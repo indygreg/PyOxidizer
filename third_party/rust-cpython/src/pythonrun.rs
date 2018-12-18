@@ -111,7 +111,9 @@ impl GILGuard {
     /// If the Python runtime is not already initialized, this function will initialize it.
     /// See [prepare_freethreaded_python()](fn.prepare_freethreaded_python.html) for details.
     pub fn acquire() -> GILGuard {
-        ::pythonrun::prepare_freethreaded_python();
+        if !cfg!(feature = "no-auto-initialize") {
+            ::pythonrun::prepare_freethreaded_python();
+        }
         let gstate = unsafe { ffi::PyGILState_Ensure() }; // acquire GIL
         GILGuard { gstate: gstate, no_send: marker::PhantomData }
     }

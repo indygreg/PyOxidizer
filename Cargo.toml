@@ -1,0 +1,3 @@
+[workspace]
+members = ["pyapp", "pyembed", "pyrepackager"]
+exclude = ["third_party/rust-cpython"]

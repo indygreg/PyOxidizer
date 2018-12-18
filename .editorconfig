@@ -1,0 +1,5 @@
+[Makefile]
+indent_style = tab
+
+[Makefile.extra]
+indent_style = tab

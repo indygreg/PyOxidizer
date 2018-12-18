@@ -1,0 +1,21 @@
+[package]
+name = "pyembed"
+version = "0.1.0"
+authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
+edition = "2018"
+build = "build.rs"
+
+[build-dependencies]
+cpython = { path = "../third_party/rust-cpython" }
+libc = "0.2"
+pyrepackager = { path = "../pyrepackager" }
+python3-sys = { path = "../third_party/rust-cpython/python3-sys" }
+
+[dependencies]
+byteorder = "1"
+libc = "0.2"
+python3-sys = { path = "../third_party/rust-cpython/python3-sys" }
+
+[dependencies.cpython]
+path = "../third_party/rust-cpython"
+features = ["python3-sys", "no-auto-initialize"]

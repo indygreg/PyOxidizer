@@ -76,6 +76,13 @@ python-3-4 = ["python3-sys/python-3-4"]
 
 #pep-384 = ["python3-sys/pep-384"]
 
+# Do not call prepare_freethreaded_python() when calling GILGuard::acquire().
+# This effectively prevents the crate from automatically calling
+# Py_InitializeEx() and other functions that attempt to automatically initialize
+# the Python interpreter. This feature can be useful for programs embedding
+# Python, which want to perform their own interpreter initialization.
+no-auto-initialize = []
+
 [workspace]
 members = ["python27-sys", "python3-sys", "extensions/hello"]
 

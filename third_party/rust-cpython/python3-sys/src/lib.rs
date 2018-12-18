@@ -72,6 +72,7 @@ pub use eval::*;
 
 pub use pystrtod::*;
 pub use frameobject::PyFrameObject;
+pub use marshal::*;
 
 mod pyport;
 // mod pymacro; contains nothing of interest for Rust
@@ -169,3 +170,4 @@ pub mod frameobject {
     pub enum PyFrameObject {}
 }
 
+mod marshal;

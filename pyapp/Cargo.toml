@@ -1,0 +1,8 @@
+[package]
+name = "pyapp"
+version = "0.1.0"
+authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+pyembed = { path = "../pyembed" }
