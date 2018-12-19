@@ -167,6 +167,21 @@ binary that uses the ``pyembed`` crate to instatiate and run an embedded
 Python interpreter. This crate demonstrates how simple it is to integrate
 and use a Python interpreter in an existing Rust project.
 
+Licensing Considerations
+========================
+
+Python and its various dependencies are governed by a handful of licenses.
+These licenses have various requirements and restrictions.
+
+Currently, binaries produced with ``PyOxidizer`` contain statically linked
+code covered by various licenses. This includes GPL 3.0 licensed code
+(``libreadline`` and ``libgdbm``). This has significant implications!
+
+In the future, ``PyOxidizer`` will allow stripping components of the Python
+distribution that have undesirable licenses and may allow distributing
+specific components as standalone libraries to skirt around some licensing
+restrictions.
+
 Frequently Asked Questions
 ==========================
 
