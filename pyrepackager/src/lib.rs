@@ -22,6 +22,7 @@ extern crate zstd;
 pub mod bytecode;
 pub mod config;
 pub mod dist;
+pub mod repackage;
 
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -72,9 +73,6 @@ const STDLIB_IGNORE_FILES: &[&str] = &[
     "distutils/README",
     "wsgiref.egg-info",
 ];
-
-#[allow(unused)]
-pub const PYTHON_IMPORTER: &'static [u8] = include_bytes!("memoryimporter.py");
 
 pub fn find_python_modules(root_path: &Path) -> Result<BTreeMap<String, Vec<u8>>, &'static str> {
     let mut mods = BTreeMap::new();

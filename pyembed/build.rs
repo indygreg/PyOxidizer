@@ -6,10 +6,11 @@ extern crate cpython;
 extern crate pyrepackager;
 extern crate python3_sys as pyffi;
 
-use pyrepackager::{BlobEntries, BlobEntry, find_python_modules, PYTHON_IMPORTER, write_blob_entries};
+use pyrepackager::{BlobEntries, BlobEntry, find_python_modules, write_blob_entries};
 use pyrepackager::bytecode::compile_bytecode;
 use pyrepackager::config::{parse_config, resolve_python_distribution_archive};
 use pyrepackager::dist::{analyze_python_distribution_tar_zst, PythonModuleData};
+use pyrepackager::repackage::derive_importlib;
 
 use std::collections::BTreeMap;
 use std::env;
@@ -57,33 +58,16 @@ fn main() {
     let dist_cursor = Cursor::new(python_distribution_data);
     let dist = analyze_python_distribution_tar_zst(dist_cursor).unwrap();
 
-    // Produce the frozen importlib modules.
-    //
-    // importlib._bootstrap isn't modified.
-    //
-    // importlib._bootstrap_external is modified. We take the original Python
-    // source and concatenate with code that provides the memory importer. We
-    // then generate bytecode for that.
-    let mod_importlib_bootstrap = dist.py_modules.get("importlib._bootstrap").unwrap();
-    let mod_importlib_bootstrap_external = dist.py_modules.get("importlib._bootstrap_external").unwrap();
-
-    let importlib_bootstrap_source = &mod_importlib_bootstrap.py;
-    let module_name = "<frozen importlib._bootstrap>";
-    let importlib_bootstrap_bytecode = compile_bytecode(importlib_bootstrap_source, module_name);
-
-    let mut importlib_bootstrap_external_source = mod_importlib_bootstrap_external.py.clone();
-    importlib_bootstrap_external_source.extend("\n# END OF importlib/_bootstrap_external.py\n\n".bytes());
-    importlib_bootstrap_external_source.extend(PYTHON_IMPORTER);
-    let module_name = "<frozen importlib._bootstrap_external>";
-    let importlib_bootstrap_external_bytecode = compile_bytecode(&importlib_bootstrap_external_source, module_name);
+    // Produce teh frozen importlib modules.
+    let importlib = derive_importlib(&dist);
 
     let importlib_bootstrap_path = Path::new(&out_dir).join("importlib_bootstrap.pyc");
     let mut fh = File::create(&importlib_bootstrap_path).unwrap();
-    fh.write(&importlib_bootstrap_bytecode).unwrap();
+    fh.write(&importlib.bootstrap_bytecode).unwrap();
 
     let importlib_bootstrap_external_path = Path::new(&out_dir).join("importlib_bootstrap_external.pyc");
     let mut fh = File::create(&importlib_bootstrap_external_path).unwrap();
-    fh.write(&importlib_bootstrap_external_bytecode).unwrap();
+    fh.write(&importlib.bootstrap_external_bytecode).unwrap();
 
     let mut all_py_modules: BTreeMap<String, PythonModuleData> = BTreeMap::new();
     for (name, entry) in dist.py_modules {
