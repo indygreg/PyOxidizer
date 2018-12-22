@@ -3,8 +3,10 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use byteorder::{LittleEndian, WriteBytesExt};
+use std::env;
 use std::fs::{create_dir_all, File};
 use std::io::Write;
+use std::path::PathBuf;
 
 use super::bytecode::compile_bytecode;
 use super::dist::PythonDistributionInfo;
@@ -92,6 +94,8 @@ pub fn write_blob_entries<W: Write>(mut dest: W, entries: &BlobEntries) -> std::
 
 /// Create a static libpython from a Python distribution.
 pub fn link_libpython(dist: &PythonDistributionInfo) {
+    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+
     let temp_dir = tempdir::TempDir::new("libpython").unwrap();
     let temp_dir_path = temp_dir.path();
 
@@ -121,5 +125,17 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
         build.object(&full);
     }
 
-    build.compile("python");
+    // Extract and link against libraries.
+    for (library, data) in &dist.libraries {
+        let library_filename = format!("lib{}.a", library);
+
+        let library_path = out_dir.join(library_filename);
+
+        let mut fh = File::create(&library_path).unwrap();
+        fh.write_all(data).unwrap();
+
+        println!("cargo:rustc-link-lib=static={}", library);
+    }
+
+    build.compile("pyembedded");
 }

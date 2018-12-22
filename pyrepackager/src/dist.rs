@@ -98,6 +98,7 @@ pub struct PythonDistributionInfo {
     pub config_c: ConfigC,
     pub config_c_in: ConfigC,
     pub frozen_c: Vec<u8>,
+    pub libraries: BTreeMap<String, Vec<u8>>,
     pub objs_core: BTreeMap<PathBuf, Vec<u8>>,
     pub objs_modules: BTreeMap<PathBuf, Vec<u8>>,
     pub py_modules: BTreeMap<String, PythonModuleData>,
@@ -113,6 +114,7 @@ pub fn analyze_python_distribution_data(files: &BTreeMap<PathBuf, Vec<u8>>) -> R
     let mut objs_modules: BTreeMap<PathBuf, Vec<u8>> = BTreeMap::new();
     let mut config_c: Vec<u8> = Vec::new();
     let mut config_c_in: Vec<u8> = Vec::new();
+    let mut libraries: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut frozen_c: Vec<u8> = Vec::new();
     let mut py_modules: BTreeMap<String, PythonModuleData> = BTreeMap::new();
 
@@ -156,6 +158,8 @@ pub fn analyze_python_distribution_data(files: &BTreeMap<PathBuf, Vec<u8>>) -> R
                 config_c = data.clone();
             } else if rel_str == "Modules/config.c.in" {
                 config_c_in = data.clone();
+            } else if rel_str == "Modules/Setup.local" {
+                continue;
             } else if rel_str == "Python/frozen.c" {
                 frozen_c = data.clone();
             }
@@ -233,6 +237,20 @@ pub fn analyze_python_distribution_data(files: &BTreeMap<PathBuf, Vec<u8>>) -> R
             }
             // TODO do we care about non-stdlib files?
         }
+        else if path.starts_with("lib/") {
+            let rel_path = path.strip_prefix("lib/").unwrap();
+            let rel_str = rel_path.to_str().unwrap();
+
+            if rel_str.ends_with(".a") {
+                if ! rel_str.starts_with("lib") {
+                    panic!(".a file does not begin with lib: {}", path.to_str().unwrap());
+                }
+
+                let name = &rel_str[3..rel_str.len() - 2];
+
+                libraries.insert(name.to_string(), data.clone());
+            }
+        }
         else if path.to_str().unwrap() == "LICENSE.rst" {
             continue;
         }
@@ -248,6 +266,7 @@ pub fn analyze_python_distribution_data(files: &BTreeMap<PathBuf, Vec<u8>>) -> R
         config_c,
         config_c_in,
         frozen_c,
+        libraries,
         objs_core,
         objs_modules,
         py_modules,
