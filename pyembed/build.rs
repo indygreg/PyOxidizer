@@ -46,7 +46,6 @@ fn main() {
     }
 
     unsafe {
-        pyffi::Py_OptimizeFlag = config.package_optimize_level as i32;
         pyffi::Py_UnbufferedStdioFlag = 1;
     }
 
@@ -78,7 +77,7 @@ fn main() {
     // Reverse iteration order so first entry in config is used (last write wins).
     for path in config.package_module_paths.iter().rev() {
         for (name, source) in find_python_modules(&path).unwrap() {
-            let bytecode = compile_bytecode(&source, &name);
+            let bytecode = compile_bytecode(&source, &name, config.package_optimize_level as i32);
 
             let (pyc, pyc_opt1, pyc_opt2) = match config.package_optimize_level {
                 0 => (Some(bytecode), None, None),

@@ -10,7 +10,7 @@ use std::ffi::CString;
 /// Compile Python source to bytecode in-process.
 ///
 /// This can be used to produce data for a frozen module.
-pub fn compile_bytecode(source: &Vec<u8>, filename: &str) -> Vec<u8> {
+pub fn compile_bytecode(source: &Vec<u8>, filename: &str, optimize: i32) -> Vec<u8> {
     // Need to convert to CString to ensure trailing NULL is present.
     let source = CString::new(source.clone()).unwrap();
     let filename = CString::new(filename).unwrap();
@@ -36,7 +36,7 @@ pub fn compile_bytecode(source: &Vec<u8>, filename: &str) -> Vec<u8> {
 
     let code = unsafe {
         let flags_ptr = &mut flags;
-        Py_CompileStringExFlags(source.as_ptr() as *const c_char, filename.as_ptr() as *const c_char, Py_file_input, flags_ptr, 0)
+        Py_CompileStringExFlags(source.as_ptr() as *const c_char, filename.as_ptr() as *const c_char, Py_file_input, flags_ptr, optimize)
     };
 
     if PyErr::occurred(py) {

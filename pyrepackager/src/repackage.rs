@@ -30,13 +30,13 @@ pub fn derive_importlib(dist: &PythonDistributionInfo) -> ImportlibData {
 
     let bootstrap_source = &mod_bootstrap.py;
     let module_name = "<frozen importlib._bootstrap>";
-    let bootstrap_bytecode = compile_bytecode(bootstrap_source, module_name);
+    let bootstrap_bytecode = compile_bytecode(bootstrap_source, module_name, 0);
 
     let mut bootstrap_external_source = mod_bootstrap_external.py.clone();
     bootstrap_external_source.extend("\n# END OF importlib/_bootstrap_external.py\n\n".bytes());
     bootstrap_external_source.extend(PYTHON_IMPORTER);
     let module_name = "<frozen importlib._bootstrap_external>";
-    let bootstrap_external_bytecode = compile_bytecode(&bootstrap_external_source, module_name);
+    let bootstrap_external_bytecode = compile_bytecode(&bootstrap_external_source, module_name, 0);
 
     ImportlibData {
         bootstrap_source: bootstrap_source.clone(),
