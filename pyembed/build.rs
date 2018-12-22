@@ -3,77 +3,18 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 extern crate cpython;
-extern crate libc;
 extern crate pyrepackager;
 extern crate python3_sys as pyffi;
 
-use cpython::{Python, PyBytes, PyErr, PyObject};
-use libc::c_char;
 use pyrepackager::{analyze_python_distribution_tar_zst, BlobEntries, BlobEntry, find_python_modules, PYTHON_IMPORTER, PythonModuleData, write_blob_entries};
+use pyrepackager::bytecode::compile_bytecode;
 use pyrepackager::config::{parse_config, resolve_python_distribution_archive};
-use pyffi::{Py_CompileStringExFlags, Py_file_input, Py_MARSHAL_VERSION, PyMarshal_WriteObjectToString};
 
 use std::collections::BTreeMap;
 use std::env;
-use std::ffi::CString;
 use std::fs::File;
 use std::io::{Cursor, Read, Write};
 use std::path::Path;
-
-/// Compile Python source to bytecode in-process.
-///
-/// This can be used to produce data for a frozen module.
-fn compile_bytecode(source: &Vec<u8>, filename: &str) -> Vec<u8> {
-    // Need to convert to CString to ensure trailing NULL is present.
-    let source = CString::new(source.clone()).unwrap();
-    let filename = CString::new(filename).unwrap();
-
-    // TODO this shouldn't be needed. Is no-auto-initialize being inherited?
-    cpython::prepare_freethreaded_python();
-
-    let gil = Python::acquire_gil();
-    let py = gil.python();
-
-    // We can pick up a different Python version from what the distribution is
-    // running. This will result in "bad" bytecode being generated. Check for
-    // that.
-    // TODO we should validate against the parsed distribution instead of
-    // hard-coding the version number.
-    if pyffi::Py_MARSHAL_VERSION != 4 {
-        panic!("unrecognized marshal version {}; did build.rs link against Python 3.7?", pyffi::Py_MARSHAL_VERSION);
-    }
-
-    let mut flags = pyffi::PyCompilerFlags {
-        cf_flags: 0,
-    };
-
-    let code = unsafe {
-        let flags_ptr = &mut flags;
-        Py_CompileStringExFlags(source.as_ptr() as *const c_char, filename.as_ptr() as *const c_char, Py_file_input, flags_ptr, 0)
-    };
-
-    if PyErr::occurred(py) {
-        let err = PyErr::fetch(py);
-        err.print(py);
-        panic!("Python error when compiling {}", filename.to_str().unwrap());
-    }
-
-    if code.is_null() {
-        panic!("code is null without Python error. Huh?");
-    }
-
-    let marshalled = unsafe {
-        PyMarshal_WriteObjectToString(code, Py_MARSHAL_VERSION)
-    };
-
-    let marshalled = unsafe {
-        PyObject::from_owned_ptr(py, marshalled)
-    };
-
-    let data = marshalled.cast_as::<PyBytes>(py).unwrap().data(py);
-
-    return data.to_vec();
-}
 
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");

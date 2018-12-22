@@ -3,8 +3,11 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 extern crate byteorder;
+extern crate cpython;
 extern crate hex;
 extern crate itertools;
+extern crate libc;
+extern crate python3_sys as pyffi;
 extern crate regex;
 extern crate reqwest;
 #[macro_use]
@@ -16,6 +19,7 @@ extern crate url;
 extern crate walkdir;
 extern crate zstd;
 
+pub mod bytecode;
 pub mod config;
 
 use std::collections::BTreeMap;

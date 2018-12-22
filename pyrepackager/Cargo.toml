@@ -9,6 +9,7 @@ byteorder = "1.2"
 hex = "0.3"
 itertools = "0.8"
 libc = "0.2"
+python3-sys = { path = "../third_party/rust-cpython/python3-sys" }
 regex = "1"
 reqwest = "0.9"
 serde = "1.0"
@@ -19,3 +20,7 @@ toml = "0.4"
 url = "1.7"
 walkdir = "2"
 zstd = "0.4"
+
+[dependencies.cpython]
+path = "../third_party/rust-cpython"
+features = ["no-auto-initialize", "python-3-7"]
