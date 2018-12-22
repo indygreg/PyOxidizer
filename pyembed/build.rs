@@ -2,15 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-extern crate cpython;
 extern crate pyrepackager;
-extern crate python3_sys as pyffi;
 
 use pyrepackager::find_python_modules;
 use pyrepackager::bytecode::compile_bytecode;
 use pyrepackager::config::{parse_config, resolve_python_distribution_archive};
 use pyrepackager::dist::{analyze_python_distribution_tar_zst, PythonModuleData};
-use pyrepackager::repackage::{BlobEntries, BlobEntry, derive_importlib, write_blob_entries};
+use pyrepackager::repackage::{BlobEntries, BlobEntry, derive_importlib, link_libpython, write_blob_entries};
 
 use std::collections::BTreeMap;
 use std::env;
@@ -45,10 +43,6 @@ fn main() {
         println!("cargo:rerun-if-changed={}", config.python_distribution_path.as_ref().unwrap());
     }
 
-    unsafe {
-        pyffi::Py_UnbufferedStdioFlag = 1;
-    }
-
     // Obtain the configured Python distribution and parse it to a data structure.
     let python_distribution_path = resolve_python_distribution_archive(&config, &out_dir_path);
     let mut fh = File::open(python_distribution_path).unwrap();
@@ -57,7 +51,12 @@ fn main() {
     let dist_cursor = Cursor::new(python_distribution_data);
     let dist = analyze_python_distribution_tar_zst(dist_cursor).unwrap();
 
-    // Produce teh frozen importlib modules.
+    // Produce a static library containing the Python bits we need.
+    // As a side-effect, this will emit the cargo: lines needed to link this
+    // library.
+    link_libpython(&dist);
+
+    // Produce the frozen importlib modules.
     let importlib = derive_importlib(&dist);
 
     let importlib_bootstrap_path = Path::new(&out_dir).join("importlib_bootstrap.pyc");

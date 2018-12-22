@@ -6,9 +6,7 @@ edition = "2018"
 build = "build.rs"
 
 [build-dependencies]
-cpython = { path = "../third_party/rust-cpython" }
 pyrepackager = { path = "../pyrepackager" }
-python3-sys = { path = "../third_party/rust-cpython/python3-sys" }
 
 [dependencies]
 byteorder = "1"
@@ -17,4 +15,4 @@ python3-sys = { path = "../third_party/rust-cpython/python3-sys" }
 
 [dependencies.cpython]
 path = "../third_party/rust-cpython"
-features = ["python3-sys", "no-auto-initialize"]
+features = ["extension-module", "python3-sys", "no-auto-initialize"]

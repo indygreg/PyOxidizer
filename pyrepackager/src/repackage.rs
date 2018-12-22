@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use byteorder::{LittleEndian, WriteBytesExt};
+use std::fs::{create_dir_all, File};
 use std::io::Write;
 
 use super::bytecode::compile_bytecode;
@@ -87,4 +88,38 @@ pub fn write_blob_entries<W: Write>(mut dest: W, entries: &BlobEntries) -> std::
     }
 
     Ok(())
+}
+
+/// Create a static libpython from a Python distribution.
+pub fn link_libpython(dist: &PythonDistributionInfo) {
+    let temp_dir = tempdir::TempDir::new("libpython").unwrap();
+    let temp_dir_path = temp_dir.path();
+
+    let mut build = cc::Build::new();
+
+    for (obj_path, data) in &dist.objs_core {
+        let parent = temp_dir_path.join(obj_path.parent().unwrap());
+        create_dir_all(parent).unwrap();
+
+        let full = temp_dir_path.join(obj_path);
+
+        let mut fh = File::create(&full).unwrap();
+        fh.write_all(data).unwrap();
+
+        build.object(&full);
+    }
+
+    for (obj_path, data) in &dist.objs_modules {
+        let parent = temp_dir_path.join(obj_path.parent().unwrap());
+        create_dir_all(parent).unwrap();
+
+        let full = temp_dir_path.join(obj_path);
+
+        let mut fh = File::create(&full).unwrap();
+        fh.write_all(data).unwrap();
+
+        build.object(&full);
+    }
+
+    build.compile("python");
 }

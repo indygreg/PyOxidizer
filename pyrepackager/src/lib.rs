@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 extern crate byteorder;
+extern crate cc;
 extern crate cpython;
 extern crate hex;
 extern crate itertools;
@@ -14,6 +15,7 @@ extern crate reqwest;
 extern crate serde_derive;
 extern crate sha2;
 extern crate tar;
+extern crate tempdir;
 extern crate toml;
 extern crate url;
 extern crate walkdir;
