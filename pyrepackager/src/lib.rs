@@ -298,6 +298,9 @@ pub fn analyze_python_distribution_data(files: &BTreeMap<PathBuf, Vec<u8>>) -> R
             }
             // TODO do we care about non-stdlib files?
         }
+        else if path.to_str().unwrap() == "LICENSE.rst" {
+            continue;
+        }
         else {
             panic!("unexpected path in archive: {}", path.to_str().unwrap());
         }
