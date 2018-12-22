@@ -6,11 +6,11 @@ extern crate cpython;
 extern crate pyrepackager;
 extern crate python3_sys as pyffi;
 
-use pyrepackager::{BlobEntries, BlobEntry, find_python_modules, write_blob_entries};
+use pyrepackager::find_python_modules;
 use pyrepackager::bytecode::compile_bytecode;
 use pyrepackager::config::{parse_config, resolve_python_distribution_archive};
 use pyrepackager::dist::{analyze_python_distribution_tar_zst, PythonModuleData};
-use pyrepackager::repackage::derive_importlib;
+use pyrepackager::repackage::{BlobEntries, BlobEntry, derive_importlib, write_blob_entries};
 
 use std::collections::BTreeMap;
 use std::env;

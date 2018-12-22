@@ -2,6 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use byteorder::{LittleEndian, WriteBytesExt};
+use std::io::Write;
+
 use super::bytecode::compile_bytecode;
 use super::dist::PythonDistributionInfo;
 
@@ -41,4 +44,47 @@ pub fn derive_importlib(dist: &PythonDistributionInfo) -> ImportlibData {
         bootstrap_external_source: bootstrap_external_source.clone(),
         bootstrap_external_bytecode,
     }
+}
+
+/// Represents a resource entry. Simple a name-value pair.
+pub struct BlobEntry {
+    pub name: String,
+    pub data: Vec<u8>,
+}
+
+/// Represents an ordered collection of resource entries.
+pub type BlobEntries = Vec<BlobEntry>;
+
+/// Serialize a BlobEntries to a writer.
+///
+/// Format:
+///    Little endian u32 total number of entries.
+///    Array of 2-tuples of
+///        Little endian u32 length of entity name
+///        Little endian u32 length of entity value
+///    Vector of entity names, with no padding
+///    Vector of entity values, with no padding
+///
+/// The "index" data is self-contained in the beginning of the data structure
+/// to allow a linear read of a contiguous memory region in order to load
+/// the index.
+pub fn write_blob_entries<W: Write>(mut dest: W, entries: &BlobEntries) -> std::io::Result<()> {
+    dest.write_u32::<LittleEndian>(entries.len() as u32)?;
+
+    for entry in entries.iter() {
+        let name_bytes = entry.name.as_bytes();
+        dest.write_u32::<LittleEndian>(name_bytes.len() as u32)?;
+        dest.write_u32::<LittleEndian>(entry.data.len() as u32)?;
+    }
+
+    for entry in entries.iter() {
+        let name_bytes = entry.name.as_bytes();
+        dest.write(name_bytes)?;
+    }
+
+    for entry in entries.iter() {
+        dest.write(entry.data.as_slice())?;
+    }
+
+    Ok(())
 }
