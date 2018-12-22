@@ -4,11 +4,11 @@
 
 extern crate byteorder;
 extern crate cc;
-extern crate cpython;
+extern crate cpython_copy as cpython;
 extern crate hex;
 extern crate itertools;
 extern crate libc;
-extern crate python3_sys as pyffi;
+extern crate python3_copy_sys as pyffi;
 extern crate regex;
 extern crate reqwest;
 #[macro_use]

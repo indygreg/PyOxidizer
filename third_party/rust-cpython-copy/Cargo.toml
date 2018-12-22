@@ -1,0 +1,88 @@
+[package]
+
+name = "cpython-copy"
+version = "0.2.1"
+description = "Bindings to Python"
+authors = ["Daniel Grunwald <daniel@danielgrunwald.de>"]
+readme = "README.md"
+keywords = [
+    "python",
+    "cpython",
+    "libpython27",
+]
+homepage = "https://github.com/dgrunwald/rust-cpython"
+repository = "https://github.com/dgrunwald/rust-cpython.git"
+documentation = "http://dgrunwald.github.io/rust-cpython/doc/cpython/"
+categories = ["api-bindings", "development-tools::ffi"]
+license = "MIT"
+exclude = [
+    "/.gitignore",
+    "/.travis.yml",
+    "/appveyor.yml",
+    "/.cargo/config",
+    "/python27-sys/**",
+    "/python3-sys/**",
+    "/extensions/**"
+]
+#build = "build.rs"
+
+[badges]
+travis-ci = { repository = "dgrunwald/rust-cpython" }
+appveyor = { repository = "dgrunwald/rust-cpython" }
+
+[dependencies]
+libc = "0.2"
+num-traits = "0.2"
+
+# These features are both optional, but you must pick one to 
+# indicate which python ffi you are trying to bind to.
+[dependencies.python27-sys]
+optional = true
+path = "python27-sys"
+version = "0.2.1"
+
+[dependencies.python3-copy-sys]
+optional = true
+path = "python3-sys"
+version = "0.2.1"
+
+[features]
+default = ["python3-copy-sys"]
+
+# Deprecated: nonnull feature no longer has any effect;
+# std::ptr::NonNull is now used unconditionally.
+nonnull = []
+
+# Enable additional features that require nightly rust
+nightly = []
+
+# Use this feature when building an extension module.
+# It tells the linker to keep the python symbols unresolved,
+# so that the module can also be used with statically linked python interpreters.
+extension-module = [ "python3-copy-sys/extension-module" ]
+
+# Unfortunately we can't use the forward the same feature to either python27-sys
+# or python3-sys. (honestly, we should probably merge both crates into 'python-sys')
+extension-module-2-7 = [ "python27-sys/extension-module" ]
+
+
+# Optional features to support explicitly specifying python minor version.
+# If you don't care which minor version, just specify python3-sys as a 
+# feature.
+python-3-7 = ["python3-copy-sys/python-3-7"]
+python-3-6 = ["python3-copy-sys/python-3-6"]
+python-3-5 = ["python3-copy-sys/python-3-5"]
+python-3-4 = ["python3-copy-sys/python-3-4"]
+
+#pep-384 = ["python3-sys/pep-384"]
+
+# Do not call prepare_freethreaded_python() when calling GILGuard::acquire().
+# This effectively prevents the crate from automatically calling
+# Py_InitializeEx() and other functions that attempt to automatically initialize
+# the Python interpreter. This feature can be useful for programs embedding
+# Python, which want to perform their own interpreter initialization.
+no-auto-initialize = []
+
+[workspace]
+members = ["python27-sys", "python3-sys", "extensions/hello"]
+
