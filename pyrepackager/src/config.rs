@@ -3,9 +3,11 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use sha2::{Digest, Sha256};
+use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use url::Url;
 
 // TOML config file parsing.
 #[derive(Debug, Deserialize)]
@@ -162,10 +164,9 @@ pub fn resolve_python_distribution_archive(config: &Config, cache_dir: &Path) ->
             p.file_name().unwrap().to_str().unwrap().to_string()
         },
         None => match &config.python_distribution_url {
-            Some(_url) => {
-                panic!("URL parsing not yet implemented");
-                //let url = Url::parse(url).unwrap();
-                //url.path_segments().unwrap()[-1]
+            Some(url) => {
+                let url = Url::parse(url).expect("failed to parse URL");
+                url.path_segments().expect("cannot be base path").last().expect("could not get last element").to_string()
             },
             None => panic!("neither local path nor URL defined for distribution"),
         },
@@ -206,7 +207,23 @@ pub fn resolve_python_distribution_archive(config: &Config, cache_dir: &Path) ->
             cache_path
         },
         None => match &config.python_distribution_url {
-            Some(_url) => panic!("fetching URLs not yet supported"),
+            Some(url) => {
+                let mut data: Vec<u8> = Vec::new();
+
+                let mut response = reqwest::get(url).expect("unable to perform HTTP request");
+                response.read_to_end(&mut data).expect("unable to download URL");
+
+                let mut hasher = Sha256::new();
+                hasher.input(&data);
+
+                let url_hash = hasher.result().to_vec();
+                if url_hash != expected_hash {
+                    panic!("sha256 of Python distribution does not validate");
+                }
+
+                fs::write(&cache_path, data).expect("unable to write file");
+                cache_path
+            }
             None => panic!("expected distribution path or URL"),
         },
     }
