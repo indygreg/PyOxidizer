@@ -8,7 +8,7 @@ use std::ffi::CString;
 use std::path::PathBuf;
 use std::ptr::null;
 
-use cpython::{ObjectProtocol, PyErr, PyModule, PyObject, PyResult, PythonObject, Python, ToPyObject};
+use cpython::{NoArgs, ObjectProtocol, PyErr, PyModule, PyObject, PyResult, PythonObject, Python, ToPyObject};
 use pyffi;
 
 use crate::data::*;
@@ -311,6 +311,49 @@ impl MainPythonInterpreter {
                 Ok(PyObject::from_owned_ptr(py, res))
             }
         }
+    }
+
+    /// Start and run a Python REPL.
+    ///
+    /// This emulates what CPython's main.c does.
+    pub fn run_repl(&mut self) -> PyResult<PyObject> {
+        let py = unsafe {
+            Python::assume_gil_acquired()
+        };
+
+        self.init(py);
+
+        unsafe {
+            pyffi::Py_InspectFlag = 0;
+        }
+
+        match py.import("readline") {
+            Ok(_) => (),
+            Err(_) => (),
+        };
+
+        let sys = py.import("sys")?;
+
+        match sys.get(py, "__interactivehook__") {
+            Ok(hook) => {
+                hook.call(py, NoArgs, None)?;
+            },
+            Err(_) => (),
+        };
+
+        let stdin_filename = "<stdin>";
+        let filename = CString::new(stdin_filename).expect("could not create CString");
+        let mut cf = pyffi::PyCompilerFlags {
+            cf_flags: 0,
+        };
+
+        // TODO use return value.
+        unsafe {
+            let stdin = libc::fdopen(libc::STDIN_FILENO, &('r' as libc::c_char));
+            pyffi::PyRun_AnyFileExFlags(stdin, filename.as_ptr() as *const c_char, 0, &mut cf)
+        };
+
+        Ok(py.None())
     }
 }
 

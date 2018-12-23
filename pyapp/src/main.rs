@@ -10,6 +10,5 @@ fn main() {
     let config = PythonConfig::default();
     let mut interp = MainPythonInterpreter::new(config);
 
-    interp.run();
-    //interp.run_module_as_main("pip.__main__").unwrap();
+    interp.run_repl().expect("repl should not error");
 }
