@@ -5,7 +5,8 @@
 use byteorder::{LittleEndian, WriteBytesExt};
 use std::collections::BTreeSet;
 use std::env;
-use std::fs::{create_dir_all, File};
+use std::fs;
+use std::fs::create_dir_all;
 use std::io::Write;
 use std::iter::FromIterator;
 use std::path::PathBuf;
@@ -161,9 +162,7 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
         create_dir_all(parent).unwrap();
 
         let full = temp_dir_path.join(obj_path);
-
-        let mut fh = File::create(&full).unwrap();
-        fh.write_all(data).unwrap();
+        fs::write(&full, data).expect("unable to write object file");
 
         build.object(&full);
     }
@@ -178,9 +177,7 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
         let data = dist.objs_modules.get(&module_path).expect(&format!("object file not found: {}", module_path.to_str().unwrap()));
 
         let full = temp_dir_path.join(module_path);
-
-        let mut fh = File::create(&full).unwrap();
-        fh.write_all(data).expect("unable to write object file");
+        fs::write(&full, data).expect("unable to write object file");
 
         build.object(&full);
     }
@@ -204,14 +201,12 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
     let config_c_source = make_config_c(&dist, &extension_modules);
     let config_c_path = out_dir.join("config.c");
 
-    let mut fh = File::create(&config_c_path).unwrap();
-    fh.write_all(config_c_source.as_bytes()).expect("unable to write config.c");
+    fs::write(&config_c_path, config_c_source.as_bytes()).expect("unable to write config.c");
 
     // We need to make all .h includes accessible.
     for (name, data) in &dist.includes {
         let full = temp_dir_path.join(name);
-        let mut fh = File::create(&full).unwrap();
-        fh.write_all(data).expect("unable to write include file");
+        fs::write(&full, data).expect("unable to write include file");
     }
 
     // TODO flags should come from parsed distribution config.
@@ -237,9 +232,7 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
             let data = dist.objs_modules.get(&module_path).expect(&format!("object file not found: {}", module_path.to_str().unwrap()));
 
             let full = temp_dir_path.join(module_path);
-
-            let mut fh = File::create(&full).unwrap();
-            fh.write_all(data).expect("unable to write object file");
+            fs::write(&full, data).expect("unable to write object file");
 
             build.object(&full);
         }
@@ -265,8 +258,7 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
         let data = dist.libraries.get(library).expect(&format!("unable to find library {}", library));
 
         let library_path = out_dir.join(format!("lib{}.a", library));
-        let mut fh = File::create(&library_path).unwrap();
-        fh.write_all(data).unwrap();
+        fs::write(&library_path, data).expect("unable to write library file");
 
         println!("cargo:rustc-link-lib=static={}", library);
     }
