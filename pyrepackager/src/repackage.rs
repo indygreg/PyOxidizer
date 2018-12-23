@@ -3,9 +3,11 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use byteorder::{LittleEndian, WriteBytesExt};
+use std::collections::BTreeSet;
 use std::env;
 use std::fs::{create_dir_all, File};
 use std::io::Write;
+use std::iter::FromIterator;
 use std::path::PathBuf;
 
 use super::bytecode::compile_bytecode;
@@ -113,24 +115,69 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
         build.object(&full);
     }
 
-    for (obj_path, data) in &dist.objs_modules {
-        let parent = temp_dir_path.join(obj_path.parent().unwrap());
-        create_dir_all(parent).unwrap();
+    // Always include some Modules/ object files that are part of the "core"
+    // modules functionality.
+    let modules_path = temp_dir_path.join("Modules");
+    create_dir_all(modules_path).unwrap();
 
-        let full = temp_dir_path.join(obj_path);
+    for object_filename in &dist.extension_modules_always {
+        let module_path = PathBuf::from(format!("Modules/{}", object_filename));
+        let data = dist.objs_modules.get(&module_path).expect(&format!("object file not found: {}", module_path.to_str().unwrap()));
+
+        let full = temp_dir_path.join(module_path);
 
         let mut fh = File::create(&full).unwrap();
-        fh.write_all(data).unwrap();
+        fh.write_all(data).expect("unable to write object file");
 
         build.object(&full);
     }
 
-    // Extract and link against libraries.
-    for (library, data) in &dist.libraries {
-        let library_filename = format!("lib{}.a", library);
+    // Relevant extension modules are the intersection of modules that are
+    // built/available and what's requested from the current config.
+    let extension_modules: BTreeSet<&String> = BTreeSet::from_iter(dist.extension_modules.keys());
 
-        let library_path = out_dir.join(library_filename);
+    // TODO accept an argument that specifies which extension modules are
+    // relevant. Once we modify the set of enabled extension modules, we'll
+    // need to recompile config.c, since it holds references to all the
+    // PyInit_* functions.
 
+    // For each extension module, extract and use its object file. We also
+    // use this pass to collect the set of libraries that we need to lin
+    // against.
+    let mut needed_libraries: BTreeSet<&str> = BTreeSet::new();
+
+    for name in extension_modules {
+        let entry = dist.extension_modules.get(name).unwrap();
+
+        for object_filename in &entry.object_filenames {
+            let module_path = PathBuf::from(format!("Modules/{}", object_filename));
+            let data = dist.objs_modules.get(&module_path).expect(&format!("object file not found: {}", module_path.to_str().unwrap()));
+
+            let full = temp_dir_path.join(module_path);
+
+            let mut fh = File::create(&full).unwrap();
+            fh.write_all(data).expect("unable to write object file");
+
+            build.object(&full);
+        }
+
+        for library in &entry.libraries {
+            needed_libraries.insert(library);
+        }
+    }
+
+    // Extract all required libraries and link against them.
+    for library in needed_libraries {
+        match library {
+            // System libraries we never distribute.
+            "dl" => continue,
+            "m" => continue,
+            _ => (),
+        };
+
+        let data = dist.libraries.get(library).expect(&format!("unable to find library {}", library));
+
+        let library_path = out_dir.join(format!("lib{}.a", library));
         let mut fh = File::create(&library_path).unwrap();
         fh.write_all(data).unwrap();
 

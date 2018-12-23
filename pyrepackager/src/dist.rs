@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use itertools::Itertools;
 use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader, Read};
 use std::path::PathBuf;
@@ -83,6 +84,93 @@ fn parse_config_c(data: &Vec<u8>) -> ConfigC {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct SetupEntry {
+    pub module: String,
+    pub object_filenames: Vec<String>,
+    pub libraries: Vec<String>,
+}
+
+fn parse_setup_line(modules: &mut BTreeMap<String, SetupEntry>, line: &str) {
+    let line = match line.find("#") {
+        Some(idx) => &line[0..idx],
+        None => &line,
+    };
+
+    if line.len() < 1 {
+        return;
+    }
+
+    // Lines have format: <module_name> <args>
+    let words = line.split_whitespace().collect_vec();
+
+    if words.len() < 2 {
+        return;
+    }
+
+    let module = words[0];
+    let mut object_filenames: Vec<String> = Vec::new();
+    let mut libraries: Vec<String> = Vec::new();
+
+    for word in words {
+        // Object files are the basename of sources with the extension changed.
+        if word.ends_with(".c") {
+            let p = PathBuf::from(&word);
+            let p = p.with_extension("o");
+            let basename = p.file_name().unwrap().to_str().unwrap();
+            object_filenames.push(basename.to_string());
+
+        }
+        else if word.starts_with("-l") {
+            libraries.push(word[2..].to_string());
+        }
+    }
+
+    let entry = SetupEntry {
+        module: module.to_string(),
+        object_filenames,
+        libraries,
+    };
+
+    modules.insert(module.to_string(), entry);
+}
+
+fn parse_setup_dist(modules: &mut BTreeMap<String, SetupEntry>, data: &Vec<u8>) {
+    let reader = BufReader::new(&**data);
+
+    let mut found_start = false;
+
+    for line in reader.lines() {
+        let line = line.expect("could not obtain line");
+        if !found_start {
+            if line.starts_with("PYTHONPATH=") {
+                found_start = true;
+                continue;
+            }
+        }
+
+        parse_setup_line(modules, &line);
+    }
+}
+
+fn parse_setup_local(modules: &mut BTreeMap<String, SetupEntry>, data: &Vec<u8>) {
+    let reader = BufReader::new(&**data);
+
+    for line in reader.lines() {
+        let line = line.expect("could not obtain line");
+
+        // Everything after the *disabled* line can be ignored.
+        if line == "*disabled*" {
+            break;
+        }
+        else if line == "*static*" {
+            continue;
+        }
+
+        parse_setup_line(modules, &line);
+    }
+}
+
 #[allow(unused)]
 #[derive(Clone, Debug)]
 pub struct PythonModuleData {
@@ -97,6 +185,8 @@ pub struct PythonModuleData {
 pub struct PythonDistributionInfo {
     pub config_c: ConfigC,
     pub config_c_in: ConfigC,
+    pub extension_modules: BTreeMap<String, SetupEntry>,
+    pub extension_modules_always: Vec<String>,
     pub frozen_c: Vec<u8>,
     pub libraries: BTreeMap<String, Vec<u8>>,
     pub objs_core: BTreeMap<PathBuf, Vec<u8>>,
@@ -114,6 +204,7 @@ pub fn analyze_python_distribution_data(files: &BTreeMap<PathBuf, Vec<u8>>) -> R
     let mut objs_modules: BTreeMap<PathBuf, Vec<u8>> = BTreeMap::new();
     let mut config_c: Vec<u8> = Vec::new();
     let mut config_c_in: Vec<u8> = Vec::new();
+    let mut extension_modules: BTreeMap<String, SetupEntry> = BTreeMap::new();
     let mut libraries: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut frozen_c: Vec<u8> = Vec::new();
     let mut py_modules: BTreeMap<String, PythonModuleData> = BTreeMap::new();
@@ -158,8 +249,10 @@ pub fn analyze_python_distribution_data(files: &BTreeMap<PathBuf, Vec<u8>>) -> R
                 config_c = data.clone();
             } else if rel_str == "Modules/config.c.in" {
                 config_c_in = data.clone();
+            } else if rel_str == "Modules/Setup.dist" {
+                parse_setup_dist(&mut extension_modules, &data);
             } else if rel_str == "Modules/Setup.local" {
-                continue;
+                parse_setup_local(&mut extension_modules, &data);
             } else if rel_str == "Python/frozen.c" {
                 frozen_c = data.clone();
             }
@@ -262,9 +355,19 @@ pub fn analyze_python_distribution_data(files: &BTreeMap<PathBuf, Vec<u8>>) -> R
     let config_c = parse_config_c(&config_c);
     let config_c_in = parse_config_c(&config_c_in);
 
+    let extension_modules_always = vec![
+        String::from("config.o"),
+        String::from("getbuildinfo.o"),
+        String::from("getpath.o"),
+        String::from("main.o"),
+        String::from("gcmodule.o"),
+    ];
+
     Ok(PythonDistributionInfo {
         config_c,
         config_c_in,
+        extension_modules,
+        extension_modules_always,
         frozen_c,
         libraries,
         objs_core,
