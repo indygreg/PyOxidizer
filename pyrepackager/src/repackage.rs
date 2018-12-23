@@ -150,6 +150,7 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
     // use this pass to collect the set of libraries that we need to lin
     // against.
     let mut needed_libraries: BTreeSet<&str> = BTreeSet::new();
+    let mut needed_frameworks: BTreeSet<&str> = BTreeSet::new();
 
     for name in extension_modules {
         let entry = dist.extension_modules.get(name).unwrap();
@@ -169,6 +170,10 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
         for library in &entry.libraries {
             needed_libraries.insert(library);
         }
+
+        for framework in &entry.frameworks {
+            needed_frameworks.insert(framework);
+        }
     }
 
     // Extract all required libraries and link against them.
@@ -187,6 +192,10 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
         fh.write_all(data).unwrap();
 
         println!("cargo:rustc-link-lib=static={}", library);
+    }
+
+    for framework in needed_frameworks {
+        println!("cargo:rustc-link-lib=framework={}", framework);
     }
 
     build.compile("pyembedded");

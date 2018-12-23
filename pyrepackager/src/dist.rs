@@ -89,6 +89,7 @@ pub struct SetupEntry {
     pub module: String,
     pub object_filenames: Vec<String>,
     pub libraries: Vec<String>,
+    pub frameworks: Vec<String>,
 }
 
 fn parse_setup_line(modules: &mut BTreeMap<String, SetupEntry>, line: &str) {
@@ -111,8 +112,9 @@ fn parse_setup_line(modules: &mut BTreeMap<String, SetupEntry>, line: &str) {
     let module = words[0];
     let mut object_filenames: Vec<String> = Vec::new();
     let mut libraries: Vec<String> = Vec::new();
+    let mut frameworks: Vec<String> = Vec::new();
 
-    for word in words {
+    for (idx, &word) in words.iter().enumerate() {
         // Object files are the basename of sources with the extension changed.
         if word.ends_with(".c") {
             let p = PathBuf::from(&word);
@@ -124,12 +126,16 @@ fn parse_setup_line(modules: &mut BTreeMap<String, SetupEntry>, line: &str) {
         else if word.starts_with("-l") {
             libraries.push(word[2..].to_string());
         }
+        else if word == "-framework" {
+            frameworks.push(String::from(words[idx + 1]));
+        }
     }
 
     let entry = SetupEntry {
         module: module.to_string(),
         object_filenames,
         libraries,
+        frameworks,
     };
 
     modules.insert(module.to_string(), entry);
