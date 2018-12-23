@@ -134,7 +134,12 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
 
     // Relevant extension modules are the intersection of modules that are
     // built/available and what's requested from the current config.
-    let extension_modules: BTreeSet<&String> = BTreeSet::from_iter(dist.extension_modules.keys());
+    let mut extension_modules: BTreeSet<&String> = BTreeSet::from_iter(dist.extension_modules.keys());
+
+    // TODO support these extensions.
+    extension_modules.remove(&String::from("_curses"));
+    extension_modules.remove(&String::from("_curses_panel"));
+    extension_modules.remove(&String::from("readline"));
 
     // TODO accept an argument that specifies which extension modules are
     // relevant. Once we modify the set of enabled extension modules, we'll
