@@ -194,6 +194,7 @@ pub struct PythonDistributionInfo {
     pub extension_modules: BTreeMap<String, SetupEntry>,
     pub extension_modules_always: Vec<String>,
     pub frozen_c: Vec<u8>,
+    pub includes: BTreeMap<String, Vec<u8>>,
     pub libraries: BTreeMap<String, Vec<u8>>,
     pub objs_core: BTreeMap<PathBuf, Vec<u8>>,
     pub objs_modules: BTreeMap<PathBuf, Vec<u8>>,
@@ -211,6 +212,7 @@ pub fn analyze_python_distribution_data(files: &BTreeMap<PathBuf, Vec<u8>>) -> R
     let mut config_c: Vec<u8> = Vec::new();
     let mut config_c_in: Vec<u8> = Vec::new();
     let mut extension_modules: BTreeMap<String, SetupEntry> = BTreeMap::new();
+    let mut includes: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut libraries: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut frozen_c: Vec<u8> = Vec::new();
     let mut py_modules: BTreeMap<String, PythonModuleData> = BTreeMap::new();
@@ -326,14 +328,21 @@ pub fn analyze_python_distribution_data(files: &BTreeMap<PathBuf, Vec<u8>>) -> R
                         pyc_opt1: pyc_opt1_data,
                         pyc_opt2: pyc_opt2_data,
                     });
-
-                }
-                else if rel_str.ends_with(".pyc") {
+                } else if rel_str.ends_with(".pyc") {
                     // Should be handled by .py branch.
                     continue;
                 }
                 // TODO do we care about non-py files?
             }
+
+            else if rel_path.starts_with("include") {
+                if rel_str.ends_with(".h") {
+                    let rel = rel_path.file_name().expect("retrieving file name");
+
+                    includes.insert(rel.to_str().expect("str conversion").to_string(), data.clone());
+                }
+            }
+
             // TODO do we care about non-stdlib files?
         }
         else if path.starts_with("lib/") {
@@ -362,7 +371,6 @@ pub fn analyze_python_distribution_data(files: &BTreeMap<PathBuf, Vec<u8>>) -> R
     let config_c_in = parse_config_c(&config_c_in);
 
     let extension_modules_always = vec![
-        String::from("config.o"),
         String::from("getbuildinfo.o"),
         String::from("getpath.o"),
         String::from("main.o"),
@@ -375,6 +383,7 @@ pub fn analyze_python_distribution_data(files: &BTreeMap<PathBuf, Vec<u8>>) -> R
         extension_modules,
         extension_modules_always,
         frozen_c,
+        includes,
         libraries,
         objs_core,
         objs_modules,
