@@ -6,7 +6,7 @@ use itertools::Itertools;
 use std::collections::BTreeMap;
 use std::fs;
 use std::io::{BufRead, BufReader, Read};
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 
 #[allow(unused)]
 struct PkgConfig {
@@ -14,14 +14,11 @@ struct PkgConfig {
     stdlib_path: PathBuf,
 }
 
-fn parse_pkgconfig(files: &BTreeMap<PathBuf, Vec<u8>>) -> PkgConfig {
-    let python_pc = PathBuf::from("python/install/lib/pkgconfig/python3.pc");
+fn parse_pkgconfig(dist_path: &Path) -> PkgConfig {
+    let python_pc = dist_path.join("python/install/lib/pkgconfig/python3.pc");
 
-    if !files.contains_key(&python_pc) {
-        panic!("{} not found", python_pc.to_str().unwrap());
-    }
+    let buf = fs::read(python_pc).expect("failed to read pkgconfig");
 
-    let buf = files.get(&python_pc).unwrap().to_vec();
     let reader = BufReader::new(&*buf);
 
     let mut version: String = String::new();
@@ -215,7 +212,7 @@ pub struct PythonDistributionInfo {
 /// Passing in a data structure with raw file data within is inefficient. But
 /// it makes things easier to implement and allows us to do things like consume
 /// tarballs without filesystem I/O.
-pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir, files: &BTreeMap<PathBuf, Vec<u8>>) -> Result<PythonDistributionInfo, &'static str> {
+pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<PythonDistributionInfo, &'static str> {
     let mut objs_core: BTreeMap<PathBuf, Vec<u8>> = BTreeMap::new();
     let mut objs_modules: BTreeMap<PathBuf, Vec<u8>> = BTreeMap::new();
     let mut config_c: Vec<u8> = Vec::new();
@@ -227,10 +224,21 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir, files: &BTre
     let mut py_modules: BTreeMap<String, PythonModuleData> = BTreeMap::new();
     let mut resources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
 
-    let pkgconfig = parse_pkgconfig(files);
+    let pkgconfig = parse_pkgconfig(temp_dir.path());
 
-    for (full_path, data) in files.iter() {
-        let path = full_path.strip_prefix("python/").unwrap();
+    for entry in walkdir::WalkDir::new(temp_dir.path()).into_iter() {
+        let entry = entry.expect("unable to retrieve directory entry");
+        let full_path = entry.path();
+
+        if full_path.is_dir() {
+            continue;
+        }
+
+        let rel_path = full_path.strip_prefix(temp_dir.path()).expect("unable to strip temp directory prefix");
+        let rel_path = rel_path.strip_prefix("python/").expect("path does not begin with python/");
+        let path = &rel_path;
+
+        let data = fs::read(full_path).expect("could not read path");
 
         if path.starts_with("build/") {
             let rel_path = path.strip_prefix("build/").unwrap();
@@ -317,19 +325,19 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir, files: &BTre
 
                     // First 16 bytes of pyc files are used for validation. We don't need this
                     // data so we strip it.
-                    let pyc_data = match files.get(&pyc_path) {
-                        Some(v) => Some(v[16..].to_vec()),
-                        None => None,
+                    let pyc_data = match fs::read(&pyc_path) {
+                        Ok(v) => Some(v[16..].to_vec()),
+                        Err(_) => None,
                     };
 
-                    let pyc_opt1_data = match files.get(&pyc_opt1_path) {
-                        Some(v) => Some(v[16..].to_vec()),
-                        None => None,
+                    let pyc_opt1_data = match fs::read(&pyc_opt1_path) {
+                        Ok(v) => Some(v[16..].to_vec()),
+                        Err(_) => None,
                     };
 
-                    let pyc_opt2_data = match files.get(&pyc_opt2_path) {
-                        Some(v) => Some(v[16..].to_vec()),
-                        None => None,
+                    let pyc_opt2_data = match fs::read(&pyc_opt2_path) {
+                        Ok(v) => Some(v[16..].to_vec()),
+                        Err(_) => None,
                     };
 
                     py_modules.insert(full_module_name, PythonModuleData {
@@ -416,25 +424,7 @@ pub fn analyze_python_distribution_tar<R: Read>(source: R) -> Result<PythonDistr
 
     tf.unpack(&temp_dir_path).expect("unable to extract tar archive");
 
-    // Buffering everything to memory isn't very efficient. But it makes things
-    // easier to implement. This is part of the build system, so resource
-    // constraints hopefully aren't a problem.
-    let mut files: BTreeMap<PathBuf, Vec<u8>> = BTreeMap::new();
-
-    for entry in walkdir::WalkDir::new(&temp_dir_path).into_iter() {
-        let entry = entry.unwrap();
-        let path = entry.into_path();
-        let rel_path = path.strip_prefix(&temp_dir_path).expect("unable to obtain relative path");
-
-        if path.is_dir() {
-            continue;
-        }
-
-        let buf = fs::read(&path).expect("unable to read path");
-        files.insert(rel_path.to_path_buf(), buf);
-    }
-
-    analyze_python_distribution_data(temp_dir, &files)
+    analyze_python_distribution_data(temp_dir)
 }
 
 pub fn analyze_python_distribution_tar_zst<R: Read>(source: R) -> Result<PythonDistributionInfo, &'static str> {
