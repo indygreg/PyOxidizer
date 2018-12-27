@@ -14,6 +14,7 @@ struct PkgConfig {
     stdlib_path: PathBuf,
 }
 
+/// Parse useful information out of Python's pkgconfig file.
 fn parse_pkgconfig(dist_path: &Path) -> PkgConfig {
     let python_pc = dist_path.join("python/install/lib/pkgconfig/python3.pc");
 
@@ -47,6 +48,7 @@ pub struct ConfigC {
     pub init_mods: BTreeMap<String, String>,
 }
 
+/// Parse the content of a config.c/config.c.in file from CPython.
 fn parse_config_c(data: &Vec<u8>) -> ConfigC {
     let reader = BufReader::new(&**data);
 
@@ -90,6 +92,7 @@ pub struct SetupEntry {
     pub frameworks: Vec<String>,
 }
 
+/// Parse a line in CPython's Setup.dist/Setup.local file.
 fn parse_setup_line(modules: &mut BTreeMap<String, SetupEntry>, line: &str) {
     let line = match line.find("#") {
         Some(idx) => &line[0..idx],
@@ -139,6 +142,7 @@ fn parse_setup_line(modules: &mut BTreeMap<String, SetupEntry>, line: &str) {
     modules.insert(module.to_string(), entry);
 }
 
+/// Parse CPython's Setup.dist file.
 fn parse_setup_dist(modules: &mut BTreeMap<String, SetupEntry>, data: &Vec<u8>) {
     let reader = BufReader::new(&**data);
 
@@ -157,6 +161,7 @@ fn parse_setup_dist(modules: &mut BTreeMap<String, SetupEntry>, data: &Vec<u8>) 
     }
 }
 
+/// Parse CPython's Setup.local file.
 fn parse_setup_local(modules: &mut BTreeMap<String, SetupEntry>, data: &Vec<u8>) {
     let reader = BufReader::new(&**data);
 
@@ -416,6 +421,7 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
     })
 }
 
+/// Extract Python distribution data from a tar archive.
 pub fn analyze_python_distribution_tar<R: Read>(source: R) -> Result<PythonDistributionInfo, &'static str> {
     let mut tf = tar::Archive::new(source);
 
@@ -427,6 +433,7 @@ pub fn analyze_python_distribution_tar<R: Read>(source: R) -> Result<PythonDistr
     analyze_python_distribution_data(temp_dir)
 }
 
+/// Extract Python distribution data from a zstandard compressed tar archive.
 pub fn analyze_python_distribution_tar_zst<R: Read>(source: R) -> Result<PythonDistributionInfo, &'static str> {
     let dctx = zstd::stream::Decoder::new(source).unwrap();
 
