@@ -186,6 +186,10 @@ pub struct PythonModuleData {
     pub pyc_opt2: Option<Vec<u8>>,
 }
 
+/// Represents a parsed Python distribution.
+///
+/// Distribution info is typically derived from a tarball containing a
+/// Python install and its build artifacts.
 #[allow(unused)]
 #[derive(Debug)]
 pub struct PythonDistributionInfo {
@@ -199,6 +203,7 @@ pub struct PythonDistributionInfo {
     pub objs_core: BTreeMap<PathBuf, Vec<u8>>,
     pub objs_modules: BTreeMap<PathBuf, Vec<u8>>,
     pub py_modules: BTreeMap<String, PythonModuleData>,
+    pub resources: BTreeMap<String, Vec<u8>>,
 }
 
 /// Extract useful information from the files constituting a Python distribution.
@@ -216,6 +221,7 @@ pub fn analyze_python_distribution_data(files: &BTreeMap<PathBuf, Vec<u8>>) -> R
     let mut libraries: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut frozen_c: Vec<u8> = Vec::new();
     let mut py_modules: BTreeMap<String, PythonModuleData> = BTreeMap::new();
+    let mut resources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
 
     let pkgconfig = parse_pkgconfig(files);
 
@@ -332,7 +338,11 @@ pub fn analyze_python_distribution_data(files: &BTreeMap<PathBuf, Vec<u8>>) -> R
                     // Should be handled by .py branch.
                     continue;
                 }
-                // TODO do we care about non-py files?
+
+                // All other files are resource files.
+                else {
+                    resources.insert(full_module_name, data.clone());
+                }
             }
 
             else if rel_path.starts_with("include") {
@@ -389,6 +399,7 @@ pub fn analyze_python_distribution_data(files: &BTreeMap<PathBuf, Vec<u8>>) -> R
         objs_core,
         objs_modules,
         py_modules,
+        resources,
     })
 }
 
