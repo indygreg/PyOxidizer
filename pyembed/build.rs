@@ -4,10 +4,10 @@
 
 extern crate pyrepackager;
 
-use pyrepackager::find_python_modules;
 use pyrepackager::bytecode::compile_bytecode;
 use pyrepackager::config::{parse_config, resolve_python_distribution_archive};
 use pyrepackager::dist::{analyze_python_distribution_tar_zst, PythonModuleData};
+use pyrepackager::fsscan::find_python_modules;
 use pyrepackager::repackage::{BlobEntries, BlobEntry, derive_importlib, link_libpython, write_blob_entries};
 
 use std::collections::BTreeMap;
