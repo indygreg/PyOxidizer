@@ -337,9 +337,10 @@ pub fn analyze_python_distribution_data(files: &BTreeMap<PathBuf, Vec<u8>>) -> R
 
             else if rel_path.starts_with("include") {
                 if rel_str.ends_with(".h") {
-                    let rel = rel_path.file_name().expect("retrieving file name");
+                    let components = rel_path.iter().map(|p| p.to_str().unwrap()).collect::<Vec<_>>();
+                    let rel = itertools::join(&components[2..components.len()], "/");
 
-                    includes.insert(rel.to_str().expect("str conversion").to_string(), data.clone());
+                    includes.insert(rel, data.clone());
                 }
             }
 

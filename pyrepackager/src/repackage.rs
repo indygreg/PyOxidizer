@@ -206,6 +206,9 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
     // We need to make all .h includes accessible.
     for (name, data) in &dist.includes {
         let full = temp_dir_path.join(name);
+
+        create_dir_all(full.parent().expect("parent directory")).expect("create include directory");
+
         fs::write(&full, data).expect("unable to write include file");
     }
 
