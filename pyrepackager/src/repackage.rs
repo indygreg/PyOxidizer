@@ -253,8 +253,12 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
     for library in needed_libraries {
         match library {
             // System libraries we never distribute.
+            // TODO this set should be per-target or be specified by the
+            // distribution somehow.
+            "crypt" => continue,
             "dl" => continue,
             "m" => continue,
+            "nsl" => continue,
             _ => (),
         };
 
