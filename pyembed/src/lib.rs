@@ -9,6 +9,7 @@ extern crate libc;
 extern crate python3_sys as pyffi;
 
 mod data;
+mod pyalloc;
 mod pyinterp;
 mod pymodules_module;
 mod pystr;

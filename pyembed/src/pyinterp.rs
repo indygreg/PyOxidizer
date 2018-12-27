@@ -12,6 +12,7 @@ use cpython::{NoArgs, ObjectProtocol, PyErr, PyModule, PyObject, PyResult, Pytho
 use pyffi;
 
 use crate::data::*;
+use crate::pyalloc::{make_raw_memory_allocator, RawAllocator};
 use crate::pymodules_module::PyInit__pymodules;
 use crate::pystr::OwnedPyStr;
 
@@ -97,6 +98,7 @@ pub struct MainPythonInterpreter {
     pub config: PythonConfig,
     frozen_modules: [pyffi::_frozen; 3],
     init_run: bool,
+    raw_allocator: Option<RawAllocator>,
 }
 
 impl MainPythonInterpreter {
@@ -108,6 +110,7 @@ impl MainPythonInterpreter {
             config,
             frozen_modules: make_custom_frozen_modules(),
             init_run: false,
+            raw_allocator: Some(make_raw_memory_allocator()),
         }
     }
 
@@ -127,6 +130,16 @@ impl MainPythonInterpreter {
         }
 
         let config = &self.config;
+
+        if let Some(raw_allocator) = &self.raw_allocator {
+            unsafe {
+                let ptr = &raw_allocator.allocator as *const _;
+                pyffi::PyMem_SetAllocator(pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_RAW, ptr as *mut _);
+
+                // TODO call this if memory debugging enabled.
+                //pyffi::PyMem_SetupDebugHooks();
+            }
+        }
 
         if config.use_custom_importlib {
             // Replace the frozen modules in the interpreter with our custom set
@@ -222,8 +235,6 @@ impl MainPythonInterpreter {
 
         /* Pre-initialization functions we could support:
          *
-         * PyMem_SetAllocator()
-         * PyMem_SetupDebugHooks()
          * PyObject_SetArenaAllocator()
          * PySys_AddWarnOption()
          * PySys_AddXOption()
