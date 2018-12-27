@@ -4,6 +4,7 @@
 
 use itertools::Itertools;
 use std::collections::BTreeMap;
+use std::fs;
 use std::io::{BufRead, BufReader, Read};
 use std::path::PathBuf;
 
@@ -193,6 +194,9 @@ pub struct PythonModuleData {
 #[allow(unused)]
 #[derive(Debug)]
 pub struct PythonDistributionInfo {
+    /// Directory where distribution lives in the filesystem.
+    pub temp_dir: tempdir::TempDir,
+
     pub config_c: ConfigC,
     pub config_c_in: ConfigC,
     pub extension_modules: BTreeMap<String, SetupEntry>,
@@ -211,7 +215,7 @@ pub struct PythonDistributionInfo {
 /// Passing in a data structure with raw file data within is inefficient. But
 /// it makes things easier to implement and allows us to do things like consume
 /// tarballs without filesystem I/O.
-pub fn analyze_python_distribution_data(files: &BTreeMap<PathBuf, Vec<u8>>) -> Result<PythonDistributionInfo, &'static str> {
+pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir, files: &BTreeMap<PathBuf, Vec<u8>>) -> Result<PythonDistributionInfo, &'static str> {
     let mut objs_core: BTreeMap<PathBuf, Vec<u8>> = BTreeMap::new();
     let mut objs_modules: BTreeMap<PathBuf, Vec<u8>> = BTreeMap::new();
     let mut config_c: Vec<u8> = Vec::new();
@@ -389,6 +393,7 @@ pub fn analyze_python_distribution_data(files: &BTreeMap<PathBuf, Vec<u8>>) -> R
     ];
 
     Ok(PythonDistributionInfo {
+        temp_dir,
         config_c,
         config_c_in,
         extension_modules,
@@ -406,40 +411,30 @@ pub fn analyze_python_distribution_data(files: &BTreeMap<PathBuf, Vec<u8>>) -> R
 pub fn analyze_python_distribution_tar<R: Read>(source: R) -> Result<PythonDistributionInfo, &'static str> {
     let mut tf = tar::Archive::new(source);
 
+    let temp_dir = tempdir::TempDir::new("python-distribution").expect("could not create temp directory");
+    let temp_dir_path = temp_dir.path();
+
+    tf.unpack(&temp_dir_path).expect("unable to extract tar archive");
+
     // Buffering everything to memory isn't very efficient. But it makes things
     // easier to implement. This is part of the build system, so resource
     // constraints hopefully aren't a problem.
     let mut files: BTreeMap<PathBuf, Vec<u8>> = BTreeMap::new();
 
-    // For collecting symlinks so we can resolve content after first pass.
-    let mut links: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
+    for entry in walkdir::WalkDir::new(&temp_dir_path).into_iter() {
+        let entry = entry.unwrap();
+        let path = entry.into_path();
+        let rel_path = path.strip_prefix(&temp_dir_path).expect("unable to obtain relative path");
 
-    for entry in tf.entries().unwrap() {
-        let mut entry = entry.unwrap();
-
-        let et = entry.header().entry_type();
-
-        if et.is_dir() {
+        if path.is_dir() {
             continue;
         }
-        else if et.is_symlink() {
-            let target = entry.path().unwrap().parent().unwrap().join(entry.link_name().unwrap().unwrap());
 
-            links.insert(entry.path().unwrap().to_path_buf(), target);
-        }
-
-        let mut buf: Vec<u8> = Vec::new();
-        entry.read_to_end(&mut buf).unwrap();
-
-        files.insert(entry.path().unwrap().to_path_buf(), buf);
+        let buf = fs::read(&path).expect("unable to read path");
+        files.insert(rel_path.to_path_buf(), buf);
     }
 
-    // Replace content of symlinks with data of the target.
-    for (source, dest) in links.iter() {
-        files.insert(source.clone(), files.get(dest).unwrap().clone());
-    }
-
-    analyze_python_distribution_data(&files)
+    analyze_python_distribution_data(temp_dir, &files)
 }
 
 pub fn analyze_python_distribution_tar_zst<R: Read>(source: R) -> Result<PythonDistributionInfo, &'static str> {
