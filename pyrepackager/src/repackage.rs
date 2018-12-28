@@ -262,10 +262,10 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
             _ => (),
         };
 
-        let data = dist.libraries.get(library).expect(&format!("unable to find library {}", library));
+        let fs_path = dist.libraries.get(library).expect(&format!("unable to find library {}", library));
 
         let library_path = out_dir.join(format!("lib{}.a", library));
-        fs::write(&library_path, data).expect("unable to write library file");
+        fs::copy(fs_path, library_path).expect("unable to copy library file");
 
         println!("cargo:rustc-link-lib=static={}", library);
     }

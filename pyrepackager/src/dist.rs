@@ -212,7 +212,11 @@ pub struct PythonDistributionInfo {
     /// Keys are relative paths. Values are filesystem paths.
     pub includes: BTreeMap<String, PathBuf>,
 
-    pub libraries: BTreeMap<String, Vec<u8>>,
+    /// Static libraries available for linking.
+    ///
+    /// Keys are library names, without the "lib" prefix or file extension.
+    /// Values are filesystem paths where library is located.
+    pub libraries: BTreeMap<String, PathBuf>,
 
     /// Object files providing the core Python implementation.
     ///
@@ -240,7 +244,7 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
     let mut config_c_in: Vec<u8> = Vec::new();
     let mut extension_modules: BTreeMap<String, SetupEntry> = BTreeMap::new();
     let mut includes: BTreeMap<String, PathBuf> = BTreeMap::new();
-    let mut libraries: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    let mut libraries: BTreeMap<String, PathBuf> = BTreeMap::new();
     let mut frozen_c: Vec<u8> = Vec::new();
     let mut py_modules: BTreeMap<String, PythonModuleData> = BTreeMap::new();
     let mut resources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
@@ -337,8 +341,7 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
             }
 
             let name = &rel_str[3..rel_str.len() - 2];
-            let data = fs::read(full_path).expect("unable to read file");
-            libraries.insert(name.to_string(), data);
+            libraries.insert(name.to_string(), full_path.to_path_buf());
         }
     }
 
