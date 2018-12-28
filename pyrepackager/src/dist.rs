@@ -229,7 +229,89 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
     let mut py_modules: BTreeMap<String, PythonModuleData> = BTreeMap::new();
     let mut resources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
 
+    for entry in fs::read_dir(temp_dir.path()).unwrap() {
+        let entry = entry.expect("unable to get directory entry");
+
+        match entry.file_name().to_str() {
+            Some("python") => continue,
+            Some(value) => panic!("unexpected entry in distribution root directory: {}", value),
+            _ => panic!("error listing root directory of Python distribution"),
+        };
+    }
+
+    let python_path = temp_dir.path().join("python");
+
+    for entry in fs::read_dir(&python_path).unwrap() {
+        let entry = entry.expect("unable to get directory entry");
+
+        match entry.file_name().to_str() {
+            Some("build") => continue,
+            Some("install") => continue,
+            Some("lib") => continue,
+            Some("LICENSE.rst") => continue,
+            Some(value) => panic!("unexpected entry in python/ directory: {}", value),
+            _ => panic!("error listing python/ directory"),
+        };
+    }
+
     let pkgconfig = parse_pkgconfig(temp_dir.path());
+
+    let build_path = python_path.join("build");
+
+    for entry in walkdir::WalkDir::new(&build_path).into_iter() {
+        let entry = entry.expect("unable to get directory entry");
+        let full_path = entry.path();
+
+        if full_path.is_dir() {
+            continue;
+        }
+
+        let rel_path = full_path.strip_prefix(&build_path).expect("unable to strip path prefix");
+        let rel_str = rel_path.to_str().expect("unable to convert path to str");
+        let data = fs::read(full_path).expect("could not read path");
+
+        let components = rel_path.iter().collect::<Vec<_>>();
+
+        if components.len() < 1 {
+            continue;
+        }
+
+        if rel_str.ends_with(".o") {
+            match components[0].to_str().unwrap() {
+                "Modules" => {
+                    objs_modules.insert(rel_path.to_path_buf(), data.clone());
+                    ()
+                },
+                "Objects" => {
+                    objs_core.insert(rel_path.to_path_buf(), data.clone());
+                    ()
+                },
+                "Parser" => {
+                    objs_core.insert(rel_path.to_path_buf(), data.clone());
+                    ()
+                },
+                "Programs" => {},
+                "Python" => {
+                    objs_core.insert(rel_path.to_path_buf(), data.clone());
+                    ()
+                },
+                _ => panic!("unexpected object file: {}", rel_str)
+            }
+        } else if rel_str == "Modules/config.c" {
+            config_c = data.clone();
+        } else if rel_str == "Modules/config.c.in" {
+            config_c_in = data.clone();
+        } else if rel_str == "Modules/Setup.dist" {
+            parse_setup_dist(&mut extension_modules, &data);
+        } else if rel_str == "Modules/Setup.local" {
+            parse_setup_local(&mut extension_modules, &data);
+        } else if rel_str == "Python/frozen.c" {
+            frozen_c = data.clone();
+        }
+        else {
+            panic!("unhandled build/ file: {}", rel_str);
+        }
+    }
 
     for entry in walkdir::WalkDir::new(temp_dir.path()).into_iter() {
         let entry = entry.expect("unable to retrieve directory entry");
@@ -246,50 +328,7 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
         let data = fs::read(full_path).expect("could not read path");
 
         if path.starts_with("build/") {
-            let rel_path = path.strip_prefix("build/").unwrap();
-            let rel_str = rel_path.to_str().unwrap();
-
-            let components = rel_path.iter().collect::<Vec<_>>();
-
-            if components.len() < 1 {
-                continue;
-            }
-
-            if rel_str.ends_with(".o") {
-                match components[0].to_str().unwrap() {
-                    "Modules" => {
-                        objs_modules.insert(rel_path.to_path_buf(), data.clone());
-                        ()
-                    },
-                    "Objects" => {
-                        objs_core.insert(rel_path.to_path_buf(), data.clone());
-                        ()
-                    },
-                    "Parser" => {
-                        objs_core.insert(rel_path.to_path_buf(), data.clone());
-                        ()
-                    },
-                    "Programs" => {},
-                    "Python" => {
-                        objs_core.insert(rel_path.to_path_buf(), data.clone());
-                        ()
-                    },
-                    _ => panic!("unexpected object file: {}", rel_str)
-                }
-            } else if rel_str == "Modules/config.c" {
-                config_c = data.clone();
-            } else if rel_str == "Modules/config.c.in" {
-                config_c_in = data.clone();
-            } else if rel_str == "Modules/Setup.dist" {
-                parse_setup_dist(&mut extension_modules, &data);
-            } else if rel_str == "Modules/Setup.local" {
-                parse_setup_local(&mut extension_modules, &data);
-            } else if rel_str == "Python/frozen.c" {
-                frozen_c = data.clone();
-            }
-            else {
-                panic!("unhandled build/ file: {}", rel_str);
-            }
+            continue;
         }
         else if path.starts_with("install/") {
             let rel_path = path.strip_prefix("install/").unwrap();
