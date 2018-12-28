@@ -337,6 +337,26 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
         }
     }
 
+    let include_path = python_path.join("install/include");
+
+    for entry in walkdir::WalkDir::new(&include_path).into_iter() {
+        let entry = entry.expect("unable to retrieve directory entry");
+        let full_path = entry.path();
+
+        if full_path.is_dir() {
+            continue;
+        }
+
+        let rel_path = full_path.strip_prefix(&include_path).expect("unable to strip prefix");
+
+        let components = rel_path.iter().map(|p| p.to_str().unwrap()).collect::<Vec<_>>();
+        let rel = itertools::join(&components[1..components.len()], "/");
+
+        let data = fs::read(full_path).expect("unable to read path");
+
+        includes.insert(rel, data);
+    }
+
     for entry in walkdir::WalkDir::new(temp_dir.path()).into_iter() {
         let entry = entry.expect("unable to retrieve directory entry");
         let full_path = entry.path();
@@ -422,15 +442,6 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
                 // All other files are resource files.
                 else {
                     resources.insert(full_module_name, data.clone());
-                }
-            }
-
-            else if rel_path.starts_with("include") {
-                if rel_str.ends_with(".h") {
-                    let components = rel_path.iter().map(|p| p.to_str().unwrap()).collect::<Vec<_>>();
-                    let rel = itertools::join(&components[2..components.len()], "/");
-
-                    includes.insert(rel, data.clone());
                 }
             }
 
