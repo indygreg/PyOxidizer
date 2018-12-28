@@ -8,7 +8,7 @@ use std::fs;
 use std::io::{BufRead, BufReader, Read};
 use std::path::{PathBuf, Path};
 
-use crate::fsscan::walk_tree_files;
+use crate::fsscan::{find_python_resources, PythonResourceType, walk_tree_files};
 
 #[allow(unused)]
 struct PkgConfig {
@@ -363,6 +363,16 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
 
     let stdlib_path = python_path.join("install").join(pkgconfig.stdlib_path);
 
+    for entry in find_python_resources(&stdlib_path) {
+        match entry.flavor {
+            PythonResourceType::Resource => {
+                resources.insert(entry.name.to_string(), entry.path);
+                ()
+            },
+            _ => (),
+        };
+    }
+
     for entry in walk_tree_files(&stdlib_path) {
         let full_path = entry.path();
 
@@ -418,14 +428,6 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
                 pyc_opt1: pyc_opt1_path,
                 pyc_opt2: pyc_opt2_path,
             });
-        } else if rel_str.ends_with(".pyc") {
-            // Should be handled by .py branch.
-            continue;
-        }
-
-        // All other files are resource files.
-        else {
-            resources.insert(full_module_name, full_path.to_path_buf());
         }
     }
 
