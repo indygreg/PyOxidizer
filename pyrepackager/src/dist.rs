@@ -392,43 +392,45 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
             full_module_name = full_module_name[0..full_module_name.len() - 9].to_string();
         }
 
-        if rel_str.ends_with(".py") {
-            if py_modules.contains_key(&full_module_name) {
-                panic!("duplicate python module: {}", full_module_name);
-            }
-
-            // The .pyc paths are in a __pycache__ sibling directory.
-            let pycache_path = full_path.parent().unwrap().join("__pycache__");
-
-            // TODO should derive base name from build config.
-            let base = "cpython-37";
-
-            let pyc_path = pycache_path.join(format!("{}.{}.pyc", module_name, base));
-            let pyc_opt1_path = pycache_path.join(format!("{}.{}.opt-1.pyc", module_name, base));
-            let pyc_opt2_path = pycache_path.join(format!("{}.{}.opt-2.pyc", module_name, base));
-
-            let pyc_path = match pyc_path.exists() {
-                true => Some(pyc_path),
-                false => None,
-            };
-
-            let pyc_opt1_path = match pyc_opt1_path.exists() {
-                true => Some(pyc_opt1_path),
-                false => None,
-            };
-
-            let pyc_opt2_path = match pyc_opt2_path.exists() {
-                true => Some(pyc_opt2_path),
-                false => None,
-            };
-
-            py_modules.insert(full_module_name, PythonModuleData {
-                py: full_path.to_path_buf(),
-                pyc: pyc_path,
-                pyc_opt1: pyc_opt1_path,
-                pyc_opt2: pyc_opt2_path,
-            });
+        if ! rel_str.ends_with(".py") {
+            continue;
         }
+
+        if py_modules.contains_key(&full_module_name) {
+            panic!("duplicate python module: {}", full_module_name);
+        }
+
+        // The .pyc paths are in a __pycache__ sibling directory.
+        let pycache_path = full_path.parent().unwrap().join("__pycache__");
+
+        // TODO should derive base name from build config.
+        let base = "cpython-37";
+
+        let pyc_path = pycache_path.join(format!("{}.{}.pyc", module_name, base));
+        let pyc_opt1_path = pycache_path.join(format!("{}.{}.opt-1.pyc", module_name, base));
+        let pyc_opt2_path = pycache_path.join(format!("{}.{}.opt-2.pyc", module_name, base));
+
+        let pyc_path = match pyc_path.exists() {
+            true => Some(pyc_path),
+            false => None,
+        };
+
+        let pyc_opt1_path = match pyc_opt1_path.exists() {
+            true => Some(pyc_opt1_path),
+            false => None,
+        };
+
+        let pyc_opt2_path = match pyc_opt2_path.exists() {
+            true => Some(pyc_opt2_path),
+            false => None,
+        };
+
+        py_modules.insert(full_module_name, PythonModuleData {
+            py: full_path.to_path_buf(),
+            pyc: pyc_path,
+            pyc_opt1: pyc_opt1_path,
+            pyc_opt2: pyc_opt2_path,
+        });
     }
 
     let config_c = parse_config_c(&config_c);
