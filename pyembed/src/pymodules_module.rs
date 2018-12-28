@@ -127,6 +127,20 @@ py_class!(class ModulesType |py| {
     }
 });
 
+fn populate_packages(packages: &mut HashSet<&'static str>, name: &'static str) {
+    let mut search = name;
+
+    loop {
+        match search.rfind(".") {
+            Some(idx) => {
+                packages.insert(&search[0..idx]);
+                search = &search[0..idx];
+            },
+            None => break,
+        };
+    }
+}
+
 /// Construct the global ModulesType instance from an embedded data structure.
 fn make_modules(py: Python) -> PyResult<ModulesType> {
     let py_modules = match parse_modules_blob(PY_MODULES_DATA) {
@@ -139,24 +153,15 @@ fn make_modules(py: Python) -> PyResult<ModulesType> {
         Err(msg) => return Err(PyErr::new::<ValueError, _>(py, msg))
     };
 
+    // TODO consider baking set of packages into embedded data.
     let mut packages: HashSet<&'static str> = HashSet::with_capacity(pyc_modules.len());
 
     for key in py_modules.keys() {
-        match key.find(".") {
-            Some(idx) => {
-                packages.insert(&key[0..idx]);
-            },
-            None => {}
-        }
+        populate_packages(&mut packages, key);
     }
 
     for key in pyc_modules.keys() {
-        match key.find(".") {
-            Some(idx) => {
-                packages.insert(&key[0..idx]);
-            },
-            None => {}
-        }
+        populate_packages(&mut packages, key);
     }
 
     ModulesType::create_instance(py, py_modules, pyc_modules, packages)
