@@ -12,6 +12,7 @@ use pyrepackager::repackage::{BlobEntries, BlobEntry, derive_importlib, link_lib
 
 use std::collections::BTreeMap;
 use std::env;
+use std::fs;
 use std::fs::File;
 use std::io::{Cursor, Read, Write};
 use std::path::Path;
@@ -74,14 +75,26 @@ fn main() {
 
     let mut all_py_modules: BTreeMap<String, PythonModuleData> = BTreeMap::new();
     for (name, entry) in dist.py_modules {
+        let pyc_path = match config.package_optimize_level {
+            0 => &entry.pyc,
+            1 => &entry.pyc_opt1,
+            2 => &entry.pyc_opt2,
+            _ => panic!("unsupported optimization level"),
+        };
+
+        let bytecode = match pyc_path {
+            Some(path) => {
+                let data = fs::read(path).expect("unable to read bytecode file");
+                // First 16 bytes of pyc files are used for validation. We don't need this
+                // data so we strip it.
+                Some(data[16..].to_vec())
+            },
+            None => None,
+        };
+
         all_py_modules.insert(name.clone(), PythonModuleData {
-            source: entry.py.clone(),
-            bytecode: match config.package_optimize_level {
-                0 => entry.pyc.clone(),
-                1 => entry.pyc_opt1.clone(),
-                2 => entry.pyc_opt2.clone(),
-                _ => panic!("unsupported optimization level"),
-            }
+            source: fs::read(entry.py).expect("error reading source file"),
+            bytecode,
         });
     }
 

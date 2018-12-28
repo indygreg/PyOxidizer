@@ -185,10 +185,10 @@ fn parse_setup_local(modules: &mut BTreeMap<String, SetupEntry>, data: &Vec<u8>)
 #[allow(unused)]
 #[derive(Clone, Debug)]
 pub struct PythonModuleData {
-    pub py: Vec<u8>,
-    pub pyc: Option<Vec<u8>>,
-    pub pyc_opt1: Option<Vec<u8>>,
-    pub pyc_opt2: Option<Vec<u8>>,
+    pub py: PathBuf,
+    pub pyc: Option<PathBuf>,
+    pub pyc_opt1: Option<PathBuf>,
+    pub pyc_opt2: Option<PathBuf>,
 }
 
 /// Represents a parsed Python distribution.
@@ -394,28 +394,26 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
             let pyc_opt1_path = pycache_path.join(format!("{}.{}.opt-1.pyc", module_name, base));
             let pyc_opt2_path = pycache_path.join(format!("{}.{}.opt-2.pyc", module_name, base));
 
-            // First 16 bytes of pyc files are used for validation. We don't need this
-            // data so we strip it.
-            let pyc_data = match fs::read(&pyc_path) {
-                Ok(v) => Some(v[16..].to_vec()),
-                Err(_) => None,
+            let pyc_path = match pyc_path.exists() {
+                true => Some(pyc_path),
+                false => None,
             };
 
-            let pyc_opt1_data = match fs::read(&pyc_opt1_path) {
-                Ok(v) => Some(v[16..].to_vec()),
-                Err(_) => None,
+            let pyc_opt1_path = match pyc_opt1_path.exists() {
+                true => Some(pyc_opt1_path),
+                false => None,
             };
 
-            let pyc_opt2_data = match fs::read(&pyc_opt2_path) {
-                Ok(v) => Some(v[16..].to_vec()),
-                Err(_) => None,
+            let pyc_opt2_path = match pyc_opt2_path.exists() {
+                true => Some(pyc_opt2_path),
+                false => None,
             };
 
             py_modules.insert(full_module_name, PythonModuleData {
-                py: data.clone(),
-                pyc: pyc_data,
-                pyc_opt1: pyc_opt1_data,
-                pyc_opt2: pyc_opt2_data,
+                py: full_path.to_path_buf(),
+                pyc: pyc_path,
+                pyc_opt1: pyc_opt1_path,
+                pyc_opt2: pyc_opt2_path,
             });
         } else if rel_str.ends_with(".pyc") {
             // Should be handled by .py branch.
