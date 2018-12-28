@@ -6,7 +6,7 @@ extern crate pyrepackager;
 
 use pyrepackager::bytecode::compile_bytecode;
 use pyrepackager::config::{parse_config, resolve_python_distribution_archive};
-use pyrepackager::dist::{analyze_python_distribution_tar_zst, PythonModuleData};
+use pyrepackager::dist::{analyze_python_distribution_tar_zst};
 use pyrepackager::fsscan::find_python_modules;
 use pyrepackager::repackage::{BlobEntries, BlobEntry, derive_importlib, link_libpython, write_blob_entries};
 
@@ -15,6 +15,11 @@ use std::env;
 use std::fs::File;
 use std::io::{Cursor, Read, Write};
 use std::path::Path;
+
+struct PythonModuleData {
+    source: Vec<u8>,
+    bytecode: Option<Vec<u8>>,
+}
 
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
@@ -69,7 +74,15 @@ fn main() {
 
     let mut all_py_modules: BTreeMap<String, PythonModuleData> = BTreeMap::new();
     for (name, entry) in dist.py_modules {
-        all_py_modules.insert(name.clone(), entry.clone());
+        all_py_modules.insert(name.clone(), PythonModuleData {
+            source: entry.py.clone(),
+            bytecode: match config.package_optimize_level {
+                0 => entry.pyc.clone(),
+                1 => entry.pyc_opt1.clone(),
+                2 => entry.pyc_opt2.clone(),
+                _ => panic!("unsupported optimization level"),
+            }
+        });
     }
 
     // Collect additional Python modules and resources to embed in the interpreter.
@@ -78,18 +91,9 @@ fn main() {
         for (name, source) in find_python_modules(&path).unwrap() {
             let bytecode = compile_bytecode(&source, &name, config.package_optimize_level as i32);
 
-            let (pyc, pyc_opt1, pyc_opt2) = match config.package_optimize_level {
-                0 => (Some(bytecode), None, None),
-                1 => (None, Some(bytecode), None),
-                2 => (None, None, Some(bytecode)),
-                _ => panic!("unsupported optimization level"),
-            };
-
-            all_py_modules.insert(name, PythonModuleData {
-                py: source,
-                pyc,
-                pyc_opt1,
-                pyc_opt2,
+            all_py_modules.insert(name.clone(), PythonModuleData {
+                source,
+                bytecode: Some(bytecode),
             });
         }
     }
@@ -104,29 +108,15 @@ fn main() {
     for (name, module) in &all_py_modules {
         py_modules.push(BlobEntry {
             name: name.clone(),
-            data: module.py.clone(),
+            data: module.source.clone(),
         });
 
-        let pyc_data = match config.package_optimize_level {
-            0 => match &module.pyc {
-                Some(data) => Some(data.clone()),
-                None => None,
-            },
-            1 => match &module.pyc_opt1 {
-                Some(data) => Some(data.clone()),
-                None => None,
-            },
-            2 => match &module.pyc_opt2 {
-                Some(data) => Some(data.clone()),
-                None => None,
-            },
-            _ => panic!("unsupported Python optimization level"),
-        };
+        let pyc_data = &module.bytecode;
 
         if pyc_data.is_some() {
             pyc_modules.push(BlobEntry {
                 name: name.clone(),
-                data: pyc_data.unwrap(),
+                data: pyc_data.clone().unwrap(),
             });
         }
     }
