@@ -204,12 +204,12 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
     fs::write(&config_c_path, config_c_source.as_bytes()).expect("unable to write config.c");
 
     // We need to make all .h includes accessible.
-    for (name, data) in &dist.includes {
+    for (name, fs_path) in &dist.includes {
         let full = temp_dir_path.join(name);
 
         create_dir_all(full.parent().expect("parent directory")).expect("create include directory");
 
-        fs::write(&full, data).expect("unable to write include file");
+        fs::copy(fs_path, full).expect("unable to copy include file");
     }
 
     // TODO flags should come from parsed distribution config.

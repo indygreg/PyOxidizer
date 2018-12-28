@@ -206,7 +206,12 @@ pub struct PythonDistributionInfo {
     pub extension_modules: BTreeMap<String, SetupEntry>,
     pub extension_modules_always: Vec<String>,
     pub frozen_c: Vec<u8>,
-    pub includes: BTreeMap<String, Vec<u8>>,
+
+    /// Include files for Python.
+    ///
+    /// Keys are relative paths. Values are filesystem paths.
+    pub includes: BTreeMap<String, PathBuf>,
+
     pub libraries: BTreeMap<String, Vec<u8>>,
 
     /// Object files providing the core Python implementation.
@@ -234,7 +239,7 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
     let mut config_c: Vec<u8> = Vec::new();
     let mut config_c_in: Vec<u8> = Vec::new();
     let mut extension_modules: BTreeMap<String, SetupEntry> = BTreeMap::new();
-    let mut includes: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    let mut includes: BTreeMap<String, PathBuf> = BTreeMap::new();
     let mut libraries: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut frozen_c: Vec<u8> = Vec::new();
     let mut py_modules: BTreeMap<String, PythonModuleData> = BTreeMap::new();
@@ -346,9 +351,7 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
         let components = rel_path.iter().map(|p| p.to_str().unwrap()).collect::<Vec<_>>();
         let rel = itertools::join(&components[1..components.len()], "/");
 
-        let data = fs::read(full_path).expect("unable to read path");
-
-        includes.insert(rel, data);
+        includes.insert(rel, full_path.to_path_buf());
     }
 
     let stdlib_path = python_path.join("install").join(pkgconfig.stdlib_path);
