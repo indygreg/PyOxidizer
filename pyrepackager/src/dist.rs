@@ -214,7 +214,11 @@ pub struct PythonDistributionInfo {
     /// Keys are relative paths. Values are filesystem paths.
     pub objs_core: BTreeMap<PathBuf, PathBuf>,
 
-    pub objs_modules: BTreeMap<PathBuf, Vec<u8>>,
+    /// Object files providing extension modules.
+    ///
+    /// Keys are relative paths. Values are filesystem paths.
+    pub objs_modules: BTreeMap<PathBuf, PathBuf>,
+
     pub py_modules: BTreeMap<String, PythonModuleData>,
     pub resources: BTreeMap<String, Vec<u8>>,
 }
@@ -226,7 +230,7 @@ pub struct PythonDistributionInfo {
 /// tarballs without filesystem I/O.
 pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<PythonDistributionInfo, &'static str> {
     let mut objs_core: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
-    let mut objs_modules: BTreeMap<PathBuf, Vec<u8>> = BTreeMap::new();
+    let mut objs_modules: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
     let mut config_c: Vec<u8> = Vec::new();
     let mut config_c_in: Vec<u8> = Vec::new();
     let mut extension_modules: BTreeMap<String, SetupEntry> = BTreeMap::new();
@@ -269,7 +273,6 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
         let full_path = entry.path();
         let rel_path = full_path.strip_prefix(&build_path).expect("unable to strip path prefix");
         let rel_str = rel_path.to_str().expect("unable to convert path to str");
-        let data = fs::read(full_path).expect("could not read path");
 
         let components = rel_path.iter().collect::<Vec<_>>();
 
@@ -280,7 +283,7 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
         if rel_str.ends_with(".o") {
             match components[0].to_str().unwrap() {
                 "Modules" => {
-                    objs_modules.insert(rel_path.to_path_buf(), data.clone());
+                    objs_modules.insert(rel_path.to_path_buf(), full_path.to_path_buf());
                     ()
                 },
                 "Objects" => {
@@ -299,15 +302,17 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
                 _ => panic!("unexpected object file: {}", rel_str)
             }
         } else if rel_str == "Modules/config.c" {
-            config_c = data.clone();
+            config_c = fs::read(full_path).expect("could not read path");
         } else if rel_str == "Modules/config.c.in" {
-            config_c_in = data.clone();
+            config_c_in = fs::read(full_path).expect("could not read path");
         } else if rel_str == "Modules/Setup.dist" {
+            let data = fs::read(full_path).expect("could not read path");
             parse_setup_dist(&mut extension_modules, &data);
         } else if rel_str == "Modules/Setup.local" {
+            let data = fs::read(full_path).expect("could not read path");
             parse_setup_local(&mut extension_modules, &data);
         } else if rel_str == "Python/frozen.c" {
-            frozen_c = data.clone();
+            frozen_c = fs::read(full_path).expect("could not read path");
         }
         else {
             panic!("unhandled build/ file: {}", rel_str);

@@ -174,10 +174,10 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
 
     for object_filename in &dist.extension_modules_always {
         let module_path = PathBuf::from(format!("Modules/{}", object_filename));
-        let data = dist.objs_modules.get(&module_path).expect(&format!("object file not found: {}", module_path.to_str().unwrap()));
+        let fs_path = dist.objs_modules.get(&module_path).expect(&format!("object file not found: {}", module_path.to_str().unwrap()));
 
         let full = temp_dir_path.join(module_path);
-        fs::write(&full, data).expect("unable to write object file");
+        fs::copy(fs_path, &full).expect("unable to copy object file");
 
         build.object(&full);
     }
@@ -232,10 +232,10 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
 
         for object_filename in &entry.object_filenames {
             let module_path = PathBuf::from(format!("Modules/{}", object_filename));
-            let data = dist.objs_modules.get(&module_path).expect(&format!("object file not found: {}", module_path.to_str().unwrap()));
+            let fs_path = dist.objs_modules.get(&module_path).expect(&format!("object file not found: {}", module_path.to_str().unwrap()));
 
             let full = temp_dir_path.join(module_path);
-            fs::write(&full, data).expect("unable to write object file");
+            fs::copy(fs_path, &full).expect("unable to copy object file");
 
             build.object(&full);
         }
