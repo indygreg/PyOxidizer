@@ -363,43 +363,17 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
     for entry in find_python_resources(&stdlib_path) {
         match entry.flavor {
             PythonResourceType::Resource => {
-                resources.insert(entry.name.to_string(), entry.path);
+                resources.insert(entry.name.clone(), entry.path);
                 ()
             },
+            PythonResourceType::Source => {
+                py_modules.insert(entry.name.clone(), PythonModuleData {
+                    py: entry.path,
+                });
+                ()
+            }
             _ => (),
         };
-    }
-
-    for entry in walk_tree_files(&stdlib_path) {
-        let full_path = entry.path();
-
-        let rel_path = full_path.strip_prefix(&stdlib_path).expect("unable to strip path");
-        let rel_str = rel_path.to_str().expect("cannot convert path to str");
-
-        let components = rel_path.iter().map(|p| p.to_str().unwrap()).collect::<Vec<_>>();
-        let package_parts = &components[0..components.len() - 1];
-        let module_name = rel_path.file_stem().unwrap().to_str().unwrap();
-
-        let mut full_module_name: Vec<&str> = package_parts.to_vec();
-        full_module_name.push(module_name);
-
-        let mut full_module_name = itertools::join(full_module_name, ".");
-
-        if full_module_name.ends_with(".__init__") {
-            full_module_name = full_module_name[0..full_module_name.len() - 9].to_string();
-        }
-
-        if ! rel_str.ends_with(".py") {
-            continue;
-        }
-
-        if py_modules.contains_key(&full_module_name) {
-            panic!("duplicate python module: {}", full_module_name);
-        }
-
-        py_modules.insert(full_module_name, PythonModuleData {
-            py: full_path.to_path_buf(),
-        });
     }
 
     let config_c = parse_config_c(&config_c);
