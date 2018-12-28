@@ -157,12 +157,12 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
 
     let mut build = cc::Build::new();
 
-    for (obj_path, data) in &dist.objs_core {
-        let parent = temp_dir_path.join(obj_path.parent().unwrap());
+    for (rel_path, fs_path) in &dist.objs_core {
+        let parent = temp_dir_path.join(rel_path.parent().unwrap());
         create_dir_all(parent).unwrap();
 
-        let full = temp_dir_path.join(obj_path);
-        fs::write(&full, data).expect("unable to write object file");
+        let full = temp_dir_path.join(rel_path);
+        fs::copy(fs_path, &full).expect("unable to copy object file");
 
         build.object(&full);
     }

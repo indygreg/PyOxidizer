@@ -208,7 +208,12 @@ pub struct PythonDistributionInfo {
     pub frozen_c: Vec<u8>,
     pub includes: BTreeMap<String, Vec<u8>>,
     pub libraries: BTreeMap<String, Vec<u8>>,
-    pub objs_core: BTreeMap<PathBuf, Vec<u8>>,
+
+    /// Object files providing the core Python implementation.
+    ///
+    /// Keys are relative paths. Values are filesystem paths.
+    pub objs_core: BTreeMap<PathBuf, PathBuf>,
+
     pub objs_modules: BTreeMap<PathBuf, Vec<u8>>,
     pub py_modules: BTreeMap<String, PythonModuleData>,
     pub resources: BTreeMap<String, Vec<u8>>,
@@ -220,7 +225,7 @@ pub struct PythonDistributionInfo {
 /// it makes things easier to implement and allows us to do things like consume
 /// tarballs without filesystem I/O.
 pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<PythonDistributionInfo, &'static str> {
-    let mut objs_core: BTreeMap<PathBuf, Vec<u8>> = BTreeMap::new();
+    let mut objs_core: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
     let mut objs_modules: BTreeMap<PathBuf, Vec<u8>> = BTreeMap::new();
     let mut config_c: Vec<u8> = Vec::new();
     let mut config_c_in: Vec<u8> = Vec::new();
@@ -279,16 +284,16 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
                     ()
                 },
                 "Objects" => {
-                    objs_core.insert(rel_path.to_path_buf(), data.clone());
+                    objs_core.insert(rel_path.to_path_buf(), full_path.to_path_buf());
                     ()
                 },
                 "Parser" => {
-                    objs_core.insert(rel_path.to_path_buf(), data.clone());
+                    objs_core.insert(rel_path.to_path_buf(), full_path.to_path_buf());
                     ()
                 },
                 "Programs" => {},
                 "Python" => {
-                    objs_core.insert(rel_path.to_path_buf(), data.clone());
+                    objs_core.insert(rel_path.to_path_buf(), full_path.to_path_buf());
                     ()
                 },
                 _ => panic!("unexpected object file: {}", rel_str)
