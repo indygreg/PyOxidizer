@@ -182,12 +182,6 @@ fn parse_setup_local(modules: &mut BTreeMap<String, SetupEntry>, data: &Vec<u8>)
     }
 }
 
-#[allow(unused)]
-#[derive(Clone, Debug)]
-pub struct PythonModuleData {
-    pub py: PathBuf,
-}
-
 /// Represents a parsed Python distribution.
 ///
 /// Distribution info is typically derived from a tarball containing a
@@ -225,7 +219,7 @@ pub struct PythonDistributionInfo {
     /// Keys are relative paths. Values are filesystem paths.
     pub objs_modules: BTreeMap<PathBuf, PathBuf>,
 
-    pub py_modules: BTreeMap<String, PythonModuleData>,
+    pub py_modules: BTreeMap<String, PathBuf>,
 
     /// Non-module Python resource files.
     ///
@@ -247,7 +241,7 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
     let mut includes: BTreeMap<String, PathBuf> = BTreeMap::new();
     let mut libraries: BTreeMap<String, PathBuf> = BTreeMap::new();
     let mut frozen_c: Vec<u8> = Vec::new();
-    let mut py_modules: BTreeMap<String, PythonModuleData> = BTreeMap::new();
+    let mut py_modules: BTreeMap<String, PathBuf> = BTreeMap::new();
     let mut resources: BTreeMap<String, PathBuf> = BTreeMap::new();
 
     for entry in fs::read_dir(temp_dir.path()).unwrap() {
@@ -367,9 +361,7 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
                 ()
             },
             PythonResourceType::Source => {
-                py_modules.insert(entry.name.clone(), PythonModuleData {
-                    py: entry.path,
-                });
+                py_modules.insert(entry.name.clone(), entry.path);
                 ()
             }
             _ => (),

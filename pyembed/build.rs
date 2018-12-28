@@ -74,8 +74,8 @@ fn main() {
     fh.write(&importlib.bootstrap_external_bytecode).unwrap();
 
     let mut all_py_modules: BTreeMap<String, PythonModuleData> = BTreeMap::new();
-    for (name, entry) in dist.py_modules {
-        let source = fs::read(entry.py).expect("error reading source file");
+    for (name, fs_path) in dist.py_modules {
+        let source = fs::read(fs_path).expect("error reading source file");
 
         let bytecode = match compile_bytecode(&source, &name, config.package_optimize_level as i32) {
             Ok(res) => Some(res),
