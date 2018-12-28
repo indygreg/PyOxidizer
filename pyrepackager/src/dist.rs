@@ -186,9 +186,6 @@ fn parse_setup_local(modules: &mut BTreeMap<String, SetupEntry>, data: &Vec<u8>)
 #[derive(Clone, Debug)]
 pub struct PythonModuleData {
     pub py: PathBuf,
-    pub pyc: Option<PathBuf>,
-    pub pyc_opt1: Option<PathBuf>,
-    pub pyc_opt2: Option<PathBuf>,
 }
 
 /// Represents a parsed Python distribution.
@@ -400,36 +397,8 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
             panic!("duplicate python module: {}", full_module_name);
         }
 
-        // The .pyc paths are in a __pycache__ sibling directory.
-        let pycache_path = full_path.parent().unwrap().join("__pycache__");
-
-        // TODO should derive base name from build config.
-        let base = "cpython-37";
-
-        let pyc_path = pycache_path.join(format!("{}.{}.pyc", module_name, base));
-        let pyc_opt1_path = pycache_path.join(format!("{}.{}.opt-1.pyc", module_name, base));
-        let pyc_opt2_path = pycache_path.join(format!("{}.{}.opt-2.pyc", module_name, base));
-
-        let pyc_path = match pyc_path.exists() {
-            true => Some(pyc_path),
-            false => None,
-        };
-
-        let pyc_opt1_path = match pyc_opt1_path.exists() {
-            true => Some(pyc_opt1_path),
-            false => None,
-        };
-
-        let pyc_opt2_path = match pyc_opt2_path.exists() {
-            true => Some(pyc_opt2_path),
-            false => None,
-        };
-
         py_modules.insert(full_module_name, PythonModuleData {
             py: full_path.to_path_buf(),
-            pyc: pyc_path,
-            pyc_opt1: pyc_opt1_path,
-            pyc_opt2: pyc_opt2_path,
         });
     }
 
