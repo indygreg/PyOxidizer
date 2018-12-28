@@ -36,13 +36,13 @@ pub fn derive_importlib(dist: &PythonDistributionInfo) -> ImportlibData {
 
     let bootstrap_source = fs::read(&mod_bootstrap.py).expect("unable to read bootstrap source");
     let module_name = "<frozen importlib._bootstrap>";
-    let bootstrap_bytecode = compile_bytecode(&bootstrap_source, module_name, 0);
+    let bootstrap_bytecode = compile_bytecode(&bootstrap_source, module_name, 0).expect("error compiling bytecode");
 
     let mut bootstrap_external_source = fs::read(&mod_bootstrap_external.py).expect("unable to read bootstrap_external source");
     bootstrap_external_source.extend("\n# END OF importlib/_bootstrap_external.py\n\n".bytes());
     bootstrap_external_source.extend(PYTHON_IMPORTER);
     let module_name = "<frozen importlib._bootstrap_external>";
-    let bootstrap_external_bytecode = compile_bytecode(&bootstrap_external_source, module_name, 0);
+    let bootstrap_external_bytecode = compile_bytecode(&bootstrap_external_source, module_name, 0).expect("error compiling bytecode");
 
     ImportlibData {
         bootstrap_source: bootstrap_source,

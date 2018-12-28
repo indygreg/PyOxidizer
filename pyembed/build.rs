@@ -102,7 +102,7 @@ fn main() {
     // Reverse iteration order so first entry in config is used (last write wins).
     for path in config.package_module_paths.iter().rev() {
         for (name, source) in find_python_modules(&path).unwrap() {
-            let bytecode = compile_bytecode(&source, &name, config.package_optimize_level as i32);
+            let bytecode = compile_bytecode(&source, &name, config.package_optimize_level as i32).expect("error compiling bytecode");
 
             all_py_modules.insert(name.clone(), PythonModuleData {
                 source,
