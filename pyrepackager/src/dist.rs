@@ -229,7 +229,11 @@ pub struct PythonDistributionInfo {
     pub objs_modules: BTreeMap<PathBuf, PathBuf>,
 
     pub py_modules: BTreeMap<String, PythonModuleData>,
-    pub resources: BTreeMap<String, Vec<u8>>,
+
+    /// Non-module Python resource files.
+    ///
+    /// Keys are full module/resource names. Values are filesystem paths.
+    pub resources: BTreeMap<String, PathBuf>,
 }
 
 /// Extract useful information from the files constituting a Python distribution.
@@ -247,7 +251,7 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
     let mut libraries: BTreeMap<String, PathBuf> = BTreeMap::new();
     let mut frozen_c: Vec<u8> = Vec::new();
     let mut py_modules: BTreeMap<String, PythonModuleData> = BTreeMap::new();
-    let mut resources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    let mut resources: BTreeMap<String, PathBuf> = BTreeMap::new();
 
     for entry in fs::read_dir(temp_dir.path()).unwrap() {
         let entry = entry.expect("unable to get directory entry");
@@ -361,7 +365,6 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
 
     for entry in walk_tree_files(&stdlib_path) {
         let full_path = entry.path();
-        let data = fs::read(full_path).expect("could not read file");
 
         let rel_path = full_path.strip_prefix(&stdlib_path).expect("unable to strip path");
         let rel_str = rel_path.to_str().expect("cannot convert path to str");
@@ -422,7 +425,7 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
 
         // All other files are resource files.
         else {
-            resources.insert(full_module_name, data.clone());
+            resources.insert(full_module_name, full_path.to_path_buf());
         }
     }
 
