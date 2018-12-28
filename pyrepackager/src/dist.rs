@@ -357,7 +357,8 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
         includes.insert(rel, data);
     }
 
-    for entry in walkdir::WalkDir::new(temp_dir.path()).into_iter() {
+    let stdlib_path = python_path.join("install").join(pkgconfig.stdlib_path);
+    for entry in walkdir::WalkDir::new(&stdlib_path).into_iter() {
         let entry = entry.expect("unable to retrieve directory entry");
         let full_path = entry.path();
 
@@ -365,96 +366,71 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
             continue;
         }
 
-        let rel_path = full_path.strip_prefix(temp_dir.path()).expect("unable to strip temp directory prefix");
-        let rel_path = rel_path.strip_prefix("python/").expect("path does not begin with python/");
-        let path = &rel_path;
+        let data = fs::read(full_path).expect("could not read file");
 
-        let data = fs::read(full_path).expect("could not read path");
+        let rel_path = full_path.strip_prefix(&stdlib_path).expect("unable to strip path");
+        let rel_str = rel_path.to_str().expect("cannot convert path to str");
 
-        if path.starts_with("build/") {
-            continue;
+        let components = rel_path.iter().map(|p| p.to_str().unwrap()).collect::<Vec<_>>();
+        let package_parts = &components[0..components.len() - 1];
+        let module_name = rel_path.file_stem().unwrap().to_str().unwrap();
+
+
+        let mut full_module_name: Vec<&str> = package_parts.to_vec();
+        full_module_name.push(module_name);
+
+        let mut full_module_name = itertools::join(full_module_name, ".");
+
+        if full_module_name.ends_with(".__init__") {
+            full_module_name = full_module_name[0..full_module_name.len() - 9].to_string();
         }
-        else if path.starts_with("install/") {
-            let rel_path = path.strip_prefix("install/").unwrap();
-            let rel_str = rel_path.to_str().unwrap();
-            let components = rel_path.iter().map(|p| p.to_str().unwrap()).collect::<Vec<_>>();
 
-            if rel_str.starts_with(pkgconfig.stdlib_path.to_str().unwrap()) {
-                if components.len() < 3 {
-                    continue;
-                }
-
-                let package_parts = &components[2..components.len() - 1];
-                let module_name = rel_path.file_stem().unwrap().to_str().unwrap();
-
-                let mut full_module_name: Vec<&str> = package_parts.to_vec();
-                full_module_name.push(module_name);
-
-                let mut full_module_name = itertools::join(full_module_name, ".");
-
-                if full_module_name.ends_with(".__init__") {
-                    full_module_name = full_module_name[0..full_module_name.len() - 9].to_string();
-                }
-
-                if rel_str.ends_with(".py") {
-                    if py_modules.contains_key(&full_module_name) {
-                        panic!("duplicate python module: {}", full_module_name);
-                    }
-
-                    // The .pyc paths are in a __pycache__ sibling directory.
-                    let pycache_path = full_path.parent().unwrap().join("__pycache__");
-
-                    // TODO should derive base name from build config.
-                    let base = "cpython-37";
-
-                    let pyc_path = pycache_path.join(format!("{}.{}.pyc", module_name, base));
-                    let pyc_opt1_path = pycache_path.join(format!("{}.{}.opt-1.pyc", module_name, base));
-                    let pyc_opt2_path = pycache_path.join(format!("{}.{}.opt-2.pyc", module_name, base));
-
-                    // First 16 bytes of pyc files are used for validation. We don't need this
-                    // data so we strip it.
-                    let pyc_data = match fs::read(&pyc_path) {
-                        Ok(v) => Some(v[16..].to_vec()),
-                        Err(_) => None,
-                    };
-
-                    let pyc_opt1_data = match fs::read(&pyc_opt1_path) {
-                        Ok(v) => Some(v[16..].to_vec()),
-                        Err(_) => None,
-                    };
-
-                    let pyc_opt2_data = match fs::read(&pyc_opt2_path) {
-                        Ok(v) => Some(v[16..].to_vec()),
-                        Err(_) => None,
-                    };
-
-                    py_modules.insert(full_module_name, PythonModuleData {
-                        py: data.clone(),
-                        pyc: pyc_data,
-                        pyc_opt1: pyc_opt1_data,
-                        pyc_opt2: pyc_opt2_data,
-                    });
-                } else if rel_str.ends_with(".pyc") {
-                    // Should be handled by .py branch.
-                    continue;
-                }
-
-                // All other files are resource files.
-                else {
-                    resources.insert(full_module_name, data.clone());
-                }
+        if rel_str.ends_with(".py") {
+            if py_modules.contains_key(&full_module_name) {
+                panic!("duplicate python module: {}", full_module_name);
             }
 
-            // TODO do we care about non-stdlib files?
-        }
-        else if path.starts_with("lib/") {
+            // The .pyc paths are in a __pycache__ sibling directory.
+            let pycache_path = full_path.parent().unwrap().join("__pycache__");
+
+            // TODO should derive base name from build config.
+            let base = "cpython-37";
+
+            let pyc_path = pycache_path.join(format!("{}.{}.pyc", module_name, base));
+            let pyc_opt1_path = pycache_path.join(format!("{}.{}.opt-1.pyc", module_name, base));
+            let pyc_opt2_path = pycache_path.join(format!("{}.{}.opt-2.pyc", module_name, base));
+
+            // First 16 bytes of pyc files are used for validation. We don't need this
+            // data so we strip it.
+            let pyc_data = match fs::read(&pyc_path) {
+                Ok(v) => Some(v[16..].to_vec()),
+                Err(_) => None,
+            };
+
+            let pyc_opt1_data = match fs::read(&pyc_opt1_path) {
+                Ok(v) => Some(v[16..].to_vec()),
+                Err(_) => None,
+            };
+
+            let pyc_opt2_data = match fs::read(&pyc_opt2_path) {
+                Ok(v) => Some(v[16..].to_vec()),
+                Err(_) => None,
+            };
+
+            py_modules.insert(full_module_name, PythonModuleData {
+                py: data.clone(),
+                pyc: pyc_data,
+                pyc_opt1: pyc_opt1_data,
+                pyc_opt2: pyc_opt2_data,
+            });
+        } else if rel_str.ends_with(".pyc") {
+            // Should be handled by .py branch.
             continue;
         }
-        else if path.to_str().unwrap() == "LICENSE.rst" {
-            continue;
-        }
+
+        // All other files are resource files.
         else {
-            panic!("unexpected path in archive: {}", path.to_str().unwrap());
+            resources.insert(full_module_name, data.clone());
         }
     }
 
