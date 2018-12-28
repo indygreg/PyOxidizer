@@ -313,6 +313,30 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
         }
     }
 
+    let lib_path = python_path.join("lib");
+
+    for entry in walkdir::WalkDir::new(&lib_path).into_iter() {
+        let entry = entry.expect("unable to get directory entry");
+        let full_path = entry.path();
+
+        if full_path.is_dir() {
+            continue;
+        }
+
+        let rel_path = full_path.strip_prefix(&lib_path).expect("unable to strip path");
+        let rel_str = rel_path.to_str().expect("could not convert path to str");
+
+        if rel_str.ends_with(".a") {
+            if ! rel_str.starts_with("lib") {
+                panic!(".a file does not begin with lib: {:?}", rel_path);
+            }
+
+            let name = &rel_str[3..rel_str.len() - 2];
+            let data = fs::read(full_path).expect("unable to read file");
+            libraries.insert(name.to_string(), data);
+        }
+    }
+
     for entry in walkdir::WalkDir::new(temp_dir.path()).into_iter() {
         let entry = entry.expect("unable to retrieve directory entry");
         let full_path = entry.path();
@@ -413,18 +437,7 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
             // TODO do we care about non-stdlib files?
         }
         else if path.starts_with("lib/") {
-            let rel_path = path.strip_prefix("lib/").unwrap();
-            let rel_str = rel_path.to_str().unwrap();
-
-            if rel_str.ends_with(".a") {
-                if ! rel_str.starts_with("lib") {
-                    panic!(".a file does not begin with lib: {}", path.to_str().unwrap());
-                }
-
-                let name = &rel_str[3..rel_str.len() - 2];
-
-                libraries.insert(name.to_string(), data.clone());
-            }
+            continue;
         }
         else if path.to_str().unwrap() == "LICENSE.rst" {
             continue;
