@@ -8,7 +8,7 @@ use pyrepackager::bytecode::compile_bytecode;
 use pyrepackager::config::{parse_config, resolve_python_distribution_archive};
 use pyrepackager::dist::{analyze_python_distribution_tar_zst};
 use pyrepackager::fsscan::find_python_modules;
-use pyrepackager::repackage::{BlobEntries, BlobEntry, derive_importlib, link_libpython, write_blob_entries};
+use pyrepackager::repackage::{BlobEntries, BlobEntry, derive_importlib, link_libpython, is_stdlib_test_package, write_blob_entries};
 
 use std::collections::BTreeMap;
 use std::env;
@@ -74,17 +74,18 @@ fn main() {
     fh.write(&importlib.bootstrap_external_bytecode).unwrap();
 
     let mut all_py_modules: BTreeMap<String, PythonModuleData> = BTreeMap::new();
+
     for (name, fs_path) in dist.py_modules {
+        if is_stdlib_test_package(&name) {
+            println!("skipping test stdlib module: {}", name);
+            continue;
+        }
+
         let source = fs::read(fs_path).expect("error reading source file");
 
         let bytecode = match compile_bytecode(&source, &name, config.package_optimize_level as i32) {
             Ok(res) => Some(res),
-            Err(msg) => {
-                // TODO consider making this fatal once we stop compiling test
-                // modules that fail to compile.
-                println!("error compiling bytecode: {}", msg);
-                None
-            },
+            Err(msg) => panic!("error compiling bytecode: {}", msg),
         };
 
         all_py_modules.insert(name.clone(), PythonModuleData {

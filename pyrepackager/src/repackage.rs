@@ -16,6 +16,21 @@ use super::dist::PythonDistributionInfo;
 
 pub const PYTHON_IMPORTER: &'static [u8] = include_bytes!("memoryimporter.py");
 
+const STDLIB_TEST_PACKAGES: &[&str] = &[
+    "bsddb.test",
+    "ctypes.test",
+    "distutils.tests",
+    "email.test",
+    "idlelib.idle_test",
+    "json.tests",
+    "lib-tk.test",
+    "lib2to3.tests",
+    "sqlite3.test",
+    "test",
+    "tkinter.test",
+    "unittest.test",
+];
+
 pub struct ImportlibData {
     pub bootstrap_source: Vec<u8>,
     pub bootstrap_bytecode: Vec<u8>,
@@ -275,4 +290,16 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
     }
 
     build.compile("pyembedded");
+}
+
+pub fn is_stdlib_test_package(name: &str) -> bool {
+    for package in STDLIB_TEST_PACKAGES {
+        let prefix = format!("{}.", package);
+
+        if name.starts_with(&prefix) {
+            return true;
+        }
+    }
+
+    false
 }

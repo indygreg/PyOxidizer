@@ -28,22 +28,6 @@ pub mod fsscan;
 pub mod repackage;
 
 #[allow(unused)]
-const STDLIB_TEST_DIRS: &[&str] = &[
-    "bsddb/test",
-    "ctypes/test",
-    "distutils/tests",
-    "email/test",
-    "idlelib/idle_test",
-    "json/tests",
-    "lib-tk/test",
-    "lib2to3/tests",
-    "sqlite3/test",
-    "test",
-    "tkinter/test",
-    "unittest/test",
-];
-
-#[allow(unused)]
 const STDLIB_NONTEST_IGNORE_DIRS: &[&str] = &[
     // The config directory describes how Python was built. It isn't relevant.
     "config",
