@@ -8,6 +8,8 @@ use std::fs;
 use std::io::{BufRead, BufReader, Read};
 use std::path::{PathBuf, Path};
 
+use crate::fsscan::walk_tree_files;
+
 #[allow(unused)]
 struct PkgConfig {
     version: String,
@@ -258,14 +260,8 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
 
     let build_path = python_path.join("build");
 
-    for entry in walkdir::WalkDir::new(&build_path).into_iter() {
-        let entry = entry.expect("unable to get directory entry");
+    for entry in walk_tree_files(&build_path) {
         let full_path = entry.path();
-
-        if full_path.is_dir() {
-            continue;
-        }
-
         let rel_path = full_path.strip_prefix(&build_path).expect("unable to strip path prefix");
         let rel_str = rel_path.to_str().expect("unable to convert path to str");
         let data = fs::read(full_path).expect("could not read path");
@@ -315,14 +311,8 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
 
     let lib_path = python_path.join("lib");
 
-    for entry in walkdir::WalkDir::new(&lib_path).into_iter() {
-        let entry = entry.expect("unable to get directory entry");
+    for entry in walk_tree_files(&lib_path) {
         let full_path = entry.path();
-
-        if full_path.is_dir() {
-            continue;
-        }
-
         let rel_path = full_path.strip_prefix(&lib_path).expect("unable to strip path");
         let rel_str = rel_path.to_str().expect("could not convert path to str");
 
@@ -339,14 +329,8 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
 
     let include_path = python_path.join("install/include");
 
-    for entry in walkdir::WalkDir::new(&include_path).into_iter() {
-        let entry = entry.expect("unable to retrieve directory entry");
+    for entry in walk_tree_files(&include_path) {
         let full_path = entry.path();
-
-        if full_path.is_dir() {
-            continue;
-        }
-
         let rel_path = full_path.strip_prefix(&include_path).expect("unable to strip prefix");
 
         let components = rel_path.iter().map(|p| p.to_str().unwrap()).collect::<Vec<_>>();
@@ -358,14 +342,9 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
     }
 
     let stdlib_path = python_path.join("install").join(pkgconfig.stdlib_path);
-    for entry in walkdir::WalkDir::new(&stdlib_path).into_iter() {
-        let entry = entry.expect("unable to retrieve directory entry");
+
+    for entry in walk_tree_files(&stdlib_path) {
         let full_path = entry.path();
-
-        if full_path.is_dir() {
-            continue;
-        }
-
         let data = fs::read(full_path).expect("could not read file");
 
         let rel_path = full_path.strip_prefix(&stdlib_path).expect("unable to strip path");
@@ -374,7 +353,6 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
         let components = rel_path.iter().map(|p| p.to_str().unwrap()).collect::<Vec<_>>();
         let package_parts = &components[0..components.len() - 1];
         let module_name = rel_path.file_stem().unwrap().to_str().unwrap();
-
 
         let mut full_module_name: Vec<&str> = package_parts.to_vec();
         full_module_name.push(module_name);

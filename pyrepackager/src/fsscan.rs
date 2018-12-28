@@ -8,6 +8,23 @@ use std::ffi::OsStr;
 use std::fs;
 use std::path::{PathBuf, Path};
 
+pub fn walk_tree_files(path: &Path) -> Box<Iterator<Item = walkdir::DirEntry>> {
+    let res = walkdir::WalkDir::new(path);
+
+    let filtered = res.into_iter().filter_map(|entry| {
+        let entry = entry.expect("unable to get directory entry");
+
+        let path = entry.path();
+
+        match path.is_dir() {
+            true => None,
+            false => Some(entry),
+        }
+    });
+
+    Box::new(filtered)
+}
+
 /// Represents the type of Python resource.
 #[derive(Debug, PartialEq)]
 pub enum PythonResourceType {
