@@ -130,8 +130,15 @@ fn main() {
         }
     }
 
+    let module_names_path = Path::new(&out_dir).join("py-module-names");
     let py_modules_path = Path::new(&out_dir).join("py-modules");
     let pyc_modules_path = Path::new(&out_dir).join("pyc-modules");
+
+    let mut fh = File::create(&module_names_path).expect("error creating file");
+    for name in all_py_modules.keys() {
+        fh.write(name.as_bytes()).expect("failed to write");
+        fh.write(b"\n").expect("failed to write");
+    }
 
     let fh = File::create(&py_modules_path).unwrap();
     write_blob_entries(&fh, &py_modules).unwrap();
