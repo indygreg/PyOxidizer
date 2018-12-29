@@ -54,6 +54,10 @@ lazy_static! {
     };
 }
 
+/// Python extension modules that should never be included.
+///
+/// Ideally this data structure doesn't exist. But there are some problems
+/// with various extensions on various targets.
 lazy_static! {
     static ref OS_IGNORE_EXTENSIONS: Vec<&'static str> = {
         let mut v = Vec::new();
