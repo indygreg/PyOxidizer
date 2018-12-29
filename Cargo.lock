@@ -862,6 +862,7 @@ dependencies = [
  "cpython-copy 0.2.1",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.45 (registry+https://github.com/rust-lang/crates.io-index)",
  "python3-copy-sys 0.2.1",
  "regex 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",

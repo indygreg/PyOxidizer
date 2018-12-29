@@ -31,6 +31,52 @@ const STDLIB_TEST_PACKAGES: &[&str] = &[
     "unittest.test",
 ];
 
+/// Libraries provided by the host that we can ignore in Python module library dependencies.
+///
+/// Libraries in this data structure are not provided by the Python distribution.
+/// A library should only be in this data structure if it is universally distributed
+/// by the OS. It is assumed that all binaries produced for the target will link
+/// against these libraries by default.
+lazy_static! {
+    static ref OS_IGNORE_LIBRARIES: Vec<&'static str> = {
+        let mut v = Vec::new();
+
+        if cfg!(target_os = "linux") {
+            v.push("dl");
+            v.push("m");
+        }
+        else if cfg!(target_os = "macos") {
+            v.push("dl");
+            v.push("m");
+        }
+
+        v
+    };
+}
+
+lazy_static! {
+    static ref OS_IGNORE_EXTENSIONS: Vec<&'static str> = {
+        let mut v = Vec::new();
+
+        if cfg!(target_os = "linux") {
+            // Linking issues.
+            v.push("_crypt");
+
+            // Linking issues.
+            v.push("nis");
+        }
+
+        else if cfg!(target_os = "macos") {
+            // curses and readline have linking issues.
+            v.push("_curses");
+            v.push("_curses_panel");
+            v.push("readline");
+        }
+
+        v
+    };
+}
+
 pub struct ImportlibData {
     pub bootstrap_source: Vec<u8>,
     pub bootstrap_bytecode: Vec<u8>,
@@ -201,10 +247,9 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
     // built/available and what's requested from the current config.
     let mut extension_modules: BTreeSet<&String> = BTreeSet::from_iter(dist.extension_modules.keys());
 
-    // TODO support these extensions.
-    extension_modules.remove(&String::from("_curses"));
-    extension_modules.remove(&String::from("_curses_panel"));
-    extension_modules.remove(&String::from("readline"));
+    for e in OS_IGNORE_EXTENSIONS.as_slice() {
+        extension_modules.remove(&String::from(*e));
+    }
 
     // TODO accept an argument that specifies which extension modules are
     // relevant.
@@ -257,26 +302,21 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
 
         for library in &entry.libraries {
             needed_libraries.insert(library);
+            println!("library {} required by {}", library, name);
         }
 
         for framework in &entry.frameworks {
             needed_frameworks.insert(framework);
+            println!("framework {} required by {}", framework, name);
         }
     }
 
-    // Extract all required libraries and link against them.
     for library in needed_libraries {
-        match library {
-            // System libraries we never distribute.
-            // TODO this set should be per-target or be specified by the
-            // distribution somehow.
-            "crypt" => continue,
-            "dl" => continue,
-            "m" => continue,
-            "nsl" => continue,
-            _ => (),
-        };
+        if OS_IGNORE_LIBRARIES.contains(&library) {
+            continue;
+        }
 
+        // Otherwise find the library in the distribution. Extract it. And statically link against it.
         let fs_path = dist.libraries.get(library).expect(&format!("unable to find library {}", library));
 
         let library_path = out_dir.join(format!("lib{}.a", library));

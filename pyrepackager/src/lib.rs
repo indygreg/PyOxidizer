@@ -7,6 +7,8 @@ extern crate cc;
 extern crate cpython_copy as cpython;
 extern crate hex;
 extern crate itertools;
+#[macro_use]
+extern crate lazy_static;
 extern crate libc;
 extern crate python3_copy_sys as pyffi;
 extern crate regex;

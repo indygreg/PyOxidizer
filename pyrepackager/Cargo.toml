@@ -9,6 +9,7 @@ byteorder = "1.2"
 cc = "1.0"
 hex = "0.3"
 itertools = "0.8"
+lazy_static = "1.2"
 libc = "0.2"
 python3-copy-sys = { path = "../third_party/rust-cpython-copy/python3-sys" }
 regex = "1"
