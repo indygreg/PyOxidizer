@@ -15,6 +15,7 @@ extern crate regex;
 extern crate reqwest;
 #[macro_use]
 extern crate serde_derive;
+extern crate serde_json;
 extern crate sha2;
 extern crate tar;
 extern crate tempdir;

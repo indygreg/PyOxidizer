@@ -10,36 +10,59 @@ use std::path::{PathBuf, Path};
 
 use crate::fsscan::{find_python_resources, PythonResourceType, walk_tree_files};
 
-#[allow(unused)]
-struct PkgConfig {
-    version: String,
-    stdlib_path: PathBuf,
+#[derive(Debug, Deserialize)]
+struct LinkEntry {
+    name: String,
+    path_static: String,
+    path_dynamic: String,
 }
 
-/// Parse useful information out of Python's pkgconfig file.
-fn parse_pkgconfig(dist_path: &Path) -> PkgConfig {
-    let python_pc = dist_path.join("python/install/lib/pkgconfig/python3.pc");
+#[derive(Debug, Deserialize)]
+struct PythonBuildLinksInfo {
+    core: Vec<LinkEntry>,
+    extensions: BTreeMap<String, LinkEntry>,
+}
 
-    let buf = fs::read(python_pc).expect("failed to read pkgconfig");
+#[derive(Debug, Deserialize)]
+struct PythonBuildExtensionInfo {
+    init_fn: String,
+    objs: Vec<String>,
+    static_lib: String,
+    system_lib_depends: Vec<String>,
+}
 
-    let reader = BufReader::new(&*buf);
+#[derive(Debug, Deserialize)]
+struct PythonBuildCoreInfo {
+    objs: Vec<String>,
+    system_lib_depends: Vec<String>,
+}
 
-    let mut version: String = String::new();
+#[derive(Debug, Deserialize)]
+struct PythonBuildInfo {
+    builtin_extensions: BTreeMap<String, String>,
+    core: PythonBuildCoreInfo,
+    extensions: BTreeMap<String, PythonBuildExtensionInfo>,
+}
 
-    for line in reader.lines() {
-        let line = line.unwrap();
+#[derive(Debug, Deserialize)]
+struct PythonJsonMain {
+    arch: String,
+    os: String,
+    python_exe: String,
+    python_flavor: String,
+    python_include: String,
+    python_stdlib: String,
+    python_version: String,
+    version: String,
+    build_info: PythonBuildInfo,
+}
 
-        if line.starts_with("Version: ") {
-            version.insert_str(0, &line[9..])
-        }
-    }
+fn parse_python_json(path: &Path) -> PythonJsonMain {
+    let buf = fs::read(path).expect("failed to read PYTHON.json");
 
-    let stdlib_path = PathBuf::from(format!("lib/python{}", version));
+    let v: PythonJsonMain = serde_json::from_slice(&buf).expect("failed to parse JSON");
 
-    PkgConfig {
-        version,
-        stdlib_path,
-    }
+    v
 }
 
 /// Represents contents of the config.c/config.c.in file.
@@ -264,12 +287,14 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
             Some("install") => continue,
             Some("lib") => continue,
             Some("LICENSE.rst") => continue,
+            Some("PYTHON.json") => continue,
             Some(value) => panic!("unexpected entry in python/ directory: {}", value),
             _ => panic!("error listing python/ directory"),
         };
     }
 
-    let pkgconfig = parse_pkgconfig(temp_dir.path());
+    let python_json_path = python_path.join("PYTHON.json");
+    let pi = parse_python_json(&python_json_path);
 
     let build_path = python_path.join("build");
 
@@ -352,7 +377,7 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
         includes.insert(rel, full_path.to_path_buf());
     }
 
-    let stdlib_path = python_path.join("install").join(pkgconfig.stdlib_path);
+    let stdlib_path = python_path.join(pi.python_stdlib);
 
     for entry in find_python_resources(&stdlib_path) {
         match entry.flavor {
