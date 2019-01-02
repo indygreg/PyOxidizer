@@ -296,6 +296,14 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
     let python_json_path = python_path.join("PYTHON.json");
     let pi = parse_python_json(&python_json_path);
 
+    // Collect object files for libpython.
+    for obj in &pi.build_info.core.objs {
+        let rel_path = PathBuf::from(obj);
+        let full_path = python_path.join(obj);
+
+        objs_core.insert(rel_path, full_path);
+    }
+
     let build_path = python_path.join("build");
 
     for entry in walk_tree_files(&build_path) {
@@ -315,20 +323,11 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
                     objs_modules.insert(rel_path.to_path_buf(), full_path.to_path_buf());
                     ()
                 },
-                "Objects" => {
-                    objs_core.insert(rel_path.to_path_buf(), full_path.to_path_buf());
-                    ()
-                },
-                "Parser" => {
-                    objs_core.insert(rel_path.to_path_buf(), full_path.to_path_buf());
-                    ()
-                },
+                "Objects" => (),
+                "Parser" => (),
                 "Programs" => {},
-                "Python" => {
-                    objs_core.insert(rel_path.to_path_buf(), full_path.to_path_buf());
-                    ()
-                },
-                _ => panic!("unexpected object file: {}", rel_str)
+                "Python" => (),
+                _ => (),
             }
         } else if rel_str == "Modules/config.c" {
             config_c = fs::read(full_path).expect("could not read path");
