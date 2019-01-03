@@ -353,11 +353,18 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
             links.push(LibraryDepends {
                 name: link.name.clone(),
                 static_path: match &link.path_static {
-                    Some(p) => Some(python_path.join(p)),
+                    Some(p) => {
+                        libraries.insert(link.name.clone(), python_path.join(p));
+
+                        Some(python_path.join(p))
+                    },
                     None => None,
                 },
                 dynamic_path: match &link.path_dynamic {
-                    Some(p) => Some(python_path.join(p)),
+                    Some(_p) => {
+                        panic!("dynamic_path not yet supported");
+                        //Some(python_path.join(p))
+                    },
                     None => None,
                 },
                 framework: false,
@@ -376,23 +383,6 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
             },
             links,
         });
-    }
-
-    let lib_path = python_path.join("lib");
-
-    for entry in walk_tree_files(&lib_path) {
-        let full_path = entry.path();
-        let rel_path = full_path.strip_prefix(&lib_path).expect("unable to strip path");
-        let rel_str = rel_path.to_str().expect("could not convert path to str");
-
-        if rel_str.ends_with(".a") {
-            if ! rel_str.starts_with("lib") {
-                panic!(".a file does not begin with lib: {:?}", rel_path);
-            }
-
-            let name = &rel_str[3..rel_str.len() - 2];
-            libraries.insert(name.to_string(), full_path.to_path_buf());
-        }
     }
 
     let include_path = python_path.join("install/include");
