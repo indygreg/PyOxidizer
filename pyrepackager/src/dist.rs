@@ -283,11 +283,6 @@ pub struct PythonDistributionInfo {
     /// Values are filesystem paths where library is located.
     pub libraries: BTreeMap<String, PathBuf>,
 
-    /// Object files providing extension modules.
-    ///
-    /// Keys are relative paths. Values are filesystem paths.
-    pub objs_modules: BTreeMap<PathBuf, PathBuf>,
-
     pub py_modules: BTreeMap<String, PathBuf>,
 
     /// Non-module Python resource files.
@@ -303,13 +298,12 @@ pub struct PythonDistributionInfo {
 /// tarballs without filesystem I/O.
 pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<PythonDistributionInfo, &'static str> {
     let mut objs_core: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
-    let mut objs_modules: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
-    let mut config_c: Vec<u8> = Vec::new();
-    let mut config_c_in: Vec<u8> = Vec::new();
+    let config_c: Vec<u8> = Vec::new();
+    let config_c_in: Vec<u8> = Vec::new();
     let mut extension_modules: BTreeMap<String, ExtensionModule> = BTreeMap::new();
     let mut includes: BTreeMap<String, PathBuf> = BTreeMap::new();
     let mut libraries: BTreeMap<String, PathBuf> = BTreeMap::new();
-    let mut frozen_c: Vec<u8> = Vec::new();
+    let frozen_c: Vec<u8> = Vec::new();
     let mut py_modules: BTreeMap<String, PathBuf> = BTreeMap::new();
     let mut resources: BTreeMap<String, PathBuf> = BTreeMap::new();
 
@@ -384,43 +378,6 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
         });
     }
 
-    let build_path = python_path.join("build");
-
-    for entry in walk_tree_files(&build_path) {
-        let full_path = entry.path();
-        let rel_path = full_path.strip_prefix(&build_path).expect("unable to strip path prefix");
-        let rel_str = rel_path.to_str().expect("unable to convert path to str");
-
-        let components = rel_path.iter().collect::<Vec<_>>();
-
-        if components.len() < 1 {
-            continue;
-        }
-
-        if rel_str.ends_with(".o") {
-            match components[0].to_str().unwrap() {
-                "Modules" => {
-                    objs_modules.insert(rel_path.to_path_buf(), full_path.to_path_buf());
-                    ()
-                },
-                "Objects" => (),
-                "Parser" => (),
-                "Programs" => {},
-                "Python" => (),
-                _ => (),
-            }
-        } else if rel_str == "Modules/config.c" {
-            config_c = fs::read(full_path).expect("could not read path");
-        } else if rel_str == "Modules/config.c.in" {
-            config_c_in = fs::read(full_path).expect("could not read path");
-        } else if rel_str == "Python/frozen.c" {
-            frozen_c = fs::read(full_path).expect("could not read path");
-        }
-        else {
-            panic!("unhandled build/ file: {}", rel_str);
-        }
-    }
-
     let lib_path = python_path.join("lib");
 
     for entry in walk_tree_files(&lib_path) {
@@ -486,7 +443,6 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
         includes,
         libraries,
         objs_core,
-        objs_modules,
         py_modules,
         resources,
     })

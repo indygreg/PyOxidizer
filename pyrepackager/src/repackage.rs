@@ -232,21 +232,6 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
         build.object(&full);
     }
 
-    // Always include some Modules/ object files that are part of the "core"
-    // modules functionality.
-    let modules_path = temp_dir_path.join("Modules");
-    create_dir_all(modules_path).unwrap();
-
-    for object_filename in &dist.extension_modules_always {
-        let module_path = PathBuf::from(format!("Modules/{}", object_filename));
-        let fs_path = dist.objs_modules.get(&module_path).expect(&format!("object file not found: {}", module_path.to_str().unwrap()));
-
-        let full = temp_dir_path.join(module_path);
-        fs::copy(fs_path, &full).expect("unable to copy object file");
-
-        build.object(&full);
-    }
-
     // Relevant extension modules are the intersection of modules that are
     // built/available and what's requested from the current config.
     let mut extension_modules: BTreeSet<&String> = BTreeSet::from_iter(dist.extension_modules.keys());
