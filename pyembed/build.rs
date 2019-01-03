@@ -168,12 +168,12 @@ fn main() {
     f.write_fmt(format_args!("pub const PROGRAM_NAME: &str = \"{}\";\n", config.program_name)).unwrap();
     f.write_fmt(format_args!("pub const UNBUFFERED_STDIO: bool = {};\n", config.unbuffered_stdio)).unwrap();
 
-    f.write_fmt(format_args!("pub const FROZEN_IMPORTLIB_DATA: &'static [u8] = include_bytes!(\"{}\");\n",
+    f.write_fmt(format_args!("pub const FROZEN_IMPORTLIB_DATA: &'static [u8] = include_bytes!(r\"{}\");\n",
         importlib_bootstrap_path.to_str().unwrap())).unwrap();
-    f.write_fmt(format_args!("pub const FROZEN_IMPORTLIB_EXTERNAL_DATA: &'static [u8] = include_bytes!(\"{}\");\n",
+    f.write_fmt(format_args!("pub const FROZEN_IMPORTLIB_EXTERNAL_DATA: &'static [u8] = include_bytes!(r\"{}\");\n",
         importlib_bootstrap_external_path.to_str().unwrap())).unwrap();
-    f.write_fmt(format_args!("pub const PY_MODULES_DATA: &'static [u8] = include_bytes!(\"{}\");\n",
+    f.write_fmt(format_args!("pub const PY_MODULES_DATA: &'static [u8] = include_bytes!(r\"{}\");\n",
         py_modules_path.to_str().unwrap())).unwrap();
-    f.write_fmt(format_args!("pub const PYC_MODULES_DATA: &'static [u8] = include_bytes!(\"{}\");\n",
+    f.write_fmt(format_args!("pub const PYC_MODULES_DATA: &'static [u8] = include_bytes!(r\"{}\");\n",
         pyc_modules_path.to_str().unwrap())).unwrap();
 }
