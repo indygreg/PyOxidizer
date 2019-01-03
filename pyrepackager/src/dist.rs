@@ -67,42 +67,6 @@ pub struct ConfigC {
     pub init_mods: BTreeMap<String, String>,
 }
 
-/// Parse the content of a config.c/config.c.in file from CPython.
-fn parse_config_c(data: &Vec<u8>) -> ConfigC {
-    let reader = BufReader::new(&**data);
-
-    let re_extern = regex::Regex::new(r"extern PyObject\* ([^\(]+)\(void\);").unwrap();
-    let re_inittab_entry = regex::Regex::new(r##"\{"([^"]+)", ([^\}]+)\},"##).unwrap();
-
-    let mut init_funcs: Vec<String> = Vec::new();
-    let mut init_mods: BTreeMap<String, String> = BTreeMap::new();
-
-    for line in reader.lines() {
-        let line = line.unwrap();
-
-        match re_extern.captures(&line) {
-            Some(caps) => {
-                init_funcs.push(caps.get(1).unwrap().as_str().to_string());
-                ()
-            },
-            None => (),
-        }
-
-        match re_inittab_entry.captures(&line) {
-            Some(caps) => {
-                init_mods.insert(caps.get(1).unwrap().as_str().to_string(), caps.get(2).unwrap().as_str().to_string());
-                ()
-            },
-            None => (),
-        }
-    }
-
-    ConfigC {
-        init_funcs,
-        init_mods,
-    }
-}
-
 /// Describes a library dependency.
 #[derive(Clone, Debug)]
 pub struct LibraryDepends {
@@ -267,8 +231,6 @@ pub struct PythonDistributionInfo {
     /// Extension modules available to this distribution.
     pub extension_modules: BTreeMap<String, ExtensionModule>,
 
-    pub config_c: ConfigC,
-    pub config_c_in: ConfigC,
     pub frozen_c: Vec<u8>,
 
     /// Include files for Python.
@@ -297,8 +259,6 @@ pub struct PythonDistributionInfo {
 /// tarballs without filesystem I/O.
 pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<PythonDistributionInfo, &'static str> {
     let mut objs_core: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
-    let config_c: Vec<u8> = Vec::new();
-    let config_c_in: Vec<u8> = Vec::new();
     let mut extension_modules: BTreeMap<String, ExtensionModule> = BTreeMap::new();
     let mut includes: BTreeMap<String, PathBuf> = BTreeMap::new();
     let mut libraries: BTreeMap<String, PathBuf> = BTreeMap::new();
@@ -408,13 +368,8 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
         };
     }
 
-    let config_c = parse_config_c(&config_c);
-    let config_c_in = parse_config_c(&config_c_in);
-
     Ok(PythonDistributionInfo {
         temp_dir,
-        config_c,
-        config_c_in,
         extension_modules,
         frozen_c,
         includes,
