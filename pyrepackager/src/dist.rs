@@ -385,16 +385,12 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
         });
     }
 
-    let include_path = python_path.join("install/include");
+    let include_path = python_path.join(pi.python_include);
 
     for entry in walk_tree_files(&include_path) {
         let full_path = entry.path();
         let rel_path = full_path.strip_prefix(&include_path).expect("unable to strip prefix");
-
-        let components = rel_path.iter().map(|p| p.to_str().unwrap()).collect::<Vec<_>>();
-        let rel = itertools::join(&components[1..components.len()], "/");
-
-        includes.insert(rel, full_path.to_path_buf());
+        includes.insert(String::from(rel_path.to_str().expect("path to string")), full_path.to_path_buf());
     }
 
     let stdlib_path = python_path.join(pi.python_stdlib);
