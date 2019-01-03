@@ -168,43 +168,35 @@ fn make_config_c(dist: &PythonDistributionInfo, extensions: &BTreeSet<&String>) 
 
     lines.push(String::from("#include \"Python.h\""));
 
-    // Entries from config_c.in are special and always present.
-    for (_, init_fn) in &dist.config_c_in.init_mods {
-        if init_fn == "NULL" {
+    // Declare the initialization functions.
+    for entry in dist.extension_modules.values() {
+        if !entry.builtin_default && !extensions.contains(&entry.module) {
             continue;
         }
 
-        lines.push(String::from(format!("extern PyObject* {}(void);", init_fn)));
-    }
+        if let Some(init_fn) = &entry.init_fn {
+            if init_fn == "NULL" {
+                continue;
+            }
 
-    for (module, init_fn) in &dist.config_c.init_mods {
-        if dist.config_c_in.init_mods.contains_key(module) {
-            continue;
+            lines.push(String::from(format!("extern PyObject* {}(void);", init_fn)));
         }
-
-        if !extensions.contains(module) {
-            continue;
-        }
-
-        lines.push(String::from(format!("extern PyObject* {}(void);", init_fn)));
     }
 
     lines.push(String::from("struct _inittab _PyImport_Inittab[] = {"));
 
-    for (module, init_fn) in &dist.config_c_in.init_mods {
-        lines.push(String::from(format!("{{\"{}\", {}}},", module, init_fn)));
-    }
-
-    for (module, init_fn) in &dist.config_c.init_mods {
-        if dist.config_c_in.init_mods.contains_key(module) {
+    for entry in dist.extension_modules.values() {
+        if !entry.builtin_default && !extensions.contains(&entry.module) {
             continue;
         }
 
-        if !extensions.contains(module) {
-            continue;
-        }
+        if let Some(init_fn) = &entry.init_fn {
+            if init_fn == "NULL" {
+                continue;
+            }
 
-        lines.push(String::from(format!("{{\"{}\", {}}},", module, init_fn)));
+            lines.push(String::from(format!("{{\"{}\", {}}},", entry.module, init_fn)));
+        }
     }
 
     lines.push(String::from("{0, 0}"));
@@ -229,6 +221,7 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
         let full = temp_dir_path.join(rel_path);
         fs::copy(fs_path, &full).expect("unable to copy object file");
 
+        println!("adding {:?} to embedded Python", full);
         build.object(&full);
     }
 

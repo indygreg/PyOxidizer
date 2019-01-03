@@ -269,7 +269,6 @@ pub struct PythonDistributionInfo {
 
     pub config_c: ConfigC,
     pub config_c_in: ConfigC,
-    pub extension_modules_always: Vec<String>,
     pub frozen_c: Vec<u8>,
 
     /// Include files for Python.
@@ -412,19 +411,11 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
     let config_c = parse_config_c(&config_c);
     let config_c_in = parse_config_c(&config_c_in);
 
-    let extension_modules_always = vec![
-        String::from("getbuildinfo.o"),
-        String::from("getpath.o"),
-        String::from("main.o"),
-        String::from("gcmodule.o"),
-    ];
-
     Ok(PythonDistributionInfo {
         temp_dir,
         config_c,
         config_c_in,
         extension_modules,
-        extension_modules_always,
         frozen_c,
         includes,
         libraries,
