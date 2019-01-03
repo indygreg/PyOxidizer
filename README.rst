@@ -304,7 +304,7 @@ How is This Different From PyInstaller?
 ---------------------------------------
 
 PyInstaller - like ``PyOxidizer`` - can produce a self-container executable
-file containing your application. However, at run-time, PyOxidizer will
+file containing your application. However, at run-time, PyInstaller will
 extract Python source/bytecode files to a temporary directory then import
 modules from the filesystem. ``PyOxidizer`` skips this step and loads
 modules directly from memory.
