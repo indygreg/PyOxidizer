@@ -90,6 +90,21 @@ fn make_custom_frozen_modules() -> [pyffi::_frozen; 3] {
     ]
 }
 
+#[cfg(windows)]
+fn stdin_to_file() -> *mut libc::FILE {
+    // libc:: doesn't expose STDIN_FILENO on Windows. So we hardcode it.
+    unsafe {
+        libc::fdopen(1, &('r' as libc::c_char))
+    }
+}
+
+#[cfg(unix)]
+fn stdin_to_file() -> *mut libc::FILE {
+    unsafe {
+        libc::fdopen(libc::STDIN_FILENO, &('r' as libc::c_char));
+    }
+}
+
 /// Represents an embedded Python interpreter.
 ///
 /// Since the Python API has global state and methods of this mutate global
@@ -360,7 +375,7 @@ impl MainPythonInterpreter {
 
         // TODO use return value.
         unsafe {
-            let stdin = libc::fdopen(libc::STDIN_FILENO, &('r' as libc::c_char));
+            let stdin = stdin_to_file();
             pyffi::PyRun_AnyFileExFlags(stdin, filename.as_ptr() as *const c_char, 0, &mut cf)
         };
 
