@@ -13,33 +13,27 @@ use crate::fsscan::{find_python_resources, PythonResourceType, walk_tree_files};
 #[derive(Debug, Deserialize)]
 struct LinkEntry {
     name: String,
-    path_static: String,
-    path_dynamic: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct PythonBuildLinksInfo {
-    core: Vec<LinkEntry>,
-    extensions: BTreeMap<String, LinkEntry>,
+    path_static: Option<String>,
+    path_dynamic: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 struct PythonBuildExtensionInfo {
+    builtin: bool,
     init_fn: String,
+    links: Vec<LinkEntry>,
     objs: Vec<String>,
-    static_lib: String,
-    system_lib_depends: Vec<String>,
+    static_lib: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 struct PythonBuildCoreInfo {
     objs: Vec<String>,
-    system_lib_depends: Vec<String>,
+    links: Vec<LinkEntry>,
 }
 
 #[derive(Debug, Deserialize)]
 struct PythonBuildInfo {
-    builtin_extensions: BTreeMap<String, String>,
     core: PythonBuildCoreInfo,
     extensions: BTreeMap<String, PythonBuildExtensionInfo>,
 }
