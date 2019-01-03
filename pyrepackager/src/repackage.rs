@@ -286,7 +286,7 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
         .compile("pyembeddedconfig");
 
     // For each extension module, extract and use its object file. We also
-    // use this pass to collect the set of libraries that we need to lin
+    // use this pass to collect the set of libraries that we need to link
     // against.
     let mut needed_libraries: BTreeSet<&str> = BTreeSet::new();
     let mut needed_frameworks: BTreeSet<&str> = BTreeSet::new();
@@ -294,24 +294,24 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
     for name in extension_modules {
         let entry = dist.extension_modules.get(name).unwrap();
 
-        for object_filename in &entry.object_filenames {
-            let module_path = PathBuf::from(format!("Modules/{}", object_filename));
-            let fs_path = dist.objs_modules.get(&module_path).expect(&format!("object file not found: {}", module_path.to_str().unwrap()));
-
-            let full = temp_dir_path.join(module_path);
-            fs::copy(fs_path, &full).expect("unable to copy object file");
-
-            build.object(&full);
+        for path in &entry.object_paths {
+            build.object(path);
         }
 
-        for library in &entry.libraries {
-            needed_libraries.insert(library);
-            println!("library {} required by {}", library, name);
-        }
+        for entry in &entry.links {
+            if entry.framework {
+                needed_frameworks.insert(&entry.name);
+                println!("framework {} required by {}", entry.name, name);
+            }
 
-        for framework in &entry.frameworks {
-            needed_frameworks.insert(framework);
-            println!("framework {} required by {}", framework, name);
+            else if let Some(_lib) = &entry.static_path {
+                needed_libraries.insert(&entry.name);
+                println!("static library {} required by {}", entry.name, name);
+            }
+            else if let Some(_lib) = &entry.dynamic_path {
+                needed_libraries.insert(&entry.name);
+                println!("dynamic library {} required by {}", entry.name, name);
+            }
         }
     }
 

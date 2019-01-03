@@ -103,6 +103,56 @@ fn parse_config_c(data: &Vec<u8>) -> ConfigC {
     }
 }
 
+/// Describes a library dependency.
+#[derive(Clone, Debug)]
+pub struct LibraryDepends {
+    /// Name of the library we depend on.
+    pub name: String,
+
+    /// Path to a file providing a static version of this library.
+    pub static_path: Option<PathBuf>,
+
+    /// Path to a file providing a dynamic version of this library.
+    pub dynamic_path: Option<PathBuf>,
+
+    /// Whether this is a system framework.
+    pub framework: bool,
+}
+
+/// Describes an extension module in a Python distribution.
+#[derive(Clone, Debug)]
+pub struct ExtensionModule {
+    /// Name of the Python module this extension module provides.
+    pub module: String,
+
+    /// Module initialization function.
+    ///
+    /// If None, there is no module initialization function. This is
+    /// typically represented as NULL in Python's inittab.
+    pub init_fn: Option<String>,
+
+    /// Whether the extension module is built-in by default.
+    ///
+    /// Some extension modules are always compiled into libpython.
+    /// This field will be true for those modules.
+    pub builtin_default: bool,
+
+    /// Whether the extension module can be disabled.
+    ///
+    /// On some distributions, built-in extension modules cannot be
+    /// disabled. This field describes whether they can be.
+    pub disableable: bool,
+
+    /// Compiled object files providing this extension module.
+    pub object_paths: Vec<PathBuf>,
+
+    /// Path to static library providing this extension module.
+    pub static_library: Option<PathBuf>,
+
+    /// Library linking metadata.
+    pub links: Vec<LibraryDepends>,
+}
+
 #[derive(Clone, Debug)]
 pub struct SetupEntry {
     pub module: String,
@@ -209,9 +259,16 @@ pub struct PythonDistributionInfo {
     /// Directory where distribution lives in the filesystem.
     pub temp_dir: tempdir::TempDir,
 
+    /// Object files providing the core Python implementation.
+    ///
+    /// Keys are relative paths. Values are filesystem paths.
+    pub objs_core: BTreeMap<PathBuf, PathBuf>,
+
+    /// Extension modules available to this distribution.
+    pub extension_modules: BTreeMap<String, ExtensionModule>,
+
     pub config_c: ConfigC,
     pub config_c_in: ConfigC,
-    pub extension_modules: BTreeMap<String, SetupEntry>,
     pub extension_modules_always: Vec<String>,
     pub frozen_c: Vec<u8>,
 
@@ -225,11 +282,6 @@ pub struct PythonDistributionInfo {
     /// Keys are library names, without the "lib" prefix or file extension.
     /// Values are filesystem paths where library is located.
     pub libraries: BTreeMap<String, PathBuf>,
-
-    /// Object files providing the core Python implementation.
-    ///
-    /// Keys are relative paths. Values are filesystem paths.
-    pub objs_core: BTreeMap<PathBuf, PathBuf>,
 
     /// Object files providing extension modules.
     ///
@@ -254,7 +306,7 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
     let mut objs_modules: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
     let mut config_c: Vec<u8> = Vec::new();
     let mut config_c_in: Vec<u8> = Vec::new();
-    let mut extension_modules: BTreeMap<String, SetupEntry> = BTreeMap::new();
+    let mut extension_modules: BTreeMap<String, ExtensionModule> = BTreeMap::new();
     let mut includes: BTreeMap<String, PathBuf> = BTreeMap::new();
     let mut libraries: BTreeMap<String, PathBuf> = BTreeMap::new();
     let mut frozen_c: Vec<u8> = Vec::new();
@@ -298,6 +350,40 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
         objs_core.insert(rel_path, full_path);
     }
 
+    // Collect extension modules.
+    for (module, entry) in &pi.build_info.extensions {
+        let object_paths = entry.objs.iter().map(|p| python_path.join(p)).collect();
+        let mut links = Vec::new();
+
+        for link in &entry.links {
+            links.push(LibraryDepends {
+                name: link.name.clone(),
+                static_path: match &link.path_static {
+                    Some(p) => Some(python_path.join(p)),
+                    None => None,
+                },
+                dynamic_path: match &link.path_dynamic {
+                    Some(p) => Some(python_path.join(p)),
+                    None => None,
+                },
+                framework: false,
+            });
+        }
+
+        extension_modules.insert(module.clone(), ExtensionModule {
+            module: module.clone(),
+            init_fn: Some(entry.init_fn.clone()),
+            builtin_default: entry.builtin,
+            disableable: !entry.builtin,
+            object_paths,
+            static_library: match &entry.static_lib {
+                Some(p) => Some(python_path.join(p)),
+                None => None,
+            },
+            links,
+        });
+    }
+
     let build_path = python_path.join("build");
 
     for entry in walk_tree_files(&build_path) {
@@ -327,12 +413,6 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
             config_c = fs::read(full_path).expect("could not read path");
         } else if rel_str == "Modules/config.c.in" {
             config_c_in = fs::read(full_path).expect("could not read path");
-        } else if rel_str == "Modules/Setup.dist" {
-            let data = fs::read(full_path).expect("could not read path");
-            parse_setup_dist(&mut extension_modules, &data);
-        } else if rel_str == "Modules/Setup.local" {
-            let data = fs::read(full_path).expect("could not read path");
-            parse_setup_local(&mut extension_modules, &data);
         } else if rel_str == "Python/frozen.c" {
             frozen_c = fs::read(full_path).expect("could not read path");
         }
