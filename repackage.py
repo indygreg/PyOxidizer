@@ -65,12 +65,12 @@ def stdlib_path_relevant(p: pathlib.Path):
 
     # config-X.Y* directories describe how Python was built and are never
     # relevant.
-    if re.match('config-\d\.\d', str(p)):
+    if re.match(r'config-\d\.\d', str(p)):
         return False
 
     # distutils/command contains some .exe files (even on Linux!). Those aren't
     # useful.
-    if re.match('distutils/command/.*\.exe', str(p)):
+    if re.match(r'distutils/command/.*\.exe', str(p)):
         return False
 
     p = pathlib.PurePosixPath(p)
