@@ -121,7 +121,7 @@ fn stdin_to_file() -> *mut libc::FILE {
 #[cfg(unix)]
 fn stdin_to_file() -> *mut libc::FILE {
     unsafe {
-        libc::fdopen(libc::STDIN_FILENO, &('r' as libc::c_char));
+        libc::fdopen(libc::STDIN_FILENO, &('r' as libc::c_char))
     }
 }
 
