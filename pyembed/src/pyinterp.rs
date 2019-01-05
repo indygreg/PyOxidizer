@@ -91,10 +91,30 @@ fn make_custom_frozen_modules() -> [pyffi::_frozen; 3] {
 }
 
 #[cfg(windows)]
+extern "C" {
+    pub fn __acrt_iob_func(x: libc::uint32_t) -> *mut libc::FILE;
+}
+
+#[cfg(windows)]
 fn stdin_to_file() -> *mut libc::FILE {
-    // libc:: doesn't expose STDIN_FILENO on Windows. So we hardcode it.
+    // The stdin symbol is made available by importing <stdio.h>. On Windows,
+    // stdin is defined in corecrt_wstdio.h as a `#define` that calls this
+    // internal CRT function. There's no exported symbol to use. So we
+    // emulate the behavior of the C code.
+    //
+    // Relying on an internal CRT symbol is probably wrong. But Microsoft
+    // typically keeps backwards compatibility for undocumented functions
+    // like this because people use them in the wild.
+    //
+    // An attempt was made to use fdopen(0) like we do on POSIX. However,
+    // this causes a crash. The Microsoft C Runtime is already bending over
+    // backwards to coerce its native HANDLEs into POSIX file descriptors.
+    // Even if there are other ways to coerce a FILE* from a HANDLE
+    // (_open_osfhandle() + _fdopen() might work), using the same function
+    // that <stdio.h> uses to obtain a FILE* seems like the least risky thing
+    // to do.
     unsafe {
-        libc::fdopen(1, &('r' as libc::c_char))
+        __acrt_iob_func(0)
     }
 }
 
