@@ -268,11 +268,31 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
     // against.
     let mut needed_libraries: BTreeSet<&str> = BTreeSet::new();
     let mut needed_frameworks: BTreeSet<&str> = BTreeSet::new();
+    let mut needed_system_libraries: BTreeSet<&str> = BTreeSet::new();
+
+    for entry in &dist.links_core {
+        if entry.framework {
+            println!("framework {} required by core", entry.name);
+            needed_frameworks.insert(&entry.name);
+        }
+        else if entry.system {
+            println!("system library {} required by core", entry.name);
+            needed_system_libraries.insert(&entry.name);
+        }
+        // TODO handle static/dynamic libraries.
+    }
 
     for name in extension_modules {
+        println!("adding extension {}", name);
         let entry = dist.extension_modules.get(name).unwrap();
 
+        if entry.builtin_default {
+            println!("{} is built-in and doesn't need special build actions", name);
+            continue;
+        }
+
         for path in &entry.object_paths {
+            println!("adding object file {:?} for extension {}", path, name);
             build.object(path);
         }
 
@@ -280,6 +300,10 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
             if entry.framework {
                 needed_frameworks.insert(&entry.name);
                 println!("framework {} required by {}", entry.name, name);
+            }
+            else if entry.system {
+                println!("system library {} required by {}", entry.name, name);
+                needed_system_libraries.insert(&entry.name);
             }
 
             else if let Some(_lib) = &entry.static_path {
@@ -300,6 +324,7 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
 
         // Otherwise find the library in the distribution. Extract it. And statically link against it.
         let fs_path = dist.libraries.get(library).expect(&format!("unable to find library {}", library));
+        println!("{:?}", fs_path);
 
         let library_path = out_dir.join(format!("lib{}.a", library));
         fs::copy(fs_path, library_path).expect("unable to copy library file");
@@ -311,7 +336,27 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
         println!("cargo:rustc-link-lib=framework={}", framework);
     }
 
-    build.compile("pyembedded");
+    for lib in needed_system_libraries {
+        println!("cargo:rustc-link-lib={}", lib);
+    }
+
+    // python3-sys uses #[link(name="pythonXY")] attributes heavily on Windows. Its
+    // build.rs then remaps ``pythonXY`` to e.g. ``python37``. This causes Cargo to
+    // link against ``python37.lib`` (or ``pythonXY.lib`` if the
+    // ``rustc-link-lib=pythonXY:python{}{}`` line is missing, which is the case
+    // in our invocation).
+    //
+    // We don't want the "real" libpython being linked. And this is a very real
+    // possibility since the path to it could be in an environment variable
+    // outside of our control!
+    //
+    // In addition, we can't naively remap ``pythonXY`` ourselves without adding
+    // a ``#[link]`` to the crate.
+    //
+    // Our current workaround is to produce a ``pythonXY.lib`` file. This satisfies
+    // the requirement of ``python3-sys`` that a ``pythonXY.lib`` file exists.
+
+    build.compile("pythonXY");
 }
 
 pub fn is_stdlib_test_package(name: &str) -> bool {

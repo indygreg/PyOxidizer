@@ -15,6 +15,8 @@ struct LinkEntry {
     name: String,
     path_static: Option<String>,
     path_dynamic: Option<String>,
+    framework: Option<bool>,
+    system: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -81,6 +83,9 @@ pub struct LibraryDepends {
 
     /// Whether this is a system framework.
     pub framework: bool,
+
+    /// Whether this is a system library.
+    pub system: bool,
 }
 
 /// Describes an extension module in a Python distribution.
@@ -213,6 +218,25 @@ fn parse_setup_local(modules: &mut BTreeMap<String, SetupEntry>, data: &Vec<u8>)
     }
 }
 
+fn link_entry_to_library_depends(entry: &LinkEntry, python_path: &PathBuf) -> LibraryDepends {
+    LibraryDepends {
+        name: entry.name.clone(),
+        static_path: match &entry.path_static {
+            Some(p) => Some(python_path.join(p)),
+            None => None,
+        },
+        dynamic_path: match &entry.path_dynamic {
+            Some(_p) => panic!("dynamic_path not yet supported"),
+            None => None,
+        },
+        framework: false,
+        system: match &entry.system {
+            Some(v) => *v,
+            None => false,
+        },
+    }
+}
+
 /// Represents a parsed Python distribution.
 ///
 /// Distribution info is typically derived from a tarball containing a
@@ -227,6 +251,9 @@ pub struct PythonDistributionInfo {
     ///
     /// Keys are relative paths. Values are filesystem paths.
     pub objs_core: BTreeMap<PathBuf, PathBuf>,
+
+    /// Linking information for the core Python implementation.
+    pub links_core: Vec<LibraryDepends>,
 
     /// Extension modules available to this distribution.
     pub extension_modules: BTreeMap<String, ExtensionModule>,
@@ -259,6 +286,7 @@ pub struct PythonDistributionInfo {
 /// tarballs without filesystem I/O.
 pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<PythonDistributionInfo, &'static str> {
     let mut objs_core: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
+    let mut links_core: Vec<LibraryDepends> = Vec::new();
     let mut extension_modules: BTreeMap<String, ExtensionModule> = BTreeMap::new();
     let mut includes: BTreeMap<String, PathBuf> = BTreeMap::new();
     let mut libraries: BTreeMap<String, PathBuf> = BTreeMap::new();
@@ -303,31 +331,29 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
         objs_core.insert(rel_path, full_path);
     }
 
+    for entry in &pi.build_info.core.links {
+        let depends = link_entry_to_library_depends(entry, &python_path);
+
+        if let Some(p) = &depends.static_path {
+            libraries.insert(depends.name.clone(), p.clone());
+        }
+
+        links_core.push(depends);
+    }
+
     // Collect extension modules.
     for (module, entry) in &pi.build_info.extensions {
         let object_paths = entry.objs.iter().map(|p| python_path.join(p)).collect();
         let mut links = Vec::new();
 
         for link in &entry.links {
-            links.push(LibraryDepends {
-                name: link.name.clone(),
-                static_path: match &link.path_static {
-                    Some(p) => {
-                        libraries.insert(link.name.clone(), python_path.join(p));
+            let depends = link_entry_to_library_depends(link, &python_path);
 
-                        Some(python_path.join(p))
-                    },
-                    None => None,
-                },
-                dynamic_path: match &link.path_dynamic {
-                    Some(_p) => {
-                        panic!("dynamic_path not yet supported");
-                        //Some(python_path.join(p))
-                    },
-                    None => None,
-                },
-                framework: false,
-            });
+            if let Some(p) = &depends.static_path {
+                libraries.insert(depends.name.clone(), p.clone());
+            }
+
+            links.push(depends);
         }
 
         extension_modules.insert(module.clone(), ExtensionModule {
@@ -373,6 +399,7 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
         extension_modules,
         frozen_c,
         includes,
+        links_core,
         libraries,
         objs_core,
         py_modules,
