@@ -65,6 +65,8 @@ extension-module = [ "python3-sys/extension-module" ]
 # or python3-sys. (honestly, we should probably merge both crates into 'python-sys')
 extension-module-2-7 = [ "python27-sys/extension-module" ]
 
+link-mode-default = [ "python3-sys/link-mode-default" ]
+link-mode-unresolved-static = [ "python3-sys/link-mode-unresolved-static" ]
 
 # Optional features to support explicitly specifying python minor version.
 # If you don't care which minor version, just specify python3-sys as a 

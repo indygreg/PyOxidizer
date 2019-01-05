@@ -15,4 +15,4 @@ python3-sys = { path = "../third_party/rust-cpython/python3-sys" }
 
 [dependencies.cpython]
 path = "../third_party/rust-cpython"
-features = ["extension-module", "python3-sys", "no-auto-initialize"]
+features = ["link-mode-unresolved-static", "python3-sys", "no-auto-initialize"]

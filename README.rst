@@ -147,6 +147,15 @@ compiled with the same toolchain used to produce the embedded Python
 interpreter. We make that toolchain available for download and can likely
 automate the building of custom extension modules.
 
+Windows currently requires a Nightly Rust to build (you can set the
+environment variable ``RUSTC_BOOTSTRAP=1`` to work around this) because
+the ``static-nobundle`` library type is required.
+https://github.com/rust-lang/rust/issues/37403 tracks making this feature
+stable. It *might* be possible to work around this by adding an
+``__imp_`` prefixed symbol in the right place. See
+https://github.com/rust-lang/rust/issues/26591#issuecomment-123513631 for
+more.
+
 Repository Structure
 ====================
 

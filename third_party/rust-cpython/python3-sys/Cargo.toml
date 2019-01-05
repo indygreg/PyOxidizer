@@ -37,6 +37,17 @@ default = ["python-3"]
 # so that the module can also be used with statically linked python interpreters.
 extension-module = [ ]
 
+# This feature implies default linking behavior.
+#
+# ``extension-module`` will dictate behavior. The path to the discovered
+# Python libraries will be added to the linker search path.
+link-mode-default = []
+
+# This feature forces Python symbols to be unresolved. The ``#[link]``
+# attributes in source will require a ``pythonXY`` static library to
+# be made available to the linker.
+link-mode-unresolved-static = []
+
 # Bind to any python 3.x.
 python-3 = []
 

@@ -316,16 +316,43 @@ fn configure_from_path(expected_version: &PythonVersion) -> Result<String, Strin
     let exec_prefix: &str = &lines[3];
 
     let is_extension_module = env::var_os("CARGO_FEATURE_EXTENSION_MODULE").is_some();
-    if !is_extension_module || cfg!(target_os="windows") {
-        println!("{}", get_rustc_link_lib(&interpreter_version,
-            ld_version, enable_shared == "1").unwrap());
-        if libpath != "None" {
-            println!("cargo:rustc-link-search=native={}", libpath);
-        } else if cfg!(target_os="windows") {
-            println!("cargo:rustc-link-search=native={}\\libs", exec_prefix);
-        }
+    let mut link_mode_default = env::var_os("CARGO_FEATURE_LINK_MODE_DEFAULT").is_some();
+    let link_mode_unresolved_static = env::var_os("CARGO_FEATURE_LINK_MODE_UNRESOLVED_STATIC").is_some();
+
+    if link_mode_default && link_mode_unresolved_static {
+        return Err("link-mode-default and link-mode-unresolved-static are mutually exclusive".to_owned());
     }
 
+    if !link_mode_default && !link_mode_unresolved_static {
+        link_mode_default = true;
+    }
+
+    if link_mode_default {
+        if !is_extension_module || cfg!(target_os="windows") {
+            println!("{}", get_rustc_link_lib(&interpreter_version,
+                ld_version, enable_shared == "1").unwrap());
+            if libpath != "None" {
+                println!("cargo:rustc-link-search=native={}", libpath);
+            } else if cfg!(target_os="windows") {
+                println!("cargo:rustc-link-search=native={}\\libs", exec_prefix);
+            }
+        }
+    }
+    else if link_mode_unresolved_static {
+        if cfg!(target_os="windows") {
+            // static-nobundle requires a Nightly rustc up to at least
+            // Rust 1.31.
+            //
+            // We need to use static linking on Windows to prevent symbol
+            // name mangling. Otherwise Rust will prefix extern {} symbols
+            // with __imp_. But if we used normal "static," we need a
+            // pythonXY.lib at build time to package into the rlib.
+            //
+            // static-nobundle removes the build-time library requirement,
+            // allowing a downstream consumer to provide the pythonXY library.
+            println!("cargo:rustc-link-lib=static-nobundle=pythonXY");
+        }
+    }
 
     if let PythonVersion { major: 3, minor: some_minor} = interpreter_version {
         if env::var_os("CARGO_FEATURE_PEP_384").is_some() {
