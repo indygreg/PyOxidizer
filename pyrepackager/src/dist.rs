@@ -229,7 +229,10 @@ fn link_entry_to_library_depends(entry: &LinkEntry, python_path: &PathBuf) -> Li
             Some(_p) => panic!("dynamic_path not yet supported"),
             None => None,
         },
-        framework: false,
+        framework: match &entry.framework {
+            Some(v) => *v,
+            None => false,
+        },
         system: match &entry.system {
             Some(v) => *v,
             None => false,
