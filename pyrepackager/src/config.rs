@@ -104,7 +104,7 @@ pub fn parse_config(data: &Vec<u8>) -> Config {
         Some(value) => {
             let values: Vec<&str> = value.split(":").collect();
             (Some(values[0].to_string()), Some(values[1].to_string()))
-        },
+        }
         None => (None, None),
     };
 
@@ -114,9 +114,10 @@ pub fn parse_config(data: &Vec<u8>) -> Config {
     };
 
     let package_module_paths = match config.python_packaging.module_paths {
-        Some(value) => {
-            value.iter().map(|p| PathBuf::from(p.as_str().unwrap())).collect()
-        },
+        Some(value) => value
+            .iter()
+            .map(|p| PathBuf::from(p.as_str().unwrap()))
+            .collect(),
         None => Vec::new(),
     };
 
@@ -162,12 +163,16 @@ pub fn resolve_python_distribution_archive(config: &Config, cache_dir: &Path) ->
         Some(path) => {
             let p = Path::new(path);
             p.file_name().unwrap().to_str().unwrap().to_string()
-        },
+        }
         None => match &config.python_distribution_url {
             Some(url) => {
                 let url = Url::parse(url).expect("failed to parse URL");
-                url.path_segments().expect("cannot be base path").last().expect("could not get last element").to_string()
-            },
+                url.path_segments()
+                    .expect("cannot be base path")
+                    .last()
+                    .expect("could not get last element")
+                    .to_string()
+            }
             None => panic!("neither local path nor URL defined for distribution"),
         },
     };
@@ -205,13 +210,15 @@ pub fn resolve_python_distribution_archive(config: &Config, cache_dir: &Path) ->
 
             std::fs::copy(path, &cache_path).unwrap();
             cache_path
-        },
+        }
         None => match &config.python_distribution_url {
             Some(url) => {
                 let mut data: Vec<u8> = Vec::new();
 
                 let mut response = reqwest::get(url).expect("unable to perform HTTP request");
-                response.read_to_end(&mut data).expect("unable to download URL");
+                response
+                    .read_to_end(&mut data)
+                    .expect("unable to download URL");
 
                 let mut hasher = Sha256::new();
                 hasher.input(&data);

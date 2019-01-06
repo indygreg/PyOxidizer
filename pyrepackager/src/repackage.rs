@@ -44,8 +44,7 @@ lazy_static! {
         if cfg!(target_os = "linux") {
             v.push("dl");
             v.push("m");
-        }
-        else if cfg!(target_os = "macos") {
+        } else if cfg!(target_os = "macos") {
             v.push("dl");
             v.push("m");
         }
@@ -97,17 +96,23 @@ pub struct ImportlibData {
 /// Bytecode is then derived from it.
 pub fn derive_importlib(dist: &PythonDistributionInfo) -> ImportlibData {
     let mod_bootstrap_path = dist.py_modules.get("importlib._bootstrap").unwrap();
-    let mod_bootstrap_external_path = dist.py_modules.get("importlib._bootstrap_external").unwrap();
+    let mod_bootstrap_external_path = dist
+        .py_modules
+        .get("importlib._bootstrap_external")
+        .unwrap();
 
     let bootstrap_source = fs::read(&mod_bootstrap_path).expect("unable to read bootstrap source");
     let module_name = "<frozen importlib._bootstrap>";
-    let bootstrap_bytecode = compile_bytecode(&bootstrap_source, module_name, 0).expect("error compiling bytecode");
+    let bootstrap_bytecode =
+        compile_bytecode(&bootstrap_source, module_name, 0).expect("error compiling bytecode");
 
-    let mut bootstrap_external_source = fs::read(&mod_bootstrap_external_path).expect("unable to read bootstrap_external source");
+    let mut bootstrap_external_source =
+        fs::read(&mod_bootstrap_external_path).expect("unable to read bootstrap_external source");
     bootstrap_external_source.extend("\n# END OF importlib/_bootstrap_external.py\n\n".bytes());
     bootstrap_external_source.extend(PYTHON_IMPORTER);
     let module_name = "<frozen importlib._bootstrap_external>";
-    let bootstrap_external_bytecode = compile_bytecode(&bootstrap_external_source, module_name, 0).expect("error compiling bytecode");
+    let bootstrap_external_bytecode = compile_bytecode(&bootstrap_external_source, module_name, 0)
+        .expect("error compiling bytecode");
 
     ImportlibData {
         bootstrap_source: bootstrap_source,
@@ -195,7 +200,10 @@ fn make_config_c(dist: &PythonDistributionInfo, extensions: &BTreeSet<&String>) 
                 continue;
             }
 
-            lines.push(String::from(format!("{{\"{}\", {}}},", entry.module, init_fn)));
+            lines.push(String::from(format!(
+                "{{\"{}\", {}}},",
+                entry.module, init_fn
+            )));
         }
     }
 
@@ -227,7 +235,8 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
 
     // Relevant extension modules are the intersection of modules that are
     // built/available and what's requested from the current config.
-    let mut extension_modules: BTreeSet<&String> = BTreeSet::from_iter(dist.extension_modules.keys());
+    let mut extension_modules: BTreeSet<&String> =
+        BTreeSet::from_iter(dist.extension_modules.keys());
 
     for e in OS_IGNORE_EXTENSIONS.as_slice() {
         extension_modules.remove(&String::from(*e));
@@ -274,8 +283,7 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
         if entry.framework {
             println!("framework {} required by core", entry.name);
             needed_frameworks.insert(&entry.name);
-        }
-        else if entry.system {
+        } else if entry.system {
             println!("system library {} required by core", entry.name);
             needed_system_libraries.insert(&entry.name);
         }
@@ -287,7 +295,10 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
         let entry = dist.extension_modules.get(name).unwrap();
 
         if entry.builtin_default {
-            println!("{} is built-in and doesn't need special build actions", name);
+            println!(
+                "{} is built-in and doesn't need special build actions",
+                name
+            );
             continue;
         }
 
@@ -300,17 +311,13 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
             if entry.framework {
                 needed_frameworks.insert(&entry.name);
                 println!("framework {} required by {}", entry.name, name);
-            }
-            else if entry.system {
+            } else if entry.system {
                 println!("system library {} required by {}", entry.name, name);
                 needed_system_libraries.insert(&entry.name);
-            }
-
-            else if let Some(_lib) = &entry.static_path {
+            } else if let Some(_lib) = &entry.static_path {
                 needed_libraries.insert(&entry.name);
                 println!("static library {} required by {}", entry.name, name);
-            }
-            else if let Some(_lib) = &entry.dynamic_path {
+            } else if let Some(_lib) = &entry.dynamic_path {
                 needed_libraries.insert(&entry.name);
                 println!("dynamic library {} required by {}", entry.name, name);
             }
@@ -323,7 +330,10 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
         }
 
         // Otherwise find the library in the distribution. Extract it. And statically link against it.
-        let fs_path = dist.libraries.get(library).expect(&format!("unable to find library {}", library));
+        let fs_path = dist
+            .libraries
+            .get(library)
+            .expect(&format!("unable to find library {}", library));
         println!("{:?}", fs_path);
 
         let library_path = out_dir.join(format!("lib{}.a", library));

@@ -6,7 +6,7 @@ use itertools::Itertools;
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::fs;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 
 pub fn walk_tree_files(path: &Path) -> Box<Iterator<Item = walkdir::DirEntry>> {
     let res = walkdir::WalkDir::new(path);
@@ -91,21 +91,30 @@ impl Iterator for PythonResourceIterator {
         let res = self.walkdir_result.next();
 
         if res.is_none() {
-            return None
+            return None;
         }
 
         let entry = res.unwrap();
 
         let path = entry.path();
 
-        let rel_path = path.strip_prefix(&self.root_path).expect("unable to strip path prefix");
+        let rel_path = path
+            .strip_prefix(&self.root_path)
+            .expect("unable to strip path prefix");
         let rel_str = rel_path.to_str().expect("could not convert path to str");
-        let components = rel_path.iter().map(|p| p.to_str().expect("unable to get path as str")).collect::<Vec<_>>();
+        let components = rel_path
+            .iter()
+            .map(|p| p.to_str().expect("unable to get path as str"))
+            .collect::<Vec<_>>();
 
         let (module_name, flavor) = match rel_path.extension().and_then(OsStr::to_str) {
             Some("py") => {
                 let package_parts = &components[0..components.len() - 1];
-                let module_name = rel_path.file_stem().expect("unable to get file stemp").to_str().expect("unable to convert path to str");
+                let module_name = rel_path
+                    .file_stem()
+                    .expect("unable to get file stemp")
+                    .to_str()
+                    .expect("unable to convert path to str");
 
                 let mut full_module_name: Vec<&str> = package_parts.to_vec();
 
@@ -116,7 +125,7 @@ impl Iterator for PythonResourceIterator {
                 let full_module_name = itertools::join(full_module_name, ".");
 
                 (full_module_name, PythonResourceType::Source)
-            },
+            }
             Some("pyc") => {
                 // .pyc files should be in a __pycache__ directory.
                 if components.len() < 2 {
@@ -130,9 +139,14 @@ impl Iterator for PythonResourceIterator {
                 let package_parts = &components[0..components.len() - 2];
 
                 // Files have format <package>/__pycache__/<module>.cpython-37.opt-1.pyc
-                let module_name = rel_path.file_stem().expect("unable to get file stem").to_str().expect("unable to convert file stem to str");
+                let module_name = rel_path
+                    .file_stem()
+                    .expect("unable to get file stem")
+                    .to_str()
+                    .expect("unable to convert file stem to str");
                 let module_name_parts = module_name.split(".").collect_vec();
-                let module_name = itertools::join(&module_name_parts[0..module_name_parts.len() - 1], ".");
+                let module_name =
+                    itertools::join(&module_name_parts[0..module_name_parts.len() - 1], ".");
 
                 let mut full_module_name: Vec<&str> = package_parts.to_vec();
 
@@ -146,16 +160,14 @@ impl Iterator for PythonResourceIterator {
 
                 if rel_str.ends_with(".opt-1.pyc") {
                     flavor = PythonResourceType::BytecodeOpt1;
-                }
-                else if rel_str.ends_with(".opt-2.pyc") {
+                } else if rel_str.ends_with(".opt-2.pyc") {
                     flavor = PythonResourceType::BytecodeOpt2;
-                }
-                else {
+                } else {
                     flavor = PythonResourceType::Bytecode;
                 }
 
                 (full_module_name, flavor)
-            },
+            }
             _ => {
                 // If it isn't a .py or a .pyc file, it is a resource file.
                 let name = itertools::join(components, ".");

@@ -8,7 +8,9 @@ use std::ffi::CString;
 use std::path::PathBuf;
 use std::ptr::null;
 
-use cpython::{NoArgs, ObjectProtocol, PyErr, PyModule, PyObject, PyResult, PythonObject, Python, ToPyObject};
+use cpython::{
+    NoArgs, ObjectProtocol, PyErr, PyModule, PyObject, PyResult, Python, PythonObject, ToPyObject,
+};
 use pyffi;
 
 use crate::data::*;
@@ -113,16 +115,12 @@ fn stdin_to_file() -> *mut libc::FILE {
     // (_open_osfhandle() + _fdopen() might work), using the same function
     // that <stdio.h> uses to obtain a FILE* seems like the least risky thing
     // to do.
-    unsafe {
-        __acrt_iob_func(0)
-    }
+    unsafe { __acrt_iob_func(0) }
 }
 
 #[cfg(unix)]
 fn stdin_to_file() -> *mut libc::FILE {
-    unsafe {
-        libc::fdopen(libc::STDIN_FILENO, &('r' as libc::c_char))
-    }
+    unsafe { libc::fdopen(libc::STDIN_FILENO, &('r' as libc::c_char)) }
 }
 
 /// Represents an embedded Python interpreter.
@@ -161,7 +159,7 @@ impl MainPythonInterpreter {
     pub fn init(&mut self, py: Python) {
         // TODO return Result<> and don't panic.
         if self.init_run {
-            return
+            return;
         }
 
         let config = &self.config;
@@ -169,7 +167,10 @@ impl MainPythonInterpreter {
         if let Some(raw_allocator) = &self.raw_allocator {
             unsafe {
                 let ptr = &raw_allocator.allocator as *const _;
-                pyffi::PyMem_SetAllocator(pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_RAW, ptr as *mut _);
+                pyffi::PyMem_SetAllocator(
+                    pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_RAW,
+                    ptr as *mut _,
+                );
 
                 // TODO call this if memory debugging enabled.
                 //pyffi::PyMem_SetupDebugHooks();
@@ -186,7 +187,10 @@ impl MainPythonInterpreter {
             // Register our _pymodules extension which exposes modules data.
             unsafe {
                 // name char* needs to live as long as the interpreter is active.
-                pyffi::PyImport_AppendInittab(PYMODULES_NAME.as_ptr() as *const i8, Some(PyInit__pymodules));
+                pyffi::PyImport_AppendInittab(
+                    PYMODULES_NAME.as_ptr() as *const i8,
+                    Some(PyInit__pymodules),
+                );
             }
         }
 
@@ -204,12 +208,17 @@ impl MainPythonInterpreter {
             pyffi::Py_SetProgramName(program_name.into());
         }
 
-        if let (Some(ref encoding), Some(ref errors)) = (&config.standard_io_encoding, &config.standard_io_errors) {
+        if let (Some(ref encoding), Some(ref errors)) =
+            (&config.standard_io_encoding, &config.standard_io_errors)
+        {
             let cencoding = CString::new(encoding.clone()).unwrap();
             let cerrors = CString::new(errors.clone()).unwrap();
 
             let res = unsafe {
-                pyffi::Py_SetStandardStreamEncoding(cencoding.as_ptr() as *const i8, cerrors.as_ptr() as *const i8)
+                pyffi::Py_SetStandardStreamEncoding(
+                    cencoding.as_ptr() as *const i8,
+                    cerrors.as_ptr() as *const i8,
+                )
             };
 
             if res != 0 {
@@ -300,13 +309,12 @@ impl MainPythonInterpreter {
     }
 
     pub fn run(&mut self) {
-        let py = unsafe {
-            Python::assume_gil_acquired()
-        };
+        let py = unsafe { Python::assume_gil_acquired() };
 
         self.init(py);
 
-        py.eval("import re, sys; from black import main; main()", None, None).unwrap();
+        py.eval("import re, sys; from black import main; main()", None, None)
+            .unwrap();
 
         //py.eval("print(\"hello, world\")", None, None).unwrap();
         //py.import("__main__").unwrap();
@@ -316,15 +324,17 @@ impl MainPythonInterpreter {
     ///
     /// Returns the execution result of the module code.
     pub fn run_module_as_main(&mut self, name: &str) -> PyResult<PyObject> {
-        let py = unsafe {
-            Python::assume_gil_acquired()
-        };
+        let py = unsafe { Python::assume_gil_acquired() };
 
         self.init(py);
 
         // This is modeled after runpy.py:_run_module_as_main().
         let main: PyModule = unsafe {
-            PyObject::from_owned_ptr(py, pyffi::PyImport_AddModule("__main__\0".as_ptr() as *const c_char)).cast_into(py)?
+            PyObject::from_owned_ptr(
+                py,
+                pyffi::PyImport_AddModule("__main__\0".as_ptr() as *const c_char),
+            )
+            .cast_into(py)?
         };
 
         let main_dict = main.dict(py);
@@ -363,9 +373,7 @@ impl MainPythonInterpreter {
     ///
     /// This emulates what CPython's main.c does.
     pub fn run_repl(&mut self) -> PyResult<PyObject> {
-        let py = unsafe {
-            Python::assume_gil_acquired()
-        };
+        let py = unsafe { Python::assume_gil_acquired() };
 
         self.init(py);
 
@@ -383,15 +391,13 @@ impl MainPythonInterpreter {
         match sys.get(py, "__interactivehook__") {
             Ok(hook) => {
                 hook.call(py, NoArgs, None)?;
-            },
+            }
             Err(_) => (),
         };
 
         let stdin_filename = "<stdin>";
         let filename = CString::new(stdin_filename).expect("could not create CString");
-        let mut cf = pyffi::PyCompilerFlags {
-            cf_flags: 0,
-        };
+        let mut cf = pyffi::PyCompilerFlags { cf_flags: 0 };
 
         // TODO use return value.
         unsafe {
@@ -405,8 +411,6 @@ impl MainPythonInterpreter {
 
 impl Drop for MainPythonInterpreter {
     fn drop(&mut self) {
-        let _ = unsafe {
-            pyffi::Py_FinalizeEx()
-        };
+        let _ = unsafe { pyffi::Py_FinalizeEx() };
     }
 }

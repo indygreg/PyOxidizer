@@ -6,9 +6,9 @@ use itertools::Itertools;
 use std::collections::BTreeMap;
 use std::fs;
 use std::io::{BufRead, BufReader, Read};
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 
-use crate::fsscan::{find_python_resources, PythonResourceType, walk_tree_files};
+use crate::fsscan::{find_python_resources, walk_tree_files, PythonResourceType};
 
 #[derive(Debug, Deserialize)]
 struct LinkEntry {
@@ -160,12 +160,9 @@ fn parse_setup_line(modules: &mut BTreeMap<String, SetupEntry>, line: &str) {
             let p = p.with_extension("o");
             let basename = p.file_name().unwrap().to_str().unwrap();
             object_filenames.push(basename.to_string());
-
-        }
-        else if word.starts_with("-l") {
+        } else if word.starts_with("-l") {
             libraries.push(word[2..].to_string());
-        }
-        else if word == "-framework" {
+        } else if word == "-framework" {
             frameworks.push(String::from(words[idx + 1]));
         }
     }
@@ -209,8 +206,7 @@ fn parse_setup_local(modules: &mut BTreeMap<String, SetupEntry>, data: &Vec<u8>)
         // Everything after the *disabled* line can be ignored.
         if line == "*disabled*" {
             break;
-        }
-        else if line == "*static*" {
+        } else if line == "*static*" {
             continue;
         }
 
@@ -287,7 +283,9 @@ pub struct PythonDistributionInfo {
 /// Passing in a data structure with raw file data within is inefficient. But
 /// it makes things easier to implement and allows us to do things like consume
 /// tarballs without filesystem I/O.
-pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<PythonDistributionInfo, &'static str> {
+pub fn analyze_python_distribution_data(
+    temp_dir: tempdir::TempDir,
+) -> Result<PythonDistributionInfo, &'static str> {
     let mut objs_core: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
     let mut links_core: Vec<LibraryDepends> = Vec::new();
     let mut extension_modules: BTreeMap<String, ExtensionModule> = BTreeMap::new();
@@ -359,26 +357,34 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
             links.push(depends);
         }
 
-        extension_modules.insert(module.clone(), ExtensionModule {
-            module: module.clone(),
-            init_fn: Some(entry.init_fn.clone()),
-            builtin_default: entry.in_core,
-            disableable: !entry.in_core,
-            object_paths,
-            static_library: match &entry.static_lib {
-                Some(p) => Some(python_path.join(p)),
-                None => None,
+        extension_modules.insert(
+            module.clone(),
+            ExtensionModule {
+                module: module.clone(),
+                init_fn: Some(entry.init_fn.clone()),
+                builtin_default: entry.in_core,
+                disableable: !entry.in_core,
+                object_paths,
+                static_library: match &entry.static_lib {
+                    Some(p) => Some(python_path.join(p)),
+                    None => None,
+                },
+                links,
             },
-            links,
-        });
+        );
     }
 
     let include_path = python_path.join(pi.python_include);
 
     for entry in walk_tree_files(&include_path) {
         let full_path = entry.path();
-        let rel_path = full_path.strip_prefix(&include_path).expect("unable to strip prefix");
-        includes.insert(String::from(rel_path.to_str().expect("path to string")), full_path.to_path_buf());
+        let rel_path = full_path
+            .strip_prefix(&include_path)
+            .expect("unable to strip prefix");
+        includes.insert(
+            String::from(rel_path.to_str().expect("path to string")),
+            full_path.to_path_buf(),
+        );
     }
 
     let stdlib_path = python_path.join(pi.python_stdlib);
@@ -388,7 +394,7 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
             PythonResourceType::Resource => {
                 resources.insert(entry.name.clone(), entry.path);
                 ()
-            },
+            }
             PythonResourceType::Source => {
                 py_modules.insert(entry.name.clone(), entry.path);
                 ()
@@ -411,19 +417,25 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
 }
 
 /// Extract Python distribution data from a tar archive.
-pub fn analyze_python_distribution_tar<R: Read>(source: R) -> Result<PythonDistributionInfo, &'static str> {
+pub fn analyze_python_distribution_tar<R: Read>(
+    source: R,
+) -> Result<PythonDistributionInfo, &'static str> {
     let mut tf = tar::Archive::new(source);
 
-    let temp_dir = tempdir::TempDir::new("python-distribution").expect("could not create temp directory");
+    let temp_dir =
+        tempdir::TempDir::new("python-distribution").expect("could not create temp directory");
     let temp_dir_path = temp_dir.path();
 
-    tf.unpack(&temp_dir_path).expect("unable to extract tar archive");
+    tf.unpack(&temp_dir_path)
+        .expect("unable to extract tar archive");
 
     analyze_python_distribution_data(temp_dir)
 }
 
 /// Extract Python distribution data from a zstandard compressed tar archive.
-pub fn analyze_python_distribution_tar_zst<R: Read>(source: R) -> Result<PythonDistributionInfo, &'static str> {
+pub fn analyze_python_distribution_tar_zst<R: Read>(
+    source: R,
+) -> Result<PythonDistributionInfo, &'static str> {
     let dctx = zstd::stream::Decoder::new(source).unwrap();
 
     analyze_python_distribution_tar(dctx)

@@ -88,7 +88,9 @@ extern "C" fn raw_realloc(ctx: *mut c_void, ptr: *mut c_void, new_size: size_t) 
         let layout = alloc::Layout::from_size_align_unchecked(new_size, MIN_ALIGN);
 
         let key = ptr as *mut u8;
-        let old_layout = (*state).remove(&key).expect("original memory address not tracked");
+        let old_layout = (*state)
+            .remove(&key)
+            .expect("original memory address not tracked");
 
         let res = alloc::realloc(ptr as *mut u8, old_layout, new_size);
 
@@ -108,7 +110,9 @@ extern "C" fn raw_free(ctx: *mut c_void, ptr: *mut c_void) -> () {
         let state = ctx as *mut RawAllocatorState;
 
         let key = ptr as *mut u8;
-        let layout = (*state).get(&key).expect(format!("could not find allocated memory record: {:?}", key).as_str());
+        let layout = (*state)
+            .get(&key)
+            .expect(format!("could not find allocated memory record: {:?}", key).as_str());
 
         alloc::dealloc(key, *layout);
         (*state).remove(&key);

@@ -4,7 +4,7 @@
 
 use libc::{c_void, size_t, wchar_t};
 use pyffi;
-use std::os::raw::{c_char};
+use std::os::raw::c_char;
 use std::ptr::null_mut;
 
 #[derive(Debug)]
@@ -14,27 +14,21 @@ pub struct OwnedPyStr {
 
 impl Drop for OwnedPyStr {
     fn drop(&mut self) {
-        unsafe {
-            pyffi::PyMem_RawFree(self.data as *mut c_void)
-        }
+        unsafe { pyffi::PyMem_RawFree(self.data as *mut c_void) }
     }
 }
 
-impl <'a> From<&'a str> for OwnedPyStr {
+impl<'a> From<&'a str> for OwnedPyStr {
     fn from(s: &str) -> Self {
         let size: *mut size_t = null_mut();
 
-        let ptr = unsafe {
-            pyffi::Py_DecodeLocale(s.as_ptr() as *const c_char, size)
-        };
+        let ptr = unsafe { pyffi::Py_DecodeLocale(s.as_ptr() as *const c_char, size) };
 
         if ptr.is_null() {
             panic!("could not convert str to Python string");
         }
 
-        OwnedPyStr {
-            data: ptr,
-        }
+        OwnedPyStr { data: ptr }
     }
 }
 

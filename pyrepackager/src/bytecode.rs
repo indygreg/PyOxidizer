@@ -2,15 +2,21 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use cpython::{Python, PyBytes, PyErr, PyObject};
+use cpython::{PyBytes, PyErr, PyObject, Python};
 use libc::c_char;
-use pyffi::{Py_CompileStringExFlags, Py_file_input, Py_MARSHAL_VERSION, PyMarshal_WriteObjectToString};
+use pyffi::{
+    PyMarshal_WriteObjectToString, Py_CompileStringExFlags, Py_MARSHAL_VERSION, Py_file_input,
+};
 use std::ffi::CString;
 
 /// Compile Python source to bytecode in-process.
 ///
 /// This can be used to produce data for a frozen module.
-pub fn compile_bytecode(source: &Vec<u8>, filename: &str, optimize: i32) -> Result<Vec<u8>, String> {
+pub fn compile_bytecode(
+    source: &Vec<u8>,
+    filename: &str,
+    optimize: i32,
+) -> Result<Vec<u8>, String> {
     // Need to convert to CString to ensure trailing NULL is present.
     let source = CString::new(source.clone()).unwrap();
     let filename = CString::new(filename).unwrap();
@@ -27,16 +33,23 @@ pub fn compile_bytecode(source: &Vec<u8>, filename: &str, optimize: i32) -> Resu
     // TODO we should validate against the parsed distribution instead of
     // hard-coding the version number.
     if pyffi::Py_MARSHAL_VERSION != 4 {
-        panic!("unrecognized marshal version {}; did build.rs link against Python 3.7?", pyffi::Py_MARSHAL_VERSION);
+        panic!(
+            "unrecognized marshal version {}; did build.rs link against Python 3.7?",
+            pyffi::Py_MARSHAL_VERSION
+        );
     }
 
-    let mut flags = pyffi::PyCompilerFlags {
-        cf_flags: 0,
-    };
+    let mut flags = pyffi::PyCompilerFlags { cf_flags: 0 };
 
     let code = unsafe {
         let flags_ptr = &mut flags;
-        Py_CompileStringExFlags(source.as_ptr() as *const c_char, filename.as_ptr() as *const c_char, Py_file_input, flags_ptr, optimize)
+        Py_CompileStringExFlags(
+            source.as_ptr() as *const c_char,
+            filename.as_ptr() as *const c_char,
+            Py_file_input,
+            flags_ptr,
+            optimize,
+        )
     };
 
     if PyErr::occurred(py) {
@@ -49,13 +62,9 @@ pub fn compile_bytecode(source: &Vec<u8>, filename: &str, optimize: i32) -> Resu
         panic!("code is null without Python error. Huh?");
     }
 
-    let marshalled = unsafe {
-        PyMarshal_WriteObjectToString(code, Py_MARSHAL_VERSION)
-    };
+    let marshalled = unsafe { PyMarshal_WriteObjectToString(code, Py_MARSHAL_VERSION) };
 
-    let marshalled = unsafe {
-        PyObject::from_owned_ptr(py, marshalled)
-    };
+    let marshalled = unsafe { PyObject::from_owned_ptr(py, marshalled) };
 
     let data = marshalled.cast_as::<PyBytes>(py).unwrap().data(py);
 

@@ -4,19 +4,18 @@
 
 /// This module defines the _pymodules Python module, which exposes
 /// .py/.pyc source/code data so it can be used by an in-memory importer.
-
 use std::collections::{HashMap, HashSet};
 use std::io::Cursor;
 
-use byteorder::{ReadBytesExt, LittleEndian};
-use pyffi::{PyBUF_READ, PyMemoryView_FromMemory};
-use cpython::{PyBool, PyErr, PyObject, PyResult, PyString, Python, ToPyObject};
+use byteorder::{LittleEndian, ReadBytesExt};
 use cpython::exc::{KeyError, ValueError};
+use cpython::{PyBool, PyErr, PyObject, PyResult, PyString, Python, ToPyObject};
+use pyffi::{PyBUF_READ, PyMemoryView_FromMemory};
 
-use crate::data::{PY_MODULES_DATA, PYC_MODULES_DATA};
+use crate::data::{PYC_MODULES_DATA, PY_MODULES_DATA};
 
 /// Parse modules blob data into a map of module name to module data.
-fn parse_modules_blob(data: &'static[u8]) -> Result<HashMap<&str, &[u8]>, &'static str> {
+fn parse_modules_blob(data: &'static [u8]) -> Result<HashMap<&str, &[u8]>, &'static str> {
     if data.len() < 4 {
         return Err("modules data too small");
     }
@@ -44,9 +43,7 @@ fn parse_modules_blob(data: &'static[u8]) -> Result<HashMap<&str, &[u8]>, &'stat
     for (name_length, value_length) in index {
         let offset = reader.position() as usize;
 
-        let name = unsafe {
-            std::str::from_utf8_unchecked(&data[offset..offset + name_length])
-        };
+        let name = unsafe { std::str::from_utf8_unchecked(&data[offset..offset + name_length]) };
 
         let value_offset = values_start_offset + values_current_offset;
         let value = &data[value_offset..value_offset + value_length];
@@ -135,7 +132,7 @@ fn populate_packages(packages: &mut HashSet<&'static str>, name: &'static str) {
             Some(idx) => {
                 packages.insert(&search[0..idx]);
                 search = &search[0..idx];
-            },
+            }
             None => break,
         };
     }
@@ -145,12 +142,12 @@ fn populate_packages(packages: &mut HashSet<&'static str>, name: &'static str) {
 fn make_modules(py: Python) -> PyResult<ModulesType> {
     let py_modules = match parse_modules_blob(PY_MODULES_DATA) {
         Ok(value) => value,
-        Err(msg) => return Err(PyErr::new::<ValueError, _>(py, msg))
+        Err(msg) => return Err(PyErr::new::<ValueError, _>(py, msg)),
     };
 
     let pyc_modules = match parse_modules_blob(PYC_MODULES_DATA) {
         Ok(value) => value,
-        Err(msg) => return Err(PyErr::new::<ValueError, _>(py, msg))
+        Err(msg) => return Err(PyErr::new::<ValueError, _>(py, msg)),
     };
 
     // TODO consider baking set of packages into embedded data.
