@@ -106,8 +106,6 @@ Only Python 3.7 is currently supported. Support for older Python 3
 releases is possible. But the project author hopes we only need to
 target the latest/greatest Python release.
 
-There is no macOS or Windows support. Support is planned.
-
 There is not yet support for controlling which Python C extensions
 are linked into the final binary. Not all applications need every
 Python C extension and removing C extensions could result in smaller
@@ -152,7 +150,9 @@ environment variable ``RUSTC_BOOTSTRAP=1`` to work around this) because
 the ``static-nobundle`` library type is required.
 https://github.com/rust-lang/rust/issues/37403 tracks making this feature
 stable. It *might* be possible to work around this by adding an
-``__imp_`` prefixed symbol in the right place. See
+``__imp_`` prefixed symbol in the right place or by producing a empty
+import library to satisfy requirements of the ``static`` linkage kind.
+See
 https://github.com/rust-lang/rust/issues/26591#issuecomment-123513631 for
 more.
 
@@ -210,9 +210,9 @@ code. In the author's opinion, the only appropriate languages for this
 were C, C++, and Rust.
 
 Of those 3, the project's author prefers to write new projects in Rust
-because it is a superior systems programming language that has learned
-from decades of mistakes of its predecessors. The author prefers
-technologies that can detect and eliminate entire classes of bugs
+because it is a superior systems programming language that has built on
+lessons learned from decades working with its predecessors.The author
+prefers technologies that can detect and eliminate entire classes of bugs
 (like buffer overflow and use-after-free) at compile time.
 
 Why is the Rust Code... Not Great?
