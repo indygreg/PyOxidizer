@@ -21,7 +21,7 @@ struct LinkEntry {
 
 #[derive(Debug, Deserialize)]
 struct PythonBuildExtensionInfo {
-    builtin: bool,
+    in_core: bool,
     init_fn: String,
     links: Vec<LinkEntry>,
     objs: Vec<String>,
@@ -359,8 +359,8 @@ pub fn analyze_python_distribution_data(temp_dir: tempdir::TempDir) -> Result<Py
         extension_modules.insert(module.clone(), ExtensionModule {
             module: module.clone(),
             init_fn: Some(entry.init_fn.clone()),
-            builtin_default: entry.builtin,
-            disableable: !entry.builtin,
+            builtin_default: entry.in_core,
+            disableable: !entry.in_core,
             object_paths,
             static_library: match &entry.static_lib {
                 Some(p) => Some(python_path.join(p)),
