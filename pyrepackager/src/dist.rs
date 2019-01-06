@@ -2,10 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use itertools::Itertools;
 use std::collections::BTreeMap;
 use std::fs;
-use std::io::{BufRead, BufReader, Read};
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use crate::fsscan::{find_python_resources, walk_tree_files, PythonResourceType};
@@ -120,98 +119,6 @@ pub struct ExtensionModule {
 
     /// Library linking metadata.
     pub links: Vec<LibraryDepends>,
-}
-
-#[derive(Clone, Debug)]
-pub struct SetupEntry {
-    pub module: String,
-    pub object_filenames: Vec<String>,
-    pub libraries: Vec<String>,
-    pub frameworks: Vec<String>,
-}
-
-/// Parse a line in CPython's Setup.dist/Setup.local file.
-fn parse_setup_line(modules: &mut BTreeMap<String, SetupEntry>, line: &str) {
-    let line = match line.find("#") {
-        Some(idx) => &line[0..idx],
-        None => &line,
-    };
-
-    if line.len() < 1 {
-        return;
-    }
-
-    // Lines have format: <module_name> <args>
-    let words = line.split_whitespace().collect_vec();
-
-    if words.len() < 2 {
-        return;
-    }
-
-    let module = words[0];
-    let mut object_filenames: Vec<String> = Vec::new();
-    let mut libraries: Vec<String> = Vec::new();
-    let mut frameworks: Vec<String> = Vec::new();
-
-    for (idx, &word) in words.iter().enumerate() {
-        // Object files are the basename of sources with the extension changed.
-        if word.ends_with(".c") {
-            let p = PathBuf::from(&word);
-            let p = p.with_extension("o");
-            let basename = p.file_name().unwrap().to_str().unwrap();
-            object_filenames.push(basename.to_string());
-        } else if word.starts_with("-l") {
-            libraries.push(word[2..].to_string());
-        } else if word == "-framework" {
-            frameworks.push(String::from(words[idx + 1]));
-        }
-    }
-
-    let entry = SetupEntry {
-        module: module.to_string(),
-        object_filenames,
-        libraries,
-        frameworks,
-    };
-
-    modules.insert(module.to_string(), entry);
-}
-
-/// Parse CPython's Setup.dist file.
-fn parse_setup_dist(modules: &mut BTreeMap<String, SetupEntry>, data: &Vec<u8>) {
-    let reader = BufReader::new(&**data);
-
-    let mut found_start = false;
-
-    for line in reader.lines() {
-        let line = line.expect("could not obtain line");
-        if !found_start {
-            if line.starts_with("PYTHONPATH=") {
-                found_start = true;
-                continue;
-            }
-        }
-
-        parse_setup_line(modules, &line);
-    }
-}
-
-/// Parse CPython's Setup.local file.
-fn parse_setup_local(modules: &mut BTreeMap<String, SetupEntry>, data: &Vec<u8>) {
-    let reader = BufReader::new(&**data);
-
-    for line in reader.lines() {
-        let line = line.expect("could not obtain line");
-
-        // Everything after the *disabled* line can be ignored.
-        if line == "*disabled*" {
-            break;
-        } else if line == "*static*" {
-            continue;
-        }
-
-        parse_setup_line(modules, &line);
-    }
 }
 
 fn link_entry_to_library_depends(entry: &LinkEntry, python_path: &PathBuf) -> LibraryDepends {
