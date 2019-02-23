@@ -120,6 +120,9 @@ pub struct ExtensionModule {
 
     /// Library linking metadata.
     pub links: Vec<LibraryDepends>,
+
+    /// Name of the variant of this extension module.
+    pub variant: String,
 }
 
 fn link_entry_to_library_depends(entry: &LinkEntry, python_path: &PathBuf) -> LibraryDepends {
@@ -163,7 +166,7 @@ pub struct PythonDistributionInfo {
     pub links_core: Vec<LibraryDepends>,
 
     /// Extension modules available to this distribution.
-    pub extension_modules: BTreeMap<String, ExtensionModule>,
+    pub extension_modules: BTreeMap<String, Vec<ExtensionModule>>,
 
     pub frozen_c: Vec<u8>,
 
@@ -196,7 +199,7 @@ pub fn analyze_python_distribution_data(
 ) -> Result<PythonDistributionInfo, &'static str> {
     let mut objs_core: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
     let mut links_core: Vec<LibraryDepends> = Vec::new();
-    let mut extension_modules: BTreeMap<String, ExtensionModule> = BTreeMap::new();
+    let mut extension_modules: BTreeMap<String, Vec<ExtensionModule>> = BTreeMap::new();
     let mut includes: BTreeMap<String, PathBuf> = BTreeMap::new();
     let mut libraries: BTreeMap<String, PathBuf> = BTreeMap::new();
     let frozen_c: Vec<u8> = Vec::new();
@@ -252,25 +255,23 @@ pub fn analyze_python_distribution_data(
 
     // Collect extension modules.
     for (module, variants) in &pi.build_info.extensions {
-        // TODO collect all variants.
-        let entry = &variants[0];
+        let mut ems: Vec<ExtensionModule> = Vec::new();
 
-        let object_paths = entry.objs.iter().map(|p| python_path.join(p)).collect();
-        let mut links = Vec::new();
+        for entry in variants.iter() {
+            let object_paths = entry.objs.iter().map(|p| python_path.join(p)).collect();
+            let mut links = Vec::new();
 
-        for link in &entry.links {
-            let depends = link_entry_to_library_depends(link, &python_path);
+            for link in &entry.links {
+                let depends = link_entry_to_library_depends(link, &python_path);
 
-            if let Some(p) = &depends.static_path {
-                libraries.insert(depends.name.clone(), p.clone());
+                if let Some(p) = &depends.static_path {
+                    libraries.insert(depends.name.clone(), p.clone());
+                }
+
+                links.push(depends);
             }
 
-            links.push(depends);
-        }
-
-        extension_modules.insert(
-            module.clone(),
-            ExtensionModule {
+            ems.push(ExtensionModule {
                 module: module.clone(),
                 init_fn: Some(entry.init_fn.clone()),
                 builtin_default: entry.in_core,
@@ -281,8 +282,13 @@ pub fn analyze_python_distribution_data(
                     None => None,
                 },
                 links,
-            },
-        );
+                variant: entry.variant.clone(),
+            });
+        }
+
+        extension_modules.insert(
+            module.clone(),
+            ems);
     }
 
     let include_path = python_path.join(pi.python_include);

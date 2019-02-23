@@ -174,7 +174,10 @@ fn make_config_c(dist: &PythonDistributionInfo, extensions: &BTreeSet<&String>) 
     lines.push(String::from("#include \"Python.h\""));
 
     // Declare the initialization functions.
-    for entry in dist.extension_modules.values() {
+    for variants in dist.extension_modules.values() {
+        // TODO support choosing variant.
+        let entry = &variants[0];
+
         if !entry.builtin_default && !extensions.contains(&entry.module) {
             continue;
         }
@@ -190,7 +193,10 @@ fn make_config_c(dist: &PythonDistributionInfo, extensions: &BTreeSet<&String>) 
 
     lines.push(String::from("struct _inittab _PyImport_Inittab[] = {"));
 
-    for entry in dist.extension_modules.values() {
+    for variants in dist.extension_modules.values() {
+        // TODO support choosing variant.
+        let entry = &variants[0];
+
         if !entry.builtin_default && !extensions.contains(&entry.module) {
             continue;
         }
@@ -292,7 +298,10 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
 
     for name in extension_modules {
         println!("adding extension {}", name);
-        let entry = dist.extension_modules.get(name).unwrap();
+        let variants = dist.extension_modules.get(name).unwrap();
+
+        // TODO support choosing which variant is used.
+        let entry = &variants[0];
 
         if entry.builtin_default {
             println!(
