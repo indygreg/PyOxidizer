@@ -25,6 +25,7 @@ struct PythonBuildExtensionInfo {
     links: Vec<LinkEntry>,
     objs: Vec<String>,
     static_lib: Option<String>,
+    variant: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -36,7 +37,7 @@ struct PythonBuildCoreInfo {
 #[derive(Debug, Deserialize)]
 struct PythonBuildInfo {
     core: PythonBuildCoreInfo,
-    extensions: BTreeMap<String, PythonBuildExtensionInfo>,
+    extensions: BTreeMap<String, Vec<PythonBuildExtensionInfo>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -250,7 +251,10 @@ pub fn analyze_python_distribution_data(
     }
 
     // Collect extension modules.
-    for (module, entry) in &pi.build_info.extensions {
+    for (module, variants) in &pi.build_info.extensions {
+        // TODO collect all variants.
+        let entry = &variants[0];
+
         let object_paths = entry.objs.iter().map(|p| python_path.join(p)).collect();
         let mut links = Vec::new();
 
