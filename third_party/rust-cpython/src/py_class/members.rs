@@ -64,7 +64,7 @@ macro_rules! py_class_init_members {
     }};
 }
 
-#[macro_export]
+#[macro_export(local_inner_macros)]
 #[doc(hidden)]
 macro_rules! py_class_instance_method {
     ($py:ident, $class:ident :: $f:ident [ $( { $pname:ident : $ptype:ty = $detail:tt } )* ]) => {{
@@ -74,7 +74,7 @@ macro_rules! py_class_instance_method {
             kwargs: *mut $crate::_detail::ffi::PyObject)
         -> *mut $crate::_detail::ffi::PyObject
         {
-            const LOCATION: &'static str = concat!(stringify!($class), ".", stringify!($f), "()");
+            const LOCATION: &'static str = _cpython__py_class__members__concat!(_cpython__py_class__members__stringify!($class), ".", _cpython__py_class__members__stringify!($f), "()");
             $crate::_detail::handle_callback(
                 LOCATION, $crate::_detail::PyObjectCallbackConverter,
                 |py| {
@@ -89,7 +89,7 @@ macro_rules! py_class_instance_method {
                 })
         }
         unsafe {
-            let method_def = py_method_def!(stringify!($f), 0, wrap_instance_method);
+            let method_def = py_method_def!(_cpython__py_class__members__stringify!($f), 0, wrap_instance_method);
             $crate::py_class::members::create_instance_method_descriptor::<$class>(method_def)
         }
     }}
@@ -121,7 +121,7 @@ macro_rules! py_class_class_method {
             kwargs: *mut $crate::_detail::ffi::PyObject)
         -> *mut $crate::_detail::ffi::PyObject
         {
-            const LOCATION: &'static str = concat!(stringify!($class), ".", stringify!($f), "()");
+            const LOCATION: &'static str = _cpython__py_class__members__concat!(_cpython__py_class__members__stringify!($class), ".", _cpython__py_class__members__stringify!($f), "()");
             $crate::_detail::handle_callback(
                 LOCATION, $crate::_detail::PyObjectCallbackConverter,
                 |py| {
@@ -136,7 +136,7 @@ macro_rules! py_class_class_method {
                 })
         }
         unsafe {
-            let method_def = py_method_def!(stringify!($f),
+            let method_def = py_method_def!(_cpython__py_class__members__stringify!($f),
                 $crate::_detail::ffi::METH_CLASS,
                 wrap_class_method);
             $crate::py_class::members::create_class_method_descriptor(method_def)
@@ -171,7 +171,7 @@ macro_rules! py_class_static_method {
             kwargs: *mut $crate::_detail::ffi::PyObject)
         -> *mut $crate::_detail::ffi::PyObject
         {
-            const LOCATION: &'static str = concat!(stringify!($class), ".", stringify!($f), "()");
+            const LOCATION: &'static str = _cpython__py_class__members__concat!(_cpython__py_class__members__stringify!($class), ".", _cpython__py_class__members__stringify!($f), "()");
             $crate::_detail::handle_callback(
                 LOCATION, $crate::_detail::PyObjectCallbackConverter,
                 |py| {
@@ -183,7 +183,7 @@ macro_rules! py_class_static_method {
                 })
         }
         unsafe {
-            let method_def = py_method_def!(stringify!($f),
+            let method_def = py_method_def!(_cpython__py_class__members__stringify!($f),
                 $crate::_detail::ffi::METH_STATIC,
                 wrap_static_method);
             $crate::_detail::py_fn_impl($py, method_def)
@@ -191,4 +191,19 @@ macro_rules! py_class_static_method {
     }}
 }
 
+// Rust 2018 support
+#[macro_export]
+#[doc(hidden)]
+macro_rules! _cpython__py_class__members__stringify {
+    ($($inner:tt)*) => {
+        stringify! { $($inner)* }
+    }
+}
 
+#[macro_export]
+#[doc(hidden)]
+macro_rules! _cpython__py_class__members__concat {
+    ($($inner:tt)*) => {
+        concat! { $($inner)* }
+    }
+}

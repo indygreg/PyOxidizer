@@ -29,7 +29,7 @@ use py_class::{CompareOp};
 use exc;
 use Py_hash_t;
 
-#[macro_export]
+#[macro_export(local_inner_macros)]
 #[doc(hidden)]
 macro_rules! py_class_type_object_static_init {
     ($class_name:ident,
@@ -77,7 +77,7 @@ pub const TPFLAGS_DEFAULT : ::libc::c_long = ffi::Py_TPFLAGS_DEFAULT
 #[cfg(feature="python3-sys")]
 pub const TPFLAGS_DEFAULT : ::libc::c_ulong = ffi::Py_TPFLAGS_DEFAULT;
 
-#[macro_export]
+#[macro_export(local_inner_macros)]
 #[doc(hidden)]
 macro_rules! py_class_type_object_dynamic_init {
     // initialize those fields of PyTypeObject that we couldn't initialize statically
@@ -92,7 +92,7 @@ macro_rules! py_class_type_object_dynamic_init {
     ) => {
         unsafe {
             $type_object.init_ob_type(&mut $crate::_detail::ffi::PyType_Type);
-            $type_object.tp_name = $crate::py_class::slots::build_tp_name($module_name, stringify!($class));
+            $type_object.tp_name = $crate::py_class::slots::build_tp_name($module_name, _cpython__py_class__slots__stringify!($class));
             $type_object.tp_basicsize = <$class as $crate::py_class::BaseObject>::size()
                                         as $crate::_detail::ffi::Py_ssize_t;
         }
@@ -121,7 +121,7 @@ pub unsafe extern "C" fn tp_dealloc_callback<T>(obj: *mut ffi::PyObject)
     r
 }
 
-#[macro_export]
+#[macro_export(local_inner_macros)]
 #[doc(hidden)]
 macro_rules! py_class_wrap_newfunc {
     ($class:ident :: $f:ident [ $( { $pname:ident : $ptype:ty = $detail:tt } )* ]) => {{
@@ -131,7 +131,7 @@ macro_rules! py_class_wrap_newfunc {
             kwargs: *mut $crate::_detail::ffi::PyObject)
         -> *mut $crate::_detail::ffi::PyObject
         {
-            const LOCATION: &'static str = concat!(stringify!($class), ".", stringify!($f), "()");
+            const LOCATION: &'static str = _cpython__py_class__slots__concat!(_cpython__py_class__slots__stringify!($class), ".", _cpython__py_class__slots__stringify!($f), "()");
             $crate::_detail::handle_callback(
                 LOCATION, $crate::_detail::PyObjectCallbackConverter,
                 |py| {
@@ -180,7 +180,7 @@ macro_rules! py_class_as_number {
     }}
 }
 
-#[macro_export]
+#[macro_export(local_inner_macros)]
 #[doc(hidden)]
 macro_rules! py_class_as_mapping {
     ( $type_object:ident, [], [
@@ -565,7 +565,7 @@ impl CallbackConverter<bool> for BoolConverter {
 }
 
 
-#[macro_export]
+#[macro_export(local_inner_macros)]
 #[doc(hidden)]
 macro_rules! py_class_call_slot {
     ($class:ident :: $f:ident [ $( { $pname:ident : $ptype:ty = $detail:tt } )* ]) => {{
@@ -575,7 +575,7 @@ macro_rules! py_class_call_slot {
             kwargs: *mut $crate::_detail::ffi::PyObject)
         -> *mut $crate::_detail::ffi::PyObject
         {
-            const LOCATION: &'static str = concat!(stringify!($class), ".", stringify!($f), "()");
+            const LOCATION: &'static str = _cpython__py_class__slots__concat!(_cpython__py_class__slots__stringify!($class), ".", _cpython__py_class__slots__stringify!($f), "()");
             $crate::_detail::handle_callback(
                 LOCATION, $crate::_detail::PyObjectCallbackConverter,
                 |py| {
@@ -604,3 +604,18 @@ pub unsafe extern "C" fn sq_item(obj: *mut ffi::PyObject, index: ffi::Py_ssize_t
     ret
 }
 
+#[doc(hidden)]
+#[macro_export]
+macro_rules! _cpython__py_class__slots__concat {
+    ($($inner:tt)*) => {
+        concat! { $($inner)* }
+    }
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! _cpython__py_class__slots__stringify {
+    ($($inner:tt)*) => {
+        stringify! { $($inner)* }
+    }
+}

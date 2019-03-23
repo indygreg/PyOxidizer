@@ -23,7 +23,7 @@
 //       DO NOT MODIFY      !!
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-#[macro_export]
+#[macro_export(local_inner_macros)]
 #[doc(hidden)]
 macro_rules! py_class_impl {
     // TT muncher macro. Results are accumulated in $info $slots $impls and $members.
@@ -145,7 +145,7 @@ macro_rules! py_class_impl {
                                 } else {
                                     // automatically initialize the class on-demand
                                     <$class as $crate::py_class::PythonObjectFromPyClassMacro>::initialize(py, None)
-                                        .expect(concat!("An error occurred while initializing class ", stringify!($class)))
+                                        .expect(_cpython__py_class__py_class_impl__concat!("An error occurred while initializing class ", _cpython__py_class__py_class_impl__stringify!($class)))
                                 }
                             }
                         }
@@ -157,9 +157,9 @@ macro_rules! py_class_impl {
                                 if $crate::py_class::is_ready(py, &TYPE_OBJECT) {
                                     return Ok($crate::PyType::from_type_ptr(py, &mut TYPE_OBJECT));
                                 }
-                                assert!(!INIT_ACTIVE,
-                                    concat!("Reentrancy detected: already initializing class ",
-                                    stringify!($class)));
+                                _cpython__py_class__py_class_impl__assert!(!INIT_ACTIVE,
+                                    _cpython__py_class__py_class_impl__concat!("Reentrancy detected: already initializing class ",
+                                    _cpython__py_class__py_class_impl__stringify!($class)));
                                 INIT_ACTIVE = true;
                                 let res = init(py, module_name);
                                 INIT_ACTIVE = false;
@@ -169,7 +169,7 @@ macro_rules! py_class_impl {
 
                         fn add_to_module(py: $crate::Python, module: &$crate::PyModule) -> $crate::PyResult<()> {
                             let ty = <$class as $crate::py_class::PythonObjectFromPyClassMacro>::initialize(py, module.name(py).ok())?;
-                            module.add(py, stringify!($class), ty)
+                            module.add(py, _cpython__py_class__py_class_impl__stringify!($class), ty)
                         }
                     }
 
@@ -1794,7 +1794,7 @@ macro_rules! py_class_impl {
         }
         /* members: */ {
             $( $member_name = $member_expr; )*
-            $name = 
+            $name =
             py_argparse_parse_plist!{
                 py_class_static_method {$py, $class::$name}
                 ($($p)*)
@@ -1814,5 +1814,29 @@ macro_rules! py_class_impl {
         }
     }};
 
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! _cpython__py_class__py_class_impl__concat {
+    ($($inner:tt)*) => {
+        concat! { $($inner)* }
+    }
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! _cpython__py_class__py_class_impl__stringify {
+    ($($inner:tt)*) => {
+        stringify! { $($inner)* }
+    }
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! _cpython__py_class__py_class_impl__assert {
+    ($($inner:tt)*) => {
+        assert! { $($inner)* }
+    }
 }
 

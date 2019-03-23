@@ -97,7 +97,7 @@ macro_rules! py_method_def {
 ///     py.run("print(multiply(6, 7))", None, Some(&dict)).unwrap();
 /// }
 /// ```
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! py_fn {
     ($py:expr, $f:ident $plist:tt ) => {
         py_argparse_parse_plist! { py_fn_impl { $py, $f } $plist }
@@ -107,7 +107,7 @@ macro_rules! py_fn {
     };
 }
 
-#[macro_export]
+#[macro_export(local_inner_macros)]
 #[doc(hidden)]
 macro_rules! py_fn_impl {
     // Form 1: reference existing function
@@ -119,9 +119,9 @@ macro_rules! py_fn_impl {
         -> *mut $crate::_detail::ffi::PyObject
         {
             $crate::_detail::handle_callback(
-                stringify!($f), $crate::_detail::PyObjectCallbackConverter,
+                _cpython__function__stringify!($f), $crate::_detail::PyObjectCallbackConverter,
                 |py| {
-                    py_argparse_raw!(py, Some(stringify!($f)), args, kwargs,
+                    py_argparse_raw!(py, Some(_cpython__function__stringify!($f)), args, kwargs,
                         [ $( { $pname : $ptype = $detail } )* ]
                         {
                             $f(py $(, $pname )* )
@@ -130,7 +130,7 @@ macro_rules! py_fn_impl {
         }
         unsafe {
             $crate::_detail::py_fn_impl($py,
-                py_method_def!(stringify!($f), 0, wrap))
+                py_method_def!(_cpython__function__stringify!($f), 0, wrap))
         }
     }};
     // Form 2: inline function definition
@@ -232,5 +232,13 @@ impl <'a> Drop for AbortOnDrop<'a> {
     }
 }
 
-// Tests for this file are in tests/test_function.rs
+// Rust 2018 support
+#[macro_export]
+#[doc(hidden)]
+macro_rules! _cpython__function__stringify {
+    ($($inner:tt)*) => {
+        stringify! { $($inner)* }
+    }
+}
 
+// Tests for this file are in tests/test_function.rs

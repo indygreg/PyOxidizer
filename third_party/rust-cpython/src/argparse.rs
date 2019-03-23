@@ -140,14 +140,14 @@ pub fn parse_args(
 /// so `return` statements might behave unexpectedly in this case. (this only affects direct use
 /// of `py_argparse!`; `py_fn!` is unaffected as the body there is always in a separate function
 /// from the generated argument-parsing code).
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! py_argparse {
     ($py:expr, $fname:expr, $args:expr, $kwargs:expr, $plist:tt $body:block) => {
         py_argparse_parse_plist! { py_argparse_impl { $py, $fname, $args, $kwargs, $body, } $plist }
     };
 }
 
-#[macro_export]
+#[macro_export(local_inner_macros)]
 #[doc(hidden)]
 macro_rules! py_argparse_parse_plist {
     // Parses a parameter-list into a format more suitable for consumption by Rust macros.
@@ -167,7 +167,7 @@ macro_rules! py_argparse_parse_plist {
     };
 }
 
-#[macro_export]
+#[macro_export(local_inner_macros)]
 #[doc(hidden)]
 macro_rules! py_argparse_parse_plist_impl {
     // TT muncher macro that does the main work for py_argparse_parse_plist!.
@@ -290,7 +290,7 @@ macro_rules! py_argparse_parse_plist_impl {
 
 // The main py_argparse!() macro, except that it expects the parameter-list
 // in the output format of py_argparse_parse_plist!().
-#[macro_export]
+#[macro_export(local_inner_macros)]
 #[doc(hidden)]
 macro_rules! py_argparse_impl {
     // special case: function signature is (*args, **kwargs),
@@ -337,7 +337,7 @@ macro_rules! py_argparse_impl {
 }
 
 // Like py_argparse_impl!(), but accepts `*mut ffi::PyObject` for $args and $kwargs.
-#[macro_export]
+#[macro_export(local_inner_macros)]
 #[doc(hidden)]
 macro_rules! py_argparse_raw {
     ($py:ident, $fname:expr, $args:expr, $kwargs:expr, $plist:tt $body:block) => {{
@@ -379,7 +379,7 @@ macro_rules! py_argparse_param_description {
     );
 }
 
-#[macro_export]
+#[macro_export(local_inner_macros)]
 #[doc(hidden)]
 macro_rules! py_argparse_extract {
     // base case

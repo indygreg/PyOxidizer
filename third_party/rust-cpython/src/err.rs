@@ -59,7 +59,7 @@ fn main() {
 }
 ```
 */
-#[macro_export]
+#[macro_export(local_inner_macros)]
 macro_rules! py_exception {
     ($module: ident, $name: ident, $base: ty) => {
         pub struct $name($crate::PyObject);
@@ -105,7 +105,7 @@ macro_rules! py_exception {
                     if type_object.is_null() {
                         type_object = $crate::PyErr::new_type(
                             py,
-                            concat!(stringify!($module), ".", stringify!($name)),
+                            _cpython__err__concat!(_cpython__err__stringify!($module), ".", _cpython__err__stringify!($name)),
                             Some($crate::PythonObject::into_object(py.get_type::<$base>())),
                             None).as_type_ptr();
                     }
@@ -447,6 +447,25 @@ pub fn error_on_minusone(py : Python, result : libc::c_int) -> PyResult<()> {
         Ok(())
     } else {
         Err(PyErr::fetch(py))
+    }
+}
+
+
+// 2018 macros support
+//
+#[doc(hidden)]
+#[macro_export]
+macro_rules! _cpython__err__concat {
+    ($($inner:tt)*) => {
+        concat! { $($inner)* }
+    }
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! _cpython__err__stringify {
+    ($($inner:tt)*) => {
+        stringify! { $($inner)* }
     }
 }
 

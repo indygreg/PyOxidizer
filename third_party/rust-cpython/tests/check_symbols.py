@@ -9,12 +9,12 @@ import platform
 if os.path.dirname(__file__):
     os.chdir(os.path.dirname(__file__))
 
-if platform.system() == 'Windows' or platform.system().startswith('CYGWIN'):
-    sys.exit(0) # test not supported on windows - ignore it
+if platform.system() in ('Windows', 'Darwin') or platform.system().startswith('CYGWIN'):
+    sys.exit(0) # test not supported on windows or osx - ignore it
 
 so_files = [
     sysconfig.get_config_var("LIBDIR")+"/"+sysconfig.get_config_var("LDLIBRARY"),
-    sysconfig.get_config_var("LIBPL")+"/"+sysconfig.get_config_var("LDLIBRARY")
+    sysconfig.get_config_var("LIBPL")+"/"+sysconfig.get_config_var("LDLIBRARY"),
 ]
 so_file = None
 for name in so_files:
