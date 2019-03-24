@@ -290,9 +290,7 @@ pub fn analyze_python_distribution_data(
             });
         }
 
-        extension_modules.insert(
-            module.clone(),
-            ems);
+        extension_modules.insert(module.clone(), ems);
     }
 
     let include_path = python_path.join(pi.python_include);
