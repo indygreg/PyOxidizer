@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::ptr::null;
 
 use cpython::{
-    NoArgs, ObjectProtocol, PyErr, PyModule, PyObject, PyResult, Python, PythonObject, ToPyObject,
+    NoArgs, ObjectProtocol, PyErr, PyList, PyModule, PyObject, PyResult, PyString, Python, PythonObject, ToPyObject,
 };
 use pyffi;
 
@@ -285,14 +285,33 @@ impl MainPythonInterpreter {
          * PySys_ResetWarnOptions()
          */
 
-        // TODO support storing raw argv somewhere to work around
-        // Python coercing it to Unicode on POSIX.
-
         unsafe {
             pyffi::Py_Initialize();
         }
 
         self.init_run = true;
+
+        // env::args() panics if arguments aren't valid Unicode. But
+        // invalid Unicode arguments are possible and some applications may
+        // want to support them. Of course, Python's str type may also enforce
+        // valid Unicode.
+        // TODO support invalid Unicode arguments
+        let args_objs: Vec<PyObject> = env::args().map(|arg| {
+            PyString::new(py, arg.as_str()).into_object()
+        }).collect();
+
+        // This will steal the pointer to the elements and mem::forget them.
+        let args = PyList::new(py, &args_objs);
+        let argv = b"argv\0";
+
+        let res = args.with_borrowed_ptr(py, |args_ptr| unsafe {
+            pyffi::PySys_SetObject(argv.as_ptr() as *const i8, args_ptr)
+        });
+
+        match res {
+            0 => (),
+            _ => panic!("unable to set sys.argv"),
+        }
 
         // As a convention, sys.frozen is set to indicate we are running from
         // a self-contained application.
