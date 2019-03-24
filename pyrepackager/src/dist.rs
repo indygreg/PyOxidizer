@@ -54,6 +54,10 @@ struct PythonJsonMain {
 }
 
 fn parse_python_json(path: &Path) -> PythonJsonMain {
+    if !path.exists() {
+        panic!("PYTHON.json does not exist; are you using an up-to-date Python distribution that conforms with our requirements?");
+    }
+
     let buf = fs::read(path).expect("failed to read PYTHON.json");
 
     let v: PythonJsonMain = serde_json::from_slice(&buf).expect("failed to parse JSON");
