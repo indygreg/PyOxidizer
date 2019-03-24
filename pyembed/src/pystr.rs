@@ -70,3 +70,21 @@ pub fn osstring_to_str(py: Python, s: OsString) -> PyObject {
     let w = s.to_wide();
     unsafe { PyObject::from_owned_ptr(py, pyffi::PyUnicode_FromWideChar(w.as_ptr(), w.len())) }
 }
+
+#[cfg(target_family = "unix")]
+pub fn osstring_to_bytes(py: Python, s: OsString) -> PyObject {
+    let b = s.as_bytes();
+    unsafe {
+        let o = pyffi::PyBytes_FromStringAndSize(b.as_ptr() as *const i8, b.len() as isize);
+        PyObject::from_owned_ptr(py, o)
+    }
+}
+
+#[cfg(target_family = "windows")]
+pub fn osstring_to_bytes(py: Python, s: OsString) -> PyObject {
+    let w = s.to_wide();
+    unsafe {
+        let o = pyffi::PyBytes_FromStringAndSize(w.as_ptr() as *const i8, w.len() * 2);
+        PyObject::from_owned_ptr(py, o)
+    }
+}

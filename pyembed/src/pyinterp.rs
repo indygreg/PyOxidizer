@@ -17,7 +17,7 @@ use pyffi;
 use crate::data::*;
 use crate::pyalloc::{make_raw_memory_allocator, RawAllocator};
 use crate::pymodules_module::PyInit__pymodules;
-use crate::pystr::{osstring_to_str, OwnedPyStr};
+use crate::pystr::{osstring_to_bytes, osstring_to_str, OwnedPyStr};
 
 const PYMODULES_NAME: &'static [u8] = b"_pymodules\0";
 
@@ -51,6 +51,11 @@ pub struct PythonConfig {
     pub dont_write_bytecode: bool,
     /// Whether stdout and stderr streams should be unbuffered.
     pub unbuffered_stdio: bool,
+    /// Whether to set sys.argvb with bytes versions of process arguments.
+    ///
+    /// On Windows, bytes will be UTF-16. On POSIX, bytes will be raw char*
+    /// values passed to `int main()`.
+    pub argvb: bool,
 }
 
 impl PythonConfig {
@@ -69,6 +74,7 @@ impl PythonConfig {
             ignore_python_env: IGNORE_ENVIRONMENT,
             dont_write_bytecode: DONT_WRITE_BYTECODE,
             unbuffered_stdio: UNBUFFERED_STDIO,
+            argvb: false,
         }
     }
 }
@@ -300,8 +306,6 @@ impl MainPythonInterpreter {
         // will be derived from wchar_t on Windows and char* on POSIX. We can
         // convert these to Python str instances using a platform-specific
         // mechanism.
-        //
-        // TODO consider exposing the raw arguments data to Python as bytes.
         let args_objs: Vec<PyObject> = env::args_os()
             .map(|os_arg| osstring_to_str(py, os_arg))
             .collect();
@@ -317,6 +321,24 @@ impl MainPythonInterpreter {
         match res {
             0 => (),
             _ => panic!("unable to set sys.argv"),
+        }
+
+        if config.argvb {
+            let args_objs: Vec<PyObject> = env::args_os()
+                .map(|os_arg| osstring_to_bytes(py, os_arg))
+                .collect();
+
+            let args = PyList::new(py, &args_objs);
+            let argvb = b"argvb\0";
+
+            let res = args.with_borrowed_ptr(py, |args_ptr| unsafe {
+                pyffi::PySys_SetObject(argvb.as_ptr() as *const i8, args_ptr)
+            });
+
+            match res {
+                0 => (),
+                _ => panic!("unable to set sys.argvb"),
+            }
         }
 
         // As a convention, sys.frozen is set to indicate we are running from
