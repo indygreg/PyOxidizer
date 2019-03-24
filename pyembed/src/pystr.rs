@@ -4,8 +4,16 @@
 
 use libc::{c_void, size_t, wchar_t};
 use pyffi;
+use std::ffi::{CString, OsString};
 use std::os::raw::c_char;
 use std::ptr::null_mut;
+
+#[cfg(target_family = "unix")]
+use std::os::unix::ffi::OsStrExt;
+#[cfg(target_family = "windows")]
+use std::os::windows::prelude::OsStrExt;
+
+use cpython::{PyObject, Python};
 
 #[derive(Debug)]
 pub struct OwnedPyStr {
@@ -36,4 +44,29 @@ impl Into<*const wchar_t> for OwnedPyStr {
     fn into(self) -> *const wchar_t {
         self.data
     }
+}
+
+const SURROGATEESCAPE: &'static [u8] = b"surrogateescape\0";
+
+#[cfg(target_family = "unix")]
+pub fn osstring_to_str(py: Python, s: OsString) -> PyObject {
+    // PyUnicode_DecodeLocaleAndSize says the input must have a trailing NULL.
+    // So use a CString for that.
+    let b = CString::new(s.as_bytes()).expect("valid C string");
+    unsafe {
+        let o = pyffi::PyUnicode_DecodeLocaleAndSize(
+            b.as_ptr() as *const i8,
+            b.to_bytes().len() as isize,
+            SURROGATEESCAPE.as_ptr() as *const i8,
+        );
+
+        PyObject::from_owned_ptr(py, o)
+    }
+}
+
+#[cfg(target_family = "windows")]
+pub fn osstring_to_str(py: Python, s: OsString) -> PyObject {
+    // Windows OsString should be valid UTF-16.
+    let w = s.to_wide();
+    unsafe { PyObject::from_owned_ptr(py, pyffi::PyUnicode_FromWideChar(w.as_ptr(), w.len())) }
 }

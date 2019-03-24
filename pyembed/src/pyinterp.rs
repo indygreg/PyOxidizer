@@ -9,14 +9,15 @@ use std::path::PathBuf;
 use std::ptr::null;
 
 use cpython::{
-    NoArgs, ObjectProtocol, PyErr, PyList, PyModule, PyObject, PyResult, PyString, Python, PythonObject, ToPyObject,
+    NoArgs, ObjectProtocol, PyErr, PyList, PyModule, PyObject, PyResult, Python, PythonObject,
+    ToPyObject,
 };
 use pyffi;
 
 use crate::data::*;
 use crate::pyalloc::{make_raw_memory_allocator, RawAllocator};
 use crate::pymodules_module::PyInit__pymodules;
-use crate::pystr::OwnedPyStr;
+use crate::pystr::{osstring_to_str, OwnedPyStr};
 
 const PYMODULES_NAME: &'static [u8] = b"_pymodules\0";
 
@@ -291,14 +292,19 @@ impl MainPythonInterpreter {
 
         self.init_run = true;
 
-        // env::args() panics if arguments aren't valid Unicode. But
-        // invalid Unicode arguments are possible and some applications may
-        // want to support them. Of course, Python's str type may also enforce
-        // valid Unicode.
-        // TODO support invalid Unicode arguments
-        let args_objs: Vec<PyObject> = env::args().map(|arg| {
-            PyString::new(py, arg.as_str()).into_object()
-        }).collect();
+        // env::args() panics if arguments aren't valid Unicode. But invalid
+        // Unicode arguments are possible and some applications may want to
+        // support them.
+        //
+        // env::args_os() provides access to the raw OsString instances, which
+        // will be derived from wchar_t on Windows and char* on POSIX. We can
+        // convert these to Python str instances using a platform-specific
+        // mechanism.
+        //
+        // TODO consider exposing the raw arguments data to Python as bytes.
+        let args_objs: Vec<PyObject> = env::args_os()
+            .map(|os_arg| osstring_to_str(py, os_arg))
+            .collect();
 
         // This will steal the pointer to the elements and mem::forget them.
         let args = PyList::new(py, &args_objs);
