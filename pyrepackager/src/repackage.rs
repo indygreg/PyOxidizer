@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use byteorder::{LittleEndian, WriteBytesExt};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
 use std::fs::create_dir_all;
@@ -12,7 +12,12 @@ use std::iter::FromIterator;
 use std::path::PathBuf;
 
 use super::bytecode::compile_bytecode;
+use super::config::PythonPackaging;
 use super::dist::PythonDistributionInfo;
+use super::fsscan::{
+    find_python_resources,
+    PythonResourceType,
+};
 
 pub const PYTHON_IMPORTER: &'static [u8] = include_bytes!("memoryimporter.py");
 
@@ -78,6 +83,110 @@ lazy_static! {
 
         v
     };
+}
+
+#[derive(Debug)]
+pub struct PythonModule {
+    pub name: String,
+    pub path: PathBuf,
+    pub optimize_level: i64,
+}
+
+fn resolve_python_packaging(package: &PythonPackaging, dist: &PythonDistributionInfo) -> Vec<PythonModule> {
+    let mut res = Vec::new();
+
+    match package {
+        PythonPackaging::Stdlib { optimize_level } => {
+            for (name, fs_path) in &dist.py_modules {
+                if is_stdlib_test_package(&name) {
+                    println!("skipping test stdlib module: {}", name);
+                    continue;
+                }
+
+                res.push(PythonModule {
+                    name: name.to_string(),
+                    path: fs_path.to_path_buf(),
+                    optimize_level: optimize_level.unwrap_or(0),
+                });
+            }
+        }
+        PythonPackaging::Virtualenv{ path, optimize_level } => {
+            let mut packages_path = PathBuf::from(path);
+
+            if dist.os == "windows" {
+                packages_path.push("Lib");
+            }
+            else {
+                packages_path.push("lib");
+            }
+
+            packages_path.push("python".to_owned() + &dist.version[0..3]);
+            packages_path.push("site-packages");
+
+            for resource in find_python_resources(&packages_path) {
+                match resource.flavor {
+                    PythonResourceType::Source => {
+                        res.push(PythonModule {
+                            name: resource.name,
+                            path: resource.path.to_path_buf(),
+                            optimize_level: optimize_level.unwrap_or(0),
+                        });
+                    },
+                    _ => {},
+                }
+            }
+        },
+        PythonPackaging::PackageRoot{ path, packages, optimize_level } => {
+            let path = PathBuf::from(path);
+
+            for resource in find_python_resources(&path) {
+                match resource.flavor {
+                    PythonResourceType::Source => {
+                        let mut relevant = false;
+
+                        for package in packages {
+                            let prefix = package.clone() + ".";
+
+                            if &resource.name == package {
+                                relevant = true;
+                            }
+
+                            else if resource.name.starts_with(&prefix) {
+                                relevant = true;
+                            }
+
+                            if relevant {
+                                break;
+                            }
+                        }
+
+                        if relevant {
+                            res.push(PythonModule {
+                                name: resource.name,
+                                path: resource.path.to_path_buf(),
+                                optimize_level: optimize_level.unwrap_or(0),
+                            });
+                        }
+                    },
+                    _ => {},
+                }
+            }
+        },
+    }
+
+    res
+}
+
+pub fn resolve_python_modules(packages: &Vec<PythonPackaging>, dist: &PythonDistributionInfo) -> BTreeMap<String, PythonModule> {
+    let mut res: BTreeMap<String, PythonModule> = BTreeMap::new();
+
+    for packaging in packages {
+        for module in resolve_python_packaging(packaging, dist) {
+            res.insert(module.name.clone(), module);
+        }
+    }
+
+    res
 }
 
 pub struct ImportlibData {

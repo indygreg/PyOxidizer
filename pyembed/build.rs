@@ -4,21 +4,21 @@
 
 extern crate pyrepackager;
 
-use pyrepackager::bytecode::compile_bytecode;
-use pyrepackager::config::{parse_config, resolve_python_distribution_archive};
-use pyrepackager::dist::analyze_python_distribution_tar_zst;
-use pyrepackager::fsscan::find_python_modules;
-use pyrepackager::repackage::{
-    derive_importlib, is_stdlib_test_package, link_libpython, write_blob_entries, BlobEntries,
-    BlobEntry,
-};
-
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
 use std::fs::File;
 use std::io::{Cursor, Read, Write};
 use std::path::Path;
+
+use pyrepackager::bytecode::compile_bytecode;
+use pyrepackager::config::{parse_config, resolve_python_distribution_archive};
+use pyrepackager::dist::analyze_python_distribution_tar_zst;
+use pyrepackager::repackage::{
+    derive_importlib, link_libpython,
+    resolve_python_modules, write_blob_entries, BlobEntries,
+    BlobEntry,
+};
 
 struct PythonModuleData {
     source: Vec<u8>,
@@ -86,38 +86,15 @@ fn main() {
 
     let mut all_py_modules: BTreeMap<String, PythonModuleData> = BTreeMap::new();
 
-    for (name, fs_path) in dist.py_modules {
-        if is_stdlib_test_package(&name) {
-            println!("skipping test stdlib module: {}", name);
-            continue;
-        }
+    for (name, module) in resolve_python_modules(&config.python_packaging, &dist) {
+        let source = fs::read(module.path).expect("error reading source file");
 
-        let source = fs::read(fs_path).expect("error reading source file");
-
-        let bytecode = match compile_bytecode(&source, &name, config.package_optimize_level as i32)
-        {
+        let bytecode = match compile_bytecode(&source, &name, module.optimize_level as i32) {
             Ok(res) => Some(res),
             Err(msg) => panic!("error compiling bytecode: {}", msg),
         };
 
         all_py_modules.insert(name.clone(), PythonModuleData { source, bytecode });
-    }
-
-    // Collect additional Python modules and resources to embed in the interpreter.
-    // Reverse iteration order so first entry in config is used (last write wins).
-    for path in config.package_module_paths.iter().rev() {
-        for (name, source) in find_python_modules(&path).unwrap() {
-            let bytecode = compile_bytecode(&source, &name, config.package_optimize_level as i32)
-                .expect("error compiling bytecode");
-
-            all_py_modules.insert(
-                name.clone(),
-                PythonModuleData {
-                    source,
-                    bytecode: Some(bytecode),
-                },
-            );
-        }
     }
 
     // Produce the packed data structures containing Python modules.

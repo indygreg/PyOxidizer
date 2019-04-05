@@ -30,16 +30,30 @@ struct PythonConfig {
 }
 
 #[derive(Debug, Deserialize)]
-struct PythonPackaging {
-    module_paths: Option<toml::value::Array>,
-    optimize_level: Option<i64>,
+#[serde(tag = "type")]
+pub enum PythonPackaging {
+    #[serde(rename = "stdlib")]
+    Stdlib {
+        optimize_level: Option<i64>,
+    },
+    #[serde(rename = "virtualenv")]
+    Virtualenv {
+        path: String,
+        optimize_level: Option<i64>,
+    },
+    #[serde(rename = "package-root")]
+    PackageRoot {
+        path: String,
+        packages: Vec<String>,
+        optimize_level: Option<i64>,
+    }
 }
 
 #[derive(Debug, Deserialize)]
 struct ParsedConfig {
     python_distribution: PythonDistribution,
     python_config: PythonConfig,
-    python_packaging: PythonPackaging,
+    python_packages: Vec<PythonPackaging>,
 }
 
 #[derive(Debug)]
@@ -49,8 +63,6 @@ pub struct Config {
     pub no_site: bool,
     pub no_user_site_directory: bool,
     pub optimize_level: i64,
-    pub package_module_paths: Vec<PathBuf>,
-    pub package_optimize_level: i64,
     pub program_name: String,
     pub python_distribution_path: Option<String>,
     pub python_distribution_url: Option<String>,
@@ -58,6 +70,7 @@ pub struct Config {
     pub stdio_encoding_name: Option<String>,
     pub stdio_encoding_errors: Option<String>,
     pub unbuffered_stdio: bool,
+    pub python_packaging: Vec<PythonPackaging>,
 }
 
 pub fn parse_config(data: &Vec<u8>) -> Config {
@@ -113,21 +126,20 @@ pub fn parse_config(data: &Vec<u8>) -> Config {
         None => false,
     };
 
-    let package_module_paths = match config.python_packaging.module_paths {
-        Some(value) => value
-            .iter()
-            .map(|p| PathBuf::from(p.as_str().unwrap()))
-            .collect(),
-        None => Vec::new(),
-    };
+    let mut have_stdlib = false;
 
-    let package_optimize_level = match config.python_packaging.optimize_level {
-        Some(0) => 0,
-        Some(1) => 1,
-        Some(2) => 2,
-        Some(value) => panic!("illegal optimize_level {}: value must be 0, 1 or 2", value),
-        None => 0,
-    };
+    for packaging in &config.python_packages {
+        match packaging {
+            PythonPackaging::Stdlib { .. } => {
+                have_stdlib = true;
+            },
+            _ => { },
+        }
+    }
+
+    if !have_stdlib {
+        panic!("no `type = \"stdlib\"` entry in `[[python_packages]]`");
+    }
 
     Config {
         dont_write_bytecode,
@@ -135,8 +147,6 @@ pub fn parse_config(data: &Vec<u8>) -> Config {
         no_site,
         no_user_site_directory,
         optimize_level,
-        package_module_paths,
-        package_optimize_level,
         program_name,
         python_distribution_path,
         python_distribution_url,
@@ -144,6 +154,7 @@ pub fn parse_config(data: &Vec<u8>) -> Config {
         stdio_encoding_name,
         stdio_encoding_errors,
         unbuffered_stdio,
+        python_packaging: config.python_packages,
     }
 }
 

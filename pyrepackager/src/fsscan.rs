@@ -33,6 +33,7 @@ pub enum PythonResourceType {
     BytecodeOpt1,
     BytecodeOpt2,
     Resource,
+    Other,
 }
 
 /// Represents a resource in a Python directory.
@@ -133,7 +134,14 @@ impl Iterator for PythonResourceIterator {
                 }
 
                 if components[components.len() - 2] != "__pycache__" {
-                    panic!("encountered .pyc file outside __pycache__/: {}", rel_str);
+                    // Possibly from Python 2?
+                    let name = itertools::join(components, ".");
+
+                    return Some(PythonResource {
+                        name,
+                        path: path.to_path_buf(),
+                        flavor: PythonResourceType::Other,
+                    });
                 }
 
                 let package_parts = &components[0..components.len() - 2];

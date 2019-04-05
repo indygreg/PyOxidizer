@@ -161,6 +161,18 @@ pub struct PythonDistributionInfo {
     /// Directory where distribution lives in the filesystem.
     pub temp_dir: tempdir::TempDir,
 
+    /// Python distribution flavor.
+    pub flavor: String,
+
+    /// Python version string.
+    pub version: String,
+
+    /// Operating system this Python runs on.
+    pub os: String,
+
+    /// Architecture this Python runs on.
+    pub arch: String,
+
     /// Object files providing the core Python implementation.
     ///
     /// Keys are relative paths. Values are filesystem paths.
@@ -323,6 +335,10 @@ pub fn analyze_python_distribution_data(
     }
 
     Ok(PythonDistributionInfo {
+        flavor: pi.python_flavor.clone(),
+        version: pi.python_version.clone(),
+        os: pi.os.clone(),
+        arch: pi.arch.clone(),
         temp_dir,
         extension_modules,
         frozen_c,

@@ -37,32 +37,6 @@ e.g.::
     local_path = "/var/python-distributions/cpython-linux64.tar.zst"
     sha256 = "11a53f5755773f91111a04f6070a6bc00518a0e8e64d90f58584abf02ca79081"
 
-``[python_packaging]``
-======================
-
-Configures how the Python interpreter is packaged. Options in this section
-declare what Python packages/modules are included in the embedded Python
-distribution.
-
-optimize_level
-   The module optimization level for packaged bytecode.
-
-   Allowed values are ``0``, ``1``, and ``2``.
-
-   Defaults to ``0``, which is the Python default.
-
-module_paths
-   Array of filesystem paths containing extra Python modules to package and
-   make available for import. Any ``.py`` files under these directories will
-   be compiled to bytecode and made available for import.
-
-   If a relative path exists in multiple directories, the first encountered
-   path is used.
-
-   To easily package all dependencies required for an application, one can
-   create a virtualenv and point this config option at its e.g.
-   ``lib/python3.7/site-packages`` directory.
-
 ``[python_config]``
 ===================
 
@@ -119,3 +93,99 @@ unbuffered_stdio
    Controls the value of
    `Py_UnbufferedStdioFlag <https://docs.python.org/3/c-api/init.html#c.Py_UnbufferedStdioFlag>`_.
    Default is ``false``.
+
+``[[python_packages]]``
+=======================
+
+Configures the packaging of Python packages/modules.
+
+Each entry of this section describes a specific source/rule for finding
+Python packages/modules to include. Each entry has a ``type`` field describing
+the type of source. All other fields are dependent on the type.
+
+Each section is processed in order and is resolved to a set of named Python
+modules/resources. If multiple sections provide the same module/resource, the
+last encountered instance of a named entity is used.
+
+The following sections describe the various ``type``s of sources.
+
+``stdlib``
+----------
+
+``type = "stdlib"`` denotes Python modules coming from the Python
+distribution's standard library.
+
+.. important::
+
+   A ``stdlib`` entry is required, as Python can't be initialized without
+   some modules from the standard library. It should almost always be the
+   first ``[[python_packages]]`` entry in the config file.
+
+The following keys control behavior:
+
+optimize_level
+   The module optimization level for packaged bytecode.
+
+   Allowed values are ``0``, ``1``, and ``2``.
+
+   Defaults to ``0``, which is the Python default.
+
+``package-root``
+----------------
+
+``type = "package-root"`` denotes packaging of modules and resources from
+a directory on the filesystem.
+
+The specified directory will be scanned for Python module and resource files.
+However, only specific named *packages* will be packaged. e.g. if the
+directory contains directories ``foo/`` and ``bar/``, you must explicitly
+state that you want the ``foo`` and/or ``bar`` package to be included so
+files from these directories are included.
+
+This type is frequently used to pull in packages from local source
+directories (e.g. directories containing a ``setup.py`` file).
+
+The following keys control behavior:
+
+path
+   The filesystem path to the directory to scan.
+
+optimize_level
+   The module optimization level for packaged bytecode.
+
+   Allowed values are ``0``, ``1``, and ``2``.
+
+   Defaults to ``0``, which is the Python default.
+
+packages
+   An array of package names to include. This corresponds to
+   ``<package>.py`` files in the root directory or directories of the
+   entry's name.
+
+``virtualenv``
+--------------
+
+``type = "virtualenv"`` denotes packaging of modules and resources in a
+populated virtualenv.
+
+.. important::
+
+   PyOxidizer only supports finding modules and resources populated via
+   *traditional* means (e.g. ``pip install`` or ``python setup.py install``).
+   If ``.pth`` or similar alternative mechanisms for installing modules are
+   used, files may not be discovered properly.
+
+The following keys control behavior:
+
+path
+   The filesystem path to the root of the virtualenv.
+
+   Python modules are typically in a ``lib/pythonX.Y/site-packages`` directory
+   under this path.
+
+optimize_level
+   The module optimization level for packaged bytecode.
+
+   Allowed values are ``0``, ``1``, and ``2``.
+
+   Defaults to ``0``, which is the Python default.
