@@ -109,10 +109,8 @@ fn resolve_python_packaging(package: &PythonPackaging, dist: &PythonDistribution
 
     match package {
         PythonPackaging::Stdlib { optimize_level, exclude_test_modules } => {
-            let include_test_modules = !exclude_test_modules.unwrap_or(true);
-
             for (name, fs_path) in &dist.py_modules {
-                if is_stdlib_test_package(&name) && !include_test_modules {
+                if is_stdlib_test_package(&name) && *exclude_test_modules {
                     println!("skipping test stdlib module: {}", name);
                     continue;
                 }

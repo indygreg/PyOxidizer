@@ -51,7 +51,8 @@ pub enum PythonPackaging {
     Stdlib {
         #[serde(default = "ZERO")]
         optimize_level: i64,
-        exclude_test_modules: Option<bool>,
+        #[serde(default = "TRUE")]
+        exclude_test_modules: bool,
     },
     #[serde(rename = "virtualenv")]
     Virtualenv {
