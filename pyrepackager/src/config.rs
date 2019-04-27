@@ -23,6 +23,9 @@ fn TRUE() -> bool { true }
 #[allow(non_snake_case)]
 fn FALSE() -> bool { false }
 
+#[allow(non_snake_case)]
+fn ZERO() -> i64 { 0 }
+
 #[derive(Debug, Deserialize)]
 struct PythonConfig {
     #[serde(default = "TRUE")]
@@ -33,7 +36,8 @@ struct PythonConfig {
     no_site: bool,
     #[serde(default = "TRUE")]
     no_user_site_directory: bool,
-    optimize_level: Option<i64>,
+    #[serde(default = "ZERO")]
+    optimize_level: i64,
     program_name: Option<String>,
     stdio_encoding: Option<String>,
     #[serde(default = "FALSE")]
@@ -45,19 +49,22 @@ struct PythonConfig {
 pub enum PythonPackaging {
     #[serde(rename = "stdlib")]
     Stdlib {
-        optimize_level: Option<i64>,
+        #[serde(default = "ZERO")]
+        optimize_level: i64,
         exclude_test_modules: Option<bool>,
     },
     #[serde(rename = "virtualenv")]
     Virtualenv {
         path: String,
-        optimize_level: Option<i64>,
+        #[serde(default = "ZERO")]
+        optimize_level: i64,
     },
     #[serde(rename = "package-root")]
     PackageRoot {
         path: String,
         packages: Vec<String>,
-        optimize_level: Option<i64>,
+        #[serde(default = "ZERO")]
+        optimize_level: i64,
         #[serde(default)]
         excludes: Vec<String>,
     }
@@ -91,11 +98,10 @@ pub fn parse_config(data: &Vec<u8>) -> Config {
     let config: ParsedConfig = toml::from_slice(&data).unwrap();
 
     let optimize_level = match config.python_config.optimize_level {
-        Some(0) => 0,
-        Some(1) => 1,
-        Some(2) => 2,
-        Some(value) => panic!("illegal optimize_level {}; value must be 0, 1, or 2", value),
-        None => 0,
+        0 => 0,
+        1 => 1,
+        2 => 2,
+        value => panic!("illegal optimize_level {}; value must be 0, 1, or 2", value),
     };
 
     let program_name = match config.python_config.program_name {

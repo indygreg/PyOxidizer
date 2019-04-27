@@ -120,7 +120,7 @@ fn resolve_python_packaging(package: &PythonPackaging, dist: &PythonDistribution
                 res.push(PythonModule {
                     name: name.to_string(),
                     path: fs_path.to_path_buf(),
-                    optimize_level: optimize_level.unwrap_or(0),
+                    optimize_level: *optimize_level,
                 });
             }
         }
@@ -143,7 +143,7 @@ fn resolve_python_packaging(package: &PythonPackaging, dist: &PythonDistribution
                         res.push(PythonModule {
                             name: resource.name,
                             path: resource.path.to_path_buf(),
-                            optimize_level: optimize_level.unwrap_or(0),
+                            optimize_level: *optimize_level,
                         });
                     },
                     _ => {},
@@ -186,7 +186,7 @@ fn resolve_python_packaging(package: &PythonPackaging, dist: &PythonDistribution
                             res.push(PythonModule {
                                 name: resource.name,
                                 path: resource.path.to_path_buf(),
-                                optimize_level: optimize_level.unwrap_or(0),
+                                optimize_level: *optimize_level,
                             });
                         }
                     },
