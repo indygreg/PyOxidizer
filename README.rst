@@ -26,12 +26,13 @@ have no additional run-time dependency on the target system (e.g.
 minimal dependencies on shared libraries, container runtimes, or
 FUSE filesystems), and runs everything from memory (as opposed to
 e.g. extracting Python modules to a temporary directory and loading
-them from there).
+them from there). This makes binaries produced with ``PyOxidizer``
+faster and simpler to manage.
 
 Quick Start
 ===========
 
-You need Rust 1.31 and a corresponding Cargo installed.
+You need Rust 1.31+ and a corresponding Cargo installed.
 
 You will need a TOML configuration file telling us how to embed Python.
 See ``docs/config.rst`` for documentation of this configuration file.
@@ -45,8 +46,12 @@ e.g.::
    [python_config]
    program_name = "myprog"
 
-   [python_packaging]
-   module_paths = ["/home/gps/src/myapp/venv/lib/python3.7/site-packages"]
+   [[python_packages]]
+   type = "stdlib"
+
+   [[python_packages]]
+   type = "virtualenv"
+   path = "/home/gps/venv-myprog"
 
 You can find available Python distributions at
 https://github.com/indygreg/python-build-standalone/releases.
