@@ -123,6 +123,17 @@ distribution's standard library.
 
 The following keys control behavior:
 
+exclude_test_modules
+
+   A boolean indicating whether test-only modules should be excluded from
+   packaging. The Python standard library typically ships various packages
+   and modules used for testing Python itself.
+
+   These modules are not referenced by *real* modules in the Python standard
+   library and are excluded by default. Support for including them is provided
+   for completeness sake, in case someone may want to run the Python standard
+   library unit tests with PyOxidizer.
+
 optimize_level
    The module optimization level for packaged bytecode.
 

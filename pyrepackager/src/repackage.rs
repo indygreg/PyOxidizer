@@ -85,6 +85,18 @@ lazy_static! {
     };
 }
 
+pub fn is_stdlib_test_package(name: &str) -> bool {
+    for package in STDLIB_TEST_PACKAGES {
+        let prefix = format!("{}.", package);
+
+        if name.starts_with(&prefix) {
+            return true;
+        }
+    }
+
+    false
+}
+
 #[derive(Debug)]
 pub struct PythonModule {
     pub name: String,
@@ -96,9 +108,11 @@ fn resolve_python_packaging(package: &PythonPackaging, dist: &PythonDistribution
     let mut res = Vec::new();
 
     match package {
-        PythonPackaging::Stdlib { optimize_level } => {
+        PythonPackaging::Stdlib { optimize_level, exclude_test_modules } => {
+            let include_test_modules = !exclude_test_modules.unwrap_or(true);
+
             for (name, fs_path) in &dist.py_modules {
-                if is_stdlib_test_package(&name) {
+                if is_stdlib_test_package(&name) && !include_test_modules {
                     println!("skipping test stdlib module: {}", name);
                     continue;
                 }
@@ -485,16 +499,4 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
     // the requirement of ``python3-sys`` that a ``pythonXY.lib`` file exists.
 
     build.compile("pythonXY");
-}
-
-pub fn is_stdlib_test_package(name: &str) -> bool {
-    for package in STDLIB_TEST_PACKAGES {
-        let prefix = format!("{}.", package);
-
-        if name.starts_with(&prefix) {
-            return true;
-        }
-    }
-
-    false
 }
