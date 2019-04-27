@@ -17,16 +17,27 @@ struct PythonDistribution {
     sha256: String,
 }
 
+#[allow(non_snake_case)]
+fn TRUE() -> bool { true }
+
+#[allow(non_snake_case)]
+fn FALSE() -> bool { false }
+
 #[derive(Debug, Deserialize)]
 struct PythonConfig {
-    dont_write_bytecode: Option<bool>,
-    ignore_environment: Option<bool>,
-    no_site: Option<bool>,
-    no_user_site_directory: Option<bool>,
+    #[serde(default = "TRUE")]
+    dont_write_bytecode: bool,
+    #[serde(default = "TRUE")]
+    ignore_environment: bool,
+    #[serde(default = "TRUE")]
+    no_site: bool,
+    #[serde(default = "TRUE")]
+    no_user_site_directory: bool,
     optimize_level: Option<i64>,
     program_name: Option<String>,
     stdio_encoding: Option<String>,
-    unbuffered_stdio: Option<bool>,
+    #[serde(default = "FALSE")]
+    unbuffered_stdio: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -79,32 +90,12 @@ pub struct Config {
 pub fn parse_config(data: &Vec<u8>) -> Config {
     let config: ParsedConfig = toml::from_slice(&data).unwrap();
 
-    let dont_write_bytecode = match config.python_config.dont_write_bytecode {
-        Some(value) => value,
-        None => true,
-    };
-
-    let ignore_environment = match config.python_config.ignore_environment {
-        Some(value) => value,
-        None => true,
-    };
-
     let optimize_level = match config.python_config.optimize_level {
         Some(0) => 0,
         Some(1) => 1,
         Some(2) => 2,
         Some(value) => panic!("illegal optimize_level {}; value must be 0, 1, or 2", value),
         None => 0,
-    };
-
-    let no_site = match config.python_config.no_site {
-        Some(value) => value,
-        None => true,
-    };
-
-    let no_user_site_directory = match config.python_config.no_user_site_directory {
-        Some(value) => value,
-        None => true,
     };
 
     let program_name = match config.python_config.program_name {
@@ -124,11 +115,6 @@ pub fn parse_config(data: &Vec<u8>) -> Config {
         None => (None, None),
     };
 
-    let unbuffered_stdio = match config.python_config.unbuffered_stdio {
-        Some(value) => value,
-        None => false,
-    };
-
     let mut have_stdlib = false;
 
     for packaging in &config.python_packages {
@@ -145,10 +131,10 @@ pub fn parse_config(data: &Vec<u8>) -> Config {
     }
 
     Config {
-        dont_write_bytecode,
-        ignore_environment,
-        no_site,
-        no_user_site_directory,
+        dont_write_bytecode: config.python_config.dont_write_bytecode,
+        ignore_environment: config.python_config.ignore_environment,
+        no_site: config.python_config.no_site,
+        no_user_site_directory: config.python_config.no_user_site_directory,
         optimize_level,
         program_name,
         python_distribution_path,
@@ -156,7 +142,7 @@ pub fn parse_config(data: &Vec<u8>) -> Config {
         python_distribution_sha256,
         stdio_encoding_name,
         stdio_encoding_errors,
-        unbuffered_stdio,
+        unbuffered_stdio: config.python_config.unbuffered_stdio,
         python_packaging: config.python_packages,
     }
 }
