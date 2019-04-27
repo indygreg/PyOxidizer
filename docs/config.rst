@@ -173,6 +173,15 @@ packages
    ``<package>.py`` files in the root directory or directories of the
    entry's name.
 
+excludes
+   An array of package or module names to exclude. By default this is an
+   empty array.
+
+   A value in this array will match on an exact full module name match or on
+   a package prefix match. e.g. ``foo`` will match the module ``foo``, the
+   package ``foo``, and any sub-modules in ``foo``, e.g. ``foo.bar``. But
+   it will not match ``foofoo``.
+
 ``virtualenv``
 --------------
 

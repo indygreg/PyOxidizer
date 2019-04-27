@@ -47,6 +47,8 @@ pub enum PythonPackaging {
         path: String,
         packages: Vec<String>,
         optimize_level: Option<i64>,
+        #[serde(default)]
+        excludes: Vec<String>,
     }
 }
 

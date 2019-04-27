@@ -150,7 +150,7 @@ fn resolve_python_packaging(package: &PythonPackaging, dist: &PythonDistribution
                 }
             }
         },
-        PythonPackaging::PackageRoot{ path, packages, optimize_level } => {
+        PythonPackaging::PackageRoot{ path, packages, optimize_level, excludes } => {
             let path = PathBuf::from(path);
 
             for resource in find_python_resources(&path) {
@@ -168,9 +168,17 @@ fn resolve_python_packaging(package: &PythonPackaging, dist: &PythonDistribution
                             else if resource.name.starts_with(&prefix) {
                                 relevant = true;
                             }
+                        }
 
-                            if relevant {
-                                break;
+                        for exclude in excludes {
+                            let prefix = exclude.clone() + ".";
+
+                            if &resource.name == exclude {
+                                relevant = false;
+                            }
+
+                            else if resource.name.starts_with(&prefix) {
+                                relevant = false;
                             }
                         }
 
