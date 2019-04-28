@@ -77,35 +77,72 @@ edges. Use at your own risk.
 How It Works
 ============
 
-``PyOxidizer`` ingests a specially produced Python distribution - likely
-one from the [python-build-standalone](https://github.com/indygreg/python-build-standalone)
-project). It consumes the ``libpython`` static library in its entirely
-or the object files it was derived from. It also collects Python modules
-from the standard library.
+``PyOxidizer`` is comprised of a number of Rust crates, each responsible
+for particular functionality.
 
-The Python standard library modules are supplemented with additional
-``.py`` source files specified by the user. These are all assembled
-into binary data structures and embedded in a Rust library, where the
-raw module source and bytecode are exposed to Python via a minimal
-extension module.
+The ``pyrepackager`` crate contains functionality for ingesting specially
+produced Python distributions - likely one from the
+[python-build-standalone](https://github.com/indygreg/python-build-standalone)
+project) and enabling those distributions to be repackaged. It has code
+for parsing our config files, finding Python modules, compiling Python
+bytecode, etc. ``pyrepackager`` is essentially the main library for
+``PyOxidizer``, providing most of the build-time functionality required
+to build binaries.
 
-There exists a custom module importer that knows how to load modules
-from the in-memory data structures exposed via the built-in extension
-module. This module importer is implemented in pure Python.
+The ``pyembed`` library crate is responsible for managing an embedded
+Python interpreter within a larger Rust application. The crate contains
+all the code needed to interact with the CPython APIs and to provide
+in-memory module importing.
 
-This custom module importer is injected into the Python interpreter
-by compiling custom bytecode for the ``importlib._bootstrap_external``
-module and replacing its entry in the *frozen* modules array exposed
-to Python's C API.
+When built, the ``pyembed`` crate interacts with the ``pyrepackager`` crate
+to assemble all resources required to embed a Python interpreter. This
+includes configuring Cargo to build/link the appropriate files to embed
+``libpython``. This activity is directed by a configuration file. See the
+crate's ``build.rs`` for more.
 
-At run-time, Rust code instantiates an embedded Python interpreter with
-our custom/defined settings.
+A built ``pyembed`` crate contains a default configuration (derived from
+the ``build.rs`` program) for the embedded Python interpreter. However,
+this configuration does not need to be used and the API exposed by the
+``pyembed`` crate allows custom behavior not matching these defaults.
 
-The end result of this process can be as simple as a single, self-contained
-executable. When the process is executed, very little work needs to be done
-to run Python code, as all native code is available in the executable and
-all ``.py`` and ``.pyc`` files can be loaded without performing any
-explicit filesystem I/O.
+A ``pyapp`` crate defines a Rust program that simply calls into the
+``pyembed`` crate and instantiates and runs Python with the configured
+default settings. The crate exists for convenience to facilitate testing
+and to demonstrate how Rust applications can interact with the ``pyembed``
+crate.
+
+The ``pyembed`` create is configured via a TOML file. The configuration
+defines which Python distribution to consume, which Python modules to
+package, and default settings for the Python interpreter, including which
+code to execute by default. Most of the reading and processing of this
+configuration is in the ``pyrepackager`` crate.
+
+At build time, the ``pyembed`` crate assembles configured Python
+resources (such as ``.py`` source files and bytecode) into binary structures
+and exposes this data to the ``pyembed`` crate via ``const &'static [u8]``
+variables. At run time, these binary arrays are parsed into richer Rust data
+structures, which allow Rust to access e.g. the Python bytecode for
+a named Python module. The embedded Python interpreter contains a
+custom *built-in extension module* which exposes these Rust data
+structures to Python as the ``_pymodules`` module. There exists a pure
+Python meta path importer providing an
+``importlib.abc.MetaPathFinder``/``importlib.abc.Loader`` which uses the
+``_pymodules`` extension module to provide access to Python source,
+code, and resource data. In order to make this importer available to
+the Python interpreter, at ``pyembed`` build time, the Python source
+code for this importer is concatenated with the
+``importlib._bootstrap_external`` module (provided by the Python
+distribution) and compiled into Python bytecode. When the embedded
+Python interpreter is initialized, this custom bytecode is used
+to *bootstrap* the Python importing mechanism, allowing the entirety
+of the Python standard library and custom modules to be imported from
+memory using zero-copy access to the Python bytecode.
+
+The final output of PyOxidizer can be as simple as a single, self-contained
+executable containing Python and all its required modules. When the
+process is executed, very little work needs to be done to run Python code,
+as Python modules can be imported from memory without explicit filesystem
+I/O.
 
 Known Limitations and Planned Features
 ======================================
@@ -163,26 +200,6 @@ import library to satisfy requirements of the ``static`` linkage kind.
 See
 https://github.com/rust-lang/rust/issues/26591#issuecomment-123513631 for
 more.
-
-Repository Structure
-====================
-
-The ``pyrepackager`` directory contains a Rust crate with the build-time
-code used for ingesting a Python distribution and emitting artifacts
-and other configurations needed to produce an embeddable Python
-interpreter. Because this is a build-time crate and doesn't contain
-code for run-time, most of the logic for ``PyOxidizer`` lives in this
-crate.
-
-The ``pyembed`` directory defines a library Rust crate for interfacing
-with an embedded Python interpreter. When built, this crate emits
-resources for embedding a Python interpreter (custom module importer,
-modules data structures, etc) and embeds them within the Rust library.
-
-The ``pyapp`` directory defines a simple Rust crate which defines a
-binary that uses the ``pyembed`` crate to instatiate and run an embedded
-Python interpreter. This crate demonstrates how simple it is to integrate
-and use a Python interpreter in an existing Rust project.
 
 Licensing Considerations
 ========================
