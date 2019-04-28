@@ -210,6 +210,12 @@ optimize_level
 
    Defaults to ``0``, which is the Python default.
 
+excludes
+   An array of package or module names to exclude. By default this is an empty
+   array.
+
+   See the documentation for ``excludes`` in ``package-root`` for more.
+
 ``[python_run]``
 ================
 

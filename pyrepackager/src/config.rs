@@ -59,6 +59,8 @@ pub enum PythonPackaging {
         path: String,
         #[serde(default = "ZERO")]
         optimize_level: i64,
+        #[serde(default)]
+        excludes: Vec<String>,
     },
     #[serde(rename = "package-root")]
     PackageRoot {

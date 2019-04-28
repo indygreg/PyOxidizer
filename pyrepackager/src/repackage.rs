@@ -122,7 +122,7 @@ fn resolve_python_packaging(package: &PythonPackaging, dist: &PythonDistribution
                 });
             }
         }
-        PythonPackaging::Virtualenv{ path, optimize_level } => {
+        PythonPackaging::Virtualenv{ path, optimize_level, excludes } => {
             let mut packages_path = PathBuf::from(path);
 
             if dist.os == "windows" {
@@ -138,11 +138,27 @@ fn resolve_python_packaging(package: &PythonPackaging, dist: &PythonDistribution
             for resource in find_python_resources(&packages_path) {
                 match resource.flavor {
                     PythonResourceType::Source => {
-                        res.push(PythonModule {
-                            name: resource.name,
-                            path: resource.path.to_path_buf(),
-                            optimize_level: *optimize_level,
-                        });
+                        let mut relevant = true;
+
+                        for exclude in excludes {
+                            let prefix = exclude.clone() + ".";
+
+                            if &resource.name == exclude {
+                                relevant = false;
+                            }
+
+                            else if resource.name.starts_with(&prefix) {
+                                relevant = false;
+                            }
+                        }
+
+                        if relevant {
+                            res.push(PythonModule {
+                                name: resource.name,
+                                path: resource.path.to_path_buf(),
+                                optimize_level: *optimize_level,
+                            });
+                        }
                     },
                     _ => {},
                 }
