@@ -72,10 +72,18 @@ pub enum PythonPackaging {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(tag = "mode")]
+pub enum RunMode {
+    #[serde(rename = "repl")]
+    Repl {},
+}
+
+#[derive(Debug, Deserialize)]
 struct ParsedConfig {
     python_distribution: PythonDistribution,
     python_config: PythonConfig,
     python_packages: Vec<PythonPackaging>,
+    python_run: RunMode,
 }
 
 #[derive(Debug)]
@@ -93,6 +101,7 @@ pub struct Config {
     pub stdio_encoding_errors: Option<String>,
     pub unbuffered_stdio: bool,
     pub python_packaging: Vec<PythonPackaging>,
+    pub run: RunMode,
 }
 
 pub fn parse_config(data: &Vec<u8>) -> Config {
@@ -151,6 +160,7 @@ pub fn parse_config(data: &Vec<u8>) -> Config {
         stdio_encoding_errors,
         unbuffered_stdio: config.python_config.unbuffered_stdio,
         python_packaging: config.python_packages,
+        run: config.python_run,
     }
 }
 

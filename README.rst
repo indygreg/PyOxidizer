@@ -40,8 +40,8 @@ See ``docs/config.rst`` for documentation of this configuration file.
 e.g.::
 
    [python_distribution]
-   local_path = "/home/gps/src/python-build-standalone/build/cpython-linux64.tar.zst"
-   sha256 = "5a43b90919672f8cc72a932b19f7627fa59ae66f867346f481ce01685db74fad"
+   url = "https://github.com/indygreg/python-build-standalone/releases/download/20190427/cpython-3.7.3-linux64-20190427T2308.tar.zst"
+   sha256 = "0b30af0deb4852f2099c7905f80f55b70f7eec152cd19a3a65b577d4350ad47a"
 
    [python_config]
    program_name = "myprog"
@@ -52,6 +52,9 @@ e.g.::
    [[python_packages]]
    type = "virtualenv"
    path = "/home/gps/venv-myprog"
+
+   [python_run]
+   mode = "repl"
 
 You can find available Python distributions at
 https://github.com/indygreg/python-build-standalone/releases.

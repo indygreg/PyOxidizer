@@ -360,8 +360,15 @@ impl MainPythonInterpreter {
 
         self.init(py);
 
-        py.eval("import re, sys; from black import main; main()", None, None)
-            .unwrap();
+        match RUN_MODE {
+            0 => {
+                self.run_repl().expect("repl should not error");
+            },
+            val => panic!("unhandled run mode: {}", val),
+        }
+
+        //py.eval("import re, sys; from black import main; main()", None, None)
+        //    .unwrap();
 
         //py.eval("print(\"hello, world\")", None, None).unwrap();
         //py.import("__main__").unwrap();

@@ -209,3 +209,23 @@ optimize_level
    Allowed values are ``0``, ``1``, and ``2``.
 
    Defaults to ``0``, which is the Python default.
+
+``[python_run]``
+================
+
+Configures the behavior of the default Python interpreter and application
+binary.
+
+The ``pyembed`` crate contains a default configuration for running a Python
+interpreter and the ``pyapp`` application uses it. This section controls what
+Python code is run when the interpreter starts.
+
+The ``mode`` key defines what operation mode the interpreter/application
+is in. The sections below describe the various modes.
+
+``repl``
+--------
+
+``mode = "repl"`` will launch an interactive Python REPL console connected to
+stdin. This is similar to the behavior of running a ``python`` executable
+without any arguments.

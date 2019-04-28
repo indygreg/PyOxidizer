@@ -12,7 +12,7 @@ use std::io::{Cursor, Read, Write};
 use std::path::Path;
 
 use pyrepackager::bytecode::compile_bytecode;
-use pyrepackager::config::{parse_config, resolve_python_distribution_archive};
+use pyrepackager::config::{parse_config, resolve_python_distribution_archive, RunMode};
 use pyrepackager::dist::analyze_python_distribution_tar_zst;
 use pyrepackager::repackage::{
     derive_importlib, link_libpython,
@@ -214,4 +214,10 @@ fn main() {
         pyc_modules_path.to_str().unwrap()
     ))
     .unwrap();
+
+    f.write_fmt(format_args!(
+        "pub const RUN_MODE: i32 = {};\n",
+        match config.run {
+            RunMode::Repl {} => 0,
+        })).unwrap();
 }
