@@ -179,6 +179,7 @@ fn resolve_python_packaging(
         PythonPackaging::Stdlib {
             optimize_level,
             exclude_test_modules,
+            include_source,
         } => {
             for (name, fs_path) in &dist.py_modules {
                 if is_stdlib_test_package(&name) && *exclude_test_modules {
@@ -192,10 +193,12 @@ fn resolve_python_packaging(
                     Err(msg) => panic!("error compiling bytecode: {}", msg),
                 };
 
-                res.push(PythonResource::ModuleSource {
-                    name: name.clone(),
-                    source,
-                });
+                if *include_source {
+                    res.push(PythonResource::ModuleSource {
+                        name: name.clone(),
+                        source,
+                    });
+                }
 
                 res.push(PythonResource::ModuleBytecode {
                     name: name.clone(),
@@ -207,6 +210,7 @@ fn resolve_python_packaging(
             path,
             optimize_level,
             excludes,
+            include_source,
         } => {
             let mut packages_path = PathBuf::from(path);
 
@@ -246,10 +250,12 @@ fn resolve_python_packaging(
                                 Err(msg) => panic!("error compiling bytecode: {}", msg),
                             };
 
-                        res.push(PythonResource::ModuleSource {
-                            name: resource.name.clone(),
-                            source,
-                        });
+                        if *include_source {
+                            res.push(PythonResource::ModuleSource {
+                                name: resource.name.clone(),
+                                source,
+                            });
+                        }
 
                         res.push(PythonResource::ModuleBytecode {
                             name: resource.name.clone(),
@@ -265,6 +271,7 @@ fn resolve_python_packaging(
             packages,
             optimize_level,
             excludes,
+            include_source,
         } => {
             let path = PathBuf::from(path);
 
@@ -305,10 +312,12 @@ fn resolve_python_packaging(
                                 Err(msg) => panic!("error compiling bytecode: {}", msg),
                             };
 
-                        res.push(PythonResource::ModuleSource {
-                            name: resource.name.clone(),
-                            source,
-                        });
+                        if *include_source {
+                            res.push(PythonResource::ModuleSource {
+                                name: resource.name.clone(),
+                                source,
+                            });
+                        }
 
                         res.push(PythonResource::ModuleBytecode {
                             name: resource.name.clone(),

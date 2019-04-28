@@ -59,6 +59,8 @@ pub enum PythonPackaging {
         optimize_level: i64,
         #[serde(default = "TRUE")]
         exclude_test_modules: bool,
+        #[serde(default = "TRUE")]
+        include_source: bool,
     },
     #[serde(rename = "virtualenv")]
     Virtualenv {
@@ -67,6 +69,8 @@ pub enum PythonPackaging {
         optimize_level: i64,
         #[serde(default)]
         excludes: Vec<String>,
+        #[serde(default = "TRUE")]
+        include_source: bool,
     },
     #[serde(rename = "package-root")]
     PackageRoot {
@@ -76,6 +80,8 @@ pub enum PythonPackaging {
         optimize_level: i64,
         #[serde(default)]
         excludes: Vec<String>,
+        #[serde(default = "TRUE")]
+        include_source: bool,
     },
 }
 

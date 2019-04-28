@@ -141,6 +141,10 @@ optimize_level
 
    Defaults to ``0``, which is the Python default.
 
+include_source
+   Whether to include the source code for modules in addition to the bytecode.
+   Defaults to true.
+
 ``package-root``
 ----------------
 
@@ -182,6 +186,10 @@ excludes
    package ``foo``, and any sub-modules in ``foo``, e.g. ``foo.bar``. But
    it will not match ``foofoo``.
 
+include_source
+   Whether to include the source code for modules in addition to the bytecode.
+   Defaults to true.
+
 ``virtualenv``
 --------------
 
@@ -215,6 +223,10 @@ excludes
    array.
 
    See the documentation for ``excludes`` in ``package-root`` for more.
+
+include_source
+   Whether to include the source code for modules in addition to the bytecode.
+   Defaults to true.
 
 ``[python_run]``
 ================
