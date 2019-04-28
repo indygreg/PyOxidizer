@@ -371,7 +371,7 @@ impl MainPythonInterpreter {
             },
             2 => {
                 let code = RUN_CODE.expect("RUN_CODE should be defined");
-                py.eval(code, None, None).expect("ran OK");
+                py.run(code, None, None).expect("ran OK");
             }
             val => panic!("unhandled run mode: {}", val),
         }
