@@ -355,23 +355,22 @@ impl MainPythonInterpreter {
         }
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&mut self) -> PyResult<PyObject> {
         let py = unsafe { Python::assume_gil_acquired() };
 
         self.init(py);
 
         match RUN_MODE {
             0 => {
-                self.run_repl().expect("repl should not error");
+                self.run_repl()
             },
             1 => {
                 let name = RUN_MODULE_NAME.expect("RUN_MODULE_NAME should be defined");
-                // TODO properly handle Python exceptions.
-                self.run_module_as_main(name).expect("ran OK");
+                self.run_module_as_main(name)
             },
             2 => {
                 let code = RUN_CODE.expect("RUN_CODE should be defined");
-                self.run_code(code).expect("ran OK");
+                self.run_code(code)
             }
             val => panic!("unhandled run mode: {}", val),
         }

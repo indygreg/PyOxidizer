@@ -9,5 +9,5 @@ use pyembed::{MainPythonInterpreter, PythonConfig};
 fn main() {
     let config = PythonConfig::default();
     let mut interp = MainPythonInterpreter::new(config);
-    interp.run();
+    interp.run().expect("ran OK");
 }
