@@ -486,6 +486,11 @@ impl MainPythonInterpreter {
             }
         }
     }
+
+    pub fn print_err(&self, err: PyErr) {
+        let py = unsafe { Python::assume_gil_acquired() };
+        err.print(py);
+    }
 }
 
 impl Drop for MainPythonInterpreter {
