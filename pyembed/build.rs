@@ -12,7 +12,7 @@ use std::path::Path;
 use pyrepackager::config::{parse_config, resolve_python_distribution_archive, RunMode};
 use pyrepackager::dist::analyze_python_distribution_tar_zst;
 use pyrepackager::repackage::{
-    derive_importlib, link_libpython, resolve_python_resources, write_blob_entries,
+    derive_importlib, link_libpython, resolve_python_resources,
 };
 
 fn main() {
@@ -80,24 +80,11 @@ fn main() {
     // TODO there is tons of room to customize this behavior, including
     // reordering modules so the memory order matches import order.
 
-    let py_modules = resources.sources_blob();
-    let pyc_modules = resources.bytecodes_blob();
-
     let module_names_path = Path::new(&out_dir).join("py-module-names");
     let py_modules_path = Path::new(&out_dir).join("py-modules");
     let pyc_modules_path = Path::new(&out_dir).join("pyc-modules");
 
-    let mut fh = File::create(&module_names_path).expect("error creating file");
-    for name in resources.all_modules {
-        fh.write(name.as_bytes()).expect("failed to write");
-        fh.write(b"\n").expect("failed to write");
-    }
-
-    let fh = File::create(&py_modules_path).unwrap();
-    write_blob_entries(&fh, &py_modules).unwrap();
-
-    let fh = File::create(&pyc_modules_path).unwrap();
-    write_blob_entries(&fh, &pyc_modules).unwrap();
+    resources.write_blobs(&module_names_path, &py_modules_path, &pyc_modules_path);
 
     let dest_path = Path::new(&out_dir).join("data.rs");
 

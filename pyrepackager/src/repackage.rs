@@ -154,6 +154,20 @@ impl PythonResources {
 
         bytecodes
     }
+
+    pub fn write_blobs(&self, module_names_path: &PathBuf, modules_path: &PathBuf, bytecodes_path: &PathBuf) {
+        let mut fh = fs::File::create(module_names_path).expect("error creating file");
+        for name in &self.all_modules {
+            fh.write(name.as_bytes()).expect("failed to write");
+            fh.write(b"\n").expect("failed to write");
+        }
+
+        let fh = fs::File::create(modules_path).unwrap();
+        write_blob_entries(&fh, &self.sources_blob()).unwrap();
+
+        let fh = fs::File::create(bytecodes_path).unwrap();
+        write_blob_entries(&fh, &self.bytecodes_blob()).unwrap();
+    }
 }
 
 /// Resolves a Python packaging rule to resources to package.
