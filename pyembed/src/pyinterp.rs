@@ -164,8 +164,8 @@ impl<'a> MainPythonInterpreter<'a> {
             Some(_) => {
                 self.py = None;
                 self.gil = None;
-            },
-            None => { },
+            }
+            None => {}
         }
     }
 
@@ -402,13 +402,11 @@ impl<'a> MainPythonInterpreter<'a> {
         self.init();
 
         match RUN_MODE {
-            0 => {
-                self.run_repl()
-            },
+            0 => self.run_repl(),
             1 => {
                 let name = RUN_MODULE_NAME.expect("RUN_MODULE_NAME should be defined");
                 self.run_module_as_main(name)
-            },
+            }
             2 => {
                 let code = RUN_CODE.expect("RUN_CODE should be defined");
                 self.run_code(code)
@@ -524,7 +522,13 @@ impl<'a> MainPythonInterpreter<'a> {
 
             let main_dict = pyffi::PyModule_GetDict(main);
 
-            let res = pyffi::PyRun_StringFlags(code.as_ptr() as *const _, pyffi::Py_file_input, main_dict, main_dict, 0 as *mut _);
+            let res = pyffi::PyRun_StringFlags(
+                code.as_ptr() as *const _,
+                pyffi::Py_file_input,
+                main_dict,
+                main_dict,
+                0 as *mut _,
+            );
 
             if res.is_null() {
                 Err(PyErr::fetch(py))

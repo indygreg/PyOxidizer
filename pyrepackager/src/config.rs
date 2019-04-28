@@ -18,13 +18,19 @@ struct PythonDistribution {
 }
 
 #[allow(non_snake_case)]
-fn TRUE() -> bool { true }
+fn TRUE() -> bool {
+    true
+}
 
 #[allow(non_snake_case)]
-fn FALSE() -> bool { false }
+fn FALSE() -> bool {
+    false
+}
 
 #[allow(non_snake_case)]
-fn ZERO() -> i64 { 0 }
+fn ZERO() -> i64 {
+    0
+}
 
 #[derive(Debug, Deserialize)]
 struct PythonConfig {
@@ -70,7 +76,7 @@ pub enum PythonPackaging {
         optimize_level: i64,
         #[serde(default)]
         excludes: Vec<String>,
-    }
+    },
 }
 
 #[derive(Debug, Deserialize)]
@@ -79,13 +85,9 @@ pub enum RunMode {
     #[serde(rename = "repl")]
     Repl {},
     #[serde(rename = "module")]
-    Module {
-        module: String,
-    },
+    Module { module: String },
     #[serde(rename = "eval")]
-    Eval {
-        code: String,
-    },
+    Eval { code: String },
 }
 
 #[derive(Debug, Deserialize)]
@@ -147,8 +149,8 @@ pub fn parse_config(data: &Vec<u8>) -> Config {
         match packaging {
             PythonPackaging::Stdlib { .. } => {
                 have_stdlib = true;
-            },
-            _ => { },
+            }
+            _ => {}
         }
     }
 

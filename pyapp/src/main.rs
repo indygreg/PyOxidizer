@@ -11,7 +11,7 @@ fn main() {
     let mut interp = MainPythonInterpreter::new(config);
 
     match interp.run() {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(err) => interp.print_err(err),
     }
 }

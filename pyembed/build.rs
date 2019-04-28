@@ -15,8 +15,7 @@ use pyrepackager::bytecode::compile_bytecode;
 use pyrepackager::config::{parse_config, resolve_python_distribution_archive, RunMode};
 use pyrepackager::dist::analyze_python_distribution_tar_zst;
 use pyrepackager::repackage::{
-    derive_importlib, link_libpython,
-    resolve_python_modules, write_blob_entries, BlobEntries,
+    derive_importlib, link_libpython, resolve_python_modules, write_blob_entries, BlobEntries,
     BlobEntry,
 };
 
@@ -221,25 +220,25 @@ fn main() {
             RunMode::Repl {} => 0,
             RunMode::Module { .. } => 1,
             RunMode::Eval { .. } => 2,
-        })).unwrap();
+        }
+    ))
+    .unwrap();
 
     f.write_fmt(format_args!(
         "pub const RUN_MODULE_NAME: Option<&'static str> = {};\n",
         match &config.run {
-            RunMode::Module { module } => {
-                "Some(\"".to_owned() + &module + "\")"
-            },
+            RunMode::Module { module } => "Some(\"".to_owned() + &module + "\")",
             _ => "None".to_owned(),
         }
-    )).unwrap();
+    ))
+    .unwrap();
 
     f.write_fmt(format_args!(
         "pub const RUN_CODE: Option<&'static str> = {};\n",
         match &config.run {
-            RunMode::Eval { code } => {
-                "Some(\"".to_owned() + &code + "\")"
-            },
+            RunMode::Eval { code } => "Some(\"".to_owned() + &code + "\")",
             _ => "None".to_owned(),
         }
-    )).unwrap();
+    ))
+    .unwrap();
 }

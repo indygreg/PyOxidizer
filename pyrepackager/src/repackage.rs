@@ -14,10 +14,7 @@ use std::path::PathBuf;
 use super::bytecode::compile_bytecode;
 use super::config::PythonPackaging;
 use super::dist::PythonDistributionInfo;
-use super::fsscan::{
-    find_python_resources,
-    PythonResourceType,
-};
+use super::fsscan::{find_python_resources, PythonResourceType};
 
 pub const PYTHON_IMPORTER: &'static [u8] = include_bytes!("memoryimporter.py");
 
@@ -104,11 +101,17 @@ pub struct PythonModule {
     pub optimize_level: i64,
 }
 
-fn resolve_python_packaging(package: &PythonPackaging, dist: &PythonDistributionInfo) -> Vec<PythonModule> {
+fn resolve_python_packaging(
+    package: &PythonPackaging,
+    dist: &PythonDistributionInfo,
+) -> Vec<PythonModule> {
     let mut res = Vec::new();
 
     match package {
-        PythonPackaging::Stdlib { optimize_level, exclude_test_modules } => {
+        PythonPackaging::Stdlib {
+            optimize_level,
+            exclude_test_modules,
+        } => {
             for (name, fs_path) in &dist.py_modules {
                 if is_stdlib_test_package(&name) && *exclude_test_modules {
                     println!("skipping test stdlib module: {}", name);
@@ -122,13 +125,16 @@ fn resolve_python_packaging(package: &PythonPackaging, dist: &PythonDistribution
                 });
             }
         }
-        PythonPackaging::Virtualenv{ path, optimize_level, excludes } => {
+        PythonPackaging::Virtualenv {
+            path,
+            optimize_level,
+            excludes,
+        } => {
             let mut packages_path = PathBuf::from(path);
 
             if dist.os == "windows" {
                 packages_path.push("Lib");
-            }
-            else {
+            } else {
                 packages_path.push("lib");
             }
 
@@ -145,9 +151,7 @@ fn resolve_python_packaging(package: &PythonPackaging, dist: &PythonDistribution
 
                             if &resource.name == exclude {
                                 relevant = false;
-                            }
-
-                            else if resource.name.starts_with(&prefix) {
+                            } else if resource.name.starts_with(&prefix) {
                                 relevant = false;
                             }
                         }
@@ -159,12 +163,17 @@ fn resolve_python_packaging(package: &PythonPackaging, dist: &PythonDistribution
                                 optimize_level: *optimize_level,
                             });
                         }
-                    },
-                    _ => {},
+                    }
+                    _ => {}
                 }
             }
-        },
-        PythonPackaging::PackageRoot{ path, packages, optimize_level, excludes } => {
+        }
+        PythonPackaging::PackageRoot {
+            path,
+            packages,
+            optimize_level,
+            excludes,
+        } => {
             let path = PathBuf::from(path);
 
             for resource in find_python_resources(&path) {
@@ -177,9 +186,7 @@ fn resolve_python_packaging(package: &PythonPackaging, dist: &PythonDistribution
 
                             if &resource.name == package {
                                 relevant = true;
-                            }
-
-                            else if resource.name.starts_with(&prefix) {
+                            } else if resource.name.starts_with(&prefix) {
                                 relevant = true;
                             }
                         }
@@ -189,9 +196,7 @@ fn resolve_python_packaging(package: &PythonPackaging, dist: &PythonDistribution
 
                             if &resource.name == exclude {
                                 relevant = false;
-                            }
-
-                            else if resource.name.starts_with(&prefix) {
+                            } else if resource.name.starts_with(&prefix) {
                                 relevant = false;
                             }
                         }
@@ -203,17 +208,20 @@ fn resolve_python_packaging(package: &PythonPackaging, dist: &PythonDistribution
                                 optimize_level: *optimize_level,
                             });
                         }
-                    },
-                    _ => {},
+                    }
+                    _ => {}
                 }
             }
-        },
+        }
     }
 
     res
 }
 
-pub fn resolve_python_modules(packages: &Vec<PythonPackaging>, dist: &PythonDistributionInfo) -> BTreeMap<String, PythonModule> {
+pub fn resolve_python_modules(
+    packages: &Vec<PythonPackaging>,
+    dist: &PythonDistributionInfo,
+) -> BTreeMap<String, PythonModule> {
     let mut res: BTreeMap<String, PythonModule> = BTreeMap::new();
 
     for packaging in packages {
