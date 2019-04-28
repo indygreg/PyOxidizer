@@ -101,6 +101,7 @@ pub struct PythonModule {
     pub optimize_level: i64,
 }
 
+/// Resolves a Python packaging rule to resources to package.
 fn resolve_python_packaging(
     package: &PythonPackaging,
     dist: &PythonDistributionInfo,
@@ -218,6 +219,7 @@ fn resolve_python_packaging(
     res
 }
 
+/// Resolves a series of packaging rules to a final set of resources to package.
 pub fn resolve_python_modules(
     packages: &Vec<PythonPackaging>,
     dist: &PythonDistributionInfo,
@@ -373,6 +375,9 @@ fn make_config_c(dist: &PythonDistributionInfo, extensions: &BTreeSet<&String>) 
 }
 
 /// Create a static libpython from a Python distribution.
+///
+/// This should only be called from the context of a build script, as it
+/// emits cargo: lines to stdout.
 pub fn link_libpython(dist: &PythonDistributionInfo) {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
