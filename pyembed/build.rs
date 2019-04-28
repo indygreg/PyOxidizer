@@ -219,5 +219,16 @@ fn main() {
         "pub const RUN_MODE: i32 = {};\n",
         match config.run {
             RunMode::Repl {} => 0,
+            RunMode::Module { .. } => 1,
         })).unwrap();
+
+    f.write_fmt(format_args!(
+        "pub const RUN_MODULE_NAME: Option<&'static str> = {};\n",
+        match config.run {
+            RunMode::Module { module } => {
+                "Some(\"".to_owned() + &module + "\")"
+            },
+            _ => "None".to_owned(),
+        }
+    )).unwrap();
 }

@@ -223,6 +223,19 @@ Python code is run when the interpreter starts.
 The ``mode`` key defines what operation mode the interpreter/application
 is in. The sections below describe the various modes.
 
+``module``
+----------
+
+``mode = "module"`` will load a named module as the ``__main__`` module and
+then execute it.
+
+This mode requires the ``module`` key to be set to the string value of the
+module to load as ``__main__``. e.g.::
+
+   [python_run]
+   mode = "module"
+   module = "mymodule"
+
 ``repl``
 --------
 

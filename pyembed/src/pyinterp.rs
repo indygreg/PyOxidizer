@@ -364,6 +364,11 @@ impl MainPythonInterpreter {
             0 => {
                 self.run_repl().expect("repl should not error");
             },
+            1 => {
+                let name = RUN_MODULE_NAME.expect("RUN_MODULE_NAME should be defined");
+                // TODO properly handle Python exceptions.
+                self.run_module_as_main(name).expect("ran OK");
+            }
             val => panic!("unhandled run mode: {}", val),
         }
 

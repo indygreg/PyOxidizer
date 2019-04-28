@@ -76,6 +76,10 @@ pub enum PythonPackaging {
 pub enum RunMode {
     #[serde(rename = "repl")]
     Repl {},
+    #[serde(rename = "module")]
+    Module {
+        module: String,
+    },
 }
 
 #[derive(Debug, Deserialize)]
