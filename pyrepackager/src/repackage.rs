@@ -9,10 +9,12 @@ use std::fs;
 use std::fs::create_dir_all;
 use std::io::{Cursor, Read, Write};
 use std::iter::FromIterator;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 
 use crate::bytecode::compile_bytecode;
-use crate::config::{Config, parse_config, PythonPackaging, resolve_python_distribution_archive, RunMode};
+use crate::config::{
+    parse_config, resolve_python_distribution_archive, Config, PythonPackaging, RunMode,
+};
 use crate::dist::{analyze_python_distribution_tar_zst, PythonDistributionInfo};
 use crate::fsscan::{find_python_resources, PythonResourceType};
 
@@ -106,18 +108,9 @@ pub type BlobEntries = Vec<BlobEntry>;
 /// Represents a resource to make available to the Python interpreter.
 #[derive(Debug)]
 pub enum PythonResource {
-    ModuleSource {
-        name: String,
-        source: Vec<u8>,
-    },
-    ModuleBytecode {
-        name: String,
-        bytecode: Vec<u8>,
-    },
-    Resource {
-        name: String,
-        data: Vec<u8>,
-    },
+    ModuleSource { name: String, source: Vec<u8> },
+    ModuleBytecode { name: String, bytecode: Vec<u8> },
+    Resource { name: String, data: Vec<u8> },
 }
 
 /// Represents Python resources to embed in a binary.
@@ -155,7 +148,12 @@ impl PythonResources {
         bytecodes
     }
 
-    pub fn write_blobs(&self, module_names_path: &PathBuf, modules_path: &PathBuf, bytecodes_path: &PathBuf) {
+    pub fn write_blobs(
+        &self,
+        module_names_path: &PathBuf,
+        modules_path: &PathBuf,
+        bytecodes_path: &PathBuf,
+    ) {
         let mut fh = fs::File::create(module_names_path).expect("error creating file");
         for name in &self.all_modules {
             fh.write(name.as_bytes()).expect("failed to write");
@@ -241,10 +239,12 @@ fn resolve_python_packaging(
                         }
 
                         let source = fs::read(resource.path).expect("error reading source file");
-                        let bytecode = match compile_bytecode(&source, &resource.name, *optimize_level as i32) {
-                            Ok(res) => res,
-                            Err(msg) => panic!("error compiling bytecode: {}", msg),
-                        };
+                        let bytecode =
+                            match compile_bytecode(&source, &resource.name, *optimize_level as i32)
+                            {
+                                Ok(res) => res,
+                                Err(msg) => panic!("error compiling bytecode: {}", msg),
+                            };
 
                         res.push(PythonResource::ModuleSource {
                             name: resource.name.clone(),
@@ -298,10 +298,12 @@ fn resolve_python_packaging(
                         }
 
                         let source = fs::read(resource.path).expect("error reading source file");
-                        let bytecode = match compile_bytecode(&source, &resource.name, *optimize_level as i32) {
-                            Ok(res) => res,
-                            Err(msg) => panic!("error compiling bytecode: {}", msg),
-                        };
+                        let bytecode =
+                            match compile_bytecode(&source, &resource.name, *optimize_level as i32)
+                            {
+                                Ok(res) => res,
+                                Err(msg) => panic!("error compiling bytecode: {}", msg),
+                            };
 
                         res.push(PythonResource::ModuleSource {
                             name: resource.name.clone(),
@@ -338,14 +340,14 @@ pub fn resolve_python_resources(
                 PythonResource::ModuleSource { name, source } => {
                     sources.insert(name.clone(), source);
                     all_modules.insert(name);
-                },
+                }
                 PythonResource::ModuleBytecode { name, bytecode } => {
                     bytecodes.insert(name.clone(), bytecode);
                     all_modules.insert(name);
-                },
+                }
                 PythonResource::Resource { name, data } => {
                     resources.insert(name, data);
-                },
+                }
             }
         }
     }
@@ -650,7 +652,14 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
     build.compile("pythonXY");
 }
 
-pub fn write_data_rs(path: &PathBuf, config: &Config, importlib_bootstrap_path: &PathBuf, importlib_bootstrap_external_path: &PathBuf, py_modules_path: &PathBuf, pyc_modules_path: &PathBuf) {
+pub fn write_data_rs(
+    path: &PathBuf,
+    config: &Config,
+    importlib_bootstrap_path: &PathBuf,
+    importlib_bootstrap_external_path: &PathBuf,
+    py_modules_path: &PathBuf,
+    pyc_modules_path: &PathBuf,
+) {
     let mut f = fs::File::create(&path).unwrap();
 
     f.write_fmt(format_args!(
@@ -810,5 +819,12 @@ pub fn process_config(config_path: &Path, out_dir: &Path) {
     resources.write_blobs(&module_names_path, &py_modules_path, &pyc_modules_path);
 
     let dest_path = Path::new(&out_dir).join("data.rs");
-    write_data_rs(&dest_path, &config, &importlib_bootstrap_path, &importlib_bootstrap_external_path, &py_modules_path, &pyc_modules_path);
+    write_data_rs(
+        &dest_path,
+        &config,
+        &importlib_bootstrap_path,
+        &importlib_bootstrap_external_path,
+        &py_modules_path,
+        &pyc_modules_path,
+    );
 }
