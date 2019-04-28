@@ -368,15 +368,13 @@ impl MainPythonInterpreter {
                 let name = RUN_MODULE_NAME.expect("RUN_MODULE_NAME should be defined");
                 // TODO properly handle Python exceptions.
                 self.run_module_as_main(name).expect("ran OK");
+            },
+            2 => {
+                let code = RUN_CODE.expect("RUN_CODE should be defined");
+                py.eval(code, None, None).expect("ran OK");
             }
             val => panic!("unhandled run mode: {}", val),
         }
-
-        //py.eval("import re, sys; from black import main; main()", None, None)
-        //    .unwrap();
-
-        //py.eval("print(\"hello, world\")", None, None).unwrap();
-        //py.import("__main__").unwrap();
     }
 
     /// Runs a Python module as the __main__ module.

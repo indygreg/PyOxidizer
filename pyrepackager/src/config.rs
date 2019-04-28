@@ -82,6 +82,10 @@ pub enum RunMode {
     Module {
         module: String,
     },
+    #[serde(rename = "eval")]
+    Eval {
+        code: String,
+    },
 }
 
 #[derive(Debug, Deserialize)]

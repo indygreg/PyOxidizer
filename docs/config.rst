@@ -229,6 +229,19 @@ Python code is run when the interpreter starts.
 The ``mode`` key defines what operation mode the interpreter/application
 is in. The sections below describe the various modes.
 
+``eval``
+--------
+
+``mode = "eval"`` will evaluate a string of Python code when the interpreter
+starts.
+
+This mode requires the ``code`` key to be set to a string containing Python
+code to run. e.g.::
+
+   [python_run]
+   mode = "eval"
+   code = "import mymodule; mymodule.main()"
+
 ``module``
 ----------
 
