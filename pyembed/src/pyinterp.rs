@@ -9,8 +9,8 @@ use std::path::PathBuf;
 use std::ptr::null;
 
 use cpython::{
-    NoArgs, ObjectProtocol, PyErr, PyList, PyModule, PyObject, PyResult, Python, PythonObject,
-    ToPyObject,
+    GILGuard, NoArgs, ObjectProtocol, PyErr, PyList, PyModule, PyObject, PyResult, Python,
+    PythonObject, ToPyObject,
 };
 use pyffi;
 
@@ -134,23 +134,54 @@ fn stdin_to_file() -> *mut libc::FILE {
 ///
 /// Since the Python API has global state and methods of this mutate global
 /// state, there should only be a single instance of this type at any time.
-pub struct MainPythonInterpreter {
+pub struct MainPythonInterpreter<'a> {
     pub config: PythonConfig,
     frozen_modules: [pyffi::_frozen; 3],
     init_run: bool,
     raw_allocator: Option<RawAllocator>,
+    gil: Option<GILGuard>,
+    py: Option<Python<'a>>,
 }
 
-impl MainPythonInterpreter {
+impl<'a> MainPythonInterpreter<'a> {
     /// Construct an instance from a config.
     ///
     /// There are no significant side-effects from calling this.
-    pub fn new(config: PythonConfig) -> MainPythonInterpreter {
+    pub fn new(config: PythonConfig) -> MainPythonInterpreter<'a> {
         MainPythonInterpreter {
             config,
             frozen_modules: make_custom_frozen_modules(),
             init_run: false,
             raw_allocator: Some(make_raw_memory_allocator()),
+            gil: None,
+            py: None,
+        }
+    }
+
+    /// Ensure the Python GIL is released.
+    pub fn release_gil(&mut self) {
+        match self.py {
+            Some(_) => {
+                self.py = None;
+                self.gil = None;
+            },
+            None => { },
+        }
+    }
+
+    /// Ensure the Python GIL is acquired, returning a handle on the interpreter.
+    pub fn acquire_gil(&mut self) -> Python<'a> {
+        match self.py {
+            Some(py) => py,
+            None => {
+                let gil = GILGuard::acquire();
+                let py = unsafe { Python::assume_gil_acquired() };
+
+                self.gil = Some(gil);
+                self.py = Some(py);
+
+                py
+            }
         }
     }
 
@@ -493,7 +524,7 @@ impl MainPythonInterpreter {
     }
 }
 
-impl Drop for MainPythonInterpreter {
+impl<'a> Drop for MainPythonInterpreter<'a> {
     fn drop(&mut self) {
         let _ = unsafe { pyffi::Py_FinalizeEx() };
     }
