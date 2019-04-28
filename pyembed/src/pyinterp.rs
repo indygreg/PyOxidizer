@@ -371,7 +371,7 @@ impl MainPythonInterpreter {
             },
             2 => {
                 let code = RUN_CODE.expect("RUN_CODE should be defined");
-                py.run(code, None, None).expect("ran OK");
+                self.run_code(code).expect("ran OK");
             }
             val => panic!("unhandled run mode: {}", val),
         }
@@ -463,6 +463,29 @@ impl MainPythonInterpreter {
         };
 
         Ok(py.None())
+    }
+
+    pub fn run_code(&self, code: &str) -> PyResult<PyObject> {
+        let py = unsafe { Python::assume_gil_acquired() };
+        let code = CString::new(code).unwrap();
+
+        unsafe {
+            let main = pyffi::PyImport_AddModule("__main__\0".as_ptr() as *const _);
+
+            if main.is_null() {
+                return Err(PyErr::fetch(py));
+            }
+
+            let main_dict = pyffi::PyModule_GetDict(main);
+
+            let res = pyffi::PyRun_StringFlags(code.as_ptr() as *const _, pyffi::Py_file_input, main_dict, main_dict, 0 as *mut _);
+
+            if res.is_null() {
+                Err(PyErr::fetch(py))
+            } else {
+                Ok(PyObject::from_owned_ptr(py, res))
+            }
+        }
     }
 }
 
