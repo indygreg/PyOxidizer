@@ -194,10 +194,10 @@ impl<'a> MainPythonInterpreter<'a> {
     /// execute custom code.
     ///
     /// If called more than once, is a no-op.
-    pub fn init(&mut self) {
+    pub fn init(&mut self) -> Python {
         // TODO return Result<> and don't panic.
         if self.init_run {
-            return;
+            return self.acquire_gil();
         }
 
         let config = &self.config;
@@ -387,6 +387,8 @@ impl<'a> MainPythonInterpreter<'a> {
             0 => (),
             _ => panic!("unable to set sys.frozen"),
         }
+
+        py
     }
 
     pub fn run(&mut self) -> PyResult<PyObject> {
@@ -412,9 +414,7 @@ impl<'a> MainPythonInterpreter<'a> {
     ///
     /// Returns the execution result of the module code.
     pub fn run_module_as_main(&mut self, name: &str) -> PyResult<PyObject> {
-        self.init();
-
-        let py = unsafe { Python::assume_gil_acquired() };
+        let py = self.init();
 
         // This is modeled after runpy.py:_run_module_as_main().
         let main: PyModule = unsafe {
@@ -461,9 +461,7 @@ impl<'a> MainPythonInterpreter<'a> {
     ///
     /// This emulates what CPython's main.c does.
     pub fn run_repl(&mut self) -> PyResult<PyObject> {
-        self.init();
-
-        let py = unsafe { Python::assume_gil_acquired() };
+        let py = self.init();
 
         unsafe {
             pyffi::Py_InspectFlag = 0;
@@ -497,9 +495,8 @@ impl<'a> MainPythonInterpreter<'a> {
     }
 
     pub fn run_code(&mut self, code: &str) -> PyResult<PyObject> {
-        self.init();
+        let py = self.init();
 
-        let py = unsafe { Python::assume_gil_acquired() };
         let code = CString::new(code).unwrap();
 
         unsafe {
