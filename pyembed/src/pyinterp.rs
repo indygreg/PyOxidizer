@@ -518,8 +518,8 @@ impl<'a> MainPythonInterpreter<'a> {
         }
     }
 
-    pub fn print_err(&self, err: PyErr) {
-        let py = unsafe { Python::assume_gil_acquired() };
+    pub fn print_err(&mut self, err: PyErr) {
+        let py = self.acquire_gil();
         err.print(py);
     }
 }
