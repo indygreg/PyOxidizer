@@ -94,18 +94,35 @@ pub fn is_stdlib_test_package(name: &str) -> bool {
     false
 }
 
+/// Represents a resource to make available to the Python interpreter.
 #[derive(Debug)]
-pub struct PythonModule {
-    pub name: String,
-    pub path: PathBuf,
-    pub optimize_level: i64,
+pub enum PythonResource {
+    ModuleSource {
+        name: String,
+        source: Vec<u8>,
+    },
+    ModuleBytecode {
+        name: String,
+        bytecode: Vec<u8>,
+    },
+    Resource {
+        name: String,
+        data: Vec<u8>,
+    },
+}
+
+pub struct PythonResources {
+    pub module_sources: BTreeMap<String, Vec<u8>>,
+    pub module_bytecodes: BTreeMap<String, Vec<u8>>,
+    pub all_modules: BTreeSet<String>,
+    pub resources: BTreeMap<String, Vec<u8>>,
 }
 
 /// Resolves a Python packaging rule to resources to package.
 fn resolve_python_packaging(
     package: &PythonPackaging,
     dist: &PythonDistributionInfo,
-) -> Vec<PythonModule> {
+) -> Vec<PythonResource> {
     let mut res = Vec::new();
 
     match package {
@@ -119,10 +136,20 @@ fn resolve_python_packaging(
                     continue;
                 }
 
-                res.push(PythonModule {
-                    name: name.to_string(),
-                    path: fs_path.to_path_buf(),
-                    optimize_level: *optimize_level,
+                let source = fs::read(fs_path).expect("error reading source file");
+                let bytecode = match compile_bytecode(&source, &name, *optimize_level as i32) {
+                    Ok(res) => res,
+                    Err(msg) => panic!("error compiling bytecode: {}", msg),
+                };
+
+                res.push(PythonResource::ModuleSource {
+                    name: name.clone(),
+                    source,
+                });
+
+                res.push(PythonResource::ModuleBytecode {
+                    name: name.clone(),
+                    bytecode,
                 });
             }
         }
@@ -157,13 +184,25 @@ fn resolve_python_packaging(
                             }
                         }
 
-                        if relevant {
-                            res.push(PythonModule {
-                                name: resource.name,
-                                path: resource.path.to_path_buf(),
-                                optimize_level: *optimize_level,
-                            });
+                        if !relevant {
+                            continue;
                         }
+
+                        let source = fs::read(resource.path).expect("error reading source file");
+                        let bytecode = match compile_bytecode(&source, &resource.name, *optimize_level as i32) {
+                            Ok(res) => res,
+                            Err(msg) => panic!("error compiling bytecode: {}", msg),
+                        };
+
+                        res.push(PythonResource::ModuleSource {
+                            name: resource.name.clone(),
+                            source,
+                        });
+
+                        res.push(PythonResource::ModuleBytecode {
+                            name: resource.name.clone(),
+                            bytecode,
+                        });
                     }
                     _ => {}
                 }
@@ -202,13 +241,25 @@ fn resolve_python_packaging(
                             }
                         }
 
-                        if relevant {
-                            res.push(PythonModule {
-                                name: resource.name,
-                                path: resource.path.to_path_buf(),
-                                optimize_level: *optimize_level,
-                            });
+                        if !relevant {
+                            continue;
                         }
+
+                        let source = fs::read(resource.path).expect("error reading source file");
+                        let bytecode = match compile_bytecode(&source, &resource.name, *optimize_level as i32) {
+                            Ok(res) => res,
+                            Err(msg) => panic!("error compiling bytecode: {}", msg),
+                        };
+
+                        res.push(PythonResource::ModuleSource {
+                            name: resource.name.clone(),
+                            source,
+                        });
+
+                        res.push(PythonResource::ModuleBytecode {
+                            name: resource.name.clone(),
+                            bytecode,
+                        });
                     }
                     _ => {}
                 }
@@ -220,19 +271,39 @@ fn resolve_python_packaging(
 }
 
 /// Resolves a series of packaging rules to a final set of resources to package.
-pub fn resolve_python_modules(
+pub fn resolve_python_resources(
     packages: &Vec<PythonPackaging>,
     dist: &PythonDistributionInfo,
-) -> BTreeMap<String, PythonModule> {
-    let mut res: BTreeMap<String, PythonModule> = BTreeMap::new();
+) -> PythonResources {
+    let mut sources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    let mut bytecodes: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    let mut all_modules: BTreeSet<String> = BTreeSet::new();
+    let mut resources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
 
     for packaging in packages {
-        for module in resolve_python_packaging(packaging, dist) {
-            res.insert(module.name.clone(), module);
+        for resource in resolve_python_packaging(packaging, dist) {
+            match resource {
+                PythonResource::ModuleSource { name, source } => {
+                    sources.insert(name.clone(), source);
+                    all_modules.insert(name);
+                },
+                PythonResource::ModuleBytecode { name, bytecode } => {
+                    bytecodes.insert(name.clone(), bytecode);
+                    all_modules.insert(name);
+                },
+                PythonResource::Resource { name, data } => {
+                    resources.insert(name, data);
+                },
+            }
         }
     }
 
-    res
+    PythonResources {
+        module_sources: sources,
+        module_bytecodes: bytecodes,
+        all_modules,
+        resources,
+    }
 }
 
 pub struct ImportlibData {

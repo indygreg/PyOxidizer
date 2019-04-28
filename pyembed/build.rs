@@ -4,25 +4,17 @@
 
 extern crate pyrepackager;
 
-use std::collections::BTreeMap;
 use std::env;
-use std::fs;
 use std::fs::File;
 use std::io::{Cursor, Read, Write};
 use std::path::Path;
 
-use pyrepackager::bytecode::compile_bytecode;
 use pyrepackager::config::{parse_config, resolve_python_distribution_archive, RunMode};
 use pyrepackager::dist::analyze_python_distribution_tar_zst;
 use pyrepackager::repackage::{
-    derive_importlib, link_libpython, resolve_python_modules, write_blob_entries, BlobEntries,
+    derive_importlib, link_libpython, resolve_python_resources, write_blob_entries, BlobEntries,
     BlobEntry,
 };
-
-struct PythonModuleData {
-    source: Vec<u8>,
-    bytecode: Option<Vec<u8>>,
-}
 
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
@@ -83,18 +75,7 @@ fn main() {
     let mut fh = File::create(&importlib_bootstrap_external_path).unwrap();
     fh.write(&importlib.bootstrap_external_bytecode).unwrap();
 
-    let mut all_py_modules: BTreeMap<String, PythonModuleData> = BTreeMap::new();
-
-    for (name, module) in resolve_python_modules(&config.python_packaging, &dist) {
-        let source = fs::read(module.path).expect("error reading source file");
-
-        let bytecode = match compile_bytecode(&source, &name, module.optimize_level as i32) {
-            Ok(res) => Some(res),
-            Err(msg) => panic!("error compiling bytecode: {}", msg),
-        };
-
-        all_py_modules.insert(name.clone(), PythonModuleData { source, bytecode });
-    }
+    let resources = resolve_python_resources(&config.python_packaging, &dist);
 
     // Produce the packed data structures containing Python modules.
     // TODO there is tons of room to customize this behavior, including
@@ -103,20 +84,18 @@ fn main() {
     let mut py_modules = BlobEntries::new();
     let mut pyc_modules = BlobEntries::new();
 
-    for (name, module) in &all_py_modules {
+    for (name, source) in &resources.module_sources {
         py_modules.push(BlobEntry {
             name: name.clone(),
-            data: module.source.clone(),
+            data: source.clone(),
         });
+    }
 
-        let pyc_data = &module.bytecode;
-
-        if pyc_data.is_some() {
-            pyc_modules.push(BlobEntry {
-                name: name.clone(),
-                data: pyc_data.clone().unwrap(),
-            });
-        }
+    for (name, bytecode) in &resources.module_bytecodes {
+        pyc_modules.push(BlobEntry {
+            name: name.clone(),
+            data: bytecode.clone(),
+        });
     }
 
     let module_names_path = Path::new(&out_dir).join("py-module-names");
@@ -124,7 +103,7 @@ fn main() {
     let pyc_modules_path = Path::new(&out_dir).join("pyc-modules");
 
     let mut fh = File::create(&module_names_path).expect("error creating file");
-    for name in all_py_modules.keys() {
+    for name in resources.all_modules {
         fh.write(name.as_bytes()).expect("failed to write");
         fh.write(b"\n").expect("failed to write");
     }
