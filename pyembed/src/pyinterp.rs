@@ -194,7 +194,7 @@ impl<'a> MainPythonInterpreter<'a> {
     /// execute custom code.
     ///
     /// If called more than once, is a no-op.
-    pub fn init(&mut self, py: Python) {
+    pub fn init(&mut self) {
         // TODO return Result<> and don't panic.
         if self.init_run {
             return;
@@ -327,6 +327,9 @@ impl<'a> MainPythonInterpreter<'a> {
             pyffi::Py_Initialize();
         }
 
+        let py = unsafe { Python::assume_gil_acquired() };
+        self.py = Some(py);
+
         self.init_run = true;
 
         // env::args() panics if arguments aren't valid Unicode. But invalid
@@ -387,9 +390,7 @@ impl<'a> MainPythonInterpreter<'a> {
     }
 
     pub fn run(&mut self) -> PyResult<PyObject> {
-        let py = unsafe { Python::assume_gil_acquired() };
-
-        self.init(py);
+        self.init();
 
         match RUN_MODE {
             0 => {
@@ -411,9 +412,9 @@ impl<'a> MainPythonInterpreter<'a> {
     ///
     /// Returns the execution result of the module code.
     pub fn run_module_as_main(&mut self, name: &str) -> PyResult<PyObject> {
-        let py = unsafe { Python::assume_gil_acquired() };
+        self.init();
 
-        self.init(py);
+        let py = unsafe { Python::assume_gil_acquired() };
 
         // This is modeled after runpy.py:_run_module_as_main().
         let main: PyModule = unsafe {
@@ -460,9 +461,9 @@ impl<'a> MainPythonInterpreter<'a> {
     ///
     /// This emulates what CPython's main.c does.
     pub fn run_repl(&mut self) -> PyResult<PyObject> {
-        let py = unsafe { Python::assume_gil_acquired() };
+        self.init();
 
-        self.init(py);
+        let py = unsafe { Python::assume_gil_acquired() };
 
         unsafe {
             pyffi::Py_InspectFlag = 0;
@@ -495,7 +496,9 @@ impl<'a> MainPythonInterpreter<'a> {
         Ok(py.None())
     }
 
-    pub fn run_code(&self, code: &str) -> PyResult<PyObject> {
+    pub fn run_code(&mut self, code: &str) -> PyResult<PyObject> {
+        self.init();
+
         let py = unsafe { Python::assume_gil_acquired() };
         let code = CString::new(code).unwrap();
 
