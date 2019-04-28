@@ -193,7 +193,10 @@ impl<'a> MainPythonInterpreter<'a> {
     /// After this is called, the embedded Python interpreter is ready to
     /// execute custom code.
     ///
-    /// If called more than once, is a no-op.
+    /// If called more than once, the function is a no-op from the perspective
+    /// of interpreter initialization.
+    ///
+    /// Returns a Python instance which has the GIL acquired.
     pub fn init(&mut self) -> Python {
         // TODO return Result<> and don't panic.
         if self.init_run {
@@ -391,6 +394,10 @@ impl<'a> MainPythonInterpreter<'a> {
         py
     }
 
+    /// Runs the interpreter with the default code execution settings.
+    ///
+    /// The crate was built with settings that configure what should be
+    /// executed by default. Those settings will be loaded and executed.
     pub fn run(&mut self) -> PyResult<PyObject> {
         self.init();
 
@@ -413,6 +420,8 @@ impl<'a> MainPythonInterpreter<'a> {
     /// Runs a Python module as the __main__ module.
     ///
     /// Returns the execution result of the module code.
+    ///
+    /// The interpreter is automatically initialized if needed.
     pub fn run_module_as_main(&mut self, name: &str) -> PyResult<PyObject> {
         let py = self.init();
 
@@ -460,6 +469,8 @@ impl<'a> MainPythonInterpreter<'a> {
     /// Start and run a Python REPL.
     ///
     /// This emulates what CPython's main.c does.
+    ///
+    /// The interpreter is automatically initialized if needed.
     pub fn run_repl(&mut self) -> PyResult<PyObject> {
         let py = self.init();
 
@@ -494,6 +505,11 @@ impl<'a> MainPythonInterpreter<'a> {
         Ok(py.None())
     }
 
+    /// Runs Python code provided by a string.
+    ///
+    /// This is similar to what ``python -c <code>`` would do.
+    ///
+    /// The interpreter is automatically initialized if needed.
     pub fn run_code(&mut self, code: &str) -> PyResult<PyObject> {
         let py = self.init();
 
@@ -518,6 +534,10 @@ impl<'a> MainPythonInterpreter<'a> {
         }
     }
 
+    /// Print a Python error.
+    ///
+    /// Under the hood this calls ``PyErr_PrintEx()``, which may call
+    /// ``Py_Exit()`` and may write to stderr.
     pub fn print_err(&mut self, err: PyErr) {
         let py = self.acquire_gil();
         err.print(py);
