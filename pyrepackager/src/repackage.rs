@@ -94,6 +94,15 @@ pub fn is_stdlib_test_package(name: &str) -> bool {
     false
 }
 
+/// Represents a resource entry. Simply a name-value pair.
+pub struct BlobEntry {
+    pub name: String,
+    pub data: Vec<u8>,
+}
+
+/// Represents an ordered collection of resource entries.
+pub type BlobEntries = Vec<BlobEntry>;
+
 /// Represents a resource to make available to the Python interpreter.
 #[derive(Debug)]
 pub enum PythonResource {
@@ -111,11 +120,40 @@ pub enum PythonResource {
     },
 }
 
+/// Represents Python resources to embed in a binary.
 pub struct PythonResources {
     pub module_sources: BTreeMap<String, Vec<u8>>,
     pub module_bytecodes: BTreeMap<String, Vec<u8>>,
     pub all_modules: BTreeSet<String>,
     pub resources: BTreeMap<String, Vec<u8>>,
+}
+
+impl PythonResources {
+    pub fn sources_blob(&self) -> BlobEntries {
+        let mut sources = BlobEntries::new();
+
+        for (name, source) in &self.module_sources {
+            sources.push(BlobEntry {
+                name: name.clone(),
+                data: source.clone(),
+            });
+        }
+
+        sources
+    }
+
+    pub fn bytecodes_blob(&self) -> BlobEntries {
+        let mut bytecodes = BlobEntries::new();
+
+        for (name, bytecode) in &self.module_bytecodes {
+            bytecodes.push(BlobEntry {
+                name: name.clone(),
+                data: bytecode.clone(),
+            });
+        }
+
+        bytecodes
+    }
 }
 
 /// Resolves a Python packaging rule to resources to package.
@@ -347,15 +385,6 @@ pub fn derive_importlib(dist: &PythonDistributionInfo) -> ImportlibData {
         bootstrap_external_bytecode,
     }
 }
-
-/// Represents a resource entry. Simple a name-value pair.
-pub struct BlobEntry {
-    pub name: String,
-    pub data: Vec<u8>,
-}
-
-/// Represents an ordered collection of resource entries.
-pub type BlobEntries = Vec<BlobEntry>;
 
 /// Serialize a BlobEntries to a writer.
 ///

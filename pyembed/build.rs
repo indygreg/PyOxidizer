@@ -12,8 +12,7 @@ use std::path::Path;
 use pyrepackager::config::{parse_config, resolve_python_distribution_archive, RunMode};
 use pyrepackager::dist::analyze_python_distribution_tar_zst;
 use pyrepackager::repackage::{
-    derive_importlib, link_libpython, resolve_python_resources, write_blob_entries, BlobEntries,
-    BlobEntry,
+    derive_importlib, link_libpython, resolve_python_resources, write_blob_entries,
 };
 
 fn main() {
@@ -81,22 +80,8 @@ fn main() {
     // TODO there is tons of room to customize this behavior, including
     // reordering modules so the memory order matches import order.
 
-    let mut py_modules = BlobEntries::new();
-    let mut pyc_modules = BlobEntries::new();
-
-    for (name, source) in &resources.module_sources {
-        py_modules.push(BlobEntry {
-            name: name.clone(),
-            data: source.clone(),
-        });
-    }
-
-    for (name, bytecode) in &resources.module_bytecodes {
-        pyc_modules.push(BlobEntry {
-            name: name.clone(),
-            data: bytecode.clone(),
-        });
-    }
+    let py_modules = resources.sources_blob();
+    let pyc_modules = resources.bytecodes_blob();
 
     let module_names_path = Path::new(&out_dir).join("py-module-names");
     let py_modules_path = Path::new(&out_dir).join("py-modules");
