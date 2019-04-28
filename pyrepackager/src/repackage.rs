@@ -11,10 +11,10 @@ use std::io::{Cursor, Read, Write};
 use std::iter::FromIterator;
 use std::path::{PathBuf, Path};
 
-use super::bytecode::compile_bytecode;
-use super::config::{Config, parse_config, PythonPackaging, resolve_python_distribution_archive, RunMode};
-use super::dist::{analyze_python_distribution_tar_zst, PythonDistributionInfo};
-use super::fsscan::{find_python_resources, PythonResourceType};
+use crate::bytecode::compile_bytecode;
+use crate::config::{Config, parse_config, PythonPackaging, resolve_python_distribution_archive, RunMode};
+use crate::dist::{analyze_python_distribution_tar_zst, PythonDistributionInfo};
+use crate::fsscan::{find_python_resources, PythonResourceType};
 
 pub const PYTHON_IMPORTER: &'static [u8] = include_bytes!("memoryimporter.py");
 
