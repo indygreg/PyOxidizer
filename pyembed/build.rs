@@ -9,10 +9,10 @@ use std::fs::File;
 use std::io::{Cursor, Read, Write};
 use std::path::Path;
 
-use pyrepackager::config::{parse_config, resolve_python_distribution_archive, RunMode};
+use pyrepackager::config::{parse_config, resolve_python_distribution_archive};
 use pyrepackager::dist::analyze_python_distribution_tar_zst;
 use pyrepackager::repackage::{
-    derive_importlib, link_libpython, resolve_python_resources,
+    derive_importlib, link_libpython, resolve_python_resources, write_data_rs,
 };
 
 fn main() {
@@ -87,109 +87,5 @@ fn main() {
     resources.write_blobs(&module_names_path, &py_modules_path, &pyc_modules_path);
 
     let dest_path = Path::new(&out_dir).join("data.rs");
-
-    let mut f = File::create(&dest_path).unwrap();
-
-    f.write_fmt(format_args!(
-        "pub const STANDARD_IO_ENCODING: Option<String> = {};\n",
-        match config.stdio_encoding_name {
-            // TODO print out value.
-            Some(_value) => "Some(\"\")",
-            None => "None",
-        }
-    ))
-    .unwrap();
-    f.write_fmt(format_args!(
-        "pub const STANDARD_IO_ERRORS: Option<String> = {};\n",
-        match config.stdio_encoding_errors {
-            Some(_value) => "Some(\"\")",
-            None => "None",
-        }
-    ))
-    .unwrap();
-
-    f.write_fmt(format_args!(
-        "pub const DONT_WRITE_BYTECODE: bool = {};\n",
-        config.dont_write_bytecode
-    ))
-    .unwrap();
-    f.write_fmt(format_args!(
-        "pub const IGNORE_ENVIRONMENT: bool = {};\n",
-        config.ignore_environment
-    ))
-    .unwrap();
-    f.write_fmt(format_args!(
-        "pub const OPT_LEVEL: i32 = {};\n",
-        config.optimize_level
-    ))
-    .unwrap();
-    f.write_fmt(format_args!(
-        "pub const NO_SITE: bool = {};\n",
-        config.no_site
-    ))
-    .unwrap();
-    f.write_fmt(format_args!(
-        "pub const NO_USER_SITE_DIRECTORY: bool = {};\n",
-        config.no_user_site_directory
-    ))
-    .unwrap();
-    f.write_fmt(format_args!(
-        "pub const PROGRAM_NAME: &str = \"{}\";\n",
-        config.program_name
-    ))
-    .unwrap();
-    f.write_fmt(format_args!(
-        "pub const UNBUFFERED_STDIO: bool = {};\n",
-        config.unbuffered_stdio
-    ))
-    .unwrap();
-
-    f.write_fmt(format_args!(
-        "pub const FROZEN_IMPORTLIB_DATA: &'static [u8] = include_bytes!(r\"{}\");\n",
-        importlib_bootstrap_path.to_str().unwrap()
-    ))
-    .unwrap();
-    f.write_fmt(format_args!(
-        "pub const FROZEN_IMPORTLIB_EXTERNAL_DATA: &'static [u8] = include_bytes!(r\"{}\");\n",
-        importlib_bootstrap_external_path.to_str().unwrap()
-    ))
-    .unwrap();
-    f.write_fmt(format_args!(
-        "pub const PY_MODULES_DATA: &'static [u8] = include_bytes!(r\"{}\");\n",
-        py_modules_path.to_str().unwrap()
-    ))
-    .unwrap();
-    f.write_fmt(format_args!(
-        "pub const PYC_MODULES_DATA: &'static [u8] = include_bytes!(r\"{}\");\n",
-        pyc_modules_path.to_str().unwrap()
-    ))
-    .unwrap();
-
-    f.write_fmt(format_args!(
-        "pub const RUN_MODE: i32 = {};\n",
-        match config.run {
-            RunMode::Repl {} => 0,
-            RunMode::Module { .. } => 1,
-            RunMode::Eval { .. } => 2,
-        }
-    ))
-    .unwrap();
-
-    f.write_fmt(format_args!(
-        "pub const RUN_MODULE_NAME: Option<&'static str> = {};\n",
-        match &config.run {
-            RunMode::Module { module } => "Some(\"".to_owned() + &module + "\")",
-            _ => "None".to_owned(),
-        }
-    ))
-    .unwrap();
-
-    f.write_fmt(format_args!(
-        "pub const RUN_CODE: Option<&'static str> = {};\n",
-        match &config.run {
-            RunMode::Eval { code } => "Some(\"".to_owned() + &code + "\")",
-            _ => "None".to_owned(),
-        }
-    ))
-    .unwrap();
+    write_data_rs(&dest_path, &config, &importlib_bootstrap_path, &importlib_bootstrap_external_path, &py_modules_path, &pyc_modules_path);
 }
