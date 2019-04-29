@@ -550,7 +550,7 @@ pub fn link_libpython(config: &Config, dist: &PythonDistributionInfo) {
             extension_modules.insert(name);
         }
 
-        match config.python_extensions {
+        match &config.python_extensions {
             PythonExtensions::All { } => {
                 extension_modules.insert(name);
             },
@@ -567,7 +567,12 @@ pub fn link_libpython(config: &Config, dist: &PythonDistributionInfo) {
                 if !have_library {
                     extension_modules.insert(name);
                 }
-            }
+            },
+            PythonExtensions::ExplicitIncludes { includes } => {
+                if includes.contains(&name.to_owned()) {
+                    extension_modules.insert(name);
+                }
+            },
         }
     }
 

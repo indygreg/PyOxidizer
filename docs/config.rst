@@ -133,6 +133,21 @@ wanted.
 against additional libraries. Most common extension modules are included.
 Extension modules like ``_ssl`` and ``zlib`` are not included.
 
+``explicit-includes``
+---------------------
+
+``policy = "explicit-includes"`` will include an extension module only if
+it is included in a specific list, as defined by the ``includes`` key.
+
+Extension modules required to initialize Python are always included and
+don't need to be specified.
+
+Example usage::
+
+   [python_extensions]
+   policy = "explicit-includes"
+   includes = ["binascii", "errno", "itertools", "math", "select", "_socket"]
+
 ``[[python_packages]]``
 =======================
 

@@ -59,6 +59,11 @@ pub enum PythonExtensions {
     None {},
     #[serde(rename = "no-libraries")]
     NoLibraries {},
+    #[serde(rename = "explicit-includes")]
+    ExplicitIncludes {
+        #[serde(default)]
+        includes: Vec<String>,
+    },
 }
 
 #[derive(Debug, Deserialize)]
