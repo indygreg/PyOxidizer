@@ -94,6 +94,27 @@ unbuffered_stdio
    `Py_UnbufferedStdioFlag <https://docs.python.org/3/c-api/init.html#c.Py_UnbufferedStdioFlag>`_.
    Default is ``false``.
 
+``[python_extensions]``
+=======================
+
+Configures which Python extensions from the Python distribution are present
+in the binary. Extensions are compiled/native code, which are typically
+distributed as shared libraries. PyOxidizer takes a slightly different
+approach and embeds the extension modules directly in the produced binary.
+
+When an extension module is included, any library dependencies required by
+it are also included. For example, the ``_sqlite3`` extension module will
+automatically pull in ``libsqlite3`` (which is likely included by the
+Python distribution).
+
+This section has a ``policy`` key denoting which extension module packaging
+policy to use. The following sections describe the individual policies.
+
+``all``
+-------
+
+``policy = "all"`` results in all extension modules being included.
+
 ``[[python_packages]]``
 =======================
 

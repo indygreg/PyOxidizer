@@ -8,12 +8,12 @@ use std::env;
 use std::fs;
 use std::fs::create_dir_all;
 use std::io::{Cursor, Read, Write};
-use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
 
 use crate::bytecode::compile_bytecode;
 use crate::config::{
-    parse_config, resolve_python_distribution_archive, Config, PythonPackaging, RunMode,
+    parse_config, resolve_python_distribution_archive, Config, PythonExtensions,
+    PythonPackaging, RunMode,
 };
 use crate::dist::{analyze_python_distribution_tar_zst, PythonDistributionInfo};
 use crate::fsscan::{find_python_resources, PythonResourceType};
@@ -503,7 +503,7 @@ fn make_config_c(dist: &PythonDistributionInfo, extensions: &BTreeSet<&String>) 
 ///
 /// This should only be called from the context of a build script, as it
 /// emits cargo: lines to stdout.
-pub fn link_libpython(dist: &PythonDistributionInfo) {
+pub fn link_libpython(config: &Config, dist: &PythonDistributionInfo) {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
     let temp_dir = tempdir::TempDir::new("libpython").unwrap();
@@ -524,8 +524,22 @@ pub fn link_libpython(dist: &PythonDistributionInfo) {
 
     // Relevant extension modules are the intersection of modules that are
     // built/available and what's requested from the current config.
-    let mut extension_modules: BTreeSet<&String> =
-        BTreeSet::from_iter(dist.extension_modules.keys());
+    let mut extension_modules: BTreeSet<&String> = BTreeSet::new();
+
+    for (name, em) in &dist.extension_modules {
+        // Always include builtin extensions that must be present.
+        for extension in em {
+            if extension.builtin_default {
+                extension_modules.insert(name);
+            }
+        }
+
+        match config.python_extensions {
+            PythonExtensions::All { } => {
+                extension_modules.insert(name);
+            },
+        }
+    }
 
     for e in OS_IGNORE_EXTENSIONS.as_slice() {
         extension_modules.remove(&String::from(*e));
@@ -801,7 +815,7 @@ pub fn process_config(config_path: &Path, out_dir: &Path) {
     // Produce a static library containing the Python bits we need.
     // As a side-effect, this will emit the cargo: lines needed to link this
     // library.
-    link_libpython(&dist);
+    link_libpython(&config, &dist);
 
     // Produce the frozen importlib modules.
     let importlib = derive_importlib(&dist);

@@ -51,6 +51,13 @@ struct PythonConfig {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(tag = "policy")]
+pub enum PythonExtensions {
+    #[serde(rename = "all")]
+    All { }
+}
+
+#[derive(Debug, Deserialize)]
 #[serde(tag = "type")]
 pub enum PythonPackaging {
     #[serde(rename = "stdlib")]
@@ -100,6 +107,7 @@ pub enum RunMode {
 struct ParsedConfig {
     python_distribution: PythonDistribution,
     python_config: PythonConfig,
+    python_extensions: PythonExtensions,
     python_packages: Vec<PythonPackaging>,
     python_run: RunMode,
 }
@@ -118,6 +126,7 @@ pub struct Config {
     pub stdio_encoding_name: Option<String>,
     pub stdio_encoding_errors: Option<String>,
     pub unbuffered_stdio: bool,
+    pub python_extensions: PythonExtensions,
     pub python_packaging: Vec<PythonPackaging>,
     pub run: RunMode,
 }
@@ -177,6 +186,7 @@ pub fn parse_config(data: &Vec<u8>) -> Config {
         stdio_encoding_name,
         stdio_encoding_errors,
         unbuffered_stdio: config.python_config.unbuffered_stdio,
+        python_extensions: config.python_extensions,
         python_packaging: config.python_packages,
         run: config.python_run,
     }

@@ -46,6 +46,9 @@ e.g.::
    [python_config]
    program_name = "myprog"
 
+   [python_extensions]
+   policy = "all"
+
    [[python_packages]]
    type = "stdlib"
 
