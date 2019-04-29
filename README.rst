@@ -73,9 +73,17 @@ Python application. You can run it directly or with ``cargo run``.
 Status of Project
 =================
 
-The project is considered technology preview status. It is not yet viable to
-use in the wild. There are several missing features, bugs, and other rough
-edges. Use at your own risk.
+PyOxidizer is in alpha status. It may work for some use cases. However, there
+are still a number of rough edges, missing features, and known limitations.
+
+The biggest risk to distributing binaries produced with PyOxidizer is likely
+that unwanted dependencies or requirements are present. Before distributing
+binaries produced with PyOxidizer, it is highly recommended to audit their
+library dependencies. To ensure maximum binary compatibility on Linux,
+compile your binary in a Debian 7 environment, as this will use a
+sufficiently old version of libc which should work in most Linux environments.
+Of course, if you control the execution environment, then this may not pose
+a problem and cross-system compatibility may not be an issue for you.
 
 How It Works
 ============
