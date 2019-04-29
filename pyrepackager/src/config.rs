@@ -54,7 +54,9 @@ struct PythonConfig {
 #[serde(tag = "policy")]
 pub enum PythonExtensions {
     #[serde(rename = "all")]
-    All { }
+    All { },
+    #[serde(rename = "none")]
+    None {},
 }
 
 #[derive(Debug, Deserialize)]

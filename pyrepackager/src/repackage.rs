@@ -35,6 +35,17 @@ const STDLIB_TEST_PACKAGES: &[&str] = &[
     "unittest.test",
 ];
 
+const REQUIRED_EXTENSIONS: &[&str] = &[
+    "_codecs",
+    "_io",
+    "_signal",
+    "_thread",
+    "_tracemalloc",
+    "_weakref",
+    "faulthandler",
+    "posix",
+];
+
 /// Libraries provided by the host that we can ignore in Python module library dependencies.
 ///
 /// Libraries in this data structure are not provided by the Python distribution.
@@ -534,10 +545,16 @@ pub fn link_libpython(config: &Config, dist: &PythonDistributionInfo) {
             }
         }
 
+        // TODO this flag should come from the distribution.
+        if REQUIRED_EXTENSIONS.contains(&name.as_str()) {
+            extension_modules.insert(name);
+        }
+
         match config.python_extensions {
             PythonExtensions::All { } => {
                 extension_modules.insert(name);
             },
+            PythonExtensions::None { } => {},
         }
     }
 

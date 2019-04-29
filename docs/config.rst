@@ -115,6 +115,17 @@ policy to use. The following sections describe the individual policies.
 
 ``policy = "all"`` results in all extension modules being included.
 
+``none``
+--------
+
+``policy = "none"`` results in no optional extension modules being included.
+An extension module is required if it provides symbols necessary to
+link ``libpython`` or is used as part of initializing a Python interpreter.
+
+This policy is incapable of running many Python programs because a lot of
+extension modules are missing. An alternate policy is almost always
+wanted.
+
 ``[[python_packages]]``
 =======================
 
