@@ -126,6 +126,13 @@ This policy is incapable of running many Python programs because a lot of
 extension modules are missing. An alternate policy is almost always
 wanted.
 
+``no-libraries``
+----------------
+
+``policy = "no-libraries"`` will include an extension module unless it links
+against additional libraries. Most common extension modules are included.
+Extension modules like ``_ssl`` and ``zlib`` are not included.
+
 ``[[python_packages]]``
 =======================
 

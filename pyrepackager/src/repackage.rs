@@ -555,6 +555,19 @@ pub fn link_libpython(config: &Config, dist: &PythonDistributionInfo) {
                 extension_modules.insert(name);
             },
             PythonExtensions::None { } => {},
+            PythonExtensions::NoLibraries { } => {
+                let mut have_library = false;
+
+                for extension in em {
+                    if extension.links.len() > 0 {
+                        have_library = true;
+                    }
+                }
+
+                if !have_library {
+                    extension_modules.insert(name);
+                }
+            }
         }
     }
 

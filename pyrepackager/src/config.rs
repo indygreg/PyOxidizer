@@ -57,6 +57,8 @@ pub enum PythonExtensions {
     All { },
     #[serde(rename = "none")]
     None {},
+    #[serde(rename = "no-libraries")]
+    NoLibraries {},
 }
 
 #[derive(Debug, Deserialize)]
