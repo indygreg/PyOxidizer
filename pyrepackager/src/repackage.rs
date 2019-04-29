@@ -124,6 +124,18 @@ pub enum PythonResource {
     Resource { name: String, data: Vec<u8> },
 }
 
+#[derive(Debug)]
+pub enum ResourceAction {
+    Add,
+    Remove,
+}
+
+#[derive(Debug)]
+pub struct PythonResourceEntry {
+    action: ResourceAction,
+    resource: PythonResource,
+}
+
 /// Represents Python resources to embed in a binary.
 pub struct PythonResources {
     pub module_sources: BTreeMap<String, Vec<u8>>,
@@ -183,7 +195,7 @@ impl PythonResources {
 fn resolve_python_packaging(
     package: &PythonPackaging,
     dist: &PythonDistributionInfo,
-) -> Vec<PythonResource> {
+) -> Vec<PythonResourceEntry> {
     let mut res = Vec::new();
 
     match package {
@@ -205,15 +217,21 @@ fn resolve_python_packaging(
                 };
 
                 if *include_source {
-                    res.push(PythonResource::ModuleSource {
-                        name: name.clone(),
-                        source,
+                    res.push(PythonResourceEntry {
+                        action: ResourceAction::Add,
+                        resource: PythonResource::ModuleSource {
+                            name: name.clone(),
+                            source,
+                        },
                     });
                 }
 
-                res.push(PythonResource::ModuleBytecode {
-                    name: name.clone(),
-                    bytecode,
+                res.push(PythonResourceEntry {
+                    action: ResourceAction::Add,
+                    resource: PythonResource::ModuleBytecode {
+                       name: name.clone(),
+                        bytecode,
+                    },
                 });
             }
         }
@@ -262,15 +280,21 @@ fn resolve_python_packaging(
                             };
 
                         if *include_source {
-                            res.push(PythonResource::ModuleSource {
-                                name: resource.name.clone(),
-                                source,
+                            res.push(PythonResourceEntry {
+                                action: ResourceAction::Add,
+                                resource: PythonResource::ModuleSource {
+                                   name: resource.name.clone(),
+                                    source,
+                                }
                             });
                         }
 
-                        res.push(PythonResource::ModuleBytecode {
-                            name: resource.name.clone(),
-                            bytecode,
+                        res.push(PythonResourceEntry {
+                            action: ResourceAction::Add,
+                            resource: PythonResource::ModuleBytecode {
+                               name: resource.name.clone(),
+                                bytecode,
+                            }
                         });
                     }
                     _ => {}
@@ -324,15 +348,21 @@ fn resolve_python_packaging(
                             };
 
                         if *include_source {
-                            res.push(PythonResource::ModuleSource {
-                                name: resource.name.clone(),
-                                source,
+                            res.push(PythonResourceEntry {
+                                action: ResourceAction::Add,
+                                resource: PythonResource::ModuleSource {
+                                    name: resource.name.clone(),
+                                    source,
+                                }
                             });
                         }
 
-                        res.push(PythonResource::ModuleBytecode {
-                            name: resource.name.clone(),
-                            bytecode,
+                        res.push(PythonResourceEntry {
+                            action: ResourceAction::Add,
+                            resource: PythonResource::ModuleBytecode {
+                                name: resource.name.clone(),
+                                bytecode,
+                            }
                         });
                     }
                     _ => {}
@@ -351,25 +381,39 @@ pub fn resolve_python_resources(
 ) -> PythonResources {
     let mut sources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut bytecodes: BTreeMap<String, Vec<u8>> = BTreeMap::new();
-    let mut all_modules: BTreeSet<String> = BTreeSet::new();
     let mut resources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
 
     for packaging in packages {
-        for resource in resolve_python_packaging(packaging, dist) {
-            match resource {
-                PythonResource::ModuleSource { name, source } => {
+        for entry in resolve_python_packaging(packaging, dist) {
+            match (entry.action, entry.resource) {
+                (ResourceAction::Add, PythonResource::ModuleSource { name, source }) => {
                     sources.insert(name.clone(), source);
-                    all_modules.insert(name);
-                }
-                PythonResource::ModuleBytecode { name, bytecode } => {
+                },
+                (ResourceAction::Remove, PythonResource::ModuleSource { name, .. }) => {
+                    sources.remove(&name);
+                },
+                (ResourceAction::Add, PythonResource::ModuleBytecode { name, bytecode }) => {
                     bytecodes.insert(name.clone(), bytecode);
-                    all_modules.insert(name);
-                }
-                PythonResource::Resource { name, data } => {
+                },
+                (ResourceAction::Remove, PythonResource::ModuleBytecode { name, .. }) => {
+                    bytecodes.remove(&name);
+                },
+                (ResourceAction::Add, PythonResource::Resource { name, data}) => {
                     resources.insert(name, data);
-                }
+                },
+                (ResourceAction::Remove, PythonResource::Resource { name, .. }) => {
+                    resources.remove(&name);
+                },
             }
         }
+    }
+
+    let mut all_modules: BTreeSet<String> = BTreeSet::new();
+    for name in sources.keys() {
+        all_modules.insert(name.to_string());
+    }
+    for name in bytecodes.keys() {
+        all_modules.insert(name.to_string());
     }
 
     PythonResources {
