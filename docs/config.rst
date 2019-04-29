@@ -148,6 +148,22 @@ Example usage::
    policy = "explicit-includes"
    includes = ["binascii", "errno", "itertools", "math", "select", "_socket"]
 
+``explicit-excludes``
+---------------------
+
+``policy = "explicit-excludes"`` will include all extension modules by
+default and will exclude an extension module if it is included in a specific
+list, as defined by the ``excludes`` key.
+
+This policy can be used to remove any extension module, even those required
+by Python. So use with care.
+
+Example usage::
+
+   [python_extensions]
+   policy = "explicit-excludes"
+   excludes = ["_ssl"]
+
 ``[[python_packages]]``
 =======================
 

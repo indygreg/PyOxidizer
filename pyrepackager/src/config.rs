@@ -64,6 +64,11 @@ pub enum PythonExtensions {
         #[serde(default)]
         includes: Vec<String>,
     },
+    #[serde(rename = "explicit-excludes")]
+    ExplicitExcludes {
+        #[serde(default)]
+        excludes: Vec<String>,
+    },
 }
 
 #[derive(Debug, Deserialize)]

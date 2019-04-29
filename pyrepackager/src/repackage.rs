@@ -573,6 +573,11 @@ pub fn link_libpython(config: &Config, dist: &PythonDistributionInfo) {
                     extension_modules.insert(name);
                 }
             },
+            PythonExtensions::ExplicitExcludes { excludes } => {
+                if !excludes.contains(&name.to_owned()) {
+                    extension_modules.insert(name);
+                }
+            },
         }
     }
 
