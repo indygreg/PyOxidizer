@@ -12,8 +12,8 @@ use std::path::{Path, PathBuf};
 
 use crate::bytecode::compile_bytecode;
 use crate::config::{
-    parse_config, resolve_python_distribution_archive, Config, PythonExtensions,
-    PythonPackaging, RunMode,
+    parse_config, resolve_python_distribution_archive, Config, PythonExtensions, PythonPackaging,
+    RunMode,
 };
 use crate::dist::{analyze_python_distribution_tar_zst, PythonDistributionInfo};
 use crate::fsscan::{find_python_resources, PythonResourceType};
@@ -229,7 +229,7 @@ fn resolve_python_packaging(
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
                     resource: PythonResource::ModuleBytecode {
-                       name: name.clone(),
+                        name: name.clone(),
                         bytecode,
                     },
                 });
@@ -283,18 +283,18 @@ fn resolve_python_packaging(
                             res.push(PythonResourceEntry {
                                 action: ResourceAction::Add,
                                 resource: PythonResource::ModuleSource {
-                                   name: resource.name.clone(),
+                                    name: resource.name.clone(),
                                     source,
-                                }
+                                },
                             });
                         }
 
                         res.push(PythonResourceEntry {
                             action: ResourceAction::Add,
                             resource: PythonResource::ModuleBytecode {
-                               name: resource.name.clone(),
+                                name: resource.name.clone(),
                                 bytecode,
-                            }
+                            },
                         });
                     }
                     _ => {}
@@ -353,7 +353,7 @@ fn resolve_python_packaging(
                                 resource: PythonResource::ModuleSource {
                                     name: resource.name.clone(),
                                     source,
-                                }
+                                },
                             });
                         }
 
@@ -362,7 +362,7 @@ fn resolve_python_packaging(
                             resource: PythonResource::ModuleBytecode {
                                 name: resource.name.clone(),
                                 bytecode,
-                            }
+                            },
                         });
                     }
                     _ => {}
@@ -388,22 +388,22 @@ pub fn resolve_python_resources(
             match (entry.action, entry.resource) {
                 (ResourceAction::Add, PythonResource::ModuleSource { name, source }) => {
                     sources.insert(name.clone(), source);
-                },
+                }
                 (ResourceAction::Remove, PythonResource::ModuleSource { name, .. }) => {
                     sources.remove(&name);
-                },
+                }
                 (ResourceAction::Add, PythonResource::ModuleBytecode { name, bytecode }) => {
                     bytecodes.insert(name.clone(), bytecode);
-                },
+                }
                 (ResourceAction::Remove, PythonResource::ModuleBytecode { name, .. }) => {
                     bytecodes.remove(&name);
-                },
-                (ResourceAction::Add, PythonResource::Resource { name, data}) => {
+                }
+                (ResourceAction::Add, PythonResource::Resource { name, data }) => {
                     resources.insert(name, data);
-                },
+                }
                 (ResourceAction::Remove, PythonResource::Resource { name, .. }) => {
                     resources.remove(&name);
-                },
+                }
             }
         }
     }
@@ -595,11 +595,11 @@ pub fn link_libpython(config: &Config, dist: &PythonDistributionInfo) {
         }
 
         match &config.python_extensions {
-            PythonExtensions::All { } => {
+            PythonExtensions::All {} => {
                 extension_modules.insert(name);
-            },
-            PythonExtensions::None { } => {},
-            PythonExtensions::NoLibraries { } => {
+            }
+            PythonExtensions::None {} => {}
+            PythonExtensions::NoLibraries {} => {
                 let mut have_library = false;
 
                 for extension in em {
@@ -611,17 +611,17 @@ pub fn link_libpython(config: &Config, dist: &PythonDistributionInfo) {
                 if !have_library {
                     extension_modules.insert(name);
                 }
-            },
+            }
             PythonExtensions::ExplicitIncludes { includes } => {
                 if includes.contains(&name.to_owned()) {
                     extension_modules.insert(name);
                 }
-            },
+            }
             PythonExtensions::ExplicitExcludes { excludes } => {
                 if !excludes.contains(&name.to_owned()) {
                     extension_modules.insert(name);
                 }
-            },
+            }
         }
     }
 
