@@ -67,8 +67,8 @@ pub fn osstring_to_str(py: Python, s: OsString) -> PyObject {
 #[cfg(target_family = "windows")]
 pub fn osstring_to_str(py: Python, s: OsString) -> PyObject {
     // Windows OsString should be valid UTF-16.
-    let w = s.to_wide();
-    unsafe { PyObject::from_owned_ptr(py, pyffi::PyUnicode_FromWideChar(w.as_ptr(), w.len())) }
+    let w: Vec<u16> = s.encode_wide().collect();
+    unsafe { PyObject::from_owned_ptr(py, pyffi::PyUnicode_FromWideChar(w.as_ptr(), w.len() as isize)) }
 }
 
 #[cfg(target_family = "unix")]
@@ -82,9 +82,9 @@ pub fn osstring_to_bytes(py: Python, s: OsString) -> PyObject {
 
 #[cfg(target_family = "windows")]
 pub fn osstring_to_bytes(py: Python, s: OsString) -> PyObject {
-    let w = s.to_wide();
+    let w: Vec<u16> = s.encode_wide().collect();
     unsafe {
-        let o = pyffi::PyBytes_FromStringAndSize(w.as_ptr() as *const i8, w.len() * 2);
+        let o = pyffi::PyBytes_FromStringAndSize(w.as_ptr() as *const i8, w.len() as isize * 2);
         PyObject::from_owned_ptr(py, o)
     }
 }
