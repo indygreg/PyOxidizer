@@ -7,7 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
 use std::fs::create_dir_all;
-use std::io::{BufReader, BufRead, Cursor, Error as IOError, Read, Write};
+use std::io::{BufRead, BufReader, Cursor, Error as IOError, Read, Write};
 use std::path::{Path, PathBuf};
 
 use crate::bytecode::compile_bytecode;
@@ -210,7 +210,10 @@ fn read_resource_names_file(path: &Path) -> Result<BTreeSet<String>, IOError> {
     Ok(res)
 }
 
-fn filter_btreemap<K: std::clone::Clone + std::cmp::Ord, V>(m: &mut BTreeMap<K, V>, f: &BTreeSet<K>) {
+fn filter_btreemap<K: std::clone::Clone + std::cmp::Ord, V>(
+    m: &mut BTreeMap<K, V>,
+    f: &BTreeSet<K>,
+) {
     let keys: Vec<K> = m.keys().cloned().collect();
 
     for key in keys {
@@ -399,7 +402,7 @@ fn resolve_python_packaging(
             }
         }
         // This is a no-op because it can only be handled at a higher level.
-        PythonPackaging::FilterFileInclude { .. } => { }
+        PythonPackaging::FilterFileInclude { .. } => {}
     }
 
     res
@@ -442,7 +445,8 @@ pub fn resolve_python_resources(
         match packaging {
             PythonPackaging::FilterFileInclude { path } => {
                 let path = Path::new(path);
-                let include_names = read_resource_names_file(path).expect("failed to read resource names file");
+                let include_names =
+                    read_resource_names_file(path).expect("failed to read resource names file");
 
                 filter_btreemap(&mut sources, &include_names);
                 filter_btreemap(&mut bytecodes, &include_names);

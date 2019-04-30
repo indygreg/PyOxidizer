@@ -105,9 +105,7 @@ pub enum PythonPackaging {
         include_source: bool,
     },
     #[serde(rename = "filter-file-include")]
-    FilterFileInclude {
-        path: String,
-    },
+    FilterFileInclude { path: String },
 }
 
 #[derive(Debug, Deserialize)]
