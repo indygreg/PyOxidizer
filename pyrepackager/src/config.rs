@@ -48,6 +48,7 @@ struct PythonConfig {
     stdio_encoding: Option<String>,
     #[serde(default = "FALSE")]
     unbuffered_stdio: bool,
+    write_modules_directory_env: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -145,6 +146,7 @@ pub struct Config {
     pub python_extensions: PythonExtensions,
     pub python_packaging: Vec<PythonPackaging>,
     pub run: RunMode,
+    pub write_modules_directory_env: Option<String>,
 }
 
 pub fn parse_config(data: &Vec<u8>) -> Config {
@@ -205,6 +207,7 @@ pub fn parse_config(data: &Vec<u8>) -> Config {
         python_extensions: config.python_extensions,
         python_packaging: config.python_packages,
         run: config.python_run,
+        write_modules_directory_env: config.python_config.write_modules_directory_env,
     }
 }
 

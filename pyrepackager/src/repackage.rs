@@ -922,6 +922,15 @@ pub fn write_data_rs(
         }
     ))
     .unwrap();
+
+    f.write_fmt(format_args!(
+        "pub const WRITE_MODULES_DIRECTORY_ENV: Option<&'static str> = {};\n",
+        match &config.write_modules_directory_env {
+            Some(path) => "Some(\"".to_owned() + &path + "\")",
+            _ => "None".to_owned(),
+        }
+    ))
+    .unwrap();
 }
 
 pub fn process_config(config_path: &Path, out_dir: &Path) {

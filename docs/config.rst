@@ -94,6 +94,23 @@ unbuffered_stdio
    `Py_UnbufferedStdioFlag <https://docs.python.org/3/c-api/init.html#c.Py_UnbufferedStdioFlag>`_.
    Default is ``false``.
 
+write_modules_directory_env
+   Environment variable that defines a directory where ``modules-<UUID>`` files
+   containing a ``\n`` delimited list of loaded Python modules (from ``sys.modules``)
+   will be written upon interpreter shutdown.
+
+   If this setting is not defined or if the environment variable specified by its
+   value is not present at run-time, no special behavior will occur. Otherwise,
+   the environment variable's value is interpreted as a directory, that directory
+   and any of its parents will be created, and a ``modules-<UUID>`` file will
+   be written to the directory.
+
+   This setting is useful when combined with the ``filter-file-include`` packaging
+   rule to assemble a list of modules required by a binary. One can use this
+   setting to produce a *probing* executable, run that executable (say by
+   executing a test harness), then combine the generated files into a unified
+   list of modules and use with ``filter-file-include``.
+
 ``[python_extensions]``
 =======================
 

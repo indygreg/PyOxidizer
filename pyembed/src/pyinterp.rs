@@ -5,11 +5,13 @@
 use libc::c_char;
 use std::env;
 use std::ffi::CString;
+use std::fs;
+use std::io::Write;
 use std::path::PathBuf;
 use std::ptr::null;
 
 use cpython::{
-    GILGuard, NoArgs, ObjectProtocol, PyErr, PyList, PyModule, PyObject, PyResult, Python,
+    GILGuard, NoArgs, ObjectProtocol, PyDict, PyErr, PyList, PyModule, PyObject, PyResult, Python,
     PythonObject, ToPyObject,
 };
 use pyffi;
@@ -56,11 +58,23 @@ pub struct PythonConfig {
     /// On Windows, bytes will be UTF-16. On POSIX, bytes will be raw char*
     /// values passed to `int main()`.
     pub argvb: bool,
+    /// Environment variable holding the directory to write a loaded modules file.
+    ///
+    /// If this value is set and the environment it refers to is set,
+    /// on interpreter shutdown, we will write a ``modules-<random>`` file to
+    /// the directory specified containing a ``\n`` delimited list of modules
+    /// loaded in ``sys.modules``.
+    pub write_modules_directory_env: Option<String>,
 }
 
 impl PythonConfig {
     /// Obtain the PythonConfig with the settings compiled into the binary.
     pub fn default() -> PythonConfig {
+        let write_modules_directory_env = match WRITE_MODULES_DIRECTORY_ENV {
+            Some(path) => Some(String::from(path)),
+            None => None,
+        };
+
         PythonConfig {
             exe: env::current_exe().unwrap(),
             program_name: PROGRAM_NAME.to_string(),
@@ -75,6 +89,7 @@ impl PythonConfig {
             dont_write_bytecode: DONT_WRITE_BYTECODE,
             unbuffered_stdio: UNBUFFERED_STDIO,
             argvb: false,
+            write_modules_directory_env,
         }
     }
 }
@@ -548,8 +563,49 @@ impl<'a> MainPythonInterpreter<'a> {
     }
 }
 
+fn write_modules_to_directory(py: &Python, path: &PathBuf) {
+    // TODO this needs better error handling all over.
+
+    fs::create_dir_all(path).expect("could not create directory for modules");
+
+    let rand = uuid::Uuid::new_v4();
+
+    let path = path.join(format!("modules-{}", rand.to_string()));
+
+    let sys = py.import("sys").expect("could not obtain sys module");
+    let modules = sys
+        .get(*py, "modules")
+        .expect("could not obtain sys.modules");
+
+    let modules = modules
+        .cast_as::<PyDict>(*py)
+        .expect("sys.modules is not a dict");
+
+    let mut f = fs::File::create(path).expect("could not open file for writing");
+
+    for (key, _value) in modules.items(*py) {
+        let name = key
+            .extract::<String>(*py)
+            .expect("module name is not a str");
+
+        f.write_fmt(format_args!("{}\n", name))
+            .expect("could not write");
+    }
+}
+
 impl<'a> Drop for MainPythonInterpreter<'a> {
     fn drop(&mut self) {
+        if let Some(key) = &self.config.write_modules_directory_env {
+            match env::var(key) {
+                Ok(path) => {
+                    let path = PathBuf::from(path);
+                    let py = self.acquire_gil();
+                    write_modules_to_directory(&py, &path);
+                }
+                Err(_) => {}
+            }
+        }
+
         let _ = unsafe { pyffi::Py_FinalizeEx() };
     }
 }

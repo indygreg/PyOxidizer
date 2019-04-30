@@ -12,6 +12,7 @@ pyrepackager = { path = "../pyrepackager" }
 byteorder = "1"
 libc = "0.2"
 python3-sys = { path = "../third_party/rust-cpython/python3-sys" }
+uuid = { version = "0.7", features = ["v4"] }
 
 [dependencies.cpython]
 path = "../third_party/rust-cpython"
