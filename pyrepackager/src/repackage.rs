@@ -7,7 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
 use std::fs::create_dir_all;
-use std::io::{Cursor, Read, Write};
+use std::io::{BufReader, BufRead, Cursor, Error as IOError, Read, Write};
 use std::path::{Path, PathBuf};
 
 use crate::bytecode::compile_bytecode;
@@ -142,6 +142,7 @@ pub struct PythonResources {
     pub module_bytecodes: BTreeMap<String, Vec<u8>>,
     pub all_modules: BTreeSet<String>,
     pub resources: BTreeMap<String, Vec<u8>>,
+    pub read_files: Vec<PathBuf>,
 }
 
 impl PythonResources {
@@ -188,6 +189,34 @@ impl PythonResources {
 
         let fh = fs::File::create(bytecodes_path).unwrap();
         write_blob_entries(&fh, &self.bytecodes_blob()).unwrap();
+    }
+}
+
+fn read_resource_names_file(path: &Path) -> Result<BTreeSet<String>, IOError> {
+    let fh = fs::File::open(path)?;
+
+    let mut res: BTreeSet<String> = BTreeSet::new();
+
+    for line in BufReader::new(fh).lines() {
+        let line = line?;
+
+        if line.starts_with("#") || line.len() == 0 {
+            continue;
+        }
+
+        res.insert(line);
+    }
+
+    Ok(res)
+}
+
+fn filter_btreemap<K: std::clone::Clone + std::cmp::Ord, V>(m: &mut BTreeMap<K, V>, f: &BTreeSet<K>) {
+    let keys: Vec<K> = m.keys().cloned().collect();
+
+    for key in keys {
+        if !f.contains(&key) {
+            m.remove(&key);
+        }
     }
 }
 
@@ -369,6 +398,8 @@ fn resolve_python_packaging(
                 }
             }
         }
+        // This is a no-op because it can only be handled at a higher level.
+        PythonPackaging::FilterFileInclude { .. } => { }
     }
 
     res
@@ -382,6 +413,7 @@ pub fn resolve_python_resources(
     let mut sources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut bytecodes: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut resources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    let mut read_files: Vec<PathBuf> = Vec::new();
 
     for packaging in packages {
         for entry in resolve_python_packaging(packaging, dist) {
@@ -406,6 +438,20 @@ pub fn resolve_python_resources(
                 }
             }
         }
+
+        match packaging {
+            PythonPackaging::FilterFileInclude { path } => {
+                let path = Path::new(path);
+                let include_names = read_resource_names_file(path).expect("failed to read resource names file");
+
+                filter_btreemap(&mut sources, &include_names);
+                filter_btreemap(&mut bytecodes, &include_names);
+                filter_btreemap(&mut resources, &include_names);
+
+                read_files.push(PathBuf::from(path));
+            }
+            _ => {}
+        }
     }
 
     let mut all_modules: BTreeSet<String> = BTreeSet::new();
@@ -421,6 +467,7 @@ pub fn resolve_python_resources(
         module_bytecodes: bytecodes,
         all_modules,
         resources,
+        read_files,
     }
 }
 
@@ -914,6 +961,10 @@ pub fn process_config(config_path: &Path, out_dir: &Path) {
     fh.write(&importlib.bootstrap_external_bytecode).unwrap();
 
     let resources = resolve_python_resources(&config.python_packaging, &dist);
+
+    for p in &resources.read_files {
+        println!("cargo:rerun-if-changed={}", p.to_str().unwrap());
+    }
 
     // Produce the packed data structures containing Python modules.
     // TODO there is tons of room to customize this behavior, including

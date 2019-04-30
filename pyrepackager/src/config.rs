@@ -104,6 +104,10 @@ pub enum PythonPackaging {
         #[serde(default = "TRUE")]
         include_source: bool,
     },
+    #[serde(rename = "filter-file-include")]
+    FilterFileInclude {
+        path: String,
+    },
 }
 
 #[derive(Debug, Deserialize)]

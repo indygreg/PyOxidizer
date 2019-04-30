@@ -298,6 +298,24 @@ include_source
    Whether to include the source code for modules in addition to the bytecode.
    Defaults to true.
 
+``filter-file-include``
+-----------------------
+
+``type = "filter-file"`` will filter all resources captured so far through a
+list of resource names read from a file. If a resource captured so far exists
+in the file, it will be packaged. Otherwise it will be excluded.
+
+This rule allows earlier rules to aggressively pull in resources then exclude
+resources via omission. This is often easier than cherry picking exactly
+which resources to include in highly-granular rules.
+
+The following keys control behavior:
+
+``path``
+   The filesystem path of the file containing resource names. The file must
+   be valid UTF-8 and consist of a ``\n`` delimited list of resource names.
+   Empty lines and lines beginning with ``#`` are ignored.
+
 ``[python_run]``
 ================
 
