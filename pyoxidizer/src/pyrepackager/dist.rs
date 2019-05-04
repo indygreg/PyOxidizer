@@ -177,6 +177,9 @@ pub struct PythonDistributionInfo {
     /// Architecture this Python runs on.
     pub arch: String,
 
+    /// Path to Python interpreter executable.
+    pub python_exe: PathBuf,
+
     /// Object files providing the core Python implementation.
     ///
     /// Keys are relative paths. Values are filesystem paths.
@@ -343,6 +346,7 @@ pub fn analyze_python_distribution_data(
         version: pi.python_version.clone(),
         os: pi.os.clone(),
         arch: pi.arch.clone(),
+        python_exe: python_path.join(pi.python_exe),
         temp_dir,
         extension_modules,
         frozen_c,

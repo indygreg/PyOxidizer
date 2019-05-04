@@ -13,7 +13,6 @@ hex = "0.3"
 itertools = "0.8"
 lazy_static = "1.2"
 libc = "0.2"
-python3-copy-sys = { path = "../third_party/rust-cpython-copy/python3-sys" }
 regex = "1"
 reqwest = "0.9"
 serde = "1.0"
@@ -27,7 +26,3 @@ url = "1.7"
 version-compare = "0.0"
 walkdir = "2"
 zstd = "0.4"
-
-[dependencies.cpython-copy]
-path = "../third_party/rust-cpython-copy"
-features = ["no-auto-initialize", "python-3-7"]

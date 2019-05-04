@@ -211,6 +211,10 @@ fn read_resource_names_file(path: &Path) -> Result<BTreeSet<String>, IOError> {
     Ok(res)
 }
 
+fn bytecode_compiler(dist: &PythonDistributionInfo) -> BytecodeCompiler {
+    BytecodeCompiler::new(&dist.python_exe)
+}
+
 fn filter_btreemap<K: std::clone::Clone + std::cmp::Ord, V>(
     m: &mut BTreeMap<K, V>,
     f: &BTreeSet<K>,
@@ -237,7 +241,7 @@ fn resolve_python_packaging(
             exclude_test_modules,
             include_source,
         } => {
-            let compiler = BytecodeCompiler::new();
+            let mut compiler = bytecode_compiler(&dist);
 
             for (name, fs_path) in &dist.py_modules {
                 if is_stdlib_test_package(&name) && *exclude_test_modules {
@@ -288,7 +292,7 @@ fn resolve_python_packaging(
             packages_path.push("python".to_owned() + &dist.version[0..3]);
             packages_path.push("site-packages");
 
-            let compiler = BytecodeCompiler::new();
+            let mut compiler = bytecode_compiler(&dist);
 
             for resource in find_python_resources(&packages_path) {
                 match resource.flavor {
@@ -348,7 +352,7 @@ fn resolve_python_packaging(
         } => {
             let path = PathBuf::from(path);
 
-            let compiler = BytecodeCompiler::new();
+            let mut compiler = bytecode_compiler(&dist);
 
             for resource in find_python_resources(&path) {
                 match resource.flavor {
@@ -498,7 +502,7 @@ pub struct ImportlibData {
 /// source and concatenate with code that provides the memory importer.
 /// Bytecode is then derived from it.
 pub fn derive_importlib(dist: &PythonDistributionInfo) -> ImportlibData {
-    let compiler = BytecodeCompiler::new();
+    let mut compiler = bytecode_compiler(&dist);
 
     let mod_bootstrap_path = dist.py_modules.get("importlib._bootstrap").unwrap();
     let mod_bootstrap_external_path = dist

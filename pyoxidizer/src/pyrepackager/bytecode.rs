@@ -2,88 +2,83 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use cpython::{PyBytes, PyErr, PyObject, Python};
-use libc::c_char;
-use pyffi::{
-    PyMarshal_WriteObjectToString, Py_CompileStringExFlags, Py_MARSHAL_VERSION, Py_file_input,
-};
-use std::ffi::CString;
+use std::fs::File;
+use std::io::{BufReader, BufRead, Read, Write};
+use std::path::{Path, PathBuf};
+use std::process;
 
-/// Compile Python source to bytecode in-process.
-///
-/// This can be used to produce data for a frozen module.
-pub fn compile_bytecode(
-    source: &Vec<u8>,
-    filename: &str,
-    optimize: i32,
-) -> Result<Vec<u8>, String> {
-    // Need to convert to CString to ensure trailing NULL is present.
-    let source = CString::new(source.clone()).unwrap();
-    let filename = CString::new(filename).unwrap();
-
-    // TODO we could probably eliminate no-auto-initialize and do away with this.
-    cpython::prepare_freethreaded_python();
-
-    let gil = Python::acquire_gil();
-    let py = gil.python();
-
-    // We can pick up a different Python version from what the distribution is
-    // running. This will result in "bad" bytecode being generated. Check for
-    // that.
-    // TODO we should validate against the parsed distribution instead of
-    // hard-coding the version number.
-    if pyffi::Py_MARSHAL_VERSION != 4 {
-        panic!(
-            "unrecognized marshal version {}; did build.rs link against Python 3.7?",
-            pyffi::Py_MARSHAL_VERSION
-        );
-    }
-
-    let mut flags = pyffi::PyCompilerFlags { cf_flags: 0 };
-
-    let code = unsafe {
-        let flags_ptr = &mut flags;
-        Py_CompileStringExFlags(
-            source.as_ptr() as *const c_char,
-            filename.as_ptr() as *const c_char,
-            Py_file_input,
-            flags_ptr,
-            optimize,
-        )
-    };
-
-    if PyErr::occurred(py) {
-        let err = PyErr::fetch(py);
-        err.print(py);
-        return Err(format!("Python error when compiling {:?}", filename));
-    }
-
-    if code.is_null() {
-        panic!("code is null without Python error. Huh?");
-    }
-
-    let marshalled = unsafe { PyMarshal_WriteObjectToString(code, Py_MARSHAL_VERSION) };
-
-    let marshalled = unsafe { PyObject::from_owned_ptr(py, marshalled) };
-
-    let data = marshalled.cast_as::<PyBytes>(py).unwrap().data(py);
-
-    return Ok(data.to_vec());
-}
+pub const BYTECODE_COMPILER: &'static [u8] = include_bytes!("bytecodecompiler.py");
 
 /// An entity to perform Python bytecode compilation.
-pub struct BytecodeCompiler {}
+pub struct BytecodeCompiler {
+    _temp_dir: tempdir::TempDir,
+    command: process::Child,
+}
 
 impl BytecodeCompiler {
-    pub fn new() -> BytecodeCompiler {
-        BytecodeCompiler {}
+    pub fn new(python: &Path) -> BytecodeCompiler {
+        let temp_dir = tempdir::TempDir::new("bytecode-compiler").expect("could not create temp directory");
+
+        let script_path = PathBuf::from(temp_dir.path()).join("bytecodecompiler.py");
+
+        {
+            let mut fh = File::create(&script_path).expect("could not create temp path");
+            fh.write(BYTECODE_COMPILER).expect("could not write bytecodecompiler.py");
+        }
+
+        let command = process::Command::new(python)
+            .arg(script_path.clone())
+            .stdin(process::Stdio::piped())
+            .stdout(process::Stdio::piped())
+            .spawn()
+            .expect("Python compiler process invoked");
+
+        BytecodeCompiler {
+            _temp_dir: temp_dir,
+            command,
+        }
     }
 
     /// Compile Python source into bytecode with an optimization level.
     ///
     /// This is very similar to converting a .py file into a .pyc file, but without
     /// the metadata in the header of the .pyc file.
-    pub fn compile(self: &BytecodeCompiler, source: &Vec<u8>, filename: &str, optimize: i32) -> Result<Vec<u8>, String> {
-        compile_bytecode(&source, &filename, optimize)
+    pub fn compile(self: &mut BytecodeCompiler, source: &Vec<u8>, filename: &str, optimize: i32) -> Result<Vec<u8>, std::io::Error> {
+        let stdin = self.command.stdin.as_mut().expect("failed to get stdin");
+        let stdout = self.command.stdout.as_mut().expect("failed to get stdout");
+
+        let mut reader = BufReader::new(stdout);
+
+        stdin.write(b"compile\n")?;
+        stdin.write(filename.len().to_string().as_bytes())?;
+        stdin.write(b"\n")?;
+        stdin.write(source.len().to_string().as_bytes())?;
+        stdin.write(b"\n")?;
+        stdin.write(optimize.to_string().as_bytes())?;
+        stdin.write(b"\n")?;
+        stdin.write(filename.as_bytes())?;
+        stdin.write(source)?;
+        stdin.flush()?;
+
+        let mut len_s = String::new();
+        reader.read_line(&mut len_s)?;
+
+        let len_s = len_s.trim_end();
+        let bytecode_len = len_s.parse::<u64>().unwrap();
+
+        let mut bytecode: Vec<u8> = Vec::new();
+        reader.take(bytecode_len).read_to_end(&mut bytecode)?;
+
+        Ok(bytecode)
+    }
+}
+
+impl Drop for BytecodeCompiler {
+    fn drop(&mut self) {
+        let stdin = self.command.stdin.as_mut().expect("failed to get stdin");
+        stdin.write(b"exit\n").expect("write failed");
+        stdin.flush().expect("flush failed");
+
+        self.command.wait().expect("compiler process did not exit");
     }
 }

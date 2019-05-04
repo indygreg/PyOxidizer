@@ -1,8 +1,0 @@
-/target
-/Cargo.lock
-/doc
-/gh-pages
-
-*.so
-*.out
-extensions/stamps/
