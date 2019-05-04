@@ -380,6 +380,84 @@ pub fn analyze_python_distribution_tar_zst<R: Read>(
     analyze_python_distribution_tar(dctx)
 }
 
+fn sha256_path(path: &PathBuf) -> Vec<u8> {
+    let mut hasher = Sha256::new();
+    let mut fh = File::open(&path).unwrap();
+    let mut data = Vec::new();
+    fh.read_to_end(&mut data).unwrap();
+    hasher.input(data);
+
+    hasher.result().to_vec()
+}
+
+/// Ensure a Python distribution at a URL is available in a local directory.
+///
+/// The path to the downloaded and validated file is returned.
+pub fn download_distribution(url: &str, sha256: &str, cache_dir: &Path) -> PathBuf {
+    let expected_hash = hex::decode(sha256).expect("could not parse SHA256 hash");
+    let url = Url::parse(url).expect("failed to parse URL");
+
+    let basename = url.path_segments()
+        .expect("cannot be base path")
+        .last()
+        .expect("could not get final URL path element")
+        .to_string();
+
+    let cache_path = cache_dir.join(basename);
+
+    if cache_path.exists() {
+        let file_hash = sha256_path(&cache_path);
+
+        // We don't care about timing side-channels from the string compare.
+        if file_hash == expected_hash {
+            return cache_path;
+        }
+    }
+
+    let mut data: Vec<u8> = Vec::new();
+
+    let mut response = reqwest::get(url).expect("unable to perform HTTP request");
+    response
+        .read_to_end(&mut data)
+        .expect("unable to download URL");
+
+    let mut hasher = Sha256::new();
+    hasher.input(&data);
+
+    let url_hash = hasher.result().to_vec();
+    if url_hash != expected_hash {
+        panic!("sha256 of Python distribution does not validate");
+    }
+
+    fs::write(&cache_path, data).expect("unable to write file");
+
+    cache_path
+}
+
+pub fn copy_local_distribution(path: &PathBuf, sha256: &str, cache_dir: &Path) -> PathBuf {
+    let expected_hash = hex::decode(sha256).expect("could not parse SHA256 hash");
+    let basename = path.file_name().unwrap().to_str().unwrap().to_string();
+    let cache_path = cache_dir.join(basename);
+
+    if cache_path.exists() {
+        let file_hash = sha256_path(&cache_path);
+
+        if file_hash == expected_hash {
+            return cache_path;
+        }
+    }
+
+    let source_hash = sha256_path(&path);
+
+    if source_hash != expected_hash {
+        panic!("sha256 of Python distribution does not validate");
+    }
+
+    std::fs::copy(path, &cache_path).unwrap();
+
+    cache_path
+}
+
 /// Obtain a local Path for a Python distribution tar archive.
 ///
 /// Takes a parsed config and a cache directory as input. Usually the cache
@@ -390,81 +468,16 @@ pub fn analyze_python_distribution_tar_zst<R: Read>(
 ///
 /// Local filesystem paths are preferred over remote URLs if both are defined.
 pub fn resolve_python_distribution_archive(config: &Config, cache_dir: &Path) -> PathBuf {
-    let expected_hash = hex::decode(&config.python_distribution_sha256).unwrap();
-
-    let basename = match &config.python_distribution_path {
-        Some(path) => {
-            let p = Path::new(path);
-            p.file_name().unwrap().to_str().unwrap().to_string()
-        }
-        None => match &config.python_distribution_url {
-            Some(url) => {
-                let url = Url::parse(url).expect("failed to parse URL");
-                url.path_segments()
-                    .expect("cannot be base path")
-                    .last()
-                    .expect("could not get last element")
-                    .to_string()
-            }
-            None => panic!("neither local path nor URL defined for distribution"),
-        },
-    };
-
-    let cache_path = cache_dir.join(basename);
-
-    if cache_path.exists() {
-        let mut hasher = Sha256::new();
-        let mut fh = File::open(&cache_path).unwrap();
-        let mut data = Vec::new();
-        fh.read_to_end(&mut data).unwrap();
-        hasher.input(data);
-
-        let file_hash = hasher.result().to_vec();
-
-        // We don't care about timing side-channels from the string compare.
-        if file_hash == expected_hash {
-            return cache_path;
-        }
-    }
-
     match &config.python_distribution_path {
         Some(path) => {
-            let mut hasher = Sha256::new();
-            let mut fh = File::open(path).unwrap();
-            let mut data = Vec::new();
-            fh.read_to_end(&mut data).unwrap();
-            hasher.input(data);
-
-            let file_hash = hasher.result().to_vec();
-
-            if file_hash != expected_hash {
-                panic!("sha256 of Python distribution does not validate");
-            }
-
-            std::fs::copy(path, &cache_path).unwrap();
-            cache_path
+            let p = PathBuf::from(path);
+            copy_local_distribution(&p, &config.python_distribution_sha256, cache_dir)
         }
         None => match &config.python_distribution_url {
             Some(url) => {
-                let mut data: Vec<u8> = Vec::new();
-
-                let mut response = reqwest::get(url).expect("unable to perform HTTP request");
-                response
-                    .read_to_end(&mut data)
-                    .expect("unable to download URL");
-
-                let mut hasher = Sha256::new();
-                hasher.input(&data);
-
-                let url_hash = hasher.result().to_vec();
-                if url_hash != expected_hash {
-                    panic!("sha256 of Python distribution does not validate");
-                }
-
-                fs::write(&cache_path, data).expect("unable to write file");
-                cache_path
+                download_distribution(&url, &config.python_distribution_sha256, cache_dir)
             }
-            None => panic!("expected distribution path or URL"),
-        },
+            None => panic!("invalid config")
+        }
     }
 }
