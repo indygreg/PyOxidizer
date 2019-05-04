@@ -2,12 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-extern crate pyrepackager;
-
 use std::env;
 use std::path::Path;
 
-use pyrepackager::repackage::process_config;
+use pyoxidizer::pyrepackager::repackage::process_config;
 
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");

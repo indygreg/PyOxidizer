@@ -2,28 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-extern crate byteorder;
-extern crate cc;
-extern crate cpython_copy as cpython;
-extern crate hex;
-extern crate itertools;
-#[macro_use]
-extern crate lazy_static;
-extern crate libc;
-extern crate python3_copy_sys as pyffi;
-extern crate regex;
-extern crate reqwest;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
-extern crate sha2;
-extern crate tar;
-extern crate tempdir;
-extern crate toml;
-extern crate url;
-extern crate walkdir;
-extern crate zstd;
-
 pub mod bytecode;
 pub mod config;
 pub mod dist;

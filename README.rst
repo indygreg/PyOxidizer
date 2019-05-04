@@ -91,25 +91,20 @@ How It Works
 ``PyOxidizer`` is comprised of a number of Rust crates, each responsible
 for particular functionality.
 
-The ``pyoxidizer`` crate provides a ``pyoxidizer`` executable and supporting
-code which serves as a high-level interface to performing actions
-relevant to PyOxidizer.
-
-The ``pyrepackager`` crate contains functionality for ingesting specially
-produced Python distributions - likely one from the
-[python-build-standalone](https://github.com/indygreg/python-build-standalone)
-project) and enabling those distributions to be repackaged. It has code
-for parsing our config files, finding Python modules, compiling Python
-bytecode, etc. ``pyrepackager`` is essentially the main library for
-``PyOxidizer``, providing most of the build-time functionality required
-to build binaries.
+The ``pyoxidizer`` crate provides a ``pyoxidizer`` executable and library.
+The library provides all the core functionality of PyOxidizer, such as
+the logic for ingesting specially produced Python distributions and
+enabling those distributions to be repackaged and embedded in a Rust
+binary. It has code for parsing our config files, finding Python modules,
+compiling Python bytecode, etc. The ``pyoxidizer`` executable serves
+as a high-level interface to performing actions relevant to PyOxidizer.
 
 The ``pyembed`` library crate is responsible for managing an embedded
 Python interpreter within a larger Rust application. The crate contains
 all the code needed to interact with the CPython APIs and to provide
 in-memory module importing.
 
-When built, the ``pyembed`` crate interacts with the ``pyrepackager`` crate
+When built, the ``pyembed`` crate interacts with the ``pyoxidizer`` crate
 to assemble all resources required to embed a Python interpreter. This
 includes configuring Cargo to build/link the appropriate files to embed
 ``libpython``. This activity is directed by a configuration file. See the
@@ -130,7 +125,7 @@ The ``pyembed`` create is configured via a TOML file. The configuration
 defines which Python distribution to consume, which Python modules to
 package, and default settings for the Python interpreter, including which
 code to execute by default. Most of the reading and processing of this
-configuration is in the ``pyrepackager`` crate.
+configuration is in the ``pyoxidizer`` crate.
 
 At build time, the ``pyembed`` crate assembles configured Python
 resources (such as ``.py`` source files and bytecode) into binary structures
@@ -261,7 +256,7 @@ Why is the Rust Code... Not Great?
 This is the project author's first real Rust project. Suggestions to improve
 the Rust code would be very much appreciated!
 
-Keep in mind that the ``pyrepackager`` crate is a build-time only
+Keep in mind that the ``pyoxidizer`` crate is a build-time only
 crate and arguably doesn't need to live up to quality standards as
 crates containing run-time code. Things like aggressive ``.unwrap()``
 usage are arguably tolerable.

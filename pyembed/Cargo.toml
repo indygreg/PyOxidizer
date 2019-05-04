@@ -6,7 +6,7 @@ edition = "2018"
 build = "build.rs"
 
 [build-dependencies]
-pyrepackager = { path = "../pyrepackager" }
+pyoxidizer = { path = "../pyoxidizer" }
 
 [dependencies]
 byteorder = "1"

@@ -5,9 +5,29 @@ authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+byteorder = "1.2"
+cc = "1.0"
 clap = "2.32"
 goblin = "0.0"
+hex = "0.3"
 itertools = "0.8"
 lazy_static = "1.2"
-pyrepackager = { path = "../pyrepackager" }
+libc = "0.2"
+python3-copy-sys = { path = "../third_party/rust-cpython-copy/python3-sys" }
+regex = "1"
+reqwest = "0.9"
+serde = "1.0"
+serde_derive = "1.0"
+serde_json = "1.0"
+sha2 = "0.8"
+tar = "0.4"
+tempdir = "0.3"
+toml = "0.4"
+url = "1.7"
 version-compare = "0.0"
+walkdir = "2"
+zstd = "0.4"
+
+[dependencies.cpython-copy]
+path = "../third_party/rust-cpython-copy"
+features = ["no-auto-initialize", "python-3-7"]
