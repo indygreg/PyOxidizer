@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use libc::c_char;
+use python3_sys as pyffi;
 use std::env;
 use std::ffi::CString;
 use std::fs;
@@ -14,7 +15,6 @@ use cpython::{
     GILGuard, NoArgs, ObjectProtocol, PyDict, PyErr, PyList, PyModule, PyObject, PyResult, Python,
     PythonObject, ToPyObject,
 };
-use pyffi;
 
 use super::data::*;
 use super::pyalloc::{make_raw_memory_allocator, RawAllocator};

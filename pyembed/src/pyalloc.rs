@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use libc::{c_void, size_t};
+use python3_sys as pyffi;
 use std::alloc;
 use std::collections::HashMap;
 use std::ptr::null_mut;

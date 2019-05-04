@@ -10,7 +10,7 @@ use std::io::Cursor;
 use byteorder::{LittleEndian, ReadBytesExt};
 use cpython::exc::{KeyError, ValueError};
 use cpython::{PyBool, PyErr, PyObject, PyResult, PyString, Python, ToPyObject};
-use pyffi::{PyBUF_READ, PyMemoryView_FromMemory};
+use python3_sys::{PyBUF_READ, PyMemoryView_FromMemory};
 
 use super::data::{PYC_MODULES_DATA, PY_MODULES_DATA};
 
