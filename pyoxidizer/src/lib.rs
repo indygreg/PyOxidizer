@@ -10,3 +10,5 @@ extern crate serde_derive;
 pub mod analyze;
 pub mod pyrepackager;
 pub mod python_distributions;
+
+pub use pyrepackager::repackage::run_from_build;

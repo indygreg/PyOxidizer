@@ -1010,3 +1010,30 @@ pub fn process_config(config_path: &Path, out_dir: &Path) {
         &pyc_modules_path,
     );
 }
+
+/// Runs packaging/embedding from the context of a build script.
+pub fn run_from_build(build_script: &str) {
+    // Adding our our rerun-if-changed lines will overwrite the default, so
+    // we need to emit the build script name explicitly.
+    println!("cargo:rerun-if-changed={}", build_script);
+
+    println!("cargo:rerun-if-env-changed=PYOXIDIZER_CONFIG");
+
+    let config_env =
+        env::var("PYOXIDIZER_CONFIG").expect("PYOXIDIZER_CONFIG environment variable not set");
+    let config_path = Path::new(&config_env);
+
+    if !config_path.exists() {
+        panic!(
+            "config file {} defined by PYOXIDIZER_CONFIG does not exist",
+            config_env
+        );
+    }
+
+    println!("cargo:rerun-if-changed={}", config_env);
+
+    let out_dir = env::var("OUT_DIR").unwrap();
+    let out_dir_path = Path::new(&out_dir);
+
+    process_config(config_path, out_dir_path);
+}
