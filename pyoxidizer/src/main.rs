@@ -6,9 +6,6 @@ use std::path::PathBuf;
 
 use clap::{App, Arg, SubCommand};
 
-#[macro_use]
-extern crate lazy_static;
-
 mod analyze;
 
 fn main() {

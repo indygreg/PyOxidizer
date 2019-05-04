@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use byteorder::{LittleEndian, WriteBytesExt};
+use lazy_static::lazy_static;
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
