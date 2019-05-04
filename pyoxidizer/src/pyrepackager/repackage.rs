@@ -10,7 +10,7 @@ use std::fs::create_dir_all;
 use std::io::{BufRead, BufReader, Cursor, Error as IOError, Read, Write};
 use std::path::{Path, PathBuf};
 
-use super::bytecode::compile_bytecode;
+use super::bytecode::BytecodeCompiler;
 use super::config::{
     parse_config, Config, PythonExtensions, PythonPackaging,
     RunMode,
@@ -237,6 +237,8 @@ fn resolve_python_packaging(
             exclude_test_modules,
             include_source,
         } => {
+            let compiler = BytecodeCompiler::new();
+
             for (name, fs_path) in &dist.py_modules {
                 if is_stdlib_test_package(&name) && *exclude_test_modules {
                     println!("skipping test stdlib module: {}", name);
@@ -244,7 +246,8 @@ fn resolve_python_packaging(
                 }
 
                 let source = fs::read(fs_path).expect("error reading source file");
-                let bytecode = match compile_bytecode(&source, &name, *optimize_level as i32) {
+
+                let bytecode = match compiler.compile(&source, &name, *optimize_level as i32) {
                     Ok(res) => res,
                     Err(msg) => panic!("error compiling bytecode: {}", msg),
                 };
@@ -285,6 +288,8 @@ fn resolve_python_packaging(
             packages_path.push("python".to_owned() + &dist.version[0..3]);
             packages_path.push("site-packages");
 
+            let compiler = BytecodeCompiler::new();
+
             for resource in find_python_resources(&packages_path) {
                 match resource.flavor {
                     PythonResourceType::Source => {
@@ -306,7 +311,7 @@ fn resolve_python_packaging(
 
                         let source = fs::read(resource.path).expect("error reading source file");
                         let bytecode =
-                            match compile_bytecode(&source, &resource.name, *optimize_level as i32)
+                            match compiler.compile(&source, &resource.name, *optimize_level as i32)
                             {
                                 Ok(res) => res,
                                 Err(msg) => panic!("error compiling bytecode: {}", msg),
@@ -343,6 +348,8 @@ fn resolve_python_packaging(
         } => {
             let path = PathBuf::from(path);
 
+            let compiler = BytecodeCompiler::new();
+
             for resource in find_python_resources(&path) {
                 match resource.flavor {
                     PythonResourceType::Source => {
@@ -374,7 +381,7 @@ fn resolve_python_packaging(
 
                         let source = fs::read(resource.path).expect("error reading source file");
                         let bytecode =
-                            match compile_bytecode(&source, &resource.name, *optimize_level as i32)
+                            match compiler.compile(&source, &resource.name, *optimize_level as i32)
                             {
                                 Ok(res) => res,
                                 Err(msg) => panic!("error compiling bytecode: {}", msg),
@@ -491,6 +498,8 @@ pub struct ImportlibData {
 /// source and concatenate with code that provides the memory importer.
 /// Bytecode is then derived from it.
 pub fn derive_importlib(dist: &PythonDistributionInfo) -> ImportlibData {
+    let compiler = BytecodeCompiler::new();
+
     let mod_bootstrap_path = dist.py_modules.get("importlib._bootstrap").unwrap();
     let mod_bootstrap_external_path = dist
         .py_modules
@@ -500,14 +509,14 @@ pub fn derive_importlib(dist: &PythonDistributionInfo) -> ImportlibData {
     let bootstrap_source = fs::read(&mod_bootstrap_path).expect("unable to read bootstrap source");
     let module_name = "<frozen importlib._bootstrap>";
     let bootstrap_bytecode =
-        compile_bytecode(&bootstrap_source, module_name, 0).expect("error compiling bytecode");
+        compiler.compile(&bootstrap_source, module_name, 0).expect("error compiling bytecode");
 
     let mut bootstrap_external_source =
         fs::read(&mod_bootstrap_external_path).expect("unable to read bootstrap_external source");
     bootstrap_external_source.extend("\n# END OF importlib/_bootstrap_external.py\n\n".bytes());
     bootstrap_external_source.extend(PYTHON_IMPORTER);
     let module_name = "<frozen importlib._bootstrap_external>";
-    let bootstrap_external_bytecode = compile_bytecode(&bootstrap_external_source, module_name, 0)
+    let bootstrap_external_bytecode = compiler.compile(&bootstrap_external_source, module_name, 0)
         .expect("error compiling bytecode");
 
     ImportlibData {

@@ -70,3 +70,20 @@ pub fn compile_bytecode(
 
     return Ok(data.to_vec());
 }
+
+/// An entity to perform Python bytecode compilation.
+pub struct BytecodeCompiler {}
+
+impl BytecodeCompiler {
+    pub fn new() -> BytecodeCompiler {
+        BytecodeCompiler {}
+    }
+
+    /// Compile Python source into bytecode with an optimization level.
+    ///
+    /// This is very similar to converting a .py file into a .pyc file, but without
+    /// the metadata in the header of the .pyc file.
+    pub fn compile(self: &BytecodeCompiler, source: &Vec<u8>, filename: &str, optimize: i32) -> Result<Vec<u8>, String> {
+        compile_bytecode(&source, &filename, optimize)
+    }
+}
