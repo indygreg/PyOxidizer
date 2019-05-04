@@ -16,10 +16,10 @@ use cpython::{
 };
 use pyffi;
 
-use crate::data::*;
-use crate::pyalloc::{make_raw_memory_allocator, RawAllocator};
-use crate::pymodules_module::PyInit__pymodules;
-use crate::pystr::{osstring_to_bytes, osstring_to_str, OwnedPyStr};
+use super::data::*;
+use super::pyalloc::{make_raw_memory_allocator, RawAllocator};
+use super::pymodules_module::PyInit__pymodules;
+use super::pystr::{osstring_to_bytes, osstring_to_str, OwnedPyStr};
 
 const PYMODULES_NAME: &'static [u8] = b"_pymodules\0";
 

@@ -12,7 +12,7 @@ use cpython::exc::{KeyError, ValueError};
 use cpython::{PyBool, PyErr, PyObject, PyResult, PyString, Python, ToPyObject};
 use pyffi::{PyBUF_READ, PyMemoryView_FromMemory};
 
-use crate::data::{PYC_MODULES_DATA, PY_MODULES_DATA};
+use super::data::{PYC_MODULES_DATA, PY_MODULES_DATA};
 
 /// Parse modules blob data into a map of module name to module data.
 fn parse_modules_blob(data: &'static [u8]) -> Result<HashMap<&str, &[u8]>, &'static str> {

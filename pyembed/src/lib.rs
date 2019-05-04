@@ -15,4 +15,4 @@ mod pymodules_module;
 mod pystr;
 
 #[allow(unused)]
-pub use crate::pyinterp::{MainPythonInterpreter, PythonConfig};
+pub use pyinterp::{MainPythonInterpreter, PythonConfig};
