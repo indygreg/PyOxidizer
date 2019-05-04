@@ -56,15 +56,3 @@ const STDLIB_IGNORE_FILES: &[&str] = &[
     "distutils/README",
     "wsgiref.egg-info",
 ];
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let source = std::fs::File::open(
-            "/home/gps/src/python-build-standalone/build/cpython-linux64.tar.zst",
-        )
-        .unwrap();
-        super::analyze_python_distribution_tar_zst(source).unwrap();
-    }
-}
