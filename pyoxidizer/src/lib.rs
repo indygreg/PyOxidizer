@@ -10,3 +10,4 @@ extern crate python3_copy_sys as pyffi;
 extern crate serde_derive;
 
 pub mod pyrepackager;
+pub mod python_distributions;
