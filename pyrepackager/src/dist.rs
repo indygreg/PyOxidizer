@@ -7,7 +7,7 @@ use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use crate::fsscan::{find_python_resources, walk_tree_files, PythonResourceType};
+use super::fsscan::{find_python_resources, walk_tree_files, PythonResourceType};
 
 #[derive(Debug, Deserialize)]
 struct LinkEntry {

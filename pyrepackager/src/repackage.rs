@@ -10,13 +10,13 @@ use std::fs::create_dir_all;
 use std::io::{BufRead, BufReader, Cursor, Error as IOError, Read, Write};
 use std::path::{Path, PathBuf};
 
-use crate::bytecode::compile_bytecode;
-use crate::config::{
+use super::bytecode::compile_bytecode;
+use super::config::{
     parse_config, resolve_python_distribution_archive, Config, PythonExtensions, PythonPackaging,
     RunMode,
 };
-use crate::dist::{analyze_python_distribution_tar_zst, PythonDistributionInfo};
-use crate::fsscan::{find_python_resources, PythonResourceType};
+use super::dist::{analyze_python_distribution_tar_zst, PythonDistributionInfo};
+use super::fsscan::{find_python_resources, PythonResourceType};
 
 pub const PYTHON_IMPORTER: &'static [u8] = include_bytes!("memoryimporter.py");
 
