@@ -91,6 +91,10 @@ How It Works
 ``PyOxidizer`` is comprised of a number of Rust crates, each responsible
 for particular functionality.
 
+The ``pyoxidizer`` crate provides a ``pyoxidizer`` executable and supporting
+code which serves as a high-level interface to performing actions
+relevant to PyOxidizer.
+
 The ``pyrepackager`` crate contains functionality for ingesting specially
 produced Python distributions - likely one from the
 [python-build-standalone](https://github.com/indygreg/python-build-standalone)

@@ -1,0 +1,13 @@
+[package]
+name = "pyoxidizer"
+version = "0.1.0"
+authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+clap = "2.32"
+goblin = "0.0"
+itertools = "0.8"
+lazy_static = "1.2"
+pyrepackager = { path = "../pyrepackager" }
+version-compare = "0.0"
