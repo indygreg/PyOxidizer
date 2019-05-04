@@ -563,6 +563,11 @@ impl<'a> MainPythonInterpreter<'a> {
     }
 }
 
+/// Write loaded Python modules to a directory.
+///
+/// Given a Python interpreter and a path to a directory, this will create a
+/// file in that directory named ``modules-<UUID>`` and write a ``\n`` delimited
+/// list of loaded names from ``sys.modules`` into that file.
 fn write_modules_to_directory(py: &Python, path: &PathBuf) {
     // TODO this needs better error handling all over.
 
