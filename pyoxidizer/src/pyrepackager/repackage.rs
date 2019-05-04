@@ -1012,6 +1012,19 @@ pub fn process_config(config_path: &Path, out_dir: &Path) {
 }
 
 /// Runs packaging/embedding from the context of a build script.
+///
+/// This function should be called by the build script for the package
+/// that wishes to embed a Python interpreter/application. When called,
+/// a PyOxidizer configuration file is found and read. The configuration
+/// is then applied to the current build. This involves obtaining a
+/// Python distribution to embed (possibly by downloading it from the Internet),
+/// analyzing the contents of that distribution, extracting relevant files
+/// from the distribution, compiling Python bytecode, and generating
+/// resources required to build the ``pyembed`` crate/modules.
+///
+/// If everything works as planned, this whole process should be largely
+/// invisible and the calling application will have an embedded Python
+/// interpreter when it is built.
 pub fn run_from_build(build_script: &str) {
     // Adding our our rerun-if-changed lines will overwrite the default, so
     // we need to emit the build script name explicitly.
@@ -1019,21 +1032,33 @@ pub fn run_from_build(build_script: &str) {
 
     println!("cargo:rerun-if-env-changed=PYOXIDIZER_CONFIG");
 
-    let config_env =
-        env::var("PYOXIDIZER_CONFIG").expect("PYOXIDIZER_CONFIG environment variable not set");
-    let config_path = Path::new(&config_env);
+    let config_path = match env::var("PYOXIDIZER_CONFIG") {
+        Ok(config_env) => {
+            println!("using PyOxidizer config file from PYOXIDIZER_CONFIG: {}", config_env);
+            PathBuf::from(config_env)
+        }
+        Err(_) => {
+            let target = env::var("TARGET").expect("TARGET not found");
+            let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not found");
+
+            let basename = format!("pyoxidizer.{}.toml", target);
+
+            let path = PathBuf::from(manifest_dir).join(basename);
+
+            println!("using PyOxidizer config file from Cargo.toml location + target triple: {}", path.to_str().expect("could not convert path to str"));
+
+            path
+        }
+    };
 
     if !config_path.exists() {
-        panic!(
-            "config file {} defined by PYOXIDIZER_CONFIG does not exist",
-            config_env
-        );
+        panic!("PyOxidizer config file does not exist");
     }
 
-    println!("cargo:rerun-if-changed={}", config_env);
+    println!("cargo:rerun-if-changed={}", config_path.to_str().expect("could not convert path to str"));
 
     let out_dir = env::var("OUT_DIR").unwrap();
     let out_dir_path = Path::new(&out_dir);
 
-    process_config(config_path, out_dir_path);
+    process_config(&config_path, out_dir_path);
 }
