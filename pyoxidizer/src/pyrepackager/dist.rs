@@ -2,11 +2,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fs;
+use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use url::Url;
 
+use super::config::Config;
 use super::fsscan::{find_python_resources, walk_tree_files, PythonResourceType};
 
 #[derive(Debug, Deserialize)]
@@ -374,4 +378,93 @@ pub fn analyze_python_distribution_tar_zst<R: Read>(
     let dctx = zstd::stream::Decoder::new(source).unwrap();
 
     analyze_python_distribution_tar(dctx)
+}
+
+/// Obtain a local Path for a Python distribution tar archive.
+///
+/// Takes a parsed config and a cache directory as input. Usually the cache
+/// directory is the OUT_DIR for the invocation of a Cargo build script.
+/// A Python distribution will be fetched according to the configuration and a
+/// copy of the archive placed in ``cache_dir``. If the archive already exists
+/// in ``cache_dir``, it will be verified and returned.
+///
+/// Local filesystem paths are preferred over remote URLs if both are defined.
+pub fn resolve_python_distribution_archive(config: &Config, cache_dir: &Path) -> PathBuf {
+    let expected_hash = hex::decode(&config.python_distribution_sha256).unwrap();
+
+    let basename = match &config.python_distribution_path {
+        Some(path) => {
+            let p = Path::new(path);
+            p.file_name().unwrap().to_str().unwrap().to_string()
+        }
+        None => match &config.python_distribution_url {
+            Some(url) => {
+                let url = Url::parse(url).expect("failed to parse URL");
+                url.path_segments()
+                    .expect("cannot be base path")
+                    .last()
+                    .expect("could not get last element")
+                    .to_string()
+            }
+            None => panic!("neither local path nor URL defined for distribution"),
+        },
+    };
+
+    let cache_path = cache_dir.join(basename);
+
+    if cache_path.exists() {
+        let mut hasher = Sha256::new();
+        let mut fh = File::open(&cache_path).unwrap();
+        let mut data = Vec::new();
+        fh.read_to_end(&mut data).unwrap();
+        hasher.input(data);
+
+        let file_hash = hasher.result().to_vec();
+
+        // We don't care about timing side-channels from the string compare.
+        if file_hash == expected_hash {
+            return cache_path;
+        }
+    }
+
+    match &config.python_distribution_path {
+        Some(path) => {
+            let mut hasher = Sha256::new();
+            let mut fh = File::open(path).unwrap();
+            let mut data = Vec::new();
+            fh.read_to_end(&mut data).unwrap();
+            hasher.input(data);
+
+            let file_hash = hasher.result().to_vec();
+
+            if file_hash != expected_hash {
+                panic!("sha256 of Python distribution does not validate");
+            }
+
+            std::fs::copy(path, &cache_path).unwrap();
+            cache_path
+        }
+        None => match &config.python_distribution_url {
+            Some(url) => {
+                let mut data: Vec<u8> = Vec::new();
+
+                let mut response = reqwest::get(url).expect("unable to perform HTTP request");
+                response
+                    .read_to_end(&mut data)
+                    .expect("unable to download URL");
+
+                let mut hasher = Sha256::new();
+                hasher.input(&data);
+
+                let url_hash = hasher.result().to_vec();
+                if url_hash != expected_hash {
+                    panic!("sha256 of Python distribution does not validate");
+                }
+
+                fs::write(&cache_path, data).expect("unable to write file");
+                cache_path
+            }
+            None => panic!("expected distribution path or URL"),
+        },
+    }
 }

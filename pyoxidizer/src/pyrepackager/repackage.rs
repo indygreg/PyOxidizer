@@ -12,10 +12,11 @@ use std::path::{Path, PathBuf};
 
 use super::bytecode::compile_bytecode;
 use super::config::{
-    parse_config, resolve_python_distribution_archive, Config, PythonExtensions, PythonPackaging,
+    parse_config, Config, PythonExtensions, PythonPackaging,
     RunMode,
 };
-use super::dist::{analyze_python_distribution_tar_zst, PythonDistributionInfo};
+use super::dist::{analyze_python_distribution_tar_zst, PythonDistributionInfo,
+    resolve_python_distribution_archive};
 use super::fsscan::{find_python_resources, PythonResourceType};
 
 pub const PYTHON_IMPORTER: &'static [u8] = include_bytes!("memoryimporter.py");
