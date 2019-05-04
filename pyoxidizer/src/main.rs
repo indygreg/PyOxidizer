@@ -9,7 +9,7 @@ use clap::{App, Arg, SubCommand};
 #[macro_use]
 extern crate lazy_static;
 
-pub mod analyze;
+mod analyze;
 
 fn main() {
     let matches = App::new("PyOxidizer")
