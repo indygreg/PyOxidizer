@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use lazy_static::lazy_static;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 /// Describes a Python distribution available at a URL.
 pub struct HostedDistribution {
@@ -12,8 +12,8 @@ pub struct HostedDistribution {
 }
 
 lazy_static! {
-    static ref CPYTHON_BY_TRIPLE: HashMap<&'static str, HostedDistribution> = {
-        let mut res: HashMap<&'static str, HostedDistribution> = HashMap::new();
+    pub static ref CPYTHON_BY_TRIPLE: BTreeMap<&'static str, HostedDistribution> = {
+        let mut res: BTreeMap<&'static str, HostedDistribution> = BTreeMap::new();
 
         res.insert("x86_64-unknown-linux-gnu", HostedDistribution {
             url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190427/cpython-3.7.3-linux64-20190427T2308.tar.zst"),

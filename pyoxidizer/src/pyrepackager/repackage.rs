@@ -1012,6 +1012,20 @@ pub fn process_config(config_path: &Path, out_dir: &Path) {
     );
 }
 
+pub fn find_pyoxidizer_config_file(start_dir: &Path, target: &str) -> Option<PathBuf> {
+    let basename = format!("pyoxidizer.{}.toml", target);
+
+    for test_dir in start_dir.ancestors() {
+        let candidate = test_dir.to_path_buf().join(&basename);
+
+        if candidate.exists() {
+            return Some(candidate);
+        }
+    }
+
+    None
+}
+
 /// Runs packaging/embedding from the context of a build script.
 ///
 /// This function should be called by the build script for the package
@@ -1042,13 +1056,13 @@ pub fn run_from_build(build_script: &str) {
             let target = env::var("TARGET").expect("TARGET not found");
             let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not found");
 
-            let basename = format!("pyoxidizer.{}.toml", target);
+            let path = find_pyoxidizer_config_file(&PathBuf::from(manifest_dir), &target);
 
-            let path = PathBuf::from(manifest_dir).join(basename);
+            if path.is_none() {
+                panic!("Could not find PyOxidizer config file");
+            }
 
-            println!("using PyOxidizer config file from Cargo.toml location + target triple: {}", path.to_str().expect("could not convert path to str"));
-
-            path
+            path.unwrap()
         }
     };
 

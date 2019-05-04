@@ -1,0 +1,27 @@
+[python_distribution]
+url = "{{{ python_distribution_url }}}"
+sha256 = "{{ python_distribution_sha256 }}"
+
+[python_config]
+program_name = "{{ program_name }}"
+
+# This will package the entirety of the Python standard library, exposing
+# a fully-features Python interpreter.
+[python_extensions]
+policy = "all"
+
+[[python_packages]]
+type = "stdlib"
+include_source = false
+
+[python_run]
+# Run an interactive Python interpreter.
+mode = "repl"
+
+# Import a Python module and run it.
+#mode = "module"
+#module = "mypackage.__main__"
+
+# Evaluate some Python code.
+#mode = "eval"
+#code = "from mypackage import main; main()"
