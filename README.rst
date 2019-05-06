@@ -232,6 +232,8 @@ See
 https://github.com/rust-lang/rust/issues/26591#issuecomment-123513631 for
 more.
 
+Cross compiling is not yet supported.
+
 Licensing Considerations
 ========================
 
