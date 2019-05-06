@@ -252,6 +252,23 @@ restrictions.
 Frequently Asked Questions
 ==========================
 
+Where Can I Report Bugs / Send Feedback / Request Features?
+-----------------------------------------------------------
+
+At https://github.com/indygreg/PyOxidizer/issues
+
+``No python interpreter found of version 3.*`` Error When Building
+------------------------------------------------------------------
+
+This is due to a dependent crate insisting that a Python executable
+exist on ``PATH``. Set the ``PYTHON_SYS_EXECUTABLE`` environment
+variable to the path of a Python 3.7 executable and try again. e.g.::
+
+   # UNIX
+   $ export PYTHON_SYS_EXECUTABLE=/usr/bin/python3.7
+   # Windows
+   $ SET PYTHON_SYS_EXECUTABLE=c:\python37\python.exe
+
 Can Python 2.7 Be Supported?
 ----------------------------
 
