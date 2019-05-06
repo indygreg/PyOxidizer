@@ -32,58 +32,93 @@ faster and simpler to manage.
 Quick Start
 ===========
 
-You need Rust 1.31+ and a corresponding Cargo installed.
+You need Rust 1.31+ and a corresponding Cargo installed. Then::
 
-You will need a TOML configuration file telling us how to embed Python.
-See ``docs/config.rst`` for documentation of this configuration file.
+   # PyOxidizer must be installed from a Git repository. This is
+   # temporary until things are stable enough for a release on
+   # ``crates.io``.
+   $ git clone https://github.com/indygreg/PyOxidizer
+   $ cd PyOxidizer
 
-e.g.::
+   # Build and install the ``pyoxidizer`` executable. This will take
+   # a while because there are a number of dependencies. These dependencies
+   # are for running ``pyoxidizer`` and don't impact the size of binaries
+   # built with PyOxidizer.
+   $ cargo install --path pyoxidizer
 
-   [python_distribution]
-   url = "https://github.com/indygreg/python-build-standalone/releases/download/20190427/cpython-3.7.3-linux64-20190427T2308.tar.zst"
-   sha256 = "0b30af0deb4852f2099c7905f80f55b70f7eec152cd19a3a65b577d4350ad47a"
+   # Verify the `pyoxidizer` executable is installed.
+   $ pyoxidizer help
 
-   [python_config]
-   program_name = "myprog"
+   # Create a new Rust project using PyOxidizer.
+   #
+   # This will call ``cargo init`` and set up PyOxidizer scaffolding in the
+   # new project.
+   $ pyoxidizer init /path/to/my-project
 
-   [python_extensions]
-   policy = "all"
+   # Build our application.
+   $ cd /path/to/my-project
+   $ cargo build
 
-   [[python_packages]]
-   type = "stdlib"
+   # When building, you may want to inspect the ``pyoxidizer.*.toml`` files
+   # in your project's directory to see what can be customized.
 
-   [[python_packages]]
-   type = "virtualenv"
-   path = "/home/gps/venv-myprog"
+   # And run it. You should get a Python REPL as if you had invoked
+   # `python` on the command line.
+   $ cargo run
 
-   [python_run]
-   mode = "repl"
+   # (Optional) Build a non-debug, release-optimized binary.
+   $ cargo build --release
 
-You can find available Python distributions at
-https://github.com/indygreg/python-build-standalone/releases.
+   # Analyze the binary dependencies of the binary so you can evaluate
+   # whether it is safe to distribute.
+   $ pyoxidizer analyze target/debug/my-app
 
-Then from a clone of this repository, run ``cargo build`` with the
-``PYOXIDIZER_CONFIG`` environment variable pointing to this config file. e.g.
+PyOxidizer uses TOML configuration files describing how to configure the
+embedded Python interpreter. See ``docs/config.rst`` for documentation
+of this configuration file.
 
-   $ PYOXIDIZER_CONFIG=~/src/myapp/pyoxidizer-linux.toml cargo build
-
-This will build a ``target/debug/pyapp`` executable containing the configured
-Python application. You can run it directly or with ``cargo run``.
+The TOML configuration file is processed as part of building the
+``pyembed`` crate, which is the crate that manages an embedded Python
+interpreter. The build script for the ``pyembed`` crate will use the
+configuration file defined by the ``PYOXIDIZER_CONFIG`` environment
+variable and fall back to looking for ``pyoxidizer.<target>.toml`` files
+in the directory ancestry of the ``pyembed`` crate.
 
 Status of Project
 =================
 
 PyOxidizer is in alpha status. It may work for some use cases. However, there
 are still a number of rough edges, missing features, and known limitations.
+Please file GitHub issues!
 
-The biggest risk to distributing binaries produced with PyOxidizer is likely
-that unwanted dependencies or requirements are present. Before distributing
-binaries produced with PyOxidizer, it is highly recommended to audit their
-library dependencies. To ensure maximum binary compatibility on Linux,
-compile your binary in a Debian 7 environment, as this will use a
-sufficiently old version of libc which should work in most Linux environments.
-Of course, if you control the execution environment, then this may not pose
-a problem and cross-system compatibility may not be an issue for you.
+What Works:
+
+* ``pyoxidizer init`` and the project it creates should work on Linux,
+  Windows, and macOS.
+* TOML configuration allows cherry pick exactly which Python modules
+  and extension to use.
+
+What Doesn't Work:
+
+* The ``importlib.abc.ResourceReader`` interface is not yet supported.
+* Bundling compiled extension modules is not yet supported (e.g. C
+  extensions).
+* Error handling in Rust code isn't great. Expect binaries to crash
+  from time to time or with esoteric input.
+* ``pyoxidizer add`` doesn't work well.
+* There is no ``pyoxidizer update`` yet.
+* ``pyoxidizer analyze`` only works on ELF files (read: no Windows or
+  macOS support).
+
+The biggest risks to distributing binaries produced with PyOxidizer is
+likely general instability (mainly due to not great error handling yet)
+and binary compatibility concerns. To ensure maximum binary compatibility
+on Linux, compile your binary in a Debian 7 environment, as this will use
+a sufficiently old version of libc which should work in most Linux
+environments. Of course, if you control the execution environment (like if
+executables will run on the same machine that built them), then this may
+not pose a problem to you. Use the ``pyoxidizer analyze`` command to
+inspect binaries for compatibility.
 
 How It Works
 ============
@@ -114,12 +149,6 @@ A built ``pyembed`` crate contains a default configuration (derived from
 the ``build.rs`` program) for the embedded Python interpreter. However,
 this configuration does not need to be used and the API exposed by the
 ``pyembed`` crate allows custom behavior not matching these defaults.
-
-A ``pyapp`` crate defines a Rust program that simply calls into the
-``pyembed`` crate and instantiates and runs Python with the configured
-default settings. The crate exists for convenience to facilitate testing
-and to demonstrate how Rust applications can interact with the ``pyembed``
-crate.
 
 The ``pyembed`` create is configured via a TOML file. The configuration
 defines which Python distribution to consume, which Python modules to
@@ -160,16 +189,6 @@ Known Limitations and Planned Features
 Only Python 3.7 is currently supported. Support for older Python 3
 releases is possible. But the project author hopes we only need to
 target the latest/greatest Python release.
-
-There is not yet support for controlling which Python C extensions
-are linked into the final binary. Not all applications need every
-Python C extension and removing C extensions could result in smaller
-binaries. There are also licensing concerns with some extensions
-(``gdbm`` and ``readline`` are GPL version 3).
-
-There is not yet support for filtering which ``.py`` and ``.pyc``
-files make it into the final binary. This is relatively trivial to
-implement.
 
 The TOML config files and how crates are built needs some work.
 
