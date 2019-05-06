@@ -12,12 +12,11 @@ use std::io::{BufRead, BufReader, Cursor, Error as IOError, Read, Write};
 use std::path::{Path, PathBuf};
 
 use super::bytecode::BytecodeCompiler;
-use super::config::{
-    parse_config, Config, PythonExtensions, PythonPackaging,
-    RunMode,
+use super::config::{parse_config, Config, PythonExtensions, PythonPackaging, RunMode};
+use super::dist::{
+    analyze_python_distribution_tar_zst, resolve_python_distribution_archive,
+    PythonDistributionInfo,
 };
-use super::dist::{analyze_python_distribution_tar_zst, PythonDistributionInfo,
-    resolve_python_distribution_archive};
 use super::fsscan::{find_python_resources, PythonResourceType};
 
 pub const PYTHON_IMPORTER: &'static [u8] = include_bytes!("memoryimporter.py");
@@ -502,15 +501,17 @@ pub fn derive_importlib(dist: &PythonDistributionInfo) -> ImportlibData {
 
     let bootstrap_source = fs::read(&mod_bootstrap_path).expect("unable to read bootstrap source");
     let module_name = "<frozen importlib._bootstrap>";
-    let bootstrap_bytecode =
-        compiler.compile(&bootstrap_source, module_name, 0).expect("error compiling bytecode");
+    let bootstrap_bytecode = compiler
+        .compile(&bootstrap_source, module_name, 0)
+        .expect("error compiling bytecode");
 
     let mut bootstrap_external_source =
         fs::read(&mod_bootstrap_external_path).expect("unable to read bootstrap_external source");
     bootstrap_external_source.extend("\n# END OF importlib/_bootstrap_external.py\n\n".bytes());
     bootstrap_external_source.extend(PYTHON_IMPORTER);
     let module_name = "<frozen importlib._bootstrap_external>";
-    let bootstrap_external_bytecode = compiler.compile(&bootstrap_external_source, module_name, 0)
+    let bootstrap_external_bytecode = compiler
+        .compile(&bootstrap_external_source, module_name, 0)
         .expect("error compiling bytecode");
 
     ImportlibData {
@@ -1036,12 +1037,16 @@ pub fn run_from_build(build_script: &str) {
 
     let config_path = match env::var("PYOXIDIZER_CONFIG") {
         Ok(config_env) => {
-            println!("using PyOxidizer config file from PYOXIDIZER_CONFIG: {}", config_env);
+            println!(
+                "using PyOxidizer config file from PYOXIDIZER_CONFIG: {}",
+                config_env
+            );
             PathBuf::from(config_env)
         }
         Err(_) => {
             let target = env::var("TARGET").expect("TARGET not found");
-            let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not found");
+            let manifest_dir =
+                env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not found");
 
             let path = find_pyoxidizer_config_file(&PathBuf::from(manifest_dir), &target);
 
@@ -1057,7 +1062,10 @@ pub fn run_from_build(build_script: &str) {
         panic!("PyOxidizer config file does not exist");
     }
 
-    println!("cargo:rerun-if-changed={}", config_path.to_str().expect("could not convert path to str"));
+    println!(
+        "cargo:rerun-if-changed={}",
+        config_path.to_str().expect("could not convert path to str")
+    );
 
     let out_dir = env::var("OUT_DIR").unwrap();
     let out_dir_path = Path::new(&out_dir);

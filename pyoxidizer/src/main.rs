@@ -18,27 +18,31 @@ fn main() {
         .version("0.1")
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .about("Integrate Python into Rust")
-
-        .subcommand(SubCommand::with_name("add")
-            .about("Add PyOxidizer to an existing Rust project")
-            .arg(Arg::with_name("path")
-                .required(true)
-                .value_name("PATH")
-                .help("Path to existing Rust project to modify"))
+        .subcommand(
+            SubCommand::with_name("add")
+                .about("Add PyOxidizer to an existing Rust project")
+                .arg(
+                    Arg::with_name("path")
+                        .required(true)
+                        .value_name("PATH")
+                        .help("Path to existing Rust project to modify"),
+                ),
         )
-
-        .subcommand(SubCommand::with_name("analyze")
-            .about("Analyze a built binary")
-            .arg(Arg::with_name("path")
-                               .help("Path to executable to analyze")))
-
-        .subcommand(SubCommand::with_name("init")
-            .about("Initialize a new Rust project embedding Python")
-            .arg(Arg::with_name("name")
-                .required(true)
-                .value_name("NAME")
-                .help("Name of project to initialize")))
-
+        .subcommand(
+            SubCommand::with_name("analyze")
+                .about("Analyze a built binary")
+                .arg(Arg::with_name("path").help("Path to executable to analyze")),
+        )
+        .subcommand(
+            SubCommand::with_name("init")
+                .about("Initialize a new Rust project embedding Python")
+                .arg(
+                    Arg::with_name("name")
+                        .required(true)
+                        .value_name("NAME")
+                        .help("Name of project to initialize"),
+                ),
+        )
         .get_matches();
 
     let result = match matches.subcommand() {
@@ -61,7 +65,7 @@ fn main() {
 
             projectmgmt::init(name)
         }
-        _ => Err("invalid sub-command".to_string())
+        _ => Err("invalid sub-command".to_string()),
     };
 
     match result {

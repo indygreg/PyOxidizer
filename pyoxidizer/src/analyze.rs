@@ -81,7 +81,6 @@ lazy_static! {
 
         res
     };
-
     static ref GCC_VERSIONS_BY_DISTRO: BTreeMap<&'static str, DistroVersion> = {
         let mut res: BTreeMap<&'static str, DistroVersion> = BTreeMap::new();
 
@@ -187,21 +186,21 @@ pub fn analyze_file(path: PathBuf) {
 pub fn analyze_data(buffer: &Vec<u8>) {
     match goblin::Object::parse(buffer).unwrap() {
         goblin::Object::Elf(elf) => {
-            let undefined_symbols = itertools::sorted(find_undefined_elf_symbols(&buffer, &elf).into_iter()).collect();
+            let undefined_symbols =
+                itertools::sorted(find_undefined_elf_symbols(&buffer, &elf).into_iter()).collect();
 
             analyze_elf_libraries(&elf.libraries, &undefined_symbols);
-        },
+        }
         goblin::Object::PE(_pe) => {
             panic!("PE not yet supported");
-        },
+        }
         goblin::Object::Mach(_mach) => {
             panic!("mach not yet supported");
-        },
+        }
         goblin::Object::Archive(_archive) => {
             panic!("archive not yet supported");
-        },
-        goblin::Object::Unknown(magic) => {
-            panic!("unknown magic: {:#x}", magic) }
+        }
+        goblin::Object::Unknown(magic) => panic!("unknown magic: {:#x}", magic),
     }
 }
 
@@ -216,8 +215,7 @@ pub fn analyze_elf_libraries(libs: &Vec<&str>, undefined_symbols: &Vec<Undefined
 
         if LSB_SHARED_LIBRARIES.contains(&lib) {
             println!("  OK - Library part of Linux Shared Bass and present on most distros");
-        }
-        else {
+        } else {
             println!("  PROBLEMATIC - Shared library dependency may not be on all machines");
         }
 
@@ -243,22 +241,25 @@ pub fn analyze_elf_libraries(libs: &Vec<&str>, undefined_symbols: &Vec<Undefined
                     match parts.len() {
                         1 => { /* TODO this is weird. Do something? */ }
                         2 => {
-                            let v = version_compare::Version::from(parts[1]).expect("unable to parse version");
+                            let v = version_compare::Version::from(parts[1])
+                                .expect("unable to parse version");
 
                             match latest_symbols.get(parts[0]) {
                                 Some(existing) => {
                                     if &v > existing {
                                         latest_symbols.insert(parts[0].to_string(), v);
                                     }
-                                },
-                                None => { latest_symbols.insert(parts[0].to_string(), v); }
+                                }
+                                None => {
+                                    latest_symbols.insert(parts[0].to_string(), v);
+                                }
                             }
-                        },
-                        _ => { }
+                        }
+                        _ => {}
                     }
 
                     //println!("  {}@{}", &symbol.symbol, version)
-                },
+                }
                 None => {
                     //println!("  {}", &symbol.symbol)
                 }
@@ -309,14 +310,18 @@ pub fn analyze_elf_libraries(libs: &Vec<&str>, undefined_symbols: &Vec<Undefined
     }
 }
 
-fn find_minimum_distro_version(version: &version_compare::Version, distro_versions: &BTreeMap<&'static str, DistroVersion>) -> Vec<String> {
+fn find_minimum_distro_version(
+    version: &version_compare::Version,
+    distro_versions: &BTreeMap<&'static str, DistroVersion>,
+) -> Vec<String> {
     let mut res: Vec<String> = Vec::new();
 
     for (distro, dv) in distro_versions {
         let mut found = false;
 
         for (distro_version, version_version) in dv {
-            let version_version = version_compare::Version::from(version_version).expect("unable to parse distro version");
+            let version_version = version_compare::Version::from(version_version)
+                .expect("unable to parse distro version");
 
             if &version_version >= version {
                 found = true;
@@ -333,7 +338,11 @@ fn find_minimum_distro_version(version: &version_compare::Version, distro_versio
     res
 }
 
-fn resolve_verneed(verneed_entries: &Vec<(Elf64_Verneed, Vec<Elf64_Vernaux>)>, names_data: &[u8], versym: u16) -> (Option<String>, Option<String>) {
+fn resolve_verneed(
+    verneed_entries: &Vec<(Elf64_Verneed, Vec<Elf64_Vernaux>)>,
+    names_data: &[u8],
+    versym: u16,
+) -> (Option<String>, Option<String>) {
     // versym corresponds to value in Elf64_Vernaux.vna_other.
     for (verneed, vernauxes) in verneed_entries {
         for vernaux in vernauxes {
@@ -347,7 +356,10 @@ fn resolve_verneed(verneed_entries: &Vec<(Elf64_Verneed, Vec<Elf64_Vernaux>)>, n
             let depend_ptr = unsafe { names_data.as_ptr().add(vernaux.vna_name as usize) };
             let depend = unsafe { CStr::from_ptr(depend_ptr as *const c_char) };
 
-            return (Some(filename.to_string_lossy().into_owned()), Some(depend.to_string_lossy().into_owned()));
+            return (
+                Some(filename.to_string_lossy().into_owned()),
+                Some(depend.to_string_lossy().into_owned()),
+            );
         }
     }
 
@@ -357,7 +369,10 @@ fn resolve_verneed(verneed_entries: &Vec<(Elf64_Verneed, Vec<Elf64_Vernaux>)>, n
 /// Find undefined dynamic symbols in an ELF binary.
 ///
 /// Will also resolve the filename and symbol version, if available.
-pub fn find_undefined_elf_symbols(buffer: &Vec<u8>, elf: &goblin::elf::Elf) -> Vec<UndefinedSymbol> {
+pub fn find_undefined_elf_symbols(
+    buffer: &Vec<u8>,
+    elf: &goblin::elf::Elf,
+) -> Vec<UndefinedSymbol> {
     let mut verneed_entries: Vec<(Elf64_Verneed, Vec<Elf64_Vernaux>)> = Vec::new();
     let mut versym: Vec<u16> = Vec::new();
     let mut verneed_names_section: u32 = 0;
@@ -367,7 +382,8 @@ pub fn find_undefined_elf_symbols(buffer: &Vec<u8>, elf: &goblin::elf::Elf) -> V
             goblin::elf::section_header::SHT_GNU_VERSYM => {
                 let data: &[u8] = &buffer[section_header.file_range()];
 
-                let entries: &[u16] = unsafe { from_raw_parts(data.as_ptr() as *const u16, data.len() / 2) };
+                let entries: &[u16] =
+                    unsafe { from_raw_parts(data.as_ptr() as *const u16, data.len() / 2) };
 
                 for value in entries {
                     versym.push(*value);
@@ -406,7 +422,8 @@ pub fn find_undefined_elf_symbols(buffer: &Vec<u8>, elf: &goblin::elf::Elf) -> V
     }
 
     let dynstrtab = &elf.dynstrtab;
-    let verneed_names_data: &[u8] = &buffer[elf.section_headers[verneed_names_section as usize].file_range()];
+    let verneed_names_data: &[u8] =
+        &buffer[elf.section_headers[verneed_names_section as usize].file_range()];
 
     let mut res: Vec<UndefinedSymbol> = Vec::new();
 
@@ -420,22 +437,20 @@ pub fn find_undefined_elf_symbols(buffer: &Vec<u8>, elf: &goblin::elf::Elf) -> V
 
             res.push(match versym > 1 {
                 true => {
-                    let (filename, version) = resolve_verneed(&verneed_entries, &verneed_names_data, versym);
+                    let (filename, version) =
+                        resolve_verneed(&verneed_entries, &verneed_names_data, versym);
 
                     UndefinedSymbol {
                         symbol: String::from(name),
                         filename,
                         version,
                     }
-
                 }
-                false => {
-                    UndefinedSymbol {
-                        symbol: String::from(name),
-                        filename: None,
-                        version: None,
-                    }
-                }
+                false => UndefinedSymbol {
+                    symbol: String::from(name),
+                    filename: None,
+                    version: None,
+                },
             });
         }
     }

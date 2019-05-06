@@ -20,19 +20,38 @@ lazy_static! {
         res.insert("data.rs", include_bytes!("pyembed/data.rs"));
         res.insert("pyalloc.rs", include_bytes!("pyembed/pyalloc.rs"));
         res.insert("pyinterp.rs", include_bytes!("pyembed/pyinterp.rs"));
-        res.insert("pymodules_module.rs", include_bytes!("pyembed/pymodules_module.rs"));
+        res.insert(
+            "pymodules_module.rs",
+            include_bytes!("pyembed/pymodules_module.rs"),
+        );
         res.insert("pystr.rs", include_bytes!("pyembed/pystr.rs"));
 
         res
     };
-
     static ref HANDLEBARS: Handlebars = {
         let mut handlebars = Handlebars::new();
 
-        handlebars.register_template_string("new-main.rs", include_str!("templates/new-main.rs")).unwrap();
-        handlebars.register_template_string("new-pyoxidizer.toml", include_str!("templates/new-pyoxidizer.toml")).unwrap();
-        handlebars.register_template_string("pyembed-build.rs", include_str!("templates/pyembed-build.rs")).unwrap();
-        handlebars.register_template_string("pyembed-cargo.toml", include_str!("templates/pyembed-cargo.toml")).unwrap();
+        handlebars
+            .register_template_string("new-main.rs", include_str!("templates/new-main.rs"))
+            .unwrap();
+        handlebars
+            .register_template_string(
+                "new-pyoxidizer.toml",
+                include_str!("templates/new-pyoxidizer.toml"),
+            )
+            .unwrap();
+        handlebars
+            .register_template_string(
+                "pyembed-build.rs",
+                include_str!("templates/pyembed-build.rs"),
+            )
+            .unwrap();
+        handlebars
+            .register_template_string(
+                "pyembed-cargo.toml",
+                include_str!("templates/pyembed-cargo.toml"),
+            )
+            .unwrap();
 
         handlebars
     };
@@ -48,8 +67,7 @@ pub fn find_pyoxidizer_files(root: &Path) -> Vec<PathBuf> {
 
         if path_s.contains("pyoxidizer") {
             res.push(path.to_path_buf());
-        }
-        else if path_s.contains("pyembed") {
+        } else if path_s.contains("pyembed") {
             res.push(path.to_path_buf());
         }
     }
@@ -61,7 +79,10 @@ fn populate_template_data(data: &mut BTreeMap<String, String>) {
     let env = super::environment::resolve_environment();
 
     if let Some(repo_path) = env.pyoxidizer_repo_path {
-        data.insert(String::from("pyoxidizer_local_repo_path"), String::from(repo_path.to_str().unwrap()));
+        data.insert(
+            String::from("pyoxidizer_local_repo_path"),
+            String::from(repo_path.to_str().unwrap()),
+        );
     }
 }
 
@@ -75,7 +96,9 @@ pub fn update_new_cargo_toml(path: &Path) -> Result<(), std::io::Error> {
 /// Write a new build.rs file supporting PyOxidizer.
 pub fn write_pyembed_build_rs(project_dir: &Path) -> Result<(), std::io::Error> {
     let data: BTreeMap<String, String> = BTreeMap::new();
-    let t = HANDLEBARS.render("pyembed-build.rs", &data).expect("unable to render pyembed-build.rs");
+    let t = HANDLEBARS
+        .render("pyembed-build.rs", &data)
+        .expect("unable to render pyembed-build.rs");
 
     let path = project_dir.to_path_buf().join("build.rs");
 
@@ -89,7 +112,9 @@ pub fn write_pyembed_build_rs(project_dir: &Path) -> Result<(), std::io::Error> 
 /// Write a new main.rs file that runs the embedded Python interpreter.
 pub fn write_new_main_rs(path: &Path) -> Result<(), std::io::Error> {
     let data: BTreeMap<String, String> = BTreeMap::new();
-    let t = HANDLEBARS.render("new-main.rs", &data).expect("unable to render template");
+    let t = HANDLEBARS
+        .render("new-main.rs", &data)
+        .expect("unable to render template");
 
     println!("writing {}", path.to_str().unwrap());
     let mut fh = std::fs::File::create(path)?;
@@ -99,7 +124,10 @@ pub fn write_new_main_rs(path: &Path) -> Result<(), std::io::Error> {
 }
 
 /// Writes default PyOxidizer config files into a project directory.
-pub fn write_new_pyoxidizer_config_files(project_dir: &Path, name: &str) -> Result<(), std::io::Error> {
+pub fn write_new_pyoxidizer_config_files(
+    project_dir: &Path,
+    name: &str,
+) -> Result<(), std::io::Error> {
     for (triple, dist) in CPYTHON_BY_TRIPLE.iter() {
         let basename = format!("pyoxidizer.{}.toml", triple);
         let path = project_dir.to_path_buf().join(basename);
@@ -109,7 +137,9 @@ pub fn write_new_pyoxidizer_config_files(project_dir: &Path, name: &str) -> Resu
         data.insert("python_distribution_sha256", dist.sha256.clone());
         data.insert("program_name", name.to_string());
 
-        let t = HANDLEBARS.render("new-pyoxidizer.toml", &data).expect("unable to render template");
+        let t = HANDLEBARS
+            .render("new-pyoxidizer.toml", &data)
+            .expect("unable to render template");
 
         println!("writing {}", path.to_str().unwrap());
         let mut fh = std::fs::File::create(path)?;
@@ -138,11 +168,16 @@ pub fn write_pyembed_crate_files(dest_dir: &Path) -> Result<(), std::io::Error> 
     let mut data = BTreeMap::new();
     populate_template_data(&mut data);
 
-    let t = HANDLEBARS.render("pyembed-cargo.toml", &data).expect("unable to render pyembed-cargo.toml");
+    let t = HANDLEBARS
+        .render("pyembed-cargo.toml", &data)
+        .expect("unable to render pyembed-cargo.toml");
 
     let path = dest_dir.to_path_buf().join("Cargo.toml");
     println!("writing {}", path.to_str().unwrap());
-    let mut fh = std::fs::OpenOptions::new().write(true).create_new(true).open(path)?;
+    let mut fh = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)?;
     fh.write_all(t.as_bytes())?;
 
     write_pyembed_build_rs(&dest_dir)?;
@@ -178,11 +213,12 @@ pub fn add_pyoxidizer(project_dir: &Path, _suppress_help: bool) -> Result<(), St
     write_pyembed_crate_files(&pyembed_dir).or(Err("error writing pyembed crate files"))?;
 
     let cargo_toml_data = std::fs::read(cargo_toml).or(Err("error reading Cargo.toml"))?;
-    let manifest = cargo_toml::Manifest::from_slice(&cargo_toml_data).expect("unable to parse Cargo.toml");
+    let manifest =
+        cargo_toml::Manifest::from_slice(&cargo_toml_data).expect("unable to parse Cargo.toml");
 
     let _package = match &manifest.package {
         Some(package) => package,
-        None => panic!("no [package]; that's weird")
+        None => panic!("no [package]; that's weird"),
     };
 
     // TODO look for pyembed dependency and print message about adding it.
@@ -204,7 +240,7 @@ pub fn init(project_path: &str) -> Result<(), String> {
                 return Err("cargo init failed".to_string());
             }
         }
-        Err(e) => return Err(e.to_string())
+        Err(e) => return Err(e.to_string()),
     }
 
     let path = PathBuf::from(project_path);
@@ -212,10 +248,14 @@ pub fn init(project_path: &str) -> Result<(), String> {
     add_pyoxidizer(&path, true)?;
     update_new_cargo_toml(&path.join("Cargo.toml")).or(Err("unable to update Cargo.toml"))?;
     write_new_main_rs(&path.join("src").join("main.rs")).or(Err("unable to write main.rs"))?;
-    write_new_pyoxidizer_config_files(&path, &name).or(Err("unable to write PyOxidizer config files"))?;
+    write_new_pyoxidizer_config_files(&path, &name)
+        .or(Err("unable to write PyOxidizer config files"))?;
 
     println!();
-    println!("A new Rust binary application has been created in {}", path.display());
+    println!(
+        "A new Rust binary application has been created in {}",
+        path.display()
+    );
     println!();
     println!("This application can be built by doing the following:");
     println!();

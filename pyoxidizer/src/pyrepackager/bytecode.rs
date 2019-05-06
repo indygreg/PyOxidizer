@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use std::fs::File;
-use std::io::{BufReader, BufRead, Read, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process;
 
@@ -17,13 +17,15 @@ pub struct BytecodeCompiler {
 
 impl BytecodeCompiler {
     pub fn new(python: &Path) -> BytecodeCompiler {
-        let temp_dir = tempdir::TempDir::new("bytecode-compiler").expect("could not create temp directory");
+        let temp_dir =
+            tempdir::TempDir::new("bytecode-compiler").expect("could not create temp directory");
 
         let script_path = PathBuf::from(temp_dir.path()).join("bytecodecompiler.py");
 
         {
             let mut fh = File::create(&script_path).expect("could not create temp path");
-            fh.write(BYTECODE_COMPILER).expect("could not write bytecodecompiler.py");
+            fh.write(BYTECODE_COMPILER)
+                .expect("could not write bytecodecompiler.py");
         }
 
         let command = process::Command::new(python)
@@ -43,7 +45,12 @@ impl BytecodeCompiler {
     ///
     /// This is very similar to converting a .py file into a .pyc file, but without
     /// the metadata in the header of the .pyc file.
-    pub fn compile(self: &mut BytecodeCompiler, source: &Vec<u8>, filename: &str, optimize: i32) -> Result<Vec<u8>, std::io::Error> {
+    pub fn compile(
+        self: &mut BytecodeCompiler,
+        source: &Vec<u8>,
+        filename: &str,
+        optimize: i32,
+    ) -> Result<Vec<u8>, std::io::Error> {
         let stdin = self.command.stdin.as_mut().expect("failed to get stdin");
         let stdout = self.command.stdout.as_mut().expect("failed to get stdout");
 

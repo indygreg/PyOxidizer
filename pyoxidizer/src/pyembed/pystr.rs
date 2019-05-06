@@ -71,7 +71,12 @@ pub fn osstring_to_str(py: Python, s: OsString) -> PyObject {
 pub fn osstring_to_str(py: Python, s: OsString) -> PyObject {
     // Windows OsString should be valid UTF-16.
     let w: Vec<u16> = s.encode_wide().collect();
-    unsafe { PyObject::from_owned_ptr(py, pyffi::PyUnicode_FromWideChar(w.as_ptr(), w.len() as isize)) }
+    unsafe {
+        PyObject::from_owned_ptr(
+            py,
+            pyffi::PyUnicode_FromWideChar(w.as_ptr(), w.len() as isize),
+        )
+    }
 }
 
 #[cfg(target_family = "unix")]

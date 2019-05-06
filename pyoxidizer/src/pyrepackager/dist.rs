@@ -407,7 +407,8 @@ pub fn download_distribution(url: &str, sha256: &str, cache_dir: &Path) -> PathB
     let expected_hash = hex::decode(sha256).expect("could not parse SHA256 hash");
     let url = Url::parse(url).expect("failed to parse URL");
 
-    let basename = url.path_segments()
+    let basename = url
+        .path_segments()
         .expect("cannot be base path")
         .last()
         .expect("could not get final URL path element")
@@ -484,10 +485,8 @@ pub fn resolve_python_distribution_archive(config: &Config, cache_dir: &Path) ->
             copy_local_distribution(&p, &config.python_distribution_sha256, cache_dir)
         }
         None => match &config.python_distribution_url {
-            Some(url) => {
-                download_distribution(&url, &config.python_distribution_sha256, cache_dir)
-            }
-            None => panic!("invalid config")
-        }
+            Some(url) => download_distribution(&url, &config.python_distribution_sha256, cache_dir),
+            None => panic!("invalid config"),
+        },
     }
 }
