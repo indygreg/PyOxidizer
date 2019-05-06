@@ -25,6 +25,11 @@ lazy_static! {
             sha256: String::from("9db612991c1d58b117bb40a9f357d15b75cc9a4b4e476a65cf0ae7ce237be8xii30"),
         });
 
+        res.insert("x86_64-apple-darwin", HostedDistribution {
+            url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190505/cpython-3.7.3-macos-20190506T0054.tar.zst"),
+            sha256: String::from("b46a861c05cb74b5b668d2ce44dcb65a449b9fef98ba5d9ec6ff6937829d5eec"),
+        });
+
         res
     };
 }
