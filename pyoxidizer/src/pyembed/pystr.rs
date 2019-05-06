@@ -4,7 +4,9 @@
 
 use libc::{c_void, size_t, wchar_t};
 use python3_sys as pyffi;
-use std::ffi::{CString, OsString};
+#[cfg(target_family = "unix")]
+use std::ffi::CString;
+use std::ffi::OsString;
 use std::os::raw::c_char;
 use std::ptr::null_mut;
 
@@ -46,6 +48,7 @@ impl Into<*const wchar_t> for OwnedPyStr {
     }
 }
 
+#[cfg(target_family = "unix")]
 const SURROGATEESCAPE: &'static [u8] = b"surrogateescape\0";
 
 #[cfg(target_family = "unix")]
