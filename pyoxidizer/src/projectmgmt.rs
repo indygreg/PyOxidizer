@@ -214,5 +214,19 @@ pub fn init(project_path: &str) -> Result<(), String> {
     write_new_main_rs(&path.join("src").join("main.rs")).or(Err("unable to write main.rs"))?;
     write_new_pyoxidizer_config_files(&path, &name).or(Err("unable to write PyOxidizer config files"))?;
 
+    println!();
+    println!("A new Rust binary application has been created in {}", path.display());
+    println!();
+    println!("This application can be built by doing the following:");
+    println!();
+    println!("  $ cd {}", path.display());
+    println!("  $ cargo build");
+    println!("  $ cargo run");
+    println!();
+    println!("The default configuration is to invoke a Python REPL. You can");
+    println!("edit the various pyoxidizer.*.toml config files or the main.rs ");
+    println!("file to change behavior. The application will need to be rebuilt ");
+    println!("for configuration changes to take effect.");
+
     Ok(())
 }

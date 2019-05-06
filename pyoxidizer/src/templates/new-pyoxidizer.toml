@@ -1,3 +1,8 @@
+# This file controls the PyOxidizer build configuration. See the
+# docs/config.rst file in the PyOxidizer source repository
+# (https://github.com/indygreg/PyOxidizer/blob/master/docs/config.rst)
+# for extensive documentation on this file format.
+
 [python_distribution]
 url = "{{{ python_distribution_url }}}"
 sha256 = "{{ python_distribution_sha256 }}"
@@ -5,15 +10,54 @@ sha256 = "{{ python_distribution_sha256 }}"
 [python_config]
 program_name = "{{ program_name }}"
 
+# dont_write_bytecode = true
+# ignore_environment = true
+# no_site = true
+# no_user_site_directory = true
+# optimize_level = 0
+# stdio_encoding = "utf-8:strict"
+# unbuffered_stdio = false
+#write_modules_directory_env = "PYOXIDIZER_WRITE_MODULES_DIR"
+
 # This will package the entirety of the Python standard library, exposing
 # a fully-features Python interpreter.
 [python_extensions]
 policy = "all"
 
+# Only include the minimal set of extensions needed to start Python.
+# Lots of Python functionality will break in this mode!
+# policy = "none"
+
+# policy = "no-libraries"
+
+# policy = "explicit-includes"
+# includes = ["binascii", "errno", "itertools", "math", "select", "_socket"]
+
+# policy = "explicit-excludes"
+# excludes = ["_ssl"]
+
 [[python_packages]]
+# Package the entire Python standard library without sources.
 type = "stdlib"
 include_source = false
 
+# Package .py files discovered in a local directory.
+# type = "package-root"
+# path = "/src/mypackage"
+# packages = ["foo", "bar"]
+
+# Package things from a populated virtualenv.
+# type = "virtualenv"
+# path = "/path/to/venv"
+
+# Filter all resources collected so far through a filter of names
+# in a file. See ``config.rst`` for more.
+# type = "filter-file-include"
+# path = "/path/to/filter-file"
+
+# How Python should run by default. This is only needed if you
+# call ``run()``. For applications customizing how the embedded
+# Python interpreter is invoked, this section is not relevant.
 [python_run]
 # Run an interactive Python interpreter.
 mode = "repl"
