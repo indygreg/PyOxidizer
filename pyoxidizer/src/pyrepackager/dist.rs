@@ -29,6 +29,7 @@ struct PythonBuildExtensionInfo {
     init_fn: String,
     links: Vec<LinkEntry>,
     objs: Vec<String>,
+    required: bool,
     static_lib: Option<String>,
     variant: String,
 }
@@ -129,6 +130,9 @@ pub struct ExtensionModule {
 
     /// Library linking metadata.
     pub links: Vec<LibraryDepends>,
+
+    /// Whether the extension must be loaded to initialize Python.
+    pub required: bool,
 
     /// Name of the variant of this extension module.
     pub variant: String,
@@ -301,6 +305,7 @@ pub fn analyze_python_distribution_data(
                 builtin_default: entry.in_core,
                 disableable: !entry.in_core,
                 object_paths,
+                required: entry.required,
                 static_library: match &entry.static_lib {
                     Some(p) => Some(python_path.join(p)),
                     None => None,
