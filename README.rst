@@ -2,11 +2,10 @@
 PyOxidizer
 ==========
 
-``PyOxidizer`` is a collection of Rust crates that facilitate building
-libraries and binaries containing Python interpreters. ``PyOxidizer`` is
-capable of producing a single file executable - with all dependencies
-statically linked and all resources (like ``.pyc`` files) embedded in the
-executable.
+``PyOxidizer`` is a utility for producing binaries that embed Python.
+``PyOxidizer`` is capable of producing a single file executable - with
+all dependencies statically linked and all resources (like ``.pyc``
+files) embedded in the executable.
 
 The over-arching goal of ``PyOxidizer`` is to make complex packaging and
 distribution problems simple so application maintainers can focus on
@@ -185,6 +184,9 @@ I/O.
 
 Known Limitations and Planned Features
 ======================================
+
+Segfaults on shutdown are a known problem. This should hopefully be
+resolved soon.
 
 Only Python 3.7 is currently supported. Support for older Python 3
 releases is possible. But the project author hopes we only need to
