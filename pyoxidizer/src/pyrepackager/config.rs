@@ -165,7 +165,7 @@ pub fn parse_config(data: &Vec<u8>) -> Config {
 
     let (stdio_encoding_name, stdio_encoding_errors) = match config.python_config.stdio_encoding {
         Some(value) => {
-            let values: Vec<&str> = value.split(":").collect();
+            let values: Vec<&str> = value.split(':').collect();
             (Some(values[0].to_string()), Some(values[1].to_string()))
         }
         None => (None, None),
