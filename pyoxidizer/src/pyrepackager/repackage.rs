@@ -405,7 +405,7 @@ fn resolve_python_packaging(
 
 /// Resolves a series of packaging rules to a final set of resources to package.
 pub fn resolve_python_resources(
-    packages: &Vec<PythonPackaging>,
+    packages: &[PythonPackaging],
     dist: &PythonDistributionInfo,
 ) -> PythonResources {
     let mut sources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
