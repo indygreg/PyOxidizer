@@ -47,7 +47,7 @@ impl BytecodeCompiler {
     /// the metadata in the header of the .pyc file.
     pub fn compile(
         self: &mut BytecodeCompiler,
-        source: &Vec<u8>,
+        source: &[u8],
         filename: &str,
         optimize: i32,
     ) -> Result<Vec<u8>, std::io::Error> {
