@@ -437,19 +437,16 @@ pub fn resolve_python_resources(
             }
         }
 
-        match packaging {
-            PythonPackaging::FilterFileInclude { path } => {
-                let path = Path::new(path);
-                let include_names =
-                    read_resource_names_file(path).expect("failed to read resource names file");
+        if let PythonPackaging::FilterFileInclude { path } = packaging {
+            let path = Path::new(path);
+            let include_names =
+                read_resource_names_file(path).expect("failed to read resource names file");
 
-                filter_btreemap(&mut sources, &include_names);
-                filter_btreemap(&mut bytecodes, &include_names);
-                filter_btreemap(&mut resources, &include_names);
+            filter_btreemap(&mut sources, &include_names);
+            filter_btreemap(&mut bytecodes, &include_names);
+            filter_btreemap(&mut resources, &include_names);
 
-                read_files.push(PathBuf::from(path));
-            }
-            _ => {}
+            read_files.push(PathBuf::from(path));
         }
     }
 
