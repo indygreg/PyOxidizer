@@ -47,29 +47,26 @@ struct PythonConfig {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(tag = "policy")]
-pub enum PythonExtensions {
-    #[serde(rename = "all")]
-    All {},
-    #[serde(rename = "none")]
-    None {},
-    #[serde(rename = "no-libraries")]
-    NoLibraries {},
-    #[serde(rename = "explicit-includes")]
-    ExplicitIncludes {
+#[serde(tag = "type")]
+pub enum PythonPackaging {
+    #[serde(rename = "extensions-all")]
+    ExtensionsAll {},
+
+    #[serde(rename = "extensions-no-libraries")]
+    ExtensionsNoLibraries {},
+
+    #[serde(rename = "extensions-explicit-includes")]
+    ExtensionsExplicitIncludes {
         #[serde(default)]
         includes: Vec<String>,
     },
-    #[serde(rename = "explicit-excludes")]
-    ExplicitExcludes {
+
+    #[serde(rename = "extensions-explicit-excludes")]
+    ExtensionsExplicitExcludes {
         #[serde(default)]
         excludes: Vec<String>,
     },
-}
 
-#[derive(Debug, Deserialize)]
-#[serde(tag = "type")]
-pub enum PythonPackaging {
     #[serde(rename = "stdlib")]
     Stdlib {
         #[serde(default = "ZERO")]
@@ -119,7 +116,6 @@ pub enum RunMode {
 struct ParsedConfig {
     python_distribution: PythonDistribution,
     python_config: PythonConfig,
-    python_extensions: PythonExtensions,
     python_packages: Vec<PythonPackaging>,
     python_run: RunMode,
 }
@@ -138,7 +134,6 @@ pub struct Config {
     pub stdio_encoding_name: Option<String>,
     pub stdio_encoding_errors: Option<String>,
     pub unbuffered_stdio: bool,
-    pub python_extensions: PythonExtensions,
     pub python_packaging: Vec<PythonPackaging>,
     pub run: RunMode,
     pub write_modules_directory_env: Option<String>,
@@ -196,7 +191,6 @@ pub fn parse_config(data: &[u8]) -> Config {
         stdio_encoding_name,
         stdio_encoding_errors,
         unbuffered_stdio: config.python_config.unbuffered_stdio,
-        python_extensions: config.python_extensions,
         python_packaging: config.python_packages,
         run: config.python_run,
         write_modules_directory_env: config.python_config.write_modules_directory_env,

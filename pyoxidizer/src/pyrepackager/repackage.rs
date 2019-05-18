@@ -12,9 +12,9 @@ use std::io::{BufRead, BufReader, Cursor, Error as IOError, Read, Write};
 use std::path::{Path, PathBuf};
 
 use super::bytecode::BytecodeCompiler;
-use super::config::{parse_config, Config, PythonExtensions, PythonPackaging, RunMode};
+use super::config::{parse_config, Config, PythonPackaging, RunMode};
 use super::dist::{
-    analyze_python_distribution_tar_zst, resolve_python_distribution_archive,
+    analyze_python_distribution_tar_zst, resolve_python_distribution_archive, ExtensionModule,
     PythonDistributionInfo,
 };
 use super::fsscan::{find_python_resources, PythonResourceType};
@@ -109,9 +109,22 @@ pub type BlobEntries = Vec<BlobEntry>;
 /// Represents a resource to make available to the Python interpreter.
 #[derive(Debug)]
 pub enum PythonResource {
-    ModuleSource { name: String, source: Vec<u8> },
-    ModuleBytecode { name: String, bytecode: Vec<u8> },
-    Resource { name: String, data: Vec<u8> },
+    ExtensionModule {
+        name: String,
+        module: ExtensionModule,
+    },
+    ModuleSource {
+        name: String,
+        source: Vec<u8>,
+    },
+    ModuleBytecode {
+        name: String,
+        bytecode: Vec<u8>,
+    },
+    Resource {
+        name: String,
+        data: Vec<u8>,
+    },
 }
 
 #[derive(Debug)]
@@ -132,6 +145,7 @@ pub struct PythonResources {
     pub module_bytecodes: BTreeMap<String, Vec<u8>>,
     pub all_modules: BTreeSet<String>,
     pub resources: BTreeMap<String, Vec<u8>>,
+    pub extension_modules: BTreeMap<String, ExtensionModule>,
     pub read_files: Vec<PathBuf>,
 }
 
@@ -225,6 +239,66 @@ fn resolve_python_packaging(
     let mut res = Vec::new();
 
     match package {
+        PythonPackaging::ExtensionsAll {} => {
+            for (name, modules) in &dist.extension_modules {
+                res.push(PythonResourceEntry {
+                    action: ResourceAction::Add,
+                    resource: PythonResource::ExtensionModule {
+                        name: name.clone(),
+                        module: modules[0].clone(),
+                    },
+                });
+            }
+        }
+
+        PythonPackaging::ExtensionsNoLibraries {} => {
+            for (name, modules) in &dist.extension_modules {
+                for em in modules {
+                    if em.links.is_empty() {
+                        res.push(PythonResourceEntry {
+                            action: ResourceAction::Add,
+                            resource: PythonResource::ExtensionModule {
+                                name: name.clone(),
+                                module: em.clone(),
+                            },
+                        });
+
+                        break;
+                    }
+                }
+            }
+        }
+
+        PythonPackaging::ExtensionsExplicitIncludes { includes } => {
+            for name in includes {
+                if let Some(modules) = &dist.extension_modules.get(name) {
+                    res.push(PythonResourceEntry {
+                        action: ResourceAction::Add,
+                        resource: PythonResource::ExtensionModule {
+                            name: name.clone(),
+                            module: modules[0].clone(),
+                        },
+                    });
+                }
+            }
+        }
+
+        PythonPackaging::ExtensionsExplicitExcludes { excludes } => {
+            for (name, modules) in &dist.extension_modules {
+                if excludes.contains(name) {
+                    continue;
+                }
+
+                res.push(PythonResourceEntry {
+                    action: ResourceAction::Add,
+                    resource: PythonResource::ExtensionModule {
+                        name: name.clone(),
+                        module: modules[0].clone(),
+                    },
+                });
+            }
+        }
+
         PythonPackaging::Stdlib {
             optimize_level,
             exclude_test_modules,
@@ -407,14 +481,30 @@ fn resolve_python_packaging(
 pub fn resolve_python_resources(config: &Config, dist: &PythonDistributionInfo) -> PythonResources {
     let packages = &config.python_packaging;
 
+    let mut extension_modules: BTreeMap<String, ExtensionModule> = BTreeMap::new();
     let mut sources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut bytecodes: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut resources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut read_files: Vec<PathBuf> = Vec::new();
 
+    // Seed extension modules with builtins that must always be enabled.
+    for (name, variants) in &dist.extension_modules {
+        for em in variants {
+            if em.builtin_default || em.required {
+                extension_modules.insert(name.clone(), em.clone());
+            }
+        }
+    }
+
     for packaging in packages {
         for entry in resolve_python_packaging(packaging, dist) {
             match (entry.action, entry.resource) {
+                (ResourceAction::Add, PythonResource::ExtensionModule { name, module }) => {
+                    extension_modules.insert(name, module);
+                }
+                (ResourceAction::Remove, PythonResource::ExtensionModule { name, .. }) => {
+                    extension_modules.remove(&name);
+                }
                 (ResourceAction::Add, PythonResource::ModuleSource { name, source }) => {
                     sources.insert(name.clone(), source);
                 }
@@ -441,12 +531,18 @@ pub fn resolve_python_resources(config: &Config, dist: &PythonDistributionInfo) 
             let include_names =
                 read_resource_names_file(path).expect("failed to read resource names file");
 
+            filter_btreemap(&mut extension_modules, &include_names);
             filter_btreemap(&mut sources, &include_names);
             filter_btreemap(&mut bytecodes, &include_names);
             filter_btreemap(&mut resources, &include_names);
 
             read_files.push(PathBuf::from(path));
         }
+    }
+
+    // Remove extension modules that have problems.
+    for e in OS_IGNORE_EXTENSIONS.as_slice() {
+        extension_modules.remove(&String::from(*e));
     }
 
     let mut all_modules: BTreeSet<String> = BTreeSet::new();
@@ -462,6 +558,7 @@ pub fn resolve_python_resources(config: &Config, dist: &PythonDistributionInfo) 
         module_bytecodes: bytecodes,
         all_modules,
         resources,
+        extension_modules,
         read_files,
     }
 }
@@ -544,7 +641,7 @@ pub fn write_blob_entries<W: Write>(mut dest: W, entries: &[BlobEntry]) -> std::
 }
 
 /// Produce the content of the config.c file containing built-in extensions.
-fn make_config_c(dist: &PythonDistributionInfo, extensions: &BTreeSet<String>) -> String {
+fn make_config_c(extension_modules: &BTreeMap<String, ExtensionModule>) -> String {
     // It is easier to construct the file from scratch than parse the template
     // and insert things in the right places.
     let mut lines: Vec<String> = Vec::new();
@@ -552,15 +649,8 @@ fn make_config_c(dist: &PythonDistributionInfo, extensions: &BTreeSet<String>) -
     lines.push(String::from("#include \"Python.h\""));
 
     // Declare the initialization functions.
-    for variants in dist.extension_modules.values() {
-        // TODO support choosing variant.
-        let entry = &variants[0];
-
-        if !entry.builtin_default && !extensions.contains(&entry.module) {
-            continue;
-        }
-
-        if let Some(init_fn) = &entry.init_fn {
+    for em in extension_modules.values() {
+        if let Some(init_fn) = &em.init_fn {
             if init_fn == "NULL" {
                 continue;
             }
@@ -571,20 +661,13 @@ fn make_config_c(dist: &PythonDistributionInfo, extensions: &BTreeSet<String>) -
 
     lines.push(String::from("struct _inittab _PyImport_Inittab[] = {"));
 
-    for variants in dist.extension_modules.values() {
-        // TODO support choosing variant.
-        let entry = &variants[0];
-
-        if !entry.builtin_default && !extensions.contains(&entry.module) {
-            continue;
-        }
-
-        if let Some(init_fn) = &entry.init_fn {
+    for em in extension_modules.values() {
+        if let Some(init_fn) = &em.init_fn {
             if init_fn == "NULL" {
                 continue;
             }
 
-            lines.push(format!("{{\"{}\", {}}},", entry.module, init_fn));
+            lines.push(format!("{{\"{}\", {}}},", em.module, init_fn));
         }
     }
 
@@ -594,63 +677,11 @@ fn make_config_c(dist: &PythonDistributionInfo, extensions: &BTreeSet<String>) -
     lines.join("\n")
 }
 
-fn resolve_extension_modules(config: &Config, dist: &PythonDistributionInfo) -> BTreeSet<String> {
-    let mut extension_modules: BTreeSet<String> = BTreeSet::new();
-
-    for (name, em) in &dist.extension_modules {
-        // Always include builtin extensions that must be present.
-        for extension in em {
-            if extension.builtin_default {
-                extension_modules.insert(name.clone());
-            }
-            if extension.required {
-                extension_modules.insert(name.clone());
-            }
-        }
-
-        match &config.python_extensions {
-            PythonExtensions::All {} => {
-                extension_modules.insert(name.clone());
-            }
-            PythonExtensions::None {} => {}
-            PythonExtensions::NoLibraries {} => {
-                let mut have_library = false;
-
-                for extension in em {
-                    if !extension.links.is_empty() {
-                        have_library = true;
-                    }
-                }
-
-                if !have_library {
-                    extension_modules.insert(name.clone());
-                }
-            }
-            PythonExtensions::ExplicitIncludes { includes } => {
-                if includes.contains(&name.to_owned()) {
-                    extension_modules.insert(name.clone());
-                }
-            }
-            PythonExtensions::ExplicitExcludes { excludes } => {
-                if !excludes.contains(&name.to_owned()) {
-                    extension_modules.insert(name.clone());
-                }
-            }
-        }
-    }
-
-    for e in OS_IGNORE_EXTENSIONS.as_slice() {
-        extension_modules.remove(&String::from(*e));
-    }
-
-    extension_modules
-}
-
 /// Create a static libpython from a Python distribution.
 ///
 /// This should only be called from the context of a build script, as it
 /// emits cargo: lines to stdout.
-pub fn link_libpython(config: &Config, dist: &PythonDistributionInfo) {
+pub fn link_libpython(dist: &PythonDistributionInfo, resources: &PythonResources) {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
     let temp_dir = tempdir::TempDir::new("libpython").unwrap();
@@ -669,13 +700,13 @@ pub fn link_libpython(config: &Config, dist: &PythonDistributionInfo) {
         build.object(&full);
     }
 
-    let extension_modules = resolve_extension_modules(&config, &dist);
+    let extension_modules = &resources.extension_modules;
 
     // We derive a custom Modules/config.c from the set of extension modules.
     // We need to do this because config.c defines the built-in extensions and
     // their initialization functions and the file generated by the source
     // distribution may not align with what we want.
-    let config_c_source = make_config_c(&dist, &extension_modules);
+    let config_c_source = make_config_c(&extension_modules);
     let config_c_path = out_dir.join("config.c");
 
     fs::write(&config_c_path, config_c_source.as_bytes()).expect("unable to write config.c");
@@ -716,14 +747,10 @@ pub fn link_libpython(config: &Config, dist: &PythonDistributionInfo) {
         // TODO handle static/dynamic libraries.
     }
 
-    for name in extension_modules {
+    for (name, em) in extension_modules {
         println!("adding extension {}", name);
-        let variants = &dist.extension_modules[&name];
 
-        // TODO support choosing which variant is used.
-        let entry = &variants[0];
-
-        if entry.builtin_default {
+        if em.builtin_default {
             println!(
                 "{} is built-in and doesn't need special build actions",
                 name
@@ -731,12 +758,12 @@ pub fn link_libpython(config: &Config, dist: &PythonDistributionInfo) {
             continue;
         }
 
-        for path in &entry.object_paths {
+        for path in &em.object_paths {
             println!("adding object file {:?} for extension {}", path, name);
             build.object(path);
         }
 
-        for entry in &entry.links {
+        for entry in &em.links {
             if entry.framework {
                 needed_frameworks.insert(&entry.name);
                 println!("framework {} required by {}", entry.name, name);
@@ -962,7 +989,7 @@ pub fn process_config(config_path: &Path, out_dir: &Path) {
     // Produce a static library containing the Python bits we need.
     // As a side-effect, this will emit the cargo: lines needed to link this
     // library.
-    link_libpython(&config, &dist);
+    link_libpython(&dist, &resources);
 
     for p in &resources.read_files {
         println!("cargo:rerun-if-changed={}", p.to_str().unwrap());

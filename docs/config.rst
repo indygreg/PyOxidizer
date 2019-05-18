@@ -111,90 +111,80 @@ write_modules_directory_env
    executing a test harness), then combine the generated files into a unified
    list of modules and use with ``filter-file-include``.
 
-``[python_extensions]``
-=======================
-
-Configures which Python extensions from the Python distribution are present
-in the binary. Extensions are compiled/native code, which are typically
-distributed as shared libraries. PyOxidizer takes a slightly different
-approach and embeds the extension modules directly in the produced binary.
-
-When an extension module is included, any library dependencies required by
-it are also included. For example, the ``_sqlite3`` extension module will
-automatically pull in ``libsqlite3`` (which is likely included by the
-Python distribution).
-
-This section has a ``policy`` key denoting which extension module packaging
-policy to use. The following sections describe the individual policies.
-
-``all``
--------
-
-``policy = "all"`` results in all extension modules being included.
-
-``none``
---------
-
-``policy = "none"`` results in no optional extension modules being included.
-An extension module is required if it provides symbols necessary to
-link ``libpython`` or is used as part of initializing a Python interpreter.
-
-This policy is incapable of running many Python programs because a lot of
-extension modules are missing. An alternate policy is almost always
-wanted.
-
-``no-libraries``
-----------------
-
-``policy = "no-libraries"`` will include an extension module unless it links
-against additional libraries. Most common extension modules are included.
-Extension modules like ``_ssl`` and ``zlib`` are not included.
-
-``explicit-includes``
----------------------
-
-``policy = "explicit-includes"`` will include an extension module only if
-it is included in a specific list, as defined by the ``includes`` key.
-
-Extension modules required to initialize Python are always included and
-don't need to be specified.
-
-Example usage::
-
-   [python_extensions]
-   policy = "explicit-includes"
-   includes = ["binascii", "errno", "itertools", "math", "select", "_socket"]
-
-``explicit-excludes``
----------------------
-
-``policy = "explicit-excludes"`` will include all extension modules by
-default and will exclude an extension module if it is included in a specific
-list, as defined by the ``excludes`` key.
-
-This policy can be used to remove any extension module, even those required
-by Python. So use with care.
-
-Example usage::
-
-   [python_extensions]
-   policy = "explicit-excludes"
-   excludes = ["_ssl"]
-
 ``[[python_packages]]``
 =======================
 
-Configures the packaging of Python packages/modules.
+Configures the packaging of Python packages/modules/extensions.
 
 Each entry of this section describes a specific source/rule for finding
-Python packages/modules to include. Each entry has a ``type`` field describing
-the type of source. All other fields are dependent on the type.
+Python packages/modules/extensions to include. Each entry has a ``type`` field
+describing the type of source. All other fields are dependent on the type.
 
 Each section is processed in order and is resolved to a set of named Python
-modules/resources. If multiple sections provide the same module/resource, the
-last encountered instance of a named entity is used.
+modules/resources/extensions. If multiple sections provide the same
+module/resource/extension, the last encountered instance of a named entity is
+used. Essentially, we start with an empty dictionary and update the
+dictionary as rules are processed.
+
+Packaging resources are differentiated by type:
+
+* Extension modules
+* Python module source
+* Python module bytecode
+* Resource file
+
+An *extension module* is a Python module backed by compiled code (typically
+written in C). Extension modules can have library dependencies. If an extension
+module has a library dependency, that library will automatically be linked
+with the resulting binary, preferably statically. For example, the
+``_sqlite3`` extension module will link the ``libsqlite3`` library (which should
+be included as part of the Python distribution).
+
+*Python module source* and *Python module bytecode* refer to ``.py`` and
+``.pyc`` files. A bytecode file is derived from a ``.py`` file by compiling
+it.
 
 The following sections describe the various ``type``s of sources.
+
+``extensions-all``
+------------------
+
+``type = "extensions-all"`` will include all extension modules from the
+Python distribution. If the distribution defines multiple variants for
+a particular named extension, the first variant will be used.
+
+``extensions-no-libraries``
+---------------------------
+
+``type = "extensions-no-libraries"`` will include all extension modules
+except those that link against additional libraries. Most common extension
+modules are included. Extension modules like ``_ssl`` and ``zlib`` are
+not included.
+
+``extensions-explicit-includes``
+--------------------------------
+
+``type = "extensions-explicit-includes`` will include extension modules from
+a list of module names, as defined by the ``includes`` key.
+
+Example usage::
+
+   [python_packages]
+   type = "extensions-explicit-includes"
+   includes = ["binascii", "errno", "itertools", "math", "select", "_socket"]
+
+``extensions-explicit-excludes``
+--------------------------------
+
+``type = "extensions-explicit-excludes"`` will include all extension modules
+by default and will exclude an extension module if its name is present in a
+list, as defined by the ``excludes`` key.
+
+Example usage::
+
+   [python_packages]
+   type = "extensions-explicit-excludes"
+   excludes = ["_ssl"]
 
 ``stdlib``
 ----------
@@ -321,6 +311,8 @@ include_source
 ``type = "filter-file"`` will filter all resources captured so far through a
 list of resource names read from a file. If a resource captured so far exists
 in the file, it will be packaged. Otherwise it will be excluded.
+
+Resource names match module names, resource file names, and extension names.
 
 This rule allows earlier rules to aggressively pull in resources then exclude
 resources via omission. This is often easier than cherry picking exactly
