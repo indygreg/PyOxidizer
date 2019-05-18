@@ -144,7 +144,7 @@ pub struct Config {
     pub write_modules_directory_env: Option<String>,
 }
 
-pub fn parse_config(data: &Vec<u8>) -> Config {
+pub fn parse_config(data: &[u8]) -> Config {
     let config: ParsedConfig = toml::from_slice(&data).unwrap();
 
     let optimize_level = match config.python_config.optimize_level {
