@@ -34,12 +34,13 @@ pub fn resolve_environment() -> Environment {
             let commit = head.peel_to_commit().unwrap();
             let root = find_root_git_commit(commit.clone());
 
-            match root.id().to_string() == ROOT_COMMIT {
-                true => (
+            if root.id().to_string() == ROOT_COMMIT {
+                (
                     Some(repo.workdir().unwrap().to_path_buf()),
                     Some(commit.id().to_string()),
-                ),
-                false => (None, None),
+                )
+            } else {
+                (None, None)
             }
         }
         Err(_) => (None, None),
