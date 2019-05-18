@@ -487,11 +487,8 @@ pub struct ImportlibData {
 pub fn derive_importlib(dist: &PythonDistributionInfo) -> ImportlibData {
     let mut compiler = bytecode_compiler(&dist);
 
-    let mod_bootstrap_path = dist.py_modules.get("importlib._bootstrap").unwrap();
-    let mod_bootstrap_external_path = dist
-        .py_modules
-        .get("importlib._bootstrap_external")
-        .unwrap();
+    let mod_bootstrap_path = &dist.py_modules["importlib._bootstrap"];
+    let mod_bootstrap_external_path = &dist.py_modules["importlib._bootstrap_external"];
 
     let bootstrap_source = fs::read(&mod_bootstrap_path).expect("unable to read bootstrap source");
     let module_name = "<frozen importlib._bootstrap>";
