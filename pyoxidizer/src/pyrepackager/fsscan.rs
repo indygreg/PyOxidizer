@@ -152,7 +152,7 @@ impl Iterator for PythonResourceIterator {
                     .expect("unable to get file stem")
                     .to_str()
                     .expect("unable to convert file stem to str");
-                let module_name_parts = module_name.split(".").collect_vec();
+                let module_name_parts = module_name.split('.').collect_vec();
                 let module_name =
                     itertools::join(&module_name_parts[0..module_name_parts.len() - 1], ".");
 
