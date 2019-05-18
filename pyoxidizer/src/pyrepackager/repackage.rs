@@ -523,7 +523,7 @@ pub fn derive_importlib(dist: &PythonDistributionInfo) -> ImportlibData {
 /// The "index" data is self-contained in the beginning of the data structure
 /// to allow a linear read of a contiguous memory region in order to load
 /// the index.
-pub fn write_blob_entries<W: Write>(mut dest: W, entries: &BlobEntries) -> std::io::Result<()> {
+pub fn write_blob_entries<W: Write>(mut dest: W, entries: &[BlobEntry]) -> std::io::Result<()> {
     dest.write_u32::<LittleEndian>(entries.len() as u32)?;
 
     for entry in entries.iter() {
