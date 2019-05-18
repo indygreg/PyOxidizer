@@ -435,22 +435,21 @@ pub fn find_undefined_elf_symbols(
         if sym.is_import() {
             let name = dynstrtab.get(sym.st_name).unwrap().unwrap();
 
-            res.push(match versym > 1 {
-                true => {
-                    let (filename, version) =
-                        resolve_verneed(&verneed_entries, &verneed_names_data, versym);
+            res.push(if versym > 1 {
+                let (filename, version) =
+                    resolve_verneed(&verneed_entries, &verneed_names_data, versym);
 
-                    UndefinedSymbol {
-                        symbol: String::from(name),
-                        filename,
-                        version,
-                    }
+                UndefinedSymbol {
+                    symbol: String::from(name),
+                    filename,
+                    version,
                 }
-                false => UndefinedSymbol {
+            } else {
+                UndefinedSymbol {
                     symbol: String::from(name),
                     filename: None,
                     version: None,
-                },
+                }
             });
         }
     }
