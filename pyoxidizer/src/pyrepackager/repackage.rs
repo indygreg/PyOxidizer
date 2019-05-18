@@ -724,7 +724,7 @@ pub fn link_libpython(config: &Config, dist: &PythonDistributionInfo) {
 
     for name in extension_modules {
         println!("adding extension {}", name);
-        let variants = dist.extension_modules.get(name).unwrap();
+        let variants = &dist.extension_modules[name];
 
         // TODO support choosing which variant is used.
         let entry = &variants[0];
