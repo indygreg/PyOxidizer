@@ -190,7 +190,7 @@ fn read_resource_names_file(path: &Path) -> Result<BTreeSet<String>, IOError> {
     for line in BufReader::new(fh).lines() {
         let line = line?;
 
-        if line.starts_with('#') || line.len() == 0 {
+        if line.starts_with('#') || line.is_empty() {
             continue;
         }
 
