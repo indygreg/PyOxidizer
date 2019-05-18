@@ -337,13 +337,11 @@ pub fn analyze_python_distribution_data(
         match entry.flavor {
             PythonResourceType::Resource => {
                 resources.insert(entry.name.clone(), entry.path);
-                ()
             }
             PythonResourceType::Source => {
                 py_modules.insert(entry.name.clone(), entry.path);
-                ()
             }
-            _ => (),
+            _ => {}
         };
     }
 
