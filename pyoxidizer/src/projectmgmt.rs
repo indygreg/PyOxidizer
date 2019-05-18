@@ -65,9 +65,7 @@ pub fn find_pyoxidizer_files(root: &Path) -> Vec<PathBuf> {
         let path = f.path().strip_prefix(root).expect("unable to strip prefix");
         let path_s = path.to_str().expect("unable to convert path to str");
 
-        if path_s.contains("pyoxidizer") {
-            res.push(path.to_path_buf());
-        } else if path_s.contains("pyembed") {
+        if path_s.contains("pyoxidizer") || path_s.contains("pyembed") {
             res.push(path.to_path_buf());
         }
     }
