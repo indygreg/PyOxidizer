@@ -491,36 +491,46 @@ pub fn resolve_python_resources(config: &Config, dist: &PythonDistributionInfo) 
     for (name, variants) in &dist.extension_modules {
         for em in variants {
             if em.builtin_default || em.required {
+                println!("adding required extension module: {}", name);
                 extension_modules.insert(name.clone(), em.clone());
             }
         }
     }
 
     for packaging in packages {
+        println!("processing packaging rule: {:?}", packaging);
         for entry in resolve_python_packaging(packaging, dist) {
             match (entry.action, entry.resource) {
                 (ResourceAction::Add, PythonResource::ExtensionModule { name, module }) => {
+                    println!("adding extension module: {}", name);
                     extension_modules.insert(name, module);
                 }
                 (ResourceAction::Remove, PythonResource::ExtensionModule { name, .. }) => {
+                    println!("removing extension module: {}", name);
                     extension_modules.remove(&name);
                 }
                 (ResourceAction::Add, PythonResource::ModuleSource { name, source }) => {
+                    println!("adding module source: {}", name);
                     sources.insert(name.clone(), source);
                 }
                 (ResourceAction::Remove, PythonResource::ModuleSource { name, .. }) => {
+                    println!("removing module source: {}", name);
                     sources.remove(&name);
                 }
                 (ResourceAction::Add, PythonResource::ModuleBytecode { name, bytecode }) => {
+                    println!("adding module bytecode: {}", name);
                     bytecodes.insert(name.clone(), bytecode);
                 }
                 (ResourceAction::Remove, PythonResource::ModuleBytecode { name, .. }) => {
+                    println!("removing module bytecode: {}", name);
                     bytecodes.remove(&name);
                 }
                 (ResourceAction::Add, PythonResource::Resource { name, data }) => {
+                    println!("adding resource: {}", name);
                     resources.insert(name, data);
                 }
                 (ResourceAction::Remove, PythonResource::Resource { name, .. }) => {
+                    println!("removing resource: {}", name);
                     resources.remove(&name);
                 }
             }
@@ -542,6 +552,7 @@ pub fn resolve_python_resources(config: &Config, dist: &PythonDistributionInfo) 
 
     // Remove extension modules that have problems.
     for e in OS_IGNORE_EXTENSIONS.as_slice() {
+        println!("removing extension module due to incompatibility: {}", e);
         extension_modules.remove(&String::from(*e));
     }
 
@@ -748,18 +759,15 @@ pub fn link_libpython(dist: &PythonDistributionInfo, resources: &PythonResources
     }
 
     for (name, em) in extension_modules {
-        println!("adding extension {}", name);
-
         if em.builtin_default {
-            println!(
-                "{} is built-in and doesn't need special build actions",
-                name
-            );
             continue;
         }
 
         for path in &em.object_paths {
-            println!("adding object file {:?} for extension {}", path, name);
+            println!(
+                "adding object file {:?} for extension module {}",
+                path, name
+            );
             build.object(path);
         }
 
