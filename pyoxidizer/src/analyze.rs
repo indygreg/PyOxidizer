@@ -2,14 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use byteorder::ReadBytesExt;
 use lazy_static::lazy_static;
 use std::collections::BTreeMap;
 use std::ffi::CStr;
 use std::fs::File;
-use std::io::Read;
+use std::io::{Cursor, Read};
 use std::os::raw::c_char;
 use std::path::PathBuf;
-use std::slice::from_raw_parts;
 
 const LSB_SHARED_LIBRARIES: &[&str] = &[
     "ld-linux-x86-64.so.2",
@@ -379,11 +379,10 @@ pub fn find_undefined_elf_symbols(buffer: &[u8], elf: &goblin::elf::Elf) -> Vec<
             goblin::elf::section_header::SHT_GNU_VERSYM => {
                 let data: &[u8] = &buffer[section_header.file_range()];
 
-                let entries: &[u16] =
-                    unsafe { from_raw_parts(data.as_ptr() as *const u16, data.len() / 2) };
+                let mut reader = Cursor::new(data);
 
-                for value in entries {
-                    versym.push(*value);
+                while let Ok(value) = reader.read_u16::<byteorder::NativeEndian>() {
+                    versym.push(value);
                 }
             }
             goblin::elf::section_header::SHT_GNU_VERNEED => {
