@@ -24,7 +24,7 @@ impl BytecodeCompiler {
 
         {
             let mut fh = File::create(&script_path).expect("could not create temp path");
-            fh.write(BYTECODE_COMPILER)
+            fh.write_all(BYTECODE_COMPILER)
                 .expect("could not write bytecodecompiler.py");
         }
 
@@ -56,15 +56,15 @@ impl BytecodeCompiler {
 
         let mut reader = BufReader::new(stdout);
 
-        stdin.write(b"compile\n")?;
-        stdin.write(filename.len().to_string().as_bytes())?;
-        stdin.write(b"\n")?;
-        stdin.write(source.len().to_string().as_bytes())?;
-        stdin.write(b"\n")?;
-        stdin.write(optimize.to_string().as_bytes())?;
-        stdin.write(b"\n")?;
-        stdin.write(filename.as_bytes())?;
-        stdin.write(source)?;
+        stdin.write_all(b"compile\n")?;
+        stdin.write_all(filename.len().to_string().as_bytes())?;
+        stdin.write_all(b"\n")?;
+        stdin.write_all(source.len().to_string().as_bytes())?;
+        stdin.write_all(b"\n")?;
+        stdin.write_all(optimize.to_string().as_bytes())?;
+        stdin.write_all(b"\n")?;
+        stdin.write_all(filename.as_bytes())?;
+        stdin.write_all(source)?;
         stdin.flush()?;
 
         let mut len_s = String::new();
@@ -83,7 +83,7 @@ impl BytecodeCompiler {
 impl Drop for BytecodeCompiler {
     fn drop(&mut self) {
         let stdin = self.command.stdin.as_mut().expect("failed to get stdin");
-        stdin.write(b"exit\n").expect("write failed");
+        stdin.write_all(b"exit\n").expect("write failed");
         stdin.flush().expect("flush failed");
 
         self.command.wait().expect("compiler process did not exit");
