@@ -236,7 +236,7 @@ pub fn analyze_elf_libraries(libs: &[&str], undefined_symbols: &Vec<UndefinedSym
         for symbol in symbols {
             match &symbol.version {
                 Some(version) => {
-                    let parts: Vec<&str> = version.splitn(2, "_").collect();
+                    let parts: Vec<&str> = version.splitn(2, '_').collect();
 
                     match parts.len() {
                         1 => { /* TODO this is weird. Do something? */ }
