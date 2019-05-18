@@ -651,7 +651,7 @@ pub fn link_libpython(config: &Config, dist: &PythonDistributionInfo) {
                 let mut have_library = false;
 
                 for extension in em {
-                    if extension.links.len() > 0 {
+                    if !extension.links.is_empty() {
                         have_library = true;
                     }
                 }
