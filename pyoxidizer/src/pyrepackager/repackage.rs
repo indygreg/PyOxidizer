@@ -962,7 +962,8 @@ pub fn process_config(config_path: &Path, out_dir: &Path) {
     let importlib_bootstrap_external_path =
         Path::new(&out_dir).join("importlib_bootstrap_external.pyc");
     let mut fh = fs::File::create(&importlib_bootstrap_external_path).unwrap();
-    fh.write_all(&importlib.bootstrap_external_bytecode).unwrap();
+    fh.write_all(&importlib.bootstrap_external_bytecode)
+        .unwrap();
 
     let resources = resolve_python_resources(&config.python_packaging, &dist);
 
