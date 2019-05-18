@@ -199,7 +199,7 @@ pub fn write_pyembed_crate_files(dest_dir: &Path) -> Result<(), std::io::Error> 
 pub fn add_pyoxidizer(project_dir: &Path, _suppress_help: bool) -> Result<(), String> {
     let existing_files = find_pyoxidizer_files(&project_dir);
 
-    if existing_files.len() > 0 {
+    if !existing_files.is_empty() {
         return Err("existing PyOxidizer files found; cannot add".to_string());
     }
 
