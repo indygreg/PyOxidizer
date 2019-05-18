@@ -91,9 +91,7 @@ impl Iterator for PythonResourceIterator {
     fn next(&mut self) -> Option<PythonResource> {
         let res = self.walkdir_result.next();
 
-        if res.is_none() {
-            return None;
-        }
+        res.as_ref()?;
 
         let entry = res.unwrap();
 
