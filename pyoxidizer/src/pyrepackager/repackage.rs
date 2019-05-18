@@ -503,9 +503,9 @@ pub fn derive_importlib(dist: &PythonDistributionInfo) -> ImportlibData {
         .expect("error compiling bytecode");
 
     ImportlibData {
-        bootstrap_source: bootstrap_source,
+        bootstrap_source,
         bootstrap_bytecode,
-        bootstrap_external_source: bootstrap_external_source,
+        bootstrap_external_source,
         bootstrap_external_bytecode,
     }
 }
