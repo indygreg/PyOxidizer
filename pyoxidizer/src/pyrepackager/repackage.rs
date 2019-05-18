@@ -941,12 +941,7 @@ pub fn process_config(config_path: &Path, out_dir: &Path) {
     let dist_cursor = Cursor::new(python_distribution_data);
     let dist = analyze_python_distribution_tar_zst(dist_cursor).unwrap();
 
-    // Produce a static library containing the Python bits we need.
-    // As a side-effect, this will emit the cargo: lines needed to link this
-    // library.
-    link_libpython(&config, &dist);
-
-    // Produce the frozen importlib modules.
+    // Produce the custom frozen importlib modules.
     let importlib = derive_importlib(&dist);
 
     let importlib_bootstrap_path = Path::new(&out_dir).join("importlib_bootstrap.pyc");
@@ -958,6 +953,11 @@ pub fn process_config(config_path: &Path, out_dir: &Path) {
     let mut fh = fs::File::create(&importlib_bootstrap_external_path).unwrap();
     fh.write_all(&importlib.bootstrap_external_bytecode)
         .unwrap();
+
+    // Produce a static library containing the Python bits we need.
+    // As a side-effect, this will emit the cargo: lines needed to link this
+    // library.
+    link_libpython(&config, &dist);
 
     let resources = resolve_python_resources(&config.python_packaging, &dist);
 
