@@ -16,9 +16,10 @@ pub fn walk_tree_files(path: &Path) -> Box<Iterator<Item = walkdir::DirEntry>> {
 
         let path = entry.path();
 
-        match path.is_dir() {
-            true => None,
-            false => Some(entry),
+        if path.is_dir() {
+            None
+        } else {
+            Some(entry)
         }
     });
 
@@ -72,9 +73,10 @@ impl PythonResourceIterator {
 
             let path = entry.path();
 
-            match path.is_dir() {
-                true => None,
-                false => Some(entry),
+            if path.is_dir() {
+                None
+            } else {
+                Some(entry)
             }
         });
 
