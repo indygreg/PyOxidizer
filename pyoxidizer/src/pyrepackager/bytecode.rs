@@ -7,7 +7,7 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process;
 
-pub const BYTECODE_COMPILER: &'static [u8] = include_bytes!("bytecodecompiler.py");
+pub const BYTECODE_COMPILER: &[u8] = include_bytes!("bytecodecompiler.py");
 
 /// An entity to perform Python bytecode compilation.
 pub struct BytecodeCompiler {
