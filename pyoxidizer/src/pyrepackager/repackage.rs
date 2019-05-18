@@ -291,9 +291,7 @@ fn resolve_python_packaging(
                         for exclude in excludes {
                             let prefix = exclude.clone() + ".";
 
-                            if &resource.name == exclude {
-                                relevant = false;
-                            } else if resource.name.starts_with(&prefix) {
+                            if &resource.name == exclude || resource.name.starts_with(&prefix) {
                                 relevant = false;
                             }
                         }
@@ -351,9 +349,7 @@ fn resolve_python_packaging(
                         for package in packages {
                             let prefix = package.clone() + ".";
 
-                            if &resource.name == package {
-                                relevant = true;
-                            } else if resource.name.starts_with(&prefix) {
+                            if &resource.name == package || resource.name.starts_with(&prefix) {
                                 relevant = true;
                             }
                         }
@@ -361,9 +357,7 @@ fn resolve_python_packaging(
                         for exclude in excludes {
                             let prefix = exclude.clone() + ".";
 
-                            if &resource.name == exclude {
-                                relevant = false;
-                            } else if resource.name.starts_with(&prefix) {
+                            if &resource.name == exclude || resource.name.starts_with(&prefix) {
                                 relevant = false;
                             }
                         }
