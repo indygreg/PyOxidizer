@@ -404,10 +404,9 @@ fn resolve_python_packaging(
 }
 
 /// Resolves a series of packaging rules to a final set of resources to package.
-pub fn resolve_python_resources(
-    packages: &[PythonPackaging],
-    dist: &PythonDistributionInfo,
-) -> PythonResources {
+pub fn resolve_python_resources(config: &Config, dist: &PythonDistributionInfo) -> PythonResources {
+    let packages = &config.python_packaging;
+
     let mut sources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut bytecodes: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut resources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
@@ -545,7 +544,7 @@ pub fn write_blob_entries<W: Write>(mut dest: W, entries: &[BlobEntry]) -> std::
 }
 
 /// Produce the content of the config.c file containing built-in extensions.
-fn make_config_c(dist: &PythonDistributionInfo, extensions: &BTreeSet<&String>) -> String {
+fn make_config_c(dist: &PythonDistributionInfo, extensions: &BTreeSet<String>) -> String {
     // It is easier to construct the file from scratch than parse the template
     // and insert things in the right places.
     let mut lines: Vec<String> = Vec::new();
@@ -595,6 +594,58 @@ fn make_config_c(dist: &PythonDistributionInfo, extensions: &BTreeSet<&String>) 
     lines.join("\n")
 }
 
+fn resolve_extension_modules(config: &Config, dist: &PythonDistributionInfo) -> BTreeSet<String> {
+    let mut extension_modules: BTreeSet<String> = BTreeSet::new();
+
+    for (name, em) in &dist.extension_modules {
+        // Always include builtin extensions that must be present.
+        for extension in em {
+            if extension.builtin_default {
+                extension_modules.insert(name.clone());
+            }
+            if extension.required {
+                extension_modules.insert(name.clone());
+            }
+        }
+
+        match &config.python_extensions {
+            PythonExtensions::All {} => {
+                extension_modules.insert(name.clone());
+            }
+            PythonExtensions::None {} => {}
+            PythonExtensions::NoLibraries {} => {
+                let mut have_library = false;
+
+                for extension in em {
+                    if !extension.links.is_empty() {
+                        have_library = true;
+                    }
+                }
+
+                if !have_library {
+                    extension_modules.insert(name.clone());
+                }
+            }
+            PythonExtensions::ExplicitIncludes { includes } => {
+                if includes.contains(&name.to_owned()) {
+                    extension_modules.insert(name.clone());
+                }
+            }
+            PythonExtensions::ExplicitExcludes { excludes } => {
+                if !excludes.contains(&name.to_owned()) {
+                    extension_modules.insert(name.clone());
+                }
+            }
+        }
+    }
+
+    for e in OS_IGNORE_EXTENSIONS.as_slice() {
+        extension_modules.remove(&String::from(*e));
+    }
+
+    extension_modules
+}
+
 /// Create a static libpython from a Python distribution.
 ///
 /// This should only be called from the context of a build script, as it
@@ -618,55 +669,7 @@ pub fn link_libpython(config: &Config, dist: &PythonDistributionInfo) {
         build.object(&full);
     }
 
-    // Relevant extension modules are the intersection of modules that are
-    // built/available and what's requested from the current config.
-    let mut extension_modules: BTreeSet<&String> = BTreeSet::new();
-
-    for (name, em) in &dist.extension_modules {
-        // Always include builtin extensions that must be present.
-        for extension in em {
-            if extension.builtin_default {
-                extension_modules.insert(name);
-            }
-            if extension.required {
-                extension_modules.insert(name);
-            }
-        }
-
-        match &config.python_extensions {
-            PythonExtensions::All {} => {
-                extension_modules.insert(name);
-            }
-            PythonExtensions::None {} => {}
-            PythonExtensions::NoLibraries {} => {
-                let mut have_library = false;
-
-                for extension in em {
-                    if !extension.links.is_empty() {
-                        have_library = true;
-                    }
-                }
-
-                if !have_library {
-                    extension_modules.insert(name);
-                }
-            }
-            PythonExtensions::ExplicitIncludes { includes } => {
-                if includes.contains(&name.to_owned()) {
-                    extension_modules.insert(name);
-                }
-            }
-            PythonExtensions::ExplicitExcludes { excludes } => {
-                if !excludes.contains(&name.to_owned()) {
-                    extension_modules.insert(name);
-                }
-            }
-        }
-    }
-
-    for e in OS_IGNORE_EXTENSIONS.as_slice() {
-        extension_modules.remove(&String::from(*e));
-    }
+    let extension_modules = resolve_extension_modules(&config, &dist);
 
     // We derive a custom Modules/config.c from the set of extension modules.
     // We need to do this because config.c defines the built-in extensions and
@@ -715,7 +718,7 @@ pub fn link_libpython(config: &Config, dist: &PythonDistributionInfo) {
 
     for name in extension_modules {
         println!("adding extension {}", name);
-        let variants = &dist.extension_modules[name];
+        let variants = &dist.extension_modules[&name];
 
         // TODO support choosing which variant is used.
         let entry = &variants[0];
@@ -959,7 +962,7 @@ pub fn process_config(config_path: &Path, out_dir: &Path) {
     // library.
     link_libpython(&config, &dist);
 
-    let resources = resolve_python_resources(&config.python_packaging, &dist);
+    let resources = resolve_python_resources(&config, &dist);
 
     for p in &resources.read_files {
         println!("cargo:rerun-if-changed={}", p.to_str().unwrap());
