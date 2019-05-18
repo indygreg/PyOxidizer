@@ -183,7 +183,7 @@ pub fn analyze_file(path: PathBuf) {
     analyze_data(&buffer);
 }
 
-pub fn analyze_data(buffer: &Vec<u8>) {
+pub fn analyze_data(buffer: &[u8]) {
     match goblin::Object::parse(buffer).unwrap() {
         goblin::Object::Elf(elf) => {
             let undefined_symbols =
@@ -204,7 +204,7 @@ pub fn analyze_data(buffer: &Vec<u8>) {
     }
 }
 
-pub fn analyze_elf_libraries(libs: &Vec<&str>, undefined_symbols: &Vec<UndefinedSymbol>) {
+pub fn analyze_elf_libraries(libs: &[&str], undefined_symbols: &Vec<UndefinedSymbol>) {
     let mut latest_symbols: BTreeMap<String, version_compare::Version> = BTreeMap::new();
 
     println!("Shared Library Dependencies");
@@ -369,10 +369,7 @@ fn resolve_verneed(
 /// Find undefined dynamic symbols in an ELF binary.
 ///
 /// Will also resolve the filename and symbol version, if available.
-pub fn find_undefined_elf_symbols(
-    buffer: &Vec<u8>,
-    elf: &goblin::elf::Elf,
-) -> Vec<UndefinedSymbol> {
+pub fn find_undefined_elf_symbols(buffer: &[u8], elf: &goblin::elf::Elf) -> Vec<UndefinedSymbol> {
     let mut verneed_entries: Vec<(Elf64_Verneed, Vec<Elf64_Vernaux>)> = Vec::new();
     let mut versym: Vec<u16> = Vec::new();
     let mut verneed_names_section: u32 = 0;
