@@ -957,12 +957,12 @@ pub fn process_config(config_path: &Path, out_dir: &Path) {
     fh.write_all(&importlib.bootstrap_external_bytecode)
         .unwrap();
 
+    let resources = resolve_python_resources(&config, &dist);
+
     // Produce a static library containing the Python bits we need.
     // As a side-effect, this will emit the cargo: lines needed to link this
     // library.
     link_libpython(&config, &dist);
-
-    let resources = resolve_python_resources(&config, &dist);
 
     for p in &resources.read_files {
         println!("cargo:rerun-if-changed={}", p.to_str().unwrap());
