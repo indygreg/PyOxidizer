@@ -170,8 +170,8 @@ impl PythonResources {
     ) {
         let mut fh = fs::File::create(module_names_path).expect("error creating file");
         for name in &self.all_modules {
-            fh.write(name.as_bytes()).expect("failed to write");
-            fh.write(b"\n").expect("failed to write");
+            fh.write_all(name.as_bytes()).expect("failed to write");
+            fh.write_all(b"\n").expect("failed to write");
         }
 
         let fh = fs::File::create(modules_path).unwrap();
@@ -546,11 +546,11 @@ pub fn write_blob_entries<W: Write>(mut dest: W, entries: &BlobEntries) -> std::
 
     for entry in entries.iter() {
         let name_bytes = entry.name.as_bytes();
-        dest.write(name_bytes)?;
+        dest.write_all(name_bytes)?;
     }
 
     for entry in entries.iter() {
-        dest.write(entry.data.as_slice())?;
+        dest.write_all(entry.data.as_slice())?;
     }
 
     Ok(())
@@ -966,12 +966,12 @@ pub fn process_config(config_path: &Path, out_dir: &Path) {
 
     let importlib_bootstrap_path = Path::new(&out_dir).join("importlib_bootstrap.pyc");
     let mut fh = fs::File::create(&importlib_bootstrap_path).unwrap();
-    fh.write(&importlib.bootstrap_bytecode).unwrap();
+    fh.write_all(&importlib.bootstrap_bytecode).unwrap();
 
     let importlib_bootstrap_external_path =
         Path::new(&out_dir).join("importlib_bootstrap_external.pyc");
     let mut fh = fs::File::create(&importlib_bootstrap_external_path).unwrap();
-    fh.write(&importlib.bootstrap_external_bytecode).unwrap();
+    fh.write_all(&importlib.bootstrap_external_bytecode).unwrap();
 
     let resources = resolve_python_resources(&config.python_packaging, &dist);
 
