@@ -239,22 +239,25 @@ fn resolve_python_packaging(
     let mut res = Vec::new();
 
     match package {
-        PythonPackaging::ExtensionsAll {} => {
-            for (name, modules) in &dist.extension_modules {
-                res.push(PythonResourceEntry {
-                    action: ResourceAction::Add,
-                    resource: PythonResource::ExtensionModule {
-                        name: name.clone(),
-                        module: modules[0].clone(),
-                    },
-                });
-            }
-        }
+        PythonPackaging::StdlibExtensionsPolicy { policy } => {
+            for (name, variants) in &dist.extension_modules {
+                match policy.as_str() {
+                    "minimal" => {
+                        let em = &variants[0];
 
-        PythonPackaging::ExtensionsNoLibraries {} => {
-            for (name, modules) in &dist.extension_modules {
-                for em in modules {
-                    if em.links.is_empty() {
+                        if em.builtin_default || em.required {
+                            res.push(PythonResourceEntry {
+                                action: ResourceAction::Add,
+                                resource: PythonResource::ExtensionModule {
+                                    name: name.clone(),
+                                    module: em.clone(),
+                                },
+                            });
+                        }
+                    }
+
+                    "all" => {
+                        let em = &variants[0];
                         res.push(PythonResourceEntry {
                             action: ResourceAction::Add,
                             resource: PythonResource::ExtensionModule {
@@ -262,8 +265,26 @@ fn resolve_python_packaging(
                                 module: em.clone(),
                             },
                         });
+                    }
 
-                        break;
+                    "no-libraries" => {
+                        for em in variants {
+                            if em.links.is_empty() {
+                                res.push(PythonResourceEntry {
+                                    action: ResourceAction::Add,
+                                    resource: PythonResource::ExtensionModule {
+                                        name: name.clone(),
+                                        module: em.clone(),
+                                    },
+                                });
+
+                                break;
+                            }
+                        }
+                    }
+
+                    other => {
+                        panic!("illegal policy value: {}", other);
                     }
                 }
             }

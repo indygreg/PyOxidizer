@@ -144,22 +144,31 @@ be included as part of the Python distribution).
 ``.pyc`` files. A bytecode file is derived from a ``.py`` file by compiling
 it.
 
-The following sections describe the various ``type``s of sources.
+The following sections describe the various ``type``s of sources/rules.
 
-``extensions-all``
-------------------
+``stdlib-extensions-policy``
+----------------------------
 
-``type = "extensions-all"`` will include all extension modules from the
-Python distribution. If the distribution defines multiple variants for
-a particular named extension, the first variant will be used.
+``type = "stdlib-extensions-policy"`` defines a base policy for what
+extension modules from the Python distribution to include.
 
-``extensions-no-libraries``
----------------------------
+This type has a ``policy`` key denoting the extension module policy.
+This key can have the following values::
 
-``type = "extensions-no-libraries"`` will include all extension modules
-except those that link against additional libraries. Most common extension
-modules are included. Extension modules like ``_ssl`` and ``zlib`` are
-not included.
+``minimal``
+   Include a minimal set of extension modules. Only the extension modules
+   required to initialize a Python interpreter will be included.
+
+   This is the default behavior.
+
+``all``
+   Include all available extension modules.
+
+``no-libraries``
+   Include all extension modules that do not have additional library
+   dependencies. Most common Python extension modules are includes. Extension
+   modules like ``_ssl`` (links against OpenSSL) and ``zlib`` are not
+   included.
 
 ``extensions-explicit-includes``
 --------------------------------

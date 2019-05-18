@@ -49,11 +49,11 @@ struct PythonConfig {
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type")]
 pub enum PythonPackaging {
-    #[serde(rename = "extensions-all")]
-    ExtensionsAll {},
-
-    #[serde(rename = "extensions-no-libraries")]
-    ExtensionsNoLibraries {},
+    #[serde(rename = "stdlib-extensions-policy")]
+    StdlibExtensionsPolicy {
+        // TODO make this an enum.
+        policy: String,
+    },
 
     #[serde(rename = "extensions-explicit-includes")]
     ExtensionsExplicitIncludes {
@@ -166,12 +166,23 @@ pub fn parse_config(data: &[u8]) -> Config {
         None => (None, None),
     };
 
+    let mut have_stdlib_extensions_policy = false;
     let mut have_stdlib = false;
 
     for packaging in &config.python_packages {
-        if let PythonPackaging::Stdlib { .. } = packaging {
-            have_stdlib = true;
+        match packaging {
+            PythonPackaging::StdlibExtensionsPolicy { .. } => {
+                have_stdlib_extensions_policy = true;
+            }
+            PythonPackaging::Stdlib { .. } => {
+                have_stdlib = true;
+            }
+            _ => {}
         }
+    }
+
+    if !have_stdlib_extensions_policy {
+        panic!("no `type = \"stdlib-extensions-policy\"` entry in `[[python_packages]]`");
     }
 
     if !have_stdlib {
