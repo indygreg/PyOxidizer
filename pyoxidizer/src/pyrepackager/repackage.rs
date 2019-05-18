@@ -569,7 +569,7 @@ fn make_config_c(dist: &PythonDistributionInfo, extensions: &BTreeSet<&String>) 
                 continue;
             }
 
-            lines.push(String::from(format!("extern PyObject* {}(void);", init_fn)));
+            lines.push(format!("extern PyObject* {}(void);", init_fn));
         }
     }
 
@@ -588,10 +588,7 @@ fn make_config_c(dist: &PythonDistributionInfo, extensions: &BTreeSet<&String>) 
                 continue;
             }
 
-            lines.push(String::from(format!(
-                "{{\"{}\", {}}},",
-                entry.module, init_fn
-            )));
+            lines.push(format!("{{\"{}\", {}}},", entry.module, init_fn));
         }
     }
 
