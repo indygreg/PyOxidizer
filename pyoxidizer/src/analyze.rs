@@ -339,7 +339,7 @@ fn find_minimum_distro_version(
 }
 
 fn resolve_verneed(
-    verneed_entries: &Vec<(Elf64_Verneed, Vec<Elf64_Vernaux>)>,
+    verneed_entries: &[(Elf64_Verneed, Vec<Elf64_Vernaux>)],
     names_data: &[u8],
     versym: u16,
 ) -> (Option<String>, Option<String>) {
