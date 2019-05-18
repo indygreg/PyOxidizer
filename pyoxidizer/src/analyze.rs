@@ -266,7 +266,7 @@ pub fn analyze_elf_libraries(libs: &Vec<&str>, undefined_symbols: &Vec<Undefined
             }
         }
 
-        println!("");
+        println!();
     }
 
     println!("Symbol Versioning");
@@ -275,10 +275,10 @@ pub fn analyze_elf_libraries(libs: &Vec<&str>, undefined_symbols: &Vec<Undefined
     for (name, version) in &latest_symbols {
         match name.as_str() {
             "GLIBC" => {
-                println!("");
+                println!();
                 println!("glibc");
                 println!("-----");
-                println!("");
+                println!();
                 println!("Minimum Version: {}", version);
                 println!("Minimum Distro Versions:");
 
@@ -287,10 +287,10 @@ pub fn analyze_elf_libraries(libs: &Vec<&str>, undefined_symbols: &Vec<Undefined
                 }
             }
             "GCC" => {
-                println!("");
+                println!();
                 println!("gcc");
                 println!("-----");
-                println!("");
+                println!();
                 println!("Minimum Version: {}", version);
                 println!("Minimum Distro Versions:");
 
@@ -299,10 +299,10 @@ pub fn analyze_elf_libraries(libs: &Vec<&str>, undefined_symbols: &Vec<Undefined
                 }
             }
             other => {
-                println!("");
+                println!();
                 println!("{}", other);
                 println!("-----");
-                println!("");
+                println!();
                 println!("Minimum Version: {}", version);
                 println!("Minimum Distro Versions: Unknown");
             }
