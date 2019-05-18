@@ -174,11 +174,8 @@ pub fn parse_config(data: &[u8]) -> Config {
     let mut have_stdlib = false;
 
     for packaging in &config.python_packages {
-        match packaging {
-            PythonPackaging::Stdlib { .. } => {
-                have_stdlib = true;
-            }
-            _ => {}
+        if let PythonPackaging::Stdlib { .. } = packaging {
+            have_stdlib = true;
         }
     }
 
