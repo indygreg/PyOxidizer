@@ -7,7 +7,7 @@ use std::env;
 use std::path::PathBuf;
 
 // Root Git commit for PyOxidizer.
-const ROOT_COMMIT: &'static str = "b1f95017c897e0fd3ed006aec25b6886196a889d";
+const ROOT_COMMIT: &str = "b1f95017c897e0fd3ed006aec25b6886196a889d";
 
 pub fn find_root_git_commit(commit: Commit) -> Commit {
     let mut current = commit;
