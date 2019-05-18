@@ -19,7 +19,7 @@ use super::dist::{
 };
 use super::fsscan::{find_python_resources, PythonResourceType};
 
-pub const PYTHON_IMPORTER: &'static [u8] = include_bytes!("memoryimporter.py");
+pub const PYTHON_IMPORTER: &[u8] = include_bytes!("memoryimporter.py");
 
 const STDLIB_TEST_PACKAGES: &[&str] = &[
     "bsddb.test",
