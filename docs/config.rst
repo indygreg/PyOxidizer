@@ -342,6 +342,36 @@ include_source
    Whether to include the source code for modules in addition to the bytecode.
    Defaults to true.
 
+``pip-install-simple``
+----------------------
+
+``type = "pip-install-simple"`` will run ``pip install`` for a single named
+package string and will automatically package all the Python resources
+associated with that package (and its dependencies).
+
+The following keys control behavior:
+
+package
+   Name of the package to install. This is added as a positional argument to
+   ``pip install``.
+
+optimize_level
+   The module optimization level for packaged bytecode.
+
+   Allowed values are ``0``, ``1``, and ``2``.
+
+   Defaults to ``0``, which is the Python default.
+
+include_source
+   Whether to include the source code for Python modules in addition to
+   the bytecode. Defaults to true.
+
+Example usage::
+
+   [[python_packages]]
+   type = "pip-install-simple"
+   package = "pyflakes"
+
 ``filter-file-include``
 -----------------------
 

@@ -79,6 +79,7 @@ pub enum PythonPackaging {
         #[serde(default = "TRUE")]
         include_source: bool,
     },
+
     #[serde(rename = "virtualenv")]
     Virtualenv {
         path: String,
@@ -89,6 +90,7 @@ pub enum PythonPackaging {
         #[serde(default = "TRUE")]
         include_source: bool,
     },
+
     #[serde(rename = "package-root")]
     PackageRoot {
         path: String,
@@ -100,6 +102,16 @@ pub enum PythonPackaging {
         #[serde(default = "TRUE")]
         include_source: bool,
     },
+
+    #[serde(rename = "pip-install-simple")]
+    PipInstallSimple {
+        package: String,
+        #[serde(default = "ZERO")]
+        optimize_level: i64,
+        #[serde(default = "TRUE")]
+        include_source: bool,
+    },
+
     #[serde(rename = "filter-file-include")]
     FilterFileInclude { path: String },
 }

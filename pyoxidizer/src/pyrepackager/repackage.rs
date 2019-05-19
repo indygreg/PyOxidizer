@@ -379,6 +379,7 @@ fn resolve_python_packaging(
                 });
             }
         }
+
         PythonPackaging::Virtualenv {
             path,
             optimize_level,
@@ -445,6 +446,7 @@ fn resolve_python_packaging(
                 }
             }
         }
+
         PythonPackaging::PackageRoot {
             path,
             packages,
@@ -511,6 +513,63 @@ fn resolve_python_packaging(
                 }
             }
         }
+
+        PythonPackaging::PipInstallSimple {
+            package,
+            optimize_level,
+            include_source,
+        } => {
+            let pip_exe = dist.ensure_pip();
+            let temp_dir = tempdir::TempDir::new("pyoxidizer-pip-install")
+                .expect("could not creat temp directory");
+
+            let temp_dir_path = temp_dir.path();
+            let temp_dir_s = temp_dir_path.display().to_string();
+            println!("pip installing to {}", temp_dir_s);
+
+            std::process::Command::new(pip_exe)
+                .args(&[
+                    "--disable-pip-version-check",
+                    "install",
+                    "--target",
+                    &temp_dir_s,
+                    package,
+                ])
+                .status()
+                .expect("error running pip");
+
+            let mut compiler = bytecode_compiler(&dist);
+
+            for resource in find_python_resources(&temp_dir_path) {
+                if let PythonResourceType::Source {} = resource.flavor {
+                    let source = fs::read(resource.path).expect("error reading source file");
+                    let bytecode =
+                        match compiler.compile(&source, &resource.name, *optimize_level as i32) {
+                            Ok(res) => res,
+                            Err(msg) => panic!("error compiling bytecode: {}", msg),
+                        };
+
+                    if *include_source {
+                        res.push(PythonResourceEntry {
+                            action: ResourceAction::Add,
+                            resource: PythonResource::ModuleSource {
+                                name: resource.name.clone(),
+                                source,
+                            },
+                        });
+                    }
+
+                    res.push(PythonResourceEntry {
+                        action: ResourceAction::Add,
+                        resource: PythonResource::ModuleBytecode {
+                            name: resource.name.clone(),
+                            bytecode,
+                        },
+                    });
+                }
+            }
+        }
+
         // This is a no-op because it can only be handled at a higher level.
         PythonPackaging::FilterFileInclude { .. } => {}
     }

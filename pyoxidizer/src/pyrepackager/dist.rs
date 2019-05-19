@@ -14,6 +14,12 @@ use url::Url;
 use super::config::Config;
 use super::fsscan::{find_python_resources, walk_tree_files, PythonResourceType};
 
+#[cfg(windows)]
+const PIP_EXE_BASENAME: &str = "pip3.exe";
+
+#[cfg(unix)]
+const PIP_EXE_BASENAME: &str = "pip3";
+
 #[derive(Debug, Deserialize)]
 struct LinkEntry {
     name: String,
@@ -215,6 +221,27 @@ pub struct PythonDistributionInfo {
     ///
     /// Keys are full module/resource names. Values are filesystem paths.
     pub resources: BTreeMap<String, PathBuf>,
+}
+
+impl PythonDistributionInfo {
+    /// Ensure pip is available to run in the distribution.
+    pub fn ensure_pip(&self) -> PathBuf {
+        let pip_path = self
+            .python_exe
+            .parent()
+            .expect("could not derive parent")
+            .to_path_buf()
+            .join(PIP_EXE_BASENAME);
+
+        if !pip_path.exists() {
+            std::process::Command::new(&self.python_exe)
+                .args(&["-m", "ensurepip"])
+                .status()
+                .expect("failed to run ensurepip");
+        }
+
+        return pip_path;
+    }
 }
 
 /// Extract useful information from the files constituting a Python distribution.
