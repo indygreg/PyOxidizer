@@ -1036,6 +1036,12 @@ pub fn write_data_rs(
     .unwrap();
 
     f.write_fmt(format_args!(
+        "pub const FILESYSTEM_IMPORTER: bool = {};\n",
+        config.filesystem_importer
+    ))
+    .unwrap();
+
+    f.write_fmt(format_args!(
         "pub const RUST_ALLOCATOR_RAW: bool = {};\n",
         config.rust_allocator_raw
     ))

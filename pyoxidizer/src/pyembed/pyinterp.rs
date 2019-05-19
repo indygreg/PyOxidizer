@@ -12,8 +12,8 @@ use std::path::PathBuf;
 use std::ptr::null;
 
 use cpython::{
-    GILGuard, NoArgs, ObjectProtocol, PyDict, PyErr, PyList, PyModule, PyObject, PyResult, Python,
-    PythonObject, ToPyObject,
+    GILGuard, NoArgs, ObjectProtocol, PyDict, PyErr, PyList, PyModule, PyObject, PyResult, PyTuple,
+    Python, PythonObject, ToPyObject,
 };
 
 use super::data::*;
@@ -37,6 +37,8 @@ pub struct PythonConfig {
     pub opt_level: i32,
     /// Whether to load our custom frozen importlib bootstrap modules.
     pub use_custom_importlib: bool,
+    /// Whether to load the filesystem-based sys.meta_path finder.
+    pub filesystem_importer: bool,
     /// Filesystem paths to add to sys.path.
     ///
     /// ``.`` will resolve to the path of the application at run-time.
@@ -95,6 +97,7 @@ impl PythonConfig {
             standard_io_errors,
             opt_level: OPT_LEVEL,
             use_custom_importlib: true,
+            filesystem_importer: FILESYSTEM_IMPORTER,
             sys_paths: vec![],
             import_site: !NO_SITE,
             import_user_site: !NO_USER_SITE_DIRECTORY,
@@ -367,8 +370,58 @@ impl<'a> MainPythonInterpreter<'a> {
 
         let py = unsafe { Python::assume_gil_acquired() };
         self.py = Some(py);
-
         self.init_run = true;
+
+        // Our hacked _frozen_importlib_external module doesn't register
+        // the filesystem importers. This is because a) we don't need it to
+        // since interpreter init can be satisfied by in-memory modules
+        // b) having that code read config settings during interpreter startup
+        // would be challenging. So, we handle installation of filesystem
+        // importers here, if desired.
+
+        // This is what importlib._bootstrap_external usally does:
+        // supported_loaders = _get_supported_file_loaders()
+        // sys.path_hooks.extend([FileFinder.path_hook(*supported_loaders)])
+        // sys.meta_path.append(PathFinder)
+        if self.config.filesystem_importer {
+            let frozen = py
+                .import("_frozen_importlib_external")
+                .expect("unable to import _frozen_importlib_external");
+
+            let loaders = frozen
+                .call(py, "_get_supported_file_loaders", NoArgs, None)
+                .expect("error calling _get_supported_file_loaders()");
+            let loaders_list = loaders
+                .cast_as::<PyList>(py)
+                .expect("unable to cast loaders to list");
+            let loaders_vec: Vec<PyObject> = loaders_list.iter(py).collect();
+            let loaders_tuple = PyTuple::new(py, loaders_vec.as_slice());
+
+            let file_finder = frozen
+                .get(py, "FileFinder")
+                .expect("unable to get FileFinder");
+            let path_hook = file_finder
+                .call_method(py, "path_hook", loaders_tuple, None)
+                .expect("unable to construct path hook");
+
+            let sys = py.import("sys").expect("unable to import sys");
+            let path_hooks = sys
+                .get(py, "path_hooks")
+                .expect("unable to get sys.path_hooks");
+            path_hooks
+                .call_method(py, "append", (path_hook,), None)
+                .expect("unable to append sys.path_hooks");
+
+            let path_finder = frozen
+                .get(py, "PathFinder")
+                .expect("unable to get PathFinder");
+            let meta_path = sys
+                .get(py, "meta_path")
+                .expect("unable to get sys.meta_path");
+            meta_path
+                .call_method(py, "append", (path_finder,), None)
+                .expect("unable to append to sys.meta_path");
+        }
 
         // env::args() panics if arguments aren't valid Unicode. But invalid
         // Unicode arguments are possible and some applications may want to

@@ -43,6 +43,8 @@ struct PythonConfig {
     stdio_encoding: Option<String>,
     #[serde(default = "FALSE")]
     unbuffered_stdio: bool,
+    #[serde(default = "FALSE")]
+    filesystem_importer: bool,
     #[serde(default = "TRUE")]
     rust_allocator_raw: bool,
     write_modules_directory_env: Option<String>,
@@ -153,6 +155,7 @@ pub struct Config {
     pub unbuffered_stdio: bool,
     pub python_packaging: Vec<PythonPackaging>,
     pub run: RunMode,
+    pub filesystem_importer: bool,
     pub rust_allocator_raw: bool,
     pub write_modules_directory_env: Option<String>,
 }
@@ -222,6 +225,7 @@ pub fn parse_config(data: &[u8]) -> Config {
         unbuffered_stdio: config.python_config.unbuffered_stdio,
         python_packaging: config.python_packages,
         run: config.python_run,
+        filesystem_importer: config.python_config.filesystem_importer,
         rust_allocator_raw: config.python_config.rust_allocator_raw,
         write_modules_directory_env: config.python_config.write_modules_directory_env,
     }

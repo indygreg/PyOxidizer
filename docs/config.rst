@@ -94,6 +94,12 @@ unbuffered_stdio
    `Py_UnbufferedStdioFlag <https://docs.python.org/3/c-api/init.html#c.Py_UnbufferedStdioFlag>`_.
    Default is ``false``.
 
+filesystem_importer
+   Controls whether to enable Python's filesystem based importer. Enabling
+   this importer allows Python modules to be imported from the filesystem.
+
+   Default is ``false`` (since we prefer to import modules from memory).
+
 rust_allocator_raw
    Whether to use the Rust memory allocator for the ``PYMEM_DOMAIN_RAW``
    allocator.
