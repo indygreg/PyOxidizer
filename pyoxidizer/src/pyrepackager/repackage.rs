@@ -290,7 +290,7 @@ fn resolve_python_packaging(
             }
         }
 
-        PythonPackaging::ExtensionsExplicitIncludes { includes } => {
+        PythonPackaging::StdlibExtensionsExplicitIncludes { includes } => {
             for name in includes {
                 if let Some(modules) = &dist.extension_modules.get(name) {
                     res.push(PythonResourceEntry {
@@ -304,7 +304,7 @@ fn resolve_python_packaging(
             }
         }
 
-        PythonPackaging::ExtensionsExplicitExcludes { excludes } => {
+        PythonPackaging::StdlibExtensionsExplicitExcludes { excludes } => {
             for (name, modules) in &dist.extension_modules {
                 if excludes.contains(name) {
                     continue;

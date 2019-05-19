@@ -170,29 +170,33 @@ This key can have the following values::
    modules like ``_ssl`` (links against OpenSSL) and ``zlib`` are not
    included.
 
-``extensions-explicit-includes``
---------------------------------
+``stdlib-extensions-explicit-includes``
+---------------------------------------
 
-``type = "extensions-explicit-includes`` will include extension modules from
-a list of module names, as defined by the ``includes`` key.
+``type = "stdlib-extensions-explicit-includes`` will include extension
+modules from the distribution's standard library if the extension name
+is included in a list specified by the ``includes`` key.
+
+This can be combined with the ``minimal`` extension modules policy to
+supplement the extension modules that are included.
 
 Example usage::
 
-   [python_packages]
-   type = "extensions-explicit-includes"
+   [[python_packages]]
+   type = "stdlib-extensions-explicit-includes"
    includes = ["binascii", "errno", "itertools", "math", "select", "_socket"]
 
-``extensions-explicit-excludes``
---------------------------------
+``stdlib-extensions-explicit-excludes``
+---------------------------------------
 
-``type = "extensions-explicit-excludes"`` will include all extension modules
-by default and will exclude an extension module if its name is present in a
-list, as defined by the ``excludes`` key.
+``type = "stdlib-extensions-explicit-excludes"`` will exclude extension
+modules from the distribution's standard library if the extension name
+is included in a list specified by the ``excludes`` key.
 
 Example usage::
 
-   [python_packages]
-   type = "extensions-explicit-excludes"
+   [[python_packages]]
+   type = "stdlib-extensions-explicit-excludes"
    excludes = ["_ssl"]
 
 ``stdlib``

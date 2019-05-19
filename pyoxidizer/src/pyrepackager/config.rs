@@ -55,14 +55,14 @@ pub enum PythonPackaging {
         policy: String,
     },
 
-    #[serde(rename = "extensions-explicit-includes")]
-    ExtensionsExplicitIncludes {
+    #[serde(rename = "stdlib-extensions-explicit-includes")]
+    StdlibExtensionsExplicitIncludes {
         #[serde(default)]
         includes: Vec<String>,
     },
 
-    #[serde(rename = "extensions-explicit-excludes")]
-    ExtensionsExplicitExcludes {
+    #[serde(rename = "stdlib-extensions-explicit-excludes")]
+    StdlibExtensionsExplicitExcludes {
         #[serde(default)]
         excludes: Vec<String>,
     },

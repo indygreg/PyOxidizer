@@ -36,12 +36,12 @@ policy = "all"
 
 # Explicit list of extension modules from the distribution to include.
 # [[python_packages]]
-# type = "extensions-explicit-includes"
+# type = "stdlib-extensions-explicit-includes"
 # includes = ["binascii", "errno", "itertools", "math", "select", "_socket"]
 
 # Explicit list of extension modules from the distribution to exclude.
 # [[python_packages]
-# type = "extensions-explicit-excludes"
+# type = "stdlib-extensions-explicit-excludes"
 # excludes = ["_ssl"]
 
 [[python_packages]]
