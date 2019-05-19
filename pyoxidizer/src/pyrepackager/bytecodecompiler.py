@@ -37,7 +37,10 @@ while True:
         source = stdin.read(source_len)
 
         name = os.fsdecode(name)
-        source = source.decode('latin1')
+        # Source code should be valid UTF-8. Preserving raw bytes via latin-1
+        # may make source code malformed from perspective of Python. So decode
+        # as UTF-8.
+        source = source.decode('utf-8')
 
         code = compile(source, name, 'exec', optimize=optimize_level)
         bytecode = marshal.dumps(code)
