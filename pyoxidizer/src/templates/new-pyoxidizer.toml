@@ -17,6 +17,7 @@ program_name = "{{ program_name }}"
 # optimize_level = 0
 # stdio_encoding = "utf-8:strict"
 # unbuffered_stdio = false
+# rust_allocator_raw = true
 #write_modules_directory_env = "PYOXIDIZER_WRITE_MODULES_DIR"
 
 [[python_packages]]
