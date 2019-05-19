@@ -12,8 +12,5 @@ fn main() {
     // configuration. If an uncaught Python exception is raised, handle it.
     // In the case of the error being SystemExit, the process will exit and
     // any code following won't run.
-    match interp.run() {
-        Ok(_) => {}
-        Err(err) => interp.print_err(err),
-    }
+    interp.run_and_handle_error();
 }

@@ -7,9 +7,5 @@ use pyembed::{MainPythonInterpreter, PythonConfig};
 fn main() {
     let config = PythonConfig::default();
     let mut interp = MainPythonInterpreter::new(config);
-
-    match interp.run() {
-        Ok(_) => {}
-        Err(err) => interp.print_err(err),
-    }
+    interp.run_and_handle_error();
 }

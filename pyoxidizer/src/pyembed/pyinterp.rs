@@ -440,6 +440,25 @@ impl<'a> MainPythonInterpreter<'a> {
         }
     }
 
+    /// Runs the interpreter and handles any exception that was raised.
+    pub fn run_and_handle_error(&mut self) {
+        // There are underdefined lifetime bugs at play here. There is no
+        // explicit lifetime for the PyObject's returned. If we don't have
+        // the local variable in scope, we can get into a situation where
+        // drop() on self is called before the PyObject's drop(). This is
+        // problematic because PyObject's drop() attempts to acquire the GIL.
+        // If the interpreter is shut down, there is no GIL to acquire, and
+        // we may segfault.
+        // TODO look into setting lifetimes properly so the compiler can
+        // prevent some issues.
+        let res = self.run();
+
+        match res {
+            Ok(_) => {}
+            Err(err) => self.print_err(err),
+        }
+    }
+
     /// Runs a Python module as the __main__ module.
     ///
     /// Returns the execution result of the module code.
