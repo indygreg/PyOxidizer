@@ -58,6 +58,9 @@ pub struct PythonConfig {
     /// On Windows, bytes will be UTF-16. On POSIX, bytes will be raw char*
     /// values passed to `int main()`.
     pub argvb: bool,
+    /// Whether to use Rust's global memory allocator for the Python raw
+    /// memory domain.
+    pub rust_allocator_raw: bool,
     /// Environment variable holding the directory to write a loaded modules file.
     ///
     /// If this value is set and the environment it refers to is set,
@@ -99,6 +102,7 @@ impl PythonConfig {
             dont_write_bytecode: DONT_WRITE_BYTECODE,
             unbuffered_stdio: UNBUFFERED_STDIO,
             argvb: false,
+            rust_allocator_raw: RUST_ALLOCATOR_RAW,
             write_modules_directory_env,
         }
     }
@@ -173,11 +177,17 @@ impl<'a> MainPythonInterpreter<'a> {
     ///
     /// There are no significant side-effects from calling this.
     pub fn new(config: PythonConfig) -> MainPythonInterpreter<'a> {
+        let raw_allocator = if config.rust_allocator_raw {
+            Some(make_raw_memory_allocator())
+        } else {
+            None
+        };
+
         MainPythonInterpreter {
             config,
             frozen_modules: make_custom_frozen_modules(),
             init_run: false,
-            raw_allocator: Some(make_raw_memory_allocator()),
+            raw_allocator,
             gil: None,
             py: None,
         }

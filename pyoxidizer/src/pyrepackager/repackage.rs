@@ -1036,6 +1036,12 @@ pub fn write_data_rs(
     .unwrap();
 
     f.write_fmt(format_args!(
+        "pub const RUST_ALLOCATOR_RAW: bool = {};\n",
+        config.rust_allocator_raw
+    ))
+    .unwrap();
+
+    f.write_fmt(format_args!(
         "pub const WRITE_MODULES_DIRECTORY_ENV: Option<&'static str> = {};\n",
         match &config.write_modules_directory_env {
             Some(path) => "Some(\"".to_owned() + &path + "\")",

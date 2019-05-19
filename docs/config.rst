@@ -94,6 +94,18 @@ unbuffered_stdio
    `Py_UnbufferedStdioFlag <https://docs.python.org/3/c-api/init.html#c.Py_UnbufferedStdioFlag>`_.
    Default is ``false``.
 
+rust_allocator_raw
+   Whether to use the Rust memory allocator for the ``PYMEM_DOMAIN_RAW``
+   allocator.
+
+   When set, Python uses Rust's global memory allocator instead of
+   ``malloc()``, ``free()``, etc.
+
+   If a custom Rust memory allocator (such as jemalloc as provided by the
+   ``jemallocator`` crate) is used, Python will also use this allocator.
+
+   Default is ``true``.
+
 write_modules_directory_env
    Environment variable that defines a directory where ``modules-<UUID>`` files
    containing a ``\n`` delimited list of loaded Python modules (from ``sys.modules``)
