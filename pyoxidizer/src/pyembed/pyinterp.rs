@@ -70,6 +70,16 @@ pub struct PythonConfig {
 impl PythonConfig {
     /// Obtain the PythonConfig with the settings compiled into the binary.
     pub fn default() -> PythonConfig {
+        let standard_io_encoding = match STANDARD_IO_ENCODING {
+            Some(value) => Some(String::from(value)),
+            None => None,
+        };
+
+        let standard_io_errors = match STANDARD_IO_ERRORS {
+            Some(value) => Some(String::from(value)),
+            None => None,
+        };
+
         let write_modules_directory_env = match WRITE_MODULES_DIRECTORY_ENV {
             Some(path) => Some(String::from(path)),
             None => None,
@@ -78,8 +88,8 @@ impl PythonConfig {
         PythonConfig {
             exe: env::current_exe().unwrap(),
             program_name: PROGRAM_NAME.to_string(),
-            standard_io_encoding: STANDARD_IO_ENCODING,
-            standard_io_errors: STANDARD_IO_ERRORS,
+            standard_io_encoding,
+            standard_io_errors,
             opt_level: OPT_LEVEL,
             use_custom_importlib: true,
             sys_paths: vec![],

@@ -875,19 +875,18 @@ pub fn write_data_rs(
     let mut f = fs::File::create(&path).unwrap();
 
     f.write_fmt(format_args!(
-        "pub const STANDARD_IO_ENCODING: Option<String> = {};\n",
+        "pub const STANDARD_IO_ENCODING: Option<&'static str> = {};\n",
         match &config.stdio_encoding_name {
-            // TODO print out value.
-            Some(_value) => "Some(\"\")",
-            None => "None",
+            Some(value) => format_args!("Some(\"{}\")", value).to_string(),
+            None => "None".to_owned(),
         }
     ))
     .unwrap();
     f.write_fmt(format_args!(
-        "pub const STANDARD_IO_ERRORS: Option<String> = {};\n",
+        "pub const STANDARD_IO_ERRORS: Option<&'static str> = {};\n",
         match &config.stdio_encoding_errors {
-            Some(_value) => "Some(\"\")",
-            None => "None",
+            Some(value) => format_args!("Some(\"{}\")", value).to_string(),
+            None => "None".to_owned(),
         }
     ))
     .unwrap();
