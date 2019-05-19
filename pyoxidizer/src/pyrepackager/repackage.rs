@@ -508,16 +508,6 @@ pub fn resolve_python_resources(config: &Config, dist: &PythonDistributionInfo) 
     let mut resources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut read_files: Vec<PathBuf> = Vec::new();
 
-    // Seed extension modules with builtins that must always be enabled.
-    for (name, variants) in &dist.extension_modules {
-        for em in variants {
-            if em.builtin_default || em.required {
-                println!("adding required extension module: {}", name);
-                extension_modules.insert(name.clone(), em.clone());
-            }
-        }
-    }
-
     for packaging in packages {
         println!("processing packaging rule: {:?}", packaging);
         for entry in resolve_python_packaging(packaging, dist) {
