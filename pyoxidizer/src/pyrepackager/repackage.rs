@@ -320,6 +320,26 @@ fn resolve_python_packaging(
             }
         }
 
+        PythonPackaging::StdlibExtensionVariant { extension, variant } => {
+            let variants = &dist.extension_modules[extension];
+
+            for em in variants {
+                if &em.variant == variant {
+                    res.push(PythonResourceEntry {
+                        action: ResourceAction::Add,
+                        resource: PythonResource::ExtensionModule {
+                            name: extension.clone(),
+                            module: em.clone(),
+                        },
+                    });
+                }
+            }
+
+            if res.is_empty() {
+                panic!("extension {} has no variant {}", extension, variant);
+            }
+        }
+
         PythonPackaging::Stdlib {
             optimize_level,
             exclude_test_modules,

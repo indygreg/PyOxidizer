@@ -199,6 +199,30 @@ Example usage::
    type = "stdlib-extensions-explicit-excludes"
    excludes = ["_ssl"]
 
+``stdlib-extension-variant``
+----------------------------
+
+``type = "stdlib-extension-variant"`` denotes to include a specific extension
+module variant from the Python distribution.
+
+Some distributions offer multiple options for individual extension modules.
+For example, the ``readline`` extension module may offer a ``libedit``
+variant that is compiled against ``libedit`` instead of ``libreadline``.
+
+By default, the first listed variant in a Python distribution is used. By
+defining entries of this type, alternate extension implementations can be
+used.
+
+Extension variants are defined by an extension name and variant name, which
+are defined by the ``extension`` and ``variant`` keys, respectively.
+
+Example usage::
+
+   [[python_packages]]
+   type = "stdlib-extension-variant"
+   extension = "readline"
+   variant = "libedit"
+
 ``stdlib``
 ----------
 

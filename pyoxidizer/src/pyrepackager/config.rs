@@ -67,6 +67,9 @@ pub enum PythonPackaging {
         excludes: Vec<String>,
     },
 
+    #[serde(rename = "stdlib-extension-variant")]
+    StdlibExtensionVariant { extension: String, variant: String },
+
     #[serde(rename = "stdlib")]
     Stdlib {
         #[serde(default = "ZERO")]
