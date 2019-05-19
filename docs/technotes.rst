@@ -7,71 +7,73 @@ CPython Initialization
 
 Most code lives in ``pylifecycle.c``.
 
-``Py_Initialize()``
-  ``Py_InitializeEx()``
-    ``_Py_InitializeFromConfig(_PyCoreConfig config)``
-      ``_Py_InitializeCore(PyInterpreterState, _PyCoreConfig)``
-        Sets up allocators.
-        ``_Py_InitializeCore_impl(PyInterpreterState, _PyCoreConfig)``
-          Does most of the initialization.
-          Runtime, new interpreter state, thread state, GIL, built-in types,
-          Initializes sys module and sets up sys.modules.
-          Initializes builtins module.
-          ``_PyImport_Init()``
-            Copies ``interp->builtins`` to ``interp->builtins_copy``.
-          ``_PyImportHooks_Init()``
-            Sets up ``sys.meta_path``, ``sys.path_importer_cache``,
-            ``sys.path_hooks`` to empty data structures.
-          ``initimport()``
-            ``PyImport_ImportFrozenModule("_frozen_importlib")``
-            ``PyImport_AddModule("_frozen_importlib")``
-            ``interp->importlib = importlib``
-            ``interp->import_func = interp->builtins.__import__``
-            ``PyInit__imp()``
-              Initializes ``_imp`` module, which is implemented in C.
-            ``sys.modules["_imp"} = imp``
-            ``importlib._install(sys, _imp)``
-            ``_PyImportZip_Init()``
+Call tree with Python 3.7::
 
-      ``_Py_InitializeMainInterpreter(interp, _PyMainInterpreterConfig)``
-        ``_PySys_EndInit()``
-          ``sys.path = XXX``
-          ``sys.executable = XXX``
-          ``sys.prefix = XXX``
-          ``sys.base_prefix = XXX``
-          ``sys.exec_prefix = XXX``
-          ``sys.base_exec_prefix = XXX``
-          ``sys.argv = XXX``
-          ``sys.warnoptions = XXX``
-          ``sys._xoptions = XXX``
-          ``sys.flags = XXX``
-          ``sys.dont_write_bytecode = XXX``
-        ``initexternalimport()``
-          ``interp->importlib._install_external_importers()``
-        ``initfsencoding()``
-          ``_PyCodec_Lookup(Py_FilesystemDefaultEncoding)``
-            ``_PyCodecRegistry_Init()``
-              ``interp->codec_search_path = []``
-              ``interp->codec_search_cache = {}``
-              ``interp->codec_error_registry = {}``
-              # This is the first non-frozen import during startup.
-              ``PyImport_ImportModuleNoBlock("encodings")``
-            ``interp->codec_search_cache[codec_name]``
-            ``for p in interp->codec_search_path: p[codec_name]``
-        ``initsigs()``
-        ``add_main_module()``
-          ``PyImport_AddModule("__main__")``
-        ``init_sys_streams()``
-          ``PyImport_ImportModule("encodings.utf_8")``
-          ``PyImport_ImportModule("encodings.latin_1")``
-          ``PyImport_ImportModule("io")``
-          Consults ``PYTHONIOENCODING`` and gets encoding and error mode.
-          Sets up ``sys.__stdin__``, ``sys.__stdout__``, ``sys.__stderr__``.
-        Sets warning options.
-        Sets ``_PyRuntime.initialized``, which is what ``Py_IsInitialized()``
-        returns.
-        ``initsite()``
-          ``PyImport_ImportModule("site")``
+    ``Py_Initialize()``
+      ``Py_InitializeEx()``
+        ``_Py_InitializeFromConfig(_PyCoreConfig config)``
+          ``_Py_InitializeCore(PyInterpreterState, _PyCoreConfig)``
+            Sets up allocators.
+            ``_Py_InitializeCore_impl(PyInterpreterState, _PyCoreConfig)``
+              Does most of the initialization.
+              Runtime, new interpreter state, thread state, GIL, built-in types,
+              Initializes sys module and sets up sys.modules.
+              Initializes builtins module.
+              ``_PyImport_Init()``
+                Copies ``interp->builtins`` to ``interp->builtins_copy``.
+              ``_PyImportHooks_Init()``
+                Sets up ``sys.meta_path``, ``sys.path_importer_cache``,
+                ``sys.path_hooks`` to empty data structures.
+              ``initimport()``
+                ``PyImport_ImportFrozenModule("_frozen_importlib")``
+                ``PyImport_AddModule("_frozen_importlib")``
+                ``interp->importlib = importlib``
+                ``interp->import_func = interp->builtins.__import__``
+                ``PyInit__imp()``
+                  Initializes ``_imp`` module, which is implemented in C.
+                ``sys.modules["_imp"} = imp``
+                ``importlib._install(sys, _imp)``
+                ``_PyImportZip_Init()``
+
+          ``_Py_InitializeMainInterpreter(interp, _PyMainInterpreterConfig)``
+            ``_PySys_EndInit()``
+              ``sys.path = XXX``
+              ``sys.executable = XXX``
+              ``sys.prefix = XXX``
+              ``sys.base_prefix = XXX``
+              ``sys.exec_prefix = XXX``
+              ``sys.base_exec_prefix = XXX``
+              ``sys.argv = XXX``
+              ``sys.warnoptions = XXX``
+              ``sys._xoptions = XXX``
+              ``sys.flags = XXX``
+              ``sys.dont_write_bytecode = XXX``
+            ``initexternalimport()``
+              ``interp->importlib._install_external_importers()``
+            ``initfsencoding()``
+              ``_PyCodec_Lookup(Py_FilesystemDefaultEncoding)``
+                ``_PyCodecRegistry_Init()``
+                  ``interp->codec_search_path = []``
+                  ``interp->codec_search_cache = {}``
+                  ``interp->codec_error_registry = {}``
+                  # This is the first non-frozen import during startup.
+                  ``PyImport_ImportModuleNoBlock("encodings")``
+                ``interp->codec_search_cache[codec_name]``
+                ``for p in interp->codec_search_path: p[codec_name]``
+            ``initsigs()``
+            ``add_main_module()``
+              ``PyImport_AddModule("__main__")``
+            ``init_sys_streams()``
+              ``PyImport_ImportModule("encodings.utf_8")``
+              ``PyImport_ImportModule("encodings.latin_1")``
+              ``PyImport_ImportModule("io")``
+              Consults ``PYTHONIOENCODING`` and gets encoding and error mode.
+              Sets up ``sys.__stdin__``, ``sys.__stdout__``, ``sys.__stderr__``.
+            Sets warning options.
+            Sets ``_PyRuntime.initialized``, which is what ``Py_IsInitialized()``
+            returns.
+            ``initsite()``
+              ``PyImport_ImportModule("site")``
 
 CPython Importing Mechanism
 ===========================
