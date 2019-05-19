@@ -45,6 +45,8 @@ struct PythonConfig {
     unbuffered_stdio: bool,
     #[serde(default = "FALSE")]
     filesystem_importer: bool,
+    #[serde(default)]
+    sys_paths: Vec<String>,
     #[serde(default = "TRUE")]
     rust_allocator_raw: bool,
     write_modules_directory_env: Option<String>,
@@ -156,6 +158,7 @@ pub struct Config {
     pub python_packaging: Vec<PythonPackaging>,
     pub run: RunMode,
     pub filesystem_importer: bool,
+    pub sys_paths: Vec<String>,
     pub rust_allocator_raw: bool,
     pub write_modules_directory_env: Option<String>,
 }
@@ -210,6 +213,8 @@ pub fn parse_config(data: &[u8]) -> Config {
         panic!("no `type = \"stdlib\"` entry in `[[python_packages]]`");
     }
 
+    let sys_paths = &config.python_config.sys_paths;
+
     Config {
         dont_write_bytecode: config.python_config.dont_write_bytecode,
         ignore_environment: config.python_config.ignore_environment,
@@ -225,7 +230,8 @@ pub fn parse_config(data: &[u8]) -> Config {
         unbuffered_stdio: config.python_config.unbuffered_stdio,
         python_packaging: config.python_packages,
         run: config.python_run,
-        filesystem_importer: config.python_config.filesystem_importer,
+        filesystem_importer: config.python_config.filesystem_importer || !sys_paths.is_empty(),
+        sys_paths: sys_paths.clone(),
         rust_allocator_raw: config.python_config.rust_allocator_raw,
         write_modules_directory_env: config.python_config.write_modules_directory_env,
     }

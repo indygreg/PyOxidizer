@@ -12,8 +12,8 @@ use std::path::PathBuf;
 use std::ptr::null;
 
 use cpython::{
-    GILGuard, NoArgs, ObjectProtocol, PyDict, PyErr, PyList, PyModule, PyObject, PyResult, PyTuple,
-    Python, PythonObject, ToPyObject,
+    GILGuard, NoArgs, ObjectProtocol, PyDict, PyErr, PyList, PyModule, PyObject, PyResult,
+    PyString, PyTuple, Python, PythonObject, ToPyObject,
 };
 
 use super::data::*;
@@ -41,8 +41,9 @@ pub struct PythonConfig {
     pub filesystem_importer: bool,
     /// Filesystem paths to add to sys.path.
     ///
-    /// ``.`` will resolve to the path of the application at run-time.
-    pub sys_paths: Vec<PathBuf>,
+    /// ``$ORIGIN`` will resolve to the directory of the application at
+    /// run-time.
+    pub sys_paths: Vec<String>,
     /// Whether to load the site.py module at initialization time.
     pub import_site: bool,
     /// Whether to load a user-specific site module at initialization time.
@@ -90,6 +91,11 @@ impl PythonConfig {
             None => None,
         };
 
+        let sys_paths = SYS_PATHS
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>();
+
         PythonConfig {
             exe: env::current_exe().unwrap(),
             program_name: PROGRAM_NAME.to_string(),
@@ -98,7 +104,7 @@ impl PythonConfig {
             opt_level: OPT_LEVEL,
             use_custom_importlib: true,
             filesystem_importer: FILESYSTEM_IMPORTER,
-            sys_paths: vec![],
+            sys_paths,
             import_site: !NO_SITE,
             import_user_site: !NO_USER_SITE_DIRECTORY,
             ignore_python_env: IGNORE_ENVIRONMENT,
@@ -305,18 +311,6 @@ impl<'a> MainPythonInterpreter<'a> {
             }
         }
 
-        /*
-        // TODO expand "." to the exe's path.
-        let paths: Vec<&str> = config.sys_paths.iter().map(|p| p.to_str().unwrap()).collect();
-        // TODO use ; on Windows.
-        // TODO OwnedPyStr::from("") appears to fail?
-        let paths = paths.join(":");
-        let path = OwnedPyStr::from(paths.as_str());
-        unsafe {
-            pyffi::Py_SetPath(path.into());
-        }
-        */
-
         unsafe {
             pyffi::Py_DontWriteBytecodeFlag = match config.dont_write_bytecode {
                 true => 1,
@@ -372,6 +366,8 @@ impl<'a> MainPythonInterpreter<'a> {
         self.py = Some(py);
         self.init_run = true;
 
+        let sys_module = py.import("sys").expect("unable to import sys");
+
         // Our hacked _frozen_importlib_external module doesn't register
         // the filesystem importers. This is because a) we don't need it to
         // since interpreter init can be satisfied by in-memory modules
@@ -404,8 +400,7 @@ impl<'a> MainPythonInterpreter<'a> {
                 .call_method(py, "path_hook", loaders_tuple, None)
                 .expect("unable to construct path hook");
 
-            let sys = py.import("sys").expect("unable to import sys");
-            let path_hooks = sys
+            let path_hooks = sys_module
                 .get(py, "path_hooks")
                 .expect("unable to get sys.path_hooks");
             path_hooks
@@ -415,12 +410,36 @@ impl<'a> MainPythonInterpreter<'a> {
             let path_finder = frozen
                 .get(py, "PathFinder")
                 .expect("unable to get PathFinder");
-            let meta_path = sys
+            let meta_path = sys_module
                 .get(py, "meta_path")
                 .expect("unable to get sys.meta_path");
             meta_path
                 .call_method(py, "append", (path_finder,), None)
                 .expect("unable to append to sys.meta_path");
+        }
+
+        // Ideally we should be calling Py_SetPath() before Py_Initialize(). But we
+        // tried to do this and only ran into problems due to string conversions,
+        // unwanted side-effects. Updating fields after initialization should have
+        // the same effect.
+
+        // Always clear out sys.path.
+        let sys_path = sys_module.get(py, "path").expect("unable to get sys.path");
+        sys_path
+            .call_method(py, "clear", NoArgs, None)
+            .expect("unable to call sys.path.clear()");
+
+        // And repopulate it with entries from the config.
+        for path in &config.sys_paths {
+            let path = path.replace(
+                "$ORIGIN",
+                config.exe.parent().unwrap().display().to_string().as_str(),
+            );
+            let py_path = PyString::new(py, path.as_str());
+
+            sys_path
+                .call_method(py, "append", (py_path,), None)
+                .expect("could not append sys.path");
         }
 
         // env::args() panics if arguments aren't valid Unicode. But invalid

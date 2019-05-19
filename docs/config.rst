@@ -100,6 +100,18 @@ filesystem_importer
 
    Default is ``false`` (since we prefer to import modules from memory).
 
+sys_paths
+   Defines filesystem paths to be added to ``sys.path``.
+
+   Value is an array of string.
+
+   The special token ``$ORIGIN`` in values will be expanded to the absolute
+   path of the executable at run-time.
+
+   Setting this value will imply ``filesystem_importer = true``.
+
+   Default is an empty array.
+
 rust_allocator_raw
    Whether to use the Rust memory allocator for the ``PYMEM_DOMAIN_RAW``
    allocator.

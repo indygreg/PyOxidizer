@@ -1042,6 +1042,17 @@ pub fn write_data_rs(
     .unwrap();
 
     f.write_fmt(format_args!(
+        "pub const SYS_PATHS: &[&str] = &[{}];\n",
+        &config
+            .sys_paths
+            .iter()
+            .map(|p| "\"".to_owned() + p + "\"")
+            .collect::<Vec<String>>()
+            .join(", ")
+    ))
+    .unwrap();
+
+    f.write_fmt(format_args!(
         "pub const RUST_ALLOCATOR_RAW: bool = {};\n",
         config.rust_allocator_raw
     ))
