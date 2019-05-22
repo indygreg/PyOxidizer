@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use std::ptr::null;
 
 use cpython::{
-    GILGuard, NoArgs, ObjectProtocol, PyDict, PyErr, PyList, PyModule, PyObject, PyResult,
+    GILGuard, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule, PyObject, PyResult,
     PyString, PyTuple, Python, PythonObject, ToPyObject,
 };
 
@@ -117,6 +117,17 @@ impl PythonConfig {
     }
 }
 
+/// Represents the results of executing Python code with exception handling.
+#[derive(Debug)]
+pub enum PythonRunResult {
+    /// Code executed without raising an exception.
+    Ok {},
+    /// Code executed and raised an exception.
+    Err {},
+    /// Code executed and raised SystemExit with the specified exit code.
+    Exit { code: i32 },
+}
+
 fn make_custom_frozen_modules() -> [pyffi::_frozen; 3] {
     [
         pyffi::_frozen {
@@ -166,6 +177,16 @@ fn stdin_to_file() -> *mut libc::FILE {
 #[cfg(unix)]
 fn stdin_to_file() -> *mut libc::FILE {
     unsafe { libc::fdopen(libc::STDIN_FILENO, &('r' as libc::c_char)) }
+}
+
+#[cfg(windows)]
+fn stderr_to_file() -> *mut libc::FILE {
+    unsafe { __acrt_iob_func(libc::STDERR_FILENO) }
+}
+
+#[cfg(unix)]
+fn stderr_to_file() -> *mut libc::FILE {
+    unsafe { libc::fdopen(libc::STDERR_FILENO, &('w' as libc::c_char)) }
 }
 
 /// Represents an embedded Python interpreter.
@@ -522,8 +543,77 @@ impl<'a> MainPythonInterpreter<'a> {
         }
     }
 
+    /// Handle a raised SystemExit exception.
+    ///
+    /// This emulates the behavior in pythonrun.c:handle_system_exit() and
+    /// _Py_HandleSystemExit() but without the call to exit(), which we don't want.
+    fn handle_system_exit(&mut self, py: Python, err: PyErr) -> i32 {
+        std::io::stdout().flush().expect("failed to flush stdout");
+
+        let mut value = match err.pvalue {
+            Some(ref instance) => {
+                if instance.as_ptr() == py.None().as_ptr() {
+                    return 0;
+                }
+
+                instance.clone_ref(py)
+            }
+            None => {
+                return 0;
+            }
+        };
+
+        if unsafe { pyffi::PyExceptionInstance_Check(value.as_ptr()) } != 0 {
+            // The error code should be in the "code" attribute.
+            if let Ok(code) = value.getattr(py, "code") {
+                if code == py.None() {
+                    return 0;
+                }
+
+                // Else pretend exc_value.code is the new exception value to use
+                // and fall through to below.
+                value = code;
+            }
+        }
+
+        if unsafe { pyffi::PyLong_Check(value.as_ptr()) } != 0 {
+            return unsafe { pyffi::PyLong_AsLong(value.as_ptr()) as i32 };
+        }
+
+        let sys_module = py.import("sys").expect("unable to obtain sys module");
+        let stderr = sys_module.get(py, "stderr");
+
+        // This is a cargo cult from the canonical implementation.
+        unsafe { pyffi::PyErr_Clear() }
+
+        match stderr {
+            Ok(o) => unsafe {
+                pyffi::PyFile_WriteObject(value.as_ptr(), o.as_ptr(), pyffi::Py_PRINT_RAW);
+            },
+            Err(_) => {
+                unsafe {
+                    pyffi::PyObject_Print(value.as_ptr(), stderr_to_file(), pyffi::Py_PRINT_RAW);
+                }
+                std::io::stderr().flush().expect("failure to flush stderr");
+            }
+        }
+
+        unsafe {
+            pyffi::PySys_WriteStderr(b"\n\0".as_ptr() as *const i8);
+        }
+
+        // This frees references to this exception, which may be necessary to avoid
+        // badness.
+        err.restore(py);
+        unsafe {
+            pyffi::PyErr_Clear();
+        }
+
+        return 1;
+    }
+
     /// Runs the interpreter and handles any exception that was raised.
-    pub fn run_and_handle_error(&mut self) {
+    pub fn run_and_handle_error(&mut self) -> PythonRunResult {
         // There are underdefined lifetime bugs at play here. There is no
         // explicit lifetime for the PyObject's returned. If we don't have
         // the local variable in scope, we can get into a situation where
@@ -534,10 +624,40 @@ impl<'a> MainPythonInterpreter<'a> {
         // TODO look into setting lifetimes properly so the compiler can
         // prevent some issues.
         let res = self.run();
+        let py = self.acquire_gil();
 
         match res {
-            Ok(_) => {}
-            Err(err) => self.print_err(err),
+            Ok(_) => PythonRunResult::Ok {},
+            Err(err) => {
+                // SystemExit is special in that PyErr_PrintEx() will call
+                // exit() if it is seen. So, we handle it manually so we can
+                // return an exit code instead of exiting.
+
+                // TODO surely the cpython crate offers a better way to do this...
+                err.restore(py);
+                let matches =
+                    unsafe { pyffi::PyErr_ExceptionMatches(pyffi::PyExc_SystemExit) } != 0;
+                let err = cpython::PyErr::fetch(py);
+
+                if matches {
+                    return PythonRunResult::Exit {
+                        code: self.handle_system_exit(py, err),
+                    };
+                }
+
+                self.print_err(err);
+
+                PythonRunResult::Err {}
+            }
+        }
+    }
+
+    /// Calls run() and resolves a suitable exit code.
+    pub fn run_as_main(&mut self) -> i32 {
+        match self.run_and_handle_error() {
+            PythonRunResult::Ok {} => 0,
+            PythonRunResult::Err {} => 1,
+            PythonRunResult::Exit { code } => code,
         }
     }
 
