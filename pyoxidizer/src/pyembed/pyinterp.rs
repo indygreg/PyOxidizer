@@ -4,6 +4,7 @@
 
 use libc::c_char;
 use python3_sys as pyffi;
+use std::collections::BTreeSet;
 use std::env;
 use std::ffi::CString;
 use std::fs;
@@ -799,7 +800,7 @@ impl<'a> MainPythonInterpreter<'a> {
 /// Given a Python interpreter and a path to a directory, this will create a
 /// file in that directory named ``modules-<UUID>`` and write a ``\n`` delimited
 /// list of loaded names from ``sys.modules`` into that file.
-fn write_modules_to_directory(py: &Python, path: &PathBuf) {
+fn write_modules_to_directory(py: Python, path: &PathBuf) {
     // TODO this needs better error handling all over.
 
     fs::create_dir_all(path).expect("could not create directory for modules");
@@ -810,20 +811,21 @@ fn write_modules_to_directory(py: &Python, path: &PathBuf) {
 
     let sys = py.import("sys").expect("could not obtain sys module");
     let modules = sys
-        .get(*py, "modules")
+        .get(py, "modules")
         .expect("could not obtain sys.modules");
 
     let modules = modules
-        .cast_as::<PyDict>(*py)
+        .cast_as::<PyDict>(py)
         .expect("sys.modules is not a dict");
+
+    let mut names = BTreeSet::new();
+    for (key, _value) in modules.items(py) {
+        names.insert(key.extract::<String>(py).expect("module name is not a str"));
+    }
 
     let mut f = fs::File::create(path).expect("could not open file for writing");
 
-    for (key, _value) in modules.items(*py) {
-        let name = key
-            .extract::<String>(*py)
-            .expect("module name is not a str");
-
+    for name in names {
         f.write_fmt(format_args!("{}\n", name))
             .expect("could not write");
     }
@@ -836,7 +838,7 @@ impl<'a> Drop for MainPythonInterpreter<'a> {
                 Ok(path) => {
                     let path = PathBuf::from(path);
                     let py = self.acquire_gil();
-                    write_modules_to_directory(&py, &path);
+                    write_modules_to_directory(py, &path);
                 }
                 Err(_) => {}
             }
