@@ -640,6 +640,17 @@ pub fn resolve_python_resources(config: &Config, dist: &PythonDistributionInfo) 
         }
     }
 
+    // Add required extension modules, as some don't show up in the modules list
+    // and may have been filtered or not added in the first place.
+    for (name, variants) in &dist.extension_modules {
+        let em = &variants[0];
+
+        if (em.builtin_default || em.required) && !extension_modules.contains_key(name) {
+            println!("adding required extension module {}", name);
+            extension_modules.insert(name.clone(), em.clone());
+        }
+    }
+
     // Remove extension modules that have problems.
     for e in OS_IGNORE_EXTENSIONS.as_slice() {
         println!("removing extension module due to incompatibility: {}", e);
