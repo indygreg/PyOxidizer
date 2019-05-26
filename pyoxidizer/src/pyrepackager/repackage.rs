@@ -821,9 +821,10 @@ fn make_config_c(extension_modules: &BTreeMap<String, ExtensionModule>) -> Strin
 
 /// Create a static libpython from a Python distribution.
 ///
-/// This should only be called from the context of a build script, as it
-/// emits cargo: lines to stdout.
-pub fn link_libpython(dist: &PythonDistributionInfo, resources: &PythonResources) {
+/// Returns a vector of cargo: lines that can be printed in build scripts.
+pub fn link_libpython(dist: &PythonDistributionInfo, resources: &PythonResources) -> Vec<String> {
+    let mut res: Vec<String> = Vec::new();
+
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
     let temp_dir = tempdir::TempDir::new("libpython").unwrap();
@@ -934,15 +935,15 @@ pub fn link_libpython(dist: &PythonDistributionInfo, resources: &PythonResources
         let library_path = out_dir.join(format!("lib{}.a", library));
         fs::copy(fs_path, library_path).expect("unable to copy library file");
 
-        println!("cargo:rustc-link-lib=static={}", library);
+        res.push(format!("cargo:rustc-link-lib=static={}", library))
     }
 
     for framework in needed_frameworks {
-        println!("cargo:rustc-link-lib=framework={}", framework);
+        res.push(format!("cargo:rustc-link-lib=framework={}", framework));
     }
 
     for lib in needed_system_libraries {
-        println!("cargo:rustc-link-lib={}", lib);
+        res.push(format!("cargo:rustc-link-lib={}", lib));
     }
 
     // python3-sys uses #[link(name="pythonXY")] attributes heavily on Windows. Its
@@ -962,6 +963,8 @@ pub fn link_libpython(dist: &PythonDistributionInfo, resources: &PythonResources
     // the requirement of ``python3-sys`` that a ``pythonXY.lib`` file exists.
 
     build.compile("pythonXY");
+
+    res
 }
 
 pub fn write_data_rs(
@@ -1051,7 +1054,11 @@ pub fn write_data_rs(
 /// Derive build artifacts from a PyOxidizer config file.
 ///
 /// Artifacts will be written to ``out_dir``.
-pub fn process_config(config_path: &Path, out_dir: &Path) {
+///
+/// Returns a vector of cargo: lines that can be printed from build scripts.
+pub fn process_config(config_path: &Path, out_dir: &Path) -> Vec<String> {
+    let mut res: Vec<String> = Vec::new();
+
     let mut fh = fs::File::open(config_path).unwrap();
 
     let mut config_data = Vec::new();
@@ -1059,11 +1066,8 @@ pub fn process_config(config_path: &Path, out_dir: &Path) {
 
     let config = parse_config(&config_data);
 
-    if config.python_distribution_path.is_some() {
-        println!(
-            "cargo:rerun-if-changed={}",
-            config.python_distribution_path.as_ref().unwrap()
-        );
+    if let Some(ref path) = config.python_distribution_path {
+        res.push(format!("cargo:rerun-if-changed={}", path));
     }
 
     // Obtain the configured Python distribution and parse it to a data structure.
@@ -1092,10 +1096,10 @@ pub fn process_config(config_path: &Path, out_dir: &Path) {
     // Produce a static library containing the Python bits we need.
     // As a side-effect, this will emit the cargo: lines needed to link this
     // library.
-    link_libpython(&dist, &resources);
+    res.extend(link_libpython(&dist, &resources));
 
     for p in &resources.read_files {
-        println!("cargo:rerun-if-changed={}", p.to_str().unwrap());
+        res.push(format!("cargo:rerun-if-changed={}", p.display()));
     }
 
     // Produce the packed data structures containing Python modules.
@@ -1117,6 +1121,8 @@ pub fn process_config(config_path: &Path, out_dir: &Path) {
         &py_modules_path,
         &pyc_modules_path,
     );
+
+    res
 }
 
 pub fn find_pyoxidizer_config_file(start_dir: &Path, target: &str) -> Option<PathBuf> {
@@ -1190,5 +1196,7 @@ pub fn run_from_build(build_script: &str) {
     let out_dir = env::var("OUT_DIR").unwrap();
     let out_dir_path = Path::new(&out_dir);
 
-    process_config(&config_path, out_dir_path);
+    for line in process_config(&config_path, out_dir_path) {
+        println!("{}", line);
+    }
 }
