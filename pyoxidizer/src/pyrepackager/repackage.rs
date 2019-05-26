@@ -1189,12 +1189,12 @@ pub fn process_config(
     println!("compiling custom importlib modules to support in-memory importing");
     let importlib = derive_importlib(&dist);
 
-    let importlib_bootstrap_path = Path::new(&out_dir).join("importlib_bootstrap.pyc");
+    let importlib_bootstrap_path = Path::new(&out_dir).join("importlib_bootstrap");
     let mut fh = fs::File::create(&importlib_bootstrap_path).unwrap();
     fh.write_all(&importlib.bootstrap_bytecode).unwrap();
 
     let importlib_bootstrap_external_path =
-        Path::new(&out_dir).join("importlib_bootstrap_external.pyc");
+        Path::new(&out_dir).join("importlib_bootstrap_external");
     let mut fh = fs::File::create(&importlib_bootstrap_external_path).unwrap();
     fh.write_all(&importlib.bootstrap_external_bytecode)
         .unwrap();
