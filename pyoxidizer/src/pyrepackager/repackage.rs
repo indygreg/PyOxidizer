@@ -1050,10 +1050,8 @@ pub fn write_data_rs(
 
 /// Derive build artifacts from a PyOxidizer config file.
 ///
-/// Artifacts will be written to ``out_dir``. The filenames will be
-/// prefixed with ``prefix`` so multiple artifacts can be stored in the
-/// same directory.
-pub fn process_config(config_path: &Path, out_dir: &Path, prefix: &str) {
+/// Artifacts will be written to ``out_dir``.
+pub fn process_config(config_path: &Path, out_dir: &Path) {
     let mut fh = fs::File::open(config_path).unwrap();
 
     let mut config_data = Vec::new();
@@ -1079,13 +1077,12 @@ pub fn process_config(config_path: &Path, out_dir: &Path, prefix: &str) {
     // Produce the custom frozen importlib modules.
     let importlib = derive_importlib(&dist);
 
-    let importlib_bootstrap_path =
-        Path::new(&out_dir).join(format!("{}importlib_bootstrap.pyc", prefix));
+    let importlib_bootstrap_path = Path::new(&out_dir).join("importlib_bootstrap.pyc");
     let mut fh = fs::File::create(&importlib_bootstrap_path).unwrap();
     fh.write_all(&importlib.bootstrap_bytecode).unwrap();
 
     let importlib_bootstrap_external_path =
-        Path::new(&out_dir).join(format!("{}importlib_bootstrap_external.pyc", prefix));
+        Path::new(&out_dir).join("importlib_bootstrap_external.pyc");
     let mut fh = fs::File::create(&importlib_bootstrap_external_path).unwrap();
     fh.write_all(&importlib.bootstrap_external_bytecode)
         .unwrap();
@@ -1105,13 +1102,13 @@ pub fn process_config(config_path: &Path, out_dir: &Path, prefix: &str) {
     // TODO there is tons of room to customize this behavior, including
     // reordering modules so the memory order matches import order.
 
-    let module_names_path = Path::new(&out_dir).join(format!("{}py-module-names", prefix));
-    let py_modules_path = Path::new(&out_dir).join(format!("{}py-modules", prefix));
-    let pyc_modules_path = Path::new(&out_dir).join(format!("{}pyc-modules", prefix));
+    let module_names_path = Path::new(&out_dir).join("py-module-names");
+    let py_modules_path = Path::new(&out_dir).join("py-modules");
+    let pyc_modules_path = Path::new(&out_dir).join("pyc-modules");
 
     resources.write_blobs(&module_names_path, &py_modules_path, &pyc_modules_path);
 
-    let dest_path = Path::new(&out_dir).join(format!("{}data.rs", prefix));
+    let dest_path = Path::new(&out_dir).join("data.rs");
     write_data_rs(
         &dest_path,
         &config,
@@ -1193,5 +1190,5 @@ pub fn run_from_build(build_script: &str) {
     let out_dir = env::var("OUT_DIR").unwrap();
     let out_dir_path = Path::new(&out_dir);
 
-    process_config(&config_path, out_dir_path, "");
+    process_config(&config_path, out_dir_path);
 }
