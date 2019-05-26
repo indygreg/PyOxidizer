@@ -832,19 +832,6 @@ pub fn link_libpython(
     let temp_dir = tempdir::TempDir::new("libpython").unwrap();
     let temp_dir_path = temp_dir.path();
 
-    let mut build = cc::Build::new();
-
-    for (rel_path, fs_path) in &dist.objs_core {
-        let parent = temp_dir_path.join(rel_path.parent().unwrap());
-        create_dir_all(parent).unwrap();
-
-        let full = temp_dir_path.join(rel_path);
-        fs::copy(fs_path, &full).expect("unable to copy object file");
-
-        println!("adding {} to embedded Python", full.display());
-        build.object(&full);
-    }
-
     let extension_modules = &resources.extension_modules;
 
     // We derive a custom Modules/config.c from the set of extension modules.
@@ -877,6 +864,19 @@ pub fn link_libpython(
 
     // Since we disabled cargo metadata lines above.
     res.push("cargo:rustc-link-lib=static=pyembeddedconfig".to_string());
+
+    let mut build = cc::Build::new();
+
+    for (rel_path, fs_path) in &dist.objs_core {
+        let parent = temp_dir_path.join(rel_path.parent().unwrap());
+        create_dir_all(parent).unwrap();
+
+        let full = temp_dir_path.join(rel_path);
+        fs::copy(fs_path, &full).expect("unable to copy object file");
+
+        println!("adding {} to embedded Python", full.display());
+        build.object(&full);
+    }
 
     // For each extension module, extract and use its object file. We also
     // use this pass to collect the set of libraries that we need to link
