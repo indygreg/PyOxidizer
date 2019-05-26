@@ -16,6 +16,7 @@ lazy_static! {
     static ref PYEMBED_RS_FILES: BTreeMap<&'static str, &'static [u8]> = {
         let mut res: BTreeMap<&'static str, &'static [u8]> = BTreeMap::new();
 
+        res.insert("config.rs", include_bytes!("pyembed/config.rs"));
         res.insert("lib.rs", include_bytes!("pyembed/lib.rs"));
         res.insert("data.rs", include_bytes!("pyembed/data.rs"));
         res.insert("pyalloc.rs", include_bytes!("pyembed/pyalloc.rs"));

@@ -1,0 +1,1 @@
+../../pyoxidizer/src/pyembed/config.rs

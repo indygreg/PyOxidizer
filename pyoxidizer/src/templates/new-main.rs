@@ -1,4 +1,4 @@
-use pyembed::{MainPythonInterpreter, PythonConfig};
+use pyembed::{default_python_config, MainPythonInterpreter};
 
 fn main() {
     // The following code is in a block so the MainPythonInterpreter is destroyed in an
@@ -6,7 +6,7 @@ fn main() {
     let code = {
         // Load the default Python configuration as derived by the PyOxidizer config
         // file used at build time.
-        let config = PythonConfig::default();
+        let config = default_python_config();
 
         // Construct a new Python interpreter using that config.
         let mut interp = MainPythonInterpreter::new(config);
