@@ -1299,9 +1299,13 @@ pub fn process_config_and_copy_artifacts(
     let target = "x86_64-unknown-linux-gnu";
     let opt_level = "0";
 
-    let embedded_config = process_config(config_path, build_dir, host, target, opt_level);
+    create_dir_all(build_dir).expect("unable to create build directory");
+    let build_dir = std::fs::canonicalize(build_dir).expect("unable to canonicalize build_dir");
 
     create_dir_all(out_dir).expect("unable to create output directory");
+    let out_dir = std::fs::canonicalize(out_dir).expect("unable to canonicalize out_dir");
+
+    let embedded_config = process_config(config_path, &build_dir, host, target, opt_level);
 
     let importlib_bootstrap_path = out_dir.join("importlib_bootstrap");
     let importlib_bootstrap_external_path = out_dir.join("importlib_bootstrap_external");

@@ -87,13 +87,7 @@ fn main() {
             let config_path = PathBuf::from(config_path);
 
             let (build_path, _temp_dir) = match args.value_of("build_path") {
-                Some(path) => {
-                    let path = PathBuf::from(path);
-                    std::fs::create_dir_all(&path).expect("unable to create build directory");
-                    let path = std::fs::canonicalize(path).expect("unable to canonicalize path");
-
-                    (path, None)
-                }
+                Some(path) => (PathBuf::from(path), None),
                 None => {
                     let temp_dir = tempdir::TempDir::new("pyoxidizer-build-artifacts")
                         .expect("unable to create temp dir");
