@@ -1296,8 +1296,17 @@ pub fn process_config_and_copy_artifacts(
     out_dir: &Path,
 ) -> EmbeddedPythonConfig {
     // TODO derive these more intelligently.
-    let host = "x86_64-unknown-linux-gnu";
-    let target = "x86_64-unknown-linux-gnu";
+    let host = if cfg!(target_os = "linux") {
+        "x86_64-unknown-linux-gnu"
+    } else if cfg!(target_os = "windows") {
+        "x86_64-pc-windows-msvc"
+    } else if cfg!(target_os = "macos") {
+        "x86_64-apple-darwin"
+    } else {
+        panic!("unable to resolve target for current binary (this is a known issue)");
+    };
+
+    let target = host;
     let opt_level = "0";
 
     create_dir_all(build_dir).expect("unable to create build directory");
