@@ -822,10 +822,12 @@ fn make_config_c(extension_modules: &BTreeMap<String, ExtensionModule>) -> Strin
 /// Create a static libpython from a Python distribution.
 ///
 /// Returns a vector of cargo: lines that can be printed in build scripts.
-pub fn link_libpython(dist: &PythonDistributionInfo, resources: &PythonResources) -> Vec<String> {
+pub fn link_libpython(
+    dist: &PythonDistributionInfo,
+    resources: &PythonResources,
+    out_dir: &Path,
+) -> Vec<String> {
     let mut res: Vec<String> = Vec::new();
-
-    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
     let temp_dir = tempdir::TempDir::new("libpython").unwrap();
     let temp_dir_path = temp_dir.path();
@@ -1096,7 +1098,7 @@ pub fn process_config(config_path: &Path, out_dir: &Path) -> Vec<String> {
     // Produce a static library containing the Python bits we need.
     // As a side-effect, this will emit the cargo: lines needed to link this
     // library.
-    res.extend(link_libpython(&dist, &resources));
+    res.extend(link_libpython(&dist, &resources, out_dir));
 
     for p in &resources.read_files {
         res.push(format!("cargo:rerun-if-changed={}", p.display()));
