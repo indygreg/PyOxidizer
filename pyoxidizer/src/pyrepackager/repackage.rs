@@ -121,7 +121,8 @@ pub enum PythonResource {
     },
     ModuleBytecode {
         name: String,
-        bytecode: Vec<u8>,
+        source: Vec<u8>,
+        optimize_level: i32,
     },
     Resource {
         name: String,
@@ -345,8 +346,6 @@ fn resolve_python_packaging(
             exclude_test_modules,
             include_source,
         } => {
-            let mut compiler = bytecode_compiler(&dist);
-
             for (name, fs_path) in &dist.py_modules {
                 if is_stdlib_test_package(&name) && *exclude_test_modules {
                     println!("skipping test stdlib module: {}", name);
@@ -355,17 +354,12 @@ fn resolve_python_packaging(
 
                 let source = fs::read(fs_path).expect("error reading source file");
 
-                let bytecode = match compiler.compile(&source, &name, *optimize_level as i32) {
-                    Ok(res) => res,
-                    Err(msg) => panic!("error compiling bytecode: {}", msg),
-                };
-
                 if *include_source {
                     res.push(PythonResourceEntry {
                         action: ResourceAction::Add,
                         resource: PythonResource::ModuleSource {
                             name: name.clone(),
-                            source,
+                            source: source.clone(),
                         },
                     });
                 }
@@ -374,7 +368,8 @@ fn resolve_python_packaging(
                     action: ResourceAction::Add,
                     resource: PythonResource::ModuleBytecode {
                         name: name.clone(),
-                        bytecode,
+                        source,
+                        optimize_level: *optimize_level as i32,
                     },
                 });
             }
@@ -397,8 +392,6 @@ fn resolve_python_packaging(
             packages_path.push("python".to_owned() + &dist.version[0..3]);
             packages_path.push("site-packages");
 
-            let mut compiler = bytecode_compiler(&dist);
-
             for resource in find_python_resources(&packages_path) {
                 match resource.flavor {
                     PythonResourceType::Source => {
@@ -417,19 +410,13 @@ fn resolve_python_packaging(
                         }
 
                         let source = fs::read(resource.path).expect("error reading source file");
-                        let bytecode =
-                            match compiler.compile(&source, &resource.name, *optimize_level as i32)
-                            {
-                                Ok(res) => res,
-                                Err(msg) => panic!("error compiling bytecode: {}", msg),
-                            };
 
                         if *include_source {
                             res.push(PythonResourceEntry {
                                 action: ResourceAction::Add,
                                 resource: PythonResource::ModuleSource {
                                     name: resource.name.clone(),
-                                    source,
+                                    source: source.clone(),
                                 },
                             });
                         }
@@ -438,7 +425,8 @@ fn resolve_python_packaging(
                             action: ResourceAction::Add,
                             resource: PythonResource::ModuleBytecode {
                                 name: resource.name.clone(),
-                                bytecode,
+                                source,
+                                optimize_level: *optimize_level as i32,
                             },
                         });
                     }
@@ -455,8 +443,6 @@ fn resolve_python_packaging(
             include_source,
         } => {
             let path = PathBuf::from(path);
-
-            let mut compiler = bytecode_compiler(&dist);
 
             for resource in find_python_resources(&path) {
                 match resource.flavor {
@@ -484,19 +470,13 @@ fn resolve_python_packaging(
                         }
 
                         let source = fs::read(resource.path).expect("error reading source file");
-                        let bytecode =
-                            match compiler.compile(&source, &resource.name, *optimize_level as i32)
-                            {
-                                Ok(res) => res,
-                                Err(msg) => panic!("error compiling bytecode: {}", msg),
-                            };
 
                         if *include_source {
                             res.push(PythonResourceEntry {
                                 action: ResourceAction::Add,
                                 resource: PythonResource::ModuleSource {
                                     name: resource.name.clone(),
-                                    source,
+                                    source: source.clone(),
                                 },
                             });
                         }
@@ -505,7 +485,8 @@ fn resolve_python_packaging(
                             action: ResourceAction::Add,
                             resource: PythonResource::ModuleBytecode {
                                 name: resource.name.clone(),
-                                bytecode,
+                                source,
+                                optimize_level: *optimize_level as i32,
                             },
                         });
                     }
@@ -538,23 +519,16 @@ fn resolve_python_packaging(
                 .status()
                 .expect("error running pip");
 
-            let mut compiler = bytecode_compiler(&dist);
-
             for resource in find_python_resources(&temp_dir_path) {
                 if let PythonResourceType::Source {} = resource.flavor {
                     let source = fs::read(resource.path).expect("error reading source file");
-                    let bytecode =
-                        match compiler.compile(&source, &resource.name, *optimize_level as i32) {
-                            Ok(res) => res,
-                            Err(msg) => panic!("error compiling bytecode: {}", msg),
-                        };
 
                     if *include_source {
                         res.push(PythonResourceEntry {
                             action: ResourceAction::Add,
                             resource: PythonResource::ModuleSource {
                                 name: resource.name.clone(),
-                                source,
+                                source: source.clone(),
                             },
                         });
                     }
@@ -563,7 +537,8 @@ fn resolve_python_packaging(
                         action: ResourceAction::Add,
                         resource: PythonResource::ModuleBytecode {
                             name: resource.name.clone(),
-                            bytecode,
+                            source,
+                            optimize_level: *optimize_level as i32,
                         },
                     });
                 }
@@ -583,9 +558,13 @@ fn resolve_python_packaging(
 pub fn resolve_python_resources(config: &Config, dist: &PythonDistributionInfo) -> PythonResources {
     let packages = &config.python_packaging;
 
+    // Since bytecode has a non-trivial cost to generate, our strategy is to accumulate
+    // requests for bytecode then generate bytecode for the final set of inputs at the
+    // end of processing. That way we don't generate bytecode only to throw it away later.
+
     let mut extension_modules: BTreeMap<String, ExtensionModule> = BTreeMap::new();
     let mut sources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
-    let mut bytecodes: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    let mut bytecode_requests: BTreeMap<String, (Vec<u8>, i32)> = BTreeMap::new();
     let mut resources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut read_files: Vec<PathBuf> = Vec::new();
 
@@ -609,13 +588,20 @@ pub fn resolve_python_resources(config: &Config, dist: &PythonDistributionInfo) 
                     println!("removing module source: {}", name);
                     sources.remove(&name);
                 }
-                (ResourceAction::Add, PythonResource::ModuleBytecode { name, bytecode }) => {
+                (
+                    ResourceAction::Add,
+                    PythonResource::ModuleBytecode {
+                        name,
+                        source,
+                        optimize_level,
+                    },
+                ) => {
                     println!("adding module bytecode: {}", name);
-                    bytecodes.insert(name.clone(), bytecode);
+                    bytecode_requests.insert(name.clone(), (source, optimize_level));
                 }
                 (ResourceAction::Remove, PythonResource::ModuleBytecode { name, .. }) => {
                     println!("removing module bytecode: {}", name);
-                    bytecodes.remove(&name);
+                    bytecode_requests.remove(&name);
                 }
                 (ResourceAction::Add, PythonResource::Resource { name, data }) => {
                     println!("adding resource: {}", name);
@@ -638,7 +624,7 @@ pub fn resolve_python_resources(config: &Config, dist: &PythonDistributionInfo) 
             println!("filtering module sources from {:?}", packaging);
             filter_btreemap(&mut sources, &include_names);
             println!("filtering module bytecode from {:?}", packaging);
-            filter_btreemap(&mut bytecodes, &include_names);
+            filter_btreemap(&mut bytecode_requests, &include_names);
             println!("filtering resources from {:?}", packaging);
             filter_btreemap(&mut resources, &include_names);
 
@@ -665,7 +651,7 @@ pub fn resolve_python_resources(config: &Config, dist: &PythonDistributionInfo) 
             println!("filtering module sources from {:?}", packaging);
             filter_btreemap(&mut sources, &include_names);
             println!("filtering module bytecode from {:?}", packaging);
-            filter_btreemap(&mut bytecodes, &include_names);
+            filter_btreemap(&mut bytecode_requests, &include_names);
             println!("filtering resources from {:?}", packaging);
             filter_btreemap(&mut resources, &include_names);
         }
@@ -686,6 +672,21 @@ pub fn resolve_python_resources(config: &Config, dist: &PythonDistributionInfo) 
     for e in OS_IGNORE_EXTENSIONS.as_slice() {
         println!("removing extension module due to incompatibility: {}", e);
         extension_modules.remove(&String::from(*e));
+    }
+
+    let mut bytecodes: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+
+    {
+        let mut compiler = bytecode_compiler(&dist);
+
+        for (name, (source, optimize_level)) in bytecode_requests {
+            let bytecode = match compiler.compile(&source, &name, optimize_level) {
+                Ok(res) => res,
+                Err(msg) => panic!("error compiling bytecode for {}: {}", name, msg),
+            };
+
+            bytecodes.insert(name.clone(), bytecode);
+        }
     }
 
     let mut all_modules: BTreeSet<String> = BTreeSet::new();
