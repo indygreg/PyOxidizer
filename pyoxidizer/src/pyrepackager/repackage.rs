@@ -835,6 +835,7 @@ pub fn link_libpython(
     out_dir: &Path,
     host: &str,
     target: &str,
+    opt_level: &str,
 ) -> LibpythonInfo {
     let mut cargo_metadata: Vec<String> = Vec::new();
 
@@ -869,6 +870,7 @@ pub fn link_libpython(
         .out_dir(out_dir)
         .host(host)
         .target(target)
+        .opt_level_str(opt_level)
         .file(config_c_path)
         .include(temp_dir_path)
         .define("NDEBUG", None)
@@ -885,6 +887,7 @@ pub fn link_libpython(
     build.out_dir(out_dir);
     build.host(host);
     build.target(target);
+    build.opt_level_str(opt_level);
 
     println!(
         "adding {} object files required by Python core: {:#?}",
@@ -1150,6 +1153,7 @@ pub fn process_config(
     out_dir: &Path,
     host: &str,
     target: &str,
+    opt_level: &str,
 ) -> EmbeddedPythonConfig {
     let mut cargo_metadata: Vec<String> = Vec::new();
 
@@ -1244,7 +1248,7 @@ pub fn process_config(
 
     // Produce a static library containing the Python bits we need.
     println!("generating custom link library containing Python...");
-    let libpython_info = link_libpython(&dist, &resources, out_dir, host, target);
+    let libpython_info = link_libpython(&dist, &resources, out_dir, host, target, opt_level);
     cargo_metadata.extend(libpython_info.cargo_metadata);
 
     for p in &resources.read_files {
@@ -1312,6 +1316,7 @@ pub fn run_from_build(build_script: &str) {
 
     let host = env::var("HOST").expect("HOST not defined");
     let target = env::var("TARGET").expect("TARGET not defined");
+    let opt_level = env::var("OPT_LEVEL").expect("OPT_LEVEL not defined");
 
     let config_path = match env::var("PYOXIDIZER_CONFIG") {
         Ok(config_env) => {
@@ -1347,7 +1352,9 @@ pub fn run_from_build(build_script: &str) {
     let out_dir = env::var("OUT_DIR").unwrap();
     let out_dir_path = Path::new(&out_dir);
 
-    for line in process_config(&config_path, out_dir_path, &host, &target).cargo_metadata {
+    for line in
+        process_config(&config_path, out_dir_path, &host, &target, &opt_level).cargo_metadata
+    {
         println!("{}", line);
     }
 }
