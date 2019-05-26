@@ -34,8 +34,6 @@ const FROZEN_IMPORTLIB_EXTERNAL_NAME: &'static [u8] = b"_frozen_importlib_extern
 /// Each instance contains the total state to define the run-time behavior of
 /// a Python interpreter.
 pub struct PythonConfig {
-    /// Path to the current executable.
-    pub exe: PathBuf,
     /// Name of the current program to tell to Python.
     pub program_name: String,
     /// Name of encoding for stdio handles.
@@ -106,7 +104,6 @@ impl PythonConfig {
             .collect::<Vec<String>>();
 
         PythonConfig {
-            exe: env::current_exe().unwrap(),
             program_name: PROGRAM_NAME.to_string(),
             standard_io_encoding,
             standard_io_errors,
@@ -279,6 +276,8 @@ impl<'a> MainPythonInterpreter<'a> {
 
         let config = &self.config;
 
+        let exe = env::current_exe().unwrap();
+
         if let Some(raw_allocator) = &self.raw_allocator {
             unsafe {
                 let ptr = &raw_allocator.allocator as *const _;
@@ -345,7 +344,7 @@ impl<'a> MainPythonInterpreter<'a> {
             }
         }
 
-        let home = OwnedPyStr::from(config.exe.to_str().unwrap());
+        let home = OwnedPyStr::from(exe.to_str().unwrap());
 
         unsafe {
             // Pointer needs to live for lifetime of interpreter.
@@ -506,7 +505,7 @@ impl<'a> MainPythonInterpreter<'a> {
         for path in &config.sys_paths {
             let path = path.replace(
                 "$ORIGIN",
-                config.exe.parent().unwrap().display().to_string().as_str(),
+                exe.parent().unwrap().display().to_string().as_str(),
             );
             let py_path = PyString::new(py, path.as_str());
 
