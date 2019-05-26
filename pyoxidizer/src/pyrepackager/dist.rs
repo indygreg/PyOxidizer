@@ -480,6 +480,7 @@ pub fn download_distribution(url: &str, sha256: &str, cache_dir: &Path) -> PathB
 
     let mut data: Vec<u8> = Vec::new();
 
+    println!("downloading {}", url);
     let mut response = reqwest::get(url).expect("unable to perform HTTP request");
     response
         .read_to_end(&mut data)
@@ -507,6 +508,10 @@ pub fn copy_local_distribution(path: &PathBuf, sha256: &str, cache_dir: &Path) -
         let file_hash = sha256_path(&cache_path);
 
         if file_hash == expected_hash {
+            println!(
+                "existing {} passes SHA-256 integrity check",
+                cache_path.display()
+            );
             return cache_path;
         }
     }
@@ -517,6 +522,7 @@ pub fn copy_local_distribution(path: &PathBuf, sha256: &str, cache_dir: &Path) -
         panic!("sha256 of Python distribution does not validate");
     }
 
+    println!("copying {}", path.display());
     std::fs::copy(path, &cache_path).unwrap();
 
     cache_path
