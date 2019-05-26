@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use byteorder::{LittleEndian, WriteBytesExt};
+use glob::glob as findglob;
 use lazy_static::lazy_static;
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
@@ -570,6 +571,8 @@ fn resolve_python_packaging(
 
         // This is a no-op because it can only be handled at a higher level.
         PythonPackaging::FilterFileInclude { .. } => {}
+
+        PythonPackaging::FilterFilesInclude { .. } => {}
     }
 
     res
@@ -639,6 +642,31 @@ pub fn resolve_python_resources(config: &Config, dist: &PythonDistributionInfo) 
             filter_btreemap(&mut resources, &include_names);
 
             read_files.push(PathBuf::from(path));
+        } else if let PythonPackaging::FilterFilesInclude { glob } = packaging {
+            let mut include_names: BTreeSet<String> = BTreeSet::new();
+
+            for entry in findglob(glob).expect("filter-files-include glob match") {
+                match entry {
+                    Ok(path) => {
+                        let new_names =
+                            read_resource_names_file(&path).expect("failed to read resource names");
+                        include_names.extend(new_names);
+                        read_files.push(path.to_path_buf());
+                    }
+                    Err(e) => {
+                        panic!("error reading resource names file: {:?}", e);
+                    }
+                }
+            }
+
+            println!("filtering extension modules from {:?}", packaging);
+            filter_btreemap(&mut extension_modules, &include_names);
+            println!("filtering module sources from {:?}", packaging);
+            filter_btreemap(&mut sources, &include_names);
+            println!("filtering module bytecode from {:?}", packaging);
+            filter_btreemap(&mut bytecodes, &include_names);
+            println!("filtering resources from {:?}", packaging);
+            filter_btreemap(&mut resources, &include_names);
         }
     }
 

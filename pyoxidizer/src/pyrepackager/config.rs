@@ -120,6 +120,9 @@ pub enum PythonPackaging {
 
     #[serde(rename = "filter-file-include")]
     FilterFileInclude { path: String },
+
+    #[serde(rename = "filter-files-include")]
+    FilterFilesInclude { glob: String },
 }
 
 #[derive(Debug, Deserialize)]

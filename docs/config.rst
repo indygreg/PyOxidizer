@@ -422,6 +422,25 @@ The following keys control behavior:
    be valid UTF-8 and consist of a ``\n`` delimited list of resource names.
    Empty lines and lines beginning with ``#`` are ignored.
 
+``filter-files-include``
+------------------------
+
+``type = "filter-files-include`` operates like ``filter-file-include`` but it
+can read resource names from multiple files.
+
+The following keys control behavior:
+
+``glob``
+   Globbing path pattern of filter files to read. ``*`` denotes all entries
+   in a directory. ``**`` denotes recursive directories. Uses the Rust ``glob``
+   crate under the hood.
+
+Example usage::
+
+   [[python_packages]]
+   type = "filter-files-include"
+   glob = "/path/to/files/modules-*"
+
 ``[python_run]``
 ================
 
