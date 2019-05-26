@@ -445,10 +445,18 @@ pub fn analyze_python_distribution_tar_zst<R: Read>(
 
 fn sha256_path(path: &PathBuf) -> Vec<u8> {
     let mut hasher = Sha256::new();
-    let mut fh = File::open(&path).unwrap();
-    let mut data = Vec::new();
-    fh.read_to_end(&mut data).unwrap();
-    hasher.input(data);
+    let fh = File::open(&path).unwrap();
+    let mut reader = std::io::BufReader::new(fh);
+
+    let mut buffer = [0; 32768];
+
+    loop {
+        let count = reader.read(&mut buffer).expect("error reading");
+        if count == 0 {
+            break;
+        }
+        hasher.input(&buffer[..count]);
+    }
 
     hasher.result().to_vec()
 }
