@@ -43,6 +43,28 @@ fn main() {
                         .help("Name of project to initialize"),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("build-artifacts")
+                .about("Process a PyOxidizer config file and build derived artifacts")
+                .arg(
+                    Arg::with_name("config_path")
+                        .required(true)
+                        .value_name("CONFIG_PATH")
+                        .help("Path to PyOxidizer config file to process"),
+                )
+                .arg(
+                    Arg::with_name("build_path")
+                        .long("build-dir")
+                        .value_name("DIR")
+                        .help("Directory for intermediate build state"),
+                )
+                .arg(
+                    Arg::with_name("dest_path")
+                        .required(true)
+                        .value_name("DIR")
+                        .help("Directory to write artifacts to"),
+                ),
+        )
         .get_matches();
 
     let result = match matches.subcommand() {
@@ -56,6 +78,38 @@ fn main() {
             let path = args.value_of("path").unwrap();
             let path = PathBuf::from(path);
             analyze::analyze_file(path);
+
+            Ok(())
+        }
+
+        ("build-artifacts", Some(args)) => {
+            let config_path = args.value_of("config_path").unwrap();
+            let config_path = PathBuf::from(config_path);
+
+            let (build_path, _temp_dir) = match args.value_of("build_path") {
+                Some(path) => {
+                    let path = PathBuf::from(path);
+                    std::fs::create_dir_all(&path).expect("unable to create build directory");
+                    let path = std::fs::canonicalize(path).expect("unable to canonicalize path");
+
+                    (path, None)
+                }
+                None => {
+                    let temp_dir = tempdir::TempDir::new("pyoxidizer-build-artifacts")
+                        .expect("unable to create temp dir");
+
+                    (PathBuf::from(temp_dir.path()), Some(temp_dir))
+                }
+            };
+
+            let dest_path = args.value_of("dest_path").unwrap();
+            let dest_path = PathBuf::from(dest_path);
+
+            pyrepackager::repackage::process_config_and_copy_artifacts(
+                &config_path,
+                &build_path,
+                &dest_path,
+            );
 
             Ok(())
         }

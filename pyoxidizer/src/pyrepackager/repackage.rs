@@ -1279,6 +1279,59 @@ pub fn process_config(
     }
 }
 
+/// Process a PyOxidizer config file and copy important artifacts to a directory.
+///
+/// ``build_dir`` holds state for building artifacts. It should be consistent between
+/// invocations or else operations will be slow.
+///
+/// Important artifacts from ``build_dir`` are copied to ``out_dir``.
+pub fn process_config_and_copy_artifacts(
+    config_path: &Path,
+    build_dir: &Path,
+    out_dir: &Path,
+) -> EmbeddedPythonConfig {
+    // TODO derive these more intelligently.
+    let host = "x86_64-unknown-linux-gnu";
+    let target = "x86_64-unknown-linux-gnu";
+    let opt_level = "0";
+
+    let embedded_config = process_config(config_path, build_dir, host, target, opt_level);
+
+    create_dir_all(out_dir).expect("unable to create output directory");
+
+    let importlib_bootstrap_path = out_dir.join("importlib_bootstrap");
+    let importlib_bootstrap_external_path = out_dir.join("importlib_bootstrap_external");
+    let py_modules_path = out_dir.join("py-modules");
+    let pyc_modules_path = out_dir.join("pyc-modules");
+    let libpython_path = out_dir.join("libpythonXY.a");
+
+    fs::copy(
+        embedded_config.importlib_bootstrap_path,
+        &importlib_bootstrap_path,
+    )
+    .expect("error copying file");
+    fs::copy(
+        embedded_config.importlib_bootstrap_external_path,
+        &importlib_bootstrap_external_path,
+    )
+    .expect("error copying file");
+    fs::copy(embedded_config.py_modules_path, &py_modules_path).expect("error copying file");
+    fs::copy(embedded_config.pyc_modules_path, &pyc_modules_path).expect("error copying file");
+    fs::copy(embedded_config.libpython_path, &libpython_path).expect("error copying file");
+
+    EmbeddedPythonConfig {
+        python_distribution_path: embedded_config.python_distribution_path,
+        importlib_bootstrap_path,
+        importlib_bootstrap_external_path,
+        module_names_path: embedded_config.module_names_path,
+        py_modules_path,
+        pyc_modules_path,
+        libpython_path,
+        cargo_metadata: embedded_config.cargo_metadata,
+        python_config_rs: embedded_config.python_config_rs,
+    }
+}
+
 pub fn find_pyoxidizer_config_file(start_dir: &Path, target: &str) -> Option<PathBuf> {
     let basename = format!("pyoxidizer.{}.toml", target);
 
