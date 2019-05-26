@@ -1124,6 +1124,28 @@ pub fn process_config(config_path: &Path, out_dir: &Path) -> Vec<String> {
         resources.extension_modules.len()
     );
 
+    // Produce the packed data structures containing Python modules.
+    // TODO there is tons of room to customize this behavior, including
+    // reordering modules so the memory order matches import order.
+
+    println!("writing packed Python module and resource data...");
+    let module_names_path = Path::new(&out_dir).join("py-module-names");
+    let py_modules_path = Path::new(&out_dir).join("py-modules");
+    let pyc_modules_path = Path::new(&out_dir).join("pyc-modules");
+    resources.write_blobs(&module_names_path, &py_modules_path, &pyc_modules_path);
+
+    println!(
+        "{} bytes of Python module source data written to {}",
+        py_modules_path.metadata().unwrap().len(),
+        py_modules_path.display()
+    );
+    println!(
+        "{} bytes of Python module bytecode data written to {}",
+        pyc_modules_path.metadata().unwrap().len(),
+        pyc_modules_path.display()
+    );
+    println!("(Python resource files not yet supported)");
+
     // Produce a static library containing the Python bits we need.
     println!("generating custom link library containing Python...");
     res.extend(link_libpython(&dist, &resources, out_dir));
@@ -1131,16 +1153,6 @@ pub fn process_config(config_path: &Path, out_dir: &Path) -> Vec<String> {
     for p in &resources.read_files {
         res.push(format!("cargo:rerun-if-changed={}", p.display()));
     }
-
-    // Produce the packed data structures containing Python modules.
-    // TODO there is tons of room to customize this behavior, including
-    // reordering modules so the memory order matches import order.
-
-    let module_names_path = Path::new(&out_dir).join("py-module-names");
-    let py_modules_path = Path::new(&out_dir).join("py-modules");
-    let pyc_modules_path = Path::new(&out_dir).join("pyc-modules");
-
-    resources.write_blobs(&module_names_path, &py_modules_path, &pyc_modules_path);
 
     let dest_path = Path::new(&out_dir).join("data.rs");
     write_data_rs(
