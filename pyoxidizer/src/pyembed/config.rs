@@ -79,4 +79,18 @@ pub struct PythonConfig {
     /// the directory specified containing a ``\n`` delimited list of modules
     /// loaded in ``sys.modules``.
     pub write_modules_directory_env: Option<String>,
+
+    // TODO represent code execution settings as an enum.
+    /// What code to run by default.
+    ///
+    /// 0: Python REPL
+    /// 1: Execute a module as defined by ``run_module_name``.
+    /// 2: Execute code as defined by ``run_code``.
+    pub run_mode: i32,
+
+    /// Python module to run by default.
+    pub run_module_name: Option<String>,
+
+    /// Python code to evaluate by default.
+    pub run_code: Option<String>,
 }

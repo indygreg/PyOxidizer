@@ -485,16 +485,20 @@ impl<'a> MainPythonInterpreter<'a> {
     pub fn run(&mut self) -> PyResult<PyObject> {
         self.init();
 
-        match RUN_MODE {
+        // clone() to work around mutable borrow of an immutable reference.
+        let run_module_name = self.config.run_module_name.clone();
+        let run_code = self.config.run_code.clone();
+
+        match self.config.run_mode {
             0 => self.run_repl(),
-            1 => {
-                let name = RUN_MODULE_NAME.expect("RUN_MODULE_NAME should be defined");
-                self.run_module_as_main(name)
-            }
-            2 => {
-                let code = RUN_CODE.expect("RUN_CODE should be defined");
-                self.run_code(code)
-            }
+            1 => match run_module_name {
+                Some(name) => self.run_module_as_main(&name),
+                None => panic!("run_module_name should be defined"),
+            },
+            2 => match run_code {
+                Some(code) => self.run_code(&code),
+                None => panic!("run_code should be defined"),
+            },
             val => panic!("unhandled run mode: {}", val),
         }
     }

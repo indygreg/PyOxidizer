@@ -999,7 +999,10 @@ pub fn write_data_rs(
          pyc_modules_data: include_bytes!(\"{}\"),\n        \
          argvb: false,\n        \
          rust_allocator_raw: {},\n        \
-         write_modules_directory_env: {},\n    \
+         write_modules_directory_env: {},\n        \
+         run_mode: {},\n        \
+         run_module_name: {},\n        \
+         run_code: {},\n    \
          }}\n}}\n",
         config.program_name,
         match &config.stdio_encoding_name {
@@ -1030,6 +1033,19 @@ pub fn write_data_rs(
             Some(path) => "Some(\"".to_owned() + &path + "\".to_string())",
             _ => "None".to_owned(),
         },
+        match config.run {
+            RunMode::Repl {} => 0,
+            RunMode::Module { .. } => 1,
+            RunMode::Eval { .. } => 2,
+        },
+        match &config.run {
+            RunMode::Module { module } => "Some(\"".to_owned() + &module + "\".to_string())",
+            _ => "None".to_owned(),
+        },
+        match &config.run {
+            RunMode::Eval { code } => "Some(\"".to_owned() + &code + "\".to_string())",
+            _ => "None".to_owned(),
+        },
     ))
     .unwrap();
 
@@ -1041,34 +1057,6 @@ pub fn write_data_rs(
     f.write_fmt(format_args!(
         "pub const FROZEN_IMPORTLIB_EXTERNAL_DATA: &'static [u8] = include_bytes!(r\"{}\");\n",
         importlib_bootstrap_external_path.to_str().unwrap()
-    ))
-    .unwrap();
-
-    f.write_fmt(format_args!(
-        "pub const RUN_MODE: i32 = {};\n",
-        match config.run {
-            RunMode::Repl {} => 0,
-            RunMode::Module { .. } => 1,
-            RunMode::Eval { .. } => 2,
-        }
-    ))
-    .unwrap();
-
-    f.write_fmt(format_args!(
-        "pub const RUN_MODULE_NAME: Option<&'static str> = {};\n",
-        match &config.run {
-            RunMode::Module { module } => "Some(\"".to_owned() + &module + "\")",
-            _ => "None".to_owned(),
-        }
-    ))
-    .unwrap();
-
-    f.write_fmt(format_args!(
-        "pub const RUN_CODE: Option<&'static str> = {};\n",
-        match &config.run {
-            RunMode::Eval { code } => "Some(\"".to_owned() + &code + "\")",
-            _ => "None".to_owned(),
-        }
     ))
     .unwrap();
 }
