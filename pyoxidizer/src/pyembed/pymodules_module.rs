@@ -10,12 +10,14 @@ use std::io::Cursor;
 use byteorder::{LittleEndian, ReadBytesExt};
 use cpython::exc::{KeyError, ValueError};
 use cpython::{
-    py_class, py_class_impl, py_coerce_item, py_module_initializer, PyBool, PyErr, PyObject,
-    PyResult, PyString, Python, ToPyObject,
+    py_class, py_class_impl, py_coerce_item, PyBool, PyErr, PyModule, PyObject, PyResult, PyString,
+    Python, PythonObject, ToPyObject,
 };
+use python3_sys as pyffi;
 use python3_sys::{PyBUF_READ, PyMemoryView_FromMemory};
 
 use super::data::{PYC_MODULES_DATA, PY_MODULES_DATA};
+use super::pyinterp::PYMODULES_NAME;
 
 /// Parse modules blob data into a map of module name to module data.
 fn parse_modules_blob(data: &'static [u8]) -> Result<HashMap<&str, &[u8]>, &'static str> {
@@ -168,11 +170,57 @@ fn make_modules(py: Python) -> PyResult<ModulesType> {
     ModulesType::create_instance(py, py_modules, pyc_modules, packages)
 }
 
-py_module_initializer!(_pymodules, init_pymodules, PyInit__pymodules, |py, m| {
-    m.add(py, "__doc__", "Binary representation of Python modules")?;
+const DOC: &'static [u8] = b"Binary representation of Python modules\0";
 
+static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
+    m_base: pyffi::PyModuleDef_HEAD_INIT,
+    m_name: PYMODULES_NAME.as_ptr() as *const _,
+    m_doc: DOC.as_ptr() as *const _,
+    m_size: 0,
+    m_methods: 0 as *mut _,
+    m_slots: 0 as *mut _,
+    m_traverse: None,
+    m_clear: None,
+    m_free: None,
+};
+
+fn init(py: Python, m: &PyModule) -> PyResult<()> {
     let modules = make_modules(py)?;
     m.add(py, "MODULES", modules)?;
 
     Ok(())
-});
+}
+
+/// Module initialization function.
+///
+/// This creates the Python module object.
+///
+/// We don't use the macros in the cpython crate because they are somewhat
+/// opinionated about how things should work. e.g. they call
+/// PyEval_InitThreads(), which is undesired. We want total control.
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn PyInit__pymodules() -> *mut pyffi::PyObject {
+    let py = cpython::Python::assume_gil_acquired();
+    let module = pyffi::PyModule_Create(&mut MODULE_DEF);
+
+    if module.is_null() {
+        return module;
+    }
+
+    let module = match PyObject::from_owned_ptr(py, module).cast_into::<PyModule>(py) {
+        Ok(m) => m,
+        Err(e) => {
+            PyErr::from(e).restore(py);
+            return std::ptr::null_mut();
+        }
+    };
+
+    // We could inline init(), but then we'd need to do error handling multiple times.
+    match init(py, &module) {
+        Ok(()) => module.into_object().steal_ptr(),
+        Err(e) => {
+            e.restore(py);
+            std::ptr::null_mut()
+        }
+    }
+}

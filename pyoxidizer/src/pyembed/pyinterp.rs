@@ -22,7 +22,7 @@ use super::pyalloc::{make_raw_memory_allocator, RawAllocator};
 use super::pymodules_module::PyInit__pymodules;
 use super::pystr::{osstring_to_bytes, osstring_to_str, OwnedPyStr};
 
-const PYMODULES_NAME: &'static [u8] = b"_pymodules\0";
+pub const PYMODULES_NAME: &'static [u8] = b"_pymodules\0";
 
 const FROZEN_IMPORTLIB_NAME: &'static [u8] = b"_frozen_importlib\0";
 const FROZEN_IMPORTLIB_EXTERNAL_NAME: &'static [u8] = b"_frozen_importlib_external\0";
