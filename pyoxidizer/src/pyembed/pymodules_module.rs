@@ -144,8 +144,26 @@ fn populate_packages(packages: &mut HashSet<&'static str>, name: &'static str) {
     }
 }
 
-/// Construct the global ModulesType instance from an embedded data structure.
-fn make_modules(py: Python) -> PyResult<ModulesType> {
+const DOC: &'static [u8] = b"Binary representation of Python modules\0";
+
+static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
+    m_base: pyffi::PyModuleDef_HEAD_INIT,
+    m_name: PYMODULES_NAME.as_ptr() as *const _,
+    m_doc: DOC.as_ptr() as *const _,
+    m_size: 0,
+    m_methods: 0 as *mut _,
+    m_slots: 0 as *mut _,
+    m_traverse: None,
+    m_clear: None,
+    m_free: None,
+};
+
+/// Initialize the Python module exposing resource data.
+///
+/// This receives a handle to the current Python interpreter and just-created
+/// Python module instance. It populates the module object with handles to raw
+/// resource data.
+fn init(py: Python, m: &PyModule) -> PyResult<()> {
     let py_modules = match parse_modules_blob(PY_MODULES_DATA) {
         Ok(value) => value,
         Err(msg) => return Err(PyErr::new::<ValueError, _>(py, msg)),
@@ -167,25 +185,8 @@ fn make_modules(py: Python) -> PyResult<ModulesType> {
         populate_packages(&mut packages, key);
     }
 
-    ModulesType::create_instance(py, py_modules, pyc_modules, packages)
-}
+    let modules = ModulesType::create_instance(py, py_modules, pyc_modules, packages)?;
 
-const DOC: &'static [u8] = b"Binary representation of Python modules\0";
-
-static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
-    m_base: pyffi::PyModuleDef_HEAD_INIT,
-    m_name: PYMODULES_NAME.as_ptr() as *const _,
-    m_doc: DOC.as_ptr() as *const _,
-    m_size: 0,
-    m_methods: 0 as *mut _,
-    m_slots: 0 as *mut _,
-    m_traverse: None,
-    m_clear: None,
-    m_free: None,
-};
-
-fn init(py: Python, m: &PyModule) -> PyResult<()> {
-    let modules = make_modules(py)?;
     m.add(py, "MODULES", modules)?;
 
     Ok(())
