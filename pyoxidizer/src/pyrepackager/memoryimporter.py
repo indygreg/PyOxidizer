@@ -20,6 +20,8 @@ class MemoryFinder:
 
         is_package = self._modules.is_package(fullname)
 
+        # TODO consider setting origin and has_location so __file__ will
+        # be populated.
         return _bootstrap.ModuleSpec(fullname, self,
                                      is_package=is_package)
 
