@@ -1107,7 +1107,7 @@ pub fn process_config(config_path: &Path, out_dir: &Path, prefix: &str) {
 
     let module_names_path = Path::new(&out_dir).join(format!("{}py-module-names", prefix));
     let py_modules_path = Path::new(&out_dir).join(format!("{}py-modules", prefix));
-    let pyc_modules_path = Path::new(&out_dir).join(format!("{}.pyc-modules", prefix));
+    let pyc_modules_path = Path::new(&out_dir).join(format!("{}pyc-modules", prefix));
 
     resources.write_blobs(&module_names_path, &py_modules_path, &pyc_modules_path);
 
