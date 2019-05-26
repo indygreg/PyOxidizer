@@ -18,7 +18,6 @@ use cpython::{
 };
 
 use super::config::PythonConfig;
-use super::data::*;
 use super::pyalloc::{make_raw_memory_allocator, RawAllocator};
 use super::pymodules_module::PyInit__pymodules;
 use super::pystr::{osstring_to_bytes, osstring_to_str, OwnedPyStr};
@@ -39,17 +38,17 @@ pub enum PythonRunResult {
     Exit { code: i32 },
 }
 
-fn make_custom_frozen_modules() -> [pyffi::_frozen; 3] {
+fn make_custom_frozen_modules(config: &PythonConfig) -> [pyffi::_frozen; 3] {
     [
         pyffi::_frozen {
             name: FROZEN_IMPORTLIB_NAME.as_ptr() as *const i8,
-            code: FROZEN_IMPORTLIB_DATA.as_ptr(),
-            size: FROZEN_IMPORTLIB_DATA.len() as i32,
+            code: config.frozen_importlib_data.as_ptr(),
+            size: config.frozen_importlib_data.len() as i32,
         },
         pyffi::_frozen {
             name: FROZEN_IMPORTLIB_EXTERNAL_NAME.as_ptr() as *const i8,
-            code: FROZEN_IMPORTLIB_EXTERNAL_DATA.as_ptr(),
-            size: FROZEN_IMPORTLIB_EXTERNAL_DATA.len() as i32,
+            code: config.frozen_importlib_external_data.as_ptr(),
+            size: config.frozen_importlib_external_data.len() as i32,
         },
         pyffi::_frozen {
             name: null(),
@@ -124,9 +123,11 @@ impl<'a> MainPythonInterpreter<'a> {
             None
         };
 
+        let frozen_modules = make_custom_frozen_modules(&config);
+
         MainPythonInterpreter {
             config,
-            frozen_modules: make_custom_frozen_modules(),
+            frozen_modules,
             init_run: false,
             raw_allocator,
             gil: None,

@@ -995,6 +995,8 @@ pub fn write_data_rs(
          ignore_python_env: {},\n        \
          dont_write_bytecode: {},\n        \
          unbuffered_stdio: {},\n        \
+         frozen_importlib_data: include_bytes!(\"{}\"),\n        \
+         frozen_importlib_external_data: include_bytes!(\"{}\"),\n        \
          py_modules_data: include_bytes!(\"{}\"),\n        \
          pyc_modules_data: include_bytes!(\"{}\"),\n        \
          argvb: false,\n        \
@@ -1026,6 +1028,8 @@ pub fn write_data_rs(
         config.ignore_environment,
         config.dont_write_bytecode,
         config.unbuffered_stdio,
+        importlib_bootstrap_path.display(),
+        importlib_bootstrap_external_path.display(),
         py_modules_path.display(),
         pyc_modules_path.display(),
         config.rust_allocator_raw,
@@ -1046,17 +1050,6 @@ pub fn write_data_rs(
             RunMode::Eval { code } => "Some(\"".to_owned() + &code + "\".to_string())",
             _ => "None".to_owned(),
         },
-    ))
-    .unwrap();
-
-    f.write_fmt(format_args!(
-        "pub const FROZEN_IMPORTLIB_DATA: &'static [u8] = include_bytes!(r\"{}\");\n",
-        importlib_bootstrap_path.to_str().unwrap()
-    ))
-    .unwrap();
-    f.write_fmt(format_args!(
-        "pub const FROZEN_IMPORTLIB_EXTERNAL_DATA: &'static [u8] = include_bytes!(r\"{}\");\n",
-        importlib_bootstrap_external_path.to_str().unwrap()
     ))
     .unwrap();
 }

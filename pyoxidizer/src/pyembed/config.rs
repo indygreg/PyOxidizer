@@ -50,6 +50,12 @@ pub struct PythonConfig {
     /// Whether stdout and stderr streams should be unbuffered.
     pub unbuffered_stdio: bool,
 
+    /// Bytecode for the importlib._bootstrap / _frozen_importlib module.
+    pub frozen_importlib_data: &'static [u8],
+
+    /// Bytecode for the importlib._bootstrap_external / _frozen_importlib_external module.
+    pub frozen_importlib_external_data: &'static [u8],
+
     /// Reference to raw Python module source data.
     ///
     /// The referenced data is produced as part of PyOxidizer packaging. This
