@@ -1303,6 +1303,7 @@ pub fn process_config_and_copy_artifacts(
     let build_dir = std::fs::canonicalize(build_dir).expect("unable to canonicalize build_dir");
 
     create_dir_all(out_dir).expect("unable to create output directory");
+    let orig_out_dir = out_dir.to_path_buf();
     let out_dir = std::fs::canonicalize(out_dir).expect("unable to canonicalize out_dir");
 
     let embedded_config = process_config(config_path, &build_dir, host, target, opt_level);
@@ -1327,6 +1328,14 @@ pub fn process_config_and_copy_artifacts(
     fs::copy(embedded_config.pyc_modules_path, &pyc_modules_path).expect("error copying file");
     fs::copy(embedded_config.libpython_path, &libpython_path).expect("error copying file");
 
+    let python_config_rs = derive_python_config(
+        &embedded_config.config,
+        &orig_out_dir.join("importlib_bootstrap"),
+        &orig_out_dir.join("importlib_bootstrap_external"),
+        &orig_out_dir.join("py-modules"),
+        &orig_out_dir.join("pyc-modules"),
+    );
+
     EmbeddedPythonConfig {
         config: embedded_config.config,
         python_distribution_path: embedded_config.python_distribution_path,
@@ -1337,7 +1346,7 @@ pub fn process_config_and_copy_artifacts(
         pyc_modules_path,
         libpython_path,
         cargo_metadata: embedded_config.cargo_metadata,
-        python_config_rs: embedded_config.python_config_rs,
+        python_config_rs,
     }
 }
 

@@ -99,11 +99,14 @@ fn main() {
             let dest_path = args.value_of("dest_path").unwrap();
             let dest_path = PathBuf::from(dest_path);
 
-            pyrepackager::repackage::process_config_and_copy_artifacts(
+            let config = pyrepackager::repackage::process_config_and_copy_artifacts(
                 &config_path,
                 &build_path,
                 &dest_path,
             );
+
+            println!("Initialize a Python interpreter with the following struct:\n");
+            println!("{}", config.python_config_rs);
 
             Ok(())
         }
