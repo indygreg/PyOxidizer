@@ -1075,13 +1075,44 @@ pub fn write_data_rs(
     .unwrap();
 }
 
+/// Defines files, etc to embed Python in a larger binary.
+///
+/// Instances are typically produced by processing a PyOxidizer config file.
+#[derive(Debug)]
+pub struct EmbeddedPythonConfig {
+    /// Path to archive with source Python distribution.
+    python_distribution_path: PathBuf,
+
+    /// Path to frozen importlib._bootstrap bytecode.
+    importlib_bootstrap_path: PathBuf,
+
+    /// Path to frozen importlib._bootstrap_external bytecode.
+    importlib_bootstrap_external_path: PathBuf,
+
+    /// Path to file containing all known module names.
+    module_names_path: PathBuf,
+
+    /// Path to file containing packed Python module source data.
+    py_modules_path: PathBuf,
+
+    /// Path to file containing packed Python module bytecode data.
+    pyc_modules_path: PathBuf,
+
+    /// Lines that can be emitted from Cargo build scripts to describe this
+    /// configuration.
+    cargo_metadata: Vec<String>,
+}
+
 /// Derive build artifacts from a PyOxidizer config file.
+///
+/// This function reads a PyOxidizer config file and turns it into a set
+/// of derived files that can power an embedded Python interpreter.
 ///
 /// Artifacts will be written to ``out_dir``.
 ///
-/// Returns a vector of cargo: lines that can be printed from build scripts.
-pub fn process_config(config_path: &Path, out_dir: &Path) -> Vec<String> {
-    let mut res: Vec<String> = Vec::new();
+/// Returns a data structure describing the results.
+pub fn process_config(config_path: &Path, out_dir: &Path) -> EmbeddedPythonConfig {
+    let mut cargo_metadata: Vec<String> = Vec::new();
 
     println!("processing config file {}", config_path.display());
 
@@ -1093,7 +1124,7 @@ pub fn process_config(config_path: &Path, out_dir: &Path) -> Vec<String> {
     let config = parse_config(&config_data);
 
     if let Some(ref path) = config.python_distribution_path {
-        res.push(format!("cargo:rerun-if-changed={}", path));
+        cargo_metadata.push(format!("cargo:rerun-if-changed={}", path));
     }
 
     // Obtain the configured Python distribution and parse it to a data structure.
@@ -1103,7 +1134,7 @@ pub fn process_config(config_path: &Path, out_dir: &Path) -> Vec<String> {
         "Python distribution available at {}",
         python_distribution_path.display()
     );
-    let mut fh = fs::File::open(python_distribution_path).unwrap();
+    let mut fh = fs::File::open(&python_distribution_path).unwrap();
     let mut python_distribution_data = Vec::new();
     fh.read_to_end(&mut python_distribution_data).unwrap();
     let dist_cursor = Cursor::new(python_distribution_data);
@@ -1174,10 +1205,10 @@ pub fn process_config(config_path: &Path, out_dir: &Path) -> Vec<String> {
 
     // Produce a static library containing the Python bits we need.
     println!("generating custom link library containing Python...");
-    res.extend(link_libpython(&dist, &resources, out_dir));
+    cargo_metadata.extend(link_libpython(&dist, &resources, out_dir));
 
     for p in &resources.read_files {
-        res.push(format!("cargo:rerun-if-changed={}", p.display()));
+        cargo_metadata.push(format!("cargo:rerun-if-changed={}", p.display()));
     }
 
     let dest_path = Path::new(&out_dir).join("data.rs");
@@ -1190,7 +1221,15 @@ pub fn process_config(config_path: &Path, out_dir: &Path) -> Vec<String> {
         &pyc_modules_path,
     );
 
-    res
+    EmbeddedPythonConfig {
+        python_distribution_path,
+        importlib_bootstrap_path,
+        importlib_bootstrap_external_path,
+        module_names_path,
+        py_modules_path,
+        pyc_modules_path,
+        cargo_metadata,
+    }
 }
 
 pub fn find_pyoxidizer_config_file(start_dir: &Path, target: &str) -> Option<PathBuf> {
@@ -1264,7 +1303,7 @@ pub fn run_from_build(build_script: &str) {
     let out_dir = env::var("OUT_DIR").unwrap();
     let out_dir_path = Path::new(&out_dir);
 
-    for line in process_config(&config_path, out_dir_path) {
+    for line in process_config(&config_path, out_dir_path).cargo_metadata {
         println!("{}", line);
     }
 }
