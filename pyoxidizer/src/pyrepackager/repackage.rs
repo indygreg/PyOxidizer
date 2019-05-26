@@ -872,7 +872,11 @@ pub fn link_libpython(
         .define("NDEBUG", None)
         .define("Py_BUILD_CORE", None)
         .flag("-std=c99")
+        .cargo_metadata(false)
         .compile("pyembeddedconfig");
+
+    // Since we disabled cargo metadata lines above.
+    res.push("cargo:rustc-link-lib=static=pyembeddedconfig".to_string());
 
     // For each extension module, extract and use its object file. We also
     // use this pass to collect the set of libraries that we need to link
