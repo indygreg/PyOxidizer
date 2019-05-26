@@ -1111,6 +1111,9 @@ pub fn write_data_rs(path: &PathBuf, python_config_rs: &str) {
 /// Instances are typically produced by processing a PyOxidizer config file.
 #[derive(Debug)]
 pub struct EmbeddedPythonConfig {
+    /// Parsed TOML config.
+    config: Config,
+
     /// Path to archive with source Python distribution.
     python_distribution_path: PathBuf,
 
@@ -1267,6 +1270,7 @@ pub fn process_config(
     write_data_rs(&dest_path, &python_config_rs);
 
     EmbeddedPythonConfig {
+        config,
         python_distribution_path,
         importlib_bootstrap_path,
         importlib_bootstrap_external_path,
@@ -1320,6 +1324,7 @@ pub fn process_config_and_copy_artifacts(
     fs::copy(embedded_config.libpython_path, &libpython_path).expect("error copying file");
 
     EmbeddedPythonConfig {
+        config: embedded_config.config,
         python_distribution_path: embedded_config.python_distribution_path,
         importlib_bootstrap_path,
         importlib_bootstrap_external_path,
