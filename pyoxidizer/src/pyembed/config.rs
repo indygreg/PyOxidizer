@@ -2,12 +2,26 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+/// Defines Python code to run.
+#[derive(Clone, Debug)]
+pub enum PythonRunMode {
+    /// No-op.
+    None,
+    /// Run a Python REPL.
+    Repl,
+    /// Run a Python module as the main module.
+    Module { module: String },
+    /// Evaluate Python code from a string.
+    Eval { code: String },
+}
+
 /// Holds the configuration of an embedded Python interpreter.
 ///
 /// Instances of this struct can be used to construct Python interpreters.
 ///
 /// Each instance contains the total state to define the run-time behavior of
 /// a Python interpreter.
+#[derive(Clone, Debug)]
 pub struct PythonConfig {
     /// Name of the current program to tell to Python.
     pub program_name: String,
@@ -86,17 +100,7 @@ pub struct PythonConfig {
     /// loaded in ``sys.modules``.
     pub write_modules_directory_env: Option<String>,
 
-    // TODO represent code execution settings as an enum.
-    /// What code to run by default.
+    /// Defines what code to run by default.
     ///
-    /// 0: Python REPL
-    /// 1: Execute a module as defined by ``run_module_name``.
-    /// 2: Execute code as defined by ``run_code``.
-    pub run_mode: i32,
-
-    /// Python module to run by default.
-    pub run_module_name: Option<String>,
-
-    /// Python code to evaluate by default.
-    pub run_code: Option<String>,
+    pub run: PythonRunMode,
 }

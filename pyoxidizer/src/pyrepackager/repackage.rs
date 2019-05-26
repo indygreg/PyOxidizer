@@ -974,7 +974,7 @@ pub fn write_data_rs(
 ) {
     let mut f = fs::File::create(&path).unwrap();
 
-    f.write_all(b"use super::config::PythonConfig;\n\n")
+    f.write_all(b"use super::config::{PythonConfig, PythonRunMode};\n\n")
         .unwrap();
 
     // Ideally we would have a const struct, but we need to do some
@@ -1002,9 +1002,7 @@ pub fn write_data_rs(
          argvb: false,\n        \
          rust_allocator_raw: {},\n        \
          write_modules_directory_env: {},\n        \
-         run_mode: {},\n        \
-         run_module_name: {},\n        \
-         run_code: {},\n    \
+         run: {},\n    \
          }}\n}}\n",
         config.program_name,
         match &config.stdio_encoding_name {
@@ -1038,17 +1036,13 @@ pub fn write_data_rs(
             _ => "None".to_owned(),
         },
         match config.run {
-            RunMode::Repl {} => 0,
-            RunMode::Module { .. } => 1,
-            RunMode::Eval { .. } => 2,
-        },
-        match &config.run {
-            RunMode::Module { module } => "Some(\"".to_owned() + &module + "\".to_string())",
-            _ => "None".to_owned(),
-        },
-        match &config.run {
-            RunMode::Eval { code } => "Some(\"".to_owned() + &code + "\".to_string())",
-            _ => "None".to_owned(),
+            RunMode::Repl {} => "PythonRunMode::Repl".to_owned(),
+            RunMode::Module { ref module } => {
+                "PythonRunMode::Module { module: \"".to_owned() + module + "\".to_string() }"
+            }
+            RunMode::Eval { ref code } => {
+                "PythonRunMode::Eval { code: \"".to_owned() + code + "\".to_string() }"
+            }
         },
     ))
     .unwrap();

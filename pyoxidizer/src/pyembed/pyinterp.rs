@@ -17,7 +17,7 @@ use cpython::{
     PyString, PyTuple, Python, PythonObject, ToPyObject,
 };
 
-use super::config::PythonConfig;
+use super::config::{PythonConfig, PythonRunMode};
 use super::pyalloc::{make_raw_memory_allocator, RawAllocator};
 use super::pymodules_module::PyInit__pymodules;
 use super::pystr::{osstring_to_bytes, osstring_to_str, OwnedPyStr};
@@ -484,23 +484,16 @@ impl<'a> MainPythonInterpreter<'a> {
     /// The crate was built with settings that configure what should be
     /// executed by default. Those settings will be loaded and executed.
     pub fn run(&mut self) -> PyResult<PyObject> {
-        self.init();
+        // clone() to avoid issues mixing mutable and immutable borrows of self.
+        let run = self.config.run.clone();
 
-        // clone() to work around mutable borrow of an immutable reference.
-        let run_module_name = self.config.run_module_name.clone();
-        let run_code = self.config.run_code.clone();
+        let py = self.init();
 
-        match self.config.run_mode {
-            0 => self.run_repl(),
-            1 => match run_module_name {
-                Some(name) => self.run_module_as_main(&name),
-                None => panic!("run_module_name should be defined"),
-            },
-            2 => match run_code {
-                Some(code) => self.run_code(&code),
-                None => panic!("run_code should be defined"),
-            },
-            val => panic!("unhandled run mode: {}", val),
+        match run {
+            PythonRunMode::None => Ok(py.None()),
+            PythonRunMode::Repl => self.run_repl(),
+            PythonRunMode::Module { module } => self.run_module_as_main(&module),
+            PythonRunMode::Eval { code } => self.run_code(&code),
         }
     }
 
