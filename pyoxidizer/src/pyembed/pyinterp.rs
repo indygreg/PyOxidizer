@@ -24,6 +24,9 @@ use super::pystr::{osstring_to_bytes, osstring_to_str, OwnedPyStr};
 
 const PYMODULES_NAME: &'static [u8] = b"_pymodules\0";
 
+const FROZEN_IMPORTLIB_NAME: &'static [u8] = b"_frozen_importlib\0";
+const FROZEN_IMPORTLIB_EXTERNAL_NAME: &'static [u8] = b"_frozen_importlib_external\0";
+
 /// Holds the configuration of an embedded Python interpreter.
 pub struct PythonConfig {
     /// Path to the current executable.
