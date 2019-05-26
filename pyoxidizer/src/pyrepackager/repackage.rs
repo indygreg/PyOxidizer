@@ -864,6 +864,7 @@ pub fn link_libpython(
     // TODO flags should come from parsed distribution config.
     println!("compiling custom config.c to object file");
     cc::Build::new()
+        .out_dir(out_dir)
         .file(config_c_path)
         .include(temp_dir_path)
         .define("NDEBUG", None)
@@ -877,6 +878,7 @@ pub fn link_libpython(
 
     println!("resolving inputs for custom Python library...");
     let mut build = cc::Build::new();
+    build.out_dir(out_dir);
 
     println!(
         "adding {} object files required by Python core: {:#?}",
