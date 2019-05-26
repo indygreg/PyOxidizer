@@ -1061,6 +1061,8 @@ pub fn write_data_rs(
 pub fn process_config(config_path: &Path, out_dir: &Path) -> Vec<String> {
     let mut res: Vec<String> = Vec::new();
 
+    println!("processing config file {}", config_path.display());
+
     let mut fh = fs::File::open(config_path).unwrap();
 
     let mut config_data = Vec::new();
@@ -1073,14 +1075,22 @@ pub fn process_config(config_path: &Path, out_dir: &Path) -> Vec<String> {
     }
 
     // Obtain the configured Python distribution and parse it to a data structure.
+    println!("resolving Python distribution...");
     let python_distribution_path = resolve_python_distribution_archive(&config, &out_dir);
+    println!(
+        "Python distribution available at {}",
+        python_distribution_path.display()
+    );
     let mut fh = fs::File::open(python_distribution_path).unwrap();
     let mut python_distribution_data = Vec::new();
     fh.read_to_end(&mut python_distribution_data).unwrap();
     let dist_cursor = Cursor::new(python_distribution_data);
+    println!("reading data from Python distribution...");
     let dist = analyze_python_distribution_tar_zst(dist_cursor).unwrap();
+    println!("distribution info: {:#?}", dist.as_minimal_info());
 
     // Produce the custom frozen importlib modules.
+    println!("compiling custom importlib modules to support in-memory importing");
     let importlib = derive_importlib(&dist);
 
     let importlib_bootstrap_path = Path::new(&out_dir).join("importlib_bootstrap.pyc");
@@ -1093,11 +1103,29 @@ pub fn process_config(config_path: &Path, out_dir: &Path) -> Vec<String> {
     fh.write_all(&importlib.bootstrap_external_bytecode)
         .unwrap();
 
+    println!("resolving Python resources (modules, extensions, resource data, etc)...");
     let resources = resolve_python_resources(&config, &dist);
 
+    println!(
+        "resolved {} Python source modules",
+        resources.module_sources.len()
+    );
+    println!(
+        "resolved {} Python bytecode modules",
+        resources.module_bytecodes.len()
+    );
+    println!(
+        "resolved {} unique Python modules",
+        resources.all_modules.len()
+    );
+    println!("resolved {} resource files", resources.resources.len());
+    println!(
+        "resolved {} extension modules",
+        resources.extension_modules.len()
+    );
+
     // Produce a static library containing the Python bits we need.
-    // As a side-effect, this will emit the cargo: lines needed to link this
-    // library.
+    println!("generating custom link library containing Python...");
     res.extend(link_libpython(&dist, &resources, out_dir));
 
     for p in &resources.read_files {

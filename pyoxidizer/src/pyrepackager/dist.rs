@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use itertools::Itertools;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
@@ -223,7 +224,34 @@ pub struct PythonDistributionInfo {
     pub resources: BTreeMap<String, PathBuf>,
 }
 
+#[derive(Debug)]
+pub struct PythonDistributionMinimalInfo {
+    pub flavor: String,
+    pub version: String,
+    pub os: String,
+    pub arch: String,
+    pub extension_modules: Vec<String>,
+    pub libraries: Vec<String>,
+    pub py_module_count: usize,
+}
+
 impl PythonDistributionInfo {
+    pub fn as_minimal_info(&self) -> PythonDistributionMinimalInfo {
+        PythonDistributionMinimalInfo {
+            flavor: self.flavor.clone(),
+            version: self.version.clone(),
+            os: self.os.clone(),
+            arch: self.arch.clone(),
+            extension_modules: self
+                .extension_modules
+                .keys()
+                .map(|k| k.clone())
+                .collect_vec(),
+            libraries: self.libraries.keys().map(|k| k.clone()).collect_vec(),
+            py_module_count: self.py_modules.len(),
+        }
+    }
+
     /// Ensure pip is available to run in the distribution.
     pub fn ensure_pip(&self) -> PathBuf {
         let pip_path = self
