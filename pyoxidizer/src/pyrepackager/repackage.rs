@@ -1065,14 +1065,7 @@ pub fn derive_python_config(
     )
 }
 
-pub fn write_data_rs(
-    path: &PathBuf,
-    config: &Config,
-    importlib_bootstrap_path: &PathBuf,
-    importlib_bootstrap_external_path: &PathBuf,
-    py_modules_path: &PathBuf,
-    pyc_modules_path: &PathBuf,
-) {
+pub fn write_data_rs(path: &PathBuf, python_config_rs: &str) {
     let mut f = fs::File::create(&path).unwrap();
 
     f.write_all(b"use super::config::{PythonConfig, PythonRunMode};\n\n")
@@ -1081,14 +1074,7 @@ pub fn write_data_rs(
     // Ideally we would have a const struct, but we need to do some
     // dynamic allocations. Using a function avoids having to pull in a
     // dependency on lazy_static.
-    let config_s = derive_python_config(
-        config,
-        importlib_bootstrap_path,
-        importlib_bootstrap_external_path,
-        py_modules_path,
-        pyc_modules_path,
-    );
-    let indented = config_s
+    let indented = python_config_rs
         .split('\n')
         .map(|line| "    ".to_owned() + line)
         .join("\n");
@@ -1126,6 +1112,9 @@ pub struct EmbeddedPythonConfig {
     /// Lines that can be emitted from Cargo build scripts to describe this
     /// configuration.
     cargo_metadata: Vec<String>,
+
+    /// Rust source code to instantiate a PythonConfig instance using this config.
+    python_config_rs: String,
 }
 
 /// Derive build artifacts from a PyOxidizer config file.
@@ -1236,15 +1225,16 @@ pub fn process_config(config_path: &Path, out_dir: &Path) -> EmbeddedPythonConfi
         cargo_metadata.push(format!("cargo:rerun-if-changed={}", p.display()));
     }
 
-    let dest_path = Path::new(&out_dir).join("data.rs");
-    write_data_rs(
-        &dest_path,
+    let python_config_rs = derive_python_config(
         &config,
         &importlib_bootstrap_path,
         &importlib_bootstrap_external_path,
         &py_modules_path,
         &pyc_modules_path,
     );
+
+    let dest_path = Path::new(&out_dir).join("data.rs");
+    write_data_rs(&dest_path, &python_config_rs);
 
     EmbeddedPythonConfig {
         python_distribution_path,
@@ -1254,6 +1244,7 @@ pub fn process_config(config_path: &Path, out_dir: &Path) -> EmbeddedPythonConfi
         py_modules_path,
         pyc_modules_path,
         cargo_metadata,
+        python_config_rs,
     }
 }
 
