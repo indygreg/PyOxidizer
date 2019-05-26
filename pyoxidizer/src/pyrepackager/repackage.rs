@@ -841,7 +841,7 @@ pub fn link_libpython(
         let full = temp_dir_path.join(rel_path);
         fs::copy(fs_path, &full).expect("unable to copy object file");
 
-        println!("adding {:?} to embedded Python", full);
+        println!("adding {} to embedded Python", full.display());
         build.object(&full);
     }
 
@@ -903,8 +903,9 @@ pub fn link_libpython(
 
         for path in &em.object_paths {
             println!(
-                "adding object file {:?} for extension module {}",
-                path, name
+                "adding object file {} for extension module {}",
+                path.display(),
+                name
             );
             build.object(path);
         }
