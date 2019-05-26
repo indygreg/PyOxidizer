@@ -13,4 +13,7 @@ mod pystr;
 pub use config::PythonConfig;
 
 #[allow(unused)]
-pub use pyinterp::{default_python_config, MainPythonInterpreter};
+pub use data::default_python_config;
+
+#[allow(unused)]
+pub use pyinterp::MainPythonInterpreter;

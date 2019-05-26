@@ -28,49 +28,6 @@ pub const PYMODULES_NAME: &'static [u8] = b"_pymodules\0";
 const FROZEN_IMPORTLIB_NAME: &'static [u8] = b"_frozen_importlib\0";
 const FROZEN_IMPORTLIB_EXTERNAL_NAME: &'static [u8] = b"_frozen_importlib_external\0";
 
-/// Obtain the PythonConfig with the settings compiled into the binary.
-pub fn default_python_config() -> PythonConfig {
-    let standard_io_encoding = match STANDARD_IO_ENCODING {
-        Some(value) => Some(String::from(value)),
-        None => None,
-    };
-
-    let standard_io_errors = match STANDARD_IO_ERRORS {
-        Some(value) => Some(String::from(value)),
-        None => None,
-    };
-
-    let write_modules_directory_env = match WRITE_MODULES_DIRECTORY_ENV {
-        Some(path) => Some(String::from(path)),
-        None => None,
-    };
-
-    let sys_paths = SYS_PATHS
-        .iter()
-        .map(|s| s.to_string())
-        .collect::<Vec<String>>();
-
-    PythonConfig {
-        program_name: PROGRAM_NAME.to_string(),
-        standard_io_encoding,
-        standard_io_errors,
-        opt_level: OPT_LEVEL,
-        use_custom_importlib: true,
-        filesystem_importer: FILESYSTEM_IMPORTER,
-        sys_paths,
-        import_site: !NO_SITE,
-        import_user_site: !NO_USER_SITE_DIRECTORY,
-        ignore_python_env: IGNORE_ENVIRONMENT,
-        dont_write_bytecode: DONT_WRITE_BYTECODE,
-        unbuffered_stdio: UNBUFFERED_STDIO,
-        py_modules_data: PY_MODULES_DATA,
-        pyc_modules_data: PYC_MODULES_DATA,
-        argvb: false,
-        rust_allocator_raw: RUST_ALLOCATOR_RAW,
-        write_modules_directory_env,
-    }
-}
-
 /// Represents the results of executing Python code with exception handling.
 #[derive(Debug)]
 pub enum PythonRunResult {

@@ -974,56 +974,62 @@ pub fn write_data_rs(
 ) {
     let mut f = fs::File::create(&path).unwrap();
 
+    f.write_all(b"use super::config::PythonConfig;\n\n")
+        .unwrap();
+
+    // Ideally we would have a const struct, but we need to do some
+    // dynamic allocations. Using a function avoids having to pull in a
+    // dependency on lazy_static.
     f.write_fmt(format_args!(
-        "pub const STANDARD_IO_ENCODING: Option<&'static str> = {};\n",
+        "pub fn default_python_config() -> PythonConfig {{\n    \
+         PythonConfig {{\n        \
+         program_name: \"{}\".to_string(),\n        \
+         standard_io_encoding: {},\n        \
+         standard_io_errors: {},\n        \
+         opt_level: {},\n        \
+         use_custom_importlib: true,\n        \
+         filesystem_importer: {},\n        \
+         sys_paths: [{}].to_vec(),\n        \
+         import_site: {},\n        \
+         import_user_site: {},\n        \
+         ignore_python_env: {},\n        \
+         dont_write_bytecode: {},\n        \
+         unbuffered_stdio: {},\n        \
+         py_modules_data: include_bytes!(\"{}\"),\n        \
+         pyc_modules_data: include_bytes!(\"{}\"),\n        \
+         argvb: false,\n        \
+         rust_allocator_raw: {},\n        \
+         write_modules_directory_env: {},\n    \
+         }}\n}}\n",
+        config.program_name,
         match &config.stdio_encoding_name {
             Some(value) => format_args!("Some(\"{}\")", value).to_string(),
             None => "None".to_owned(),
-        }
-    ))
-    .unwrap();
-    f.write_fmt(format_args!(
-        "pub const STANDARD_IO_ERRORS: Option<&'static str> = {};\n",
+        },
         match &config.stdio_encoding_errors {
             Some(value) => format_args!("Some(\"{}\")", value).to_string(),
             None => "None".to_owned(),
-        }
-    ))
-    .unwrap();
-
-    f.write_fmt(format_args!(
-        "pub const DONT_WRITE_BYTECODE: bool = {};\n",
-        config.dont_write_bytecode
-    ))
-    .unwrap();
-    f.write_fmt(format_args!(
-        "pub const IGNORE_ENVIRONMENT: bool = {};\n",
-        config.ignore_environment
-    ))
-    .unwrap();
-    f.write_fmt(format_args!(
-        "pub const OPT_LEVEL: i32 = {};\n",
-        config.optimize_level
-    ))
-    .unwrap();
-    f.write_fmt(format_args!(
-        "pub const NO_SITE: bool = {};\n",
-        config.no_site
-    ))
-    .unwrap();
-    f.write_fmt(format_args!(
-        "pub const NO_USER_SITE_DIRECTORY: bool = {};\n",
-        config.no_user_site_directory
-    ))
-    .unwrap();
-    f.write_fmt(format_args!(
-        "pub const PROGRAM_NAME: &str = \"{}\";\n",
-        config.program_name
-    ))
-    .unwrap();
-    f.write_fmt(format_args!(
-        "pub const UNBUFFERED_STDIO: bool = {};\n",
-        config.unbuffered_stdio
+        },
+        config.optimize_level,
+        config.filesystem_importer,
+        &config
+            .sys_paths
+            .iter()
+            .map(|p| "\"".to_owned() + p + "\".to_string()")
+            .collect::<Vec<String>>()
+            .join(", "),
+        !config.no_site,
+        !config.no_user_site_directory,
+        config.ignore_environment,
+        config.dont_write_bytecode,
+        config.unbuffered_stdio,
+        py_modules_path.display(),
+        pyc_modules_path.display(),
+        config.rust_allocator_raw,
+        match &config.write_modules_directory_env {
+            Some(path) => "Some(\"".to_owned() + &path + "\".to_string())",
+            _ => "None".to_owned(),
+        },
     ))
     .unwrap();
 
@@ -1035,16 +1041,6 @@ pub fn write_data_rs(
     f.write_fmt(format_args!(
         "pub const FROZEN_IMPORTLIB_EXTERNAL_DATA: &'static [u8] = include_bytes!(r\"{}\");\n",
         importlib_bootstrap_external_path.to_str().unwrap()
-    ))
-    .unwrap();
-    f.write_fmt(format_args!(
-        "pub const PY_MODULES_DATA: &'static [u8] = include_bytes!(r\"{}\");\n",
-        py_modules_path.to_str().unwrap()
-    ))
-    .unwrap();
-    f.write_fmt(format_args!(
-        "pub const PYC_MODULES_DATA: &'static [u8] = include_bytes!(r\"{}\");\n",
-        pyc_modules_path.to_str().unwrap()
     ))
     .unwrap();
 
@@ -1071,38 +1067,6 @@ pub fn write_data_rs(
         "pub const RUN_CODE: Option<&'static str> = {};\n",
         match &config.run {
             RunMode::Eval { code } => "Some(\"".to_owned() + &code + "\")",
-            _ => "None".to_owned(),
-        }
-    ))
-    .unwrap();
-
-    f.write_fmt(format_args!(
-        "pub const FILESYSTEM_IMPORTER: bool = {};\n",
-        config.filesystem_importer
-    ))
-    .unwrap();
-
-    f.write_fmt(format_args!(
-        "pub const SYS_PATHS: &[&str] = &[{}];\n",
-        &config
-            .sys_paths
-            .iter()
-            .map(|p| "\"".to_owned() + p + "\"")
-            .collect::<Vec<String>>()
-            .join(", ")
-    ))
-    .unwrap();
-
-    f.write_fmt(format_args!(
-        "pub const RUST_ALLOCATOR_RAW: bool = {};\n",
-        config.rust_allocator_raw
-    ))
-    .unwrap();
-
-    f.write_fmt(format_args!(
-        "pub const WRITE_MODULES_DIRECTORY_ENV: Option<&'static str> = {};\n",
-        match &config.write_modules_directory_env {
-            Some(path) => "Some(\"".to_owned() + &path + "\")",
             _ => "None".to_owned(),
         }
     ))
