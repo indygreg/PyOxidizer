@@ -218,14 +218,12 @@ fn bytecode_compiler(dist: &PythonDistributionInfo) -> BytecodeCompiler {
     BytecodeCompiler::new(&dist.python_exe)
 }
 
-fn filter_btreemap<K: std::clone::Clone + std::cmp::Ord, V>(
-    m: &mut BTreeMap<K, V>,
-    f: &BTreeSet<K>,
-) {
-    let keys: Vec<K> = m.keys().cloned().collect();
+fn filter_btreemap<V>(m: &mut BTreeMap<String, V>, f: &BTreeSet<String>) {
+    let keys: Vec<String> = m.keys().cloned().collect();
 
     for key in keys {
         if !f.contains(&key) {
+            println!("removing {}", key);
             m.remove(&key);
         }
     }
@@ -631,9 +629,13 @@ pub fn resolve_python_resources(config: &Config, dist: &PythonDistributionInfo) 
             let include_names =
                 read_resource_names_file(path).expect("failed to read resource names file");
 
+            println!("filtering extension modules from {:?}", packaging);
             filter_btreemap(&mut extension_modules, &include_names);
+            println!("filtering module sources from {:?}", packaging);
             filter_btreemap(&mut sources, &include_names);
+            println!("filtering module bytecode from {:?}", packaging);
             filter_btreemap(&mut bytecodes, &include_names);
+            println!("filtering resources from {:?}", packaging);
             filter_btreemap(&mut resources, &include_names);
 
             read_files.push(PathBuf::from(path));
