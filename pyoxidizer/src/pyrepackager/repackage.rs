@@ -820,6 +820,12 @@ fn make_config_c(extension_modules: &BTreeMap<String, ExtensionModule>) -> Strin
     lines.join("\n")
 }
 
+#[derive(Debug)]
+pub struct LibpythonInfo {
+    path: PathBuf,
+    cargo_metadata: Vec<String>,
+}
+
 /// Create a static libpython from a Python distribution.
 ///
 /// Returns a vector of cargo: lines that can be printed in build scripts.
@@ -827,8 +833,8 @@ pub fn link_libpython(
     dist: &PythonDistributionInfo,
     resources: &PythonResources,
     out_dir: &Path,
-) -> Vec<String> {
-    let mut res: Vec<String> = Vec::new();
+) -> LibpythonInfo {
+    let mut cargo_metadata: Vec<String> = Vec::new();
 
     let temp_dir = tempdir::TempDir::new("libpython").unwrap();
     let temp_dir_path = temp_dir.path();
@@ -867,7 +873,7 @@ pub fn link_libpython(
         .compile("pyembeddedconfig");
 
     // Since we disabled cargo metadata lines above.
-    res.push("cargo:rustc-link-lib=static=pyembeddedconfig".to_string());
+    cargo_metadata.push("cargo:rustc-link-lib=static=pyembeddedconfig".to_string());
 
     println!("resolving inputs for custom Python library...");
     let mut build = cc::Build::new();
@@ -957,15 +963,15 @@ pub fn link_libpython(
         let library_path = out_dir.join(format!("lib{}.a", library));
         fs::copy(fs_path, library_path).expect("unable to copy library file");
 
-        res.push(format!("cargo:rustc-link-lib=static={}", library))
+        cargo_metadata.push(format!("cargo:rustc-link-lib=static={}", library))
     }
 
     for framework in needed_frameworks {
-        res.push(format!("cargo:rustc-link-lib=framework={}", framework));
+        cargo_metadata.push(format!("cargo:rustc-link-lib=framework={}", framework));
     }
 
     for lib in needed_system_libraries {
-        res.push(format!("cargo:rustc-link-lib={}", lib));
+        cargo_metadata.push(format!("cargo:rustc-link-lib={}", lib));
     }
 
     // python3-sys uses #[link(name="pythonXY")] attributes heavily on Windows. Its
@@ -988,7 +994,10 @@ pub fn link_libpython(
     build.compile("pythonXY");
     println!("libpythonXY created");
 
-    res
+    LibpythonInfo {
+        path: out_dir.join("libpythonXY.a"),
+        cargo_metadata,
+    }
 }
 
 /// Obtain the Rust source code to construct a PythonConfig instance.
@@ -1109,6 +1118,9 @@ pub struct EmbeddedPythonConfig {
     /// Path to file containing packed Python module bytecode data.
     pyc_modules_path: PathBuf,
 
+    /// Path to library file containing Python.
+    libpython_path: PathBuf,
+
     /// Lines that can be emitted from Cargo build scripts to describe this
     /// configuration.
     cargo_metadata: Vec<String>,
@@ -1219,7 +1231,8 @@ pub fn process_config(config_path: &Path, out_dir: &Path) -> EmbeddedPythonConfi
 
     // Produce a static library containing the Python bits we need.
     println!("generating custom link library containing Python...");
-    cargo_metadata.extend(link_libpython(&dist, &resources, out_dir));
+    let libpython_info = link_libpython(&dist, &resources, out_dir);
+    cargo_metadata.extend(libpython_info.cargo_metadata);
 
     for p in &resources.read_files {
         cargo_metadata.push(format!("cargo:rerun-if-changed={}", p.display()));
@@ -1243,6 +1256,7 @@ pub fn process_config(config_path: &Path, out_dir: &Path) -> EmbeddedPythonConfi
         module_names_path,
         py_modules_path,
         pyc_modules_path,
+        libpython_path: libpython_info.path,
         cargo_metadata,
         python_config_rs,
     }
