@@ -28,6 +28,11 @@ const FROZEN_IMPORTLIB_NAME: &'static [u8] = b"_frozen_importlib\0";
 const FROZEN_IMPORTLIB_EXTERNAL_NAME: &'static [u8] = b"_frozen_importlib_external\0";
 
 /// Holds the configuration of an embedded Python interpreter.
+///
+/// Instances of this struct can be used to construct Python interpreters.
+///
+/// Each instance contains the total state to define the run-time behavior of
+/// a Python interpreter.
 pub struct PythonConfig {
     /// Path to the current executable.
     pub exe: PathBuf,
