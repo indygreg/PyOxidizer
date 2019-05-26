@@ -991,46 +991,37 @@ pub fn link_libpython(
     res
 }
 
-pub fn write_data_rs(
-    path: &PathBuf,
+/// Obtain the Rust source code to construct a PythonConfig instance.
+pub fn derive_python_config(
     config: &Config,
     importlib_bootstrap_path: &PathBuf,
     importlib_bootstrap_external_path: &PathBuf,
     py_modules_path: &PathBuf,
     pyc_modules_path: &PathBuf,
-) {
-    let mut f = fs::File::create(&path).unwrap();
-
-    f.write_all(b"use super::config::{PythonConfig, PythonRunMode};\n\n")
-        .unwrap();
-
-    // Ideally we would have a const struct, but we need to do some
-    // dynamic allocations. Using a function avoids having to pull in a
-    // dependency on lazy_static.
-    f.write_fmt(format_args!(
-        "pub fn default_python_config() -> PythonConfig {{\n    \
-         PythonConfig {{\n        \
-         program_name: \"{}\".to_string(),\n        \
-         standard_io_encoding: {},\n        \
-         standard_io_errors: {},\n        \
-         opt_level: {},\n        \
-         use_custom_importlib: true,\n        \
-         filesystem_importer: {},\n        \
-         sys_paths: [{}].to_vec(),\n        \
-         import_site: {},\n        \
-         import_user_site: {},\n        \
-         ignore_python_env: {},\n        \
-         dont_write_bytecode: {},\n        \
-         unbuffered_stdio: {},\n        \
-         frozen_importlib_data: include_bytes!(\"{}\"),\n        \
-         frozen_importlib_external_data: include_bytes!(\"{}\"),\n        \
-         py_modules_data: include_bytes!(\"{}\"),\n        \
-         pyc_modules_data: include_bytes!(\"{}\"),\n        \
-         argvb: false,\n        \
-         rust_allocator_raw: {},\n        \
-         write_modules_directory_env: {},\n        \
-         run: {},\n    \
-         }}\n}}\n",
+) -> String {
+    format!(
+        "PythonConfig {{\n    \
+         program_name: \"{}\".to_string(),\n    \
+         standard_io_encoding: {},\n    \
+         standard_io_errors: {},\n    \
+         opt_level: {},\n    \
+         use_custom_importlib: true,\n    \
+         filesystem_importer: {},\n    \
+         sys_paths: [{}].to_vec(),\n    \
+         import_site: {},\n    \
+         import_user_site: {},\n    \
+         ignore_python_env: {},\n    \
+         dont_write_bytecode: {},\n    \
+         unbuffered_stdio: {},\n    \
+         frozen_importlib_data: include_bytes!(\"{}\"),\n    \
+         frozen_importlib_external_data: include_bytes!(\"{}\"),\n    \
+         py_modules_data: include_bytes!(\"{}\"),\n    \
+         pyc_modules_data: include_bytes!(\"{}\"),\n    \
+         argvb: false,\n    \
+         rust_allocator_raw: {},\n    \
+         write_modules_directory_env: {},\n    \
+         run: {},\n\
+         }}",
         config.program_name,
         match &config.stdio_encoding_name {
             Some(value) => format_args!("Some(\"{}\")", value).to_string(),
@@ -1071,6 +1062,40 @@ pub fn write_data_rs(
                 "PythonRunMode::Eval { code: \"".to_owned() + code + "\".to_string() }"
             }
         },
+    )
+}
+
+pub fn write_data_rs(
+    path: &PathBuf,
+    config: &Config,
+    importlib_bootstrap_path: &PathBuf,
+    importlib_bootstrap_external_path: &PathBuf,
+    py_modules_path: &PathBuf,
+    pyc_modules_path: &PathBuf,
+) {
+    let mut f = fs::File::create(&path).unwrap();
+
+    f.write_all(b"use super::config::{PythonConfig, PythonRunMode};\n\n")
+        .unwrap();
+
+    // Ideally we would have a const struct, but we need to do some
+    // dynamic allocations. Using a function avoids having to pull in a
+    // dependency on lazy_static.
+    let config_s = derive_python_config(
+        config,
+        importlib_bootstrap_path,
+        importlib_bootstrap_external_path,
+        py_modules_path,
+        pyc_modules_path,
+    );
+    let indented = config_s
+        .split('\n')
+        .map(|line| "    ".to_owned() + line)
+        .join("\n");
+
+    f.write_fmt(format_args!(
+        "pub fn default_python_config() -> PythonConfig {{\n{}\n}}\n",
+        indented
     ))
     .unwrap();
 }
