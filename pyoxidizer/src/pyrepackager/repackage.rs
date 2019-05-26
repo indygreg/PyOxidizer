@@ -37,13 +37,13 @@ const STDLIB_TEST_PACKAGES: &[&str] = &[
     "unittest.test",
 ];
 
-/// Libraries provided by the host that we can ignore in Python module library dependencies.
-///
-/// Libraries in this data structure are not provided by the Python distribution.
-/// A library should only be in this data structure if it is universally distributed
-/// by the OS. It is assumed that all binaries produced for the target will link
-/// against these libraries by default.
 lazy_static! {
+    /// Libraries provided by the host that we can ignore in Python module library dependencies.
+    ///
+    /// Libraries in this data structure are not provided by the Python distribution.
+    /// A library should only be in this data structure if it is universally distributed
+    /// by the OS. It is assumed that all binaries produced for the target will link
+    /// against these libraries by default.
     static ref OS_IGNORE_LIBRARIES: Vec<&'static str> = {
         let mut v = Vec::new();
 
@@ -59,11 +59,11 @@ lazy_static! {
     };
 }
 
-/// Python extension modules that should never be included.
-///
-/// Ideally this data structure doesn't exist. But there are some problems
-/// with various extensions on various targets.
 lazy_static! {
+    /// Python extension modules that should never be included.
+    ///
+    /// Ideally this data structure doesn't exist. But there are some problems
+    /// with various extensions on various targets.
     static ref OS_IGNORE_EXTENSIONS: Vec<&'static str> = {
         let mut v = Vec::new();
 

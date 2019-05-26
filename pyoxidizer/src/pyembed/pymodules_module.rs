@@ -59,6 +59,7 @@ fn parse_modules_blob(data: &'static [u8]) -> Result<HashMap<&str, &[u8]>, &'sta
     Ok(res)
 }
 
+#[allow(unused_doc_comments)]
 /// Python type to facilitate access to in-memory modules data.
 ///
 /// We /could/ use simple Python data structures (e.g. dict mapping
