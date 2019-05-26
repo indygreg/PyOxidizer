@@ -1112,35 +1112,35 @@ pub fn write_data_rs(path: &PathBuf, python_config_rs: &str) {
 #[derive(Debug)]
 pub struct EmbeddedPythonConfig {
     /// Parsed TOML config.
-    config: Config,
+    pub config: Config,
 
     /// Path to archive with source Python distribution.
-    python_distribution_path: PathBuf,
+    pub python_distribution_path: PathBuf,
 
     /// Path to frozen importlib._bootstrap bytecode.
-    importlib_bootstrap_path: PathBuf,
+    pub importlib_bootstrap_path: PathBuf,
 
     /// Path to frozen importlib._bootstrap_external bytecode.
-    importlib_bootstrap_external_path: PathBuf,
+    pub importlib_bootstrap_external_path: PathBuf,
 
     /// Path to file containing all known module names.
-    module_names_path: PathBuf,
+    pub module_names_path: PathBuf,
 
     /// Path to file containing packed Python module source data.
-    py_modules_path: PathBuf,
+    pub py_modules_path: PathBuf,
 
     /// Path to file containing packed Python module bytecode data.
-    pyc_modules_path: PathBuf,
+    pub pyc_modules_path: PathBuf,
 
     /// Path to library file containing Python.
-    libpython_path: PathBuf,
+    pub libpython_path: PathBuf,
 
     /// Lines that can be emitted from Cargo build scripts to describe this
     /// configuration.
-    cargo_metadata: Vec<String>,
+    pub cargo_metadata: Vec<String>,
 
     /// Rust source code to instantiate a PythonConfig instance using this config.
-    python_config_rs: String,
+    pub python_config_rs: String,
 }
 
 /// Derive build artifacts from a PyOxidizer config file.
