@@ -833,6 +833,8 @@ pub fn link_libpython(
     dist: &PythonDistributionInfo,
     resources: &PythonResources,
     out_dir: &Path,
+    host: &str,
+    target: &str,
 ) -> LibpythonInfo {
     let mut cargo_metadata: Vec<String> = Vec::new();
 
@@ -865,6 +867,8 @@ pub fn link_libpython(
     println!("compiling custom config.c to object file");
     cc::Build::new()
         .out_dir(out_dir)
+        .host(host)
+        .target(target)
         .file(config_c_path)
         .include(temp_dir_path)
         .define("NDEBUG", None)
@@ -879,6 +883,8 @@ pub fn link_libpython(
     println!("resolving inputs for custom Python library...");
     let mut build = cc::Build::new();
     build.out_dir(out_dir);
+    build.host(host);
+    build.target(target);
 
     println!(
         "adding {} object files required by Python core: {:#?}",
@@ -1139,7 +1145,12 @@ pub struct EmbeddedPythonConfig {
 /// Artifacts will be written to ``out_dir``.
 ///
 /// Returns a data structure describing the results.
-pub fn process_config(config_path: &Path, out_dir: &Path) -> EmbeddedPythonConfig {
+pub fn process_config(
+    config_path: &Path,
+    out_dir: &Path,
+    host: &str,
+    target: &str,
+) -> EmbeddedPythonConfig {
     let mut cargo_metadata: Vec<String> = Vec::new();
 
     println!("processing config file {}", config_path.display());
@@ -1233,7 +1244,7 @@ pub fn process_config(config_path: &Path, out_dir: &Path) -> EmbeddedPythonConfi
 
     // Produce a static library containing the Python bits we need.
     println!("generating custom link library containing Python...");
-    let libpython_info = link_libpython(&dist, &resources, out_dir);
+    let libpython_info = link_libpython(&dist, &resources, out_dir, host, target);
     cargo_metadata.extend(libpython_info.cargo_metadata);
 
     for p in &resources.read_files {
@@ -1299,6 +1310,7 @@ pub fn run_from_build(build_script: &str) {
 
     println!("cargo:rerun-if-env-changed=PYOXIDIZER_CONFIG");
 
+    let host = env::var("HOST").expect("HOST not defined");
     let target = env::var("TARGET").expect("TARGET not defined");
 
     let config_path = match env::var("PYOXIDIZER_CONFIG") {
@@ -1335,7 +1347,7 @@ pub fn run_from_build(build_script: &str) {
     let out_dir = env::var("OUT_DIR").unwrap();
     let out_dir_path = Path::new(&out_dir);
 
-    for line in process_config(&config_path, out_dir_path).cargo_metadata {
+    for line in process_config(&config_path, out_dir_path, &host, &target).cargo_metadata {
         println!("{}", line);
     }
 }
