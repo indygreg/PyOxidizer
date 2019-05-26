@@ -1107,21 +1107,25 @@ pub fn process_config(config_path: &Path, out_dir: &Path) -> Vec<String> {
     let resources = resolve_python_resources(&config, &dist);
 
     println!(
-        "resolved {} Python source modules",
-        resources.module_sources.len()
+        "resolved {} Python source modules: {:#?}",
+        resources.module_sources.len(),
+        resources.module_sources.keys()
     );
     println!(
-        "resolved {} Python bytecode modules",
-        resources.module_bytecodes.len()
+        "resolved {} Python bytecode modules: {:#?}",
+        resources.module_bytecodes.len(),
+        resources.module_bytecodes.keys()
     );
     println!(
-        "resolved {} unique Python modules",
-        resources.all_modules.len()
+        "resolved {} unique Python modules: {:#?}",
+        resources.all_modules.len(),
+        resources.all_modules
     );
     println!("resolved {} resource files", resources.resources.len());
     println!(
-        "resolved {} extension modules",
-        resources.extension_modules.len()
+        "resolved {} extension modules: {:#?}",
+        resources.extension_modules.len(),
+        resources.extension_modules.keys()
     );
 
     // Produce the packed data structures containing Python modules.
