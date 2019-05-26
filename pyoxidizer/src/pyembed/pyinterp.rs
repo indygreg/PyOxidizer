@@ -287,6 +287,36 @@ impl<'a> MainPythonInterpreter<'a> {
             }
         }
 
+        // Module state is a bit wonky.
+        //
+        // Our in-memory importer relies on a special module which holds references
+        // to Python objects exposing module/resource data. This module is imported as
+        // part of initializing the Python interpreter.
+        //
+        // This Python module object needs to hold references to the raw Python module
+        // and resource data. Those references are defined by the ModuleState struct.
+        //
+        // Unfortunately, we can't easily associate state with the interpreter before
+        // calling Py_Initialize(). And the module initialization function receives no
+        // arguments. Our solution is to update a global pointer to point at "our" state
+        // then call Py_Initialize(). The module will be initialized as part of calling
+        // Py_Initialize(). It will copy the contents at the pointer into the local
+        // module state and the global pointer will be unused after that. The end result
+        // is that we have no reliance on global variables outside of a short window
+        // between now and when Py_Initialize() is called.
+        //
+        // We could potentially do away with this global variable by using a closure for
+        // the initialization function. But this rabbit hole may involve gross hackery
+        // like dynamic module names. It probably isn't worth it.
+
+        // It is important for references in this struct to have a lifetime of at least
+        // that of the interpreter.
+        // TODO specify lifetimes so the compiler validates this for us.
+        let module_state = super::pymodules_module::ModuleState {
+            py_data: PY_MODULES_DATA,
+            pyc_data: PYC_MODULES_DATA,
+        };
+
         if config.use_custom_importlib {
             // Replace the frozen modules in the interpreter with our custom set
             // that knows how to import from memory.
@@ -301,6 +331,12 @@ impl<'a> MainPythonInterpreter<'a> {
                     PYMODULES_NAME.as_ptr() as *const i8,
                     Some(PyInit__pymodules),
                 );
+
+                // Move pointer to our stack allocated instance. This pointer will be
+                // accessed when creating the Python module object, which should be
+                // done automatically as part of low-level interpreter initialization
+                // when calling Py_Initialize() below.
+                super::pymodules_module::NEXT_MODULE_STATE = &module_state;
             }
         }
 
@@ -385,6 +421,13 @@ impl<'a> MainPythonInterpreter<'a> {
 
         unsafe {
             pyffi::Py_Initialize();
+        }
+
+        // We shouldn't be accessing this pointer after Py_Initialize(). And the
+        // memory is stack allocated and doesn't outlive this frame. We don't want
+        // to leave a stack pointer sitting around!
+        unsafe {
+            super::pymodules_module::NEXT_MODULE_STATE = std::ptr::null();
         }
 
         let py = unsafe { Python::assume_gil_acquired() };
