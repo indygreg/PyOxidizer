@@ -500,7 +500,7 @@ fn resolve_python_packaging(
             optimize_level,
             include_source,
         } => {
-            let pip_exe = dist.ensure_pip();
+            dist.ensure_pip();
             let temp_dir = tempdir::TempDir::new("pyoxidizer-pip-install")
                 .expect("could not creat temp directory");
 
@@ -508,8 +508,10 @@ fn resolve_python_packaging(
             let temp_dir_s = temp_dir_path.display().to_string();
             println!("pip installing to {}", temp_dir_s);
 
-            std::process::Command::new(pip_exe)
+            std::process::Command::new(&dist.python_exe)
                 .args(&[
+                    "-m",
+                    "pip",
                     "--disable-pip-version-check",
                     "install",
                     "--target",
