@@ -192,6 +192,9 @@ pub struct PythonDistributionInfo {
     /// Path to Python interpreter executable.
     pub python_exe: PathBuf,
 
+    /// Path to Python standard library.
+    pub stdlib_path: PathBuf,
+
     /// Object files providing the core Python implementation.
     ///
     /// Keys are relative paths. Values are filesystem paths.
@@ -406,6 +409,7 @@ pub fn analyze_python_distribution_data(
         os: pi.os.clone(),
         arch: pi.arch.clone(),
         python_exe: python_path.join(pi.python_exe),
+        stdlib_path,
         temp_dir,
         extension_modules,
         frozen_c,
