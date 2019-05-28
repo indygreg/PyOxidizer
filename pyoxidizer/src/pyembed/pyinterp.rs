@@ -254,14 +254,13 @@ impl<'a> MainPythonInterpreter<'a> {
 
         unsafe {
             // Pointer needs to live for lifetime of interpreter.
-            pyffi::Py_SetPythonHome(home.into());
+            pyffi::Py_SetPythonHome(home.as_wchar_ptr());
         }
 
         let program_name = OwnedPyStr::from(config.program_name.as_str());
 
         unsafe {
-            // Pointer needs to live for lifetime of interpreter.
-            pyffi::Py_SetProgramName(program_name.into());
+            pyffi::Py_SetProgramName(program_name.as_wchar_ptr());
         }
 
         // If we don't call Py_SetPath(), Python has its own logic for initializing it.
@@ -270,7 +269,7 @@ impl<'a> MainPythonInterpreter<'a> {
         unsafe {
             // Value is copied internally. So short lifetime is OK.
             let value = OwnedPyStr::from("");
-            pyffi::Py_SetPath(value.into());
+            pyffi::Py_SetPath(value.as_wchar_ptr());
         }
 
         if let (Some(ref encoding), Some(ref errors)) =

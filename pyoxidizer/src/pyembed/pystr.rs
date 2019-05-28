@@ -21,6 +21,12 @@ pub struct OwnedPyStr {
     data: *const wchar_t,
 }
 
+impl OwnedPyStr {
+    pub fn as_wchar_ptr(&self) -> *const wchar_t {
+        self.data
+    }
+}
+
 impl Drop for OwnedPyStr {
     fn drop(&mut self) {
         unsafe { pyffi::PyMem_RawFree(self.data as *mut c_void) }
@@ -41,12 +47,6 @@ impl<'a> From<&'a str> for OwnedPyStr {
         }
 
         OwnedPyStr { data: ptr }
-    }
-}
-
-impl Into<*const wchar_t> for OwnedPyStr {
-    fn into(self) -> *const wchar_t {
-        self.data
     }
 }
 
