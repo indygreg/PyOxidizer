@@ -264,6 +264,15 @@ impl<'a> MainPythonInterpreter<'a> {
             pyffi::Py_SetProgramName(program_name.into());
         }
 
+        // If we don't call Py_SetPath(), Python has its own logic for initializing it.
+        // We set it to an empty string because we don't want any paths by default. If
+        // we do have defined paths, they will be set after Py_Initialize().
+        unsafe {
+            // Value is copied internally. So short lifetime is OK.
+            let value = OwnedPyStr::from("");
+            pyffi::Py_SetPath(value.into());
+        }
+
         if let (Some(ref encoding), Some(ref errors)) =
             (&config.standard_io_encoding, &config.standard_io_errors)
         {
@@ -396,10 +405,10 @@ impl<'a> MainPythonInterpreter<'a> {
                 .expect("unable to append to sys.meta_path");
         }
 
-        // Ideally we should be calling Py_SetPath() before Py_Initialize(). But we
-        // tried to do this and only ran into problems due to string conversions,
-        // unwanted side-effects. Updating fields after initialization should have
-        // the same effect.
+        // Ideally we should be calling Py_SetPath() with this value before Py_Initialize().
+        // But we tried to do this and only ran into problems due to string conversions,
+        // unwanted side-effects. Updating fields after initialization should have the
+        // same effect.
 
         // Always clear out sys.path.
         let sys_path = sys_module.get(py, "path").expect("unable to get sys.path");
