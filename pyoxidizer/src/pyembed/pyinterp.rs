@@ -110,6 +110,7 @@ pub struct MainPythonInterpreter<'a> {
     raw_allocator: Option<RawAllocator>,
     gil: Option<GILGuard>,
     py: Option<Python<'a>>,
+    program_name: Option<OwnedPyStr>,
 }
 
 impl<'a> MainPythonInterpreter<'a> {
@@ -132,6 +133,7 @@ impl<'a> MainPythonInterpreter<'a> {
             raw_allocator,
             gil: None,
             py: None,
+            program_name: None,
         }
     }
 
@@ -262,6 +264,9 @@ impl<'a> MainPythonInterpreter<'a> {
         unsafe {
             pyffi::Py_SetProgramName(program_name.as_wchar_ptr());
         }
+
+        // Value needs to live for lifetime of interpreter.
+        self.program_name = Some(program_name);
 
         // If we don't call Py_SetPath(), Python has its own logic for initializing it.
         // We set it to an empty string because we don't want any paths by default. If
