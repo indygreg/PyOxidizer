@@ -6,4 +6,5 @@ license = "MPL-2.0"
 edition = "2018"
 
 [dependencies]
+jemallocator-global = "0.3"
 pyembed = { path = "../pyembed" }

@@ -87,6 +87,7 @@ fn populate_template_data(data: &mut BTreeMap<String, String>) {
 
 pub fn update_new_cargo_toml(path: &Path) -> Result<(), std::io::Error> {
     let mut fh = std::fs::OpenOptions::new().append(true).open(path)?;
+    fh.write_all(b"jemallocator-global = \"0.3\"\n")?;
     fh.write_all(b"pyembed = { path = \"pyembed\" }\n")?;
 
     Ok(())
