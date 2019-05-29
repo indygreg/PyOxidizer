@@ -143,6 +143,8 @@ pub enum PythonPackaging {
 #[derive(Debug, Deserialize)]
 #[serde(tag = "mode")]
 pub enum RunMode {
+    #[serde(rename = "noop")]
+    Noop {},
     #[serde(rename = "repl")]
     Repl {},
     #[serde(rename = "module")]

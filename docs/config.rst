@@ -485,6 +485,11 @@ module to load as ``__main__``. e.g.::
    mode = "module"
    module = "mymodule"
 
+``noop``
+--------
+
+``module = "noop"`` will perform nothing.
+
 ``repl``
 --------
 
