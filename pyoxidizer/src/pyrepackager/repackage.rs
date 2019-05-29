@@ -648,6 +648,10 @@ pub fn resolve_python_resources(config: &Config, dist: &PythonDistributionInfo) 
                 }
             }
 
+            if include_names.is_empty() {
+                panic!("filter-files-include rule resolves to empty set; are you sure the path is correct?");
+            }
+
             println!("filtering extension modules from {:?}", packaging);
             filter_btreemap(&mut extension_modules, &include_names);
             println!("filtering module sources from {:?}", packaging);
