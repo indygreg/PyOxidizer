@@ -28,6 +28,21 @@ fn ZERO() -> i64 {
 }
 
 #[derive(Debug, Deserialize)]
+pub enum RawAllocator {
+    #[serde(rename = "jemalloc")]
+    Jemalloc,
+    #[serde(rename = "rust")]
+    Rust,
+    #[serde(rename = "system")]
+    System,
+}
+
+#[allow(non_snake_case)]
+pub fn DEFAULT_ALLOCATOR() -> RawAllocator {
+    RawAllocator::Jemalloc
+}
+
+#[derive(Debug, Deserialize)]
 struct PythonConfig {
     #[serde(default = "TRUE")]
     dont_write_bytecode: bool,
@@ -47,8 +62,8 @@ struct PythonConfig {
     filesystem_importer: bool,
     #[serde(default)]
     sys_paths: Vec<String>,
-    #[serde(default = "TRUE")]
-    rust_allocator_raw: bool,
+    #[serde(default = "DEFAULT_ALLOCATOR")]
+    raw_allocator: RawAllocator,
     write_modules_directory_env: Option<String>,
 }
 
@@ -162,7 +177,7 @@ pub struct Config {
     pub run: RunMode,
     pub filesystem_importer: bool,
     pub sys_paths: Vec<String>,
-    pub rust_allocator_raw: bool,
+    pub raw_allocator: RawAllocator,
     pub write_modules_directory_env: Option<String>,
 }
 
@@ -235,7 +250,7 @@ pub fn parse_config(data: &[u8]) -> Config {
         run: config.python_run,
         filesystem_importer: config.python_config.filesystem_importer || !sys_paths.is_empty(),
         sys_paths: sys_paths.clone(),
-        rust_allocator_raw: config.python_config.rust_allocator_raw,
+        raw_allocator: config.python_config.raw_allocator,
         write_modules_directory_env: config.python_config.write_modules_directory_env,
     }
 }

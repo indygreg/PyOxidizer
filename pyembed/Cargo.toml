@@ -10,6 +10,7 @@ pyoxidizer = { path = "../pyoxidizer" }
 
 [dependencies]
 byteorder = "1"
+jemalloc-sys = { version = "0.3", optional = true }
 libc = "0.2"
 python3-sys = { path = "../third_party/rust-cpython/python3-sys" }
 uuid = { version = "0.7", features = ["v4"] }
@@ -17,3 +18,6 @@ uuid = { version = "0.7", features = ["v4"] }
 [dependencies.cpython]
 path = "../third_party/rust-cpython"
 features = ["link-mode-unresolved-static", "python3-sys", "no-auto-initialize"]
+
+[features]
+default = ["jemalloc-sys"]

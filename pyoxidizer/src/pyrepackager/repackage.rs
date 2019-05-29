@@ -14,7 +14,7 @@ use std::io::{BufRead, BufReader, Cursor, Error as IOError, Read, Write};
 use std::path::{Path, PathBuf};
 
 use super::bytecode::BytecodeCompiler;
-use super::config::{parse_config, Config, PythonPackaging, RunMode};
+use super::config::{parse_config, Config, PythonPackaging, RawAllocator, RunMode};
 use super::dist::{
     analyze_python_distribution_tar_zst, resolve_python_distribution_archive, ExtensionModule,
     PythonDistributionInfo,
@@ -1049,7 +1049,7 @@ pub fn derive_python_config(
          py_modules_data: include_bytes!(\"{}\"),\n    \
          pyc_modules_data: include_bytes!(\"{}\"),\n    \
          argvb: false,\n    \
-         rust_allocator_raw: {},\n    \
+         raw_allocator: {},\n    \
          write_modules_directory_env: {},\n    \
          run: {},\n\
          }}",
@@ -1079,7 +1079,11 @@ pub fn derive_python_config(
         importlib_bootstrap_external_path.display(),
         py_modules_path.display(),
         pyc_modules_path.display(),
-        config.rust_allocator_raw,
+        match config.raw_allocator {
+            RawAllocator::Jemalloc => "PythonRawAllocator::Jemalloc",
+            RawAllocator::Rust => "PythonRawAllocator::Rust",
+            RawAllocator::System => "PythonRawAllocator::System",
+        },
         match &config.write_modules_directory_env {
             Some(path) => "Some(\"".to_owned() + &path + "\".to_string())",
             _ => "None".to_owned(),
@@ -1099,7 +1103,7 @@ pub fn derive_python_config(
 pub fn write_data_rs(path: &PathBuf, python_config_rs: &str) {
     let mut f = fs::File::create(&path).unwrap();
 
-    f.write_all(b"use super::config::{PythonConfig, PythonRunMode};\n\n")
+    f.write_all(b"use super::config::{PythonConfig, PythonRawAllocator, PythonRunMode};\n\n")
         .unwrap();
 
     // Ideally we would have a const struct, but we need to do some

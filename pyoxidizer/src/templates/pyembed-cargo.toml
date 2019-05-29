@@ -10,6 +10,7 @@ build = "build.rs"
 
 [dependencies]
 byteorder = "1"
+jemalloc-sys = { version = "0.3", optional = true }
 libc = "0.2"
 {{#if pyoxidizer_local_repo_path }}python3-sys = { path = "{{{ pyoxidizer_local_repo_path }}}/third_party/rust-cpython/python3-sys" }{{/if}}
 uuid = { version = "0.7", features = ["v4"] }
@@ -17,3 +18,6 @@ uuid = { version = "0.7", features = ["v4"] }
 [dependencies.cpython]
 {{#if pyoxidizer_local_repo_path }}path = "{{{ pyoxidizer_local_repo_path }}}/third_party/rust-cpython"{{/if}}
 features = ["link-mode-unresolved-static", "python3-sys", "no-auto-initialize"]
+
+[features]
+default = ["jemalloc-sys"]

@@ -2,6 +2,17 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+/// Defines which allocator to use for the raw domain.
+#[derive(Clone, Debug)]
+pub enum PythonRawAllocator {
+    /// Use jemalloc.
+    Jemalloc,
+    /// Use the Rust global allocator.
+    Rust,
+    /// Use the system allocator.
+    System,
+}
+
 /// Defines Python code to run.
 #[derive(Clone, Debug)]
 pub enum PythonRunMode {
@@ -88,9 +99,8 @@ pub struct PythonConfig {
     /// values passed to `int main()`.
     pub argvb: bool,
 
-    /// Whether to use Rust's global memory allocator for the Python raw
-    /// memory domain.
-    pub rust_allocator_raw: bool,
+    /// Which memory allocator to use for the raw domain.
+    pub raw_allocator: PythonRawAllocator,
 
     /// Environment variable holding the directory to write a loaded modules file.
     ///

@@ -17,8 +17,10 @@ use cpython::{
     PyString, PyTuple, Python, PythonObject, ToPyObject,
 };
 
-use super::config::{PythonConfig, PythonRunMode};
-use super::pyalloc::{make_raw_memory_allocator, RawAllocator};
+use super::config::{PythonConfig, PythonRawAllocator, PythonRunMode};
+#[cfg(feature = "jemalloc-sys")]
+use super::pyalloc::make_raw_jemalloc_allocator;
+use super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator};
 use super::pymodules_module::PyInit__pymodules;
 use super::pystr::{osstring_to_bytes, osstring_to_str, OwnedPyStr};
 
@@ -99,6 +101,16 @@ fn stderr_to_file() -> *mut libc::FILE {
     unsafe { libc::fdopen(libc::STDERR_FILENO, &('w' as libc::c_char)) }
 }
 
+#[cfg(feature = "jemalloc-sys")]
+fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
+    make_raw_jemalloc_allocator()
+}
+
+#[cfg(not(feature = "jemalloc-sys"))]
+fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
+    panic!("jemalloc is not available in this build configuration");
+}
+
 /// Represents an embedded Python interpreter.
 ///
 /// Since the Python API has global state and methods of this mutate global
@@ -107,7 +119,8 @@ pub struct MainPythonInterpreter<'a> {
     pub config: PythonConfig,
     frozen_modules: [pyffi::_frozen; 3],
     init_run: bool,
-    raw_allocator: Option<RawAllocator>,
+    raw_allocator: Option<pyffi::PyMemAllocatorEx>,
+    raw_rust_allocator: Option<RawAllocator>,
     gil: Option<GILGuard>,
     py: Option<Python<'a>>,
     program_name: Option<OwnedPyStr>,
@@ -118,10 +131,10 @@ impl<'a> MainPythonInterpreter<'a> {
     ///
     /// There are no significant side-effects from calling this.
     pub fn new(config: PythonConfig) -> MainPythonInterpreter<'a> {
-        let raw_allocator = if config.rust_allocator_raw {
-            Some(make_raw_memory_allocator())
-        } else {
-            None
+        let (raw_allocator, raw_rust_allocator) = match config.raw_allocator {
+            PythonRawAllocator::Jemalloc => (Some(raw_jemallocator()), None),
+            PythonRawAllocator::Rust => (None, Some(make_raw_rust_memory_allocator())),
+            PythonRawAllocator::System => (None, None),
         };
 
         let frozen_modules = make_custom_frozen_modules(&config);
@@ -131,6 +144,7 @@ impl<'a> MainPythonInterpreter<'a> {
             frozen_modules,
             init_run: false,
             raw_allocator,
+            raw_rust_allocator,
             gil: None,
             py: None,
             program_name: None,
@@ -186,16 +200,22 @@ impl<'a> MainPythonInterpreter<'a> {
 
         let exe = env::current_exe().unwrap();
 
+        // TODO should we call PyMem::SetupDebugHooks() if enabled?
         if let Some(raw_allocator) = &self.raw_allocator {
             unsafe {
-                let ptr = &raw_allocator.allocator as *const _;
+                let ptr = raw_allocator as *const _;
                 pyffi::PyMem_SetAllocator(
                     pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_RAW,
                     ptr as *mut _,
                 );
-
-                // TODO call this if memory debugging enabled.
-                //pyffi::PyMem_SetupDebugHooks();
+            }
+        } else if let Some(raw_rust_allocator) = &self.raw_rust_allocator {
+            unsafe {
+                let ptr = &raw_rust_allocator.allocator as *const _;
+                pyffi::PyMem_SetAllocator(
+                    pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_RAW,
+                    ptr as *mut _,
+                );
             }
         }
 

@@ -112,17 +112,22 @@ sys_paths
 
    Default is an empty array.
 
-rust_allocator_raw
-   Whether to use the Rust memory allocator for the ``PYMEM_DOMAIN_RAW``
-   allocator.
+raw_allocator
+   Which memory allocator to use for the ``PYMEM_DOMAIN_RAW`` allocator.
 
-   When set, Python uses Rust's global memory allocator instead of
-   ``malloc()``, ``free()``, etc.
+   This controls the lowest level memory allocator used by Python. All
+   memory allocations are effectively serviced by this allocator.
 
-   If a custom Rust memory allocator (such as jemalloc as provided by the
-   ``jemallocator`` crate) is used, Python will also use this allocator.
+   Values can be ``jemalloc``, ``rust``, or ``system``. ``jemalloc`` will
+   use the jemalloc allocator. ``rust`` will use Rust's global allocator
+   (whatever that may be). ``system`` will use the default allocator functions
+   exposed to the binary (``malloc()``, ``free()``, etc).
 
-   Default is ``true``.
+   Note that the ``jemalloc`` allocator requires the ``jemalloc-sys`` crate to be
+   available. A run-time error will occur if ``jemalloc`` is configured but this
+   allocator isn't available.
+
+   Default is ``jemalloc``.
 
 write_modules_directory_env
    Environment variable that defines a directory where ``modules-<UUID>`` files
