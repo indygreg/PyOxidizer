@@ -898,6 +898,14 @@ pub fn link_libpython(
         dist.objs_core.keys().map(|k| k.display()).collect_vec()
     );
     for (rel_path, fs_path) in &dist.objs_core {
+        // TODO this is a bit hacky. Perhaps the distribution should advertise
+        // which object file contains _PyImport_Inittab. Or perhaps we could
+        // scan all the object files for this symbol and ignore it automatically?
+        if rel_path.ends_with("Modules/config.o") {
+            println!("ignoring config.o since it may conflict with our version");
+            continue;
+        }
+
         let parent = temp_dir_path.join(rel_path.parent().unwrap());
         create_dir_all(parent).unwrap();
 
