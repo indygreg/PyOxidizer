@@ -36,8 +36,8 @@ fn parse_modules_blob(data: &'static [u8]) -> Result<HashMap<&str, &[u8]>, &'sta
         let data_length = reader.read_u32::<LittleEndian>().unwrap() as usize;
 
         index.push((name_length, data_length));
-        total_names_length = total_names_length + name_length;
-        i = i + 1;
+        total_names_length += name_length;
+        i += 1;
     }
 
     let mut res = HashMap::with_capacity(count as usize);
@@ -52,7 +52,7 @@ fn parse_modules_blob(data: &'static [u8]) -> Result<HashMap<&str, &[u8]>, &'sta
         let value_offset = values_start_offset + values_current_offset;
         let value = &data[value_offset..value_offset + value_length];
         reader.set_position(offset as u64 + name_length as u64);
-        values_current_offset = values_current_offset + value_length;
+        values_current_offset += value_length;
 
         res.insert(name, value);
     }
