@@ -171,6 +171,23 @@ struct ModuleState {
     pub pyc_data: &'static [u8],
 }
 
+/// Obtain the module state for an instance of our importer module.
+///
+/// Creates a Python exception on failure.
+///
+/// Doesn't do type checking that the PyModule is of the appropriate type.
+fn get_module_state<'a>(py: Python, m: &'a PyModule) -> Result<&'a mut ModuleState, PyErr> {
+    let ptr = m.as_object().as_ptr();
+    let state = unsafe { pyffi::PyModule_GetState(ptr) as *mut ModuleState };
+
+    if state.is_null() {
+        let err = PyErr::new::<ValueError, _>(py, "unable to retrieve module state");
+        return Err(err);
+    }
+
+    Ok(unsafe { &mut *state })
+}
+
 static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
     m_base: pyffi::PyModuleDef_HEAD_INIT,
     m_name: PYMODULES_NAME.as_ptr() as *const _,
@@ -186,9 +203,19 @@ static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
 /// Initialize the Python module exposing resource data.
 ///
 /// This receives a handle to the current Python interpreter and just-created
-/// Python module instance. It populates the module object with handles to raw
-/// resource data.
-fn init(py: Python, m: &PyModule, state: &ModuleState) -> PyResult<()> {
+/// Python module instance. It populates the internal module state and the
+/// external, Python-facing module attributes.
+///
+/// Because this function accesses NEXT_MODULE_STATE, it should only be
+/// called during interpreter initialization.
+fn init(py: Python, m: &PyModule) -> PyResult<()> {
+    let mut state = get_module_state(py, m)?;
+
+    unsafe {
+        state.py_data = (*NEXT_MODULE_STATE).py_data;
+        state.pyc_data = (*NEXT_MODULE_STATE).pyc_data;
+    }
+
     let py_modules = match parse_modules_blob(state.py_data) {
         Ok(value) => value,
         Err(msg) => return Err(PyErr::new::<ValueError, _>(py, msg)),
@@ -233,20 +260,6 @@ pub extern "C" fn PyInit__pymodules() -> *mut pyffi::PyObject {
         return module;
     }
 
-    // Populate the module's state.
-    let state = unsafe { pyffi::PyModule_GetState(module) as *mut ModuleState };
-
-    if state.is_null() {
-        let err = PyErr::new::<ValueError, _>(py, "unable to retrieve module state");
-        err.restore(py);
-        return std::ptr::null_mut();
-    }
-
-    unsafe {
-        (*state).py_data = (*NEXT_MODULE_STATE).py_data;
-        (*state).pyc_data = (*NEXT_MODULE_STATE).pyc_data;
-    }
-
     let module = match unsafe { PyObject::from_owned_ptr(py, module).cast_into::<PyModule>(py) } {
         Ok(m) => m,
         Err(e) => {
@@ -256,7 +269,7 @@ pub extern "C" fn PyInit__pymodules() -> *mut pyffi::PyObject {
     };
 
     // We could inline init(), but then we'd need to do error handling multiple times.
-    match init(py, &module, unsafe { &*state }) {
+    match init(py, &module) {
         Ok(()) => module.into_object().steal_ptr(),
         Err(e) => {
             e.restore(py);
