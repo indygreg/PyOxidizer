@@ -1189,7 +1189,7 @@ pub fn process_config(
     let mut config_data = Vec::new();
     fh.read_to_end(&mut config_data).unwrap();
 
-    let config = parse_config(&config_data);
+    let config = parse_config(&config_data, target);
 
     if let PythonDistribution::Local {
         local_path,

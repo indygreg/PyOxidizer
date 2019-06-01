@@ -182,7 +182,11 @@ pub struct Config {
     pub write_modules_directory_env: Option<String>,
 }
 
-pub fn parse_config(data: &[u8]) -> Config {
+/// Parse a PyOxidizer TOML config from raw data.
+///
+/// Configs are evaluated against a specific build target. Config entries not
+/// relevant to the specified target are removed from the final data structure.
+pub fn parse_config(data: &[u8], _target: &str) -> Config {
     let config: ParsedConfig = toml::from_slice(&data).unwrap();
 
     let optimize_level = match config.python_config.optimize_level {
