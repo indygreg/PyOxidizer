@@ -133,7 +133,7 @@ fn populate_packages(packages: &mut HashSet<&'static str>, name: &'static str) {
     let mut search = name;
 
     loop {
-        match search.rfind(".") {
+        match search.rfind('.') {
             Some(idx) => {
                 packages.insert(&search[0..idx]);
                 search = &search[0..idx];
