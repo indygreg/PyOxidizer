@@ -253,17 +253,14 @@ static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
 /// module object for the interpreter.
 ///
 /// This receives a handle to the current Python interpreter and just-created
-/// Python module instance. It populates the internal module state and the
-/// external, Python-facing module attributes.
+/// Python module instance. It populates the internal module state and registers
+/// a _setup() on the module object for usage by Python.
 ///
 /// Because this function accesses NEXT_MODULE_STATE, it should only be
 /// called during interpreter initialization.
 fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
     let mut state = get_module_state(py, m)?;
 
-    // If we exit this function before setting all fields, the cleanup function
-    // may access uninitialized memory. So set all cleaned up fields explicitly
-    // to guard against that.
     state.builtin_importer = None;
     state.frozen_importer = None;
     state.known_modules = None;
@@ -272,6 +269,47 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
         state.py_data = (*NEXT_MODULE_STATE).py_data;
         state.pyc_data = (*NEXT_MODULE_STATE).pyc_data;
     }
+
+    m.add(
+        py,
+        "_setup",
+        py_fn!(py, module_setup(m: PyModule, sys_module: PyModule)),
+    )?;
+
+    Ok(())
+}
+
+/// Called after module import/initialization to configure the importing mechanism.
+///
+/// This does the heavy work of configuring the importing mechanism.
+///
+/// This function should only be called once as part of
+/// _frozen_importlib_external._install_external_importers().
+fn module_setup(py: Python, m: PyModule, sys_module: PyModule) -> PyResult<PyObject> {
+    let mut state = get_module_state(py, &m)?;
+
+    let meta_path = sys_module.get(py, "meta_path")?;
+
+    // We should be executing as part of
+    // _frozen_importlib_external._install_external_importers().
+    // _frozen_importlib._install() should have already been called and set up
+    // sys.meta_path with [BuiltinImporter, FrozenImporter]. Those should be the
+    // only meta path importers present.
+
+    let meta_path = meta_path.cast_as::<PyList>(py)?;
+
+    if meta_path.len(py) != 2 {
+        return Err(PyErr::new::<ValueError, _>(
+            py,
+            "sys.meta_path does not contain 2 values",
+        ));
+    }
+
+    let builtin_importer = meta_path.get_item(py, 0);
+    let frozen_importer = meta_path.get_item(py, 1);
+
+    state.builtin_importer = Some(builtin_importer);
+    state.frozen_importer = Some(frozen_importer);
 
     let py_modules = match parse_modules_blob(state.py_data) {
         Ok(value) => value,
@@ -346,44 +384,9 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
 
     let modules = ModulesType::create_instance(py, py_modules, pyc_modules, packages)?;
 
-    m.add(
-        py,
-        "_setup",
-        py_fn!(py, module_setup(m: PyModule, sys_module: PyModule)),
-    )?;
     m.add(py, "MODULES", modules)?;
 
     state.known_modules = Some(known_modules);
-
-    Ok(())
-}
-
-/// Called after module import/initialization to configure the importing mechanism.
-fn module_setup(py: Python, m: PyModule, sys_module: PyModule) -> PyResult<PyObject> {
-    let mut state = get_module_state(py, &m)?;
-
-    let meta_path = sys_module.get(py, "meta_path")?;
-
-    // We should be executing as part of
-    // _frozen_importlib_external._install_external_importers().
-    // _frozen_importlib._install() should have already been called and set up
-    // sys.meta_path with [BuiltinImporter, FrozenImporter]. Those should be the
-    // only meta path importers present.
-
-    let meta_path = meta_path.cast_as::<PyList>(py)?;
-
-    if meta_path.len(py) != 2 {
-        return Err(PyErr::new::<ValueError, _>(
-            py,
-            "sys.meta_path does not contain 2 values",
-        ));
-    }
-
-    let builtin_importer = meta_path.get_item(py, 0);
-    let frozen_importer = meta_path.get_item(py, 1);
-
-    state.builtin_importer = Some(builtin_importer);
-    state.frozen_importer = Some(frozen_importer);
 
     Ok(py.None())
 }
