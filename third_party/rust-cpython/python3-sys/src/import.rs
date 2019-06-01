@@ -72,6 +72,13 @@ pub unsafe fn PyImport_ImportModuleEx(name: *const c_char,
 
 #[repr(C)]
 #[derive(Copy, Clone)]
+pub struct _inittab {
+    pub name: *mut c_char,
+    pub initfunc: Option<unsafe extern "C" fn()>,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
 #[cfg(not(Py_LIMITED_API))]
 pub struct _frozen {
     pub name: *const c_char,
@@ -83,4 +90,5 @@ pub struct _frozen {
 #[cfg_attr(windows, link(name="pythonXY"))]
 extern "C" {
     pub static mut PyImport_FrozenModules: *const _frozen;
+    pub static mut PyImport_Inittab: *mut _inittab;
 }
