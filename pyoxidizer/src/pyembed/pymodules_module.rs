@@ -122,9 +122,10 @@ py_class!(class ModulesType |py| {
     def is_package(&self, name: PyString) -> PyResult<PyBool> {
         let key = name.to_string(py)?;
 
-        Ok(match self.packages(py).contains(&*key) {
-            true => true.to_py_object(py),
-            false => false.to_py_object(py),
+        Ok(if self.packages(py).contains(&*key) {
+            true.to_py_object(py)
+        } else {
+            false.to_py_object(py)
         })
     }
 });
