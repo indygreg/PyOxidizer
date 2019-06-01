@@ -5,6 +5,7 @@
 /* This module defines a Python meta path importer for importing from a self-contained binary. */
 
 use std::collections::{HashMap, HashSet};
+use std::ffi::CStr;
 use std::io::Cursor;
 
 use byteorder::{LittleEndian, ReadBytesExt};
@@ -157,6 +158,16 @@ pub struct InitModuleState {
 /// Python module is initialized.
 pub static mut NEXT_MODULE_STATE: *const InitModuleState = std::ptr::null();
 
+/// Represents which importer to use for known modules.
+#[derive(Debug)]
+enum KnownModuleFlavor {
+    Builtin,
+    Frozen,
+    InMemory,
+}
+
+type KnownModules = HashMap<&'static str, KnownModuleFlavor>;
+
 /// State associated with each importer module instance.
 ///
 /// We write per-module state to per-module instances of this struct so
@@ -175,6 +186,12 @@ struct ModuleState {
 
     /// Handle on the FrozenImporter meta path importer.
     frozen_importer: Option<PyObject>,
+
+    /// Stores mapping of module name to module type.
+    ///
+    /// This facilitates dispatching to an importer with a single lookup instead
+    /// of iterating over all importers.
+    known_modules: Option<Box<KnownModules>>,
 }
 
 /// Obtain the module state for an instance of our importer module.
@@ -208,6 +225,11 @@ pub extern "C" fn pymodules_clear(m: *mut pyffi::PyObject) -> libc::c_int {
     unsafe {
         (*state).builtin_importer = None;
         (*state).frozen_importer = None;
+    }
+
+    // Need to drop Rust values that are owned by this instance.
+    unsafe {
+        (*state).known_modules = None;
     }
 
     0
@@ -244,6 +266,7 @@ fn internal_init(py: Python, m: &PyModule) -> PyResult<()> {
     // to guard against that.
     state.builtin_importer = None;
     state.frozen_importer = None;
+    state.known_modules = None;
 
     const META_PATH: &[u8; 10] = b"meta_path\0";
     let meta_path = match unsafe {
@@ -295,20 +318,72 @@ fn internal_init(py: Python, m: &PyModule) -> PyResult<()> {
         Err(msg) => return Err(PyErr::new::<ValueError, _>(py, msg)),
     };
 
+    // Populate our known module lookup table with entries from builtins, frozens, and
+    // finally us. Last write wins and has the same effect as registering our
+    // meta path importer first. This should be safe. If nothing else, it allows
+    // some builtins to be overwritten by .py implemented modules.
+    let mut known_modules = Box::new(KnownModules::with_capacity(pyc_modules.len() + 10));
+
+    for i in 0.. {
+        let record = unsafe { pyffi::PyImport_Inittab.offset(i) };
+
+        if unsafe { *record }.name.is_null() {
+            break;
+        }
+
+        let name = unsafe { CStr::from_ptr((*record).name as _) };
+        let name_str = match name.to_str() {
+            Ok(v) => v,
+            Err(_) => {
+                return Err(PyErr::new::<ValueError, _>(
+                    py,
+                    "unable to parse PyImport_Inittab",
+                ));
+            }
+        };
+
+        known_modules.insert(name_str, KnownModuleFlavor::Builtin);
+    }
+
+    for i in 0.. {
+        let record = unsafe { pyffi::PyImport_FrozenModules.offset(i) };
+
+        if unsafe { *record }.name.is_null() {
+            break;
+        }
+
+        let name = unsafe { CStr::from_ptr((*record).name as _) };
+        let name_str = match name.to_str() {
+            Ok(v) => v,
+            Err(_) => {
+                return Err(PyErr::new::<ValueError, _>(
+                    py,
+                    "unable to parse PyImport_FrozenModules",
+                ));
+            }
+        };
+
+        known_modules.insert(name_str, KnownModuleFlavor::Frozen);
+    }
+
     // TODO consider baking set of packages into embedded data.
     let mut packages: HashSet<&'static str> = HashSet::with_capacity(pyc_modules.len());
 
     for key in py_modules.keys() {
+        known_modules.insert(key, KnownModuleFlavor::InMemory);
         populate_packages(&mut packages, key);
     }
 
     for key in pyc_modules.keys() {
+        known_modules.insert(key, KnownModuleFlavor::InMemory);
         populate_packages(&mut packages, key);
     }
 
     let modules = ModulesType::create_instance(py, py_modules, pyc_modules, packages)?;
 
     m.add(py, "MODULES", modules)?;
+
+    state.known_modules = Some(known_modules);
 
     Ok(())
 }
