@@ -141,14 +141,9 @@ fn populate_packages(packages: &mut HashSet<&'static str>, name: &'static str) {
 
 const DOC: &[u8] = b"Binary representation of Python modules\0";
 
-/// Represents per-module module state.
-///
-/// We associate an instance of this struct with each constructed module object
-/// so that modules can access local variables/state instead of relying on
-/// globals.
-#[derive(Debug, Clone)]
+/// Represents global module state to be passed at interpreter initialization time.
+#[derive(Debug)]
 pub struct InitModuleState {
-    // Strictly speaking these don't need to be &'static.
     /// Raw data constituting Python module source code.
     pub py_data: &'static [u8],
 
@@ -162,11 +157,25 @@ pub struct InitModuleState {
 /// Python module is initialized.
 pub static mut NEXT_MODULE_STATE: *const InitModuleState = std::ptr::null();
 
+/// State associated with each importer module instance.
+///
+/// We write per-module state to per-module instances of this struct so
+/// we don't rely on global variables and so multiple importer modules can
+/// exist without issue.
+#[derive(Debug, Clone)]
+struct ModuleState {
+    /// Raw data constituting Python module source code.
+    pub py_data: &'static [u8],
+
+    /// Raw data constituting Python module bytecode.
+    pub pyc_data: &'static [u8],
+}
+
 static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
     m_base: pyffi::PyModuleDef_HEAD_INIT,
     m_name: PYMODULES_NAME.as_ptr() as *const _,
     m_doc: DOC.as_ptr() as *const _,
-    m_size: std::mem::size_of::<InitModuleState>() as isize,
+    m_size: std::mem::size_of::<ModuleState>() as isize,
     m_methods: 0 as *mut _,
     m_slots: 0 as *mut _,
     m_traverse: None,
@@ -179,7 +188,7 @@ static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
 /// This receives a handle to the current Python interpreter and just-created
 /// Python module instance. It populates the module object with handles to raw
 /// resource data.
-fn init(py: Python, m: &PyModule, state: &InitModuleState) -> PyResult<()> {
+fn init(py: Python, m: &PyModule, state: &ModuleState) -> PyResult<()> {
     let py_modules = match parse_modules_blob(state.py_data) {
         Ok(value) => value,
         Err(msg) => return Err(PyErr::new::<ValueError, _>(py, msg)),
@@ -224,9 +233,8 @@ pub extern "C" fn PyInit__pymodules() -> *mut pyffi::PyObject {
         return module;
     }
 
-    // Copy the "next" module state into this module's state so we have per-module
-    // state and don't rely on global variables.
-    let state = unsafe { pyffi::PyModule_GetState(module) as *mut InitModuleState };
+    // Populate the module's state.
+    let state = unsafe { pyffi::PyModule_GetState(module) as *mut ModuleState };
 
     if state.is_null() {
         let err = PyErr::new::<ValueError, _>(py, "unable to retrieve module state");
@@ -235,7 +243,8 @@ pub extern "C" fn PyInit__pymodules() -> *mut pyffi::PyObject {
     }
 
     unsafe {
-        NEXT_MODULE_STATE.copy_to(state, 1);
+        (*state).py_data = (*NEXT_MODULE_STATE).py_data;
+        (*state).pyc_data = (*NEXT_MODULE_STATE).pyc_data;
     }
 
     let module = match unsafe { PyObject::from_owned_ptr(py, module).cast_into::<PyModule>(py) } {
