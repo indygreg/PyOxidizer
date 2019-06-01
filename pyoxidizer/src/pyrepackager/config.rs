@@ -8,7 +8,7 @@ use serde::Deserialize;
 
 #[serde(untagged)]
 #[derive(Debug, Deserialize)]
-enum ConfigPythonDistribution {
+pub enum PythonDistribution {
     Local { local_path: String, sha256: String },
     Url { url: String, sha256: String },
 }
@@ -156,7 +156,7 @@ pub enum RunMode {
 
 #[derive(Debug, Deserialize)]
 struct ParsedConfig {
-    python_distribution: ConfigPythonDistribution,
+    python_distribution: PythonDistribution,
     python_config: ConfigPython,
     python_packages: Vec<PythonPackaging>,
     python_run: RunMode,
@@ -170,9 +170,7 @@ pub struct Config {
     pub no_user_site_directory: bool,
     pub optimize_level: i64,
     pub program_name: String,
-    pub python_distribution_path: Option<String>,
-    pub python_distribution_url: Option<String>,
-    pub python_distribution_sha256: String,
+    pub python_distribution: PythonDistribution,
     pub stdio_encoding_name: Option<String>,
     pub stdio_encoding_errors: Option<String>,
     pub unbuffered_stdio: bool,
@@ -198,14 +196,6 @@ pub fn parse_config(data: &[u8]) -> Config {
         Some(value) => value,
         None => String::from("undefined"),
     };
-
-    let (python_distribution_path, python_distribution_url, python_distribution_sha256) =
-        match config.python_distribution {
-            ConfigPythonDistribution::Local { local_path, sha256 } => {
-                (Some(local_path), None, sha256)
-            }
-            ConfigPythonDistribution::Url { url, sha256 } => (None, Some(url), sha256),
-        };
 
     let (stdio_encoding_name, stdio_encoding_errors) = match config.python_config.stdio_encoding {
         Some(value) => {
@@ -247,9 +237,7 @@ pub fn parse_config(data: &[u8]) -> Config {
         no_user_site_directory: config.python_config.no_user_site_directory,
         optimize_level,
         program_name,
-        python_distribution_path,
-        python_distribution_url,
-        python_distribution_sha256,
+        python_distribution: config.python_distribution,
         stdio_encoding_name,
         stdio_encoding_errors,
         unbuffered_stdio: config.python_config.unbuffered_stdio,

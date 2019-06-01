@@ -14,7 +14,9 @@ use std::io::{BufRead, BufReader, Cursor, Error as IOError, Read, Write};
 use std::path::{Path, PathBuf};
 
 use super::bytecode::BytecodeCompiler;
-use super::config::{parse_config, Config, PythonPackaging, RawAllocator, RunMode};
+use super::config::{
+    parse_config, Config, PythonDistribution, PythonPackaging, RawAllocator, RunMode,
+};
 use super::dist::{
     analyze_python_distribution_tar_zst, resolve_python_distribution_archive, ExtensionModule,
     PythonDistributionInfo,
@@ -1189,8 +1191,12 @@ pub fn process_config(
 
     let config = parse_config(&config_data);
 
-    if let Some(ref path) = config.python_distribution_path {
-        cargo_metadata.push(format!("cargo:rerun-if-changed={}", path));
+    if let PythonDistribution::Local {
+        local_path,
+        sha256: _,
+    } = &config.python_distribution
+    {
+        cargo_metadata.push(format!("cargo:rerun-if-changed={}", local_path));
     }
 
     // Obtain the configured Python distribution and parse it to a data structure.

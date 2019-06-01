@@ -12,7 +12,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use url::Url;
 
-use super::config::Config;
+use super::config::{Config, PythonDistribution};
 use super::fsscan::{find_python_resources, walk_tree_files, PythonResourceType};
 
 #[cfg(windows)]
@@ -546,14 +546,11 @@ pub fn copy_local_distribution(path: &PathBuf, sha256: &str, cache_dir: &Path) -
 ///
 /// Local filesystem paths are preferred over remote URLs if both are defined.
 pub fn resolve_python_distribution_archive(config: &Config, cache_dir: &Path) -> PathBuf {
-    match &config.python_distribution_path {
-        Some(path) => {
-            let p = PathBuf::from(path);
-            copy_local_distribution(&p, &config.python_distribution_sha256, cache_dir)
+    match &config.python_distribution {
+        PythonDistribution::Local { local_path, sha256 } => {
+            let p = PathBuf::from(local_path);
+            copy_local_distribution(&p, sha256, cache_dir)
         }
-        None => match &config.python_distribution_url {
-            Some(url) => download_distribution(&url, &config.python_distribution_sha256, cache_dir),
-            None => panic!("invalid config"),
-        },
+        PythonDistribution::Url { url, sha256 } => download_distribution(url, sha256, cache_dir),
     }
 }
