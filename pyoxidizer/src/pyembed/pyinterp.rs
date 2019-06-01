@@ -316,31 +316,19 @@ impl<'a> MainPythonInterpreter<'a> {
         }
 
         unsafe {
-            pyffi::Py_DontWriteBytecodeFlag = match config.dont_write_bytecode {
-                true => 1,
-                false => 0,
-            };
+            pyffi::Py_DontWriteBytecodeFlag = if config.dont_write_bytecode { 1 } else { 0 };
         }
 
         unsafe {
-            pyffi::Py_IgnoreEnvironmentFlag = match config.ignore_python_env {
-                true => 1,
-                false => 0,
-            };
+            pyffi::Py_IgnoreEnvironmentFlag = if config.ignore_python_env { 1 } else { 0 };
         }
 
         unsafe {
-            pyffi::Py_NoSiteFlag = match config.import_site {
-                true => 0,
-                false => 1,
-            };
+            pyffi::Py_NoSiteFlag = if config.import_site { 0 } else { 1 };
         }
 
         unsafe {
-            pyffi::Py_NoUserSiteDirectory = match config.import_user_site {
-                true => 0,
-                false => 1,
-            };
+            pyffi::Py_NoUserSiteDirectory = if config.import_user_site { 0 } else { 1 };
         }
 
         unsafe {
@@ -348,10 +336,7 @@ impl<'a> MainPythonInterpreter<'a> {
         }
 
         unsafe {
-            pyffi::Py_UnbufferedStdioFlag = match config.unbuffered_stdio {
-                true => 1,
-                false => 0,
-            };
+            pyffi::Py_UnbufferedStdioFlag = if config.unbuffered_stdio { 1 } else { 0 };
         }
 
         /* Pre-initialization functions we could support:
