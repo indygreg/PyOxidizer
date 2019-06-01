@@ -787,13 +787,10 @@ fn write_modules_to_directory(py: Python, path: &PathBuf) {
 impl<'a> Drop for MainPythonInterpreter<'a> {
     fn drop(&mut self) {
         if let Some(key) = &self.config.write_modules_directory_env {
-            match env::var(key) {
-                Ok(path) => {
-                    let path = PathBuf::from(path);
-                    let py = self.acquire_gil();
-                    write_modules_to_directory(py, &path);
-                }
-                Err(_) => {}
+            if let Ok(path) = env::var(key) {
+                let path = PathBuf::from(path);
+                let py = self.acquire_gil();
+                write_modules_to_directory(py, &path);
             }
         }
 
