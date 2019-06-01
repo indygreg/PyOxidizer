@@ -5,11 +5,12 @@
 use serde::Deserialize;
 
 // TOML config file parsing.
+
+#[serde(untagged)]
 #[derive(Debug, Deserialize)]
-struct ConfigPythonDistribution {
-    local_path: Option<String>,
-    url: Option<String>,
-    sha256: String,
+enum ConfigPythonDistribution {
+    Local { local_path: String, sha256: String },
+    Url { url: String, sha256: String },
 }
 
 #[allow(non_snake_case)]
@@ -198,9 +199,13 @@ pub fn parse_config(data: &[u8]) -> Config {
         None => String::from("undefined"),
     };
 
-    let python_distribution_path = config.python_distribution.local_path;
-    let python_distribution_url = config.python_distribution.url;
-    let python_distribution_sha256 = config.python_distribution.sha256;
+    let (python_distribution_path, python_distribution_url, python_distribution_sha256) =
+        match config.python_distribution {
+            ConfigPythonDistribution::Local { local_path, sha256 } => {
+                (Some(local_path), None, sha256)
+            }
+            ConfigPythonDistribution::Url { url, sha256 } => (None, Some(url), sha256),
+        };
 
     let (stdio_encoding_name, stdio_encoding_errors) = match config.python_config.stdio_encoding {
         Some(value) => {
