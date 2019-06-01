@@ -70,6 +70,9 @@ fn parse_modules_blob(data: &'static [u8]) -> Result<HashMap<&str, &[u8]>, &'sta
 py_class!(class PyOxidizerFinder |py| {
     data builtin_importer: PyObject;
     data frozen_importer: PyObject;
+    data py_modules: HashMap<&'static str, &'static [u8]>;
+    data pyc_modules: HashMap<&'static str, &'static [u8]>;
+    data packages: HashSet<&'static str>;
     data known_modules: KnownModules;
 
     // Start of importlib.abc.MetaPathFinder interface.
@@ -415,12 +418,24 @@ fn module_setup(py: Python, m: PyModule, bootstrap_module: PyModule) -> PyResult
         populate_packages(&mut packages, key);
     }
 
-    let modules = ModulesType::create_instance(py, py_modules, pyc_modules, packages)?;
+    let modules = ModulesType::create_instance(
+        py,
+        py_modules.clone(),
+        pyc_modules.clone(),
+        packages.clone(),
+    )?;
 
     m.add(py, "MODULES", modules)?;
 
-    let unified_importer =
-        PyOxidizerFinder::create_instance(py, builtin_importer, frozen_importer, known_modules)?;
+    let unified_importer = PyOxidizerFinder::create_instance(
+        py,
+        builtin_importer,
+        frozen_importer,
+        py_modules,
+        pyc_modules,
+        packages,
+        known_modules,
+    )?;
     meta_path_object.call_method(py, "clear", NoArgs, None)?;
     meta_path_object.call_method(py, "append", (unified_importer,), None)?;
 
