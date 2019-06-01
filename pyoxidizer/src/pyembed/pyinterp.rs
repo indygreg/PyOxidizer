@@ -676,10 +676,8 @@ impl<'a> MainPythonInterpreter<'a> {
             pyffi::Py_InspectFlag = 0;
         }
 
-        match py.import("readline") {
-            Ok(_) => (),
-            Err(_) => (),
-        };
+        // readline is optional. We don't care if it fails.
+        if py.import("readline").is_ok() {}
 
         let sys = py.import("sys")?;
 
