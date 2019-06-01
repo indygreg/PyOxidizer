@@ -128,11 +128,13 @@ pub fn write_new_pyoxidizer_config_files(
     project_dir: &Path,
     name: &str,
 ) -> Result<(), std::io::Error> {
+    // TODO write all targets into single file.
     for (triple, dist) in CPYTHON_BY_TRIPLE.iter() {
         let basename = format!("pyoxidizer.{}.toml", triple);
         let path = project_dir.to_path_buf().join(basename);
 
         let mut data = BTreeMap::new();
+        data.insert("target", triple.to_string());
         data.insert("python_distribution_url", dist.url.clone());
         data.insert("python_distribution_sha256", dist.sha256.clone());
         data.insert("program_name", name.to_string());

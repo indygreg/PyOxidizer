@@ -8,9 +8,17 @@ use serde::Deserialize;
 
 #[serde(untagged)]
 #[derive(Debug, Deserialize)]
-pub enum PythonDistribution {
-    Local { local_path: String, sha256: String },
-    Url { url: String, sha256: String },
+enum ConfigPythonDistribution {
+    Local {
+        target: String,
+        local_path: String,
+        sha256: String,
+    },
+    Url {
+        target: String,
+        url: String,
+        sha256: String,
+    },
 }
 
 #[allow(non_snake_case)]
@@ -156,10 +164,17 @@ pub enum RunMode {
 
 #[derive(Debug, Deserialize)]
 struct ParsedConfig {
-    python_distribution: PythonDistribution,
+    #[serde(default, rename = "python_distribution")]
+    python_distributions: Vec<ConfigPythonDistribution>,
     python_config: ConfigPython,
     python_packages: Vec<PythonPackaging>,
     python_run: RunMode,
+}
+
+#[derive(Debug)]
+pub enum PythonDistribution {
+    Local { local_path: String, sha256: String },
+    Url { url: String, sha256: String },
 }
 
 #[derive(Debug)]
@@ -186,8 +201,55 @@ pub struct Config {
 ///
 /// Configs are evaluated against a specific build target. Config entries not
 /// relevant to the specified target are removed from the final data structure.
-pub fn parse_config(data: &[u8], _target: &str) -> Config {
+pub fn parse_config(data: &[u8], target: &str) -> Config {
     let config: ParsedConfig = toml::from_slice(&data).unwrap();
+
+    if config.python_distributions.is_empty() {
+        panic!("no [[python_distribution]] sections");
+    }
+
+    let python_distribution = match config
+        .python_distributions
+        .iter()
+        .filter_map(|d| match d {
+            ConfigPythonDistribution::Local {
+                target: dist_target,
+                local_path,
+                sha256,
+            } => {
+                if dist_target == target {
+                    Some(PythonDistribution::Local {
+                        local_path: local_path.clone(),
+                        sha256: sha256.clone(),
+                    })
+                } else {
+                    None
+                }
+            }
+
+            ConfigPythonDistribution::Url {
+                target: dist_target,
+                url,
+                sha256,
+            } => {
+                if dist_target == target {
+                    Some(PythonDistribution::Url {
+                        url: url.clone(),
+                        sha256: sha256.clone(),
+                    })
+                } else {
+                    None
+                }
+            }
+        })
+        .next()
+    {
+        Some(v) => v,
+        None => panic!(
+            "no suitable Python distributions found for target {}",
+            target
+        ),
+    };
 
     let optimize_level = match config.python_config.optimize_level {
         0 => 0,
@@ -241,7 +303,7 @@ pub fn parse_config(data: &[u8], _target: &str) -> Config {
         no_user_site_directory: config.python_config.no_user_site_directory,
         optimize_level,
         program_name,
-        python_distribution: config.python_distribution,
+        python_distribution,
         stdio_encoding_name,
         stdio_encoding_errors,
         unbuffered_stdio: config.python_config.unbuffered_stdio,

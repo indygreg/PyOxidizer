@@ -7,10 +7,10 @@ the format of those TOML files.
 
 Sections in this document correspond to TOML sections.
 
-``[python_distribution]``
+``[[python_distribution]]``
 =========================
 
-Configures the Python distribution that should be ingested and used.
+Defines a Python distribution that can be embedded.
 
 A Python distribution is a zstandard-compressed tar archive containing a
 specially produced Python distribution. These distributions are typically
@@ -19,8 +19,8 @@ produced by the
 project. Pre-built distributions are available at
 https://github.com/indygreg/python-build-standalone/releases.
 
-A distribution is defined by a location and a hash. The location is
-defined by one of the following keys in this section:
+A distribution is defined by a target triple, location and a hash. The
+location is defined by one of the following keys in this section:
 
 local_path
    Local filesystem path containing zstandard-compressed tar archive.
@@ -33,7 +33,8 @@ The hash of the archive MUST be defined in the ``sha256`` key.
 
 e.g.::
 
-    [python_distribution]
+    [[python_distribution]]
+    target = "x86_64-unknown-linux-gnu"
     local_path = "/var/python-distributions/cpython-linux64.tar.zst"
     sha256 = "11a53f5755773f91111a04f6070a6bc00518a0e8e64d90f58584abf02ca79081"
 
