@@ -107,7 +107,7 @@ extern "C" fn raw_rust_realloc(
     }
 }
 
-extern "C" fn raw_rust_free(ctx: *mut c_void, ptr: *mut c_void) -> () {
+extern "C" fn raw_rust_free(ctx: *mut c_void, ptr: *mut c_void) {
     if ptr.is_null() {
         return;
     }
@@ -198,7 +198,7 @@ extern "C" fn raw_jemalloc_realloc(
 }
 
 #[cfg(feature = "jemalloc-sys")]
-extern "C" fn raw_jemalloc_free(_ctx: *mut c_void, ptr: *mut c_void) -> () {
+extern "C" fn raw_jemalloc_free(_ctx: *mut c_void, ptr: *mut c_void) {
     if ptr.is_null() {
         return;
     }
