@@ -132,14 +132,9 @@ py_class!(class ModulesType |py| {
 fn populate_packages(packages: &mut HashSet<&'static str>, name: &'static str) {
     let mut search = name;
 
-    loop {
-        match search.rfind('.') {
-            Some(idx) => {
-                packages.insert(&search[0..idx]);
-                search = &search[0..idx];
-            }
-            None => break,
-        };
+    while let Some(idx) = search.rfind('.') {
+        packages.insert(&search[0..idx]);
+        search = &search[0..idx];
     }
 }
 
