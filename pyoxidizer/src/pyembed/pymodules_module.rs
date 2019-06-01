@@ -139,7 +139,7 @@ fn populate_packages(packages: &mut HashSet<&'static str>, name: &'static str) {
     }
 }
 
-const DOC: &'static [u8] = b"Binary representation of Python modules\0";
+const DOC: &[u8] = b"Binary representation of Python modules\0";
 
 /// Represents per-module module state.
 ///
