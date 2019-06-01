@@ -307,7 +307,7 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
     m.add(
         py,
         "_setup",
-        py_fn!(py, module_setup(m: PyModule, sys_module: PyModule)),
+        py_fn!(py, module_setup(m: PyModule, bootstrap_module: PyModule)),
     )?;
 
     Ok(())
@@ -319,9 +319,11 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
 ///
 /// This function should only be called once as part of
 /// _frozen_importlib_external._install_external_importers().
-fn module_setup(py: Python, m: PyModule, sys_module: PyModule) -> PyResult<PyObject> {
+fn module_setup(py: Python, m: PyModule, bootstrap_module: PyModule) -> PyResult<PyObject> {
     let state = get_module_state(py, &m)?;
 
+    let sys_module = bootstrap_module.get(py, "sys")?;
+    let sys_module = sys_module.cast_as::<PyModule>(py)?;
     let meta_path_object = sys_module.get(py, "meta_path")?;
 
     // We should be executing as part of
