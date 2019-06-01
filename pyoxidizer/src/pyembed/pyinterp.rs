@@ -223,7 +223,7 @@ impl<'a> MainPythonInterpreter<'a> {
         // part of initializing the Python interpreter.
         //
         // This Python module object needs to hold references to the raw Python module
-        // and resource data. Those references are defined by the ModuleState struct.
+        // and resource data. Those references are defined by the InitModuleState struct.
         //
         // Unfortunately, we can't easily associate state with the interpreter before
         // calling Py_Initialize(). And the module initialization function receives no
@@ -241,7 +241,7 @@ impl<'a> MainPythonInterpreter<'a> {
         // It is important for references in this struct to have a lifetime of at least
         // that of the interpreter.
         // TODO specify lifetimes so the compiler validates this for us.
-        let module_state = super::importer::ModuleState {
+        let module_state = super::importer::InitModuleState {
             py_data: config.py_modules_data,
             pyc_data: config.pyc_modules_data,
         };
