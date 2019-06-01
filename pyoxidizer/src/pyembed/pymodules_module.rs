@@ -76,7 +76,7 @@ py_class!(class ModulesType |py| {
     def get_source(&self, name: PyString) -> PyResult<PyObject> {
         let key = name.to_string(py)?;
 
-        return match self.py_modules(py).get(&*key) {
+        match self.py_modules(py).get(&*key) {
             Some(value) => {
                 let py_value = unsafe {
                     let ptr = PyMemoryView_FromMemory(value.as_ptr() as * mut i8, value.len() as isize, PyBUF_READ);
@@ -92,7 +92,7 @@ py_class!(class ModulesType |py| {
     def get_code(&self, name: PyString) -> PyResult<PyObject> {
         let key = name.to_string(py)?;
 
-        return match self.pyc_modules(py).get(&*key) {
+        match self.pyc_modules(py).get(&*key) {
             Some(value) => {
                 let py_value = unsafe {
                     let ptr = PyMemoryView_FromMemory(value.as_ptr() as * mut i8, value.len() as isize, PyBUF_READ);
@@ -116,7 +116,7 @@ py_class!(class ModulesType |py| {
             return Ok(true.to_py_object(py));
         }
 
-        return Ok(false.to_py_object(py));
+        Ok(false.to_py_object(py))
     }
 
     def is_package(&self, name: PyString) -> PyResult<PyBool> {
