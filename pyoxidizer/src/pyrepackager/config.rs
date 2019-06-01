@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use itertools::Itertools;
 use serde::Deserialize;
 
 // TOML config file parsing.
@@ -51,6 +52,11 @@ pub fn DEFAULT_ALLOCATOR() -> RawAllocator {
     RawAllocator::Jemalloc
 }
 
+#[allow(non_snake_case)]
+fn ALL() -> String {
+    "all".to_string()
+}
+
 #[derive(Debug, Deserialize)]
 struct ConfigPython {
     #[serde(default = "TRUE")]
@@ -78,30 +84,43 @@ struct ConfigPython {
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type")]
-pub enum PythonPackaging {
+enum ConfigPythonPackaging {
     #[serde(rename = "stdlib-extensions-policy")]
     StdlibExtensionsPolicy {
+        #[serde(default = "ALL")]
+        target: String,
         // TODO make this an enum.
         policy: String,
     },
 
     #[serde(rename = "stdlib-extensions-explicit-includes")]
     StdlibExtensionsExplicitIncludes {
+        #[serde(default = "ALL")]
+        target: String,
         #[serde(default)]
         includes: Vec<String>,
     },
 
     #[serde(rename = "stdlib-extensions-explicit-excludes")]
     StdlibExtensionsExplicitExcludes {
+        #[serde(default = "ALL")]
+        target: String,
         #[serde(default)]
         excludes: Vec<String>,
     },
 
     #[serde(rename = "stdlib-extension-variant")]
-    StdlibExtensionVariant { extension: String, variant: String },
+    StdlibExtensionVariant {
+        #[serde(default = "ALL")]
+        target: String,
+        extension: String,
+        variant: String,
+    },
 
     #[serde(rename = "stdlib")]
     Stdlib {
+        #[serde(default = "ALL")]
+        target: String,
         #[serde(default = "ZERO")]
         optimize_level: i64,
         #[serde(default = "TRUE")]
@@ -112,6 +131,8 @@ pub enum PythonPackaging {
 
     #[serde(rename = "virtualenv")]
     Virtualenv {
+        #[serde(default = "ALL")]
+        target: String,
         path: String,
         #[serde(default = "ZERO")]
         optimize_level: i64,
@@ -123,6 +144,8 @@ pub enum PythonPackaging {
 
     #[serde(rename = "package-root")]
     PackageRoot {
+        #[serde(default = "ALL")]
+        target: String,
         path: String,
         packages: Vec<String>,
         #[serde(default = "ZERO")]
@@ -135,6 +158,8 @@ pub enum PythonPackaging {
 
     #[serde(rename = "pip-install-simple")]
     PipInstallSimple {
+        #[serde(default = "ALL")]
+        target: String,
         package: String,
         #[serde(default = "ZERO")]
         optimize_level: i64,
@@ -143,10 +168,18 @@ pub enum PythonPackaging {
     },
 
     #[serde(rename = "filter-file-include")]
-    FilterFileInclude { path: String },
+    FilterFileInclude {
+        #[serde(default = "ALL")]
+        target: String,
+        path: String,
+    },
 
     #[serde(rename = "filter-files-include")]
-    FilterFilesInclude { glob: String },
+    FilterFilesInclude {
+        #[serde(default = "ALL")]
+        target: String,
+        glob: String,
+    },
 }
 
 #[derive(Debug, Deserialize)]
@@ -167,7 +200,7 @@ struct ParsedConfig {
     #[serde(default, rename = "python_distribution")]
     python_distributions: Vec<ConfigPythonDistribution>,
     python_config: ConfigPython,
-    python_packages: Vec<PythonPackaging>,
+    python_packages: Vec<ConfigPythonPackaging>,
     python_run: RunMode,
 }
 
@@ -175,6 +208,62 @@ struct ParsedConfig {
 pub enum PythonDistribution {
     Local { local_path: String, sha256: String },
     Url { url: String, sha256: String },
+}
+
+#[derive(Debug)]
+pub enum PythonPackaging {
+    StdlibExtensionsPolicy {
+        // TODO make this an enum.
+        policy: String,
+    },
+
+    StdlibExtensionsExplicitIncludes {
+        includes: Vec<String>,
+    },
+
+    StdlibExtensionsExplicitExcludes {
+        excludes: Vec<String>,
+    },
+
+    StdlibExtensionVariant {
+        extension: String,
+        variant: String,
+    },
+
+    Stdlib {
+        optimize_level: i64,
+        exclude_test_modules: bool,
+        include_source: bool,
+    },
+
+    Virtualenv {
+        path: String,
+        optimize_level: i64,
+        excludes: Vec<String>,
+        include_source: bool,
+    },
+
+    PackageRoot {
+        path: String,
+        packages: Vec<String>,
+        optimize_level: i64,
+        excludes: Vec<String>,
+        include_source: bool,
+    },
+
+    PipInstallSimple {
+        package: String,
+        optimize_level: i64,
+        include_source: bool,
+    },
+
+    FilterFileInclude {
+        path: String,
+    },
+
+    FilterFilesInclude {
+        glob: String,
+    },
 }
 
 #[derive(Debug)]
@@ -274,17 +363,156 @@ pub fn parse_config(data: &[u8], target: &str) -> Config {
     let mut have_stdlib_extensions_policy = false;
     let mut have_stdlib = false;
 
-    for packaging in &config.python_packages {
-        match packaging {
-            PythonPackaging::StdlibExtensionsPolicy { .. } => {
-                have_stdlib_extensions_policy = true;
+    let python_packaging = config
+        .python_packages
+        .iter()
+        .filter_map(|r| match r {
+            ConfigPythonPackaging::FilterFileInclude {
+                target: rule_target,
+                path,
+            } => {
+                if rule_target == "all" || rule_target == target {
+                    Some(PythonPackaging::FilterFileInclude { path: path.clone() })
+                } else {
+                    None
+                }
             }
-            PythonPackaging::Stdlib { .. } => {
-                have_stdlib = true;
+            ConfigPythonPackaging::FilterFilesInclude {
+                target: rule_target,
+                glob,
+            } => {
+                if rule_target == "all" || rule_target == target {
+                    Some(PythonPackaging::FilterFilesInclude { glob: glob.clone() })
+                } else {
+                    None
+                }
             }
-            _ => {}
-        }
-    }
+            ConfigPythonPackaging::PackageRoot {
+                target: rule_target,
+                path,
+                packages,
+                optimize_level,
+                excludes,
+                include_source,
+            } => {
+                if rule_target == "all" || rule_target == target {
+                    Some(PythonPackaging::PackageRoot {
+                        path: path.clone(),
+                        packages: packages.clone(),
+                        optimize_level: *optimize_level,
+                        excludes: excludes.clone(),
+                        include_source: *include_source,
+                    })
+                } else {
+                    None
+                }
+            }
+            ConfigPythonPackaging::PipInstallSimple {
+                target: rule_target,
+                package,
+                optimize_level,
+                include_source,
+            } => {
+                if rule_target == "all" || rule_target == target {
+                    Some(PythonPackaging::PipInstallSimple {
+                        package: package.clone(),
+                        optimize_level: *optimize_level,
+                        include_source: *include_source,
+                    })
+                } else {
+                    None
+                }
+            }
+            ConfigPythonPackaging::Stdlib {
+                target: rule_target,
+                optimize_level,
+                exclude_test_modules,
+                include_source,
+            } => {
+                if rule_target == "all" || rule_target == target {
+                    have_stdlib = true;
+
+                    Some(PythonPackaging::Stdlib {
+                        optimize_level: *optimize_level,
+                        exclude_test_modules: *exclude_test_modules,
+                        include_source: *include_source,
+                    })
+                } else {
+                    None
+                }
+            }
+            ConfigPythonPackaging::StdlibExtensionsExplicitExcludes {
+                target: rule_target,
+                excludes,
+            } => {
+                if rule_target == "all" || rule_target == target {
+                    Some(PythonPackaging::StdlibExtensionsExplicitExcludes {
+                        excludes: excludes.clone(),
+                    })
+                } else {
+                    None
+                }
+            }
+            ConfigPythonPackaging::StdlibExtensionsExplicitIncludes {
+                target: rule_target,
+                includes,
+            } => {
+                if rule_target == "all" || rule_target == target {
+                    Some(PythonPackaging::StdlibExtensionsExplicitIncludes {
+                        includes: includes.clone(),
+                    })
+                } else {
+                    None
+                }
+            }
+            ConfigPythonPackaging::StdlibExtensionsPolicy {
+                target: rule_target,
+                policy,
+            } => {
+                if rule_target == "all" || rule_target == target {
+                    have_stdlib_extensions_policy = true;
+
+                    Some(PythonPackaging::StdlibExtensionsPolicy {
+                        policy: policy.clone(),
+                    })
+                } else {
+                    None
+                }
+            }
+            ConfigPythonPackaging::StdlibExtensionVariant {
+                target: rule_target,
+                extension,
+                variant,
+            } => {
+                if rule_target == "all" || rule_target == target {
+                    Some(PythonPackaging::StdlibExtensionVariant {
+                        extension: extension.clone(),
+                        variant: variant.clone(),
+                    })
+                } else {
+                    None
+                }
+            }
+            ConfigPythonPackaging::Virtualenv {
+                target: rule_target,
+                path,
+                optimize_level,
+                excludes,
+                include_source,
+            } => {
+                if rule_target == "all" || rule_target == target {
+                    Some(PythonPackaging::Virtualenv {
+                        path: path.clone(),
+                        optimize_level: *optimize_level,
+                        excludes: excludes.clone(),
+                        include_source: *include_source,
+                    })
+                } else {
+                    None
+                }
+            }
+        })
+        .collect_vec();
 
     if !have_stdlib_extensions_policy {
         panic!("no `type = \"stdlib-extensions-policy\"` entry in `[[python_packages]]`");
@@ -307,7 +535,7 @@ pub fn parse_config(data: &[u8], target: &str) -> Config {
         stdio_encoding_name,
         stdio_encoding_errors,
         unbuffered_stdio: config.python_config.unbuffered_stdio,
-        python_packaging: config.python_packages,
+        python_packaging,
         run: config.python_run,
         filesystem_importer: config.python_config.filesystem_importer || !sys_paths.is_empty(),
         sys_paths: sys_paths.clone(),

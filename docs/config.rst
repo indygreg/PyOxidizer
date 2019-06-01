@@ -154,7 +154,10 @@ Configures the packaging of Python packages/modules/extensions.
 
 Each entry of this section describes a specific source/rule for finding
 Python packages/modules/extensions to include. Each entry has a ``type`` field
-describing the type of source. All other fields are dependent on the type.
+describing the type of source and an optional ``target`` field denoting the
+target triple this source/rule applies to. If ``target`` is missing or has the
+special value ``all``, it applies to all build targets. All other fields are
+dependent on the ``type``.
 
 Each section is processed in order and is resolved to a set of named Python
 modules/resources/extensions. If multiple sections provide the same
