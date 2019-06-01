@@ -10,8 +10,8 @@ use std::io::Cursor;
 use byteorder::{LittleEndian, ReadBytesExt};
 use cpython::exc::{KeyError, ValueError};
 use cpython::{
-    py_class, py_class_impl, py_coerce_item, PyBool, PyErr, PyModule, PyObject, PyResult, PyString,
-    Python, PythonObject, ToPyObject,
+    py_class, py_class_impl, py_coerce_item, PyBool, PyErr, PyList, PyModule, PyObject, PyResult,
+    PyString, Python, PythonObject, ToPyObject,
 };
 use python3_sys as pyffi;
 use python3_sys::{PyBUF_READ, PyMemoryView_FromMemory};
@@ -162,13 +162,19 @@ pub static mut NEXT_MODULE_STATE: *const InitModuleState = std::ptr::null();
 /// We write per-module state to per-module instances of this struct so
 /// we don't rely on global variables and so multiple importer modules can
 /// exist without issue.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct ModuleState {
     /// Raw data constituting Python module source code.
-    pub py_data: &'static [u8],
+    py_data: &'static [u8],
 
     /// Raw data constituting Python module bytecode.
-    pub pyc_data: &'static [u8],
+    pyc_data: &'static [u8],
+
+    /// Handle on the BuiltinImporter meta path importer.
+    builtin_importer: Option<PyObject>,
+
+    /// Handle on the FrozenImporter meta path importer.
+    frozen_importer: Option<PyObject>,
 }
 
 /// Obtain the module state for an instance of our importer module.
@@ -188,6 +194,25 @@ fn get_module_state<'a>(py: Python, m: &'a PyModule) -> Result<&'a mut ModuleSta
     Ok(unsafe { &mut *state })
 }
 
+/// Garbage collection function for our importer module.
+pub extern "C" fn pymodules_clear(m: *mut pyffi::PyObject) -> libc::c_int {
+    let state = unsafe { pyffi::PyModule_GetState(m) as *mut ModuleState };
+
+    if state.is_null() {
+        return 0;
+    }
+
+    // py_data and pyc_data are simple Rust refs. Don't need to do anything special.
+
+    // We need to destroy references to PyObject in state otherwise we will leak them.
+    unsafe {
+        (*state).builtin_importer = None;
+        (*state).frozen_importer = None;
+    }
+
+    0
+}
+
 static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
     m_base: pyffi::PyModuleDef_HEAD_INIT,
     m_name: PYMODULES_NAME.as_ptr() as *const _,
@@ -196,7 +221,7 @@ static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
     m_methods: 0 as *mut _,
     m_slots: 0 as *mut _,
     m_traverse: None,
-    m_clear: None,
+    m_clear: Some(pymodules_clear),
     m_free: None,
 };
 
@@ -214,10 +239,51 @@ static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
 fn internal_init(py: Python, m: &PyModule) -> PyResult<()> {
     let mut state = get_module_state(py, m)?;
 
+    // If we exit this function before setting all fields, the cleanup function
+    // may access uninitialized memory. So set all cleaned up fields explicitly
+    // to guard against that.
+    state.builtin_importer = None;
+    state.frozen_importer = None;
+
+    const META_PATH: &[u8; 10] = b"meta_path\0";
+    let meta_path = match unsafe {
+        let ptr = pyffi::PySys_GetObject(META_PATH.as_ptr() as *const _);
+        PyObject::from_borrowed_ptr_opt(py, ptr)
+    } {
+        Some(v) => v,
+        None => {
+            return Err(PyErr::new::<ValueError, _>(
+                py,
+                "could not obtain sys.meta_path",
+            ));
+        }
+    };
+
+    // We should be executing as part of
+    // _frozen_importlib_external._install_external_importers().
+    // _frozen_importlib._install() should have already been called and set up
+    // sys.meta_path with [BuiltinImporter, FrozenImporter]. Those should be the
+    // only meta path importers present.
+
+    let meta_path = meta_path.cast_as::<PyList>(py)?;
+
+    if meta_path.len(py) != 2 {
+        return Err(PyErr::new::<ValueError, _>(
+            py,
+            "sys.meta_path does not contain 2 values",
+        ));
+    }
+
+    let builtin_importer = meta_path.get_item(py, 0);
+    let frozen_importer = meta_path.get_item(py, 1);
+
     unsafe {
         state.py_data = (*NEXT_MODULE_STATE).py_data;
         state.pyc_data = (*NEXT_MODULE_STATE).pyc_data;
     }
+
+    state.builtin_importer = Some(builtin_importer);
+    state.frozen_importer = Some(frozen_importer);
 
     let py_modules = match parse_modules_blob(state.py_data) {
         Ok(value) => value,
