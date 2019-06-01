@@ -9,11 +9,11 @@ mod pyinterp;
 mod pymodules_module;
 mod pystr;
 
-#[allow(unused)]
+#[allow(unused_imports)]
 pub use config::PythonConfig;
 
-#[allow(unused)]
+#[allow(unused_imports)]
 pub use data::default_python_config;
 
-#[allow(unused)]
+#[allow(unused_imports)]
 pub use pyinterp::MainPythonInterpreter;
