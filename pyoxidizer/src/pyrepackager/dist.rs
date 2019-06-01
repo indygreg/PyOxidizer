@@ -245,11 +245,7 @@ impl PythonDistributionInfo {
             version: self.version.clone(),
             os: self.os.clone(),
             arch: self.arch.clone(),
-            extension_modules: self
-                .extension_modules
-                .keys()
-                .map(|k| k.clone())
-                .collect_vec(),
+            extension_modules: self.extension_modules.keys().cloned().collect_vec(),
             libraries: self.libraries.keys().map(|k| k.clone()).collect_vec(),
             py_module_count: self.py_modules.len(),
         }
