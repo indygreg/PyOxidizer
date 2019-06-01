@@ -28,11 +28,6 @@ fn TRUE() -> bool {
 }
 
 #[allow(non_snake_case)]
-fn FALSE() -> bool {
-    false
-}
-
-#[allow(non_snake_case)]
 fn ZERO() -> i64 {
     0
 }
@@ -48,37 +43,23 @@ pub enum RawAllocator {
 }
 
 #[allow(non_snake_case)]
-pub fn DEFAULT_ALLOCATOR() -> RawAllocator {
-    RawAllocator::Jemalloc
-}
-
-#[allow(non_snake_case)]
 fn ALL() -> String {
     "all".to_string()
 }
 
 #[derive(Debug, Deserialize)]
 struct ConfigPython {
-    #[serde(default = "TRUE")]
-    dont_write_bytecode: bool,
-    #[serde(default = "TRUE")]
-    ignore_environment: bool,
-    #[serde(default = "TRUE")]
-    no_site: bool,
-    #[serde(default = "TRUE")]
-    no_user_site_directory: bool,
-    #[serde(default = "ZERO")]
-    optimize_level: i64,
+    dont_write_bytecode: Option<bool>,
+    ignore_environment: Option<bool>,
+    no_site: Option<bool>,
+    no_user_site_directory: Option<bool>,
+    optimize_level: Option<i64>,
     program_name: Option<String>,
     stdio_encoding: Option<String>,
-    #[serde(default = "FALSE")]
-    unbuffered_stdio: bool,
-    #[serde(default = "FALSE")]
-    filesystem_importer: bool,
-    #[serde(default)]
-    sys_paths: Vec<String>,
-    #[serde(default = "DEFAULT_ALLOCATOR")]
-    raw_allocator: RawAllocator,
+    unbuffered_stdio: Option<bool>,
+    filesystem_importer: Option<bool>,
+    sys_paths: Option<Vec<String>>,
+    raw_allocator: Option<RawAllocator>,
     write_modules_directory_env: Option<String>,
 }
 
@@ -340,25 +321,74 @@ pub fn parse_config(data: &[u8], target: &str) -> Config {
         ),
     };
 
-    let optimize_level = match config.python_config.optimize_level {
-        0 => 0,
-        1 => 1,
-        2 => 2,
-        value => panic!("illegal optimize_level {}; value must be 0, 1, or 2", value),
-    };
+    let mut dont_write_bytecode = true;
+    let mut ignore_environment = true;
+    let mut no_site = true;
+    let mut no_user_site_directory = true;
+    let mut optimize_level = 0;
+    let mut program_name = String::from("undefined");
+    let mut stdio_encoding_name = None;
+    let mut stdio_encoding_errors = None;
+    let mut unbuffered_stdio = false;
+    let mut filesystem_importer = false;
+    let mut sys_paths = Vec::new();
+    let mut raw_allocator = RawAllocator::Jemalloc;
+    let mut write_modules_directory_env = None;
 
-    let program_name = match config.python_config.program_name {
-        Some(value) => value,
-        None => String::from("undefined"),
-    };
+    if let Some(v) = config.python_config.dont_write_bytecode {
+        dont_write_bytecode = v;
+    }
 
-    let (stdio_encoding_name, stdio_encoding_errors) = match config.python_config.stdio_encoding {
-        Some(value) => {
-            let values: Vec<&str> = value.split(':').collect();
-            (Some(values[0].to_string()), Some(values[1].to_string()))
-        }
-        None => (None, None),
-    };
+    if let Some(v) = config.python_config.ignore_environment {
+        ignore_environment = v;
+    }
+
+    if let Some(v) = config.python_config.no_site {
+        no_site = v;
+    }
+
+    if let Some(v) = config.python_config.no_user_site_directory {
+        no_user_site_directory = v;
+    }
+
+    if let Some(v) = config.python_config.optimize_level {
+        optimize_level = match v {
+            0 => 0,
+            1 => 1,
+            2 => 2,
+            value => panic!("illegal optimize_level {}; value must be 0, 1, or 2", value),
+        };
+    }
+
+    if let Some(v) = config.python_config.program_name {
+        program_name = v;
+    }
+
+    if let Some(v) = config.python_config.stdio_encoding {
+        let values: Vec<&str> = v.split(':').collect();
+        stdio_encoding_name = Some(values[0].to_string());
+        stdio_encoding_errors = Some(values[1].to_string());
+    }
+
+    if let Some(v) = config.python_config.unbuffered_stdio {
+        unbuffered_stdio = v;
+    }
+
+    if let Some(v) = config.python_config.filesystem_importer {
+        filesystem_importer = v;
+    }
+
+    if let Some(v) = config.python_config.sys_paths {
+        sys_paths = v.clone();
+    }
+
+    if let Some(v) = config.python_config.raw_allocator {
+        raw_allocator = v;
+    }
+
+    if let Some(v) = config.python_config.write_modules_directory_env {
+        write_modules_directory_env = Some(v);
+    }
 
     let mut have_stdlib_extensions_policy = false;
     let mut have_stdlib = false;
@@ -522,24 +552,24 @@ pub fn parse_config(data: &[u8], target: &str) -> Config {
         panic!("no `type = \"stdlib\"` entry in `[[python_packages]]`");
     }
 
-    let sys_paths = &config.python_config.sys_paths;
+    filesystem_importer = filesystem_importer || !sys_paths.is_empty();
 
     Config {
-        dont_write_bytecode: config.python_config.dont_write_bytecode,
-        ignore_environment: config.python_config.ignore_environment,
-        no_site: config.python_config.no_site,
-        no_user_site_directory: config.python_config.no_user_site_directory,
+        dont_write_bytecode,
+        ignore_environment,
+        no_site,
+        no_user_site_directory,
         optimize_level,
         program_name,
         python_distribution,
         stdio_encoding_name,
         stdio_encoding_errors,
-        unbuffered_stdio: config.python_config.unbuffered_stdio,
+        unbuffered_stdio,
         python_packaging,
         run: config.python_run,
-        filesystem_importer: config.python_config.filesystem_importer || !sys_paths.is_empty(),
-        sys_paths: sys_paths.clone(),
-        raw_allocator: config.python_config.raw_allocator,
-        write_modules_directory_env: config.python_config.write_modules_directory_env,
+        filesystem_importer,
+        sys_paths,
+        raw_allocator,
+        write_modules_directory_env,
     }
 }
