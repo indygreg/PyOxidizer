@@ -2,8 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-/// This module defines the _pymodules Python module, which exposes
-/// .py/.pyc source/code data so it can be used by an in-memory importer.
+/* This module defines a Python meta path importer for importing from a self-contained binary. */
+
 use std::collections::{HashMap, HashSet};
 use std::io::Cursor;
 
@@ -216,9 +216,9 @@ fn init(py: Python, m: &PyModule, state: &ModuleState) -> PyResult<()> {
 /// opinionated about how things should work. e.g. they call
 /// PyEval_InitThreads(), which is undesired. We want total control.
 #[allow(non_snake_case)]
-pub unsafe extern "C" fn PyInit__pymodules() -> *mut pyffi::PyObject {
-    let py = cpython::Python::assume_gil_acquired();
-    let module = pyffi::PyModule_Create(&mut MODULE_DEF);
+pub extern "C" fn PyInit__pymodules() -> *mut pyffi::PyObject {
+    let py = unsafe { cpython::Python::assume_gil_acquired() };
+    let module = unsafe { pyffi::PyModule_Create(&mut MODULE_DEF) };
 
     if module.is_null() {
         return module;
@@ -226,7 +226,7 @@ pub unsafe extern "C" fn PyInit__pymodules() -> *mut pyffi::PyObject {
 
     // Copy the "next" module state into this module's state so we have per-module
     // state and don't rely on global variables.
-    let state = pyffi::PyModule_GetState(module) as *mut ModuleState;
+    let state = unsafe { pyffi::PyModule_GetState(module) as *mut ModuleState };
 
     if state.is_null() {
         let err = PyErr::new::<ValueError, _>(py, "unable to retrieve module state");
@@ -234,9 +234,11 @@ pub unsafe extern "C" fn PyInit__pymodules() -> *mut pyffi::PyObject {
         return std::ptr::null_mut();
     }
 
-    NEXT_MODULE_STATE.copy_to(state, 1);
+    unsafe {
+        NEXT_MODULE_STATE.copy_to(state, 1);
+    }
 
-    let module = match PyObject::from_owned_ptr(py, module).cast_into::<PyModule>(py) {
+    let module = match unsafe { PyObject::from_owned_ptr(py, module).cast_into::<PyModule>(py) } {
         Ok(m) => m,
         Err(e) => {
             PyErr::from(e).restore(py);
@@ -245,7 +247,7 @@ pub unsafe extern "C" fn PyInit__pymodules() -> *mut pyffi::PyObject {
     };
 
     // We could inline init(), but then we'd need to do error handling multiple times.
-    match init(py, &module, &*state) {
+    match init(py, &module, unsafe { &*state }) {
         Ok(()) => module.into_object().steal_ptr(),
         Err(e) => {
             e.restore(py);
