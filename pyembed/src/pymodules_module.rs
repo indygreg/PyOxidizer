@@ -1,1 +1,0 @@
-../../pyoxidizer/src/pyembed/pymodules_module.rs

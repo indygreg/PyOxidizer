@@ -20,12 +20,9 @@ lazy_static! {
         res.insert("config.rs", include_bytes!("pyembed/config.rs"));
         res.insert("lib.rs", include_bytes!("pyembed/lib.rs"));
         res.insert("data.rs", include_bytes!("pyembed/data.rs"));
+        res.insert("importer.rs", include_bytes!("pyembed/importer.rs"));
         res.insert("pyalloc.rs", include_bytes!("pyembed/pyalloc.rs"));
         res.insert("pyinterp.rs", include_bytes!("pyembed/pyinterp.rs"));
-        res.insert(
-            "pymodules_module.rs",
-            include_bytes!("pyembed/pymodules_module.rs"),
-        );
         res.insert("pystr.rs", include_bytes!("pyembed/pystr.rs"));
 
         res

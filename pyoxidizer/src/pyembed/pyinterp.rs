@@ -18,10 +18,10 @@ use cpython::{
 };
 
 use super::config::{PythonConfig, PythonRawAllocator, PythonRunMode};
+use super::importer::PyInit__pymodules;
 #[cfg(feature = "jemalloc-sys")]
 use super::pyalloc::make_raw_jemalloc_allocator;
 use super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator};
-use super::pymodules_module::PyInit__pymodules;
 use super::pystr::{osstring_to_bytes, osstring_to_str, OwnedPyStr};
 
 pub const PYMODULES_NAME: &[u8] = b"_pymodules\0";
@@ -241,7 +241,7 @@ impl<'a> MainPythonInterpreter<'a> {
         // It is important for references in this struct to have a lifetime of at least
         // that of the interpreter.
         // TODO specify lifetimes so the compiler validates this for us.
-        let module_state = super::pymodules_module::ModuleState {
+        let module_state = super::importer::ModuleState {
             py_data: config.py_modules_data,
             pyc_data: config.pyc_modules_data,
         };
@@ -265,7 +265,7 @@ impl<'a> MainPythonInterpreter<'a> {
                 // accessed when creating the Python module object, which should be
                 // done automatically as part of low-level interpreter initialization
                 // when calling Py_Initialize() below.
-                super::pymodules_module::NEXT_MODULE_STATE = &module_state;
+                super::importer::NEXT_MODULE_STATE = &module_state;
             }
         }
 
@@ -337,7 +337,7 @@ impl<'a> MainPythonInterpreter<'a> {
         // memory is stack allocated and doesn't outlive this frame. We don't want
         // to leave a stack pointer sitting around!
         unsafe {
-            super::pymodules_module::NEXT_MODULE_STATE = std::ptr::null();
+            super::importer::NEXT_MODULE_STATE = std::ptr::null();
         }
 
         let py = unsafe { Python::assume_gil_acquired() };

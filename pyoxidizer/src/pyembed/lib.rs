@@ -4,9 +4,9 @@
 
 mod config;
 mod data;
+mod importer;
 mod pyalloc;
 mod pyinterp;
-mod pymodules_module;
 mod pystr;
 
 #[allow(unused_imports)]
