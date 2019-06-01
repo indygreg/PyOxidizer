@@ -317,25 +317,10 @@ impl<'a> MainPythonInterpreter<'a> {
 
         unsafe {
             pyffi::Py_DontWriteBytecodeFlag = if config.dont_write_bytecode { 1 } else { 0 };
-        }
-
-        unsafe {
             pyffi::Py_IgnoreEnvironmentFlag = if config.ignore_python_env { 1 } else { 0 };
-        }
-
-        unsafe {
             pyffi::Py_NoSiteFlag = if config.import_site { 0 } else { 1 };
-        }
-
-        unsafe {
             pyffi::Py_NoUserSiteDirectory = if config.import_user_site { 0 } else { 1 };
-        }
-
-        unsafe {
             pyffi::Py_OptimizeFlag = config.opt_level;
-        }
-
-        unsafe {
             pyffi::Py_UnbufferedStdioFlag = if config.unbuffered_stdio { 1 } else { 0 };
         }
 
