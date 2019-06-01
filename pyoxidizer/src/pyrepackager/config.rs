@@ -32,7 +32,7 @@ fn ZERO() -> i64 {
     0
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 pub enum RawAllocator {
     #[serde(rename = "jemalloc")]
     Jemalloc,
@@ -49,6 +49,8 @@ fn ALL() -> String {
 
 #[derive(Debug, Deserialize)]
 struct ConfigPython {
+    #[serde(default = "ALL")]
+    target: String,
     dont_write_bytecode: Option<bool>,
     ignore_environment: Option<bool>,
     no_site: Option<bool>,
@@ -180,7 +182,8 @@ pub enum RunMode {
 struct ParsedConfig {
     #[serde(default, rename = "python_distribution")]
     python_distributions: Vec<ConfigPythonDistribution>,
-    python_config: ConfigPython,
+    #[serde(default, rename = "python_config")]
+    python_configs: Vec<ConfigPython>,
     python_packages: Vec<ConfigPythonPackaging>,
     python_run: RunMode,
 }
@@ -335,59 +338,65 @@ pub fn parse_config(data: &[u8], target: &str) -> Config {
     let mut raw_allocator = RawAllocator::Jemalloc;
     let mut write_modules_directory_env = None;
 
-    if let Some(v) = config.python_config.dont_write_bytecode {
-        dont_write_bytecode = v;
-    }
+    for python_config in config
+        .python_configs
+        .iter()
+        .filter(|c| c.target == "all" || c.target == target)
+    {
+        if let Some(v) = python_config.dont_write_bytecode {
+            dont_write_bytecode = v;
+        }
 
-    if let Some(v) = config.python_config.ignore_environment {
-        ignore_environment = v;
-    }
+        if let Some(v) = python_config.ignore_environment {
+            ignore_environment = v;
+        }
 
-    if let Some(v) = config.python_config.no_site {
-        no_site = v;
-    }
+        if let Some(v) = python_config.no_site {
+            no_site = v;
+        }
 
-    if let Some(v) = config.python_config.no_user_site_directory {
-        no_user_site_directory = v;
-    }
+        if let Some(v) = python_config.no_user_site_directory {
+            no_user_site_directory = v;
+        }
 
-    if let Some(v) = config.python_config.optimize_level {
-        optimize_level = match v {
-            0 => 0,
-            1 => 1,
-            2 => 2,
-            value => panic!("illegal optimize_level {}; value must be 0, 1, or 2", value),
-        };
-    }
+        if let Some(v) = python_config.optimize_level {
+            optimize_level = match v {
+                0 => 0,
+                1 => 1,
+                2 => 2,
+                value => panic!("illegal optimize_level {}; value must be 0, 1, or 2", value),
+            };
+        }
 
-    if let Some(v) = config.python_config.program_name {
-        program_name = v;
-    }
+        if let Some(ref v) = python_config.program_name {
+            program_name = v.clone();
+        }
 
-    if let Some(v) = config.python_config.stdio_encoding {
-        let values: Vec<&str> = v.split(':').collect();
-        stdio_encoding_name = Some(values[0].to_string());
-        stdio_encoding_errors = Some(values[1].to_string());
-    }
+        if let Some(ref v) = python_config.stdio_encoding {
+            let values: Vec<&str> = v.split(':').collect();
+            stdio_encoding_name = Some(values[0].to_string());
+            stdio_encoding_errors = Some(values[1].to_string());
+        }
 
-    if let Some(v) = config.python_config.unbuffered_stdio {
-        unbuffered_stdio = v;
-    }
+        if let Some(v) = python_config.unbuffered_stdio {
+            unbuffered_stdio = v;
+        }
 
-    if let Some(v) = config.python_config.filesystem_importer {
-        filesystem_importer = v;
-    }
+        if let Some(v) = python_config.filesystem_importer {
+            filesystem_importer = v;
+        }
 
-    if let Some(v) = config.python_config.sys_paths {
-        sys_paths = v.clone();
-    }
+        if let Some(ref v) = python_config.sys_paths {
+            sys_paths = v.clone();
+        }
 
-    if let Some(v) = config.python_config.raw_allocator {
-        raw_allocator = v;
-    }
+        if let Some(ref v) = python_config.raw_allocator {
+            raw_allocator = v.clone();
+        }
 
-    if let Some(v) = config.python_config.write_modules_directory_env {
-        write_modules_directory_env = Some(v);
+        if let Some(ref v) = python_config.write_modules_directory_env {
+            write_modules_directory_env = Some(v.clone());
+        }
     }
 
     let mut have_stdlib_extensions_policy = false;

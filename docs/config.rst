@@ -38,7 +38,7 @@ e.g.::
     local_path = "/var/python-distributions/cpython-linux64.tar.zst"
     sha256 = "11a53f5755773f91111a04f6070a6bc00518a0e8e64d90f58584abf02ca79081"
 
-``[python_config]``
+``[[python_config]]``
 ===================
 
 Configures the default configuration settings for the embedded Python
@@ -51,6 +51,11 @@ in this TOML section.
 
 If you are constructing a custom ``pyembed::PythonConfig`` instance and don't
 use the default instance, this config section is not relevant to you.
+
+The ``target`` key defines which target triple this section applies to.
+If it is not present, has the special ``all``, or has a value matching the
+Rust build target, this section will be used. Otherwise it is ignored.
+This feature is typically used to override settings on specific platforms.
 
 The following keys can be defined to control the default behavior:
 

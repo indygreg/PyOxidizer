@@ -8,7 +8,7 @@ target = "{{{ target }}}"
 url = "{{{ python_distribution_url }}}"
 sha256 = "{{ python_distribution_sha256 }}"
 
-[python_config]
+[[python_config]]
 program_name = "{{ program_name }}"
 
 # dont_write_bytecode = true
