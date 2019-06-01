@@ -11,8 +11,8 @@ use std::io::Cursor;
 use byteorder::{LittleEndian, ReadBytesExt};
 use cpython::exc::{KeyError, ValueError};
 use cpython::{
-    py_class, py_class_impl, py_coerce_item, py_fn, PyBool, PyErr, PyList, PyModule, PyObject,
-    PyResult, PyString, Python, PythonObject, ToPyObject,
+    py_class, py_class_impl, py_coerce_item, py_fn, NoArgs, ObjectProtocol, PyBool, PyErr, PyList,
+    PyModule, PyObject, PyResult, PyString, Python, PythonObject, ToPyObject,
 };
 use python3_sys as pyffi;
 use python3_sys::{PyBUF_READ, PyMemoryView_FromMemory};
@@ -60,6 +60,80 @@ fn parse_modules_blob(data: &'static [u8]) -> Result<HashMap<&str, &[u8]>, &'sta
 
     Ok(res)
 }
+
+#[allow(unused_doc_comments)]
+/// Python type to import modules.
+///
+/// This type implements the importlib.abc.MetaPathFinder interface for
+/// finding/loading modules. It supports loading various flavors of modules,
+/// allowing it to be the only registered sys.meta_path importer.
+py_class!(class PyOxidizerFinder |py| {
+    data builtin_importer: PyObject;
+    data frozen_importer: PyObject;
+    data known_modules: KnownModules;
+
+    // Start of importlib.abc.MetaPathFinder interface.
+
+    def find_spec(&self, fullname: &PyString, path: &PyObject, target: Option<PyObject> = None) -> PyResult<PyObject> {
+        let key = fullname.to_string(py)?;
+
+        match self.known_modules(py).get(&*key) {
+            Some(flavor) => {
+                match flavor {
+                    KnownModuleFlavor::Builtin => {
+                        self.builtin_importer(py).call_method(py, "find_spec", (fullname, path, target), None)
+                    }
+                    KnownModuleFlavor::Frozen => {
+                        self.frozen_importer(py).call_method(py, "find_spec", (fullname, path, target), None)
+                    }
+                    KnownModuleFlavor::InMemory => {
+                        // TODO implement.
+                        Ok(py.None())
+                    }
+                }
+            }
+            None => {
+                Ok(py.None())
+            }
+        }
+    }
+
+    def find_module(&self, _fullname: &PyObject, _path: &PyObject) -> PyResult<PyObject> {
+        // Method is deprecated. Always returns None.
+        // We /could/ call find_spec(). Meh.
+        Ok(py.None())
+    }
+
+    def invalidate_caches(&self) -> PyResult<PyObject> {
+        Ok(py.None())
+    }
+
+    // End of importlib.abc.MetaPathFinder interface.
+
+    // Start of importlib.abc.Loader interface.
+
+    def create_module(&self, _spec: &PyObject) -> PyResult<PyObject> {
+        Ok(py.None())
+    }
+
+    def exec_module(&self, _module: &PyObject) -> PyResult<PyObject> {
+        Ok(py.None())
+    }
+
+    // End of importlib.abc.Loader interface.
+
+    // Start of importlib.abc.InspectLoader interface.
+
+    def get_code(&self, _fullname: &PyObject) -> PyResult<PyObject> {
+        Ok(py.None())
+    }
+
+    def get_source(&self, _fullname: &PyObject) -> PyResult<PyObject> {
+        Ok(py.None())
+    }
+
+    // End of importlib.abc.InspectLoader interface.
+});
 
 #[allow(unused_doc_comments)]
 /// Python type to facilitate access to in-memory modules data.
@@ -180,18 +254,6 @@ struct ModuleState {
 
     /// Raw data constituting Python module bytecode.
     pyc_data: &'static [u8],
-
-    /// Handle on the BuiltinImporter meta path importer.
-    builtin_importer: Option<PyObject>,
-
-    /// Handle on the FrozenImporter meta path importer.
-    frozen_importer: Option<PyObject>,
-
-    /// Stores mapping of module name to module type.
-    ///
-    /// This facilitates dispatching to an importer with a single lookup instead
-    /// of iterating over all importers.
-    known_modules: Option<Box<KnownModules>>,
 }
 
 /// Obtain the module state for an instance of our importer module.
@@ -211,30 +273,6 @@ fn get_module_state<'a>(py: Python, m: &'a PyModule) -> Result<&'a mut ModuleSta
     Ok(unsafe { &mut *state })
 }
 
-/// Garbage collection function for our importer module.
-pub extern "C" fn pymodules_clear(m: *mut pyffi::PyObject) -> libc::c_int {
-    let state = unsafe { pyffi::PyModule_GetState(m) as *mut ModuleState };
-
-    if state.is_null() {
-        return 0;
-    }
-
-    // py_data and pyc_data are simple Rust refs. Don't need to do anything special.
-
-    // We need to destroy references to PyObject in state otherwise we will leak them.
-    unsafe {
-        (*state).builtin_importer = None;
-        (*state).frozen_importer = None;
-    }
-
-    // Need to drop Rust values that are owned by this instance.
-    unsafe {
-        (*state).known_modules = None;
-    }
-
-    0
-}
-
 static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
     m_base: pyffi::PyModuleDef_HEAD_INIT,
     m_name: PYMODULES_NAME.as_ptr() as *const _,
@@ -243,7 +281,7 @@ static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
     m_methods: 0 as *mut _,
     m_slots: 0 as *mut _,
     m_traverse: None,
-    m_clear: Some(pymodules_clear),
+    m_clear: None,
     m_free: None,
 };
 
@@ -260,10 +298,6 @@ static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
 /// called during interpreter initialization.
 fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
     let mut state = get_module_state(py, m)?;
-
-    state.builtin_importer = None;
-    state.frozen_importer = None;
-    state.known_modules = None;
 
     unsafe {
         state.py_data = (*NEXT_MODULE_STATE).py_data;
@@ -286,9 +320,9 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
 /// This function should only be called once as part of
 /// _frozen_importlib_external._install_external_importers().
 fn module_setup(py: Python, m: PyModule, sys_module: PyModule) -> PyResult<PyObject> {
-    let mut state = get_module_state(py, &m)?;
+    let state = get_module_state(py, &m)?;
 
-    let meta_path = sys_module.get(py, "meta_path")?;
+    let meta_path_object = sys_module.get(py, "meta_path")?;
 
     // We should be executing as part of
     // _frozen_importlib_external._install_external_importers().
@@ -296,7 +330,7 @@ fn module_setup(py: Python, m: PyModule, sys_module: PyModule) -> PyResult<PyObj
     // sys.meta_path with [BuiltinImporter, FrozenImporter]. Those should be the
     // only meta path importers present.
 
-    let meta_path = meta_path.cast_as::<PyList>(py)?;
+    let meta_path = meta_path_object.cast_as::<PyList>(py)?;
 
     if meta_path.len(py) != 2 {
         return Err(PyErr::new::<ValueError, _>(
@@ -307,9 +341,6 @@ fn module_setup(py: Python, m: PyModule, sys_module: PyModule) -> PyResult<PyObj
 
     let builtin_importer = meta_path.get_item(py, 0);
     let frozen_importer = meta_path.get_item(py, 1);
-
-    state.builtin_importer = Some(builtin_importer);
-    state.frozen_importer = Some(frozen_importer);
 
     let py_modules = match parse_modules_blob(state.py_data) {
         Ok(value) => value,
@@ -325,7 +356,7 @@ fn module_setup(py: Python, m: PyModule, sys_module: PyModule) -> PyResult<PyObj
     // finally us. Last write wins and has the same effect as registering our
     // meta path importer first. This should be safe. If nothing else, it allows
     // some builtins to be overwritten by .py implemented modules.
-    let mut known_modules = Box::new(KnownModules::with_capacity(pyc_modules.len() + 10));
+    let mut known_modules = KnownModules::with_capacity(pyc_modules.len() + 10);
 
     for i in 0.. {
         let record = unsafe { pyffi::PyImport_Inittab.offset(i) };
@@ -386,7 +417,10 @@ fn module_setup(py: Python, m: PyModule, sys_module: PyModule) -> PyResult<PyObj
 
     m.add(py, "MODULES", modules)?;
 
-    state.known_modules = Some(known_modules);
+    let unified_importer =
+        PyOxidizerFinder::create_instance(py, builtin_importer, frozen_importer, known_modules)?;
+    meta_path_object.call_method(py, "clear", NoArgs, None)?;
+    meta_path_object.call_method(py, "append", (unified_importer,), None)?;
 
     Ok(py.None())
 }
