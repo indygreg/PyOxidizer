@@ -11,8 +11,8 @@ use std::io::Cursor;
 use byteorder::{LittleEndian, ReadBytesExt};
 use cpython::exc::{KeyError, ValueError};
 use cpython::{
-    py_class, py_class_impl, py_coerce_item, PyBool, PyErr, PyList, PyModule, PyObject, PyResult,
-    PyString, Python, PythonObject, ToPyObject,
+    py_class, py_class_impl, py_coerce_item, py_fn, PyBool, PyErr, PyList, PyModule, PyObject,
+    PyResult, PyString, Python, PythonObject, ToPyObject,
 };
 use python3_sys as pyffi;
 use python3_sys::{PyBUF_READ, PyMemoryView_FromMemory};
@@ -381,11 +381,17 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
 
     let modules = ModulesType::create_instance(py, py_modules, pyc_modules, packages)?;
 
+    m.add(py, "_setup", py_fn!(py, module_setup()))?;
     m.add(py, "MODULES", modules)?;
 
     state.known_modules = Some(known_modules);
 
     Ok(())
+}
+
+/// Called after module import/initialization to configure the importing mechanism.
+fn module_setup(py: Python) -> PyResult<PyObject> {
+    Ok(py.None())
 }
 
 /// Module initialization function.
