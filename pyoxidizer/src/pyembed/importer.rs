@@ -381,7 +381,11 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
 
     let modules = ModulesType::create_instance(py, py_modules, pyc_modules, packages)?;
 
-    m.add(py, "_setup", py_fn!(py, module_setup()))?;
+    m.add(
+        py,
+        "_setup",
+        py_fn!(py, module_setup(m: PyModule, sys_module: PyModule)),
+    )?;
     m.add(py, "MODULES", modules)?;
 
     state.known_modules = Some(known_modules);
@@ -390,7 +394,7 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
 }
 
 /// Called after module import/initialization to configure the importing mechanism.
-fn module_setup(py: Python) -> PyResult<PyObject> {
+fn module_setup(py: Python, _m: PyModule, _sys_module: PyModule) -> PyResult<PyObject> {
     Ok(py.None())
 }
 

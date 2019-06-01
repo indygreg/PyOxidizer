@@ -79,7 +79,7 @@ def _install(_bootstrap_module):
     _setup(_bootstrap_module)
 
     import _pymodules
-    _pymodules._setup()
+    _pymodules._setup(_pymodules, sys)
 
     memory_finder = MemoryFinder(_pymodules.MODULES)
 
