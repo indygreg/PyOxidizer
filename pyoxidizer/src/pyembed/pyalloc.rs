@@ -81,7 +81,7 @@ extern "C" fn raw_rust_realloc(
     // PyMem_RawRealloc()'s docs say: If p is NULL, the call is equivalent to
     // PyMem_RawMalloc(n); else if n is equal to zero, the memory block is
     // resized but is not freed, and the returned pointer is non-NULL.
-    if ptr == null_mut() {
+    if ptr.is_null() {
         return raw_rust_malloc(ctx, new_size);
     }
 
@@ -108,7 +108,7 @@ extern "C" fn raw_rust_realloc(
 }
 
 extern "C" fn raw_rust_free(ctx: *mut c_void, ptr: *mut c_void) -> () {
-    if ptr == null_mut() {
+    if ptr.is_null() {
         return;
     }
 
