@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 // TOML config file parsing.
 #[derive(Debug, Deserialize)]
-struct PythonDistribution {
+struct ConfigPythonDistribution {
     local_path: Option<String>,
     url: Option<String>,
     sha256: String,
@@ -43,7 +43,7 @@ pub fn DEFAULT_ALLOCATOR() -> RawAllocator {
 }
 
 #[derive(Debug, Deserialize)]
-struct PythonConfig {
+struct ConfigPython {
     #[serde(default = "TRUE")]
     dont_write_bytecode: bool,
     #[serde(default = "TRUE")]
@@ -155,8 +155,8 @@ pub enum RunMode {
 
 #[derive(Debug, Deserialize)]
 struct ParsedConfig {
-    python_distribution: PythonDistribution,
-    python_config: PythonConfig,
+    python_distribution: ConfigPythonDistribution,
+    python_config: ConfigPython,
     python_packages: Vec<PythonPackaging>,
     python_run: RunMode,
 }
