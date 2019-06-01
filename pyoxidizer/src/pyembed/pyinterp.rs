@@ -153,12 +153,9 @@ impl<'a> MainPythonInterpreter<'a> {
 
     /// Ensure the Python GIL is released.
     pub fn release_gil(&mut self) {
-        match self.py {
-            Some(_) => {
-                self.py = None;
-                self.gil = None;
-            }
-            None => {}
+        if let Some(_) = self.py {
+            self.py = None;
+            self.gil = None;
         }
     }
 
