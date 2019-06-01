@@ -727,7 +727,7 @@ impl<'a> MainPythonInterpreter<'a> {
                 pyffi::Py_file_input,
                 main_dict,
                 main_dict,
-                0 as *mut _,
+                std::ptr::null_mut(),
             );
 
             if res.is_null() {
