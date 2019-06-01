@@ -683,12 +683,9 @@ impl<'a> MainPythonInterpreter<'a> {
 
         let sys = py.import("sys")?;
 
-        match sys.get(py, "__interactivehook__") {
-            Ok(hook) => {
-                hook.call(py, NoArgs, None)?;
-            }
-            Err(_) => (),
-        };
+        if let Ok(hook) = sys.get(py, "__interactivehook__") {
+            hook.call(py, NoArgs, None)?;
+        }
 
         let stdin_filename = "<stdin>";
         let filename = CString::new(stdin_filename).expect("could not create CString");
