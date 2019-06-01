@@ -200,7 +200,10 @@ static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
     m_free: None,
 };
 
-/// Initialize the Python module exposing resource data.
+/// Initialize the Python module object.
+///
+/// This is called as part of the PyInit_* function to create the internal
+/// module object for the interpreter.
 ///
 /// This receives a handle to the current Python interpreter and just-created
 /// Python module instance. It populates the internal module state and the
@@ -208,7 +211,7 @@ static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
 ///
 /// Because this function accesses NEXT_MODULE_STATE, it should only be
 /// called during interpreter initialization.
-fn init(py: Python, m: &PyModule) -> PyResult<()> {
+fn internal_init(py: Python, m: &PyModule) -> PyResult<()> {
     let mut state = get_module_state(py, m)?;
 
     unsafe {
@@ -268,8 +271,7 @@ pub extern "C" fn PyInit__pymodules() -> *mut pyffi::PyObject {
         }
     };
 
-    // We could inline init(), but then we'd need to do error handling multiple times.
-    match init(py, &module) {
+    match internal_init(py, &module) {
         Ok(()) => module.into_object().steal_ptr(),
         Err(e) => {
             e.restore(py);
