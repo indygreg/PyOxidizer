@@ -3,11 +3,7 @@
 # (https://github.com/indygreg/PyOxidizer/blob/master/docs/config.rst)
 # for extensive documentation on this file format.
 
-[[python_distribution]]
-target = "{{{ target }}}"
-url = "{{{ python_distribution_url }}}"
-sha256 = "{{ python_distribution_sha256 }}"
-
+{{{ python_distributions }}}
 [[python_config]]
 program_name = "{{ program_name }}"
 

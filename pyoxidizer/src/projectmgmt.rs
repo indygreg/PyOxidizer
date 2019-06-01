@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use handlebars::Handlebars;
+use itertools::Itertools;
 use lazy_static::lazy_static;
 use std::collections::BTreeMap;
 use std::io::Write;
@@ -124,29 +125,37 @@ pub fn write_new_main_rs(path: &Path) -> Result<(), std::io::Error> {
 }
 
 /// Writes default PyOxidizer config files into a project directory.
-pub fn write_new_pyoxidizer_config_files(
+pub fn write_new_pyoxidizer_config_file(
     project_dir: &Path,
     name: &str,
 ) -> Result<(), std::io::Error> {
-    // TODO write all targets into single file.
-    for (triple, dist) in CPYTHON_BY_TRIPLE.iter() {
-        let basename = format!("pyoxidizer.{}.toml", triple);
-        let path = project_dir.to_path_buf().join(basename);
+    let path = project_dir.to_path_buf().join("pyoxidizer.toml");
 
-        let mut data = BTreeMap::new();
-        data.insert("target", triple.to_string());
-        data.insert("python_distribution_url", dist.url.clone());
-        data.insert("python_distribution_sha256", dist.sha256.clone());
-        data.insert("program_name", name.to_string());
+    let distributions = CPYTHON_BY_TRIPLE
+        .iter()
+        .map(|(triple, dist)| {
+            format!(
+                "[[python_distribution]]\ntarget = \"{}\"\nurl = \"{}\"\nsha256 = \"{}\"\n",
+                triple.clone(),
+                dist.url.clone(),
+                dist.sha256.clone()
+            )
+            .to_string()
+        })
+        .collect_vec();
 
-        let t = HANDLEBARS
-            .render("new-pyoxidizer.toml", &data)
-            .expect("unable to render template");
+    let mut data = BTreeMap::new();
 
-        println!("writing {}", path.to_str().unwrap());
-        let mut fh = std::fs::File::create(path)?;
-        fh.write_all(t.as_bytes())?;
-    }
+    data.insert("python_distributions", distributions.join("\n"));
+    data.insert("program_name", name.to_string());
+
+    let t = HANDLEBARS
+        .render("new-pyoxidizer.toml", &data)
+        .expect("unable to render template");
+
+    println!("writing {}", path.to_str().unwrap());
+    let mut fh = std::fs::File::create(path)?;
+    fh.write_all(t.as_bytes())?;
 
     Ok(())
 }
@@ -250,7 +259,7 @@ pub fn init(project_path: &str) -> Result<(), String> {
     add_pyoxidizer(&path, true)?;
     update_new_cargo_toml(&path.join("Cargo.toml")).or(Err("unable to update Cargo.toml"))?;
     write_new_main_rs(&path.join("src").join("main.rs")).or(Err("unable to write main.rs"))?;
-    write_new_pyoxidizer_config_files(&path, &name)
+    write_new_pyoxidizer_config_file(&path, &name)
         .or(Err("unable to write PyOxidizer config files"))?;
 
     println!();

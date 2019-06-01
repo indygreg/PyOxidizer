@@ -1385,11 +1385,9 @@ pub fn process_config_and_copy_artifacts(
     }
 }
 
-pub fn find_pyoxidizer_config_file(start_dir: &Path, target: &str) -> Option<PathBuf> {
-    let basename = format!("pyoxidizer.{}.toml", target);
-
+pub fn find_pyoxidizer_config_file(start_dir: &Path) -> Option<PathBuf> {
     for test_dir in start_dir.ancestors() {
-        let candidate = test_dir.to_path_buf().join(&basename);
+        let candidate = test_dir.to_path_buf().join("pyoxidizer.toml");
 
         if candidate.exists() {
             return Some(candidate);
@@ -1436,7 +1434,7 @@ pub fn run_from_build(build_script: &str) {
             let manifest_dir =
                 env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not found");
 
-            let path = find_pyoxidizer_config_file(&PathBuf::from(manifest_dir), &target);
+            let path = find_pyoxidizer_config_file(&PathBuf::from(manifest_dir));
 
             if path.is_none() {
                 panic!("Could not find PyOxidizer config file");

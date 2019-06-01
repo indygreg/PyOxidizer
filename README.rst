@@ -58,7 +58,7 @@ You need Rust 1.31+ and a corresponding Cargo installed. Then::
    $ cd /path/to/my-project
    $ cargo build
 
-   # When building, you may want to inspect the ``pyoxidizer.*.toml`` files
+   # When building, you may want to inspect the ``pyoxidizer.toml`` file
    # in your project's directory to see what can be customized.
 
    # And run it. You should get a Python REPL as if you had invoked
@@ -80,7 +80,7 @@ The TOML configuration file is processed as part of building the
 ``pyembed`` crate, which is the crate that manages an embedded Python
 interpreter. The build script for the ``pyembed`` crate will use the
 configuration file defined by the ``PYOXIDIZER_CONFIG`` environment
-variable and fall back to looking for ``pyoxidizer.<target>.toml`` files
+variable and fall back to looking for a ``pyoxidizer.toml`` file
 in the directory ancestry of the ``pyembed`` crate.
 
 Status of Project
