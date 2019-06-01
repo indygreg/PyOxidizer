@@ -258,7 +258,7 @@ static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
 ///
 /// Because this function accesses NEXT_MODULE_STATE, it should only be
 /// called during interpreter initialization.
-fn internal_init(py: Python, m: &PyModule) -> PyResult<()> {
+fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
     let mut state = get_module_state(py, m)?;
 
     // If we exit this function before setting all fields, the cleanup function
@@ -412,7 +412,7 @@ pub extern "C" fn PyInit__pymodules() -> *mut pyffi::PyObject {
         }
     };
 
-    match internal_init(py, &module) {
+    match module_init(py, &module) {
         Ok(()) => module.into_object().steal_ptr(),
         Err(e) => {
             e.restore(py);
