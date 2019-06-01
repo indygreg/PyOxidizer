@@ -566,7 +566,7 @@ impl<'a> MainPythonInterpreter<'a> {
             pyffi::PyErr_Clear();
         }
 
-        return 1;
+        1
     }
 
     /// Runs the interpreter and handles any exception that was raised.
