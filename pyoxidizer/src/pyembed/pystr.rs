@@ -51,7 +51,7 @@ impl<'a> From<&'a str> for OwnedPyStr {
 }
 
 #[cfg(target_family = "unix")]
-const SURROGATEESCAPE: &'static [u8] = b"surrogateescape\0";
+const SURROGATEESCAPE: &[u8] = b"surrogateescape\0";
 
 #[cfg(target_family = "unix")]
 pub fn osstring_to_str(py: Python, s: OsString) -> PyObject {
