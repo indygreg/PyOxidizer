@@ -271,7 +271,7 @@ impl PythonDistributionInfo {
                 .expect("failed to run ensurepip");
         }
 
-        return pip_path;
+        pip_path
     }
 }
 
