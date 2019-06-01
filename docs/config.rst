@@ -455,15 +455,19 @@ Example usage::
    type = "filter-files-include"
    glob = "/path/to/files/modules-*"
 
-``[python_run]``
+``[[python_run]]``
 ================
 
 Configures the behavior of the default Python interpreter and application
 binary.
 
 The ``pyembed`` crate contains a default configuration for running a Python
-interpreter and the ``pyapp`` application uses it. This section controls what
-Python code is run when the interpreter starts.
+interpreter. This section controls what Python code is run when the interpreter
+starts.
+
+Like the ``[[python_config]]`` section, this section can have a ``target`` key
+that allows differentiating behavior depending on the target triple being
+built for. The semantics are the same.
 
 The ``mode`` key defines what operation mode the interpreter/application
 is in. The sections below describe the various modes.

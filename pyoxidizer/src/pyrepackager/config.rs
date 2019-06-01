@@ -167,15 +167,29 @@ enum ConfigPythonPackaging {
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "mode")]
-pub enum RunMode {
+enum ConfigRunMode {
     #[serde(rename = "noop")]
-    Noop {},
+    Noop {
+        #[serde(default = "ALL")]
+        target: String,
+    },
     #[serde(rename = "repl")]
-    Repl {},
+    Repl {
+        #[serde(default = "ALL")]
+        target: String,
+    },
     #[serde(rename = "module")]
-    Module { module: String },
+    Module {
+        #[serde(default = "ALL")]
+        target: String,
+        module: String,
+    },
     #[serde(rename = "eval")]
-    Eval { code: String },
+    Eval {
+        #[serde(default = "ALL")]
+        target: String,
+        code: String,
+    },
 }
 
 #[derive(Debug, Deserialize)]
@@ -185,7 +199,7 @@ struct ParsedConfig {
     #[serde(default, rename = "python_config")]
     python_configs: Vec<ConfigPython>,
     python_packages: Vec<ConfigPythonPackaging>,
-    python_run: RunMode,
+    python_run: Vec<ConfigRunMode>,
 }
 
 #[derive(Debug)]
@@ -248,6 +262,14 @@ pub enum PythonPackaging {
     FilterFilesInclude {
         glob: String,
     },
+}
+
+#[derive(Debug)]
+pub enum RunMode {
+    Noop {},
+    Repl {},
+    Module { module: String },
+    Eval { code: String },
 }
 
 #[derive(Debug)]
@@ -561,6 +583,49 @@ pub fn parse_config(data: &[u8], target: &str) -> Config {
         panic!("no `type = \"stdlib\"` entry in `[[python_packages]]`");
     }
 
+    let mut run = RunMode::Noop {};
+
+    for run_mode in config.python_run.iter().filter_map(|r| match r {
+        ConfigRunMode::Eval {
+            target: run_target,
+            code,
+        } => {
+            if run_target == "all" || run_target == target {
+                Some(RunMode::Eval { code: code.clone() })
+            } else {
+                None
+            }
+        }
+        ConfigRunMode::Module {
+            target: run_target,
+            module,
+        } => {
+            if run_target == "all" || run_target == target {
+                Some(RunMode::Module {
+                    module: module.clone(),
+                })
+            } else {
+                None
+            }
+        }
+        ConfigRunMode::Noop { target: run_target } => {
+            if run_target == "all" || run_target == target {
+                Some(RunMode::Noop {})
+            } else {
+                None
+            }
+        }
+        ConfigRunMode::Repl { target: run_target } => {
+            if run_target == "all" || run_target == target {
+                Some(RunMode::Repl {})
+            } else {
+                None
+            }
+        }
+    }) {
+        run = run_mode;
+    }
+
     filesystem_importer = filesystem_importer || !sys_paths.is_empty();
 
     Config {
@@ -575,7 +640,7 @@ pub fn parse_config(data: &[u8], target: &str) -> Config {
         stdio_encoding_errors,
         unbuffered_stdio,
         python_packaging,
-        run: config.python_run,
+        run,
         filesystem_importer,
         sys_paths,
         raw_allocator,

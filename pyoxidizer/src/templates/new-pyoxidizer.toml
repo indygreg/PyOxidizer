@@ -69,7 +69,7 @@ include_source = false
 # How Python should run by default. This is only needed if you
 # call ``run()``. For applications customizing how the embedded
 # Python interpreter is invoked, this section is not relevant.
-[python_run]
+[[python_run]]
 # Run an interactive Python interpreter.
 mode = "repl"
 
