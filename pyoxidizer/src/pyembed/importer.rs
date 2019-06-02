@@ -9,7 +9,7 @@ use std::ffi::CStr;
 use std::io::Cursor;
 
 use byteorder::{LittleEndian, ReadBytesExt};
-use cpython::exc::{ImportError, ValueError};
+use cpython::exc::{ImportError, RuntimeError, ValueError};
 use cpython::{
     py_class, py_class_impl, py_coerce_item, py_fn, NoArgs, ObjectProtocol, PyDict, PyErr, PyList,
     PyModule, PyObject, PyResult, PyString, Python, PythonObject,
@@ -293,6 +293,9 @@ struct ModuleState {
 
     /// Raw data constituting Python module bytecode.
     pyc_data: &'static [u8],
+
+    /// Whether setup() has been called.
+    setup_called: bool,
 }
 
 /// Obtain the module state for an instance of our importer module.
@@ -343,6 +346,8 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
         state.pyc_data = (*NEXT_MODULE_STATE).pyc_data;
     }
 
+    state.setup_called = false;
+
     m.add(
         py,
         "_setup",
@@ -374,6 +379,15 @@ fn module_setup(
     decode_source: PyObject,
 ) -> PyResult<PyObject> {
     let state = get_module_state(py, &m)?;
+
+    if state.setup_called {
+        return Err(PyErr::new::<RuntimeError, _>(
+            py,
+            "PyOxidizer _setup() already called",
+        ));
+    }
+
+    state.setup_called = true;
 
     let imp_module = bootstrap_module.get(py, "_imp")?;
     let imp_module = imp_module.cast_into::<PyModule>(py)?;
