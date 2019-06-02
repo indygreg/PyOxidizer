@@ -9,15 +9,39 @@ use std::ffi::CStr;
 use std::io::Cursor;
 
 use byteorder::{LittleEndian, ReadBytesExt};
-use cpython::exc::{KeyError, ValueError};
+use cpython::exc::{ImportError, ValueError};
 use cpython::{
-    py_class, py_class_impl, py_coerce_item, py_fn, NoArgs, ObjectProtocol, PyBool, PyErr, PyList,
-    PyModule, PyObject, PyResult, PyString, Python, PythonObject, ToPyObject,
+    py_class, py_class_impl, py_coerce_item, py_fn, NoArgs, ObjectProtocol, PyDict, PyErr, PyList,
+    PyModule, PyObject, PyResult, PyString, Python, PythonObject,
 };
 use python3_sys as pyffi;
 use python3_sys::{PyBUF_READ, PyMemoryView_FromMemory};
 
 use super::pyinterp::PYMODULES_NAME;
+
+/// Represents Python modules data in memory.
+///
+/// That data can be source, bytecode, etc. This type is just a thin wrapper around
+/// a mapping of module name to blob data.
+struct PythonModulesData {
+    data: HashMap<&'static str, &'static [u8]>,
+}
+
+impl PythonModulesData {
+    /// Obtain a PyMemoryView instance for a specific key.
+    fn get_memory_view(&self, py: Python, name: &str) -> Option<PyObject> {
+        match self.data.get(name) {
+            Some(value) => {
+                let ptr = unsafe {
+                    PyMemoryView_FromMemory(value.as_ptr() as _, value.len() as _, PyBUF_READ)
+                };
+
+                unsafe { PyObject::from_owned_ptr_opt(py, ptr) }
+            }
+            None => None,
+        }
+    }
+}
 
 /// Parse modules blob data into a map of module name to module data.
 fn parse_modules_blob(data: &'static [u8]) -> Result<HashMap<&str, &[u8]>, &'static str> {
@@ -68,10 +92,16 @@ fn parse_modules_blob(data: &'static [u8]) -> Result<HashMap<&str, &[u8]>, &'sta
 /// finding/loading modules. It supports loading various flavors of modules,
 /// allowing it to be the only registered sys.meta_path importer.
 py_class!(class PyOxidizerFinder |py| {
+    data imp_module: PyModule;
+    data marshal_loads: PyObject;
     data builtin_importer: PyObject;
     data frozen_importer: PyObject;
-    data py_modules: HashMap<&'static str, &'static [u8]>;
-    data pyc_modules: HashMap<&'static str, &'static [u8]>;
+    data call_with_frames_removed: PyObject;
+    data module_spec_type: PyObject;
+    data decode_source: PyObject;
+    data exec_fn: PyObject;
+    data py_modules: PythonModulesData;
+    data pyc_modules: PythonModulesData;
     data packages: HashSet<&'static str>;
     data known_modules: KnownModules;
 
@@ -80,24 +110,28 @@ py_class!(class PyOxidizerFinder |py| {
     def find_spec(&self, fullname: &PyString, path: &PyObject, target: Option<PyObject> = None) -> PyResult<PyObject> {
         let key = fullname.to_string(py)?;
 
-        match self.known_modules(py).get(&*key) {
-            Some(flavor) => {
-                match flavor {
-                    KnownModuleFlavor::Builtin => {
-                        self.builtin_importer(py).call_method(py, "find_spec", (fullname, path, target), None)
-                    }
-                    KnownModuleFlavor::Frozen => {
-                        self.frozen_importer(py).call_method(py, "find_spec", (fullname, path, target), None)
-                    }
-                    KnownModuleFlavor::InMemory => {
-                        // TODO implement.
-                        Ok(py.None())
-                    }
+        if let Some(flavor) = self.known_modules(py).get(&*key) {
+            match flavor {
+                KnownModuleFlavor::Builtin => {
+                    self.builtin_importer(py).call_method(py, "find_spec", (fullname, path, target), None)
+                }
+                KnownModuleFlavor::Frozen => {
+                    self.frozen_importer(py).call_method(py, "find_spec", (fullname, path, target), None)
+                }
+                KnownModuleFlavor::InMemory => {
+                    let is_package = self.packages(py).contains(&*key);
+
+                    // TODO consider setting origin and has_location so __file__ will be
+                    // populated.
+
+                    let kwargs = PyDict::new(py);
+                    kwargs.set_item(py, "is_package", is_package)?;
+
+                    self.module_spec_type(py).call(py, (fullname, self), Some(&kwargs))
                 }
             }
-            None => {
-                Ok(py.None())
-            }
+        } else {
+            Ok(py.None())
         }
     }
 
@@ -119,93 +153,95 @@ py_class!(class PyOxidizerFinder |py| {
         Ok(py.None())
     }
 
-    def exec_module(&self, _module: &PyObject) -> PyResult<PyObject> {
-        Ok(py.None())
+    def exec_module(&self, module: &PyObject) -> PyResult<PyObject> {
+        let name = module.getattr(py, "__name__")?;
+        let key = name.extract::<String>(py)?;
+
+        if let Some(flavor) = self.known_modules(py).get(&*key) {
+            match flavor {
+                KnownModuleFlavor::Builtin => {
+                    self.builtin_importer(py).call_method(py, "exec_module", (module,), None)
+                },
+                KnownModuleFlavor::Frozen => {
+                    self.frozen_importer(py).call_method(py, "exec_module", (module,), None)
+                },
+                KnownModuleFlavor::InMemory => {
+                    match self.pyc_modules(py).get_memory_view(py, &*key) {
+                        Some(value) => {
+                            let code = self.marshal_loads(py).call(py, (value,), None)?;
+                            let exec_fn = self.exec_fn(py);
+                            let dict = module.getattr(py, "__dict__")?;
+
+                            self.call_with_frames_removed(py).call(py, (exec_fn, code, dict), None)
+                        },
+                        None => {
+                            Err(PyErr::new::<ImportError, _>(py, ("cannot find code in memory", name)))
+                        }
+                    }
+                },
+            }
+        } else {
+            // Raising here might make more sense, as exec_module() shouldn't
+            // be called on the Loader that didn't create the module.
+            Ok(py.None())
+        }
     }
 
     // End of importlib.abc.Loader interface.
 
     // Start of importlib.abc.InspectLoader interface.
 
-    def get_code(&self, _fullname: &PyObject) -> PyResult<PyObject> {
-        Ok(py.None())
+    def get_code(&self, fullname: &PyString) -> PyResult<PyObject> {
+        let key = fullname.to_string(py)?;
+
+        if let Some(flavor) = self.known_modules(py).get(&*key) {
+            match flavor {
+                KnownModuleFlavor::Frozen => {
+                    let imp_module = self.imp_module(py);
+
+                    imp_module.call(py, "get_frozen_object", (fullname,), None)
+                },
+                KnownModuleFlavor::InMemory => {
+                    match self.pyc_modules(py).get_memory_view(py, &*key) {
+                        Some(value) => {
+                            self.marshal_loads(py).call(py, (value,), None)
+                        }
+                        None => {
+                            Err(PyErr::new::<ImportError, _>(py, ("cannot find code in memory", fullname)))
+                        }
+                    }
+                },
+                KnownModuleFlavor::Builtin => {
+                    Ok(py.None())
+                }
+            }
+        } else {
+            Ok(py.None())
+        }
     }
 
-    def get_source(&self, _fullname: &PyObject) -> PyResult<PyObject> {
-        Ok(py.None())
+    def get_source(&self, fullname: &PyString) -> PyResult<PyObject> {
+        let key = fullname.to_string(py)?;
+
+        if let Some(flavor) = self.known_modules(py).get(&*key) {
+            if let KnownModuleFlavor::InMemory = flavor {
+                match self.py_modules(py).get_memory_view(py, &*key) {
+                    Some(value) => {
+                        self.decode_source(py).call(py, (value,), None)
+                    },
+                    None => {
+                        Err(PyErr::new::<ImportError, _>(py, ("source not available", fullname)))
+                    }
+                }
+            } else {
+                Ok(py.None())
+            }
+        } else {
+            Ok(py.None())
+        }
     }
 
     // End of importlib.abc.InspectLoader interface.
-});
-
-#[allow(unused_doc_comments)]
-/// Python type to facilitate access to in-memory modules data.
-///
-/// We /could/ use simple Python data structures (e.g. dict mapping
-/// module names to data). However, if we pre-populated a Python dict,
-/// we'd need to allocate PyObject instances for every value. This adds
-/// overhead to startup. This type minimizes PyObject instantiation to
-/// reduce overhead.
-py_class!(class ModulesType |py| {
-    data py_modules: HashMap<&'static str, &'static [u8]>;
-    data pyc_modules: HashMap<&'static str, &'static [u8]>;
-    data packages: HashSet<&'static str>;
-
-    def get_source(&self, name: PyString) -> PyResult<PyObject> {
-        let key = name.to_string(py)?;
-
-        match self.py_modules(py).get(&*key) {
-            Some(value) => {
-                let py_value = unsafe {
-                    let ptr = PyMemoryView_FromMemory(value.as_ptr() as * mut i8, value.len() as isize, PyBUF_READ);
-                    PyObject::from_owned_ptr_opt(py, ptr)
-                }.unwrap();
-
-                Ok(py_value)
-            },
-            None => Err(PyErr::new::<KeyError, _>(py, "module not available"))
-        }
-    }
-
-    def get_code(&self, name: PyString) -> PyResult<PyObject> {
-        let key = name.to_string(py)?;
-
-        match self.pyc_modules(py).get(&*key) {
-            Some(value) => {
-                let py_value = unsafe {
-                    let ptr = PyMemoryView_FromMemory(value.as_ptr() as * mut i8, value.len() as isize, PyBUF_READ);
-                    PyObject::from_owned_ptr_opt(py, ptr)
-                }.unwrap();
-
-                Ok(py_value)
-            },
-            None => Err(PyErr::new::<KeyError, _>(py, "module not available"))
-        }
-    }
-
-    def has_module(&self, name: PyString) -> PyResult<PyBool> {
-        let key = name.to_string(py)?;
-
-        if self.py_modules(py).contains_key(&*key) {
-            return Ok(true.to_py_object(py));
-        }
-
-        if self.pyc_modules(py).contains_key(&*key) {
-            return Ok(true.to_py_object(py));
-        }
-
-        Ok(false.to_py_object(py))
-    }
-
-    def is_package(&self, name: PyString) -> PyResult<PyBool> {
-        let key = name.to_string(py)?;
-
-        Ok(if self.packages(py).contains(&*key) {
-            true.to_py_object(py)
-        } else {
-            false.to_py_object(py)
-        })
-    }
 });
 
 fn populate_packages(packages: &mut HashSet<&'static str>, name: &'static str) {
@@ -310,7 +346,15 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
     m.add(
         py,
         "_setup",
-        py_fn!(py, module_setup(m: PyModule, bootstrap_module: PyModule)),
+        py_fn!(
+            py,
+            module_setup(
+                m: PyModule,
+                bootstrap_module: PyModule,
+                marshal_module: PyModule,
+                decode_source: PyObject
+            )
+        ),
     )?;
 
     Ok(())
@@ -322,9 +366,17 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
 ///
 /// This function should only be called once as part of
 /// _frozen_importlib_external._install_external_importers().
-fn module_setup(py: Python, m: PyModule, bootstrap_module: PyModule) -> PyResult<PyObject> {
+fn module_setup(
+    py: Python,
+    m: PyModule,
+    bootstrap_module: PyModule,
+    marshal_module: PyModule,
+    decode_source: PyObject,
+) -> PyResult<PyObject> {
     let state = get_module_state(py, &m)?;
 
+    let imp_module = bootstrap_module.get(py, "_imp")?;
+    let imp_module = imp_module.cast_into::<PyModule>(py)?;
     let sys_module = bootstrap_module.get(py, "sys")?;
     let sys_module = sys_module.cast_as::<PyModule>(py)?;
     let meta_path_object = sys_module.get(py, "meta_path")?;
@@ -418,21 +470,43 @@ fn module_setup(py: Python, m: PyModule, bootstrap_module: PyModule) -> PyResult
         populate_packages(&mut packages, key);
     }
 
-    let modules = ModulesType::create_instance(
-        py,
-        py_modules.clone(),
-        pyc_modules.clone(),
-        packages.clone(),
-    )?;
+    let marshal_loads = marshal_module.get(py, "loads")?;
+    let call_with_frames_removed = bootstrap_module.get(py, "_call_with_frames_removed")?;
+    let module_spec_type = bootstrap_module.get(py, "ModuleSpec")?;
 
-    m.add(py, "MODULES", modules)?;
+    let builtins_module =
+        match unsafe { PyObject::from_borrowed_ptr_opt(py, pyffi::PyEval_GetBuiltins()) } {
+            Some(o) => o.cast_into::<PyDict>(py),
+            None => {
+                return Err(PyErr::new::<ValueError, _>(
+                    py,
+                    "unable to obtain __builtins__",
+                ));
+            }
+        }?;
+
+    let exec_fn = match builtins_module.get_item(py, "exec") {
+        Some(v) => v,
+        None => {
+            return Err(PyErr::new::<ValueError, _>(
+                py,
+                "could not obtain __builtins__.exec",
+            ));
+        }
+    };
 
     let unified_importer = PyOxidizerFinder::create_instance(
         py,
+        imp_module,
+        marshal_loads,
         builtin_importer,
         frozen_importer,
-        py_modules,
-        pyc_modules,
+        call_with_frames_removed,
+        module_spec_type,
+        decode_source,
+        exec_fn,
+        PythonModulesData { data: py_modules },
+        PythonModulesData { data: pyc_modules },
         packages,
         known_modules,
     )?;
