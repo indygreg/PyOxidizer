@@ -10,8 +10,8 @@ def _install(_bootstrap_module):
     _setup(_bootstrap_module)
 
     # These lines magically register the PyOxidizer importer.
-    import _pymodules
-    _pymodules._setup(_pymodules, _bootstrap_module, marshal, decode_source)
+    import _pyoxidizer_importer
+    _pyoxidizer_importer._setup(_pyoxidizer_importer, _bootstrap_module, marshal, decode_source)
 
     #supported_loaders = _get_supported_file_loaders()
     #sys.path_hooks.extend([FileFinder.path_hook(*supported_loaders)])

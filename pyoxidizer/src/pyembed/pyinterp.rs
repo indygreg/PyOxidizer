@@ -18,13 +18,13 @@ use cpython::{
 };
 
 use super::config::{PythonConfig, PythonRawAllocator, PythonRunMode};
-use super::importer::PyInit__pymodules;
+use super::importer::PyInit__pyoxidizer_importer;
 #[cfg(feature = "jemalloc-sys")]
 use super::pyalloc::make_raw_jemalloc_allocator;
 use super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator};
 use super::pystr::{osstring_to_bytes, osstring_to_str, OwnedPyStr};
 
-pub const PYMODULES_NAME: &[u8] = b"_pymodules\0";
+pub const PYOXIDIZER_IMPORTER_NAME: &[u8] = b"_pyoxidizer_importer\0";
 
 const FROZEN_IMPORTLIB_NAME: &[u8] = b"_frozen_importlib\0";
 const FROZEN_IMPORTLIB_EXTERNAL_NAME: &[u8] = b"_frozen_importlib_external\0";
@@ -253,12 +253,12 @@ impl<'a> MainPythonInterpreter<'a> {
                 pyffi::PyImport_FrozenModules = self.frozen_modules.as_ptr();
             }
 
-            // Register our _pymodules extension which exposes modules data.
+            // Register our _pyoxidizer_importer extension which provides importing functionality.
             unsafe {
                 // name char* needs to live as long as the interpreter is active.
                 pyffi::PyImport_AppendInittab(
-                    PYMODULES_NAME.as_ptr() as *const i8,
-                    Some(PyInit__pymodules),
+                    PYOXIDIZER_IMPORTER_NAME.as_ptr() as *const i8,
+                    Some(PyInit__pyoxidizer_importer),
                 );
 
                 // Move pointer to our stack allocated instance. This pointer will be

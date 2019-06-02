@@ -17,7 +17,7 @@ use cpython::{
 use python3_sys as pyffi;
 use python3_sys::{PyBUF_READ, PyMemoryView_FromMemory};
 
-use super::pyinterp::PYMODULES_NAME;
+use super::pyinterp::PYOXIDIZER_IMPORTER_NAME;
 
 /// Represents Python modules data in memory.
 ///
@@ -317,7 +317,7 @@ fn get_module_state<'a>(py: Python, m: &'a PyModule) -> Result<&'a mut ModuleSta
 
 static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
     m_base: pyffi::PyModuleDef_HEAD_INIT,
-    m_name: PYMODULES_NAME.as_ptr() as *const _,
+    m_name: PYOXIDIZER_IMPORTER_NAME.as_ptr() as *const _,
     m_doc: DOC.as_ptr() as *const _,
     m_size: std::mem::size_of::<ModuleState>() as isize,
     m_methods: 0 as *mut _,
@@ -538,7 +538,7 @@ fn module_setup(
 /// opinionated about how things should work. e.g. they call
 /// PyEval_InitThreads(), which is undesired. We want total control.
 #[allow(non_snake_case)]
-pub extern "C" fn PyInit__pymodules() -> *mut pyffi::PyObject {
+pub extern "C" fn PyInit__pyoxidizer_importer() -> *mut pyffi::PyObject {
     let py = unsafe { cpython::Python::assume_gil_acquired() };
     let module = unsafe { pyffi::PyModule_Create(&mut MODULE_DEF) };
 

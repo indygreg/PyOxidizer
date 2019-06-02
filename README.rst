@@ -161,20 +161,15 @@ and exposes this data to the ``pyembed`` crate via ``const &'static [u8]``
 variables. At run time, these binary arrays are parsed into richer Rust data
 structures, which allow Rust to access e.g. the Python bytecode for
 a named Python module. The embedded Python interpreter contains a
-custom *built-in extension module* which exposes these Rust data
-structures to Python as the ``_pymodules`` module. There exists a pure
-Python meta path importer providing an
-``importlib.abc.MetaPathFinder``/``importlib.abc.Loader`` which uses the
-``_pymodules`` extension module to provide access to Python source,
-code, and resource data. In order to make this importer available to
-the Python interpreter, at ``pyembed`` build time, the Python source
-code for this importer is concatenated with the
-``importlib._bootstrap_external`` module (provided by the Python
-distribution) and compiled into Python bytecode. When the embedded
-Python interpreter is initialized, this custom bytecode is used
-to *bootstrap* the Python importing mechanism, allowing the entirety
-of the Python standard library and custom modules to be imported from
-memory using zero-copy access to the Python bytecode.
+custom *built-in extension module* which implements a Python meta path
+importer that services import requests. In order to make this importer
+available to the Python interpreter, at ``pyembed`` build time, we
+compile a modified version of the ``importlib._bootstrap_external`` module
+(provided by the Python distribution) to Python bytecode. When the embedded
+Python interpreter is initialized, this custom bytecode calls into
+our *built-in extension module*, which installs itself, and allows the
+entirety of the Python standard library and custom modules to be imported from
+memory using zero-copy.
 
 The final output of PyOxidizer can be as simple as a single, self-contained
 executable containing Python and all its required modules. When the
