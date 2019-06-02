@@ -169,14 +169,13 @@ impl<'a> MainPythonInterpreter<'a> {
     ///
     /// Returns a Python instance which has the GIL acquired.
     fn init(&mut self) -> Result<Python, &'static str> {
-        // TODO return Result<> and don't panic.
         if self.init_run {
             return Ok(self.acquire_gil());
         }
 
         let config = &self.config;
 
-        let exe = env::current_exe().unwrap();
+        let exe = env::current_exe().or_else(|_| Err("could not obtain current exe"))?;
 
         // TODO should we call PyMem::SetupDebugHooks() if enabled?
         if let Some(raw_allocator) = &self.raw_allocator {
@@ -249,7 +248,7 @@ impl<'a> MainPythonInterpreter<'a> {
             }
         }
 
-        let home = OwnedPyStr::from(exe.to_str().unwrap());
+        let home = OwnedPyStr::from(exe.to_str().ok_or_else(|| "unable to convert exe to str")?);
 
         unsafe {
             // Pointer needs to live for lifetime of interpreter.
@@ -277,8 +276,10 @@ impl<'a> MainPythonInterpreter<'a> {
         if let (Some(ref encoding), Some(ref errors)) =
             (&config.standard_io_encoding, &config.standard_io_errors)
         {
-            let cencoding = CString::new(encoding.clone()).unwrap();
-            let cerrors = CString::new(errors.clone()).unwrap();
+            let cencoding = CString::new(encoding.clone())
+                .or_else(|_| Err("unable to convert encoding to C string"))?;
+            let cerrors = CString::new(errors.clone())
+                .or_else(|_| Err("unable to convert encoding error mode to C string"))?;
 
             let res = unsafe {
                 pyffi::Py_SetStandardStreamEncoding(
@@ -288,7 +289,7 @@ impl<'a> MainPythonInterpreter<'a> {
             };
 
             if res != 0 {
-                panic!("unable to set standard stream encoding");
+                return Err("unable to set standard stream encoding");
             }
         }
 
@@ -324,7 +325,7 @@ impl<'a> MainPythonInterpreter<'a> {
         self.py = Some(py);
         self.init_run = true;
 
-        let sys_module = py.import("sys").expect("unable to import sys");
+        let sys_module = py.import("sys").or_else(|_| Err("unable to import sys"))?;
 
         // Our hacked _frozen_importlib_external module doesn't register
         // the filesystem importers. This is because a) we don't need it to
@@ -340,40 +341,40 @@ impl<'a> MainPythonInterpreter<'a> {
         if self.config.filesystem_importer {
             let frozen = py
                 .import("_frozen_importlib_external")
-                .expect("unable to import _frozen_importlib_external");
+                .or_else(|_| Err("unable to import _frozen_importlib_external"))?;
 
             let loaders = frozen
                 .call(py, "_get_supported_file_loaders", NoArgs, None)
-                .expect("error calling _get_supported_file_loaders()");
+                .or_else(|_| Err("error calling _get_supported_file_loaders()"))?;
             let loaders_list = loaders
                 .cast_as::<PyList>(py)
-                .expect("unable to cast loaders to list");
+                .or_else(|_| Err("unable to cast loaders to list"))?;
             let loaders_vec: Vec<PyObject> = loaders_list.iter(py).collect();
             let loaders_tuple = PyTuple::new(py, loaders_vec.as_slice());
 
             let file_finder = frozen
                 .get(py, "FileFinder")
-                .expect("unable to get FileFinder");
+                .or_else(|_| Err("unable to get FileFinder"))?;
             let path_hook = file_finder
                 .call_method(py, "path_hook", loaders_tuple, None)
-                .expect("unable to construct path hook");
+                .or_else(|_| Err("unable to construct path hook"))?;
 
             let path_hooks = sys_module
                 .get(py, "path_hooks")
-                .expect("unable to get sys.path_hooks");
+                .or_else(|_| Err("unable to get sys.path_hooks"))?;
             path_hooks
                 .call_method(py, "append", (path_hook,), None)
-                .expect("unable to append sys.path_hooks");
+                .or_else(|_| Err("unable to append sys.path_hooks"))?;
 
             let path_finder = frozen
                 .get(py, "PathFinder")
-                .expect("unable to get PathFinder");
+                .or_else(|_| Err("unable to get PathFinder"))?;
             let meta_path = sys_module
                 .get(py, "meta_path")
-                .expect("unable to get sys.meta_path");
+                .or_else(|_| Err("unable to get sys.meta_path"))?;
             meta_path
                 .call_method(py, "append", (path_finder,), None)
-                .expect("unable to append to sys.meta_path");
+                .or_else(|_| Err("unable to append to sys.meta_path"))?;
         }
 
         // Ideally we should be calling Py_SetPath() with this value before Py_Initialize().
@@ -382,22 +383,28 @@ impl<'a> MainPythonInterpreter<'a> {
         // same effect.
 
         // Always clear out sys.path.
-        let sys_path = sys_module.get(py, "path").expect("unable to get sys.path");
+        let sys_path = sys_module
+            .get(py, "path")
+            .or_else(|_| Err("unable to get sys.path"))?;
         sys_path
             .call_method(py, "clear", NoArgs, None)
-            .expect("unable to call sys.path.clear()");
+            .or_else(|_| Err("unable to call sys.path.clear()"))?;
 
         // And repopulate it with entries from the config.
         for path in &config.sys_paths {
             let path = path.replace(
                 "$ORIGIN",
-                exe.parent().unwrap().display().to_string().as_str(),
+                exe.parent()
+                    .ok_or_else(|| "unable to get exe parent")?
+                    .display()
+                    .to_string()
+                    .as_str(),
             );
             let py_path = PyString::new(py, path.as_str());
 
             sys_path
                 .call_method(py, "append", (py_path,), None)
-                .expect("could not append sys.path");
+                .or_else(|_| Err("could not append sys.path"))?;
         }
 
         // env::args() panics if arguments aren't valid Unicode. But invalid
@@ -422,7 +429,7 @@ impl<'a> MainPythonInterpreter<'a> {
 
         match res {
             0 => (),
-            _ => panic!("unable to set sys.argv"),
+            _ => return Err("unable to set sys.argv"),
         }
 
         if config.argvb {
@@ -439,7 +446,7 @@ impl<'a> MainPythonInterpreter<'a> {
 
             match res {
                 0 => (),
-                _ => panic!("unable to set sys.argvb"),
+                _ => return Err("unable to set sys.argvb"),
             }
         }
 
@@ -453,7 +460,7 @@ impl<'a> MainPythonInterpreter<'a> {
 
         match res {
             0 => (),
-            _ => panic!("unable to set sys.frozen"),
+            _ => return Err("unable to set sys.oxidized"),
         }
 
         Ok(py)
