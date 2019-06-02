@@ -131,7 +131,7 @@ impl<'a> MainPythonInterpreter<'a> {
     /// Construct a Python interpreter from a configuration.
     ///
     /// The Python interpreter is initialized as a side-effect. The GIL is held.
-    pub fn new(config: PythonConfig) -> MainPythonInterpreter<'a> {
+    pub fn new(config: PythonConfig) -> Result<MainPythonInterpreter<'a>, &'static str> {
         let (raw_allocator, raw_rust_allocator) = match config.raw_allocator {
             PythonRawAllocator::Jemalloc => (Some(raw_jemallocator()), None),
             PythonRawAllocator::Rust => (None, Some(make_raw_rust_memory_allocator())),
@@ -151,10 +151,9 @@ impl<'a> MainPythonInterpreter<'a> {
             program_name: None,
         };
 
-        // TODO return Result from this function.
-        res.init().unwrap();
+        res.init()?;
 
-        res
+        Ok(res)
     }
 
     /// Initialize the interpreter.

@@ -7,8 +7,13 @@ use pyembed::{default_python_config, MainPythonInterpreter};
 fn main() {
     let code = {
         let config = default_python_config();
-        let mut interp = MainPythonInterpreter::new(config);
-        interp.run_as_main()
+        match MainPythonInterpreter::new(config) {
+            Ok(mut interp) => interp.run_as_main(),
+            Err(msg) => {
+                eprintln!("{}", msg);
+                1
+            }
+        }
     };
 
     std::process::exit(code);

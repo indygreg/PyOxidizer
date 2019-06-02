@@ -8,14 +8,21 @@ fn main() {
         // file used at build time.
         let config = default_python_config();
 
-        // Construct a new Python interpreter using that config.
-        let mut interp = MainPythonInterpreter::new(config);
-
-        // And run it using the default run configuration as specified by the
-        // configuration. If an uncaught Python exception is raised, handle it.
-        // This includes the special SystemExit, which is a request to terminate the
-        // process.
-        interp.run_as_main()
+        // Construct a new Python interpreter using that config, handling any errors
+        // from construction.
+        match MainPythonInterpreter::new(config) {
+            Ok(mut interp) => {
+                // And run it using the default run configuration as specified by the
+                // configuration. If an uncaught Python exception is raised, handle it.
+                // This includes the special SystemExit, which is a request to terminate the
+                // process.
+                interp.run_as_main()
+            }
+            Err(msg) => {
+                eprintln!("{}", msg);
+                1
+            }
+        }
     };
 
     // And exit the process according to code execution results.
