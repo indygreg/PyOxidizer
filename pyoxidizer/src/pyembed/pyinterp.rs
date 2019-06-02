@@ -710,7 +710,8 @@ impl<'a> MainPythonInterpreter<'a> {
         }
 
         let stdin_filename = "<stdin>";
-        let filename = CString::new(stdin_filename).expect("could not create CString");
+        let filename = CString::new(stdin_filename)
+            .or_else(|_| Err(PyErr::new::<ValueError, _>(py, "could not create CString")))?;
         let mut cf = pyffi::PyCompilerFlags { cf_flags: 0 };
 
         // TODO use return value.
