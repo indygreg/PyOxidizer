@@ -13,20 +13,59 @@ mod projectmgmt;
 mod pyrepackager;
 mod python_distributions;
 
+const ADD_ABOUT: &str = "\
+Add PyOxidizer to an existing Rust project.
+
+The PATH argument is a filesystem path to a directory containing an
+existing Cargo.toml file. The destination directory MUST NOT have files
+belonging to PyOxidizer.
+
+This command will install files and make file modifications required to
+embed a Python interpreter in the existing Rust project.
+
+It is highly recommended to have the destination directory under version
+control so any unwanted changes can be reverted.
+
+The installed PyOxidizer scaffolding inherits settings such as Python
+distribution URLs and dependency crate versions and locations from the
+PyOxidizer executable that runs this command.
+";
+
+const INIT_ABOUT: &str = "\
+Create a new Rust project embedding Python.
+
+The PATH argument is a filesystem path that should be created to hold the
+new Rust project.
+
+This command will call `cargo init PATH` and then install files and make
+modifications required to embed a Python interpreter in that application.
+
+The new project's binary will be configured to launch a Python REPL by
+default.
+
+Created projects inherit settings such as Python distribution URLs and
+dependency crate versions and locations from the PyOxidizer executable
+they were created with. 
+
+On success, instructions on potential next steps are printed.
+";
+
 fn main() {
     let matches = App::new("PyOxidizer")
         .setting(AppSettings::ArgRequiredElseHelp)
         .version("0.1")
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
-        .about("Integrate Python into Rust")
+        .long_about("Build and distribute Python applications")
         .subcommand(
             SubCommand::with_name("add")
-                .about("Add PyOxidizer to an existing Rust project")
+                .setting(AppSettings::ArgRequiredElseHelp)
+                .about("Add PyOxidizer to an existing Rust project.")
+                .long_about(ADD_ABOUT)
                 .arg(
                     Arg::with_name("path")
                         .required(true)
                         .value_name("PATH")
-                        .help("Path to existing Rust project to modify"),
+                        .help("Directory of existing Rust project"),
                 ),
         )
         .subcommand(
@@ -36,12 +75,14 @@ fn main() {
         )
         .subcommand(
             SubCommand::with_name("init")
-                .about("Initialize a new Rust project embedding Python")
+                .setting(AppSettings::ArgRequiredElseHelp)
+                .about("Create a new Rust project embedding Python.")
+                .long_about(INIT_ABOUT)
                 .arg(
                     Arg::with_name("name")
                         .required(true)
-                        .value_name("NAME")
-                        .help("Name of project to initialize"),
+                        .value_name("PATH")
+                        .help("Directory to be created for new project"),
                 ),
         )
         .subcommand(
