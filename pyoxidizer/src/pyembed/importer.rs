@@ -29,64 +29,111 @@ fn get_memory_view(py: Python, data: &'static [u8]) -> Option<PyObject> {
     unsafe { PyObject::from_owned_ptr_opt(py, ptr) }
 }
 
+/// Holds pointers to Python module data in memory.
+#[derive(Debug)]
+struct PythonModuleData {
+    source: Option<&'static [u8]>,
+    bytecode: Option<&'static [u8]>,
+}
+
 /// Represents Python modules data in memory.
 ///
-/// That data can be source, bytecode, etc. This type is just a thin wrapper around
-/// a mapping of module name to blob data.
+/// This is essentially an index over a raw backing blob.
 struct PythonModulesData {
-    data: HashMap<&'static str, &'static [u8]>,
+    data: HashMap<&'static str, PythonModuleData>,
 }
 
 impl PythonModulesData {
-    /// Obtain a PyMemoryView instance for a specific key.
-    fn get_memory_view(&self, py: Python, name: &str) -> Option<PyObject> {
+    /// Construct a new instance from a memory slice.
+    fn from(data: &'static [u8]) -> Result<PythonModulesData, &'static str> {
+        let mut reader = Cursor::new(data);
+
+        let count = reader
+            .read_u32::<LittleEndian>()
+            .or_else(|_| Err("failed reading count"))?;
+
+        let mut index = Vec::with_capacity(count as usize);
+        let mut total_names_length = 0;
+        let mut total_sources_length = 0;
+
+        for _ in 0..count {
+            let name_length = reader
+                .read_u32::<LittleEndian>()
+                .or_else(|_| Err("failed reading name length"))?
+                as usize;
+            let source_length = reader
+                .read_u32::<LittleEndian>()
+                .or_else(|_| Err("failed reading source length"))?
+                as usize;
+            let bytecode_length = reader
+                .read_u32::<LittleEndian>()
+                .or_else(|_| Err("failed reading bytecode length"))?
+                as usize;
+
+            index.push((name_length, source_length, bytecode_length));
+            total_names_length += name_length;
+            total_sources_length += source_length;
+        }
+
+        let mut res = HashMap::with_capacity(count as usize);
+        let sources_start_offset = reader.position() as usize + total_names_length;
+        let bytecodes_start_offset = sources_start_offset + total_sources_length;
+
+        let mut sources_current_offset: usize = 0;
+        let mut bytecodes_current_offset: usize = 0;
+
+        for (name_length, source_length, bytecode_length) in index {
+            let offset = reader.position() as usize;
+
+            let name =
+                unsafe { std::str::from_utf8_unchecked(&data[offset..offset + name_length]) };
+
+            let source_offset = sources_start_offset + sources_current_offset;
+            let source = if source_length > 0 {
+                Some(&data[source_offset..source_offset + source_length])
+            } else {
+                None
+            };
+
+            let bytecode_offset = bytecodes_start_offset + bytecodes_current_offset;
+            let bytecode = if bytecode_length > 0 {
+                Some(&data[bytecode_offset..bytecode_offset + bytecode_length])
+            } else {
+                None
+            };
+
+            reader.set_position(offset as u64 + name_length as u64);
+
+            sources_current_offset += source_length;
+            bytecodes_current_offset += bytecode_length;
+
+            res.insert(name, PythonModuleData { source, bytecode });
+        }
+
+        Ok(PythonModulesData { data: res })
+    }
+
+    /// Obtain a PyMemoryView instance for source data.
+    fn get_source_memory_view(&self, py: Python, name: &str) -> Option<PyObject> {
         match self.data.get(name) {
-            Some(value) => get_memory_view(py, value),
+            Some(value) => match value.source {
+                Some(data) => get_memory_view(py, data),
+                None => None,
+            },
             None => None,
         }
     }
-}
 
-/// Parse modules blob data into a map of module name to module data.
-fn parse_modules_blob(data: &'static [u8]) -> Result<HashMap<&str, &[u8]>, &'static str> {
-    if data.len() < 4 {
-        return Err("modules data too small");
+    /// Obtain a PyMemoryView instance for bytecode data.
+    fn get_bytecode_memory_view(&self, py: Python, name: &str) -> Option<PyObject> {
+        match self.data.get(name) {
+            Some(value) => match value.bytecode {
+                Some(data) => get_memory_view(py, data),
+                None => None,
+            },
+            None => None,
+        }
     }
-
-    let mut reader = Cursor::new(data);
-
-    let count = reader.read_u32::<LittleEndian>().unwrap();
-    let mut index = Vec::with_capacity(count as usize);
-    let mut total_names_length = 0;
-
-    let mut i = 0;
-    while i < count {
-        let name_length = reader.read_u32::<LittleEndian>().unwrap() as usize;
-        let data_length = reader.read_u32::<LittleEndian>().unwrap() as usize;
-
-        index.push((name_length, data_length));
-        total_names_length += name_length;
-        i += 1;
-    }
-
-    let mut res = HashMap::with_capacity(count as usize);
-    let values_start_offset = reader.position() as usize + total_names_length;
-    let mut values_current_offset: usize = 0;
-
-    for (name_length, value_length) in index {
-        let offset = reader.position() as usize;
-
-        let name = unsafe { std::str::from_utf8_unchecked(&data[offset..offset + name_length]) };
-
-        let value_offset = values_start_offset + values_current_offset;
-        let value = &data[value_offset..value_offset + value_length];
-        reader.set_position(offset as u64 + name_length as u64);
-        values_current_offset += value_length;
-
-        res.insert(name, value);
-    }
-
-    Ok(res)
 }
 
 #[allow(unused_doc_comments)]
@@ -104,8 +151,7 @@ py_class!(class PyOxidizerFinder |py| {
     data module_spec_type: PyObject;
     data decode_source: PyObject;
     data exec_fn: PyObject;
-    data py_modules: PythonModulesData;
-    data pyc_modules: PythonModulesData;
+    data py_modules_data: PythonModulesData;
     data packages: HashSet<&'static str>;
     data known_modules: KnownModules;
 
@@ -170,7 +216,7 @@ py_class!(class PyOxidizerFinder |py| {
                     self.frozen_importer(py).call_method(py, "exec_module", (module,), None)
                 },
                 KnownModuleFlavor::InMemory => {
-                    match self.pyc_modules(py).get_memory_view(py, &*key) {
+                    match self.py_modules_data(py).get_bytecode_memory_view(py, &*key) {
                         Some(value) => {
                             let code = self.marshal_loads(py).call(py, (value,), None)?;
                             let exec_fn = self.exec_fn(py);
@@ -206,7 +252,7 @@ py_class!(class PyOxidizerFinder |py| {
                     imp_module.call(py, "get_frozen_object", (fullname,), None)
                 },
                 KnownModuleFlavor::InMemory => {
-                    match self.pyc_modules(py).get_memory_view(py, &*key) {
+                    match self.py_modules_data(py).get_bytecode_memory_view(py, &*key) {
                         Some(value) => {
                             self.marshal_loads(py).call(py, (value,), None)
                         }
@@ -229,7 +275,7 @@ py_class!(class PyOxidizerFinder |py| {
 
         if let Some(flavor) = self.known_modules(py).get(&*key) {
             if let KnownModuleFlavor::InMemory = flavor {
-                match self.py_modules(py).get_memory_view(py, &*key) {
+                match self.py_modules_data(py).get_source_memory_view(py, &*key) {
                     Some(value) => {
                         self.decode_source(py).call(py, (value,), None)
                     },
@@ -263,10 +309,7 @@ const DOC: &[u8] = b"Binary representation of Python modules\0";
 #[derive(Debug)]
 pub struct InitModuleState {
     /// Raw data constituting Python module source code.
-    pub py_data: &'static [u8],
-
-    /// Raw data constituting Python module bytecode.
-    pub pyc_data: &'static [u8],
+    pub py_modules_data: &'static [u8],
 }
 
 /// Holds reference to next module state struct.
@@ -293,10 +336,7 @@ type KnownModules = HashMap<&'static str, KnownModuleFlavor>;
 #[derive(Debug)]
 struct ModuleState {
     /// Raw data constituting Python module source code.
-    py_data: &'static [u8],
-
-    /// Raw data constituting Python module bytecode.
-    pyc_data: &'static [u8],
+    py_modules_data: &'static [u8],
 
     /// Whether setup() has been called.
     setup_called: bool,
@@ -346,8 +386,7 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
     let mut state = get_module_state(py, m)?;
 
     unsafe {
-        state.py_data = (*NEXT_MODULE_STATE).py_data;
-        state.pyc_data = (*NEXT_MODULE_STATE).pyc_data;
+        state.py_modules_data = (*NEXT_MODULE_STATE).py_modules_data;
     }
 
     state.setup_called = false;
@@ -417,13 +456,8 @@ fn module_setup(
     let builtin_importer = meta_path.get_item(py, 0);
     let frozen_importer = meta_path.get_item(py, 1);
 
-    let py_modules = match parse_modules_blob(state.py_data) {
-        Ok(value) => value,
-        Err(msg) => return Err(PyErr::new::<ValueError, _>(py, msg)),
-    };
-
-    let pyc_modules = match parse_modules_blob(state.pyc_data) {
-        Ok(value) => value,
+    let modules_data = match PythonModulesData::from(state.py_modules_data) {
+        Ok(v) => v,
         Err(msg) => return Err(PyErr::new::<ValueError, _>(py, msg)),
     };
 
@@ -431,7 +465,7 @@ fn module_setup(
     // finally us. Last write wins and has the same effect as registering our
     // meta path importer first. This should be safe. If nothing else, it allows
     // some builtins to be overwritten by .py implemented modules.
-    let mut known_modules = KnownModules::with_capacity(pyc_modules.len() + 10);
+    let mut known_modules = KnownModules::with_capacity(modules_data.data.len() + 10);
 
     for i in 0.. {
         let record = unsafe { pyffi::PyImport_Inittab.offset(i) };
@@ -476,14 +510,9 @@ fn module_setup(
     }
 
     // TODO consider baking set of packages into embedded data.
-    let mut packages: HashSet<&'static str> = HashSet::with_capacity(pyc_modules.len());
+    let mut packages: HashSet<&'static str> = HashSet::with_capacity(modules_data.data.len());
 
-    for key in py_modules.keys() {
-        known_modules.insert(key, KnownModuleFlavor::InMemory);
-        populate_packages(&mut packages, key);
-    }
-
-    for key in pyc_modules.keys() {
+    for key in modules_data.data.keys() {
         known_modules.insert(key, KnownModuleFlavor::InMemory);
         populate_packages(&mut packages, key);
     }
@@ -523,8 +552,7 @@ fn module_setup(
         module_spec_type,
         decode_source,
         exec_fn,
-        PythonModulesData { data: py_modules },
-        PythonModulesData { data: pyc_modules },
+        modules_data,
         packages,
         known_modules,
     )?;

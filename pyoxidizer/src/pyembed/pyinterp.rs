@@ -242,8 +242,7 @@ impl<'a> MainPythonInterpreter<'a> {
         // that of the interpreter.
         // TODO specify lifetimes so the compiler validates this for us.
         let module_state = super::importer::InitModuleState {
-            py_data: config.py_modules_data,
-            pyc_data: config.pyc_modules_data,
+            py_modules_data: config.py_modules_data,
         };
 
         if config.use_custom_importlib {

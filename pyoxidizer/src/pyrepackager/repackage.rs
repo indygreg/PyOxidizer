@@ -101,14 +101,15 @@ pub fn is_stdlib_test_package(name: &str) -> bool {
     false
 }
 
-/// Represents a resource entry. Simply a name-value pair.
-pub struct BlobEntry {
+/// Represents a single module's data record.
+pub struct ModuleEntry {
     pub name: String,
-    pub data: Vec<u8>,
+    pub source: Option<Vec<u8>>,
+    pub bytecode: Option<Vec<u8>>,
 }
 
-/// Represents an ordered collection of resource entries.
-pub type BlobEntries = Vec<BlobEntry>;
+/// Represents an ordered collection of module entries.
+pub type ModuleEntries = Vec<ModuleEntry>;
 
 /// Represents a resource to make available to the Python interpreter.
 #[derive(Debug)]
@@ -155,38 +156,31 @@ pub struct PythonResources {
 }
 
 impl PythonResources {
-    pub fn sources_blob(&self) -> BlobEntries {
-        let mut sources = BlobEntries::new();
+    /// Obtain records for all modules in this resources collection.
+    pub fn modules_records(&self) -> ModuleEntries {
+        let mut records = ModuleEntries::new();
 
-        for (name, source) in &self.module_sources {
-            sources.push(BlobEntry {
+        for name in &self.all_modules {
+            let source = self.module_sources.get(name);
+            let bytecode = self.module_bytecodes.get(name);
+
+            records.push(ModuleEntry {
                 name: name.clone(),
-                data: source.clone(),
+                source: match source {
+                    Some(value) => Some(value.clone()),
+                    None => None,
+                },
+                bytecode: match bytecode {
+                    Some(value) => Some(value.clone()),
+                    None => None,
+                },
             });
         }
 
-        sources
+        records
     }
 
-    pub fn bytecodes_blob(&self) -> BlobEntries {
-        let mut bytecodes = BlobEntries::new();
-
-        for (name, bytecode) in &self.module_bytecodes {
-            bytecodes.push(BlobEntry {
-                name: name.clone(),
-                data: bytecode.clone(),
-            });
-        }
-
-        bytecodes
-    }
-
-    pub fn write_blobs(
-        &self,
-        module_names_path: &PathBuf,
-        modules_path: &PathBuf,
-        bytecodes_path: &PathBuf,
-    ) {
+    pub fn write_blobs(&self, module_names_path: &PathBuf, modules_path: &PathBuf) {
         let mut fh = fs::File::create(module_names_path).expect("error creating file");
         for name in &self.all_modules {
             fh.write_all(name.as_bytes()).expect("failed to write");
@@ -194,10 +188,7 @@ impl PythonResources {
         }
 
         let fh = fs::File::create(modules_path).unwrap();
-        write_blob_entries(&fh, &self.sources_blob()).unwrap();
-
-        let fh = fs::File::create(bytecodes_path).unwrap();
-        write_blob_entries(&fh, &self.bytecodes_blob()).unwrap();
+        write_modules_entries(&fh, &self.modules_records()).unwrap();
     }
 }
 
@@ -758,26 +749,40 @@ pub fn derive_importlib(dist: &PythonDistributionInfo) -> ImportlibData {
     }
 }
 
-/// Serialize a BlobEntries to a writer.
+/// Serialize a ModulesEntries to a writer.
 ///
 /// Format:
 ///    Little endian u32 total number of entries.
-///    Array of 2-tuples of
+///    Array of 3-tuples of
 ///        Little endian u32 length of entity name
-///        Little endian u32 length of entity value
+///        Little endian u32 length of source data
+///        Little endian u32 length of bytecode value
 ///    Vector of entity names, with no padding
-///    Vector of entity values, with no padding
+///    Vector of sources, with no padding
+///    Vector of bytecodes, with no padding
 ///
 /// The "index" data is self-contained in the beginning of the data structure
 /// to allow a linear read of a contiguous memory region in order to load
 /// the index.
-pub fn write_blob_entries<W: Write>(mut dest: W, entries: &[BlobEntry]) -> std::io::Result<()> {
+pub fn write_modules_entries<W: Write>(
+    mut dest: W,
+    entries: &[ModuleEntry],
+) -> std::io::Result<()> {
     dest.write_u32::<LittleEndian>(entries.len() as u32)?;
 
     for entry in entries.iter() {
         let name_bytes = entry.name.as_bytes();
         dest.write_u32::<LittleEndian>(name_bytes.len() as u32)?;
-        dest.write_u32::<LittleEndian>(entry.data.len() as u32)?;
+        dest.write_u32::<LittleEndian>(if let Some(ref v) = entry.source {
+            v.len() as u32
+        } else {
+            0
+        })?;
+        dest.write_u32::<LittleEndian>(if let Some(ref v) = entry.bytecode {
+            v.len() as u32
+        } else {
+            0
+        })?;
     }
 
     for entry in entries.iter() {
@@ -786,7 +791,15 @@ pub fn write_blob_entries<W: Write>(mut dest: W, entries: &[BlobEntry]) -> std::
     }
 
     for entry in entries.iter() {
-        dest.write_all(entry.data.as_slice())?;
+        if let Some(ref v) = entry.source {
+            dest.write_all(v.as_slice())?;
+        }
+    }
+
+    for entry in entries.iter() {
+        if let Some(ref v) = entry.bytecode {
+            dest.write_all(v.as_slice())?;
+        }
     }
 
     Ok(())
@@ -1034,7 +1047,6 @@ pub fn derive_python_config(
     importlib_bootstrap_path: &PathBuf,
     importlib_bootstrap_external_path: &PathBuf,
     py_modules_path: &PathBuf,
-    pyc_modules_path: &PathBuf,
 ) -> String {
     format!(
         "PythonConfig {{\n    \
@@ -1053,7 +1065,6 @@ pub fn derive_python_config(
          frozen_importlib_data: include_bytes!(\"{}\"),\n    \
          frozen_importlib_external_data: include_bytes!(\"{}\"),\n    \
          py_modules_data: include_bytes!(\"{}\"),\n    \
-         pyc_modules_data: include_bytes!(\"{}\"),\n    \
          argvb: false,\n    \
          raw_allocator: {},\n    \
          write_modules_directory_env: {},\n    \
@@ -1084,7 +1095,6 @@ pub fn derive_python_config(
         importlib_bootstrap_path.display(),
         importlib_bootstrap_external_path.display(),
         py_modules_path.display(),
-        pyc_modules_path.display(),
         match config.raw_allocator {
             RawAllocator::Jemalloc => "PythonRawAllocator::Jemalloc",
             RawAllocator::Rust => "PythonRawAllocator::Rust",
@@ -1150,9 +1160,6 @@ pub struct EmbeddedPythonConfig {
 
     /// Path to file containing packed Python module source data.
     pub py_modules_path: PathBuf,
-
-    /// Path to file containing packed Python module bytecode data.
-    pub pyc_modules_path: PathBuf,
 
     /// Path to library file containing Python.
     pub libpython_path: PathBuf,
@@ -1260,18 +1267,12 @@ pub fn process_config(
     println!("writing packed Python module and resource data...");
     let module_names_path = Path::new(&out_dir).join("py-module-names");
     let py_modules_path = Path::new(&out_dir).join("py-modules");
-    let pyc_modules_path = Path::new(&out_dir).join("pyc-modules");
-    resources.write_blobs(&module_names_path, &py_modules_path, &pyc_modules_path);
+    resources.write_blobs(&module_names_path, &py_modules_path);
 
     println!(
-        "{} bytes of Python module source data written to {}",
+        "{} bytes of Python module data written to {}",
         py_modules_path.metadata().unwrap().len(),
         py_modules_path.display()
-    );
-    println!(
-        "{} bytes of Python module bytecode data written to {}",
-        pyc_modules_path.metadata().unwrap().len(),
-        pyc_modules_path.display()
     );
     println!("(Python resource files not yet supported)");
 
@@ -1289,7 +1290,6 @@ pub fn process_config(
         &importlib_bootstrap_path,
         &importlib_bootstrap_external_path,
         &py_modules_path,
-        &pyc_modules_path,
     );
 
     let dest_path = Path::new(&out_dir).join("data.rs");
@@ -1302,7 +1302,6 @@ pub fn process_config(
         importlib_bootstrap_external_path,
         module_names_path,
         py_modules_path,
-        pyc_modules_path,
         libpython_path: libpython_info.path,
         cargo_metadata,
         python_config_rs,
@@ -1346,7 +1345,6 @@ pub fn process_config_and_copy_artifacts(
     let importlib_bootstrap_path = out_dir.join("importlib_bootstrap");
     let importlib_bootstrap_external_path = out_dir.join("importlib_bootstrap_external");
     let py_modules_path = out_dir.join("py-modules");
-    let pyc_modules_path = out_dir.join("pyc-modules");
     let libpython_path = out_dir.join("libpythonXY.a");
 
     fs::copy(
@@ -1360,7 +1358,6 @@ pub fn process_config_and_copy_artifacts(
     )
     .expect("error copying file");
     fs::copy(embedded_config.py_modules_path, &py_modules_path).expect("error copying file");
-    fs::copy(embedded_config.pyc_modules_path, &pyc_modules_path).expect("error copying file");
     fs::copy(embedded_config.libpython_path, &libpython_path).expect("error copying file");
 
     let python_config_rs = derive_python_config(
@@ -1368,7 +1365,6 @@ pub fn process_config_and_copy_artifacts(
         &orig_out_dir.join("importlib_bootstrap"),
         &orig_out_dir.join("importlib_bootstrap_external"),
         &orig_out_dir.join("py-modules"),
-        &orig_out_dir.join("pyc-modules"),
     );
 
     EmbeddedPythonConfig {
@@ -1378,7 +1374,6 @@ pub fn process_config_and_copy_artifacts(
         importlib_bootstrap_external_path,
         module_names_path: embedded_config.module_names_path,
         py_modules_path,
-        pyc_modules_path,
         libpython_path,
         cargo_metadata: embedded_config.cargo_metadata,
         python_config_rs,
