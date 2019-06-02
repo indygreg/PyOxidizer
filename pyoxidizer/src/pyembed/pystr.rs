@@ -57,10 +57,10 @@ impl<'a> TryFrom<&'a str> for OwnedPyStr {
 const SURROGATEESCAPE: &[u8] = b"surrogateescape\0";
 
 #[cfg(target_family = "unix")]
-pub fn osstring_to_str(py: Python, s: OsString) -> PyObject {
+pub fn osstring_to_str(py: Python, s: OsString) -> Result<PyObject, &'static str> {
     // PyUnicode_DecodeLocaleAndSize says the input must have a trailing NULL.
     // So use a CString for that.
-    let b = CString::new(s.as_bytes()).expect("valid C string");
+    let b = CString::new(s.as_bytes()).or_else(|_| Err("not a valid C string"))?;
     unsafe {
         let o = pyffi::PyUnicode_DecodeLocaleAndSize(
             b.as_ptr() as *const i8,
@@ -68,19 +68,19 @@ pub fn osstring_to_str(py: Python, s: OsString) -> PyObject {
             SURROGATEESCAPE.as_ptr() as *const i8,
         );
 
-        PyObject::from_owned_ptr(py, o)
+        Ok(PyObject::from_owned_ptr(py, o))
     }
 }
 
 #[cfg(target_family = "windows")]
-pub fn osstring_to_str(py: Python, s: OsString) -> PyObject {
+pub fn osstring_to_str(py: Python, s: OsString) -> Result<PyObject, &'static str> {
     // Windows OsString should be valid UTF-16.
     let w: Vec<u16> = s.encode_wide().collect();
     unsafe {
-        PyObject::from_owned_ptr(
+        Ok(PyObject::from_owned_ptr(
             py,
             pyffi::PyUnicode_FromWideChar(w.as_ptr(), w.len() as isize),
-        )
+        ))
     }
 }
 
