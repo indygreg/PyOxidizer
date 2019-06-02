@@ -150,7 +150,8 @@ impl<'a> MainPythonInterpreter<'a> {
             program_name: None,
         };
 
-        res.init();
+        // TODO return Result from this function.
+        res.init().unwrap();
 
         res
     }
@@ -167,10 +168,10 @@ impl<'a> MainPythonInterpreter<'a> {
     /// of interpreter initialization.
     ///
     /// Returns a Python instance which has the GIL acquired.
-    fn init(&mut self) -> Python {
+    fn init(&mut self) -> Result<Python, &'static str> {
         // TODO return Result<> and don't panic.
         if self.init_run {
-            return self.acquire_gil();
+            return Ok(self.acquire_gil());
         }
 
         let config = &self.config;
@@ -455,7 +456,7 @@ impl<'a> MainPythonInterpreter<'a> {
             _ => panic!("unable to set sys.frozen"),
         }
 
-        py
+        Ok(py)
     }
 
     /// Ensure the Python GIL is released.
