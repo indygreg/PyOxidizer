@@ -12,6 +12,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process;
 
+use super::environment::PyOxidizerSource;
 use super::pyrepackager::fsscan::walk_tree_files;
 use super::python_distributions::CPYTHON_BY_TRIPLE;
 
@@ -77,11 +78,17 @@ pub fn find_pyoxidizer_files(root: &Path) -> Vec<PathBuf> {
 fn populate_template_data(data: &mut BTreeMap<String, String>) {
     let env = super::environment::resolve_environment().unwrap();
 
-    if let Some(repo_path) = env.pyoxidizer_repo_path {
-        data.insert(
-            String::from("pyoxidizer_local_repo_path"),
-            String::from(repo_path.to_str().unwrap()),
-        );
+    match env.pyoxidizer_source {
+        PyOxidizerSource::LocalPath { path } => {
+            data.insert(
+                String::from("pyoxidizer_local_repo_path"),
+                path.display().to_string(),
+            );
+        }
+        PyOxidizerSource::GitUrl { url, commit } => {
+            data.insert(String::from("pyoxidizer_git_url"), url);
+            data.insert(String::from("pyoxidizer_git_commit"), commit);
+        }
     }
 }
 

@@ -6,17 +6,32 @@ edition = "2018"
 build = "build.rs"
 
 [build-dependencies]
-{{#if pyoxidizer_local_repo_path}}pyoxidizer = { path = "{{{ pyoxidizer_local_repo_path }}}/pyoxidizer" }{{/if}}
+{{#if pyoxidizer_git_url~}}
+pyoxidizer = { git = "{{{ pyoxidizer_git_url }}}", rev = "{{{pyoxidizer_git_commit}}}" }
+{{~else~}}
+pyoxidizer = { path = "{{{ pyoxidizer_local_repo_path }}}/pyoxidizer" }
+{{~/if}}
 
 [dependencies]
 byteorder = "1"
 jemalloc-sys = { version = "0.3", optional = true }
 libc = "0.2"
-{{#if pyoxidizer_local_repo_path }}python3-sys = { path = "{{{ pyoxidizer_local_repo_path }}}/third_party/rust-cpython/python3-sys" }{{/if}}
 uuid = { version = "0.7", features = ["v4"] }
 
+[dependencies.python3-sys]
+{{~#if pyoxidizer_git_url}}
+git = "{{{ pyoxidizer_git_url }}}"
+rev = "{{{pyoxidizer_git_commit}}}"
+{{else}}
+path = "{{{ pyoxidizer_local_repo_path }}}/third_party/rust-cpython/python3-sys" }
+{{~/if}}
 [dependencies.cpython]
-{{#if pyoxidizer_local_repo_path }}path = "{{{ pyoxidizer_local_repo_path }}}/third_party/rust-cpython"{{/if}}
+{{~#if pyoxidizer_git_url}}
+git = "{{{ pyoxidizer_git_url }}}"
+rev = "{{{pyoxidizer_git_commit}}}"
+{{else}}
+path = "{{{ pyoxidizer_local_repo_path }}}/third_party/rust-cpython"
+{{/if~}}
 features = ["link-mode-unresolved-static", "python3-sys", "no-auto-initialize"]
 
 [features]
