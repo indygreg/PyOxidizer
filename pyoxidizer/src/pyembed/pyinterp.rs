@@ -778,35 +778,42 @@ impl<'a> MainPythonInterpreter<'a> {
 /// Given a Python interpreter and a path to a directory, this will create a
 /// file in that directory named ``modules-<UUID>`` and write a ``\n`` delimited
 /// list of loaded names from ``sys.modules`` into that file.
-fn write_modules_to_directory(py: Python, path: &PathBuf) {
+fn write_modules_to_directory(py: Python, path: &PathBuf) -> Result<(), &'static str> {
     // TODO this needs better error handling all over.
 
-    fs::create_dir_all(path).expect("could not create directory for modules");
+    fs::create_dir_all(path).or_else(|_| Err("could not create directory for modules"))?;
 
     let rand = uuid::Uuid::new_v4();
 
     let path = path.join(format!("modules-{}", rand.to_string()));
 
-    let sys = py.import("sys").expect("could not obtain sys module");
+    let sys = py
+        .import("sys")
+        .or_else(|_| Err("could not obtain sys module"))?;
     let modules = sys
         .get(py, "modules")
-        .expect("could not obtain sys.modules");
+        .or_else(|_| Err("could not obtain sys.modules"))?;
 
     let modules = modules
         .cast_as::<PyDict>(py)
-        .expect("sys.modules is not a dict");
+        .or_else(|_| Err("sys.modules is not a dict"))?;
 
     let mut names = BTreeSet::new();
     for (key, _value) in modules.items(py) {
-        names.insert(key.extract::<String>(py).expect("module name is not a str"));
+        names.insert(
+            key.extract::<String>(py)
+                .or_else(|_| Err("module name is not a str"))?,
+        );
     }
 
-    let mut f = fs::File::create(path).expect("could not open file for writing");
+    let mut f = fs::File::create(path).or_else(|_| Err("could not open file for writing"))?;
 
     for name in names {
         f.write_fmt(format_args!("{}\n", name))
-            .expect("could not write");
+            .or_else(|_| Err("could not write"))?;
     }
+
+    Ok(())
 }
 
 impl<'a> Drop for MainPythonInterpreter<'a> {
@@ -815,7 +822,10 @@ impl<'a> Drop for MainPythonInterpreter<'a> {
             if let Ok(path) = env::var(key) {
                 let path = PathBuf::from(path);
                 let py = self.acquire_gil();
-                write_modules_to_directory(py, &path);
+
+                if let Err(msg) = write_modules_to_directory(py, &path) {
+                    eprintln!("error writing modules file: {}", msg);
+                }
             }
         }
 
