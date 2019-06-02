@@ -4,6 +4,7 @@
 
 use libc::{c_void, size_t, wchar_t};
 use python3_sys as pyffi;
+use std::convert::TryFrom;
 #[cfg(target_family = "unix")]
 use std::ffi::CString;
 use std::ffi::OsString;
@@ -33,20 +34,22 @@ impl Drop for OwnedPyStr {
     }
 }
 
-impl<'a> From<&'a str> for OwnedPyStr {
-    fn from(s: &str) -> Self {
+impl<'a> TryFrom<&'a str> for OwnedPyStr {
+    type Error = &'static str;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
         // We need to convert to a C string so there is a terminal NULL
         // otherwise Py_DecodeLocale() can get confused.
-        let cs = CString::new(s).expect("source string has NULL bytes");
+        let cs = CString::new(s).or_else(|_| Err("source string has NULL bytes"))?;
 
         let size: *mut size_t = null_mut();
         let ptr = unsafe { pyffi::Py_DecodeLocale(cs.as_ptr(), size) };
 
         if ptr.is_null() {
-            panic!("could not convert str to Python string");
+            Err("could not convert str to Python string")
+        } else {
+            Ok(OwnedPyStr { data: ptr })
         }
-
-        OwnedPyStr { data: ptr }
     }
 }
 

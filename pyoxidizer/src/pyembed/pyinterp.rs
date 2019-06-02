@@ -5,6 +5,7 @@
 use libc::c_char;
 use python3_sys as pyffi;
 use std::collections::BTreeSet;
+use std::convert::TryFrom;
 use std::env;
 use std::ffi::CString;
 use std::fs;
@@ -248,14 +249,15 @@ impl<'a> MainPythonInterpreter<'a> {
             }
         }
 
-        let home = OwnedPyStr::from(exe.to_str().ok_or_else(|| "unable to convert exe to str")?);
+        let home =
+            OwnedPyStr::try_from(exe.to_str().ok_or_else(|| "unable to convert exe to str")?)?;
 
         unsafe {
             // Pointer needs to live for lifetime of interpreter.
             pyffi::Py_SetPythonHome(home.as_wchar_ptr());
         }
 
-        let program_name = OwnedPyStr::from(config.program_name.as_str());
+        let program_name = OwnedPyStr::try_from(config.program_name.as_str())?;
 
         unsafe {
             pyffi::Py_SetProgramName(program_name.as_wchar_ptr());
@@ -269,7 +271,7 @@ impl<'a> MainPythonInterpreter<'a> {
         // we do have defined paths, they will be set after Py_Initialize().
         unsafe {
             // Value is copied internally. So short lifetime is OK.
-            let value = OwnedPyStr::from("");
+            let value = OwnedPyStr::try_from("")?;
             pyffi::Py_SetPath(value.as_wchar_ptr());
         }
 
