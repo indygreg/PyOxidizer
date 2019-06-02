@@ -19,6 +19,16 @@ use python3_sys::{PyBUF_READ, PyMemoryView_FromMemory};
 
 use super::pyinterp::PYOXIDIZER_IMPORTER_NAME;
 
+/// Obtain a Python memoryview referencing a memory slice.
+///
+/// New memoryview allows Python to access the underlying memory without
+/// copying it.
+#[inline]
+fn get_memory_view(py: Python, data: &'static [u8]) -> Option<PyObject> {
+    let ptr = unsafe { PyMemoryView_FromMemory(data.as_ptr() as _, data.len() as _, PyBUF_READ) };
+    unsafe { PyObject::from_owned_ptr_opt(py, ptr) }
+}
+
 /// Represents Python modules data in memory.
 ///
 /// That data can be source, bytecode, etc. This type is just a thin wrapper around
@@ -31,13 +41,7 @@ impl PythonModulesData {
     /// Obtain a PyMemoryView instance for a specific key.
     fn get_memory_view(&self, py: Python, name: &str) -> Option<PyObject> {
         match self.data.get(name) {
-            Some(value) => {
-                let ptr = unsafe {
-                    PyMemoryView_FromMemory(value.as_ptr() as _, value.len() as _, PyBUF_READ)
-                };
-
-                unsafe { PyObject::from_owned_ptr_opt(py, ptr) }
-            }
+            Some(value) => get_memory_view(py, value),
             None => None,
         }
     }
