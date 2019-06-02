@@ -28,7 +28,12 @@ pub struct Environment {
 }
 
 pub fn resolve_environment() -> Result<Environment, &'static str> {
-    let exe_path = PathBuf::from(env::current_exe().unwrap().parent().unwrap());
+    let exe_path = PathBuf::from(
+        env::current_exe()
+            .or_else(|_| Err("could not resolve current exe"))?
+            .parent()
+            .ok_or_else(|| "could not resolve parent of current exe")?,
+    );
 
     let (repo_path, commit) = match Repository::discover(&exe_path) {
         Ok(repo) => {
@@ -38,7 +43,11 @@ pub fn resolve_environment() -> Result<Environment, &'static str> {
 
             if root.id().to_string() == ROOT_COMMIT {
                 (
-                    Some(repo.workdir().unwrap().to_path_buf()),
+                    Some(
+                        repo.workdir()
+                            .ok_or_else(|| "unable to resolve Git workdir")?
+                            .to_path_buf(),
+                    ),
                     Some(commit.id().to_string()),
                 )
             } else {
