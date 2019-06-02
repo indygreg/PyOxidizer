@@ -150,6 +150,17 @@ enum ConfigPythonPackaging {
         include_source: bool,
     },
 
+    #[serde(rename = "pip-requirements-file")]
+    PipRequirementsFile {
+        #[serde(default = "ALL")]
+        target: String,
+        requirements_path: String,
+        #[serde(default = "ZERO")]
+        optimize_level: i64,
+        #[serde(default = "TRUE")]
+        include_source: bool,
+    },
+
     #[serde(rename = "filter-file-include")]
     FilterFileInclude {
         #[serde(default = "ALL")]
@@ -251,6 +262,13 @@ pub enum PythonPackaging {
 
     PipInstallSimple {
         package: String,
+        optimize_level: i64,
+        include_source: bool,
+    },
+
+    PipRequirementsFile {
+        // TODO resolve to a PathBuf.
+        requirements_path: String,
         optimize_level: i64,
         include_source: bool,
     },
@@ -477,6 +495,22 @@ pub fn parse_config(data: &[u8], target: &str) -> Config {
                 if rule_target == "all" || rule_target == target {
                     Some(PythonPackaging::PipInstallSimple {
                         package: package.clone(),
+                        optimize_level: *optimize_level,
+                        include_source: *include_source,
+                    })
+                } else {
+                    None
+                }
+            }
+            ConfigPythonPackaging::PipRequirementsFile {
+                target: rule_target,
+                requirements_path,
+                optimize_level,
+                include_source,
+            } => {
+                if rule_target == "all" || rule_target == target {
+                    Some(PythonPackaging::PipRequirementsFile {
+                        requirements_path: requirements_path.clone(),
                         optimize_level: *optimize_level,
                         include_source: *include_source,
                     })

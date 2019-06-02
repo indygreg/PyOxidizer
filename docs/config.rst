@@ -416,6 +416,30 @@ Example usage::
    type = "pip-install-simple"
    package = "pyflakes"
 
+``pip-requirements-file``
+-------------------------
+
+``type = "pip-requirements-file"`` will run ``pip install -r <path>``
+for a given `pip requirements file <https://pip.pypa.io/en/stable/user_guide/#requirements-files>`_.
+This allows multiple Python packages to be downloaded/installed in a single
+operation.
+
+The following keys control behavior:
+
+requirements_path
+   Filesystem path to pip requirements file.
+
+optimize_level
+   The module optimization level for packaged bytecode.
+
+   Allowed values are ``0``, ``1``, and ``2``.
+
+   Defaults to ``0``, which is the Python default.
+
+include_source
+   Whether to include the source code for Python modules in addition to
+   the bytecode. Defaults to true.
+
 ``filter-file-include``
 -----------------------
 
