@@ -4,7 +4,7 @@
 
 use std::path::{Path, PathBuf};
 
-use clap::{App, Arg, SubCommand};
+use clap::{App, AppSettings, Arg, SubCommand};
 
 mod analyze;
 mod environment;
@@ -15,6 +15,7 @@ mod python_distributions;
 
 fn main() {
     let matches = App::new("PyOxidizer")
+        .setting(AppSettings::ArgRequiredElseHelp)
         .version("0.1")
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .about("Integrate Python into Rust")
