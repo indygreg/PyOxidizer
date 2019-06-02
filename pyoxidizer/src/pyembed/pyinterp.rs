@@ -463,12 +463,12 @@ impl<'a> MainPythonInterpreter<'a> {
             }
         }
 
-        // As a convention, sys.frozen is set to indicate we are running from
+        // As a convention, sys.oxidized is set to indicate we are running from
         // a self-contained application.
-        let frozen = b"_pymodules\0";
+        let oxidized = b"oxidized\0";
 
         let res = py.True().with_borrowed_ptr(py, |py_true| unsafe {
-            pyffi::PySys_SetObject(frozen.as_ptr() as *const i8, py_true)
+            pyffi::PySys_SetObject(oxidized.as_ptr() as *const i8, py_true)
         });
 
         match res {
