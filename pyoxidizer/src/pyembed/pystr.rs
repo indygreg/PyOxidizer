@@ -2,6 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+//! Bridge Rust and Python string types.
+
 use libc::{c_void, size_t, wchar_t};
 use python3_sys as pyffi;
 use std::convert::TryFrom;

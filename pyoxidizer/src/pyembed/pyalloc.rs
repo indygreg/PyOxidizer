@@ -2,6 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+//! Custom Python memory allocators.
+
 #[cfg(feature = "jemalloc-sys")]
 use jemalloc_sys as jemallocffi;
 use libc::{c_void, size_t};

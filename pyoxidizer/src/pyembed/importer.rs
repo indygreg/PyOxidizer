@@ -2,7 +2,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-/* This module defines a Python meta path importer for importing from a self-contained binary. */
+/*!
+Functionality for a Python importer.
+
+This module defines a Python meta path importer and associated functionality
+for importing Python modules from memory.
+*/
 
 use std::collections::{HashMap, HashSet};
 use std::ffi::CStr;

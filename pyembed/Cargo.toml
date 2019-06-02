@@ -9,6 +9,7 @@ build = "build.rs"
 pyoxidizer = { path = "../pyoxidizer" }
 
 [dependencies]
+# Update documentation in lib.rs when new dependencies are added.
 byteorder = "1"
 jemalloc-sys = { version = "0.3", optional = true }
 libc = "0.2"

@@ -807,19 +807,7 @@ pub fn derive_importlib(dist: &PythonDistributionInfo) -> ImportlibData {
 
 /// Serialize a ModulesEntries to a writer.
 ///
-/// Format:
-///    Little endian u32 total number of entries.
-///    Array of 3-tuples of
-///        Little endian u32 length of entity name
-///        Little endian u32 length of source data
-///        Little endian u32 length of bytecode value
-///    Vector of entity names, with no padding
-///    Vector of sources, with no padding
-///    Vector of bytecodes, with no padding
-///
-/// The "index" data is self-contained in the beginning of the data structure
-/// to allow a linear read of a contiguous memory region in order to load
-/// the index.
+/// See the documentation in the `pyembed` crate for the data format.
 pub fn write_modules_entries<W: Write>(
     mut dest: W,
     entries: &[ModuleEntry],
@@ -1188,7 +1176,12 @@ pub fn write_data_rs(path: &PathBuf, python_config_rs: &str) {
         .join("\n");
 
     f.write_fmt(format_args!(
-        "pub fn default_python_config() -> PythonConfig {{\n{}\n}}\n",
+        "/// Obtain the default Python configuration\n\
+         ///\n\
+         /// The crate is compiled with a default Python configuration embedded
+         /// in the crate. This function will return an instance of that
+         /// configuration.
+         pub fn default_python_config() -> PythonConfig {{\n{}\n}}\n",
         indented
     ))
     .unwrap();

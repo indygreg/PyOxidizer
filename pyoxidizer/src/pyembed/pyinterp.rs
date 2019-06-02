@@ -2,6 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+//! Manage an embedded Python interpreter.
+
 use libc::c_char;
 use python3_sys as pyffi;
 use std::collections::BTreeSet;
@@ -113,10 +115,18 @@ fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
     panic!("jemalloc is not available in this build configuration");
 }
 
-/// Represents an embedded Python interpreter.
+/// Manages an embedded Python interpreter.
 ///
-/// Since the Python API has global state and methods of this mutate global
-/// state, there should only be a single instance of this type at any time.
+/// **Warning: Python interpreters have global state. There should only be a
+/// single instance of this type per process.**
+///
+/// Instances must only be constructed through [`MainPythonInterpreter::new()`](#method.new).
+///
+/// This type and its various functionality is a glorified wrapper around the
+/// Python C API. But there's a lot of added functionality on top of what the C
+/// API provides.
+///
+/// Both the low-level `python3-sys` and higher-level `cpython` crates are used.
 pub struct MainPythonInterpreter<'a> {
     pub config: PythonConfig,
     frozen_modules: [pyffi::_frozen; 3],

@@ -2,6 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+//! Data structures for configuring a Python interpreter.
+
 /// Defines which allocator to use for the raw domain.
 #[derive(Clone, Debug)]
 pub enum PythonRawAllocator {
