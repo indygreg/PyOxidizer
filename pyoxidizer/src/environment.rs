@@ -27,7 +27,7 @@ pub struct Environment {
     pub pyoxidizer_commit: Option<String>,
 }
 
-pub fn resolve_environment() -> Environment {
+pub fn resolve_environment() -> Result<Environment, &'static str> {
     let exe_path = PathBuf::from(env::current_exe().unwrap().parent().unwrap());
 
     let (repo_path, commit) = match Repository::discover(&exe_path) {
@@ -48,8 +48,8 @@ pub fn resolve_environment() -> Environment {
         Err(_) => (None, None),
     };
 
-    Environment {
+    Ok(Environment {
         pyoxidizer_repo_path: repo_path,
         pyoxidizer_commit: commit,
-    }
+    })
 }

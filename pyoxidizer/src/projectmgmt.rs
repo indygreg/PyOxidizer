@@ -75,7 +75,7 @@ pub fn find_pyoxidizer_files(root: &Path) -> Vec<PathBuf> {
 }
 
 fn populate_template_data(data: &mut BTreeMap<String, String>) {
-    let env = super::environment::resolve_environment();
+    let env = super::environment::resolve_environment().unwrap();
 
     if let Some(repo_path) = env.pyoxidizer_repo_path {
         data.insert(
