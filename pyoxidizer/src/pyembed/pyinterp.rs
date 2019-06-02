@@ -127,9 +127,9 @@ pub struct MainPythonInterpreter<'a> {
 }
 
 impl<'a> MainPythonInterpreter<'a> {
-    /// Construct an instance from a config.
+    /// Construct a Python interpreter from a configuration.
     ///
-    /// There are no significant side-effects from calling this.
+    /// The Python interpreter is initialized as a side-effect. The GIL is held.
     pub fn new(config: PythonConfig) -> MainPythonInterpreter<'a> {
         let (raw_allocator, raw_rust_allocator) = match config.raw_allocator {
             PythonRawAllocator::Jemalloc => (Some(raw_jemallocator()), None),
@@ -139,7 +139,7 @@ impl<'a> MainPythonInterpreter<'a> {
 
         let frozen_modules = make_custom_frozen_modules(&config);
 
-        MainPythonInterpreter {
+        let mut res = MainPythonInterpreter {
             config,
             frozen_modules,
             init_run: false,
@@ -148,7 +148,11 @@ impl<'a> MainPythonInterpreter<'a> {
             gil: None,
             py: None,
             program_name: None,
-        }
+        };
+
+        res.init();
+
+        res
     }
 
     /// Initialize the interpreter.
@@ -163,7 +167,7 @@ impl<'a> MainPythonInterpreter<'a> {
     /// of interpreter initialization.
     ///
     /// Returns a Python instance which has the GIL acquired.
-    pub fn init(&mut self) -> Python {
+    fn init(&mut self) -> Python {
         // TODO return Result<> and don't panic.
         if self.init_run {
             return self.acquire_gil();
@@ -486,7 +490,7 @@ impl<'a> MainPythonInterpreter<'a> {
         // clone() to avoid issues mixing mutable and immutable borrows of self.
         let run = self.config.run.clone();
 
-        let py = self.init();
+        let py = self.acquire_gil();
 
         match run {
             PythonRunMode::None => Ok(py.None()),
@@ -620,7 +624,7 @@ impl<'a> MainPythonInterpreter<'a> {
     ///
     /// The interpreter is automatically initialized if needed.
     pub fn run_module_as_main(&mut self, name: &str) -> PyResult<PyObject> {
-        let py = self.init();
+        let py = self.acquire_gil();
 
         // This is modeled after runpy.py:_run_module_as_main().
         let main: PyModule = unsafe {
@@ -669,7 +673,7 @@ impl<'a> MainPythonInterpreter<'a> {
     ///
     /// The interpreter is automatically initialized if needed.
     pub fn run_repl(&mut self) -> PyResult<PyObject> {
-        let py = self.init();
+        let py = self.acquire_gil();
 
         unsafe {
             pyffi::Py_InspectFlag = 0;
@@ -703,7 +707,7 @@ impl<'a> MainPythonInterpreter<'a> {
     ///
     /// The interpreter is automatically initialized if needed.
     pub fn run_code(&mut self, code: &str) -> PyResult<PyObject> {
-        let py = self.init();
+        let py = self.acquire_gil();
 
         let code = CString::new(code).unwrap();
 
