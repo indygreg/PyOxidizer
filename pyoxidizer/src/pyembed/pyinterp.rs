@@ -513,19 +513,21 @@ impl<'a> MainPythonInterpreter<'a> {
     ///
     /// This emulates the behavior in pythonrun.c:handle_system_exit() and
     /// _Py_HandleSystemExit() but without the call to exit(), which we don't want.
-    fn handle_system_exit(&mut self, py: Python, err: PyErr) -> i32 {
-        std::io::stdout().flush().expect("failed to flush stdout");
+    fn handle_system_exit(&mut self, py: Python, err: PyErr) -> Result<i32, &'static str> {
+        std::io::stdout()
+            .flush()
+            .or_else(|_| Err("failed to flush stdout"))?;
 
         let mut value = match err.pvalue {
             Some(ref instance) => {
                 if instance.as_ptr() == py.None().as_ptr() {
-                    return 0;
+                    return Ok(0);
                 }
 
                 instance.clone_ref(py)
             }
             None => {
-                return 0;
+                return Ok(0);
             }
         };
 
@@ -533,7 +535,7 @@ impl<'a> MainPythonInterpreter<'a> {
             // The error code should be in the "code" attribute.
             if let Ok(code) = value.getattr(py, "code") {
                 if code == py.None() {
-                    return 0;
+                    return Ok(0);
                 }
 
                 // Else pretend exc_value.code is the new exception value to use
@@ -543,10 +545,12 @@ impl<'a> MainPythonInterpreter<'a> {
         }
 
         if unsafe { pyffi::PyLong_Check(value.as_ptr()) } != 0 {
-            return unsafe { pyffi::PyLong_AsLong(value.as_ptr()) as i32 };
+            return Ok(unsafe { pyffi::PyLong_AsLong(value.as_ptr()) as i32 });
         }
 
-        let sys_module = py.import("sys").expect("unable to obtain sys module");
+        let sys_module = py
+            .import("sys")
+            .or_else(|_| Err("unable to obtain sys module"))?;
         let stderr = sys_module.get(py, "stderr");
 
         // This is a cargo cult from the canonical implementation.
@@ -560,7 +564,9 @@ impl<'a> MainPythonInterpreter<'a> {
                 unsafe {
                     pyffi::PyObject_Print(value.as_ptr(), stderr_to_file(), pyffi::Py_PRINT_RAW);
                 }
-                std::io::stderr().flush().expect("failure to flush stderr");
+                std::io::stderr()
+                    .flush()
+                    .or_else(|_| Err("failure to flush stderr"))?;
             }
         }
 
@@ -575,7 +581,7 @@ impl<'a> MainPythonInterpreter<'a> {
             pyffi::PyErr_Clear();
         }
 
-        1
+        Ok(1)
     }
 
     /// Runs the interpreter and handles any exception that was raised.
@@ -607,7 +613,13 @@ impl<'a> MainPythonInterpreter<'a> {
 
                 if matches {
                     return PythonRunResult::Exit {
-                        code: self.handle_system_exit(py, err),
+                        code: match self.handle_system_exit(py, err) {
+                            Ok(code) => code,
+                            Err(msg) => {
+                                eprintln!("{}", msg);
+                                1
+                            }
+                        },
                     };
                 }
 
