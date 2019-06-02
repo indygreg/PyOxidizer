@@ -151,30 +151,6 @@ impl<'a> MainPythonInterpreter<'a> {
         }
     }
 
-    /// Ensure the Python GIL is released.
-    pub fn release_gil(&mut self) {
-        if self.py.is_some() {
-            self.py = None;
-            self.gil = None;
-        }
-    }
-
-    /// Ensure the Python GIL is acquired, returning a handle on the interpreter.
-    pub fn acquire_gil(&mut self) -> Python<'a> {
-        match self.py {
-            Some(py) => py,
-            None => {
-                let gil = GILGuard::acquire();
-                let py = unsafe { Python::assume_gil_acquired() };
-
-                self.gil = Some(gil);
-                self.py = Some(py);
-
-                py
-            }
-        }
-    }
-
     /// Initialize the interpreter.
     ///
     /// This mutates global state in the Python interpreter according to the
@@ -476,6 +452,30 @@ impl<'a> MainPythonInterpreter<'a> {
         }
 
         py
+    }
+
+    /// Ensure the Python GIL is released.
+    pub fn release_gil(&mut self) {
+        if self.py.is_some() {
+            self.py = None;
+            self.gil = None;
+        }
+    }
+
+    /// Ensure the Python GIL is acquired, returning a handle on the interpreter.
+    pub fn acquire_gil(&mut self) -> Python<'a> {
+        match self.py {
+            Some(py) => py,
+            None => {
+                let gil = GILGuard::acquire();
+                let py = unsafe { Python::assume_gil_acquired() };
+
+                self.gil = Some(gil);
+                self.py = Some(py);
+
+                py
+            }
+        }
     }
 
     /// Runs the interpreter with the default code execution settings.
