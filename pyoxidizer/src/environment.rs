@@ -51,7 +51,14 @@ pub fn resolve_environment() -> Result<Environment, &'static str> {
                     Some(commit.id().to_string()),
                 )
             } else {
-                (None, None)
+                // The pyoxidizer binary is in a directory that is in a Git repo that isn't
+                // pyoxidizer's. That's really weird. While this could occur, treat as a fatal
+                // error for now.
+                return Err(
+                    "pyoxidizer binary is in a Git repository that is not pyoxidizer; \
+                     refusing to continue; if you would like this feature, please file \
+                     an issue for it at https://github.com/indygreg/PyOxidizer/issues/",
+                );
             }
         }
         Err(_) => (None, None),
