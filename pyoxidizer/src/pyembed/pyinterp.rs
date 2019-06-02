@@ -12,6 +12,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::ptr::null;
 
+use cpython::exc::ValueError;
 use cpython::{
     GILGuard, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule, PyObject, PyResult,
     PyString, PyTuple, Python, PythonObject, ToPyObject,
@@ -717,7 +718,12 @@ impl<'a> MainPythonInterpreter<'a> {
     pub fn run_code(&mut self, code: &str) -> PyResult<PyObject> {
         let py = self.acquire_gil();
 
-        let code = CString::new(code).unwrap();
+        let code = CString::new(code).or_else(|_| {
+            Err(PyErr::new::<ValueError, _>(
+                py,
+                "source code is not a valid C string",
+            ))
+        })?;
 
         unsafe {
             let main = pyffi::PyImport_AddModule("__main__\0".as_ptr() as *const _);
