@@ -36,6 +36,24 @@ struct PythonModuleData {
     bytecode: Option<&'static [u8]>,
 }
 
+impl PythonModuleData {
+    /// Obtain a PyMemoryView instance for source data.
+    fn get_source_memory_view(&self, py: Python) -> Option<PyObject> {
+        match self.source {
+            Some(data) => get_memory_view(py, data),
+            None => None,
+        }
+    }
+
+    /// Obtain a PyMemoryView instance for bytecode data.
+    fn get_bytecode_memory_view(&self, py: Python) -> Option<PyObject> {
+        match self.bytecode {
+            Some(data) => get_memory_view(py, data),
+            None => None,
+        }
+    }
+}
+
 /// Represents Python modules data in memory.
 ///
 /// This is essentially an index over a raw backing blob.
@@ -112,28 +130,6 @@ impl PythonModulesData {
 
         Ok(PythonModulesData { data: res })
     }
-
-    /// Obtain a PyMemoryView instance for source data.
-    fn get_source_memory_view(&self, py: Python, name: &str) -> Option<PyObject> {
-        match self.data.get(name) {
-            Some(value) => match value.source {
-                Some(data) => get_memory_view(py, data),
-                None => None,
-            },
-            None => None,
-        }
-    }
-
-    /// Obtain a PyMemoryView instance for bytecode data.
-    fn get_bytecode_memory_view(&self, py: Python, name: &str) -> Option<PyObject> {
-        match self.data.get(name) {
-            Some(value) => match value.bytecode {
-                Some(data) => get_memory_view(py, data),
-                None => None,
-            },
-            None => None,
-        }
-    }
 }
 
 #[allow(unused_doc_comments)]
@@ -151,7 +147,6 @@ py_class!(class PyOxidizerFinder |py| {
     data module_spec_type: PyObject;
     data decode_source: PyObject;
     data exec_fn: PyObject;
-    data py_modules_data: PythonModulesData;
     data packages: HashSet<&'static str>;
     data known_modules: KnownModules;
 
@@ -168,7 +163,7 @@ py_class!(class PyOxidizerFinder |py| {
                 KnownModuleFlavor::Frozen => {
                     self.frozen_importer(py).call_method(py, "find_spec", (fullname, path, target), None)
                 }
-                KnownModuleFlavor::InMemory => {
+                KnownModuleFlavor::InMemory { .. } => {
                     let is_package = self.packages(py).contains(&*key);
 
                     // TODO consider setting origin and has_location so __file__ will be
@@ -215,8 +210,8 @@ py_class!(class PyOxidizerFinder |py| {
                 KnownModuleFlavor::Frozen => {
                     self.frozen_importer(py).call_method(py, "exec_module", (module,), None)
                 },
-                KnownModuleFlavor::InMemory => {
-                    match self.py_modules_data(py).get_bytecode_memory_view(py, &*key) {
+                KnownModuleFlavor::InMemory { module_data } => {
+                    match module_data.get_bytecode_memory_view(py) {
                         Some(value) => {
                             let code = self.marshal_loads(py).call(py, (value,), None)?;
                             let exec_fn = self.exec_fn(py);
@@ -251,8 +246,8 @@ py_class!(class PyOxidizerFinder |py| {
 
                     imp_module.call(py, "get_frozen_object", (fullname,), None)
                 },
-                KnownModuleFlavor::InMemory => {
-                    match self.py_modules_data(py).get_bytecode_memory_view(py, &*key) {
+                KnownModuleFlavor::InMemory { module_data } => {
+                    match module_data.get_bytecode_memory_view(py) {
                         Some(value) => {
                             self.marshal_loads(py).call(py, (value,), None)
                         }
@@ -274,8 +269,8 @@ py_class!(class PyOxidizerFinder |py| {
         let key = fullname.to_string(py)?;
 
         if let Some(flavor) = self.known_modules(py).get(&*key) {
-            if let KnownModuleFlavor::InMemory = flavor {
-                match self.py_modules_data(py).get_source_memory_view(py, &*key) {
+            if let KnownModuleFlavor::InMemory { module_data } = flavor {
+                match module_data.get_source_memory_view(py) {
                     Some(value) => {
                         self.decode_source(py).call(py, (value,), None)
                     },
@@ -323,7 +318,7 @@ pub static mut NEXT_MODULE_STATE: *const InitModuleState = std::ptr::null();
 enum KnownModuleFlavor {
     Builtin,
     Frozen,
-    InMemory,
+    InMemory { module_data: PythonModuleData },
 }
 
 type KnownModules = HashMap<&'static str, KnownModuleFlavor>;
@@ -456,6 +451,9 @@ fn module_setup(
     let builtin_importer = meta_path.get_item(py, 0);
     let frozen_importer = meta_path.get_item(py, 1);
 
+    // It may seem inefficient to create a full HashMap of the parsed data instead of e.g.
+    // streaming it. But the overhead of iterators was measured to be more than building
+    // up a temporary HashMap.
     let modules_data = match PythonModulesData::from(state.py_modules_data) {
         Ok(v) => v,
         Err(msg) => return Err(PyErr::new::<ValueError, _>(py, msg)),
@@ -512,9 +510,14 @@ fn module_setup(
     // TODO consider baking set of packages into embedded data.
     let mut packages: HashSet<&'static str> = HashSet::with_capacity(modules_data.data.len());
 
-    for key in modules_data.data.keys() {
-        known_modules.insert(key, KnownModuleFlavor::InMemory);
-        populate_packages(&mut packages, key);
+    for (name, record) in modules_data.data {
+        known_modules.insert(
+            name,
+            KnownModuleFlavor::InMemory {
+                module_data: record,
+            },
+        );
+        populate_packages(&mut packages, name);
     }
 
     let marshal_loads = marshal_module.get(py, "loads")?;
@@ -552,7 +555,6 @@ fn module_setup(
         module_spec_type,
         decode_source,
         exec_fn,
-        modules_data,
         packages,
         known_modules,
     )?;
