@@ -28,4 +28,8 @@ path = "{{{ pyoxidizer_local_repo_path }}}/third_party/rust-cpython"
 features = ["link-mode-unresolved-static", "python3-sys", "no-auto-initialize"]
 
 [features]
+{{~#if jemalloc}}
 default = ["jemalloc-sys"]
+{{else}}
+default = []
+{{~/if}}

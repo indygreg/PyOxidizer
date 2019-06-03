@@ -94,9 +94,13 @@ fn populate_template_data(data: &mut BTreeMap<String, String>) {
     }
 }
 
-pub fn update_new_cargo_toml(path: &Path) -> Result<(), std::io::Error> {
+pub fn update_new_cargo_toml(path: &Path, jemalloc: bool) -> Result<(), std::io::Error> {
     let mut fh = std::fs::OpenOptions::new().append(true).open(path)?;
-    fh.write_all(b"jemallocator-global = \"0.3\"\n")?;
+
+    if jemalloc {
+        fh.write_all(b"jemallocator-global = \"0.3\"\n")?;
+    }
+
     fh.write_all(b"pyembed = { path = \"pyembed\" }\n")?;
 
     Ok(())
@@ -144,6 +148,7 @@ pub fn write_new_main_rs(path: &Path) -> Result<(), std::io::Error> {
 pub fn write_new_pyoxidizer_config_file(
     project_dir: &Path,
     name: &str,
+    enable_jemalloc: bool,
 ) -> Result<(), std::io::Error> {
     let path = project_dir.to_path_buf().join("pyoxidizer.toml");
 
@@ -165,6 +170,10 @@ pub fn write_new_pyoxidizer_config_file(
     data.insert("python_distributions", distributions.join("\n"));
     data.insert("program_name", name.to_string());
 
+    if enable_jemalloc {
+        data.insert("jemalloc", "1".to_string());
+    }
+
     let t = HANDLEBARS
         .render("new-pyoxidizer.toml", &data)
         .expect("unable to render template");
@@ -177,7 +186,7 @@ pub fn write_new_pyoxidizer_config_file(
 }
 
 /// Write files for the pyembed crate into a destination directory.
-pub fn write_pyembed_crate_files(dest_dir: &Path) -> Result<(), std::io::Error> {
+pub fn write_pyembed_crate_files(dest_dir: &Path, jemalloc: bool) -> Result<(), std::io::Error> {
     println!("creating {}", dest_dir.to_str().unwrap());
     std::fs::create_dir_all(dest_dir)?;
 
@@ -194,6 +203,10 @@ pub fn write_pyembed_crate_files(dest_dir: &Path) -> Result<(), std::io::Error> 
 
     let mut data = BTreeMap::new();
     populate_template_data(&mut data);
+
+    if jemalloc {
+        data.insert("jemalloc".to_string(), "1".to_string());
+    }
 
     let t = HANDLEBARS
         .render("pyembed-cargo.toml", &data)
@@ -223,7 +236,11 @@ pub fn write_pyembed_crate_files(dest_dir: &Path) -> Result<(), std::io::Error> 
 ///
 /// The Rust source files added to the target project are installed into
 /// a sub-directory defined by ``module_name``. This is typically ``pyembed``.
-pub fn add_pyoxidizer(project_dir: &Path, _suppress_help: bool) -> Result<(), String> {
+pub fn add_pyoxidizer(
+    project_dir: &Path,
+    _suppress_help: bool,
+    jemalloc: bool,
+) -> Result<(), String> {
     let existing_files = find_pyoxidizer_files(&project_dir);
 
     if !existing_files.is_empty() {
@@ -237,7 +254,8 @@ pub fn add_pyoxidizer(project_dir: &Path, _suppress_help: bool) -> Result<(), St
     }
 
     let pyembed_dir = project_dir.to_path_buf().join("pyembed");
-    write_pyembed_crate_files(&pyembed_dir).or(Err("error writing pyembed crate files"))?;
+    write_pyembed_crate_files(&pyembed_dir, jemalloc)
+        .or(Err("error writing pyembed crate files"))?;
 
     let cargo_toml_data = std::fs::read(cargo_toml).or(Err("error reading Cargo.toml"))?;
     let manifest =
@@ -309,7 +327,7 @@ pub fn build(project_path: &str, debug: bool, release: bool) -> Result<(), Strin
 }
 
 /// Initialize a new Rust project with PyOxidizer support.
-pub fn init(project_path: &str) -> Result<(), String> {
+pub fn init(project_path: &str, jemalloc: bool) -> Result<(), String> {
     let res = process::Command::new("cargo")
         .arg("init")
         .arg("--bin")
@@ -327,10 +345,11 @@ pub fn init(project_path: &str) -> Result<(), String> {
 
     let path = PathBuf::from(project_path);
     let name = path.iter().last().unwrap().to_str().unwrap();
-    add_pyoxidizer(&path, true)?;
-    update_new_cargo_toml(&path.join("Cargo.toml")).or(Err("unable to update Cargo.toml"))?;
+    add_pyoxidizer(&path, true, jemalloc)?;
+    update_new_cargo_toml(&path.join("Cargo.toml"), jemalloc)
+        .or(Err("unable to update Cargo.toml"))?;
     write_new_main_rs(&path.join("src").join("main.rs")).or(Err("unable to write main.rs"))?;
-    write_new_pyoxidizer_config_file(&path, &name)
+    write_new_pyoxidizer_config_file(&path, &name, jemalloc)
         .or(Err("unable to write PyOxidizer config files"))?;
 
     println!();
