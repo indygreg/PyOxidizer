@@ -3,6 +3,11 @@ name = "pyoxidizer"
 version = "0.1.0"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 license = "MPL-2.0"
+description = "Package self-contained Python applications"
+readme = "../README.rst"
+homepage = "https://github.com/indygreg/PyOxidizer"
+repository = "https://github.com/indygreg/PyOxidizer.git"
+keywords = ["python"]
 edition = "2018"
 build = "build.rs"
 
