@@ -8,6 +8,7 @@ use handlebars::Handlebars;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use std::collections::BTreeMap;
+use std::error::Error;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process;
@@ -239,6 +240,101 @@ pub fn add_pyoxidizer(project_dir: &Path, _suppress_help: bool) -> Result<(), St
     };
 
     // TODO look for pyembed dependency and print message about adding it.
+
+    Ok(())
+}
+
+/// Build packages that are dependencies of oxidized applications.
+///
+/// We do this separately so we can minimize verbose output.
+fn build_depends(project_path: &Path, release: bool) -> Result<(), String> {
+    let mut args = Vec::new();
+    args.push("build");
+    if release {
+        args.push("--release");
+    }
+
+    // TODO sniff dependencies from Cargo.toml file, as that is more robust.
+    for package in [
+        "byteorder",
+        "cpython",
+        "jemallocator-global",
+        "jemalloc-sys",
+        "libc",
+        "python3-sys",
+        "uuid",
+        "pyoxidizer",
+    ]
+    .iter()
+    {
+        args.push("-p");
+        args.push(package);
+    }
+
+    match process::Command::new("cargo")
+        .args(args)
+        .current_dir(project_path)
+        .status()
+    {
+        Ok(status) => {
+            if !status.success() {
+                return Err("cargo build failed".to_string());
+            }
+        }
+        Err(e) => return Err(e.to_string()),
+    }
+
+    Ok(())
+}
+
+fn build_project(project_path: &Path, release: bool) -> Result<(), String> {
+    let mut args = Vec::new();
+    args.push("build");
+    if release {
+        args.push("--release");
+    }
+    args.push("-vv");
+
+    match process::Command::new("cargo")
+        .args(args)
+        .current_dir(&project_path)
+        .status()
+    {
+        Ok(status) => {
+            if status.success() {
+                Ok(())
+            } else {
+                Err("cargo build failed".to_string())
+            }
+        }
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+/// Build a PyOxidizer enabled project.
+///
+/// This is a glorified wrapper around `cargo build`. Our goal is to get the
+/// output from repackaging to give the user something for debugging.
+pub fn build(project_path: &str, debug: bool, release: bool) -> Result<(), String> {
+    let path = PathBuf::from(project_path)
+        .canonicalize()
+        .or_else(|e| Err(e.description().to_owned()))?;
+
+    if find_pyoxidizer_files(&path).is_empty() {
+        return Err("no PyOxidizer files in specified path".to_string());
+    }
+
+    if debug {
+        println!("building PyOxidizer dependency (this could take a while)");
+        build_depends(&path, false)?;
+        build_project(&path, false)?;
+    }
+
+    if release {
+        println!("building PyOxidizer dependency (this could take a while)");
+        build_depends(&path, true)?;
+        build_project(&path, true)?;
+    }
 
     Ok(())
 }

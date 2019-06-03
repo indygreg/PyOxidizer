@@ -717,6 +717,16 @@ distribution URLs and dependency crate versions and locations from the
 PyOxidizer executable that runs this command.
 ";
 
+const BUILD_ABOUT: &str = "\
+Build a PyOxidizer project.
+
+The PATH argument is a filesystem path to a directory containing an
+existing PyOxidizer enabled project.
+
+This command will invoke Rust's build system tool (Cargo) to build
+the project.
+";
+
 const INIT_ABOUT: &str = "\
 Create a new Rust project embedding Python.
 
@@ -769,6 +779,28 @@ fn main() {
                         .required(true)
                         .value_name("PATH")
                         .help("Directory to be created for new project"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("build")
+                .setting(AppSettings::ArgRequiredElseHelp)
+                .about("Build a PyOxidizer enabled project")
+                .long_about(BUILD_ABOUT)
+                .arg(
+                    Arg::with_name("debug")
+                        .long("debug")
+                        .help("Build a debug binary"),
+                )
+                .arg(
+                    Arg::with_name("release")
+                        .long("release")
+                        .help("Build a release binary"),
+                )
+                .arg(
+                    Arg::with_name("path")
+                        .default_value(".")
+                        .value_name("PATH")
+                        .help("Directory containing project to build"),
                 ),
         )
         .subcommand(
@@ -837,6 +869,18 @@ fn main() {
             println!("{}", config.python_config_rs);
 
             Ok(())
+        }
+
+        ("build", Some(args)) => {
+            let mut debug = args.is_present("debug");
+            let release = args.is_present("release");
+            let path = args.value_of("path").unwrap();
+
+            if !debug && !release {
+                debug = true;
+            }
+
+            projectmgmt::build(path, debug, release)
         }
 
         ("init", Some(args)) => {
