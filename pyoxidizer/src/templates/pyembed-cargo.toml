@@ -23,7 +23,7 @@ uuid = { version = "0.7", features = ["v4"] }
 git = "{{{ pyoxidizer_git_url }}}"
 rev = "{{{pyoxidizer_git_commit}}}"
 {{else}}
-path = "{{{ pyoxidizer_local_repo_path }}}/third_party/rust-cpython/python3-sys" }
+path = "{{{ pyoxidizer_local_repo_path }}}/third_party/rust-cpython/python3-sys"
 {{~/if}}
 [dependencies.cpython]
 {{~#if pyoxidizer_git_url}}
