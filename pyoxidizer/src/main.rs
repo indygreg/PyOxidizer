@@ -746,6 +746,20 @@ they were created with.
 On success, instructions on potential next steps are printed.
 ";
 
+const RUN_BUILD_SCRIPT_ABOUT: &str = "\
+Runs a crate build script to generate Python artifacts.
+
+When the Rust crate embedding Python is built, it needs to consume various
+artifacts derived from processing the active PyOxidizer TOML config file.
+These files are typically generated when the crate's build script runs.
+
+This command executes the functionality to derive various artifacts and
+emits special lines that tell the Rust build system how to consume them.
+
+This command is essentially identical to `build-artifacts` except the
+output is tailored for the Rust build system.
+";
+
 fn main() {
     let matches = App::new("PyOxidizer")
         .setting(AppSettings::ArgRequiredElseHelp)
@@ -768,6 +782,17 @@ fn main() {
             SubCommand::with_name("analyze")
                 .about("Analyze a built binary")
                 .arg(Arg::with_name("path").help("Path to executable to analyze")),
+        )
+        .subcommand(
+            SubCommand::with_name("run-build-script")
+                .setting(AppSettings::ArgRequiredElseHelp)
+                .about("Run functionality that a build script would perform")
+                .long_about(RUN_BUILD_SCRIPT_ABOUT)
+                .arg(
+                    Arg::with_name("build-script-name")
+                        .required(true)
+                        .help("Value to use for Rust build script"),
+                ),
         )
         .subcommand(
             SubCommand::with_name("init")
@@ -887,6 +912,12 @@ fn main() {
             let name = args.value_of("name").unwrap();
 
             projectmgmt::init(name)
+        }
+
+        ("run-build-script", Some(args)) => {
+            let build_script = args.value_of("build-script-name").unwrap();
+
+            projectmgmt::run_build_script(build_script)
         }
         _ => Err("invalid sub-command".to_string()),
     };

@@ -5,13 +5,6 @@ authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 edition = "2018"
 build = "build.rs"
 
-[build-dependencies]
-{{#if pyoxidizer_git_url~}}
-pyoxidizer = { git = "{{{ pyoxidizer_git_url }}}", rev = "{{{pyoxidizer_git_commit}}}" }
-{{~else~}}
-pyoxidizer = { path = "{{{ pyoxidizer_local_repo_path }}}/pyoxidizer" }
-{{~/if}}
-
 [dependencies]
 byteorder = "1"
 jemalloc-sys = { version = "0.3", optional = true }

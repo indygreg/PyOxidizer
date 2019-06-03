@@ -15,6 +15,7 @@ use std::process;
 
 use super::environment::PyOxidizerSource;
 use super::pyrepackager::fsscan::walk_tree_files;
+use super::pyrepackager::repackage::run_from_build;
 use super::python_distributions::CPYTHON_BY_TRIPLE;
 
 lazy_static! {
@@ -252,56 +253,12 @@ pub fn add_pyoxidizer(project_dir: &Path, _suppress_help: bool) -> Result<(), St
     Ok(())
 }
 
-/// Build packages that are dependencies of oxidized applications.
-///
-/// We do this separately so we can minimize verbose output.
-fn build_depends(project_path: &Path, release: bool) -> Result<(), String> {
-    let mut args = Vec::new();
-    args.push("build");
-    if release {
-        args.push("--release");
-    }
-
-    // TODO sniff dependencies from Cargo.toml file, as that is more robust.
-    for package in [
-        "byteorder",
-        "cpython",
-        "jemallocator-global",
-        "jemalloc-sys",
-        "libc",
-        "python3-sys",
-        "uuid",
-        "pyoxidizer",
-    ]
-    .iter()
-    {
-        args.push("-p");
-        args.push(package);
-    }
-
-    match process::Command::new("cargo")
-        .args(args)
-        .current_dir(project_path)
-        .status()
-    {
-        Ok(status) => {
-            if !status.success() {
-                return Err("cargo build failed".to_string());
-            }
-        }
-        Err(e) => return Err(e.to_string()),
-    }
-
-    Ok(())
-}
-
 fn build_project(project_path: &Path, release: bool) -> Result<(), String> {
     let mut args = Vec::new();
     args.push("build");
     if release {
         args.push("--release");
     }
-    args.push("-vv");
 
     let current_exe = std::env::current_exe()
         .or_else(|e| Err(e.to_string()))?
@@ -341,14 +298,10 @@ pub fn build(project_path: &str, debug: bool, release: bool) -> Result<(), Strin
     }
 
     if debug {
-        println!("building PyOxidizer dependency (this could take a while)");
-        build_depends(&path, false)?;
         build_project(&path, false)?;
     }
 
     if release {
-        println!("building PyOxidizer dependency (this could take a while)");
-        build_depends(&path, true)?;
         build_project(&path, true)?;
     }
 
@@ -396,6 +349,12 @@ pub fn init(project_path: &str) -> Result<(), String> {
     println!("edit the various pyoxidizer.*.toml config files or the main.rs ");
     println!("file to change behavior. The application will need to be rebuilt ");
     println!("for configuration changes to take effect.");
+
+    Ok(())
+}
+
+pub fn run_build_script(build_script: &str) -> Result<(), String> {
+    run_from_build(build_script);
 
     Ok(())
 }
