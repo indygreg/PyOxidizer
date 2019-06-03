@@ -52,7 +52,7 @@ indirect dependency on the `num-traits` crate.
 This crate requires linking against a library providing CPython C symbols.
 (This dependency is via the `python3-sys` crate.) On Windows, this library
 must be named `pythonXY`. This library is typically generated with
-PyOxidizer.
+PyOxidizer and its linking is managed by the ``build.rs`` build script.
 
 # Features
 
