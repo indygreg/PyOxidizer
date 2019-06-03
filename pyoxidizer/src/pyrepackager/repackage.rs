@@ -1392,18 +1392,21 @@ pub fn process_config_and_copy_artifacts(
     let py_modules_path = out_dir.join("py-modules");
     let libpython_path = out_dir.join("libpythonXY.a");
 
-    fs::copy(
-        embedded_config.importlib_bootstrap_path,
-        &importlib_bootstrap_path,
-    )
-    .expect("error copying file");
-    fs::copy(
-        embedded_config.importlib_bootstrap_external_path,
-        &importlib_bootstrap_external_path,
-    )
-    .expect("error copying file");
-    fs::copy(embedded_config.py_modules_path, &py_modules_path).expect("error copying file");
-    fs::copy(embedded_config.libpython_path, &libpython_path).expect("error copying file");
+    // It is possible to use the output directory as the build directory.
+    if build_dir != out_dir {
+        fs::copy(
+            embedded_config.importlib_bootstrap_path,
+            &importlib_bootstrap_path,
+        )
+        .expect("error copying file");
+        fs::copy(
+            embedded_config.importlib_bootstrap_external_path,
+            &importlib_bootstrap_external_path,
+        )
+        .expect("error copying file");
+        fs::copy(embedded_config.py_modules_path, &py_modules_path).expect("error copying file");
+        fs::copy(embedded_config.libpython_path, &libpython_path).expect("error copying file");
+    }
 
     let python_config_rs = derive_python_config(
         &embedded_config.config,
