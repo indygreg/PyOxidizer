@@ -3,10 +3,12 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 /*!
-Tools for embedding and packaging Python.
+Functionality for embedding and packaging Python.
 
 PyOxidizer provides a myriad of functionality for packaging a Python
 distribution and embedding it in a larger binary, oftentimes an executable.
+
+This library exposes that functionality to other tools.
 */
 
 pub mod analyze;

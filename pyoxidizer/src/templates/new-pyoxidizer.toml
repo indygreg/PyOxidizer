@@ -1,7 +1,6 @@
 # This file controls the PyOxidizer build configuration. See the
-# docs/config.rst file in the PyOxidizer source repository
-# (https://github.com/indygreg/PyOxidizer/blob/master/docs/config.rst)
-# for extensive documentation on this file format.
+# pyoxidizer crate's documentation for extensive documentation
+# on this file format.
 
 {{{ python_distributions }}}
 [[python_config]]
@@ -58,7 +57,7 @@ include_source = false
 # path = "/path/to/venv"
 
 # Filter all resources collected so far through a filter of names
-# in a file. See ``config.rst`` for more.
+# in a file.
 # type = "filter-file-include"
 # path = "/path/to/filter-file"
 
