@@ -6,6 +6,12 @@ license = "MPL-2.0"
 edition = "2018"
 build = "build.rs"
 
+# We rename the library so we can have crate documentation for both the
+# library and the binary.
+[lib]
+name = "pyoxidizerlib"
+path = "src/lib.rs"
+
 [build-dependencies]
 vergen = "3"
 
