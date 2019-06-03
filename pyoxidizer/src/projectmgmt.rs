@@ -295,9 +295,17 @@ fn build_project(project_path: &Path, release: bool) -> Result<(), String> {
     }
     args.push("-vv");
 
+    let current_exe = std::env::current_exe()
+        .or_else(|e| Err(e.to_string()))?
+        .canonicalize()
+        .or_else(|e| Err(e.to_string()))?
+        .display()
+        .to_string();
+
     match process::Command::new("cargo")
         .args(args)
         .current_dir(&project_path)
+        .env("PYOXIDIZER_EXE", current_exe)
         .status()
     {
         Ok(status) => {
