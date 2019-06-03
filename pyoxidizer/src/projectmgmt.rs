@@ -103,7 +103,15 @@ pub fn update_new_cargo_toml(path: &Path) -> Result<(), std::io::Error> {
 
 /// Write a new build.rs file supporting PyOxidizer.
 pub fn write_pyembed_build_rs(project_dir: &Path) -> Result<(), std::io::Error> {
-    let data: BTreeMap<String, String> = BTreeMap::new();
+    let mut data: BTreeMap<String, String> = BTreeMap::new();
+    data.insert(
+        "pyoxidizer_exe".to_string(),
+        std::env::current_exe()?
+            .canonicalize()?
+            .display()
+            .to_string(),
+    );
+
     let t = HANDLEBARS
         .render("pyembed-build.rs", &data)
         .expect("unable to render pyembed-build.rs");
