@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-# This file is concatenated to importlib/_bootstrap.py.
+# This file is concatenated to importlib/_bootstrap_external.py.
 
 # This overrides importlib._bootstrap_external:_install()
 def _install(_bootstrap_module):
