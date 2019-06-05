@@ -171,7 +171,7 @@ Module                         Type       Source
 ``readline``                   builtin
 ``sys``                        builtin    ``_Py_InitializeCore_impl()``
 ``zipimport``                  builtin    ``initimport()``
-============================== ========== =================================
+============================== ========== ================================
 
 Modules Imported by ``site.py``
 ===============================
