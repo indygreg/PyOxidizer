@@ -7,6 +7,7 @@ build = "build.rs"
 
 [build-dependencies]
 pyoxidizer = { path = "../pyoxidizer" }
+slog = "2.4"
 
 [dependencies]
 # Update documentation in lib.rs when new dependencies are added.

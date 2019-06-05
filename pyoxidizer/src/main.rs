@@ -27,12 +27,12 @@ is implemented in C. Rust is simply a tool to achieve an end goal, albeit
 a rather effective and powerful tool.
 */
 
-use std::path::{Path, PathBuf};
-
 use clap::{App, AppSettings, Arg, SubCommand};
+use std::path::{Path, PathBuf};
 
 mod analyze;
 mod environment;
+mod logging;
 mod projectmgmt;
 #[allow(unused)]
 mod pyrepackager;
@@ -201,6 +201,8 @@ fn main() {
         )
         .get_matches();
 
+    let logger_context = logging::logger_from_env();
+
     let result = match matches.subcommand() {
         ("add", Some(args)) => {
             let path = args.value_of("path").unwrap();
@@ -235,6 +237,7 @@ fn main() {
             let dest_path = PathBuf::from(dest_path);
 
             let config = pyrepackager::repackage::process_config_and_copy_artifacts(
+                &logger_context.logger,
                 &config_path,
                 &build_path,
                 &dest_path,
@@ -268,7 +271,7 @@ fn main() {
         ("run-build-script", Some(args)) => {
             let build_script = args.value_of("build-script-name").unwrap();
 
-            projectmgmt::run_build_script(build_script)
+            projectmgmt::run_build_script(&logger_context.logger, build_script)
         }
         _ => Err("invalid sub-command".to_string()),
     };

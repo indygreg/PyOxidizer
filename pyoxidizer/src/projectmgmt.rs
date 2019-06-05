@@ -372,8 +372,8 @@ pub fn init(project_path: &str, jemalloc: bool) -> Result<(), String> {
     Ok(())
 }
 
-pub fn run_build_script(build_script: &str) -> Result<(), String> {
-    run_from_build(build_script);
+pub fn run_build_script(logger: &slog::Logger, build_script: &str) -> Result<(), String> {
+    run_from_build(logger, build_script);
 
     Ok(())
 }
