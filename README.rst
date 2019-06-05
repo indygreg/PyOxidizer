@@ -119,64 +119,6 @@ executables will run on the same machine that built them), then this may
 not pose a problem to you. Use the ``pyoxidizer analyze`` command to
 inspect binaries for compatibility.
 
-How It Works
-============
-
-``PyOxidizer`` is comprised of a number of Rust crates, each responsible
-for particular functionality.
-
-The ``pyoxidizer`` crate provides a ``pyoxidizer`` executable and library.
-The library provides all the core functionality of PyOxidizer, such as
-the logic for ingesting specially produced Python distributions and
-enabling those distributions to be repackaged and embedded in a Rust
-binary. It has code for parsing our config files, finding Python modules,
-compiling Python bytecode, etc. The ``pyoxidizer`` executable serves
-as a high-level interface to performing actions relevant to PyOxidizer.
-
-The ``pyembed`` library crate is responsible for managing an embedded
-Python interpreter within a larger Rust application. The crate contains
-all the code needed to interact with the CPython APIs and to provide
-in-memory module importing.
-
-When built, the ``pyembed`` crate interacts with the ``pyoxidizer`` crate
-to assemble all resources required to embed a Python interpreter. This
-includes configuring Cargo to build/link the appropriate files to embed
-``libpython``. This activity is directed by a configuration file. See the
-crate's ``build.rs`` for more.
-
-A built ``pyembed`` crate contains a default configuration (derived from
-the ``build.rs`` program) for the embedded Python interpreter. However,
-this configuration does not need to be used and the API exposed by the
-``pyembed`` crate allows custom behavior not matching these defaults.
-
-The ``pyembed`` create is configured via a TOML file. The configuration
-defines which Python distribution to consume, which Python modules to
-package, and default settings for the Python interpreter, including which
-code to execute by default. Most of the reading and processing of this
-configuration is in the ``pyoxidizer`` crate.
-
-At build time, the ``pyembed`` crate assembles configured Python
-resources (such as ``.py`` source files and bytecode) into binary structures
-and exposes this data to the ``pyembed`` crate via ``const &'static [u8]``
-variables. At run time, these binary arrays are parsed into richer Rust data
-structures, which allow Rust to access e.g. the Python bytecode for
-a named Python module. The embedded Python interpreter contains a
-custom *built-in extension module* which implements a Python meta path
-importer that services import requests. In order to make this importer
-available to the Python interpreter, at ``pyembed`` build time, we
-compile a modified version of the ``importlib._bootstrap_external`` module
-(provided by the Python distribution) to Python bytecode. When the embedded
-Python interpreter is initialized, this custom bytecode calls into
-our *built-in extension module*, which installs itself, and allows the
-entirety of the Python standard library and custom modules to be imported from
-memory using zero-copy.
-
-The final output of PyOxidizer can be as simple as a single, self-contained
-executable containing Python and all its required modules. When the
-process is executed, very little work needs to be done to run Python code,
-as Python modules can be imported from memory without explicit filesystem
-I/O.
-
 Known Limitations and Planned Features
 ======================================
 
