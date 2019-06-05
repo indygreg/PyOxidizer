@@ -6,5 +6,6 @@ PyOxidizer
    :caption: Contents:
 
    config
+   faq
    comparisons
    technotes
