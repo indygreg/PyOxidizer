@@ -3,30 +3,45 @@ PyOxidizer
 ==========
 
 ``PyOxidizer`` is a utility for producing binaries that embed Python.
-``PyOxidizer`` is capable of producing a single file executable - with
-all dependencies statically linked and all resources (like ``.pyc``
-files) embedded in the executable.
-
 The over-arching goal of ``PyOxidizer`` is to make complex packaging and
 distribution problems simple so application maintainers can focus on
 building applications instead of toiling with build systems and packaging
 tools.
 
+``PyOxidizer`` is capable of producing a single file executable - with
+a copy of Python and all its dependencies statically linked and all
+resources (like ``.pyc`` files) embedded in the executable. You can
+copy a single executable file to another machine and run a Python
+application contained within. It *just works*.
+
+``PyOxidizer`` exposes its lower level functionality for embedding
+self-contained Python interpreters as a tool and software library. So if
+you don't want to ship executables that only consist of a Python
+application, you can still use ``PyOxidizer`` to e.g. produce a library
+containing Python suitable for linking in any application or use
+``PyOxidizer``'s embedding library directly for embedding Python in a
+larger application.
+
 The *Oxidizer* part of the name comes from Rust: executables produced
 by ``PyOxidizer`` are compiled from Rust and Rust code is responsible
 for managing the embedded Python interpreter and all its operations.
+If you don't know Rust, that's OK: PyOxidizer tries to make the existence
+of Rust nearly invisible to end-users.
 
-``PyOxidizer`` is similar in nature to
-`PyInstaller <http://www.pyinstaller.org/>`_,
-`Shiv <https://shiv.readthedocs.io/en/latest/>`_, and other tools in
-this space. What generally sets ``PyOxidizer`` apart is that produced
-executables contain an embedded, statically-linked Python interpreter,
-have no additional run-time dependency on the target system (e.g.
-minimal dependencies on shared libraries, container runtimes, or
-FUSE filesystems), and runs everything from memory (as opposed to
-e.g. extracting Python modules to a temporary directory and loading
-them from there). This makes binaries produced with ``PyOxidizer``
-faster and simpler to manage.
+While solving packaging and distribution problems is the primary goal
+of ``PyOxidizer``, a side-effect of solving that problem with Rust is
+that ``PyOxidizer`` can serve as a bridge between these two languages.
+``PyOxidizer`` can be used to easily add a Python interpreter to *any*
+Rust project. But the opposite it also true: ``PyOxidizer`` can also be
+used to add Rust to Python. Using ``PyOxidizer``, you could *bootstrap*
+a new Rust project providing your application's executable/library.
+Initially, that binary is a few lines of Rust that instantiates a Python
+interpreter and runs Python code. Over time, functionality could be
+(re)written in Rust and your previously Python-only project could
+leverage Rust and its diverse ecosystem. Since ``PyOxidizer`` abstracts
+the Python interpreter away, this could all be invisible to end-users:
+you could rewrite an application from Python to Rust and people may
+not even know because all they might see is a single file executable!
 
 Quick Start
 ===========
