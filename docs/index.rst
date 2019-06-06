@@ -9,5 +9,6 @@ PyOxidizer
    overview
    config
    faq
+   status
    comparisons
    technotes
