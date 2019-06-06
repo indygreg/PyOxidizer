@@ -147,26 +147,3 @@ to be secure.
 
 Another implication is code compatibility. If multiple consumers try
 to use different versions of the same library... TODO
-
-What About Binary Compatibility?
-================================
-
-You claim binaries produced with PyOxidizer can run nearly anywhere. Is
-that true?
-
-It depends.
-
-On Linux, a binary built with MUSL should *just work* on pretty much any
-Linux machine.
-
-If you are linking against ``libc.so``, things get more complicated
-because the binary will link against the ``glibc`` symbol versions
-that were present on the build machine. To ensure maximum binary
-compatibility, compile your binary in a Debian 7 environment, as this will use
-a sufficiently old version of glibc which should work in most Linux
-environments.
-
-Of course, if you control the execution environment (like if executables
-will run on the same machine that built them), then this may not pose a
-problem to you. Use the ``pyoxidizer analyze`` command to inspect binaries
-for compatibility.

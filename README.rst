@@ -82,18 +82,3 @@ interpreter. The build script for the ``pyembed`` crate will use the
 configuration file defined by the ``PYOXIDIZER_CONFIG`` environment
 variable and fall back to looking for a ``pyoxidizer.toml`` file
 in the directory ancestry of the ``pyembed`` crate.
-
-Licensing Considerations
-========================
-
-Python and its various dependencies are governed by a handful of licenses.
-These licenses have various requirements and restrictions.
-
-Currently, binaries produced with ``PyOxidizer`` contain statically linked
-code covered by various licenses. This includes GPL 3.0 licensed code
-(``libreadline`` and ``libgdbm``). This has significant implications!
-
-In the future, ``PyOxidizer`` will allow stripping components of the Python
-distribution that have undesirable licenses and may allow distributing
-specific components as standalone libraries to skirt around some licensing
-restrictions.

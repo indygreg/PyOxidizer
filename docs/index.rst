@@ -7,6 +7,7 @@ PyOxidizer
 
    getting_started
    overview
+   distributing
    config
    faq
    status

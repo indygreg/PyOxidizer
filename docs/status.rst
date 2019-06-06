@@ -39,7 +39,10 @@ We don't yet have a good story for the *distributing* part of the application
 distribution problem. We're good at producing executables. But we'd like to
 go the extra mile and make it easier for people to produce installers, ``.dmg``
 files, tarballs, etc. This includes providing build environments for e.g.
-non-MUSL based Linux executables.
+non-MUSL based Linux executables. It also includes support for auditing
+for license compatibility (e.g. screening for GPL components in proprietary
+applications) and assembling required license texts to satisfy notification
+requirements in those licenses.
 
 Lesser Missing Features
 =======================
