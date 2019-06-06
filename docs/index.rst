@@ -5,6 +5,7 @@ PyOxidizer
    :maxdepth: 2
    :caption: Contents:
 
+   getting_started
    overview
    config
    faq
