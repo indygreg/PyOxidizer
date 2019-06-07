@@ -58,8 +58,8 @@ include_source = false
 
 # Filter all resources collected so far through a filter of names
 # in a file.
-# type = "filter-file-include"
-# path = "/path/to/filter-file"
+# type = "filter-include"
+# files = ["/path/to/filter-file"]
 
 # How Python should run by default. This is only needed if you
 # call ``run()``. For applications customizing how the embedded

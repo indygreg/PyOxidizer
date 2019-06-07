@@ -597,9 +597,7 @@ fn resolve_python_packaging(
         }
 
         // This is a no-op because it can only be handled at a higher level.
-        PythonPackaging::FilterFileInclude { .. } => {}
-
-        PythonPackaging::FilterFilesInclude { .. } => {}
+        PythonPackaging::FilterInclude { .. } => {}
     }
 
     res
@@ -665,40 +663,43 @@ pub fn resolve_python_resources(config: &Config, dist: &PythonDistributionInfo) 
             }
         }
 
-        if let PythonPackaging::FilterFileInclude { path } = packaging {
-            let path = Path::new(path);
-            let include_names =
-                read_resource_names_file(path).expect("failed to read resource names file");
-
-            println!("filtering extension modules from {:?}", packaging);
-            filter_btreemap(&mut extension_modules, &include_names);
-            println!("filtering module sources from {:?}", packaging);
-            filter_btreemap(&mut sources, &include_names);
-            println!("filtering module bytecode from {:?}", packaging);
-            filter_btreemap(&mut bytecode_requests, &include_names);
-            println!("filtering resources from {:?}", packaging);
-            filter_btreemap(&mut resources, &include_names);
-
-            read_files.push(PathBuf::from(path));
-        } else if let PythonPackaging::FilterFilesInclude { glob } = packaging {
+        if let PythonPackaging::FilterInclude { files, glob_files } = packaging {
             let mut include_names: BTreeSet<String> = BTreeSet::new();
 
-            for entry in findglob(glob).expect("filter-files-include glob match") {
-                match entry {
-                    Ok(path) => {
-                        let new_names =
-                            read_resource_names_file(&path).expect("failed to read resource names");
-                        include_names.extend(new_names);
-                        read_files.push(path.to_path_buf());
-                    }
-                    Err(e) => {
-                        panic!("error reading resource names file: {:?}", e);
-                    }
-                }
+            for path in files {
+                let path = PathBuf::from(path);
+                let new_names =
+                    read_resource_names_file(&path).expect("failed to read resource names file");
+
+                include_names.extend(new_names);
+                read_files.push(path);
             }
 
-            if include_names.is_empty() {
-                panic!("filter-files-include rule resolves to empty set; are you sure the path is correct?");
+            for glob in glob_files {
+                let mut new_names: BTreeSet<String> = BTreeSet::new();
+
+                for entry in findglob(glob).expect("glob_files glob match failed") {
+                    match entry {
+                        Ok(path) => {
+                            new_names.extend(
+                                read_resource_names_file(&path)
+                                    .expect("failed to read resource names"),
+                            );
+                            read_files.push(path);
+                        }
+                        Err(e) => {
+                            panic!("error reading resource names file: {:?}", e);
+                        }
+                    }
+                }
+
+                if new_names.is_empty() {
+                    panic!(
+                        "glob filter resolves to empty set; are you sure the paths are correct?"
+                    );
+                }
+
+                include_names.extend(new_names);
             }
 
             println!("filtering extension modules from {:?}", packaging);

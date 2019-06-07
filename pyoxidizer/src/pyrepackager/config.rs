@@ -161,18 +161,13 @@ enum ConfigPythonPackaging {
         include_source: bool,
     },
 
-    #[serde(rename = "filter-file-include")]
-    FilterFileInclude {
+    #[serde(rename = "filter-include")]
+    FilterInclude {
         #[serde(default = "ALL")]
         target: String,
-        path: String,
-    },
 
-    #[serde(rename = "filter-files-include")]
-    FilterFilesInclude {
-        #[serde(default = "ALL")]
-        target: String,
-        glob: String,
+        files: Vec<String>,
+        glob_files: Vec<String>,
     },
 }
 
@@ -273,12 +268,9 @@ pub enum PythonPackaging {
         include_source: bool,
     },
 
-    FilterFileInclude {
-        path: String,
-    },
-
-    FilterFilesInclude {
-        glob: String,
+    FilterInclude {
+        files: Vec<String>,
+        glob_files: Vec<String>,
     },
 }
 
@@ -446,22 +438,16 @@ pub fn parse_config(data: &[u8], target: &str) -> Config {
         .python_packages
         .iter()
         .filter_map(|r| match r {
-            ConfigPythonPackaging::FilterFileInclude {
+            ConfigPythonPackaging::FilterInclude {
                 target: rule_target,
-                path,
+                files,
+                glob_files,
             } => {
                 if rule_target == "all" || rule_target == target {
-                    Some(PythonPackaging::FilterFileInclude { path: path.clone() })
-                } else {
-                    None
-                }
-            }
-            ConfigPythonPackaging::FilterFilesInclude {
-                target: rule_target,
-                glob,
-            } => {
-                if rule_target == "all" || rule_target == target {
-                    Some(PythonPackaging::FilterFilesInclude { glob: glob.clone() })
+                    Some(PythonPackaging::FilterInclude {
+                        files: files.clone(),
+                        glob_files: glob_files.clone(),
+                    })
                 } else {
                     None
                 }

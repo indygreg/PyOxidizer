@@ -553,39 +553,46 @@ Example::
    type = "virtualenv"
    path = "/home/gps/src/myapp/venv"
 
-``filter-file-include``
------------------------
+``filter-include``
+------------------
 
-This rule filters all resource names resolved so far through a list of
-resource names read from a file. Resolved resources not contained in the
-file will be removed. i.e. the file defines a filter that resources must
-match to remain included.
+This rule filters all resource names resolved so far through a set of
+resource names resolved from sources defined by this section. Resources
+not contained in the set defined by this section will be removed.
 
-This rule allows earlier rules to aggressively pull in resources then
-exclude resources via omission from a named file. This is often easier
-than cherry picking exactly which resources to include in highly-granular
-rules.
+This rule is effectively an *allow list*. This rule allows earlier rules
+to aggressively pull in resources only to filter them via this rule.
+This approach is often easier than adding a cherry picked set of resources
+via highly granular addition rules.
 
-The ``path`` key denotes the filesystem path of a file containing resource
-names. The file must be valid UTF-8 and consist of a ``\n`` delimited list of
-resource names. Empty lines and lines beginning with ``#`` are ignored.
+The section has keys that define various sources for resource names:
 
-``filter-files-include``
-------------------------
+``files`` (array of string)
 
-This rule operates identically to ``filter-file-include`` but it can
-read resource names from multiple files.
+   List of filesystem paths to files containing resource names. The file must
+   be valid UTF-8 and consist of a ``\n`` delimited list of resource names.
+   Empty lines and lines beginning with ``#`` are ignored.
 
-The ``glob`` key specifies a glob matching pattern of filter files to
-read. ``*`` denotes all files in a directory. ``**`` denotes recursive
-directories. Uses the Rust ``glob`` crate under the hood. So its
-documentation for pattern matching info.
+``glob_files`` (array of string)
+
+   List of glob matching patterns of filter files to read. ``*`` denotes
+   all files in a directory. ``**`` denotes recursive directories. This uses
+   the Rust ``glob`` crate under the hood and the documentation for that crate
+   contains more pattern matching info.
+
+   The files read by this key must be the same format as documented by the
+   ``files`` key.
+
+All defined keys have their resolved resources combined into a set of
+resource names. Each read entity has its values unioned with the set of
+values resolved so far.
 
 Example::
 
    [[python_packages]]
-   type = "filter-files-include"
-   glob = "/path/to/files/modules-*"
+   type = "filter-include"
+   files = ["allow-modules"]
+   glob_files = ["module-dumps/modules-*"]
 
 In Combination With `write_modules_directory_env`
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -594,15 +601,16 @@ The ``write_modules_directory_env`` Python configuration setting enables
 processes to write ``modules-*`` files containing loaded modules to a
 directory specified by this environment variable.
 
-This can be combined with ``filter-file-include`` or ``filter-files-include``
-rules to build binaries in two phases to *probe* for loaded modules.
+This can be combined with the ``files`` and ``glob_files`` keys of the
+``filter-include`` rule to build binaries in two phases to *probe* for
+loaded modules.
 
 In phase 1, a binary is built with all resources and
 ``write_modules_directory_env`` enabled. The binary is then executed
 and ``modules-*`` files are written.
 
 In phase 2, the file filter is enabled and only the modules used by
-the binary will be packages.
+the binary will be packaged.
 
 ``[[python_run]]``
 ==================
