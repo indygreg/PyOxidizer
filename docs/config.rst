@@ -4,8 +4,28 @@
 Configuration Files
 ===================
 
-PyOxidizer uses TOML configuration files. Files named ``pyoxidizer.toml`` in
-the project being built are typically automatically discovered and used.
+PyOxidizer uses TOML configuration files to configure how Python is packaged
+and built applications behave.
+
+Finding Configuration Files
+===========================
+
+The TOML configuration file is processed as part of building the ``pyembed``
+crate. This is the crate that manages an embedded Python interpreter in a
+larger Rust project.
+
+If the ``PYOXIDIZER_CONFIG`` environment variable is set, the path specified
+by this environment variable will be used as the location of the TOML
+configuration file.
+
+If ``PYOXIDIZER_CONFIG`` is not set, the build will look for a
+``pyoxidizer.toml`` starting in the directory of the ``pyembed`` crate and
+then traversing ancestor directories until a file is found.
+
+If no configuration file is found, an error occurs.
+
+File Processing Semantics
+=========================
 
 The configuration file format is designed to be simultaneously used by multiple
 build *targets*, where a target is a Rust toolchain target triple, such as
@@ -20,10 +40,13 @@ a section with defaults. As sections are read from the config file, if
 the section is active for the current ``target``, any encountered keys are
 set. The final set of values across all encountered sections is used.
 
+Configuration Sections
+======================
+
 The following documentation sections describe the various TOML sections.
 
 ``[[python_distribution]]``
-===========================
+---------------------------
 
 Defines a Python distribution that can be embedded into a binary.
 
@@ -62,7 +85,7 @@ One of ``local_path`` or ``url`` MUST be defined.
    request.
 
 Examples
---------
+^^^^^^^^
 
 ::
 
@@ -72,7 +95,7 @@ Examples
    sha256 = "11a53f5755773f91111a04f6070a6bc00518a0e8e64d90f58584abf02ca79081"
 
 ``[[python_config]]``
-=====================
+---------------------
 
 This section configures the embedded Python interpreter.
 
@@ -227,7 +250,7 @@ behavior:
    running Python code.
 
 ``[[python_packages]]``
-=======================
+-----------------------
 
 Defines a rule to control the packaging of Python resources to be embedded
 in the binary.
@@ -264,7 +287,7 @@ last added version is used. i.e. *last write wins*.
 The following sections describe the various ``type``'s of rules.
 
 ``stdlib-extension-policy``
----------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This rule defines a base policy for what *extension modules* to include
 from the Python distribution.
@@ -290,7 +313,7 @@ Example::
    policy = "no-libraries"
 
 ``stdlib-extensions-explicit-includes``
----------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This rule allows including explicitly delimited extension modules from
 the Python distribution.
@@ -308,7 +331,7 @@ Example::
    includes = ["binascii", "errno", "itertools", "math", "select", "_socket"]
 
 ``stdlib-extensions-explicit-excludes``
----------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This rule allows excluding explicitly delimited extension modules from
 the Python distribution.
@@ -323,7 +346,7 @@ Example::
    excludes = ["_ssl"]
 
 ``stdlib-extension-variant``
-----------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This rule specifies the inclusion of a specific extension module *variant*.
 
@@ -346,7 +369,7 @@ Example::
    variant = "libedit"
 
 ``stdlib``
-----------
+^^^^^^^^^^
 
 This rule controls packaging of non-extension modules Python resources from
 the Python distribution's standard library. Presence of this rule will
@@ -384,7 +407,7 @@ The following keys can exist in this rule type:
    Default is ``true``.
 
 ``package-root``
-----------------
+^^^^^^^^^^^^^^^^
 
 This rule discovers resources from a directory on the filesystem.
 
@@ -438,7 +461,7 @@ This rule has the following keys:
    Default is ``true``.
 
 ``pip-install-simple``
-----------------------
+^^^^^^^^^^^^^^^^^^^^^^
 
 This rule runs ``pip install`` for a single package and will automatically
 package all Python resources associated with that operation, including
@@ -474,7 +497,7 @@ This will include the ``pyflakes`` package and all its dependencies::
    package = "pyflakes"
 
 ``pip-requirements-file``
--------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This rule runs ``pip install -r <path>`` for a given
 `pip requirements file <https://pip.pypa.io/en/stable/user_guide/#requirements-files>`_.
@@ -507,7 +530,7 @@ Example::
    path = "/home/gps/src/myapp/requirements.txt"
 
 ``virtualenv``
---------------
+^^^^^^^^^^^^^^
 
 This rule will include resources found in a pre-populated *virtualenv*
 directory.
@@ -554,7 +577,7 @@ Example::
    path = "/home/gps/src/myapp/venv"
 
 ``filter-include``
-------------------
+^^^^^^^^^^^^^^^^^^
 
 This rule filters all resource names resolved so far through a set of
 resource names resolved from sources defined by this section. Resources
@@ -594,8 +617,8 @@ Example::
    files = ["allow-modules"]
    glob_files = ["module-dumps/modules-*"]
 
-In Combination With `write_modules_directory_env`
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+In Combination With ``write_modules_directory_env``
+'''''''''''''''''''''''''''''''''''''''''''''''''''
 
 The ``write_modules_directory_env`` Python configuration setting enables
 processes to write ``modules-*`` files containing loaded modules to a
@@ -613,7 +636,7 @@ In phase 2, the file filter is enabled and only the modules used by
 the binary will be packaged.
 
 ``[[python_run]]``
-==================
+------------------
 
 This section configures the behavior of the default Python interpreter
 and application binary.
@@ -631,7 +654,7 @@ mode the interpreter is in. The sections below describe these
 various modes.
 
 ``eval``
---------
+^^^^^^^^
 
 This mode will evaluate a string containing Python code after the
 interpreter initializes.
@@ -646,7 +669,7 @@ Example::
    code = "import mymodule; mymodule.main()"
 
 ``module``
-----------
+^^^^^^^^^^
 
 This mode will load a named Python module as the ``__main__`` module and
 then execute that module.
@@ -661,6 +684,7 @@ Example::
    module = "mymodule"
 
 ``repl``
+^^^^^^^^
 
 This mode will launch an interactive Python REPL connected to stdin. This
 is similar to the behavior of running a ``python`` executable without any
@@ -672,6 +696,6 @@ Example::
    mode = "repl"
 
 ``noop``
---------
+^^^^^^^^
 
 This mode will do nothing. It is provided for completeness sake.

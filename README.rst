@@ -88,12 +88,5 @@ You need Rust 1.31+ and a corresponding Cargo installed. Then::
    $ pyoxidizer analyze target/debug/my-app
 
 PyOxidizer uses TOML configuration files describing how to configure the
-embedded Python interpreter. See the ``pyoxidizer`` crate documentation
-for info about this file.
-
-The TOML configuration file is processed as part of building the
-``pyembed`` crate, which is the crate that manages an embedded Python
-interpreter. The build script for the ``pyembed`` crate will use the
-configuration file defined by the ``PYOXIDIZER_CONFIG`` environment
-variable and fall back to looking for a ``pyoxidizer.toml`` file
-in the directory ancestry of the ``pyembed`` crate.
+embedded Python interpreter. See the project documentation for info about
+this file.
