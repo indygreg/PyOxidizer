@@ -63,14 +63,6 @@ Binary resources are currently stored as raw data. They could be
 stored compressed to keep binary size in check (at the cost of run-time
 memory usage and CPU overhead).
 
-There is not yet support for lazy module importers. Even though importing
-is faster due to no I/O, a large part of module importing is executing
-module code on import. So lazy module importing is still beneficial.
-``PyOxidizer`` will eventually ship a built-in lazy module importer.
-There are also possibilities for alternate module serialization techniques
-which are faster than ``marshal``. Some have experimented with serializing
-the various ``PyObject`` types and adjusting pointers at run-time...
-
 Windows currently requires a Nightly Rust to build (you can set the
 environment variable ``RUSTC_BOOTSTRAP=1`` to work around this) because
 the ``static-nobundle`` library type is required.
@@ -88,3 +80,117 @@ can e.g. produce Windows and macOS executables from Linux. It's possible.
 
 Naming and semantics in the TOML configuration files can be significantly
 improved. There's also various missing packaging functionality.
+
+Eventual Features
+=================
+
+The immediate goal of ``PyOxidizer`` is to solve packaging and distribution
+problems for Python applications. But we want ``PyOxidizer`` to be more than
+just a packaging tool: we want to add additional features to ``PyOxidizer``
+to bring extra value to the tool and to demonstrate and/or experiment with
+alternate ways of solving various problems that Python applications
+frequently encounter.
+
+Lazy Module Loading
+-------------------
+
+When a Python module is ``import``ed, its code is evaluated. When applications
+consist of dozens or even hundreds of modules, the overhead of executing all
+this code at ``import`` time can be substantial and add up to dozens of
+milliseconds of overhead - all before your application runs a meaningful line
+of code.
+
+We would like ``PyOxidizer`` to provide lazy module importing so Python's
+``import`` machinery can defer evaluating a module's code until it is actually
+needed. With features in modern versions of Python 3, this feature could likely
+be enabled by default. And since many ``PyOxidizer`` applications are
+*frozen* and have total knowledge of all ``import``able modules at build time,
+``PyOxidizer`` could return a *lazy* module object after performing a simple
+Rust ``HashMap`` lookup. This would be extremely fast.
+
+Alternate Module Serialization Techniques
+-----------------------------------------
+
+Related to lazy module loading, there is also the potential to explore
+alternate module serialization techniques. Currently, the way ``PyOxidizer``
+and ``.pyc`` files work is that a Python code object is serialized with the
+``marshal`` module. At module load time, the code object is deserialized
+and then executed. This deserialization plus code execution has overhead.
+
+It is possible to devise alternate serialization and load techniques that
+don't rely on ``marshal`` and possibly bypass having to run as much code
+at module load time. For example, one could devise a format for serializing
+various ``PyObject`` types and then adjusting pointers inside the structs
+at run time. This is kind of a crazy idea. But it could work.
+
+Module Order Tracing
+--------------------
+
+Currently, resource data is serialized on disk in alphabetical order according
+to the resource name. e.g. the ``bar`` module is serialized before the ``foo``
+module.
+
+We would like to explore a mechanism to record the order in which modules are
+loaded as part of application execution and then reorder the serialized modules
+such that they are stored in load order. This will facilitate linear reads at
+application run time and possibly provide some performance wins (especially on
+devices with slow I/O).
+
+Module Import Performance Tracing
+---------------------------------
+
+``PyOxidizer`` has near total visibility into what Python's module importer
+is doing. It could be very useful to provide forensic output of what modules
+import what, how long it takes to import various modules, etc.
+
+CPython does have some support for module importing tracing. We think we can
+go a few steps farther. And we can implement it more easily in Rust than
+what CPython can do in C. For example, with Rust, one can use the
+`inferno crate <https://github.com/jonhoo/inferno>`_ to emit flame graphs
+directly from Rust, without having to use external tools.
+
+Built-in Profiler
+-----------------
+
+There's potential to integrate a built-in profiler into ``PyOxidizer``
+applications. The excellent `py-spy <https://github.com/benfred/py-spy>`_
+sampling profiler (or the core components of it) could potentially be
+integrated directly into ``PyOxidizer`` such that produced applications
+could self-profile with minimal overhead.
+
+It should also be possible for ``PyOxidizer`` to expose mechanisms for
+Rust to receive callbacks when Python's
+`profiling and tracing <https://docs.python.org/3.7/c-api/init.html#profiling-and-tracing>`_
+hooks fire. This could allow building a powerful debugger or tracer
+in Rust.
+
+Command Server
+--------------
+
+A known problem with Python is its startup overhead. The maintainer of
+``PyOxidizer`` has raised this issue on Python's mailing list
+`a <https://mail.python.org/pipermail/python-dev/2014-May/134528.html>`_
+`few <https://mail.python.org/pipermail/python-dev/2018-May/153296.html>`_
+`times <https://mail.python.org/pipermail/python-dev/2018-October/155466.html>`_.
+
+``PyOxidizer`` helps with this problem by eliminating explicit filesystem I/O
+and allowing modules to be imported faster. But there's only so much that can
+be done and startup overhead can still be a problem.
+
+One strategy to combat this problem is the use of persistent *command
+server daemons*. Essentially, on the first invocation of a program you
+spawn a background process running Python. That process listens for
+*command requests* on a pipe, socket, etc. You send the current command's
+arguments, environment variables, other state, etc to the background process.
+It uses its Python interpreter to execute the command and send results back
+to the main process. On the 2nd invocation of your program, the Python
+process/interpreter is already running and meaningful Python code can be
+executed immediately, without waiting for the Python interpreter and your
+application code to initialize.
+
+This approach is used by the Mercurial version control tool, for example,
+where it can shave dozens of milliseconds off of ``hg`` command service
+times.
+
+``PyOxidizer`` could potentially support *command servers* as a built-in
+feature for *any* Python application.
