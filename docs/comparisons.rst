@@ -10,11 +10,13 @@ tools? Read on to find out!
 PyInstaller
 ===========
 
-PyInstaller - like ``PyOxidizer`` - can produce a self-contained executable
-file containing your application. However, at run-time, PyInstaller will
-extract Python source/bytecode files to a temporary directory then import
-modules from the filesystem. ``PyOxidizer`` typically skips this step and
-loads modules directly from memory.
+`PyInstaller <https://www.pyinstaller.org/>`_ - like ``PyOxidizer`` - can
+produce a self-contained executable file containing your application.
+However, at run-time, PyInstaller will extract Python source/bytecode
+files to a temporary directory then import modules from the filesystem.
+``PyOxidizer`` typically skips this step and loads modules directly from
+memory using zero-copy. This makes ``PyOxidizer`` executables significantly
+faster to start.
 
 py2exe
 ======
