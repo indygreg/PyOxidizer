@@ -19,7 +19,27 @@ loads modules directly from memory.
 py2exe
 ======
 
-TODO
+`py2exe <http://www.py2exe.org/>`_ is a tool for converting Python scripts
+into Windows programs, able to run without requiring an installation.
+
+The goals of py2exe and ``PyOxidizer`` are conceptually very similar.
+
+One major difference between the two is that py2exe works on just Windows
+whereas ``PyOxidizer`` works on multiple platforms.
+
+Another significant difference is that py2exe distributes a copy of Python and
+your Python resources in a more traditional manner: as a ``pythonXY.dll``
+and a ``library.zip`` file containing compiled Python bytecode. ``PyOxidizer``
+is able to compile the Python interpreter and your Python resources directly
+into the ``.exe`` so there can be as little as a single file providing
+your application.
+
+Also, the approach to packaging that py2exe and ``PyOxidizer`` take is
+substantially different. py2exe embeds itself into ``setup.py`` as a
+``distutils`` extension. ``PyOxidizer`` wants to exist at a higher level
+and interact with the output of ``setup.py`` rather than get involved in the
+convoluted mess of ``distutils`` internals. This enables ``PyOxidizer`` to
+provide value beyond what ``setup.py``/``distutils`` can provide.
 
 Shiv
 ====
