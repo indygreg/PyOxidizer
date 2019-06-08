@@ -305,6 +305,29 @@ fn resolve_stdlib_extensions_explicit_includes(
     res
 }
 
+fn resolve_stdlib_extensions_explicit_excludes(
+    dist: &PythonDistributionInfo,
+    excludes: &Vec<String>,
+) -> Vec<PythonResourceEntry> {
+    let mut res = Vec::new();
+
+    for (name, modules) in &dist.extension_modules {
+        if excludes.contains(name) {
+            continue;
+        }
+
+        res.push(PythonResourceEntry {
+            action: ResourceAction::Add,
+            resource: PythonResource::ExtensionModule {
+                name: name.clone(),
+                module: modules[0].clone(),
+            },
+        });
+    }
+
+    res
+}
+
 /// Resolves a Python packaging rule to resources to package.
 fn resolve_python_packaging(
     logger: &slog::Logger,
@@ -323,19 +346,7 @@ fn resolve_python_packaging(
         }
 
         PythonPackaging::StdlibExtensionsExplicitExcludes { excludes } => {
-            for (name, modules) in &dist.extension_modules {
-                if excludes.contains(name) {
-                    continue;
-                }
-
-                res.push(PythonResourceEntry {
-                    action: ResourceAction::Add,
-                    resource: PythonResource::ExtensionModule {
-                        name: name.clone(),
-                        module: modules[0].clone(),
-                    },
-                });
-            }
+            res.extend(resolve_stdlib_extensions_explicit_excludes(dist, excludes));
         }
 
         PythonPackaging::StdlibExtensionVariant { extension, variant } => {
