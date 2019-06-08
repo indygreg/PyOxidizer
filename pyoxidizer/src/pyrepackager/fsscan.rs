@@ -56,11 +56,21 @@ pub struct PythonResource {
     /// `full_name`.
     pub package: String,
 
+    /// Final "stem" name of this resource.
+    ///
+    /// This is derived from the file name's basename.
+    ///
+    /// For resources that define packages, this is an empty string.
+    pub stem: String,
+
     /// Full resource name of this resource.
     ///
     /// This is typically how `importlib` refers to the resource.
     ///
     /// e.g. `foo.bar`.
+    ///
+    /// For resources that are packages, this is equivalent to `package`.
+    /// For non-package resources, this is `package.stem`.
     pub full_name: String,
 
     /// Filesystem path to this resource.
@@ -132,9 +142,12 @@ impl Iterator for PythonResourceIterator {
 
                 let mut full_module_name: Vec<&str> = package_parts.to_vec();
 
-                if module_name != "__init__" {
+                let stem = if module_name == "__init__" {
+                    "".to_string()
+                } else {
                     full_module_name.push(module_name);
-                }
+                    module_name.to_string()
+                };
 
                 let full_module_name = itertools::join(full_module_name, ".");
 
@@ -144,6 +157,7 @@ impl Iterator for PythonResourceIterator {
 
                 PythonResource {
                     package,
+                    stem,
                     full_name: full_module_name,
                     path: path.to_path_buf(),
                     flavor: PythonResourceType::Source,
@@ -159,10 +173,12 @@ impl Iterator for PythonResourceIterator {
                 if components[components.len() - 2] != "__pycache__" {
                     let package_parts = &components[0..components.len() - 1];
                     let package = itertools::join(package_parts, ".");
-                    let full_name = itertools::join(components, ".");
+                    let full_name = itertools::join(&components, ".");
+                    let stem = components[components.len() - 1].to_string();
 
                     return Some(PythonResource {
                         package,
+                        stem,
                         full_name,
                         path: path.to_path_buf(),
                         flavor: PythonResourceType::Other,
@@ -184,9 +200,12 @@ impl Iterator for PythonResourceIterator {
 
                 let mut full_module_name: Vec<&str> = package_parts.to_vec();
 
-                if module_name != "__init__" {
+                let stem = if module_name == "__init__" {
+                    "".to_string()
+                } else {
                     full_module_name.push(&module_name);
-                }
+                    module_name.clone()
+                };
 
                 let full_module_name = itertools::join(full_module_name, ".");
 
@@ -206,6 +225,7 @@ impl Iterator for PythonResourceIterator {
 
                 PythonResource {
                     package,
+                    stem,
                     full_name: full_module_name,
                     path: path.to_path_buf(),
                     flavor,
@@ -216,7 +236,8 @@ impl Iterator for PythonResourceIterator {
                 let package_parts = &components[0..components.len() - 1];
                 let mut package = itertools::join(package_parts, ".");
 
-                let name = itertools::join(components, ".");
+                let name = itertools::join(&components, ".");
+                let stem = components[components.len() - 1].to_string();
 
                 if package.is_empty() {
                     package = name.clone();
@@ -224,6 +245,7 @@ impl Iterator for PythonResourceIterator {
 
                 PythonResource {
                     package,
+                    stem,
                     full_name: name,
                     path: path.to_path_buf(),
                     flavor: PythonResourceType::Resource,
