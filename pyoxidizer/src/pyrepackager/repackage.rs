@@ -396,6 +396,71 @@ fn resolve_stdlib(
     res
 }
 
+fn resolve_virtualenv(
+    dist: &PythonDistributionInfo,
+    path: &str,
+    optimize_level: i64,
+    excludes: &Vec<String>,
+    include_source: bool,
+) -> Vec<PythonResourceEntry> {
+    let mut res = Vec::new();
+
+    let mut packages_path = PathBuf::from(path);
+
+    if dist.os == "windows" {
+        packages_path.push("Lib");
+    } else {
+        packages_path.push("lib");
+    }
+
+    packages_path.push("python".to_owned() + &dist.version[0..3]);
+    packages_path.push("site-packages");
+
+    for resource in find_python_resources(&packages_path) {
+        match resource.flavor {
+            PythonResourceType::Source => {
+                let mut relevant = true;
+
+                for exclude in excludes {
+                    let prefix = exclude.clone() + ".";
+
+                    if &resource.name == exclude || resource.name.starts_with(&prefix) {
+                        relevant = false;
+                    }
+                }
+
+                if !relevant {
+                    continue;
+                }
+
+                let source = fs::read(resource.path).expect("error reading source file");
+
+                if include_source {
+                    res.push(PythonResourceEntry {
+                        action: ResourceAction::Add,
+                        resource: PythonResource::ModuleSource {
+                            name: resource.name.clone(),
+                            source: source.clone(),
+                        },
+                    });
+                }
+
+                res.push(PythonResourceEntry {
+                    action: ResourceAction::Add,
+                    resource: PythonResource::ModuleBytecode {
+                        name: resource.name.clone(),
+                        source,
+                        optimize_level: optimize_level as i32,
+                    },
+                });
+            }
+            _ => {}
+        }
+    }
+
+    res
+}
+
 /// Resolves a Python packaging rule to resources to package.
 fn resolve_python_packaging(
     logger: &slog::Logger,
@@ -441,58 +506,13 @@ fn resolve_python_packaging(
             excludes,
             include_source,
         } => {
-            let mut packages_path = PathBuf::from(path);
-
-            if dist.os == "windows" {
-                packages_path.push("Lib");
-            } else {
-                packages_path.push("lib");
-            }
-
-            packages_path.push("python".to_owned() + &dist.version[0..3]);
-            packages_path.push("site-packages");
-
-            for resource in find_python_resources(&packages_path) {
-                match resource.flavor {
-                    PythonResourceType::Source => {
-                        let mut relevant = true;
-
-                        for exclude in excludes {
-                            let prefix = exclude.clone() + ".";
-
-                            if &resource.name == exclude || resource.name.starts_with(&prefix) {
-                                relevant = false;
-                            }
-                        }
-
-                        if !relevant {
-                            continue;
-                        }
-
-                        let source = fs::read(resource.path).expect("error reading source file");
-
-                        if *include_source {
-                            res.push(PythonResourceEntry {
-                                action: ResourceAction::Add,
-                                resource: PythonResource::ModuleSource {
-                                    name: resource.name.clone(),
-                                    source: source.clone(),
-                                },
-                            });
-                        }
-
-                        res.push(PythonResourceEntry {
-                            action: ResourceAction::Add,
-                            resource: PythonResource::ModuleBytecode {
-                                name: resource.name.clone(),
-                                source,
-                                optimize_level: *optimize_level as i32,
-                            },
-                        });
-                    }
-                    _ => {}
-                }
-            }
+            res.extend(resolve_virtualenv(
+                dist,
+                path,
+                *optimize_level,
+                excludes,
+                *include_source,
+            ));
         }
 
         PythonPackaging::PackageRoot {
