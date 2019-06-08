@@ -79,6 +79,8 @@ exc_type!(AssertionError, PyExc_AssertionError);
 exc_type!(AttributeError, PyExc_AttributeError);
 exc_type!(EOFError, PyExc_EOFError);
 exc_type!(EnvironmentError, PyExc_EnvironmentError);
+#[cfg(feature = "python3-sys")]
+exc_type!(FileNotFoundError, PyExc_FileNotFoundError);
 exc_type!(FloatingPointError, PyExc_FloatingPointError);
 exc_type!(IOError, PyExc_IOError);
 exc_type!(ImportError, PyExc_ImportError);
