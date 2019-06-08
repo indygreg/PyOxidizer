@@ -83,6 +83,7 @@ pub struct PythonResource {
 pub struct PythonResourceIterator {
     root_path: PathBuf,
     walkdir_result: Box<Iterator<Item = walkdir::DirEntry>>,
+    resources: Vec<PythonResource>,
 }
 
 impl PythonResourceIterator {
@@ -104,6 +105,7 @@ impl PythonResourceIterator {
         PythonResourceIterator {
             root_path: path.to_path_buf(),
             walkdir_result: Box::new(filtered),
+            resources: Vec::new(),
         }
     }
 
@@ -251,12 +253,44 @@ impl Iterator for PythonResourceIterator {
     type Item = PythonResource;
 
     fn next(&mut self) -> Option<PythonResource> {
-        let res = self.walkdir_result.next();
+        // Our strategy is to walk directory entries and buffer resource files locally.
+        // We then emit those at the end, perhaps doing some post-processing along the
+        // way.
+        loop {
+            let res = self.walkdir_result.next();
 
-        res.as_ref()?;
-        let entry = res.unwrap();
+            // We're out of directory entries;
+            if res.is_none() {
+                break;
+            }
 
-        self.resolve_dir_entry(entry)
+            let entry = res.unwrap();
+            let python_resource = self.resolve_dir_entry(entry);
+
+            // Try the next directory entry.
+            if python_resource.is_none() {
+                continue;
+            }
+
+            let python_resource = python_resource.unwrap();
+
+            // Buffer Resource entries until later.
+            if python_resource.flavor == PythonResourceType::Resource {
+                self.resources.push(python_resource);
+                continue;
+            }
+
+            return Some(python_resource);
+        }
+
+        if self.resources.is_empty() {
+            return None;
+        }
+
+        // This isn't efficient. But we shouldn't care.
+        let resource = self.resources.remove(0);
+
+        Some(resource)
     }
 }
 
