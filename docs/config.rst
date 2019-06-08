@@ -406,6 +406,15 @@ The following keys can exist in this rule type:
 
    Default is ``true``.
 
+``include_resources`` (bool)
+
+   Whether to include non-module resource files.
+
+   These are files like ``lib2to3/Grammar.txt`` which are present in the
+   standard library but aren't typically used for common functionality.
+
+   Default is ``false``.
+
 ``package-root``
 ^^^^^^^^^^^^^^^^
 

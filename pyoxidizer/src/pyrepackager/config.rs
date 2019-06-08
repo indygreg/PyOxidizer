@@ -121,6 +121,8 @@ enum ConfigPythonPackaging {
         exclude_test_modules: bool,
         #[serde(default = "TRUE")]
         include_source: bool,
+        #[serde(default)]
+        include_resources: bool,
     },
 
     #[serde(rename = "virtualenv")]
@@ -259,6 +261,7 @@ pub struct PackagingStdlib {
     pub optimize_level: i64,
     pub exclude_test_modules: bool,
     pub include_source: bool,
+    pub include_resources: bool,
 }
 
 #[derive(Debug)]
@@ -579,6 +582,7 @@ pub fn parse_config(data: &[u8], target: &str) -> Result<Config, String> {
                 optimize_level,
                 exclude_test_modules,
                 include_source,
+                include_resources,
             } => {
                 if rule_target == "all" || rule_target == target {
                     have_stdlib = true;
@@ -587,6 +591,7 @@ pub fn parse_config(data: &[u8], target: &str) -> Result<Config, String> {
                         optimize_level: *optimize_level,
                         exclude_test_modules: *exclude_test_modules,
                         include_source: *include_source,
+                        include_resources: *include_resources,
                     }))
                 } else {
                     None

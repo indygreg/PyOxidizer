@@ -398,26 +398,28 @@ fn resolve_stdlib(
         });
     }
 
-    for (package, resources) in &dist.resources {
-        if is_stdlib_test_package(package) && rule.exclude_test_modules {
-            info!(
-                logger,
-                "skipping resources associated with test package: {}", package
-            );
-            continue;
-        }
+    if rule.include_resources {
+        for (package, resources) in &dist.resources {
+            if is_stdlib_test_package(package) && rule.exclude_test_modules {
+                info!(
+                    logger,
+                    "skipping resources associated with test package: {}", package
+                );
+                continue;
+            }
 
-        for (name, fs_path) in resources {
-            let data = fs::read(fs_path).expect("error reading resource file");
+            for (name, fs_path) in resources {
+                let data = fs::read(fs_path).expect("error reading resource file");
 
-            res.push(PythonResourceEntry {
-                action: ResourceAction::Add,
-                resource: PythonResource::Resource {
-                    package: package.clone(),
-                    name: name.clone(),
-                    data,
-                },
-            });
+                res.push(PythonResourceEntry {
+                    action: ResourceAction::Add,
+                    resource: PythonResource::Resource {
+                        package: package.clone(),
+                        name: name.clone(),
+                        data,
+                    },
+                });
+            }
         }
     }
 
