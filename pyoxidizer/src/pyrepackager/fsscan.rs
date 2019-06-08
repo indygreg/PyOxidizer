@@ -123,6 +123,12 @@ impl PythonResourceIterator {
             .map(|p| p.to_str().expect("unable to get path as str"))
             .collect::<Vec<_>>();
 
+        // .dist-info directories containing packaging metadata. They aren't interesting to us.
+        // We /could/ emit these files if we wanted to. But until there is a need, exclude them.
+        if components[0].ends_with(".dist-info") {
+            return None;
+        }
+
         let resource = match rel_path.extension().and_then(OsStr::to_str) {
             Some("py") => {
                 let package_parts = &components[0..components.len() - 1];
