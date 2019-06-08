@@ -98,7 +98,7 @@ pub fn is_stdlib_test_package(name: &str) -> bool {
     for package in STDLIB_TEST_PACKAGES {
         let prefix = format!("{}.", package);
 
-        if name.starts_with(&prefix) {
+        if &name == package || name.starts_with(&prefix) {
             return true;
         }
     }
