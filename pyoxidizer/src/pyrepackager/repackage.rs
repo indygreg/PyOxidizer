@@ -186,7 +186,12 @@ impl PythonResources {
         records
     }
 
-    pub fn write_blobs(&self, module_names_path: &PathBuf, modules_path: &PathBuf) {
+    pub fn write_blobs(
+        &self,
+        module_names_path: &PathBuf,
+        modules_path: &PathBuf,
+        resources_path: &PathBuf,
+    ) {
         let mut fh = fs::File::create(module_names_path).expect("error creating file");
         for name in &self.all_modules {
             fh.write_all(name.as_bytes()).expect("failed to write");
@@ -195,6 +200,9 @@ impl PythonResources {
 
         let fh = fs::File::create(modules_path).unwrap();
         write_modules_entries(&fh, &self.modules_records()).unwrap();
+
+        let fh = fs::File::create(resources_path).unwrap();
+        write_resources_entries(&fh, &self.resources).unwrap();
     }
 }
 
@@ -1142,6 +1150,49 @@ pub fn write_modules_entries<W: Write>(
     Ok(())
 }
 
+/// Serializes resource data to a writer.
+///
+/// See the documentation in the `pyembed` crate for the data format.
+pub fn write_resources_entries<W: Write>(
+    mut dest: W,
+    entries: &BTreeMap<String, BTreeMap<String, Vec<u8>>>,
+) -> std::io::Result<()> {
+    dest.write_u32::<LittleEndian>(entries.len() as u32)?;
+
+    // All the numeric index data is written in pass 1.
+    for (package, resources) in entries {
+        let package_bytes = package.as_bytes();
+
+        dest.write_u32::<LittleEndian>(package_bytes.len() as u32)?;
+        dest.write_u32::<LittleEndian>(resources.len() as u32)?;
+
+        for (name, value) in resources {
+            let name_bytes = name.as_bytes();
+
+            dest.write_u32::<LittleEndian>(name_bytes.len() as u32)?;
+            dest.write_u32::<LittleEndian>(value.len() as u32)?;
+        }
+    }
+
+    // All the name strings are written in pass 2.
+    for (package, resources) in entries {
+        dest.write_all(package.as_bytes())?;
+
+        for name in resources.keys() {
+            dest.write_all(name.as_bytes())?;
+        }
+    }
+
+    // All the resource data is written in pass 3.
+    for resources in entries.values() {
+        for value in resources.values() {
+            dest.write_all(value.as_slice())?;
+        }
+    }
+
+    Ok(())
+}
+
 /// Produce the content of the config.c file containing built-in extensions.
 fn make_config_c(extension_modules: &BTreeMap<String, ExtensionModule>) -> String {
     // It is easier to construct the file from scratch than parse the template
@@ -1517,6 +1568,9 @@ pub struct EmbeddedPythonConfig {
     /// Path to file containing packed Python module source data.
     pub py_modules_path: PathBuf,
 
+    /// Path to file containing packed Python resources data.
+    pub resources_path: PathBuf,
+
     /// Path to library file containing Python.
     pub libpython_path: PathBuf,
 
@@ -1654,7 +1708,8 @@ pub fn process_config(
     info!(logger, "writing packed Python module and resource data...");
     let module_names_path = Path::new(&out_dir).join("py-module-names");
     let py_modules_path = Path::new(&out_dir).join("py-modules");
-    resources.write_blobs(&module_names_path, &py_modules_path);
+    let resources_path = Path::new(&out_dir).join("python-resources");
+    resources.write_blobs(&module_names_path, &py_modules_path, &resources_path);
 
     info!(
         logger,
@@ -1662,7 +1717,12 @@ pub fn process_config(
         py_modules_path.metadata().unwrap().len(),
         py_modules_path.display()
     );
-    info!(logger, "(Python resource files not yet supported)");
+    info!(
+        logger,
+        "{} bytes of resources data written to {}",
+        resources_path.metadata().unwrap().len(),
+        resources_path.display()
+    );
 
     // Produce a static library containing the Python bits we need.
     info!(
@@ -1694,6 +1754,7 @@ pub fn process_config(
         importlib_bootstrap_external_path,
         module_names_path,
         py_modules_path,
+        resources_path,
         libpython_path: libpython_info.path,
         cargo_metadata,
         python_config_rs,
@@ -1738,6 +1799,7 @@ pub fn process_config_and_copy_artifacts(
     let importlib_bootstrap_path = out_dir.join("importlib_bootstrap");
     let importlib_bootstrap_external_path = out_dir.join("importlib_bootstrap_external");
     let py_modules_path = out_dir.join("py-modules");
+    let resources_path = out_dir.join("python-resources");
     let libpython_path = out_dir.join("libpythonXY.a");
 
     // It is possible to use the output directory as the build directory.
@@ -1753,6 +1815,7 @@ pub fn process_config_and_copy_artifacts(
         )
         .expect("error copying file");
         fs::copy(embedded_config.py_modules_path, &py_modules_path).expect("error copying file");
+        fs::copy(embedded_config.resources_path, &resources_path).expect("error copying file");
         fs::copy(embedded_config.libpython_path, &libpython_path).expect("error copying file");
     }
 
@@ -1770,6 +1833,7 @@ pub fn process_config_and_copy_artifacts(
         importlib_bootstrap_external_path,
         module_names_path: embedded_config.module_names_path,
         py_modules_path,
+        resources_path,
         libpython_path,
         cargo_metadata: embedded_config.cargo_metadata,
         python_config_rs,

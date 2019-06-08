@@ -411,6 +411,68 @@ names could definitely compress well. But use of compression will undermine
 0-copy properties. Similar compression opportunities exist for source and
 bytecode data with similar caveats.
 
+# Packed Resources Data
+
+The custom meta path importer provided by this crate supports loading
+_resource_ data via the `importlib.abc.ResourceReader` interface. Data is
+loaded from memory using 0-copy.
+
+Resource file data is embedded in the binary and is represented to
+[`PythonConfig`](struct.PythonConfig.html) as a `&[u8]`.
+
+The format of this packed data is as follows.
+
+The first 4 bytes are a little endian u32 containing the total number
+of packages in the data blob. Let's call this value `package_count`.
+
+Following are `package_count` segments that define the resources in each
+package. Each segment begins with a pair of little endian u32. The first
+integer is the length of the package name string and the 2nd is the number
+of resources in this package. Let's call these `package_name_length` and
+`resource_count`, respectively.
+
+Following the package header is an array of `resource_count` elements. Each
+element is composed of 2 little endian u32 defining the resource's name length
+and data size, respectively.
+
+Following this array is the index data for the next package, if there is
+one.
+
+After the final package index data is the raw name of the 1st package.
+Following it is a vector of strings containing the resource names for that
+package. This pattern repeats for each package. All strings MUST be valid
+UTF-8. There is no NULL terminator or any other padding between values.
+
+Following the *index* metadata is the raw resource values. Values occur
+in the order they were referenced in the index. There is no padding between
+values. Values can contain any arbitrary byte sequence.
+
+Example (without literal integer encoding and spaces for legibility):
+
+```text
+2                          # There are 2 packages total.
+
+(3, 1)                     # Length of 1st package name is 3 and it has 1 resource.
+(3, 42)                    # 1st resource has name length 3 and is 42 bytes long.
+
+(4, 2)                     # Length of 2nd package name is 4 and it has 2 resources.
+(5, 128)                   # 1st resource has name length 5 and is 128 bytes long.
+(8, 1024)                  # 2nd resource has name length 8 and is 1024 bytes long.
+
+foo                        # 1st package is named "foo"
+bar                        # 1st resource name is "bar"
+acme                       # 2nd package is named "acme"
+hello                      # 1st resource name is "hello"
+blahblah                   # 2nd resource name is "blahblah"
+
+foo.bar raw data           # 42 bytes of raw data for "foo.bar".
+acme.hello                 # 128 bytes of raw data for "acme.hello".
+acme.blahblah              # 1024 bytes of raw data for "acme.blahblah"
+```
+
+Rationale for the design of this data format is similar to the reasons given
+for *Packed Modules Data* above.
+
 */
 
 mod config;
