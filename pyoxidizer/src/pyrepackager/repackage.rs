@@ -443,7 +443,7 @@ fn resolve_virtualenv(
         for exclude in &rule.excludes {
             let prefix = exclude.clone() + ".";
 
-            if &resource.name == exclude || resource.name.starts_with(&prefix) {
+            if &resource.full_name == exclude || resource.full_name.starts_with(&prefix) {
                 relevant = false;
             }
         }
@@ -460,7 +460,7 @@ fn resolve_virtualenv(
                     res.push(PythonResourceEntry {
                         action: ResourceAction::Add,
                         resource: PythonResource::ModuleSource {
-                            name: resource.name.clone(),
+                            name: resource.full_name.clone(),
                             source: source.clone(),
                         },
                     });
@@ -469,7 +469,7 @@ fn resolve_virtualenv(
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
                     resource: PythonResource::ModuleBytecode {
-                        name: resource.name.clone(),
+                        name: resource.full_name.clone(),
                         source,
                         optimize_level: rule.optimize_level as i32,
                     },
@@ -482,7 +482,7 @@ fn resolve_virtualenv(
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
                     resource: PythonResource::Resource {
-                        name: resource.name.clone(),
+                        name: resource.full_name.clone(),
                         data,
                     },
                 });
@@ -506,7 +506,7 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceEntry>
         for package in &rule.packages {
             let prefix = package.clone() + ".";
 
-            if &resource.name == package || resource.name.starts_with(&prefix) {
+            if &resource.full_name == package || resource.full_name.starts_with(&prefix) {
                 relevant = true;
             }
         }
@@ -514,7 +514,7 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceEntry>
         for exclude in &rule.excludes {
             let prefix = exclude.clone() + ".";
 
-            if &resource.name == exclude || resource.name.starts_with(&prefix) {
+            if &resource.full_name == exclude || resource.full_name.starts_with(&prefix) {
                 relevant = false;
             }
         }
@@ -531,7 +531,7 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceEntry>
                     res.push(PythonResourceEntry {
                         action: ResourceAction::Add,
                         resource: PythonResource::ModuleSource {
-                            name: resource.name.clone(),
+                            name: resource.full_name.clone(),
                             source: source.clone(),
                         },
                     });
@@ -540,7 +540,7 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceEntry>
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
                     resource: PythonResource::ModuleBytecode {
-                        name: resource.name.clone(),
+                        name: resource.full_name.clone(),
                         source,
                         optimize_level: rule.optimize_level as i32,
                     },
@@ -553,7 +553,7 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceEntry>
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
                     resource: PythonResource::Resource {
-                        name: resource.name.clone(),
+                        name: resource.full_name.clone(),
                         data,
                     },
                 });
@@ -603,7 +603,7 @@ fn resolve_pip_install_simple(
                     res.push(PythonResourceEntry {
                         action: ResourceAction::Add,
                         resource: PythonResource::ModuleSource {
-                            name: resource.name.clone(),
+                            name: resource.full_name.clone(),
                             source: source.clone(),
                         },
                     });
@@ -612,7 +612,7 @@ fn resolve_pip_install_simple(
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
                     resource: PythonResource::ModuleBytecode {
-                        name: resource.name.clone(),
+                        name: resource.full_name.clone(),
                         source,
                         optimize_level: rule.optimize_level as i32,
                     },
@@ -625,7 +625,7 @@ fn resolve_pip_install_simple(
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
                     resource: PythonResource::Resource {
-                        name: resource.name.clone(),
+                        name: resource.full_name.clone(),
                         data,
                     },
                 });
@@ -679,7 +679,7 @@ fn resolve_pip_requirements_file(
                     res.push(PythonResourceEntry {
                         action: ResourceAction::Add,
                         resource: PythonResource::ModuleSource {
-                            name: resource.name.clone(),
+                            name: resource.full_name.clone(),
                             source: source.clone(),
                         },
                     });
@@ -688,7 +688,7 @@ fn resolve_pip_requirements_file(
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
                     resource: PythonResource::ModuleBytecode {
-                        name: resource.name.clone(),
+                        name: resource.full_name.clone(),
                         source,
                         optimize_level: rule.optimize_level as i32,
                     },
@@ -701,7 +701,7 @@ fn resolve_pip_requirements_file(
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
                     resource: PythonResource::Resource {
-                        name: resource.name.clone(),
+                        name: resource.full_name.clone(),
                         data,
                     },
                 });
@@ -759,7 +759,7 @@ fn resolve_setup_py_install(
                     res.push(PythonResourceEntry {
                         action: ResourceAction::Add,
                         resource: PythonResource::ModuleSource {
-                            name: resource.name.clone(),
+                            name: resource.full_name.clone(),
                             source: source.clone(),
                         },
                     });
@@ -768,7 +768,7 @@ fn resolve_setup_py_install(
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
                     resource: PythonResource::ModuleBytecode {
-                        name: resource.name.clone(),
+                        name: resource.full_name.clone(),
                         source,
                         optimize_level: rule.optimize_level as i32,
                     },
@@ -781,7 +781,7 @@ fn resolve_setup_py_install(
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
                     resource: PythonResource::Resource {
-                        name: resource.name.clone(),
+                        name: resource.full_name.clone(),
                         data,
                     },
                 });

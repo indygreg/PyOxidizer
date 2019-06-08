@@ -26,7 +26,7 @@ pub fn walk_tree_files(path: &Path) -> Box<Iterator<Item = walkdir::DirEntry>> {
     Box::new(filtered)
 }
 
-/// Represents the type of Python resource.
+/// Represents the type of a Python resource.
 #[derive(Debug, PartialEq)]
 pub enum PythonResourceType {
     Source,
@@ -45,12 +45,12 @@ pub enum PythonResourceType {
 /// TODO track the package name
 #[derive(Debug)]
 pub struct PythonResource {
-    /// Name of this resource.
+    /// Full resource name of this resource.
     ///
-    /// This is the full resource name as referenced by ``importlib``.
+    /// This is typically how `importlib` refers to the resource.
     ///
-    /// e.g. foo.bar
-    pub name: String,
+    /// e.g. `foo.bar`.
+    pub full_name: String,
 
     /// Filesystem path to this resource.
     pub path: PathBuf,
@@ -135,10 +135,10 @@ impl Iterator for PythonResourceIterator {
 
                 if components[components.len() - 2] != "__pycache__" {
                     // Possibly from Python 2?
-                    let name = itertools::join(components, ".");
+                    let full_name = itertools::join(components, ".");
 
                     return Some(PythonResource {
-                        name,
+                        full_name,
                         path: path.to_path_buf(),
                         flavor: PythonResourceType::Other,
                     });
@@ -185,7 +185,7 @@ impl Iterator for PythonResourceIterator {
         };
 
         Some(PythonResource {
-            name: module_name.clone(),
+            full_name: module_name.clone(),
             path: path.to_path_buf(),
             flavor,
         })
@@ -215,7 +215,7 @@ pub fn find_python_modules(root_path: &Path) -> Result<BTreeMap<String, Vec<u8>>
 
         let data = fs::read(resource.path).expect("unable to read file");
 
-        mods.insert(resource.name, data);
+        mods.insert(resource.full_name, data);
     }
 
     Ok(mods)

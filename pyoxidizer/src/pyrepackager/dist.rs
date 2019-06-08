@@ -390,10 +390,10 @@ pub fn analyze_python_distribution_data(
     for entry in find_python_resources(&stdlib_path) {
         match entry.flavor {
             PythonResourceType::Resource => {
-                resources.insert(entry.name.clone(), entry.path);
+                resources.insert(entry.full_name.clone(), entry.path);
             }
             PythonResourceType::Source => {
-                py_modules.insert(entry.name.clone(), entry.path);
+                py_modules.insert(entry.full_name.clone(), entry.path);
             }
             _ => {}
         };
