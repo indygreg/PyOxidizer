@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use itertools::Itertools;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -83,6 +83,7 @@ pub struct PythonResource {
 pub struct PythonResourceIterator {
     root_path: PathBuf,
     walkdir_result: Box<Iterator<Item = walkdir::DirEntry>>,
+    seen_packages: HashSet<String>,
     resources: Vec<PythonResource>,
 }
 
@@ -105,11 +106,12 @@ impl PythonResourceIterator {
         PythonResourceIterator {
             root_path: path.to_path_buf(),
             walkdir_result: Box::new(filtered),
+            seen_packages: HashSet::new(),
             resources: Vec::new(),
         }
     }
 
-    fn resolve_dir_entry(&self, entry: walkdir::DirEntry) -> Option<PythonResource> {
+    fn resolve_dir_entry(&mut self, entry: walkdir::DirEntry) -> Option<PythonResource> {
         let path = entry.path();
 
         let rel_path = path
@@ -146,6 +148,8 @@ impl PythonResourceIterator {
                 if package.is_empty() {
                     package = full_module_name.clone();
                 }
+
+                self.seen_packages.insert(package.clone());
 
                 PythonResource {
                     package,
@@ -204,6 +208,8 @@ impl PythonResourceIterator {
                 if package.is_empty() {
                     package = full_module_name.clone();
                 }
+
+                self.seen_packages.insert(package.clone());
 
                 let flavor;
 
@@ -283,14 +289,63 @@ impl Iterator for PythonResourceIterator {
             return Some(python_resource);
         }
 
-        if self.resources.is_empty() {
-            return None;
+        loop {
+            if self.resources.is_empty() {
+                return None;
+            }
+
+            // This isn't efficient. But we shouldn't care.
+            let resource = self.resources.remove(0);
+
+            // We initially resolve the package name from the relative filesystem path.
+            // But not all directories are Python packages! When we encountered Python
+            // modules during traversal, we added their package name to a set. Here, we
+            // ensure the resource's package is an actual package, munging values if needed.
+            if self.seen_packages.contains(&resource.package) {
+                return Some(resource);
+            } else {
+                // We need to shift components from the reported package name into the
+                // stem until we arrive at a known package.
+
+                // Special case where there is no root package.
+                if resource.package.is_empty() {
+                    continue;
+                }
+
+                let mut components = resource.package.split('.').collect_vec();
+                let mut shift_parts = Vec::new();
+
+                while !components.is_empty() {
+                    let part = components.pop().unwrap();
+                    shift_parts.push(part);
+                    let new_package = itertools::join(&components, ".");
+
+                    if !self.seen_packages.contains(&new_package) {
+                        continue;
+                    }
+
+                    // We have arrived at a known package. Shift collected parts in names
+                    // accordingly.
+                    shift_parts.reverse();
+                    let prepend = itertools::join(shift_parts, ".");
+
+                    // Use / instead of . because this emulates filesystem behavior.
+                    let stem = prepend + "/" + &resource.stem;
+
+                    return Some(PythonResource {
+                        package: new_package,
+                        stem,
+                        full_name: resource.full_name,
+                        path: resource.path,
+                        flavor: resource.flavor,
+                    });
+                }
+
+                // Hmmm. We couldn't resolve this resource to a known Python package. Let's
+                // just emit it and let downstream deal with it.
+                return Some(resource);
+            }
         }
-
-        // This isn't efficient. But we shouldn't care.
-        let resource = self.resources.remove(0);
-
-        Some(resource)
     }
 }
 
