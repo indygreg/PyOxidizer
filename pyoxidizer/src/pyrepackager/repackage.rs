@@ -356,6 +356,46 @@ fn resolve_stdlib_extension_variant(
     res
 }
 
+fn resolve_stdlib(
+    logger: &slog::Logger,
+    dist: &PythonDistributionInfo,
+    optimize_level: i64,
+    exclude_test_modules: bool,
+    include_source: bool,
+) -> Vec<PythonResourceEntry> {
+    let mut res = Vec::new();
+
+    for (name, fs_path) in &dist.py_modules {
+        if is_stdlib_test_package(&name) && exclude_test_modules {
+            info!(logger, "skipping test stdlib module: {}", name);
+            continue;
+        }
+
+        let source = fs::read(fs_path).expect("error reading source file");
+
+        if include_source {
+            res.push(PythonResourceEntry {
+                action: ResourceAction::Add,
+                resource: PythonResource::ModuleSource {
+                    name: name.clone(),
+                    source: source.clone(),
+                },
+            });
+        }
+
+        res.push(PythonResourceEntry {
+            action: ResourceAction::Add,
+            resource: PythonResource::ModuleBytecode {
+                name: name.clone(),
+                source,
+                optimize_level: optimize_level as i32,
+            },
+        });
+    }
+
+    res
+}
+
 /// Resolves a Python packaging rule to resources to package.
 fn resolve_python_packaging(
     logger: &slog::Logger,
@@ -386,33 +426,13 @@ fn resolve_python_packaging(
             exclude_test_modules,
             include_source,
         } => {
-            for (name, fs_path) in &dist.py_modules {
-                if is_stdlib_test_package(&name) && *exclude_test_modules {
-                    info!(logger, "skipping test stdlib module: {}", name);
-                    continue;
-                }
-
-                let source = fs::read(fs_path).expect("error reading source file");
-
-                if *include_source {
-                    res.push(PythonResourceEntry {
-                        action: ResourceAction::Add,
-                        resource: PythonResource::ModuleSource {
-                            name: name.clone(),
-                            source: source.clone(),
-                        },
-                    });
-                }
-
-                res.push(PythonResourceEntry {
-                    action: ResourceAction::Add,
-                    resource: PythonResource::ModuleBytecode {
-                        name: name.clone(),
-                        source,
-                        optimize_level: *optimize_level as i32,
-                    },
-                });
-            }
+            res.extend(resolve_stdlib(
+                logger,
+                dist,
+                *optimize_level,
+                *exclude_test_modules,
+                *include_source,
+            ));
         }
 
         PythonPackaging::Virtualenv {
