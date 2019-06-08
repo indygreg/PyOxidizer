@@ -583,6 +583,68 @@ fn resolve_pip_install_simple(
     res
 }
 
+fn resolve_pip_requirements_file(
+    logger: &slog::Logger,
+    dist: &PythonDistributionInfo,
+    requirements_path: &str,
+    optimize_level: i64,
+    include_source: bool,
+) -> Vec<PythonResourceEntry> {
+    let mut res = Vec::new();
+
+    dist.ensure_pip();
+
+    let temp_dir =
+        tempdir::TempDir::new("pyoxidizer-pip-install").expect("could not create temp directory");
+
+    let temp_dir_path = temp_dir.path();
+    let temp_dir_s = temp_dir_path.display().to_string();
+    info!(logger, "pip installing to {}", temp_dir_s);
+
+    std::process::Command::new(&dist.python_exe)
+        .args(&[
+            "-m",
+            "pip",
+            "--disable-pip-version-check",
+            "install",
+            "--target",
+            &temp_dir_s,
+            "--no-binary",
+            ":all:",
+            "--requirement",
+            requirements_path,
+        ])
+        .status()
+        .expect("error running pip");
+
+    for resource in find_python_resources(&temp_dir_path) {
+        if let PythonResourceType::Source {} = resource.flavor {
+            let source = fs::read(resource.path).expect("error reading source file");
+
+            if include_source {
+                res.push(PythonResourceEntry {
+                    action: ResourceAction::Add,
+                    resource: PythonResource::ModuleSource {
+                        name: resource.name.clone(),
+                        source: source.clone(),
+                    },
+                });
+            }
+
+            res.push(PythonResourceEntry {
+                action: ResourceAction::Add,
+                resource: PythonResource::ModuleBytecode {
+                    name: resource.name.clone(),
+                    source,
+                    optimize_level: optimize_level as i32,
+                },
+            });
+        }
+    }
+
+    res
+}
+
 /// Resolves a Python packaging rule to resources to package.
 fn resolve_python_packaging(
     logger: &slog::Logger,
@@ -672,55 +734,13 @@ fn resolve_python_packaging(
             optimize_level,
             include_source,
         } => {
-            dist.ensure_pip();
-
-            let temp_dir = tempdir::TempDir::new("pyoxidizer-pip-install")
-                .expect("could not create temp directory");
-
-            let temp_dir_path = temp_dir.path();
-            let temp_dir_s = temp_dir_path.display().to_string();
-            info!(logger, "pip installing to {}", temp_dir_s);
-
-            std::process::Command::new(&dist.python_exe)
-                .args(&[
-                    "-m",
-                    "pip",
-                    "--disable-pip-version-check",
-                    "install",
-                    "--target",
-                    &temp_dir_s,
-                    "--no-binary",
-                    ":all:",
-                    "--requirement",
-                    requirements_path,
-                ])
-                .status()
-                .expect("error running pip");
-
-            for resource in find_python_resources(&temp_dir_path) {
-                if let PythonResourceType::Source {} = resource.flavor {
-                    let source = fs::read(resource.path).expect("error reading source file");
-
-                    if *include_source {
-                        res.push(PythonResourceEntry {
-                            action: ResourceAction::Add,
-                            resource: PythonResource::ModuleSource {
-                                name: resource.name.clone(),
-                                source: source.clone(),
-                            },
-                        });
-                    }
-
-                    res.push(PythonResourceEntry {
-                        action: ResourceAction::Add,
-                        resource: PythonResource::ModuleBytecode {
-                            name: resource.name.clone(),
-                            source,
-                            optimize_level: *optimize_level as i32,
-                        },
-                    });
-                }
-            }
+            res.extend(resolve_pip_requirements_file(
+                logger,
+                dist,
+                requirements_path,
+                *optimize_level,
+                *include_source,
+            ));
         }
 
         PythonPackaging::SetupPyInstall {
