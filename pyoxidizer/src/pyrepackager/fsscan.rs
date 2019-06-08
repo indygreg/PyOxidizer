@@ -45,6 +45,17 @@ pub enum PythonResourceType {
 /// TODO track the package name
 #[derive(Debug)]
 pub struct PythonResource {
+    /// Python package name of this resource.
+    ///
+    /// For resources in the root, this will likely be the resource name.
+    ///
+    /// For modules that are packages (e.g. `__init__.py` or `__init__.pyc`
+    /// files, this will be the same as `full_name`.
+    ///
+    /// For regular modules, this will be all but the final component in
+    /// `full_name`.
+    pub package: String,
+
     /// Full resource name of this resource.
     ///
     /// This is typically how `importlib` refers to the resource.
@@ -111,9 +122,11 @@ impl Iterator for PythonResourceIterator {
         let resource = match rel_path.extension().and_then(OsStr::to_str) {
             Some("py") => {
                 let package_parts = &components[0..components.len() - 1];
+                let mut package = itertools::join(package_parts, ".");
+
                 let module_name = rel_path
                     .file_stem()
-                    .expect("unable to get file stemp")
+                    .expect("unable to get file stem")
                     .to_str()
                     .expect("unable to convert path to str");
 
@@ -125,7 +138,12 @@ impl Iterator for PythonResourceIterator {
 
                 let full_module_name = itertools::join(full_module_name, ".");
 
+                if package.is_empty() {
+                    package = full_module_name.clone();
+                }
+
                 PythonResource {
+                    package,
                     full_name: full_module_name,
                     path: path.to_path_buf(),
                     flavor: PythonResourceType::Source,
@@ -137,11 +155,14 @@ impl Iterator for PythonResourceIterator {
                     panic!("encountered .pyc file with invalid path: {}", rel_str);
                 }
 
+                // Possibly from Python 2?
                 if components[components.len() - 2] != "__pycache__" {
-                    // Possibly from Python 2?
+                    let package_parts = &components[0..components.len() - 1];
+                    let package = itertools::join(package_parts, ".");
                     let full_name = itertools::join(components, ".");
 
                     return Some(PythonResource {
+                        package,
                         full_name,
                         path: path.to_path_buf(),
                         flavor: PythonResourceType::Other,
@@ -149,6 +170,7 @@ impl Iterator for PythonResourceIterator {
                 }
 
                 let package_parts = &components[0..components.len() - 2];
+                let mut package = itertools::join(package_parts, ".");
 
                 // Files have format <package>/__pycache__/<module>.cpython-37.opt-1.pyc
                 let module_name = rel_path
@@ -168,6 +190,10 @@ impl Iterator for PythonResourceIterator {
 
                 let full_module_name = itertools::join(full_module_name, ".");
 
+                if package.is_empty() {
+                    package = full_module_name.clone();
+                }
+
                 let flavor;
 
                 if rel_str.ends_with(".opt-1.pyc") {
@@ -179,6 +205,7 @@ impl Iterator for PythonResourceIterator {
                 }
 
                 PythonResource {
+                    package,
                     full_name: full_module_name,
                     path: path.to_path_buf(),
                     flavor,
@@ -186,9 +213,17 @@ impl Iterator for PythonResourceIterator {
             }
             _ => {
                 // If it isn't a .py or a .pyc file, it is a resource file.
+                let package_parts = &components[0..components.len() - 1];
+                let mut package = itertools::join(package_parts, ".");
+
                 let name = itertools::join(components, ".");
 
+                if package.is_empty() {
+                    package = name.clone();
+                }
+
                 PythonResource {
+                    package,
                     full_name: name,
                     path: path.to_path_buf(),
                     flavor: PythonResourceType::Resource,
