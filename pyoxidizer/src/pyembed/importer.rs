@@ -139,6 +139,90 @@ impl PythonModulesData {
     }
 }
 
+/// Represents Python resources data in memory.
+///
+/// This is essentially an index over a raw backing blob.
+struct PythonResourcesData {
+    packages: HashMap<&'static str, Arc<Box<HashMap<&'static str, &'static [u8]>>>>,
+}
+
+impl PythonResourcesData {
+    fn from(data: &'static [u8]) -> Result<PythonResourcesData, &'static str> {
+        let mut reader = Cursor::new(data);
+
+        let package_count = reader
+            .read_u32::<LittleEndian>()
+            .or_else(|_| Err("failed reading package count"))? as usize;
+
+        let mut index = Vec::with_capacity(package_count);
+        let mut total_names_length = 0;
+
+        for _ in 0..package_count {
+            let package_name_length = reader
+                .read_u32::<LittleEndian>()
+                .or_else(|_| Err("failed reading package name length"))?
+                as usize;
+            let resource_count = reader
+                .read_u32::<LittleEndian>()
+                .or_else(|_| Err("failed reading resource count"))?
+                as usize;
+
+            total_names_length += package_name_length;
+
+            let mut package_index = Vec::with_capacity(resource_count);
+
+            for _ in 0..resource_count {
+                let resource_name_length = reader
+                    .read_u32::<LittleEndian>()
+                    .or_else(|_| Err("failed reading resource name length"))?
+                    as usize;
+                let resource_data_length = reader
+                    .read_u32::<LittleEndian>()
+                    .or_else(|_| Err("failed reading resource data length"))?
+                    as usize;
+
+                total_names_length += resource_name_length;
+
+                package_index.push((resource_name_length, resource_data_length));
+            }
+
+            index.push((package_name_length, package_index));
+        }
+
+        let mut name_offset = reader.position() as usize;
+        let data_offset = name_offset + total_names_length;
+        let mut res = HashMap::new();
+
+        for (package_name_length, package_index) in index {
+            let package_name = unsafe {
+                std::str::from_utf8_unchecked(&data[name_offset..name_offset + package_name_length])
+            };
+
+            name_offset += package_name_length;
+
+            let mut package_data = Box::new(HashMap::new());
+
+            for (resource_name_length, resource_data_length) in package_index {
+                let resource_name = unsafe {
+                    std::str::from_utf8_unchecked(
+                        &data[name_offset..name_offset + resource_name_length],
+                    )
+                };
+
+                name_offset += resource_name_length;
+
+                let resource_data = &data[data_offset..data_offset + resource_data_length];
+
+                package_data.insert(resource_name, resource_data);
+            }
+
+            res.insert(package_name, Arc::new(package_data));
+        }
+
+        Ok(PythonResourcesData { packages: res })
+    }
+}
+
 #[allow(unused_doc_comments)]
 /// Python type to import modules.
 ///
@@ -399,6 +483,9 @@ const DOC: &[u8] = b"Binary representation of Python modules\0";
 pub struct InitModuleState {
     /// Raw data constituting Python module source code.
     pub py_modules_data: &'static [u8],
+
+    /// Raw data constituting Python resources data.
+    pub py_resources_data: &'static [u8],
 }
 
 /// Holds reference to next module state struct.
@@ -426,6 +513,9 @@ type KnownModules = HashMap<&'static str, KnownModuleFlavor>;
 struct ModuleState {
     /// Raw data constituting Python module source code.
     py_modules_data: &'static [u8],
+
+    /// Raw data constituting Python resources data.
+    py_resources_data: &'static [u8],
 
     /// Whether setup() has been called.
     setup_called: bool,
@@ -476,6 +566,7 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
 
     unsafe {
         state.py_modules_data = (*NEXT_MODULE_STATE).py_modules_data;
+        state.py_resources_data = (*NEXT_MODULE_STATE).py_resources_data;
     }
 
     state.setup_called = false;
@@ -614,6 +705,11 @@ fn module_setup(
         populate_packages(&mut packages, name);
     }
 
+    let resources_data = match PythonResourcesData::from(state.py_resources_data) {
+        Ok(v) => v,
+        Err(msg) => return Err(PyErr::new::<ValueError, _>(py, msg)),
+    };
+
     let marshal_loads = marshal_module.get(py, "loads")?;
     let call_with_frames_removed = bootstrap_module.get(py, "_call_with_frames_removed")?;
     let module_spec_type = bootstrap_module.get(py, "ModuleSpec")?;
@@ -639,10 +735,6 @@ fn module_setup(
         }
     };
 
-    // TODO populate this with resource data.
-    let resources: HashMap<&'static str, Arc<Box<HashMap<&'static str, &'static [u8]>>>> =
-        HashMap::new();
-
     let resource_readers: RefCell<Box<HashMap<String, PyObject>>> =
         RefCell::new(Box::new(HashMap::new()));
 
@@ -658,7 +750,7 @@ fn module_setup(
         exec_fn,
         packages,
         known_modules,
-        resources,
+        resources_data.packages,
         resource_readers,
     )?;
     meta_path_object.call_method(py, "clear", NoArgs, None)?;
