@@ -328,6 +328,34 @@ fn resolve_stdlib_extensions_explicit_excludes(
     res
 }
 
+fn resolve_stdlib_extension_variant(
+    dist: &PythonDistributionInfo,
+    extension: &str,
+    variant: &str,
+) -> Vec<PythonResourceEntry> {
+    let mut res = Vec::new();
+
+    let variants = &dist.extension_modules[extension];
+
+    for em in variants {
+        if &em.variant == variant {
+            res.push(PythonResourceEntry {
+                action: ResourceAction::Add,
+                resource: PythonResource::ExtensionModule {
+                    name: extension.to_string(),
+                    module: em.clone(),
+                },
+            });
+        }
+    }
+
+    if res.is_empty() {
+        panic!("extension {} has no variant {}", extension, variant);
+    }
+
+    res
+}
+
 /// Resolves a Python packaging rule to resources to package.
 fn resolve_python_packaging(
     logger: &slog::Logger,
@@ -350,23 +378,7 @@ fn resolve_python_packaging(
         }
 
         PythonPackaging::StdlibExtensionVariant { extension, variant } => {
-            let variants = &dist.extension_modules[extension];
-
-            for em in variants {
-                if &em.variant == variant {
-                    res.push(PythonResourceEntry {
-                        action: ResourceAction::Add,
-                        resource: PythonResource::ExtensionModule {
-                            name: extension.clone(),
-                            module: em.clone(),
-                        },
-                    });
-                }
-            }
-
-            if res.is_empty() {
-                panic!("extension {} has no variant {}", extension, variant);
-            }
+            res.extend(resolve_stdlib_extension_variant(dist, extension, variant));
         }
 
         PythonPackaging::Stdlib {
