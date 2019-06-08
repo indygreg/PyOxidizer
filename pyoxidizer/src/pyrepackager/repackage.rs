@@ -717,53 +717,41 @@ fn resolve_python_packaging(
     package: &PythonPackaging,
     dist: &PythonDistributionInfo,
 ) -> Vec<PythonResourceEntry> {
-    let mut res = Vec::new();
-
     match package {
         PythonPackaging::StdlibExtensionsPolicy { policy } => {
-            res.extend(resolve_stdlib_extensions_policy(dist, policy));
+            resolve_stdlib_extensions_policy(dist, policy)
         }
 
         PythonPackaging::StdlibExtensionsExplicitIncludes { includes } => {
-            res.extend(resolve_stdlib_extensions_explicit_includes(dist, includes));
+            resolve_stdlib_extensions_explicit_includes(dist, includes)
         }
 
         PythonPackaging::StdlibExtensionsExplicitExcludes { excludes } => {
-            res.extend(resolve_stdlib_extensions_explicit_excludes(dist, excludes));
+            resolve_stdlib_extensions_explicit_excludes(dist, excludes)
         }
 
         PythonPackaging::StdlibExtensionVariant { extension, variant } => {
-            res.extend(resolve_stdlib_extension_variant(dist, extension, variant));
+            resolve_stdlib_extension_variant(dist, extension, variant)
         }
 
         PythonPackaging::Stdlib {
             optimize_level,
             exclude_test_modules,
             include_source,
-        } => {
-            res.extend(resolve_stdlib(
-                logger,
-                dist,
-                *optimize_level,
-                *exclude_test_modules,
-                *include_source,
-            ));
-        }
+        } => resolve_stdlib(
+            logger,
+            dist,
+            *optimize_level,
+            *exclude_test_modules,
+            *include_source,
+        ),
 
         PythonPackaging::Virtualenv {
             path,
             optimize_level,
             excludes,
             include_source,
-        } => {
-            res.extend(resolve_virtualenv(
-                dist,
-                path,
-                *optimize_level,
-                excludes,
-                *include_source,
-            ));
-        }
+        } => resolve_virtualenv(dist, path, *optimize_level, excludes, *include_source),
 
         PythonPackaging::PackageRoot {
             path,
@@ -771,63 +759,35 @@ fn resolve_python_packaging(
             optimize_level,
             excludes,
             include_source,
-        } => {
-            res.extend(resolve_package_root(
-                path,
-                packages,
-                *optimize_level,
-                excludes,
-                *include_source,
-            ));
-        }
+        } => resolve_package_root(path, packages, *optimize_level, excludes, *include_source),
 
         PythonPackaging::PipInstallSimple {
             package,
             optimize_level,
             include_source,
-        } => {
-            res.extend(resolve_pip_install_simple(
-                logger,
-                dist,
-                package,
-                *optimize_level,
-                *include_source,
-            ));
-        }
+        } => resolve_pip_install_simple(logger, dist, package, *optimize_level, *include_source),
 
         PythonPackaging::PipRequirementsFile {
             requirements_path,
             optimize_level,
             include_source,
-        } => {
-            res.extend(resolve_pip_requirements_file(
-                logger,
-                dist,
-                requirements_path,
-                *optimize_level,
-                *include_source,
-            ));
-        }
+        } => resolve_pip_requirements_file(
+            logger,
+            dist,
+            requirements_path,
+            *optimize_level,
+            *include_source,
+        ),
 
         PythonPackaging::SetupPyInstall {
             path,
             optimize_level,
             include_source,
-        } => {
-            res.extend(resolve_setup_py_install(
-                logger,
-                dist,
-                path,
-                *optimize_level,
-                *include_source,
-            ));
-        }
+        } => resolve_setup_py_install(logger, dist, path, *optimize_level, *include_source),
 
         // This is a no-op because it can only be handled at a higher level.
-        PythonPackaging::FilterInclude { .. } => {}
+        PythonPackaging::FilterInclude { .. } => Vec::new(),
     }
-
-    res
 }
 
 /// Resolves a series of packaging rules to a final set of resources to package.
