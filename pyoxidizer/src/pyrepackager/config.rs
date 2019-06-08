@@ -68,6 +68,17 @@ struct ConfigPython {
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type")]
 enum ConfigPythonPackaging {
+    #[serde(rename = "setup-py-install")]
+    SetupPyInstall {
+        #[serde(default = "ALL")]
+        target: String,
+        package_path: String,
+        #[serde(default = "ZERO")]
+        optimize_level: i64,
+        #[serde(default = "TRUE")]
+        include_source: bool,
+    },
+
     #[serde(rename = "stdlib-extensions-policy")]
     StdlibExtensionsPolicy {
         #[serde(default = "ALL")]
@@ -216,6 +227,12 @@ pub enum PythonDistribution {
 
 #[derive(Debug)]
 pub enum PythonPackaging {
+    SetupPyInstall {
+        path: String,
+        optimize_level: i64,
+        include_source: bool,
+    },
+
     StdlibExtensionsPolicy {
         // TODO make this an enum.
         policy: String,
@@ -497,6 +514,22 @@ pub fn parse_config(data: &[u8], target: &str) -> Config {
                 if rule_target == "all" || rule_target == target {
                     Some(PythonPackaging::PipRequirementsFile {
                         requirements_path: requirements_path.clone(),
+                        optimize_level: *optimize_level,
+                        include_source: *include_source,
+                    })
+                } else {
+                    None
+                }
+            }
+            ConfigPythonPackaging::SetupPyInstall {
+                target: rule_target,
+                package_path,
+                optimize_level,
+                include_source,
+            } => {
+                if rule_target == "all" || rule_target == target {
+                    Some(PythonPackaging::SetupPyInstall {
+                        path: package_path.clone(),
                         optimize_level: *optimize_level,
                         include_source: *include_source,
                     })

@@ -529,6 +529,34 @@ Example::
    type = "pip-requirements-file"
    path = "/home/gps/src/myapp/requirements.txt"
 
+``setup-py-install``
+^^^^^^^^^^^^^^^^^^^^
+
+This rule runs ``python setup.py install`` for a given directory containing a
+``setup.py`` ``distutils``/``setuptools`` packaging script.
+
+The target package will be installed to a temporary directory and its installed
+resources will be collected and packaged.
+
+``package_path`` (string)
+
+   Local filesystem to the directory containing a ``setup.py`` file.
+
+``optimize_level`` (int)
+
+   The module optimization level for packaged bytecode.
+
+   Allowed values are ``0``, ``1``, and ``2``.
+
+   Defaults to ``0``, which is the Python default.
+
+``include_source`` (bool)
+
+   Whether to include the source code for Python modules in addition to the
+   bytecode.
+
+   Default is ``true``.
+
 ``virtualenv``
 ^^^^^^^^^^^^^^
 

@@ -596,6 +596,66 @@ fn resolve_python_packaging(
             }
         }
 
+        PythonPackaging::SetupPyInstall {
+            path,
+            optimize_level,
+            include_source,
+        } => {
+            let temp_dir = tempdir::TempDir::new("pyoxidizer-setup-py-install")
+                .expect("could not create temp directory");
+            let temp_dir_path = temp_dir.path();
+            let temp_dir_s = temp_dir_path.display().to_string();
+            println!("python setup.py installing to {}", temp_dir_s);
+
+            std::process::Command::new(&dist.python_exe)
+                .current_dir(path)
+                .args(&[
+                    "setup.py",
+                    "install",
+                    "--prefix",
+                    &temp_dir_s,
+                    "--no-compile",
+                ])
+                .status()
+                .expect("error running setup.py");
+
+            let mut packages_path = temp_dir_path.to_path_buf();
+
+            if dist.os == "windows" {
+                packages_path.push("Lib");
+            } else {
+                packages_path.push("lib");
+            }
+
+            packages_path.push("python".to_owned() + &dist.version[0..3]);
+            packages_path.push("site-packages");
+
+            for resource in find_python_resources(&packages_path) {
+                if let PythonResourceType::Source {} = resource.flavor {
+                    let source = fs::read(resource.path).expect("error reading source");
+
+                    if *include_source {
+                        res.push(PythonResourceEntry {
+                            action: ResourceAction::Add,
+                            resource: PythonResource::ModuleSource {
+                                name: resource.name.clone(),
+                                source: source.clone(),
+                            },
+                        });
+                    }
+
+                    res.push(PythonResourceEntry {
+                        action: ResourceAction::Add,
+                        resource: PythonResource::ModuleBytecode {
+                            name: resource.name.clone(),
+                            source,
+                            optimize_level: *optimize_level as i32,
+                        },
+                    });
+                }
+            }
+        }
+
         // This is a no-op because it can only be handled at a higher level.
         PythonPackaging::FilterInclude { .. } => {}
     }
