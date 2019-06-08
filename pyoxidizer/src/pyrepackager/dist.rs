@@ -223,8 +223,9 @@ pub struct PythonDistributionInfo {
 
     /// Non-module Python resource files.
     ///
-    /// Keys are full module/resource names. Values are filesystem paths.
-    pub resources: BTreeMap<String, PathBuf>,
+    /// Keys are package names. Values are maps of resource name to data for the resource
+    /// within that package.
+    pub resources: BTreeMap<String, BTreeMap<String, PathBuf>>,
 }
 
 #[derive(Debug)]
@@ -286,7 +287,7 @@ pub fn analyze_python_distribution_data(
     let mut libraries: BTreeMap<String, PathBuf> = BTreeMap::new();
     let frozen_c: Vec<u8> = Vec::new();
     let mut py_modules: BTreeMap<String, PathBuf> = BTreeMap::new();
-    let mut resources: BTreeMap<String, PathBuf> = BTreeMap::new();
+    let mut resources: BTreeMap<String, BTreeMap<String, PathBuf>> = BTreeMap::new();
 
     for entry in fs::read_dir(temp_dir.path()).unwrap() {
         let entry = entry.expect("unable to get directory entry");
@@ -390,7 +391,14 @@ pub fn analyze_python_distribution_data(
     for entry in find_python_resources(&stdlib_path) {
         match entry.flavor {
             PythonResourceType::Resource => {
-                resources.insert(entry.full_name.clone(), entry.path);
+                if !resources.contains_key(&entry.package) {
+                    resources.insert(entry.package.clone(), BTreeMap::new());
+                }
+
+                resources
+                    .get_mut(&entry.package)
+                    .unwrap()
+                    .insert(entry.stem.clone(), entry.path);
             }
             PythonResourceType::Source => {
                 py_modules.insert(entry.full_name.clone(), entry.path);

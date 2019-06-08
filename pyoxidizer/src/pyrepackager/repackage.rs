@@ -133,6 +133,7 @@ pub enum PythonResource {
         optimize_level: i32,
     },
     Resource {
+        package: String,
         name: String,
         data: Vec<u8>,
     },
@@ -155,7 +156,7 @@ pub struct PythonResources {
     pub module_sources: BTreeMap<String, Vec<u8>>,
     pub module_bytecodes: BTreeMap<String, Vec<u8>>,
     pub all_modules: BTreeSet<String>,
-    pub resources: BTreeMap<String, Vec<u8>>,
+    pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
     pub extension_modules: BTreeMap<String, ExtensionModule>,
     pub read_files: Vec<PathBuf>,
 }
@@ -397,24 +398,27 @@ fn resolve_stdlib(
         });
     }
 
-    for (name, fs_path) in &dist.resources {
-        if is_stdlib_test_package(name) && rule.exclude_test_modules {
+    for (package, resources) in &dist.resources {
+        if is_stdlib_test_package(package) && rule.exclude_test_modules {
             info!(
                 logger,
-                "skipping resource associated with test package: {}", name
+                "skipping resources associated with test package: {}", package
             );
             continue;
         }
 
-        let data = fs::read(fs_path).expect("error reading resource file");
+        for (name, fs_path) in resources {
+            let data = fs::read(fs_path).expect("error reading resource file");
 
-        res.push(PythonResourceEntry {
-            action: ResourceAction::Add,
-            resource: PythonResource::Resource {
-                name: name.clone(),
-                data,
-            },
-        });
+            res.push(PythonResourceEntry {
+                action: ResourceAction::Add,
+                resource: PythonResource::Resource {
+                    package: package.clone(),
+                    name: name.clone(),
+                    data,
+                },
+            });
+        }
     }
 
     res
@@ -482,7 +486,8 @@ fn resolve_virtualenv(
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
                     resource: PythonResource::Resource {
-                        name: resource.full_name.clone(),
+                        package: resource.package.clone(),
+                        name: resource.stem.clone(),
                         data,
                     },
                 });
@@ -553,7 +558,8 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceEntry>
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
                     resource: PythonResource::Resource {
-                        name: resource.full_name.clone(),
+                        package: resource.package.clone(),
+                        name: resource.stem.clone(),
                         data,
                     },
                 });
@@ -625,7 +631,8 @@ fn resolve_pip_install_simple(
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
                     resource: PythonResource::Resource {
-                        name: resource.full_name.clone(),
+                        package: resource.package.clone(),
+                        name: resource.stem.clone(),
                         data,
                     },
                 });
@@ -701,7 +708,8 @@ fn resolve_pip_requirements_file(
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
                     resource: PythonResource::Resource {
-                        name: resource.full_name.clone(),
+                        package: resource.package.clone(),
+                        name: resource.stem.clone(),
                         data,
                     },
                 });
@@ -781,7 +789,8 @@ fn resolve_setup_py_install(
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
                     resource: PythonResource::Resource {
-                        name: resource.full_name.clone(),
+                        package: resource.package.clone(),
+                        name: resource.stem.clone(),
                         data,
                     },
                 });
@@ -851,7 +860,7 @@ pub fn resolve_python_resources(
     let mut extension_modules: BTreeMap<String, ExtensionModule> = BTreeMap::new();
     let mut sources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut bytecode_requests: BTreeMap<String, (Vec<u8>, i32)> = BTreeMap::new();
-    let mut resources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    let mut resources: BTreeMap<String, BTreeMap<String, Vec<u8>>> = BTreeMap::new();
     let mut read_files: Vec<PathBuf> = Vec::new();
 
     for packaging in packages {
@@ -889,9 +898,21 @@ pub fn resolve_python_resources(
                     info!(logger, "removing module bytecode: {}", name);
                     bytecode_requests.remove(&name);
                 }
-                (ResourceAction::Add, PythonResource::Resource { name, data }) => {
+                (
+                    ResourceAction::Add,
+                    PythonResource::Resource {
+                        package,
+                        name,
+                        data,
+                    },
+                ) => {
                     info!(logger, "adding resource: {}", name);
-                    resources.insert(name, data);
+
+                    if !resources.contains_key(&package) {
+                        resources.insert(package.clone(), BTreeMap::new());
+                    }
+
+                    resources.get_mut(&package).unwrap().insert(name, data);
                 }
                 (ResourceAction::Remove, PythonResource::Resource { name, .. }) => {
                     info!(logger, "removing resource: {}", name);
@@ -1571,11 +1592,22 @@ pub fn process_config(
         resources.all_modules.len(),
         resources.all_modules
     );
+
+    let mut resource_count = 0;
+    let mut resource_map = BTreeMap::new();
+    for (package, entries) in &resources.resources {
+        let mut names = BTreeSet::new();
+        names.extend(entries.keys());
+        resource_map.insert(package.clone(), names);
+        resource_count += entries.len();
+    }
+
     info!(
         logger,
-        "resolved {} resource files: {:#?}",
+        "resolved {} resource files across {} packages: {:#?}",
+        resource_count,
         resources.resources.len(),
-        resources.resources.keys()
+        resource_map
     );
     info!(
         logger,
