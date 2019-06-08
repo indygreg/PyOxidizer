@@ -15,7 +15,7 @@ use std::ffi::CStr;
 use std::io::Cursor;
 
 use byteorder::{LittleEndian, ReadBytesExt};
-use cpython::exc::{ImportError, RuntimeError, ValueError};
+use cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError};
 use cpython::{
     py_class, py_class_impl, py_coerce_item, py_fn, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr,
     PyList, PyModule, PyObject, PyResult, PyString, Python, PythonObject,
@@ -344,8 +344,7 @@ py_class!(class PyOxidizerResourceReader |py| {
     /// If the resource does not concretely exist on the file system, raise
     /// FileNotFoundError.
     def resource_path(&self, _resource: &PyString) -> PyResult<PyObject> {
-        // TODO implement.
-        Ok(py.None())
+        Err(PyErr::new::<FileNotFoundError, _>(py, "in-memory resources do not have filesystem paths"))
     }
 
     /// Returns True if the named name is considered a resource. FileNotFoundError
