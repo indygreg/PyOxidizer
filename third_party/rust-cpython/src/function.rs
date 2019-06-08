@@ -137,7 +137,7 @@ macro_rules! py_fn_impl {
         }
         unsafe {
             $crate::_detail::py_fn_impl($py,
-                py_method_def!(_cpython__function__stringify!($f), 0, wrap))
+                py_method_def!(_cpython__function__stringify!($f), 0, wrap, ""))
         }
     }};
     // Form 2: inline function definition
