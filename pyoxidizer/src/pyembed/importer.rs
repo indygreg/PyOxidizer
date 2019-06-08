@@ -9,6 +9,7 @@ This module defines a Python meta path importer and associated functionality
 for importing Python modules from memory.
 */
 
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::ffi::CStr;
 use std::io::Cursor;
@@ -16,8 +17,8 @@ use std::io::Cursor;
 use byteorder::{LittleEndian, ReadBytesExt};
 use cpython::exc::{ImportError, RuntimeError, ValueError};
 use cpython::{
-    py_class, py_class_impl, py_coerce_item, py_fn, NoArgs, ObjectProtocol, PyDict, PyErr, PyList,
-    PyModule, PyObject, PyResult, PyString, Python, PythonObject,
+    py_class, py_class_impl, py_coerce_item, py_fn, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr,
+    PyList, PyModule, PyObject, PyResult, PyString, Python, PythonObject,
 };
 use python3_sys as pyffi;
 use python3_sys::{PyBUF_READ, PyMemoryView_FromMemory};
@@ -154,6 +155,7 @@ py_class!(class PyOxidizerFinder |py| {
     data exec_fn: PyObject;
     data packages: HashSet<&'static str>;
     data known_modules: KnownModules;
+    data resource_readers: RefCell<Box<HashMap<String, PyObject>>>;
 
     // Start of importlib.abc.MetaPathFinder interface.
 
@@ -292,6 +294,81 @@ py_class!(class PyOxidizerFinder |py| {
     }
 
     // End of importlib.abc.InspectLoader interface.
+
+    // Support obtaining ResourceReader instances.
+    def get_resource_loader(&self, fullname: &PyString) -> PyResult<PyObject> {
+        let key = fullname.to_string(py)?;
+
+        // This should not happen since code below should not be recursive into this
+        // function.
+        let mut resource_readers = match self.resource_readers(py).try_borrow_mut() {
+            Ok(v) => v,
+            Err(_) => {
+                return Err(PyErr::new::<RuntimeError, _>(py, "resource reader already borrowed"));
+            }
+        };
+
+        // Return an existing instance if we have one.
+        if let Some(reader) = resource_readers.get(&*key) {
+            return Ok(reader.clone_ref(py));
+        }
+
+        // Only create a reader if the name is a package.
+        if self.packages(py).contains(&*key) {
+            let reader = PyOxidizerResourceReader::create_instance(py)?.into_object();
+            resource_readers.insert(key.to_string(), reader.clone_ref(py));
+
+            Ok(reader)
+        } else {
+            Ok(py.None())
+        }
+    }
+});
+
+#[allow(unused_doc_comments)]
+/// Implements in-memory reading of resource data.
+///
+/// Implements importlib.abc.ResourceReader.
+py_class!(class PyOxidizerResourceReader |py| {
+
+    /// Returns an opened, file-like object for binary reading of the resource.
+    ///
+    /// If the resource cannot be found, FileNotFoundError is raised.
+    def open_resource(&self, _resource: &PyString) -> PyResult<PyObject> {
+        // TODO implement.
+        Ok(py.None())
+    }
+
+    /// Returns the file system path to the resource.
+    ///
+    /// If the resource does not concretely exist on the file system, raise
+    /// FileNotFoundError.
+    def resource_path(&self, _resource: &PyString) -> PyResult<PyObject> {
+        // TODO implement.
+        Ok(py.None())
+    }
+
+    /// Returns True if the named name is considered a resource. FileNotFoundError
+    /// is raised if name does not exist.
+    def is_resource(&self, _name: &PyString) -> PyResult<PyObject> {
+        // TODO implement.
+        Ok(py.None())
+    }
+
+    /// Returns an iterable of strings over the contents of the package.
+    ///
+    /// Do note that it is not required that all names returned by the iterator be actual resources,
+    /// e.g. it is acceptable to return names for which is_resource() would be false.
+    ///
+    /// Allowing non-resource names to be returned is to allow for situations where how a package
+    /// and its resources are stored are known a priori and the non-resource names would be useful.
+    /// For instance, returning subdirectory names is allowed so that when it is known that the
+    /// package and resources are stored on the file system then those subdirectory names can be
+    /// used directly.
+    def contents(&self) -> PyResult<PyObject> {
+        // TODO implement.
+        Ok(py.None())
+    }
 });
 
 fn populate_packages(packages: &mut HashSet<&'static str>, name: &'static str) {
@@ -550,6 +627,9 @@ fn module_setup(
         }
     };
 
+    let resource_readers: RefCell<Box<HashMap<String, PyObject>>> =
+        RefCell::new(Box::new(HashMap::new()));
+
     let unified_importer = PyOxidizerFinder::create_instance(
         py,
         imp_module,
@@ -562,6 +642,7 @@ fn module_setup(
         exec_fn,
         packages,
         known_modules,
+        resource_readers,
     )?;
     meta_path_object.call_method(py, "clear", NoArgs, None)?;
     meta_path_object.call_method(py, "append", (unified_importer,), None)?;
