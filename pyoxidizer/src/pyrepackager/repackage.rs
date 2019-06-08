@@ -1404,8 +1404,8 @@ pub fn derive_python_config(
             _ => "None".to_owned(),
         },
         match config.run {
-            RunMode::Noop {} => "PythonRunMode::None".to_owned(),
-            RunMode::Repl {} => "PythonRunMode::Repl".to_owned(),
+            RunMode::Noop => "PythonRunMode::None".to_owned(),
+            RunMode::Repl => "PythonRunMode::Repl".to_owned(),
             RunMode::Module { ref module } => {
                 "PythonRunMode::Module { module: \"".to_owned() + module + "\".to_string() }"
             }

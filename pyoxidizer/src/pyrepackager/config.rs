@@ -316,8 +316,8 @@ pub enum PythonPackaging {
 
 #[derive(Debug)]
 pub enum RunMode {
-    Noop {},
-    Repl {},
+    Noop,
+    Repl,
     Module { module: String },
     Eval { code: String },
 }
@@ -710,14 +710,14 @@ pub fn parse_config(data: &[u8], target: &str) -> Result<Config, String> {
         }
         ConfigRunMode::Noop { target: run_target } => {
             if run_target == "all" || run_target == target {
-                Some(RunMode::Noop {})
+                Some(RunMode::Noop)
             } else {
                 None
             }
         }
         ConfigRunMode::Repl { target: run_target } => {
             if run_target == "all" || run_target == target {
-                Some(RunMode::Repl {})
+                Some(RunMode::Repl)
             } else {
                 None
             }
