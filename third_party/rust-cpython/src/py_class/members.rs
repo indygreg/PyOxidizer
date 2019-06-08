@@ -68,6 +68,10 @@ macro_rules! py_class_init_members {
 #[doc(hidden)]
 macro_rules! py_class_instance_method {
     ($py:ident, $class:ident :: $f:ident [ $( { $pname:ident : $ptype:ty = $detail:tt } )* ]) => {{
+        py_class_instance_method!($py, $class::$f, { "" } [ $( { $pname : $ptype = $detail } )* ])
+    }};
+
+    ($py:ident, $class:ident :: $f:ident, { $doc:expr } [ $( { $pname:ident : $ptype:ty = $detail:tt } )* ]) => {{
         unsafe extern "C" fn wrap_instance_method(
             slf: *mut $crate::_detail::ffi::PyObject,
             args: *mut $crate::_detail::ffi::PyObject,
@@ -89,7 +93,7 @@ macro_rules! py_class_instance_method {
                 })
         }
         unsafe {
-            let method_def = py_method_def!(_cpython__py_class__members__stringify!($f), 0, wrap_instance_method);
+            let method_def = py_method_def!(_cpython__py_class__members__stringify!($f), 0, wrap_instance_method, $doc);
             $crate::py_class::members::create_instance_method_descriptor::<$class>(method_def)
         }
     }}

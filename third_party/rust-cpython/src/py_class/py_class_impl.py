@@ -442,7 +442,12 @@ def generate_instance_method(special_name=None, decoration='',
         slot=None, add_member=False, value_macro=None, value_args=None):
     name_pattern = special_name or '$name:ident'
     name_use = special_name or '$name'
-    def impl(with_params):
+    def impl(with_params, with_docs):
+        if with_docs:
+            doc_prefix = '$(#[doc=$doc:expr])*'
+            value_suffix = ', { _cpython__py_class__py_class_impl__concat!($($doc, "\\n"),*) }'
+        else:
+            doc_prefix = value_suffix = ''
         if with_params:
             param_pattern = ', $($p:tt)+'
             impl = '''py_argparse_parse_plist_impl!{
@@ -450,14 +455,14 @@ def generate_instance_method(special_name=None, decoration='',
                 [] ($($p)+,)
             }''' % name_use
             value = 'py_argparse_parse_plist_impl!{%s {%s} [] ($($p)+,)}' \
-                    % (value_macro, value_args)
+                    % (value_macro, value_args + value_suffix)
         else:
             param_pattern = ''
             impl = 'py_class_impl_item! { $class, $py, %s(&$slf,) $res_type; { $($body)* } [] }' \
                 % name_use
-            value = '%s!{%s []}' % (value_macro, value_args)
+            value = '%s!{%s []}' % (value_macro, value_args + value_suffix)
         pattern = '%s def %s (&$slf:ident%s) -> $res_type:ty { $( $body:tt )* }' \
-            % (decoration, name_pattern, param_pattern)
+            % (doc_prefix + decoration, name_pattern, param_pattern)
         slots = []
         if slot is not None:
             slots.append((slot, value))
@@ -465,8 +470,11 @@ def generate_instance_method(special_name=None, decoration='',
         if add_member:
             members.append((name_use, value))
         generate_case(pattern, new_impl=impl, new_slots=slots, new_members=members)
-    impl(False) # without parameters
-    impl(True) # with parameters
+
+    # Currently, only instance method implements docs
+    with_docs = (value_macro == 'py_class_instance_method')
+    for with_params in (False, True):
+        impl(with_params, with_docs)
 
 def static_method():
     generate_case(

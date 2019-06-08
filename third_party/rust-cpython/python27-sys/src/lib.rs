@@ -56,6 +56,7 @@ pub use compile::*;
 pub use eval::*;
 pub use structmember::PyMemberDef;
 pub use frameobject::PyFrameObject;
+pub use marshal::*;
 
 mod pyport;
 mod pymem;
@@ -114,6 +115,7 @@ mod objectabstract;
 mod code;
 mod compile;
 mod eval;
+mod marshal;
 
 // mod pyctype; // TODO: incomplete
 // mod pystrtod; // TODO: incomplete

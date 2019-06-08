@@ -30,6 +30,10 @@ use err::{self, PyResult};
 #[doc(hidden)]
 macro_rules! py_method_def {
     ($name: expr, $flags: expr, $wrap: expr) => {{
+        py_method_def!($name, $flags, $wrap, "")
+    }};
+
+    ($name: expr, $flags: expr, $wrap: expr, $doc: expr) => {{
         static mut METHOD_DEF: $crate::_detail::ffi::PyMethodDef = $crate::_detail::ffi::PyMethodDef {
             //ml_name: bytes!(stringify!($name), "\0"),
             ml_name: 0 as *const $crate::_detail::libc::c_char,
@@ -38,12 +42,15 @@ macro_rules! py_method_def {
             ml_doc: 0 as *const $crate::_detail::libc::c_char
         };
         METHOD_DEF.ml_name = concat!($name, "\0").as_ptr() as *const _;
+        if !$doc.is_empty() {
+            METHOD_DEF.ml_doc = concat!($doc, "\0").as_ptr() as *const _;
+        }
         METHOD_DEF.ml_meth = Some(
             ::std::mem::transmute::<$crate::_detail::ffi::PyCFunctionWithKeywords,
                                   $crate::_detail::ffi::PyCFunction>($wrap)
         );
         &mut METHOD_DEF
-    }}
+    }};
 }
 
 /// Creates a Python callable object that invokes a Rust function.

@@ -1708,7 +1708,7 @@ macro_rules! py_class_impl {
     { { def __xor__ $($tail:tt)* } $( $stuff:tt )* } => {
         py_error! { "Invalid signature for binary numeric operator __xor__" }
     };
-    { {  def $name:ident (&$slf:ident) -> $res_type:ty { $( $body:tt )* } $($tail:tt)* }
+    { { $(#[doc=$doc:expr])* def $name:ident (&$slf:ident) -> $res_type:ty { $( $body:tt )* } $($tail:tt)* }
         $class:ident $py:ident $info:tt $slots:tt
         { $( $imp:item )* }
         { $( $member_name:ident = $member_expr:expr; )* }
@@ -1721,10 +1721,10 @@ macro_rules! py_class_impl {
         }
         /* members: */ {
             $( $member_name = $member_expr; )*
-            $name = py_class_instance_method!{$py, $class::$name []};
+            $name = py_class_instance_method!{$py, $class::$name, { _cpython__py_class__py_class_impl__concat!($($doc, "\n"),*) } []};
         }
     }};
-    { {  def $name:ident (&$slf:ident, $($p:tt)+) -> $res_type:ty { $( $body:tt )* } $($tail:tt)* }
+    { { $(#[doc=$doc:expr])* def $name:ident (&$slf:ident, $($p:tt)+) -> $res_type:ty { $( $body:tt )* } $($tail:tt)* }
         $class:ident $py:ident $info:tt $slots:tt
         { $( $imp:item )* }
         { $( $member_name:ident = $member_expr:expr; )* }
@@ -1740,7 +1740,7 @@ macro_rules! py_class_impl {
         }
         /* members: */ {
             $( $member_name = $member_expr; )*
-            $name = py_argparse_parse_plist_impl!{py_class_instance_method {$py, $class::$name} [] ($($p)+,)};
+            $name = py_argparse_parse_plist_impl!{py_class_instance_method {$py, $class::$name, { _cpython__py_class__py_class_impl__concat!($($doc, "\n"),*) }} [] ($($p)+,)};
         }
     }};
     { { @classmethod def $name:ident ($cls:ident) -> $res_type:ty { $( $body:tt )* } $($tail:tt)* }
@@ -1794,7 +1794,7 @@ macro_rules! py_class_impl {
         }
         /* members: */ {
             $( $member_name = $member_expr; )*
-            $name =
+            $name = 
             py_argparse_parse_plist!{
                 py_class_static_method {$py, $class::$name}
                 ($($p)*)

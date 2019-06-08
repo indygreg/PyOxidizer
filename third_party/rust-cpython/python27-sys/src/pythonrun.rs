@@ -15,7 +15,7 @@ pub const PyCF_ONLY_AST : c_int = 0x0400;
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct PyCompilerFlags {
-    cf_flags : c_int
+    pub cf_flags : c_int
 }
 
 #[allow(missing_copy_implementations)]

@@ -3,13 +3,7 @@ use object::PyObject;
 use pyport::Py_ssize_t;
 
 // 1 -> 2 in df88846ebca9186514e86bc2067242233ade4608 (Python 2.5)
-// 2 -> 3 in d7009c69136a3809282804f460902ab42e9972f6 (Python 3.4)
-// 3 -> 4 in 1164dfcb86757ebaeb68276e4b8f6ee266c9968d (Python 3.4)
-#[cfg(all(Py_3_3, not(Py_3_4)))]
 pub const Py_MARSHAL_VERSION: c_int = 2;
-
-#[cfg(Py_3_4)]
-pub const Py_MARSHAL_VERSION: c_int = 4;
 
 #[cfg_attr(windows, link(name="pythonXY"))] extern "C" {
     pub fn PyMarshal_WriteLongToFile(arg1: c_long,
