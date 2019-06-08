@@ -108,7 +108,7 @@ impl Iterator for PythonResourceIterator {
             .map(|p| p.to_str().expect("unable to get path as str"))
             .collect::<Vec<_>>();
 
-        let (module_name, flavor) = match rel_path.extension().and_then(OsStr::to_str) {
+        let resource = match rel_path.extension().and_then(OsStr::to_str) {
             Some("py") => {
                 let package_parts = &components[0..components.len() - 1];
                 let module_name = rel_path
@@ -125,7 +125,11 @@ impl Iterator for PythonResourceIterator {
 
                 let full_module_name = itertools::join(full_module_name, ".");
 
-                (full_module_name, PythonResourceType::Source)
+                PythonResource {
+                    full_name: full_module_name,
+                    path: path.to_path_buf(),
+                    flavor: PythonResourceType::Source,
+                }
             }
             Some("pyc") => {
                 // .pyc files should be in a __pycache__ directory.
@@ -174,21 +178,25 @@ impl Iterator for PythonResourceIterator {
                     flavor = PythonResourceType::Bytecode;
                 }
 
-                (full_module_name, flavor)
+                PythonResource {
+                    full_name: full_module_name,
+                    path: path.to_path_buf(),
+                    flavor,
+                }
             }
             _ => {
                 // If it isn't a .py or a .pyc file, it is a resource file.
                 let name = itertools::join(components, ".");
 
-                (name, PythonResourceType::Resource)
+                PythonResource {
+                    full_name: name,
+                    path: path.to_path_buf(),
+                    flavor: PythonResourceType::Resource,
+                }
             }
         };
 
-        Some(PythonResource {
-            full_name: module_name.clone(),
-            path: path.to_path_buf(),
-            flavor,
-        })
+        Some(resource)
     }
 }
 
