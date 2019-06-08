@@ -1449,6 +1449,7 @@ pub fn derive_python_config(
     importlib_bootstrap_path: &PathBuf,
     importlib_bootstrap_external_path: &PathBuf,
     py_modules_path: &PathBuf,
+    py_resources_path: &PathBuf,
 ) -> String {
     format!(
         "PythonConfig {{\n    \
@@ -1467,6 +1468,7 @@ pub fn derive_python_config(
          frozen_importlib_data: include_bytes!(\"{}\"),\n    \
          frozen_importlib_external_data: include_bytes!(\"{}\"),\n    \
          py_modules_data: include_bytes!(\"{}\"),\n    \
+         py_resources_data: include_bytes!(\"{}\"),\n    \
          argvb: false,\n    \
          raw_allocator: {},\n    \
          write_modules_directory_env: {},\n    \
@@ -1497,6 +1499,7 @@ pub fn derive_python_config(
         importlib_bootstrap_path.display(),
         importlib_bootstrap_external_path.display(),
         py_modules_path.display(),
+        py_resources_path.display(),
         match config.raw_allocator {
             RawAllocator::Jemalloc => "PythonRawAllocator::Jemalloc",
             RawAllocator::Rust => "PythonRawAllocator::Rust",
@@ -1742,6 +1745,7 @@ pub fn process_config(
         &importlib_bootstrap_path,
         &importlib_bootstrap_external_path,
         &py_modules_path,
+        &resources_path,
     );
 
     let dest_path = Path::new(&out_dir).join("data.rs");
@@ -1824,6 +1828,7 @@ pub fn process_config_and_copy_artifacts(
         &orig_out_dir.join("importlib_bootstrap"),
         &orig_out_dir.join("importlib_bootstrap_external"),
         &orig_out_dir.join("py-modules"),
+        &orig_out_dir.join("python-resources"),
     );
 
     EmbeddedPythonConfig {
