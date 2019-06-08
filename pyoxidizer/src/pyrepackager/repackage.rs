@@ -226,6 +226,64 @@ fn filter_btreemap<V>(logger: &slog::Logger, m: &mut BTreeMap<String, V>, f: &BT
     }
 }
 
+fn resolve_stdlib_extensions_policy(
+    dist: &PythonDistributionInfo,
+    policy: &str,
+) -> Vec<PythonResourceEntry> {
+    let mut res = Vec::new();
+
+    for (name, variants) in &dist.extension_modules {
+        match policy {
+            "minimal" => {
+                let em = &variants[0];
+
+                if em.builtin_default || em.required {
+                    res.push(PythonResourceEntry {
+                        action: ResourceAction::Add,
+                        resource: PythonResource::ExtensionModule {
+                            name: name.clone(),
+                            module: em.clone(),
+                        },
+                    });
+                }
+            }
+
+            "all" => {
+                let em = &variants[0];
+                res.push(PythonResourceEntry {
+                    action: ResourceAction::Add,
+                    resource: PythonResource::ExtensionModule {
+                        name: name.clone(),
+                        module: em.clone(),
+                    },
+                });
+            }
+
+            "no-libraries" => {
+                for em in variants {
+                    if em.links.is_empty() {
+                        res.push(PythonResourceEntry {
+                            action: ResourceAction::Add,
+                            resource: PythonResource::ExtensionModule {
+                                name: name.clone(),
+                                module: em.clone(),
+                            },
+                        });
+
+                        break;
+                    }
+                }
+            }
+
+            other => {
+                panic!("illegal policy value: {}", other);
+            }
+        }
+    }
+
+    res
+}
+
 /// Resolves a Python packaging rule to resources to package.
 fn resolve_python_packaging(
     logger: &slog::Logger,
@@ -236,54 +294,7 @@ fn resolve_python_packaging(
 
     match package {
         PythonPackaging::StdlibExtensionsPolicy { policy } => {
-            for (name, variants) in &dist.extension_modules {
-                match policy.as_str() {
-                    "minimal" => {
-                        let em = &variants[0];
-
-                        if em.builtin_default || em.required {
-                            res.push(PythonResourceEntry {
-                                action: ResourceAction::Add,
-                                resource: PythonResource::ExtensionModule {
-                                    name: name.clone(),
-                                    module: em.clone(),
-                                },
-                            });
-                        }
-                    }
-
-                    "all" => {
-                        let em = &variants[0];
-                        res.push(PythonResourceEntry {
-                            action: ResourceAction::Add,
-                            resource: PythonResource::ExtensionModule {
-                                name: name.clone(),
-                                module: em.clone(),
-                            },
-                        });
-                    }
-
-                    "no-libraries" => {
-                        for em in variants {
-                            if em.links.is_empty() {
-                                res.push(PythonResourceEntry {
-                                    action: ResourceAction::Add,
-                                    resource: PythonResource::ExtensionModule {
-                                        name: name.clone(),
-                                        module: em.clone(),
-                                    },
-                                });
-
-                                break;
-                            }
-                        }
-                    }
-
-                    other => {
-                        panic!("illegal policy value: {}", other);
-                    }
-                }
-            }
+            res.extend(resolve_stdlib_extensions_policy(dist, policy));
         }
 
         PythonPackaging::StdlibExtensionsExplicitIncludes { includes } => {
