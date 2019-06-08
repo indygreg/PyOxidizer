@@ -393,6 +393,26 @@ fn resolve_stdlib(
         });
     }
 
+    for (name, fs_path) in &dist.resources {
+        if is_stdlib_test_package(name) && exclude_test_modules {
+            info!(
+                logger,
+                "skipping resource associated with test package: {}", name
+            );
+            continue;
+        }
+
+        let data = fs::read(fs_path).expect("error reading resource file");
+
+        res.push(PythonResourceEntry {
+            action: ResourceAction::Add,
+            resource: PythonResource::Resource {
+                name: name.clone(),
+                data,
+            },
+        });
+    }
+
     res
 }
 
@@ -417,22 +437,22 @@ fn resolve_virtualenv(
     packages_path.push("site-packages");
 
     for resource in find_python_resources(&packages_path) {
+        let mut relevant = true;
+
+        for exclude in excludes {
+            let prefix = exclude.clone() + ".";
+
+            if &resource.name == exclude || resource.name.starts_with(&prefix) {
+                relevant = false;
+            }
+        }
+
+        if !relevant {
+            continue;
+        }
+
         match resource.flavor {
             PythonResourceType::Source => {
-                let mut relevant = true;
-
-                for exclude in excludes {
-                    let prefix = exclude.clone() + ".";
-
-                    if &resource.name == exclude || resource.name.starts_with(&prefix) {
-                        relevant = false;
-                    }
-                }
-
-                if !relevant {
-                    continue;
-                }
-
                 let source = fs::read(resource.path).expect("error reading source file");
 
                 if include_source {
@@ -454,6 +474,19 @@ fn resolve_virtualenv(
                     },
                 });
             }
+
+            PythonResourceType::Resource => {
+                let data = fs::read(resource.path).expect("error reading resource file");
+
+                res.push(PythonResourceEntry {
+                    action: ResourceAction::Add,
+                    resource: PythonResource::Resource {
+                        name: resource.name.clone(),
+                        data,
+                    },
+                });
+            }
+
             _ => {}
         }
     }
@@ -473,30 +506,30 @@ fn resolve_package_root(
     let path = PathBuf::from(path);
 
     for resource in find_python_resources(&path) {
+        let mut relevant = false;
+
+        for package in packages {
+            let prefix = package.clone() + ".";
+
+            if &resource.name == package || resource.name.starts_with(&prefix) {
+                relevant = true;
+            }
+        }
+
+        for exclude in excludes {
+            let prefix = exclude.clone() + ".";
+
+            if &resource.name == exclude || resource.name.starts_with(&prefix) {
+                relevant = false;
+            }
+        }
+
+        if !relevant {
+            continue;
+        }
+
         match resource.flavor {
             PythonResourceType::Source => {
-                let mut relevant = false;
-
-                for package in packages {
-                    let prefix = package.clone() + ".";
-
-                    if &resource.name == package || resource.name.starts_with(&prefix) {
-                        relevant = true;
-                    }
-                }
-
-                for exclude in excludes {
-                    let prefix = exclude.clone() + ".";
-
-                    if &resource.name == exclude || resource.name.starts_with(&prefix) {
-                        relevant = false;
-                    }
-                }
-
-                if !relevant {
-                    continue;
-                }
-
                 let source = fs::read(resource.path).expect("error reading source file");
 
                 if include_source {
@@ -518,6 +551,19 @@ fn resolve_package_root(
                     },
                 });
             }
+
+            PythonResourceType::Resource => {
+                let data = fs::read(resource.path).expect("error reading resource file");
+
+                res.push(PythonResourceEntry {
+                    action: ResourceAction::Add,
+                    resource: PythonResource::Resource {
+                        name: resource.name.clone(),
+                        data,
+                    },
+                });
+            }
+
             _ => {}
         }
     }
@@ -556,27 +602,43 @@ fn resolve_pip_install_simple(
         .expect("error running pip");
 
     for resource in find_python_resources(&temp_dir_path) {
-        if let PythonResourceType::Source {} = resource.flavor {
-            let source = fs::read(resource.path).expect("error reading source file");
+        match resource.flavor {
+            PythonResourceType::Source => {
+                let source = fs::read(resource.path).expect("error reading source file");
 
-            if include_source {
+                if include_source {
+                    res.push(PythonResourceEntry {
+                        action: ResourceAction::Add,
+                        resource: PythonResource::ModuleSource {
+                            name: resource.name.clone(),
+                            source: source.clone(),
+                        },
+                    });
+                }
+
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
-                    resource: PythonResource::ModuleSource {
+                    resource: PythonResource::ModuleBytecode {
                         name: resource.name.clone(),
-                        source: source.clone(),
+                        source,
+                        optimize_level: optimize_level as i32,
                     },
                 });
             }
 
-            res.push(PythonResourceEntry {
-                action: ResourceAction::Add,
-                resource: PythonResource::ModuleBytecode {
-                    name: resource.name.clone(),
-                    source,
-                    optimize_level: optimize_level as i32,
-                },
-            });
+            PythonResourceType::Resource => {
+                let data = fs::read(resource.path).expect("error reading resource file");
+
+                res.push(PythonResourceEntry {
+                    action: ResourceAction::Add,
+                    resource: PythonResource::Resource {
+                        name: resource.name.clone(),
+                        data,
+                    },
+                });
+            }
+
+            _ => {}
         }
     }
 
@@ -618,27 +680,43 @@ fn resolve_pip_requirements_file(
         .expect("error running pip");
 
     for resource in find_python_resources(&temp_dir_path) {
-        if let PythonResourceType::Source {} = resource.flavor {
-            let source = fs::read(resource.path).expect("error reading source file");
+        match resource.flavor {
+            PythonResourceType::Source => {
+                let source = fs::read(resource.path).expect("error reading source file");
 
-            if include_source {
+                if include_source {
+                    res.push(PythonResourceEntry {
+                        action: ResourceAction::Add,
+                        resource: PythonResource::ModuleSource {
+                            name: resource.name.clone(),
+                            source: source.clone(),
+                        },
+                    });
+                }
+
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
-                    resource: PythonResource::ModuleSource {
+                    resource: PythonResource::ModuleBytecode {
                         name: resource.name.clone(),
-                        source: source.clone(),
+                        source,
+                        optimize_level: optimize_level as i32,
                     },
                 });
             }
 
-            res.push(PythonResourceEntry {
-                action: ResourceAction::Add,
-                resource: PythonResource::ModuleBytecode {
-                    name: resource.name.clone(),
-                    source,
-                    optimize_level: optimize_level as i32,
-                },
-            });
+            PythonResourceType::Resource => {
+                let data = fs::read(resource.path).expect("error reading resource file");
+
+                res.push(PythonResourceEntry {
+                    action: ResourceAction::Add,
+                    resource: PythonResource::Resource {
+                        name: resource.name.clone(),
+                        data,
+                    },
+                });
+            }
+
+            _ => {}
         }
     }
 
@@ -684,27 +762,43 @@ fn resolve_setup_py_install(
     packages_path.push("site-packages");
 
     for resource in find_python_resources(&packages_path) {
-        if let PythonResourceType::Source {} = resource.flavor {
-            let source = fs::read(resource.path).expect("error reading source");
+        match resource.flavor {
+            PythonResourceType::Source => {
+                let source = fs::read(resource.path).expect("error reading source");
 
-            if include_source {
+                if include_source {
+                    res.push(PythonResourceEntry {
+                        action: ResourceAction::Add,
+                        resource: PythonResource::ModuleSource {
+                            name: resource.name.clone(),
+                            source: source.clone(),
+                        },
+                    });
+                }
+
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
-                    resource: PythonResource::ModuleSource {
+                    resource: PythonResource::ModuleBytecode {
                         name: resource.name.clone(),
-                        source: source.clone(),
+                        source,
+                        optimize_level: optimize_level as i32,
                     },
                 });
             }
 
-            res.push(PythonResourceEntry {
-                action: ResourceAction::Add,
-                resource: PythonResource::ModuleBytecode {
-                    name: resource.name.clone(),
-                    source,
-                    optimize_level: optimize_level as i32,
-                },
-            });
+            PythonResourceType::Resource => {
+                let data = fs::read(resource.path).expect("error reading resource file");
+
+                res.push(PythonResourceEntry {
+                    action: ResourceAction::Add,
+                    resource: PythonResource::Resource {
+                        name: resource.name.clone(),
+                        data,
+                    },
+                });
+            }
+
+            _ => {}
         }
     }
 
@@ -1527,8 +1621,9 @@ pub fn process_config(
     );
     info!(
         logger,
-        "resolved {} resource files",
-        resources.resources.len()
+        "resolved {} resource files: {:#?}",
+        resources.resources.len(),
+        resources.resources.keys()
     );
     info!(
         logger,
