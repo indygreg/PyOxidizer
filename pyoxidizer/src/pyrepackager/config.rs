@@ -323,11 +323,14 @@ pub struct Config {
 ///
 /// Configs are evaluated against a specific build target. Config entries not
 /// relevant to the specified target are removed from the final data structure.
-pub fn parse_config(data: &[u8], target: &str) -> Config {
-    let config: ParsedConfig = toml::from_slice(&data).unwrap();
+pub fn parse_config(data: &[u8], target: &str) -> Result<Config, String> {
+    let config: ParsedConfig = match toml::from_slice(&data) {
+        Ok(v) => v,
+        Err(e) => return Err(e.to_string()),
+    };
 
     if config.python_distributions.is_empty() {
-        panic!("no [[python_distribution]] sections");
+        return Err("no [[python_distribution]] sections".to_string());
     }
 
     let python_distribution = match config
@@ -367,10 +370,12 @@ pub fn parse_config(data: &[u8], target: &str) -> Config {
         .next()
     {
         Some(v) => v,
-        None => panic!(
-            "no suitable Python distributions found for target {}",
-            target
-        ),
+        None => {
+            return Err(format!(
+                "no suitable Python distributions found for target {}",
+                target
+            ))
+        }
     };
 
     let mut dont_write_bytecode = true;
@@ -413,7 +418,12 @@ pub fn parse_config(data: &[u8], target: &str) -> Config {
                 0 => 0,
                 1 => 1,
                 2 => 2,
-                value => panic!("illegal optimize_level {}; value must be 0, 1, or 2", value),
+                value => {
+                    return Err(format!(
+                        "illegal optimize_level {}; value must be 0, 1, or 2",
+                        value
+                    ))
+                }
             };
         }
 
@@ -629,11 +639,13 @@ pub fn parse_config(data: &[u8], target: &str) -> Config {
         .collect_vec();
 
     if !have_stdlib_extensions_policy {
-        panic!("no `type = \"stdlib-extensions-policy\"` entry in `[[python_packages]]`");
+        return Err(
+            "no `type = \"stdlib-extensions-policy\"` entry in `[[python_packages]]`".to_string(),
+        );
     }
 
     if !have_stdlib {
-        panic!("no `type = \"stdlib\"` entry in `[[python_packages]]`");
+        return Err("no `type = \"stdlib\"` entry in `[[python_packages]]`".to_string());
     }
 
     let mut run = RunMode::Noop {};
@@ -681,7 +693,7 @@ pub fn parse_config(data: &[u8], target: &str) -> Config {
 
     filesystem_importer = filesystem_importer || !sys_paths.is_empty();
 
-    Config {
+    Ok(Config {
         dont_write_bytecode,
         ignore_environment,
         no_site,
@@ -698,5 +710,5 @@ pub fn parse_config(data: &[u8], target: &str) -> Config {
         sys_paths,
         raw_allocator,
         write_modules_directory_env,
-    }
+    })
 }

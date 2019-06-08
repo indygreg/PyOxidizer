@@ -1330,7 +1330,14 @@ pub fn process_config(
     let mut config_data = Vec::new();
     fh.read_to_end(&mut config_data).unwrap();
 
-    let config = parse_config(&config_data, target);
+    let config = match parse_config(&config_data, target) {
+        Ok(v) => v,
+        Err(message) => panic!(
+            "error reading config {}: {}",
+            config_path.display(),
+            message
+        ),
+    };
 
     if let PythonDistribution::Local { local_path, .. } = &config.python_distribution {
         cargo_metadata.push(format!("cargo:rerun-if-changed={}", local_path));
