@@ -9,7 +9,11 @@
 
 import marshal
 import os
+import re
 import sys
+
+
+RE_CODING = re.compile(b'^[ \t\f]*#.*?coding[:=][ \t]*([-_.a-zA-Z0-9]+)')
 
 
 if marshal.version != 4:
@@ -37,10 +41,20 @@ while True:
         source = stdin.read(source_len)
 
         name = os.fsdecode(name)
-        # Source code should be valid UTF-8. Preserving raw bytes via latin-1
-        # may make source code malformed from perspective of Python. So decode
-        # as UTF-8.
-        source = source.decode('utf-8')
+
+        # Default source encoding is UTF-8. But per PEP 263, the first or second
+        # line of source can match a regular expression to define a custom
+        # encoding. We need to detect custom encodings and use it to decode
+        # the passed bytes to str.
+        encoding = 'utf-8'
+
+        for line in source.splitlines()[0:2]:
+            m = RE_CODING.match(line)
+            if m:
+                encoding = m.group(1).decode('ascii')
+                break
+
+        source = source.decode(encoding)
 
         code = compile(source, name, 'exec', optimize=optimize_level)
         bytecode = marshal.dumps(code)
