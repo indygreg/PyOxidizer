@@ -16,7 +16,11 @@ use std::path::{Path, PathBuf};
 
 use super::bytecode::BytecodeCompiler;
 use super::config::{
-    parse_config, Config, PythonDistribution, PythonPackaging, RawAllocator, RunMode,
+    parse_config, Config, PackagingPackageRoot, PackagingPipInstallSimple,
+    PackagingPipRequirementsFile, PackagingSetupPyInstall, PackagingStdlib,
+    PackagingStdlibExtensionVariant, PackagingStdlibExtensionsExplicitExcludes,
+    PackagingStdlibExtensionsExplicitIncludes, PackagingStdlibExtensionsPolicy,
+    PackagingVirtualenv, PythonDistribution, PythonPackaging, RawAllocator, RunMode,
 };
 use super::dist::{
     analyze_python_distribution_tar_zst, resolve_python_distribution_archive, ExtensionModule,
@@ -228,12 +232,12 @@ fn filter_btreemap<V>(logger: &slog::Logger, m: &mut BTreeMap<String, V>, f: &BT
 
 fn resolve_stdlib_extensions_policy(
     dist: &PythonDistributionInfo,
-    policy: &str,
+    rule: &PackagingStdlibExtensionsPolicy,
 ) -> Vec<PythonResourceEntry> {
     let mut res = Vec::new();
 
     for (name, variants) in &dist.extension_modules {
-        match policy {
+        match rule.policy.as_str() {
             "minimal" => {
                 let em = &variants[0];
 
@@ -286,11 +290,11 @@ fn resolve_stdlib_extensions_policy(
 
 fn resolve_stdlib_extensions_explicit_includes(
     dist: &PythonDistributionInfo,
-    includes: &Vec<String>,
+    rule: &PackagingStdlibExtensionsExplicitIncludes,
 ) -> Vec<PythonResourceEntry> {
     let mut res = Vec::new();
 
-    for name in includes {
+    for name in &rule.includes {
         if let Some(modules) = &dist.extension_modules.get(name) {
             res.push(PythonResourceEntry {
                 action: ResourceAction::Add,
@@ -307,12 +311,12 @@ fn resolve_stdlib_extensions_explicit_includes(
 
 fn resolve_stdlib_extensions_explicit_excludes(
     dist: &PythonDistributionInfo,
-    excludes: &Vec<String>,
+    rule: &PackagingStdlibExtensionsExplicitExcludes,
 ) -> Vec<PythonResourceEntry> {
     let mut res = Vec::new();
 
     for (name, modules) in &dist.extension_modules {
-        if excludes.contains(name) {
+        if rule.excludes.contains(name) {
             continue;
         }
 
@@ -330,19 +334,18 @@ fn resolve_stdlib_extensions_explicit_excludes(
 
 fn resolve_stdlib_extension_variant(
     dist: &PythonDistributionInfo,
-    extension: &str,
-    variant: &str,
+    rule: &PackagingStdlibExtensionVariant,
 ) -> Vec<PythonResourceEntry> {
     let mut res = Vec::new();
 
-    let variants = &dist.extension_modules[extension];
+    let variants = &dist.extension_modules[&rule.extension];
 
     for em in variants {
-        if &em.variant == variant {
+        if &em.variant == &rule.variant {
             res.push(PythonResourceEntry {
                 action: ResourceAction::Add,
                 resource: PythonResource::ExtensionModule {
-                    name: extension.to_string(),
+                    name: rule.extension.clone(),
                     module: em.clone(),
                 },
             });
@@ -350,7 +353,10 @@ fn resolve_stdlib_extension_variant(
     }
 
     if res.is_empty() {
-        panic!("extension {} has no variant {}", extension, variant);
+        panic!(
+            "extension {} has no variant {}",
+            rule.extension, rule.variant
+        );
     }
 
     res
@@ -359,21 +365,19 @@ fn resolve_stdlib_extension_variant(
 fn resolve_stdlib(
     logger: &slog::Logger,
     dist: &PythonDistributionInfo,
-    optimize_level: i64,
-    exclude_test_modules: bool,
-    include_source: bool,
+    rule: &PackagingStdlib,
 ) -> Vec<PythonResourceEntry> {
     let mut res = Vec::new();
 
     for (name, fs_path) in &dist.py_modules {
-        if is_stdlib_test_package(&name) && exclude_test_modules {
+        if is_stdlib_test_package(&name) && rule.exclude_test_modules {
             info!(logger, "skipping test stdlib module: {}", name);
             continue;
         }
 
         let source = fs::read(fs_path).expect("error reading source file");
 
-        if include_source {
+        if rule.include_source {
             res.push(PythonResourceEntry {
                 action: ResourceAction::Add,
                 resource: PythonResource::ModuleSource {
@@ -388,13 +392,13 @@ fn resolve_stdlib(
             resource: PythonResource::ModuleBytecode {
                 name: name.clone(),
                 source,
-                optimize_level: optimize_level as i32,
+                optimize_level: rule.optimize_level as i32,
             },
         });
     }
 
     for (name, fs_path) in &dist.resources {
-        if is_stdlib_test_package(name) && exclude_test_modules {
+        if is_stdlib_test_package(name) && rule.exclude_test_modules {
             info!(
                 logger,
                 "skipping resource associated with test package: {}", name
@@ -418,14 +422,11 @@ fn resolve_stdlib(
 
 fn resolve_virtualenv(
     dist: &PythonDistributionInfo,
-    path: &str,
-    optimize_level: i64,
-    excludes: &Vec<String>,
-    include_source: bool,
+    rule: &PackagingVirtualenv,
 ) -> Vec<PythonResourceEntry> {
     let mut res = Vec::new();
 
-    let mut packages_path = PathBuf::from(path);
+    let mut packages_path = PathBuf::from(&rule.path);
 
     if dist.os == "windows" {
         packages_path.push("Lib");
@@ -439,7 +440,7 @@ fn resolve_virtualenv(
     for resource in find_python_resources(&packages_path) {
         let mut relevant = true;
 
-        for exclude in excludes {
+        for exclude in &rule.excludes {
             let prefix = exclude.clone() + ".";
 
             if &resource.name == exclude || resource.name.starts_with(&prefix) {
@@ -455,7 +456,7 @@ fn resolve_virtualenv(
             PythonResourceType::Source => {
                 let source = fs::read(resource.path).expect("error reading source file");
 
-                if include_source {
+                if rule.include_source {
                     res.push(PythonResourceEntry {
                         action: ResourceAction::Add,
                         resource: PythonResource::ModuleSource {
@@ -470,7 +471,7 @@ fn resolve_virtualenv(
                     resource: PythonResource::ModuleBytecode {
                         name: resource.name.clone(),
                         source,
-                        optimize_level: optimize_level as i32,
+                        optimize_level: rule.optimize_level as i32,
                     },
                 });
             }
@@ -494,21 +495,15 @@ fn resolve_virtualenv(
     res
 }
 
-fn resolve_package_root(
-    path: &str,
-    packages: &Vec<String>,
-    optimize_level: i64,
-    excludes: &Vec<String>,
-    include_source: bool,
-) -> Vec<PythonResourceEntry> {
+fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceEntry> {
     let mut res = Vec::new();
 
-    let path = PathBuf::from(path);
+    let path = PathBuf::from(&rule.path);
 
     for resource in find_python_resources(&path) {
         let mut relevant = false;
 
-        for package in packages {
+        for package in &rule.packages {
             let prefix = package.clone() + ".";
 
             if &resource.name == package || resource.name.starts_with(&prefix) {
@@ -516,7 +511,7 @@ fn resolve_package_root(
             }
         }
 
-        for exclude in excludes {
+        for exclude in &rule.excludes {
             let prefix = exclude.clone() + ".";
 
             if &resource.name == exclude || resource.name.starts_with(&prefix) {
@@ -532,7 +527,7 @@ fn resolve_package_root(
             PythonResourceType::Source => {
                 let source = fs::read(resource.path).expect("error reading source file");
 
-                if include_source {
+                if rule.include_source {
                     res.push(PythonResourceEntry {
                         action: ResourceAction::Add,
                         resource: PythonResource::ModuleSource {
@@ -547,7 +542,7 @@ fn resolve_package_root(
                     resource: PythonResource::ModuleBytecode {
                         name: resource.name.clone(),
                         source,
-                        optimize_level: optimize_level as i32,
+                        optimize_level: rule.optimize_level as i32,
                     },
                 });
             }
@@ -574,9 +569,7 @@ fn resolve_package_root(
 fn resolve_pip_install_simple(
     logger: &slog::Logger,
     dist: &PythonDistributionInfo,
-    package: &str,
-    optimize_level: i64,
-    include_source: bool,
+    rule: &PackagingPipInstallSimple,
 ) -> Vec<PythonResourceEntry> {
     let mut res = Vec::new();
 
@@ -596,7 +589,7 @@ fn resolve_pip_install_simple(
             "install",
             "--target",
             &temp_dir_s,
-            package,
+            &rule.package,
         ])
         .status()
         .expect("error running pip");
@@ -606,7 +599,7 @@ fn resolve_pip_install_simple(
             PythonResourceType::Source => {
                 let source = fs::read(resource.path).expect("error reading source file");
 
-                if include_source {
+                if rule.include_source {
                     res.push(PythonResourceEntry {
                         action: ResourceAction::Add,
                         resource: PythonResource::ModuleSource {
@@ -621,7 +614,7 @@ fn resolve_pip_install_simple(
                     resource: PythonResource::ModuleBytecode {
                         name: resource.name.clone(),
                         source,
-                        optimize_level: optimize_level as i32,
+                        optimize_level: rule.optimize_level as i32,
                     },
                 });
             }
@@ -648,9 +641,7 @@ fn resolve_pip_install_simple(
 fn resolve_pip_requirements_file(
     logger: &slog::Logger,
     dist: &PythonDistributionInfo,
-    requirements_path: &str,
-    optimize_level: i64,
-    include_source: bool,
+    rule: &PackagingPipRequirementsFile,
 ) -> Vec<PythonResourceEntry> {
     let mut res = Vec::new();
 
@@ -674,7 +665,7 @@ fn resolve_pip_requirements_file(
             "--no-binary",
             ":all:",
             "--requirement",
-            requirements_path,
+            &rule.requirements_path,
         ])
         .status()
         .expect("error running pip");
@@ -684,7 +675,7 @@ fn resolve_pip_requirements_file(
             PythonResourceType::Source => {
                 let source = fs::read(resource.path).expect("error reading source file");
 
-                if include_source {
+                if rule.include_source {
                     res.push(PythonResourceEntry {
                         action: ResourceAction::Add,
                         resource: PythonResource::ModuleSource {
@@ -699,7 +690,7 @@ fn resolve_pip_requirements_file(
                     resource: PythonResource::ModuleBytecode {
                         name: resource.name.clone(),
                         source,
-                        optimize_level: optimize_level as i32,
+                        optimize_level: rule.optimize_level as i32,
                     },
                 });
             }
@@ -726,9 +717,7 @@ fn resolve_pip_requirements_file(
 fn resolve_setup_py_install(
     logger: &slog::Logger,
     dist: &PythonDistributionInfo,
-    path: &str,
-    optimize_level: i64,
-    include_source: bool,
+    rule: &PackagingSetupPyInstall,
 ) -> Vec<PythonResourceEntry> {
     let mut res = Vec::new();
 
@@ -739,7 +728,7 @@ fn resolve_setup_py_install(
     info!(logger, "python setup.py installing to {}", temp_dir_s);
 
     std::process::Command::new(&dist.python_exe)
-        .current_dir(path)
+        .current_dir(&rule.path)
         .args(&[
             "setup.py",
             "install",
@@ -766,7 +755,7 @@ fn resolve_setup_py_install(
             PythonResourceType::Source => {
                 let source = fs::read(resource.path).expect("error reading source");
 
-                if include_source {
+                if rule.include_source {
                     res.push(PythonResourceEntry {
                         action: ResourceAction::Add,
                         resource: PythonResource::ModuleSource {
@@ -781,7 +770,7 @@ fn resolve_setup_py_install(
                     resource: PythonResource::ModuleBytecode {
                         name: resource.name.clone(),
                         source,
-                        optimize_level: optimize_level as i32,
+                        optimize_level: rule.optimize_level as i32,
                     },
                 });
             }
@@ -812,75 +801,38 @@ fn resolve_python_packaging(
     dist: &PythonDistributionInfo,
 ) -> Vec<PythonResourceEntry> {
     match package {
-        PythonPackaging::StdlibExtensionsPolicy { policy } => {
-            resolve_stdlib_extensions_policy(dist, policy)
+        PythonPackaging::StdlibExtensionsPolicy(rule) => {
+            resolve_stdlib_extensions_policy(dist, &rule)
         }
 
-        PythonPackaging::StdlibExtensionsExplicitIncludes { includes } => {
-            resolve_stdlib_extensions_explicit_includes(dist, includes)
+        PythonPackaging::StdlibExtensionsExplicitIncludes(rule) => {
+            resolve_stdlib_extensions_explicit_includes(dist, &rule)
         }
 
-        PythonPackaging::StdlibExtensionsExplicitExcludes { excludes } => {
-            resolve_stdlib_extensions_explicit_excludes(dist, excludes)
+        PythonPackaging::StdlibExtensionsExplicitExcludes(rule) => {
+            resolve_stdlib_extensions_explicit_excludes(dist, &rule)
         }
 
-        PythonPackaging::StdlibExtensionVariant { extension, variant } => {
-            resolve_stdlib_extension_variant(dist, extension, variant)
+        PythonPackaging::StdlibExtensionVariant(rule) => {
+            resolve_stdlib_extension_variant(dist, rule)
         }
 
-        PythonPackaging::Stdlib {
-            optimize_level,
-            exclude_test_modules,
-            include_source,
-        } => resolve_stdlib(
-            logger,
-            dist,
-            *optimize_level,
-            *exclude_test_modules,
-            *include_source,
-        ),
+        PythonPackaging::Stdlib(rule) => resolve_stdlib(logger, dist, &rule),
 
-        PythonPackaging::Virtualenv {
-            path,
-            optimize_level,
-            excludes,
-            include_source,
-        } => resolve_virtualenv(dist, path, *optimize_level, excludes, *include_source),
+        PythonPackaging::Virtualenv(rule) => resolve_virtualenv(dist, &rule),
 
-        PythonPackaging::PackageRoot {
-            path,
-            packages,
-            optimize_level,
-            excludes,
-            include_source,
-        } => resolve_package_root(path, packages, *optimize_level, excludes, *include_source),
+        PythonPackaging::PackageRoot(rule) => resolve_package_root(&rule),
 
-        PythonPackaging::PipInstallSimple {
-            package,
-            optimize_level,
-            include_source,
-        } => resolve_pip_install_simple(logger, dist, package, *optimize_level, *include_source),
+        PythonPackaging::PipInstallSimple(rule) => resolve_pip_install_simple(logger, dist, &rule),
 
-        PythonPackaging::PipRequirementsFile {
-            requirements_path,
-            optimize_level,
-            include_source,
-        } => resolve_pip_requirements_file(
-            logger,
-            dist,
-            requirements_path,
-            *optimize_level,
-            *include_source,
-        ),
+        PythonPackaging::PipRequirementsFile(rule) => {
+            resolve_pip_requirements_file(logger, dist, &rule)
+        }
 
-        PythonPackaging::SetupPyInstall {
-            path,
-            optimize_level,
-            include_source,
-        } => resolve_setup_py_install(logger, dist, path, *optimize_level, *include_source),
+        PythonPackaging::SetupPyInstall(rule) => resolve_setup_py_install(logger, dist, &rule),
 
         // This is a no-op because it can only be handled at a higher level.
-        PythonPackaging::FilterInclude { .. } => Vec::new(),
+        PythonPackaging::FilterInclude(_) => Vec::new(),
     }
 }
 
@@ -948,10 +900,10 @@ pub fn resolve_python_resources(
             }
         }
 
-        if let PythonPackaging::FilterInclude { files, glob_files } = packaging {
+        if let PythonPackaging::FilterInclude(rule) = packaging {
             let mut include_names: BTreeSet<String> = BTreeSet::new();
 
-            for path in files {
+            for path in &rule.files {
                 let path = PathBuf::from(path);
                 let new_names =
                     read_resource_names_file(&path).expect("failed to read resource names file");
@@ -960,7 +912,7 @@ pub fn resolve_python_resources(
                 read_files.push(path);
             }
 
-            for glob in glob_files {
+            for glob in &rule.glob_files {
                 let mut new_names: BTreeSet<String> = BTreeSet::new();
 
                 for entry in findglob(glob).expect("glob_files glob match failed") {

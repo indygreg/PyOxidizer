@@ -226,69 +226,92 @@ pub enum PythonDistribution {
 }
 
 #[derive(Debug)]
+pub struct PackagingSetupPyInstall {
+    pub path: String,
+    pub optimize_level: i64,
+    pub include_source: bool,
+}
+
+#[derive(Debug)]
+pub struct PackagingStdlibExtensionsPolicy {
+    // TODO make this an enum.
+    pub policy: String,
+}
+
+#[derive(Debug)]
+pub struct PackagingStdlibExtensionsExplicitIncludes {
+    pub includes: Vec<String>,
+}
+
+#[derive(Debug)]
+pub struct PackagingStdlibExtensionsExplicitExcludes {
+    pub excludes: Vec<String>,
+}
+
+#[derive(Debug)]
+pub struct PackagingStdlibExtensionVariant {
+    pub extension: String,
+    pub variant: String,
+}
+
+#[derive(Debug)]
+pub struct PackagingStdlib {
+    pub optimize_level: i64,
+    pub exclude_test_modules: bool,
+    pub include_source: bool,
+}
+
+#[derive(Debug)]
+pub struct PackagingVirtualenv {
+    pub path: String,
+    pub optimize_level: i64,
+    pub excludes: Vec<String>,
+    pub include_source: bool,
+}
+
+#[derive(Debug)]
+pub struct PackagingPackageRoot {
+    pub path: String,
+    pub packages: Vec<String>,
+    pub optimize_level: i64,
+    pub excludes: Vec<String>,
+    pub include_source: bool,
+}
+
+#[derive(Debug)]
+pub struct PackagingPipInstallSimple {
+    pub package: String,
+    pub optimize_level: i64,
+    pub include_source: bool,
+}
+
+#[derive(Debug)]
+pub struct PackagingPipRequirementsFile {
+    // TODO resolve to a PathBuf.
+    pub requirements_path: String,
+    pub optimize_level: i64,
+    pub include_source: bool,
+}
+
+#[derive(Debug)]
+pub struct PackagingFilterInclude {
+    pub files: Vec<String>,
+    pub glob_files: Vec<String>,
+}
+
+#[derive(Debug)]
 pub enum PythonPackaging {
-    SetupPyInstall {
-        path: String,
-        optimize_level: i64,
-        include_source: bool,
-    },
-
-    StdlibExtensionsPolicy {
-        // TODO make this an enum.
-        policy: String,
-    },
-
-    StdlibExtensionsExplicitIncludes {
-        includes: Vec<String>,
-    },
-
-    StdlibExtensionsExplicitExcludes {
-        excludes: Vec<String>,
-    },
-
-    StdlibExtensionVariant {
-        extension: String,
-        variant: String,
-    },
-
-    Stdlib {
-        optimize_level: i64,
-        exclude_test_modules: bool,
-        include_source: bool,
-    },
-
-    Virtualenv {
-        path: String,
-        optimize_level: i64,
-        excludes: Vec<String>,
-        include_source: bool,
-    },
-
-    PackageRoot {
-        path: String,
-        packages: Vec<String>,
-        optimize_level: i64,
-        excludes: Vec<String>,
-        include_source: bool,
-    },
-
-    PipInstallSimple {
-        package: String,
-        optimize_level: i64,
-        include_source: bool,
-    },
-
-    PipRequirementsFile {
-        // TODO resolve to a PathBuf.
-        requirements_path: String,
-        optimize_level: i64,
-        include_source: bool,
-    },
-
-    FilterInclude {
-        files: Vec<String>,
-        glob_files: Vec<String>,
-    },
+    SetupPyInstall(PackagingSetupPyInstall),
+    StdlibExtensionsPolicy(PackagingStdlibExtensionsPolicy),
+    StdlibExtensionsExplicitIncludes(PackagingStdlibExtensionsExplicitIncludes),
+    StdlibExtensionsExplicitExcludes(PackagingStdlibExtensionsExplicitExcludes),
+    StdlibExtensionVariant(PackagingStdlibExtensionVariant),
+    Stdlib(PackagingStdlib),
+    Virtualenv(PackagingVirtualenv),
+    PackageRoot(PackagingPackageRoot),
+    PipInstallSimple(PackagingPipInstallSimple),
+    PipRequirementsFile(PackagingPipRequirementsFile),
+    FilterInclude(PackagingFilterInclude),
 }
 
 #[derive(Debug)]
@@ -471,10 +494,10 @@ pub fn parse_config(data: &[u8], target: &str) -> Result<Config, String> {
                 glob_files,
             } => {
                 if rule_target == "all" || rule_target == target {
-                    Some(PythonPackaging::FilterInclude {
+                    Some(PythonPackaging::FilterInclude(PackagingFilterInclude {
                         files: files.clone(),
                         glob_files: glob_files.clone(),
-                    })
+                    }))
                 } else {
                     None
                 }
@@ -488,13 +511,13 @@ pub fn parse_config(data: &[u8], target: &str) -> Result<Config, String> {
                 include_source,
             } => {
                 if rule_target == "all" || rule_target == target {
-                    Some(PythonPackaging::PackageRoot {
+                    Some(PythonPackaging::PackageRoot(PackagingPackageRoot {
                         path: path.clone(),
                         packages: packages.clone(),
                         optimize_level: *optimize_level,
                         excludes: excludes.clone(),
                         include_source: *include_source,
-                    })
+                    }))
                 } else {
                     None
                 }
@@ -506,11 +529,13 @@ pub fn parse_config(data: &[u8], target: &str) -> Result<Config, String> {
                 include_source,
             } => {
                 if rule_target == "all" || rule_target == target {
-                    Some(PythonPackaging::PipInstallSimple {
-                        package: package.clone(),
-                        optimize_level: *optimize_level,
-                        include_source: *include_source,
-                    })
+                    Some(PythonPackaging::PipInstallSimple(
+                        PackagingPipInstallSimple {
+                            package: package.clone(),
+                            optimize_level: *optimize_level,
+                            include_source: *include_source,
+                        },
+                    ))
                 } else {
                     None
                 }
@@ -522,11 +547,13 @@ pub fn parse_config(data: &[u8], target: &str) -> Result<Config, String> {
                 include_source,
             } => {
                 if rule_target == "all" || rule_target == target {
-                    Some(PythonPackaging::PipRequirementsFile {
-                        requirements_path: requirements_path.clone(),
-                        optimize_level: *optimize_level,
-                        include_source: *include_source,
-                    })
+                    Some(PythonPackaging::PipRequirementsFile(
+                        PackagingPipRequirementsFile {
+                            requirements_path: requirements_path.clone(),
+                            optimize_level: *optimize_level,
+                            include_source: *include_source,
+                        },
+                    ))
                 } else {
                     None
                 }
@@ -538,11 +565,11 @@ pub fn parse_config(data: &[u8], target: &str) -> Result<Config, String> {
                 include_source,
             } => {
                 if rule_target == "all" || rule_target == target {
-                    Some(PythonPackaging::SetupPyInstall {
+                    Some(PythonPackaging::SetupPyInstall(PackagingSetupPyInstall {
                         path: package_path.clone(),
                         optimize_level: *optimize_level,
                         include_source: *include_source,
-                    })
+                    }))
                 } else {
                     None
                 }
@@ -556,11 +583,11 @@ pub fn parse_config(data: &[u8], target: &str) -> Result<Config, String> {
                 if rule_target == "all" || rule_target == target {
                     have_stdlib = true;
 
-                    Some(PythonPackaging::Stdlib {
+                    Some(PythonPackaging::Stdlib(PackagingStdlib {
                         optimize_level: *optimize_level,
                         exclude_test_modules: *exclude_test_modules,
                         include_source: *include_source,
-                    })
+                    }))
                 } else {
                     None
                 }
@@ -570,9 +597,11 @@ pub fn parse_config(data: &[u8], target: &str) -> Result<Config, String> {
                 excludes,
             } => {
                 if rule_target == "all" || rule_target == target {
-                    Some(PythonPackaging::StdlibExtensionsExplicitExcludes {
-                        excludes: excludes.clone(),
-                    })
+                    Some(PythonPackaging::StdlibExtensionsExplicitExcludes(
+                        PackagingStdlibExtensionsExplicitExcludes {
+                            excludes: excludes.clone(),
+                        },
+                    ))
                 } else {
                     None
                 }
@@ -582,9 +611,11 @@ pub fn parse_config(data: &[u8], target: &str) -> Result<Config, String> {
                 includes,
             } => {
                 if rule_target == "all" || rule_target == target {
-                    Some(PythonPackaging::StdlibExtensionsExplicitIncludes {
-                        includes: includes.clone(),
-                    })
+                    Some(PythonPackaging::StdlibExtensionsExplicitIncludes(
+                        PackagingStdlibExtensionsExplicitIncludes {
+                            includes: includes.clone(),
+                        },
+                    ))
                 } else {
                     None
                 }
@@ -596,9 +627,11 @@ pub fn parse_config(data: &[u8], target: &str) -> Result<Config, String> {
                 if rule_target == "all" || rule_target == target {
                     have_stdlib_extensions_policy = true;
 
-                    Some(PythonPackaging::StdlibExtensionsPolicy {
-                        policy: policy.clone(),
-                    })
+                    Some(PythonPackaging::StdlibExtensionsPolicy(
+                        PackagingStdlibExtensionsPolicy {
+                            policy: policy.clone(),
+                        },
+                    ))
                 } else {
                     None
                 }
@@ -609,10 +642,12 @@ pub fn parse_config(data: &[u8], target: &str) -> Result<Config, String> {
                 variant,
             } => {
                 if rule_target == "all" || rule_target == target {
-                    Some(PythonPackaging::StdlibExtensionVariant {
-                        extension: extension.clone(),
-                        variant: variant.clone(),
-                    })
+                    Some(PythonPackaging::StdlibExtensionVariant(
+                        PackagingStdlibExtensionVariant {
+                            extension: extension.clone(),
+                            variant: variant.clone(),
+                        },
+                    ))
                 } else {
                     None
                 }
@@ -625,12 +660,12 @@ pub fn parse_config(data: &[u8], target: &str) -> Result<Config, String> {
                 include_source,
             } => {
                 if rule_target == "all" || rule_target == target {
-                    Some(PythonPackaging::Virtualenv {
+                    Some(PythonPackaging::Virtualenv(PackagingVirtualenv {
                         path: path.clone(),
                         optimize_level: *optimize_level,
                         excludes: excludes.clone(),
                         include_source: *include_source,
-                    })
+                    }))
                 } else {
                     None
                 }
