@@ -106,18 +106,8 @@ impl PythonResourceIterator {
             walkdir_result: Box::new(filtered),
         }
     }
-}
 
-impl Iterator for PythonResourceIterator {
-    type Item = PythonResource;
-
-    fn next(&mut self) -> Option<PythonResource> {
-        let res = self.walkdir_result.next();
-
-        res.as_ref()?;
-
-        let entry = res.unwrap();
-
+    fn resolve_dir_entry(&self, entry: walkdir::DirEntry) -> Option<PythonResource> {
         let path = entry.path();
 
         let rel_path = path
@@ -254,6 +244,19 @@ impl Iterator for PythonResourceIterator {
         };
 
         Some(resource)
+    }
+}
+
+impl Iterator for PythonResourceIterator {
+    type Item = PythonResource;
+
+    fn next(&mut self) -> Option<PythonResource> {
+        let res = self.walkdir_result.next();
+
+        res.as_ref()?;
+        let entry = res.unwrap();
+
+        self.resolve_dir_entry(entry)
     }
 }
 
