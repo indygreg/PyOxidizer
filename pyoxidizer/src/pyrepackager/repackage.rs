@@ -1016,6 +1016,35 @@ pub fn resolve_python_resources(
         all_modules.insert(name.to_string());
     }
 
+    let mut package_names = BTreeSet::new();
+    for name in &all_modules {
+        let mut search: &str = name;
+
+        while let Some(idx) = search.rfind('.') {
+            package_names.insert(search[0..idx].to_string());
+            search = &search[0..idx];
+        }
+    }
+
+    // Prune resource files that belong to packages that don't have a corresponding
+    // Python module package, as they won't be loadable by our custom importer.
+    let resources = resources
+        .iter()
+        .filter_map(|(package, values)| {
+            if !package_names.contains(package) {
+                info!(
+                    logger,
+                    "package {} does not exist; excluding resources: {:?}",
+                    package,
+                    values.keys()
+                );
+                None
+            } else {
+                Some((package.clone(), values.clone()))
+            }
+        })
+        .collect();
+
     PythonResources {
         module_sources: sources,
         module_bytecodes: bytecodes,
