@@ -13,6 +13,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::ffi::CStr;
 use std::io::Cursor;
+use std::sync::Arc;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError};
@@ -155,6 +156,7 @@ py_class!(class PyOxidizerFinder |py| {
     data exec_fn: PyObject;
     data packages: HashSet<&'static str>;
     data known_modules: KnownModules;
+    data resources: HashMap<&'static str, Arc<Box<HashMap<&'static str, &'static [u8]>>>>;
     data resource_readers: RefCell<Box<HashMap<String, PyObject>>>;
 
     // Start of importlib.abc.MetaPathFinder interface.
@@ -315,7 +317,17 @@ py_class!(class PyOxidizerFinder |py| {
 
         // Only create a reader if the name is a package.
         if self.packages(py).contains(&*key) {
-            let reader = PyOxidizerResourceReader::create_instance(py)?.into_object();
+
+            // Not all packages have known resources.
+            let resources = match self.resources(py).get(&*key) {
+                Some(v) => v.clone(),
+                None => {
+                    let h: Box<HashMap<&'static str, &'static [u8]>> = Box::new(HashMap::new());
+                    Arc::new(h)
+                }
+            };
+
+            let reader = PyOxidizerResourceReader::create_instance(py, resources)?.into_object();
             resource_readers.insert(key.to_string(), reader.clone_ref(py));
 
             Ok(reader)
@@ -330,6 +342,7 @@ py_class!(class PyOxidizerFinder |py| {
 ///
 /// Implements importlib.abc.ResourceReader.
 py_class!(class PyOxidizerResourceReader |py| {
+    data resources: Arc<Box<HashMap<&'static str, &'static [u8]>>>;
 
     /// Returns an opened, file-like object for binary reading of the resource.
     ///
@@ -626,6 +639,10 @@ fn module_setup(
         }
     };
 
+    // TODO populate this with resource data.
+    let resources: HashMap<&'static str, Arc<Box<HashMap<&'static str, &'static [u8]>>>> =
+        HashMap::new();
+
     let resource_readers: RefCell<Box<HashMap<String, PyObject>>> =
         RefCell::new(Box::new(HashMap::new()));
 
@@ -641,6 +658,7 @@ fn module_setup(
         exec_fn,
         packages,
         known_modules,
+        resources,
         resource_readers,
     )?;
     meta_path_object.call_method(py, "clear", NoArgs, None)?;
