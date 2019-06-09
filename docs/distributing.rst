@@ -37,6 +37,8 @@ problem to you. Use the ``pyoxidizer analyze`` command to inspect binaries
 for compatibility before attempting to run a binary on a different machine
 it was produced on.
 
+.. _licensing_considerations:
+
 Licensing Considerations
 ========================
 

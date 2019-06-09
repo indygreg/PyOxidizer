@@ -293,24 +293,37 @@ This rule defines a base policy for what *extension modules* to include
 from the Python distribution.
 
 This type has a ``policy`` key denoting the *policy* to use. This key can have
-the value ``minimal``, ``all``, or ``no-libraries``.
+the following values:
 
-``minimal`` means to include the minimal set of extension modules required
-to initialize a Python interpreter. This is a very small and various
-functionality from the Python interpreter will not work with this value.
+``minimal``
+   Include the minimal set of extension modules required to initialize a
+   Python interpreter. This is a very small set and various common
+   functionality from the Python standard library will not work with this
+   value.
 
-``all`` includes all available extension modules in the Python distribution.
+``all``
+   Includes all available extension modules in the Python distribution.
 
-``no-libraries`` includes all available extension modules in the Python
-distribution that do not have an additional library dependency. Most common
-Python extension modules are included. Extension modules like ``_ssl``
-(links against OpenSSL) and ``zlib`` are not included.
+``no-libraries``
+   Includes all available extension modules in the Python distribution that
+   do not have an additional library dependency. Most common Python extension
+   modules are included. Extension modules like ``_ssl`` (links against
+   OpenSSL) and ``zlib`` are not included.
 
 Example::
 
    [[python_packages]]
    type = "stdlib-extension-policy"
    policy = "no-libraries"
+
+.. important::
+
+   Libraries that extension modules link against have various software
+   licenses, including GPL version 3. Adding these extension modules will
+   also include the library. This typically exposes your program to additional
+   licensing requirements, including making your application subject to that
+   license and therefore open source. See :ref:`licensing_considerations` for
+   more.
 
 ``stdlib-extensions-explicit-includes``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
