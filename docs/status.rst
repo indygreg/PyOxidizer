@@ -42,8 +42,9 @@ Lesser Missing Features
 =======================
 
 Error handling in build-time Rust code isn't great. Expect to see the
-``pyoxidizer`` executable to crash from time to time. Crashes in binaries
-built with PyOxidizer should not occur and will be treated as serious bugs!
+``pyoxidizer`` executable to crash from time to time. The code that runs in
+binaries built with PyOxidizer is held to a higher standard. Crashes should
+not occur and will be treated as serious bugs!
 
 Only Python 3.7 is currently supported. Support for older Python 3
 releases is possible. But the project author hopes we only need to
