@@ -38,6 +38,27 @@ There is no ``pyoxidizer upgrade`` command.
 
 Work on all of these is planned.
 
+More Robust Packaging Support
+-----------------------------
+
+Currently, we produce an executable via Cargo. Often a self-contained
+executable is not suitable. We may have to run some Python modules from
+the filesystem because of limitations in those modules. In addition, some
+may wish to install custom files alongside the executable.
+
+We want to add a myriad of features around packaging functionality to
+facilitate these things. This includes:
+
+* Copying arbitrary files to live next to the executable.
+* Copying the produced binary and other required files outside of
+  the Cargo build directory.
+* Specifying that certain modules should not be embedded in the binary.
+* Support for ``__file__``.
+* A ``pyoxidizer`` command for turnkey building and assembling of all files.
+* A build mode that produces an instrumented binary, runs it a few times
+  to dump loaded modules into files, then builds it again with a pruned
+  set of resources.
+
 Making Distribution Easy
 ------------------------
 
