@@ -446,9 +446,14 @@ py_class!(class PyOxidizerResourceReader |py| {
 
     /// Returns True if the named name is considered a resource. FileNotFoundError
     /// is raised if name does not exist.
-    def is_resource(&self, _name: &PyString) -> PyResult<PyObject> {
-        // TODO implement.
-        Ok(py.None())
+    def is_resource(&self, name: &PyString) -> PyResult<PyObject> {
+        let key = name.to_string(py)?;
+
+        if self.resources(py).contains_key(&*key) {
+            Ok(py.True().as_object().clone_ref(py))
+        } else {
+            Err(PyErr::new::<FileNotFoundError, _>(py, "resource not found"))
+        }
     }
 
     /// Returns an iterable of strings over the contents of the package.
