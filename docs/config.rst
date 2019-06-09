@@ -310,6 +310,16 @@ the following values:
    modules are included. Extension modules like ``_ssl`` (links against
    OpenSSL) and ``zlib`` are not included.
 
+``no-gpl``
+   Includes all available extension modules in the Python distribution that
+   do not link against GPL licensed libraries.
+
+   Not all Python distributions may annotate license info for all extensions or
+   the libraries they link against. If license info is missing, the extension is
+   not included because it *could* be GPL licensed. Similarly, the mechanism for
+   determining whether a license is GPL is based on an explicit list of non-GPL
+   licenses. This ensures new GPL licenses don't slip through.
+
 Example::
 
    [[python_packages]]

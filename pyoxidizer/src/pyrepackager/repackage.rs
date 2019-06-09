@@ -30,6 +30,20 @@ use super::fsscan::{find_python_resources, PythonResourceType};
 
 pub const PYTHON_IMPORTER: &[u8] = include_bytes!("memoryimporter.py");
 
+/// SPDX licenses in Python distributions that are not GPL.
+///
+/// We store an allow list of licenses rather than trying to deny GPL licenses
+/// because if we miss a new GPL license, we accidentally let in GPL.
+const NON_GPL_LICENSES: &[&str] = &[
+    "BSD-3-Clause",
+    "bzip2-1.0.6",
+    "MIT",
+    "OpenSSL",
+    "Sleepycat",
+    "X11",
+    "Zlib",
+];
+
 const STDLIB_TEST_PACKAGES: &[&str] = &[
     "bsddb.test",
     "ctypes.test",
@@ -240,6 +254,7 @@ fn filter_btreemap<V>(logger: &slog::Logger, m: &mut BTreeMap<String, V>, f: &BT
 }
 
 fn resolve_stdlib_extensions_policy(
+    logger: &slog::Logger,
     dist: &PythonDistributionInfo,
     rule: &PackagingStdlibExtensionsPolicy,
 ) -> Vec<PythonResourceEntry> {
@@ -275,6 +290,46 @@ fn resolve_stdlib_extensions_policy(
             "no-libraries" => {
                 for em in variants {
                     if em.links.is_empty() {
+                        res.push(PythonResourceEntry {
+                            action: ResourceAction::Add,
+                            resource: PythonResource::ExtensionModule {
+                                name: name.clone(),
+                                module: em.clone(),
+                            },
+                        });
+
+                        break;
+                    }
+                }
+            }
+
+            "no-gpl" => {
+                for em in variants {
+                    let suitable = if em.links.is_empty() {
+                        true
+                    } else {
+                        em.links.iter().all(|link| {
+                            // Public domain is always allowed.
+                            if link.license_public_domain == Some(true) {
+                                true
+                            // Use explicit license list if one is defined.
+                            } else if let Some(ref licenses) = link.licenses {
+                                // We filter through an allow list because it is safer. (No new GPL
+                                // licenses can slip through.)
+                                licenses
+                                    .iter()
+                                    .all(|license| NON_GPL_LICENSES.contains(&license.as_str()))
+                            } else {
+                                // In lack of evidence that it isn't GPL, assume GPL.
+                                // TODO consider improving logic here, like allowing known system
+                                // and framework libraries to be used.
+                                info!(logger, "unable to determine {} is not GPL; ignoring", &name);
+                                false
+                            }
+                        })
+                    };
+
+                    if suitable {
                         res.push(PythonResourceEntry {
                             action: ResourceAction::Add,
                             resource: PythonResource::ExtensionModule {
@@ -821,7 +876,7 @@ fn resolve_python_packaging(
 ) -> Vec<PythonResourceEntry> {
     match package {
         PythonPackaging::StdlibExtensionsPolicy(rule) => {
-            resolve_stdlib_extensions_policy(dist, &rule)
+            resolve_stdlib_extensions_policy(logger, dist, &rule)
         }
 
         PythonPackaging::StdlibExtensionsExplicitIncludes(rule) => {
