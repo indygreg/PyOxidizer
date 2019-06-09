@@ -381,16 +381,22 @@ fn resolve_stdlib_extensions_explicit_excludes(
 
     for (name, modules) in &dist.extension_modules {
         if rule.excludes.contains(name) {
-            continue;
+            res.push(PythonResourceEntry {
+                action: ResourceAction::Remove,
+                resource: PythonResource::ExtensionModule {
+                    name: name.clone(),
+                    module: modules[0].clone(),
+                },
+            });
+        } else {
+            res.push(PythonResourceEntry {
+                action: ResourceAction::Add,
+                resource: PythonResource::ExtensionModule {
+                    name: name.clone(),
+                    module: modules[0].clone(),
+                },
+            });
         }
-
-        res.push(PythonResourceEntry {
-            action: ResourceAction::Add,
-            resource: PythonResource::ExtensionModule {
-                name: name.clone(),
-                module: modules[0].clone(),
-            },
-        });
     }
 
     res

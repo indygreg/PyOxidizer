@@ -362,6 +362,9 @@ the Python distribution.
 The section must define an ``excludes`` key, which is an array of strings of
 extension module names.
 
+Every known extension module not in ``excludes`` will be added. If an extension
+module with a name in ``excludes`` has already been added, it will be removed.
+
 Example::
 
    [[python_packages]]
