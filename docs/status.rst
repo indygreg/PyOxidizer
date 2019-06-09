@@ -22,41 +22,71 @@ PyOxidizer today.
 Major Missing Features
 ======================
 
+C Extensions
+------------
+
 Building and using compiled extension modules (e.g. C extensions) is not
 yet supported. This is a hard problem on a few dimensions. We have a plan
 to solve it, however.
 
-``pyoxidizer add`` and ``pyoxidizer analyze`` aren't fully implemented. There
-is no ``pyoxidizer upgrade`` command. Work on all of these is planned.
+Incomplete ``pyoxidizer`` Commands
+----------------------------------
+
+``pyoxidizer add`` and ``pyoxidizer analyze`` aren't fully implemented.
+
+There is no ``pyoxidizer upgrade`` command.
+
+Work on all of these is planned.
+
+Making Distribution Easy
+------------------------
 
 We don't yet have a good story for the *distributing* part of the application
 distribution problem. We're good at producing executables. But we'd like to
 go the extra mile and make it easier for people to produce installers, ``.dmg``
-files, tarballs, etc. This includes providing build environments for e.g.
-non-MUSL based Linux executables. It also includes support for auditing
-for license compatibility (e.g. screening for GPL components in proprietary
-applications) and assembling required license texts to satisfy notification
-requirements in those licenses.
+files, tarballs, etc.
+
+This includes providing build environments for e.g. non-MUSL based Linux
+executables.
+
+It also includes support for auditing for license compatibility (e.g. screening
+for GPL components in proprietary applications) and assembling required license
+texts to satisfy notification requirements in those licenses.
 
 Lesser Missing Features
 =======================
+
+Poor Rust Error Handling
+------------------------
 
 Error handling in build-time Rust code isn't great. Expect to see the
 ``pyoxidizer`` executable to crash from time to time. The code that runs in
 binaries built with PyOxidizer is held to a higher standard. Crashes should
 not occur and will be treated as serious bugs!
 
+Python Version Support
+----------------------
+
 Only Python 3.7 is currently supported. Support for older Python 3
 releases is possible. But the project author hopes we only need to
 target the latest/greatest Python release.
+
+Reordering Resource Files
+-------------------------
 
 There is not yet support for reordering ``.py`` and ``.pyc`` files
 in the binary. This feature would facilitate linear read access,
 which could lead to faster execution.
 
+Compressed Resource Files
+-------------------------
+
 Binary resources are currently stored as raw data. They could be
 stored compressed to keep binary size in check (at the cost of run-time
 memory usage and CPU overhead).
+
+Nightly Rust Required on Windows
+--------------------------------
 
 Windows currently requires a Nightly Rust to build (you can set the
 environment variable ``RUSTC_BOOTSTRAP=1`` to work around this) because
@@ -69,9 +99,15 @@ See
 https://github.com/rust-lang/rust/issues/26591#issuecomment-123513631 for
 more.
 
+Cross Compiling
+---------------
+
 Cross compiling is not yet supported. We hope to and believe we can
 support this someday. We would like to eventually get to a state where you
 can e.g. produce Windows and macOS executables from Linux. It's possible.
+
+TOML Configuration File
+-----------------------
 
 Naming and semantics in the TOML configuration files can be significantly
 improved. There's also various missing packaging functionality.
