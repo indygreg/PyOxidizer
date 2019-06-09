@@ -658,7 +658,7 @@ fn resolve_pip_install_simple(
     let temp_dir_s = temp_dir_path.display().to_string();
     info!(logger, "pip installing to {}", temp_dir_s);
 
-    std::process::Command::new(&dist.python_exe)
+    let mut cmd = std::process::Command::new(&dist.python_exe)
         .args(&[
             "-m",
             "pip",
@@ -668,8 +668,22 @@ fn resolve_pip_install_simple(
             &temp_dir_s,
             &rule.package,
         ])
-        .status()
+        .stdout(std::process::Stdio::piped())
+        .spawn()
         .expect("error running pip");
+    {
+        let stdout = cmd.stdout.as_mut().unwrap();
+        let reader = BufReader::new(stdout);
+
+        for line in reader.lines() {
+            info!(logger, "{}", line.unwrap());
+        }
+    }
+
+    let status = cmd.wait().unwrap();
+    if !status.success() {
+        panic!("error running pip");
+    }
 
     for resource in find_python_resources(&temp_dir_path) {
         match resource.flavor {
@@ -732,7 +746,7 @@ fn resolve_pip_requirements_file(
     let temp_dir_s = temp_dir_path.display().to_string();
     info!(logger, "pip installing to {}", temp_dir_s);
 
-    std::process::Command::new(&dist.python_exe)
+    let mut cmd = std::process::Command::new(&dist.python_exe)
         .args(&[
             "-m",
             "pip",
@@ -745,8 +759,22 @@ fn resolve_pip_requirements_file(
             "--requirement",
             &rule.requirements_path,
         ])
-        .status()
+        .stdout(std::process::Stdio::piped())
+        .spawn()
         .expect("error running pip");
+    {
+        let stdout = cmd.stdout.as_mut().unwrap();
+        let reader = BufReader::new(stdout);
+
+        for line in reader.lines() {
+            info!(logger, "{}", line.unwrap());
+        }
+    }
+
+    let status = cmd.wait().unwrap();
+    if !status.success() {
+        panic!("error running pip");
+    }
 
     for resource in find_python_resources(&temp_dir_path) {
         match resource.flavor {
@@ -806,7 +834,7 @@ fn resolve_setup_py_install(
     let temp_dir_s = temp_dir_path.display().to_string();
     info!(logger, "python setup.py installing to {}", temp_dir_s);
 
-    std::process::Command::new(&dist.python_exe)
+    let mut cmd = std::process::Command::new(&dist.python_exe)
         .current_dir(&rule.path)
         .args(&[
             "setup.py",
@@ -815,8 +843,22 @@ fn resolve_setup_py_install(
             &temp_dir_s,
             "--no-compile",
         ])
-        .status()
+        .spawn()
         .expect("error running setup.py");
+
+    {
+        let stdout = cmd.stdout.as_mut().unwrap();
+        let reader = BufReader::new(stdout);
+
+        for line in reader.lines() {
+            info!(logger, "{}", line.unwrap());
+        }
+    }
+
+    let status = cmd.wait().unwrap();
+    if !status.success() {
+        panic!("error running setup.py");
+    }
 
     let mut packages_path = temp_dir_path.to_path_buf();
 
