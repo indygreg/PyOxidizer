@@ -22,12 +22,6 @@ PyOxidizer today.
 Major Missing Features
 ======================
 
-The ``importlib.abc.ResourceReader`` interface is not yet supported. There's
-no way to embed non-module *resource* data into binaries. But you can
-distribute these resources next to a binary and use traditional filesystem
-importers configured via ``sys.path`` to load resources. Support for
-``importlib.abc.ResourceReader`` is planned.
-
 Building and using compiled extension modules (e.g. C extensions) is not
 yet supported. This is a hard problem on a few dimensions. We have a plan
 to solve it, however.

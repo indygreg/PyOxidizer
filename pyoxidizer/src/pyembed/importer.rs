@@ -431,9 +431,22 @@ py_class!(class PyOxidizerResourceReader |py| {
     /// Returns an opened, file-like object for binary reading of the resource.
     ///
     /// If the resource cannot be found, FileNotFoundError is raised.
-    def open_resource(&self, _resource: &PyString) -> PyResult<PyObject> {
-        // TODO implement.
-        Ok(py.None())
+    def open_resource(&self, resource: &PyString) -> PyResult<PyObject> {
+        let key = resource.to_string(py)?;
+
+        if let Some(data) = self.resources(py).get(&*key) {
+            match get_memory_view(py, data) {
+                Some(mv) => {
+                    let io_module = py.import("io")?;
+                    let bytes_io = io_module.get(py, "BytesIO")?;
+
+                    bytes_io.call(py, (mv,), None)
+                }
+                None => Err(PyErr::fetch(py))
+            }
+        } else {
+            Err(PyErr::new::<FileNotFoundError, _>(py, "resource not found"))
+        }
     }
 
     /// Returns the file system path to the resource.
