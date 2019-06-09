@@ -9,11 +9,12 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use std::collections::BTreeMap;
 use std::error::Error;
-use std::io::Write;
+use std::io::{Cursor, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process;
 
 use super::environment::PyOxidizerSource;
+use super::pyrepackager::dist::analyze_python_distribution_tar_zst;
 use super::pyrepackager::fsscan::walk_tree_files;
 use super::pyrepackager::repackage::run_from_build;
 use super::python_distributions::CPYTHON_BY_TRIPLE;
@@ -368,6 +369,74 @@ pub fn init(project_path: &str, jemalloc: bool) -> Result<(), String> {
     println!("edit the various pyoxidizer.*.toml config files or the main.rs ");
     println!("file to change behavior. The application will need to be rebuilt ");
     println!("for configuration changes to take effect.");
+
+    Ok(())
+}
+
+pub fn python_distribution_licenses(path: &str) -> Result<(), String> {
+    let mut fh = std::fs::File::open(Path::new(path)).or_else(|e| Err(e.to_string()))?;
+    let mut data = Vec::new();
+    fh.read_to_end(&mut data).or_else(|e| Err(e.to_string()))?;
+
+    let cursor = Cursor::new(data);
+    let dist = analyze_python_distribution_tar_zst(cursor)?;
+
+    println!(
+        "Python Distribution Licenses: {}",
+        match dist.licenses {
+            Some(licenses) => itertools::join(licenses, ", "),
+            None => "NO LICENSE FOUND".to_string(),
+        }
+    );
+    println!();
+    println!("Extension Libraries and License Requirements");
+    println!("============================================");
+    println!();
+
+    for (name, variants) in &dist.extension_modules {
+        for variant in variants {
+            if variant.links.is_empty() {
+                continue;
+            }
+
+            let name = if variant.variant == "default" {
+                name.clone()
+            } else {
+                format!("{} ({})", name, variant.variant)
+            };
+
+            println!("{}", name);
+            println!("{}", "-".repeat(name.len()));
+            println!();
+
+            for link in &variant.links {
+                println!("Dependency: {}", &link.name);
+                println!(
+                    "Link Type: {}",
+                    if link.system {
+                        "system"
+                    } else if link.framework {
+                        "framework"
+                    } else {
+                        "library"
+                    }
+                );
+
+                if link.license_public_domain.is_some() && link.license_public_domain.unwrap() {
+                    println!("Licenses: Public Domain");
+                } else if let Some(ref licenses) = link.licenses {
+                    println!("Licenses: {}", itertools::join(licenses, ", "));
+                    for license in licenses {
+                        println!("License Info: https://spdx.org/licenses/{}.html", license);
+                    }
+                } else {
+                    println!("Licenses: UNKNOWN");
+                }
+
+                println!();
+            }
+        }
+    }
 
     Ok(())
 }

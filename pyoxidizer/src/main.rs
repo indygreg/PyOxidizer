@@ -199,6 +199,16 @@ fn main() {
                         .help("Directory to write artifacts to"),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("python-distribution-licenses")
+                .about("Show licenses for a given Python distribution")
+                .arg(
+                    Arg::with_name("path")
+                        .required(true)
+                        .value_name("PATH")
+                        .help("Path or URL to Python distribution to analyze"),
+                ),
+        )
         .get_matches();
 
     let logger_context = logging::logger_from_env();
@@ -266,6 +276,12 @@ fn main() {
             let jemalloc = !args.is_present("no-jemalloc");
 
             projectmgmt::init(name, jemalloc)
+        }
+
+        ("python-distribution-licenses", Some(args)) => {
+            let path = args.value_of("path").unwrap();
+
+            projectmgmt::python_distribution_licenses(path)
         }
 
         ("run-build-script", Some(args)) => {

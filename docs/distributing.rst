@@ -92,15 +92,14 @@ strong copyleft protections in the GPL license.
    It is critical to audit which Python extensions and packages are being
    packaged because of licensing requirements of various extensions.
 
-Currently, PyOxidizer doesn't have a good way to audit for license use
-in produced binaries. This is definitely something we want to add. We
-want to go a step further and have explicit configuration options for
-e.g. preventing GPL extensions/libraries from being compiled into binaries,
-because accidentally linking a proprietary application with a GPL 3.0
-licensed library would have potentially disastrous consequences!
+Showing Python Distribution Licenses
+------------------------------------
 
-For now, a list of licenses used by CPython and the various libraries
-its extensions link against can be found at
-https://github.com/indygreg/python-build-standalone/blob/master/python-licenses.rst.
-You will likely need to make copies of some of these licenses available
-if you distribute any binary produced with PyOxidizer.
+The special Python distributions that PyOxidizer consumes can annotate
+licenses of software within.
+
+The ``pyoxidizer python-distribution-licenses`` command can display the
+licenses for the Python distribution and libraries it may link against.
+This command can be used to evaluate which extensions meet licensing
+requirements and what licensing requirements apply if a given extension
+or library is used.
