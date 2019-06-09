@@ -28,6 +28,9 @@ struct LinkEntry {
     path_dynamic: Option<String>,
     framework: Option<bool>,
     system: Option<bool>,
+    licenses: Option<Vec<String>>,
+    license_path: Option<String>,
+    license_public_domain: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -64,6 +67,8 @@ struct PythonJsonMain {
     python_version: String,
     version: String,
     build_info: PythonBuildInfo,
+    licenses: Option<Vec<String>>,
+    license_path: Option<String>,
 }
 
 fn parse_python_json(path: &Path) -> PythonJsonMain {
@@ -87,6 +92,10 @@ pub struct ConfigC {
 }
 
 /// Describes a library dependency.
+///
+/// If the license fields are Some value, then license metadata was
+/// present in the distribution. If the values are None, then license
+/// metadata is not known.
 #[derive(Clone, Debug)]
 pub struct LibraryDepends {
     /// Name of the library we depend on.
@@ -103,6 +112,15 @@ pub struct LibraryDepends {
 
     /// Whether this is a system library.
     pub system: bool,
+
+    /// SPDX license shortnames that apply to this library dependency.
+    pub licenses: Option<Vec<String>>,
+
+    /// Path to file holding license text for this library.
+    pub license_path: Option<PathBuf>,
+
+    /// Whether the license for this library is in the public domain.
+    pub license_public_domain: Option<bool>,
 }
 
 /// Describes an extension module in a Python distribution.
@@ -164,6 +182,15 @@ fn link_entry_to_library_depends(entry: &LinkEntry, python_path: &PathBuf) -> Li
             Some(v) => *v,
             None => false,
         },
+        licenses: match entry.licenses {
+            Some(ref licenses) => Some(licenses.clone()),
+            None => None,
+        },
+        license_path: match entry.license_path {
+            Some(ref path) => Some(PathBuf::from(path)),
+            None => None,
+        },
+        license_public_domain: entry.license_public_domain.clone(),
     }
 }
 
@@ -194,6 +221,16 @@ pub struct PythonDistributionInfo {
 
     /// Path to Python standard library.
     pub stdlib_path: PathBuf,
+
+    /// SPDX license shortnames that apply to this distribution.
+    ///
+    /// Licenses only cover the core distribution. Licenses for libraries
+    /// required by extensions are stored next to the extension's linking
+    /// info.
+    pub licenses: Option<Vec<String>>,
+
+    /// Path to file holding license text for this distribution.
+    pub license_path: Option<PathBuf>,
 
     /// Object files providing the core Python implementation.
     ///
@@ -308,6 +345,7 @@ pub fn analyze_python_distribution_data(
             Some("build") => continue,
             Some("install") => continue,
             Some("lib") => continue,
+            Some("licenses") => continue,
             Some("LICENSE.rst") => continue,
             Some("PYTHON.json") => continue,
             Some(value) => panic!("unexpected entry in python/ directory: {}", value),
@@ -414,6 +452,11 @@ pub fn analyze_python_distribution_data(
         arch: pi.arch.clone(),
         python_exe: python_path.join(pi.python_exe),
         stdlib_path,
+        licenses: pi.licenses.clone(),
+        license_path: match pi.license_path {
+            Some(ref path) => Some(PathBuf::from(path)),
+            None => None,
+        },
         temp_dir,
         extension_modules,
         frozen_c,
