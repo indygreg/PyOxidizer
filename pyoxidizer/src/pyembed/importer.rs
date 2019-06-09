@@ -19,7 +19,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError};
 use cpython::{
     py_class, py_class_impl, py_coerce_item, py_fn, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr,
-    PyList, PyModule, PyObject, PyResult, PyString, Python, PythonObject,
+    PyList, PyModule, PyObject, PyResult, PyString, Python, PythonObject, ToPyObject,
 };
 use python3_sys as pyffi;
 use python3_sys::{PyBUF_READ, PyMemoryView_FromMemory};
@@ -467,8 +467,16 @@ py_class!(class PyOxidizerResourceReader |py| {
     /// package and resources are stored on the file system then those subdirectory names can be
     /// used directly.
     def contents(&self) -> PyResult<PyObject> {
-        // TODO implement.
-        Ok(py.None())
+        let resources = self.resources(py);
+        let mut names = Vec::with_capacity(resources.len());
+
+        for name in resources.keys() {
+            names.push(name.to_py_object(py));
+        }
+
+        let names_list = names.to_py_object(py);
+
+        Ok(names_list.as_object().clone_ref(py))
     }
 });
 
