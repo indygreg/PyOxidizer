@@ -1886,7 +1886,7 @@ pub fn process_config_and_copy_artifacts(
     logger: &slog::Logger,
     config_path: &Path,
     build_dir: &Path,
-    out_dir: &Path,
+    default_out_dir: &Path,
 ) -> EmbeddedPythonConfig {
     // TODO derive these more intelligently.
     let host = if cfg!(target_os = "linux") {
@@ -1905,11 +1905,15 @@ pub fn process_config_and_copy_artifacts(
     create_dir_all(build_dir).expect("unable to create build directory");
     let build_dir = std::fs::canonicalize(build_dir).expect("unable to canonicalize build_dir");
 
-    create_dir_all(out_dir).expect("unable to create output directory");
-    let orig_out_dir = out_dir.to_path_buf();
-    let out_dir = std::fs::canonicalize(out_dir).expect("unable to canonicalize out_dir");
+    create_dir_all(default_out_dir).expect("unable to create output directory");
+    let orig_default_out_dir = default_out_dir.to_path_buf();
+    let default_out_dir =
+        std::fs::canonicalize(default_out_dir).expect("unable to canonicalize out_dir");
 
     let embedded_config = process_config(logger, config_path, &build_dir, host, target, opt_level);
+
+    let out_dir = default_out_dir;
+    let display_out_dir = orig_default_out_dir;
 
     let importlib_bootstrap_path = out_dir.join("importlib_bootstrap");
     let importlib_bootstrap_external_path = out_dir.join("importlib_bootstrap_external");
@@ -1936,10 +1940,10 @@ pub fn process_config_and_copy_artifacts(
 
     let python_config_rs = derive_python_config(
         &embedded_config.config,
-        &orig_out_dir.join("importlib_bootstrap"),
-        &orig_out_dir.join("importlib_bootstrap_external"),
-        &orig_out_dir.join("py-modules"),
-        &orig_out_dir.join("python-resources"),
+        &display_out_dir.join("importlib_bootstrap"),
+        &display_out_dir.join("importlib_bootstrap_external"),
+        &display_out_dir.join("py-modules"),
+        &display_out_dir.join("python-resources"),
     );
 
     EmbeddedPythonConfig {
