@@ -84,15 +84,21 @@ One of ``local_path`` or ``url`` MUST be defined.
    URL from which a distribution archive can be obtained using an HTTP GET
    request.
 
-Examples
-^^^^^^^^
+Examples:
 
-::
+.. code-block:: toml
 
    [[python_distribution]]
    target = "x86_64-unknown-linux-gnu"
    local_path = "/var/python-distributions/cpython-linux64.tar.zst"
    sha256 = "11a53f5755773f91111a04f6070a6bc00518a0e8e64d90f58584abf02ca79081"
+
+.. code-block:: toml
+
+   [[python_distribution]]
+   target = "x86_64-apple-darwin"
+   url = "https://github.com/indygreg/python-build-standalone/releases/download/20190505/cpython-3.7.3-macos-20190506T0054.tar.zst"
+   sha256 = "b46a861c05cb74b5b668d2ce44dcb65a449b9fef98ba5d9ec6ff6937829d5eec"
 
 ``[[python_config]]``
 ---------------------
@@ -347,7 +353,9 @@ of extension module names.
 This policy is typically combined with the ``minimal`` ``stdlib-extension-policy``
 to cherry pick individual extension modules for inclusion.
 
-Example::
+Example:
+
+.. code-block:: toml
 
    [[python_packages]]
    type = "stdlib-extensions-explicit-includes"
@@ -365,7 +373,9 @@ extension module names.
 Every known extension module not in ``excludes`` will be added. If an extension
 module with a name in ``excludes`` has already been added, it will be removed.
 
-Example::
+Example:
+
+.. code-block:: toml
 
    [[python_packages]]
    type = "stdlib-extensions-explicit-excludes"
@@ -387,7 +397,9 @@ extension module variation.
 Extension module variants are defined the the ``extension`` and ``variant`` keys.
 The former defines the extension module name. The latter its variant name.
 
-Example::
+Example:
+
+.. code-block:: toml
 
    [[python_packages]]
    type = "stdlib-extension-variant"
@@ -525,7 +537,9 @@ rule.
 
    Default is ``true``.
 
-This will include the ``pyflakes`` package and all its dependencies::
+This will include the ``pyflakes`` package and all its dependencies:
+
+.. code-block:: toml
 
    [[python_packages]]
    type = "pip-install-simple"
@@ -558,7 +572,9 @@ operation.
 
    Default is ``true``.
 
-Example::
+Example:
+
+.. code-block:: toml
 
    [[python_packages]]
    type = "pip-requirements-file"
@@ -633,7 +649,9 @@ directory.
 
    Default is ``true``.
 
-Example::
+Example:
+
+.. code-block:: toml
 
    [[python_packages]]
    type = "virtualenv"
@@ -673,7 +691,9 @@ All defined keys have their resolved resources combined into a set of
 resource names. Each read entity has its values unioned with the set of
 values resolved so far.
 
-Example::
+Example:
+
+.. code-block:: toml
 
    [[python_packages]]
    type = "filter-include"
@@ -725,7 +745,9 @@ interpreter initializes.
 This mode requires the ``code`` key to be set to a string containing
 Python code to run.
 
-Example::
+Example:
+
+.. code-block:: toml
 
    [[python_run]]
    mode = "eval"
@@ -740,7 +762,9 @@ then execute that module.
 This mode requires the ``module`` key to be set to the string value of
 the module to load as ``__main__``.
 
-Example::
+Example:
+
+.. code-block:: toml
 
    [[python_run]]
    mode = "module"
@@ -753,7 +777,9 @@ This mode will launch an interactive Python REPL connected to stdin. This
 is similar to the behavior of running a ``python`` executable without any
 arguments.
 
-Example::
+Example:
+
+.. code-block:: toml
 
    [[python_run]]
    mode = "repl"
