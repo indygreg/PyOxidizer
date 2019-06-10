@@ -1691,6 +1691,16 @@ pub struct EmbeddedPythonConfig {
     pub python_config_rs: String,
 }
 
+pub fn parse_config_file(config_path: &Path, target: &str) -> Result<Config, String> {
+    let mut fh = fs::File::open(config_path).or_else(|e| Err(e.to_string()))?;
+
+    let mut config_data = Vec::new();
+    fh.read_to_end(&mut config_data)
+        .or_else(|e| Err(e.to_string()))?;
+
+    parse_config(&config_data, config_path, target)
+}
+
 /// Derive build artifacts from a PyOxidizer config file.
 ///
 /// This function reads a PyOxidizer config file and turns it into a set
@@ -1711,12 +1721,7 @@ pub fn process_config(
 
     info!(logger, "processing config file {}", config_path.display());
 
-    let mut fh = fs::File::open(config_path).unwrap();
-
-    let mut config_data = Vec::new();
-    fh.read_to_end(&mut config_data).unwrap();
-
-    let config = match parse_config(&config_data, target) {
+    let config = match parse_config_file(config_path, target) {
         Ok(v) => v,
         Err(message) => panic!(
             "error reading config {}: {}",
