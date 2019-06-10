@@ -658,6 +658,7 @@ fn resolve_pip_install_simple(
     let temp_dir_s = temp_dir_path.display().to_string();
     info!(logger, "pip installing to {}", temp_dir_s);
 
+    // TODO send stderr to stdout.
     let mut cmd = std::process::Command::new(&dist.python_exe)
         .args(&[
             "-m",
@@ -746,6 +747,7 @@ fn resolve_pip_requirements_file(
     let temp_dir_s = temp_dir_path.display().to_string();
     info!(logger, "pip installing to {}", temp_dir_s);
 
+    // TODO send stderr to stdout.
     let mut cmd = std::process::Command::new(&dist.python_exe)
         .args(&[
             "-m",
@@ -834,6 +836,7 @@ fn resolve_setup_py_install(
     let temp_dir_s = temp_dir_path.display().to_string();
     info!(logger, "python setup.py installing to {}", temp_dir_s);
 
+    // TODO send stderr to stdout.
     let mut cmd = std::process::Command::new(&dist.python_exe)
         .current_dir(&rule.path)
         .args(&[
