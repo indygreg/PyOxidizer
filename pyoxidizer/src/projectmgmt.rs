@@ -303,6 +303,37 @@ fn build_project(project_path: &Path, release: bool) -> Result<(), String> {
     }
 }
 
+fn run_project(project_path: &Path, release: bool) -> Result<(), String> {
+    let mut args = Vec::new();
+    args.push("run");
+    if release {
+        args.push("--release");
+    }
+
+    let current_exe = std::env::current_exe()
+        .or_else(|e| Err(e.to_string()))?
+        .canonicalize()
+        .or_else(|e| Err(e.to_string()))?
+        .display()
+        .to_string();
+
+    match process::Command::new("cargo")
+        .args(args)
+        .current_dir(&project_path)
+        .env("PYOXIDIZER_EXE", current_exe)
+        .status()
+    {
+        Ok(status) => {
+            if status.success() {
+                Ok(())
+            } else {
+                Err("cargo run failed".to_string())
+            }
+        }
+        Err(e) => Err(e.to_string()),
+    }
+}
+
 /// Build a PyOxidizer enabled project.
 ///
 /// This is a glorified wrapper around `cargo build`. Our goal is to get the
@@ -325,6 +356,18 @@ pub fn build(project_path: &str, debug: bool, release: bool) -> Result<(), Strin
     }
 
     Ok(())
+}
+
+pub fn run(project_path: &str, release: bool) -> Result<(), String> {
+    let path = PathBuf::from(project_path)
+        .canonicalize()
+        .or_else(|e| Err(e.to_string()))?;
+
+    if find_pyoxidizer_files(&path).is_empty() {
+        return Err("no PyOxidizer files in specified path".to_string());
+    }
+
+    run_project(&path, release)
 }
 
 /// Initialize a new Rust project with PyOxidizer support.

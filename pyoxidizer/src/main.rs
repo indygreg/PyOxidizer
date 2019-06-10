@@ -200,6 +200,21 @@ fn main() {
                 ),
         )
         .subcommand(
+            SubCommand::with_name("run")
+                .about("Build and run a PyOxidizer application")
+                .arg(
+                    Arg::with_name("release")
+                        .long("release")
+                        .help("Run a release binary"),
+                )
+                .arg(
+                    Arg::with_name("path")
+                        .default_value(".")
+                        .value_name("PATH")
+                        .help("Directory containing project to build"),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("python-distribution-licenses")
                 .about("Show licenses for a given Python distribution")
                 .arg(
@@ -289,6 +304,14 @@ fn main() {
 
             projectmgmt::run_build_script(&logger_context.logger, build_script)
         }
+
+        ("run", Some(args)) => {
+            let release = args.is_present("release");
+            let path = args.value_of("path").unwrap();
+
+            projectmgmt::run(path, release)
+        }
+
         _ => Err("invalid sub-command".to_string()),
     };
 
