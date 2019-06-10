@@ -4,6 +4,7 @@
 
 use itertools::Itertools;
 use serde::Deserialize;
+use std::path::{Path, PathBuf};
 
 // TOML config file parsing.
 
@@ -45,6 +46,13 @@ pub enum RawAllocator {
 #[allow(non_snake_case)]
 fn ALL() -> String {
     "all".to_string()
+}
+
+#[derive(Debug, Deserialize)]
+struct ConfigBuild {
+    #[serde(default = "ALL")]
+    target: String,
+    artifacts_path: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -213,12 +221,19 @@ enum ConfigRunMode {
 
 #[derive(Debug, Deserialize)]
 struct ParsedConfig {
+    #[serde(default, rename = "build")]
+    builds: Vec<ConfigBuild>,
     #[serde(default, rename = "python_distribution")]
     python_distributions: Vec<ConfigPythonDistribution>,
     #[serde(default, rename = "python_config")]
     python_configs: Vec<ConfigPython>,
     python_packages: Vec<ConfigPythonPackaging>,
     python_run: Vec<ConfigRunMode>,
+}
+
+#[derive(Debug)]
+pub struct BuildConfig {
+    pub artifacts_path: Option<PathBuf>,
 }
 
 #[derive(Debug)]
@@ -327,6 +342,7 @@ pub enum RunMode {
 
 #[derive(Debug)]
 pub struct Config {
+    pub build_config: BuildConfig,
     pub dont_write_bytecode: bool,
     pub ignore_environment: bool,
     pub no_site: bool,
@@ -349,11 +365,33 @@ pub struct Config {
 ///
 /// Configs are evaluated against a specific build target. Config entries not
 /// relevant to the specified target are removed from the final data structure.
-pub fn parse_config(data: &[u8], target: &str) -> Result<Config, String> {
+pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Config, String> {
     let config: ParsedConfig = match toml::from_slice(&data) {
         Ok(v) => v,
         Err(e) => return Err(e.to_string()),
     };
+
+    let origin = config_path
+        .parent()
+        .ok_or_else(|| "unable to get config parent directory")?
+        .canonicalize()
+        .or_else(|e| Err(e.to_string()))?
+        .display()
+        .to_string();
+
+    let mut artifacts_path = None;
+
+    for build_config in config
+        .builds
+        .iter()
+        .filter(|c| c.target == "all" || c.target == target)
+    {
+        if let Some(ref path) = build_config.artifacts_path {
+            artifacts_path = Some(PathBuf::from(path.replace("$ORIGIN", &origin)));
+        }
+    }
+
+    let build_config = BuildConfig { artifacts_path };
 
     if config.python_distributions.is_empty() {
         return Err("no [[python_distribution]] sections".to_string());
@@ -734,6 +772,7 @@ pub fn parse_config(data: &[u8], target: &str) -> Result<Config, String> {
     filesystem_importer = filesystem_importer || !sys_paths.is_empty();
 
     Ok(Config {
+        build_config,
         dont_write_bytecode,
         ignore_environment,
         no_site,

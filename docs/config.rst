@@ -45,6 +45,20 @@ Configuration Sections
 
 The following documentation sections describe the various TOML sections.
 
+``[[build]]``
+-------------
+
+This section configures high-level application build settings.
+
+``artifacts_path``
+
+   Filesystem path to directory that will contain build artifacts. Build
+   artifacts include the generated Python link library and the packed
+   resource data to embed in binaries.
+
+   The special value ``$ORIGIN`` will be replaced by the directory
+   holding this configuration file.
+
 ``[[python_distribution]]``
 ---------------------------
 

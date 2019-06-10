@@ -1706,13 +1706,16 @@ pub fn parse_config_file(config_path: &Path, target: &str) -> Result<Config, Str
 /// This function reads a PyOxidizer config file and turns it into a set
 /// of derived files that can power an embedded Python interpreter.
 ///
-/// Artifacts will be written to ``out_dir``.
+/// Artifacts will be written to ``force_out_dir`` if it is defined. Otherwise
+/// they are written to the ``[[build]] artifacts_path = "..."`` value from the
+/// config if defined. Otherwise they are written to ``default_out_dir``.
 ///
 /// Returns a data structure describing the results.
 pub fn process_config(
     logger: &slog::Logger,
     config_path: &Path,
-    out_dir: &Path,
+    default_out_dir: &Path,
+    force_out_dir: Option<&Path>,
     host: &str,
     target: &str,
     opt_level: &str,
@@ -1730,13 +1733,26 @@ pub fn process_config(
         ),
     };
 
+    // Allow config to overwrite the output directory. But not if force_out_dir is set.
+    let dest_dir = if let Some(path) = force_out_dir {
+        path
+    } else if let Some(ref path) = config.build_config.artifacts_path {
+        path.as_path()
+    } else {
+        default_out_dir
+    };
+
+    if !dest_dir.exists() {
+        create_dir_all(dest_dir).unwrap();
+    }
+
     if let PythonDistribution::Local { local_path, .. } = &config.python_distribution {
         cargo_metadata.push(format!("cargo:rerun-if-changed={}", local_path));
     }
 
     // Obtain the configured Python distribution and parse it to a data structure.
     info!(logger, "resolving Python distribution...");
-    let python_distribution_path = resolve_python_distribution_archive(&config, &out_dir);
+    let python_distribution_path = resolve_python_distribution_archive(&config, &dest_dir);
     info!(
         logger,
         "Python distribution available at {}",
@@ -1757,12 +1773,12 @@ pub fn process_config(
     );
     let importlib = derive_importlib(&dist);
 
-    let importlib_bootstrap_path = Path::new(&out_dir).join("importlib_bootstrap");
+    let importlib_bootstrap_path = Path::new(&dest_dir).join("importlib_bootstrap");
     let mut fh = fs::File::create(&importlib_bootstrap_path).unwrap();
     fh.write_all(&importlib.bootstrap_bytecode).unwrap();
 
     let importlib_bootstrap_external_path =
-        Path::new(&out_dir).join("importlib_bootstrap_external");
+        Path::new(&dest_dir).join("importlib_bootstrap_external");
     let mut fh = fs::File::create(&importlib_bootstrap_external_path).unwrap();
     fh.write_all(&importlib.bootstrap_external_bytecode)
         .unwrap();
@@ -1820,9 +1836,9 @@ pub fn process_config(
     // reordering modules so the memory order matches import order.
 
     info!(logger, "writing packed Python module and resource data...");
-    let module_names_path = Path::new(&out_dir).join("py-module-names");
-    let py_modules_path = Path::new(&out_dir).join("py-modules");
-    let resources_path = Path::new(&out_dir).join("python-resources");
+    let module_names_path = Path::new(&dest_dir).join("py-module-names");
+    let py_modules_path = Path::new(&dest_dir).join("py-modules");
+    let resources_path = Path::new(&dest_dir).join("python-resources");
     resources.write_blobs(&module_names_path, &py_modules_path, &resources_path);
 
     info!(
@@ -1844,7 +1860,7 @@ pub fn process_config(
         "generating custom link library containing Python..."
     );
     let libpython_info =
-        link_libpython(logger, &dist, &resources, out_dir, host, target, opt_level);
+        link_libpython(logger, &dist, &resources, dest_dir, host, target, opt_level);
     cargo_metadata.extend(libpython_info.cargo_metadata);
 
     for p in &resources.read_files {
@@ -1859,8 +1875,16 @@ pub fn process_config(
         &resources_path,
     );
 
-    let dest_path = Path::new(&out_dir).join("data.rs");
+    let dest_path = Path::new(&dest_dir).join("data.rs");
     write_data_rs(&dest_path, &python_config_rs);
+
+    // We also write data.rs to the original requested out directory because we can't
+    // easily pass the real output path to the ``pyembed`` crate. (It uses
+    // ``env!("OUT_DIR")`` to locate the data.rs file.)
+    let orig_dest_path = Path::new(&default_out_dir).join("data.rs");
+    if orig_dest_path != dest_path {
+        write_data_rs(&orig_dest_path, &python_config_rs);
+    }
 
     EmbeddedPythonConfig {
         config,
@@ -1910,7 +1934,15 @@ pub fn process_config_and_copy_artifacts(
     let default_out_dir =
         std::fs::canonicalize(default_out_dir).expect("unable to canonicalize out_dir");
 
-    let embedded_config = process_config(logger, config_path, &build_dir, host, target, opt_level);
+    let embedded_config = process_config(
+        logger,
+        config_path,
+        &build_dir,
+        None,
+        host,
+        target,
+        opt_level,
+    );
 
     let out_dir = default_out_dir;
     let display_out_dir = orig_default_out_dir;
@@ -2035,6 +2067,7 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
         logger,
         &config_path,
         out_dir_path,
+        None,
         &host,
         &target,
         &opt_level,
