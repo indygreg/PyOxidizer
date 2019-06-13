@@ -4,6 +4,8 @@
 Getting Started
 ===============
 
+.. _installing:
+
 Installing
 ==========
 
