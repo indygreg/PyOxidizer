@@ -31,8 +31,9 @@ The default project created by ``pyoxidizer init`` will produce an executable
 that embeds Python and starts a Python REPL. Let's test that::
 
    $ pyoxidizer run pyapp
-      Compiling memchr v2.2.0
-      ...
+   no existing PyOxidizer artifacts found
+   processing config file /home/gps/src/pyapp/pyoxidizer.toml
+   resolving Python distribution...
       Compiling pyapp v0.1.0 (/home/gps/src/pyapp)
        Finished dev [unoptimized + debuginfo] target(s) in 53.14s
         Running `target/debug/pyapp`
@@ -136,10 +137,10 @@ With the configuration changes made, we can build and run a ``pyflakes``
 native executable::
 
    # From outside the ``pyflakes`` directory
-   $ pyoxidizer run /path/to/pyflakes/project
+   $ pyoxidizer run /path/to/pyflakes/project -- /path/to/python/file/to/analyze
 
    # From inside the ``pyflakes`` directory
-   $ pyoxidizer run
+   $ pyoxidizer run -- /path/to/python/file/to/analyze
 
    # Or if you prefer the Rust native tools
    $ cargo run -- /path/to/python/file/to/analyze

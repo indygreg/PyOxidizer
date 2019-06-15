@@ -202,6 +202,7 @@ fn main() {
         )
         .subcommand(
             SubCommand::with_name("run")
+                .setting(AppSettings::TrailingVarArg)
                 .about("Build and run a PyOxidizer application")
                 .arg(
                     Arg::with_name("target")
@@ -219,7 +220,8 @@ fn main() {
                         .default_value(".")
                         .value_name("PATH")
                         .help("Directory containing project to build"),
-                ),
+                )
+                .arg(Arg::with_name("extra").multiple(true)),
         )
         .subcommand(
             SubCommand::with_name("python-distribution-licenses")
@@ -292,8 +294,9 @@ fn main() {
             let target = args.value_of("target");
             let release = args.is_present("release");
             let path = args.value_of("path").unwrap();
+            let extra: Vec<&str> = args.values_of("extra").unwrap().collect();
 
-            projectmgmt::run(&logger_context.logger, path, target, release)
+            projectmgmt::run(&logger_context.logger, path, target, release, &extra)
         }
 
         _ => Err("invalid sub-command".to_string()),

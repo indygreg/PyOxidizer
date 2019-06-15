@@ -456,6 +456,7 @@ fn run_project(
     config_path: &Path,
     target: &str,
     release: bool,
+    extra_args: &[&str],
 ) -> Result<(), String> {
     // We call our build wrapper and invoke the binary directly. This allows
     // build output to be printed.
@@ -477,6 +478,7 @@ fn run_project(
 
     match process::Command::new(bin_path)
         .current_dir(&project_path)
+        .args(extra_args)
         .status()
     {
         Ok(status) => {
@@ -560,6 +562,7 @@ pub fn run(
     project_path: &str,
     target: Option<&str>,
     release: bool,
+    extra_args: &[&str],
 ) -> Result<(), String> {
     let path = PathBuf::from(project_path)
         .canonicalize()
@@ -579,7 +582,7 @@ pub fn run(
         None => default_target()?,
     };
 
-    run_project(logger, &path, &config_path, &target, release)
+    run_project(logger, &path, &config_path, &target, release, extra_args)
 }
 
 /// Initialize a new Rust project with PyOxidizer support.

@@ -65,9 +65,11 @@ executable that embeds Python and starts a Python REPL by default. Let's
 test that::
 
    $ cd pyapp
-   $ cargo run
-      Compiling memchr v2.2.0
-      ...
+   $ pyoxidizer run
+   no existing PyOxidizer artifacts found
+   processing config file /home/gps/src/pyapp/pyoxidizer.toml
+   resolving Python distribution...
+   ...
       Compiling pyapp v0.1.0 (/home/gps/src/pyapp)
        Finished dev [unoptimized + debuginfo] target(s) in 53.14s
         Running `target/debug/testapp`
@@ -129,7 +131,7 @@ or delete it and replace it with the following::
 We're now telling the interpreter to effectively run the Python statement
 ``eval(code)`` when it starts. Test that out::
 
-   $ cargo run
+   $ pyoxidizer run
       Compiling pyembed v0.1.0 (/home/gps/src/pyapp/pyembed)
       Compiling pyapp v0.1.0 (/home/gps/src/pyapp)
        Finished dev [unoptimized + debuginfo] target(s) in 3.92s
@@ -162,7 +164,7 @@ package. At build time, this will effectively perform a
 ``pip install pyflakes==2.1.1`` and take all installed files and add them to the
 produced binary. Let's try that::
 
-   $ cargo run -- --help
+   $ pyoxidizer run -- --help
       Compiling pyembed v0.1.0 (/home/gps/tmp/pyapp/pyembed)
       Compiling pyapp v0.1.0 (/home/gps/tmp/pyapp)
        Finished dev [unoptimized + debuginfo] target(s) in 5.49s
