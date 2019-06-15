@@ -113,7 +113,7 @@ The new ``pyoxidizer.toml`` file should look something like:
 
    # Multiple [[python_distribution]] sections elided for brevity.
 
-   [[python_config]]
+   [[embedded_python_config]]
    program_name = "pyflakes"
    raw_allocator = "jemalloc"
 

@@ -225,7 +225,7 @@ struct ParsedConfig {
     builds: Vec<ConfigBuild>,
     #[serde(default, rename = "python_distribution")]
     python_distributions: Vec<ConfigPythonDistribution>,
-    #[serde(default, rename = "python_config")]
+    #[serde(default, rename = "embedded_python_config")]
     python_configs: Vec<ConfigPython>,
     python_packages: Vec<ConfigPythonPackaging>,
     python_run: Vec<ConfigRunMode>,

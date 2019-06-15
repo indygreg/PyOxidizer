@@ -123,18 +123,22 @@ Examples:
    url = "https://github.com/indygreg/python-build-standalone/releases/download/20190505/cpython-3.7.3-macos-20190506T0054.tar.zst"
    sha256 = "b46a861c05cb74b5b668d2ce44dcb65a449b9fef98ba5d9ec6ff6937829d5eec"
 
-``[[python_config]]``
----------------------
+``[[embedded_python_config]]``
+------------------------------
 
-This section configures the embedded Python interpreter.
+This section configures the default behavior of the embedded Python interpreter.
 
 Embedded Python interpreters are configured and instantiated using a
 ``pyembed::PythonConfig`` data structure. The ``pyembed`` crate defines a
 default instance of this data structure with parameters defined by the settings
 in this TOML section.
 
-If you are constructing a custom ``pyembed::PythonConfig`` instance and don't
-use the default instance, this config section is not relevant to you.
+.. note::
+
+   If you are writing custom Rust code and constructing a custom
+   ``pyembed::PythonConfig`` instance and don't use the default instance, this
+   config section is not relevant to you and can be omitted from your config
+   file.
 
 The following keys can be defined to control the default ``PythonConfig``
 behavior:

@@ -3,7 +3,7 @@
 # on this file format.
 
 {{{ python_distributions }}}
-[[python_config]]
+[[embedded_python_config]]
 program_name = "{{ program_name }}"
 raw_allocator = "{{#if jemalloc}}jemalloc{{else}}system{{/if}}"
 
