@@ -108,6 +108,8 @@ lazy_static! {
     };
 }
 
+const HOST: &str = env!("HOST");
+
 pub fn is_stdlib_test_package(name: &str) -> bool {
     for package in STDLIB_TEST_PACKAGES {
         let prefix = format!("{}.", package);
@@ -1932,7 +1934,7 @@ pub fn process_config_simple(
         config_path,
         &dest_dir,
         Some(&dest_dir),
-        target,
+        HOST,
         target,
         opt_level,
     )

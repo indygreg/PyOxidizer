@@ -6,4 +6,9 @@ use vergen::{generate_cargo_keys, ConstantsFlags};
 
 fn main() {
     generate_cargo_keys(ConstantsFlags::all()).expect("error running vergen");
+
+    println!(
+        "cargo:rustc-env=HOST={}",
+        std::env::var("HOST").expect("HOST not set")
+    );
 }
