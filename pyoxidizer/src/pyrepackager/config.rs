@@ -340,8 +340,10 @@ pub enum RunMode {
     Eval { code: String },
 }
 
+/// Represents a parsed PyOxidizer configuration file.
 #[derive(Debug)]
 pub struct Config {
+    pub config_path: PathBuf,
     pub build_config: BuildConfig,
     pub dont_write_bytecode: bool,
     pub ignore_environment: bool,
@@ -772,6 +774,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
     filesystem_importer = filesystem_importer || !sys_paths.is_empty();
 
     Ok(Config {
+        config_path: config_path.to_path_buf(),
         build_config,
         dont_write_bytecode,
         ignore_environment,
