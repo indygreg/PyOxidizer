@@ -1886,6 +1886,13 @@ pub fn process_config(
         write_data_rs(&orig_dest_path, &python_config_rs);
     }
 
+    // Write a file containing the cargo metadata lines. This allows those
+    // lines to be consumed elsewhere and re-emitted without going through all the
+    // logic in this function.
+    let cargo_metadata_path = Path::new(&dest_dir).join("cargo_metadata.txt");
+    fs::write(&cargo_metadata_path, cargo_metadata.join("\n").as_bytes())
+        .expect("unable to write cargo_metadata.txt");
+
     EmbeddedPythonConfig {
         config,
         python_distribution_path,
