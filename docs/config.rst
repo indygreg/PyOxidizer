@@ -27,18 +27,23 @@ If no configuration file is found, an error occurs.
 File Processing Semantics
 =========================
 
+Config files are processed by iterating through the various sections within
+them. Unless specified otherwise, when a new section type is encountered,
+a set of default values for that section type is initialized. As each new
+section instance is encountered, the section is examined to see if it is
+*applicable*. If it is, the settings it defines are set on the configuration
+object. The final set of values set for a given section type are used.
+
 The configuration file format is designed to be simultaneously used by multiple
 build *targets*, where a target is a Rust toolchain target triple, such as
-``x86_64-unknown-linux-gnu`` or ``x86_64-pc-windows-msvc``. Each TOML section
-accepts an optional ``target`` key that can be used to control whether the
-section is applied or ignored. If the ``target`` key is not defined or has
-the special value ``all``, it is always applied. Otherwise the section is only
-applied if its ``target`` value matches the Rust build target.
+``x86_64-unknown-linux-gnu`` or ``x86_64-pc-windows-msvc``. (Run
+``rustup target list`` to see a list of targets.)
 
-Unless specified otherwise, section processing works by first initializing
-a section with defaults. As sections are read from the config file, if
-the section is active for the current ``target``, any encountered keys are
-set. The final set of values across all encountered sections is used.
+Each TOML section accepts an optional ``target`` key that can be used to
+control whether the section is applied or ignored. If the ``target`` key is
+not defined or has the special value ``all``, it is always applied. Otherwise
+the section is only applied if its ``target`` value matches the Rust build
+target.
 
 Configuration Sections
 ======================
