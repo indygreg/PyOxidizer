@@ -1708,7 +1708,13 @@ pub fn parse_config_file(config_path: &Path, target: &str) -> Result<Config, Str
     fh.read_to_end(&mut config_data)
         .or_else(|e| Err(e.to_string()))?;
 
-    parse_config(&config_data, config_path, target)
+    parse_config(&config_data, config_path, target).or_else(|message| {
+        Err(format!(
+            "err reading config {}: {}",
+            config_path.display(),
+            message
+        ))
+    })
 }
 
 /// Derive build artifacts from a PyOxidizer config file.
@@ -1734,14 +1740,7 @@ pub fn process_config(
 
     info!(logger, "processing config file {}", config_path.display());
 
-    let config = match parse_config_file(config_path, target) {
-        Ok(v) => v,
-        Err(message) => panic!(
-            "error reading config {}: {}",
-            config_path.display(),
-            message
-        ),
-    };
+    let config = parse_config_file(config_path, target).unwrap();
 
     cargo_metadata.push(format!("cargo:rerun-if-changed={}", config_path.display()));
 
