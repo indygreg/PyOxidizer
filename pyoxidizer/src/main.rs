@@ -187,12 +187,6 @@ fn main() {
                         .help("Path to PyOxidizer config file to process"),
                 )
                 .arg(
-                    Arg::with_name("build_path")
-                        .long("build-dir")
-                        .value_name("DIR")
-                        .help("Directory for intermediate build state"),
-                )
-                .arg(
                     Arg::with_name("dest_path")
                         .required(true)
                         .value_name("DIR")
@@ -247,24 +241,12 @@ fn main() {
         ("build-artifacts", Some(args)) => {
             let config_path = args.value_of("config_path").unwrap();
             let config_path = PathBuf::from(config_path);
-
-            let (build_path, _temp_dir) = match args.value_of("build_path") {
-                Some(path) => (PathBuf::from(path), None),
-                None => {
-                    let temp_dir = tempdir::TempDir::new("pyoxidizer-build-artifacts")
-                        .expect("unable to create temp dir");
-
-                    (PathBuf::from(temp_dir.path()), Some(temp_dir))
-                }
-            };
-
             let dest_path = args.value_of("dest_path").unwrap();
             let dest_path = PathBuf::from(dest_path);
 
-            let config = pyrepackager::repackage::process_config_and_copy_artifacts(
+            let config = pyrepackager::repackage::process_config_simple(
                 &logger_context.logger,
                 &config_path,
-                &build_path,
                 &dest_path,
             );
 

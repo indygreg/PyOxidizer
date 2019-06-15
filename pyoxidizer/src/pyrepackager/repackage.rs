@@ -1900,17 +1900,11 @@ pub fn process_config(
     }
 }
 
-/// Process a PyOxidizer config file and copy important artifacts to a directory.
-///
-/// ``build_dir`` holds state for building artifacts. It should be consistent between
-/// invocations or else operations will be slow.
-///
-/// Important artifacts from ``build_dir`` are copied to ``out_dir``.
-pub fn process_config_and_copy_artifacts(
+/// Process a PyOxidizer config file with minimal environment knowledge.
+pub fn process_config_simple(
     logger: &slog::Logger,
     config_path: &Path,
-    build_dir: &Path,
-    default_out_dir: &Path,
+    dest_dir: &Path,
 ) -> EmbeddedPythonConfig {
     // TODO derive these more intelligently.
     let host = if cfg!(target_os = "linux") {
@@ -1926,70 +1920,18 @@ pub fn process_config_and_copy_artifacts(
     let target = host;
     let opt_level = "0";
 
-    create_dir_all(build_dir).expect("unable to create build directory");
-    let build_dir = std::fs::canonicalize(build_dir).expect("unable to canonicalize build_dir");
+    create_dir_all(dest_dir).expect("unable to create build directory");
+    let dest_dir = std::fs::canonicalize(dest_dir).expect("unable to canonicalize build_dir");
 
-    create_dir_all(default_out_dir).expect("unable to create output directory");
-    let orig_default_out_dir = default_out_dir.to_path_buf();
-    let default_out_dir =
-        std::fs::canonicalize(default_out_dir).expect("unable to canonicalize out_dir");
-
-    let embedded_config = process_config(
+    process_config(
         logger,
         config_path,
-        &build_dir,
-        None,
+        &dest_dir,
+        Some(&dest_dir),
         host,
         target,
         opt_level,
-    );
-
-    let out_dir = default_out_dir;
-    let display_out_dir = orig_default_out_dir;
-
-    let importlib_bootstrap_path = out_dir.join("importlib_bootstrap");
-    let importlib_bootstrap_external_path = out_dir.join("importlib_bootstrap_external");
-    let py_modules_path = out_dir.join("py-modules");
-    let resources_path = out_dir.join("python-resources");
-    let libpython_path = out_dir.join("libpythonXY.a");
-
-    // It is possible to use the output directory as the build directory.
-    if build_dir != out_dir {
-        fs::copy(
-            embedded_config.importlib_bootstrap_path,
-            &importlib_bootstrap_path,
-        )
-        .expect("error copying file");
-        fs::copy(
-            embedded_config.importlib_bootstrap_external_path,
-            &importlib_bootstrap_external_path,
-        )
-        .expect("error copying file");
-        fs::copy(embedded_config.py_modules_path, &py_modules_path).expect("error copying file");
-        fs::copy(embedded_config.resources_path, &resources_path).expect("error copying file");
-        fs::copy(embedded_config.libpython_path, &libpython_path).expect("error copying file");
-    }
-
-    let python_config_rs = derive_python_config(
-        &embedded_config.config,
-        &display_out_dir.join("importlib_bootstrap"),
-        &display_out_dir.join("importlib_bootstrap_external"),
-        &display_out_dir.join("py-modules"),
-        &display_out_dir.join("python-resources"),
-    );
-
-    EmbeddedPythonConfig {
-        config: embedded_config.config,
-        python_distribution_path: embedded_config.python_distribution_path,
-        importlib_bootstrap_path,
-        importlib_bootstrap_external_path,
-        module_names_path: embedded_config.module_names_path,
-        py_modules_path,
-        resources_path,
-        libpython_path,
-        cargo_metadata: embedded_config.cargo_metadata,
-        python_config_rs,
-    }
+    )
 }
 
 pub fn find_pyoxidizer_config_file(start_dir: &Path) -> Option<PathBuf> {
