@@ -311,6 +311,7 @@ fn build_project(
         .join(if release { "release" } else { "debug" })
         .join("pyoxidizer");
 
+    // TODO take rerun-if-changed into consideration to avoid effective no-op.
     process_config_simple(logger, config_path, &pyoxidizer_artifacts_path, target);
 
     let mut args = Vec::new();
