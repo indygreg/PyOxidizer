@@ -1406,6 +1406,8 @@ pub fn link_libpython(
     build.host(host);
     build.target(target);
     build.opt_level_str(opt_level);
+    // We handle this ourselves.
+    build.cargo_metadata(false);
 
     info!(
         logger,
@@ -1542,6 +1544,12 @@ pub fn link_libpython(
     info!(logger, "compiling libpythonXY...");
     build.compile("pythonXY");
     info!(logger, "libpythonXY created");
+
+    cargo_metadata.push("cargo:rustc-link-lib=static=pythonXY".to_string());
+    cargo_metadata.push(format!(
+        "cargo:rustc-link-search=native={}",
+        out_dir.display()
+    ));
 
     LibpythonInfo {
         path: out_dir.join("libpythonXY.a"),
