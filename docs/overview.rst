@@ -28,6 +28,73 @@ that CPython (the official Python distribution available from www.python.org)
 is implemented in C. Rust is simply a tool to achieve an end goal (albeit
 a rather effective and powerful tool).
 
+Benefits of PyOxidizer
+======================
+
+You may be wondering why you should use or care about ``PyOxidizer``.
+Great question!
+
+Python application distribution is generally considered an unsolved
+problem. At PyCon 2019, Russel Keith-Magee
+`identified code distribution <https://youtu.be/ftP5BQh1-YM?t=2033>`_ as
+a potential *black swan* for Python during a keynote talk. In their words,
+*Python hasn't ever had a consistent story for how I give my code to someone
+else, especially if that someone else isn't a developer and just wants to
+use my application.* The over-arching goal of ``PyOxidizer`` is to solve this
+problem. If we're successful, we help Python become a more attractive
+option in more domains and eliminate this potential *black swan* that
+is an existential threat for Python's longevity.
+
+On a less existential level, there are several benefits to ``PyOxidizer``.
+
+Ease of Application Installation
+--------------------------------
+
+Installing Python applications can be hard, especially if you aren't a
+developer.
+
+Applications produced with ``PyOxidizer`` are self-contained - as small as
+a single file executable. From the perspective of the end-user, they get
+an executable containing an application that *just works*. There's no need
+to install a Python distribution on their system. There's no need to
+muck with installing Python packages. There's no need to configure a
+container runtime like Docker. There's just an executable containing an
+embedded Python interpreter and associated Python application code and
+running that executable *just works*. From the perspective of the end-user,
+your application is just another platform native executable.
+
+Ease of Packaging and Distribution
+----------------------------------
+
+Python application developers can spend a large amount of time
+managing how their applications are packaged and distributed. There's
+no universal standard for distributing Python applications. Instead, there's
+a hodgepodge of random tools, typically different tools per operating
+system.
+
+Python application developers typically need to *solve* the packaging
+and distribution problem N times. This is thankless work and sucks valuable
+time away from what could otherwise be spent improving the application
+itself. Furthermore, each distinct Python application tends to solve this
+problem redundantly.
+
+Again, the over-arching goal of ``PyOxidizer`` is to provide a comprehensive
+solution to the Python application packaging and distribution problem space.
+We want to make it as turn-key as possible for application maintainers to
+make their applications usable by novice computer users. If we're successful,
+Python developers can spend less time solving packaging and distribution
+problems and more time improving Python applications themselves. That's
+good for the Python ecosystem.
+
+Faster Python Programs
+----------------------
+
+Binaries built with ``PyOxidizer`` tend to run faster than those
+executing via a normal ``python`` interpreter.
+
+TODO add details
+TODO add some graphs here
+
 Components
 ==========
 
