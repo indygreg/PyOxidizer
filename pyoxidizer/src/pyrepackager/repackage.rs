@@ -1918,19 +1918,8 @@ pub fn process_config_simple(
     logger: &slog::Logger,
     config_path: &Path,
     dest_dir: &Path,
+    target: &str,
 ) -> EmbeddedPythonConfig {
-    // TODO derive these more intelligently.
-    let host = if cfg!(target_os = "linux") {
-        "x86_64-unknown-linux-gnu"
-    } else if cfg!(target_os = "windows") {
-        "x86_64-pc-windows-msvc"
-    } else if cfg!(target_os = "macos") {
-        "x86_64-apple-darwin"
-    } else {
-        panic!("unable to resolve target for current binary (this is a known issue)");
-    };
-
-    let target = host;
     let opt_level = "0";
 
     create_dir_all(dest_dir).expect("unable to create build directory");
@@ -1941,7 +1930,7 @@ pub fn process_config_simple(
         config_path,
         &dest_dir,
         Some(&dest_dir),
-        host,
+        target,
         target,
         opt_level,
     )

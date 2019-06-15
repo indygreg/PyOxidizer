@@ -16,7 +16,7 @@ use std::process;
 use super::environment::PyOxidizerSource;
 use super::pyrepackager::dist::analyze_python_distribution_tar_zst;
 use super::pyrepackager::fsscan::walk_tree_files;
-use super::pyrepackager::repackage::run_from_build;
+use super::pyrepackager::repackage::{process_config_simple, run_from_build};
 use super::python_distributions::CPYTHON_BY_TRIPLE;
 
 lazy_static! {
@@ -60,6 +60,20 @@ lazy_static! {
 
         handlebars
     };
+}
+
+/// Attempt to resolve the default Rust target for a build.
+pub fn default_target() -> Option<String> {
+    // TODO derive these more intelligently.
+    if cfg!(target_os = "linux") {
+        Some("x86_64-unknown-linux-gnu".to_string())
+    } else if cfg!(target_os = "windows") {
+        Some("x86_64-pc-windows-msvc".to_string())
+    } else if cfg!(target_os = "macos") {
+        Some("x86_64-apple-darwin".to_string())
+    } else {
+        None
+    }
 }
 
 /// Find existing PyOxidizer files in a project directory.
@@ -348,6 +362,27 @@ pub fn build(project_path: &str, release: bool) -> Result<(), String> {
     }
 
     build_project(&path, release)?;
+
+    Ok(())
+}
+
+pub fn build_artifacts(
+    logger: &slog::Logger,
+    config_path: &Path,
+    dest_path: &Path,
+) -> Result<(), String> {
+    let target = default_target();
+
+    if target.is_none() {
+        return Err("unable to resolve default target".to_string());
+    }
+
+    let target = target.unwrap();
+
+    let config = process_config_simple(logger, &config_path, &dest_path, &target);
+
+    println!("Initialize a Python interpreter with the following struct:\n");
+    println!("{}", config.python_config_rs);
 
     Ok(())
 }

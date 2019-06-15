@@ -239,16 +239,7 @@ fn main() {
             let dest_path = args.value_of("dest_path").unwrap();
             let dest_path = PathBuf::from(dest_path);
 
-            let config = pyrepackager::repackage::process_config_simple(
-                &logger_context.logger,
-                &config_path,
-                &dest_path,
-            );
-
-            println!("Initialize a Python interpreter with the following struct:\n");
-            println!("{}", config.python_config_rs);
-
-            Ok(())
+            projectmgmt::build_artifacts(&logger_context.logger, &config_path, &dest_path)
         }
 
         ("build", Some(args)) => {
