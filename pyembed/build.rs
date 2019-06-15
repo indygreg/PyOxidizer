@@ -4,9 +4,40 @@
 
 use pyoxidizerlib::logging::logger_from_env;
 use pyoxidizerlib::run_from_build;
+use std::env;
+use std::path::PathBuf;
 
 fn main() {
-    let logger_context = logger_from_env();
+    // We support using pre-built artifacts, in which case we emit the
+    // cargo metadata lines from the "original" build to "register" the
+    // artifacts with this cargo invocation.
+    if env::var("PYOXIDIZER_REUSE_ARTIFACTS").is_ok() {
+        let artifact_dir_env = env::var("PYOXIDIZER_ARTIFACT_DIR");
 
-    run_from_build(&logger_context.logger, "build.rs");
+        let artifact_dir_path = match artifact_dir_env {
+            Ok(ref v) => PathBuf::from(v),
+            Err(_) => {
+                let out_dir = env::var("OUT_DIR").unwrap();
+                PathBuf::from(&out_dir)
+            }
+        };
+
+        println!(
+            "using pre-built artifacts from {}",
+            artifact_dir_path.display()
+        );
+
+        println!("cargo:rerun-if-env-changed=PYOXIDIZER_REUSE_ARTIFACTS");
+        println!("cargo:rerun-if-env-changed=PYOXIDIZER_ARTIFACT_DIR");
+
+        // Emit the cargo metadata lines to register libraries for linking.
+        let cargo_metadata_path = artifact_dir_path.join("cargo_metadata.txt");
+        let metadata = std::fs::read_to_string(&cargo_metadata_path)
+            .expect(format!("failed to read {}", cargo_metadata_path.display()).as_str());
+        println!("{}", metadata);
+    } else {
+        let logger_context = logger_from_env();
+
+        run_from_build(&logger_context.logger, "build.rs");
+    }
 }

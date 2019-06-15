@@ -1885,14 +1885,12 @@ pub fn process_config(
 
     let dest_path = Path::new(&dest_dir).join("data.rs");
     write_data_rs(&dest_path, &python_config_rs);
-
-    // We also write data.rs to the original requested out directory because we can't
-    // easily pass the real output path to the ``pyembed`` crate. (It uses
-    // ``env!("OUT_DIR")`` to locate the data.rs file.)
-    let orig_dest_path = Path::new(&default_out_dir).join("data.rs");
-    if orig_dest_path != dest_path {
-        write_data_rs(&orig_dest_path, &python_config_rs);
-    }
+    // Define the path to the written file in an environment variable so it can
+    // be anywhere.
+    cargo_metadata.push(format!(
+        "cargo:rustc-env=PYEMBED_DATA_RS_PATH={}",
+        dest_path.display()
+    ));
 
     // Write a file containing the cargo metadata lines. This allows those
     // lines to be consumed elsewhere and re-emitted without going through all the
