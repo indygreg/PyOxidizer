@@ -1936,6 +1936,7 @@ pub fn process_config_simple(
     )
 }
 
+/// Find a pyoxidizer.toml configuration file by walking directory ancestry.
 pub fn find_pyoxidizer_config_file(start_dir: &Path) -> Option<PathBuf> {
     for test_dir in start_dir.ancestors() {
         let candidate = test_dir.to_path_buf().join("pyoxidizer.toml");
@@ -1946,6 +1947,21 @@ pub fn find_pyoxidizer_config_file(start_dir: &Path) -> Option<PathBuf> {
     }
 
     None
+}
+
+/// Find a PyOxidizer configuration file from walking the filesystem or an
+/// environment variable override.
+pub fn find_pyoxidizer_config_file_env(logger: &slog::Logger, start_dir: &Path) -> Option<PathBuf> {
+    match env::var("PYOXIDIZER_CONFIG") {
+        Ok(config_env) => {
+            info!(
+                logger,
+                "using PyOxidizer config file from PYOXIDIZER_CONFIG: {}", config_env
+            );
+            Some(PathBuf::from(config_env))
+        }
+        Err(_) => find_pyoxidizer_config_file(start_dir),
+    }
 }
 
 /// Runs packaging/embedding from the context of a build script.
@@ -1972,27 +1988,11 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
     let host = env::var("HOST").expect("HOST not defined");
     let target = env::var("TARGET").expect("TARGET not defined");
     let opt_level = env::var("OPT_LEVEL").expect("OPT_LEVEL not defined");
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not found");
 
-    let config_path = match env::var("PYOXIDIZER_CONFIG") {
-        Ok(config_env) => {
-            info!(
-                logger,
-                "using PyOxidizer config file from PYOXIDIZER_CONFIG: {}", config_env
-            );
-            PathBuf::from(config_env)
-        }
-        Err(_) => {
-            let manifest_dir =
-                env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not found");
-
-            let path = find_pyoxidizer_config_file(&PathBuf::from(manifest_dir));
-
-            if path.is_none() {
-                panic!("Could not find PyOxidizer config file");
-            }
-
-            path.unwrap()
-        }
+    let config_path = match find_pyoxidizer_config_file_env(logger, &PathBuf::from(manifest_dir)) {
+        Some(v) => v,
+        None => panic!("Could not find PyOxidizer config file"),
     };
 
     if !config_path.exists() {
