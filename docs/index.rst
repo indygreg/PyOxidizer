@@ -7,6 +7,8 @@ PyOxidizer
 
    getting_started
    overview
+   packaging
+   packaging_pitfalls
    distributing
    config
    faq
