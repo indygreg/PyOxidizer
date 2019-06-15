@@ -2005,11 +2005,17 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
     let out_dir = env::var("OUT_DIR").unwrap();
     let out_dir_path = Path::new(&out_dir);
 
+    let artifact_env = env::var("PYOXIDIZER_ARTIFACT_DIR");
+    let force_out_path = match artifact_env {
+        Ok(ref v) => Some(Path::new(v)),
+        Err(_) => None,
+    };
+
     for line in process_config(
         logger,
         &config_path,
         out_dir_path,
-        None,
+        force_out_path,
         &host,
         &target,
         &opt_level,
