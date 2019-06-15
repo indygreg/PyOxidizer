@@ -338,7 +338,7 @@ fn run_project(project_path: &Path, release: bool) -> Result<(), String> {
 ///
 /// This is a glorified wrapper around `cargo build`. Our goal is to get the
 /// output from repackaging to give the user something for debugging.
-pub fn build(project_path: &str, debug: bool, release: bool) -> Result<(), String> {
+pub fn build(project_path: &str, release: bool) -> Result<(), String> {
     let path = PathBuf::from(project_path)
         .canonicalize()
         .or_else(|e| Err(e.description().to_owned()))?;
@@ -347,13 +347,7 @@ pub fn build(project_path: &str, debug: bool, release: bool) -> Result<(), Strin
         return Err("no PyOxidizer files in specified path".to_string());
     }
 
-    if debug {
-        build_project(&path, false)?;
-    }
-
-    if release {
-        build_project(&path, true)?;
-    }
+    build_project(&path, release)?;
 
     Ok(())
 }

@@ -161,11 +161,6 @@ fn main() {
                 .about("Build a PyOxidizer enabled project")
                 .long_about(BUILD_ABOUT)
                 .arg(
-                    Arg::with_name("debug")
-                        .long("debug")
-                        .help("Build a debug binary"),
-                )
-                .arg(
                     Arg::with_name("release")
                         .long("release")
                         .help("Build a release binary"),
@@ -257,15 +252,10 @@ fn main() {
         }
 
         ("build", Some(args)) => {
-            let mut debug = args.is_present("debug");
             let release = args.is_present("release");
             let path = args.value_of("path").unwrap();
 
-            if !debug && !release {
-                debug = true;
-            }
-
-            projectmgmt::build(path, debug, release)
+            projectmgmt::build(path, release)
         }
 
         ("init", Some(args)) => {
