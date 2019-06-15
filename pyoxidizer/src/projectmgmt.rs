@@ -323,6 +323,9 @@ fn build_project(project_path: &Path, target: &str, release: bool) -> Result<(),
 }
 
 fn run_project(project_path: &Path, release: bool) -> Result<(), String> {
+    // TODO call build_project and run the binary directly instead of using
+    // cargo run. This will facilitate logging from the build working.
+
     let mut args = Vec::new();
     args.push("run");
     if release {
