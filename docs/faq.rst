@@ -31,22 +31,36 @@ variable to the path of a Python 3.7 executable and try again. e.g.::
 Why Rust?
 =========
 
+This is really 2 separate questions:
+
+* Why choose Rust for the run-time/embedding components?
+* Why choose Rust for the build-time components?
+
 ``PyOxidizer`` binaries require a *driver* application to interface with
 the Python C API and that *driver* application needs to compile to native
-code. In the author's opinion, the only appropriate languages for this
-were C, C++, and Rust.
+code in order to provide a *native* executable without requiring a run-time
+on the machine it executes on. In the author's opinion, the only appropriate
+languages for this were C, Rust, and maybe C++.
 
 Of those 3, the project's author prefers to write new projects in Rust
 because it is a superior systems programming language that has built on
 lessons learned from decades working with its predecessors. The author
 prefers technologies that can detect and eliminate entire classes of bugs
-(like buffer overflow and use-after-free) at compile time.
+(like buffer overflow and use-after-free) at compile time. On a less-opinionated
+front, Rust's built-in build system support means that we don't have to
+spend considerable effort solving hard problems like cross-compiling.
+Implementing the embedding component in Rust also creates interesting
+opportunities to embed Python in Rust programs. This is largely an
+unexplored area in the Python ecosystem and the author hopes that PyOxidizer
+plays a part in more people embedding Python in Rust.
 
 For the non-runtime packaging side of ``PyOxidizer``, pretty much any
 programming language would be appropriate. The project's author initially
 did prototyping in Python 3 but switched to Rust for synergy with the the
-run-time driver and because Rust had *solved* some hard problems such as
-a build system that could easily produce statically linked binaries.
+run-time driver and because Rust had working solutions for several systems-level
+problems, such as parsing ELF, DWARF, etc executables, cross-compiling,
+integrating custom memory allocators, etc. A minor factor was the author's
+desire to learn more about Rust by starting a *real* Rust project.
 
 Why is the Rust Code... Not Great?
 ==================================
