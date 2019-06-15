@@ -64,6 +64,10 @@ This section configures high-level application build settings.
    The special value ``$ORIGIN`` will be replaced by the directory
    holding this configuration file.
 
+   If not set, artifacts will be placed next to the other artifacts that
+   Rust's build system produces. (Typically in the ``target`` directory
+   under a ``Cargo.toml`` file.)
+
 ``[[python_distribution]]``
 ---------------------------
 
