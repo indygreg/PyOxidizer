@@ -63,16 +63,16 @@ lazy_static! {
 }
 
 /// Attempt to resolve the default Rust target for a build.
-pub fn default_target() -> Option<String> {
+pub fn default_target() -> Result<String, String> {
     // TODO derive these more intelligently.
     if cfg!(target_os = "linux") {
-        Some("x86_64-unknown-linux-gnu".to_string())
+        Ok("x86_64-unknown-linux-gnu".to_string())
     } else if cfg!(target_os = "windows") {
-        Some("x86_64-pc-windows-msvc".to_string())
+        Ok("x86_64-pc-windows-msvc".to_string())
     } else if cfg!(target_os = "macos") {
-        Some("x86_64-apple-darwin".to_string())
+        Ok("x86_64-apple-darwin".to_string())
     } else {
-        None
+        Err("unable to resolve target".to_string())
     }
 }
 
@@ -286,9 +286,14 @@ pub fn add_pyoxidizer(
     Ok(())
 }
 
-fn build_project(project_path: &Path, release: bool) -> Result<(), String> {
+/// Build an oxidized Rust application at the specified project path.
+fn build_project(project_path: &Path, target: &str, release: bool) -> Result<(), String> {
     let mut args = Vec::new();
     args.push("build");
+
+    args.push("--target");
+    args.push(target);
+
     if release {
         args.push("--release");
     }
@@ -361,7 +366,9 @@ pub fn build(project_path: &str, release: bool) -> Result<(), String> {
         return Err("no PyOxidizer files in specified path".to_string());
     }
 
-    build_project(&path, release)?;
+    let target = default_target()?;
+
+    build_project(&path, &target, release)?;
 
     Ok(())
 }
@@ -371,13 +378,7 @@ pub fn build_artifacts(
     config_path: &Path,
     dest_path: &Path,
 ) -> Result<(), String> {
-    let target = default_target();
-
-    if target.is_none() {
-        return Err("unable to resolve default target".to_string());
-    }
-
-    let target = target.unwrap();
+    let target = default_target()?;
 
     let config = process_config_simple(logger, &config_path, &dest_path, &target);
 
