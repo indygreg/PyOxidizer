@@ -417,13 +417,26 @@ pub fn build(
 
 pub fn build_artifacts(
     logger: &slog::Logger,
-    config_path: &Path,
+    project_path: &Path,
     dest_path: &Path,
     target: Option<&str>,
 ) -> Result<(), String> {
+    let path = PathBuf::from(project_path)
+        .canonicalize()
+        .or_else(|e| Err(e.description().to_owned()))?;
+
+    if find_pyoxidizer_files(&path).is_empty() {
+        return Err("no PyOxidizer files in specified path".to_string());
+    }
+
     let target = match target {
         Some(v) => v.to_string(),
         None => default_target()?,
+    };
+
+    let config_path = match find_pyoxidizer_config_file_env(logger, &path) {
+        Some(p) => p,
+        None => return Err("unable to find PyOxidizer config file".to_string()),
     };
 
     let config = process_config_simple(logger, &config_path, &dest_path, &target);

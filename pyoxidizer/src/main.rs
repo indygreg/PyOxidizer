@@ -188,9 +188,9 @@ fn main() {
                         .help("Rust target triple to build for"),
                 )
                 .arg(
-                    Arg::with_name("config_path")
-                        .required(true)
-                        .value_name("CONFIG_PATH")
+                    Arg::with_name("path")
+                        .default_value(".")
+                        .value_name("PROJECT_PATH")
                         .help("Path to PyOxidizer config file to process"),
                 )
                 .arg(
@@ -247,12 +247,12 @@ fn main() {
 
         ("build-artifacts", Some(args)) => {
             let target = args.value_of("target");
-            let config_path = args.value_of("config_path").unwrap();
-            let config_path = PathBuf::from(config_path);
+            let path = args.value_of("path").unwrap();
+            let path = PathBuf::from(path);
             let dest_path = args.value_of("dest_path").unwrap();
             let dest_path = PathBuf::from(dest_path);
 
-            projectmgmt::build_artifacts(&logger_context.logger, &config_path, &dest_path, target)
+            projectmgmt::build_artifacts(&logger_context.logger, &path, &dest_path, target)
         }
 
         ("build", Some(args)) => {
