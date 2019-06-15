@@ -1741,6 +1741,8 @@ pub fn process_config(
         ),
     };
 
+    cargo_metadata.push(format!("cargo:rerun-if-changed={}", config_path.display()));
+
     // Allow config to overwrite the output directory. But not if force_out_dir is set.
     let dest_dir = if let Some(path) = force_out_dir {
         path
@@ -1998,11 +2000,6 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
     if !config_path.exists() {
         panic!("PyOxidizer config file does not exist");
     }
-
-    println!(
-        "cargo:rerun-if-changed={}",
-        config_path.to_str().expect("could not convert path to str")
-    );
 
     let out_dir = env::var("OUT_DIR").unwrap();
     let out_dir_path = Path::new(&out_dir);
