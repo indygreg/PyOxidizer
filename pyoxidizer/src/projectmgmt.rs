@@ -7,6 +7,7 @@
 use handlebars::Handlebars;
 use itertools::Itertools;
 use lazy_static::lazy_static;
+use slog::info;
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::io::{Cursor, Read, Write};
@@ -295,6 +296,101 @@ fn resolve_target_path(project_path: &Path, target: &str, release: bool) -> Path
         .join(if release { "release " } else { "debug" })
 }
 
+fn dependency_current(
+    logger: &slog::Logger,
+    path: &Path,
+    built_time: std::time::SystemTime,
+) -> bool {
+    match path.metadata() {
+        Ok(md) => match md.modified() {
+            Ok(t) => {
+                if t > built_time {
+                    info!(
+                        logger,
+                        "building artifacts because {} changed",
+                        path.display()
+                    );
+                    false
+                } else {
+                    true
+                }
+            }
+            Err(_) => {
+                info!(logger, "error resolving mtime of {}", path.display());
+                false
+            }
+        },
+        Err(_) => {
+            info!(logger, "error resolving metadata of {}", path.display());
+            false
+        }
+    }
+}
+
+/// Determines whether PyOxidizer artifacts are current.
+fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: &Path) -> bool {
+    let metadata_path = artifacts_path.join("cargo_metadata.txt");
+
+    if !metadata_path.exists() {
+        info!(logger, "no existing PyOxidizer artifacts found");
+        return false;
+    }
+
+    // We assume the mtime of the metadata file is the built time. If we
+    // encounter any modified times newer than that file, we're not up to date.
+    let built_time = match metadata_path.metadata() {
+        Ok(md) => match md.modified() {
+            Ok(t) => t,
+            Err(_) => {
+                info!(
+                    logger,
+                    "error determining mtime of {}",
+                    metadata_path.display()
+                );
+                return false;
+            }
+        },
+        Err(_) => {
+            info!(
+                logger,
+                "error resolving metadata of {}",
+                metadata_path.display()
+            );
+            return false;
+        }
+    };
+
+    let metadata_data = match std::fs::read_to_string(&metadata_path) {
+        Ok(data) => data,
+        Err(_) => {
+            info!(logger, "error reading {}", metadata_path.display());
+            return false;
+        }
+    };
+
+    for line in metadata_data.split("\n") {
+        if line.starts_with("cargo:rerun-if-changed=") {
+            let path = PathBuf::from(&line[23..line.len()]);
+
+            if !dependency_current(logger, &path, built_time) {
+                return false;
+            }
+        }
+    }
+
+    let current_exe = std::env::current_exe().expect("unable to determine current exe");
+    if !dependency_current(logger, &current_exe, built_time) {
+        return false;
+    }
+
+    if !dependency_current(logger, config_path, built_time) {
+        return false;
+    }
+
+    // TODO detect config file change.
+    return true;
+}
+
 /// Build an oxidized Rust application at the specified project path.
 fn build_project(
     logger: &slog::Logger,
@@ -316,8 +412,9 @@ fn build_project(
     let pyoxidizer_artifacts_path =
         resolve_target_path(project_path, target, release).join("pyoxidizer");
 
-    // TODO take rerun-if-changed into consideration to avoid effective no-op.
-    process_config_simple(logger, config_path, &pyoxidizer_artifacts_path, target);
+    if !artifacts_current(logger, config_path, &pyoxidizer_artifacts_path) {
+        process_config_simple(logger, config_path, &pyoxidizer_artifacts_path, target);
+    }
 
     let mut args = Vec::new();
     args.push("build");
