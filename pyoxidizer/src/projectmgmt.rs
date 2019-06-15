@@ -10,6 +10,7 @@ use lazy_static::lazy_static;
 use slog::info;
 use std::collections::BTreeMap;
 use std::error::Error;
+use std::fs::create_dir_all;
 use std::io::{Cursor, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process;
@@ -18,7 +19,8 @@ use super::environment::PyOxidizerSource;
 use super::pyrepackager::dist::analyze_python_distribution_tar_zst;
 use super::pyrepackager::fsscan::walk_tree_files;
 use super::pyrepackager::repackage::{
-    find_pyoxidizer_config_file_env, process_config_simple, run_from_build,
+    find_pyoxidizer_config_file_env, parse_config_file, process_config, process_config_simple,
+    run_from_build, HOST,
 };
 use super::python_distributions::CPYTHON_BY_TRIPLE;
 
@@ -206,11 +208,11 @@ pub fn write_new_pyoxidizer_config_file(
 /// Write files for the pyembed crate into a destination directory.
 pub fn write_pyembed_crate_files(dest_dir: &Path, jemalloc: bool) -> Result<(), std::io::Error> {
     println!("creating {}", dest_dir.to_str().unwrap());
-    std::fs::create_dir_all(dest_dir)?;
+    create_dir_all(dest_dir)?;
 
     let src_dir = dest_dir.to_path_buf().join("src");
     println!("creating {}", src_dir.to_str().unwrap());
-    std::fs::create_dir_all(&src_dir)?;
+    create_dir_all(&src_dir)?;
 
     for (rs, data) in PYEMBED_RS_FILES.iter() {
         let path = src_dir.join(rs);
@@ -411,9 +413,23 @@ fn build_project(
 
     let pyoxidizer_artifacts_path =
         resolve_target_path(project_path, target, release).join("pyoxidizer");
+    let pyoxidizer_artifacts_path = std::fs::canonicalize(pyoxidizer_artifacts_path)
+        .expect("unable to canonicalize artifacts directory");
+
+    create_dir_all(&pyoxidizer_artifacts_path).or_else(|e| Err(e.to_string()))?;
+
+    let config = parse_config_file(config_path, target)?;
 
     if !artifacts_current(logger, config_path, &pyoxidizer_artifacts_path) {
-        process_config_simple(logger, config_path, &pyoxidizer_artifacts_path, target);
+        process_config(
+            logger,
+            config,
+            &pyoxidizer_artifacts_path,
+            Some(&pyoxidizer_artifacts_path),
+            HOST,
+            target,
+            "0",
+        );
     }
 
     let mut args = Vec::new();

@@ -108,7 +108,7 @@ lazy_static! {
     };
 }
 
-const HOST: &str = env!("HOST");
+pub const HOST: &str = env!("HOST");
 
 pub fn is_stdlib_test_package(name: &str) -> bool {
     for package in STDLIB_TEST_PACKAGES {
