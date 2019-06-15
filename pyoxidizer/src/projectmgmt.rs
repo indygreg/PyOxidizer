@@ -288,11 +288,19 @@ pub fn add_pyoxidizer(
 
 /// Build an oxidized Rust application at the specified project path.
 fn build_project(project_path: &Path, target: &str, release: bool) -> Result<(), String> {
+    // We set an explicit target directory so we can be sure we write our
+    // artifacts to the same directory that cargo is using.
+    let target_path = project_path.join("target");
+    let target_path_string = target_path.display().to_string();
+
     let mut args = Vec::new();
     args.push("build");
 
     args.push("--target");
     args.push(target);
+
+    args.push("--target-dir");
+    args.push(&target_path_string);
 
     if release {
         args.push("--release");
