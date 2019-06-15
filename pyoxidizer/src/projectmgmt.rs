@@ -425,7 +425,7 @@ fn build_project(
             logger,
             config,
             &pyoxidizer_artifacts_path,
-            Some(&pyoxidizer_artifacts_path),
+            None,
             HOST,
             target,
             "0",
