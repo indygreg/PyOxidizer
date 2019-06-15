@@ -161,6 +161,12 @@ fn main() {
                 .about("Build a PyOxidizer enabled project")
                 .long_about(BUILD_ABOUT)
                 .arg(
+                    Arg::with_name("target")
+                        .long("target")
+                        .takes_value(true)
+                        .help("Rust target triple to build for"),
+                )
+                .arg(
                     Arg::with_name("release")
                         .long("release")
                         .help("Build a release binary"),
@@ -175,6 +181,12 @@ fn main() {
         .subcommand(
             SubCommand::with_name("build-artifacts")
                 .about("Process a PyOxidizer config file and build derived artifacts")
+                .arg(
+                    Arg::with_name("target")
+                        .long("target")
+                        .takes_value(true)
+                        .help("Rust target triple to build for"),
+                )
                 .arg(
                     Arg::with_name("config_path")
                         .required(true)
@@ -234,19 +246,21 @@ fn main() {
         }
 
         ("build-artifacts", Some(args)) => {
+            let target = args.value_of("target");
             let config_path = args.value_of("config_path").unwrap();
             let config_path = PathBuf::from(config_path);
             let dest_path = args.value_of("dest_path").unwrap();
             let dest_path = PathBuf::from(dest_path);
 
-            projectmgmt::build_artifacts(&logger_context.logger, &config_path, &dest_path)
+            projectmgmt::build_artifacts(&logger_context.logger, &config_path, &dest_path, target)
         }
 
         ("build", Some(args)) => {
             let release = args.is_present("release");
+            let target = args.value_of("target");
             let path = args.value_of("path").unwrap();
 
-            projectmgmt::build(path, release)
+            projectmgmt::build(path, target, release)
         }
 
         ("init", Some(args)) => {
