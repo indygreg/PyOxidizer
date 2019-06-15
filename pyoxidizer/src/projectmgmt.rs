@@ -16,7 +16,9 @@ use std::process;
 use super::environment::PyOxidizerSource;
 use super::pyrepackager::dist::analyze_python_distribution_tar_zst;
 use super::pyrepackager::fsscan::walk_tree_files;
-use super::pyrepackager::repackage::{process_config_simple, run_from_build};
+use super::pyrepackager::repackage::{
+    find_pyoxidizer_config_file_env, process_config_simple, run_from_build,
+};
 use super::python_distributions::CPYTHON_BY_TRIPLE;
 
 lazy_static! {
@@ -287,11 +289,29 @@ pub fn add_pyoxidizer(
 }
 
 /// Build an oxidized Rust application at the specified project path.
-fn build_project(project_path: &Path, target: &str, release: bool) -> Result<(), String> {
-    // We set an explicit target directory so we can be sure we write our
+fn build_project(
+    logger: &slog::Logger,
+    project_path: &Path,
+    config_path: &Path,
+    target: &str,
+    release: bool,
+) -> Result<(), String> {
+    // Our build process is to first generate artifacts from the PyOxidizer
+    // configuration within this process then call out to `cargo build`. We do
+    // this because it is easier to emit output from this process than to have
+    // it proxied via cargo.
+
+    // We use an explicit target directory so we can be sure we write our
     // artifacts to the same directory that cargo is using.
     let target_path = project_path.join("target");
     let target_path_string = target_path.display().to_string();
+
+    let pyoxidizer_artifacts_path = target_path
+        .join(target)
+        .join(if release { "release" } else { "debug" })
+        .join("pyoxidizer");
+
+    process_config_simple(logger, config_path, &pyoxidizer_artifacts_path, target);
 
     let mut args = Vec::new();
     args.push("build");
@@ -306,17 +326,14 @@ fn build_project(project_path: &Path, target: &str, release: bool) -> Result<(),
         args.push("--release");
     }
 
-    let current_exe = std::env::current_exe()
-        .or_else(|e| Err(e.to_string()))?
-        .canonicalize()
-        .or_else(|e| Err(e.to_string()))?
-        .display()
-        .to_string();
-
     match process::Command::new("cargo")
         .args(args)
         .current_dir(&project_path)
-        .env("PYOXIDIZER_EXE", current_exe)
+        .env(
+            "PYOXIDIZER_ARTIFACT_DIR",
+            pyoxidizer_artifacts_path.display().to_string(),
+        )
+        .env("PYOXIDIZER_REUSE_ARTIFACTS", "1")
         .status()
     {
         Ok(status) => {
@@ -368,7 +385,12 @@ fn run_project(project_path: &Path, release: bool) -> Result<(), String> {
 ///
 /// This is a glorified wrapper around `cargo build`. Our goal is to get the
 /// output from repackaging to give the user something for debugging.
-pub fn build(project_path: &str, target: Option<&str>, release: bool) -> Result<(), String> {
+pub fn build(
+    logger: &slog::Logger,
+    project_path: &str,
+    target: Option<&str>,
+    release: bool,
+) -> Result<(), String> {
     let path = PathBuf::from(project_path)
         .canonicalize()
         .or_else(|e| Err(e.description().to_owned()))?;
@@ -382,7 +404,12 @@ pub fn build(project_path: &str, target: Option<&str>, release: bool) -> Result<
         None => default_target()?,
     };
 
-    build_project(&path, &target, release)?;
+    let config_path = match find_pyoxidizer_config_file_env(logger, &path) {
+        Some(p) => p,
+        None => return Err("unable to find PyOxidizer config file".to_string()),
+    };
+
+    build_project(logger, &path, &config_path, &target, release)?;
 
     Ok(())
 }

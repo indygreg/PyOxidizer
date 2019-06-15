@@ -260,7 +260,7 @@ fn main() {
             let target = args.value_of("target");
             let path = args.value_of("path").unwrap();
 
-            projectmgmt::build(path, target, release)
+            projectmgmt::build(&logger_context.logger, path, target, release)
         }
 
         ("init", Some(args)) => {
