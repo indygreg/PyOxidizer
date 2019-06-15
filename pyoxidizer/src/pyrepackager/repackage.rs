@@ -1729,7 +1729,7 @@ pub fn parse_config_file(config_path: &Path, target: &str) -> Result<Config, Str
 /// Returns a data structure describing the results.
 pub fn process_config(
     logger: &slog::Logger,
-    config_path: &Path,
+    config: Config,
     default_out_dir: &Path,
     force_out_dir: Option<&Path>,
     host: &str,
@@ -1738,11 +1738,16 @@ pub fn process_config(
 ) -> EmbeddedPythonConfig {
     let mut cargo_metadata: Vec<String> = Vec::new();
 
-    info!(logger, "processing config file {}", config_path.display());
+    info!(
+        logger,
+        "processing config file {}",
+        config.config_path.display()
+    );
 
-    let config = parse_config_file(config_path, target).unwrap();
-
-    cargo_metadata.push(format!("cargo:rerun-if-changed={}", config_path.display()));
+    cargo_metadata.push(format!(
+        "cargo:rerun-if-changed={}",
+        config.config_path.display()
+    ));
 
     // Allow config to overwrite the output directory. But not if force_out_dir is set.
     let dest_dir = if let Some(path) = force_out_dir {
@@ -1928,9 +1933,11 @@ pub fn process_config_simple(
     create_dir_all(dest_dir).expect("unable to create build directory");
     let dest_dir = std::fs::canonicalize(dest_dir).expect("unable to canonicalize build_dir");
 
+    let config = parse_config_file(config_path, target).unwrap();
+
     process_config(
         logger,
-        config_path,
+        config,
         &dest_dir,
         Some(&dest_dir),
         HOST,
@@ -2011,9 +2018,11 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
         Err(_) => None,
     };
 
+    let config = parse_config_file(&config_path, &target).unwrap();
+
     for line in process_config(
         logger,
-        &config_path,
+        config,
         out_dir_path,
         force_out_path,
         &host,
