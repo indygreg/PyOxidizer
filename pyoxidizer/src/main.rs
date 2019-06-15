@@ -204,6 +204,12 @@ fn main() {
             SubCommand::with_name("run")
                 .about("Build and run a PyOxidizer application")
                 .arg(
+                    Arg::with_name("target")
+                        .long("target")
+                        .takes_value(true)
+                        .help("Rust target triple to build for"),
+                )
+                .arg(
                     Arg::with_name("release")
                         .long("release")
                         .help("Run a release binary"),
@@ -283,10 +289,11 @@ fn main() {
         }
 
         ("run", Some(args)) => {
+            let target = args.value_of("target");
             let release = args.is_present("release");
             let path = args.value_of("path").unwrap();
 
-            projectmgmt::run(path, release)
+            projectmgmt::run(&logger_context.logger, path, target, release)
         }
 
         _ => Err("invalid sub-command".to_string()),

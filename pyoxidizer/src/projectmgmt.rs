@@ -288,6 +288,13 @@ pub fn add_pyoxidizer(
     Ok(())
 }
 
+fn resolve_target_path(project_path: &Path, target: &str, release: bool) -> PathBuf {
+    project_path
+        .join("target")
+        .join(target)
+        .join(if release { "release " } else { "debug" })
+}
+
 /// Build an oxidized Rust application at the specified project path.
 fn build_project(
     logger: &slog::Logger,
@@ -306,10 +313,8 @@ fn build_project(
     let target_path = project_path.join("target");
     let target_path_string = target_path.display().to_string();
 
-    let pyoxidizer_artifacts_path = target_path
-        .join(target)
-        .join(if release { "release" } else { "debug" })
-        .join("pyoxidizer");
+    let pyoxidizer_artifacts_path =
+        resolve_target_path(project_path, target, release).join("pyoxidizer");
 
     // TODO take rerun-if-changed into consideration to avoid effective no-op.
     process_config_simple(logger, config_path, &pyoxidizer_artifacts_path, target);
@@ -348,27 +353,33 @@ fn build_project(
     }
 }
 
-fn run_project(project_path: &Path, release: bool) -> Result<(), String> {
-    // TODO call build_project and run the binary directly instead of using
-    // cargo run. This will facilitate logging from the build working.
+fn run_project(
+    logger: &slog::Logger,
+    project_path: &Path,
+    config_path: &Path,
+    target: &str,
+    release: bool,
+) -> Result<(), String> {
+    // We call our build wrapper and invoke the binary directly. This allows
+    // build output to be printed.
+    build_project(logger, project_path, config_path, target, release)?;
 
-    let mut args = Vec::new();
-    args.push("run");
-    if release {
-        args.push("--release");
-    }
+    // TODO should ideally get this from Cargo.toml.
+    let project_name = project_path
+        .file_name()
+        .expect("could not extract project name")
+        .to_str()
+        .unwrap();
+    let exe_name = if target.contains("pc-windows") {
+        format!("{}.exe", project_name)
+    } else {
+        project_name.to_string()
+    };
 
-    let current_exe = std::env::current_exe()
-        .or_else(|e| Err(e.to_string()))?
-        .canonicalize()
-        .or_else(|e| Err(e.to_string()))?
-        .display()
-        .to_string();
+    let bin_path = resolve_target_path(project_path, target, release).join(exe_name);
 
-    match process::Command::new("cargo")
-        .args(args)
+    match process::Command::new(bin_path)
         .current_dir(&project_path)
-        .env("PYOXIDIZER_EXE", current_exe)
         .status()
     {
         Ok(status) => {
@@ -447,7 +458,12 @@ pub fn build_artifacts(
     Ok(())
 }
 
-pub fn run(project_path: &str, release: bool) -> Result<(), String> {
+pub fn run(
+    logger: &slog::Logger,
+    project_path: &str,
+    target: Option<&str>,
+    release: bool,
+) -> Result<(), String> {
     let path = PathBuf::from(project_path)
         .canonicalize()
         .or_else(|e| Err(e.to_string()))?;
@@ -456,7 +472,17 @@ pub fn run(project_path: &str, release: bool) -> Result<(), String> {
         return Err("no PyOxidizer files in specified path".to_string());
     }
 
-    run_project(&path, release)
+    let config_path = match find_pyoxidizer_config_file_env(logger, &path) {
+        Some(p) => p,
+        None => return Err("unable to find PyOxidizer config file".to_string()),
+    };
+
+    let target = match target {
+        Some(v) => v.to_string(),
+        None => default_target()?,
+    };
+
+    run_project(logger, &path, &config_path, &target, release)
 }
 
 /// Initialize a new Rust project with PyOxidizer support.
