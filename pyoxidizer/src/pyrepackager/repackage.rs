@@ -1921,31 +1921,6 @@ pub fn process_config(
     }
 }
 
-/// Process a PyOxidizer config file with minimal environment knowledge.
-pub fn process_config_simple(
-    logger: &slog::Logger,
-    config_path: &Path,
-    dest_dir: &Path,
-    target: &str,
-) -> EmbeddedPythonConfig {
-    let opt_level = "0";
-
-    create_dir_all(dest_dir).expect("unable to create build directory");
-    let dest_dir = std::fs::canonicalize(dest_dir).expect("unable to canonicalize build_dir");
-
-    let config = parse_config_file(config_path, target).unwrap();
-
-    process_config(
-        logger,
-        config,
-        &dest_dir,
-        Some(&dest_dir),
-        HOST,
-        target,
-        opt_level,
-    )
-}
-
 /// Find a pyoxidizer.toml configuration file by walking directory ancestry.
 pub fn find_pyoxidizer_config_file(start_dir: &Path) -> Option<PathBuf> {
     for test_dir in start_dir.ancestors() {

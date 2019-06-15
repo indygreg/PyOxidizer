@@ -19,8 +19,7 @@ use super::environment::PyOxidizerSource;
 use super::pyrepackager::dist::analyze_python_distribution_tar_zst;
 use super::pyrepackager::fsscan::walk_tree_files;
 use super::pyrepackager::repackage::{
-    find_pyoxidizer_config_file_env, parse_config_file, process_config, process_config_simple,
-    run_from_build, HOST,
+    find_pyoxidizer_config_file_env, parse_config_file, process_config, run_from_build, HOST,
 };
 use super::python_distributions::CPYTHON_BY_TRIPLE;
 
@@ -393,6 +392,50 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
     return true;
 }
 
+/// Build PyOxidizer artifacts for a project.
+fn build_pyoxidizer_artifacts(
+    logger: &slog::Logger,
+    project_path: &Path,
+    config_path: &Path,
+    target: &str,
+    release: bool,
+    force_dest_path: Option<&Path>,
+) -> Result<PathBuf, String> {
+    let pyoxidizer_artifacts_path =
+        resolve_target_path(project_path, target, release).join("pyoxidizer");
+
+    create_dir_all(&pyoxidizer_artifacts_path).or_else(|e| Err(e.to_string()))?;
+
+    let pyoxidizer_artifacts_path = std::fs::canonicalize(pyoxidizer_artifacts_path)
+        .expect("unable to canonicalize artifacts directory");
+
+    let config = parse_config_file(config_path, target)?;
+
+    let build_config_path = &config.build_config.artifacts_path.clone();
+
+    if !artifacts_current(logger, config_path, &pyoxidizer_artifacts_path) {
+        process_config(
+            logger,
+            config,
+            &pyoxidizer_artifacts_path,
+            force_dest_path,
+            HOST,
+            target,
+            "0",
+        );
+    }
+
+    Ok(if let Some(path) = force_dest_path {
+        path.to_path_buf()
+    } else {
+        if let Some(ref path) = build_config_path {
+            path.clone()
+        } else {
+            pyoxidizer_artifacts_path
+        }
+    })
+}
+
 /// Build an oxidized Rust application at the specified project path.
 fn build_project(
     logger: &slog::Logger,
@@ -407,30 +450,13 @@ fn build_project(
     // it proxied via cargo.
 
     // We use an explicit target directory so we can be sure we write our
-    // artifacts to the same directory that cargo is using.
+    // artifacts to the same directory that cargo is using (unless the config
+    // file overwrites the artifacts directory, of course).
     let target_path = project_path.join("target");
     let target_path_string = target_path.display().to_string();
 
     let pyoxidizer_artifacts_path =
-        resolve_target_path(project_path, target, release).join("pyoxidizer");
-    let pyoxidizer_artifacts_path = std::fs::canonicalize(pyoxidizer_artifacts_path)
-        .expect("unable to canonicalize artifacts directory");
-
-    create_dir_all(&pyoxidizer_artifacts_path).or_else(|e| Err(e.to_string()))?;
-
-    let config = parse_config_file(config_path, target)?;
-
-    if !artifacts_current(logger, config_path, &pyoxidizer_artifacts_path) {
-        process_config(
-            logger,
-            config,
-            &pyoxidizer_artifacts_path,
-            None,
-            HOST,
-            target,
-            "0",
-        );
-    }
+        build_pyoxidizer_artifacts(logger, project_path, config_path, target, release, None)?;
 
     let mut args = Vec::new();
     args.push("build");
@@ -546,6 +572,7 @@ pub fn build_artifacts(
     project_path: &Path,
     dest_path: &Path,
     target: Option<&str>,
+    release: bool,
 ) -> Result<(), String> {
     let path = PathBuf::from(project_path)
         .canonicalize()
@@ -565,10 +592,14 @@ pub fn build_artifacts(
         None => return Err("unable to find PyOxidizer config file".to_string()),
     };
 
-    let config = process_config_simple(logger, &config_path, &dest_path, &target);
-
-    println!("Initialize a Python interpreter with the following struct:\n");
-    println!("{}", config.python_config_rs);
+    build_pyoxidizer_artifacts(
+        logger,
+        &path,
+        &config_path,
+        &target,
+        release,
+        Some(dest_path),
+    )?;
 
     Ok(())
 }

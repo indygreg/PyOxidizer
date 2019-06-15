@@ -188,6 +188,11 @@ fn main() {
                         .help("Rust target triple to build for"),
                 )
                 .arg(
+                    Arg::with_name("release")
+                        .long("release")
+                        .help("Build a release binary"),
+                )
+                .arg(
                     Arg::with_name("path")
                         .default_value(".")
                         .value_name("PROJECT_PATH")
@@ -255,12 +260,13 @@ fn main() {
 
         ("build-artifacts", Some(args)) => {
             let target = args.value_of("target");
+            let release = args.is_present("release");
             let path = args.value_of("path").unwrap();
             let path = PathBuf::from(path);
             let dest_path = args.value_of("dest_path").unwrap();
             let dest_path = PathBuf::from(dest_path);
 
-            projectmgmt::build_artifacts(&logger_context.logger, &path, &dest_path, target)
+            projectmgmt::build_artifacts(&logger_context.logger, &path, &dest_path, target, release)
         }
 
         ("build", Some(args)) => {
