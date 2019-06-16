@@ -156,8 +156,14 @@ pub struct BuildContext {
     /// Should be passed as --target to cargo build.
     pub target_base_path: PathBuf,
 
-    /// Where target-triple specific output files will be created.
-    pub target_path: PathBuf,
+    /// Rust build artifact output path for this target.
+    pub target_triple_base_path: PathBuf,
+
+    /// Rust build artifact output path for the pyembed crate.
+    pub pyembed_target_path: PathBuf,
+
+    /// Rust build artifact output path for the application crate.
+    pub app_target_path: PathBuf,
 
     /// Path where PyOxidizer should write its build artifacts.
     pub pyoxidizer_artifacts_path: PathBuf,
@@ -185,6 +191,13 @@ impl BuildContext {
         // Build Rust artifacts into build path, not wherever Rust chooses.
         let target_base_path = build_path.join("target");
 
+        // This assumes we invoke as `cargo build --target`, otherwise we don't get the
+        // target triple in the directory path unless cross compiling.
+        let target_triple_base_path =
+            target_base_path
+                .join(target)
+                .join(if release { "release" } else { "debug" });
+
         // TOOD should ideally get this from a config, either ours or Cargo's.
         let app_name = project_path
             .file_name()
@@ -193,27 +206,23 @@ impl BuildContext {
             .unwrap()
             .to_string();
 
-        // This assumes we invoke as `cargo build --target`, otherwise we don't get the
-        // target triple in the directory path unless cross compiling.
-        let target_path =
-            target_base_path
-                .join(target)
-                .join(if release { "release" } else { "debug" });
-
         let exe_name = if target.contains("pc-windows") {
             format!("{}.exe", &app_name)
         } else {
             app_name.clone()
         };
 
-        let app_exe_path = target_path.join(exe_name);
+        let pyembed_target_path = target_triple_base_path.join("pyembed");
+        let app_target_path = target_triple_base_path.join(&app_name);
+
+        let app_exe_path = target_triple_base_path.join(exe_name);
 
         // Artifacts path is:
         // 1. force_artifacts_path (if defined)
         // 2. A "pyoxidizer" directory in the target directory.
         let pyoxidizer_artifacts_path = match force_artifacts_path {
             Some(path) => path.to_path_buf(),
-            None => target_path.join("pyoxidizer"),
+            None => pyembed_target_path.join("pyoxidizer"),
         };
 
         Ok(BuildContext {
@@ -227,7 +236,9 @@ impl BuildContext {
             target_triple: target.to_string(),
             release,
             target_base_path,
-            target_path,
+            target_triple_base_path,
+            pyembed_target_path,
+            app_target_path,
             pyoxidizer_artifacts_path,
         })
     }
