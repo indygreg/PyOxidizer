@@ -1030,19 +1030,19 @@ pub fn resolve_python_resources(
         for entry in resolve_python_packaging(logger, packaging, dist) {
             match (entry.action, entry.resource) {
                 (ResourceAction::Add, PythonResource::ExtensionModule { name, module }) => {
-                    info!(logger, "adding extension module: {}", name);
+                    info!(logger, "adding embedded extension module: {}", name);
                     embedded_extension_modules.insert(name, module);
                 }
                 (ResourceAction::Remove, PythonResource::ExtensionModule { name, .. }) => {
-                    info!(logger, "removing extension module: {}", name);
+                    info!(logger, "removing embedded extension module: {}", name);
                     embedded_extension_modules.remove(&name);
                 }
                 (ResourceAction::Add, PythonResource::ModuleSource { name, source }) => {
-                    info!(logger, "adding module source: {}", name);
+                    info!(logger, "adding embedded module source: {}", name);
                     embedded_sources.insert(name.clone(), source);
                 }
                 (ResourceAction::Remove, PythonResource::ModuleSource { name, .. }) => {
-                    info!(logger, "removing module source: {}", name);
+                    info!(logger, "removing embedded module source: {}", name);
                     embedded_sources.remove(&name);
                 }
                 (
@@ -1053,11 +1053,11 @@ pub fn resolve_python_resources(
                         optimize_level,
                     },
                 ) => {
-                    info!(logger, "adding module bytecode: {}", name);
+                    info!(logger, "adding embedded module bytecode: {}", name);
                     bytecode_requests.insert(name.clone(), (source, optimize_level));
                 }
                 (ResourceAction::Remove, PythonResource::ModuleBytecode { name, .. }) => {
-                    info!(logger, "removing module bytecode: {}", name);
+                    info!(logger, "removing embedded module bytecode: {}", name);
                     bytecode_requests.remove(&name);
                 }
                 (
@@ -1068,7 +1068,7 @@ pub fn resolve_python_resources(
                         data,
                     },
                 ) => {
-                    info!(logger, "adding resource: {}", name);
+                    info!(logger, "adding embedded resource: {}", name);
 
                     if !embedded_resources.contains_key(&package) {
                         embedded_resources.insert(package.clone(), BTreeMap::new());
@@ -1080,7 +1080,7 @@ pub fn resolve_python_resources(
                         .insert(name, data);
                 }
                 (ResourceAction::Remove, PythonResource::Resource { name, .. }) => {
-                    info!(logger, "removing resource: {}", name);
+                    info!(logger, "removing embedded resource: {}", name);
                     embedded_resources.remove(&name);
                 }
             }
@@ -1125,13 +1125,22 @@ pub fn resolve_python_resources(
                 include_names.extend(new_names);
             }
 
-            info!(logger, "filtering extension modules from {:?}", packaging);
+            info!(
+                logger,
+                "filtering embedded extension modules from {:?}", packaging
+            );
             filter_btreemap(logger, &mut embedded_extension_modules, &include_names);
-            info!(logger, "filtering module sources from {:?}", packaging);
+            info!(
+                logger,
+                "filtering embedded module sources from {:?}", packaging
+            );
             filter_btreemap(logger, &mut embedded_sources, &include_names);
-            info!(logger, "filtering module bytecode from {:?}", packaging);
+            info!(
+                logger,
+                "filtering embedded module bytecode from {:?}", packaging
+            );
             filter_btreemap(logger, &mut bytecode_requests, &include_names);
-            info!(logger, "filtering resources from {:?}", packaging);
+            info!(logger, "filtering embedded resources from {:?}", packaging);
             filter_btreemap(logger, &mut embedded_resources, &include_names);
         }
     }
@@ -1142,7 +1151,7 @@ pub fn resolve_python_resources(
         let em = &variants[0];
 
         if (em.builtin_default || em.required) && !embedded_extension_modules.contains_key(name) {
-            info!(logger, "adding required extension module {}", name);
+            info!(logger, "adding required embedded extension module {}", name);
             embedded_extension_modules.insert(name.clone(), em.clone());
         }
     }
