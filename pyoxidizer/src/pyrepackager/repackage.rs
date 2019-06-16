@@ -122,6 +122,81 @@ pub fn is_stdlib_test_package(name: &str) -> bool {
     false
 }
 
+/// Represents environment for a build.
+pub struct BuildContext {
+    /// Path to Rust project.
+    pub project_path: PathBuf,
+
+    /// Name of application/binary being built.
+    pub app_name: String,
+
+    /// Path to application executable being built.
+    pub app_exe_path: PathBuf,
+
+    /// Rust target triple for build host.
+    pub host_triple: String,
+
+    /// Rust target triple for build target.
+    pub target_triple: String,
+
+    /// Whether compiling a release build.
+    pub release: bool,
+
+    /// Main output path for Rust build artifacts.
+    ///
+    /// Should be passed as --target to cargo build.
+    pub target_base_path: PathBuf,
+
+    /// Where target-triple specific output files will be created.
+    pub target_path: PathBuf,
+
+    /// Path where PyOxidizer should write its build artifacts.
+    pub pyoxidizer_artifacts_path: PathBuf,
+}
+
+impl BuildContext {
+    pub fn new(project_path: &Path, target: &str, release: bool) -> Result<Self, String> {
+        // TOOD should ideally get this from Cargo.toml.
+        let app_name = project_path
+            .file_name()
+            .expect("could not extract project name")
+            .to_str()
+            .unwrap()
+            .to_string();
+
+        // This assumes we invoke as `cargo build --target`, otherwise we don't get the
+        // target triple in the directory path unless cross compiling.
+        let target_base_path = project_path.join("target");
+
+        let target_path =
+            target_base_path
+                .join(target)
+                .join(if release { "release" } else { "debug" });
+
+        let exe_name = if target.contains("pc-windows") {
+            format!("{}.exe", &app_name)
+        } else {
+            app_name.clone()
+        };
+
+        let app_exe_path = target_path.join(exe_name);
+
+        let pyoxidizer_artifacts_path = target_path.join("pyoxidizer");
+
+        Ok(BuildContext {
+            project_path: project_path.to_path_buf(),
+            app_name,
+            app_exe_path,
+            host_triple: HOST.to_string(),
+            target_triple: target.to_string(),
+            release,
+            target_base_path,
+            target_path,
+            pyoxidizer_artifacts_path,
+        })
+    }
+}
+
 /// Represents a single module's data record.
 pub struct ModuleEntry {
     pub name: String,

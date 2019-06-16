@@ -19,7 +19,8 @@ use super::environment::PyOxidizerSource;
 use super::pyrepackager::dist::analyze_python_distribution_tar_zst;
 use super::pyrepackager::fsscan::walk_tree_files;
 use super::pyrepackager::repackage::{
-    find_pyoxidizer_config_file_env, parse_config_file, process_config, run_from_build, HOST,
+    find_pyoxidizer_config_file_env, parse_config_file, process_config, run_from_build,
+    BuildContext,
 };
 use super::python_distributions::CPYTHON_BY_TRIPLE;
 
@@ -290,13 +291,6 @@ pub fn add_pyoxidizer(
     Ok(())
 }
 
-fn resolve_target_path(project_path: &Path, target: &str, release: bool) -> PathBuf {
-    project_path
-        .join("target")
-        .join(target)
-        .join(if release { "release " } else { "debug" })
-}
-
 fn dependency_current(
     logger: &slog::Logger,
     path: &Path,
@@ -395,21 +389,18 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
 /// Build PyOxidizer artifacts for a project.
 fn build_pyoxidizer_artifacts(
     logger: &slog::Logger,
-    project_path: &Path,
+    context: &BuildContext,
     config_path: &Path,
-    target: &str,
-    release: bool,
     force_dest_path: Option<&Path>,
 ) -> Result<PathBuf, String> {
-    let pyoxidizer_artifacts_path =
-        resolve_target_path(project_path, target, release).join("pyoxidizer");
+    let pyoxidizer_artifacts_path = &context.pyoxidizer_artifacts_path;
 
     create_dir_all(&pyoxidizer_artifacts_path).or_else(|e| Err(e.to_string()))?;
 
     let pyoxidizer_artifacts_path = std::fs::canonicalize(pyoxidizer_artifacts_path)
         .expect("unable to canonicalize artifacts directory");
 
-    let config = parse_config_file(config_path, target)?;
+    let config = parse_config_file(config_path, &context.target_triple)?;
 
     let build_config_path = &config.build_config.artifacts_path.clone();
 
@@ -419,8 +410,8 @@ fn build_pyoxidizer_artifacts(
             config,
             &pyoxidizer_artifacts_path,
             force_dest_path,
-            HOST,
-            target,
+            &context.host_triple,
+            &context.target_triple,
             "0",
         );
     }
@@ -443,20 +434,16 @@ fn build_project(
     config_path: &Path,
     target: &str,
     release: bool,
-) -> Result<(), String> {
+) -> Result<BuildContext, String> {
     // Our build process is to first generate artifacts from the PyOxidizer
     // configuration within this process then call out to `cargo build`. We do
     // this because it is easier to emit output from this process than to have
     // it proxied via cargo.
 
-    // We use an explicit target directory so we can be sure we write our
-    // artifacts to the same directory that cargo is using (unless the config
-    // file overwrites the artifacts directory, of course).
-    let target_path = project_path.join("target");
-    let target_path_string = target_path.display().to_string();
+    let context = BuildContext::new(project_path, target, release)?;
 
     let pyoxidizer_artifacts_path =
-        build_pyoxidizer_artifacts(logger, project_path, config_path, target, release, None)?;
+        build_pyoxidizer_artifacts(logger, &context, config_path, None)?;
 
     let mut args = Vec::new();
     args.push("build");
@@ -464,8 +451,12 @@ fn build_project(
     args.push("--target");
     args.push(target);
 
+    // We use an explicit target directory so we can be sure we write our
+    // artifacts to the same directory that cargo is using (unless the config
+    // file overwrites the artifacts directory, of course).
+    let target_dir = context.target_base_path.display().to_string();
     args.push("--target-dir");
-    args.push(&target_path_string);
+    args.push(&target_dir);
 
     if release {
         args.push("--release");
@@ -483,7 +474,7 @@ fn build_project(
     {
         Ok(status) => {
             if status.success() {
-                Ok(())
+                Ok(context)
             } else {
                 Err("cargo build failed".to_string())
             }
@@ -502,23 +493,9 @@ fn run_project(
 ) -> Result<(), String> {
     // We call our build wrapper and invoke the binary directly. This allows
     // build output to be printed.
-    build_project(logger, project_path, config_path, target, release)?;
+    let context = build_project(logger, project_path, config_path, target, release)?;
 
-    // TODO should ideally get this from Cargo.toml.
-    let project_name = project_path
-        .file_name()
-        .expect("could not extract project name")
-        .to_str()
-        .unwrap();
-    let exe_name = if target.contains("pc-windows") {
-        format!("{}.exe", project_name)
-    } else {
-        project_name.to_string()
-    };
-
-    let bin_path = resolve_target_path(project_path, target, release).join(exe_name);
-
-    match process::Command::new(bin_path)
+    match process::Command::new(&context.app_exe_path)
         .current_dir(&project_path)
         .args(extra_args)
         .status()
@@ -592,14 +569,9 @@ pub fn build_artifacts(
         None => return Err("unable to find PyOxidizer config file".to_string()),
     };
 
-    build_pyoxidizer_artifacts(
-        logger,
-        &path,
-        &config_path,
-        &target,
-        release,
-        Some(dest_path),
-    )?;
+    let context = BuildContext::new(project_path, &target, release)?;
+
+    build_pyoxidizer_artifacts(logger, &context, &config_path, Some(dest_path))?;
 
     Ok(())
 }
