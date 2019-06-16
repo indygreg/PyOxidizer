@@ -19,7 +19,7 @@ use super::environment::PyOxidizerSource;
 use super::pyrepackager::dist::analyze_python_distribution_tar_zst;
 use super::pyrepackager::fsscan::walk_tree_files;
 use super::pyrepackager::repackage::{
-    find_pyoxidizer_config_file_env, process_config, run_from_build, BuildContext,
+    find_pyoxidizer_config_file_env, package_project, process_config, run_from_build, BuildContext,
 };
 use super::python_distributions::CPYTHON_BY_TRIPLE;
 
@@ -471,6 +471,8 @@ fn run_project(
     // build output to be printed.
     let context = build_project(logger, project_path, config_path, target, release)?;
 
+    package_project(logger, &context)?;
+
     match process::Command::new(&context.app_exe_path)
         .current_dir(&project_path)
         .args(extra_args)
@@ -515,7 +517,8 @@ pub fn build(
         None => return Err("unable to find PyOxidizer config file".to_string()),
     };
 
-    build_project(logger, &path, &config_path, &target, release)?;
+    let context = build_project(logger, &path, &config_path, &target, release)?;
+    package_project(logger, &context)?;
 
     Ok(())
 }

@@ -139,7 +139,10 @@ pub struct BuildContext {
     /// Name of application/binary being built.
     pub app_name: String,
 
-    /// Path to application executable being built.
+    /// Path containing build/packaged application and all supporting files.
+    pub app_path: PathBuf,
+
+    /// Path to application executable in its installed/packaged directory.
     pub app_exe_path: PathBuf,
 
     /// Rust target triple for build host.
@@ -164,6 +167,9 @@ pub struct BuildContext {
 
     /// Rust build artifact output path for the application crate.
     pub app_target_path: PathBuf,
+
+    /// Application executable in its Rust target directory.
+    pub app_exe_target_path: PathBuf,
 
     /// Path where PyOxidizer should write its build artifacts.
     pub pyoxidizer_artifacts_path: PathBuf,
@@ -191,6 +197,8 @@ impl BuildContext {
         // Build Rust artifacts into build path, not wherever Rust chooses.
         let target_base_path = build_path.join("target");
 
+        let apps_base_path = build_path.join("apps");
+
         // This assumes we invoke as `cargo build --target`, otherwise we don't get the
         // target triple in the directory path unless cross compiling.
         let target_triple_base_path =
@@ -209,7 +217,9 @@ impl BuildContext {
         let pyembed_target_path = target_triple_base_path.join("pyembed");
         let app_target_path = target_triple_base_path.join(&app_name);
 
-        let app_exe_path = target_triple_base_path.join(exe_name);
+        let app_path = apps_base_path.join(&app_name);
+        let app_exe_target_path = target_triple_base_path.join(&exe_name);
+        let app_exe_path = app_path.join(&exe_name);
 
         // Artifacts path is:
         // 1. force_artifacts_path (if defined)
@@ -225,6 +235,7 @@ impl BuildContext {
             config,
             build_path,
             app_name,
+            app_path,
             app_exe_path,
             host_triple,
             target_triple: target.to_string(),
@@ -233,6 +244,7 @@ impl BuildContext {
             target_triple_base_path,
             pyembed_target_path,
             app_target_path,
+            app_exe_target_path,
             pyoxidizer_artifacts_path,
         })
     }
@@ -2102,6 +2114,23 @@ fn install_app_relative(
         path,
         app_relative.resources.keys()
     );
+
+    Ok(())
+}
+
+/// Package a built Rust project into its packaging directory.
+pub fn package_project(logger: &slog::Logger, context: &BuildContext) -> Result<(), String> {
+    create_dir_all(context.app_exe_path.parent().unwrap())
+        .or_else(|_| Err("failed to create directory".to_string()))?;
+
+    info!(
+        logger,
+        "copying {} to {}",
+        context.app_exe_target_path.display(),
+        context.app_exe_path.display()
+    );
+    std::fs::copy(&context.app_exe_target_path, &context.app_exe_path)
+        .or_else(|_| Err("failed to copy built application"))?;
 
     Ok(())
 }
