@@ -282,8 +282,8 @@ behavior:
    This setting is useful for determining which Python modules are loaded when
    running Python code.
 
-``[[python_packages]]``
------------------------
+``[[python_packaging_rule]]``
+-----------------------------
 
 Defines a rule to control the packaging of Python resources to be embedded
 in the binary.
@@ -355,7 +355,7 @@ the following values:
 
 Example::
 
-   [[python_packages]]
+   [[python_packaging_rule]]
    type = "stdlib-extension-policy"
    policy = "no-libraries"
 
@@ -384,7 +384,7 @@ Example:
 
 .. code-block:: toml
 
-   [[python_packages]]
+   [[python_packaging_rule]]
    type = "stdlib-extensions-explicit-includes"
    includes = ["binascii", "errno", "itertools", "math", "select", "_socket"]
 
@@ -404,7 +404,7 @@ Example:
 
 .. code-block:: toml
 
-   [[python_packages]]
+   [[python_packaging_rule]]
    type = "stdlib-extensions-explicit-excludes"
    excludes = ["_ssl"]
 
@@ -428,7 +428,7 @@ Example:
 
 .. code-block:: toml
 
-   [[python_packages]]
+   [[python_packaging_rule]]
    type = "stdlib-extension-variant"
    extension = "readline"
    variant = "libedit"
@@ -444,7 +444,7 @@ pull in the Python standard library in its entirety.
 
    A ``stdlib`` rule is required, as Python can't be initialized
    without some modules from the standard library. It should be one of the first
-   ``[[python_packages]]`` entries so the standard library forms the base of the
+   ``[[python_packaging_rule]]`` entries so the standard library forms the base of the
    set of Python modules to include.
 
 The following keys can exist in this rule type:
@@ -568,7 +568,7 @@ This will include the ``pyflakes`` package and all its dependencies:
 
 .. code-block:: toml
 
-   [[python_packages]]
+   [[python_packaging_rule]]
    type = "pip-install-simple"
    package = "pyflakes"
 
@@ -603,7 +603,7 @@ Example:
 
 .. code-block:: toml
 
-   [[python_packages]]
+   [[python_packaging_rule]]
    type = "pip-requirements-file"
    path = "/home/gps/src/myapp/requirements.txt"
 
@@ -680,7 +680,7 @@ Example:
 
 .. code-block:: toml
 
-   [[python_packages]]
+   [[python_packaging_rule]]
    type = "virtualenv"
    path = "/home/gps/src/myapp/venv"
 
@@ -722,7 +722,7 @@ Example:
 
 .. code-block:: toml
 
-   [[python_packages]]
+   [[python_packaging_rule]]
    type = "filter-include"
    files = ["allow-modules"]
    glob_files = ["module-dumps/modules-*"]

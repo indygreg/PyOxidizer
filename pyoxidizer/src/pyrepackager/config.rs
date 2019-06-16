@@ -227,7 +227,8 @@ struct ParsedConfig {
     python_distributions: Vec<ConfigPythonDistribution>,
     #[serde(default, rename = "embedded_python_config")]
     python_configs: Vec<ConfigPython>,
-    python_packages: Vec<ConfigPythonPackaging>,
+    #[serde(rename = "python_packaging_rule")]
+    python_packaging_rules: Vec<ConfigPythonPackaging>,
     python_run: Vec<ConfigRunMode>,
 }
 
@@ -528,7 +529,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
     let mut have_stdlib = false;
 
     let python_packaging = config
-        .python_packages
+        .python_packaging_rules
         .iter()
         .filter_map(|r| match r {
             ConfigPythonPackaging::FilterInclude {
@@ -720,12 +721,13 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
 
     if !have_stdlib_extensions_policy {
         return Err(
-            "no `type = \"stdlib-extensions-policy\"` entry in `[[python_packages]]`".to_string(),
+            "no `type = \"stdlib-extensions-policy\"` entry in `[[python_packaging_rule]]`"
+                .to_string(),
         );
     }
 
     if !have_stdlib {
-        return Err("no `type = \"stdlib\"` entry in `[[python_packages]]`".to_string());
+        return Err("no `type = \"stdlib\"` entry in `[[python_packaging_rule]]`".to_string());
     }
 
     let mut run = RunMode::Noop {};

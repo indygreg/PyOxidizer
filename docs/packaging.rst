@@ -86,7 +86,7 @@ following lines:
 
 .. code-block:: toml
 
-   [[python_packages]]
+   [[python_packaging_rule]]
    type = "pip-install-simple"
    package = "pyflakes==2.1.1"
 
@@ -117,15 +117,15 @@ The new ``pyoxidizer.toml`` file should look something like:
    program_name = "pyflakes"
    raw_allocator = "jemalloc"
 
-   [[python_packages]]
+   [[python_packaging_rule]]
    type = "stdlib-extensions-policy"
    policy = "all"
 
-   [[python_packages]]
+   [[python_packaging_rule]]
    type = "stdlib"
    include_source = false
 
-   [[python_packages]]
+   [[python_packaging_rule]]
    type = "pip-install-simple"
    package = "pyflakes==2.1.1"
 
