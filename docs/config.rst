@@ -39,10 +39,10 @@ build *targets*, where a target is a Rust toolchain target triple, such as
 ``x86_64-unknown-linux-gnu`` or ``x86_64-pc-windows-msvc``. (Run
 ``rustup target list`` to see a list of targets.)
 
-Each TOML section accepts an optional ``target`` key that can be used to
-control whether the section is applied or ignored. If the ``target`` key is
-not defined or has the special value ``all``, it is always applied. Otherwise
-the section is only applied if its ``target`` value matches the Rust build
+Each TOML section accepts an optional ``built_target`` key that can be used to
+control whether the section is applied or ignored. If the ``built_target`` key
+is not defined or has the special value ``all``, it is always applied. Otherwise
+the section is only applied if its ``build_target`` value matches the Rust build
 target.
 
 Configuration Sections
@@ -90,7 +90,7 @@ A distribution is defined by a target triple, location, and a hash.
 
 One of ``local_path`` or ``url`` MUST be defined.
 
-``target`` (string)
+``build_target`` (string)
 
    Target triple this distribution is compiled for.
 
@@ -112,14 +112,14 @@ Examples:
 .. code-block:: toml
 
    [[python_distribution]]
-   target = "x86_64-unknown-linux-gnu"
+   build_target = "x86_64-unknown-linux-gnu"
    local_path = "/var/python-distributions/cpython-linux64.tar.zst"
    sha256 = "11a53f5755773f91111a04f6070a6bc00518a0e8e64d90f58584abf02ca79081"
 
 .. code-block:: toml
 
    [[python_distribution]]
-   target = "x86_64-apple-darwin"
+   build_target = "x86_64-apple-darwin"
    url = "https://github.com/indygreg/python-build-standalone/releases/download/20190505/cpython-3.7.3-macos-20190506T0054.tar.zst"
    sha256 = "b46a861c05cb74b5b668d2ce44dcb65a449b9fef98ba5d9ec6ff6937829d5eec"
 

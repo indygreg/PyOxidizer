@@ -12,12 +12,12 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Deserialize)]
 enum ConfigPythonDistribution {
     Local {
-        target: String,
+        build_target: String,
         local_path: String,
         sha256: String,
     },
     Url {
-        target: String,
+        build_target: String,
         url: String,
         sha256: String,
     },
@@ -51,14 +51,14 @@ fn ALL() -> String {
 #[derive(Debug, Deserialize)]
 struct ConfigBuild {
     #[serde(default = "ALL")]
-    target: String,
+    build_target: String,
     artifacts_path: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 struct ConfigPython {
     #[serde(default = "ALL")]
-    target: String,
+    build_target: String,
     dont_write_bytecode: Option<bool>,
     ignore_environment: Option<bool>,
     no_site: Option<bool>,
@@ -79,7 +79,7 @@ enum ConfigPythonPackaging {
     #[serde(rename = "setup-py-install")]
     SetupPyInstall {
         #[serde(default = "ALL")]
-        target: String,
+        build_target: String,
         package_path: String,
         #[serde(default = "ZERO")]
         optimize_level: i64,
@@ -90,7 +90,7 @@ enum ConfigPythonPackaging {
     #[serde(rename = "stdlib-extensions-policy")]
     StdlibExtensionsPolicy {
         #[serde(default = "ALL")]
-        target: String,
+        build_target: String,
         // TODO make this an enum.
         policy: String,
     },
@@ -98,7 +98,7 @@ enum ConfigPythonPackaging {
     #[serde(rename = "stdlib-extensions-explicit-includes")]
     StdlibExtensionsExplicitIncludes {
         #[serde(default = "ALL")]
-        target: String,
+        build_target: String,
         #[serde(default)]
         includes: Vec<String>,
     },
@@ -106,7 +106,7 @@ enum ConfigPythonPackaging {
     #[serde(rename = "stdlib-extensions-explicit-excludes")]
     StdlibExtensionsExplicitExcludes {
         #[serde(default = "ALL")]
-        target: String,
+        build_target: String,
         #[serde(default)]
         excludes: Vec<String>,
     },
@@ -114,7 +114,7 @@ enum ConfigPythonPackaging {
     #[serde(rename = "stdlib-extension-variant")]
     StdlibExtensionVariant {
         #[serde(default = "ALL")]
-        target: String,
+        build_target: String,
         extension: String,
         variant: String,
     },
@@ -122,7 +122,7 @@ enum ConfigPythonPackaging {
     #[serde(rename = "stdlib")]
     Stdlib {
         #[serde(default = "ALL")]
-        target: String,
+        build_target: String,
         #[serde(default = "ZERO")]
         optimize_level: i64,
         #[serde(default = "TRUE")]
@@ -136,7 +136,7 @@ enum ConfigPythonPackaging {
     #[serde(rename = "virtualenv")]
     Virtualenv {
         #[serde(default = "ALL")]
-        target: String,
+        build_target: String,
         path: String,
         #[serde(default = "ZERO")]
         optimize_level: i64,
@@ -149,7 +149,7 @@ enum ConfigPythonPackaging {
     #[serde(rename = "package-root")]
     PackageRoot {
         #[serde(default = "ALL")]
-        target: String,
+        build_target: String,
         path: String,
         packages: Vec<String>,
         #[serde(default = "ZERO")]
@@ -163,7 +163,7 @@ enum ConfigPythonPackaging {
     #[serde(rename = "pip-install-simple")]
     PipInstallSimple {
         #[serde(default = "ALL")]
-        target: String,
+        build_target: String,
         package: String,
         #[serde(default = "ZERO")]
         optimize_level: i64,
@@ -174,7 +174,7 @@ enum ConfigPythonPackaging {
     #[serde(rename = "pip-requirements-file")]
     PipRequirementsFile {
         #[serde(default = "ALL")]
-        target: String,
+        build_target: String,
         requirements_path: String,
         #[serde(default = "ZERO")]
         optimize_level: i64,
@@ -185,7 +185,7 @@ enum ConfigPythonPackaging {
     #[serde(rename = "filter-include")]
     FilterInclude {
         #[serde(default = "ALL")]
-        target: String,
+        build_target: String,
 
         files: Vec<String>,
         glob_files: Vec<String>,
@@ -198,23 +198,23 @@ enum ConfigRunMode {
     #[serde(rename = "noop")]
     Noop {
         #[serde(default = "ALL")]
-        target: String,
+        build_target: String,
     },
     #[serde(rename = "repl")]
     Repl {
         #[serde(default = "ALL")]
-        target: String,
+        build_target: String,
     },
     #[serde(rename = "module")]
     Module {
         #[serde(default = "ALL")]
-        target: String,
+        build_target: String,
         module: String,
     },
     #[serde(rename = "eval")]
     Eval {
         #[serde(default = "ALL")]
-        target: String,
+        build_target: String,
         code: String,
     },
 }
@@ -388,7 +388,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
     for build_config in config
         .builds
         .iter()
-        .filter(|c| c.target == "all" || c.target == target)
+        .filter(|c| c.build_target == "all" || c.build_target == target)
     {
         if let Some(ref path) = build_config.artifacts_path {
             artifacts_path = Some(PathBuf::from(path.replace("$ORIGIN", &origin)));
@@ -406,7 +406,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
         .iter()
         .filter_map(|d| match d {
             ConfigPythonDistribution::Local {
-                target: dist_target,
+                build_target: dist_target,
                 local_path,
                 sha256,
             } => {
@@ -421,7 +421,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
             }
 
             ConfigPythonDistribution::Url {
-                target: dist_target,
+                build_target: dist_target,
                 url,
                 sha256,
             } => {
@@ -463,7 +463,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
     for python_config in config
         .python_configs
         .iter()
-        .filter(|c| c.target == "all" || c.target == target)
+        .filter(|c| c.build_target == "all" || c.build_target == target)
     {
         if let Some(v) = python_config.dont_write_bytecode {
             dont_write_bytecode = v;
@@ -534,7 +534,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
         .iter()
         .filter_map(|r| match r {
             ConfigPythonPackaging::FilterInclude {
-                target: rule_target,
+                build_target: rule_target,
                 files,
                 glob_files,
             } => {
@@ -548,7 +548,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 }
             }
             ConfigPythonPackaging::PackageRoot {
-                target: rule_target,
+                build_target: rule_target,
                 path,
                 packages,
                 optimize_level,
@@ -568,7 +568,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 }
             }
             ConfigPythonPackaging::PipInstallSimple {
-                target: rule_target,
+                build_target: rule_target,
                 package,
                 optimize_level,
                 include_source,
@@ -586,7 +586,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 }
             }
             ConfigPythonPackaging::PipRequirementsFile {
-                target: rule_target,
+                build_target: rule_target,
                 requirements_path,
                 optimize_level,
                 include_source,
@@ -604,7 +604,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 }
             }
             ConfigPythonPackaging::SetupPyInstall {
-                target: rule_target,
+                build_target: rule_target,
                 package_path,
                 optimize_level,
                 include_source,
@@ -620,7 +620,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 }
             }
             ConfigPythonPackaging::Stdlib {
-                target: rule_target,
+                build_target: rule_target,
                 optimize_level,
                 exclude_test_modules,
                 include_source,
@@ -640,7 +640,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 }
             }
             ConfigPythonPackaging::StdlibExtensionsExplicitExcludes {
-                target: rule_target,
+                build_target: rule_target,
                 excludes,
             } => {
                 if rule_target == "all" || rule_target == target {
@@ -654,7 +654,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 }
             }
             ConfigPythonPackaging::StdlibExtensionsExplicitIncludes {
-                target: rule_target,
+                build_target: rule_target,
                 includes,
             } => {
                 if rule_target == "all" || rule_target == target {
@@ -668,7 +668,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 }
             }
             ConfigPythonPackaging::StdlibExtensionsPolicy {
-                target: rule_target,
+                build_target: rule_target,
                 policy,
             } => {
                 if rule_target == "all" || rule_target == target {
@@ -684,7 +684,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 }
             }
             ConfigPythonPackaging::StdlibExtensionVariant {
-                target: rule_target,
+                build_target: rule_target,
                 extension,
                 variant,
             } => {
@@ -700,7 +700,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 }
             }
             ConfigPythonPackaging::Virtualenv {
-                target: rule_target,
+                build_target: rule_target,
                 path,
                 optimize_level,
                 excludes,
@@ -735,7 +735,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
 
     for run_mode in config.python_run.iter().filter_map(|r| match r {
         ConfigRunMode::Eval {
-            target: run_target,
+            build_target: run_target,
             code,
         } => {
             if run_target == "all" || run_target == target {
@@ -745,7 +745,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
             }
         }
         ConfigRunMode::Module {
-            target: run_target,
+            build_target: run_target,
             module,
         } => {
             if run_target == "all" || run_target == target {
@@ -756,14 +756,18 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 None
             }
         }
-        ConfigRunMode::Noop { target: run_target } => {
+        ConfigRunMode::Noop {
+            build_target: run_target,
+        } => {
             if run_target == "all" || run_target == target {
                 Some(RunMode::Noop)
             } else {
                 None
             }
         }
-        ConfigRunMode::Repl { target: run_target } => {
+        ConfigRunMode::Repl {
+            build_target: run_target,
+        } => {
             if run_target == "all" || run_target == target {
                 Some(RunMode::Repl)
             } else {
