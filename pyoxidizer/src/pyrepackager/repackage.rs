@@ -2186,9 +2186,21 @@ fn install_app_relative(
 }
 
 /// Package a built Rust project into its packaging directory.
+///
+/// This will delete all content in the application's package directory.
 pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Result<(), String> {
-    create_dir_all(context.app_exe_path.parent().unwrap())
-        .or_else(|_| Err("failed to create directory".to_string()))?;
+    info!(
+        logger,
+        "packaging application into {}",
+        context.app_path.display()
+    );
+
+    if context.app_path.exists() {
+        info!(logger, "purging {}", context.app_path.display());
+        std::fs::remove_dir_all(&context.app_path).or_else(|e| Err(e.to_string()))?;
+    }
+
+    create_dir_all(&context.app_path).or_else(|e| Err(e.to_string()))?;
 
     info!(
         logger,
