@@ -239,12 +239,12 @@ struct ParsedConfig {
     python_run: Vec<ConfigRunMode>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct BuildConfig {
     pub artifacts_path: Option<PathBuf>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum PythonDistribution {
     Local { local_path: String, sha256: String },
     Url { url: String, sha256: String },
@@ -346,7 +346,7 @@ pub enum PythonPackaging {
     FilterInclude(PackagingFilterInclude),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum RunMode {
     Noop,
     Repl,
@@ -355,7 +355,7 @@ pub enum RunMode {
 }
 
 /// Represents a parsed PyOxidizer configuration file.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Config {
     pub config_path: PathBuf,
     pub build_config: BuildConfig,

@@ -127,6 +127,12 @@ pub struct BuildContext {
     /// Path to Rust project.
     pub project_path: PathBuf,
 
+    /// Path to PyOxidizer configuration file.
+    pub config_path: PathBuf,
+
+    /// Parsed PyOxidizer configuration file.
+    pub config: Config,
+
     /// Name of application/binary being built.
     pub app_name: String,
 
@@ -155,7 +161,14 @@ pub struct BuildContext {
 }
 
 impl BuildContext {
-    pub fn new(project_path: &Path, target: &str, release: bool) -> Result<Self, String> {
+    pub fn new(
+        project_path: &Path,
+        config_path: &Path,
+        target: &str,
+        release: bool,
+    ) -> Result<Self, String> {
+        let config = parse_config_file(config_path, target)?;
+
         // TOOD should ideally get this from Cargo.toml.
         let app_name = project_path
             .file_name()
@@ -185,6 +198,8 @@ impl BuildContext {
 
         Ok(BuildContext {
             project_path: project_path.to_path_buf(),
+            config_path: config_path.to_path_buf(),
+            config,
             app_name,
             app_exe_path,
             host_triple: HOST.to_string(),
@@ -1900,7 +1915,7 @@ pub fn parse_config_file(config_path: &Path, target: &str) -> Result<Config, Str
 /// Returns a data structure describing the results.
 pub fn process_config(
     logger: &slog::Logger,
-    config: Config,
+    config: &Config,
     default_out_dir: &Path,
     force_out_dir: Option<&Path>,
     host: &str,
@@ -2088,7 +2103,7 @@ pub fn process_config(
         .expect("unable to write cargo_metadata.txt");
 
     EmbeddedPythonConfig {
-        config,
+        config: config.clone(),
         python_distribution_path,
         importlib_bootstrap_path,
         importlib_bootstrap_external_path,
@@ -2177,7 +2192,7 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
 
     for line in process_config(
         logger,
-        config,
+        &config,
         out_dir_path,
         force_out_path,
         &host,
