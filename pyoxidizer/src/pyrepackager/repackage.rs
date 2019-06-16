@@ -6,6 +6,7 @@ use byteorder::{LittleEndian, WriteBytesExt};
 use glob::glob as findglob;
 use itertools::Itertools;
 use lazy_static::lazy_static;
+use serde::{Deserialize, Serialize};
 use slog::info;
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
@@ -173,6 +174,9 @@ pub struct BuildContext {
 
     /// Path where PyOxidizer should write its build artifacts.
     pub pyoxidizer_artifacts_path: PathBuf,
+
+    /// State used for packaging.
+    packaging_state: Option<PackagingState>,
 }
 
 impl BuildContext {
@@ -246,7 +250,30 @@ impl BuildContext {
             app_target_path,
             app_exe_target_path,
             pyoxidizer_artifacts_path,
+            packaging_state: None,
         })
+    }
+
+    /// Obtain the PackagingState instance for this configuration.
+    ///
+    /// This basically reads the packaging_state.cbor file from the artifacts
+    /// directory.
+    pub fn get_packaging_state(&mut self) -> Result<PackagingState, String> {
+        if self.packaging_state.is_none() {
+            let path = self.pyoxidizer_artifacts_path.join("packaging_state.cbor");
+            let fh = std::io::BufReader::new(
+                std::fs::File::open(&path).or_else(|e| Err(e.to_string()))?,
+            );
+
+            let state: PackagingState =
+                serde_cbor::from_reader(fh).or_else(|e| Err(e.to_string()))?;
+
+            self.packaging_state = Some(state);
+        }
+
+        // Ideally we'd return a ref. But lifetimes and mutable borrows can get
+        // tricky. So just stomach the clone() for now.
+        Ok(self.packaging_state.clone().unwrap())
     }
 }
 
@@ -375,7 +402,7 @@ impl EmbeddedPythonResources {
 }
 
 /// Represents resources to install in an app-relative location.
-#[derive(Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AppRelativeResources {
     pub module_sources: BTreeMap<String, Vec<u8>>,
     pub module_bytecodes: BTreeMap<String, Vec<u8>>,
@@ -2045,6 +2072,15 @@ pub fn write_data_rs(path: &PathBuf, python_config_rs: &str) {
     .unwrap();
 }
 
+/// Holds state needed to perform packaging.
+///
+/// Instances are serialized to disk during builds and read during
+/// packaging.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PackagingState {
+    pub app_relative_resources: BTreeMap<String, AppRelativeResources>,
+}
+
 /// Install all app-relative files next to the generated binary.
 fn install_app_relative(
     logger: &slog::Logger,
@@ -2119,7 +2155,7 @@ fn install_app_relative(
 }
 
 /// Package a built Rust project into its packaging directory.
-pub fn package_project(logger: &slog::Logger, context: &BuildContext) -> Result<(), String> {
+pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Result<(), String> {
     create_dir_all(context.app_exe_path.parent().unwrap())
         .or_else(|_| Err("failed to create directory".to_string()))?;
 
@@ -2131,6 +2167,19 @@ pub fn package_project(logger: &slog::Logger, context: &BuildContext) -> Result<
     );
     std::fs::copy(&context.app_exe_target_path, &context.app_exe_path)
         .or_else(|_| Err("failed to copy built application"))?;
+
+    info!(logger, "resolving packaging state...");
+    let state = context.get_packaging_state()?;
+
+    info!(
+        logger,
+        "installing resources into {} app-relative directories",
+        state.app_relative_resources.len(),
+    );
+
+    for (path, v) in &state.app_relative_resources {
+        install_app_relative(logger, context, path.as_str(), v).unwrap();
+    }
 
     Ok(())
 }
@@ -2170,6 +2219,9 @@ pub struct EmbeddedPythonConfig {
 
     /// Rust source code to instantiate a PythonConfig instance using this config.
     pub python_config_rs: String,
+
+    /// Path to file containing packaging state.
+    pub packaging_state_path: PathBuf,
 }
 
 pub fn parse_config_file(config_path: &Path, target: &str) -> Result<Config, String> {
@@ -2196,7 +2248,7 @@ pub fn parse_config_file(config_path: &Path, target: &str) -> Result<Config, Str
 /// Returns a data structure describing the results.
 pub fn process_config(
     logger: &slog::Logger,
-    context: &BuildContext,
+    context: &mut BuildContext,
     opt_level: &str,
 ) -> EmbeddedPythonConfig {
     let mut cargo_metadata: Vec<String> = Vec::new();
@@ -2345,17 +2397,6 @@ pub fn process_config(
     );
     cargo_metadata.extend(libpython_info.cargo_metadata);
 
-    // Move on to app-relative resources.
-    info!(
-        logger,
-        "installing resources into {} app-relative directories",
-        &resources.app_relative.len()
-    );
-
-    for (path, v) in &resources.app_relative {
-        install_app_relative(logger, context, path.as_str(), v).unwrap();
-    }
-
     for p in &resources.read_files {
         cargo_metadata.push(format!("cargo:rerun-if-changed={}", p.display()));
     }
@@ -2384,6 +2425,23 @@ pub fn process_config(
     fs::write(&cargo_metadata_path, cargo_metadata.join("\n").as_bytes())
         .expect("unable to write cargo_metadata.txt");
 
+    let packaging_state = PackagingState {
+        app_relative_resources: resources.app_relative,
+    };
+
+    let packaging_state_path = dest_dir.join("packaging_state.cbor");
+    info!(
+        logger,
+        "writing packaging state to {}",
+        packaging_state_path.display()
+    );
+    let mut fh = std::io::BufWriter::new(
+        fs::File::create(&packaging_state_path).expect("unable to create packaging_state.cbor"),
+    );
+    serde_cbor::to_writer(&mut fh, &packaging_state).unwrap();
+
+    context.packaging_state = Some(packaging_state);
+
     EmbeddedPythonConfig {
         config: config.clone(),
         python_distribution_path,
@@ -2395,6 +2453,7 @@ pub fn process_config(
         libpython_path: libpython_info.path,
         cargo_metadata,
         python_config_rs,
+        packaging_state_path,
     }
 }
 
@@ -2469,7 +2528,7 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
         Err(_) => PathBuf::from(env::var("OUT_DIR").unwrap()),
     };
 
-    let context = BuildContext::new(
+    let mut context = BuildContext::new(
         &project_path,
         &config_path,
         Some(&host),
@@ -2480,7 +2539,7 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
     )
     .unwrap();
 
-    for line in process_config(logger, &context, &opt_level).cargo_metadata {
+    for line in process_config(logger, &mut context, &opt_level).cargo_metadata {
         println!("{}", line);
     }
 }

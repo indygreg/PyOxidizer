@@ -386,7 +386,10 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
 }
 
 /// Build PyOxidizer artifacts for a project.
-fn build_pyoxidizer_artifacts(logger: &slog::Logger, context: &BuildContext) -> Result<(), String> {
+fn build_pyoxidizer_artifacts(
+    logger: &slog::Logger,
+    context: &mut BuildContext,
+) -> Result<(), String> {
     let pyoxidizer_artifacts_path = &context.pyoxidizer_artifacts_path;
 
     create_dir_all(&pyoxidizer_artifacts_path).or_else(|e| Err(e.to_string()))?;
@@ -395,7 +398,7 @@ fn build_pyoxidizer_artifacts(logger: &slog::Logger, context: &BuildContext) -> 
         .expect("unable to canonicalize artifacts directory");
 
     if !artifacts_current(logger, &context.config_path, &pyoxidizer_artifacts_path) {
-        process_config(logger, &context, "0");
+        process_config(logger, context, "0");
     }
 
     Ok(())
@@ -414,9 +417,9 @@ fn build_project(
     // this because it is easier to emit output from this process than to have
     // it proxied via cargo.
 
-    let context = BuildContext::new(project_path, config_path, None, target, release, None)?;
+    let mut context = BuildContext::new(project_path, config_path, None, target, release, None)?;
 
-    build_pyoxidizer_artifacts(logger, &context)?;
+    build_pyoxidizer_artifacts(logger, &mut context)?;
 
     let mut args = Vec::new();
     args.push("build");
@@ -469,9 +472,9 @@ fn run_project(
 ) -> Result<(), String> {
     // We call our build wrapper and invoke the binary directly. This allows
     // build output to be printed.
-    let context = build_project(logger, project_path, config_path, target, release)?;
+    let mut context = build_project(logger, project_path, config_path, target, release)?;
 
-    package_project(logger, &context)?;
+    package_project(logger, &mut context)?;
 
     match process::Command::new(&context.app_exe_path)
         .current_dir(&project_path)
@@ -517,8 +520,8 @@ pub fn build(
         None => return Err("unable to find PyOxidizer config file".to_string()),
     };
 
-    let context = build_project(logger, &path, &config_path, &target, release)?;
-    package_project(logger, &context)?;
+    let mut context = build_project(logger, &path, &config_path, &target, release)?;
+    package_project(logger, &mut context)?;
 
     Ok(())
 }
@@ -548,7 +551,7 @@ pub fn build_artifacts(
         None => return Err("unable to find PyOxidizer config file".to_string()),
     };
 
-    let context = BuildContext::new(
+    let mut context = BuildContext::new(
         project_path,
         &config_path,
         None,
@@ -557,7 +560,7 @@ pub fn build_artifacts(
         Some(dest_path),
     )?;
 
-    build_pyoxidizer_artifacts(logger, &context)?;
+    build_pyoxidizer_artifacts(logger, &mut context)?;
 
     Ok(())
 }
