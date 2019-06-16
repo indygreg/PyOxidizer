@@ -1028,25 +1028,42 @@ pub fn resolve_python_resources(
     for packaging in packages {
         info!(logger, "processing packaging rule: {:?}", packaging);
         for entry in resolve_python_packaging(logger, packaging, dist) {
-            match (entry.action, entry.resource) {
-                (ResourceAction::Add, PythonResource::ExtensionModule { name, module }) => {
+            match (entry.action, entry.location, entry.resource) {
+                (
+                    ResourceAction::Add,
+                    ResourceLocation::Embedded,
+                    PythonResource::ExtensionModule { name, module },
+                ) => {
                     info!(logger, "adding embedded extension module: {}", name);
                     embedded_extension_modules.insert(name, module);
                 }
-                (ResourceAction::Remove, PythonResource::ExtensionModule { name, .. }) => {
+                (
+                    ResourceAction::Remove,
+                    ResourceLocation::Embedded,
+                    PythonResource::ExtensionModule { name, .. },
+                ) => {
                     info!(logger, "removing embedded extension module: {}", name);
                     embedded_extension_modules.remove(&name);
                 }
-                (ResourceAction::Add, PythonResource::ModuleSource { name, source }) => {
+                (
+                    ResourceAction::Add,
+                    ResourceLocation::Embedded,
+                    PythonResource::ModuleSource { name, source },
+                ) => {
                     info!(logger, "adding embedded module source: {}", name);
                     embedded_sources.insert(name.clone(), source);
                 }
-                (ResourceAction::Remove, PythonResource::ModuleSource { name, .. }) => {
+                (
+                    ResourceAction::Remove,
+                    ResourceLocation::Embedded,
+                    PythonResource::ModuleSource { name, .. },
+                ) => {
                     info!(logger, "removing embedded module source: {}", name);
                     embedded_sources.remove(&name);
                 }
                 (
                     ResourceAction::Add,
+                    ResourceLocation::Embedded,
                     PythonResource::ModuleBytecode {
                         name,
                         source,
@@ -1056,12 +1073,17 @@ pub fn resolve_python_resources(
                     info!(logger, "adding embedded module bytecode: {}", name);
                     bytecode_requests.insert(name.clone(), (source, optimize_level));
                 }
-                (ResourceAction::Remove, PythonResource::ModuleBytecode { name, .. }) => {
+                (
+                    ResourceAction::Remove,
+                    ResourceLocation::Embedded,
+                    PythonResource::ModuleBytecode { name, .. },
+                ) => {
                     info!(logger, "removing embedded module bytecode: {}", name);
                     bytecode_requests.remove(&name);
                 }
                 (
                     ResourceAction::Add,
+                    ResourceLocation::Embedded,
                     PythonResource::Resource {
                         package,
                         name,
@@ -1079,7 +1101,11 @@ pub fn resolve_python_resources(
                         .unwrap()
                         .insert(name, data);
                 }
-                (ResourceAction::Remove, PythonResource::Resource { name, .. }) => {
+                (
+                    ResourceAction::Remove,
+                    ResourceLocation::Embedded,
+                    PythonResource::Resource { name, .. },
+                ) => {
                     info!(logger, "removing embedded resource: {}", name);
                     embedded_resources.remove(&name);
                 }
@@ -1125,6 +1151,7 @@ pub fn resolve_python_resources(
                 include_names.extend(new_names);
             }
 
+            // TODO honor location in rule when defined.
             info!(
                 logger,
                 "filtering embedded extension modules from {:?}", packaging
