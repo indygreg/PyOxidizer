@@ -169,7 +169,7 @@ pub enum ResourceLocation {
 }
 
 #[derive(Debug)]
-pub struct PythonResourceEntry {
+pub struct PythonResourceAction {
     action: ResourceAction,
     location: ResourceLocation,
     resource: PythonResource,
@@ -267,7 +267,7 @@ fn resolve_stdlib_extensions_policy(
     logger: &slog::Logger,
     dist: &PythonDistributionInfo,
     rule: &PackagingStdlibExtensionsPolicy,
-) -> Vec<PythonResourceEntry> {
+) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
 
     for (name, variants) in &dist.extension_modules {
@@ -276,7 +276,7 @@ fn resolve_stdlib_extensions_policy(
                 let em = &variants[0];
 
                 if em.builtin_default || em.required {
-                    res.push(PythonResourceEntry {
+                    res.push(PythonResourceAction {
                         action: ResourceAction::Add,
                         location: ResourceLocation::Embedded,
                         resource: PythonResource::ExtensionModule {
@@ -289,7 +289,7 @@ fn resolve_stdlib_extensions_policy(
 
             "all" => {
                 let em = &variants[0];
-                res.push(PythonResourceEntry {
+                res.push(PythonResourceAction {
                     action: ResourceAction::Add,
                     location: ResourceLocation::Embedded,
                     resource: PythonResource::ExtensionModule {
@@ -302,7 +302,7 @@ fn resolve_stdlib_extensions_policy(
             "no-libraries" => {
                 for em in variants {
                     if em.links.is_empty() {
-                        res.push(PythonResourceEntry {
+                        res.push(PythonResourceAction {
                             action: ResourceAction::Add,
                             location: ResourceLocation::Embedded,
                             resource: PythonResource::ExtensionModule {
@@ -343,7 +343,7 @@ fn resolve_stdlib_extensions_policy(
                     };
 
                     if suitable {
-                        res.push(PythonResourceEntry {
+                        res.push(PythonResourceAction {
                             action: ResourceAction::Add,
                             location: ResourceLocation::Embedded,
                             resource: PythonResource::ExtensionModule {
@@ -369,12 +369,12 @@ fn resolve_stdlib_extensions_policy(
 fn resolve_stdlib_extensions_explicit_includes(
     dist: &PythonDistributionInfo,
     rule: &PackagingStdlibExtensionsExplicitIncludes,
-) -> Vec<PythonResourceEntry> {
+) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
 
     for name in &rule.includes {
         if let Some(modules) = &dist.extension_modules.get(name) {
-            res.push(PythonResourceEntry {
+            res.push(PythonResourceAction {
                 action: ResourceAction::Add,
                 location: ResourceLocation::Embedded,
                 resource: PythonResource::ExtensionModule {
@@ -391,12 +391,12 @@ fn resolve_stdlib_extensions_explicit_includes(
 fn resolve_stdlib_extensions_explicit_excludes(
     dist: &PythonDistributionInfo,
     rule: &PackagingStdlibExtensionsExplicitExcludes,
-) -> Vec<PythonResourceEntry> {
+) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
 
     for (name, modules) in &dist.extension_modules {
         if rule.excludes.contains(name) {
-            res.push(PythonResourceEntry {
+            res.push(PythonResourceAction {
                 action: ResourceAction::Remove,
                 location: ResourceLocation::Embedded,
                 resource: PythonResource::ExtensionModule {
@@ -405,7 +405,7 @@ fn resolve_stdlib_extensions_explicit_excludes(
                 },
             });
         } else {
-            res.push(PythonResourceEntry {
+            res.push(PythonResourceAction {
                 action: ResourceAction::Add,
                 location: ResourceLocation::Embedded,
                 resource: PythonResource::ExtensionModule {
@@ -422,14 +422,14 @@ fn resolve_stdlib_extensions_explicit_excludes(
 fn resolve_stdlib_extension_variant(
     dist: &PythonDistributionInfo,
     rule: &PackagingStdlibExtensionVariant,
-) -> Vec<PythonResourceEntry> {
+) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
 
     let variants = &dist.extension_modules[&rule.extension];
 
     for em in variants {
         if &em.variant == &rule.variant {
-            res.push(PythonResourceEntry {
+            res.push(PythonResourceAction {
                 action: ResourceAction::Add,
                 location: ResourceLocation::Embedded,
                 resource: PythonResource::ExtensionModule {
@@ -454,7 +454,7 @@ fn resolve_stdlib(
     logger: &slog::Logger,
     dist: &PythonDistributionInfo,
     rule: &PackagingStdlib,
-) -> Vec<PythonResourceEntry> {
+) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
 
     for (name, fs_path) in &dist.py_modules {
@@ -466,7 +466,7 @@ fn resolve_stdlib(
         let source = fs::read(fs_path).expect("error reading source file");
 
         if rule.include_source {
-            res.push(PythonResourceEntry {
+            res.push(PythonResourceAction {
                 action: ResourceAction::Add,
                 location: ResourceLocation::Embedded,
                 resource: PythonResource::ModuleSource {
@@ -476,7 +476,7 @@ fn resolve_stdlib(
             });
         }
 
-        res.push(PythonResourceEntry {
+        res.push(PythonResourceAction {
             action: ResourceAction::Add,
             location: ResourceLocation::Embedded,
             resource: PythonResource::ModuleBytecode {
@@ -500,7 +500,7 @@ fn resolve_stdlib(
             for (name, fs_path) in resources {
                 let data = fs::read(fs_path).expect("error reading resource file");
 
-                res.push(PythonResourceEntry {
+                res.push(PythonResourceAction {
                     action: ResourceAction::Add,
                     location: ResourceLocation::Embedded,
                     resource: PythonResource::Resource {
@@ -519,7 +519,7 @@ fn resolve_stdlib(
 fn resolve_virtualenv(
     dist: &PythonDistributionInfo,
     rule: &PackagingVirtualenv,
-) -> Vec<PythonResourceEntry> {
+) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
 
     let mut packages_path = PathBuf::from(&rule.path);
@@ -553,7 +553,7 @@ fn resolve_virtualenv(
                 let source = fs::read(resource.path).expect("error reading source file");
 
                 if rule.include_source {
-                    res.push(PythonResourceEntry {
+                    res.push(PythonResourceAction {
                         action: ResourceAction::Add,
                         location: ResourceLocation::Embedded,
                         resource: PythonResource::ModuleSource {
@@ -563,7 +563,7 @@ fn resolve_virtualenv(
                     });
                 }
 
-                res.push(PythonResourceEntry {
+                res.push(PythonResourceAction {
                     action: ResourceAction::Add,
                     location: ResourceLocation::Embedded,
                     resource: PythonResource::ModuleBytecode {
@@ -577,7 +577,7 @@ fn resolve_virtualenv(
             PythonResourceType::Resource => {
                 let data = fs::read(resource.path).expect("error reading resource file");
 
-                res.push(PythonResourceEntry {
+                res.push(PythonResourceAction {
                     action: ResourceAction::Add,
                     location: ResourceLocation::Embedded,
                     resource: PythonResource::Resource {
@@ -595,7 +595,7 @@ fn resolve_virtualenv(
     res
 }
 
-fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceEntry> {
+fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
 
     let path = PathBuf::from(&rule.path);
@@ -628,7 +628,7 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceEntry>
                 let source = fs::read(resource.path).expect("error reading source file");
 
                 if rule.include_source {
-                    res.push(PythonResourceEntry {
+                    res.push(PythonResourceAction {
                         action: ResourceAction::Add,
                         location: ResourceLocation::Embedded,
                         resource: PythonResource::ModuleSource {
@@ -638,7 +638,7 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceEntry>
                     });
                 }
 
-                res.push(PythonResourceEntry {
+                res.push(PythonResourceAction {
                     action: ResourceAction::Add,
                     location: ResourceLocation::Embedded,
                     resource: PythonResource::ModuleBytecode {
@@ -652,7 +652,7 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceEntry>
             PythonResourceType::Resource => {
                 let data = fs::read(resource.path).expect("error reading resource file");
 
-                res.push(PythonResourceEntry {
+                res.push(PythonResourceAction {
                     action: ResourceAction::Add,
                     location: ResourceLocation::Embedded,
                     resource: PythonResource::Resource {
@@ -674,7 +674,7 @@ fn resolve_pip_install_simple(
     logger: &slog::Logger,
     dist: &PythonDistributionInfo,
     rule: &PackagingPipInstallSimple,
-) -> Vec<PythonResourceEntry> {
+) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
 
     dist.ensure_pip();
@@ -719,7 +719,7 @@ fn resolve_pip_install_simple(
                 let source = fs::read(resource.path).expect("error reading source file");
 
                 if rule.include_source {
-                    res.push(PythonResourceEntry {
+                    res.push(PythonResourceAction {
                         action: ResourceAction::Add,
                         location: ResourceLocation::Embedded,
                         resource: PythonResource::ModuleSource {
@@ -729,7 +729,7 @@ fn resolve_pip_install_simple(
                     });
                 }
 
-                res.push(PythonResourceEntry {
+                res.push(PythonResourceAction {
                     action: ResourceAction::Add,
                     location: ResourceLocation::Embedded,
                     resource: PythonResource::ModuleBytecode {
@@ -743,7 +743,7 @@ fn resolve_pip_install_simple(
             PythonResourceType::Resource => {
                 let data = fs::read(resource.path).expect("error reading resource file");
 
-                res.push(PythonResourceEntry {
+                res.push(PythonResourceAction {
                     action: ResourceAction::Add,
                     location: ResourceLocation::Embedded,
                     resource: PythonResource::Resource {
@@ -765,7 +765,7 @@ fn resolve_pip_requirements_file(
     logger: &slog::Logger,
     dist: &PythonDistributionInfo,
     rule: &PackagingPipRequirementsFile,
-) -> Vec<PythonResourceEntry> {
+) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
 
     dist.ensure_pip();
@@ -814,7 +814,7 @@ fn resolve_pip_requirements_file(
                 let source = fs::read(resource.path).expect("error reading source file");
 
                 if rule.include_source {
-                    res.push(PythonResourceEntry {
+                    res.push(PythonResourceAction {
                         action: ResourceAction::Add,
                         location: ResourceLocation::Embedded,
                         resource: PythonResource::ModuleSource {
@@ -824,7 +824,7 @@ fn resolve_pip_requirements_file(
                     });
                 }
 
-                res.push(PythonResourceEntry {
+                res.push(PythonResourceAction {
                     action: ResourceAction::Add,
                     location: ResourceLocation::Embedded,
                     resource: PythonResource::ModuleBytecode {
@@ -838,7 +838,7 @@ fn resolve_pip_requirements_file(
             PythonResourceType::Resource => {
                 let data = fs::read(resource.path).expect("error reading resource file");
 
-                res.push(PythonResourceEntry {
+                res.push(PythonResourceAction {
                     action: ResourceAction::Add,
                     location: ResourceLocation::Embedded,
                     resource: PythonResource::Resource {
@@ -860,7 +860,7 @@ fn resolve_setup_py_install(
     logger: &slog::Logger,
     dist: &PythonDistributionInfo,
     rule: &PackagingSetupPyInstall,
-) -> Vec<PythonResourceEntry> {
+) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
 
     let temp_dir = tempdir::TempDir::new("pyoxidizer-setup-py-install")
@@ -913,7 +913,7 @@ fn resolve_setup_py_install(
                 let source = fs::read(resource.path).expect("error reading source");
 
                 if rule.include_source {
-                    res.push(PythonResourceEntry {
+                    res.push(PythonResourceAction {
                         action: ResourceAction::Add,
                         location: ResourceLocation::Embedded,
                         resource: PythonResource::ModuleSource {
@@ -923,7 +923,7 @@ fn resolve_setup_py_install(
                     });
                 }
 
-                res.push(PythonResourceEntry {
+                res.push(PythonResourceAction {
                     action: ResourceAction::Add,
                     location: ResourceLocation::Embedded,
                     resource: PythonResource::ModuleBytecode {
@@ -937,7 +937,7 @@ fn resolve_setup_py_install(
             PythonResourceType::Resource => {
                 let data = fs::read(resource.path).expect("error reading resource file");
 
-                res.push(PythonResourceEntry {
+                res.push(PythonResourceAction {
                     action: ResourceAction::Add,
                     location: ResourceLocation::Embedded,
                     resource: PythonResource::Resource {
@@ -960,7 +960,7 @@ fn resolve_python_packaging(
     logger: &slog::Logger,
     package: &PythonPackaging,
     dist: &PythonDistributionInfo,
-) -> Vec<PythonResourceEntry> {
+) -> Vec<PythonResourceAction> {
     match package {
         PythonPackaging::StdlibExtensionsPolicy(rule) => {
             resolve_stdlib_extensions_policy(logger, dist, &rule)
