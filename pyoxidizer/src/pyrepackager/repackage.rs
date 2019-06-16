@@ -176,6 +176,7 @@ pub struct PythonResourceAction {
 }
 
 /// Represents Python resources to embed in a binary.
+#[derive(Debug)]
 pub struct EmbeddedPythonResources {
     pub module_sources: BTreeMap<String, Vec<u8>>,
     pub module_bytecodes: BTreeMap<String, Vec<u8>>,
@@ -228,6 +229,12 @@ impl EmbeddedPythonResources {
         let fh = fs::File::create(resources_path).unwrap();
         write_resources_entries(&fh, &self.resources).unwrap();
     }
+}
+
+/// Represents resources to package with an application.
+#[derive(Debug)]
+pub struct PythonResources {
+    pub embedded: EmbeddedPythonResources,
 }
 
 fn read_resource_names_file(path: &Path) -> Result<BTreeSet<String>, IOError> {
@@ -1002,7 +1009,7 @@ pub fn resolve_python_resources(
     logger: &slog::Logger,
     config: &Config,
     dist: &PythonDistributionInfo,
-) -> EmbeddedPythonResources {
+) -> PythonResources {
     let packages = &config.python_packaging;
 
     // Since bytecode has a non-trivial cost to generate, our strategy is to accumulate
@@ -1195,13 +1202,15 @@ pub fn resolve_python_resources(
         })
         .collect();
 
-    EmbeddedPythonResources {
-        module_sources: sources,
-        module_bytecodes: bytecodes,
-        all_modules,
-        resources,
-        extension_modules,
-        read_files,
+    PythonResources {
+        embedded: EmbeddedPythonResources {
+            module_sources: sources,
+            module_bytecodes: bytecodes,
+            all_modules,
+            resources,
+            extension_modules,
+            read_files,
+        },
     }
 }
 
@@ -1842,25 +1851,25 @@ pub fn process_config(
     info!(
         logger,
         "resolved {} Python source modules: {:#?}",
-        resources.module_sources.len(),
-        resources.module_sources.keys()
+        resources.embedded.module_sources.len(),
+        resources.embedded.module_sources.keys()
     );
     info!(
         logger,
         "resolved {} Python bytecode modules: {:#?}",
-        resources.module_bytecodes.len(),
-        resources.module_bytecodes.keys()
+        resources.embedded.module_bytecodes.len(),
+        resources.embedded.module_bytecodes.keys()
     );
     info!(
         logger,
         "resolved {} unique Python modules: {:#?}",
-        resources.all_modules.len(),
-        resources.all_modules
+        resources.embedded.all_modules.len(),
+        resources.embedded.all_modules
     );
 
     let mut resource_count = 0;
     let mut resource_map = BTreeMap::new();
-    for (package, entries) in &resources.resources {
+    for (package, entries) in &resources.embedded.resources {
         let mut names = BTreeSet::new();
         names.extend(entries.keys());
         resource_map.insert(package.clone(), names);
@@ -1871,14 +1880,14 @@ pub fn process_config(
         logger,
         "resolved {} resource files across {} packages: {:#?}",
         resource_count,
-        resources.resources.len(),
+        resources.embedded.resources.len(),
         resource_map
     );
     info!(
         logger,
         "resolved {} extension modules: {:#?}",
-        resources.extension_modules.len(),
-        resources.extension_modules.keys()
+        resources.embedded.extension_modules.len(),
+        resources.embedded.extension_modules.keys()
     );
 
     // Produce the packed data structures containing Python modules.
@@ -1889,7 +1898,9 @@ pub fn process_config(
     let module_names_path = Path::new(&dest_dir).join("py-module-names");
     let py_modules_path = Path::new(&dest_dir).join("py-modules");
     let resources_path = Path::new(&dest_dir).join("python-resources");
-    resources.write_blobs(&module_names_path, &py_modules_path, &resources_path);
+    resources
+        .embedded
+        .write_blobs(&module_names_path, &py_modules_path, &resources_path);
 
     info!(
         logger,
@@ -1909,11 +1920,18 @@ pub fn process_config(
         logger,
         "generating custom link library containing Python..."
     );
-    let libpython_info =
-        link_libpython(logger, &dist, &resources, dest_dir, host, target, opt_level);
+    let libpython_info = link_libpython(
+        logger,
+        &dist,
+        &resources.embedded,
+        dest_dir,
+        host,
+        target,
+        opt_level,
+    );
     cargo_metadata.extend(libpython_info.cargo_metadata);
 
-    for p in &resources.read_files {
+    for p in &resources.embedded.read_files {
         cargo_metadata.push(format!("cargo:rerun-if-changed={}", p.display()));
     }
 
