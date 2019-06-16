@@ -166,6 +166,7 @@ impl BuildContext {
         config_path: &Path,
         target: &str,
         release: bool,
+        force_artifacts_path: Option<&Path>,
     ) -> Result<Self, String> {
         let config = parse_config_file(config_path, target)?;
 
@@ -194,7 +195,17 @@ impl BuildContext {
 
         let app_exe_path = target_path.join(exe_name);
 
-        let pyoxidizer_artifacts_path = target_path.join("pyoxidizer");
+        // Artifacts path is:
+        // 1. force_artifacts_path (if defined)
+        // 2. artifacts_path from config (if defined)
+        // 3. A "pyoxidizer" directory in the target directory.
+        let pyoxidizer_artifacts_path = match force_artifacts_path {
+            Some(path) => path.to_path_buf(),
+            None => match config.build_config.artifacts_path {
+                Some(ref path) => path.clone(),
+                None => target_path.join("pyoxidizer"),
+            },
+        };
 
         Ok(BuildContext {
             project_path: project_path.to_path_buf(),

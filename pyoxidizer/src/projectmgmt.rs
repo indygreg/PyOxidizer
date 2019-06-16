@@ -386,11 +386,7 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
 }
 
 /// Build PyOxidizer artifacts for a project.
-fn build_pyoxidizer_artifacts(
-    logger: &slog::Logger,
-    context: &BuildContext,
-    force_dest_path: Option<&Path>,
-) -> Result<PathBuf, String> {
+fn build_pyoxidizer_artifacts(logger: &slog::Logger, context: &BuildContext) -> Result<(), String> {
     let pyoxidizer_artifacts_path = &context.pyoxidizer_artifacts_path;
 
     create_dir_all(&pyoxidizer_artifacts_path).or_else(|e| Err(e.to_string()))?;
@@ -398,29 +394,19 @@ fn build_pyoxidizer_artifacts(
     let pyoxidizer_artifacts_path = std::fs::canonicalize(pyoxidizer_artifacts_path)
         .expect("unable to canonicalize artifacts directory");
 
-    let build_config_path = &context.config.build_config.artifacts_path.clone();
-
     if !artifacts_current(logger, &context.config_path, &pyoxidizer_artifacts_path) {
         process_config(
             logger,
             &context.config,
             &pyoxidizer_artifacts_path,
-            force_dest_path,
+            Some(&pyoxidizer_artifacts_path),
             &context.host_triple,
             &context.target_triple,
             "0",
         );
     }
 
-    Ok(if let Some(path) = force_dest_path {
-        path.to_path_buf()
-    } else {
-        if let Some(ref path) = build_config_path {
-            path.clone()
-        } else {
-            pyoxidizer_artifacts_path
-        }
-    })
+    Ok(())
 }
 
 /// Build an oxidized Rust application at the specified project path.
@@ -436,9 +422,9 @@ fn build_project(
     // this because it is easier to emit output from this process than to have
     // it proxied via cargo.
 
-    let context = BuildContext::new(project_path, config_path, target, release)?;
+    let context = BuildContext::new(project_path, config_path, target, release, None)?;
 
-    let pyoxidizer_artifacts_path = build_pyoxidizer_artifacts(logger, &context, None)?;
+    build_pyoxidizer_artifacts(logger, &context)?;
 
     let mut args = Vec::new();
     args.push("build");
@@ -462,7 +448,7 @@ fn build_project(
         .current_dir(&project_path)
         .env(
             "PYOXIDIZER_ARTIFACT_DIR",
-            pyoxidizer_artifacts_path.display().to_string(),
+            context.pyoxidizer_artifacts_path.display().to_string(),
         )
         .env("PYOXIDIZER_REUSE_ARTIFACTS", "1")
         .status()
@@ -564,9 +550,15 @@ pub fn build_artifacts(
         None => return Err("unable to find PyOxidizer config file".to_string()),
     };
 
-    let context = BuildContext::new(project_path, &config_path, &target, release)?;
+    let context = BuildContext::new(
+        project_path,
+        &config_path,
+        &target,
+        release,
+        Some(dest_path),
+    )?;
 
-    build_pyoxidizer_artifacts(logger, &context, Some(dest_path))?;
+    build_pyoxidizer_artifacts(logger, &context)?;
 
     Ok(())
 }
