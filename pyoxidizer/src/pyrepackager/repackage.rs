@@ -754,6 +754,8 @@ fn resolve_virtualenv(
 ) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
 
+    let location = ResourceLocation::new(&rule.install_location);
+
     let mut packages_path = PathBuf::from(&rule.path);
 
     if dist.os == "windows" {
@@ -787,7 +789,7 @@ fn resolve_virtualenv(
                 if rule.include_source {
                     res.push(PythonResourceAction {
                         action: ResourceAction::Add,
-                        location: ResourceLocation::Embedded,
+                        location: location.clone(),
                         resource: PythonResource::ModuleSource {
                             name: resource.full_name.clone(),
                             source: source.clone(),
@@ -797,7 +799,7 @@ fn resolve_virtualenv(
 
                 res.push(PythonResourceAction {
                     action: ResourceAction::Add,
-                    location: ResourceLocation::Embedded,
+                    location: location.clone(),
                     resource: PythonResource::ModuleBytecode {
                         name: resource.full_name.clone(),
                         source,
@@ -811,7 +813,7 @@ fn resolve_virtualenv(
 
                 res.push(PythonResourceAction {
                     action: ResourceAction::Add,
-                    location: ResourceLocation::Embedded,
+                    location: location.clone(),
                     resource: PythonResource::Resource {
                         package: resource.package.clone(),
                         name: resource.stem.clone(),
@@ -830,6 +832,7 @@ fn resolve_virtualenv(
 fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
 
+    let location = ResourceLocation::new(&rule.install_location);
     let path = PathBuf::from(&rule.path);
 
     for resource in find_python_resources(&path) {
@@ -862,7 +865,7 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceAction
                 if rule.include_source {
                     res.push(PythonResourceAction {
                         action: ResourceAction::Add,
-                        location: ResourceLocation::Embedded,
+                        location: location.clone(),
                         resource: PythonResource::ModuleSource {
                             name: resource.full_name.clone(),
                             source: source.clone(),
@@ -872,7 +875,7 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceAction
 
                 res.push(PythonResourceAction {
                     action: ResourceAction::Add,
-                    location: ResourceLocation::Embedded,
+                    location: location.clone(),
                     resource: PythonResource::ModuleBytecode {
                         name: resource.full_name.clone(),
                         source,
@@ -886,7 +889,7 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceAction
 
                 res.push(PythonResourceAction {
                     action: ResourceAction::Add,
-                    location: ResourceLocation::Embedded,
+                    location: location.clone(),
                     resource: PythonResource::Resource {
                         package: resource.package.clone(),
                         name: resource.stem.clone(),
@@ -908,6 +911,8 @@ fn resolve_pip_install_simple(
     rule: &PackagingPipInstallSimple,
 ) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
+
+    let location = ResourceLocation::new(&rule.install_location);
 
     dist.ensure_pip();
     let temp_dir =
@@ -953,7 +958,7 @@ fn resolve_pip_install_simple(
                 if rule.include_source {
                     res.push(PythonResourceAction {
                         action: ResourceAction::Add,
-                        location: ResourceLocation::Embedded,
+                        location: location.clone(),
                         resource: PythonResource::ModuleSource {
                             name: resource.full_name.clone(),
                             source: source.clone(),
@@ -963,7 +968,7 @@ fn resolve_pip_install_simple(
 
                 res.push(PythonResourceAction {
                     action: ResourceAction::Add,
-                    location: ResourceLocation::Embedded,
+                    location: location.clone(),
                     resource: PythonResource::ModuleBytecode {
                         name: resource.full_name.clone(),
                         source,
@@ -977,7 +982,7 @@ fn resolve_pip_install_simple(
 
                 res.push(PythonResourceAction {
                     action: ResourceAction::Add,
-                    location: ResourceLocation::Embedded,
+                    location: location.clone(),
                     resource: PythonResource::Resource {
                         package: resource.package.clone(),
                         name: resource.stem.clone(),
@@ -999,6 +1004,8 @@ fn resolve_pip_requirements_file(
     rule: &PackagingPipRequirementsFile,
 ) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
+
+    let location = ResourceLocation::new(&rule.install_location);
 
     dist.ensure_pip();
 
@@ -1048,7 +1055,7 @@ fn resolve_pip_requirements_file(
                 if rule.include_source {
                     res.push(PythonResourceAction {
                         action: ResourceAction::Add,
-                        location: ResourceLocation::Embedded,
+                        location: location.clone(),
                         resource: PythonResource::ModuleSource {
                             name: resource.full_name.clone(),
                             source: source.clone(),
@@ -1058,7 +1065,7 @@ fn resolve_pip_requirements_file(
 
                 res.push(PythonResourceAction {
                     action: ResourceAction::Add,
-                    location: ResourceLocation::Embedded,
+                    location: location.clone(),
                     resource: PythonResource::ModuleBytecode {
                         name: resource.full_name.clone(),
                         source,
@@ -1072,7 +1079,7 @@ fn resolve_pip_requirements_file(
 
                 res.push(PythonResourceAction {
                     action: ResourceAction::Add,
-                    location: ResourceLocation::Embedded,
+                    location: location.clone(),
                     resource: PythonResource::Resource {
                         package: resource.package.clone(),
                         name: resource.stem.clone(),
@@ -1094,6 +1101,8 @@ fn resolve_setup_py_install(
     rule: &PackagingSetupPyInstall,
 ) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
+
+    let location = ResourceLocation::new(&rule.install_location);
 
     let temp_dir = tempdir::TempDir::new("pyoxidizer-setup-py-install")
         .expect("could not create temp directory");
@@ -1147,7 +1156,7 @@ fn resolve_setup_py_install(
                 if rule.include_source {
                     res.push(PythonResourceAction {
                         action: ResourceAction::Add,
-                        location: ResourceLocation::Embedded,
+                        location: location.clone(),
                         resource: PythonResource::ModuleSource {
                             name: resource.full_name.clone(),
                             source: source.clone(),
@@ -1157,7 +1166,7 @@ fn resolve_setup_py_install(
 
                 res.push(PythonResourceAction {
                     action: ResourceAction::Add,
-                    location: ResourceLocation::Embedded,
+                    location: location.clone(),
                     resource: PythonResource::ModuleBytecode {
                         name: resource.full_name.clone(),
                         source,
@@ -1171,7 +1180,7 @@ fn resolve_setup_py_install(
 
                 res.push(PythonResourceAction {
                     action: ResourceAction::Add,
-                    location: ResourceLocation::Embedded,
+                    location: location.clone(),
                     resource: PythonResource::Resource {
                         package: resource.package.clone(),
                         name: resource.stem.clone(),

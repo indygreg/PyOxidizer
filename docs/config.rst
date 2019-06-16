@@ -647,6 +647,11 @@ This rule has the following keys:
 
    Default is ``true``.
 
+``install_location`` (string)
+
+   Where to package resources associated with this rule.
+   See :ref:`install_locations`.
+
 ``pip-install-simple``
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -677,13 +682,29 @@ rule.
 
    Default is ``true``.
 
-This will include the ``pyflakes`` package and all its dependencies:
+``install_location`` (string)
+
+   Where to package resources associated with this rule.
+   See :ref:`install_locations`.
+
+This will include the ``pyflakes`` package and all its dependencies as embedded
+resources:
 
 .. code-block:: toml
 
    [[python_packaging_rule]]
    type = "pip-install-simple"
    package = "pyflakes"
+
+This will include the ``black`` package and all its dependencies in a directory
+next to the produced binary:
+
+.. code-block:: toml
+
+   [[python_packaging_rule]]
+   type = "pip-install-simple"
+   package = "black"
+   install_location = "app-relative:lib"
 
 ``pip-requirements-file``
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -748,6 +769,11 @@ resources will be collected and packaged.
 
    Default is ``true``.
 
+``install_location`` (string)
+
+   Where to package resources associated with this rule.
+   See :ref:`install_locations`.
+
 ``virtualenv``
 ^^^^^^^^^^^^^^
 
@@ -788,6 +814,11 @@ directory.
    Whether to include the source code for modules in addition to the bytecode.
 
    Default is ``true``.
+
+``install_location`` (string)
+
+   Where to package resources associated with this rule.
+   See :ref:`install_locations`.
 
 Example:
 

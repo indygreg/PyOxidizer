@@ -90,6 +90,8 @@ enum ConfigPythonPackaging {
         optimize_level: i64,
         #[serde(default = "TRUE")]
         include_source: bool,
+        #[serde(default = "EMBEDDED")]
+        install_location: String,
     },
 
     #[serde(rename = "stdlib-extensions-policy")]
@@ -151,6 +153,8 @@ enum ConfigPythonPackaging {
         excludes: Vec<String>,
         #[serde(default = "TRUE")]
         include_source: bool,
+        #[serde(default = "EMBEDDED")]
+        install_location: String,
     },
 
     #[serde(rename = "package-root")]
@@ -165,6 +169,8 @@ enum ConfigPythonPackaging {
         excludes: Vec<String>,
         #[serde(default = "TRUE")]
         include_source: bool,
+        #[serde(default = "EMBEDDED")]
+        install_location: String,
     },
 
     #[serde(rename = "pip-install-simple")]
@@ -176,6 +182,8 @@ enum ConfigPythonPackaging {
         optimize_level: i64,
         #[serde(default = "TRUE")]
         include_source: bool,
+        #[serde(default = "EMBEDDED")]
+        install_location: String,
     },
 
     #[serde(rename = "pip-requirements-file")]
@@ -187,6 +195,8 @@ enum ConfigPythonPackaging {
         optimize_level: i64,
         #[serde(default = "TRUE")]
         include_source: bool,
+        #[serde(default = "EMBEDDED")]
+        install_location: String,
     },
 
     #[serde(rename = "filter-include")]
@@ -263,6 +273,7 @@ pub struct PackagingSetupPyInstall {
     pub path: String,
     pub optimize_level: i64,
     pub include_source: bool,
+    pub install_location: InstallLocation,
 }
 
 #[derive(Clone, Debug)]
@@ -302,6 +313,7 @@ pub struct PackagingVirtualenv {
     pub optimize_level: i64,
     pub excludes: Vec<String>,
     pub include_source: bool,
+    pub install_location: InstallLocation,
 }
 
 #[derive(Clone, Debug)]
@@ -311,6 +323,7 @@ pub struct PackagingPackageRoot {
     pub optimize_level: i64,
     pub excludes: Vec<String>,
     pub include_source: bool,
+    pub install_location: InstallLocation,
 }
 
 #[derive(Clone, Debug)]
@@ -318,6 +331,7 @@ pub struct PackagingPipInstallSimple {
     pub package: String,
     pub optimize_level: i64,
     pub include_source: bool,
+    pub install_location: InstallLocation,
 }
 
 #[derive(Clone, Debug)]
@@ -326,6 +340,7 @@ pub struct PackagingPipRequirementsFile {
     pub requirements_path: String,
     pub optimize_level: i64,
     pub include_source: bool,
+    pub install_location: InstallLocation,
 }
 
 #[derive(Clone, Debug)]
@@ -595,6 +610,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 optimize_level,
                 excludes,
                 include_source,
+                install_location,
             } => {
                 if rule_target == "all" || rule_target == target {
                     Ok(Some(PythonPackaging::PackageRoot(PackagingPackageRoot {
@@ -603,6 +619,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                         optimize_level: *optimize_level,
                         excludes: excludes.clone(),
                         include_source: *include_source,
+                        install_location: resolve_install_location(&install_location)?,
                     })))
                 } else {
                     Ok(None)
@@ -613,6 +630,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 package,
                 optimize_level,
                 include_source,
+                install_location,
             } => {
                 if rule_target == "all" || rule_target == target {
                     Ok(Some(PythonPackaging::PipInstallSimple(
@@ -620,6 +638,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                             package: package.clone(),
                             optimize_level: *optimize_level,
                             include_source: *include_source,
+                            install_location: resolve_install_location(&install_location)?,
                         },
                     )))
                 } else {
@@ -631,6 +650,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 requirements_path,
                 optimize_level,
                 include_source,
+                install_location,
             } => {
                 if rule_target == "all" || rule_target == target {
                     Ok(Some(PythonPackaging::PipRequirementsFile(
@@ -638,6 +658,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                             requirements_path: requirements_path.clone(),
                             optimize_level: *optimize_level,
                             include_source: *include_source,
+                            install_location: resolve_install_location(&install_location)?,
                         },
                     )))
                 } else {
@@ -649,6 +670,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 package_path,
                 optimize_level,
                 include_source,
+                install_location,
             } => {
                 if rule_target == "all" || rule_target == target {
                     Ok(Some(PythonPackaging::SetupPyInstall(
@@ -656,6 +678,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                             path: package_path.clone(),
                             optimize_level: *optimize_level,
                             include_source: *include_source,
+                            install_location: resolve_install_location(&install_location)?,
                         },
                     )))
                 } else {
@@ -750,6 +773,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 optimize_level,
                 excludes,
                 include_source,
+                install_location,
             } => {
                 if rule_target == "all" || rule_target == target {
                     Ok(Some(PythonPackaging::Virtualenv(PackagingVirtualenv {
@@ -757,6 +781,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                         optimize_level: *optimize_level,
                         excludes: excludes.clone(),
                         include_source: *include_source,
+                        install_location: resolve_install_location(&install_location)?,
                     })))
                 } else {
                     Ok(None)
