@@ -176,7 +176,7 @@ pub struct PythonResourceAction {
 }
 
 /// Represents Python resources to embed in a binary.
-pub struct PythonResources {
+pub struct EmbeddedPythonResources {
     pub module_sources: BTreeMap<String, Vec<u8>>,
     pub module_bytecodes: BTreeMap<String, Vec<u8>>,
     pub all_modules: BTreeSet<String>,
@@ -185,7 +185,7 @@ pub struct PythonResources {
     pub read_files: Vec<PathBuf>,
 }
 
-impl PythonResources {
+impl EmbeddedPythonResources {
     /// Obtain records for all modules in this resources collection.
     pub fn modules_records(&self) -> ModuleEntries {
         let mut records = ModuleEntries::new();
@@ -1002,7 +1002,7 @@ pub fn resolve_python_resources(
     logger: &slog::Logger,
     config: &Config,
     dist: &PythonDistributionInfo,
-) -> PythonResources {
+) -> EmbeddedPythonResources {
     let packages = &config.python_packaging;
 
     // Since bytecode has a non-trivial cost to generate, our strategy is to accumulate
@@ -1195,7 +1195,7 @@ pub fn resolve_python_resources(
         })
         .collect();
 
-    PythonResources {
+    EmbeddedPythonResources {
         module_sources: sources,
         module_bytecodes: bytecodes,
         all_modules,
@@ -1384,7 +1384,7 @@ pub struct LibpythonInfo {
 pub fn link_libpython(
     logger: &slog::Logger,
     dist: &PythonDistributionInfo,
-    resources: &PythonResources,
+    resources: &EmbeddedPythonResources,
     out_dir: &Path,
     host: &str,
     target: &str,
