@@ -1032,8 +1032,7 @@ pub fn resolve_python_resources(
 
     let mut embedded_extension_modules: BTreeMap<String, ExtensionModule> = BTreeMap::new();
     let mut embedded_sources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
-    // TODO index this by location.
-    let mut bytecode_requests: BTreeMap<String, (Vec<u8>, i32)> = BTreeMap::new();
+    let mut embedded_bytecode_requests: BTreeMap<String, (Vec<u8>, i32)> = BTreeMap::new();
     let mut embedded_resources: BTreeMap<String, BTreeMap<String, Vec<u8>>> = BTreeMap::new();
     let mut read_files: Vec<PathBuf> = Vec::new();
 
@@ -1083,7 +1082,7 @@ pub fn resolve_python_resources(
                     },
                 ) => {
                     info!(logger, "adding embedded module bytecode: {}", name);
-                    bytecode_requests.insert(name.clone(), (source, optimize_level));
+                    embedded_bytecode_requests.insert(name.clone(), (source, optimize_level));
                 }
                 (
                     ResourceAction::Remove,
@@ -1091,7 +1090,7 @@ pub fn resolve_python_resources(
                     PythonResource::ModuleBytecode { name, .. },
                 ) => {
                     info!(logger, "removing embedded module bytecode: {}", name);
-                    bytecode_requests.remove(&name);
+                    embedded_bytecode_requests.remove(&name);
                 }
                 (
                     ResourceAction::Add,
@@ -1178,7 +1177,7 @@ pub fn resolve_python_resources(
                 logger,
                 "filtering embedded module bytecode from {:?}", packaging
             );
-            filter_btreemap(logger, &mut bytecode_requests, &include_names);
+            filter_btreemap(logger, &mut embedded_bytecode_requests, &include_names);
             info!(logger, "filtering embedded resources from {:?}", packaging);
             filter_btreemap(logger, &mut embedded_resources, &include_names);
         }
@@ -1209,7 +1208,7 @@ pub fn resolve_python_resources(
     {
         let mut compiler = bytecode_compiler(&dist);
 
-        for (name, (source, optimize_level)) in bytecode_requests {
+        for (name, (source, optimize_level)) in embedded_bytecode_requests {
             let bytecode = match compiler.compile(&source, &name, optimize_level) {
                 Ok(res) => res,
                 Err(msg) => panic!("error compiling bytecode for {}: {}", name, msg),
