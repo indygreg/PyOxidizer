@@ -1919,16 +1919,11 @@ pub fn parse_config_file(config_path: &Path, target: &str) -> Result<Config, Str
 /// This function reads a PyOxidizer config file and turns it into a set
 /// of derived files that can power an embedded Python interpreter.
 ///
-/// Artifacts will be written to ``force_out_dir`` if it is defined. Otherwise
-/// they are written to the ``[[build]] artifacts_path = "..."`` value from the
-/// config if defined. Otherwise they are written to ``default_out_dir``.
-///
 /// Returns a data structure describing the results.
 pub fn process_config(
     logger: &slog::Logger,
     config: &Config,
-    default_out_dir: &Path,
-    force_out_dir: Option<&Path>,
+    dest_dir: &Path,
     host: &str,
     target: &str,
     opt_level: &str,
@@ -1945,15 +1940,6 @@ pub fn process_config(
         "cargo:rerun-if-changed={}",
         config.config_path.display()
     ));
-
-    // Allow config to overwrite the output directory. But not if force_out_dir is set.
-    let dest_dir = if let Some(path) = force_out_dir {
-        path
-    } else if let Some(ref path) = config.build_config.artifacts_path {
-        path.as_path()
-    } else {
-        default_out_dir
-    };
 
     if !dest_dir.exists() {
         create_dir_all(dest_dir).unwrap();
@@ -2190,27 +2176,15 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
         panic!("PyOxidizer config file does not exist");
     }
 
-    let out_dir = env::var("OUT_DIR").unwrap();
-    let out_dir_path = Path::new(&out_dir);
-
-    let artifact_env = env::var("PYOXIDIZER_ARTIFACT_DIR");
-    let force_out_path = match artifact_env {
-        Ok(ref v) => Some(Path::new(v)),
-        Err(_) => None,
+    let dest_dir = match env::var("PYOXIDIZER_ARTIFACT_DIR") {
+        Ok(ref v) => PathBuf::from(v),
+        Err(_) => PathBuf::from(env::var("OUT_DIR").unwrap()),
     };
 
     let config = parse_config_file(&config_path, &target).unwrap();
 
-    for line in process_config(
-        logger,
-        &config,
-        out_dir_path,
-        force_out_path,
-        &host,
-        &target,
-        &opt_level,
-    )
-    .cargo_metadata
+    for line in
+        process_config(logger, &config, &dest_dir, &host, &target, &opt_level).cargo_metadata
     {
         println!("{}", line);
     }

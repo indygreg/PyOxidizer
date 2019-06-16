@@ -399,7 +399,6 @@ fn build_pyoxidizer_artifacts(logger: &slog::Logger, context: &BuildContext) -> 
             logger,
             &context.config,
             &pyoxidizer_artifacts_path,
-            Some(&pyoxidizer_artifacts_path),
             &context.host_triple,
             &context.target_triple,
             "0",
