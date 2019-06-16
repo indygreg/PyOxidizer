@@ -1922,13 +1922,13 @@ pub fn parse_config_file(config_path: &Path, target: &str) -> Result<Config, Str
 /// Returns a data structure describing the results.
 pub fn process_config(
     logger: &slog::Logger,
-    config: &Config,
-    dest_dir: &Path,
-    host: &str,
-    target: &str,
+    context: &BuildContext,
     opt_level: &str,
 ) -> EmbeddedPythonConfig {
     let mut cargo_metadata: Vec<String> = Vec::new();
+
+    let config = &context.config;
+    let dest_dir = &context.pyoxidizer_artifacts_path;
 
     info!(
         logger,
@@ -2065,8 +2065,8 @@ pub fn process_config(
         &dist,
         &resources.embedded,
         dest_dir,
-        host,
-        target,
+        &context.host_triple,
+        &context.target_triple,
         opt_level,
     );
     cargo_metadata.extend(libpython_info.cargo_metadata);
@@ -2166,6 +2166,9 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
     let target = env::var("TARGET").expect("TARGET not defined");
     let opt_level = env::var("OPT_LEVEL").expect("OPT_LEVEL not defined");
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not found");
+    let profile = env::var("PROFILE").expect("PROFILE not defined");
+
+    let project_path = PathBuf::from(&manifest_dir);
 
     let config_path = match find_pyoxidizer_config_file_env(logger, &PathBuf::from(manifest_dir)) {
         Some(v) => v,
@@ -2181,11 +2184,17 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
         Err(_) => PathBuf::from(env::var("OUT_DIR").unwrap()),
     };
 
-    let config = parse_config_file(&config_path, &target).unwrap();
+    let context = BuildContext::new(
+        &project_path,
+        &config_path,
+        &target,
+        profile == "release",
+        // TODO Config value won't be honored here. Is that OK?
+        Some(&dest_dir),
+    )
+    .unwrap();
 
-    for line in
-        process_config(logger, &config, &dest_dir, &host, &target, &opt_level).cargo_metadata
-    {
+    for line in process_config(logger, &context, &opt_level).cargo_metadata {
         println!("{}", line);
     }
 }

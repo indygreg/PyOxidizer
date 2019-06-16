@@ -395,14 +395,7 @@ fn build_pyoxidizer_artifacts(logger: &slog::Logger, context: &BuildContext) -> 
         .expect("unable to canonicalize artifacts directory");
 
     if !artifacts_current(logger, &context.config_path, &pyoxidizer_artifacts_path) {
-        process_config(
-            logger,
-            &context.config,
-            &pyoxidizer_artifacts_path,
-            &context.host_triple,
-            &context.target_triple,
-            "0",
-        );
+        process_config(logger, &context, "0");
     }
 
     Ok(())
