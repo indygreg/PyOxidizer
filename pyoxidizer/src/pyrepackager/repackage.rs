@@ -2143,13 +2143,44 @@ fn install_app_relative(
         path,
         app_relative.module_bytecodes.keys()
     );
+
+    let mut resource_count = 0;
+    let mut resource_map = BTreeMap::new();
+    for (package, entries) in &app_relative.resources {
+        let mut names = BTreeSet::new();
+        names.extend(entries.keys());
+        resource_map.insert(package.clone(), names);
+        resource_count += entries.len();
+    }
+
     info!(
         logger,
-        "resolved {} app-relative resource files in {}: {:#?}",
+        "resolved {} app-relative resource files across {} packages: {:#?}",
+        resource_count,
         app_relative.resources.len(),
-        path,
-        app_relative.resources.keys()
+        resource_map
     );
+
+    for (package, entries) in &app_relative.resources {
+        let package_path = dest_path.join(package);
+
+        for (name, data) in entries {
+            let dest_path = package_path.join(name);
+
+            info!(
+                logger,
+                "installing app-relative resource {}:{} to {}",
+                package,
+                name,
+                dest_path.display()
+            );
+
+            create_dir_all(dest_path.parent().unwrap()).or_else(|e| Err(e.to_string()))?;
+
+            fs::write(&dest_path, data)
+                .or_else(|_| Err(format!("failed to write {}", dest_path.display())))?;
+        }
+    }
 
     Ok(())
 }
