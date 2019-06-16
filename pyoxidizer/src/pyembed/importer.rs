@@ -19,7 +19,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError};
 use cpython::{
     py_class, py_class_impl, py_coerce_item, py_fn, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr,
-    PyList, PyModule, PyObject, PyResult, PyString, Python, PythonObject, ToPyObject,
+    PyList, PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
 };
 use python3_sys as pyffi;
 use python3_sys::{PyBUF_READ, PyMemoryView_FromMemory};
@@ -507,6 +507,12 @@ const DOC: &[u8] = b"Binary representation of Python modules\0";
 /// Represents global module state to be passed at interpreter initialization time.
 #[derive(Debug)]
 pub struct InitModuleState {
+    /// Whether to register the filesystem importer on sys.meta_path.
+    pub register_filesystem_importer: bool,
+
+    /// Values to set on sys.path.
+    pub sys_paths: Vec<String>,
+
     /// Raw data constituting Python module source code.
     pub py_modules_data: &'static [u8],
 
@@ -537,6 +543,12 @@ type KnownModules = HashMap<&'static str, KnownModuleFlavor>;
 /// exist without issue.
 #[derive(Debug)]
 struct ModuleState {
+    /// Whether to register PathFinder on sys.meta_path.
+    register_filesystem_importer: bool,
+
+    /// Values to set on sys.path.
+    sys_paths: Vec<String>,
+
     /// Raw data constituting Python module source code.
     py_modules_data: &'static [u8],
 
@@ -591,6 +603,9 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
     let mut state = get_module_state(py, m)?;
 
     unsafe {
+        state.register_filesystem_importer = (*NEXT_MODULE_STATE).register_filesystem_importer;
+        // TODO we could move the value if we wanted to avoid the clone().
+        state.sys_paths = (*NEXT_MODULE_STATE).sys_paths.clone();
         state.py_modules_data = (*NEXT_MODULE_STATE).py_modules_data;
         state.py_resources_data = (*NEXT_MODULE_STATE).py_resources_data;
     }
@@ -781,6 +796,53 @@ fn module_setup(
     )?;
     meta_path_object.call_method(py, "clear", NoArgs, None)?;
     meta_path_object.call_method(py, "append", (unified_importer,), None)?;
+
+    // At this point the importing mechanism is fully initialized to use our
+    // unified importer, which handles built-in, frozen, and in-memory imports.
+
+    // Because we're probably running during Py_Initialize() and stdlib modules
+    // may not be in-memory, we need to register and configure additional importers
+    // here, before continuing with Py_Initialize(), otherwise we may not find
+    // the standard library!
+
+    if state.register_filesystem_importer {
+        // This is what importlib._bootstrap_external usually does:
+        // supported_loaders = _get_supported_file_loaders()
+        // sys.path_hooks.extend([FileFinder.path_hook(*supported_loaders)])
+        // sys.meta_path.append(PathFinder)
+        let frozen_importlib_external = py.import("_frozen_importlib_external")?;
+
+        let loaders =
+            frozen_importlib_external.call(py, "_get_supported_file_loaders", NoArgs, None)?;
+        let loaders_list = loaders.cast_as::<PyList>(py)?;
+        let loaders_vec: Vec<PyObject> = loaders_list.iter(py).collect();
+        let loaders_tuple = PyTuple::new(py, loaders_vec.as_slice());
+
+        let file_finder = frozen_importlib_external.get(py, "FileFinder")?;
+        let path_hook = file_finder.call_method(py, "path_hook", loaders_tuple, None)?;
+        let path_hooks = sys_module.get(py, "path_hooks")?;
+        path_hooks.call_method(py, "append", (path_hook,), None)?;
+
+        let path_finder = frozen_importlib_external.get(py, "PathFinder")?;
+        let meta_path = sys_module.get(py, "meta_path")?;
+        meta_path.call_method(py, "append", (path_finder,), None)?;
+    }
+
+    // Ideally we should be calling Py_SetPath() before Py_Initialize() to set sys.path.
+    // But we tried to do this and only ran into problems due to string conversions,
+    // unwanted side-effects. Updating sys.path directly before it is used by PathFinder
+    // (which was just registered above) should have the same effect.
+
+    // Always clear out sys.path.
+    let sys_path = sys_module.get(py, "path")?;
+    sys_path.call_method(py, "clear", NoArgs, None)?;
+
+    // And repopulate it with entries from the config.
+    for path in &state.sys_paths {
+        let py_path = PyString::new(py, path.as_str());
+
+        sys_path.call_method(py, "append", (py_path,), None)?;
+    }
 
     Ok(py.None())
 }

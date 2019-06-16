@@ -18,7 +18,7 @@ use std::ptr::null;
 use cpython::exc::ValueError;
 use cpython::{
     GILGuard, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule, PyObject, PyResult,
-    PyString, PyTuple, Python, PythonObject, ToPyObject,
+    Python, PythonObject, ToPyObject,
 };
 
 use super::config::{PythonConfig, PythonRawAllocator, PythonRunMode};
@@ -187,6 +187,17 @@ impl<'a> MainPythonInterpreter<'a> {
         let config = &self.config;
 
         let exe = env::current_exe().or_else(|_| Err("could not obtain current exe"))?;
+        let origin = exe
+            .parent()
+            .ok_or_else(|| "unable to get exe parent")?
+            .display()
+            .to_string();
+
+        let sys_paths: Vec<String> = config
+            .sys_paths
+            .iter()
+            .map(|path| path.replace("$ORIGIN", &origin))
+            .collect();
 
         // TODO should we call PyMem::SetupDebugHooks() if enabled?
         if let Some(raw_allocator) = &self.raw_allocator {
@@ -233,6 +244,8 @@ impl<'a> MainPythonInterpreter<'a> {
         // that of the interpreter.
         // TODO specify lifetimes so the compiler validates this for us.
         let module_state = super::importer::InitModuleState {
+            register_filesystem_importer: self.config.filesystem_importer,
+            sys_paths,
             py_modules_data: config.py_modules_data,
             py_resources_data: config.py_resources_data,
         };
@@ -337,88 +350,6 @@ impl<'a> MainPythonInterpreter<'a> {
         let py = unsafe { Python::assume_gil_acquired() };
         self.py = Some(py);
         self.init_run = true;
-
-        let sys_module = py.import("sys").or_else(|_| Err("unable to import sys"))?;
-
-        // Our hacked _frozen_importlib_external module doesn't register
-        // the filesystem importers. This is because a) we don't need it to
-        // since interpreter init can be satisfied by in-memory modules
-        // b) having that code read config settings during interpreter startup
-        // would be challenging. So, we handle installation of filesystem
-        // importers here, if desired.
-
-        // This is what importlib._bootstrap_external usally does:
-        // supported_loaders = _get_supported_file_loaders()
-        // sys.path_hooks.extend([FileFinder.path_hook(*supported_loaders)])
-        // sys.meta_path.append(PathFinder)
-        if self.config.filesystem_importer {
-            let frozen = py
-                .import("_frozen_importlib_external")
-                .or_else(|_| Err("unable to import _frozen_importlib_external"))?;
-
-            let loaders = frozen
-                .call(py, "_get_supported_file_loaders", NoArgs, None)
-                .or_else(|_| Err("error calling _get_supported_file_loaders()"))?;
-            let loaders_list = loaders
-                .cast_as::<PyList>(py)
-                .or_else(|_| Err("unable to cast loaders to list"))?;
-            let loaders_vec: Vec<PyObject> = loaders_list.iter(py).collect();
-            let loaders_tuple = PyTuple::new(py, loaders_vec.as_slice());
-
-            let file_finder = frozen
-                .get(py, "FileFinder")
-                .or_else(|_| Err("unable to get FileFinder"))?;
-            let path_hook = file_finder
-                .call_method(py, "path_hook", loaders_tuple, None)
-                .or_else(|_| Err("unable to construct path hook"))?;
-
-            let path_hooks = sys_module
-                .get(py, "path_hooks")
-                .or_else(|_| Err("unable to get sys.path_hooks"))?;
-            path_hooks
-                .call_method(py, "append", (path_hook,), None)
-                .or_else(|_| Err("unable to append sys.path_hooks"))?;
-
-            let path_finder = frozen
-                .get(py, "PathFinder")
-                .or_else(|_| Err("unable to get PathFinder"))?;
-            let meta_path = sys_module
-                .get(py, "meta_path")
-                .or_else(|_| Err("unable to get sys.meta_path"))?;
-            meta_path
-                .call_method(py, "append", (path_finder,), None)
-                .or_else(|_| Err("unable to append to sys.meta_path"))?;
-        }
-
-        // Ideally we should be calling Py_SetPath() with this value before Py_Initialize().
-        // But we tried to do this and only ran into problems due to string conversions,
-        // unwanted side-effects. Updating fields after initialization should have the
-        // same effect.
-
-        // Always clear out sys.path.
-        let sys_path = sys_module
-            .get(py, "path")
-            .or_else(|_| Err("unable to get sys.path"))?;
-        sys_path
-            .call_method(py, "clear", NoArgs, None)
-            .or_else(|_| Err("unable to call sys.path.clear()"))?;
-
-        // And repopulate it with entries from the config.
-        for path in &config.sys_paths {
-            let path = path.replace(
-                "$ORIGIN",
-                exe.parent()
-                    .ok_or_else(|| "unable to get exe parent")?
-                    .display()
-                    .to_string()
-                    .as_str(),
-            );
-            let py_path = PyString::new(py, path.as_str());
-
-            sys_path
-                .call_method(py, "append", (py_path,), None)
-                .or_else(|_| Err("could not append sys.path"))?;
-        }
 
         // env::args() panics if arguments aren't valid Unicode. But invalid
         // Unicode arguments are possible and some applications may want to
