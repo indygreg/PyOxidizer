@@ -1018,10 +1018,11 @@ pub fn resolve_python_resources(
     // requests for bytecode then generate bytecode for the final set of inputs at the
     // end of processing. That way we don't generate bytecode only to throw it away later.
 
-    let mut extension_modules: BTreeMap<String, ExtensionModule> = BTreeMap::new();
-    let mut sources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    let mut embedded_extension_modules: BTreeMap<String, ExtensionModule> = BTreeMap::new();
+    let mut embedded_sources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    // TODO index this by location.
     let mut bytecode_requests: BTreeMap<String, (Vec<u8>, i32)> = BTreeMap::new();
-    let mut resources: BTreeMap<String, BTreeMap<String, Vec<u8>>> = BTreeMap::new();
+    let mut embedded_resources: BTreeMap<String, BTreeMap<String, Vec<u8>>> = BTreeMap::new();
     let mut read_files: Vec<PathBuf> = Vec::new();
 
     for packaging in packages {
@@ -1030,19 +1031,19 @@ pub fn resolve_python_resources(
             match (entry.action, entry.resource) {
                 (ResourceAction::Add, PythonResource::ExtensionModule { name, module }) => {
                     info!(logger, "adding extension module: {}", name);
-                    extension_modules.insert(name, module);
+                    embedded_extension_modules.insert(name, module);
                 }
                 (ResourceAction::Remove, PythonResource::ExtensionModule { name, .. }) => {
                     info!(logger, "removing extension module: {}", name);
-                    extension_modules.remove(&name);
+                    embedded_extension_modules.remove(&name);
                 }
                 (ResourceAction::Add, PythonResource::ModuleSource { name, source }) => {
                     info!(logger, "adding module source: {}", name);
-                    sources.insert(name.clone(), source);
+                    embedded_sources.insert(name.clone(), source);
                 }
                 (ResourceAction::Remove, PythonResource::ModuleSource { name, .. }) => {
                     info!(logger, "removing module source: {}", name);
-                    sources.remove(&name);
+                    embedded_sources.remove(&name);
                 }
                 (
                     ResourceAction::Add,
@@ -1069,15 +1070,18 @@ pub fn resolve_python_resources(
                 ) => {
                     info!(logger, "adding resource: {}", name);
 
-                    if !resources.contains_key(&package) {
-                        resources.insert(package.clone(), BTreeMap::new());
+                    if !embedded_resources.contains_key(&package) {
+                        embedded_resources.insert(package.clone(), BTreeMap::new());
                     }
 
-                    resources.get_mut(&package).unwrap().insert(name, data);
+                    embedded_resources
+                        .get_mut(&package)
+                        .unwrap()
+                        .insert(name, data);
                 }
                 (ResourceAction::Remove, PythonResource::Resource { name, .. }) => {
                     info!(logger, "removing resource: {}", name);
-                    resources.remove(&name);
+                    embedded_resources.remove(&name);
                 }
             }
         }
@@ -1122,13 +1126,13 @@ pub fn resolve_python_resources(
             }
 
             info!(logger, "filtering extension modules from {:?}", packaging);
-            filter_btreemap(logger, &mut extension_modules, &include_names);
+            filter_btreemap(logger, &mut embedded_extension_modules, &include_names);
             info!(logger, "filtering module sources from {:?}", packaging);
-            filter_btreemap(logger, &mut sources, &include_names);
+            filter_btreemap(logger, &mut embedded_sources, &include_names);
             info!(logger, "filtering module bytecode from {:?}", packaging);
             filter_btreemap(logger, &mut bytecode_requests, &include_names);
             info!(logger, "filtering resources from {:?}", packaging);
-            filter_btreemap(logger, &mut resources, &include_names);
+            filter_btreemap(logger, &mut embedded_resources, &include_names);
         }
     }
 
@@ -1137,9 +1141,9 @@ pub fn resolve_python_resources(
     for (name, variants) in &dist.extension_modules {
         let em = &variants[0];
 
-        if (em.builtin_default || em.required) && !extension_modules.contains_key(name) {
+        if (em.builtin_default || em.required) && !embedded_extension_modules.contains_key(name) {
             info!(logger, "adding required extension module {}", name);
-            extension_modules.insert(name.clone(), em.clone());
+            embedded_extension_modules.insert(name.clone(), em.clone());
         }
     }
 
@@ -1149,10 +1153,10 @@ pub fn resolve_python_resources(
             logger,
             "removing extension module due to incompatibility: {}", e
         );
-        extension_modules.remove(&String::from(*e));
+        embedded_extension_modules.remove(&String::from(*e));
     }
 
-    let mut bytecodes: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    let mut embedded_bytecodes: BTreeMap<String, Vec<u8>> = BTreeMap::new();
 
     {
         let mut compiler = bytecode_compiler(&dist);
@@ -1163,20 +1167,20 @@ pub fn resolve_python_resources(
                 Err(msg) => panic!("error compiling bytecode for {}: {}", name, msg),
             };
 
-            bytecodes.insert(name.clone(), bytecode);
+            embedded_bytecodes.insert(name.clone(), bytecode);
         }
     }
 
-    let mut all_modules: BTreeSet<String> = BTreeSet::new();
-    for name in sources.keys() {
-        all_modules.insert(name.to_string());
+    let mut all_embedded_modules: BTreeSet<String> = BTreeSet::new();
+    for name in embedded_sources.keys() {
+        all_embedded_modules.insert(name.to_string());
     }
-    for name in bytecodes.keys() {
-        all_modules.insert(name.to_string());
+    for name in embedded_bytecodes.keys() {
+        all_embedded_modules.insert(name.to_string());
     }
 
     let mut package_names = BTreeSet::new();
-    for name in &all_modules {
+    for name in &all_embedded_modules {
         let mut search: &str = name;
 
         while let Some(idx) = search.rfind('.') {
@@ -1187,7 +1191,7 @@ pub fn resolve_python_resources(
 
     // Prune resource files that belong to packages that don't have a corresponding
     // Python module package, as they won't be loadable by our custom importer.
-    let resources = resources
+    let embedded_resources = embedded_resources
         .iter()
         .filter_map(|(package, values)| {
             if !package_names.contains(package) {
@@ -1206,11 +1210,11 @@ pub fn resolve_python_resources(
 
     PythonResources {
         embedded: EmbeddedPythonResources {
-            module_sources: sources,
-            module_bytecodes: bytecodes,
-            all_modules,
-            resources,
-            extension_modules,
+            module_sources: embedded_sources,
+            module_bytecodes: embedded_bytecodes,
+            all_modules: all_embedded_modules,
+            resources: embedded_resources,
+            extension_modules: embedded_extension_modules,
         },
         read_files,
     }
