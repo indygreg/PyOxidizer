@@ -3,8 +3,10 @@
 # on this file format.
 
 {{{ python_distributions }}}
+[[build]]
+application_name = "{{program_name}}"
+
 [[embedded_python_config]]
-program_name = "{{ program_name }}"
 raw_allocator = "{{#if jemalloc}}jemalloc{{else}}system{{/if}}"
 
 # dont_write_bytecode = true

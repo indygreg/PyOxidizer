@@ -51,6 +51,7 @@ fn ALL() -> String {
 struct ConfigBuild {
     #[serde(default = "ALL")]
     build_target: String,
+    application_name: Option<String>,
     build_path: Option<String>,
 }
 
@@ -241,6 +242,7 @@ struct ParsedConfig {
 
 #[derive(Clone, Debug)]
 pub struct BuildConfig {
+    pub application_name: String,
     pub build_path: PathBuf,
 }
 
@@ -403,6 +405,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
         .display()
         .to_string();
 
+    let mut application_name = None;
     let mut build_path = PathBuf::from(&origin).join("build");
 
     for build_config in config
@@ -410,12 +413,23 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
         .iter()
         .filter(|c| c.build_target == "all" || c.build_target == target)
     {
+        if let Some(ref name) = build_config.application_name {
+            application_name = Some(name.clone());
+        }
+
         if let Some(ref path) = build_config.build_path {
             build_path = PathBuf::from(path.replace("$ORIGIN", &origin));
         }
     }
 
-    let build_config = BuildConfig { build_path };
+    if application_name.is_none() {
+        return Err("no [[build]] application_name defined".to_string());
+    }
+
+    let build_config = BuildConfig {
+        application_name: application_name.clone().unwrap(),
+        build_path,
+    };
 
     if config.python_distributions.is_empty() {
         return Err("no [[python_distribution]] sections".to_string());
@@ -471,7 +485,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
     let mut no_site = true;
     let mut no_user_site_directory = true;
     let mut optimize_level = 0;
-    let mut program_name = String::from("undefined");
+    let mut program_name = application_name.unwrap();
     let mut stdio_encoding_name = None;
     let mut stdio_encoding_errors = None;
     let mut unbuffered_stdio = false;

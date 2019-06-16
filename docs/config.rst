@@ -55,6 +55,12 @@ The following documentation sections describe the various TOML sections.
 
 This section configures high-level application build settings.
 
+``application_name``
+   Name of the application being built.
+
+   This also corresponds to the name of the Rust binary to be built.
+   A ``cargo build --bin <application_name>`` must work.
+
 ``build_path``
    Filesystem path to directory where build artifacts will be written.
 
@@ -193,7 +199,7 @@ behavior:
    The name of the running application. This value will be passed to
    ``Py_SetProgramName()``.
 
-   Default value is the string ``undefined``.
+   Default value is the value of ``[[build]] application_name``.
 
 ``stdio_encoding`` (string)
 

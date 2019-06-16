@@ -431,6 +431,9 @@ fn build_project(
     args.push("--target-dir");
     args.push(&target_dir);
 
+    args.push("--bin");
+    args.push(&context.config.build_config.application_name);
+
     if release {
         args.push("--release");
     }

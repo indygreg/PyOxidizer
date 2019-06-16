@@ -198,13 +198,7 @@ impl BuildContext {
                 .join(target)
                 .join(if release { "release" } else { "debug" });
 
-        // TOOD should ideally get this from a config, either ours or Cargo's.
-        let app_name = project_path
-            .file_name()
-            .expect("could not extract project name")
-            .to_str()
-            .unwrap()
-            .to_string();
+        let app_name = config.build_config.application_name.clone();
 
         let exe_name = if target.contains("pc-windows") {
             format!("{}.exe", &app_name)
