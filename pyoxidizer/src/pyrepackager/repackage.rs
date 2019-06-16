@@ -164,10 +164,17 @@ impl BuildContext {
     pub fn new(
         project_path: &Path,
         config_path: &Path,
+        host: Option<&str>,
         target: &str,
         release: bool,
         force_artifacts_path: Option<&Path>,
     ) -> Result<Self, String> {
+        let host_triple = if let Some(v) = host {
+            v.to_string()
+        } else {
+            HOST.to_string()
+        };
+
         let config = parse_config_file(config_path, target)?;
 
         // TOOD should ideally get this from Cargo.toml.
@@ -213,7 +220,7 @@ impl BuildContext {
             config,
             app_name,
             app_exe_path,
-            host_triple: HOST.to_string(),
+            host_triple,
             target_triple: target.to_string(),
             release,
             target_base_path,
@@ -2187,6 +2194,7 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
     let context = BuildContext::new(
         &project_path,
         &config_path,
+        Some(&host),
         &target,
         profile == "release",
         // TODO Config value won't be honored here. Is that OK?

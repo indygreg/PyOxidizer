@@ -414,7 +414,7 @@ fn build_project(
     // this because it is easier to emit output from this process than to have
     // it proxied via cargo.
 
-    let context = BuildContext::new(project_path, config_path, target, release, None)?;
+    let context = BuildContext::new(project_path, config_path, None, target, release, None)?;
 
     build_pyoxidizer_artifacts(logger, &context)?;
 
@@ -545,6 +545,7 @@ pub fn build_artifacts(
     let context = BuildContext::new(
         project_path,
         &config_path,
+        None,
         &target,
         release,
         Some(dest_path),
