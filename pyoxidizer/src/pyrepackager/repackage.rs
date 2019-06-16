@@ -161,9 +161,17 @@ pub enum ResourceAction {
     Remove,
 }
 
+/// Represents the packaging location for a resource.
+#[derive(Debug)]
+pub enum ResourceLocation {
+    /// Embed the resource in the binary.
+    Embedded,
+}
+
 #[derive(Debug)]
 pub struct PythonResourceEntry {
     action: ResourceAction,
+    location: ResourceLocation,
     resource: PythonResource,
 }
 
@@ -270,6 +278,7 @@ fn resolve_stdlib_extensions_policy(
                 if em.builtin_default || em.required {
                     res.push(PythonResourceEntry {
                         action: ResourceAction::Add,
+                        location: ResourceLocation::Embedded,
                         resource: PythonResource::ExtensionModule {
                             name: name.clone(),
                             module: em.clone(),
@@ -282,6 +291,7 @@ fn resolve_stdlib_extensions_policy(
                 let em = &variants[0];
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
+                    location: ResourceLocation::Embedded,
                     resource: PythonResource::ExtensionModule {
                         name: name.clone(),
                         module: em.clone(),
@@ -294,6 +304,7 @@ fn resolve_stdlib_extensions_policy(
                     if em.links.is_empty() {
                         res.push(PythonResourceEntry {
                             action: ResourceAction::Add,
+                            location: ResourceLocation::Embedded,
                             resource: PythonResource::ExtensionModule {
                                 name: name.clone(),
                                 module: em.clone(),
@@ -334,6 +345,7 @@ fn resolve_stdlib_extensions_policy(
                     if suitable {
                         res.push(PythonResourceEntry {
                             action: ResourceAction::Add,
+                            location: ResourceLocation::Embedded,
                             resource: PythonResource::ExtensionModule {
                                 name: name.clone(),
                                 module: em.clone(),
@@ -364,6 +376,7 @@ fn resolve_stdlib_extensions_explicit_includes(
         if let Some(modules) = &dist.extension_modules.get(name) {
             res.push(PythonResourceEntry {
                 action: ResourceAction::Add,
+                location: ResourceLocation::Embedded,
                 resource: PythonResource::ExtensionModule {
                     name: name.clone(),
                     module: modules[0].clone(),
@@ -385,6 +398,7 @@ fn resolve_stdlib_extensions_explicit_excludes(
         if rule.excludes.contains(name) {
             res.push(PythonResourceEntry {
                 action: ResourceAction::Remove,
+                location: ResourceLocation::Embedded,
                 resource: PythonResource::ExtensionModule {
                     name: name.clone(),
                     module: modules[0].clone(),
@@ -393,6 +407,7 @@ fn resolve_stdlib_extensions_explicit_excludes(
         } else {
             res.push(PythonResourceEntry {
                 action: ResourceAction::Add,
+                location: ResourceLocation::Embedded,
                 resource: PythonResource::ExtensionModule {
                     name: name.clone(),
                     module: modules[0].clone(),
@@ -416,6 +431,7 @@ fn resolve_stdlib_extension_variant(
         if &em.variant == &rule.variant {
             res.push(PythonResourceEntry {
                 action: ResourceAction::Add,
+                location: ResourceLocation::Embedded,
                 resource: PythonResource::ExtensionModule {
                     name: rule.extension.clone(),
                     module: em.clone(),
@@ -452,6 +468,7 @@ fn resolve_stdlib(
         if rule.include_source {
             res.push(PythonResourceEntry {
                 action: ResourceAction::Add,
+                location: ResourceLocation::Embedded,
                 resource: PythonResource::ModuleSource {
                     name: name.clone(),
                     source: source.clone(),
@@ -461,6 +478,7 @@ fn resolve_stdlib(
 
         res.push(PythonResourceEntry {
             action: ResourceAction::Add,
+            location: ResourceLocation::Embedded,
             resource: PythonResource::ModuleBytecode {
                 name: name.clone(),
                 source,
@@ -484,6 +502,7 @@ fn resolve_stdlib(
 
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
+                    location: ResourceLocation::Embedded,
                     resource: PythonResource::Resource {
                         package: package.clone(),
                         name: name.clone(),
@@ -536,6 +555,7 @@ fn resolve_virtualenv(
                 if rule.include_source {
                     res.push(PythonResourceEntry {
                         action: ResourceAction::Add,
+                        location: ResourceLocation::Embedded,
                         resource: PythonResource::ModuleSource {
                             name: resource.full_name.clone(),
                             source: source.clone(),
@@ -545,6 +565,7 @@ fn resolve_virtualenv(
 
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
+                    location: ResourceLocation::Embedded,
                     resource: PythonResource::ModuleBytecode {
                         name: resource.full_name.clone(),
                         source,
@@ -558,6 +579,7 @@ fn resolve_virtualenv(
 
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
+                    location: ResourceLocation::Embedded,
                     resource: PythonResource::Resource {
                         package: resource.package.clone(),
                         name: resource.stem.clone(),
@@ -608,6 +630,7 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceEntry>
                 if rule.include_source {
                     res.push(PythonResourceEntry {
                         action: ResourceAction::Add,
+                        location: ResourceLocation::Embedded,
                         resource: PythonResource::ModuleSource {
                             name: resource.full_name.clone(),
                             source: source.clone(),
@@ -617,6 +640,7 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceEntry>
 
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
+                    location: ResourceLocation::Embedded,
                     resource: PythonResource::ModuleBytecode {
                         name: resource.full_name.clone(),
                         source,
@@ -630,6 +654,7 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceEntry>
 
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
+                    location: ResourceLocation::Embedded,
                     resource: PythonResource::Resource {
                         package: resource.package.clone(),
                         name: resource.stem.clone(),
@@ -696,6 +721,7 @@ fn resolve_pip_install_simple(
                 if rule.include_source {
                     res.push(PythonResourceEntry {
                         action: ResourceAction::Add,
+                        location: ResourceLocation::Embedded,
                         resource: PythonResource::ModuleSource {
                             name: resource.full_name.clone(),
                             source: source.clone(),
@@ -705,6 +731,7 @@ fn resolve_pip_install_simple(
 
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
+                    location: ResourceLocation::Embedded,
                     resource: PythonResource::ModuleBytecode {
                         name: resource.full_name.clone(),
                         source,
@@ -718,6 +745,7 @@ fn resolve_pip_install_simple(
 
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
+                    location: ResourceLocation::Embedded,
                     resource: PythonResource::Resource {
                         package: resource.package.clone(),
                         name: resource.stem.clone(),
@@ -788,6 +816,7 @@ fn resolve_pip_requirements_file(
                 if rule.include_source {
                     res.push(PythonResourceEntry {
                         action: ResourceAction::Add,
+                        location: ResourceLocation::Embedded,
                         resource: PythonResource::ModuleSource {
                             name: resource.full_name.clone(),
                             source: source.clone(),
@@ -797,6 +826,7 @@ fn resolve_pip_requirements_file(
 
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
+                    location: ResourceLocation::Embedded,
                     resource: PythonResource::ModuleBytecode {
                         name: resource.full_name.clone(),
                         source,
@@ -810,6 +840,7 @@ fn resolve_pip_requirements_file(
 
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
+                    location: ResourceLocation::Embedded,
                     resource: PythonResource::Resource {
                         package: resource.package.clone(),
                         name: resource.stem.clone(),
@@ -884,6 +915,7 @@ fn resolve_setup_py_install(
                 if rule.include_source {
                     res.push(PythonResourceEntry {
                         action: ResourceAction::Add,
+                        location: ResourceLocation::Embedded,
                         resource: PythonResource::ModuleSource {
                             name: resource.full_name.clone(),
                             source: source.clone(),
@@ -893,6 +925,7 @@ fn resolve_setup_py_install(
 
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
+                    location: ResourceLocation::Embedded,
                     resource: PythonResource::ModuleBytecode {
                         name: resource.full_name.clone(),
                         source,
@@ -906,6 +939,7 @@ fn resolve_setup_py_install(
 
                 res.push(PythonResourceEntry {
                     action: ResourceAction::Add,
+                    location: ResourceLocation::Embedded,
                     resource: PythonResource::Resource {
                         package: resource.package.clone(),
                         name: resource.stem.clone(),
