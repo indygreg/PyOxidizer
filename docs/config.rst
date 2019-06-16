@@ -359,10 +359,9 @@ This mode will do nothing. It is provided for completeness sake.
 ``[[python_packaging_rule]]``
 -----------------------------
 
-Defines a rule to control the packaging of Python resources to be embedded
-in the binary.
+Defines a rule to control the packaging of Python resources.
 
-A *Python resource* here can be one of the following:
+A *Python resource* can be one of the following:
 
 * *Extension module*. An extension module is a Python module backed by compiled
   code (typically written in C).
@@ -390,6 +389,24 @@ empty set for each resource *flavor*. As sections are read, their results are
 *merged* with the existing resource sets according to the behavior of that
 rule ``type``. If multiple rules add a resource of the same name and flavor, the
 last added version is used. i.e. *last write wins*.
+
+.. _install_locations:
+
+Install Locations
+^^^^^^^^^^^^^^^^^
+
+Some rules support the concept of *install locations*. This allows resources
+to be packaged in different locations. For example, some resources can be
+embedded in the produced binary and others can live as files on the
+filesystem (like how Python traditionally works).
+
+If a rule supports *install locations*, the string value defining an install
+location has the following values:
+
+``embedded``
+   Resource will be embedded in the produced binary.
+
+   This is usually the default install location.
 
 The following sections describe the various ``type``'s of rules.
 
@@ -553,6 +570,10 @@ The following keys can exist in this rule type:
    standard library but aren't typically used for common functionality.
 
    Default is ``false``.
+
+``install_location`` (string)
+
+   Where to package these resources. See :ref:`install_locations`.
 
 ``package-root``
 ^^^^^^^^^^^^^^^^

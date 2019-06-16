@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 
 use super::bytecode::BytecodeCompiler;
 use super::config::{
-    parse_config, Config, PackagingPackageRoot, PackagingPipInstallSimple,
+    parse_config, Config, InstallLocation, PackagingPackageRoot, PackagingPipInstallSimple,
     PackagingPipRequirementsFile, PackagingSetupPyInstall, PackagingStdlib,
     PackagingStdlibExtensionVariant, PackagingStdlibExtensionsExplicitExcludes,
     PackagingStdlibExtensionsExplicitIncludes, PackagingStdlibExtensionsPolicy,
@@ -162,11 +162,21 @@ pub enum ResourceAction {
 }
 
 /// Represents the packaging location for a resource.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum ResourceLocation {
     /// Embed the resource in the binary.
     Embedded,
 }
+
+impl ResourceLocation {
+    fn new(v: &InstallLocation) -> Self {
+        match v {
+            InstallLocation::Embedded => ResourceLocation::Embedded,
+        }
+    }
+}
+
+impl ResourceLocation {}
 
 #[derive(Debug)]
 pub struct PythonResourceAction {
@@ -466,6 +476,8 @@ fn resolve_stdlib(
 ) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
 
+    let location = ResourceLocation::new(&rule.install_location);
+
     for (name, fs_path) in &dist.py_modules {
         if is_stdlib_test_package(&name) && rule.exclude_test_modules {
             info!(logger, "skipping test stdlib module: {}", name);
@@ -477,7 +489,7 @@ fn resolve_stdlib(
         if rule.include_source {
             res.push(PythonResourceAction {
                 action: ResourceAction::Add,
-                location: ResourceLocation::Embedded,
+                location: location.clone(),
                 resource: PythonResource::ModuleSource {
                     name: name.clone(),
                     source: source.clone(),
@@ -487,7 +499,7 @@ fn resolve_stdlib(
 
         res.push(PythonResourceAction {
             action: ResourceAction::Add,
-            location: ResourceLocation::Embedded,
+            location: location.clone(),
             resource: PythonResource::ModuleBytecode {
                 name: name.clone(),
                 source,
@@ -511,7 +523,7 @@ fn resolve_stdlib(
 
                 res.push(PythonResourceAction {
                     action: ResourceAction::Add,
-                    location: ResourceLocation::Embedded,
+                    location: location.clone(),
                     resource: PythonResource::Resource {
                         package: package.clone(),
                         name: name.clone(),

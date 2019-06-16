@@ -2,7 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use itertools::Itertools;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
@@ -73,6 +72,11 @@ struct ConfigPython {
     write_modules_directory_env: Option<String>,
 }
 
+#[allow(non_snake_case)]
+fn EMBEDDED() -> String {
+    "embedded".to_string()
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type")]
 enum ConfigPythonPackaging {
@@ -131,6 +135,8 @@ enum ConfigPythonPackaging {
         include_source: bool,
         #[serde(default)]
         include_resources: bool,
+        #[serde(default = "EMBEDDED")]
+        install_location: String,
     },
 
     #[serde(rename = "virtualenv")]
@@ -244,44 +250,50 @@ pub enum PythonDistribution {
     Url { url: String, sha256: String },
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
+pub enum InstallLocation {
+    Embedded,
+}
+
+#[derive(Clone, Debug)]
 pub struct PackagingSetupPyInstall {
     pub path: String,
     pub optimize_level: i64,
     pub include_source: bool,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct PackagingStdlibExtensionsPolicy {
     // TODO make this an enum.
     pub policy: String,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct PackagingStdlibExtensionsExplicitIncludes {
     pub includes: Vec<String>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct PackagingStdlibExtensionsExplicitExcludes {
     pub excludes: Vec<String>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct PackagingStdlibExtensionVariant {
     pub extension: String,
     pub variant: String,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct PackagingStdlib {
     pub optimize_level: i64,
     pub exclude_test_modules: bool,
     pub include_source: bool,
     pub include_resources: bool,
+    pub install_location: InstallLocation,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct PackagingVirtualenv {
     pub path: String,
     pub optimize_level: i64,
@@ -289,7 +301,7 @@ pub struct PackagingVirtualenv {
     pub include_source: bool,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct PackagingPackageRoot {
     pub path: String,
     pub packages: Vec<String>,
@@ -298,14 +310,14 @@ pub struct PackagingPackageRoot {
     pub include_source: bool,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct PackagingPipInstallSimple {
     pub package: String,
     pub optimize_level: i64,
     pub include_source: bool,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct PackagingPipRequirementsFile {
     // TODO resolve to a PathBuf.
     pub requirements_path: String,
@@ -313,13 +325,13 @@ pub struct PackagingPipRequirementsFile {
     pub include_source: bool,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct PackagingFilterInclude {
     pub files: Vec<String>,
     pub glob_files: Vec<String>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum PythonPackaging {
     SetupPyInstall(PackagingSetupPyInstall),
     StdlibExtensionsPolicy(PackagingStdlibExtensionsPolicy),
@@ -363,6 +375,14 @@ pub struct Config {
     pub sys_paths: Vec<String>,
     pub raw_allocator: RawAllocator,
     pub write_modules_directory_env: Option<String>,
+}
+
+fn resolve_install_location(value: &str) -> Result<InstallLocation, String> {
+    if value == "embedded" {
+        Ok(InstallLocation::Embedded)
+    } else {
+        Err(format!("invalid install_location: {}", value))
+    }
 }
 
 /// Parse a PyOxidizer TOML config from raw data.
@@ -529,22 +549,24 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
     let mut have_stdlib_extensions_policy = false;
     let mut have_stdlib = false;
 
-    let python_packaging = config
+    let python_packaging: Result<Vec<Option<PythonPackaging>>, String> = config
         .python_packaging_rules
         .iter()
-        .filter_map(|r| match r {
+        .map(|r| match r {
             ConfigPythonPackaging::FilterInclude {
                 build_target: rule_target,
                 files,
                 glob_files,
             } => {
                 if rule_target == "all" || rule_target == target {
-                    Some(PythonPackaging::FilterInclude(PackagingFilterInclude {
-                        files: files.clone(),
-                        glob_files: glob_files.clone(),
-                    }))
+                    Ok(Some(PythonPackaging::FilterInclude(
+                        PackagingFilterInclude {
+                            files: files.clone(),
+                            glob_files: glob_files.clone(),
+                        },
+                    )))
                 } else {
-                    None
+                    Ok(None)
                 }
             }
             ConfigPythonPackaging::PackageRoot {
@@ -556,15 +578,15 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 include_source,
             } => {
                 if rule_target == "all" || rule_target == target {
-                    Some(PythonPackaging::PackageRoot(PackagingPackageRoot {
+                    Ok(Some(PythonPackaging::PackageRoot(PackagingPackageRoot {
                         path: path.clone(),
                         packages: packages.clone(),
                         optimize_level: *optimize_level,
                         excludes: excludes.clone(),
                         include_source: *include_source,
-                    }))
+                    })))
                 } else {
-                    None
+                    Ok(None)
                 }
             }
             ConfigPythonPackaging::PipInstallSimple {
@@ -574,15 +596,15 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 include_source,
             } => {
                 if rule_target == "all" || rule_target == target {
-                    Some(PythonPackaging::PipInstallSimple(
+                    Ok(Some(PythonPackaging::PipInstallSimple(
                         PackagingPipInstallSimple {
                             package: package.clone(),
                             optimize_level: *optimize_level,
                             include_source: *include_source,
                         },
-                    ))
+                    )))
                 } else {
-                    None
+                    Ok(None)
                 }
             }
             ConfigPythonPackaging::PipRequirementsFile {
@@ -592,15 +614,15 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 include_source,
             } => {
                 if rule_target == "all" || rule_target == target {
-                    Some(PythonPackaging::PipRequirementsFile(
+                    Ok(Some(PythonPackaging::PipRequirementsFile(
                         PackagingPipRequirementsFile {
                             requirements_path: requirements_path.clone(),
                             optimize_level: *optimize_level,
                             include_source: *include_source,
                         },
-                    ))
+                    )))
                 } else {
-                    None
+                    Ok(None)
                 }
             }
             ConfigPythonPackaging::SetupPyInstall {
@@ -610,13 +632,15 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 include_source,
             } => {
                 if rule_target == "all" || rule_target == target {
-                    Some(PythonPackaging::SetupPyInstall(PackagingSetupPyInstall {
-                        path: package_path.clone(),
-                        optimize_level: *optimize_level,
-                        include_source: *include_source,
-                    }))
+                    Ok(Some(PythonPackaging::SetupPyInstall(
+                        PackagingSetupPyInstall {
+                            path: package_path.clone(),
+                            optimize_level: *optimize_level,
+                            include_source: *include_source,
+                        },
+                    )))
                 } else {
-                    None
+                    Ok(None)
                 }
             }
             ConfigPythonPackaging::Stdlib {
@@ -625,18 +649,20 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 exclude_test_modules,
                 include_source,
                 include_resources,
+                install_location,
             } => {
                 if rule_target == "all" || rule_target == target {
                     have_stdlib = true;
 
-                    Some(PythonPackaging::Stdlib(PackagingStdlib {
+                    Ok(Some(PythonPackaging::Stdlib(PackagingStdlib {
                         optimize_level: *optimize_level,
                         exclude_test_modules: *exclude_test_modules,
                         include_source: *include_source,
                         include_resources: *include_resources,
-                    }))
+                        install_location: resolve_install_location(&install_location)?,
+                    })))
                 } else {
-                    None
+                    Ok(None)
                 }
             }
             ConfigPythonPackaging::StdlibExtensionsExplicitExcludes {
@@ -644,13 +670,13 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 excludes,
             } => {
                 if rule_target == "all" || rule_target == target {
-                    Some(PythonPackaging::StdlibExtensionsExplicitExcludes(
+                    Ok(Some(PythonPackaging::StdlibExtensionsExplicitExcludes(
                         PackagingStdlibExtensionsExplicitExcludes {
                             excludes: excludes.clone(),
                         },
-                    ))
+                    )))
                 } else {
-                    None
+                    Ok(None)
                 }
             }
             ConfigPythonPackaging::StdlibExtensionsExplicitIncludes {
@@ -658,13 +684,13 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 includes,
             } => {
                 if rule_target == "all" || rule_target == target {
-                    Some(PythonPackaging::StdlibExtensionsExplicitIncludes(
+                    Ok(Some(PythonPackaging::StdlibExtensionsExplicitIncludes(
                         PackagingStdlibExtensionsExplicitIncludes {
                             includes: includes.clone(),
                         },
-                    ))
+                    )))
                 } else {
-                    None
+                    Ok(None)
                 }
             }
             ConfigPythonPackaging::StdlibExtensionsPolicy {
@@ -674,13 +700,13 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 if rule_target == "all" || rule_target == target {
                     have_stdlib_extensions_policy = true;
 
-                    Some(PythonPackaging::StdlibExtensionsPolicy(
+                    Ok(Some(PythonPackaging::StdlibExtensionsPolicy(
                         PackagingStdlibExtensionsPolicy {
                             policy: policy.clone(),
                         },
-                    ))
+                    )))
                 } else {
-                    None
+                    Ok(None)
                 }
             }
             ConfigPythonPackaging::StdlibExtensionVariant {
@@ -689,14 +715,14 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 variant,
             } => {
                 if rule_target == "all" || rule_target == target {
-                    Some(PythonPackaging::StdlibExtensionVariant(
+                    Ok(Some(PythonPackaging::StdlibExtensionVariant(
                         PackagingStdlibExtensionVariant {
                             extension: extension.clone(),
                             variant: variant.clone(),
                         },
-                    ))
+                    )))
                 } else {
-                    None
+                    Ok(None)
                 }
             }
             ConfigPythonPackaging::Virtualenv {
@@ -707,18 +733,27 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 include_source,
             } => {
                 if rule_target == "all" || rule_target == target {
-                    Some(PythonPackaging::Virtualenv(PackagingVirtualenv {
+                    Ok(Some(PythonPackaging::Virtualenv(PackagingVirtualenv {
                         path: path.clone(),
                         optimize_level: *optimize_level,
                         excludes: excludes.clone(),
                         include_source: *include_source,
-                    }))
+                    })))
                 } else {
-                    None
+                    Ok(None)
                 }
             }
         })
-        .collect_vec();
+        .collect();
+
+    let python_packaging: Vec<PythonPackaging> = python_packaging?
+        .clone()
+        .iter()
+        // .clone() is needed to avoid move out of borrowed content. There's surely
+        // a better way to do this. But it isn't performance critical, so low
+        // priority.
+        .filter_map(|v| v.clone())
+        .collect();
 
     if !have_stdlib_extensions_policy {
         return Err(
