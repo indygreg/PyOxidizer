@@ -412,6 +412,20 @@ location has the following values:
 
    This is usually the default install location.
 
+``app-relative:<path>``
+   Strings prefixed with ``app-relative:`` denote a path relative to the
+   produced binary. The value following the prefix will be joined with the
+   parent directory of the produced binary to form a base path for resources
+   to be installed into.
+
+   For example, ``app-relative:lib`` would install resources into a ``lib``
+   child directory underneath where the produced binary lives.
+
+   Different resource types are mapped to different semantics for choosing the
+   exact final path. Using the above example, a Python source module for the
+   ``foo.bar`` module would be installed to ``lib/foo/bar.py`` or
+   ``lib/foo/bar/__init__.py`` if it is a package module.
+
 The following sections describe the various ``type``'s of rules.
 
 ``stdlib-extension-policy``

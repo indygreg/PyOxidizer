@@ -255,6 +255,7 @@ pub enum PythonDistribution {
 #[derive(Clone, Debug)]
 pub enum InstallLocation {
     Embedded,
+    AppRelative { path: String },
 }
 
 #[derive(Clone, Debug)]
@@ -382,6 +383,10 @@ pub struct Config {
 fn resolve_install_location(value: &str) -> Result<InstallLocation, String> {
     if value == "embedded" {
         Ok(InstallLocation::Embedded)
+    } else if value.starts_with("app-relative:") {
+        let path = value[13..value.len()].to_string();
+
+        Ok(InstallLocation::AppRelative { path })
     } else {
         Err(format!("invalid install_location: {}", value))
     }

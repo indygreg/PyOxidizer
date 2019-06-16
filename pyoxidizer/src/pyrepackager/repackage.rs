@@ -282,12 +282,18 @@ pub enum ResourceAction {
 pub enum ResourceLocation {
     /// Embed the resource in the binary.
     Embedded,
+
+    /// Install the resource in a path relative to the produced binary.
+    AppRelative { path: String },
 }
 
 impl ResourceLocation {
     fn new(v: &InstallLocation) -> Self {
         match v {
             InstallLocation::Embedded => ResourceLocation::Embedded,
+            InstallLocation::AppRelative { path } => {
+                ResourceLocation::AppRelative { path: path.clone() }
+            }
         }
     }
 }
@@ -356,11 +362,43 @@ impl EmbeddedPythonResources {
     }
 }
 
+/// Represents resources to install in an app-relative location.
+#[derive(Debug)]
+pub struct AppRelativeResources {
+    pub module_sources: BTreeMap<String, Vec<u8>>,
+    pub module_bytecodes: BTreeMap<String, Vec<u8>>,
+    pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
+}
+
+impl AppRelativeResources {
+    pub fn new() -> Self {
+        AppRelativeResources {
+            module_sources: BTreeMap::new(),
+            module_bytecodes: BTreeMap::new(),
+            resources: BTreeMap::new(),
+        }
+    }
+
+    pub fn package_names(&self) -> BTreeSet<String> {
+        let mut packages =
+            packages_from_module_names(self.module_sources.keys().into_iter().cloned());
+        packages.extend(packages_from_module_names(
+            self.module_bytecodes.keys().into_iter().cloned(),
+        ));
+
+        packages
+    }
+}
+
 /// Represents resources to package with an application.
 #[derive(Debug)]
 pub struct PythonResources {
     /// Resources to be embedded in the binary.
     pub embedded: EmbeddedPythonResources,
+
+    /// Resources to install in paths relative to the produced binary.
+    pub app_relative: BTreeMap<String, AppRelativeResources>,
+
     /// Files that are read to resolve this data structure.
     pub read_files: Vec<PathBuf>,
 }
@@ -396,6 +434,24 @@ fn filter_btreemap<V>(logger: &slog::Logger, m: &mut BTreeMap<String, V>, f: &BT
             m.remove(&key);
         }
     }
+}
+
+fn packages_from_module_names<I>(names: I) -> BTreeSet<String>
+where
+    I: Iterator<Item = String>,
+{
+    let mut package_names = BTreeSet::new();
+
+    for name in names {
+        let mut search: &str = &name;
+
+        while let Some(idx) = search.rfind('.') {
+            package_names.insert(search[0..idx].to_string());
+            search = &search[0..idx];
+        }
+    }
+
+    package_names
 }
 
 fn resolve_stdlib_extensions_policy(
@@ -1150,6 +1206,11 @@ pub fn resolve_python_resources(
     let mut embedded_sources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut embedded_bytecode_requests: BTreeMap<String, (Vec<u8>, i32)> = BTreeMap::new();
     let mut embedded_resources: BTreeMap<String, BTreeMap<String, Vec<u8>>> = BTreeMap::new();
+
+    let mut app_relative: BTreeMap<String, AppRelativeResources> = BTreeMap::new();
+    let mut app_relative_bytecode_requests: BTreeMap<String, BTreeMap<String, (Vec<u8>, i32)>> =
+        BTreeMap::new();
+
     let mut read_files: Vec<PathBuf> = Vec::new();
 
     for packaging in packages {
@@ -1163,6 +1224,13 @@ pub fn resolve_python_resources(
                 ) => {
                     info!(logger, "adding embedded extension module: {}", name);
                     embedded_extension_modules.insert(name, module);
+                }
+                (
+                    ResourceAction::Add,
+                    ResourceLocation::AppRelative { .. },
+                    PythonResource::ExtensionModule { .. },
+                ) => {
+                    panic!("should not have gotten an app-relative extension module");
                 }
                 (
                     ResourceAction::Remove,
@@ -1179,6 +1247,25 @@ pub fn resolve_python_resources(
                 ) => {
                     info!(logger, "adding embedded module source: {}", name);
                     embedded_sources.insert(name.clone(), source);
+                }
+                (
+                    ResourceAction::Add,
+                    ResourceLocation::AppRelative { path },
+                    PythonResource::ModuleSource { name, source },
+                ) => {
+                    info!(
+                        logger,
+                        "adding app-relative module source to {}: {}", path, name
+                    );
+                    if !app_relative.contains_key(&path) {
+                        app_relative.insert(path.clone(), AppRelativeResources::new());
+                    }
+
+                    app_relative
+                        .get_mut(&path)
+                        .unwrap()
+                        .module_sources
+                        .insert(name.clone(), source);
                 }
                 (
                     ResourceAction::Remove,
@@ -1199,6 +1286,29 @@ pub fn resolve_python_resources(
                 ) => {
                     info!(logger, "adding embedded module bytecode: {}", name);
                     embedded_bytecode_requests.insert(name.clone(), (source, optimize_level));
+                }
+                (
+                    ResourceAction::Add,
+                    ResourceLocation::AppRelative { path },
+                    PythonResource::ModuleBytecode {
+                        name,
+                        source,
+                        optimize_level,
+                    },
+                ) => {
+                    info!(
+                        logger,
+                        "adding app-relative module bytecode to {}: {}", path, name
+                    );
+
+                    if !app_relative_bytecode_requests.contains_key(&path) {
+                        app_relative_bytecode_requests.insert(path.clone(), BTreeMap::new());
+                    }
+
+                    app_relative_bytecode_requests
+                        .get_mut(&path)
+                        .unwrap()
+                        .insert(name.clone(), (source, optimize_level));
                 }
                 (
                     ResourceAction::Remove,
@@ -1229,12 +1339,44 @@ pub fn resolve_python_resources(
                         .insert(name, data);
                 }
                 (
+                    ResourceAction::Add,
+                    ResourceLocation::AppRelative { path },
+                    PythonResource::Resource {
+                        package,
+                        name,
+                        data,
+                    },
+                ) => {
+                    info!(logger, "adding app-relative resource to {}: {}", path, name);
+
+                    if !app_relative.contains_key(&path) {
+                        app_relative.insert(path.clone(), AppRelativeResources::new());
+                    }
+
+                    let app_relative = app_relative.get_mut(&path).unwrap();
+
+                    if !app_relative.resources.contains_key(&package) {
+                        app_relative
+                            .resources
+                            .insert(package.clone(), BTreeMap::new());
+                    }
+
+                    app_relative
+                        .resources
+                        .get_mut(&package)
+                        .unwrap()
+                        .insert(name, data);
+                }
+                (
                     ResourceAction::Remove,
                     ResourceLocation::Embedded,
                     PythonResource::Resource { name, .. },
                 ) => {
                     info!(logger, "removing embedded resource: {}", name);
                     embedded_resources.remove(&name);
+                }
+                (ResourceAction::Remove, ResourceLocation::AppRelative { .. }, _) => {
+                    panic!("should not have gotten an action to remove an app-relative resource");
                 }
             }
         }
@@ -1278,7 +1420,6 @@ pub fn resolve_python_resources(
                 include_names.extend(new_names);
             }
 
-            // TODO honor location in rule when defined.
             info!(
                 logger,
                 "filtering embedded extension modules from {:?}", packaging
@@ -1291,11 +1432,32 @@ pub fn resolve_python_resources(
             filter_btreemap(logger, &mut embedded_sources, &include_names);
             info!(
                 logger,
+                "filtering app-relative module sources from {:?}", packaging
+            );
+            for value in app_relative.values_mut() {
+                filter_btreemap(logger, &mut value.module_sources, &include_names);
+            }
+            info!(
+                logger,
                 "filtering embedded module bytecode from {:?}", packaging
             );
             filter_btreemap(logger, &mut embedded_bytecode_requests, &include_names);
+            info!(
+                logger,
+                "filtering app-relative module bytecode from {:?}", packaging
+            );
+            for value in app_relative_bytecode_requests.values_mut() {
+                filter_btreemap(logger, value, &include_names);
+            }
             info!(logger, "filtering embedded resources from {:?}", packaging);
             filter_btreemap(logger, &mut embedded_resources, &include_names);
+            info!(
+                logger,
+                "filtering app-relative resources from {:?}", packaging
+            );
+            for value in app_relative.values_mut() {
+                filter_btreemap(logger, &mut value.resources, &include_names);
+            }
         }
     }
 
@@ -1334,6 +1496,8 @@ pub fn resolve_python_resources(
         }
     }
 
+    // TODO compile app-relative bytecode too.
+
     let mut all_embedded_modules: BTreeSet<String> = BTreeSet::new();
     for name in embedded_sources.keys() {
         all_embedded_modules.insert(name.to_string());
@@ -1342,15 +1506,7 @@ pub fn resolve_python_resources(
         all_embedded_modules.insert(name.to_string());
     }
 
-    let mut package_names = BTreeSet::new();
-    for name in &all_embedded_modules {
-        let mut search: &str = name;
-
-        while let Some(idx) = search.rfind('.') {
-            package_names.insert(search[0..idx].to_string());
-            search = &search[0..idx];
-        }
-    }
+    let package_names = packages_from_module_names(all_embedded_modules.iter().cloned());
 
     // Prune resource files that belong to packages that don't have a corresponding
     // Python module package, as they won't be loadable by our custom importer.
@@ -1379,6 +1535,7 @@ pub fn resolve_python_resources(
             resources: embedded_resources,
             extension_modules: embedded_extension_modules,
         },
+        app_relative,
         read_files,
     }
 }
@@ -1876,6 +2033,79 @@ pub fn write_data_rs(path: &PathBuf, python_config_rs: &str) {
     .unwrap();
 }
 
+/// Install all app-relative files next to the generated binary.
+fn install_app_relative(
+    logger: &slog::Logger,
+    context: &BuildContext,
+    path: &str,
+    app_relative: &AppRelativeResources,
+) -> Result<(), String> {
+    let dest_path = context.app_exe_path.parent().unwrap().join(path);
+
+    create_dir_all(&dest_path).or_else(|_| Err("could not create app-relative path"))?;
+
+    info!(
+        logger,
+        "installing {} app-relative Python source modules to {}",
+        app_relative.module_sources.len(),
+        dest_path.display(),
+    );
+
+    let packages = app_relative.package_names();
+
+    for (module_name, module_data) in &app_relative.module_sources {
+        // foo.bar -> foo/bar
+        let mut module_path = dest_path.clone();
+        module_path.extend(module_name.split("."));
+
+        // Packages need to get normalized to /__init__.py.
+        if packages.contains(module_name) {
+            module_path.push("__init__");
+        }
+
+        module_path.set_file_name(format!(
+            "{}.py",
+            module_path.file_name().unwrap().to_string_lossy()
+        ));
+
+        info!(
+            logger,
+            "installing Python module {} to {}",
+            module_name,
+            module_path.display()
+        );
+
+        let parent_dir = module_path.parent().unwrap();
+        create_dir_all(&parent_dir).or_else(|_| {
+            Err(format!(
+                "failed to create directory {}",
+                parent_dir.display()
+            ))
+        })?;
+
+        fs::write(&module_path, module_data)
+            .or_else(|_| Err(format!("failed to write {}", module_path.display())))?;
+    }
+
+    // TODO implement.
+    info!(
+        logger,
+        "resolved {} app-relative Python bytecode modules in {}: {:#?}",
+        app_relative.module_bytecodes.len(),
+        path,
+        app_relative.module_bytecodes.keys()
+    );
+    info!(
+        logger,
+        "resolved {} app-relative resource files in {}: {:#?}",
+        app_relative.resources.len(),
+        path,
+        app_relative.resources.keys()
+    );
+
+    Ok(())
+}
+
 /// Defines files, etc to embed Python in a larger binary.
 ///
 /// Instances are typically produced by processing a PyOxidizer config file.
@@ -2005,19 +2235,19 @@ pub fn process_config(
 
     info!(
         logger,
-        "resolved {} Python source modules: {:#?}",
+        "resolved {} embedded Python source modules: {:#?}",
         resources.embedded.module_sources.len(),
         resources.embedded.module_sources.keys()
     );
     info!(
         logger,
-        "resolved {} Python bytecode modules: {:#?}",
+        "resolved {} embedded Python bytecode modules: {:#?}",
         resources.embedded.module_bytecodes.len(),
         resources.embedded.module_bytecodes.keys()
     );
     info!(
         logger,
-        "resolved {} unique Python modules: {:#?}",
+        "resolved {} unique embedded Python modules: {:#?}",
         resources.embedded.all_modules.len(),
         resources.embedded.all_modules
     );
@@ -2033,14 +2263,14 @@ pub fn process_config(
 
     info!(
         logger,
-        "resolved {} resource files across {} packages: {:#?}",
+        "resolved {} embedded resource files across {} packages: {:#?}",
         resource_count,
         resources.embedded.resources.len(),
         resource_map
     );
     info!(
         logger,
-        "resolved {} extension modules: {:#?}",
+        "resolved {} embedded extension modules: {:#?}",
         resources.embedded.extension_modules.len(),
         resources.embedded.extension_modules.keys()
     );
@@ -2085,6 +2315,17 @@ pub fn process_config(
         opt_level,
     );
     cargo_metadata.extend(libpython_info.cargo_metadata);
+
+    // Move on to app-relative resources.
+    info!(
+        logger,
+        "installing resources into {} app-relative directories",
+        &resources.app_relative.len()
+    );
+
+    for (path, v) in &resources.app_relative {
+        install_app_relative(logger, context, path.as_str(), v).unwrap();
+    }
 
     for p in &resources.read_files {
         cargo_metadata.push(format!("cargo:rerun-if-changed={}", p.display()));
