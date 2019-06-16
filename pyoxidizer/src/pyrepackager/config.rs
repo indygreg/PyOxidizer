@@ -51,7 +51,7 @@ fn ALL() -> String {
 struct ConfigBuild {
     #[serde(default = "ALL")]
     build_target: String,
-    artifacts_path: Option<String>,
+    build_path: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -241,7 +241,7 @@ struct ParsedConfig {
 
 #[derive(Clone, Debug)]
 pub struct BuildConfig {
-    pub artifacts_path: Option<PathBuf>,
+    pub build_path: PathBuf,
 }
 
 #[derive(Clone, Debug)]
@@ -403,19 +403,19 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
         .display()
         .to_string();
 
-    let mut artifacts_path = None;
+    let mut build_path = PathBuf::from(&origin).join("build");
 
     for build_config in config
         .builds
         .iter()
         .filter(|c| c.build_target == "all" || c.build_target == target)
     {
-        if let Some(ref path) = build_config.artifacts_path {
-            artifacts_path = Some(PathBuf::from(path.replace("$ORIGIN", &origin)));
+        if let Some(ref path) = build_config.build_path {
+            build_path = PathBuf::from(path.replace("$ORIGIN", &origin));
         }
     }
 
-    let build_config = BuildConfig { artifacts_path };
+    let build_config = BuildConfig { build_path };
 
     if config.python_distributions.is_empty() {
         return Err("no [[python_distribution]] sections".to_string());

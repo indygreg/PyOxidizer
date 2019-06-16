@@ -133,6 +133,9 @@ pub struct BuildContext {
     /// Parsed PyOxidizer configuration file.
     pub config: Config,
 
+    /// Path to main build directory where all state is stored.
+    pub build_path: PathBuf,
+
     /// Name of application/binary being built.
     pub app_name: String,
 
@@ -177,7 +180,12 @@ impl BuildContext {
 
         let config = parse_config_file(config_path, target)?;
 
-        // TOOD should ideally get this from Cargo.toml.
+        let build_path = config.build_config.build_path.clone();
+
+        // Build Rust artifacts into build path, not wherever Rust chooses.
+        let target_base_path = build_path.join("target");
+
+        // TOOD should ideally get this from a config, either ours or Cargo's.
         let app_name = project_path
             .file_name()
             .expect("could not extract project name")
@@ -187,8 +195,6 @@ impl BuildContext {
 
         // This assumes we invoke as `cargo build --target`, otherwise we don't get the
         // target triple in the directory path unless cross compiling.
-        let target_base_path = project_path.join("target");
-
         let target_path =
             target_base_path
                 .join(target)
@@ -204,20 +210,17 @@ impl BuildContext {
 
         // Artifacts path is:
         // 1. force_artifacts_path (if defined)
-        // 2. artifacts_path from config (if defined)
-        // 3. A "pyoxidizer" directory in the target directory.
+        // 2. A "pyoxidizer" directory in the target directory.
         let pyoxidizer_artifacts_path = match force_artifacts_path {
             Some(path) => path.to_path_buf(),
-            None => match config.build_config.artifacts_path {
-                Some(ref path) => path.clone(),
-                None => target_path.join("pyoxidizer"),
-            },
+            None => target_path.join("pyoxidizer"),
         };
 
         Ok(BuildContext {
             project_path: project_path.to_path_buf(),
             config_path: config_path.to_path_buf(),
             config,
+            build_path,
             app_name,
             app_exe_path,
             host_triple,
