@@ -229,6 +229,7 @@ struct ParsedConfig {
     python_configs: Vec<ConfigPython>,
     #[serde(rename = "python_packaging_rule")]
     python_packaging_rules: Vec<ConfigPythonPackaging>,
+    #[serde(rename = "embedded_python_run")]
     python_run: Vec<ConfigRunMode>,
 }
 

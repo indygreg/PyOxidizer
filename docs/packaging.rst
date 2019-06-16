@@ -95,11 +95,12 @@ This creates a packaging rule that essentially translates to running
 by that command.
 
 Next, we tell PyOxidizer to run pyflakes when the interpreter is executed.
-Find the ``[[python_run]]`` section and change its contents to the following:
+Find the ``[[embedded_python_run]]`` section and change its contents to the
+following:
 
 .. code-block:: toml
 
-   [[python_run]]
+   [[embedded_python_run]]
    mode = "eval"
    code = "from pyflakes.api import main; main()"
 
@@ -129,7 +130,7 @@ The new ``pyoxidizer.toml`` file should look something like:
    type = "pip-install-simple"
    package = "pyflakes==2.1.1"
 
-   [[python_run]]
+   [[embedded_python_run]]
    mode = "eval"
    code = "from pyflakes.api import main; main()"
 

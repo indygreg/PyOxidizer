@@ -282,6 +282,80 @@ behavior:
    This setting is useful for determining which Python modules are loaded when
    running Python code.
 
+``[[embedded_python_run]]``
+---------------------------
+
+This section configures the default Python code to be executed by built
+binaries.
+
+Embedded Python interpreters are configured and instantiated using a
+``pyembed::PythonConfig`` data structure. The ``pyembed`` crate defines a
+default instance of this data structure with parameters defined by the settings
+in this TOML section.
+
+.. note::
+
+   If you are writing custom Rust code and constructing a custom
+   ``pyembed::PythonConfig`` instance and don't use the default instance, this
+   config section is not relevant to you and can be omitted from your config
+   file.
+
+Instances of this section have a ``mode`` key that defines the mode of
+execution for the interpreter. The sections below describe these various modes.
+
+``eval``
+^^^^^^^^
+
+This mode will evaluate a string containing Python code after the
+interpreter initializes.
+
+This mode requires the ``code`` key to be set to a string containing
+Python code to run.
+
+Example:
+
+.. code-block:: toml
+
+   [[embedded_python_run]]
+   mode = "eval"
+   code = "import mymodule; mymodule.main()"
+
+``module``
+^^^^^^^^^^
+
+This mode will load a named Python module as the ``__main__`` module and
+then execute that module.
+
+This mode requires the ``module`` key to be set to the string value of
+the module to load as ``__main__``.
+
+Example:
+
+.. code-block:: toml
+
+   [[embedded_python_run]]
+   mode = "module"
+   module = "mymodule"
+
+``repl``
+^^^^^^^^
+
+This mode will launch an interactive Python REPL connected to stdin. This
+is similar to the behavior of running a ``python`` executable without any
+arguments.
+
+Example:
+
+.. code-block:: toml
+
+   [[embedded_python_run]]
+   mode = "repl"
+
+``noop``
+^^^^^^^^
+
+This mode will do nothing. It is provided for completeness sake.
+
 ``[[python_packaging_rule]]``
 -----------------------------
 
@@ -744,74 +818,3 @@ and ``modules-*`` files are written.
 
 In phase 2, the file filter is enabled and only the modules used by
 the binary will be packaged.
-
-``[[python_run]]``
-------------------
-
-This section configures the behavior of the default Python interpreter
-and application binary.
-
-The ``PythonConfig`` struct used by the ``pyembed`` crate contains a
-default mode of execution for the Python interpreter. The default
-Rust application instantiating a ``MainPythonInterpreter`` will execute
-this default.
-
-If you are using a custom ``PythonConfig`` or application for
-instantiating an interpreter, this setting is not relevant.
-
-Instances of this section have a ``mode`` key that defines what operating
-mode the interpreter is in. The sections below describe these
-various modes.
-
-``eval``
-^^^^^^^^
-
-This mode will evaluate a string containing Python code after the
-interpreter initializes.
-
-This mode requires the ``code`` key to be set to a string containing
-Python code to run.
-
-Example:
-
-.. code-block:: toml
-
-   [[python_run]]
-   mode = "eval"
-   code = "import mymodule; mymodule.main()"
-
-``module``
-^^^^^^^^^^
-
-This mode will load a named Python module as the ``__main__`` module and
-then execute that module.
-
-This mode requires the ``module`` key to be set to the string value of
-the module to load as ``__main__``.
-
-Example:
-
-.. code-block:: toml
-
-   [[python_run]]
-   mode = "module"
-   module = "mymodule"
-
-``repl``
-^^^^^^^^
-
-This mode will launch an interactive Python REPL connected to stdin. This
-is similar to the behavior of running a ``python`` executable without any
-arguments.
-
-Example:
-
-.. code-block:: toml
-
-   [[python_run]]
-   mode = "repl"
-
-``noop``
-^^^^^^^^
-
-This mode will do nothing. It is provided for completeness sake.

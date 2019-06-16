@@ -124,7 +124,7 @@ section. This section configures what to do when the interpreter starts.
 By default, it should have a ``mode = "repl"`` line. Let's comment that out
 or delete it and replace it with the following::
 
-   [[python_run]]
+   [[embedded_python_run]]
    mode = "eval"
    code = "import uuid; print(uuid.uuid4())"
 
@@ -153,9 +153,9 @@ Now let's add the following lines after the last of those sections::
    type = "pip-install-simple"
    package = "pyflakes==2.1.1"
 
-And change the ``[[python_run]]`` section to::
+And change the ``[[embedded_python_run]]`` section to::
 
-   [[python_run]]
+   [[embedded_python_run]]
    mode = "eval"
    code = "from pyflakes.api import main; main()"
 
