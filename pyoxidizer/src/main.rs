@@ -299,8 +299,8 @@ fn main() {
         ("run", Some(args)) => {
             let target = args.value_of("target");
             let release = args.is_present("release");
-            let path = args.value_of("path").unwrap();
-            let extra: Vec<&str> = args.values_of("extra").unwrap().collect();
+            let path = args.value_of("path").unwrap();;
+            let extra: Vec<&str> = args.values_of("extra").unwrap_or_default().collect();
 
             projectmgmt::run(&logger_context.logger, path, target, release, &extra)
         }
