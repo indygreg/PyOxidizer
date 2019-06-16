@@ -183,7 +183,6 @@ pub struct EmbeddedPythonResources {
     pub all_modules: BTreeSet<String>,
     pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
     pub extension_modules: BTreeMap<String, ExtensionModule>,
-    pub read_files: Vec<PathBuf>,
 }
 
 impl EmbeddedPythonResources {
@@ -234,7 +233,10 @@ impl EmbeddedPythonResources {
 /// Represents resources to package with an application.
 #[derive(Debug)]
 pub struct PythonResources {
+    /// Resources to be embedded in the binary.
     pub embedded: EmbeddedPythonResources,
+    /// Files that are read to resolve this data structure.
+    pub read_files: Vec<PathBuf>,
 }
 
 fn read_resource_names_file(path: &Path) -> Result<BTreeSet<String>, IOError> {
@@ -1209,8 +1211,8 @@ pub fn resolve_python_resources(
             all_modules,
             resources,
             extension_modules,
-            read_files,
         },
+        read_files,
     }
 }
 
@@ -1931,7 +1933,7 @@ pub fn process_config(
     );
     cargo_metadata.extend(libpython_info.cargo_metadata);
 
-    for p in &resources.embedded.read_files {
+    for p in &resources.read_files {
         cargo_metadata.push(format!("cargo:rerun-if-changed={}", p.display()));
     }
 
