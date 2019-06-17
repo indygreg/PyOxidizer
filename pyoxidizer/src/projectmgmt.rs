@@ -639,6 +639,20 @@ pub fn init(project_path: &str, jemalloc: bool) -> Result<(), String> {
     Ok(())
 }
 
+pub fn python_distribution_extract(dist_path: &str, dest_path: &str) -> Result<(), String> {
+    let mut fh = std::fs::File::open(Path::new(dist_path)).or_else(|e| Err(e.to_string()))?;
+    let mut data = Vec::new();
+    fh.read_to_end(&mut data).or_else(|e| Err(e.to_string()))?;
+    let cursor = Cursor::new(data);
+    let dctx = zstd::stream::Decoder::new(cursor).or_else(|e| Err(e.to_string()))?;
+    let mut tf = tar::Archive::new(dctx);
+
+    println!("extracting archive to {}", dest_path);
+    tf.unpack(dest_path).or_else(|e| Err(e.to_string()))?;
+
+    Ok(())
+}
+
 pub fn python_distribution_licenses(path: &str) -> Result<(), String> {
     let mut fh = std::fs::File::open(Path::new(path)).or_else(|e| Err(e.to_string()))?;
     let mut data = Vec::new();

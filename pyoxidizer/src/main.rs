@@ -229,13 +229,29 @@ fn main() {
                 .arg(Arg::with_name("extra").multiple(true)),
         )
         .subcommand(
+            SubCommand::with_name("python-distribution-extract")
+                .about("Extract a Python distribution archive to a directory")
+                .arg(
+                    Arg::with_name("dist_path")
+                        .required(true)
+                        .value_name("DISTRIBUTION_PATH")
+                        .help("Path to a Python distribution"),
+                )
+                .arg(
+                    Arg::with_name("dest_path")
+                        .required(true)
+                        .value_name("DESTINATION_PATH")
+                        .help("Path to directory where distribution should be extracted"),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("python-distribution-licenses")
                 .about("Show licenses for a given Python distribution")
                 .arg(
                     Arg::with_name("path")
                         .required(true)
                         .value_name("PATH")
-                        .help("Path or URL to Python distribution to analyze"),
+                        .help("Path to Python distribution to analyze"),
                 ),
         )
         .get_matches();
@@ -282,6 +298,13 @@ fn main() {
             let jemalloc = !args.is_present("no-jemalloc");
 
             projectmgmt::init(name, jemalloc)
+        }
+
+        ("python-distribution-extract", Some(args)) => {
+            let dist_path = args.value_of("dist_path").unwrap();
+            let dest_path = args.value_of("dest_path").unwrap();
+
+            projectmgmt::python_distribution_extract(dist_path, dest_path)
         }
 
         ("python-distribution-licenses", Some(args)) => {
