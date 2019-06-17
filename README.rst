@@ -43,6 +43,15 @@ the Python interpreter away, this could all be invisible to end-users:
 you could rewrite an application from Python to Rust and people may
 not even know because all they might see is a single file executable!
 
+Project Info
+============
+
+The official home of the ``PyOxidizer`` project is
+https://github.com/indygreg/PyOxidizer.
+
+Documentation (generated from the ``docs/`` directory) is available
+at https://pyoxidizer.readthedocs.io/en/latest/index.html.
+
 Quick Start
 ===========
 
