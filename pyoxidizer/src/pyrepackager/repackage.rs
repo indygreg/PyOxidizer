@@ -2223,15 +2223,24 @@ pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Res
     info!(logger, "resolving packaging state...");
     let state = context.get_packaging_state()?;
 
-    info!(
-        logger,
-        "installing resources into {} app-relative directories",
-        state.app_relative_resources.len(),
-    );
+    if !state.app_relative_resources.is_empty() {
+        info!(
+            logger,
+            "installing resources into {} app-relative directories",
+            state.app_relative_resources.len(),
+        );
+    }
 
     for (path, v) in &state.app_relative_resources {
         install_app_relative(logger, context, path.as_str(), v).unwrap();
     }
+
+    info!(
+        logger,
+        "{} packaged into {}",
+        context.app_name,
+        context.app_path.display()
+    );
 
     Ok(())
 }
