@@ -313,3 +313,51 @@ Let's try to run the application::
    No paths given. Nothing to do 😴
 
 Success!
+
+Trimming Unused Resources
+=========================
+
+By default, packaging rules are very aggressive about pulling in
+resources such as Python modules. For example, the entire Python standard
+library is embedded into the binary by default. These extra resources take up
+space and can make your binary significantly larger than it could be.
+
+It is often desirable to *prune* your application of unused resources. For
+example, you may wish to only include Python modules that your application
+uses. This is possible with PyOxidizer.
+
+Essentially, all strategies for managing the set of packaged resources
+boil down to crafting ``[[packaging_rule]]``'s that choose which resources
+are packaged.
+
+The recommended method to manage resources is the :ref:`rule_filter-include`
+``[[packaging_rule]]``. This rule acts as an *allow list* filter against all
+resources identified for packaging. Using this rule, you can construct an
+explicit list of resources that should be packaged.
+
+But maintaining explicit lists of resources can be tedious. There's a better
+way!
+
+The :ref:`config_embedded_python_config` config section defines a
+``write_modules_directory_env`` setting, which when enabled will instruct
+the embedded Python interpreter to write the list of all loaded modules
+into a randomly named file in the directory identified by the environment
+variable defined by this setting. For example, if you set
+``write_modules_directory_env = "PYOXIDIZER_MODULES_DIR"`` and then
+run your binary with ``PYOXIDIZER_MODULES_DIR=~/tmp/dump-modules``,
+each invocation will write a ``~/tmp/dump-modules/modules-*`` file
+containing the list of Python modules loaded by the Python interpreter.
+
+One can therefore use ``write_modules_directory_env`` to produce files
+that can be referenced in a ``filter-include`` rule's ``files`` and
+``glob_files`` settings.
+
+While PyOxidizer doesn't yet automate the process, one could use a two
+phase build to *slim* your binary.
+
+In phase 1, a binary is built with all resources and
+``write_modules_directory_env`` enabled. The binary is then executed and
+``modules-*`` files are written.
+
+In phase 2, the ``filter-include`` rule is enabled and only the modules
+used by the instrumented binary will be packaged.

@@ -50,6 +50,8 @@ Configuration Sections
 
 The following documentation sections describe the various TOML sections.
 
+.. _config_build:
+
 ``[[build]]``
 -------------
 
@@ -71,6 +73,8 @@ This section configures high-level application build settings.
    holding this configuration file.
 
    The default value is ``$ORIGIN/build``.
+
+.. _config_python_distribution:
 
 ``[[python_distribution]]``
 ---------------------------
@@ -126,6 +130,8 @@ Examples:
    build_target = "x86_64-apple-darwin"
    url = "https://github.com/indygreg/python-build-standalone/releases/download/20190505/cpython-3.7.3-macos-20190506T0054.tar.zst"
    sha256 = "b46a861c05cb74b5b668d2ce44dcb65a449b9fef98ba5d9ec6ff6937829d5eec"
+
+.. _config_embedded_python_config:
 
 ``[[embedded_python_config]]``
 ------------------------------
@@ -286,6 +292,8 @@ behavior:
    This setting is useful for determining which Python modules are loaded when
    running Python code.
 
+.. _config_embedded_python_run:
+
 ``[[embedded_python_run]]``
 ---------------------------
 
@@ -359,6 +367,8 @@ Example:
 ^^^^^^^^
 
 This mode will do nothing. It is provided for completeness sake.
+
+.. _config_packaging_rule:
 
 ``[[packaging_rule]]``
 ----------------------
@@ -828,6 +838,8 @@ Example:
    type = "virtualenv"
    path = "/home/gps/src/myapp/venv"
 
+.. _rule_filter-include:
+
 ``filter-include``
 ^^^^^^^^^^^^^^^^^^
 
@@ -870,21 +882,3 @@ Example:
    type = "filter-include"
    files = ["allow-modules"]
    glob_files = ["module-dumps/modules-*"]
-
-In Combination With ``write_modules_directory_env``
-'''''''''''''''''''''''''''''''''''''''''''''''''''
-
-The ``write_modules_directory_env`` Python configuration setting enables
-processes to write ``modules-*`` files containing loaded modules to a
-directory specified by this environment variable.
-
-This can be combined with the ``files`` and ``glob_files`` keys of the
-``filter-include`` rule to build binaries in two phases to *probe* for
-loaded modules.
-
-In phase 1, a binary is built with all resources and
-``write_modules_directory_env`` enabled. The binary is then executed
-and ``modules-*`` files are written.
-
-In phase 2, the file filter is enabled and only the modules used by
-the binary will be packaged.
