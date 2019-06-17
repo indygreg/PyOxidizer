@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use itertools::Itertools;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fs;
@@ -194,6 +194,17 @@ fn link_entry_to_library_depends(entry: &LinkEntry, python_path: &PathBuf) -> Li
     }
 }
 
+/// Describes license information for a library.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct LicenseInfo {
+    /// SPDX license shortnames.
+    pub licenses: Vec<String>,
+    /// Suggested filename for the license.
+    pub license_filename: String,
+    /// Text of the license.
+    pub license_text: String,
+}
+
 /// Represents a parsed Python distribution.
 ///
 /// Distribution info is typically derived from a tarball containing a
@@ -263,6 +274,9 @@ pub struct PythonDistributionInfo {
     /// Keys are package names. Values are maps of resource name to data for the resource
     /// within that package.
     pub resources: BTreeMap<String, BTreeMap<String, PathBuf>>,
+
+    /// Describes license info for things in this distribution.
+    pub license_infos: BTreeMap<String, LicenseInfo>,
 }
 
 #[derive(Debug)]
@@ -325,6 +339,7 @@ pub fn analyze_python_distribution_data(
     let frozen_c: Vec<u8> = Vec::new();
     let mut py_modules: BTreeMap<String, PathBuf> = BTreeMap::new();
     let mut resources: BTreeMap<String, BTreeMap<String, PathBuf>> = BTreeMap::new();
+    let mut license_infos: BTreeMap<String, LicenseInfo> = BTreeMap::new();
 
     for entry in fs::read_dir(temp_dir.path()).unwrap() {
         let entry = entry.expect("unable to get directory entry");
@@ -356,6 +371,21 @@ pub fn analyze_python_distribution_data(
     let python_json_path = python_path.join("PYTHON.json");
     let pi = parse_python_json(&python_json_path);
 
+    if let Some(ref python_license_path) = pi.license_path {
+        let license_path = python_path.join(python_license_path);
+        let license_text =
+            fs::read_to_string(&license_path).or_else(|_| Err("unable to read Python license"))?;
+
+        license_infos.insert(
+            "python".to_string(),
+            LicenseInfo {
+                licenses: pi.licenses.clone().unwrap(),
+                license_filename: "LICENSE.python.txt".to_string(),
+                license_text,
+            },
+        );
+    }
+
     // Collect object files for libpython.
     for obj in &pi.build_info.core.objs {
         let rel_path = PathBuf::from(obj);
@@ -369,6 +399,21 @@ pub fn analyze_python_distribution_data(
 
         if let Some(p) = &depends.static_path {
             libraries.insert(depends.name.clone(), p.clone());
+        }
+
+        if let Some(ref license_path) = depends.license_path {
+            let license_path = python_path.join(license_path);
+            let license_text = fs::read_to_string(&license_path)
+                .or_else(|_| Err("unable to read license file"))?;
+
+            license_infos.insert(
+                depends.name.clone(),
+                LicenseInfo {
+                    licenses: depends.licenses.clone().unwrap(),
+                    license_filename: format!("LICENSE.{}.txt", depends.name),
+                    license_text,
+                },
+            );
         }
 
         links_core.push(depends);
@@ -387,6 +432,21 @@ pub fn analyze_python_distribution_data(
 
                 if let Some(p) = &depends.static_path {
                     libraries.insert(depends.name.clone(), p.clone());
+                }
+
+                if let Some(ref license_path) = depends.license_path {
+                    let license_path = python_path.join(license_path);
+                    let license_text = fs::read_to_string(&license_path)
+                        .or_else(|_| Err("unable to read license file"))?;
+
+                    license_infos.insert(
+                        depends.name.clone(),
+                        LicenseInfo {
+                            licenses: depends.licenses.clone().unwrap(),
+                            license_filename: format!("LICENSE.{}.txt", depends.name),
+                            license_text,
+                        },
+                    );
                 }
 
                 links.push(depends);
@@ -466,6 +526,7 @@ pub fn analyze_python_distribution_data(
         objs_core,
         py_modules,
         resources,
+        license_infos,
     })
 }
 

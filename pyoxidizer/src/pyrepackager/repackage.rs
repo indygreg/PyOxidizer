@@ -25,7 +25,7 @@ use super::config::{
 };
 use super::dist::{
     analyze_python_distribution_tar_zst, resolve_python_distribution_archive, ExtensionModule,
-    PythonDistributionInfo,
+    LicenseInfo, PythonDistributionInfo,
 };
 use super::fsscan::{find_python_resources, PythonResourceType};
 
@@ -1759,6 +1759,7 @@ fn make_config_c(extension_modules: &BTreeMap<String, ExtensionModule>) -> Strin
 pub struct LibpythonInfo {
     path: PathBuf,
     cargo_metadata: Vec<String>,
+    license_infos: BTreeMap<String, LicenseInfo>,
 }
 
 /// Create a static libpython from a Python distribution.
@@ -1918,7 +1919,7 @@ pub fn link_libpython(
         }
     }
 
-    for library in needed_libraries {
+    for library in needed_libraries.iter() {
         if OS_IGNORE_LIBRARIES.contains(&library) {
             continue;
         }
@@ -1926,7 +1927,7 @@ pub fn link_libpython(
         // Otherwise find the library in the distribution. Extract it. And statically link against it.
         let fs_path = dist
             .libraries
-            .get(library)
+            .get(*library)
             .expect(&format!("unable to find library {}", library));
         info!(logger, "{}", fs_path.display());
 
@@ -1970,9 +1971,22 @@ pub fn link_libpython(
         out_dir.display()
     ));
 
+    let mut license_infos = BTreeMap::new();
+
+    if let Some(li) = dist.license_infos.get("python") {
+        license_infos.insert("python".to_string(), li.clone());
+    }
+
+    for lib in needed_libraries.iter() {
+        if let Some(li) = dist.license_infos.get(*lib) {
+            license_infos.insert(lib.to_string(), li.clone());
+        }
+    }
+
     LibpythonInfo {
         path: out_dir.join("libpythonXY.a"),
         cargo_metadata,
+        license_infos,
     }
 }
 
@@ -2088,6 +2102,7 @@ pub fn write_data_rs(path: &PathBuf, python_config_rs: &str) {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PackagingState {
     pub app_relative_resources: BTreeMap<String, AppRelativeResources>,
+    pub license_infos: BTreeMap<String, LicenseInfo>,
 }
 
 /// Install all app-relative files next to the generated binary.
@@ -2487,6 +2502,7 @@ pub fn process_config(
         .expect("unable to write cargo_metadata.txt");
 
     let packaging_state = PackagingState {
+        license_infos: libpython_info.license_infos,
         app_relative_resources: resources.app_relative,
     };
 
