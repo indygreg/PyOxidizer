@@ -50,8 +50,6 @@ We want to add a myriad of features around packaging functionality to
 facilitate these things. This includes:
 
 * Copying arbitrary files to live next to the executable.
-* Copying the produced binary and other required files outside of
-  the Cargo build directory.
 * Specifying that certain modules should not be embedded in the binary.
 * Support for ``__file__``.
 * A ``pyoxidizer`` command for turnkey building and assembling of all files.
