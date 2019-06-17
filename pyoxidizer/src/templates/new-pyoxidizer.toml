@@ -43,23 +43,25 @@ policy = "all"
 # type = "stdlib-extensions-explicit-excludes"
 # excludes = ["_ssl"]
 
-[[packaging_rule]]
-
 # Package the entire Python standard library without sources.
+[[packaging_rule]]
 type = "stdlib"
 include_source = false
 
 # Package .py files discovered in a local directory.
+# [[packaging_rule]]
 # type = "package-root"
 # path = "/src/mypackage"
 # packages = ["foo", "bar"]
 
 # Package things from a populated virtualenv.
+# [[packaging_rule]]
 # type = "virtualenv"
 # path = "/path/to/venv"
 
 # Filter all resources collected so far through a filter of names
 # in a file.
+# [[packaging_rule]]
 # type = "filter-include"
 # files = ["/path/to/filter-file"]
 
