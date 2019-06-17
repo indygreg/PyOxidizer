@@ -10,6 +10,8 @@ assumptions that don't hold inside PyOxidizer. This section talks about
 all the things that can go wrong when attempting to package a Python
 application.
 
+.. _no_file:
+
 Reliance on ``__file__``
 ========================
 

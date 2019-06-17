@@ -86,6 +86,8 @@ Python developers can spend less time solving packaging and distribution
 problems and more time improving Python applications themselves. That's
 good for the Python ecosystem.
 
+.. _better_performance:
+
 Faster Python Programs
 ----------------------
 

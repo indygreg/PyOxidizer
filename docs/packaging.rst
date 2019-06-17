@@ -164,3 +164,151 @@ inevitably run into problems due to incompatibilities with PyOxidizer.
 
 The :ref:`pitfalls` documentation can serve as a guide to identify and work
 around these problems.
+
+Packaging Additional Files
+==========================
+
+By default PyOxidizer will embed Python resources such as modules into
+the compiled executable. This is the ideal method to produce distributable
+Python applications because it can keep the entire application self-contained
+to a single executable and can result in
+:ref:`performance wins <better_performance>`.
+
+But sometimes embedded resources into the binary isn't desired or doesn't
+work. Fear not: PyOxidizer has you covered!
+
+As documented at :ref:`install_locations`, many packaging rules in PyOxidizer
+configuration files can define an ``install_location`` that denotes where
+resources found by a packaging rule are installed.
+
+Let's give an example of this by attempting to package
+`black <https://github.com/python/black>`_, a Python code formatter.
+
+We start by creating a new project::
+
+   $ pyoxidizer init black
+
+Then edit the ``pyoxidizer.toml`` file to have the following:
+
+.. code-block:: toml
+
+   # Multiple [[python_distribution]] sections elided for brevity.
+
+   [[build]]
+   application_name = "black"
+
+   [[embedded_python_config]]
+   raw_allocator = "jemalloc"
+
+   [[packaging_rule]]
+   type = "stdlib-extensions-policy"
+   policy = "all"
+
+   [[packaging_rule]]
+   type = "stdlib"
+   include_source = false
+
+   [[packaging_rule]]
+   type = "pip-install-simple"
+   package = "black==19.3b0"
+
+   [[embedded_python_run]]
+   mode = "module"
+   module = "black"
+
+Then let's attempt to build the application::
+
+   $ pyoxidizer build black
+   processing config file /home/gps/src/black/pyoxidizer.toml
+   resolving Python distribution...
+   ...
+   packaging application into /home/gps/src/black/build/apps/black
+   purging /home/gps/src/black/build/apps/black
+   copying /home/gps/src/black/build/target/x86_64-unknown-linux-gnu/debug/black to /home/gps/src/black/build/apps/black/black
+   resolving packaging state...
+   black packaged into /home/gps/src/black/build/apps/black
+
+Looking good so far!
+
+Now let's try to run it::
+
+   $  black/build/apps/black/black
+   Traceback (most recent call last):
+     File "black", line 46, in <module>
+     File "blib2to3.pygram", line 15, in <module>
+   NameError: name '__file__' is not defined
+   SystemError
+
+Uh oh - that's didn't work as expected.
+
+As the error message shows, the ``blib2to3.pygram`` module is trying to
+access ``__file__``, which is not defined. As explained by :ref:`no_file`,
+PyOxidizer doesn't set ``__file__`` for modules loaded from memory. This is
+perfectly legal as Python doesn't mandate that ``__file__`` be defined. So
+``black`` (and every other Python file assuming the existence of ``__file__``)
+is buggy.
+
+Let's assume we can't easily change the offending source code.
+
+To fix this problem, we change the packaging rule to install ``black``
+relative to the built application.
+
+Simply change the following rule:
+
+.. code-block:: toml
+
+   [[packaging_rule]]
+   type = "pip-install-simple"
+   package = "black==19.3b0"
+
+To:
+
+.. code-block:: toml
+
+   [[packaging_rule]]
+   type = "pip-install-simple"
+   package = "black==19.3b0"
+   install_location = "app-relative:lib"
+
+The added ``install_location = "app-relative:lib"`` line says to set the
+installation location for resources found by that rule to a ``lib``
+directory next to the built application.
+
+In addition, we will also need to adjust the ``[[embedded_python_config]]``
+section to have the following:
+
+.. code-block:: toml
+
+   [[embedded_python_config]]
+   sys_paths = ["$ORIGIN/lib"]
+
+The added ``sys_paths = ["$ORIGIN/lib"]`` line says to populate Python's
+``sys.path`` list with a single entry which resolves to a ``lib`` sub-directory
+in the executable's directory. This configuration change is necessary to allow
+the Python interpreter to import Python modules from the filesystem and to find
+the modules that our ``[[packaging_rule]]`` installed into the ``lib``
+directory.
+
+Now let's re-build the application::
+
+   $ pyoxidizer build black
+   ...
+   packaging application into /home/gps/src/black/build/apps/black
+   purging /home/gps/src/black/build/apps/black
+   copying /home/gps/src/black/build/target/x86_64-unknown-linux-gnu/debug/black to /home/gps/src/black/build/apps/black/black
+   resolving packaging state...
+   installing resources into 1 app-relative directories
+   installing 46 app-relative Python source modules to /home/gps/src/black/build/apps/black/lib
+   ...
+   black packaged into /home/gps/src/black/build/apps/black
+
+If you examine the output, you'll see that various Python modules files were
+written to the ``black/build/apps/black/lib`` directory, just as our packaging
+rules requested!
+
+Let's try to run the application::
+
+   $  black/build/apps/black/black
+   No paths given. Nothing to do 😴
+
+Success!
