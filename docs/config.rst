@@ -360,8 +360,8 @@ Example:
 
 This mode will do nothing. It is provided for completeness sake.
 
-``[[python_packaging_rule]]``
------------------------------
+``[[packaging_rule]]``
+----------------------
 
 Defines a rule to control the packaging of Python resources.
 
@@ -464,7 +464,7 @@ the following values:
 
 Example::
 
-   [[python_packaging_rule]]
+   [[packaging_rule]]
    type = "stdlib-extension-policy"
    policy = "no-libraries"
 
@@ -493,7 +493,7 @@ Example:
 
 .. code-block:: toml
 
-   [[python_packaging_rule]]
+   [[packaging_rule]]
    type = "stdlib-extensions-explicit-includes"
    includes = ["binascii", "errno", "itertools", "math", "select", "_socket"]
 
@@ -513,7 +513,7 @@ Example:
 
 .. code-block:: toml
 
-   [[python_packaging_rule]]
+   [[packaging_rule]]
    type = "stdlib-extensions-explicit-excludes"
    excludes = ["_ssl"]
 
@@ -537,7 +537,7 @@ Example:
 
 .. code-block:: toml
 
-   [[python_packaging_rule]]
+   [[packaging_rule]]
    type = "stdlib-extension-variant"
    extension = "readline"
    variant = "libedit"
@@ -553,7 +553,7 @@ pull in the Python standard library in its entirety.
 
    A ``stdlib`` rule is required, as Python can't be initialized
    without some modules from the standard library. It should be one of the first
-   ``[[python_packaging_rule]]`` entries so the standard library forms the base of the
+   ``[[packaging_rule]]`` entries so the standard library forms the base of the
    set of Python modules to include.
 
 The following keys can exist in this rule type:
@@ -692,7 +692,7 @@ resources:
 
 .. code-block:: toml
 
-   [[python_packaging_rule]]
+   [[packaging_rule]]
    type = "pip-install-simple"
    package = "pyflakes"
 
@@ -701,7 +701,7 @@ next to the produced binary:
 
 .. code-block:: toml
 
-   [[python_packaging_rule]]
+   [[packaging_rule]]
    type = "pip-install-simple"
    package = "black"
    install_location = "app-relative:lib"
@@ -737,7 +737,7 @@ Example:
 
 .. code-block:: toml
 
-   [[python_packaging_rule]]
+   [[packaging_rule]]
    type = "pip-requirements-file"
    path = "/home/gps/src/myapp/requirements.txt"
 
@@ -824,7 +824,7 @@ Example:
 
 .. code-block:: toml
 
-   [[python_packaging_rule]]
+   [[packaging_rule]]
    type = "virtualenv"
    path = "/home/gps/src/myapp/venv"
 
@@ -866,7 +866,7 @@ Example:
 
 .. code-block:: toml
 
-   [[python_packaging_rule]]
+   [[packaging_rule]]
    type = "filter-include"
    files = ["allow-modules"]
    glob_files = ["module-dumps/modules-*"]

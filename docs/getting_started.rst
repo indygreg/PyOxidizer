@@ -149,7 +149,7 @@ Python application!
 Find the existing ``[[python_packages]]`` section in the ``pyoxidizer.toml``.
 Now let's add the following lines after the last of those sections::
 
-   [[python_packaging_rule]]
+   [[packaging_rule]]
    type = "pip-install-simple"
    package = "pyflakes==2.1.1"
 

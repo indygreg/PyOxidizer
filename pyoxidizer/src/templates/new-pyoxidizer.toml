@@ -18,7 +18,7 @@ raw_allocator = "{{#if jemalloc}}jemalloc{{else}}system{{/if}}"
 # unbuffered_stdio = false
 #write_modules_directory_env = "PYOXIDIZER_WRITE_MODULES_DIR"
 
-[[python_packaging_rule]]
+[[packaging_rule]]
 type = "stdlib-extensions-policy"
 
 # Package all available extension modules from the Python distribution.
@@ -34,16 +34,16 @@ policy = "all"
 # policy = "no-libraries"
 
 # Explicit list of extension modules from the distribution to include.
-# [[python_packaging_rule]]
+# [[packaging_rule]]
 # type = "stdlib-extensions-explicit-includes"
 # includes = ["binascii", "errno", "itertools", "math", "select", "_socket"]
 
 # Explicit list of extension modules from the distribution to exclude.
-# [[python_packages]
+# [[packaging_rule]
 # type = "stdlib-extensions-explicit-excludes"
 # excludes = ["_ssl"]
 
-[[python_packaging_rule]]
+[[packaging_rule]]
 
 # Package the entire Python standard library without sources.
 type = "stdlib"
