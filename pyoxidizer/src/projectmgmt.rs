@@ -628,8 +628,8 @@ pub fn init(project_path: &str, jemalloc: bool) -> Result<(), String> {
     println!("This application can be built by doing the following:");
     println!();
     println!("  $ cd {}", path.display());
-    println!("  $ cargo build");
-    println!("  $ cargo run");
+    println!("  $ pyoxidizer build");
+    println!("  $ pyoxidizer run");
     println!();
     println!("The default configuration is to invoke a Python REPL. You can");
     println!("edit the various pyoxidizer.*.toml config files or the main.rs ");

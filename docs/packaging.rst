@@ -55,11 +55,13 @@ the REPL.)
 
    If you have built a Rust project before, the output from building a
    PyOxidizer application may look familiar to you. That's because under the
-   hood Cargo - Rust's package manager and build system - is doing most of the
-   work to build the application. The ``build`` and ``run`` ``pyoxidizer``
-   commands are essentially minimal wrappers around ``cargo`` commands. If you
-   are familiar with Rust development, feel free to use ``cargo build`` and
-   ``cargo run`` directly.
+   hood Cargo - Rust's package manager and build system - is doing a lot of the
+   work to build the application. If you are familiar with Rust development,
+   feel free to use ``cargo build`` and ``cargo run`` directly. However, Rust's
+   build system is only responsible for some functionality. Most notable,
+   all the post-build *packaging* steps such as copying binaries to the
+   ``build/apps`` directory is not performed by the Rust build system, so
+   built applications may be incomplete.
 
 If you are curious about what's inside newly-created projects, read
 :ref:`new_project_layout`.
