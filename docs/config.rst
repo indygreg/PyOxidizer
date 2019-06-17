@@ -838,6 +838,18 @@ Example:
    type = "virtualenv"
    path = "/home/gps/src/myapp/venv"
 
+``write-license-files``
+^^^^^^^^^^^^^^^^^^^^^^^
+
+This rule instructs packaging to write license files to a directory as
+denoted by this rule.
+
+``path`` (string)
+   Filesystem path to directory where licenses should be written.
+
+   Value is relative to the application binary. An empty string denotes
+   to write files in the same directory as the application binary.
+
 .. _rule_filter-include:
 
 ``filter-include``

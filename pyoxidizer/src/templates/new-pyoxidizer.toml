@@ -48,6 +48,11 @@ policy = "all"
 type = "stdlib"
 include_source = false
 
+# Write out license files next to the produced binary.
+[[packaging_rule]]
+type = "write-license-files"
+path = ""
+
 # Package .py files discovered in a local directory.
 # [[packaging_rule]]
 # type = "package-root"

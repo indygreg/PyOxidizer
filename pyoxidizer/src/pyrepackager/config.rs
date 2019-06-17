@@ -207,6 +207,14 @@ enum ConfigPythonPackaging {
         files: Vec<String>,
         glob_files: Vec<String>,
     },
+
+    #[serde(rename = "write-license-files")]
+    WriteLicenseFiles {
+        #[serde(default = "ALL")]
+        build_target: String,
+
+        path: String,
+    },
 }
 
 #[derive(Debug, Deserialize)]
@@ -350,6 +358,11 @@ pub struct PackagingFilterInclude {
 }
 
 #[derive(Clone, Debug)]
+pub struct PackagingWriteLicenseFiles {
+    pub path: String,
+}
+
+#[derive(Clone, Debug)]
 pub enum PythonPackaging {
     SetupPyInstall(PackagingSetupPyInstall),
     StdlibExtensionsPolicy(PackagingStdlibExtensionsPolicy),
@@ -362,6 +375,7 @@ pub enum PythonPackaging {
     PipInstallSimple(PackagingPipInstallSimple),
     PipRequirementsFile(PackagingPipRequirementsFile),
     FilterInclude(PackagingFilterInclude),
+    WriteLicenseFiles(PackagingWriteLicenseFiles),
 }
 
 #[derive(Clone, Debug)]
@@ -783,6 +797,18 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                         include_source: *include_source,
                         install_location: resolve_install_location(&install_location)?,
                     })))
+                } else {
+                    Ok(None)
+                }
+            }
+            ConfigPythonPackaging::WriteLicenseFiles {
+                build_target: rule_target,
+                path,
+            } => {
+                if rule_target == "all" || rule_target == target {
+                    Ok(Some(PythonPackaging::WriteLicenseFiles(
+                        PackagingWriteLicenseFiles { path: path.clone() },
+                    )))
                 } else {
                     Ok(None)
                 }

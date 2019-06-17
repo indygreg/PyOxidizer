@@ -337,8 +337,6 @@ impl ResourceLocation {
     }
 }
 
-impl ResourceLocation {}
-
 #[derive(Debug)]
 pub struct PythonResourceAction {
     action: ResourceAction,
@@ -440,6 +438,9 @@ pub struct PythonResources {
 
     /// Files that are read to resolve this data structure.
     pub read_files: Vec<PathBuf>,
+
+    /// Path where to write license files.
+    pub license_files_path: Option<String>,
 }
 
 fn read_resource_names_file(path: &Path) -> Result<BTreeSet<String>, IOError> {
@@ -1233,6 +1234,8 @@ fn resolve_python_packaging(
 
         PythonPackaging::SetupPyInstall(rule) => resolve_setup_py_install(logger, dist, &rule),
 
+        PythonPackaging::WriteLicenseFiles(_) => Vec::new(),
+
         // This is a no-op because it can only be handled at a higher level.
         PythonPackaging::FilterInclude(_) => Vec::new(),
     }
@@ -1260,6 +1263,7 @@ pub fn resolve_python_resources(
         BTreeMap::new();
 
     let mut read_files: Vec<PathBuf> = Vec::new();
+    let mut license_files_path = None;
 
     for packaging in packages {
         info!(logger, "processing packaging rule: {:?}", packaging);
@@ -1429,6 +1433,10 @@ pub fn resolve_python_resources(
             }
         }
 
+        if let PythonPackaging::WriteLicenseFiles(rule) = packaging {
+            license_files_path = Some(rule.path.clone());
+        }
+
         if let PythonPackaging::FilterInclude(rule) = packaging {
             let mut include_names: BTreeSet<String> = BTreeSet::new();
 
@@ -1585,6 +1593,7 @@ pub fn resolve_python_resources(
         },
         app_relative,
         read_files,
+        license_files_path,
     }
 }
 
@@ -2102,6 +2111,7 @@ pub fn write_data_rs(path: &PathBuf, python_config_rs: &str) {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PackagingState {
     pub app_relative_resources: BTreeMap<String, AppRelativeResources>,
+    pub license_files_path: Option<String>,
     pub license_infos: BTreeMap<String, LicenseInfo>,
 }
 
@@ -2237,6 +2247,20 @@ pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Res
 
     info!(logger, "resolving packaging state...");
     let state = context.get_packaging_state()?;
+
+    if let Some(licenses_path) = state.license_files_path {
+        let licenses_path = if licenses_path.is_empty() {
+            context.app_path.clone()
+        } else {
+            context.app_path.join(licenses_path)
+        };
+
+        for (name, li) in &state.license_infos {
+            let path = licenses_path.join(&li.license_filename);
+            info!(logger, "writing license for {} to {}", name, path.display());
+            fs::write(&path, li.license_text.as_bytes()).or_else(|e| Err(e.to_string()))?;
+        }
+    }
 
     if !state.app_relative_resources.is_empty() {
         info!(
@@ -2502,6 +2526,7 @@ pub fn process_config(
         .expect("unable to write cargo_metadata.txt");
 
     let packaging_state = PackagingState {
+        license_files_path: resources.license_files_path,
         license_infos: libpython_info.license_infos,
         app_relative_resources: resources.app_relative,
     };
