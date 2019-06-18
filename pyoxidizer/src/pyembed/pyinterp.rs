@@ -66,7 +66,7 @@ fn make_custom_frozen_modules(config: &PythonConfig) -> [pyffi::_frozen; 3] {
 
 #[cfg(windows)]
 extern "C" {
-    pub fn __acrt_iob_func(x: libc::uint32_t) -> *mut libc::FILE;
+    pub fn __acrt_iob_func(x: u32) -> *mut libc::FILE;
 }
 
 #[cfg(windows)]
