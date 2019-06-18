@@ -97,7 +97,7 @@ fn stdin_to_file() -> *mut libc::FILE {
 
 #[cfg(windows)]
 fn stderr_to_file() -> *mut libc::FILE {
-    unsafe { __acrt_iob_func(libc::STDERR_FILENO) }
+    unsafe { __acrt_iob_func(2) }
 }
 
 #[cfg(unix)]
