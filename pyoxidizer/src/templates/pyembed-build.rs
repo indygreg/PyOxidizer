@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::process;
 
 /// Path to pyoxidizer executable this file was created with.
-const DEFAULT_PYOXIDIZER_EXE: &str = "{{{pyoxidizer_exe}}}";
+const DEFAULT_PYOXIDIZER_EXE: &str = r#"{{{pyoxidizer_exe}}}"#;
 
 fn main() {
     // We support using pre-built artifacts, in which case we emit the
