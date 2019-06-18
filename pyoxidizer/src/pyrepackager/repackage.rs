@@ -2026,10 +2026,10 @@ pub fn derive_python_config(
          ignore_python_env: {},\n    \
          dont_write_bytecode: {},\n    \
          unbuffered_stdio: {},\n    \
-         frozen_importlib_data: include_bytes!(\"{}\"),\n    \
-         frozen_importlib_external_data: include_bytes!(\"{}\"),\n    \
-         py_modules_data: include_bytes!(\"{}\"),\n    \
-         py_resources_data: include_bytes!(\"{}\"),\n    \
+         frozen_importlib_data: include_bytes!(r#\"{}\"#),\n    \
+         frozen_importlib_external_data: include_bytes!(r#\"{}\"#),\n    \
+         py_modules_data: include_bytes!(r#\"{}\"#),\n    \
+         py_resources_data: include_bytes!(r#\"{}\"#),\n    \
          argvb: false,\n    \
          raw_allocator: {},\n    \
          write_modules_directory_env: {},\n    \
