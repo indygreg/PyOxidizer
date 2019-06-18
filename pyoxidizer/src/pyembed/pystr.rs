@@ -7,9 +7,7 @@
 use libc::{c_void, size_t, wchar_t};
 use python3_sys as pyffi;
 use std::convert::TryFrom;
-#[cfg(target_family = "unix")]
-use std::ffi::CString;
-use std::ffi::OsString;
+use std::ffi::{CString, OsString};
 use std::ptr::null_mut;
 
 #[cfg(target_family = "unix")]
