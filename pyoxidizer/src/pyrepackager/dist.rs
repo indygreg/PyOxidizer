@@ -28,15 +28,15 @@ struct LinkEntry {
     path_dynamic: Option<String>,
     framework: Option<bool>,
     system: Option<bool>,
-    licenses: Option<Vec<String>>,
-    license_path: Option<String>,
-    license_public_domain: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
 struct PythonBuildExtensionInfo {
     in_core: bool,
     init_fn: String,
+    licenses: Option<Vec<String>>,
+    license_paths: Option<Vec<String>>,
+    license_public_domain: Option<bool>,
     links: Vec<LinkEntry>,
     objs: Vec<String>,
     required: bool,
@@ -112,15 +112,6 @@ pub struct LibraryDepends {
 
     /// Whether this is a system library.
     pub system: bool,
-
-    /// SPDX license shortnames that apply to this library dependency.
-    pub licenses: Option<Vec<String>>,
-
-    /// Path to file holding license text for this library.
-    pub license_path: Option<PathBuf>,
-
-    /// Whether the license for this library is in the public domain.
-    pub license_public_domain: Option<bool>,
 }
 
 /// Describes an extension module in a Python distribution.
@@ -161,6 +152,15 @@ pub struct ExtensionModule {
 
     /// Name of the variant of this extension module.
     pub variant: String,
+
+    /// SPDX license shortnames that apply to this library dependency.
+    pub licenses: Option<Vec<String>>,
+
+    /// Path to file holding license text for this library.
+    pub license_paths: Option<Vec<PathBuf>>,
+
+    /// Whether the license for this library is in the public domain.
+    pub license_public_domain: Option<bool>,
 }
 
 fn link_entry_to_library_depends(entry: &LinkEntry, python_path: &PathBuf) -> LibraryDepends {
@@ -182,15 +182,6 @@ fn link_entry_to_library_depends(entry: &LinkEntry, python_path: &PathBuf) -> Li
             Some(v) => *v,
             None => false,
         },
-        licenses: match entry.licenses {
-            Some(ref licenses) => Some(licenses.clone()),
-            None => None,
-        },
-        license_path: match entry.license_path {
-            Some(ref path) => Some(PathBuf::from(path)),
-            None => None,
-        },
-        license_public_domain: entry.license_public_domain.clone(),
     }
 }
 
@@ -276,7 +267,7 @@ pub struct PythonDistributionInfo {
     pub resources: BTreeMap<String, BTreeMap<String, PathBuf>>,
 
     /// Describes license info for things in this distribution.
-    pub license_infos: BTreeMap<String, LicenseInfo>,
+    pub license_infos: BTreeMap<String, Vec<LicenseInfo>>,
 }
 
 #[derive(Debug)]
@@ -339,7 +330,7 @@ pub fn analyze_python_distribution_data(
     let frozen_c: Vec<u8> = Vec::new();
     let mut py_modules: BTreeMap<String, PathBuf> = BTreeMap::new();
     let mut resources: BTreeMap<String, BTreeMap<String, PathBuf>> = BTreeMap::new();
-    let mut license_infos: BTreeMap<String, LicenseInfo> = BTreeMap::new();
+    let mut license_infos: BTreeMap<String, Vec<LicenseInfo>> = BTreeMap::new();
 
     for entry in fs::read_dir(temp_dir.path()).unwrap() {
         let entry = entry.expect("unable to get directory entry");
@@ -376,14 +367,14 @@ pub fn analyze_python_distribution_data(
         let license_text =
             fs::read_to_string(&license_path).or_else(|_| Err("unable to read Python license"))?;
 
-        license_infos.insert(
-            "python".to_string(),
-            LicenseInfo {
-                licenses: pi.licenses.clone().unwrap(),
-                license_filename: "LICENSE.python.txt".to_string(),
-                license_text,
-            },
-        );
+        let mut licenses = Vec::new();
+        licenses.push(LicenseInfo {
+            licenses: pi.licenses.clone().unwrap(),
+            license_filename: "LICENSE.python.txt".to_string(),
+            license_text,
+        });
+
+        license_infos.insert("python".to_string(), licenses);
     }
 
     // Collect object files for libpython.
@@ -399,21 +390,6 @@ pub fn analyze_python_distribution_data(
 
         if let Some(p) = &depends.static_path {
             libraries.insert(depends.name.clone(), p.clone());
-        }
-
-        if let Some(ref license_path) = depends.license_path {
-            let license_path = python_path.join(license_path);
-            let license_text = fs::read_to_string(&license_path)
-                .or_else(|_| Err("unable to read license file"))?;
-
-            license_infos.insert(
-                depends.name.clone(),
-                LicenseInfo {
-                    licenses: depends.licenses.clone().unwrap(),
-                    license_filename: format!("LICENSE.{}.txt", depends.name),
-                    license_text,
-                },
-            );
         }
 
         links_core.push(depends);
@@ -434,22 +410,30 @@ pub fn analyze_python_distribution_data(
                     libraries.insert(depends.name.clone(), p.clone());
                 }
 
-                if let Some(ref license_path) = depends.license_path {
+                links.push(depends);
+            }
+
+            if let Some(ref license_paths) = entry.license_paths {
+                let mut licenses = Vec::new();
+
+                for license_path in license_paths {
                     let license_path = python_path.join(license_path);
                     let license_text = fs::read_to_string(&license_path)
                         .or_else(|_| Err("unable to read license file"))?;
 
-                    license_infos.insert(
-                        depends.name.clone(),
-                        LicenseInfo {
-                            licenses: depends.licenses.clone().unwrap(),
-                            license_filename: format!("LICENSE.{}.txt", depends.name),
-                            license_text,
-                        },
-                    );
+                    licenses.push(LicenseInfo {
+                        licenses: entry.licenses.clone().unwrap(),
+                        license_filename: license_path
+                            .file_name()
+                            .unwrap()
+                            .to_str()
+                            .unwrap()
+                            .to_string(),
+                        license_text,
+                    });
                 }
 
-                links.push(depends);
+                license_infos.insert(module.clone(), licenses);
             }
 
             ems.push(ExtensionModule {
@@ -457,6 +441,12 @@ pub fn analyze_python_distribution_data(
                 init_fn: Some(entry.init_fn.clone()),
                 builtin_default: entry.in_core,
                 disableable: !entry.in_core,
+                license_public_domain: entry.license_public_domain.clone(),
+                license_paths: match entry.license_paths {
+                    Some(ref refs) => Some(refs.iter().map(|p| python_path.join(p)).collect()),
+                    None => None,
+                },
+                licenses: entry.licenses.clone(),
                 object_paths,
                 required: entry.required,
                 static_library: match &entry.static_lib {

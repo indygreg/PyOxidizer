@@ -552,25 +552,23 @@ fn resolve_stdlib_extensions_policy(
                     let suitable = if em.links.is_empty() {
                         true
                     } else {
-                        em.links.iter().all(|link| {
-                            // Public domain is always allowed.
-                            if link.license_public_domain == Some(true) {
-                                true
-                            // Use explicit license list if one is defined.
-                            } else if let Some(ref licenses) = link.licenses {
-                                // We filter through an allow list because it is safer. (No new GPL
-                                // licenses can slip through.)
-                                licenses
-                                    .iter()
-                                    .all(|license| NON_GPL_LICENSES.contains(&license.as_str()))
-                            } else {
-                                // In lack of evidence that it isn't GPL, assume GPL.
-                                // TODO consider improving logic here, like allowing known system
-                                // and framework libraries to be used.
-                                info!(logger, "unable to determine {} is not GPL; ignoring", &name);
-                                false
-                            }
-                        })
+                        // Public domain is always allowed.
+                        if em.license_public_domain == Some(true) {
+                            true
+                        // Use explicit license list if one is defined.
+                        } else if let Some(ref licenses) = em.licenses {
+                            // We filter through an allow list because it is safer. (No new GPL
+                            // licenses can slip through.)
+                            licenses
+                                .iter()
+                                .all(|license| NON_GPL_LICENSES.contains(&license.as_str()))
+                        } else {
+                            // In lack of evidence that it isn't GPL, assume GPL.
+                            // TODO consider improving logic here, like allowing known system
+                            // and framework libraries to be used.
+                            info!(logger, "unable to determine {} is not GPL; ignoring", &name);
+                            false
+                        }
                     };
 
                     if suitable {
@@ -1768,7 +1766,7 @@ fn make_config_c(extension_modules: &BTreeMap<String, ExtensionModule>) -> Strin
 pub struct LibpythonInfo {
     path: PathBuf,
     cargo_metadata: Vec<String>,
-    license_infos: BTreeMap<String, LicenseInfo>,
+    license_infos: BTreeMap<String, Vec<LicenseInfo>>,
 }
 
 /// Create a static libpython from a Python distribution.
@@ -1986,9 +1984,9 @@ pub fn link_libpython(
         license_infos.insert("python".to_string(), li.clone());
     }
 
-    for lib in needed_libraries.iter() {
-        if let Some(li) = dist.license_infos.get(*lib) {
-            license_infos.insert(lib.to_string(), li.clone());
+    for name in extension_modules.keys() {
+        if let Some(li) = dist.license_infos.get(name) {
+            license_infos.insert(name.clone(), li.clone());
         }
     }
 
@@ -2112,7 +2110,7 @@ pub fn write_data_rs(path: &PathBuf, python_config_rs: &str) {
 pub struct PackagingState {
     pub app_relative_resources: BTreeMap<String, AppRelativeResources>,
     pub license_files_path: Option<String>,
-    pub license_infos: BTreeMap<String, LicenseInfo>,
+    pub license_infos: BTreeMap<String, Vec<LicenseInfo>>,
 }
 
 /// Install all app-relative files next to the generated binary.
@@ -2255,10 +2253,12 @@ pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Res
             context.app_path.join(licenses_path)
         };
 
-        for (name, li) in &state.license_infos {
-            let path = licenses_path.join(&li.license_filename);
-            info!(logger, "writing license for {} to {}", name, path.display());
-            fs::write(&path, li.license_text.as_bytes()).or_else(|e| Err(e.to_string()))?;
+        for (name, lis) in &state.license_infos {
+            for li in lis {
+                let path = licenses_path.join(&li.license_filename);
+                info!(logger, "writing license for {} to {}", name, path.display());
+                fs::write(&path, li.license_text.as_bytes()).or_else(|e| Err(e.to_string()))?;
+            }
         }
     }
 

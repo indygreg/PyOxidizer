@@ -702,18 +702,18 @@ pub fn python_distribution_licenses(path: &str) -> Result<(), String> {
                     }
                 );
 
-                if link.license_public_domain.is_some() && link.license_public_domain.unwrap() {
-                    println!("Licenses: Public Domain");
-                } else if let Some(ref licenses) = link.licenses {
-                    println!("Licenses: {}", itertools::join(licenses, ", "));
-                    for license in licenses {
-                        println!("License Info: https://spdx.org/licenses/{}.html", license);
-                    }
-                } else {
-                    println!("Licenses: UNKNOWN");
-                }
-
                 println!();
+            }
+
+            if variant.license_public_domain.is_some() && variant.license_public_domain.unwrap() {
+                println!("Licenses: Public Domain");
+            } else if let Some(ref licenses) = variant.licenses {
+                println!("Licenses: {}", itertools::join(licenses, ", "));
+                for license in licenses {
+                    println!("License Info: https://spdx.org/licenses/{}.html", license);
+                }
+            } else {
+                println!("Licenses: UNKNOWN");
             }
         }
     }
