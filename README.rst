@@ -34,14 +34,15 @@ that ``PyOxidizer`` can serve as a bridge between these two languages.
 ``PyOxidizer`` can be used to easily add a Python interpreter to *any*
 Rust project. But the opposite it also true: ``PyOxidizer`` can also be
 used to add Rust to Python. Using ``PyOxidizer``, you could *bootstrap*
-a new Rust project providing your application's executable/library.
-Initially, that binary is a few lines of Rust that instantiates a Python
-interpreter and runs Python code. Over time, functionality could be
-(re)written in Rust and your previously Python-only project could
-leverage Rust and its diverse ecosystem. Since ``PyOxidizer`` abstracts
-the Python interpreter away, this could all be invisible to end-users:
-you could rewrite an application from Python to Rust and people may
-not even know because all they might see is a single file executable!
+a new Rust project which contains an embedded version of Python and your
+application. Initially, your project is a few lines of Rust that
+instantiates a Python interpreter and runs Python code. Over time,
+functionality could be (re)written in Rust and your previously
+Python-only project could leverage Rust and its diverse ecosystem. Since
+``PyOxidizer`` abstracts the Python interpreter away, this could all be
+invisible to end-users: you could rewrite an application from Python to
+Rust and people may not even know because they never see a ``libpython``,
+``.py`` files, etc.
 
 Project Info
 ============
@@ -51,51 +52,3 @@ https://github.com/indygreg/PyOxidizer.
 
 Documentation (generated from the ``docs/`` directory) is available
 at https://pyoxidizer.readthedocs.io/en/latest/index.html.
-
-Quick Start
-===========
-
-You need Rust 1.31+ and a corresponding Cargo installed. Then::
-
-   # PyOxidizer must be installed from a Git repository. This is
-   # temporary until things are stable enough for a release on
-   # ``crates.io``.
-   $ git clone https://github.com/indygreg/PyOxidizer
-   $ cd PyOxidizer
-
-   # Build and install the ``pyoxidizer`` executable. This will take
-   # a while because there are a number of dependencies. These dependencies
-   # are for running ``pyoxidizer`` and don't impact the size of binaries
-   # built with PyOxidizer.
-   $ cargo install --path pyoxidizer
-
-   # Verify the `pyoxidizer` executable is installed.
-   $ pyoxidizer help
-
-   # Create a new Rust project using PyOxidizer.
-   #
-   # This will call ``cargo init`` and set up PyOxidizer scaffolding in the
-   # new project.
-   $ pyoxidizer init /path/to/my-project
-
-   # Build our application.
-   $ cd /path/to/my-project
-   $ cargo build
-
-   # When building, you may want to inspect the ``pyoxidizer.toml`` file
-   # in your project's directory to see what can be customized.
-
-   # And run it. You should get a Python REPL as if you had invoked
-   # `python` on the command line.
-   $ cargo run
-
-   # (Optional) Build a non-debug, release-optimized binary.
-   $ cargo build --release
-
-   # Analyze the binary dependencies of the binary so you can evaluate
-   # whether it is safe to distribute.
-   $ pyoxidizer analyze target/debug/my-app
-
-PyOxidizer uses TOML configuration files describing how to configure the
-embedded Python interpreter. See the project documentation for info about
-this file.
