@@ -444,14 +444,23 @@ fn build_project(
         args.push("--release");
     }
 
+    let mut envs = Vec::new();
+    envs.push((
+        "PYOXIDIZER_ARTIFACT_DIR",
+        context.pyoxidizer_artifacts_path.display().to_string(),
+    ));
+    envs.push(("PYOXIDIZER_REUSE_ARTIFACTS", "1".to_string()));
+
+    // static-nobundle link kind requires nightly Rust compiler until
+    // https://github.com/rust-lang/rust/issues/37403 is resolved.
+    if cfg!(windows) {
+        envs.push(("RUSTC_BOOTSTRAP", "1".to_string()));
+    }
+
     match process::Command::new("cargo")
         .args(args)
         .current_dir(&project_path)
-        .env(
-            "PYOXIDIZER_ARTIFACT_DIR",
-            context.pyoxidizer_artifacts_path.display().to_string(),
-        )
-        .env("PYOXIDIZER_REUSE_ARTIFACTS", "1")
+        .envs(envs)
         .status()
     {
         Ok(status) => {
