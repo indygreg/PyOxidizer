@@ -94,7 +94,7 @@ config = sysconfig.get_config_vars();".to_owned();
     }
 
     let stdout = String::from_utf8(out.stdout).unwrap();
-    let split_stdout: Vec<&str> = stdout.trim_right().split(NEWLINE_SEQUENCE).collect();
+    let split_stdout: Vec<&str> = stdout.trim_end().split(NEWLINE_SEQUENCE).collect();
     if split_stdout.len() != SYSCONFIG_VALUES.len() + SYSCONFIG_FLAGS.len() {
         return Err(
             format!("python stdout len didn't return expected number of lines:
