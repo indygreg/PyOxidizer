@@ -15,7 +15,7 @@ use std::io::{Cursor, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process;
 
-use super::environment::PyOxidizerSource;
+use super::environment::{canonicalize_path, PyOxidizerSource};
 use super::pyrepackager::dist::analyze_python_distribution_tar_zst;
 use super::pyrepackager::fsscan::walk_tree_files;
 use super::pyrepackager::repackage::{
@@ -130,8 +130,7 @@ pub fn write_pyembed_build_rs(project_dir: &Path) -> Result<(), std::io::Error> 
     let mut data: BTreeMap<String, String> = BTreeMap::new();
     data.insert(
         "pyoxidizer_exe".to_string(),
-        std::env::current_exe()?
-            .canonicalize()?
+        canonicalize_path(&std::env::current_exe()?)?
             .display()
             .to_string(),
     );
@@ -394,7 +393,7 @@ fn build_pyoxidizer_artifacts(
 
     create_dir_all(&pyoxidizer_artifacts_path).or_else(|e| Err(e.to_string()))?;
 
-    let pyoxidizer_artifacts_path = std::fs::canonicalize(pyoxidizer_artifacts_path)
+    let pyoxidizer_artifacts_path = canonicalize_path(pyoxidizer_artifacts_path)
         .expect("unable to canonicalize artifacts directory");
 
     if !artifacts_current(logger, &context.config_path, &pyoxidizer_artifacts_path) {
@@ -502,8 +501,7 @@ pub fn build(
     target: Option<&str>,
     release: bool,
 ) -> Result<(), String> {
-    let path = PathBuf::from(project_path)
-        .canonicalize()
+    let path = canonicalize_path(&PathBuf::from(project_path))
         .or_else(|e| Err(e.description().to_owned()))?;
 
     if find_pyoxidizer_files(&path).is_empty() {
@@ -533,8 +531,7 @@ pub fn build_artifacts(
     target: Option<&str>,
     release: bool,
 ) -> Result<(), String> {
-    let path = PathBuf::from(project_path)
-        .canonicalize()
+    let path = canonicalize_path(&PathBuf::from(project_path))
         .or_else(|e| Err(e.description().to_owned()))?;
 
     if find_pyoxidizer_files(&path).is_empty() {
@@ -572,9 +569,7 @@ pub fn run(
     release: bool,
     extra_args: &[&str],
 ) -> Result<(), String> {
-    let path = PathBuf::from(project_path)
-        .canonicalize()
-        .or_else(|e| Err(e.to_string()))?;
+    let path = canonicalize_path(&PathBuf::from(project_path)).or_else(|e| Err(e.to_string()))?;
 
     if find_pyoxidizer_files(&path).is_empty() {
         return Err("no PyOxidizer files in specified path".to_string());

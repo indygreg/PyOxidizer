@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use super::super::environment::canonicalize_path;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
@@ -431,13 +432,14 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
         Err(e) => return Err(e.to_string()),
     };
 
-    let origin = config_path
-        .parent()
-        .ok_or_else(|| "unable to get config parent directory")?
-        .canonicalize()
-        .or_else(|e| Err(e.to_string()))?
-        .display()
-        .to_string();
+    let origin = canonicalize_path(
+        config_path
+            .parent()
+            .ok_or_else(|| "unable to get config parent directory")?,
+    )
+    .or_else(|e| Err(e.to_string()))?
+    .display()
+    .to_string();
 
     let mut application_name = None;
     let mut build_path = PathBuf::from(&origin).join("build");

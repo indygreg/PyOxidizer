@@ -6,7 +6,7 @@
 
 use git2::{Commit, Repository};
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Canonical Git repository for PyOxidizer.
 const CANONICAL_GIT_REPO_URL: &str = "https://github.com/indygreg/PyOxidizer.git";
@@ -28,6 +28,22 @@ fn find_root_git_commit(commit: Commit) -> Commit {
     }
 
     current
+}
+
+pub fn canonicalize_path(path: &Path) -> Result<PathBuf, std::io::Error> {
+    let mut p = path.canonicalize()?;
+
+    // Strip \\?\ prefix on Windows and replace \ with /, which is valid.
+    if cfg!(windows) {
+        let mut s = p.display().to_string().replace("\\", "/");
+        if s.starts_with("//?/") {
+            s = s[4..].to_string();
+        }
+
+        p = PathBuf::from(s);
+    }
+
+    Ok(p)
 }
 
 /// Describes the location of the PyOxidizer source files.
@@ -60,12 +76,11 @@ pub fn resolve_environment() -> Result<Environment, &'static str> {
 
             if root.id().to_string() == ROOT_COMMIT {
                 PyOxidizerSource::LocalPath {
-                    path: repo
-                        .workdir()
-                        .ok_or_else(|| "unable to resolve Git workdir")?
-                        .to_path_buf()
-                        .canonicalize()
-                        .or_else(|_| Err("unable to canonicalize path"))?,
+                    path: canonicalize_path(
+                        repo.workdir()
+                            .ok_or_else(|| "unable to resolve Git workdir")?,
+                    )
+                    .or_else(|_| Err("unable to canonicalize path"))?,
                 }
             } else {
                 // The pyoxidizer binary is in a directory that is in a Git repo that isn't
