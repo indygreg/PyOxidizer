@@ -222,7 +222,7 @@ pub unsafe fn handle_callback<F, T, C>(location: &str, _c: C, f: F) -> C::R
     ret
 }
 
-fn handle_panic(_py: Python, _panic: &any::Any) {
+fn handle_panic(_py: Python, _panic: &dyn any::Any) {
     let msg = cstr!("Rust panic");
     unsafe {
         ffi::PyErr_SetString(ffi::PyExc_SystemError, msg.as_ptr());
