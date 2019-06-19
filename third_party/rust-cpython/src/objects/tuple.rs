@@ -170,6 +170,7 @@ impl ToPyObject for NoArgs {
 
 /// Returns `Ok(NoArgs)` if the input is an empty Python tuple.
 /// Otherwise, returns an error.
+#[allow(unused_doc_comments)]
 extract!(obj to NoArgs; py => {
     let t = obj.cast_as::<PyTuple>(py)?;
     if t.len(py) == 0 {

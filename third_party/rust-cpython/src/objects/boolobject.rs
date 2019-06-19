@@ -44,6 +44,7 @@ impl ToPyObject for bool {
 /// Converts a Python `bool` to a rust `bool`.
 ///
 /// Fails with `TypeError` if the input is not a Python `bool`.
+#[allow(unused_doc_comments)]
 extract!(obj to bool; py => {
     Ok(obj.cast_as::<PyBool>(py)?.is_true())
 });
