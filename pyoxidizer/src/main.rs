@@ -111,9 +111,9 @@ fn main() {
                 .about("Add PyOxidizer to an existing Rust project.")
                 .long_about(ADD_ABOUT)
                 .arg(
-                    Arg::with_name("no-jemalloc")
-                        .long("no-jemalloc")
-                        .help("Do not use jemalloc"),
+                    Arg::with_name("jemalloc")
+                        .long("jemalloc")
+                        .help("Enable support for jemalloc"),
                 )
                 .arg(
                     Arg::with_name("path")
@@ -144,9 +144,9 @@ fn main() {
                 .about("Create a new Rust project embedding Python.")
                 .long_about(INIT_ABOUT)
                 .arg(
-                    Arg::with_name("no-jemalloc")
-                        .long("no-jemalloc")
-                        .help("Do not use jemalloc"),
+                    Arg::with_name("jemalloc")
+                        .long("jemalloc")
+                        .help("Enable support for jemalloc"),
                 )
                 .arg(
                     Arg::with_name("name")
@@ -261,7 +261,7 @@ fn main() {
     let result = match matches.subcommand() {
         ("add", Some(args)) => {
             let path = args.value_of("path").unwrap();
-            let jemalloc = !args.is_present("no-jemalloc");
+            let jemalloc = args.is_present("jemalloc");
 
             projectmgmt::add_pyoxidizer(Path::new(path), false, jemalloc)
         }
@@ -295,7 +295,7 @@ fn main() {
 
         ("init", Some(args)) => {
             let name = args.value_of("name").unwrap();
-            let jemalloc = !args.is_present("no-jemalloc");
+            let jemalloc = args.is_present("jemalloc");
 
             projectmgmt::init(name, jemalloc)
         }

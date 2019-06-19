@@ -120,7 +120,7 @@ The new ``pyoxidizer.toml`` file should look something like:
    application_name = "pyflakes"
 
    [[embedded_python_config]]
-   raw_allocator = "jemalloc"
+   raw_allocator = "system"
 
    [[packaging_rule]]
    type = "stdlib-extensions-policy"
@@ -199,7 +199,7 @@ Then edit the ``pyoxidizer.toml`` file to have the following:
    application_name = "black"
 
    [[embedded_python_config]]
-   raw_allocator = "jemalloc"
+   raw_allocator = "system"
 
    [[packaging_rule]]
    type = "stdlib-extensions-policy"

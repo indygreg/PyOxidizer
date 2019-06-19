@@ -275,7 +275,7 @@ behavior:
    **Important**: the ``rust`` crate is not recommended because it introduces
    performance overhead.
 
-   Default is ``jemalloc``.
+   Default is ``system``.
 
 ``write_modules_directory_env`` (string)
 

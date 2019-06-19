@@ -75,6 +75,14 @@ texts to satisfy notification requirements in those licenses.
 Lesser Missing Features
 =======================
 
+jemalloc Enabled By Default
+---------------------------
+
+PyOxidizer supports using jemalloc for the Rust and Python allocator.
+jemalloc doesn't work on Windows MSVC Rust targets and we haven't worked
+out the interaction to selectively enable jemalloc on supported targets.
+So for now, jemalloc is disabled by default.
+
 Poor Rust Error Handling
 ------------------------
 

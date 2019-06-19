@@ -116,11 +116,15 @@ fn populate_template_data(data: &mut BTreeMap<String, String>) {
 pub fn update_new_cargo_toml(path: &Path, jemalloc: bool) -> Result<(), std::io::Error> {
     let mut fh = std::fs::OpenOptions::new().append(true).open(path)?;
 
-    if jemalloc {
-        fh.write_all(b"jemallocator-global = \"0.3\"\n")?;
-    }
-
+    fh.write_all(b"jemallocator-global = { version = \"0.3\", optional = true }\n")?;
     fh.write_all(b"pyembed = { path = \"pyembed\" }\n")?;
+    fh.write_all(b"\n")?;
+    fh.write_all(b"[features]\n")?;
+    if jemalloc {
+        fh.write_all(b"default = \"jemallocator-global\"\n")?;
+    } else {
+        fh.write_all(b"default = []\n")?;
+    }
 
     Ok(())
 }

@@ -527,7 +527,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
     let mut unbuffered_stdio = false;
     let mut filesystem_importer = false;
     let mut sys_paths = Vec::new();
-    let mut raw_allocator = RawAllocator::Jemalloc;
+    let mut raw_allocator = RawAllocator::System;
     let mut write_modules_directory_env = None;
 
     for python_config in config
