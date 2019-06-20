@@ -241,6 +241,9 @@ impl BuildContext {
             PythonDistribution::Url { sha256, .. } => sha256,
         };
 
+        // Take the prefix so paths are shorter.
+        let distribution_hash = &distribution_hash[0..12];
+
         let python_distribution_path =
             pyoxidizer_artifacts_path.join(format!("python.{}", distribution_hash));
 
