@@ -166,6 +166,9 @@ pub struct BuildContext {
     /// Rust build artifact output path for the pyembed crate.
     pub pyembed_target_path: PathBuf,
 
+    /// Path to extracted Python distribution.
+    pub python_distribution_path: PathBuf,
+
     /// Rust build artifact output path for the application crate.
     pub app_target_path: PathBuf,
 
@@ -233,6 +236,14 @@ impl BuildContext {
             None => pyembed_target_path.join("pyoxidizer"),
         };
 
+        let distribution_hash = match &config.python_distribution {
+            PythonDistribution::Local { sha256, .. } => sha256,
+            PythonDistribution::Url { sha256, .. } => sha256,
+        };
+
+        let python_distribution_path =
+            pyoxidizer_artifacts_path.join(format!("python.{}", distribution_hash));
+
         Ok(BuildContext {
             project_path: project_path.to_path_buf(),
             config_path: config_path.to_path_buf(),
@@ -250,6 +261,7 @@ impl BuildContext {
             app_target_path,
             app_exe_target_path,
             pyoxidizer_artifacts_path,
+            python_distribution_path,
             packaging_state: None,
         })
     }
@@ -2296,9 +2308,6 @@ pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Res
 /// Instances are typically produced by processing a PyOxidizer config file.
 #[derive(Debug)]
 pub struct EmbeddedPythonConfig {
-    /// Temporary directory for Python distribution.
-    temp_dir: tempdir::TempDir,
-
     /// Parsed TOML config.
     pub config: Config,
 
@@ -2399,10 +2408,8 @@ pub fn process_config(
     let dist_cursor = Cursor::new(python_distribution_data);
     info!(logger, "reading data from Python distribution...");
 
-    let temp_dir = tempdir::TempDir::new("python-distribution").unwrap();
-    let temp_dir_path = temp_dir.path();
-
-    let dist = analyze_python_distribution_tar_zst(dist_cursor, temp_dir_path).unwrap();
+    let dist = analyze_python_distribution_tar_zst(dist_cursor, &context.python_distribution_path)
+        .unwrap();
     info!(logger, "distribution info: {:#?}", dist.as_minimal_info());
 
     // Produce the custom frozen importlib modules.
@@ -2559,7 +2566,6 @@ pub fn process_config(
     context.packaging_state = Some(packaging_state);
 
     EmbeddedPythonConfig {
-        temp_dir: temp_dir,
         config: config.clone(),
         python_distribution_path,
         importlib_bootstrap_path,
