@@ -2296,6 +2296,9 @@ pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Res
 /// Instances are typically produced by processing a PyOxidizer config file.
 #[derive(Debug)]
 pub struct EmbeddedPythonConfig {
+    /// Temporary directory for Python distribution.
+    temp_dir: tempdir::TempDir,
+
     /// Parsed TOML config.
     pub config: Config,
 
@@ -2395,7 +2398,11 @@ pub fn process_config(
     fh.read_to_end(&mut python_distribution_data).unwrap();
     let dist_cursor = Cursor::new(python_distribution_data);
     info!(logger, "reading data from Python distribution...");
-    let dist = analyze_python_distribution_tar_zst(dist_cursor).unwrap();
+
+    let temp_dir = tempdir::TempDir::new("python-distribution").unwrap();
+    let temp_dir_path = temp_dir.path();
+
+    let dist = analyze_python_distribution_tar_zst(dist_cursor, temp_dir_path).unwrap();
     info!(logger, "distribution info: {:#?}", dist.as_minimal_info());
 
     // Produce the custom frozen importlib modules.
@@ -2552,6 +2559,7 @@ pub fn process_config(
     context.packaging_state = Some(packaging_state);
 
     EmbeddedPythonConfig {
+        temp_dir: temp_dir,
         config: config.clone(),
         python_distribution_path,
         importlib_bootstrap_path,

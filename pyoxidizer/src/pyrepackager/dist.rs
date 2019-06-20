@@ -204,7 +204,7 @@ pub struct LicenseInfo {
 #[derive(Debug)]
 pub struct PythonDistributionInfo {
     /// Directory where distribution lives in the filesystem.
-    pub temp_dir: tempdir::TempDir,
+    pub base_dir: PathBuf,
 
     /// Python distribution flavor.
     pub flavor: String,
@@ -320,7 +320,7 @@ impl PythonDistributionInfo {
 /// it makes things easier to implement and allows us to do things like consume
 /// tarballs without filesystem I/O.
 pub fn analyze_python_distribution_data(
-    temp_dir: tempdir::TempDir,
+    dist_dir: &Path,
 ) -> Result<PythonDistributionInfo, &'static str> {
     let mut objs_core: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
     let mut links_core: Vec<LibraryDepends> = Vec::new();
@@ -332,7 +332,7 @@ pub fn analyze_python_distribution_data(
     let mut resources: BTreeMap<String, BTreeMap<String, PathBuf>> = BTreeMap::new();
     let mut license_infos: BTreeMap<String, Vec<LicenseInfo>> = BTreeMap::new();
 
-    for entry in fs::read_dir(temp_dir.path()).unwrap() {
+    for entry in fs::read_dir(dist_dir).unwrap() {
         let entry = entry.expect("unable to get directory entry");
 
         match entry.file_name().to_str() {
@@ -342,7 +342,7 @@ pub fn analyze_python_distribution_data(
         };
     }
 
-    let python_path = temp_dir.path().join("python");
+    let python_path = dist_dir.join("python");
 
     for entry in fs::read_dir(&python_path).unwrap() {
         let entry = entry.expect("unable to get directory entry");
@@ -507,7 +507,7 @@ pub fn analyze_python_distribution_data(
             Some(ref path) => Some(PathBuf::from(path)),
             None => None,
         },
-        temp_dir,
+        base_dir: dist_dir.to_path_buf(),
         extension_modules,
         frozen_c,
         includes,
@@ -523,26 +523,28 @@ pub fn analyze_python_distribution_data(
 /// Extract Python distribution data from a tar archive.
 pub fn analyze_python_distribution_tar<R: Read>(
     source: R,
+    extract_dir: &Path,
 ) -> Result<PythonDistributionInfo, &'static str> {
     let mut tf = tar::Archive::new(source);
 
-    let temp_dir =
-        tempdir::TempDir::new("python-distribution").expect("could not create temp directory");
-    let temp_dir_path = temp_dir.path();
+    if !extract_dir.exists() {
+        std::fs::create_dir_all(extract_dir).or_else(|_| Err("unable to create directory"))?;
+    }
 
-    tf.unpack(&temp_dir_path)
+    tf.unpack(extract_dir)
         .expect("unable to extract tar archive");
 
-    analyze_python_distribution_data(temp_dir)
+    analyze_python_distribution_data(extract_dir)
 }
 
 /// Extract Python distribution data from a zstandard compressed tar archive.
 pub fn analyze_python_distribution_tar_zst<R: Read>(
     source: R,
+    extract_dir: &Path,
 ) -> Result<PythonDistributionInfo, &'static str> {
     let dctx = zstd::stream::Decoder::new(source).unwrap();
 
-    analyze_python_distribution_tar(dctx)
+    analyze_python_distribution_tar(dctx, extract_dir)
 }
 
 fn sha256_path(path: &PathBuf) -> Vec<u8> {

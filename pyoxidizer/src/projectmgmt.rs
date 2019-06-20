@@ -654,8 +654,11 @@ pub fn python_distribution_licenses(path: &str) -> Result<(), String> {
     let mut data = Vec::new();
     fh.read_to_end(&mut data).or_else(|e| Err(e.to_string()))?;
 
+    let temp_dir = tempdir::TempDir::new("python-distribution").or_else(|e| Err(e.to_string()))?;
+    let temp_dir_path = temp_dir.path();
+
     let cursor = Cursor::new(data);
-    let dist = analyze_python_distribution_tar_zst(cursor)?;
+    let dist = analyze_python_distribution_tar_zst(cursor, temp_dir_path)?;
 
     println!(
         "Python Distribution Licenses: {}",
