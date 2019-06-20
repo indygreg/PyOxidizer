@@ -319,6 +319,13 @@ fn parse_python_json_from_distribution(dist_dir: &Path) -> PythonJsonMain {
     parse_python_json(&python_json_path)
 }
 
+/// Resolve the path to a `python` executable in a Python distribution.
+pub fn python_exe_path(dist_dir: &Path) -> PathBuf {
+    let pi = parse_python_json_from_distribution(dist_dir);
+
+    dist_dir.join("python").join(pi.python_exe)
+}
+
 /// Extract useful information from the files constituting a Python distribution.
 ///
 /// Passing in a data structure with raw file data within is inefficient. But
@@ -504,7 +511,7 @@ pub fn analyze_python_distribution_data(
         version: pi.python_version.clone(),
         os: pi.os.clone(),
         arch: pi.arch.clone(),
-        python_exe: python_path.join(pi.python_exe),
+        python_exe: python_exe_path(dist_dir),
         stdlib_path,
         licenses: pi.licenses.clone(),
         license_path: match pi.license_path {
