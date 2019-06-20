@@ -17,7 +17,7 @@ use std::process;
 
 use super::environment::{canonicalize_path, PyOxidizerSource};
 use super::pyrepackager::config::RawAllocator;
-use super::pyrepackager::dist::analyze_python_distribution_tar_zst;
+use super::pyrepackager::dist::{analyze_python_distribution_tar_zst, python_exe_path};
 use super::pyrepackager::fsscan::walk_tree_files;
 use super::pyrepackager::repackage::{
     find_pyoxidizer_config_file_env, package_project, process_config, run_from_build, BuildContext,
@@ -439,6 +439,14 @@ fn build_project(
         context.pyoxidizer_artifacts_path.display().to_string(),
     ));
     envs.push(("PYOXIDIZER_REUSE_ARTIFACTS", "1".to_string()));
+
+    // Set PYTHON_SYS_EXECUTABLE so python3-sys uses our distribution's Python to
+    // configure itself.
+    let python_exe_path = python_exe_path(&context.python_distribution_path);
+    envs.push((
+        "PYTHON_SYS_EXECUTABLE",
+        python_exe_path.display().to_string(),
+    ));
 
     // static-nobundle link kind requires nightly Rust compiler until
     // https://github.com/rust-lang/rust/issues/37403 is resolved.
