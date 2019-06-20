@@ -314,6 +314,11 @@ impl PythonDistributionInfo {
     }
 }
 
+fn parse_python_json_from_distribution(dist_dir: &Path) -> PythonJsonMain {
+    let python_json_path = dist_dir.join("python").join("PYTHON.json");
+    parse_python_json(&python_json_path)
+}
+
 /// Extract useful information from the files constituting a Python distribution.
 ///
 /// Passing in a data structure with raw file data within is inefficient. But
@@ -359,8 +364,7 @@ pub fn analyze_python_distribution_data(
         };
     }
 
-    let python_json_path = python_path.join("PYTHON.json");
-    let pi = parse_python_json(&python_json_path);
+    let pi = parse_python_json_from_distribution(dist_dir);
 
     if let Some(ref python_license_path) = pi.license_path {
         let license_path = python_path.join(python_license_path);
