@@ -28,6 +28,12 @@ variable to the path of a Python 3.7 executable and try again. e.g.::
    # Windows
    $ SET PYTHON_SYS_EXECUTABLE=c:\python37\python.exe
 
+.. note::
+
+   The ``pyoxidizer`` tool should take care of setting ``PYTHON_SYS_EXECUTABLE``
+   and prevent this error. If you see this error and you are building with
+   ``pyoxidizer``, it is a bug that should be reported.
+
 Why Rust?
 =========
 
