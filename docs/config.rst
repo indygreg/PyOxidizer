@@ -275,7 +275,8 @@ behavior:
    **Important**: the ``rust`` crate is not recommended because it introduces
    performance overhead.
 
-   Default is ``system``.
+   Default is ``jemalloc`` on non-Windows targets and ``system`` on Windows.
+   (The ``jemalloc-sys`` crate doesn't work on Windows MSVC targets.)
 
 ``write_modules_directory_env`` (string)
 

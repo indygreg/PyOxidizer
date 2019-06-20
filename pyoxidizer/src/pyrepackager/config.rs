@@ -33,7 +33,7 @@ fn ZERO() -> i64 {
     0
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 pub enum RawAllocator {
     #[serde(rename = "jemalloc")]
     Jemalloc,
@@ -527,7 +527,11 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
     let mut unbuffered_stdio = false;
     let mut filesystem_importer = false;
     let mut sys_paths = Vec::new();
-    let mut raw_allocator = RawAllocator::System;
+    let mut raw_allocator = if target == "x86_64-pc-windows-msvc" {
+        RawAllocator::System
+    } else {
+        RawAllocator::Jemalloc
+    };
     let mut write_modules_directory_env = None;
 
     for python_config in config

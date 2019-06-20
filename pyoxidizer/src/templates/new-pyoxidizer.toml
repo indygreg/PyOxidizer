@@ -7,7 +7,7 @@
 application_name = "{{program_name}}"
 
 [[embedded_python_config]]
-raw_allocator = "{{#if jemalloc}}jemalloc{{else}}system{{/if}}"
+raw_allocator = "jemalloc"
 
 # dont_write_bytecode = true
 # ignore_environment = true
@@ -17,6 +17,11 @@ raw_allocator = "{{#if jemalloc}}jemalloc{{else}}system{{/if}}"
 # stdio_encoding = "utf-8:strict"
 # unbuffered_stdio = false
 #write_modules_directory_env = "PYOXIDIZER_WRITE_MODULES_DIR"
+
+# Windows doesn't support jemalloc.
+[[embedded_python_config]]
+build_target = "x86_64-pc-windows-msvc"
+raw_allocator = "system"
 
 [[packaging_rule]]
 type = "stdlib-extensions-policy"
