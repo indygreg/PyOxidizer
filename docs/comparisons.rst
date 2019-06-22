@@ -1,4 +1,4 @@
-.. comparisons:
+.. _comparisons:
 
 ==========================
 Comparisons to Other Tools
@@ -6,6 +6,8 @@ Comparisons to Other Tools
 
 What makes PyOxidizer different from other Python packaging and distribution
 tools? Read on to find out!
+
+.. _compare_pyinstaller:
 
 PyInstaller
 ===========
@@ -17,6 +19,8 @@ files to a temporary directory then import modules from the filesystem.
 ``PyOxidizer`` typically skips this step and loads modules directly from
 memory using zero-copy. This makes ``PyOxidizer`` executables significantly
 faster to start.
+
+.. _compare_py2exe:
 
 py2exe
 ======
@@ -43,6 +47,8 @@ and interact with the output of ``setup.py`` rather than get involved in the
 convoluted mess of ``distutils`` internals. This enables ``PyOxidizer`` to
 provide value beyond what ``setup.py``/``distutils`` can provide.
 
+.. _compare_shiv:
+
 Shiv
 ====
 
@@ -65,12 +71,16 @@ optimization (PGO) and link-time optimization (LTO). You can also easily
 configure custom memory allocators or tweak memory allocators for optimal
 performance.
 
+.. _compare_pex:
+
 PEX
 ===
 
 `PEX <https://github.com/pantsbuild/pex>`_ is a packager for zip file based
 Python applications. For purposes of comparison, PEX and Shiv have the
-same properties.
+same properties. See :ref:`compare_shiv` for this comparison.
+
+.. _compare_xar:
 
 XAR
 ===
@@ -81,6 +91,8 @@ SquashFS requires Linux.
 ``PyOxidizer`` is a target native executable and doesn't require any special
 filesystems or other properties to run.
 
+.. _compare_docker:
+
 Docker / Running a Container
 ============================
 
@@ -88,20 +100,23 @@ It is increasingly popular to distribute applications as self-contained
 container environments. e.g. Docker images. This distribution mechanism
 is effective for Linux users.
 
-``PyOxidizer`` will likely produce a smaller distribution than container-based
-applications. This is because many container-based applications contain a lot
-of extra content that isn't needed by the processes within.
+``PyOxidizer`` will almost certainly produce a smaller distribution than
+container-based applications. This is because many container-based applications
+contain a lot of extra content that isn't needed by the processes within.
 
 ``PyOxidizer`` also doesn't require a container execution environment. Not
 every user has the capability to run certain container formats. However,
-nearly every user can run a self-contained executable.
+nearly every user can run an executable.
 
 At run time, ``PyOxidizer`` executes a native binary and doesn't have to go
 through any additional execution layers. Contrast this with Docker, which
-uses HTTP requests to create containers, sets up temporary filesystems and
-networks for the container, etc. Spawning a process in a Docker container can
-take tens of milliseconds or more. This overhead can be prohibitive for low
-latency applications like CLI tools.
+uses HTTP requests to create containers, set up temporary filesystems and
+networks for the container, etc. Spawning a process in a new Docker
+container can take hundreds of milliseconds or more. This overhead can be
+prohibitive for low latency applications like CLI tools. This overhead
+does not exist for ``PyOxidizer`` executables.
+
+.. _compare_nuitka:
 
 Nuitka
 ======
@@ -112,7 +127,7 @@ converts Python to C and compiles that. Nuitka is effectively an alternate
 Python interpreter.
 
 Nuitka is a cool project and purports to produce significant speed-ups
-compared to CPython.
+compared to CPython!
 
 Since Nuitka is effectively a new Python interpreter, there are risks to
 running Python in this environment. Some code has dependencies on CPython
@@ -123,6 +138,8 @@ applications should *just work*.
 Given the performance benefits of Nuitka, it is a compelling alternative
 to ``PyOxidizer``.
 
+.. _compare_pyrun:
+
 PyRun
 =====
 
@@ -132,3 +149,22 @@ appear to support modern Python versions. And it appears to require shared
 libraries (like bzip2) on the target system. ``PyOxidizer`` supports
 the latest Python and doesn't require shared libraries that aren't in
 nearly every environment.
+
+.. _compare_pynsist:
+
+pynsist
+=======
+
+`pynsist <https://pynsist.readthedocs.io/en/latest/index.html>`_ is a
+tool for building Windows installers for Python applications. pynsist
+is very similar in spirit to PyOxidizer.
+
+A major difference between the projects is that pynsist focuses on
+solving the application distribution problem on Windows where ``PyOxidizer``
+aims to solve larger problems around Python application distribution, such
+as performance optimization (via loading Python modules from memory
+instead of the filesystem).
+
+``PyOxidizer`` has yet to invest significantly into making producing
+distributable artifacts (such as Windows installers) simple, so pynsist
+still has an advantage over ``PyOxidizer`` here.
