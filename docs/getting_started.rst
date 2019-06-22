@@ -109,6 +109,13 @@ modifications are in the form of a new ``pyembed`` crate.
    control so you can see what changes are made by ``pyoxidizer add`` and
    so you can undo any unwanted changes.
 
+.. danger::
+
+   This command isn't very well tested. And results have been known to be
+   wrong. If it doesn't *just work*, you may want to run ``pyoxidizer init``
+   and incorporate relevant files into your project manually. Sorry for
+   the inconvenience.
+
 Customizing Python and Packaging Behavior
 =========================================
 

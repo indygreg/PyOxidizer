@@ -80,7 +80,7 @@ pub fn run_cli() -> Result<(), String> {
         .subcommand(
             SubCommand::with_name("add")
                 .setting(AppSettings::ArgRequiredElseHelp)
-                .about("Add PyOxidizer to an existing Rust project.")
+                .about("Add PyOxidizer to an existing Rust project. (EXPERIMENTAL)")
                 .long_about(ADD_ABOUT)
                 .arg(
                     Arg::with_name("path")
