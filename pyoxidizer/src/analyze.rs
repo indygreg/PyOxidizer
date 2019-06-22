@@ -333,7 +333,7 @@ fn find_minimum_distro_version(
         }
 
         if !found {
-            res.push(format!("No {} versions supported", distro));
+            res.push(format!("No known {} versions supported", distro));
         }
     }
 
