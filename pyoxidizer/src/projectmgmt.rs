@@ -550,6 +550,7 @@ pub fn build(
     release: bool,
 ) -> Result<(), String> {
     let mut context = resolve_build_context(logger, project_path, None, target, release, None)?;
+    build_project(logger, &mut context)?;
     package_project(logger, &mut context)?;
 
     info!(
