@@ -523,20 +523,23 @@ pub fn resolve_build_context(
 
 fn run_project(
     logger: &slog::Logger,
-    project_path: &Path,
-    config_path: &Path,
-    target: &str,
-    release: bool,
+    context: &BuildContext,
     extra_args: &[&str],
 ) -> Result<(), String> {
     // We call our build wrapper and invoke the binary directly. This allows
     // build output to be printed.
-    let mut context = build_project(logger, project_path, config_path, target, release)?;
+    let mut context = build_project(
+        logger,
+        &context.project_path,
+        &context.config_path,
+        &context.target_triple,
+        context.release,
+    )?;
 
     package_project(logger, &mut context)?;
 
     match process::Command::new(&context.app_exe_path)
-        .current_dir(&project_path)
+        .current_dir(&context.project_path)
         .args(extra_args)
         .status()
     {
@@ -603,14 +606,7 @@ pub fn run(
 ) -> Result<(), String> {
     let context = resolve_build_context(logger, project_path, None, target, release, None)?;
 
-    run_project(
-        logger,
-        &context.project_path,
-        &context.config_path,
-        &context.target_triple,
-        context.release,
-        extra_args,
-    )
+    run_project(logger, &context, extra_args)
 }
 
 /// Initialize a new Rust project with PyOxidizer support.
