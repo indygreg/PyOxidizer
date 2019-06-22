@@ -538,12 +538,14 @@ pub fn analyze_python_distribution_tar<R: Read>(
 ) -> Result<PythonDistributionInfo, &'static str> {
     let mut tf = tar::Archive::new(source);
 
-    if !extract_dir.exists() {
+    // The content of the distribution could change between runs. But caching
+    // the extraction does keep things fast.
+    let test_path = extract_dir.join("python").join("PYTHON.json");
+    if !test_path.exists() {
         std::fs::create_dir_all(extract_dir).or_else(|_| Err("unable to create directory"))?;
+        tf.unpack(extract_dir)
+            .expect("unable to extract tar archive");
     }
-
-    tf.unpack(extract_dir)
-        .expect("unable to extract tar archive");
 
     analyze_python_distribution_data(extract_dir)
 }
