@@ -15,7 +15,9 @@ use std::io::{Cursor, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process;
 
-use super::environment::{canonicalize_path, PyOxidizerSource};
+use super::environment::{
+    canonicalize_path, PyOxidizerSource, BUILD_GIT_COMMIT, PYOXIDIZER_VERSION,
+};
 use super::pyrepackager::config::RawAllocator;
 use super::pyrepackager::dist::{analyze_python_distribution_tar_zst, python_exe_path};
 use super::pyrepackager::fsscan::walk_tree_files;
@@ -99,6 +101,15 @@ pub fn find_pyoxidizer_files(root: &Path) -> Vec<PathBuf> {
 
 fn populate_template_data(data: &mut BTreeMap<String, String>) {
     let env = super::environment::resolve_environment().unwrap();
+
+    data.insert(
+        "pyoxidizer_version".to_string(),
+        PYOXIDIZER_VERSION.to_string(),
+    );
+    data.insert(
+        "pyoxidizer_commit".to_string(),
+        BUILD_GIT_COMMIT.to_string(),
+    );
 
     match env.pyoxidizer_source {
         PyOxidizerSource::LocalPath { path } => {
@@ -185,9 +196,10 @@ pub fn write_new_pyoxidizer_config_file(
         .collect_vec();
 
     let mut data = BTreeMap::new();
+    populate_template_data(&mut data);
 
-    data.insert("python_distributions", distributions.join("\n"));
-    data.insert("program_name", name.to_string());
+    data.insert("python_distributions".to_string(), distributions.join("\n"));
+    data.insert("program_name".to_string(), name.to_string());
 
     let t = HANDLEBARS
         .render("new-pyoxidizer.toml", &data)

@@ -89,3 +89,9 @@ mode = "repl"
 # Evaluate some Python code.
 #mode = "eval"
 #code = "from mypackage import main; main()"
+
+# Keeps track of which version of PyOxidizer is managing this project.
+# THIS SECTION IS MANAGED BY PYOXIDIZER AND SHOULD NOT BE CHANGED BY PEOPLE.
+[[pyoxidizer]]
+version = "{{{ pyoxidizer_version }}}"
+commit = "{{{ pyoxidizer_commit }}}"

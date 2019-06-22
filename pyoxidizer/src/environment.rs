@@ -8,6 +8,8 @@ use git2::{Commit, Repository};
 use std::env;
 use std::path::{Path, PathBuf};
 
+pub const PYOXIDIZER_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 /// Canonical Git repository for PyOxidizer.
 const CANONICAL_GIT_REPO_URL: &str = "https://github.com/indygreg/PyOxidizer.git";
 
