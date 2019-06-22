@@ -476,6 +476,7 @@ pub fn resolve_build_context(
     project_path: &str,
     target: Option<&str>,
     release: bool,
+    force_artifacts_path: Option<&Path>,
 ) -> Result<BuildContext, String> {
     let path = canonicalize_path(&PathBuf::from(project_path))
         .or_else(|e| Err(e.description().to_owned()))?;
@@ -494,7 +495,14 @@ pub fn resolve_build_context(
         None => return Err("unable to find PyOxidizer config file".to_string()),
     };
 
-    BuildContext::new(&path, &config_path, None, &target, release, None)
+    BuildContext::new(
+        &path,
+        &config_path,
+        None,
+        &target,
+        release,
+        force_artifacts_path,
+    )
 }
 
 fn run_project(
@@ -537,7 +545,7 @@ pub fn build(
     target: Option<&str>,
     release: bool,
 ) -> Result<(), String> {
-    let mut context = resolve_build_context(logger, project_path, target, release)?;
+    let mut context = resolve_build_context(logger, project_path, target, release, None)?;
     package_project(logger, &mut context)?;
 
     Ok(())
@@ -550,28 +558,10 @@ pub fn build_artifacts(
     target: Option<&str>,
     release: bool,
 ) -> Result<(), String> {
-    let path = canonicalize_path(&PathBuf::from(project_path))
-        .or_else(|e| Err(e.description().to_owned()))?;
-
-    if find_pyoxidizer_files(&path).is_empty() {
-        return Err("no PyOxidizer files in specified path".to_string());
-    }
-
-    let target = match target {
-        Some(v) => v.to_string(),
-        None => default_target()?,
-    };
-
-    let config_path = match find_pyoxidizer_config_file_env(logger, &path) {
-        Some(p) => p,
-        None => return Err("unable to find PyOxidizer config file".to_string()),
-    };
-
-    let mut context = BuildContext::new(
-        project_path,
-        &config_path,
-        None,
-        &target,
+    let mut context = resolve_build_context(
+        logger,
+        project_path.to_str().unwrap(),
+        target,
         release,
         Some(dest_path),
     )?;
@@ -588,7 +578,7 @@ pub fn run(
     release: bool,
     extra_args: &[&str],
 ) -> Result<(), String> {
-    let context = resolve_build_context(logger, project_path, target, release)?;
+    let context = resolve_build_context(logger, project_path, target, release, None)?;
 
     run_project(
         logger,
