@@ -548,6 +548,12 @@ pub fn build(
     let mut context = resolve_build_context(logger, project_path, target, release, None)?;
     package_project(logger, &mut context)?;
 
+    info!(
+        logger,
+        "executable path: {}",
+        context.app_exe_path.display()
+    );
+
     Ok(())
 }
 
