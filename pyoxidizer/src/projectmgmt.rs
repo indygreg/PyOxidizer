@@ -471,6 +471,32 @@ fn build_project(
     }
 }
 
+pub fn resolve_build_context(
+    logger: &slog::Logger,
+    project_path: &str,
+    target: Option<&str>,
+    release: bool,
+) -> Result<BuildContext, String> {
+    let path = canonicalize_path(&PathBuf::from(project_path))
+        .or_else(|e| Err(e.description().to_owned()))?;
+
+    if find_pyoxidizer_files(&path).is_empty() {
+        return Err("no PyOxidizer files in specified path".to_string());
+    }
+
+    let target = match target {
+        Some(v) => v.to_string(),
+        None => default_target()?,
+    };
+
+    let config_path = match find_pyoxidizer_config_file_env(logger, &path) {
+        Some(p) => p,
+        None => return Err("unable to find PyOxidizer config file".to_string()),
+    };
+
+    BuildContext::new(&path, &config_path, None, &target, release, None)
+}
+
 fn run_project(
     logger: &slog::Logger,
     project_path: &Path,
@@ -511,24 +537,7 @@ pub fn build(
     target: Option<&str>,
     release: bool,
 ) -> Result<(), String> {
-    let path = canonicalize_path(&PathBuf::from(project_path))
-        .or_else(|e| Err(e.description().to_owned()))?;
-
-    if find_pyoxidizer_files(&path).is_empty() {
-        return Err("no PyOxidizer files in specified path".to_string());
-    }
-
-    let target = match target {
-        Some(v) => v.to_string(),
-        None => default_target()?,
-    };
-
-    let config_path = match find_pyoxidizer_config_file_env(logger, &path) {
-        Some(p) => p,
-        None => return Err("unable to find PyOxidizer config file".to_string()),
-    };
-
-    let mut context = build_project(logger, &path, &config_path, &target, release)?;
+    let mut context = resolve_build_context(logger, project_path, target, release)?;
     package_project(logger, &mut context)?;
 
     Ok(())
@@ -579,23 +588,16 @@ pub fn run(
     release: bool,
     extra_args: &[&str],
 ) -> Result<(), String> {
-    let path = canonicalize_path(&PathBuf::from(project_path)).or_else(|e| Err(e.to_string()))?;
+    let context = resolve_build_context(logger, project_path, target, release)?;
 
-    if find_pyoxidizer_files(&path).is_empty() {
-        return Err("no PyOxidizer files in specified path".to_string());
-    }
-
-    let config_path = match find_pyoxidizer_config_file_env(logger, &path) {
-        Some(p) => p,
-        None => return Err("unable to find PyOxidizer config file".to_string()),
-    };
-
-    let target = match target {
-        Some(v) => v.to_string(),
-        None => default_target()?,
-    };
-
-    run_project(logger, &path, &config_path, &target, release, extra_args)
+    run_project(
+        logger,
+        &context.project_path,
+        &context.config_path,
+        &context.target_triple,
+        context.release,
+        extra_args,
+    )
 }
 
 /// Initialize a new Rust project with PyOxidizer support.
