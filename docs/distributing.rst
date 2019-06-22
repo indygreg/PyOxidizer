@@ -21,21 +21,100 @@ that true?
 
 It depends.
 
-On Linux, a binary built with MUSL should *just work* on pretty much any
-Linux machine.
+On Linux, a binary built with musl libc should *just work* on pretty much
+any Linux machine. See :ref:`statically_linked_linux` for more.
 
 If you are linking against ``libc.so``, things get more complicated
 because the binary will link against the ``glibc`` symbol versions
 that were present on the build machine. To ensure maximum binary
-compatibility, compile your binary in a Debian 7 environment, as this will use
-a sufficiently old version of glibc which should work in most Linux
-environments.
+compatibility, compile your binary in a Debian 7 environment, as this
+will use a sufficiently old version of glibc which should work in most
+Linux environments.
 
 Of course, if you control the execution environment (like if executables
 will run on the same machine that built them), then this may not pose a
 problem to you. Use the ``pyoxidizer analyze`` command to inspect binaries
 for compatibility before attempting to run a binary on a different machine
 it was produced on.
+
+.. _statically_linked_linux:
+
+Building Fully Statically Linked Binaries on Linux
+--------------------------------------------------
+
+It is possible to produce a fully statically linked executable embedding
+Python on Linux. The produced binary will have no external library
+dependencies nor will it even support loading dynamic libraries. In theory,
+the executable can be copied between Linux machines and it will *just work*.
+
+Building such binaries requires using the ``x86_64-unknown-linux-musl``
+Rust toolchain target. Using ``pyoxidizer``::
+
+   $ pyoxidizer build --target x86_64-unknown-linux-musl
+
+Specifying ``--target x86_64-unknown-linux-musl`` will cause PyOxidizer
+to use a Python distribution built against
+`musl libc <https://www.musl-libc.org/>`_ as well as tell Rust to target
+*musl on Linux*.
+
+Targeting musl requires that Rust have the musl target installed. Standard
+Rust on Linux installs typically do not have this installed! To install it::
+
+   $ rustup target add x86_64-unknown-linux-musl
+   info: downloading component 'rust-std' for 'x86_64-unknown-linux-musl'
+   info: installing component 'rust-std' for 'x86_64-unknown-linux-musl'
+
+If you don't have the musl target installed, you get a build time error
+similar to the following::
+
+   error[E0463]: can't find crate for `std`
+     |
+     = note: the `x86_64-unknown-linux-musl` target may not be installed
+
+But even installing the target may not be sufficient! The standalone
+Python builds are using a modern version of musl and the Rust musl
+target must also be using this newer version or else you will see
+linking errors due to missing symbols. For example::
+
+    /build/Python-3.7.3/Python/bootstrap_hash.c:132: undefined reference to `getrandom'
+    /usr/bin/ld: /build/Python-3.7.3/Python/bootstrap_hash.c:132: undefined reference to `getrandom'
+    /usr/bin/ld: /build/Python-3.7.3/Python/bootstrap_hash.c:136: undefined reference to `getrandom'
+    /usr/bin/ld: /build/Python-3.7.3/Python/bootstrap_hash.c:136: undefined reference to `getrandom'
+
+Rust 1.37 or newer is required for the modern musl version compatibility.
+Rust 1.37 is Rust Nightly until July 4, 2019, at which point it becomes
+Rust Beta. It then becomes Rust Stable on August 15, 2019. You may need to
+override the Rust toolchain used to build your project so Rust 1.37+ is
+used. For example::
+
+   $ rustup override set nightly
+   $ rustup target add --toolchain nightly x86_64-unknown-linux-musl
+
+This will tell Rust that the ``nightly`` toolchain should be used for
+the current directory and to install musl support for the ``nightly``
+toolchain.
+
+Then you can build away::
+
+   $ pyoxidizer build --target x86_64-unknown-linux-musl
+   $ ldd build/apps/myapp/myapp
+        not a dynamic executable
+
+Congratulations, you've produced a fully statically linked executable containing
+a Python application!
+
+.. important::
+
+   There are
+   `reported performance problems <https://superuser.com/questions/1219609/why-is-the-alpine-docker-image-over-50-slower-than-the-ubuntu-image>`_
+   with Python linked against musl libc. Application maintainers are therefore
+   highly encouraged to evaluate potential performance issues before distributing
+   binaries linked against musl libc.
+
+   It's worth noting that in the default configuration PyOxidizer binaries
+   will use ``jemalloc`` for memory allocations, bypassing musl's apparently
+   slower memory allocator implementation. This *may* help mitigate reported
+   performance issues.
 
 .. _licensing_considerations:
 
