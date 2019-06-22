@@ -257,6 +257,13 @@ enum ConfigDistribution {
         build_target: String,
         path_prefix: Option<String>,
     },
+    #[serde(rename = "wix")]
+    WixInstaller {
+        #[serde(default = "ALL")]
+        build_target: String,
+        msi_upgrade_code_amd64: Option<String>,
+        bundle_upgrade_code: Option<String>,
+    },
 }
 
 #[derive(Debug, Deserialize)]
@@ -410,10 +417,17 @@ pub struct DistributionTarball {
     pub path_prefix: Option<String>,
 }
 
+#[derive(Clone, Debug)]
+pub struct DistributionWixInstaller {
+    pub msi_upgrade_code_amd64: Option<String>,
+    pub bundle_upgrade_code: Option<String>,
+}
+
 /// Represents a distribution rule.
 #[derive(Clone, Debug)]
 pub enum Distribution {
     Tarball(DistributionTarball),
+    WixInstaller(DistributionWixInstaller),
 }
 
 /// Represents a parsed PyOxidizer configuration file.
@@ -929,6 +943,20 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 if rule_target == "all" || rule_target == target {
                     Ok(Some(Distribution::Tarball(DistributionTarball {
                         path_prefix: path_prefix.clone(),
+                    })))
+                } else {
+                    Ok(None)
+                }
+            }
+            ConfigDistribution::WixInstaller {
+                build_target: rule_target,
+                msi_upgrade_code_amd64,
+                bundle_upgrade_code,
+            } => {
+                if rule_target == "all" || rule_target == target {
+                    Ok(Some(Distribution::WixInstaller(DistributionWixInstaller {
+                        msi_upgrade_code_amd64: msi_upgrade_code_amd64.clone(),
+                        bundle_upgrade_code: bundle_upgrade_code.clone(),
                     })))
                 } else {
                     Ok(None)

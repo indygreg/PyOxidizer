@@ -104,6 +104,9 @@ code = {{{code}}}
 #code = "from mypackage import main; main()"
 {{~/if}}
 
+[[distribution]]
+type = "wix"
+
 # END OF COMMON USER-ADJUSTED SETTINGS.
 #
 # Everything below this is typically managed by PyOxidizer and doesn't need

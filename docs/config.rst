@@ -927,3 +927,25 @@ This type accepts the following keys:
    archive members have no path prefix and extraction of the archive will
    typically place files in the current directory. Specify this option to
    prefix all archive members with a path prefix.
+
+``wix``
+^^^^^^^^^^^^^^^^^
+
+The ``type = "wix"`` distribution will produce Windows installers via the
+`WiX Toolset <https://wixtoolset.org/>`_. These installers allow the application
+to be easily installed on Windows.
+
+This type accepts the following keys:
+
+``msi_upgrade_code_amd64``
+   UUID to use for the x64 MSI installer. If not defined, a deterministic
+   UUID based on the application name will be used.
+
+``bundle_upgrade_code``
+   UUID to use for the unified ``.exe`` bundle installer. The bundle installer
+   contains the application's MSI installer as well as other dependencies (such
+   as the Visual C++ Redistributable). This is typically the installer given to
+   users.
+
+   If not defined, a deterministic UUID based on the application name will be
+   used.

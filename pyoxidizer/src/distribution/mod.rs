@@ -6,6 +6,7 @@ use super::pyrepackager::config::Distribution;
 use super::pyrepackager::repackage::BuildContext;
 
 pub mod tarball;
+pub mod wix;
 
 /// Produce distributions from a built application.
 pub fn produce_distributions(
@@ -21,6 +22,13 @@ pub fn produce_distributions(
                 }
 
                 tarball::produce_tarball(logger, context, tarball)?;
+            }
+            Distribution::WixInstaller(wix) => {
+                if !types.contains(&"wix") {
+                    continue;
+                }
+
+                wix::build_wix_installer(logger, context, wix)?;
             }
         }
     }
