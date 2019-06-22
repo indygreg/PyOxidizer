@@ -72,6 +72,45 @@ It also includes support for auditing for license compatibility (e.g. screening
 for GPL components in proprietary applications) and assembling required license
 texts to satisfy notification requirements in those licenses.
 
+Partial Terminfo and Readline Support
+-------------------------------------
+
+The readline and curses support for the standalone Python distributions is
+currently not great.
+
+First, the non-GPL ``libedit`` version of the Python ``readline`` extension may
+not work on Linux. So if you want a non-GPL binary that uses the ``readline``
+extension, you may be out of luck until this is fixed.
+
+The bigger issue is with terminal database support. The ``ncurses`` library
+needs to know how to load a ``terminfo`` database so it knows which features
+a terminal supports. Without this database, terminal interaction can be
+wrong or unexpected. For example, pressing the *backspace* key could advance
+the cursor instead of removing the previous character!
+
+Typically the path to the database is specified at build time. The ``ncurses``
+library is never distributed across machines, so this is typically fine. Linux
+distributions put the ``terminfo`` database in different locations, so
+hard-coding a fixed location at compile time is the wrong approach for
+PyOxidizer.
+
+It is possible to compile and embed a database into the ``ncurses`` library.
+But it is impossible to embed the entire database because of compilation errors
+in ``ncurses``. And the database could bloat the size of the binary. If we only
+included some database entries, we would be playing gatekeeper and may exclude
+some terminal definitions that people need.
+
+``ncurses`` does support specifying the location to the database via environment
+variables (notably ``TERMINFO`` and ``TERMINFO_DIRS``). One possible approach is
+to sniff for the location of the database at known popular locations at run-time.
+We could potentially make this lazy so it only occurs if Python extensions using
+``ncurses`` are loaded. We could also make it easy to distribute a database next
+to built application and tell built binaries to load it relative to the binary.
+
+There are definitely options here. But for now, the lack of a ``terminfo`` /
+``termcap`` database in the embedded Python distribution can make Python
+interact with terminals in unexpected ways.
+
 Lesser Missing Features
 =======================
 
