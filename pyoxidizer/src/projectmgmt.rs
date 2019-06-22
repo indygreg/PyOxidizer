@@ -486,6 +486,7 @@ fn build_project(
 pub fn resolve_build_context(
     logger: &slog::Logger,
     project_path: &str,
+    config_path: Option<&str>,
     target: Option<&str>,
     release: bool,
     force_artifacts_path: Option<&Path>,
@@ -502,9 +503,12 @@ pub fn resolve_build_context(
         None => default_target()?,
     };
 
-    let config_path = match find_pyoxidizer_config_file_env(logger, &path) {
-        Some(p) => p,
-        None => return Err("unable to find PyOxidizer config file".to_string()),
+    let config_path = match config_path {
+        Some(p) => PathBuf::from(p),
+        None => match find_pyoxidizer_config_file_env(logger, &path) {
+            Some(p) => p,
+            None => return Err("unable to find PyOxidizer config file".to_string()),
+        },
     };
 
     BuildContext::new(
@@ -557,7 +561,7 @@ pub fn build(
     target: Option<&str>,
     release: bool,
 ) -> Result<(), String> {
-    let mut context = resolve_build_context(logger, project_path, target, release, None)?;
+    let mut context = resolve_build_context(logger, project_path, None, target, release, None)?;
     package_project(logger, &mut context)?;
 
     info!(
@@ -579,6 +583,7 @@ pub fn build_artifacts(
     let mut context = resolve_build_context(
         logger,
         project_path.to_str().unwrap(),
+        None,
         target,
         release,
         Some(dest_path),
@@ -596,7 +601,7 @@ pub fn run(
     release: bool,
     extra_args: &[&str],
 ) -> Result<(), String> {
-    let context = resolve_build_context(logger, project_path, target, release, None)?;
+    let context = resolve_build_context(logger, project_path, None, target, release, None)?;
 
     run_project(
         logger,
