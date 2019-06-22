@@ -163,9 +163,6 @@ pub struct BuildContext {
     /// Rust build artifact output path for this target.
     pub target_triple_base_path: PathBuf,
 
-    /// Rust build artifact output path for the pyembed crate.
-    pub pyembed_target_path: PathBuf,
-
     /// Path to extracted Python distribution.
     pub python_distribution_path: PathBuf,
 
@@ -221,7 +218,6 @@ impl BuildContext {
             app_name.clone()
         };
 
-        let pyembed_target_path = target_triple_base_path.join("pyembed");
         let app_target_path = target_triple_base_path.join(&app_name);
 
         let app_path = apps_base_path.join(&app_name);
@@ -233,7 +229,7 @@ impl BuildContext {
         // 2. A "pyoxidizer" directory in the target directory.
         let pyoxidizer_artifacts_path = match force_artifacts_path {
             Some(path) => path.to_path_buf(),
-            None => pyembed_target_path.join("pyoxidizer"),
+            None => target_triple_base_path.join("pyoxidizer"),
         };
 
         let distribution_hash = match &config.python_distribution {
@@ -260,7 +256,6 @@ impl BuildContext {
             release,
             target_base_path,
             target_triple_base_path,
-            pyembed_target_path,
             app_target_path,
             app_exe_target_path,
             pyoxidizer_artifacts_path,
