@@ -92,10 +92,77 @@ Faster Python Programs
 ----------------------
 
 Binaries built with ``PyOxidizer`` tend to run faster than those
-executing via a normal ``python`` interpreter.
+executing via a normal ``python`` interpreter. There are a few reasons
+for this.
 
-TODO add details
-TODO add some graphs here
+In its default configuration, binaries produced with ``PyOxidizer`` configure
+the embedded Python interpreter differently from how a ``python`` is
+typically configured.
+
+Notably, ``PyOxidizer`` disables the importing of the ``site`` module by
+default (making it roughly equivalent to ``python -S``). The ``site`` module
+does a number of things, such as look for ``.pth`` files, looks for
+``site-packages`` directories, etc. These activities can contribute
+substantial overhead, as measured through a normal ``python3.7`` executable
+on macOS::
+
+   $ hyperfine -m 500 -- '/usr/local/bin/python3.7 -c 1' '/usr/local/bin/python3.7 -S -c 1'
+   Benchmark #1: /usr/local/bin/python3.7 -c 1
+     Time (mean ± σ):      22.7 ms ±   2.0 ms    [User: 16.7 ms, System: 4.2 ms]
+     Range (min … max):    18.4 ms …  32.7 ms    500 runs
+
+   Benchmark #2: /usr/local/bin/python3.7 -S -c 1
+     Time (mean ± σ):      12.7 ms ±   1.1 ms    [User: 8.2 ms, System: 2.9 ms]
+     Range (min … max):     9.8 ms …  16.9 ms    500 runs
+
+   Summary
+     '/usr/local/bin/python3.7 -S -c 1' ran
+       1.78 ± 0.22 times faster than '/usr/local/bin/python3.7 -c 1'
+
+Shaving ~10ms off of startup overhead is not trivial!
+
+Another performance benefit comes from importing modules from memory.
+``PyOxidizer`` supports importing Python modules from memory using
+zero-copy. Traditionally, Python performs filesystem I/O to find and load
+modules. Filesystem I/O performance is intrinsically inconsistent and depends
+on several factors. Importing modules from memory removes the filesystem
+API overhead and the only inconsistency is whether the binary's memory
+address range containing Python modules is paged in. (On first binary load
+the first access of a memory address will require the underling file to be
+paged in by the kernel. But this all happens in the kernel and avoids
+filesystem API overhead from userland.)
+
+We can attempt to isolate the effect of in-memory module imports by running
+a Python script that attempts to import the entirety of the Python standard
+library. This test is a bit contrived. But it is effective at demonstrating
+the performance difference.
+
+Using a stock ``python3.7`` executable and 2 ``PyOxidizer`` executables - one
+configured to load the standard library from the filesystem and another from
+memory::
+
+   $ hyperfine -m 50 -- '/usr/local/bin/python3.7 -S import_stdlib.py' import-stdlib-filesystem import-stdlib-memory
+   Benchmark #1: /usr/local/bin/python3.7 -S import_stdlib.py
+     Time (mean ± σ):     258.8 ms ±   8.9 ms    [User: 220.2 ms, System: 34.4 ms]
+     Range (min … max):   247.7 ms … 310.5 ms    50 runs
+
+   Benchmark #2: import-stdlib-filesystem
+     Time (mean ± σ):     249.4 ms ±   3.7 ms    [User: 216.3 ms, System: 29.8 ms]
+     Range (min … max):   243.5 ms … 258.5 ms    50 runs
+
+   Benchmark #3: import-stdlib-memory
+     Time (mean ± σ):     217.6 ms ±   6.4 ms    [User: 200.4 ms, System: 13.7 ms]
+     Range (min … max):   207.9 ms … 243.1 ms    50 runs
+
+   Summary
+     'import-stdlib-memory' ran
+       1.15 ± 0.04 times faster than 'import-stdlib-filesystem'
+       1.19 ± 0.05 times faster than '/usr/local/bin/python3.7 -S import_stdlib.py'
+
+We see that the ``PyOxidizer`` executable importing from the filesystem has
+very similar performance to ``python3.7``. But the ``PyOxidizer`` executable
+importing from memory is clearly faster. These measurements were obtained
+on macOS and the ``import_stdlib.py`` script imports 506 modules.
 
 Components
 ==========
