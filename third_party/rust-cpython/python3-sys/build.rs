@@ -198,7 +198,7 @@ fn get_rustc_link_lib(_: &PythonVersion, ld_version: &str, enable_shared: bool) 
 fn get_macos_linkmodel() -> Result<String, String> {
     let script = "import sysconfig; print('framework' if sysconfig.get_config_var('PYTHONFRAMEWORK') else ('shared' if sysconfig.get_config_var('Py_ENABLE_SHARED') else 'static'));";
     let out = run_python_script("python", script).unwrap();
-    Ok(out.trim_right().to_owned())
+    Ok(out.trim_end().to_owned())
 }
 
 #[cfg(target_os="macos")]
