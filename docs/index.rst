@@ -15,8 +15,8 @@ and maintainer of ``PyOxidizer`` is
 .. toctree::
    :maxdepth: 2
 
-   getting_started
    overview
+   getting_started
    packaging
    packaging_pitfalls
    distributing
