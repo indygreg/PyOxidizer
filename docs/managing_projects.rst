@@ -264,3 +264,59 @@ is compatible with.
 
    ``pyoxidizer analyze`` is not yet implemented for all executable
    file types that ``PyOxidizer`` supports.
+
+Inspecting Python Distributions
+===============================
+
+The ``Python Building`` phase of the lifecycle entails downloading special
+pre-built Python distributions and then linking them into a larger binary.
+You can find the location of these distributions in your project's
+``pyoxidizer.toml`` configuration file.
+
+These Python distributions are zstandard compressed tar files. Zstandard
+is a modern compression format that is really, really, really good.
+(PyOxidizer's maintainer also maintains
+`Python bindings to zstandard <https://github.com/indygreg/python-zstandard>`_
+and has
+`written about the benefits of zstandard <https://gregoryszorc.com/blog/2017/03/07/better-compression-with-zstandard/>`_
+on his blog. You should read that blog post so you are enlightened on
+how amazing zstandard is.) But because zstandard is relatively new, not
+all systems have utilities for decompressing that format yet. So, the
+``pyoxidizer python-distribution-extract`` command can be used to extract
+the zstandard compressed tar archive to a local filesystem path.
+
+Python distributions contain software governed by a number of licenses.
+This of course has implications for application distribution. See
+:ref:`licensing_considerations` for more.
+
+The ``pyoxidizer python-distribution-licenses`` command can be used to
+inspect a Python distribution archive for information about its licenses.
+The command will print information about the licensing of the Python
+distribution itself along with a per-extension breakdown of which
+libraries are used by which extensions and which licenses apply to what.
+This command can be super useful to audit for license usage and only allow
+extensions with licenses that you are legally comfortable with.
+
+For example, the entry for the ``readline`` extension shows that the
+extension links against the ``ncurses`` and ``readline`` libraries, which
+are governed by the X11, and GPL-3.0 licenses::
+
+   readline
+   --------
+
+   Dependency: ncurses
+   Link Type: library
+
+   Dependency: readline
+   Link Type: library
+
+   Licenses: GPL-3.0, X11
+   License Info: https://spdx.org/licenses/GPL-3.0.html
+   License Info: https://spdx.org/licenses/X11.html
+
+.. note::
+
+   The license annotations in Python distributions are best effort and
+   can be wrong. They do not constitute a legal promise. Paranoid
+   individuals may want to double check the license annotations by
+   verifying with source code distributions, for example.
