@@ -22,12 +22,31 @@ PyOxidizer today.
 Major Missing Features
 ======================
 
+An Official Build Environment
+-----------------------------
+
+Compiling binaries that work on nearly every target system is hard.
+On Linux, things like ``glibc`` symbol versions from the build machine
+can leak into the built binary, effectively requiring a new Linux
+distribution to run a binary.
+
+In order to make the binary build process robust, we will need to
+provide an execution environment for binaries. On Linux, this likely
+entails making something like a Docker image available. On Windows and
+macOS, we might have to provide a tarball. In all cases, we want this
+environment to be integrated into ``pyoxidizer build`` so end users
+don't have to worry about jumping through hoops to build portable
+binaries.
+
 C Extensions
 ------------
 
 Building and using compiled extension modules (e.g. C extensions) is not
 yet supported. This is a hard problem on a few dimensions. We have a plan
 to solve it, however.
+
+In some cases, C extensions may *just work*. But it isn't very well
+tested.
 
 Incomplete ``pyoxidizer`` Commands
 ----------------------------------
