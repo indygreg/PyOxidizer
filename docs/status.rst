@@ -130,6 +130,12 @@ There are definitely options here. But for now, the lack of a ``terminfo`` /
 ``termcap`` database in the embedded Python distribution can make Python
 interact with terminals in unexpected ways.
 
+Test Coverage
+-------------
+
+The test coverage for ``PyOxidizer`` is pretty bad. We need to write a lot
+of tests.
+
 Lesser Missing Features
 =======================
 
