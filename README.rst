@@ -55,3 +55,6 @@ at https://pyoxidizer.readthedocs.io/en/latest/index.html.
 
 The `pyoxidizer-users <https://groups.google.com/forum/#!forum/pyoxidizer-users>`_
 mailing list is a forum for users to discuss all things PyOxidizer.
+
+If you want to financially contribute to PyOxidizer, do so
+`on Patreon <https://www.patreon.com/indygreg>`_.
