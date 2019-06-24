@@ -719,6 +719,8 @@ pub fn python_distribution_licenses(path: &str) -> Result<(), String> {
             } else {
                 println!("Licenses: UNKNOWN");
             }
+
+            println!();
         }
     }
 
