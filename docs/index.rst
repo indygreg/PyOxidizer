@@ -33,4 +33,5 @@ The creator and maintainer of ``PyOxidizer`` is
    status
    comparisons
    contributing
+   history
    technotes
