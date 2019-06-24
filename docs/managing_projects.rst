@@ -214,6 +214,12 @@ The ``pyoxidizer build`` command is probably the most important and used
 In short, ``pyoxidizer build`` attempts to build your application as you
 have configured it.
 
+``Application Assembly`` is performed into a ``build/apps/<app>`` directory
+under the project root. If your project name is ``myapp``, the application
+will be assembled to a ``build/apps/myapp`` directory. The full path to the
+executable will be ``build/apps/myapp/myapp`` (on Linux and macOS) or
+``build/apps/myapp/myapp.exe`` (on Windows).
+
 It's worth noting that the ergonomics of ``pyoxidizer build`` are superior to
 ``cargo build``. With ``pyoxidizer build``, the tool prints information about
 Python-specific activity as it is occurring. While it is possible to build
