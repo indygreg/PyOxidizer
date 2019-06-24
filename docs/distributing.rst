@@ -31,7 +31,7 @@ of executables and libraries. For example, for ELF binaries it will list
 all shared library dependencies and analyze glibc symbol versions and
 print out which Linux distributions it thinks the binary is compatible
 with. Please note that ``pyoxidizer analyze`` is not yet implemented on
-all platform.s
+all platforms.
 
 Windows
 -------

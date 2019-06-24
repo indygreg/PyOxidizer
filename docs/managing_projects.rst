@@ -167,7 +167,7 @@ run.
 See :ref:`config_files` for comprehensive documentation of ``pyoxidizer.toml``
 files and their semantics.
 
-Adding PyOxidizer to an Existing Project With ``add``
+Adding PyOxidizer to an Existing Project with ``add``
 =====================================================
 
 Do you have an existing Rust project that you want to add an embedded
@@ -196,3 +196,65 @@ modifications are in the form of a new ``pyembed`` crate.
    wrong. If it doesn't *just work*, you may want to run ``pyoxidizer init``
    and incorporate relevant files into your project manually. Sorry for
    the inconvenience.
+
+Building PyObject Projects with ``build``
+=========================================
+
+The ``pyoxidizer build`` command is probably the most important and used
+``pyoxidizer`` command. This command does the following:
+
+1. Processes the ``pyoxidizer.toml`` configuration file and derives Python
+   artifacts to incorporate in a larger binary. (The ``Python Building``
+   phase of the pipeline described at the top of this document.)
+2. Invokes ``cargo build`` to build the associated Rust project.
+   (The ``Application Building`` phase.)
+3. Performs any post-build actions to assemble extra resources alongside
+   the ``cargo``-built binary. (The ``Application Assembly`` phase.)
+
+In short, ``pyoxidizer build`` attempts to build your application as you
+have configured it.
+
+It's worth noting that the ergonomics of ``pyoxidizer build`` are superior to
+``cargo build``. With ``pyoxidizer build``, the tool prints information about
+Python-specific activity as it is occurring. While it is possible to build
+applications with ``cargo build`` to achieve the same effect, doing so will
+defer Python build steps until later in the build and will hide that activity
+from output. This behavior isn't optimal for people whose primary goal is to
+package Python applications.
+
+Running Applications with ``run``
+=================================
+
+Once you have produced an application with ``pyoxidizer build``, you can run
+it with ``pyoxidizer run``. For example::
+
+   $ pyoxidizer run -- foo bar'
+
+This command will build your application (if needed) then invoke it with the
+arguments specified.
+
+This command is provided for convenience, as it is certainly possible to
+run executables directly from their build location.
+
+Analyzing Produced Binaries with ``analyze``
+============================================
+
+The ``pyoxidizer analyze`` command is a generic command for analyzing the
+contents of executables and libraries. While it is generic, its output is
+specifically tailored for ``PyOxidizer``.
+
+Run the command with the path to an executable. For example::
+
+   $ pyoxidizer analyze build/apps/myapp/myapp
+
+Behavior is dependent on the format of the file being analyzed. But the
+general theme is that the command attempts to identify the run-time
+requirements for that binary. For example, for ELF binaries it will
+list all shared library dependencies and analyze ``glibc`` symbol
+versions and print out which Linux distributions it thinks the binary
+is compatible with.
+
+.. note::
+
+   ``pyoxidizer analyze`` is not yet implemented for all executable
+   file types that ``PyOxidizer`` supports.
