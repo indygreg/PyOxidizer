@@ -8,6 +8,43 @@ The ``pyoxidizer`` command line tool is used to manage the integration
 of ``PyOxidizer`` within a Rust project. See :ref:`components` for more
 on the various components of ``PyOxidizer``.
 
+High-Level Project Lifecycle and Pipeline
+=========================================
+
+``PyOxidizer`` projects conceptually progress through a development
+pipeline. This pipeline consists of the following phases:
+
+1. Creation
+2. Python Building
+3. Application Building
+4. Application Assembly
+5. Validation (manual)
+6. Distribution (not yet implemented)
+
+In ``Creation``, a new project is created.
+
+In ``Python Building``, the Python components of the project are
+derived. This includes fetching any Python package dependencies.
+
+In ``Application Building``, the larger [Rust] application is built.
+this usually entails producing an executable containing an embedded
+Python interpreter along with any embedded python resource data.
+
+In ``Application Assembly``, the built [Rust] application is assembled
+with other packaging pieces. These extra pieces could include Python
+modules not embedded in the [Rust] binary.
+
+In ``Validation``, the assembled application is validated, tested, etc.
+
+In ``Distribution``, distributable versions of the assembled application
+are produced. This includes installable packages, etc.
+
+Typically, ``Python Building``, ``Application Building``, and
+``Application Assembly`` are performed as a single logical step
+(often via ``pyoxidizer build``). But ``PyOxidizer`` supports performing
+each action in isolation in order to facilitate more flexible development
+patterns.
+
 Creating New Projects with ``init``
 ===================================
 
