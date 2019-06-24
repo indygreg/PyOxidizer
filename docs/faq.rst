@@ -163,7 +163,16 @@ statically linked, you need to rebuild your binary to pick up the latest
 version of that 3rd party library. So if e.g. there is an important
 security update to OpenSSL, you would need to ship a new version of your
 application with the new OpenSSL in order for users of your application
-to be secure.
+to be secure. This shifts the security onus from e.g. your operating
+system vendor to you. This is less than ideal because security updates
+are one of those problems that tend to benefit from greater centralization,
+not less.
 
-Another implication is code compatibility. If multiple consumers try
-to use different versions of the same library... TODO
+It's worth noting that PyOxidizer's library security story is the
+same as it is for e.g. Docker images. Docker images have the same
+security properties. If you are OK distributing Docker images, you
+should be OK with distributing executables built with PyOxidizer.
+
+Another implication of static linking is licensing considerations. Static
+linking can trigger stronger licensing protections and requirements.
+Read more at :ref:`licensing_considerations`.
