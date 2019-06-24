@@ -25,6 +25,7 @@ The creator and maintainer of ``PyOxidizer`` is
 
    overview
    getting_started
+   managing_projects
    packaging
    packaging_pitfalls
    distributing
