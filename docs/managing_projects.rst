@@ -119,7 +119,7 @@ an embedded Python interpreter. This project behaves like any other Rust
 library project: there's a ``Cargo.toml``, a ``src/lib.rs`` defining the
 main library define, and a pile of other ``.rs`` files implementing the
 library functionality. The only functionality you will likely be concerned
-about are the ``PythonConfig`` and ``MainPythonInterpreter` structs. These
+about are the ``PythonConfig`` and ``MainPythonInterpreter`` structs. These
 types define how the embedded Python interpreter is configured and executed.
 If you want to learn more about this crate and how it works, run ``cargo doc``.
 
