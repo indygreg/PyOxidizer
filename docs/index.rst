@@ -14,7 +14,8 @@ The `pyoxidizer-users <https://groups.google.com/forum/#!forum/pyoxidizer-users>
 mailing list is a forum for users to discuss all things PyOxidizer.
 
 If you want to financially contribute to PyOxidizer, do so
-`on Patreon <https://www.patreon.com/indygreg>`_.
+`on Patreon <https://www.patreon.com/indygreg>`_ or
+`via PayPal <https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=gregory%2eszorc%40gmail%2ecom&lc=US&item_name=PyOxidizer&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donate_LG%2egif%3aNonHosted>`_.
 
 The creator and maintainer of ``PyOxidizer`` is
 `Gregory Szorc <https://gregoryszorc.com/>`_.
@@ -31,4 +32,5 @@ The creator and maintainer of ``PyOxidizer`` is
    faq
    status
    comparisons
+   contributing
    technotes
