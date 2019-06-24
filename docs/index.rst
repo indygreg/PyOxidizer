@@ -8,8 +8,12 @@ dive into :ref:`getting_started` to learn how to start using
 
 The official home of the ``PyOxidizer`` project is
 https://github.com/indygreg/PyOxidizer. Official documentation lives
-at https://pyoxidizer.readthedocs.io/en/latest/index.html. The creator
-and maintainer of ``PyOxidizer`` is
+at https://pyoxidizer.readthedocs.io/en/latest/index.html.
+
+The `pyoxidizer-users <https://groups.google.com/forum/#!forum/pyoxidizer-users>`_
+mailing list is a forum for users to discuss all things PyOxidizer.
+
+The creator and maintainer of ``PyOxidizer`` is
 `Gregory Szorc <https://gregoryszorc.com/>`_.
 
 .. toctree::

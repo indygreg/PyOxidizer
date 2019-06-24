@@ -52,3 +52,6 @@ https://github.com/indygreg/PyOxidizer.
 
 Documentation (generated from the ``docs/`` directory) is available
 at https://pyoxidizer.readthedocs.io/en/latest/index.html.
+
+The `pyoxidizer-users <https://groups.google.com/forum/#!forum/pyoxidizer-users>`_
+mailing list is a forum for users to discuss all things PyOxidizer.
