@@ -47,6 +47,26 @@ and interact with the output of ``setup.py`` rather than get involved in the
 convoluted mess of ``distutils`` internals. This enables ``PyOxidizer`` to
 provide value beyond what ``setup.py``/``distutils`` can provide.
 
+.. _compare_cx_freeze:
+
+cx_Freeze
+=========
+
+`cx_Freeze <https://cx-freeze.readthedocs.io/en/latest/>`_ is a set of
+scripts and modules for freezing Python scripts into executables.
+
+The goals of ``cx_Freeze`` and ``PyOxidizer`` are conceptually very
+similar.
+
+Like other tools in the *produce executables* space, ``cx_Freeze`` packages
+Python traditionally. On Windows, this entails shipping a ``pythonXY.dll``.
+``cx_Freeze`` will also package dependent libraries found by binaries you
+are shipping. This introduces portability problems, especially on Linux.
+
+``PyOxidizer`` uses custom Python distributions that are built in such
+a way that they are highly portable across machines. ``PyOxidizer`` can
+also produce single file executables.
+
 .. _compare_shiv:
 
 Shiv
