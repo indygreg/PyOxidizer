@@ -9,6 +9,8 @@ Where Can I Report Bugs / Send Feedback / Request Features?
 
 At https://github.com/indygreg/PyOxidizer/issues
 
+.. _faq_why_another_tool:
+
 Why Build Another Python Application Packaging Tool?
 ====================================================
 
