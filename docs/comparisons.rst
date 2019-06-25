@@ -47,6 +47,19 @@ and interact with the output of ``setup.py`` rather than get involved in the
 convoluted mess of ``distutils`` internals. This enables ``PyOxidizer`` to
 provide value beyond what ``setup.py``/``distutils`` can provide.
 
+.. _compare_py2app:
+
+py2app
+======
+
+`py2app <https://py2app.readthedocs.io/en/latest/>`_ is a setuptools
+command which will allow you to make standalone application bundles
+and plugins from Python scripts.
+
+``py2app`` only works on macOS. This makes it like a macOS version of
+``py2exe``. Most :ref:`comparisons to py2exe <compare_py2exe>` are
+analogous for ``py2app``.
+
 .. _compare_cx_freeze:
 
 cx_Freeze
