@@ -35,7 +35,7 @@ None yet.
 Bug Fixes
 ^^^^^^^^^
 
-None yet.
+* Handle BOM when compiling Python source files to bytecode. (#13)
 
 All Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^
