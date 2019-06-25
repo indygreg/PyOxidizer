@@ -37,7 +37,7 @@ Under the hood, this crate makes direct use of the `python-sys` crate for
 low-level Python FFI bindings as well as the `cpython` crate for higher-level
 interfacing. Due to our special needs, **we currently require a fork of these
 crates**. These forks are maintained in the
-[canonicalGit repository](https://github.com/indygreg/PyOxidizer.git).
+[canonical Git repository](https://github.com/indygreg/PyOxidizer.git).
 Customizations to these crates are actively upstreamed and the requirement
 to use a fork should go away in time.
 
