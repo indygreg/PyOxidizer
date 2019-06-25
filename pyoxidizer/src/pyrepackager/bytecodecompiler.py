@@ -58,7 +58,7 @@ while True:
         # be interpreted as UTF-8.
         if source.startswith(b'\xef\xbb\xbf'):
             encoding = 'utf-8'
-            source = source[4:]
+            source = source[3:]
 
         source = source.decode(encoding)
 
