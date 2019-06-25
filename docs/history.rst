@@ -42,6 +42,18 @@ All Relevant Changes
 
 None yet.
 
+0.1.1
+-----
+
+Released on June 24, 2019.
+
+Bug Fixes
+^^^^^^^^^
+
+* ``pyoxidizer`` binaries built from crates should now properly
+  refer to an appropriate commit/tag in PyOxidizer's canonical Git
+  repository in auto-generated ``Cargo.toml`` files. (#11)
+
 0.1
 ---
 
