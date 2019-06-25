@@ -19,6 +19,10 @@ const ROOT_COMMIT: &str = "b1f95017c897e0fd3ed006aec25b6886196a889d";
 /// Git commit this build of PyOxidizer was produced with.
 pub const BUILD_GIT_COMMIT: &str = env!("VERGEN_SHA");
 
+/// Semantic version for this build of PyOxidizer. Can correspond to a Git
+/// tag or version string from Cargo.toml.
+pub const BUILD_SEMVER: &str = env!("VERGEN_SEMVER");
+
 /// Find the root Git commit given a starting Git commit.
 ///
 /// This just walks parents until it gets to a commit without any.
@@ -59,7 +63,11 @@ pub enum PyOxidizerSource {
 
 /// Describes the PyOxidizer run-time environment.
 pub struct Environment {
+    /// Where a copy of PyOxidizer can be obtained from.
     pub pyoxidizer_source: PyOxidizerSource,
+
+    /// Semantic version string for PyOxidizer.
+    pub pyoxidizer_semver: String,
 }
 
 pub fn resolve_environment() -> Result<Environment, &'static str> {
@@ -69,6 +77,8 @@ pub fn resolve_environment() -> Result<Environment, &'static str> {
             .parent()
             .ok_or_else(|| "could not resolve parent of current exe")?,
     );
+
+    let pyoxidizer_semver = BUILD_SEMVER.to_string();
 
     let pyoxidizer_source = match Repository::discover(&exe_path) {
         Ok(repo) => {
@@ -106,5 +116,8 @@ pub fn resolve_environment() -> Result<Environment, &'static str> {
         }
     };
 
-    Ok(Environment { pyoxidizer_source })
+    Ok(Environment {
+        pyoxidizer_source,
+        pyoxidizer_semver,
+    })
 }
