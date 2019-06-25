@@ -58,7 +58,11 @@ pub enum PyOxidizerSource {
     LocalPath { path: PathBuf },
 
     /// A Git repository somewhere. Defined by a Git remote URL and a commit string.
-    GitUrl { url: String, commit: Option<String> },
+    GitUrl {
+        url: String,
+        commit: Option<String>,
+        tag: Option<String>,
+    },
 }
 
 /// Describes the PyOxidizer run-time environment.
@@ -109,9 +113,33 @@ pub fn resolve_environment() -> Result<Environment, &'static str> {
             // We're not running from a Git repo. Point to the canonical repo for the Git commit
             // baked into the binary.
             // TODO detect builds from forks via build.rs environment variable.
+
+            let commit = match BUILD_GIT_COMMIT {
+                // Can happen when not run from a Git checkout (such as installing
+                // from a crate).
+                "" => None,
+                // Can happen if `git` is not available at build time.
+                "UNKNOWN" => None,
+                value => Some(value.to_string()),
+            };
+
+            // Commit and tag should be mutually exclusive. BUILD_SEMVER could be
+            // derived by a Git tag in some circumstances. More commonly it is
+            // derived from Cargo.toml. The Git tags have ``v`` prefixes.
+            let tag = if commit.is_some() {
+                None
+            } else {
+                if !BUILD_SEMVER.starts_with("v") {
+                    Some("v".to_string() + BUILD_SEMVER)
+                } else {
+                    Some(BUILD_SEMVER.to_string())
+                }
+            };
+
             PyOxidizerSource::GitUrl {
                 url: CANONICAL_GIT_REPO_URL.to_owned(),
-                commit: Some(BUILD_GIT_COMMIT.to_owned()),
+                commit,
+                tag,
             }
         }
     };
