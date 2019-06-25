@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use super::analyze;
-use super::environment::BUILD_GIT_COMMIT;
+use super::environment::BUILD_SEMVER_LIGHTWEIGHT;
 use super::logging;
 use super::projectmgmt;
 use clap::{App, AppSettings, Arg, SubCommand};
@@ -71,10 +71,9 @@ output is tailored for the Rust build system.
 ";
 
 pub fn run_cli() -> Result<(), String> {
-    let version = format!("0.1 (commit {})", BUILD_GIT_COMMIT);
     let matches = App::new("PyOxidizer")
         .setting(AppSettings::ArgRequiredElseHelp)
-        .version(version.as_str())
+        .version(BUILD_SEMVER_LIGHTWEIGHT)
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .long_about("Build and distribute Python applications")
         .subcommand(

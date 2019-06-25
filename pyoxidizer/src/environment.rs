@@ -23,6 +23,10 @@ pub const BUILD_GIT_COMMIT: &str = env!("VERGEN_SHA");
 /// tag or version string from Cargo.toml.
 pub const BUILD_SEMVER: &str = env!("VERGEN_SEMVER");
 
+/// Semantic version for this build of PyOxidizer. Usually of form
+/// <tag>-<count>-<short sha>.
+pub const BUILD_SEMVER_LIGHTWEIGHT: &str = env!("VERGEN_SEMVER_LIGHTWEIGHT");
+
 /// Find the root Git commit given a starting Git commit.
 ///
 /// This just walks parents until it gets to a commit without any.
