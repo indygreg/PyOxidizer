@@ -30,7 +30,7 @@ While solving packaging and distribution problems is the primary goal
 of `PyOxidizer`, a side-effect of solving that problem with Rust is
 that `PyOxidizer` can serve as a bridge between these two languages.
 `PyOxidizer` can be used to easily add a Python interpreter to _any_
-Rust project. But the opposite it also true: `PyOxidizer` can also be
+Rust project. But the opposite is also true: `PyOxidizer` can also be
 used to add Rust to Python. Using `PyOxidizer`, you could _bootstrap_
 a new Rust project which contains an embedded version of Python and your
 application. Initially, your project is a few lines of Rust that
