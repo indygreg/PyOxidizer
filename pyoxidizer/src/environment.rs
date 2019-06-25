@@ -54,7 +54,7 @@ pub enum PyOxidizerSource {
     LocalPath { path: PathBuf },
 
     /// A Git repository somewhere. Defined by a Git remote URL and a commit string.
-    GitUrl { url: String, commit: String },
+    GitUrl { url: String, commit: Option<String> },
 }
 
 /// Describes the PyOxidizer run-time environment.
@@ -101,7 +101,7 @@ pub fn resolve_environment() -> Result<Environment, &'static str> {
             // TODO detect builds from forks via build.rs environment variable.
             PyOxidizerSource::GitUrl {
                 url: CANONICAL_GIT_REPO_URL.to_owned(),
-                commit: BUILD_GIT_COMMIT.to_owned(),
+                commit: Some(BUILD_GIT_COMMIT.to_owned()),
             }
         }
     };

@@ -120,7 +120,9 @@ fn populate_template_data(data: &mut BTreeMap<String, String>) {
         }
         PyOxidizerSource::GitUrl { url, commit } => {
             data.insert(String::from("pyoxidizer_git_url"), url);
-            data.insert(String::from("pyoxidizer_git_commit"), commit);
+            if let Some(commit) = commit {
+                data.insert(String::from("pyoxidizer_git_commit"), commit);
+            }
         }
     }
 }
