@@ -40,24 +40,36 @@ py2exe
 `py2exe <http://www.py2exe.org/>`_ is a tool for converting Python scripts
 into Windows programs, able to run without requiring an installation.
 
-The goals of py2exe and ``PyOxidizer`` are conceptually very similar.
+The goals of ``py2exe`` and ``PyOxidizer`` are conceptually very similar.
 
-One major difference between the two is that py2exe works on just Windows
+One major difference between the two is that ``py2exe`` works on just Windows
 whereas ``PyOxidizer`` works on multiple platforms.
 
-Another significant difference is that py2exe distributes a copy of Python and
-your Python resources in a more traditional manner: as a ``pythonXY.dll``
-and a ``library.zip`` file containing compiled Python bytecode. ``PyOxidizer``
-is able to compile the Python interpreter and your Python resources directly
-into the ``.exe`` so there can be as little as a single file providing
-your application.
+One trick that ``py2exe`` employs is that it can load ``libpython`` and
+Python extension modules (which are actually dynamic link libraries) and
+other libraries from memory - not filesystem files. They employ a
+`really clever hack <https://sourceforge.net/p/py2exe/svn/HEAD/tree/trunk/py2exe/source/README-MemoryModule.txt>`_
+to do this! This is similar in nature to what Google does internally with
+a custom build of glibc providing a
+`dlopen_from_offset() <https://sourceware.org/bugzilla/show_bug.cgi?id=11767>`_.
+Essentially, ``py2exe`` embeds DLLs and other entities as *resources*
+in the PE file (the binary executable format for Windows) and is capable
+of loading them from memory. This allows ``py2exe`` to run things from a
+single binary, just like ``PyOxidizer``! The main difference is ``py2exe``
+relies on clever DLL loading tricks rather than ``PyOxidizer``'s approach
+of using custom builds of Python (which exist as a single binary/library)
+to facilitate this. This is a really clever solution and ``py2exe``'s
+authors deserve commendation for pulling this off!
 
-Also, the approach to packaging that py2exe and ``PyOxidizer`` take is
+The approach to packaging that ``py2exe`` and ``PyOxidizer`` take is
 substantially different. py2exe embeds itself into ``setup.py`` as a
 ``distutils`` extension. ``PyOxidizer`` wants to exist at a higher level
 and interact with the output of ``setup.py`` rather than get involved in the
 convoluted mess of ``distutils`` internals. This enables ``PyOxidizer`` to
 provide value beyond what ``setup.py``/``distutils`` can provide.
+
+``py2exe`` is a mature Python packaging/distribution tool for Windows. It
+offers a lot of similar functionality to ``PyOxidizer``.
 
 .. _compare_py2app:
 
