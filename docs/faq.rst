@@ -139,8 +139,8 @@ The custom ``importlib_bootstrap_external`` frozen module trick is
 probably the most novel technical achievement of ``PyOxidizer``. Other
 Python distribution tools are encouraged to steal this idea!
 
-See the docs in the ``pyembed`` crate for an overview of how the
-in-memory import machinery works.
+See :ref:`pyembed` for an overview of how the in-memory import machinery
+works.
 
 Can Applications Import Python Modules from the Filesystem?
 ===========================================================
