@@ -7,14 +7,14 @@ Comparisons to Other Tools
 What makes ``PyOxidizer`` different from other Python packaging and distribution
 tools? Read on to find out!
 
-If you are curios why PyOxidizer's creator felt the need to create a
+If you are curious why PyOxidizer's creator felt the need to create a
 new tool, see
 :ref:`faq_why_another_tool` in the FAQ.
 
 .. important::
 
    It is important for Python application maintainers to make informed
-   decisions about their use packaging tools. If you feel the comparisons
+   decisions about their use of packaging tools. If you feel the comparisons
    in this document are incomplete or unfair, please
    `file an issue <https://github.com/indygreg/PyOxidizer/issues>`_ so
    this page can be improved.
