@@ -578,6 +578,32 @@ fn sha256_path(path: &PathBuf) -> Vec<u8> {
     hasher.result().to_vec()
 }
 
+pub fn get_http_client() -> reqwest::Result<reqwest::Client> {
+    let mut builder = reqwest::ClientBuilder::new();
+
+    for (key, value) in std::env::vars() {
+        let key = key.to_lowercase();
+        if key.ends_with("_proxy") {
+            let end = key.len() - "_proxy".len();
+            let schema = &key[..end];
+
+            if let Ok(url) = Url::parse(&value) {
+                if let Some(proxy) = match schema {
+                    "http" => Some(reqwest::Proxy::http(url)),
+                    "https" => Some(reqwest::Proxy::https(url)),
+                    _ => None,
+                } {
+                    if let Ok(proxy) = proxy {
+                        builder = builder.proxy(proxy);
+                    }
+                }
+            }
+        }
+    }
+
+    builder.build()
+}
+
 /// Ensure a Python distribution at a URL is available in a local directory.
 ///
 /// The path to the downloaded and validated file is returned.
@@ -606,7 +632,11 @@ pub fn download_distribution(url: &str, sha256: &str, cache_dir: &Path) -> PathB
     let mut data: Vec<u8> = Vec::new();
 
     println!("downloading {}", url);
-    let mut response = reqwest::get(url).expect("unable to perform HTTP request");
+    let client = get_http_client().expect("unable to get HTTP client");
+    let mut response = client
+        .get(url)
+        .send()
+        .expect("unable to perform HTTP request");
     response
         .read_to_end(&mut data)
         .expect("unable to download URL");

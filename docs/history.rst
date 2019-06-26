@@ -35,6 +35,8 @@ None yet.
 Bug Fixes
 ^^^^^^^^^
 
+* Honor ``HTTP_PROXY`` and ``HTTPS_PROXY`` environment variables when
+  downloading Python distributions. (#15)
 * Handle BOM when compiling Python source files to bytecode. (#13)
 
 All Relevant Changes
