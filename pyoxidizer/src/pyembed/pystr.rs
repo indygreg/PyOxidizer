@@ -6,7 +6,6 @@
 
 use libc::{c_void, size_t, wchar_t};
 use python3_sys as pyffi;
-use std::convert::TryFrom;
 use std::ffi::{CString, OsString};
 use std::ptr::null_mut;
 
@@ -26,18 +25,8 @@ impl OwnedPyStr {
     pub fn as_wchar_ptr(&self) -> *const wchar_t {
         self.data
     }
-}
 
-impl Drop for OwnedPyStr {
-    fn drop(&mut self) {
-        unsafe { pyffi::PyMem_RawFree(self.data as *mut c_void) }
-    }
-}
-
-impl<'a> TryFrom<&'a str> for OwnedPyStr {
-    type Error = &'static str;
-
-    fn try_from(s: &str) -> Result<Self, Self::Error> {
+    pub fn from_str(s: &str) -> Result<Self, &'static str> {
         // We need to convert to a C string so there is a terminal NULL
         // otherwise Py_DecodeLocale() can get confused.
         let cs = CString::new(s).or_else(|_| Err("source string has NULL bytes"))?;
@@ -50,6 +39,12 @@ impl<'a> TryFrom<&'a str> for OwnedPyStr {
         } else {
             Ok(OwnedPyStr { data: ptr })
         }
+    }
+}
+
+impl Drop for OwnedPyStr {
+    fn drop(&mut self) {
+        unsafe { pyffi::PyMem_RawFree(self.data as *mut c_void) }
     }
 }
 
