@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 use std::process;
 
 use super::environment::{
-    canonicalize_path, PyOxidizerSource, BUILD_GIT_COMMIT, PYOXIDIZER_VERSION,
+    canonicalize_path, PyOxidizerSource, BUILD_GIT_COMMIT, MINIMUM_RUST_VERSION, PYOXIDIZER_VERSION,
 };
 use super::pyrepackager::config::RawAllocator;
 use super::pyrepackager::dist::{analyze_python_distribution_tar_zst, python_exe_path};
@@ -410,6 +410,17 @@ fn build_pyoxidizer_artifacts(
 
 /// Build an oxidized Rust application at the specified project path.
 fn build_project(logger: &slog::Logger, context: &mut BuildContext) -> Result<(), String> {
+    if let Ok(rust_version) = rustc_version::version() {
+        if rust_version.lt(&MINIMUM_RUST_VERSION) {
+            return Err(format!(
+                "PyOxidizer requires Rust {}; version {} found",
+                *MINIMUM_RUST_VERSION, rust_version,
+            ));
+        }
+    } else {
+        return Err("unable to determine Rust version; is Rust installed?".to_string());
+    }
+
     // Our build process is to first generate artifacts from the PyOxidizer
     // configuration within this process then call out to `cargo build`. We do
     // this because it is easier to emit output from this process than to have

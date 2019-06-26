@@ -5,6 +5,7 @@
 //! Resolve details about the PyOxidizer execution environment.
 
 use git2::{Commit, Repository};
+use lazy_static::lazy_static;
 use std::env;
 use std::path::{Path, PathBuf};
 
@@ -26,6 +27,11 @@ pub const BUILD_SEMVER: &str = env!("VERGEN_SEMVER");
 /// Semantic version for this build of PyOxidizer. Usually of form
 /// <tag>-<count>-<short sha>.
 pub const BUILD_SEMVER_LIGHTWEIGHT: &str = env!("VERGEN_SEMVER_LIGHTWEIGHT");
+
+lazy_static! {
+    /// Minimum version of Rust required to build PyOxidizer applications.
+    pub static ref MINIMUM_RUST_VERSION: semver::Version = semver::Version::new(1, 34, 0);
+}
 
 /// Find the root Git commit given a starting Git commit.
 ///

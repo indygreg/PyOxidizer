@@ -42,7 +42,8 @@ Bug Fixes
 All Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^
 
-None yet.
+* ``pyoxidizer`` now verifies the minimum Rust version meets requirements
+  before building.
 
 0.1.1
 -----
