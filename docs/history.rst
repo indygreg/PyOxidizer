@@ -17,20 +17,10 @@ Blog Posts
 Version History
 ===============
 
-0.2
----
+0.1.2
+-----
 
-**Not yet released**
-
-Backwards Compatibility Notes
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-None yet.
-
-New Features
-^^^^^^^^^^^^
-
-None yet.
+Relased on June 25, 2019.
 
 Bug Fixes
 ^^^^^^^^^
