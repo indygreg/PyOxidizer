@@ -9,10 +9,33 @@ Getting Started
 Installing
 ==========
 
+Installing Rust
+---------------
+
 PyOxidizer is a Rust application and requires Rust 1.33+ to be installed in
-order to build binaries. If you don't have Rust installed,
-https://www.rust-lang.org/ has very detailed instructions on how to
-install it.
+order to build PyOxidizer itself as well as Python application binaries.
+
+You can verify your installed version of Rust by running::
+
+   $ rustc --version
+   rustc 1.35.0 (3c235d560 2019-05-20)
+
+If you don't have Rust installed, https://www.rust-lang.org/ has very detailed
+instructions on how to install it.
+
+Rust releases a new version every 6 weeks and language development moves
+faster than other programming languages. It is common for the Rust packages
+provided by common package managers to lag behind the latest Rust release by
+several releases. For that reason, use of the ``rustup`` tool for managing
+Rust is highly recommended.
+
+If you are a security paranoid individual and don't want to follow the
+official ``rustup`` install instructions involving a ``curl | sh`` (your
+paranoia is understood), you can find instructions for alternative installation
+methods at https://github.com/rust-lang/rustup.rs/#other-installation-methods.
+
+Installing PyOxidizer
+---------------------
 
 PyOxidizer can be installed from its latest published crate::
 
