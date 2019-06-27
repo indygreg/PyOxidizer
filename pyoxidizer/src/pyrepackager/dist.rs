@@ -543,7 +543,8 @@ pub fn analyze_python_distribution_tar<R: Read>(
     let test_path = extract_dir.join("python").join("PYTHON.json");
     if !test_path.exists() {
         std::fs::create_dir_all(extract_dir).or_else(|_| Err("unable to create directory"))?;
-        tf.unpack(extract_dir)
+        let absolute_path = std::fs::canonicalize(extract_dir);
+        tf.unpack(&absolute_path.unwrap())
             .expect("unable to extract tar archive");
     }
 
