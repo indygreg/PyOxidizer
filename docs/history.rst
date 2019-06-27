@@ -17,6 +17,22 @@ Blog Posts
 Version History
 ===============
 
+Next
+----
+
+*Not yet released*
+
+Bug Fixes
+^^^^^^^^^
+
+None yet.
+
+All Relevant Changes
+^^^^^^^^^^^^^^^^^^^^
+
+* Comments in auto-generated ``pyoxidizer.toml`` have been tweaked to
+  improve understanding. (#29)
+
 0.1.2
 -----
 

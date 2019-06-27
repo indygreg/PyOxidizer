@@ -31,11 +31,13 @@ type = "stdlib-extensions-policy"
 policy = "all"
 
 # Only package the minimal set of extension modules needed to initialize
-# a Python interpreter. Many things like won't work with this setting.
+# a Python interpreter. Many common packages in Python's standard
+# library won't work with this setting.
 # policy = "minimal"
 
 # Only package extension modules that don't require linking against
-# non-Python libraries.
+# non-Python libraries. e.g. will exclude support for OpenSSL, SQLite3,
+# other features that require external libraries.
 # policy = "no-libraries"
 
 # Explicit list of extension modules from the distribution to include.
