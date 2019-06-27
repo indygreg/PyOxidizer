@@ -1129,9 +1129,9 @@ fn resolve_setup_py_install(
             &temp_dir_s,
             "--no-compile",
         ])
+        .stdout(std::process::Stdio::piped())
         .spawn()
         .expect("error running setup.py");
-
     {
         let stdout = cmd.stdout.as_mut().unwrap();
         let reader = BufReader::new(stdout);
