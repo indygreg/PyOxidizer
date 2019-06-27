@@ -960,6 +960,20 @@ fn resolve_pip_install_simple(
     }
 
     for resource in find_python_resources(&temp_dir_path) {
+        let mut relevant = true;
+
+        for exclude in &rule.excludes {
+            let prefix = exclude.clone() + ".";
+
+            if &resource.full_name == exclude || resource.full_name.starts_with(&prefix) {
+                relevant = false;
+            }
+        }
+
+        if !relevant {
+            continue;
+        }
+
         match resource.flavor {
             PythonResourceType::Source => {
                 let source = fs::read(resource.path).expect("error reading source file");
