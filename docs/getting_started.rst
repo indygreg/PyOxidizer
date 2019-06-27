@@ -44,7 +44,7 @@ PyOxidizer can be installed from its latest published crate::
 From a Git repository using cargo::
 
    # The latest commit in source control.
-   $ cargo install --git https://github.com/indygreg/PyOxidizer.git --branch master pyoxidizer
+   $ cargo install --git https://github.com/indygreg/PyOxidizer.git --branch main pyoxidizer
 
    $ A specific release
    $ cargo install --git https://github.com/indygreg/PyOxidizer.git --tag <TAG> pyoxidizer
@@ -57,8 +57,8 @@ Or by cloning the Git repository and building the project locally::
 
 .. note::
 
-   PyOxidizer's project policy is for the ``master`` branch to be stable. So it
-   should always be relatively safe to use ``master`` instead of a released
+   PyOxidizer's project policy is for the ``main`` branch to be stable. So it
+   should always be relatively safe to use ``main`` instead of a released
    version.
 
 Once the ``pyoxidizer`` executable is installed, try to run it::
