@@ -181,6 +181,8 @@ enum ConfigPythonPackaging {
         package: String,
         #[serde(default = "ZERO")]
         optimize_level: i64,
+        #[serde(default)]
+        excludes: Vec<String>,
         #[serde(default = "TRUE")]
         include_source: bool,
         #[serde(default = "EMBEDDED")]
@@ -339,6 +341,7 @@ pub struct PackagingPackageRoot {
 pub struct PackagingPipInstallSimple {
     pub package: String,
     pub optimize_level: i64,
+    pub excludes: Vec<String>,
     pub include_source: bool,
     pub install_location: InstallLocation,
 }
@@ -649,6 +652,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 build_target: rule_target,
                 package,
                 optimize_level,
+                excludes,
                 include_source,
                 install_location,
             } => {
@@ -657,6 +661,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                         PackagingPipInstallSimple {
                             package: package.clone(),
                             optimize_level: *optimize_level,
+                            excludes: excludes.clone(),
                             include_source: *include_source,
                             install_location: resolve_install_location(&install_location)?,
                         },
