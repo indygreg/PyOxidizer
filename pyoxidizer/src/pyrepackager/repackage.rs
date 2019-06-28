@@ -930,18 +930,23 @@ fn resolve_pip_install_simple(
     let temp_dir_path = temp_dir.path();
     let temp_dir_s = temp_dir_path.display().to_string();
     info!(logger, "pip installing to {}", temp_dir_s);
+    let mut pip_args = vec![
+        "-m".to_string(),
+        "pip".to_string(),
+        "--disable-pip-version-check".to_string(),
+        "install".to_string(),
+        "--target".to_string(),
+        temp_dir_s,
+        rule.package.clone(),
+    ];
 
+    if rule.extra_args.is_some() {
+        pip_args.extend(rule.extra_args.clone().unwrap());
+    }
+    
     // TODO send stderr to stdout.
     let mut cmd = std::process::Command::new(&dist.python_exe)
-        .args(&[
-            "-m",
-            "pip",
-            "--disable-pip-version-check",
-            "install",
-            "--target",
-            &temp_dir_s,
-            &rule.package,
-        ])
+        .args(&pip_args)
         .stdout(std::process::Stdio::piped())
         .spawn()
         .expect("error running pip");
