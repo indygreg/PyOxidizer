@@ -141,13 +141,11 @@ pub fn resolve_environment() -> Result<Environment, &'static str> {
                 }
             } else {
                 // The pyoxidizer binary is in a directory that is in a Git repo that isn't
-                // pyoxidizer's. That's really weird. While this could occur, treat as a fatal
-                // error for now.
-                return Err(
-                    "pyoxidizer binary is in a Git repository that is not pyoxidizer; \
-                     refusing to continue; if you would like this feature, please file \
-                     an issue for it at https://github.com/indygreg/PyOxidizer/issues/",
-                );
+                // pyoxidizer's. This could happen if running `pyoxidizer` from another
+                // project's Git repository. This commonly happens when running
+                // pyoxidizer as a library from a build script. Fall back to
+                // returning info embedded in the build.
+                built_git_url()
             }
         }
         Err(_) => {

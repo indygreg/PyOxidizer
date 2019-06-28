@@ -25,7 +25,8 @@ Next
 Bug Fixes
 ^^^^^^^^^
 
-None yet.
+* Various functionality will no longer fail when running ``pyoxidizer`` from
+  a Git repository that isn't the canonical ``PyOxidizer`` repository. (#34)
 
 All Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^
