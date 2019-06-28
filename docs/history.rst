@@ -34,6 +34,9 @@ New Features
 * ``pip-install-simple`` packaging rule now supports ``excludes`` for excluding
   resources from packaging. (#21)
 
+* ``pip-install-simple`` packaging rule now supports ``extra_args`` for adding
+  parameters to the pip install command. (#42)
+
 All Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^
 

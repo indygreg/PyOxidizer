@@ -705,6 +705,10 @@ rule.
    Where to package resources associated with this rule.
    See :ref:`install_locations`.
 
+``extra_args`` (optional array of string)
+
+   An array of arguments added to the pip install command.
+
 This will include the ``pyflakes`` package and all its dependencies as embedded
 resources:
 
