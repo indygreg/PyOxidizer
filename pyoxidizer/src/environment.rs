@@ -84,6 +84,37 @@ pub struct Environment {
     pub pyoxidizer_semver: String,
 }
 
+/// Obtain a PyOxidizerSource pointing to the GitUrl this binary was built with.
+pub fn built_git_url() -> PyOxidizerSource {
+    let commit = match BUILD_GIT_COMMIT {
+        // Can happen when not run from a Git checkout (such as installing
+        // from a crate).
+        "" => None,
+        // Can happen if `git` is not available at build time.
+        "UNKNOWN" => None,
+        value => Some(value.to_string()),
+    };
+
+    // Commit and tag should be mutually exclusive. BUILD_SEMVER could be
+    // derived by a Git tag in some circumstances. More commonly it is
+    // derived from Cargo.toml. The Git tags have ``v`` prefixes.
+    let tag = if commit.is_some() {
+        None
+    } else {
+        if !BUILD_SEMVER.starts_with("v") {
+            Some("v".to_string() + BUILD_SEMVER)
+        } else {
+            Some(BUILD_SEMVER.to_string())
+        }
+    };
+
+    PyOxidizerSource::GitUrl {
+        url: CANONICAL_GIT_REPO_URL.to_owned(),
+        commit,
+        tag,
+    }
+}
+
 pub fn resolve_environment() -> Result<Environment, &'static str> {
     let exe_path = PathBuf::from(
         env::current_exe()
@@ -123,34 +154,7 @@ pub fn resolve_environment() -> Result<Environment, &'static str> {
             // We're not running from a Git repo. Point to the canonical repo for the Git commit
             // baked into the binary.
             // TODO detect builds from forks via build.rs environment variable.
-
-            let commit = match BUILD_GIT_COMMIT {
-                // Can happen when not run from a Git checkout (such as installing
-                // from a crate).
-                "" => None,
-                // Can happen if `git` is not available at build time.
-                "UNKNOWN" => None,
-                value => Some(value.to_string()),
-            };
-
-            // Commit and tag should be mutually exclusive. BUILD_SEMVER could be
-            // derived by a Git tag in some circumstances. More commonly it is
-            // derived from Cargo.toml. The Git tags have ``v`` prefixes.
-            let tag = if commit.is_some() {
-                None
-            } else {
-                if !BUILD_SEMVER.starts_with("v") {
-                    Some("v".to_string() + BUILD_SEMVER)
-                } else {
-                    Some(BUILD_SEMVER.to_string())
-                }
-            };
-
-            PyOxidizerSource::GitUrl {
-                url: CANONICAL_GIT_REPO_URL.to_owned(),
-                commit,
-                tag,
-            }
+            built_git_url()
         }
     };
 
