@@ -28,6 +28,12 @@ Bug Fixes
 * Various functionality will no longer fail when running ``pyoxidizer`` from
   a Git repository that isn't the canonical ``PyOxidizer`` repository. (#34)
 
+New Features
+^^^^^^^^^^^^
+
+* ``pip-install-simple`` packaging rule now supports ``excludes`` for excluding
+  resources from packaging. (#21)
+
 All Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^
 

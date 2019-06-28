@@ -693,6 +693,13 @@ rule.
 
    Default is ``true``.
 
+``excludes`` (array of string)
+
+   An array of package or module names to exclude. See the documentation
+   for ``excludes`` for ``package-root`` rules for more.
+
+   Default is an empty array.
+
 ``install_location`` (string)
 
    Where to package resources associated with this rule.
