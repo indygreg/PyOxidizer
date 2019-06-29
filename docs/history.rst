@@ -28,6 +28,13 @@ Backwards Compatibility Notes
   directory instead of ``apps/<appname>``. This allows debug and release
   builds to exist side-by-side.
 
+Bug Fixes
+^^^^^^^^^
+
+* ``site-packages`` directories are now recognized as Python resource package
+  roots and no longer have their contents packaged under a ``site-packages``
+  Python package.
+
 New Features
 ^^^^^^^^^^^^
 

@@ -112,11 +112,11 @@ impl PythonResourceIterator {
     fn resolve_dir_entry(&mut self, entry: walkdir::DirEntry) -> Option<PythonResource> {
         let path = entry.path();
 
-        let rel_path = path
+        let mut rel_path = path
             .strip_prefix(&self.root_path)
             .expect("unable to strip path prefix");
-        let rel_str = rel_path.to_str().expect("could not convert path to str");
-        let components = rel_path
+        let mut rel_str = rel_path.to_str().expect("could not convert path to str");
+        let mut components = rel_path
             .iter()
             .map(|p| p.to_str().expect("unable to get path as str"))
             .collect::<Vec<_>>();
@@ -125,6 +125,21 @@ impl PythonResourceIterator {
         // We /could/ emit these files if we wanted to. But until there is a need, exclude them.
         if components[0].ends_with(".dist-info") {
             return None;
+        }
+
+        // site-packages directories are package roots within package roots. Treat them as
+        // such.
+        if components[0] == "site-packages" {
+            let sp_path = self.root_path.join("site-packages");
+            rel_path = path
+                .strip_prefix(sp_path)
+                .expect("unable to strip site-packages prefix");
+
+            rel_str = rel_path.to_str().expect("could not convert path to str");
+            components = rel_path
+                .iter()
+                .map(|p| p.to_str().expect("unable to get path as str"))
+                .collect::<Vec<_>>();
         }
 
         let resource = match rel_path.extension().and_then(OsStr::to_str) {
@@ -466,13 +481,12 @@ mod tests {
         let resources = PythonResourceIterator::new(tp).collect_vec();
         assert_eq!(resources.len(), 2);
 
-        // TODO this is wrong.
         assert_eq!(
             resources[0],
             PythonResource {
-                package: "site-packages.acme".to_string(),
+                package: "acme".to_string(),
                 stem: "".to_string(),
-                full_name: "site-packages.acme".to_string(),
+                full_name: "acme".to_string(),
                 path: acme_path.join("__init__.py"),
                 flavor: PythonResourceType::Source,
             }
@@ -480,9 +494,9 @@ mod tests {
         assert_eq!(
             resources[1],
             PythonResource {
-                package: "site-packages.acme".to_string(),
+                package: "acme".to_string(),
                 stem: "bar".to_string(),
-                full_name: "site-packages.acme.bar".to_string(),
+                full_name: "acme.bar".to_string(),
                 path: acme_path.join("bar.py"),
                 flavor: PythonResourceType::Source,
             }
