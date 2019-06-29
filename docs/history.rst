@@ -22,6 +22,11 @@ Next
 
 *Not yet released.*
 
+All Other Relevant Changes
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* Cargo packages updated to latest versions.
+
 0.1.3
 -----
 
