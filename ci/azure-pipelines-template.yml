@@ -42,3 +42,15 @@ jobs:
 
   - script: cargo clippy -p pyoxidizer -- --allow clippy::cast_ptr_alignment
     displayName: Clippy
+
+  - ${{ if ne(parameters.name, 'Windows') }}:
+    - script: |
+        cargo run --bin pyoxidizer -- init ~/pyapp
+        cargo run --bin pyoxidizer -- build ~/pyapp
+      displayName: Build Oxidized Application
+
+  - ${{ if eq(parameters.name, 'Windows') }}:
+    - script: |
+        cargo run --bin pyoxidizer -- init %HOME%/pyapp
+        cargo run --bin pyoxidizer -- build %HOME%/pyapp
+      displayName: Build Oxidized Application (Windows)
