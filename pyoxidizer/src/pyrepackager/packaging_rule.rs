@@ -10,12 +10,12 @@ use super::config::{
 };
 use super::dist::{ExtensionModule, PythonDistributionInfo};
 use super::fsscan::{find_python_resources, PythonFileResource};
+use duct::cmd;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use slog::{info, warn};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs;
-use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
 /// SPDX licenses in Python distributions that are not GPL.
@@ -839,24 +839,18 @@ fn resolve_pip_install_simple(
         pip_args.extend(rule.extra_args.clone().unwrap());
     }
 
-    // TODO send stderr to stdout.
-    let mut cmd = std::process::Command::new(&dist.python_exe)
-        .args(&pip_args)
-        .envs(&extra_envs)
-        .stdout(std::process::Stdio::piped())
-        .spawn()
+    let handler = cmd(&dist.python_exe, &pip_args)
+        .full_env(&extra_envs)
+        .stderr_to_stdout()
+        .stdout_capture()
+        .start()
         .expect("error running pip");
-    {
-        let stdout = cmd.stdout.as_mut().unwrap();
-        let reader = BufReader::new(stdout);
 
-        for line in reader.lines() {
-            warn!(logger, "{}", line.unwrap());
-        }
-    }
+    let output = handler.wait().unwrap();
+    let stdout = &output.stdout;
+    info!(logger, "{}", std::str::from_utf8(&stdout).unwrap());
 
-    let status = cmd.wait().unwrap();
-    if !status.success() {
+    if !output.status.success() {
         panic!("error running pip");
     }
 
@@ -957,9 +951,9 @@ fn resolve_pip_requirements_file(
     let target_dir_s = target_dir_path.display().to_string();
     warn!(logger, "pip installing to {}", target_dir_s);
 
-    // TODO send stderr to stdout.
-    let mut cmd = std::process::Command::new(&dist.python_exe)
-        .args(&[
+    let handler = cmd(
+        &dist.python_exe,
+        &[
             "-m",
             "pip",
             "--disable-pip-version-check",
@@ -970,22 +964,19 @@ fn resolve_pip_requirements_file(
             ":all:",
             "--requirement",
             &rule.requirements_path,
-        ])
-        .envs(&extra_envs)
-        .stdout(std::process::Stdio::piped())
-        .spawn()
-        .expect("error running pip");
-    {
-        let stdout = cmd.stdout.as_mut().unwrap();
-        let reader = BufReader::new(stdout);
+        ],
+    )
+    .full_env(&extra_envs)
+    .stderr_to_stdout()
+    .stdout_capture()
+    .start()
+    .expect("error running pip");
 
-        for line in reader.lines() {
-            warn!(logger, "{}", line.unwrap());
-        }
-    }
+    let output = handler.wait().unwrap();
+    let stdout = &output.stdout;
+    info!(logger, "{}", std::str::from_utf8(&stdout).unwrap());
 
-    let status = cmd.wait().unwrap();
-    if !status.success() {
+    if !output.status.success() {
         panic!("error running pip");
     }
 
@@ -1069,31 +1060,28 @@ fn resolve_setup_py_install(
     let target_dir_s = target_dir_path.display().to_string();
     warn!(logger, "python setup.py installing to {}", target_dir_s);
 
-    // TODO send stderr to stdout.
-    let mut cmd = std::process::Command::new(&dist.python_exe)
-        .current_dir(&rule.path)
-        .args(&[
+    let handler = cmd(
+        &dist.python_exe,
+        &[
             "setup.py",
             "install",
             "--prefix",
             &target_dir_s,
             "--no-compile",
-        ])
-        .envs(&extra_envs)
-        .stdout(std::process::Stdio::piped())
-        .spawn()
-        .expect("error running setup.py");
-    {
-        let stdout = cmd.stdout.as_mut().unwrap();
-        let reader = BufReader::new(stdout);
+        ],
+    )
+    .dir(&rule.path)
+    .full_env(&extra_envs)
+    .stderr_to_stdout()
+    .stdout_capture()
+    .start()
+    .expect("error running setup.py");
 
-        for line in reader.lines() {
-            warn!(logger, "{}", line.unwrap());
-        }
-    }
+    let output = handler.wait().unwrap();
+    let stdout = &output.stdout;
+    info!(logger, "{}", std::str::from_utf8(&stdout).unwrap());
 
-    let status = cmd.wait().unwrap();
-    if !status.success() {
+    if !output.status.success() {
         panic!("error running setup.py");
     }
 
