@@ -31,7 +31,8 @@ can leak into the built binary, effectively requiring a new Linux
 distribution to run a binary.
 
 In order to make the binary build process robust, we will need to
-provide an execution environment for binaries. On Linux, this likely
+provide an execution environment in which to build portable binaries.
+On Linux, this likely
 entails making something like a Docker image available. On Windows and
 macOS, we might have to provide a tarball. In all cases, we want this
 environment to be integrated into ``pyoxidizer build`` so end users
