@@ -25,10 +25,10 @@ mod pyinterp;
 mod pystr;
 
 #[allow(unused_imports)]
-pub use config::PythonConfig;
+pub use crate::config::PythonConfig;
 
 #[allow(unused_imports)]
-pub use data::default_python_config;
+pub use crate::data::default_python_config;
 
 #[allow(unused_imports)]
-pub use pyinterp::MainPythonInterpreter;
+pub use crate::pyinterp::MainPythonInterpreter;
