@@ -76,6 +76,11 @@ pub fn run_cli() -> Result<(), String> {
         .version(BUILD_SEMVER_LIGHTWEIGHT)
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .long_about("Build and distribute Python applications")
+        .arg(
+            Arg::with_name("verbose")
+                .long("verbose")
+                .help("Enable verbose output"),
+        )
         .subcommand(
             SubCommand::with_name("add")
                 .setting(AppSettings::ArgRequiredElseHelp)
@@ -223,7 +228,13 @@ pub fn run_cli() -> Result<(), String> {
         )
         .get_matches();
 
-    let logger_context = logging::logger_from_env(slog::Level::Warning);
+    let log_level = if matches.is_present("verbose") {
+        slog::Level::Info
+    } else {
+        slog::Level::Warning
+    };
+
+    let logger_context = logging::logger_from_env(log_level);
 
     match matches.subcommand() {
         ("add", Some(args)) => {
