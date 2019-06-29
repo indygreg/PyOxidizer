@@ -591,7 +591,7 @@ impl<'a> MainPythonInterpreter<'a> {
 
         // This is modeled after runpy.py:_run_module_as_main().
         let main: PyModule = unsafe {
-            PyObject::from_owned_ptr(
+            PyObject::from_borrowed_ptr(
                 py,
                 pyffi::PyImport_AddModule("__main__\0".as_ptr() as *const c_char),
             )

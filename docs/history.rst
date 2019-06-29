@@ -25,6 +25,9 @@ Next
 Bug Fixes
 ^^^^^^^^^
 
+* Fix Python refcounting bug involving call to ``PyImport_AddModule()`` when
+  ``mode = module`` evaluation mode is used. The bug would likely lead to
+  a segfault when destroying the Python interpreter. (#31)
 * Various functionality will no longer fail when running ``pyoxidizer`` from
   a Git repository that isn't the canonical ``PyOxidizer`` repository. (#34)
 
