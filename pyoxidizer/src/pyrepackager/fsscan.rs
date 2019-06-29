@@ -91,6 +91,13 @@ pub enum PythonFileResource {
         path: PathBuf,
     },
 
+    ExtensionModule {
+        package: String,
+        stem: String,
+        full_name: String,
+        path: PathBuf,
+    },
+
     Resource(FileBasedResource),
 
     EggFile {
@@ -319,6 +326,43 @@ impl PythonResourceIterator {
                         full_name: full_module_name,
                         path: path.to_path_buf(),
                     }
+                }
+            }
+            Some("pyd") | Some("so") => {
+                let package_parts = &components[0..components.len() - 1];
+                let mut package = itertools::join(package_parts, ".");
+
+                // TODO there can be a path component before the file extension that further
+                // identifies the extension module flavor. We need to look for and elide that.
+
+                let module_name = rel_path
+                    .file_stem()
+                    .expect("unable to get file stem")
+                    .to_str()
+                    .expect("unable to convert path to str");
+
+                let mut full_module_name: Vec<&str> = package_parts.to_vec();
+
+                let stem = if module_name == "__init__" {
+                    "".to_string()
+                } else {
+                    full_module_name.push(module_name);
+                    module_name.to_string()
+                };
+
+                let full_module_name = itertools::join(full_module_name, ".");
+
+                if package.is_empty() {
+                    package = full_module_name.clone();
+                }
+
+                self.seen_packages.insert(package.clone());
+
+                PythonFileResource::ExtensionModule {
+                    package,
+                    stem,
+                    full_name: full_module_name,
+                    path: path.to_path_buf(),
                 }
             }
             Some("egg") => PythonFileResource::EggFile {
@@ -571,6 +615,43 @@ mod tests {
                 stem: "bar".to_string(),
                 full_name: "acme.bar".to_string(),
                 path: acme_path.join("bar.py"),
+            }
+        );
+    }
+
+    #[test]
+    fn test_extension_module() {
+        let td = tempdir::TempDir::new("pyoxidizer-test").unwrap();
+        let tp = td.path();
+
+        create_dir_all(&tp).unwrap();
+
+        let pyd_path = tp.join("foo.pyd");
+        let so_path = tp.join("bar.so");
+
+        write(&pyd_path, "").unwrap();
+        write(&so_path, "").unwrap();
+
+        let resources = PythonResourceIterator::new(tp).collect_vec();
+        assert_eq!(resources.len(), 2);
+
+        assert_eq!(
+            resources[0],
+            PythonFileResource::ExtensionModule {
+                package: "bar".to_string(),
+                stem: "bar".to_string(),
+                full_name: "bar".to_string(),
+                path: so_path,
+            }
+        );
+
+        assert_eq!(
+            resources[1],
+            PythonFileResource::ExtensionModule {
+                package: "foo".to_string(),
+                stem: "foo".to_string(),
+                full_name: "foo".to_string(),
+                path: pyd_path,
             }
         );
     }
