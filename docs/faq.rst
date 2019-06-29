@@ -14,8 +14,8 @@ At https://github.com/indygreg/PyOxidizer/issues
 Why Build Another Python Application Packaging Tool?
 ====================================================
 
-It is true that several other *turn Python into distributable applications*
-tools exist! :ref:`comparisons` attempts to exhaustively compare ``PyOxidizer``
+It is true that several other tools exist to turn Python code into distributable applications!
+:ref:`comparisons` attempts to exhaustively compare ``PyOxidizer``
 to these myriad of tools. (If a tool is missing or the comparison incomplete
 or unfair, please file an issue so Python application maintainers can make
 better, informed decisions!)
