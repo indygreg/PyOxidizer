@@ -7,7 +7,7 @@ use glob::glob as findglob;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
-use slog::info;
+use slog::warn;
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
@@ -479,7 +479,7 @@ fn filter_btreemap<V>(logger: &slog::Logger, m: &mut BTreeMap<String, V>, f: &BT
 
     for key in keys {
         if !f.contains(&key) {
-            info!(logger, "removing {}", key);
+            warn!(logger, "removing {}", key);
             m.remove(&key);
         }
     }
@@ -575,7 +575,7 @@ fn resolve_stdlib_extensions_policy(
                             // In lack of evidence that it isn't GPL, assume GPL.
                             // TODO consider improving logic here, like allowing known system
                             // and framework libraries to be used.
-                            info!(logger, "unable to determine {} is not GPL; ignoring", &name);
+                            warn!(logger, "unable to determine {} is not GPL; ignoring", &name);
                             false
                         }
                     };
@@ -699,7 +699,7 @@ fn resolve_stdlib(
 
     for (name, fs_path) in &dist.py_modules {
         if is_stdlib_test_package(&name) && rule.exclude_test_modules {
-            info!(logger, "skipping test stdlib module: {}", name);
+            warn!(logger, "skipping test stdlib module: {}", name);
             continue;
         }
 
@@ -730,7 +730,7 @@ fn resolve_stdlib(
     if rule.include_resources {
         for (package, resources) in &dist.resources {
             if is_stdlib_test_package(package) && rule.exclude_test_modules {
-                info!(
+                warn!(
                     logger,
                     "skipping resources associated with test package: {}", package
                 );
@@ -928,7 +928,7 @@ fn resolve_pip_install_simple(
 
     let temp_dir_path = temp_dir.path();
     let temp_dir_s = temp_dir_path.display().to_string();
-    info!(logger, "pip installing to {}", temp_dir_s);
+    warn!(logger, "pip installing to {}", temp_dir_s);
     let mut pip_args = vec![
         "-m".to_string(),
         "pip".to_string(),
@@ -954,7 +954,7 @@ fn resolve_pip_install_simple(
         let reader = BufReader::new(stdout);
 
         for line in reader.lines() {
-            info!(logger, "{}", line.unwrap());
+            warn!(logger, "{}", line.unwrap());
         }
     }
 
@@ -1041,7 +1041,7 @@ fn resolve_pip_requirements_file(
 
     let temp_dir_path = temp_dir.path();
     let temp_dir_s = temp_dir_path.display().to_string();
-    info!(logger, "pip installing to {}", temp_dir_s);
+    warn!(logger, "pip installing to {}", temp_dir_s);
 
     // TODO send stderr to stdout.
     let mut cmd = std::process::Command::new(&dist.python_exe)
@@ -1065,7 +1065,7 @@ fn resolve_pip_requirements_file(
         let reader = BufReader::new(stdout);
 
         for line in reader.lines() {
-            info!(logger, "{}", line.unwrap());
+            warn!(logger, "{}", line.unwrap());
         }
     }
 
@@ -1135,7 +1135,7 @@ fn resolve_setup_py_install(
         .expect("could not create temp directory");
     let temp_dir_path = temp_dir.path();
     let temp_dir_s = temp_dir_path.display().to_string();
-    info!(logger, "python setup.py installing to {}", temp_dir_s);
+    warn!(logger, "python setup.py installing to {}", temp_dir_s);
 
     // TODO send stderr to stdout.
     let mut cmd = std::process::Command::new(&dist.python_exe)
@@ -1155,7 +1155,7 @@ fn resolve_setup_py_install(
         let reader = BufReader::new(stdout);
 
         for line in reader.lines() {
-            info!(logger, "{}", line.unwrap());
+            warn!(logger, "{}", line.unwrap());
         }
     }
 
@@ -1292,7 +1292,7 @@ pub fn resolve_python_resources(
     let mut license_files_path = None;
 
     for packaging in packages {
-        info!(logger, "processing packaging rule: {:?}", packaging);
+        warn!(logger, "processing packaging rule: {:?}", packaging);
         for entry in resolve_python_packaging(logger, packaging, dist) {
             match (entry.action, entry.location, entry.resource) {
                 (
@@ -1300,7 +1300,7 @@ pub fn resolve_python_resources(
                     ResourceLocation::Embedded,
                     PythonResource::ExtensionModule { name, module },
                 ) => {
-                    info!(logger, "adding embedded extension module: {}", name);
+                    warn!(logger, "adding embedded extension module: {}", name);
                     embedded_extension_modules.insert(name, module);
                 }
                 (
@@ -1315,7 +1315,7 @@ pub fn resolve_python_resources(
                     ResourceLocation::Embedded,
                     PythonResource::ExtensionModule { name, .. },
                 ) => {
-                    info!(logger, "removing embedded extension module: {}", name);
+                    warn!(logger, "removing embedded extension module: {}", name);
                     embedded_extension_modules.remove(&name);
                 }
                 (
@@ -1323,7 +1323,7 @@ pub fn resolve_python_resources(
                     ResourceLocation::Embedded,
                     PythonResource::ModuleSource { name, source },
                 ) => {
-                    info!(logger, "adding embedded module source: {}", name);
+                    warn!(logger, "adding embedded module source: {}", name);
                     embedded_sources.insert(name.clone(), source);
                 }
                 (
@@ -1331,7 +1331,7 @@ pub fn resolve_python_resources(
                     ResourceLocation::AppRelative { path },
                     PythonResource::ModuleSource { name, source },
                 ) => {
-                    info!(
+                    warn!(
                         logger,
                         "adding app-relative module source to {}: {}", path, name
                     );
@@ -1350,7 +1350,7 @@ pub fn resolve_python_resources(
                     ResourceLocation::Embedded,
                     PythonResource::ModuleSource { name, .. },
                 ) => {
-                    info!(logger, "removing embedded module source: {}", name);
+                    warn!(logger, "removing embedded module source: {}", name);
                     embedded_sources.remove(&name);
                 }
                 (
@@ -1362,7 +1362,7 @@ pub fn resolve_python_resources(
                         optimize_level,
                     },
                 ) => {
-                    info!(logger, "adding embedded module bytecode: {}", name);
+                    warn!(logger, "adding embedded module bytecode: {}", name);
                     embedded_bytecode_requests.insert(name.clone(), (source, optimize_level));
                 }
                 (
@@ -1374,7 +1374,7 @@ pub fn resolve_python_resources(
                         optimize_level,
                     },
                 ) => {
-                    info!(
+                    warn!(
                         logger,
                         "adding app-relative module bytecode to {}: {}", path, name
                     );
@@ -1393,7 +1393,7 @@ pub fn resolve_python_resources(
                     ResourceLocation::Embedded,
                     PythonResource::ModuleBytecode { name, .. },
                 ) => {
-                    info!(logger, "removing embedded module bytecode: {}", name);
+                    warn!(logger, "removing embedded module bytecode: {}", name);
                     embedded_bytecode_requests.remove(&name);
                 }
                 (
@@ -1405,7 +1405,7 @@ pub fn resolve_python_resources(
                         data,
                     },
                 ) => {
-                    info!(logger, "adding embedded resource: {}", name);
+                    warn!(logger, "adding embedded resource: {}", name);
 
                     if !embedded_resources.contains_key(&package) {
                         embedded_resources.insert(package.clone(), BTreeMap::new());
@@ -1425,7 +1425,7 @@ pub fn resolve_python_resources(
                         data,
                     },
                 ) => {
-                    info!(logger, "adding app-relative resource to {}: {}", path, name);
+                    warn!(logger, "adding app-relative resource to {}: {}", path, name);
 
                     if !app_relative.contains_key(&path) {
                         app_relative.insert(path.clone(), AppRelativeResources::new());
@@ -1450,7 +1450,7 @@ pub fn resolve_python_resources(
                     ResourceLocation::Embedded,
                     PythonResource::Resource { name, .. },
                 ) => {
-                    info!(logger, "removing embedded resource: {}", name);
+                    warn!(logger, "removing embedded resource: {}", name);
                     embedded_resources.remove(&name);
                 }
                 (ResourceAction::Remove, ResourceLocation::AppRelative { .. }, _) => {
@@ -1502,38 +1502,38 @@ pub fn resolve_python_resources(
                 include_names.extend(new_names);
             }
 
-            info!(
+            warn!(
                 logger,
                 "filtering embedded extension modules from {:?}", packaging
             );
             filter_btreemap(logger, &mut embedded_extension_modules, &include_names);
-            info!(
+            warn!(
                 logger,
                 "filtering embedded module sources from {:?}", packaging
             );
             filter_btreemap(logger, &mut embedded_sources, &include_names);
-            info!(
+            warn!(
                 logger,
                 "filtering app-relative module sources from {:?}", packaging
             );
             for value in app_relative.values_mut() {
                 filter_btreemap(logger, &mut value.module_sources, &include_names);
             }
-            info!(
+            warn!(
                 logger,
                 "filtering embedded module bytecode from {:?}", packaging
             );
             filter_btreemap(logger, &mut embedded_bytecode_requests, &include_names);
-            info!(
+            warn!(
                 logger,
                 "filtering app-relative module bytecode from {:?}", packaging
             );
             for value in app_relative_bytecode_requests.values_mut() {
                 filter_btreemap(logger, value, &include_names);
             }
-            info!(logger, "filtering embedded resources from {:?}", packaging);
+            warn!(logger, "filtering embedded resources from {:?}", packaging);
             filter_btreemap(logger, &mut embedded_resources, &include_names);
-            info!(
+            warn!(
                 logger,
                 "filtering app-relative resources from {:?}", packaging
             );
@@ -1549,14 +1549,14 @@ pub fn resolve_python_resources(
         let em = &variants[0];
 
         if (em.builtin_default || em.required) && !embedded_extension_modules.contains_key(name) {
-            info!(logger, "adding required embedded extension module {}", name);
+            warn!(logger, "adding required embedded extension module {}", name);
             embedded_extension_modules.insert(name.clone(), em.clone());
         }
     }
 
     // Remove extension modules that have problems.
     for e in OS_IGNORE_EXTENSIONS.as_slice() {
-        info!(
+        warn!(
             logger,
             "removing extension module due to incompatibility: {}", e
         );
@@ -1596,7 +1596,7 @@ pub fn resolve_python_resources(
         .iter()
         .filter_map(|(package, values)| {
             if !package_names.contains(package) {
-                info!(
+                warn!(
                     logger,
                     "package {} does not exist; excluding resources: {:?}",
                     package,
@@ -1825,7 +1825,7 @@ pub fn link_libpython(
     // We need to do this because config.c defines the built-in extensions and
     // their initialization functions and the file generated by the source
     // distribution may not align with what we want.
-    info!(
+    warn!(
         logger,
         "deriving custom config.c from {} extension modules",
         extension_modules.len()
@@ -1845,7 +1845,7 @@ pub fn link_libpython(
     }
 
     // TODO flags should come from parsed distribution config.
-    info!(logger, "compiling custom config.c to object file");
+    warn!(logger, "compiling custom config.c to object file");
     cc::Build::new()
         .out_dir(out_dir)
         .host(host)
@@ -1862,7 +1862,7 @@ pub fn link_libpython(
     // Since we disabled cargo metadata lines above.
     cargo_metadata.push("cargo:rustc-link-lib=static=pyembeddedconfig".to_string());
 
-    info!(logger, "resolving inputs for custom Python library...");
+    warn!(logger, "resolving inputs for custom Python library...");
     let mut build = cc::Build::new();
     build.out_dir(out_dir);
     build.host(host);
@@ -1871,7 +1871,7 @@ pub fn link_libpython(
     // We handle this ourselves.
     build.cargo_metadata(false);
 
-    info!(
+    warn!(
         logger,
         "adding {} object files required by Python core: {:#?}",
         dist.objs_core.len(),
@@ -1882,7 +1882,7 @@ pub fn link_libpython(
         // which object file contains _PyImport_Inittab. Or perhaps we could
         // scan all the object files for this symbol and ignore it automatically?
         if rel_path.ends_with("Modules/config.o") {
-            info!(
+            warn!(
                 logger,
                 "ignoring config.o since it may conflict with our version"
             );
@@ -1905,22 +1905,22 @@ pub fn link_libpython(
     let mut needed_frameworks: BTreeSet<&str> = BTreeSet::new();
     let mut needed_system_libraries: BTreeSet<&str> = BTreeSet::new();
 
-    info!(
+    warn!(
         logger,
         "resolving libraries required by core distribution..."
     );
     for entry in &dist.links_core {
         if entry.framework {
-            info!(logger, "framework {} required by core", entry.name);
+            warn!(logger, "framework {} required by core", entry.name);
             needed_frameworks.insert(&entry.name);
         } else if entry.system {
-            info!(logger, "system library {} required by core", entry.name);
+            warn!(logger, "system library {} required by core", entry.name);
             needed_system_libraries.insert(&entry.name);
         }
         // TODO handle static/dynamic libraries.
     }
 
-    info!(
+    warn!(
         logger,
         "resolving inputs for {} extension modules...",
         extension_modules.len()
@@ -1930,7 +1930,7 @@ pub fn link_libpython(
             continue;
         }
 
-        info!(
+        warn!(
             logger,
             "adding {} object files for {} extension module: {:#?}",
             em.object_paths.len(),
@@ -1944,16 +1944,16 @@ pub fn link_libpython(
         for entry in &em.links {
             if entry.framework {
                 needed_frameworks.insert(&entry.name);
-                info!(logger, "framework {} required by {}", entry.name, name);
+                warn!(logger, "framework {} required by {}", entry.name, name);
             } else if entry.system {
-                info!(logger, "system library {} required by {}", entry.name, name);
+                warn!(logger, "system library {} required by {}", entry.name, name);
                 needed_system_libraries.insert(&entry.name);
             } else if let Some(_lib) = &entry.static_path {
                 needed_libraries.insert(&entry.name);
-                info!(logger, "static library {} required by {}", entry.name, name);
+                warn!(logger, "static library {} required by {}", entry.name, name);
             } else if let Some(_lib) = &entry.dynamic_path {
                 needed_libraries.insert(&entry.name);
-                info!(
+                warn!(
                     logger,
                     "dynamic library {} required by {}", entry.name, name
                 );
@@ -1971,7 +1971,7 @@ pub fn link_libpython(
             .libraries
             .get(*library)
             .expect(&format!("unable to find library {}", library));
-        info!(logger, "{}", fs_path.display());
+        warn!(logger, "{}", fs_path.display());
 
         let library_path = out_dir.join(format!("lib{}.a", library));
         fs::copy(fs_path, library_path).expect("unable to copy library file");
@@ -2003,9 +2003,9 @@ pub fn link_libpython(
     // Our current workaround is to produce a ``pythonXY.lib`` file. This satisfies
     // the requirement of ``python3-sys`` that a ``pythonXY.lib`` file exists.
 
-    info!(logger, "compiling libpythonXY...");
+    warn!(logger, "compiling libpythonXY...");
     build.compile("pythonXY");
-    info!(logger, "libpythonXY created");
+    warn!(logger, "libpythonXY created");
 
     cargo_metadata.push("cargo:rustc-link-lib=static=pythonXY".to_string());
     cargo_metadata.push(format!(
@@ -2159,7 +2159,7 @@ fn install_app_relative(
 
     create_dir_all(&dest_path).or_else(|_| Err("could not create app-relative path"))?;
 
-    info!(
+    warn!(
         logger,
         "installing {} app-relative Python source modules to {}",
         app_relative.module_sources.len(),
@@ -2183,7 +2183,7 @@ fn install_app_relative(
             module_path.file_name().unwrap().to_string_lossy()
         ));
 
-        info!(
+        warn!(
             logger,
             "installing Python module {} to {}",
             module_name,
@@ -2203,7 +2203,7 @@ fn install_app_relative(
     }
 
     // TODO implement.
-    info!(
+    warn!(
         logger,
         "resolved {} app-relative Python bytecode modules in {}: {:#?}",
         app_relative.module_bytecodes.len(),
@@ -2220,7 +2220,7 @@ fn install_app_relative(
         resource_count += entries.len();
     }
 
-    info!(
+    warn!(
         logger,
         "resolved {} app-relative resource files across {} packages: {:#?}",
         resource_count,
@@ -2234,7 +2234,7 @@ fn install_app_relative(
         for (name, data) in entries {
             let dest_path = package_path.join(name);
 
-            info!(
+            warn!(
                 logger,
                 "installing app-relative resource {}:{} to {}",
                 package,
@@ -2256,20 +2256,20 @@ fn install_app_relative(
 ///
 /// This will delete all content in the application's package directory.
 pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Result<(), String> {
-    info!(
+    warn!(
         logger,
         "packaging application into {}",
         context.app_path.display()
     );
 
     if context.app_path.exists() {
-        info!(logger, "purging {}", context.app_path.display());
+        warn!(logger, "purging {}", context.app_path.display());
         std::fs::remove_dir_all(&context.app_path).or_else(|e| Err(e.to_string()))?;
     }
 
     create_dir_all(&context.app_path).or_else(|e| Err(e.to_string()))?;
 
-    info!(
+    warn!(
         logger,
         "copying {} to {}",
         context.app_exe_target_path.display(),
@@ -2278,7 +2278,7 @@ pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Res
     std::fs::copy(&context.app_exe_target_path, &context.app_exe_path)
         .or_else(|_| Err("failed to copy built application"))?;
 
-    info!(logger, "resolving packaging state...");
+    warn!(logger, "resolving packaging state...");
     let state = context.get_packaging_state()?;
 
     if let Some(licenses_path) = state.license_files_path {
@@ -2291,14 +2291,14 @@ pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Res
         for (name, lis) in &state.license_infos {
             for li in lis {
                 let path = licenses_path.join(&li.license_filename);
-                info!(logger, "writing license for {} to {}", name, path.display());
+                warn!(logger, "writing license for {} to {}", name, path.display());
                 fs::write(&path, li.license_text.as_bytes()).or_else(|e| Err(e.to_string()))?;
             }
         }
     }
 
     if !state.app_relative_resources.is_empty() {
-        info!(
+        warn!(
             logger,
             "installing resources into {} app-relative directories",
             state.app_relative_resources.len(),
@@ -2309,7 +2309,7 @@ pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Res
         install_app_relative(logger, context, path.as_str(), v).unwrap();
     }
 
-    info!(
+    warn!(
         logger,
         "{} packaged into {}",
         context.app_name,
@@ -2391,7 +2391,7 @@ pub fn process_config(
     let config = &context.config;
     let dest_dir = &context.pyoxidizer_artifacts_path;
 
-    info!(
+    warn!(
         logger,
         "processing config file {}",
         config.config_path.display()
@@ -2411,9 +2411,9 @@ pub fn process_config(
     }
 
     // Obtain the configured Python distribution and parse it to a data structure.
-    info!(logger, "resolving Python distribution...");
+    warn!(logger, "resolving Python distribution...");
     let python_distribution_path = resolve_python_distribution_archive(&config, &dest_dir);
-    info!(
+    warn!(
         logger,
         "Python distribution available at {}",
         python_distribution_path.display()
@@ -2422,14 +2422,14 @@ pub fn process_config(
     let mut python_distribution_data = Vec::new();
     fh.read_to_end(&mut python_distribution_data).unwrap();
     let dist_cursor = Cursor::new(python_distribution_data);
-    info!(logger, "reading data from Python distribution...");
+    warn!(logger, "reading data from Python distribution...");
 
     let dist = analyze_python_distribution_tar_zst(dist_cursor, &context.python_distribution_path)
         .unwrap();
-    info!(logger, "distribution info: {:#?}", dist.as_minimal_info());
+    warn!(logger, "distribution info: {:#?}", dist.as_minimal_info());
 
     // Produce the custom frozen importlib modules.
-    info!(
+    warn!(
         logger,
         "compiling custom importlib modules to support in-memory importing"
     );
@@ -2445,25 +2445,25 @@ pub fn process_config(
     fh.write_all(&importlib.bootstrap_external_bytecode)
         .unwrap();
 
-    info!(
+    warn!(
         logger,
         "resolving Python resources (modules, extensions, resource data, etc)..."
     );
     let resources = resolve_python_resources(logger, &config, &dist);
 
-    info!(
+    warn!(
         logger,
         "resolved {} embedded Python source modules: {:#?}",
         resources.embedded.module_sources.len(),
         resources.embedded.module_sources.keys()
     );
-    info!(
+    warn!(
         logger,
         "resolved {} embedded Python bytecode modules: {:#?}",
         resources.embedded.module_bytecodes.len(),
         resources.embedded.module_bytecodes.keys()
     );
-    info!(
+    warn!(
         logger,
         "resolved {} unique embedded Python modules: {:#?}",
         resources.embedded.all_modules.len(),
@@ -2479,14 +2479,14 @@ pub fn process_config(
         resource_count += entries.len();
     }
 
-    info!(
+    warn!(
         logger,
         "resolved {} embedded resource files across {} packages: {:#?}",
         resource_count,
         resources.embedded.resources.len(),
         resource_map
     );
-    info!(
+    warn!(
         logger,
         "resolved {} embedded extension modules: {:#?}",
         resources.embedded.extension_modules.len(),
@@ -2497,7 +2497,7 @@ pub fn process_config(
     // TODO there is tons of room to customize this behavior, including
     // reordering modules so the memory order matches import order.
 
-    info!(logger, "writing packed Python module and resource data...");
+    warn!(logger, "writing packed Python module and resource data...");
     let module_names_path = Path::new(&dest_dir).join("py-module-names");
     let py_modules_path = Path::new(&dest_dir).join("py-modules");
     let resources_path = Path::new(&dest_dir).join("python-resources");
@@ -2505,13 +2505,13 @@ pub fn process_config(
         .embedded
         .write_blobs(&module_names_path, &py_modules_path, &resources_path);
 
-    info!(
+    warn!(
         logger,
         "{} bytes of Python module data written to {}",
         py_modules_path.metadata().unwrap().len(),
         py_modules_path.display()
     );
-    info!(
+    warn!(
         logger,
         "{} bytes of resources data written to {}",
         resources_path.metadata().unwrap().len(),
@@ -2519,7 +2519,7 @@ pub fn process_config(
     );
 
     // Produce a static library containing the Python bits we need.
-    info!(
+    warn!(
         logger,
         "generating custom link library containing Python..."
     );
@@ -2569,7 +2569,7 @@ pub fn process_config(
     };
 
     let packaging_state_path = dest_dir.join("packaging_state.cbor");
-    info!(
+    warn!(
         logger,
         "writing packaging state to {}",
         packaging_state_path.display()
@@ -2614,7 +2614,7 @@ pub fn find_pyoxidizer_config_file(start_dir: &Path) -> Option<PathBuf> {
 pub fn find_pyoxidizer_config_file_env(logger: &slog::Logger, start_dir: &Path) -> Option<PathBuf> {
     match env::var("PYOXIDIZER_CONFIG") {
         Ok(config_env) => {
-            info!(
+            warn!(
                 logger,
                 "using PyOxidizer config file from PYOXIDIZER_CONFIG: {}", config_env
             );

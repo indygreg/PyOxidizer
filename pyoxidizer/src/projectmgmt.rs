@@ -7,7 +7,7 @@
 use handlebars::Handlebars;
 use itertools::Itertools;
 use lazy_static::lazy_static;
-use slog::info;
+use slog::warn;
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::fs::create_dir_all;
@@ -306,7 +306,7 @@ fn dependency_current(
         Ok(md) => match md.modified() {
             Ok(t) => {
                 if t > built_time {
-                    info!(
+                    warn!(
                         logger,
                         "building artifacts because {} changed",
                         path.display()
@@ -317,12 +317,12 @@ fn dependency_current(
                 }
             }
             Err(_) => {
-                info!(logger, "error resolving mtime of {}", path.display());
+                warn!(logger, "error resolving mtime of {}", path.display());
                 false
             }
         },
         Err(_) => {
-            info!(logger, "error resolving metadata of {}", path.display());
+            warn!(logger, "error resolving metadata of {}", path.display());
             false
         }
     }
@@ -333,7 +333,7 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
     let metadata_path = artifacts_path.join("cargo_metadata.txt");
 
     if !metadata_path.exists() {
-        info!(logger, "no existing PyOxidizer artifacts found");
+        warn!(logger, "no existing PyOxidizer artifacts found");
         return false;
     }
 
@@ -343,7 +343,7 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
         Ok(md) => match md.modified() {
             Ok(t) => t,
             Err(_) => {
-                info!(
+                warn!(
                     logger,
                     "error determining mtime of {}",
                     metadata_path.display()
@@ -352,7 +352,7 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
             }
         },
         Err(_) => {
-            info!(
+            warn!(
                 logger,
                 "error resolving metadata of {}",
                 metadata_path.display()
@@ -364,7 +364,7 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
     let metadata_data = match std::fs::read_to_string(&metadata_path) {
         Ok(data) => data,
         Err(_) => {
-            info!(logger, "error reading {}", metadata_path.display());
+            warn!(logger, "error reading {}", metadata_path.display());
             return false;
         }
     };
@@ -572,7 +572,7 @@ pub fn build(
     build_project(logger, &mut context)?;
     package_project(logger, &mut context)?;
 
-    info!(
+    warn!(
         logger,
         "executable path: {}",
         context.app_exe_path.display()
