@@ -2169,7 +2169,7 @@ fn install_app_relative(
     for (module_name, module_data) in &app_relative.module_sources {
         // foo.bar -> foo/bar
         let mut module_path = dest_path.clone();
-        module_path.extend(module_name.split("."));
+        module_path.extend(module_name.split('.'));
 
         // Packages need to get normalized to /__init__.py.
         if packages.contains(module_name) {
