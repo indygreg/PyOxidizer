@@ -152,7 +152,7 @@ impl PythonResourceIterator {
             .map(|p| p.to_str().expect("unable to get path as str"))
             .collect::<Vec<_>>();
 
-        // .dist-info directories containing packaging metadata. They aren't interesting to us.
+        // .dist-info directories contain packaging metadata. They aren't interesting to us.
         // We /could/ emit these files if we wanted to. But until there is a need, exclude them.
         if components[0].ends_with(".dist-info") {
             return None;
@@ -160,7 +160,7 @@ impl PythonResourceIterator {
 
         // site-packages directories are package roots within package roots. Treat them as
         // such.
-        if components[0] == "site-packages" {
+        let in_site_packages = if components[0] == "site-packages" {
             let sp_path = self.root_path.join("site-packages");
             rel_path = path
                 .strip_prefix(sp_path)
@@ -171,6 +171,45 @@ impl PythonResourceIterator {
                 .iter()
                 .map(|p| p.to_str().expect("unable to get path as str"))
                 .collect::<Vec<_>>();
+
+            true
+        } else {
+            false
+        };
+
+        // It looks like we're in an unpacked egg. This is similar to the site-packages
+        // scenario: we essentially have a new package root that corresponds to the
+        // egg's extraction directory.
+        if (&components[0..components.len() - 1])
+            .iter()
+            .any(|p| p.ends_with(".egg"))
+        {
+            let mut egg_root_path = self.root_path.clone();
+
+            if in_site_packages {
+                egg_root_path = egg_root_path.join("site-packages");
+            }
+
+            for p in &components[0..components.len() - 1] {
+                egg_root_path = egg_root_path.join(p);
+
+                if p.ends_with(".egg") {
+                    break;
+                }
+            }
+
+            rel_path = path
+                .strip_prefix(egg_root_path)
+                .expect("unable to strip egg prefix");
+            components = rel_path
+                .iter()
+                .map(|p| p.to_str().expect("unable to get path as str"))
+                .collect::<Vec<_>>();
+
+            // Ignore EGG-INFO directory, as it is just packaging metadata.
+            if components[0] == "EGG-INFO" {
+                return None;
+            }
         }
 
         let resource = match rel_path.extension().and_then(OsStr::to_str) {
@@ -550,6 +589,47 @@ mod tests {
         assert_eq!(resources.len(), 1);
 
         assert_eq!(resources[0], PythonFileResource::EggFile { path: egg_path });
+    }
+
+    #[test]
+    fn test_egg_dir() {
+        let td = tempdir::TempDir::new("pyoxidizer-test").unwrap();
+        let tp = td.path();
+
+        create_dir_all(&tp).unwrap();
+
+        let egg_path = tp.join("site-packages").join("foo-1.0-py3.7.egg");
+        let egg_info_path = egg_path.join("EGG-INFO");
+        let package_path = egg_path.join("foo");
+
+        create_dir_all(&egg_info_path).unwrap();
+        create_dir_all(&package_path).unwrap();
+
+        write(egg_info_path.join("PKG-INFO"), "").unwrap();
+        write(package_path.join("__init__.py"), "").unwrap();
+        write(package_path.join("bar.py"), "").unwrap();
+
+        let resources = PythonResourceIterator::new(tp).collect_vec();
+        assert_eq!(resources.len(), 2);
+
+        assert_eq!(
+            resources[0],
+            PythonFileResource::Source {
+                package: "foo".to_string(),
+                stem: "".to_string(),
+                full_name: "foo".to_string(),
+                path: package_path.join("__init__.py"),
+            }
+        );
+        assert_eq!(
+            resources[1],
+            PythonFileResource::Source {
+                package: "foo".to_string(),
+                stem: "bar".to_string(),
+                full_name: "foo.bar".to_string(),
+                path: package_path.join("bar.py"),
+            }
+        );
     }
 
     #[test]

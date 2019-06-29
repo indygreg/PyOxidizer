@@ -31,6 +31,9 @@ Backwards Compatibility Notes
 Bug Fixes
 ^^^^^^^^^
 
+* Extracted ``.egg`` directories in Python package directories should now have
+  their resources detected properly and not as Python packages with the name
+  ``*.egg``.
 * ``site-packages`` directories are now recognized as Python resource package
   roots and no longer have their contents packaged under a ``site-packages``
   Python package.
