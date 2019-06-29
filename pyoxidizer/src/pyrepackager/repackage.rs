@@ -2465,10 +2465,10 @@ pub fn process_config(
     );
     warn!(
         logger,
-        "resolved {} unique embedded Python modules: {:#?}",
+        "resolved {} unique embedded Python modules",
         resources.embedded.all_modules.len(),
-        resources.embedded.all_modules
     );
+    info!(logger, "{:#?}", resources.embedded.all_modules);
 
     let mut resource_count = 0;
     let mut resource_map = BTreeMap::new();

@@ -28,6 +28,13 @@ Backwards Compatibility Notes
   directory instead of ``apps/<appname>``. This allows debug and release
   builds to exist side-by-side.
 
+New Features
+^^^^^^^^^^^^
+
+* ``pyoxidizer`` now accepts a ``--verbose`` flag to make operations more
+  verbose. Various low-level output is no longer printed by default and
+  requires ``--verbose`` to see.
+
 All Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
