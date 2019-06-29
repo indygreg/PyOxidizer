@@ -449,4 +449,43 @@ mod tests {
             }
         );
     }
+
+    #[test]
+    fn test_site_packages() {
+        let td = tempdir::TempDir::new("pyoxidizer-test").unwrap();
+        let tp = td.path();
+
+        let sp_path = tp.join("site-packages");
+        let acme_path = sp_path.join("acme");
+
+        create_dir_all(&acme_path).unwrap();
+
+        write(acme_path.join("__init__.py"), "").unwrap();
+        write(acme_path.join("bar.py"), "").unwrap();
+
+        let resources = PythonResourceIterator::new(tp).collect_vec();
+        assert_eq!(resources.len(), 2);
+
+        // TODO this is wrong.
+        assert_eq!(
+            resources[0],
+            PythonResource {
+                package: "site-packages.acme".to_string(),
+                stem: "".to_string(),
+                full_name: "site-packages.acme".to_string(),
+                path: acme_path.join("__init__.py"),
+                flavor: PythonResourceType::Source,
+            }
+        );
+        assert_eq!(
+            resources[1],
+            PythonResource {
+                package: "site-packages.acme".to_string(),
+                stem: "bar".to_string(),
+                full_name: "site-packages.acme.bar".to_string(),
+                path: acme_path.join("bar.py"),
+                flavor: PythonResourceType::Source,
+            }
+        );
+    }
 }
