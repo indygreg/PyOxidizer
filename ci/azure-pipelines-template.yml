@@ -26,6 +26,9 @@ jobs:
         echo "##vso[task.setvariable variable=PATH;]%PATH%;%USERPROFILE%\.cargo\bin"
       displayName: Install Rust (Windows)
 
+  - script: rustup component add clippy
+    displayName: Install Clippy
+
   - script: |
         rustc -Vv
         cargo -V
@@ -36,3 +39,6 @@ jobs:
 
   - script: cargo test -p pyoxidizer
     displayName: Test
+
+  - script: cargo clippy -p pyoxidizer -- --allow clippy::cast_ptr_alignment
+    displayName: Clippy
