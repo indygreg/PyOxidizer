@@ -576,18 +576,6 @@ fn get_module_state<'a>(py: Python, m: &'a PyModule) -> Result<&'a mut ModuleSta
     Ok(unsafe { &mut *state })
 }
 
-static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
-    m_base: pyffi::PyModuleDef_HEAD_INIT,
-    m_name: PYOXIDIZER_IMPORTER_NAME.as_ptr() as *const _,
-    m_doc: DOC.as_ptr() as *const _,
-    m_size: std::mem::size_of::<ModuleState>() as isize,
-    m_methods: 0 as *mut _,
-    m_slots: 0 as *mut _,
-    m_traverse: None,
-    m_clear: None,
-    m_free: None,
-};
-
 /// Initialize the Python module object.
 ///
 /// This is called as part of the PyInit_* function to create the internal
@@ -847,6 +835,18 @@ fn module_setup(
     Ok(py.None())
 }
 
+static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
+    m_base: pyffi::PyModuleDef_HEAD_INIT,
+    m_name: std::ptr::null(),
+    m_doc: std::ptr::null(),
+    m_size: std::mem::size_of::<ModuleState>() as isize,
+    m_methods: 0 as *mut _,
+    m_slots: 0 as *mut _,
+    m_traverse: None,
+    m_clear: None,
+    m_free: None,
+};
+
 /// Module initialization function.
 ///
 /// This creates the Python module object.
@@ -857,6 +857,15 @@ fn module_setup(
 #[allow(non_snake_case)]
 pub extern "C" fn PyInit__pyoxidizer_importer() -> *mut pyffi::PyObject {
     let py = unsafe { cpython::Python::assume_gil_acquired() };
+
+    // TRACKING RUST1.32 We can't call as_ptr() in const fn in Rust 1.31.
+    unsafe {
+        if MODULE_DEF.m_name.is_null() {
+            MODULE_DEF.m_name = PYOXIDIZER_IMPORTER_NAME.as_ptr() as *const _;
+            MODULE_DEF.m_doc = DOC.as_ptr() as *const _;
+        }
+    }
+
     let module = unsafe { pyffi::PyModule_Create(&mut MODULE_DEF) };
 
     if module.is_null() {
