@@ -7,7 +7,7 @@ use glob::glob as findglob;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
-use slog::warn;
+use slog::{info, warn};
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
@@ -699,7 +699,7 @@ fn resolve_stdlib(
 
     for (name, fs_path) in &dist.py_modules {
         if is_stdlib_test_package(&name) && rule.exclude_test_modules {
-            warn!(logger, "skipping test stdlib module: {}", name);
+            info!(logger, "skipping test stdlib module: {}", name);
             continue;
         }
 
@@ -730,7 +730,7 @@ fn resolve_stdlib(
     if rule.include_resources {
         for (package, resources) in &dist.resources {
             if is_stdlib_test_package(package) && rule.exclude_test_modules {
-                warn!(
+                info!(
                     logger,
                     "skipping resources associated with test package: {}", package
                 );
