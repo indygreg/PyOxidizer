@@ -34,6 +34,7 @@ pub enum PythonResourceType {
     BytecodeOpt1,
     BytecodeOpt2,
     Resource,
+    EggFile,
     Other,
 }
 
@@ -248,6 +249,13 @@ impl PythonResourceIterator {
                     flavor,
                 }
             }
+            Some("egg") => PythonResource {
+                package: "".to_string(),
+                stem: "".to_string(),
+                full_name: "".to_string(),
+                path: path.to_path_buf(),
+                flavor: PythonResourceType::EggFile,
+            },
             _ => {
                 // If it isn't a .py or a .pyc file, it is a resource file.
                 let package_parts = &components[0..components.len() - 1];
@@ -499,6 +507,31 @@ mod tests {
                 full_name: "acme.bar".to_string(),
                 path: acme_path.join("bar.py"),
                 flavor: PythonResourceType::Source,
+            }
+        );
+    }
+
+    #[test]
+    fn test_egg_file() {
+        let td = tempdir::TempDir::new("pyoxidizer-test").unwrap();
+        let tp = td.path();
+
+        create_dir_all(&tp).unwrap();
+
+        let egg_path = tp.join("foo-1.0-py3.7.egg");
+        write(&egg_path, "").unwrap();
+
+        let resources = PythonResourceIterator::new(tp).collect_vec();
+        assert_eq!(resources.len(), 1);
+
+        assert_eq!(
+            resources[0],
+            PythonResource {
+                package: "".to_string(),
+                stem: "".to_string(),
+                full_name: "".to_string(),
+                path: egg_path,
+                flavor: PythonResourceType::EggFile,
             }
         );
     }
