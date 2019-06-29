@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use pyoxidizerlib::logging::logger_from_env;
-use pyoxidizerlib::run_from_build;
+use pyoxidizerlib::pyrepackager::repackage::run_from_build;
 use std::env;
 use std::path::PathBuf;
 
