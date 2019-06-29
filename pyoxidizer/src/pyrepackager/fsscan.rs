@@ -9,7 +9,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 pub fn walk_tree_files(path: &Path) -> Box<Iterator<Item = walkdir::DirEntry>> {
-    let res = walkdir::WalkDir::new(path);
+    let res = walkdir::WalkDir::new(path).sort_by(|a, b| a.file_name().cmp(b.file_name()));
 
     let filtered = res.into_iter().filter_map(|entry| {
         let entry = entry.expect("unable to get directory entry");
@@ -87,7 +87,7 @@ pub struct PythonResourceIterator {
 
 impl PythonResourceIterator {
     fn new(path: &Path) -> PythonResourceIterator {
-        let res = walkdir::WalkDir::new(path);
+        let res = walkdir::WalkDir::new(path).sort_by(|a, b| a.file_name().cmp(b.file_name()));
 
         let filtered = res.into_iter().filter_map(|entry| {
             let entry = entry.expect("unable to get directory entry");
@@ -411,20 +411,20 @@ mod tests {
         assert_eq!(
             resources[0],
             PythonResource {
-                package: "acme.bar".to_string(),
+                package: "acme".to_string(),
                 stem: "".to_string(),
-                full_name: "acme.bar".to_string(),
-                path: acme_bar_path.join("__init__.py"),
+                full_name: "acme".to_string(),
+                path: acme_path.join("__init__.py"),
                 flavor: PythonResourceType::Source,
             }
         );
         assert_eq!(
             resources[1],
             PythonResource {
-                package: "acme".to_string(),
+                package: "acme.a".to_string(),
                 stem: "".to_string(),
-                full_name: "acme".to_string(),
-                path: acme_path.join("__init__.py"),
+                full_name: "acme.a".to_string(),
+                path: acme_a_path.join("__init__.py"),
                 flavor: PythonResourceType::Source,
             }
         );
@@ -441,10 +441,10 @@ mod tests {
         assert_eq!(
             resources[3],
             PythonResource {
-                package: "acme.a".to_string(),
+                package: "acme.bar".to_string(),
                 stem: "".to_string(),
-                full_name: "acme.a".to_string(),
-                path: acme_a_path.join("__init__.py"),
+                full_name: "acme.bar".to_string(),
+                path: acme_bar_path.join("__init__.py"),
                 flavor: PythonResourceType::Source,
             }
         );
