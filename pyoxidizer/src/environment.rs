@@ -101,7 +101,7 @@ pub fn built_git_url() -> PyOxidizerSource {
     let tag = if commit.is_some() {
         None
     } else {
-        if !BUILD_SEMVER.starts_with("v") {
+        if !BUILD_SEMVER.starts_with('v') {
             Some("v".to_string() + BUILD_SEMVER)
         } else {
             Some(BUILD_SEMVER.to_string())
