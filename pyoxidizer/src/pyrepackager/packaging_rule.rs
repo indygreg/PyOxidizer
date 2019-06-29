@@ -600,16 +600,16 @@ fn resolve_pip_install_simple(
     let temp_dir =
         tempdir::TempDir::new("pyoxidizer-pip-install").expect("could not creat temp directory");
 
-    let temp_dir_path = temp_dir.path();
-    let temp_dir_s = temp_dir_path.display().to_string();
-    warn!(logger, "pip installing to {}", temp_dir_s);
+    let target_dir_path = temp_dir.path().join("install");
+    let target_dir_s = target_dir_path.display().to_string();
+    warn!(logger, "pip installing to {}", target_dir_s);
     let mut pip_args = vec![
         "-m".to_string(),
         "pip".to_string(),
         "--disable-pip-version-check".to_string(),
         "install".to_string(),
         "--target".to_string(),
-        temp_dir_s,
+        target_dir_s,
         rule.package.clone(),
     ];
 
@@ -637,7 +637,7 @@ fn resolve_pip_install_simple(
         panic!("error running pip");
     }
 
-    for resource in find_python_resources(&temp_dir_path) {
+    for resource in find_python_resources(&target_dir_path) {
         let mut relevant = true;
         let full_name = resource_full_name(&resource);
 
@@ -716,9 +716,9 @@ fn resolve_pip_requirements_file(
     let temp_dir =
         tempdir::TempDir::new("pyoxidizer-pip-install").expect("could not create temp directory");
 
-    let temp_dir_path = temp_dir.path();
-    let temp_dir_s = temp_dir_path.display().to_string();
-    warn!(logger, "pip installing to {}", temp_dir_s);
+    let target_dir_path = temp_dir.path().join("install");
+    let target_dir_s = target_dir_path.display().to_string();
+    warn!(logger, "pip installing to {}", target_dir_s);
 
     // TODO send stderr to stdout.
     let mut cmd = std::process::Command::new(&dist.python_exe)
@@ -728,7 +728,7 @@ fn resolve_pip_requirements_file(
             "--disable-pip-version-check",
             "install",
             "--target",
-            &temp_dir_s,
+            &target_dir_s,
             "--no-binary",
             ":all:",
             "--requirement",
@@ -751,7 +751,7 @@ fn resolve_pip_requirements_file(
         panic!("error running pip");
     }
 
-    for resource in find_python_resources(&temp_dir_path) {
+    for resource in find_python_resources(&target_dir_path) {
         match resource {
             PythonFileResource::Source {
                 full_name, path, ..
@@ -812,9 +812,10 @@ fn resolve_setup_py_install(
 
     let temp_dir = tempdir::TempDir::new("pyoxidizer-setup-py-install")
         .expect("could not create temp directory");
-    let temp_dir_path = temp_dir.path();
-    let temp_dir_s = temp_dir_path.display().to_string();
-    warn!(logger, "python setup.py installing to {}", temp_dir_s);
+
+    let target_dir_path = temp_dir.path().join("install");
+    let target_dir_s = target_dir_path.display().to_string();
+    warn!(logger, "python setup.py installing to {}", target_dir_s);
 
     // TODO send stderr to stdout.
     let mut cmd = std::process::Command::new(&dist.python_exe)
@@ -823,7 +824,7 @@ fn resolve_setup_py_install(
             "setup.py",
             "install",
             "--prefix",
-            &temp_dir_s,
+            &target_dir_s,
             "--no-compile",
         ])
         .stdout(std::process::Stdio::piped())
@@ -843,7 +844,7 @@ fn resolve_setup_py_install(
         panic!("error running setup.py");
     }
 
-    let mut packages_path = temp_dir_path.to_path_buf();
+    let mut packages_path = target_dir_path.to_path_buf();
 
     if dist.os == "windows" {
         packages_path.push("Lib");
