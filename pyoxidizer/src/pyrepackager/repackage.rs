@@ -70,10 +70,7 @@ lazy_static! {
     static ref OS_IGNORE_LIBRARIES: Vec<&'static str> = {
         let mut v = Vec::new();
 
-        if cfg!(target_os = "linux") {
-            v.push("dl");
-            v.push("m");
-        } else if cfg!(target_os = "macos") {
+        if cfg!(target_os = "linux") || cfg!(target_os = "macos") {
             v.push("dl");
             v.push("m");
         }
@@ -943,7 +940,7 @@ fn resolve_pip_install_simple(
     if rule.extra_args.is_some() {
         pip_args.extend(rule.extra_args.clone().unwrap());
     }
-    
+
     // TODO send stderr to stdout.
     let mut cmd = std::process::Command::new(&dist.python_exe)
         .args(&pip_args)
