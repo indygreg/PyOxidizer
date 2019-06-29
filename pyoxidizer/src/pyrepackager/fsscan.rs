@@ -41,7 +41,7 @@ pub enum PythonResourceType {
 ///
 /// A resource can be a Python source file, a bytecode file, or a resource
 /// file.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct PythonResource {
     /// Python package name of this resource.
     ///
@@ -380,4 +380,73 @@ pub fn find_python_modules(root_path: &Path) -> Result<BTreeMap<String, Vec<u8>>
     }
 
     Ok(mods)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::{create_dir_all, write};
+
+    #[test]
+    fn test_source_resolution() {
+        let td = tempdir::TempDir::new("pyoxidizer-test").unwrap();
+        let tp = td.path();
+
+        let acme_path = tp.join("acme");
+        let acme_a_path = acme_path.join("a");
+        let acme_bar_path = acme_path.join("bar");
+
+        create_dir_all(&acme_a_path).unwrap();
+        create_dir_all(&acme_bar_path).unwrap();
+
+        write(acme_path.join("__init__.py"), "").unwrap();
+        write(acme_a_path.join("__init__.py"), "").unwrap();
+        write(acme_bar_path.join("__init__.py"), "").unwrap();
+
+        write(acme_a_path.join("foo.py"), "# acme.foo").unwrap();
+
+        let resources = PythonResourceIterator::new(tp).collect_vec();
+        assert_eq!(resources.len(), 4);
+
+        assert_eq!(
+            resources[0],
+            PythonResource {
+                package: "acme.bar".to_string(),
+                stem: "".to_string(),
+                full_name: "acme.bar".to_string(),
+                path: acme_bar_path.join("__init__.py"),
+                flavor: PythonResourceType::Source,
+            }
+        );
+        assert_eq!(
+            resources[1],
+            PythonResource {
+                package: "acme".to_string(),
+                stem: "".to_string(),
+                full_name: "acme".to_string(),
+                path: acme_path.join("__init__.py"),
+                flavor: PythonResourceType::Source,
+            }
+        );
+        assert_eq!(
+            resources[2],
+            PythonResource {
+                package: "acme.a".to_string(),
+                stem: "foo".to_string(),
+                full_name: "acme.a.foo".to_string(),
+                path: acme_a_path.join("foo.py"),
+                flavor: PythonResourceType::Source,
+            }
+        );
+        assert_eq!(
+            resources[3],
+            PythonResource {
+                package: "acme.a".to_string(),
+                stem: "".to_string(),
+                full_name: "acme.a".to_string(),
+                path: acme_a_path.join("__init__.py"),
+                flavor: PythonResourceType::Source,
+            }
+        );
+    }
 }
