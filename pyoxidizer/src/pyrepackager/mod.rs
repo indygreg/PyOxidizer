@@ -6,4 +6,5 @@ pub mod bytecode;
 pub mod config;
 pub mod dist;
 pub mod fsscan;
+pub mod packaging_rule;
 pub mod repackage;
