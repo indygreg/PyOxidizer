@@ -384,7 +384,7 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
     }
 
     // TODO detect config file change.
-    return true;
+    true
 }
 
 /// Build PyOxidizer artifacts for a project.
