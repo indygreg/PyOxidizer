@@ -34,13 +34,5 @@ jobs:
   - script: cargo build -p pyoxidizer
     displayName: Build
 
-  - ${{ if ne(parameters.name, 'Windows') }}:
-    - script: |
-        if [ "$RUSTUP_TOOLCHAIN" = 'nightly' ]
-          then cargo test -p pyoxidizer
-        fi
-      displayName: Test
-
-  - ${{ if eq(parameters.name, 'Windows') }}:
-    - script: if "%RUSTUP_TOOLCHAIN%" == "nightly" cargo test -p pyoxidizer
-      displayName: Test
+  - script: cargo test -p pyoxidizer
+    displayName: Test
