@@ -22,6 +22,12 @@ Next
 
 *Not yet released.*
 
+Backwards Compatibility Notes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* Applications are now built into an ``apps/<appname>/(debug|release)``
+  directory instead of ``apps/<appname>``. This allows debug and release
+  builds to exist side-by-side.
+
 All Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 

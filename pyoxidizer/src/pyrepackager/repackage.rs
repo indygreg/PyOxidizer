@@ -217,7 +217,10 @@ impl BuildContext {
 
         let app_target_path = target_triple_base_path.join(&app_name);
 
-        let app_path = apps_base_path.join(&app_name);
+        let app_path =
+            apps_base_path
+                .join(&app_name)
+                .join(if release { "release" } else { "debug" });
         let app_exe_target_path = target_triple_base_path.join(&exe_name);
         let app_exe_path = app_path.join(&exe_name);
 
