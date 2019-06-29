@@ -17,10 +17,10 @@ Blog Posts
 Version History
 ===============
 
-Next
-----
+0.1.3
+-----
 
-*Not yet released*
+Released on June 29, 2019.
 
 Bug Fixes
 ^^^^^^^^^
@@ -53,7 +53,7 @@ All Relevant Changes
 0.1.2
 -----
 
-Relased on June 25, 2019.
+Released on June 25, 2019.
 
 Bug Fixes
 ^^^^^^^^^
