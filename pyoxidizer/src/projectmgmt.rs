@@ -192,9 +192,7 @@ pub fn write_new_pyoxidizer_config_file(
         .map(|(triple, dist)| {
             format!(
                 "[[python_distribution]]\nbuild_target = \"{}\"\nurl = \"{}\"\nsha256 = \"{}\"\n",
-                triple.clone(),
-                dist.url.clone(),
-                dist.sha256.clone()
+                triple, dist.url, dist.sha256
             )
             .to_string()
         })
