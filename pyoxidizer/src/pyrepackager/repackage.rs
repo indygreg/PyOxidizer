@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 
 use super::bytecode::BytecodeCompiler;
 use super::config::{
-    parse_config, Config, PythonDistribution, PythonPackaging, RawAllocator, RunMode,
+    parse_config_file, Config, PythonDistribution, PythonPackaging, RawAllocator, RunMode,
 };
 use super::dist::{
     analyze_python_distribution_tar_zst, resolve_python_distribution_archive, ExtensionModule,
@@ -1476,22 +1476,6 @@ pub struct EmbeddedPythonConfig {
 
     /// Path to file containing packaging state.
     pub packaging_state_path: PathBuf,
-}
-
-pub fn parse_config_file(config_path: &Path, target: &str) -> Result<Config, String> {
-    let mut fh = fs::File::open(config_path).or_else(|e| Err(e.to_string()))?;
-
-    let mut config_data = Vec::new();
-    fh.read_to_end(&mut config_data)
-        .or_else(|e| Err(e.to_string()))?;
-
-    parse_config(&config_data, config_path, target).or_else(|message| {
-        Err(format!(
-            "err reading config {}: {}",
-            config_path.display(),
-            message
-        ))
-    })
 }
 
 /// Derive build artifacts from a PyOxidizer config file.

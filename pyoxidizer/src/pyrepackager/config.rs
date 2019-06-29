@@ -4,6 +4,7 @@
 
 use super::super::environment::canonicalize_path;
 use serde::Deserialize;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 // TOML config file parsing.
@@ -187,7 +188,7 @@ enum ConfigPythonPackaging {
         include_source: bool,
         #[serde(default = "EMBEDDED")]
         install_location: String,
-        extra_args: Option<Vec<String>>
+        extra_args: Option<Vec<String>>,
     },
 
     #[serde(rename = "pip-requirements-file")]
@@ -345,7 +346,7 @@ pub struct PackagingPipInstallSimple {
     pub excludes: Vec<String>,
     pub include_source: bool,
     pub install_location: InstallLocation,
-    pub extra_args: Option<Vec<String>>
+    pub extra_args: Option<Vec<String>>,
 }
 
 #[derive(Clone, Debug)]
@@ -657,7 +658,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 excludes,
                 include_source,
                 install_location,
-                extra_args
+                extra_args,
             } => {
                 if rule_target == "all" || rule_target == target {
                     Ok(Some(PythonPackaging::PipInstallSimple(
@@ -667,7 +668,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                             excludes: excludes.clone(),
                             include_source: *include_source,
                             install_location: resolve_install_location(&install_location)?,
-                            extra_args: extra_args.clone()
+                            extra_args: extra_args.clone(),
                         },
                     )))
                 } else {
@@ -918,5 +919,21 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
         sys_paths,
         raw_allocator,
         write_modules_directory_env,
+    })
+}
+
+pub fn parse_config_file(config_path: &Path, target: &str) -> Result<Config, String> {
+    let mut fh = std::fs::File::open(config_path).or_else(|e| Err(e.to_string()))?;
+
+    let mut config_data = Vec::new();
+    fh.read_to_end(&mut config_data)
+        .or_else(|e| Err(e.to_string()))?;
+
+    parse_config(&config_data, config_path, target).or_else(|message| {
+        Err(format!(
+            "err reading config {}: {}",
+            config_path.display(),
+            message
+        ))
     })
 }
