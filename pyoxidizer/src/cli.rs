@@ -223,7 +223,7 @@ pub fn run_cli() -> Result<(), String> {
         )
         .get_matches();
 
-    let logger_context = logging::logger_from_env();
+    let logger_context = logging::logger_from_env(slog::Level::Warning);
 
     match matches.subcommand() {
         ("add", Some(args)) => {

@@ -34,9 +34,7 @@ pub struct LoggerContext {
 }
 
 /// Construct a slog::Logger from settings in environment.
-pub fn logger_from_env() -> LoggerContext {
-    let min_level = slog::Level::Warning;
-
+pub fn logger_from_env(min_level: slog::Level) -> LoggerContext {
     LoggerContext {
         logger: slog::Logger::root(PrintlnDrain { min_level }.fuse(), slog::o!()),
     }

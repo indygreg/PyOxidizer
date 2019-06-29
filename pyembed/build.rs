@@ -36,7 +36,7 @@ fn main() {
             .expect(format!("failed to read {}", cargo_metadata_path.display()).as_str());
         println!("{}", metadata);
     } else {
-        let logger_context = logger_from_env();
+        let logger_context = logger_from_env(slog::Level::Info);
 
         run_from_build(&logger_context.logger, "build.rs");
     }
