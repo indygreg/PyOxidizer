@@ -39,6 +39,7 @@ New Features
 All Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^
 
+* Minimum Rust version decreased to 1.31 (the first Rust 2018 release). (#24)
 * Added CI powered by Azure Pipelines. (#45)
 * Comments in auto-generated ``pyoxidizer.toml`` have been tweaked to
   improve understanding. (#29)

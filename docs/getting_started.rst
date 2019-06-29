@@ -12,8 +12,9 @@ Installing
 Installing Rust
 ---------------
 
-PyOxidizer is a Rust application and requires Rust 1.33+ to be installed in
-order to build PyOxidizer itself as well as Python application binaries.
+PyOxidizer is a Rust application and requires Rust 2018 (1.31 or newer) to be
+installed in order to build PyOxidizer itself as well as Python application
+binaries.
 
 You can verify your installed version of Rust by running::
 
