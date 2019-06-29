@@ -7,6 +7,7 @@
 use handlebars::Handlebars;
 use itertools::Itertools;
 use lazy_static::lazy_static;
+use serde::Serialize;
 use slog::warn;
 use std::collections::BTreeMap;
 use std::error::Error;
@@ -99,32 +100,54 @@ pub fn find_pyoxidizer_files(root: &Path) -> Vec<PathBuf> {
     res
 }
 
-fn populate_template_data(data: &mut BTreeMap<String, String>) {
+#[derive(Serialize)]
+struct TemplateData {
+    pyoxidizer_version: Option<String>,
+    pyoxidizer_commit: Option<String>,
+    pyoxidizer_local_repo_path: Option<String>,
+    pyoxidizer_git_url: Option<String>,
+    pyoxidizer_git_commit: Option<String>,
+    pyoxidizer_git_tag: Option<String>,
+
+    python_distributions: Option<String>,
+    program_name: Option<String>,
+    code: Option<String>,
+}
+
+impl TemplateData {
+    fn new() -> TemplateData {
+        TemplateData {
+            pyoxidizer_version: None,
+            pyoxidizer_commit: None,
+            pyoxidizer_local_repo_path: None,
+            pyoxidizer_git_url: None,
+            pyoxidizer_git_commit: None,
+            pyoxidizer_git_tag: None,
+            python_distributions: None,
+            program_name: None,
+            code: None,
+        }
+    }
+}
+
+fn populate_template_data(data: &mut TemplateData) {
     let env = super::environment::resolve_environment().unwrap();
 
-    data.insert(
-        "pyoxidizer_version".to_string(),
-        PYOXIDIZER_VERSION.to_string(),
-    );
-    data.insert(
-        "pyoxidizer_commit".to_string(),
-        BUILD_GIT_COMMIT.to_string(),
-    );
+    data.pyoxidizer_version = Some(PYOXIDIZER_VERSION.to_string());
+    data.pyoxidizer_commit = Some(BUILD_GIT_COMMIT.to_string());
 
     match env.pyoxidizer_source {
         PyOxidizerSource::LocalPath { path } => {
-            data.insert(
-                String::from("pyoxidizer_local_repo_path"),
-                path.display().to_string(),
-            );
+            data.pyoxidizer_local_repo_path = Some(path.display().to_string());
         }
         PyOxidizerSource::GitUrl { url, commit, tag } => {
-            data.insert(String::from("pyoxidizer_git_url"), url);
+            data.pyoxidizer_git_url = Some(url);
+
             if let Some(commit) = commit {
-                data.insert(String::from("pyoxidizer_git_commit"), commit);
+                data.pyoxidizer_git_commit = Some(commit);
             }
             if let Some(tag) = tag {
-                data.insert(String::from("pyoxidizer_git_tag"), tag);
+                data.pyoxidizer_git_tag = Some(tag);
             }
         }
     }
@@ -199,14 +222,13 @@ pub fn write_new_pyoxidizer_config_file(
         })
         .collect_vec();
 
-    let mut data = BTreeMap::new();
+    let mut data = TemplateData::new();
     populate_template_data(&mut data);
-
-    data.insert("python_distributions".to_string(), distributions.join("\n"));
-    data.insert("program_name".to_string(), name.to_string());
+    data.python_distributions = Some(distributions.join("\n"));
+    data.program_name = Some(name.to_string());
 
     if let Some(code) = code {
-        data.insert("code".to_string(), toml::to_string(code).unwrap());
+        data.code = Some(toml::to_string(code).unwrap());
     }
 
     let t = HANDLEBARS
@@ -236,7 +258,7 @@ pub fn write_pyembed_crate_files(dest_dir: &Path) -> Result<(), std::io::Error> 
         fh.write_all(&data)?;
     }
 
-    let mut data = BTreeMap::new();
+    let mut data = TemplateData::new();
     populate_template_data(&mut data);
 
     let t = HANDLEBARS
