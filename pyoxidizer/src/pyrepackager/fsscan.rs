@@ -97,6 +97,10 @@ pub enum PythonFileResource {
         path: PathBuf,
     },
 
+    PthFile {
+        path: PathBuf,
+    },
+
     Other {
         package: String,
         stem: String,
@@ -279,6 +283,9 @@ impl PythonResourceIterator {
                 }
             }
             Some("egg") => PythonFileResource::EggFile {
+                path: path.to_path_buf(),
+            },
+            Some("pth") => PythonFileResource::PthFile {
                 path: path.to_path_buf(),
             },
             _ => {
@@ -543,5 +550,21 @@ mod tests {
         assert_eq!(resources.len(), 1);
 
         assert_eq!(resources[0], PythonFileResource::EggFile { path: egg_path });
+    }
+
+    #[test]
+    fn test_pth_file() {
+        let td = tempdir::TempDir::new("pyoxidizer-test").unwrap();
+        let tp = td.path();
+
+        create_dir_all(&tp).unwrap();
+
+        let pth_path = tp.join("foo.pth");
+        write(&pth_path, "").unwrap();
+
+        let resources = PythonResourceIterator::new(tp).collect_vec();
+        assert_eq!(resources.len(), 1);
+
+        assert_eq!(resources[0], PythonFileResource::PthFile { path: pth_path });
     }
 }
