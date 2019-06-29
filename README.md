@@ -1,5 +1,7 @@
 # PyOxidizer
 
+[![Build Status](https://dev.azure.com/gregoryszorc/PyOxidizer/_apis/build/status/indygreg.PyOxidizer?branchName=main)](https://dev.azure.com/gregoryszorc/PyOxidizer/_build/latest?definitionId=1&branchName=main)
+
 `PyOxidizer` is a utility for producing binaries that embed Python.
 The over-arching goal of `PyOxidizer` is to make complex packaging and
 distribution problems simple so application maintainers can focus on
