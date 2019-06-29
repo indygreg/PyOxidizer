@@ -184,6 +184,7 @@ pub fn write_new_main_rs(path: &Path) -> Result<(), std::io::Error> {
 pub fn write_new_pyoxidizer_config_file(
     project_dir: &Path,
     name: &str,
+    code: Option<&str>,
 ) -> Result<(), std::io::Error> {
     let path = project_dir.to_path_buf().join("pyoxidizer.toml");
 
@@ -203,6 +204,10 @@ pub fn write_new_pyoxidizer_config_file(
 
     data.insert("python_distributions".to_string(), distributions.join("\n"));
     data.insert("program_name".to_string(), name.to_string());
+
+    if let Some(code) = code {
+        data.insert("code".to_string(), toml::to_string(code).unwrap());
+    }
 
     let t = HANDLEBARS
         .render("new-pyoxidizer.toml", &data)
@@ -610,7 +615,7 @@ pub fn run(
 }
 
 /// Initialize a new Rust project with PyOxidizer support.
-pub fn init(project_path: &str) -> Result<(), String> {
+pub fn init(project_path: &str, code: Option<&str>) -> Result<(), String> {
     let res = process::Command::new("cargo")
         .arg("init")
         .arg("--bin")
@@ -631,7 +636,7 @@ pub fn init(project_path: &str) -> Result<(), String> {
     add_pyoxidizer(&path, true)?;
     update_new_cargo_toml(&path.join("Cargo.toml")).or(Err("unable to update Cargo.toml"))?;
     write_new_main_rs(&path.join("src").join("main.rs")).or(Err("unable to write main.rs"))?;
-    write_new_pyoxidizer_config_file(&path, &name)
+    write_new_pyoxidizer_config_file(&path, &name, code)
         .or(Err("unable to write PyOxidizer config files"))?;
 
     println!();

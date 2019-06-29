@@ -31,6 +31,9 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* ``pyoxidizer init`` now accepts a ``--python-code`` option to control which
+  Python code is evaluated in the produced executable. This can be used to
+  create applications that do not run a Python REPL by default.
 * ``pip-install-simple`` packaging rule now supports ``excludes`` for excluding
   resources from packaging. (#21)
 * ``pip-install-simple`` packaging rule now supports ``extra_args`` for adding

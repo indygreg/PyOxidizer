@@ -110,6 +110,12 @@ pub fn run_cli() -> Result<(), String> {
                 .about("Create a new Rust project embedding Python.")
                 .long_about(INIT_ABOUT)
                 .arg(
+                    Arg::with_name("python-code")
+                        .long("python-code")
+                        .takes_value(true)
+                        .help("Default Python code to execute in built executable"),
+                )
+                .arg(
                     Arg::with_name("name")
                         .required(true)
                         .value_name("PATH")
@@ -254,9 +260,10 @@ pub fn run_cli() -> Result<(), String> {
         }
 
         ("init", Some(args)) => {
+            let code = args.value_of("python-code");
             let name = args.value_of("name").unwrap();
 
-            projectmgmt::init(name)
+            projectmgmt::init(name, code)
         }
 
         ("python-distribution-extract", Some(args)) => {

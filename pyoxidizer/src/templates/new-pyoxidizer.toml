@@ -82,15 +82,24 @@ path = ""
 # Python interpreter is invoked, this section is not relevant.
 [[embedded_python_run]]
 # Run an interactive Python interpreter.
+{{#unless code~}}
 mode = "repl"
+{{~else~}}
+# mode = "repl"
+{{~/unless}}
 
 # Import a Python module and run it.
 #mode = "module"
 #module = "mypackage.__main__"
 
 # Evaluate some Python code.
+{{#if code~}}
+mode = "eval"
+code = {{{code}}}
+{{~else~}}
 #mode = "eval"
 #code = "from mypackage import main; main()"
+{{~/if}}
 
 # Keeps track of which version of PyOxidizer is managing this project.
 # THIS SECTION IS MANAGED BY PYOXIDIZER AND SHOULD NOT BE CHANGED BY PEOPLE.
