@@ -664,7 +664,7 @@ fn resolve_stdlib_extension_variant(
     let variants = &dist.extension_modules[&rule.extension];
 
     for em in variants {
-        if &em.variant == &rule.variant {
+        if em.variant == rule.variant {
             res.push(PythonResourceAction {
                 action: ResourceAction::Add,
                 location: ResourceLocation::Embedded,
