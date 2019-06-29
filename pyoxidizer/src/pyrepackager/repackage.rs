@@ -24,8 +24,8 @@ use super::dist::{
     LicenseInfo, PythonDistributionInfo,
 };
 use super::packaging_rule::{
-    packages_from_module_names, resolve_python_packaging, PythonResource, ResourceAction,
-    ResourceLocation,
+    packages_from_module_names, resolve_python_packaging, AppRelativeResources, PythonResource,
+    ResourceAction, ResourceLocation,
 };
 
 pub const PYTHON_IMPORTER: &[u8] = include_bytes!("memoryimporter.py");
@@ -307,33 +307,6 @@ impl EmbeddedPythonResources {
 
         let fh = fs::File::create(resources_path).unwrap();
         write_resources_entries(&fh, &self.resources).unwrap();
-    }
-}
-
-/// Represents resources to install in an app-relative location.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct AppRelativeResources {
-    pub module_sources: BTreeMap<String, Vec<u8>>,
-    pub module_bytecodes: BTreeMap<String, Vec<u8>>,
-    pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
-}
-
-impl AppRelativeResources {
-    pub fn new() -> Self {
-        AppRelativeResources {
-            module_sources: BTreeMap::new(),
-            module_bytecodes: BTreeMap::new(),
-            resources: BTreeMap::new(),
-        }
-    }
-
-    pub fn package_names(&self) -> BTreeSet<String> {
-        let mut packages = packages_from_module_names(self.module_sources.keys().cloned());
-        packages.extend(packages_from_module_names(
-            self.module_bytecodes.keys().cloned(),
-        ));
-
-        packages
     }
 }
 

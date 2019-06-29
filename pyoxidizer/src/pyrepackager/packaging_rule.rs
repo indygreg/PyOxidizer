@@ -10,8 +10,9 @@ use super::config::{
 };
 use super::dist::{ExtensionModule, PythonDistributionInfo};
 use super::fsscan::{find_python_resources, PythonFileResource};
+use serde::{Deserialize, Serialize};
 use slog::{info, warn};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
@@ -112,6 +113,33 @@ pub struct PythonResourceAction {
     pub action: ResourceAction,
     pub location: ResourceLocation,
     pub resource: PythonResource,
+}
+
+/// Represents resources to install in an app-relative location.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AppRelativeResources {
+    pub module_sources: BTreeMap<String, Vec<u8>>,
+    pub module_bytecodes: BTreeMap<String, Vec<u8>>,
+    pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
+}
+
+impl AppRelativeResources {
+    pub fn new() -> Self {
+        AppRelativeResources {
+            module_sources: BTreeMap::new(),
+            module_bytecodes: BTreeMap::new(),
+            resources: BTreeMap::new(),
+        }
+    }
+
+    pub fn package_names(&self) -> BTreeSet<String> {
+        let mut packages = packages_from_module_names(self.module_sources.keys().cloned());
+        packages.extend(packages_from_module_names(
+            self.module_bytecodes.keys().cloned(),
+        ));
+
+        packages
+    }
 }
 
 pub fn packages_from_module_names<I>(names: I) -> BTreeSet<String>
