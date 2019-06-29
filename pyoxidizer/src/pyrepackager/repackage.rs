@@ -2102,7 +2102,7 @@ pub fn derive_python_config(
                 "PythonRunMode::Module { module: \"".to_owned() + module + "\".to_string() }"
             }
             RunMode::Eval { ref code } => {
-                "PythonRunMode::Eval { code: \"".to_owned() + code + "\".to_string() }"
+                "PythonRunMode::Eval { code: r###\"".to_owned() + code + "\"###.to_string() }"
             }
         },
     )
