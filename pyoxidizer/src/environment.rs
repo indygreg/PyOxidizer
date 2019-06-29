@@ -100,12 +100,10 @@ pub fn built_git_url() -> PyOxidizerSource {
     // derived from Cargo.toml. The Git tags have ``v`` prefixes.
     let tag = if commit.is_some() {
         None
+    } else if !BUILD_SEMVER.starts_with('v') {
+        Some("v".to_string() + BUILD_SEMVER)
     } else {
-        if !BUILD_SEMVER.starts_with('v') {
-            Some("v".to_string() + BUILD_SEMVER)
-        } else {
-            Some(BUILD_SEMVER.to_string())
-        }
+        Some(BUILD_SEMVER.to_string())
     };
 
     PyOxidizerSource::GitUrl {
