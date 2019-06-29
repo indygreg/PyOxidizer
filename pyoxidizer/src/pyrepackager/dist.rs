@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use url::Url;
 
 use super::config::{Config, PythonDistribution};
-use super::fsscan::{find_python_resources, walk_tree_files, PythonResourceType};
+use super::fsscan::{find_python_resources, walk_tree_files, PythonFileResource};
 
 #[cfg(windows)]
 const PIP_EXE_BASENAME: &str = "pip3.exe";
@@ -488,19 +488,21 @@ pub fn analyze_python_distribution_data(
     let stdlib_path = python_path.join(pi.python_stdlib);
 
     for entry in find_python_resources(&stdlib_path) {
-        match entry.flavor {
-            PythonResourceType::Resource => {
-                if !resources.contains_key(&entry.package) {
-                    resources.insert(entry.package.clone(), BTreeMap::new());
+        match entry {
+            PythonFileResource::Resource(resource) => {
+                if !resources.contains_key(&resource.package) {
+                    resources.insert(resource.package.clone(), BTreeMap::new());
                 }
 
                 resources
-                    .get_mut(&entry.package)
+                    .get_mut(&resource.package)
                     .unwrap()
-                    .insert(entry.stem.clone(), entry.path);
+                    .insert(resource.stem.clone(), resource.path);
             }
-            PythonResourceType::Source => {
-                py_modules.insert(entry.full_name.clone(), entry.path);
+            PythonFileResource::Source {
+                full_name, path, ..
+            } => {
+                py_modules.insert(full_name.clone(), path);
             }
             _ => {}
         };
