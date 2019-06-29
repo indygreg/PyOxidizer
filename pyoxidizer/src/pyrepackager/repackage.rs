@@ -1871,7 +1871,7 @@ pub fn link_libpython(
     // We handle this ourselves.
     build.cargo_metadata(false);
 
-    warn!(
+    info!(
         logger,
         "adding {} object files required by Python core: {:#?}",
         dist.objs_core.len(),
@@ -1930,7 +1930,7 @@ pub fn link_libpython(
             continue;
         }
 
-        warn!(
+        info!(
             logger,
             "adding {} object files for {} extension module: {:#?}",
             em.object_paths.len(),
