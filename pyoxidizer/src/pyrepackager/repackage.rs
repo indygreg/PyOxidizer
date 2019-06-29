@@ -424,10 +424,9 @@ impl AppRelativeResources {
     }
 
     pub fn package_names(&self) -> BTreeSet<String> {
-        let mut packages =
-            packages_from_module_names(self.module_sources.keys().into_iter().cloned());
+        let mut packages = packages_from_module_names(self.module_sources.keys().cloned());
         packages.extend(packages_from_module_names(
-            self.module_bytecodes.keys().into_iter().cloned(),
+            self.module_bytecodes.keys().cloned(),
         ));
 
         packages
