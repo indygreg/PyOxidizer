@@ -41,8 +41,6 @@ pub enum PythonResourceType {
 ///
 /// A resource can be a Python source file, a bytecode file, or a resource
 /// file.
-///
-/// TODO track the package name
 #[derive(Debug)]
 pub struct PythonResource {
     /// Python package name of this resource.
