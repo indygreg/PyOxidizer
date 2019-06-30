@@ -2,13 +2,6 @@
 # pyoxidizer crate's documentation for extensive documentation
 # on this file format.
 
-{{#each python_distributions ~}}
-[[python_distribution]]
-build_target = "{{{ this.build_target }}}"
-url = "{{{ this.url }}}"
-sha256 = "{{{ this.sha256 }}}"
-{{/each}}
-
 [[build]]
 application_name = "{{program_name}}"
 
@@ -107,8 +100,18 @@ code = {{{code}}}
 #code = "from mypackage import main; main()"
 {{~/if}}
 
-# Keeps track of which version of PyOxidizer is managing this project.
-# THIS SECTION IS MANAGED BY PYOXIDIZER AND SHOULD NOT BE CHANGED BY PEOPLE.
+# END OF COMMON USER-ADJUSTED SETTINGS.
+#
+# Everything below this is typically managed by PyOxidizer and doesn't need
+# to be updated by people.
+
+{{#each python_distributions ~}}
+[[python_distribution]]
+build_target = "{{{ this.build_target }}}"
+url = "{{{ this.url }}}"
+sha256 = "{{{ this.sha256 }}}"
+{{/each}}
+
 [[pyoxidizer]]
 version = "{{{ pyoxidizer_version }}}"
 commit = "{{{ pyoxidizer_commit }}}"
