@@ -121,6 +121,14 @@ pub fn run_cli() -> Result<(), String> {
                         .help("Default Python code to execute in built executable"),
                 )
                 .arg(
+                    Arg::with_name("pip-install")
+                        .long("pip-install")
+                        .takes_value(true)
+                        .multiple(true)
+                        .number_of_values(1)
+                        .help("Python packages to install via `pip install`"),
+                )
+                .arg(
                     Arg::with_name("name")
                         .required(true)
                         .value_name("PATH")
@@ -272,9 +280,14 @@ pub fn run_cli() -> Result<(), String> {
 
         ("init", Some(args)) => {
             let code = args.value_of("python-code");
+            let pip_install = if args.is_present("pip-install") {
+                args.values_of("pip-install").unwrap().collect()
+            } else {
+                Vec::new()
+            };
             let name = args.value_of("name").unwrap();
 
-            projectmgmt::init(name, code)
+            projectmgmt::init(name, code, &pip_install)
         }
 
         ("python-distribution-extract", Some(args)) => {

@@ -41,6 +41,10 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* ``pyoxidizer init`` now accepts a ``--pip-install`` option to pre-configure
+  generated ``pyoxidizer.toml`` files with packages to install via ``pip``.
+  Combined with the ``--python-code`` option, it is now possible to create
+  ``pyoxidizer.toml`` files for a ready-to-use Python application!
 * ``pyoxidizer`` now accepts a ``--verbose`` flag to make operations more
   verbose. Various low-level output is no longer printed by default and
   requires ``--verbose`` to see.

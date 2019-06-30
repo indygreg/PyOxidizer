@@ -58,7 +58,11 @@ include_source = false
 [[packaging_rule]]
 type = "write-license-files"
 path = ""
-
+{{#each pip_install_simple}}
+[[packaging_rule]]
+type = "pip-install-simple"
+package = "{{{ this }}}"
+{{/each}}
 # Package .py files discovered in a local directory.
 # [[packaging_rule]]
 # type = "package-root"

@@ -119,6 +119,7 @@ struct TemplateData {
     python_distributions: Vec<PythonDistribution>,
     program_name: Option<String>,
     code: Option<String>,
+    pip_install_simple: Vec<String>,
 }
 
 impl TemplateData {
@@ -133,6 +134,7 @@ impl TemplateData {
             python_distributions: Vec::new(),
             program_name: None,
             code: None,
+            pip_install_simple: Vec::new(),
         }
     }
 }
@@ -215,6 +217,7 @@ pub fn write_new_pyoxidizer_config_file(
     project_dir: &Path,
     name: &str,
     code: Option<&str>,
+    pip_install: &[&str],
 ) -> Result<(), std::io::Error> {
     let path = project_dir.to_path_buf().join("pyoxidizer.toml");
 
@@ -235,6 +238,8 @@ pub fn write_new_pyoxidizer_config_file(
     if let Some(code) = code {
         data.code = Some(toml::to_string(code).unwrap());
     }
+
+    data.pip_install_simple = pip_install.iter().map(|v| v.to_string()).collect();
 
     let t = HANDLEBARS
         .render("new-pyoxidizer.toml", &data)
@@ -642,7 +647,12 @@ pub fn run(
 }
 
 /// Initialize a new Rust project with PyOxidizer support.
-pub fn init(project_path: &str, code: Option<&str>) -> Result<(), String> {
+///
+/// `code` can specify custom Python code to run by default in the new
+/// application.
+///
+/// `pip_install` can specify Python packages to `pip install` for the application.
+pub fn init(project_path: &str, code: Option<&str>, pip_install: &[&str]) -> Result<(), String> {
     let res = process::Command::new("cargo")
         .arg("init")
         .arg("--bin")
@@ -663,7 +673,7 @@ pub fn init(project_path: &str, code: Option<&str>) -> Result<(), String> {
     add_pyoxidizer(&path, true)?;
     update_new_cargo_toml(&path.join("Cargo.toml")).or(Err("unable to update Cargo.toml"))?;
     write_new_main_rs(&path.join("src").join("main.rs")).or(Err("unable to write main.rs"))?;
-    write_new_pyoxidizer_config_file(&path, &name, code)
+    write_new_pyoxidizer_config_file(&path, &name, code, pip_install)
         .or(Err("unable to write PyOxidizer config files"))?;
 
     println!();
