@@ -251,7 +251,9 @@ py_class!(class PyOxidizerFinder |py| {
         if let Some(flavor) = self.known_modules(py).get(&*key) {
             match flavor {
                 KnownModuleFlavor::Builtin => {
-                    self.builtin_importer(py).call_method(py, "find_spec", (fullname, path, target), None)
+                    // BuiltinImporter.find_spec() always returns None if `path` is defined.
+                    // And it doesn't use `target`. So don't proxy these values.
+                    self.builtin_importer(py).call_method(py, "find_spec", (fullname,), None)
                 }
                 KnownModuleFlavor::Frozen => {
                     self.frozen_importer(py).call_method(py, "find_spec", (fullname, path, target), None)
