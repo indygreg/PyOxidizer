@@ -610,6 +610,8 @@ fn resolve_pip_install_simple(
         "install".to_string(),
         "--target".to_string(),
         target_dir_s,
+        "--no-binary".to_string(),
+        ":all:".to_string(),
         rule.package.clone(),
     ];
 

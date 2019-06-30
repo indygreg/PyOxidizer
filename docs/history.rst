@@ -52,6 +52,7 @@ New Features
 All Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* ``pip-install-simple`` rule now passes ``--no-binary :all:`` to pip.
 * Cargo packages updated to latest versions.
 
 0.1.3
