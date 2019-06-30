@@ -12,7 +12,7 @@ use super::dist::{ExtensionModule, PythonDistributionInfo};
 use super::fsscan::{find_python_resources, PythonFileResource};
 use serde::{Deserialize, Serialize};
 use slog::{info, warn};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
@@ -182,6 +182,58 @@ fn resource_full_name(resource: &PythonFileResource) -> &str {
         PythonFileResource::Resource(resource) => &resource.full_name,
         _ => "",
     }
+}
+
+/// Prepare a hacked install of distutils to use with Python packaging.
+///
+/// The idea is we use the distutils in the distribution as a base then install
+/// our own hacks on top of it to make it perform the functionality that we want.
+/// This enables things using it (like setup.py scripts) to invoke our
+/// functionality, without requiring them to change anything.
+pub fn prepare_hacked_distutils(
+    logger: &slog::Logger,
+    dist: &PythonDistributionInfo,
+    dest_dir: &std::path::Path,
+) -> Result<HashMap<String, String>, String> {
+    let extra_sys_path = dest_dir.join("packages");
+
+    warn!(
+        logger,
+        "installing modified distutils to {}",
+        extra_sys_path.display()
+    );
+
+    let orig_distutils_path = dist.stdlib_path.join("distutils");
+    let dest_distutils_path = extra_sys_path.join("distutils");
+
+    for entry in walkdir::WalkDir::new(&orig_distutils_path) {
+        match entry {
+            Ok(entry) => {
+                if entry.path().is_dir() {
+                    continue;
+                }
+
+                let source_path = entry.path();
+                let rel_path = source_path
+                    .strip_prefix(&orig_distutils_path)
+                    .or_else(|_| Err("unable to strip prefix"))?;
+                let dest_path = dest_distutils_path.join(rel_path);
+
+                let dest_dir = dest_path.parent().unwrap();
+                std::fs::create_dir_all(&dest_dir).or_else(|e| Err(e.to_string()))?;
+                std::fs::copy(&source_path, &dest_path).or_else(|e| Err(e.to_string()))?;
+            }
+            Err(e) => return Err(e.to_string()),
+        }
+    }
+
+    let mut res = HashMap::new();
+    res.insert(
+        "PYTHONPATH".to_string(),
+        extra_sys_path.display().to_string(),
+    );
+
+    Ok(res)
 }
 
 fn resolve_stdlib_extensions_policy(
@@ -613,9 +665,13 @@ fn resolve_pip_install_simple(
     let temp_dir =
         tempdir::TempDir::new("pyoxidizer-pip-install").expect("could not creat temp directory");
 
+    let extra_envs =
+        prepare_hacked_distutils(logger, dist, temp_dir.path()).expect("unable to hack distutils");
+
     let target_dir_path = temp_dir.path().join("install");
     let target_dir_s = target_dir_path.display().to_string();
     warn!(logger, "pip installing to {}", target_dir_s);
+
     let mut pip_args = vec![
         "-m".to_string(),
         "pip".to_string(),
@@ -635,6 +691,7 @@ fn resolve_pip_install_simple(
     // TODO send stderr to stdout.
     let mut cmd = std::process::Command::new(&dist.python_exe)
         .args(&pip_args)
+        .envs(extra_envs)
         .stdout(std::process::Stdio::piped())
         .spawn()
         .expect("error running pip");
@@ -731,6 +788,9 @@ fn resolve_pip_requirements_file(
     let temp_dir =
         tempdir::TempDir::new("pyoxidizer-pip-install").expect("could not create temp directory");
 
+    let extra_envs =
+        prepare_hacked_distutils(logger, dist, temp_dir.path()).expect("unable to hack distutils");
+
     let target_dir_path = temp_dir.path().join("install");
     let target_dir_s = target_dir_path.display().to_string();
     warn!(logger, "pip installing to {}", target_dir_s);
@@ -749,6 +809,7 @@ fn resolve_pip_requirements_file(
             "--requirement",
             &rule.requirements_path,
         ])
+        .envs(extra_envs)
         .stdout(std::process::Stdio::piped())
         .spawn()
         .expect("error running pip");
@@ -828,6 +889,9 @@ fn resolve_setup_py_install(
     let temp_dir = tempdir::TempDir::new("pyoxidizer-setup-py-install")
         .expect("could not create temp directory");
 
+    let extra_envs =
+        prepare_hacked_distutils(logger, dist, temp_dir.path()).expect("unable to hack distutils");
+
     let target_dir_path = temp_dir.path().join("install");
     let target_dir_s = target_dir_path.display().to_string();
     warn!(logger, "python setup.py installing to {}", target_dir_s);
@@ -842,6 +906,7 @@ fn resolve_setup_py_install(
             &target_dir_s,
             "--no-compile",
         ])
+        .envs(extra_envs)
         .stdout(std::process::Stdio::piped())
         .spawn()
         .expect("error running setup.py");
