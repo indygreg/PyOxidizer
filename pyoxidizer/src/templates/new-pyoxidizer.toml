@@ -2,7 +2,13 @@
 # pyoxidizer crate's documentation for extensive documentation
 # on this file format.
 
-{{{ python_distributions }}}
+{{#each python_distributions ~}}
+[[python_distribution]]
+build_target = "{{{ this.build_target }}}"
+url = "{{{ this.url }}}"
+sha256 = "{{{ this.sha256 }}}"
+{{/each}}
+
 [[build]]
 application_name = "{{program_name}}"
 

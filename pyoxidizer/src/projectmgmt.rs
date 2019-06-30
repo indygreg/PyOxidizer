@@ -101,6 +101,13 @@ pub fn find_pyoxidizer_files(root: &Path) -> Vec<PathBuf> {
 }
 
 #[derive(Serialize)]
+struct PythonDistribution {
+    build_target: String,
+    url: String,
+    sha256: String,
+}
+
+#[derive(Serialize)]
 struct TemplateData {
     pyoxidizer_version: Option<String>,
     pyoxidizer_commit: Option<String>,
@@ -109,7 +116,7 @@ struct TemplateData {
     pyoxidizer_git_commit: Option<String>,
     pyoxidizer_git_tag: Option<String>,
 
-    python_distributions: Option<String>,
+    python_distributions: Vec<PythonDistribution>,
     program_name: Option<String>,
     code: Option<String>,
 }
@@ -123,7 +130,7 @@ impl TemplateData {
             pyoxidizer_git_url: None,
             pyoxidizer_git_commit: None,
             pyoxidizer_git_tag: None,
-            python_distributions: None,
+            python_distributions: Vec::new(),
             program_name: None,
             code: None,
         }
@@ -213,18 +220,16 @@ pub fn write_new_pyoxidizer_config_file(
 
     let distributions = CPYTHON_BY_TRIPLE
         .iter()
-        .map(|(triple, dist)| {
-            format!(
-                "[[python_distribution]]\nbuild_target = \"{}\"\nurl = \"{}\"\nsha256 = \"{}\"\n",
-                triple, dist.url, dist.sha256
-            )
-            .to_string()
+        .map(|(triple, dist)| PythonDistribution {
+            build_target: triple.to_string(),
+            url: dist.url.clone(),
+            sha256: dist.sha256.clone(),
         })
         .collect_vec();
 
     let mut data = TemplateData::new();
     populate_template_data(&mut data);
-    data.python_distributions = Some(distributions.join("\n"));
+    data.python_distributions = distributions;
     data.program_name = Some(name.to_string());
 
     if let Some(code) = code {
