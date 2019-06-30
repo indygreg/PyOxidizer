@@ -52,6 +52,9 @@ New Features
 All Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* Packaging now automatically creates empty modules for missing parent
+  packages. This prevents a module from being packaged without its parent.
+  This could occur with *namespace packages*, for example.
 * ``pip-install-simple`` rule now passes ``--no-binary :all:`` to pip.
 * Cargo packages updated to latest versions.
 

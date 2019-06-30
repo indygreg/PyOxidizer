@@ -24,8 +24,8 @@ use super::dist::{
     LicenseInfo, PythonDistributionInfo,
 };
 use super::packaging_rule::{
-    packages_from_module_names, resolve_python_packaging, AppRelativeResources, PythonResource,
-    ResourceAction, ResourceLocation,
+    packages_from_module_name, packages_from_module_names, resolve_python_packaging,
+    AppRelativeResources, PythonResource, ResourceAction, ResourceLocation,
 };
 
 pub const PYTHON_IMPORTER: &[u8] = include_bytes!("memoryimporter.py");
@@ -633,6 +633,25 @@ pub fn resolve_python_resources(
                 filter_btreemap(logger, &mut value.resources, &include_names);
             }
         }
+    }
+
+    // Add empty modules for missing parent packages. This could happen if there are
+    // namespace packages, for example.
+    let mut missing_packages = BTreeSet::new();
+    for name in embedded_bytecode_requests.keys() {
+        for package in packages_from_module_name(&name) {
+            if !embedded_bytecode_requests.contains_key(&package) {
+                missing_packages.insert(package.clone());
+            }
+        }
+    }
+
+    for package in missing_packages {
+        warn!(
+            logger,
+            "adding empty module for missing package {}", package
+        );
+        embedded_bytecode_requests.insert(package.clone(), (Vec::new(), 0));
     }
 
     // Add required extension modules, as some don't show up in the modules list
