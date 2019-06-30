@@ -48,7 +48,7 @@ Building and using compiled extension modules (e.g. C extensions) is
 partially supported.
 
 Building C extensions to be embedded in the produced binary works
-for Linux and macOS. It isn't yet implemented on Windows.
+for Windows, Linux, and macOS.
 
 Support for installing extension modules in app-relative paths is not yet
 implemented.

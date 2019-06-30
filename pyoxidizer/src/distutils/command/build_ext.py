@@ -525,6 +525,10 @@ class build_ext(Command):
         for undef in ext.undef_macros:
             macros.append((undef,))
 
+        # This is needed to activate specific symbol visibility / linking
+        # behavior on Windows. It isn't needed on UNIX but should be harmless.
+        macros.append(('Py_BUILD_CORE_BUILTIN', '1'))
+
         objects = self.compiler.compile(sources,
                                          output_dir=self.build_temp,
                                          macros=macros,
