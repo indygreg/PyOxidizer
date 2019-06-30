@@ -10,6 +10,7 @@ use super::config::{
 };
 use super::dist::{ExtensionModule, PythonDistributionInfo};
 use super::fsscan::{find_python_resources, PythonFileResource};
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use slog::{info, warn};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -184,12 +185,36 @@ fn resource_full_name(resource: &PythonFileResource) -> &str {
     }
 }
 
+lazy_static! {
+    static ref MODIFIED_DISTUTILS_FILES: BTreeMap<&'static str, &'static [u8]> = {
+        let mut res: BTreeMap<&'static str, &'static [u8]> = BTreeMap::new();
+
+        res.insert(
+            "command/build_ext.py",
+            include_bytes!("../distutils/command/build_ext.py"),
+        );
+        res.insert(
+            "unixccompiler.py",
+            include_bytes!("../distutils/unixccompiler.py"),
+        );
+
+        res
+    };
+}
+
 /// Prepare a hacked install of distutils to use with Python packaging.
 ///
 /// The idea is we use the distutils in the distribution as a base then install
 /// our own hacks on top of it to make it perform the functionality that we want.
 /// This enables things using it (like setup.py scripts) to invoke our
 /// functionality, without requiring them to change anything.
+///
+/// An alternate considered implementation was to "prepend" code to the invoked
+/// setup.py or Python process so that the in-process distutils was monkeypatched.
+/// This approach felt less robust than modifying distutils itself because a
+/// modified distutils will survive multiple process invocations, unlike a
+/// monkeypatch. People do weird things in setup.py scripts and we want to
+/// support as many as possible.
 pub fn prepare_hacked_distutils(
     logger: &slog::Logger,
     dist: &PythonDistributionInfo,
@@ -225,6 +250,13 @@ pub fn prepare_hacked_distutils(
             }
             Err(e) => return Err(e.to_string()),
         }
+    }
+
+    for (path, data) in MODIFIED_DISTUTILS_FILES.iter() {
+        let dest_path = dest_distutils_path.join(path);
+
+        warn!(logger, "modifying distutils/{} for oxidation", path);
+        std::fs::write(dest_path, data).or_else(|e| Err(e.to_string()))?;
     }
 
     let mut res = HashMap::new();
