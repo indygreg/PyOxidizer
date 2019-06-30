@@ -41,6 +41,8 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* Support for building and embedding C extensions on Linux (and possibly macOS)
+  in some circumstances. See :ref:`status_extension_modules` for support status.
 * ``pyoxidizer init`` now accepts a ``--pip-install`` option to pre-configure
   generated ``pyoxidizer.toml`` files with packages to install via ``pip``.
   Combined with the ``--python-code`` option, it is now possible to create

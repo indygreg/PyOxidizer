@@ -16,7 +16,7 @@ use slog::{info, warn};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs;
 use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// SPDX licenses in Python distributions that are not GPL.
 ///
@@ -59,6 +59,16 @@ pub fn is_stdlib_test_package(name: &str) -> bool {
     false
 }
 
+/// Represents an extension module built during packaging.
+///
+/// This is like a light version of `ExtensionModule`.
+#[derive(Clone, Debug)]
+pub struct BuiltExtensionModule {
+    pub name: String,
+    pub init_fn: String,
+    pub object_file_data: Vec<Vec<u8>>,
+}
+
 /// Represents a resource to make available to the Python interpreter.
 #[derive(Debug)]
 pub enum PythonResource {
@@ -80,6 +90,7 @@ pub enum PythonResource {
         name: String,
         data: Vec<u8>,
     },
+    BuiltExtensionModule(BuiltExtensionModule),
 }
 
 #[derive(Debug)]
@@ -259,13 +270,87 @@ pub fn prepare_hacked_distutils(
         std::fs::write(dest_path, data).or_else(|e| Err(e.to_string()))?;
     }
 
+    let state_dir = dest_dir.join("pyoxidizer-build-state");
+    fs::create_dir_all(&state_dir).or_else(|e| Err(e.to_string()))?;
+
     let mut res = HashMap::new();
     res.insert(
         "PYTHONPATH".to_string(),
         extra_sys_path.display().to_string(),
     );
+    res.insert(
+        "PYOXIDIZER_DISTUTILS_STATE_DIR".to_string(),
+        state_dir.display().to_string(),
+    );
 
     Ok(res)
+}
+
+#[derive(Debug, Deserialize)]
+struct DistutilsExtensionState {
+    name: String,
+    objects: Vec<String>,
+    output_filename: String,
+    libraries: Vec<String>,
+    library_dirs: Vec<String>,
+    runtime_library_dirs: Vec<String>,
+}
+
+fn resolve_built_extensions(
+    logger: &slog::Logger,
+    state_dir: &Path,
+    res: &mut Vec<PythonResourceAction>,
+    location: &ResourceLocation,
+) -> Result<(), String> {
+    let entries = fs::read_dir(state_dir).or_else(|e| Err(e.to_string()))?;
+
+    for entry in entries {
+        let entry = entry.or_else(|e| Err(e.to_string()))?;
+        let path = entry.path();
+        let file_name = path.file_name().unwrap().to_str().unwrap();
+
+        if !file_name.starts_with("extension.") || !file_name.ends_with(".json") {
+            continue;
+        }
+
+        let data = fs::read_to_string(&path).or_else(|e| Err(e.to_string()))?;
+
+        let info: DistutilsExtensionState =
+            serde_json::from_str(&data).or_else(|e| Err(e.to_string()))?;
+
+        let module_components: Vec<&str> = info.name.split('.').collect();
+        let final_name = module_components[module_components.len() - 1];
+        let init_fn = "PyInit_".to_string() + final_name;
+
+        let mut object_file_data = Vec::new();
+
+        for object_path in info.objects {
+            let path = PathBuf::from(object_path);
+            let data = fs::read(path).or_else(|e| Err(e.to_string()))?;
+
+            object_file_data.push(data);
+        }
+
+        if !info.libraries.is_empty() {
+            warn!(
+                logger,
+                "WARNING: libraries found for built extension module {} are not used yet",
+                info.name
+            );
+        }
+
+        res.push(PythonResourceAction {
+            action: ResourceAction::Add,
+            location: location.clone(),
+            resource: PythonResource::BuiltExtensionModule(BuiltExtensionModule {
+                name: info.name.clone(),
+                init_fn,
+                object_file_data,
+            }),
+        });
+    }
+
+    Ok(())
 }
 
 fn resolve_stdlib_extensions_policy(
@@ -723,7 +808,7 @@ fn resolve_pip_install_simple(
     // TODO send stderr to stdout.
     let mut cmd = std::process::Command::new(&dist.python_exe)
         .args(&pip_args)
-        .envs(extra_envs)
+        .envs(&extra_envs)
         .stdout(std::process::Stdio::piped())
         .spawn()
         .expect("error running pip");
@@ -803,6 +888,14 @@ fn resolve_pip_install_simple(
         }
     }
 
+    resolve_built_extensions(
+        logger,
+        &PathBuf::from(extra_envs.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap()),
+        &mut res,
+        &location,
+    )
+    .unwrap();
+
     res
 }
 
@@ -841,7 +934,7 @@ fn resolve_pip_requirements_file(
             "--requirement",
             &rule.requirements_path,
         ])
-        .envs(extra_envs)
+        .envs(&extra_envs)
         .stdout(std::process::Stdio::piped())
         .spawn()
         .expect("error running pip");
@@ -906,6 +999,14 @@ fn resolve_pip_requirements_file(
         }
     }
 
+    resolve_built_extensions(
+        logger,
+        &PathBuf::from(extra_envs.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap()),
+        &mut res,
+        &location,
+    )
+    .unwrap();
+
     res
 }
 
@@ -938,7 +1039,7 @@ fn resolve_setup_py_install(
             &target_dir_s,
             "--no-compile",
         ])
-        .envs(extra_envs)
+        .envs(&extra_envs)
         .stdout(std::process::Stdio::piped())
         .spawn()
         .expect("error running setup.py");
@@ -1013,6 +1114,14 @@ fn resolve_setup_py_install(
             _ => {}
         }
     }
+
+    resolve_built_extensions(
+        logger,
+        &PathBuf::from(extra_envs.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap()),
+        &mut res,
+        &location,
+    )
+    .unwrap();
 
     res
 }

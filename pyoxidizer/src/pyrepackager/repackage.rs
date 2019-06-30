@@ -25,7 +25,7 @@ use super::dist::{
 };
 use super::packaging_rule::{
     packages_from_module_name, packages_from_module_names, resolve_python_packaging,
-    AppRelativeResources, PythonResource, ResourceAction, ResourceLocation,
+    AppRelativeResources, BuiltExtensionModule, PythonResource, ResourceAction, ResourceLocation,
 };
 
 pub const PYTHON_IMPORTER: &[u8] = include_bytes!("memoryimporter.py");
@@ -263,6 +263,7 @@ pub struct EmbeddedPythonResources {
     pub all_modules: BTreeSet<String>,
     pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
     pub extension_modules: BTreeMap<String, ExtensionModule>,
+    pub built_extension_modules: BTreeMap<String, BuiltExtensionModule>,
 }
 
 impl EmbeddedPythonResources {
@@ -307,6 +308,19 @@ impl EmbeddedPythonResources {
 
         let fh = fs::File::create(resources_path).unwrap();
         write_resources_entries(&fh, &self.resources).unwrap();
+    }
+
+    pub fn embedded_extension_module_names(&self) -> BTreeSet<String> {
+        let mut res = BTreeSet::new();
+
+        for name in self.extension_modules.keys() {
+            res.insert(name.clone());
+        }
+        for name in self.built_extension_modules.keys() {
+            res.insert(name.clone());
+        }
+
+        res
     }
 }
 
@@ -375,6 +389,7 @@ pub fn resolve_python_resources(
     let mut embedded_sources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut embedded_bytecode_requests: BTreeMap<String, (Vec<u8>, i32)> = BTreeMap::new();
     let mut embedded_resources: BTreeMap<String, BTreeMap<String, Vec<u8>>> = BTreeMap::new();
+    let mut embedded_built_extension_modules = BTreeMap::new();
 
     let mut app_relative: BTreeMap<String, AppRelativeResources> = BTreeMap::new();
     let mut app_relative_bytecode_requests: BTreeMap<String, BTreeMap<String, (Vec<u8>, i32)>> =
@@ -548,6 +563,44 @@ pub fn resolve_python_resources(
                 (ResourceAction::Remove, ResourceLocation::AppRelative { .. }, _) => {
                     panic!("should not have gotten an action to remove an app-relative resource");
                 }
+                (
+                    ResourceAction::Add,
+                    ResourceLocation::Embedded,
+                    PythonResource::BuiltExtensionModule(em),
+                ) => {
+                    warn!(
+                        logger,
+                        "adding embedded built extension module: {}", em.name
+                    );
+
+                    embedded_built_extension_modules.insert(em.name.clone(), em.clone());
+                }
+                (
+                    ResourceAction::Add,
+                    ResourceLocation::AppRelative { path },
+                    PythonResource::BuiltExtensionModule(em),
+                ) => {
+                    warn!(
+                        logger,
+                        "adding app-relative built extension module {} to {}", em.name, path
+                    );
+                    // TODO implement
+                    warn!(
+                        logger,
+                        "WARNING: app-relative built extension modules not yet supported"
+                    );
+                }
+                (
+                    ResourceAction::Remove,
+                    ResourceLocation::Embedded,
+                    PythonResource::BuiltExtensionModule(em),
+                ) => {
+                    warn!(
+                        logger,
+                        "removing embedded built extension module {}", em.name
+                    );
+                    embedded_built_extension_modules.remove(&em.name);
+                }
             }
         }
 
@@ -632,6 +685,15 @@ pub fn resolve_python_resources(
             for value in app_relative.values_mut() {
                 filter_btreemap(logger, &mut value.resources, &include_names);
             }
+            warn!(
+                logger,
+                "filtering embedded built extension modules from {:?}", packaging
+            );
+            filter_btreemap(
+                logger,
+                &mut embedded_built_extension_modules,
+                &include_names,
+            );
         }
     }
 
@@ -727,6 +789,7 @@ pub fn resolve_python_resources(
             all_modules: all_embedded_modules,
             resources: embedded_resources,
             extension_modules: embedded_extension_modules,
+            built_extension_modules: embedded_built_extension_modules,
         },
         app_relative,
         read_files,
@@ -865,7 +928,10 @@ pub fn write_resources_entries<W: Write>(
 }
 
 /// Produce the content of the config.c file containing built-in extensions.
-fn make_config_c(extension_modules: &BTreeMap<String, ExtensionModule>) -> String {
+fn make_config_c(
+    extension_modules: &BTreeMap<String, ExtensionModule>,
+    built_extension_modules: &BTreeMap<String, BuiltExtensionModule>,
+) -> String {
     // It is easier to construct the file from scratch than parse the template
     // and insert things in the right places.
     let mut lines: Vec<String> = Vec::new();
@@ -883,6 +949,10 @@ fn make_config_c(extension_modules: &BTreeMap<String, ExtensionModule>) -> Strin
         }
     }
 
+    for em in built_extension_modules.values() {
+        lines.push(format!("extern PyObject* {}(void);", em.init_fn));
+    }
+
     lines.push(String::from("struct _inittab _PyImport_Inittab[] = {"));
 
     for em in extension_modules.values() {
@@ -893,6 +963,10 @@ fn make_config_c(extension_modules: &BTreeMap<String, ExtensionModule>) -> Strin
 
             lines.push(format!("{{\"{}\", {}}},", em.module, init_fn));
         }
+    }
+
+    for em in built_extension_modules.values() {
+        lines.push(format!("{{\"{}\", {}}},", em.name, em.init_fn));
     }
 
     lines.push(String::from("{0, 0}"));
@@ -926,6 +1000,7 @@ pub fn link_libpython(
     let temp_dir_path = temp_dir.path();
 
     let extension_modules = &resources.extension_modules;
+    let built_extension_modules = &resources.built_extension_modules;
 
     // Sometimes we have canonicalized paths. These can break cc/cl.exe when they
     // are \\?\ paths on Windows for some reason. We hack around this by doing
@@ -939,9 +1014,9 @@ pub fn link_libpython(
     warn!(
         logger,
         "deriving custom config.c from {} extension modules",
-        extension_modules.len()
+        extension_modules.len() + built_extension_modules.len()
     );
-    let config_c_source = make_config_c(&extension_modules);
+    let config_c_source = make_config_c(&extension_modules, &built_extension_modules);
     let config_c_path = out_dir.join("config.c");
     let config_c_temp_path = temp_dir_path.join("config.c");
 
@@ -1034,7 +1109,7 @@ pub fn link_libpython(
     warn!(
         logger,
         "resolving inputs for {} extension modules...",
-        extension_modules.len()
+        extension_modules.len() + built_extension_modules.len()
     );
     for (name, em) in extension_modules {
         if em.builtin_default {
@@ -1070,6 +1145,29 @@ pub fn link_libpython(
                 );
             }
         }
+    }
+
+    warn!(
+        logger,
+        "resolving inputs for {} built extension modules...",
+        built_extension_modules.len()
+    );
+
+    for (name, em) in built_extension_modules {
+        info!(
+            logger,
+            "adding {} object files for {} built extension module",
+            em.object_file_data.len(),
+            name
+        );
+        for (i, object_data) in em.object_file_data.iter().enumerate() {
+            let out_path = temp_dir_path.join(format!("{}.{}.o", name, i));
+
+            fs::write(&out_path, object_data).expect("unable to write object file");
+            build.object(&out_path);
+        }
+
+        // TODO collect libraries and frameworks.
     }
 
     for library in needed_libraries.iter() {
@@ -1581,11 +1679,13 @@ pub fn process_config(
         resources.embedded.resources.len(),
         resource_map
     );
+
+    let all_extension_modules = resources.embedded.embedded_extension_module_names();
     warn!(
         logger,
         "resolved {} embedded extension modules: {:#?}",
-        resources.embedded.extension_modules.len(),
-        resources.embedded.extension_modules.keys()
+        all_extension_modules.len(),
+        all_extension_modules
     );
 
     // Produce the packed data structures containing Python modules.

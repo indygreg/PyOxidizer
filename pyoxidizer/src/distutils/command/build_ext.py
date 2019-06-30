@@ -547,7 +547,14 @@ class build_ext(Command):
         # Detect target language, if not provided
         language = ext.language or self.compiler.detect_language(sources)
 
-        self.compiler.link_shared_object(
+        if hasattr(self.compiler, 'extension_link_shared_object'):
+            fn = self.compiler.extension_link_shared_object
+            extra_kwargs = {'name': ext.name}
+        else:
+            fn = self.compiler.link_shared_object
+            extra_kwargs = {}
+
+        fn(
             objects, ext_path,
             libraries=self.get_libraries(ext),
             library_dirs=ext.library_dirs,
@@ -556,7 +563,8 @@ class build_ext(Command):
             export_symbols=self.get_export_symbols(ext),
             debug=self.debug,
             build_temp=self.build_temp,
-            target_lang=language)
+            target_lang=language,
+            **extra_kwargs)
 
     def swig_sources(self, sources, extension):
         """Walk the list of source files in 'sources', looking for SWIG

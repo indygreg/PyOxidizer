@@ -13,7 +13,7 @@ the "typical" Unix-style command-line C compiler:
   * link shared library handled by 'cc -shared'
 """
 
-import os, sys, re
+import json, os, sys, re, shutil
 
 from distutils import sysconfig
 from distutils.dep_util import newer
@@ -206,6 +206,58 @@ class UnixCCompiler(CCompiler):
                 raise LinkError(msg)
         else:
             log.debug("skipping %s (up-to-date)", output_filename)
+
+    def extension_link_shared_object(self,
+                           objects,
+                           output_filename,
+                           output_dir=None,
+                           libraries=None,
+                           library_dirs=None,
+                           runtime_library_dirs=None,
+                           export_symbols=None,
+                           debug=0,
+                           extra_preargs=None,
+                           extra_postargs=None,
+                           build_temp=None,
+                           target_lang=None,
+                           name=None):
+
+        if 'PYOXIDIZER_DISTUTILS_STATE_DIR' not in os.environ:
+            raise Exception('PYOXIDIZER_DISTUTILS_STATE_DIR not defined')
+
+        self.link(CCompiler.SHARED_OBJECT, objects,
+                  output_filename, output_dir,
+                  libraries, library_dirs, runtime_library_dirs,
+                  export_symbols, debug,
+                  extra_preargs, extra_postargs, build_temp, target_lang)
+
+        # In addition to performing the requested link, we also write out
+        # files that PyOxidizer can use to embed the extension in a larger
+        # binary.
+        dest_path = os.environ['PYOXIDIZER_DISTUTILS_STATE_DIR']
+
+        # We need to copy the object files because they may be in a temp
+        # directory that doesn't outlive this process.
+        object_paths = []
+        for i, o in enumerate(objects):
+            p = os.path.join(dest_path, '%s.%d.o' % (name, i))
+            shutil.copyfile(o, p)
+            object_paths.append(p)
+
+        # Write out a file with the information about the extension. PyOxidizer
+        # will read this to know how to ingest the extension.
+        json_path = os.path.join(dest_path, 'extension.%s.json' % name)
+        with open(json_path, 'w', encoding='utf-8') as fh:
+            data = {
+                'name': name,
+                'objects': object_paths,
+                'output_filename': os.path.abspath(output_filename),
+                'libraries': libraries or [],
+                'library_dirs': library_dirs or [],
+                'runtime_library_dirs': runtime_library_dirs or [],
+            }
+            json.dump(data, fh, indent=4, sort_keys=True)
+
 
     # -- Miscellaneous methods -----------------------------------------
     # These are all used by the 'gen_lib_options() function, in
