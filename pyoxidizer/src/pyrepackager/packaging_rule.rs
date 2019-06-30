@@ -205,6 +205,10 @@ lazy_static! {
             include_bytes!("../distutils/command/build_ext.py"),
         );
         res.insert(
+            "_msvccompiler.py",
+            include_bytes!("../distutils/_msvccompiler.py"),
+        );
+        res.insert(
             "unixccompiler.py",
             include_bytes!("../distutils/unixccompiler.py"),
         );
