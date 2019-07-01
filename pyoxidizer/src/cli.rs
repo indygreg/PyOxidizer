@@ -96,6 +96,7 @@ pub fn run_cli() -> Result<(), String> {
         .subcommand(
             SubCommand::with_name("analyze")
                 .about("Analyze a built binary")
+                .setting(AppSettings::ArgRequiredElseHelp)
                 .arg(Arg::with_name("path").help("Path to executable to analyze")),
         )
         .subcommand(
@@ -312,7 +313,7 @@ pub fn run_cli() -> Result<(), String> {
         ("run", Some(args)) => {
             let target = args.value_of("target");
             let release = args.is_present("release");
-            let path = args.value_of("path").unwrap();;
+            let path = args.value_of("path").unwrap();
             let extra: Vec<&str> = args.values_of("extra").unwrap_or_default().collect();
 
             projectmgmt::run(&logger_context.logger, path, target, release, &extra)
