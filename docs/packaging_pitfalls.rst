@@ -212,3 +212,48 @@ don't be surprised if you need to modify code to support the modern resource
 interfaces. But this effort should be well spent, as the new resource APIs
 are hopefully the most future compatible. And, using them will enable
 applications built with PyOxidizer to import resources data from memory!
+
+.. _pitfall_extension_modules:
+
+C and Other Native Extension Modules
+====================================
+
+Many Python packages compile *extension modules* to native code. (Typically
+C is used to implement extension modules.)
+
+The way this typically works is some build system (often ``distutils`` via a
+``setup.py`` script) produces a shared library file containing the extension.
+On Linux and macOS, the file extension is typically ``.so``. On Windows, it
+is ``.pyd``. Python's importing mechanism looks for these files in addition
+to normal ``.py`` and ``.pyc`` files when an ``import`` is requested.
+
+PyOxidizer currently has :ref:`limited support <status_extension_modules>` for
+extension modules. Under some circumstances, building extension modules as
+part of regular package build machinery *just works* and the resulting
+extension module can be embedded in the produced binary.
+
+The way PyOxidizer achieves this is a bit crude, but effective.
+
+When PyOxidizer invokes ``pip`` or ``setup.py`` to build a package, it
+installs a modified version of ``distutils`` into the invoked Python's
+``sys.path``. This modified ``distutils`` changes the behavior of some
+key build steps (notably how C extensions are built) such that the build
+emits artifacts that PyOxidizer can use to integrate the extension module
+into a custom binary. For example, on Linux, PyOxidizer copies the
+intermediate object files produced by the build and links them into the
+same binary containing Python: PyOxidizer completely ignores the shared
+library that is or would typically be produced.
+
+If ``setup.py`` scripts are following the traditional pattern of using
+`distutils.core.Extension <https://docs.python.org/3/distutils/apiref.html#distutils.core.Extension>`_
+to define extension modules, things tend to *just work* (assuming extension
+modules are supported by PyOxidizer for the target platform). However,
+if ``setup.py`` scripts are doing their own monkeypatching of
+``distutils``, rely on custom build steps or types to compile extension
+modules, or invoke separate Python processes to interact with ``distutils``,
+things may break.
+
+If you run into an extension module packaging problem that isn't
+recorded here or on the :ref:`static page <status_extension_modules>`,
+please `file an issue <https://github.com/indygreg/PyOxidizer/issues>`_ so
+it may be tracked.

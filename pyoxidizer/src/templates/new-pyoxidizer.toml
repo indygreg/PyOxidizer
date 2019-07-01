@@ -2,7 +2,6 @@
 # pyoxidizer crate's documentation for extensive documentation
 # on this file format.
 
-{{{ python_distributions }}}
 [[build]]
 application_name = "{{program_name}}"
 
@@ -31,11 +30,13 @@ type = "stdlib-extensions-policy"
 policy = "all"
 
 # Only package the minimal set of extension modules needed to initialize
-# a Python interpreter. Many things like won't work with this setting.
+# a Python interpreter. Many common packages in Python's standard
+# library won't work with this setting.
 # policy = "minimal"
 
 # Only package extension modules that don't require linking against
-# non-Python libraries.
+# non-Python libraries. e.g. will exclude support for OpenSSL, SQLite3,
+# other features that require external libraries.
 # policy = "no-libraries"
 
 # Explicit list of extension modules from the distribution to include.
@@ -57,7 +58,11 @@ include_source = false
 [[packaging_rule]]
 type = "write-license-files"
 path = ""
-
+{{#each pip_install_simple}}
+[[packaging_rule]]
+type = "pip-install-simple"
+package = "{{{ this }}}"
+{{/each}}
 # Package .py files discovered in a local directory.
 # [[packaging_rule]]
 # type = "package-root"
@@ -80,18 +85,37 @@ path = ""
 # Python interpreter is invoked, this section is not relevant.
 [[embedded_python_run]]
 # Run an interactive Python interpreter.
+{{#unless code~}}
 mode = "repl"
+{{~else~}}
+# mode = "repl"
+{{~/unless}}
 
 # Import a Python module and run it.
 #mode = "module"
 #module = "mypackage.__main__"
 
 # Evaluate some Python code.
+{{#if code~}}
+mode = "eval"
+code = {{{code}}}
+{{~else~}}
 #mode = "eval"
 #code = "from mypackage import main; main()"
+{{~/if}}
 
-# Keeps track of which version of PyOxidizer is managing this project.
-# THIS SECTION IS MANAGED BY PYOXIDIZER AND SHOULD NOT BE CHANGED BY PEOPLE.
+# END OF COMMON USER-ADJUSTED SETTINGS.
+#
+# Everything below this is typically managed by PyOxidizer and doesn't need
+# to be updated by people.
+
+{{#each python_distributions ~}}
+[[python_distribution]]
+build_target = "{{{ this.build_target }}}"
+url = "{{{ this.url }}}"
+sha256 = "{{{ this.sha256 }}}"
+{{/each}}
+
 [[pyoxidizer]]
 version = "{{{ pyoxidizer_version }}}"
 commit = "{{{ pyoxidizer_commit }}}"

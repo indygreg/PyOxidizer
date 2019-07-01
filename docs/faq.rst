@@ -9,6 +9,34 @@ Where Can I Report Bugs / Send Feedback / Request Features?
 
 At https://github.com/indygreg/PyOxidizer/issues
 
+.. _faq_why_another_tool:
+
+Why Build Another Python Application Packaging Tool?
+====================================================
+
+It is true that several other tools exist to turn Python code into distributable applications!
+:ref:`comparisons` attempts to exhaustively compare ``PyOxidizer``
+to these myriad of tools. (If a tool is missing or the comparison incomplete
+or unfair, please file an issue so Python application maintainers can make
+better, informed decisions!)
+
+The long version of how ``PyOxidizer`` came to be can be found in the
+`Distributing Standalone Python Applications <https://gregoryszorc.com/blog/2018/12/18/distributing-standalone-python-applications/>`_
+blog post. If you really want to understand the motivations for
+starting a new project rather than using or improving an existing
+one, read that post.
+
+If you just want the extra concise version, at the time ``PyOxidizer``
+was conceived, there were no Python application packaging/distribution
+tool which satisfied **all** of the following requirements:
+
+* Works across all platforms (many tools target e.g. Windows or macOS only).
+* Does not require an already-installed Python on the executing system
+  (rules out e.g. zip file based distribution mechanisms).
+* Has no special system requirements (e.g. SquashFS, container runtimes).
+* Offers startup performance no worse than traditional ``python`` execution.
+* Supports single file executables with none or minimal system dependencies.
+
 Can Python 2.7 Be Supported?
 ============================
 
@@ -111,8 +139,8 @@ The custom ``importlib_bootstrap_external`` frozen module trick is
 probably the most novel technical achievement of ``PyOxidizer``. Other
 Python distribution tools are encouraged to steal this idea!
 
-See the docs in the ``pyembed`` crate for an overview of how the
-in-memory import machinery works.
+See :ref:`pyembed` for an overview of how the in-memory import machinery
+works.
 
 Can Applications Import Python Modules from the Filesystem?
 ===========================================================

@@ -7,7 +7,8 @@
 use handlebars::Handlebars;
 use itertools::Itertools;
 use lazy_static::lazy_static;
-use slog::info;
+use serde::Serialize;
+use slog::warn;
 use std::collections::BTreeMap;
 use std::error::Error;
 use std::fs::create_dir_all;
@@ -16,7 +17,7 @@ use std::path::{Path, PathBuf};
 use std::process;
 
 use super::environment::{
-    canonicalize_path, PyOxidizerSource, BUILD_GIT_COMMIT, PYOXIDIZER_VERSION,
+    canonicalize_path, PyOxidizerSource, BUILD_GIT_COMMIT, MINIMUM_RUST_VERSION, PYOXIDIZER_VERSION,
 };
 use super::pyrepackager::config::RawAllocator;
 use super::pyrepackager::dist::{analyze_python_distribution_tar_zst, python_exe_path};
@@ -99,28 +100,64 @@ pub fn find_pyoxidizer_files(root: &Path) -> Vec<PathBuf> {
     res
 }
 
-fn populate_template_data(data: &mut BTreeMap<String, String>) {
+#[derive(Serialize)]
+struct PythonDistribution {
+    build_target: String,
+    url: String,
+    sha256: String,
+}
+
+#[derive(Serialize)]
+struct TemplateData {
+    pyoxidizer_version: Option<String>,
+    pyoxidizer_commit: Option<String>,
+    pyoxidizer_local_repo_path: Option<String>,
+    pyoxidizer_git_url: Option<String>,
+    pyoxidizer_git_commit: Option<String>,
+    pyoxidizer_git_tag: Option<String>,
+
+    python_distributions: Vec<PythonDistribution>,
+    program_name: Option<String>,
+    code: Option<String>,
+    pip_install_simple: Vec<String>,
+}
+
+impl TemplateData {
+    fn new() -> TemplateData {
+        TemplateData {
+            pyoxidizer_version: None,
+            pyoxidizer_commit: None,
+            pyoxidizer_local_repo_path: None,
+            pyoxidizer_git_url: None,
+            pyoxidizer_git_commit: None,
+            pyoxidizer_git_tag: None,
+            python_distributions: Vec::new(),
+            program_name: None,
+            code: None,
+            pip_install_simple: Vec::new(),
+        }
+    }
+}
+
+fn populate_template_data(data: &mut TemplateData) {
     let env = super::environment::resolve_environment().unwrap();
 
-    data.insert(
-        "pyoxidizer_version".to_string(),
-        PYOXIDIZER_VERSION.to_string(),
-    );
-    data.insert(
-        "pyoxidizer_commit".to_string(),
-        BUILD_GIT_COMMIT.to_string(),
-    );
+    data.pyoxidizer_version = Some(PYOXIDIZER_VERSION.to_string());
+    data.pyoxidizer_commit = Some(BUILD_GIT_COMMIT.to_string());
 
     match env.pyoxidizer_source {
         PyOxidizerSource::LocalPath { path } => {
-            data.insert(
-                String::from("pyoxidizer_local_repo_path"),
-                path.display().to_string(),
-            );
+            data.pyoxidizer_local_repo_path = Some(path.display().to_string());
         }
-        PyOxidizerSource::GitUrl { url, commit } => {
-            data.insert(String::from("pyoxidizer_git_url"), url);
-            data.insert(String::from("pyoxidizer_git_commit"), commit);
+        PyOxidizerSource::GitUrl { url, commit, tag } => {
+            data.pyoxidizer_git_url = Some(url);
+
+            if let Some(commit) = commit {
+                data.pyoxidizer_git_commit = Some(commit);
+            }
+            if let Some(tag) = tag {
+                data.pyoxidizer_git_tag = Some(tag);
+            }
         }
     }
 }
@@ -179,27 +216,30 @@ pub fn write_new_main_rs(path: &Path) -> Result<(), std::io::Error> {
 pub fn write_new_pyoxidizer_config_file(
     project_dir: &Path,
     name: &str,
+    code: Option<&str>,
+    pip_install: &[&str],
 ) -> Result<(), std::io::Error> {
     let path = project_dir.to_path_buf().join("pyoxidizer.toml");
 
     let distributions = CPYTHON_BY_TRIPLE
         .iter()
-        .map(|(triple, dist)| {
-            format!(
-                "[[python_distribution]]\nbuild_target = \"{}\"\nurl = \"{}\"\nsha256 = \"{}\"\n",
-                triple.clone(),
-                dist.url.clone(),
-                dist.sha256.clone()
-            )
-            .to_string()
+        .map(|(triple, dist)| PythonDistribution {
+            build_target: triple.to_string(),
+            url: dist.url.clone(),
+            sha256: dist.sha256.clone(),
         })
         .collect_vec();
 
-    let mut data = BTreeMap::new();
+    let mut data = TemplateData::new();
     populate_template_data(&mut data);
+    data.python_distributions = distributions;
+    data.program_name = Some(name.to_string());
 
-    data.insert("python_distributions".to_string(), distributions.join("\n"));
-    data.insert("program_name".to_string(), name.to_string());
+    if let Some(code) = code {
+        data.code = Some(toml::to_string(code).unwrap());
+    }
+
+    data.pip_install_simple = pip_install.iter().map(|v| v.to_string()).collect();
 
     let t = HANDLEBARS
         .render("new-pyoxidizer.toml", &data)
@@ -228,7 +268,7 @@ pub fn write_pyembed_crate_files(dest_dir: &Path) -> Result<(), std::io::Error> 
         fh.write_all(&data)?;
     }
 
-    let mut data = BTreeMap::new();
+    let mut data = TemplateData::new();
     populate_template_data(&mut data);
 
     let t = HANDLEBARS
@@ -298,7 +338,7 @@ fn dependency_current(
         Ok(md) => match md.modified() {
             Ok(t) => {
                 if t > built_time {
-                    info!(
+                    warn!(
                         logger,
                         "building artifacts because {} changed",
                         path.display()
@@ -309,12 +349,12 @@ fn dependency_current(
                 }
             }
             Err(_) => {
-                info!(logger, "error resolving mtime of {}", path.display());
+                warn!(logger, "error resolving mtime of {}", path.display());
                 false
             }
         },
         Err(_) => {
-            info!(logger, "error resolving metadata of {}", path.display());
+            warn!(logger, "error resolving metadata of {}", path.display());
             false
         }
     }
@@ -325,7 +365,7 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
     let metadata_path = artifacts_path.join("cargo_metadata.txt");
 
     if !metadata_path.exists() {
-        info!(logger, "no existing PyOxidizer artifacts found");
+        warn!(logger, "no existing PyOxidizer artifacts found");
         return false;
     }
 
@@ -335,7 +375,7 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
         Ok(md) => match md.modified() {
             Ok(t) => t,
             Err(_) => {
-                info!(
+                warn!(
                     logger,
                     "error determining mtime of {}",
                     metadata_path.display()
@@ -344,7 +384,7 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
             }
         },
         Err(_) => {
-            info!(
+            warn!(
                 logger,
                 "error resolving metadata of {}",
                 metadata_path.display()
@@ -356,7 +396,7 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
     let metadata_data = match std::fs::read_to_string(&metadata_path) {
         Ok(data) => data,
         Err(_) => {
-            info!(logger, "error reading {}", metadata_path.display());
+            warn!(logger, "error reading {}", metadata_path.display());
             return false;
         }
     };
@@ -381,7 +421,7 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
     }
 
     // TODO detect config file change.
-    return true;
+    true
 }
 
 /// Build PyOxidizer artifacts for a project.
@@ -405,6 +445,17 @@ fn build_pyoxidizer_artifacts(
 
 /// Build an oxidized Rust application at the specified project path.
 fn build_project(logger: &slog::Logger, context: &mut BuildContext) -> Result<(), String> {
+    if let Ok(rust_version) = rustc_version::version() {
+        if rust_version.lt(&MINIMUM_RUST_VERSION) {
+            return Err(format!(
+                "PyOxidizer requires Rust {}; version {} found",
+                *MINIMUM_RUST_VERSION, rust_version,
+            ));
+        }
+    } else {
+        return Err("unable to determine Rust version; is Rust installed?".to_string());
+    }
+
     // Our build process is to first generate artifacts from the PyOxidizer
     // configuration within this process then call out to `cargo build`. We do
     // this because it is easier to emit output from this process than to have
@@ -553,7 +604,7 @@ pub fn build(
     build_project(logger, &mut context)?;
     package_project(logger, &mut context)?;
 
-    info!(
+    warn!(
         logger,
         "executable path: {}",
         context.app_exe_path.display()
@@ -596,7 +647,12 @@ pub fn run(
 }
 
 /// Initialize a new Rust project with PyOxidizer support.
-pub fn init(project_path: &str) -> Result<(), String> {
+///
+/// `code` can specify custom Python code to run by default in the new
+/// application.
+///
+/// `pip_install` can specify Python packages to `pip install` for the application.
+pub fn init(project_path: &str, code: Option<&str>, pip_install: &[&str]) -> Result<(), String> {
     let res = process::Command::new("cargo")
         .arg("init")
         .arg("--bin")
@@ -617,7 +673,7 @@ pub fn init(project_path: &str) -> Result<(), String> {
     add_pyoxidizer(&path, true)?;
     update_new_cargo_toml(&path.join("Cargo.toml")).or(Err("unable to update Cargo.toml"))?;
     write_new_main_rs(&path.join("src").join("main.rs")).or(Err("unable to write main.rs"))?;
-    write_new_pyoxidizer_config_file(&path, &name)
+    write_new_pyoxidizer_config_file(&path, &name, code, pip_install)
         .or(Err("unable to write PyOxidizer config files"))?;
 
     println!();

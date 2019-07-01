@@ -31,22 +31,41 @@ can leak into the built binary, effectively requiring a new Linux
 distribution to run a binary.
 
 In order to make the binary build process robust, we will need to
-provide an execution environment for binaries. On Linux, this likely
+provide an execution environment in which to build portable binaries.
+On Linux, this likely
 entails making something like a Docker image available. On Windows and
 macOS, we might have to provide a tarball. In all cases, we want this
 environment to be integrated into ``pyoxidizer build`` so end users
 don't have to worry about jumping through hoops to build portable
 binaries.
 
-C Extensions
-------------
+.. _status_extension_modules:
 
-Building and using compiled extension modules (e.g. C extensions) is not
-yet supported. This is a hard problem on a few dimensions. We have a plan
-to solve it, however.
+Native Extension Modules
+------------------------
 
-In some cases, C extensions may *just work*. But it isn't very well
-tested.
+Building and using compiled extension modules (e.g. C extensions) is
+partially supported.
+
+Building C extensions to be embedded in the produced binary works
+for Windows, Linux, and macOS.
+
+Support for installing extension modules in app-relative paths is not yet
+implemented.
+
+Support for extension modules that link additional libraries or frameworks
+not used by Python itself is not yet implemented (but should be easy to
+do).
+
+Support for cross-compiling extension modules (including to MUSL) does
+not work. (It may appear to work and break at linking or run-time.)
+
+We also do not yet provide a build environment for C extensions. So
+unexpected behavior could occur if e.g. a different compiler toolchain
+is used to build the C extensions from the one that produced the
+Python distribution.
+
+See also :ref:`pitfall_extension_modules`.
 
 Incomplete ``pyoxidizer`` Commands
 ----------------------------------

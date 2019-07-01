@@ -54,6 +54,12 @@ while True:
                 encoding = m.group(1).decode('ascii')
                 break
 
+        # Someone has set us up the BOM! According to PEP 263 the file should
+        # be interpreted as UTF-8.
+        if source.startswith(b'\xef\xbb\xbf'):
+            encoding = 'utf-8'
+            source = source[3:]
+
         source = source.decode(encoding)
 
         code = compile(source, name, 'exec', optimize=optimize_level)

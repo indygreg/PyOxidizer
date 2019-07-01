@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use super::analyze;
-use super::environment::BUILD_GIT_COMMIT;
+use super::environment::BUILD_SEMVER_LIGHTWEIGHT;
 use super::logging;
 use super::projectmgmt;
 use clap::{App, AppSettings, Arg, SubCommand};
@@ -71,12 +71,16 @@ output is tailored for the Rust build system.
 ";
 
 pub fn run_cli() -> Result<(), String> {
-    let version = format!("0.1 (commit {})", BUILD_GIT_COMMIT);
     let matches = App::new("PyOxidizer")
         .setting(AppSettings::ArgRequiredElseHelp)
-        .version(version.as_str())
+        .version(BUILD_SEMVER_LIGHTWEIGHT)
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .long_about("Build and distribute Python applications")
+        .arg(
+            Arg::with_name("verbose")
+                .long("verbose")
+                .help("Enable verbose output"),
+        )
         .subcommand(
             SubCommand::with_name("add")
                 .setting(AppSettings::ArgRequiredElseHelp)
@@ -110,6 +114,20 @@ pub fn run_cli() -> Result<(), String> {
                 .setting(AppSettings::ArgRequiredElseHelp)
                 .about("Create a new Rust project embedding Python.")
                 .long_about(INIT_ABOUT)
+                .arg(
+                    Arg::with_name("python-code")
+                        .long("python-code")
+                        .takes_value(true)
+                        .help("Default Python code to execute in built executable"),
+                )
+                .arg(
+                    Arg::with_name("pip-install")
+                        .long("pip-install")
+                        .takes_value(true)
+                        .multiple(true)
+                        .number_of_values(1)
+                        .help("Python packages to install via `pip install`"),
+                )
                 .arg(
                     Arg::with_name("name")
                         .required(true)
@@ -218,7 +236,13 @@ pub fn run_cli() -> Result<(), String> {
         )
         .get_matches();
 
-    let logger_context = logging::logger_from_env();
+    let log_level = if matches.is_present("verbose") {
+        slog::Level::Info
+    } else {
+        slog::Level::Warning
+    };
+
+    let logger_context = logging::logger_from_env(log_level);
 
     match matches.subcommand() {
         ("add", Some(args)) => {
@@ -255,9 +279,15 @@ pub fn run_cli() -> Result<(), String> {
         }
 
         ("init", Some(args)) => {
+            let code = args.value_of("python-code");
+            let pip_install = if args.is_present("pip-install") {
+                args.values_of("pip-install").unwrap().collect()
+            } else {
+                Vec::new()
+            };
             let name = args.value_of("name").unwrap();
 
-            projectmgmt::init(name)
+            projectmgmt::init(name, code, &pip_install)
         }
 
         ("python-distribution-extract", Some(args)) => {

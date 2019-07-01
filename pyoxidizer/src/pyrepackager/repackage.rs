@@ -7,7 +7,7 @@ use glob::glob as findglob;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
-use slog::info;
+use slog::{info, warn};
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
@@ -17,48 +17,19 @@ use std::path::{Path, PathBuf};
 
 use super::bytecode::BytecodeCompiler;
 use super::config::{
-    parse_config, Config, InstallLocation, PackagingPackageRoot, PackagingPipInstallSimple,
-    PackagingPipRequirementsFile, PackagingSetupPyInstall, PackagingStdlib,
-    PackagingStdlibExtensionVariant, PackagingStdlibExtensionsExplicitExcludes,
-    PackagingStdlibExtensionsExplicitIncludes, PackagingStdlibExtensionsPolicy,
-    PackagingVirtualenv, PythonDistribution, PythonPackaging, RawAllocator, RunMode,
+    parse_config_file, Config, PythonDistribution, PythonPackaging, RawAllocator, RunMode,
 };
 use super::dist::{
     analyze_python_distribution_tar_zst, resolve_python_distribution_archive, ExtensionModule,
     LicenseInfo, PythonDistributionInfo,
 };
-use super::fsscan::{find_python_resources, PythonResourceType};
+use super::packaging_rule::{
+    packages_from_module_name, packages_from_module_names, resolve_python_packaging,
+    AppRelativeResources, BuiltExtensionModule, PackagedModuleBytecode, PackagedModuleSource,
+    PythonResource, ResourceAction, ResourceLocation,
+};
 
 pub const PYTHON_IMPORTER: &[u8] = include_bytes!("memoryimporter.py");
-
-/// SPDX licenses in Python distributions that are not GPL.
-///
-/// We store an allow list of licenses rather than trying to deny GPL licenses
-/// because if we miss a new GPL license, we accidentally let in GPL.
-const NON_GPL_LICENSES: &[&str] = &[
-    "BSD-3-Clause",
-    "bzip2-1.0.6",
-    "MIT",
-    "OpenSSL",
-    "Sleepycat",
-    "X11",
-    "Zlib",
-];
-
-const STDLIB_TEST_PACKAGES: &[&str] = &[
-    "bsddb.test",
-    "ctypes.test",
-    "distutils.tests",
-    "email.test",
-    "idlelib.idle_test",
-    "json.tests",
-    "lib-tk.test",
-    "lib2to3.tests",
-    "sqlite3.test",
-    "test",
-    "tkinter.test",
-    "unittest.test",
-];
 
 lazy_static! {
     /// Libraries provided by the host that we can ignore in Python module library dependencies.
@@ -70,10 +41,7 @@ lazy_static! {
     static ref OS_IGNORE_LIBRARIES: Vec<&'static str> = {
         let mut v = Vec::new();
 
-        if cfg!(target_os = "linux") {
-            v.push("dl");
-            v.push("m");
-        } else if cfg!(target_os = "macos") {
+        if cfg!(target_os = "linux") || cfg!(target_os = "macos") {
             v.push("dl");
             v.push("m");
         }
@@ -110,18 +78,6 @@ lazy_static! {
 }
 
 pub const HOST: &str = env!("HOST");
-
-pub fn is_stdlib_test_package(name: &str) -> bool {
-    for package in STDLIB_TEST_PACKAGES {
-        let prefix = format!("{}.", package);
-
-        if &name == package || name.starts_with(&prefix) {
-            return true;
-        }
-    }
-
-    false
-}
 
 /// Represents environment for a build.
 pub struct BuildContext {
@@ -220,7 +176,10 @@ impl BuildContext {
 
         let app_target_path = target_triple_base_path.join(&app_name);
 
-        let app_path = apps_base_path.join(&app_name);
+        let app_path =
+            apps_base_path
+                .join(&app_name)
+                .join(if release { "release" } else { "debug" });
         let app_exe_target_path = target_triple_base_path.join(&exe_name);
         let app_exe_path = app_path.join(&exe_name);
 
@@ -290,6 +249,7 @@ impl BuildContext {
 /// Represents a single module's data record.
 pub struct ModuleEntry {
     pub name: String,
+    pub is_package: bool,
     pub source: Option<Vec<u8>>,
     pub bytecode: Option<Vec<u8>>,
 }
@@ -297,71 +257,16 @@ pub struct ModuleEntry {
 /// Represents an ordered collection of module entries.
 pub type ModuleEntries = Vec<ModuleEntry>;
 
-/// Represents a resource to make available to the Python interpreter.
-#[derive(Debug)]
-pub enum PythonResource {
-    ExtensionModule {
-        name: String,
-        module: ExtensionModule,
-    },
-    ModuleSource {
-        name: String,
-        source: Vec<u8>,
-    },
-    ModuleBytecode {
-        name: String,
-        source: Vec<u8>,
-        optimize_level: i32,
-    },
-    Resource {
-        package: String,
-        name: String,
-        data: Vec<u8>,
-    },
-}
-
-#[derive(Debug)]
-pub enum ResourceAction {
-    Add,
-    Remove,
-}
-
-/// Represents the packaging location for a resource.
-#[derive(Clone, Debug)]
-pub enum ResourceLocation {
-    /// Embed the resource in the binary.
-    Embedded,
-
-    /// Install the resource in a path relative to the produced binary.
-    AppRelative { path: String },
-}
-
-impl ResourceLocation {
-    fn new(v: &InstallLocation) -> Self {
-        match v {
-            InstallLocation::Embedded => ResourceLocation::Embedded,
-            InstallLocation::AppRelative { path } => {
-                ResourceLocation::AppRelative { path: path.clone() }
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct PythonResourceAction {
-    action: ResourceAction,
-    location: ResourceLocation,
-    resource: PythonResource,
-}
-
 /// Represents Python resources to embed in a binary.
 #[derive(Debug)]
 pub struct EmbeddedPythonResources {
-    pub module_sources: BTreeMap<String, Vec<u8>>,
-    pub module_bytecodes: BTreeMap<String, Vec<u8>>,
+    pub module_sources: BTreeMap<String, PackagedModuleSource>,
+    pub module_bytecodes: BTreeMap<String, PackagedModuleBytecode>,
     pub all_modules: BTreeSet<String>,
+    pub all_packages: BTreeSet<String>,
     pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
     pub extension_modules: BTreeMap<String, ExtensionModule>,
+    pub built_extension_modules: BTreeMap<String, BuiltExtensionModule>,
 }
 
 impl EmbeddedPythonResources {
@@ -375,12 +280,13 @@ impl EmbeddedPythonResources {
 
             records.push(ModuleEntry {
                 name: name.clone(),
+                is_package: self.all_packages.contains(name),
                 source: match source {
-                    Some(value) => Some(value.clone()),
+                    Some(value) => Some(value.source.clone()),
                     None => None,
                 },
                 bytecode: match bytecode {
-                    Some(value) => Some(value.clone()),
+                    Some(value) => Some(value.bytecode.clone()),
                     None => None,
                 },
             });
@@ -407,33 +313,18 @@ impl EmbeddedPythonResources {
         let fh = fs::File::create(resources_path).unwrap();
         write_resources_entries(&fh, &self.resources).unwrap();
     }
-}
 
-/// Represents resources to install in an app-relative location.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct AppRelativeResources {
-    pub module_sources: BTreeMap<String, Vec<u8>>,
-    pub module_bytecodes: BTreeMap<String, Vec<u8>>,
-    pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
-}
+    pub fn embedded_extension_module_names(&self) -> BTreeSet<String> {
+        let mut res = BTreeSet::new();
 
-impl AppRelativeResources {
-    pub fn new() -> Self {
-        AppRelativeResources {
-            module_sources: BTreeMap::new(),
-            module_bytecodes: BTreeMap::new(),
-            resources: BTreeMap::new(),
+        for name in self.extension_modules.keys() {
+            res.insert(name.clone());
         }
-    }
+        for name in self.built_extension_modules.keys() {
+            res.insert(name.clone());
+        }
 
-    pub fn package_names(&self) -> BTreeSet<String> {
-        let mut packages =
-            packages_from_module_names(self.module_sources.keys().into_iter().cloned());
-        packages.extend(packages_from_module_names(
-            self.module_bytecodes.keys().into_iter().cloned(),
-        ));
-
-        packages
+        res
     }
 }
 
@@ -480,773 +371,16 @@ fn filter_btreemap<V>(logger: &slog::Logger, m: &mut BTreeMap<String, V>, f: &BT
 
     for key in keys {
         if !f.contains(&key) {
-            info!(logger, "removing {}", key);
+            warn!(logger, "removing {}", key);
             m.remove(&key);
         }
     }
 }
 
-fn packages_from_module_names<I>(names: I) -> BTreeSet<String>
-where
-    I: Iterator<Item = String>,
-{
-    let mut package_names = BTreeSet::new();
-
-    for name in names {
-        let mut search: &str = &name;
-
-        while let Some(idx) = search.rfind('.') {
-            package_names.insert(search[0..idx].to_string());
-            search = &search[0..idx];
-        }
-    }
-
-    package_names
-}
-
-fn resolve_stdlib_extensions_policy(
-    logger: &slog::Logger,
-    dist: &PythonDistributionInfo,
-    rule: &PackagingStdlibExtensionsPolicy,
-) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
-    for (name, variants) in &dist.extension_modules {
-        match rule.policy.as_str() {
-            "minimal" => {
-                let em = &variants[0];
-
-                if em.builtin_default || em.required {
-                    res.push(PythonResourceAction {
-                        action: ResourceAction::Add,
-                        location: ResourceLocation::Embedded,
-                        resource: PythonResource::ExtensionModule {
-                            name: name.clone(),
-                            module: em.clone(),
-                        },
-                    });
-                }
-            }
-
-            "all" => {
-                let em = &variants[0];
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: ResourceLocation::Embedded,
-                    resource: PythonResource::ExtensionModule {
-                        name: name.clone(),
-                        module: em.clone(),
-                    },
-                });
-            }
-
-            "no-libraries" => {
-                for em in variants {
-                    if em.links.is_empty() {
-                        res.push(PythonResourceAction {
-                            action: ResourceAction::Add,
-                            location: ResourceLocation::Embedded,
-                            resource: PythonResource::ExtensionModule {
-                                name: name.clone(),
-                                module: em.clone(),
-                            },
-                        });
-
-                        break;
-                    }
-                }
-            }
-
-            "no-gpl" => {
-                for em in variants {
-                    let suitable = if em.links.is_empty() {
-                        true
-                    } else {
-                        // Public domain is always allowed.
-                        if em.license_public_domain == Some(true) {
-                            true
-                        // Use explicit license list if one is defined.
-                        } else if let Some(ref licenses) = em.licenses {
-                            // We filter through an allow list because it is safer. (No new GPL
-                            // licenses can slip through.)
-                            licenses
-                                .iter()
-                                .all(|license| NON_GPL_LICENSES.contains(&license.as_str()))
-                        } else {
-                            // In lack of evidence that it isn't GPL, assume GPL.
-                            // TODO consider improving logic here, like allowing known system
-                            // and framework libraries to be used.
-                            info!(logger, "unable to determine {} is not GPL; ignoring", &name);
-                            false
-                        }
-                    };
-
-                    if suitable {
-                        res.push(PythonResourceAction {
-                            action: ResourceAction::Add,
-                            location: ResourceLocation::Embedded,
-                            resource: PythonResource::ExtensionModule {
-                                name: name.clone(),
-                                module: em.clone(),
-                            },
-                        });
-
-                        break;
-                    }
-                }
-            }
-
-            other => {
-                panic!("illegal policy value: {}", other);
-            }
-        }
-    }
-
-    res
-}
-
-fn resolve_stdlib_extensions_explicit_includes(
-    dist: &PythonDistributionInfo,
-    rule: &PackagingStdlibExtensionsExplicitIncludes,
-) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
-    for name in &rule.includes {
-        if let Some(modules) = &dist.extension_modules.get(name) {
-            res.push(PythonResourceAction {
-                action: ResourceAction::Add,
-                location: ResourceLocation::Embedded,
-                resource: PythonResource::ExtensionModule {
-                    name: name.clone(),
-                    module: modules[0].clone(),
-                },
-            });
-        }
-    }
-
-    res
-}
-
-fn resolve_stdlib_extensions_explicit_excludes(
-    dist: &PythonDistributionInfo,
-    rule: &PackagingStdlibExtensionsExplicitExcludes,
-) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
-    for (name, modules) in &dist.extension_modules {
-        if rule.excludes.contains(name) {
-            res.push(PythonResourceAction {
-                action: ResourceAction::Remove,
-                location: ResourceLocation::Embedded,
-                resource: PythonResource::ExtensionModule {
-                    name: name.clone(),
-                    module: modules[0].clone(),
-                },
-            });
-        } else {
-            res.push(PythonResourceAction {
-                action: ResourceAction::Add,
-                location: ResourceLocation::Embedded,
-                resource: PythonResource::ExtensionModule {
-                    name: name.clone(),
-                    module: modules[0].clone(),
-                },
-            });
-        }
-    }
-
-    res
-}
-
-fn resolve_stdlib_extension_variant(
-    dist: &PythonDistributionInfo,
-    rule: &PackagingStdlibExtensionVariant,
-) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
-    let variants = &dist.extension_modules[&rule.extension];
-
-    for em in variants {
-        if &em.variant == &rule.variant {
-            res.push(PythonResourceAction {
-                action: ResourceAction::Add,
-                location: ResourceLocation::Embedded,
-                resource: PythonResource::ExtensionModule {
-                    name: rule.extension.clone(),
-                    module: em.clone(),
-                },
-            });
-        }
-    }
-
-    if res.is_empty() {
-        panic!(
-            "extension {} has no variant {}",
-            rule.extension, rule.variant
-        );
-    }
-
-    res
-}
-
-fn resolve_stdlib(
-    logger: &slog::Logger,
-    dist: &PythonDistributionInfo,
-    rule: &PackagingStdlib,
-) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
-    let location = ResourceLocation::new(&rule.install_location);
-
-    for (name, fs_path) in &dist.py_modules {
-        if is_stdlib_test_package(&name) && rule.exclude_test_modules {
-            info!(logger, "skipping test stdlib module: {}", name);
-            continue;
-        }
-
-        let source = fs::read(fs_path).expect("error reading source file");
-
-        if rule.include_source {
-            res.push(PythonResourceAction {
-                action: ResourceAction::Add,
-                location: location.clone(),
-                resource: PythonResource::ModuleSource {
-                    name: name.clone(),
-                    source: source.clone(),
-                },
-            });
-        }
-
-        res.push(PythonResourceAction {
-            action: ResourceAction::Add,
-            location: location.clone(),
-            resource: PythonResource::ModuleBytecode {
-                name: name.clone(),
-                source,
-                optimize_level: rule.optimize_level as i32,
-            },
-        });
-    }
-
-    if rule.include_resources {
-        for (package, resources) in &dist.resources {
-            if is_stdlib_test_package(package) && rule.exclude_test_modules {
-                info!(
-                    logger,
-                    "skipping resources associated with test package: {}", package
-                );
-                continue;
-            }
-
-            for (name, fs_path) in resources {
-                let data = fs::read(fs_path).expect("error reading resource file");
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::Resource {
-                        package: package.clone(),
-                        name: name.clone(),
-                        data,
-                    },
-                });
-            }
-        }
-    }
-
-    res
-}
-
-fn resolve_virtualenv(
-    dist: &PythonDistributionInfo,
-    rule: &PackagingVirtualenv,
-) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
-    let location = ResourceLocation::new(&rule.install_location);
-
-    let mut packages_path = PathBuf::from(&rule.path);
-
-    if dist.os == "windows" {
-        packages_path.push("Lib");
-    } else {
-        packages_path.push("lib");
-    }
-
-    packages_path.push("python".to_owned() + &dist.version[0..3]);
-    packages_path.push("site-packages");
-
-    for resource in find_python_resources(&packages_path) {
-        let mut relevant = true;
-
-        for exclude in &rule.excludes {
-            let prefix = exclude.clone() + ".";
-
-            if &resource.full_name == exclude || resource.full_name.starts_with(&prefix) {
-                relevant = false;
-            }
-        }
-
-        if !relevant {
-            continue;
-        }
-
-        match resource.flavor {
-            PythonResourceType::Source => {
-                let source = fs::read(resource.path).expect("error reading source file");
-
-                if rule.include_source {
-                    res.push(PythonResourceAction {
-                        action: ResourceAction::Add,
-                        location: location.clone(),
-                        resource: PythonResource::ModuleSource {
-                            name: resource.full_name.clone(),
-                            source: source.clone(),
-                        },
-                    });
-                }
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::ModuleBytecode {
-                        name: resource.full_name.clone(),
-                        source,
-                        optimize_level: rule.optimize_level as i32,
-                    },
-                });
-            }
-
-            PythonResourceType::Resource => {
-                let data = fs::read(resource.path).expect("error reading resource file");
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::Resource {
-                        package: resource.package.clone(),
-                        name: resource.stem.clone(),
-                        data,
-                    },
-                });
-            }
-
-            _ => {}
-        }
-    }
-
-    res
-}
-
-fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
-    let location = ResourceLocation::new(&rule.install_location);
-    let path = PathBuf::from(&rule.path);
-
-    for resource in find_python_resources(&path) {
-        let mut relevant = false;
-
-        for package in &rule.packages {
-            let prefix = package.clone() + ".";
-
-            if &resource.full_name == package || resource.full_name.starts_with(&prefix) {
-                relevant = true;
-            }
-        }
-
-        for exclude in &rule.excludes {
-            let prefix = exclude.clone() + ".";
-
-            if &resource.full_name == exclude || resource.full_name.starts_with(&prefix) {
-                relevant = false;
-            }
-        }
-
-        if !relevant {
-            continue;
-        }
-
-        match resource.flavor {
-            PythonResourceType::Source => {
-                let source = fs::read(resource.path).expect("error reading source file");
-
-                if rule.include_source {
-                    res.push(PythonResourceAction {
-                        action: ResourceAction::Add,
-                        location: location.clone(),
-                        resource: PythonResource::ModuleSource {
-                            name: resource.full_name.clone(),
-                            source: source.clone(),
-                        },
-                    });
-                }
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::ModuleBytecode {
-                        name: resource.full_name.clone(),
-                        source,
-                        optimize_level: rule.optimize_level as i32,
-                    },
-                });
-            }
-
-            PythonResourceType::Resource => {
-                let data = fs::read(resource.path).expect("error reading resource file");
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::Resource {
-                        package: resource.package.clone(),
-                        name: resource.stem.clone(),
-                        data,
-                    },
-                });
-            }
-
-            _ => {}
-        }
-    }
-
-    res
-}
-
-fn resolve_pip_install_simple(
-    logger: &slog::Logger,
-    dist: &PythonDistributionInfo,
-    rule: &PackagingPipInstallSimple,
-) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
-    let location = ResourceLocation::new(&rule.install_location);
-
-    dist.ensure_pip();
-    let temp_dir =
-        tempdir::TempDir::new("pyoxidizer-pip-install").expect("could not creat temp directory");
-
-    let temp_dir_path = temp_dir.path();
-    let temp_dir_s = temp_dir_path.display().to_string();
-    info!(logger, "pip installing to {}", temp_dir_s);
-
-    // TODO send stderr to stdout.
-    let mut cmd = std::process::Command::new(&dist.python_exe)
-        .args(&[
-            "-m",
-            "pip",
-            "--disable-pip-version-check",
-            "install",
-            "--target",
-            &temp_dir_s,
-            &rule.package,
-        ])
-        .stdout(std::process::Stdio::piped())
-        .spawn()
-        .expect("error running pip");
-    {
-        let stdout = cmd.stdout.as_mut().unwrap();
-        let reader = BufReader::new(stdout);
-
-        for line in reader.lines() {
-            info!(logger, "{}", line.unwrap());
-        }
-    }
-
-    let status = cmd.wait().unwrap();
-    if !status.success() {
-        panic!("error running pip");
-    }
-
-    for resource in find_python_resources(&temp_dir_path) {
-        match resource.flavor {
-            PythonResourceType::Source => {
-                let source = fs::read(resource.path).expect("error reading source file");
-
-                if rule.include_source {
-                    res.push(PythonResourceAction {
-                        action: ResourceAction::Add,
-                        location: location.clone(),
-                        resource: PythonResource::ModuleSource {
-                            name: resource.full_name.clone(),
-                            source: source.clone(),
-                        },
-                    });
-                }
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::ModuleBytecode {
-                        name: resource.full_name.clone(),
-                        source,
-                        optimize_level: rule.optimize_level as i32,
-                    },
-                });
-            }
-
-            PythonResourceType::Resource => {
-                let data = fs::read(resource.path).expect("error reading resource file");
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::Resource {
-                        package: resource.package.clone(),
-                        name: resource.stem.clone(),
-                        data,
-                    },
-                });
-            }
-
-            _ => {}
-        }
-    }
-
-    res
-}
-
-fn resolve_pip_requirements_file(
-    logger: &slog::Logger,
-    dist: &PythonDistributionInfo,
-    rule: &PackagingPipRequirementsFile,
-) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
-    let location = ResourceLocation::new(&rule.install_location);
-
-    dist.ensure_pip();
-
-    let temp_dir =
-        tempdir::TempDir::new("pyoxidizer-pip-install").expect("could not create temp directory");
-
-    let temp_dir_path = temp_dir.path();
-    let temp_dir_s = temp_dir_path.display().to_string();
-    info!(logger, "pip installing to {}", temp_dir_s);
-
-    // TODO send stderr to stdout.
-    let mut cmd = std::process::Command::new(&dist.python_exe)
-        .args(&[
-            "-m",
-            "pip",
-            "--disable-pip-version-check",
-            "install",
-            "--target",
-            &temp_dir_s,
-            "--no-binary",
-            ":all:",
-            "--requirement",
-            &rule.requirements_path,
-        ])
-        .stdout(std::process::Stdio::piped())
-        .spawn()
-        .expect("error running pip");
-    {
-        let stdout = cmd.stdout.as_mut().unwrap();
-        let reader = BufReader::new(stdout);
-
-        for line in reader.lines() {
-            info!(logger, "{}", line.unwrap());
-        }
-    }
-
-    let status = cmd.wait().unwrap();
-    if !status.success() {
-        panic!("error running pip");
-    }
-
-    for resource in find_python_resources(&temp_dir_path) {
-        match resource.flavor {
-            PythonResourceType::Source => {
-                let source = fs::read(resource.path).expect("error reading source file");
-
-                if rule.include_source {
-                    res.push(PythonResourceAction {
-                        action: ResourceAction::Add,
-                        location: location.clone(),
-                        resource: PythonResource::ModuleSource {
-                            name: resource.full_name.clone(),
-                            source: source.clone(),
-                        },
-                    });
-                }
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::ModuleBytecode {
-                        name: resource.full_name.clone(),
-                        source,
-                        optimize_level: rule.optimize_level as i32,
-                    },
-                });
-            }
-
-            PythonResourceType::Resource => {
-                let data = fs::read(resource.path).expect("error reading resource file");
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::Resource {
-                        package: resource.package.clone(),
-                        name: resource.stem.clone(),
-                        data,
-                    },
-                });
-            }
-
-            _ => {}
-        }
-    }
-
-    res
-}
-
-fn resolve_setup_py_install(
-    logger: &slog::Logger,
-    dist: &PythonDistributionInfo,
-    rule: &PackagingSetupPyInstall,
-) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
-    let location = ResourceLocation::new(&rule.install_location);
-
-    let temp_dir = tempdir::TempDir::new("pyoxidizer-setup-py-install")
-        .expect("could not create temp directory");
-    let temp_dir_path = temp_dir.path();
-    let temp_dir_s = temp_dir_path.display().to_string();
-    info!(logger, "python setup.py installing to {}", temp_dir_s);
-
-    // TODO send stderr to stdout.
-    let mut cmd = std::process::Command::new(&dist.python_exe)
-        .current_dir(&rule.path)
-        .args(&[
-            "setup.py",
-            "install",
-            "--prefix",
-            &temp_dir_s,
-            "--no-compile",
-        ])
-        .spawn()
-        .expect("error running setup.py");
-
-    {
-        let stdout = cmd.stdout.as_mut().unwrap();
-        let reader = BufReader::new(stdout);
-
-        for line in reader.lines() {
-            info!(logger, "{}", line.unwrap());
-        }
-    }
-
-    let status = cmd.wait().unwrap();
-    if !status.success() {
-        panic!("error running setup.py");
-    }
-
-    let mut packages_path = temp_dir_path.to_path_buf();
-
-    if dist.os == "windows" {
-        packages_path.push("Lib");
-    } else {
-        packages_path.push("lib");
-    }
-
-    packages_path.push("python".to_owned() + &dist.version[0..3]);
-    packages_path.push("site-packages");
-
-    for resource in find_python_resources(&packages_path) {
-        match resource.flavor {
-            PythonResourceType::Source => {
-                let source = fs::read(resource.path).expect("error reading source");
-
-                if rule.include_source {
-                    res.push(PythonResourceAction {
-                        action: ResourceAction::Add,
-                        location: location.clone(),
-                        resource: PythonResource::ModuleSource {
-                            name: resource.full_name.clone(),
-                            source: source.clone(),
-                        },
-                    });
-                }
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::ModuleBytecode {
-                        name: resource.full_name.clone(),
-                        source,
-                        optimize_level: rule.optimize_level as i32,
-                    },
-                });
-            }
-
-            PythonResourceType::Resource => {
-                let data = fs::read(resource.path).expect("error reading resource file");
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::Resource {
-                        package: resource.package.clone(),
-                        name: resource.stem.clone(),
-                        data,
-                    },
-                });
-            }
-
-            _ => {}
-        }
-    }
-
-    res
-}
-
-/// Resolves a Python packaging rule to resources to package.
-fn resolve_python_packaging(
-    logger: &slog::Logger,
-    package: &PythonPackaging,
-    dist: &PythonDistributionInfo,
-) -> Vec<PythonResourceAction> {
-    match package {
-        PythonPackaging::StdlibExtensionsPolicy(rule) => {
-            resolve_stdlib_extensions_policy(logger, dist, &rule)
-        }
-
-        PythonPackaging::StdlibExtensionsExplicitIncludes(rule) => {
-            resolve_stdlib_extensions_explicit_includes(dist, &rule)
-        }
-
-        PythonPackaging::StdlibExtensionsExplicitExcludes(rule) => {
-            resolve_stdlib_extensions_explicit_excludes(dist, &rule)
-        }
-
-        PythonPackaging::StdlibExtensionVariant(rule) => {
-            resolve_stdlib_extension_variant(dist, rule)
-        }
-
-        PythonPackaging::Stdlib(rule) => resolve_stdlib(logger, dist, &rule),
-
-        PythonPackaging::Virtualenv(rule) => resolve_virtualenv(dist, &rule),
-
-        PythonPackaging::PackageRoot(rule) => resolve_package_root(&rule),
-
-        PythonPackaging::PipInstallSimple(rule) => resolve_pip_install_simple(logger, dist, &rule),
-
-        PythonPackaging::PipRequirementsFile(rule) => {
-            resolve_pip_requirements_file(logger, dist, &rule)
-        }
-
-        PythonPackaging::SetupPyInstall(rule) => resolve_setup_py_install(logger, dist, &rule),
-
-        PythonPackaging::WriteLicenseFiles(_) => Vec::new(),
-
-        // This is a no-op because it can only be handled at a higher level.
-        PythonPackaging::FilterInclude(_) => Vec::new(),
-    }
+struct BytecodeRequest {
+    source: Vec<u8>,
+    optimize_level: i32,
+    is_package: bool,
 }
 
 /// Resolves a series of packaging rules to a final set of resources to package.
@@ -1262,19 +396,20 @@ pub fn resolve_python_resources(
     // end of processing. That way we don't generate bytecode only to throw it away later.
 
     let mut embedded_extension_modules: BTreeMap<String, ExtensionModule> = BTreeMap::new();
-    let mut embedded_sources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
-    let mut embedded_bytecode_requests: BTreeMap<String, (Vec<u8>, i32)> = BTreeMap::new();
+    let mut embedded_sources: BTreeMap<String, PackagedModuleSource> = BTreeMap::new();
+    let mut embedded_bytecode_requests: BTreeMap<String, BytecodeRequest> = BTreeMap::new();
     let mut embedded_resources: BTreeMap<String, BTreeMap<String, Vec<u8>>> = BTreeMap::new();
+    let mut embedded_built_extension_modules = BTreeMap::new();
 
     let mut app_relative: BTreeMap<String, AppRelativeResources> = BTreeMap::new();
-    let mut app_relative_bytecode_requests: BTreeMap<String, BTreeMap<String, (Vec<u8>, i32)>> =
+    let mut app_relative_bytecode_requests: BTreeMap<String, BTreeMap<String, BytecodeRequest>> =
         BTreeMap::new();
 
     let mut read_files: Vec<PathBuf> = Vec::new();
     let mut license_files_path = None;
 
     for packaging in packages {
-        info!(logger, "processing packaging rule: {:?}", packaging);
+        warn!(logger, "processing packaging rule: {:?}", packaging);
         for entry in resolve_python_packaging(logger, packaging, dist) {
             match (entry.action, entry.location, entry.resource) {
                 (
@@ -1282,7 +417,7 @@ pub fn resolve_python_resources(
                     ResourceLocation::Embedded,
                     PythonResource::ExtensionModule { name, module },
                 ) => {
-                    info!(logger, "adding embedded extension module: {}", name);
+                    warn!(logger, "adding embedded extension module: {}", name);
                     embedded_extension_modules.insert(name, module);
                 }
                 (
@@ -1297,23 +432,32 @@ pub fn resolve_python_resources(
                     ResourceLocation::Embedded,
                     PythonResource::ExtensionModule { name, .. },
                 ) => {
-                    info!(logger, "removing embedded extension module: {}", name);
+                    warn!(logger, "removing embedded extension module: {}", name);
                     embedded_extension_modules.remove(&name);
                 }
                 (
                     ResourceAction::Add,
                     ResourceLocation::Embedded,
-                    PythonResource::ModuleSource { name, source },
+                    PythonResource::ModuleSource {
+                        name,
+                        source,
+                        is_package,
+                    },
                 ) => {
-                    info!(logger, "adding embedded module source: {}", name);
-                    embedded_sources.insert(name.clone(), source);
+                    warn!(logger, "adding embedded module source: {}", name);
+                    embedded_sources
+                        .insert(name.clone(), PackagedModuleSource { source, is_package });
                 }
                 (
                     ResourceAction::Add,
                     ResourceLocation::AppRelative { path },
-                    PythonResource::ModuleSource { name, source },
+                    PythonResource::ModuleSource {
+                        name,
+                        source,
+                        is_package,
+                    },
                 ) => {
-                    info!(
+                    warn!(
                         logger,
                         "adding app-relative module source to {}: {}", path, name
                     );
@@ -1325,14 +469,14 @@ pub fn resolve_python_resources(
                         .get_mut(&path)
                         .unwrap()
                         .module_sources
-                        .insert(name.clone(), source);
+                        .insert(name.clone(), PackagedModuleSource { source, is_package });
                 }
                 (
                     ResourceAction::Remove,
                     ResourceLocation::Embedded,
                     PythonResource::ModuleSource { name, .. },
                 ) => {
-                    info!(logger, "removing embedded module source: {}", name);
+                    warn!(logger, "removing embedded module source: {}", name);
                     embedded_sources.remove(&name);
                 }
                 (
@@ -1342,10 +486,18 @@ pub fn resolve_python_resources(
                         name,
                         source,
                         optimize_level,
+                        is_package,
                     },
                 ) => {
-                    info!(logger, "adding embedded module bytecode: {}", name);
-                    embedded_bytecode_requests.insert(name.clone(), (source, optimize_level));
+                    warn!(logger, "adding embedded module bytecode: {}", name);
+                    embedded_bytecode_requests.insert(
+                        name.clone(),
+                        BytecodeRequest {
+                            source,
+                            optimize_level,
+                            is_package,
+                        },
+                    );
                 }
                 (
                     ResourceAction::Add,
@@ -1354,9 +506,10 @@ pub fn resolve_python_resources(
                         name,
                         source,
                         optimize_level,
+                        is_package,
                     },
                 ) => {
-                    info!(
+                    warn!(
                         logger,
                         "adding app-relative module bytecode to {}: {}", path, name
                     );
@@ -1368,14 +521,21 @@ pub fn resolve_python_resources(
                     app_relative_bytecode_requests
                         .get_mut(&path)
                         .unwrap()
-                        .insert(name.clone(), (source, optimize_level));
+                        .insert(
+                            name.clone(),
+                            BytecodeRequest {
+                                source,
+                                optimize_level,
+                                is_package,
+                            },
+                        );
                 }
                 (
                     ResourceAction::Remove,
                     ResourceLocation::Embedded,
                     PythonResource::ModuleBytecode { name, .. },
                 ) => {
-                    info!(logger, "removing embedded module bytecode: {}", name);
+                    warn!(logger, "removing embedded module bytecode: {}", name);
                     embedded_bytecode_requests.remove(&name);
                 }
                 (
@@ -1387,7 +547,7 @@ pub fn resolve_python_resources(
                         data,
                     },
                 ) => {
-                    info!(logger, "adding embedded resource: {}", name);
+                    warn!(logger, "adding embedded resource: {}", name);
 
                     if !embedded_resources.contains_key(&package) {
                         embedded_resources.insert(package.clone(), BTreeMap::new());
@@ -1407,7 +567,7 @@ pub fn resolve_python_resources(
                         data,
                     },
                 ) => {
-                    info!(logger, "adding app-relative resource to {}: {}", path, name);
+                    warn!(logger, "adding app-relative resource to {}: {}", path, name);
 
                     if !app_relative.contains_key(&path) {
                         app_relative.insert(path.clone(), AppRelativeResources::new());
@@ -1432,11 +592,49 @@ pub fn resolve_python_resources(
                     ResourceLocation::Embedded,
                     PythonResource::Resource { name, .. },
                 ) => {
-                    info!(logger, "removing embedded resource: {}", name);
+                    warn!(logger, "removing embedded resource: {}", name);
                     embedded_resources.remove(&name);
                 }
                 (ResourceAction::Remove, ResourceLocation::AppRelative { .. }, _) => {
                     panic!("should not have gotten an action to remove an app-relative resource");
+                }
+                (
+                    ResourceAction::Add,
+                    ResourceLocation::Embedded,
+                    PythonResource::BuiltExtensionModule(em),
+                ) => {
+                    warn!(
+                        logger,
+                        "adding embedded built extension module: {}", em.name
+                    );
+
+                    embedded_built_extension_modules.insert(em.name.clone(), em.clone());
+                }
+                (
+                    ResourceAction::Add,
+                    ResourceLocation::AppRelative { path },
+                    PythonResource::BuiltExtensionModule(em),
+                ) => {
+                    warn!(
+                        logger,
+                        "adding app-relative built extension module {} to {}", em.name, path
+                    );
+                    // TODO implement
+                    warn!(
+                        logger,
+                        "WARNING: app-relative built extension modules not yet supported"
+                    );
+                }
+                (
+                    ResourceAction::Remove,
+                    ResourceLocation::Embedded,
+                    PythonResource::BuiltExtensionModule(em),
+                ) => {
+                    warn!(
+                        logger,
+                        "removing embedded built extension module {}", em.name
+                    );
+                    embedded_built_extension_modules.remove(&em.name);
                 }
             }
         }
@@ -1484,45 +682,80 @@ pub fn resolve_python_resources(
                 include_names.extend(new_names);
             }
 
-            info!(
+            warn!(
                 logger,
                 "filtering embedded extension modules from {:?}", packaging
             );
             filter_btreemap(logger, &mut embedded_extension_modules, &include_names);
-            info!(
+            warn!(
                 logger,
                 "filtering embedded module sources from {:?}", packaging
             );
             filter_btreemap(logger, &mut embedded_sources, &include_names);
-            info!(
+            warn!(
                 logger,
                 "filtering app-relative module sources from {:?}", packaging
             );
             for value in app_relative.values_mut() {
                 filter_btreemap(logger, &mut value.module_sources, &include_names);
             }
-            info!(
+            warn!(
                 logger,
                 "filtering embedded module bytecode from {:?}", packaging
             );
             filter_btreemap(logger, &mut embedded_bytecode_requests, &include_names);
-            info!(
+            warn!(
                 logger,
                 "filtering app-relative module bytecode from {:?}", packaging
             );
             for value in app_relative_bytecode_requests.values_mut() {
                 filter_btreemap(logger, value, &include_names);
             }
-            info!(logger, "filtering embedded resources from {:?}", packaging);
+            warn!(logger, "filtering embedded resources from {:?}", packaging);
             filter_btreemap(logger, &mut embedded_resources, &include_names);
-            info!(
+            warn!(
                 logger,
                 "filtering app-relative resources from {:?}", packaging
             );
             for value in app_relative.values_mut() {
                 filter_btreemap(logger, &mut value.resources, &include_names);
             }
+            warn!(
+                logger,
+                "filtering embedded built extension modules from {:?}", packaging
+            );
+            filter_btreemap(
+                logger,
+                &mut embedded_built_extension_modules,
+                &include_names,
+            );
         }
+    }
+
+    // Add empty modules for missing parent packages. This could happen if there are
+    // namespace packages, for example.
+    let mut missing_packages = BTreeSet::new();
+    for name in embedded_bytecode_requests.keys() {
+        for package in packages_from_module_name(&name) {
+            if !embedded_bytecode_requests.contains_key(&package) {
+                missing_packages.insert(package.clone());
+            }
+        }
+    }
+
+    for package in missing_packages {
+        warn!(
+            logger,
+            "adding empty module for missing package {}", package
+        );
+        embedded_bytecode_requests.insert(
+            package.clone(),
+            BytecodeRequest {
+                source: Vec::new(),
+                optimize_level: 0,
+                is_package: true,
+            },
+        );
     }
 
     // Add required extension modules, as some don't show up in the modules list
@@ -1531,54 +764,89 @@ pub fn resolve_python_resources(
         let em = &variants[0];
 
         if (em.builtin_default || em.required) && !embedded_extension_modules.contains_key(name) {
-            info!(logger, "adding required embedded extension module {}", name);
+            warn!(logger, "adding required embedded extension module {}", name);
             embedded_extension_modules.insert(name.clone(), em.clone());
         }
     }
 
     // Remove extension modules that have problems.
     for e in OS_IGNORE_EXTENSIONS.as_slice() {
-        info!(
+        warn!(
             logger,
             "removing extension module due to incompatibility: {}", e
         );
         embedded_extension_modules.remove(&String::from(*e));
     }
 
-    let mut embedded_bytecodes: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    let mut embedded_bytecodes: BTreeMap<String, PackagedModuleBytecode> = BTreeMap::new();
 
     {
         let mut compiler = bytecode_compiler(&dist);
 
-        for (name, (source, optimize_level)) in embedded_bytecode_requests {
-            let bytecode = match compiler.compile(&source, &name, optimize_level) {
+        for (name, request) in embedded_bytecode_requests {
+            let bytecode = match compiler.compile(&request.source, &name, request.optimize_level) {
                 Ok(res) => res,
                 Err(msg) => panic!("error compiling bytecode for {}: {}", name, msg),
             };
 
-            embedded_bytecodes.insert(name.clone(), bytecode);
+            embedded_bytecodes.insert(
+                name.clone(),
+                PackagedModuleBytecode {
+                    bytecode,
+                    is_package: request.is_package,
+                },
+            );
         }
     }
 
     // TODO compile app-relative bytecode too.
 
-    let mut all_embedded_modules: BTreeSet<String> = BTreeSet::new();
-    for name in embedded_sources.keys() {
-        all_embedded_modules.insert(name.to_string());
+    let mut all_embedded_modules = BTreeSet::new();
+    let mut annotated_package_names = BTreeSet::new();
+
+    for (name, source) in &embedded_sources {
+        all_embedded_modules.insert(name.clone());
+
+        if source.is_package {
+            annotated_package_names.insert(name.clone());
+        }
     }
-    for name in embedded_bytecodes.keys() {
-        all_embedded_modules.insert(name.to_string());
+    for (name, bytecode) in &embedded_bytecodes {
+        all_embedded_modules.insert(name.clone());
+
+        if bytecode.is_package {
+            annotated_package_names.insert(name.clone());
+        }
     }
 
-    let package_names = packages_from_module_names(all_embedded_modules.iter().cloned());
+    for (name, extension) in &embedded_built_extension_modules {
+        all_embedded_modules.insert(name.clone());
+
+        if extension.is_package {
+            annotated_package_names.insert(name.clone());
+        }
+    }
+
+    let derived_package_names = packages_from_module_names(all_embedded_modules.iter().cloned());
+
+    let mut all_embedded_package_names = BTreeSet::from(annotated_package_names);
+    for package in derived_package_names {
+        if !all_embedded_package_names.contains(&package) {
+            warn!(
+                logger,
+                "package {} not initially detected as such; is package detection buggy?", package
+            );
+            all_embedded_package_names.insert(package);
+        }
+    }
 
     // Prune resource files that belong to packages that don't have a corresponding
     // Python module package, as they won't be loadable by our custom importer.
     let embedded_resources = embedded_resources
         .iter()
         .filter_map(|(package, values)| {
-            if !package_names.contains(package) {
-                info!(
+            if !all_embedded_package_names.contains(package) {
+                warn!(
                     logger,
                     "package {} does not exist; excluding resources: {:?}",
                     package,
@@ -1596,8 +864,10 @@ pub fn resolve_python_resources(
             module_sources: embedded_sources,
             module_bytecodes: embedded_bytecodes,
             all_modules: all_embedded_modules,
+            all_packages: all_embedded_package_names,
             resources: embedded_resources,
             extension_modules: embedded_extension_modules,
+            built_extension_modules: embedded_built_extension_modules,
         },
         app_relative,
         read_files,
@@ -1670,6 +940,13 @@ pub fn write_modules_entries<W: Write>(
         } else {
             0
         })?;
+
+        let mut flags = 0;
+        if entry.is_package {
+            flags |= 1;
+        }
+
+        dest.write_u32::<LittleEndian>(flags)?;
     }
 
     for entry in entries.iter() {
@@ -1736,7 +1013,10 @@ pub fn write_resources_entries<W: Write>(
 }
 
 /// Produce the content of the config.c file containing built-in extensions.
-fn make_config_c(extension_modules: &BTreeMap<String, ExtensionModule>) -> String {
+fn make_config_c(
+    extension_modules: &BTreeMap<String, ExtensionModule>,
+    built_extension_modules: &BTreeMap<String, BuiltExtensionModule>,
+) -> String {
     // It is easier to construct the file from scratch than parse the template
     // and insert things in the right places.
     let mut lines: Vec<String> = Vec::new();
@@ -1754,6 +1034,10 @@ fn make_config_c(extension_modules: &BTreeMap<String, ExtensionModule>) -> Strin
         }
     }
 
+    for em in built_extension_modules.values() {
+        lines.push(format!("extern PyObject* {}(void);", em.init_fn));
+    }
+
     lines.push(String::from("struct _inittab _PyImport_Inittab[] = {"));
 
     for em in extension_modules.values() {
@@ -1764,6 +1048,10 @@ fn make_config_c(extension_modules: &BTreeMap<String, ExtensionModule>) -> Strin
 
             lines.push(format!("{{\"{}\", {}}},", em.module, init_fn));
         }
+    }
+
+    for em in built_extension_modules.values() {
+        lines.push(format!("{{\"{}\", {}}},", em.name, em.init_fn));
     }
 
     lines.push(String::from("{0, 0}"));
@@ -1797,6 +1085,7 @@ pub fn link_libpython(
     let temp_dir_path = temp_dir.path();
 
     let extension_modules = &resources.extension_modules;
+    let built_extension_modules = &resources.built_extension_modules;
 
     // Sometimes we have canonicalized paths. These can break cc/cl.exe when they
     // are \\?\ paths on Windows for some reason. We hack around this by doing
@@ -1807,12 +1096,12 @@ pub fn link_libpython(
     // We need to do this because config.c defines the built-in extensions and
     // their initialization functions and the file generated by the source
     // distribution may not align with what we want.
-    info!(
+    warn!(
         logger,
         "deriving custom config.c from {} extension modules",
-        extension_modules.len()
+        extension_modules.len() + built_extension_modules.len()
     );
-    let config_c_source = make_config_c(&extension_modules);
+    let config_c_source = make_config_c(&extension_modules, &built_extension_modules);
     let config_c_path = out_dir.join("config.c");
     let config_c_temp_path = temp_dir_path.join("config.c");
 
@@ -1827,7 +1116,7 @@ pub fn link_libpython(
     }
 
     // TODO flags should come from parsed distribution config.
-    info!(logger, "compiling custom config.c to object file");
+    warn!(logger, "compiling custom config.c to object file");
     cc::Build::new()
         .out_dir(out_dir)
         .host(host)
@@ -1844,7 +1133,7 @@ pub fn link_libpython(
     // Since we disabled cargo metadata lines above.
     cargo_metadata.push("cargo:rustc-link-lib=static=pyembeddedconfig".to_string());
 
-    info!(logger, "resolving inputs for custom Python library...");
+    warn!(logger, "resolving inputs for custom Python library...");
     let mut build = cc::Build::new();
     build.out_dir(out_dir);
     build.host(host);
@@ -1864,7 +1153,7 @@ pub fn link_libpython(
         // which object file contains _PyImport_Inittab. Or perhaps we could
         // scan all the object files for this symbol and ignore it automatically?
         if rel_path.ends_with("Modules/config.o") {
-            info!(
+            warn!(
                 logger,
                 "ignoring config.o since it may conflict with our version"
             );
@@ -1887,25 +1176,25 @@ pub fn link_libpython(
     let mut needed_frameworks: BTreeSet<&str> = BTreeSet::new();
     let mut needed_system_libraries: BTreeSet<&str> = BTreeSet::new();
 
-    info!(
+    warn!(
         logger,
         "resolving libraries required by core distribution..."
     );
     for entry in &dist.links_core {
         if entry.framework {
-            info!(logger, "framework {} required by core", entry.name);
+            warn!(logger, "framework {} required by core", entry.name);
             needed_frameworks.insert(&entry.name);
         } else if entry.system {
-            info!(logger, "system library {} required by core", entry.name);
+            warn!(logger, "system library {} required by core", entry.name);
             needed_system_libraries.insert(&entry.name);
         }
         // TODO handle static/dynamic libraries.
     }
 
-    info!(
+    warn!(
         logger,
         "resolving inputs for {} extension modules...",
-        extension_modules.len()
+        extension_modules.len() + built_extension_modules.len()
     );
     for (name, em) in extension_modules {
         if em.builtin_default {
@@ -1926,21 +1215,44 @@ pub fn link_libpython(
         for entry in &em.links {
             if entry.framework {
                 needed_frameworks.insert(&entry.name);
-                info!(logger, "framework {} required by {}", entry.name, name);
+                warn!(logger, "framework {} required by {}", entry.name, name);
             } else if entry.system {
-                info!(logger, "system library {} required by {}", entry.name, name);
+                warn!(logger, "system library {} required by {}", entry.name, name);
                 needed_system_libraries.insert(&entry.name);
             } else if let Some(_lib) = &entry.static_path {
                 needed_libraries.insert(&entry.name);
-                info!(logger, "static library {} required by {}", entry.name, name);
+                warn!(logger, "static library {} required by {}", entry.name, name);
             } else if let Some(_lib) = &entry.dynamic_path {
                 needed_libraries.insert(&entry.name);
-                info!(
+                warn!(
                     logger,
                     "dynamic library {} required by {}", entry.name, name
                 );
             }
         }
+    }
+
+    warn!(
+        logger,
+        "resolving inputs for {} built extension modules...",
+        built_extension_modules.len()
+    );
+
+    for (name, em) in built_extension_modules {
+        info!(
+            logger,
+            "adding {} object files for {} built extension module",
+            em.object_file_data.len(),
+            name
+        );
+        for (i, object_data) in em.object_file_data.iter().enumerate() {
+            let out_path = temp_dir_path.join(format!("{}.{}.o", name, i));
+
+            fs::write(&out_path, object_data).expect("unable to write object file");
+            build.object(&out_path);
+        }
+
+        // TODO collect libraries and frameworks.
     }
 
     for library in needed_libraries.iter() {
@@ -1953,7 +1265,7 @@ pub fn link_libpython(
             .libraries
             .get(*library)
             .expect(&format!("unable to find library {}", library));
-        info!(logger, "{}", fs_path.display());
+        warn!(logger, "{}", fs_path.display());
 
         let library_path = out_dir.join(format!("lib{}.a", library));
         fs::copy(fs_path, library_path).expect("unable to copy library file");
@@ -1985,9 +1297,9 @@ pub fn link_libpython(
     // Our current workaround is to produce a ``pythonXY.lib`` file. This satisfies
     // the requirement of ``python3-sys`` that a ``pythonXY.lib`` file exists.
 
-    info!(logger, "compiling libpythonXY...");
+    warn!(logger, "compiling libpythonXY...");
     build.compile("pythonXY");
-    info!(logger, "libpythonXY created");
+    warn!(logger, "libpythonXY created");
 
     cargo_metadata.push("cargo:rustc-link-lib=static=pythonXY".to_string());
     cargo_metadata.push(format!(
@@ -2087,7 +1399,7 @@ pub fn derive_python_config(
                 "PythonRunMode::Module { module: \"".to_owned() + module + "\".to_string() }"
             }
             RunMode::Eval { ref code } => {
-                "PythonRunMode::Eval { code: \"".to_owned() + code + "\".to_string() }"
+                "PythonRunMode::Eval { code: r###\"".to_owned() + code + "\"###.to_string() }"
             }
         },
     )
@@ -2141,7 +1453,7 @@ fn install_app_relative(
 
     create_dir_all(&dest_path).or_else(|_| Err("could not create app-relative path"))?;
 
-    info!(
+    warn!(
         logger,
         "installing {} app-relative Python source modules to {}",
         app_relative.module_sources.len(),
@@ -2150,10 +1462,10 @@ fn install_app_relative(
 
     let packages = app_relative.package_names();
 
-    for (module_name, module_data) in &app_relative.module_sources {
+    for (module_name, module_source) in &app_relative.module_sources {
         // foo.bar -> foo/bar
         let mut module_path = dest_path.clone();
-        module_path.extend(module_name.split("."));
+        module_path.extend(module_name.split('.'));
 
         // Packages need to get normalized to /__init__.py.
         if packages.contains(module_name) {
@@ -2165,7 +1477,7 @@ fn install_app_relative(
             module_path.file_name().unwrap().to_string_lossy()
         ));
 
-        info!(
+        warn!(
             logger,
             "installing Python module {} to {}",
             module_name,
@@ -2180,12 +1492,12 @@ fn install_app_relative(
             ))
         })?;
 
-        fs::write(&module_path, module_data)
+        fs::write(&module_path, &module_source.source)
             .or_else(|_| Err(format!("failed to write {}", module_path.display())))?;
     }
 
     // TODO implement.
-    info!(
+    warn!(
         logger,
         "resolved {} app-relative Python bytecode modules in {}: {:#?}",
         app_relative.module_bytecodes.len(),
@@ -2202,7 +1514,7 @@ fn install_app_relative(
         resource_count += entries.len();
     }
 
-    info!(
+    warn!(
         logger,
         "resolved {} app-relative resource files across {} packages: {:#?}",
         resource_count,
@@ -2216,7 +1528,7 @@ fn install_app_relative(
         for (name, data) in entries {
             let dest_path = package_path.join(name);
 
-            info!(
+            warn!(
                 logger,
                 "installing app-relative resource {}:{} to {}",
                 package,
@@ -2238,20 +1550,20 @@ fn install_app_relative(
 ///
 /// This will delete all content in the application's package directory.
 pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Result<(), String> {
-    info!(
+    warn!(
         logger,
         "packaging application into {}",
         context.app_path.display()
     );
 
     if context.app_path.exists() {
-        info!(logger, "purging {}", context.app_path.display());
+        warn!(logger, "purging {}", context.app_path.display());
         std::fs::remove_dir_all(&context.app_path).or_else(|e| Err(e.to_string()))?;
     }
 
     create_dir_all(&context.app_path).or_else(|e| Err(e.to_string()))?;
 
-    info!(
+    warn!(
         logger,
         "copying {} to {}",
         context.app_exe_target_path.display(),
@@ -2260,7 +1572,7 @@ pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Res
     std::fs::copy(&context.app_exe_target_path, &context.app_exe_path)
         .or_else(|_| Err("failed to copy built application"))?;
 
-    info!(logger, "resolving packaging state...");
+    warn!(logger, "resolving packaging state...");
     let state = context.get_packaging_state()?;
 
     if let Some(licenses_path) = state.license_files_path {
@@ -2273,14 +1585,14 @@ pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Res
         for (name, lis) in &state.license_infos {
             for li in lis {
                 let path = licenses_path.join(&li.license_filename);
-                info!(logger, "writing license for {} to {}", name, path.display());
+                warn!(logger, "writing license for {} to {}", name, path.display());
                 fs::write(&path, li.license_text.as_bytes()).or_else(|e| Err(e.to_string()))?;
             }
         }
     }
 
     if !state.app_relative_resources.is_empty() {
-        info!(
+        warn!(
             logger,
             "installing resources into {} app-relative directories",
             state.app_relative_resources.len(),
@@ -2291,7 +1603,7 @@ pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Res
         install_app_relative(logger, context, path.as_str(), v).unwrap();
     }
 
-    info!(
+    warn!(
         logger,
         "{} packaged into {}",
         context.app_name,
@@ -2341,22 +1653,6 @@ pub struct EmbeddedPythonConfig {
     pub packaging_state_path: PathBuf,
 }
 
-pub fn parse_config_file(config_path: &Path, target: &str) -> Result<Config, String> {
-    let mut fh = fs::File::open(config_path).or_else(|e| Err(e.to_string()))?;
-
-    let mut config_data = Vec::new();
-    fh.read_to_end(&mut config_data)
-        .or_else(|e| Err(e.to_string()))?;
-
-    parse_config(&config_data, config_path, target).or_else(|message| {
-        Err(format!(
-            "err reading config {}: {}",
-            config_path.display(),
-            message
-        ))
-    })
-}
-
 /// Derive build artifacts from a PyOxidizer config file.
 ///
 /// This function reads a PyOxidizer config file and turns it into a set
@@ -2373,7 +1669,7 @@ pub fn process_config(
     let config = &context.config;
     let dest_dir = &context.pyoxidizer_artifacts_path;
 
-    info!(
+    warn!(
         logger,
         "processing config file {}",
         config.config_path.display()
@@ -2393,9 +1689,9 @@ pub fn process_config(
     }
 
     // Obtain the configured Python distribution and parse it to a data structure.
-    info!(logger, "resolving Python distribution...");
+    warn!(logger, "resolving Python distribution...");
     let python_distribution_path = resolve_python_distribution_archive(&config, &dest_dir);
-    info!(
+    warn!(
         logger,
         "Python distribution available at {}",
         python_distribution_path.display()
@@ -2404,14 +1700,14 @@ pub fn process_config(
     let mut python_distribution_data = Vec::new();
     fh.read_to_end(&mut python_distribution_data).unwrap();
     let dist_cursor = Cursor::new(python_distribution_data);
-    info!(logger, "reading data from Python distribution...");
+    warn!(logger, "reading data from Python distribution...");
 
     let dist = analyze_python_distribution_tar_zst(dist_cursor, &context.python_distribution_path)
         .unwrap();
-    info!(logger, "distribution info: {:#?}", dist.as_minimal_info());
+    warn!(logger, "distribution info: {:#?}", dist.as_minimal_info());
 
     // Produce the custom frozen importlib modules.
-    info!(
+    warn!(
         logger,
         "compiling custom importlib modules to support in-memory importing"
     );
@@ -2427,30 +1723,30 @@ pub fn process_config(
     fh.write_all(&importlib.bootstrap_external_bytecode)
         .unwrap();
 
-    info!(
+    warn!(
         logger,
         "resolving Python resources (modules, extensions, resource data, etc)..."
     );
     let resources = resolve_python_resources(logger, &config, &dist);
 
-    info!(
+    warn!(
         logger,
         "resolved {} embedded Python source modules: {:#?}",
         resources.embedded.module_sources.len(),
         resources.embedded.module_sources.keys()
     );
-    info!(
+    warn!(
         logger,
         "resolved {} embedded Python bytecode modules: {:#?}",
         resources.embedded.module_bytecodes.len(),
         resources.embedded.module_bytecodes.keys()
     );
-    info!(
+    warn!(
         logger,
-        "resolved {} unique embedded Python modules: {:#?}",
+        "resolved {} unique embedded Python modules",
         resources.embedded.all_modules.len(),
-        resources.embedded.all_modules
     );
+    info!(logger, "{:#?}", resources.embedded.all_modules);
 
     let mut resource_count = 0;
     let mut resource_map = BTreeMap::new();
@@ -2461,25 +1757,27 @@ pub fn process_config(
         resource_count += entries.len();
     }
 
-    info!(
+    warn!(
         logger,
         "resolved {} embedded resource files across {} packages: {:#?}",
         resource_count,
         resources.embedded.resources.len(),
         resource_map
     );
-    info!(
+
+    let all_extension_modules = resources.embedded.embedded_extension_module_names();
+    warn!(
         logger,
         "resolved {} embedded extension modules: {:#?}",
-        resources.embedded.extension_modules.len(),
-        resources.embedded.extension_modules.keys()
+        all_extension_modules.len(),
+        all_extension_modules
     );
 
     // Produce the packed data structures containing Python modules.
     // TODO there is tons of room to customize this behavior, including
     // reordering modules so the memory order matches import order.
 
-    info!(logger, "writing packed Python module and resource data...");
+    warn!(logger, "writing packed Python module and resource data...");
     let module_names_path = Path::new(&dest_dir).join("py-module-names");
     let py_modules_path = Path::new(&dest_dir).join("py-modules");
     let resources_path = Path::new(&dest_dir).join("python-resources");
@@ -2487,13 +1785,13 @@ pub fn process_config(
         .embedded
         .write_blobs(&module_names_path, &py_modules_path, &resources_path);
 
-    info!(
+    warn!(
         logger,
         "{} bytes of Python module data written to {}",
         py_modules_path.metadata().unwrap().len(),
         py_modules_path.display()
     );
-    info!(
+    warn!(
         logger,
         "{} bytes of resources data written to {}",
         resources_path.metadata().unwrap().len(),
@@ -2501,7 +1799,7 @@ pub fn process_config(
     );
 
     // Produce a static library containing the Python bits we need.
-    info!(
+    warn!(
         logger,
         "generating custom link library containing Python..."
     );
@@ -2551,7 +1849,7 @@ pub fn process_config(
     };
 
     let packaging_state_path = dest_dir.join("packaging_state.cbor");
-    info!(
+    warn!(
         logger,
         "writing packaging state to {}",
         packaging_state_path.display()
@@ -2596,7 +1894,7 @@ pub fn find_pyoxidizer_config_file(start_dir: &Path) -> Option<PathBuf> {
 pub fn find_pyoxidizer_config_file_env(logger: &slog::Logger, start_dir: &Path) -> Option<PathBuf> {
     match env::var("PYOXIDIZER_CONFIG") {
         Ok(config_env) => {
-            info!(
+            warn!(
                 logger,
                 "using PyOxidizer config file from PYOXIDIZER_CONFIG: {}", config_env
             );

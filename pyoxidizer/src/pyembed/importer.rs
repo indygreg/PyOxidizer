@@ -65,6 +65,10 @@ impl PythonModuleData {
 ///
 /// This is essentially an index over a raw backing blob.
 struct PythonModulesData {
+    /// Packages in this set of modules.
+    packages: HashSet<&'static str>,
+
+    /// Maps module name to source/bytecode.
     data: HashMap<&'static str, PythonModuleData>,
 }
 
@@ -80,6 +84,7 @@ impl PythonModulesData {
         let mut index = Vec::with_capacity(count as usize);
         let mut total_names_length = 0;
         let mut total_sources_length = 0;
+        let mut package_count = 0;
 
         for _ in 0..count {
             let name_length = reader
@@ -94,20 +99,30 @@ impl PythonModulesData {
                 .read_u32::<LittleEndian>()
                 .or_else(|_| Err("failed reading bytecode length"))?
                 as usize;
+            let flags = reader
+                .read_u32::<LittleEndian>()
+                .or_else(|_| Err("failed reading module flags"))?;
 
-            index.push((name_length, source_length, bytecode_length));
+            let is_package = flags & 0x01 != 0;
+
+            if is_package {
+                package_count += 1;
+            }
+
+            index.push((name_length, source_length, bytecode_length, is_package));
             total_names_length += name_length;
             total_sources_length += source_length;
         }
 
         let mut res = HashMap::with_capacity(count as usize);
+        let mut packages = HashSet::with_capacity(package_count);
         let sources_start_offset = reader.position() as usize + total_names_length;
         let bytecodes_start_offset = sources_start_offset + total_sources_length;
 
         let mut sources_current_offset: usize = 0;
         let mut bytecodes_current_offset: usize = 0;
 
-        for (name_length, source_length, bytecode_length) in index {
+        for (name_length, source_length, bytecode_length, is_package) in index {
             let offset = reader.position() as usize;
 
             let name =
@@ -132,10 +147,21 @@ impl PythonModulesData {
             sources_current_offset += source_length;
             bytecodes_current_offset += bytecode_length;
 
-            res.insert(name, PythonModuleData { source, bytecode });
+            if is_package {
+                packages.insert(name);
+            }
+
+            // Extension modules will have their names present to populate the
+            // packages set. So only populate module data if we have data for it.
+            if source.is_some() || bytecode.is_some() {
+                res.insert(name, PythonModuleData { source, bytecode });
+            }
         }
 
-        Ok(PythonModulesData { data: res })
+        Ok(PythonModulesData {
+            packages,
+            data: res,
+        })
     }
 }
 
@@ -251,7 +277,9 @@ py_class!(class PyOxidizerFinder |py| {
         if let Some(flavor) = self.known_modules(py).get(&*key) {
             match flavor {
                 KnownModuleFlavor::Builtin => {
-                    self.builtin_importer(py).call_method(py, "find_spec", (fullname, path, target), None)
+                    // BuiltinImporter.find_spec() always returns None if `path` is defined.
+                    // And it doesn't use `target`. So don't proxy these values.
+                    self.builtin_importer(py).call_method(py, "find_spec", (fullname,), None)
                 }
                 KnownModuleFlavor::Frozen => {
                     self.frozen_importer(py).call_method(py, "find_spec", (fullname, path, target), None)
@@ -382,7 +410,7 @@ py_class!(class PyOxidizerFinder |py| {
     // End of importlib.abc.InspectLoader interface.
 
     // Support obtaining ResourceReader instances.
-    def get_resource_loader(&self, fullname: &PyString) -> PyResult<PyObject> {
+    def get_resource_reader(&self, fullname: &PyString) -> PyResult<PyObject> {
         let key = fullname.to_string(py)?;
 
         // This should not happen since code below should not be recursive into this
@@ -493,15 +521,6 @@ py_class!(class PyOxidizerResourceReader |py| {
     }
 });
 
-fn populate_packages(packages: &mut HashSet<&'static str>, name: &'static str) {
-    let mut search = name;
-
-    while let Some(idx) = search.rfind('.') {
-        packages.insert(&search[0..idx]);
-        search = &search[0..idx];
-    }
-}
-
 const DOC: &[u8] = b"Binary representation of Python modules\0";
 
 /// Represents global module state to be passed at interpreter initialization time.
@@ -575,18 +594,6 @@ fn get_module_state<'a>(py: Python, m: &'a PyModule) -> Result<&'a mut ModuleSta
 
     Ok(unsafe { &mut *state })
 }
-
-static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
-    m_base: pyffi::PyModuleDef_HEAD_INIT,
-    m_name: PYOXIDIZER_IMPORTER_NAME.as_ptr() as *const _,
-    m_doc: DOC.as_ptr() as *const _,
-    m_size: std::mem::size_of::<ModuleState>() as isize,
-    m_methods: 0 as *mut _,
-    m_slots: 0 as *mut _,
-    m_traverse: None,
-    m_clear: None,
-    m_free: None,
-};
 
 /// Initialize the Python module object.
 ///
@@ -733,9 +740,6 @@ fn module_setup(
         known_modules.insert(name_str, KnownModuleFlavor::Frozen);
     }
 
-    // TODO consider baking set of packages into embedded data.
-    let mut packages: HashSet<&'static str> = HashSet::with_capacity(modules_data.data.len());
-
     for (name, record) in modules_data.data {
         known_modules.insert(
             name,
@@ -743,7 +747,6 @@ fn module_setup(
                 module_data: record,
             },
         );
-        populate_packages(&mut packages, name);
     }
 
     let resources_data = match PythonResourcesData::from(state.py_resources_data) {
@@ -789,7 +792,7 @@ fn module_setup(
         module_spec_type,
         decode_source,
         exec_fn,
-        packages,
+        modules_data.packages,
         known_modules,
         resources_data.packages,
         resource_readers,
@@ -847,6 +850,18 @@ fn module_setup(
     Ok(py.None())
 }
 
+static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
+    m_base: pyffi::PyModuleDef_HEAD_INIT,
+    m_name: std::ptr::null(),
+    m_doc: std::ptr::null(),
+    m_size: std::mem::size_of::<ModuleState>() as isize,
+    m_methods: 0 as *mut _,
+    m_slots: 0 as *mut _,
+    m_traverse: None,
+    m_clear: None,
+    m_free: None,
+};
+
 /// Module initialization function.
 ///
 /// This creates the Python module object.
@@ -857,6 +872,15 @@ fn module_setup(
 #[allow(non_snake_case)]
 pub extern "C" fn PyInit__pyoxidizer_importer() -> *mut pyffi::PyObject {
     let py = unsafe { cpython::Python::assume_gil_acquired() };
+
+    // TRACKING RUST1.32 We can't call as_ptr() in const fn in Rust 1.31.
+    unsafe {
+        if MODULE_DEF.m_name.is_null() {
+            MODULE_DEF.m_name = PYOXIDIZER_IMPORTER_NAME.as_ptr() as *const _;
+            MODULE_DEF.m_doc = DOC.as_ptr() as *const _;
+        }
+    }
+
     let module = unsafe { pyffi::PyModule_Create(&mut MODULE_DEF) };
 
     if module.is_null() {

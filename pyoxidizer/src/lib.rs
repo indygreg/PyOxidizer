@@ -17,5 +17,3 @@ pub mod logging;
 pub mod projectmgmt;
 pub mod pyrepackager;
 pub mod python_distributions;
-
-pub use pyrepackager::repackage::run_from_build;
