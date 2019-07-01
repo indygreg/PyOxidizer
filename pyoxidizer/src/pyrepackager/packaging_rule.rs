@@ -79,11 +79,13 @@ pub enum PythonResource {
     ModuleSource {
         name: String,
         source: Vec<u8>,
+        is_package: bool,
     },
     ModuleBytecode {
         name: String,
         source: Vec<u8>,
         optimize_level: i32,
+        is_package: bool,
     },
     Resource {
         package: String,
@@ -183,6 +185,11 @@ where
     }
 
     package_names
+}
+
+fn is_package_from_path(path: &Path) -> bool {
+    let file_name = path.file_name().unwrap().to_str().unwrap();
+    file_name.starts_with("__init__.")
 }
 
 fn resource_full_name(resource: &PythonFileResource) -> &str {
@@ -557,6 +564,7 @@ fn resolve_stdlib(
             continue;
         }
 
+        let is_package = is_package_from_path(&fs_path);
         let source = fs::read(fs_path).expect("error reading source file");
 
         if rule.include_source {
@@ -566,6 +574,7 @@ fn resolve_stdlib(
                 resource: PythonResource::ModuleSource {
                     name: name.clone(),
                     source: source.clone(),
+                    is_package,
                 },
             });
         }
@@ -577,6 +586,7 @@ fn resolve_stdlib(
                 name: name.clone(),
                 source,
                 optimize_level: rule.optimize_level as i32,
+                is_package,
             },
         });
     }
@@ -649,6 +659,7 @@ fn resolve_virtualenv(
             PythonFileResource::Source {
                 full_name, path, ..
             } => {
+                let is_package = is_package_from_path(&path);
                 let source = fs::read(path).expect("error reading source file");
 
                 if rule.include_source {
@@ -658,6 +669,7 @@ fn resolve_virtualenv(
                         resource: PythonResource::ModuleSource {
                             name: full_name.clone(),
                             source: source.clone(),
+                            is_package,
                         },
                     });
                 }
@@ -669,6 +681,7 @@ fn resolve_virtualenv(
                         name: full_name.clone(),
                         source,
                         optimize_level: rule.optimize_level as i32,
+                        is_package,
                     },
                 });
             }
@@ -728,6 +741,7 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceAction
             PythonFileResource::Source {
                 full_name, path, ..
             } => {
+                let is_package = is_package_from_path(&path);
                 let source = fs::read(path).expect("error reading source file");
 
                 if rule.include_source {
@@ -737,6 +751,7 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceAction
                         resource: PythonResource::ModuleSource {
                             name: full_name.clone(),
                             source: source.clone(),
+                            is_package,
                         },
                     });
                 }
@@ -748,6 +763,7 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceAction
                         name: full_name.clone(),
                         source,
                         optimize_level: rule.optimize_level as i32,
+                        is_package,
                     },
                 });
             }
@@ -850,6 +866,7 @@ fn resolve_pip_install_simple(
             PythonFileResource::Source {
                 full_name, path, ..
             } => {
+                let is_package = is_package_from_path(&path);
                 let source = fs::read(path).expect("error reading source file");
 
                 if rule.include_source {
@@ -859,6 +876,7 @@ fn resolve_pip_install_simple(
                         resource: PythonResource::ModuleSource {
                             name: full_name.clone(),
                             source: source.clone(),
+                            is_package,
                         },
                     });
                 }
@@ -870,6 +888,7 @@ fn resolve_pip_install_simple(
                         name: full_name.clone(),
                         source,
                         optimize_level: rule.optimize_level as i32,
+                        is_package,
                     },
                 });
             }
@@ -961,6 +980,7 @@ fn resolve_pip_requirements_file(
             PythonFileResource::Source {
                 full_name, path, ..
             } => {
+                let is_package = is_package_from_path(&path);
                 let source = fs::read(path).expect("error reading source file");
 
                 if rule.include_source {
@@ -970,6 +990,7 @@ fn resolve_pip_requirements_file(
                         resource: PythonResource::ModuleSource {
                             name: full_name.clone(),
                             source: source.clone(),
+                            is_package,
                         },
                     });
                 }
@@ -981,6 +1002,7 @@ fn resolve_pip_requirements_file(
                         name: full_name.clone(),
                         source,
                         optimize_level: rule.optimize_level as i32,
+                        is_package,
                     },
                 });
             }
@@ -1077,6 +1099,7 @@ fn resolve_setup_py_install(
             PythonFileResource::Source {
                 full_name, path, ..
             } => {
+                let is_package = is_package_from_path(&path);
                 let source = fs::read(path).expect("error reading source");
 
                 if rule.include_source {
@@ -1086,6 +1109,7 @@ fn resolve_setup_py_install(
                         resource: PythonResource::ModuleSource {
                             name: full_name.clone(),
                             source: source.clone(),
+                            is_package,
                         },
                     });
                 }
@@ -1097,6 +1121,7 @@ fn resolve_setup_py_install(
                         name: full_name.clone(),
                         source,
                         optimize_level: rule.optimize_level as i32,
+                        is_package,
                     },
                 });
             }

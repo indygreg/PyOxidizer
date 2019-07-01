@@ -428,7 +428,11 @@ pub fn resolve_python_resources(
                 (
                     ResourceAction::Add,
                     ResourceLocation::Embedded,
-                    PythonResource::ModuleSource { name, source },
+                    PythonResource::ModuleSource {
+                        name,
+                        source,
+                        is_package: _,
+                    },
                 ) => {
                     warn!(logger, "adding embedded module source: {}", name);
                     embedded_sources.insert(name.clone(), source);
@@ -436,7 +440,11 @@ pub fn resolve_python_resources(
                 (
                     ResourceAction::Add,
                     ResourceLocation::AppRelative { path },
-                    PythonResource::ModuleSource { name, source },
+                    PythonResource::ModuleSource {
+                        name,
+                        source,
+                        is_package: _,
+                    },
                 ) => {
                     warn!(
                         logger,
@@ -467,6 +475,7 @@ pub fn resolve_python_resources(
                         name,
                         source,
                         optimize_level,
+                        is_package: _,
                     },
                 ) => {
                     warn!(logger, "adding embedded module bytecode: {}", name);
@@ -479,6 +488,7 @@ pub fn resolve_python_resources(
                         name,
                         source,
                         optimize_level,
+                        is_package: _,
                     },
                 ) => {
                     warn!(
