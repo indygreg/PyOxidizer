@@ -798,15 +798,42 @@ pub fn resolve_python_resources(
 
     // TODO compile app-relative bytecode too.
 
-    let mut all_embedded_modules: BTreeSet<String> = BTreeSet::new();
-    for name in embedded_sources.keys() {
-        all_embedded_modules.insert(name.to_string());
+    let mut all_embedded_modules = BTreeSet::new();
+    let mut annotated_package_names = BTreeSet::new();
+
+    for (name, source) in &embedded_sources {
+        all_embedded_modules.insert(name.clone());
+
+        if source.is_package {
+            annotated_package_names.insert(name.clone());
+        }
     }
-    for name in embedded_bytecodes.keys() {
-        all_embedded_modules.insert(name.to_string());
+    for (name, bytecode) in &embedded_bytecodes {
+        all_embedded_modules.insert(name.clone());
+
+        if bytecode.is_package {
+            annotated_package_names.insert(name.clone());
+        }
     }
 
-    let package_names = packages_from_module_names(all_embedded_modules.iter().cloned());
+    for (name, extension) in &embedded_built_extension_modules {
+        if extension.is_package {
+            annotated_package_names.insert(name.clone());
+        }
+    }
+
+    let derived_package_names = packages_from_module_names(all_embedded_modules.iter().cloned());
+
+    let mut package_names = BTreeSet::from(annotated_package_names);
+    for package in derived_package_names {
+        if !package_names.contains(&package) {
+            warn!(
+                logger,
+                "package {} not initially detected as such; is package detection buggy?", package
+            );
+            package_names.insert(package);
+        }
+    }
 
     // Prune resource files that belong to packages that don't have a corresponding
     // Python module package, as they won't be loadable by our custom importer.
