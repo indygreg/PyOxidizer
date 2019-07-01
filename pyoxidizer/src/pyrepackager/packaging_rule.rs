@@ -67,6 +67,7 @@ pub struct BuiltExtensionModule {
     pub name: String,
     pub init_fn: String,
     pub object_file_data: Vec<Vec<u8>>,
+    pub is_package: bool,
 }
 
 /// Represents a resource to make available to the Python interpreter.
@@ -369,6 +370,7 @@ fn resolve_built_extensions(
                 name: info.name.clone(),
                 init_fn,
                 object_file_data,
+                is_package: final_name == "__init__",
             }),
         });
     }
