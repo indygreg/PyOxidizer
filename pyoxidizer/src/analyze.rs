@@ -216,7 +216,7 @@ pub fn analyze_elf_libraries(libs: &[&str], undefined_symbols: &Vec<UndefinedSym
         println!("{}", lib);
 
         if LSB_SHARED_LIBRARIES.contains(&lib) {
-            println!("  OK - Library part of Linux Shared Bass and present on most distros");
+            println!("  OK - Library part of Linux Standard Base and present on most distros");
         } else {
             println!("  PROBLEMATIC - Shared library dependency may not be on all machines");
         }
