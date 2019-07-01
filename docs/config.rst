@@ -761,7 +761,7 @@ Example:
 
    [[packaging_rule]]
    type = "pip-requirements-file"
-   path = "/home/gps/src/myapp/requirements.txt"
+   requirements_path = "/home/gps/src/myapp/requirements.txt"
 
 ``setup-py-install``
 ^^^^^^^^^^^^^^^^^^^^
