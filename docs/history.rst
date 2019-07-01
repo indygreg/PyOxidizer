@@ -33,6 +33,9 @@ Backwards Compatibility Notes
 Bug Fixes
 ^^^^^^^^^
 
+* The in-memory module importer now implements ``get_resource_reader()`` instead
+  of ``get_resource_loader()``. (The CPython documentation steered us in the
+  wrong direction - https://bugs.python.org/issue37459.)
 * The in-memory module importer now correctly populates ``__package__`` in
   more cases than it did previously. Before, whether a module was a package
   was derived from the presence of a ``foo.bar`` module. Now, a module will be

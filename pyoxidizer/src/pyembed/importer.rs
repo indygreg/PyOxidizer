@@ -410,7 +410,7 @@ py_class!(class PyOxidizerFinder |py| {
     // End of importlib.abc.InspectLoader interface.
 
     // Support obtaining ResourceReader instances.
-    def get_resource_loader(&self, fullname: &PyString) -> PyResult<PyObject> {
+    def get_resource_reader(&self, fullname: &PyString) -> PyResult<PyObject> {
         let key = fullname.to_string(py)?;
 
         // This should not happen since code below should not be recursive into this
