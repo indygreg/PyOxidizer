@@ -374,6 +374,11 @@ fn filter_btreemap<V>(logger: &slog::Logger, m: &mut BTreeMap<String, V>, f: &BT
     }
 }
 
+struct BytecodeRequest {
+    source: Vec<u8>,
+    optimize_level: i32,
+}
+
 /// Resolves a series of packaging rules to a final set of resources to package.
 pub fn resolve_python_resources(
     logger: &slog::Logger,
@@ -388,12 +393,12 @@ pub fn resolve_python_resources(
 
     let mut embedded_extension_modules: BTreeMap<String, ExtensionModule> = BTreeMap::new();
     let mut embedded_sources: BTreeMap<String, PackagedModuleSource> = BTreeMap::new();
-    let mut embedded_bytecode_requests: BTreeMap<String, (Vec<u8>, i32)> = BTreeMap::new();
+    let mut embedded_bytecode_requests: BTreeMap<String, BytecodeRequest> = BTreeMap::new();
     let mut embedded_resources: BTreeMap<String, BTreeMap<String, Vec<u8>>> = BTreeMap::new();
     let mut embedded_built_extension_modules = BTreeMap::new();
 
     let mut app_relative: BTreeMap<String, AppRelativeResources> = BTreeMap::new();
-    let mut app_relative_bytecode_requests: BTreeMap<String, BTreeMap<String, (Vec<u8>, i32)>> =
+    let mut app_relative_bytecode_requests: BTreeMap<String, BTreeMap<String, BytecodeRequest>> =
         BTreeMap::new();
 
     let mut read_files: Vec<PathBuf> = Vec::new();
@@ -480,7 +485,13 @@ pub fn resolve_python_resources(
                     },
                 ) => {
                     warn!(logger, "adding embedded module bytecode: {}", name);
-                    embedded_bytecode_requests.insert(name.clone(), (source, optimize_level));
+                    embedded_bytecode_requests.insert(
+                        name.clone(),
+                        BytecodeRequest {
+                            source,
+                            optimize_level,
+                        },
+                    );
                 }
                 (
                     ResourceAction::Add,
@@ -504,7 +515,13 @@ pub fn resolve_python_resources(
                     app_relative_bytecode_requests
                         .get_mut(&path)
                         .unwrap()
-                        .insert(name.clone(), (source, optimize_level));
+                        .insert(
+                            name.clone(),
+                            BytecodeRequest {
+                                source,
+                                optimize_level,
+                            },
+                        );
                 }
                 (
                     ResourceAction::Remove,
@@ -724,7 +741,13 @@ pub fn resolve_python_resources(
             logger,
             "adding empty module for missing package {}", package
         );
-        embedded_bytecode_requests.insert(package.clone(), (Vec::new(), 0));
+        embedded_bytecode_requests.insert(
+            package.clone(),
+            BytecodeRequest {
+                source: Vec::new(),
+                optimize_level: 0,
+            },
+        );
     }
 
     // Add required extension modules, as some don't show up in the modules list
@@ -752,8 +775,8 @@ pub fn resolve_python_resources(
     {
         let mut compiler = bytecode_compiler(&dist);
 
-        for (name, (source, optimize_level)) in embedded_bytecode_requests {
-            let bytecode = match compiler.compile(&source, &name, optimize_level) {
+        for (name, request) in embedded_bytecode_requests {
+            let bytecode = match compiler.compile(&request.source, &name, request.optimize_level) {
                 Ok(res) => res,
                 Err(msg) => panic!("error compiling bytecode for {}: {}", name, msg),
             };
