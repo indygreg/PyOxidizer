@@ -25,8 +25,8 @@ use super::dist::{
 };
 use super::packaging_rule::{
     packages_from_module_name, packages_from_module_names, resolve_python_packaging,
-    AppRelativeResources, BuiltExtensionModule, PackagedModuleSource, PythonResource,
-    ResourceAction, ResourceLocation,
+    AppRelativeResources, BuiltExtensionModule, PackagedModuleBytecode, PackagedModuleSource,
+    PythonResource, ResourceAction, ResourceLocation,
 };
 
 pub const PYTHON_IMPORTER: &[u8] = include_bytes!("memoryimporter.py");
@@ -260,7 +260,7 @@ pub type ModuleEntries = Vec<ModuleEntry>;
 #[derive(Debug)]
 pub struct EmbeddedPythonResources {
     pub module_sources: BTreeMap<String, PackagedModuleSource>,
-    pub module_bytecodes: BTreeMap<String, Vec<u8>>,
+    pub module_bytecodes: BTreeMap<String, PackagedModuleBytecode>,
     pub all_modules: BTreeSet<String>,
     pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
     pub extension_modules: BTreeMap<String, ExtensionModule>,
@@ -283,7 +283,7 @@ impl EmbeddedPythonResources {
                     None => None,
                 },
                 bytecode: match bytecode {
-                    Some(value) => Some(value.clone()),
+                    Some(value) => Some(value.bytecode.clone()),
                     None => None,
                 },
             });
@@ -747,7 +747,7 @@ pub fn resolve_python_resources(
         embedded_extension_modules.remove(&String::from(*e));
     }
 
-    let mut embedded_bytecodes: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    let mut embedded_bytecodes: BTreeMap<String, PackagedModuleBytecode> = BTreeMap::new();
 
     {
         let mut compiler = bytecode_compiler(&dist);
@@ -758,7 +758,7 @@ pub fn resolve_python_resources(
                 Err(msg) => panic!("error compiling bytecode for {}: {}", name, msg),
             };
 
-            embedded_bytecodes.insert(name.clone(), bytecode);
+            embedded_bytecodes.insert(name.clone(), PackagedModuleBytecode { bytecode });
         }
     }
 

@@ -134,11 +134,16 @@ pub struct PackagedModuleSource {
     pub source: Vec<u8>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PackagedModuleBytecode {
+    pub bytecode: Vec<u8>,
+}
+
 /// Represents resources to install in an app-relative location.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AppRelativeResources {
     pub module_sources: BTreeMap<String, PackagedModuleSource>,
-    pub module_bytecodes: BTreeMap<String, Vec<u8>>,
+    pub module_bytecodes: BTreeMap<String, PackagedModuleBytecode>,
     pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
 }
 
