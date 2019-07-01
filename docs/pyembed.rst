@@ -328,10 +328,14 @@ The first 4 bytes are a little endian u32 containing the total number of
 modules in this data. Let's call this value ``total``.
 
 Following is an array of length ``total`` with each array element being
-a 3-tuples of packed (no interior or exterior padding) composed of 3
+a 3-tuple of packed (no interior or exterior padding) composed of 4
 little endian u32 values. These values correspond to the module name
 length (``name_length``), module source data length (``source_length``),
-and module bytecode data length (``bytecode_length``), respectively.
+module bytecode data length (``bytecode_length``), and a ``flags`` field
+to denote special behavior, respectively.
+
+The least significant bit of the ``flags`` field is set if the
+corresponding module name is a package.
 
 Following the lengths array is a vector of the module name strings.
 This vector has ``total`` elements. Each element is a non-NULL terminated

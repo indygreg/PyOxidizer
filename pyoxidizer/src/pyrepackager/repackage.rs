@@ -249,6 +249,7 @@ impl BuildContext {
 /// Represents a single module's data record.
 pub struct ModuleEntry {
     pub name: String,
+    pub is_package: bool,
     pub source: Option<Vec<u8>>,
     pub bytecode: Option<Vec<u8>>,
 }
@@ -279,6 +280,7 @@ impl EmbeddedPythonResources {
 
             records.push(ModuleEntry {
                 name: name.clone(),
+                is_package: self.all_packages.contains(name),
                 source: match source {
                     Some(value) => Some(value.source.clone()),
                     None => None,
@@ -818,6 +820,8 @@ pub fn resolve_python_resources(
     }
 
     for (name, extension) in &embedded_built_extension_modules {
+        all_embedded_modules.insert(name.clone());
+
         if extension.is_package {
             annotated_package_names.insert(name.clone());
         }
@@ -936,6 +940,13 @@ pub fn write_modules_entries<W: Write>(
         } else {
             0
         })?;
+
+        let mut flags = 0;
+        if entry.is_package {
+            flags |= 1;
+        }
+
+        dest.write_u32::<LittleEndian>(flags)?;
     }
 
     for entry in entries.iter() {

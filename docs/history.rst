@@ -18,6 +18,27 @@ Blog Posts
 Version History
 ===============
 
+next
+----
+
+*Not yet released*
+
+Backwards Compatibility Notes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* The format of embedded Python module data has changed. The ``pyembed`` crate
+  and ``pyoxidizer`` versions must match exactly or else the ``pyembed`` crate
+  will likely crash at run-time when parsing module data.
+
+Bug Fixes
+^^^^^^^^^
+
+* The in-memory module importer now correctly populates ``__package__`` in
+  more cases than it did previously. Before, whether a module was a package
+  was derived from the presence of a ``foo.bar`` module. Now, a module will be
+  identified as a package if the file providing it is named ``__init__``. This
+  more closely matches the behavior of Python's filesystem based importer. (#53)
+
 0.2.0
 -----
 

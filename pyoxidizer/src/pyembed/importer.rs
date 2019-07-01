@@ -65,6 +65,10 @@ impl PythonModuleData {
 ///
 /// This is essentially an index over a raw backing blob.
 struct PythonModulesData {
+    /// Packages in this set of modules.
+    packages: HashSet<&'static str>,
+
+    /// Maps module name to source/bytecode.
     data: HashMap<&'static str, PythonModuleData>,
 }
 
@@ -80,6 +84,7 @@ impl PythonModulesData {
         let mut index = Vec::with_capacity(count as usize);
         let mut total_names_length = 0;
         let mut total_sources_length = 0;
+        let mut package_count = 0;
 
         for _ in 0..count {
             let name_length = reader
@@ -94,20 +99,30 @@ impl PythonModulesData {
                 .read_u32::<LittleEndian>()
                 .or_else(|_| Err("failed reading bytecode length"))?
                 as usize;
+            let flags = reader
+                .read_u32::<LittleEndian>()
+                .or_else(|_| Err("failed reading module flags"))?;
 
-            index.push((name_length, source_length, bytecode_length));
+            let is_package = flags & 0x01 != 0;
+
+            if is_package {
+                package_count += 1;
+            }
+
+            index.push((name_length, source_length, bytecode_length, is_package));
             total_names_length += name_length;
             total_sources_length += source_length;
         }
 
         let mut res = HashMap::with_capacity(count as usize);
+        let mut packages = HashSet::with_capacity(package_count);
         let sources_start_offset = reader.position() as usize + total_names_length;
         let bytecodes_start_offset = sources_start_offset + total_sources_length;
 
         let mut sources_current_offset: usize = 0;
         let mut bytecodes_current_offset: usize = 0;
 
-        for (name_length, source_length, bytecode_length) in index {
+        for (name_length, source_length, bytecode_length, is_package) in index {
             let offset = reader.position() as usize;
 
             let name =
@@ -132,10 +147,21 @@ impl PythonModulesData {
             sources_current_offset += source_length;
             bytecodes_current_offset += bytecode_length;
 
-            res.insert(name, PythonModuleData { source, bytecode });
+            if is_package {
+                packages.insert(name);
+            }
+
+            // Extension modules will have their names present to populate the
+            // packages set. So only populate module data if we have data for it.
+            if source.is_some() || bytecode.is_some() {
+                res.insert(name, PythonModuleData { source, bytecode });
+            }
         }
 
-        Ok(PythonModulesData { data: res })
+        Ok(PythonModulesData {
+            packages,
+            data: res,
+        })
     }
 }
 
@@ -495,15 +521,6 @@ py_class!(class PyOxidizerResourceReader |py| {
     }
 });
 
-fn populate_packages(packages: &mut HashSet<&'static str>, name: &'static str) {
-    let mut search = name;
-
-    while let Some(idx) = search.rfind('.') {
-        packages.insert(&search[0..idx]);
-        search = &search[0..idx];
-    }
-}
-
 const DOC: &[u8] = b"Binary representation of Python modules\0";
 
 /// Represents global module state to be passed at interpreter initialization time.
@@ -723,9 +740,6 @@ fn module_setup(
         known_modules.insert(name_str, KnownModuleFlavor::Frozen);
     }
 
-    // TODO consider baking set of packages into embedded data.
-    let mut packages: HashSet<&'static str> = HashSet::with_capacity(modules_data.data.len());
-
     for (name, record) in modules_data.data {
         known_modules.insert(
             name,
@@ -733,7 +747,6 @@ fn module_setup(
                 module_data: record,
             },
         );
-        populate_packages(&mut packages, name);
     }
 
     let resources_data = match PythonResourcesData::from(state.py_resources_data) {
@@ -779,7 +792,7 @@ fn module_setup(
         module_spec_type,
         decode_source,
         exec_fn,
-        packages,
+        modules_data.packages,
         known_modules,
         resources_data.packages,
         resource_readers,
