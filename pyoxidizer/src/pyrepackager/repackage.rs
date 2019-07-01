@@ -262,6 +262,7 @@ pub struct EmbeddedPythonResources {
     pub module_sources: BTreeMap<String, PackagedModuleSource>,
     pub module_bytecodes: BTreeMap<String, PackagedModuleBytecode>,
     pub all_modules: BTreeSet<String>,
+    pub all_packages: BTreeSet<String>,
     pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
     pub extension_modules: BTreeMap<String, ExtensionModule>,
     pub built_extension_modules: BTreeMap<String, BuiltExtensionModule>,
@@ -824,14 +825,14 @@ pub fn resolve_python_resources(
 
     let derived_package_names = packages_from_module_names(all_embedded_modules.iter().cloned());
 
-    let mut package_names = BTreeSet::from(annotated_package_names);
+    let mut all_embedded_package_names = BTreeSet::from(annotated_package_names);
     for package in derived_package_names {
-        if !package_names.contains(&package) {
+        if !all_embedded_package_names.contains(&package) {
             warn!(
                 logger,
                 "package {} not initially detected as such; is package detection buggy?", package
             );
-            package_names.insert(package);
+            all_embedded_package_names.insert(package);
         }
     }
 
@@ -840,7 +841,7 @@ pub fn resolve_python_resources(
     let embedded_resources = embedded_resources
         .iter()
         .filter_map(|(package, values)| {
-            if !package_names.contains(package) {
+            if !all_embedded_package_names.contains(package) {
                 warn!(
                     logger,
                     "package {} does not exist; excluding resources: {:?}",
@@ -859,6 +860,7 @@ pub fn resolve_python_resources(
             module_sources: embedded_sources,
             module_bytecodes: embedded_bytecodes,
             all_modules: all_embedded_modules,
+            all_packages: all_embedded_package_names,
             resources: embedded_resources,
             extension_modules: embedded_extension_modules,
             built_extension_modules: embedded_built_extension_modules,
