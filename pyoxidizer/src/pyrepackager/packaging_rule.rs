@@ -132,11 +132,13 @@ pub struct PythonResourceAction {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PackagedModuleSource {
     pub source: Vec<u8>,
+    pub is_package: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PackagedModuleBytecode {
     pub bytecode: Vec<u8>,
+    pub is_package: bool,
 }
 
 /// Represents resources to install in an app-relative location.

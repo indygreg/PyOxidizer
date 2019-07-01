@@ -377,6 +377,7 @@ fn filter_btreemap<V>(logger: &slog::Logger, m: &mut BTreeMap<String, V>, f: &BT
 struct BytecodeRequest {
     source: Vec<u8>,
     optimize_level: i32,
+    is_package: bool,
 }
 
 /// Resolves a series of packaging rules to a final set of resources to package.
@@ -437,11 +438,12 @@ pub fn resolve_python_resources(
                     PythonResource::ModuleSource {
                         name,
                         source,
-                        is_package: _,
+                        is_package,
                     },
                 ) => {
                     warn!(logger, "adding embedded module source: {}", name);
-                    embedded_sources.insert(name.clone(), PackagedModuleSource { source });
+                    embedded_sources
+                        .insert(name.clone(), PackagedModuleSource { source, is_package });
                 }
                 (
                     ResourceAction::Add,
@@ -449,7 +451,7 @@ pub fn resolve_python_resources(
                     PythonResource::ModuleSource {
                         name,
                         source,
-                        is_package: _,
+                        is_package,
                     },
                 ) => {
                     warn!(
@@ -464,7 +466,7 @@ pub fn resolve_python_resources(
                         .get_mut(&path)
                         .unwrap()
                         .module_sources
-                        .insert(name.clone(), PackagedModuleSource { source });
+                        .insert(name.clone(), PackagedModuleSource { source, is_package });
                 }
                 (
                     ResourceAction::Remove,
@@ -481,7 +483,7 @@ pub fn resolve_python_resources(
                         name,
                         source,
                         optimize_level,
-                        is_package: _,
+                        is_package,
                     },
                 ) => {
                     warn!(logger, "adding embedded module bytecode: {}", name);
@@ -490,6 +492,7 @@ pub fn resolve_python_resources(
                         BytecodeRequest {
                             source,
                             optimize_level,
+                            is_package,
                         },
                     );
                 }
@@ -500,7 +503,7 @@ pub fn resolve_python_resources(
                         name,
                         source,
                         optimize_level,
-                        is_package: _,
+                        is_package,
                     },
                 ) => {
                     warn!(
@@ -520,6 +523,7 @@ pub fn resolve_python_resources(
                             BytecodeRequest {
                                 source,
                                 optimize_level,
+                                is_package,
                             },
                         );
                 }
@@ -746,6 +750,7 @@ pub fn resolve_python_resources(
             BytecodeRequest {
                 source: Vec::new(),
                 optimize_level: 0,
+                is_package: true,
             },
         );
     }
@@ -781,7 +786,13 @@ pub fn resolve_python_resources(
                 Err(msg) => panic!("error compiling bytecode for {}: {}", name, msg),
             };
 
-            embedded_bytecodes.insert(name.clone(), PackagedModuleBytecode { bytecode });
+            embedded_bytecodes.insert(
+                name.clone(),
+                PackagedModuleBytecode {
+                    bytecode,
+                    is_package: request.is_package,
+                },
+            );
         }
     }
 
