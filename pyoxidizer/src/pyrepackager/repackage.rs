@@ -25,7 +25,8 @@ use super::dist::{
 };
 use super::packaging_rule::{
     packages_from_module_name, packages_from_module_names, resolve_python_packaging,
-    AppRelativeResources, BuiltExtensionModule, PythonResource, ResourceAction, ResourceLocation,
+    AppRelativeResources, BuiltExtensionModule, PackagedModuleSource, PythonResource,
+    ResourceAction, ResourceLocation,
 };
 
 pub const PYTHON_IMPORTER: &[u8] = include_bytes!("memoryimporter.py");
@@ -258,7 +259,7 @@ pub type ModuleEntries = Vec<ModuleEntry>;
 /// Represents Python resources to embed in a binary.
 #[derive(Debug)]
 pub struct EmbeddedPythonResources {
-    pub module_sources: BTreeMap<String, Vec<u8>>,
+    pub module_sources: BTreeMap<String, PackagedModuleSource>,
     pub module_bytecodes: BTreeMap<String, Vec<u8>>,
     pub all_modules: BTreeSet<String>,
     pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
@@ -278,7 +279,7 @@ impl EmbeddedPythonResources {
             records.push(ModuleEntry {
                 name: name.clone(),
                 source: match source {
-                    Some(value) => Some(value.clone()),
+                    Some(value) => Some(value.source.clone()),
                     None => None,
                 },
                 bytecode: match bytecode {
@@ -386,7 +387,7 @@ pub fn resolve_python_resources(
     // end of processing. That way we don't generate bytecode only to throw it away later.
 
     let mut embedded_extension_modules: BTreeMap<String, ExtensionModule> = BTreeMap::new();
-    let mut embedded_sources: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    let mut embedded_sources: BTreeMap<String, PackagedModuleSource> = BTreeMap::new();
     let mut embedded_bytecode_requests: BTreeMap<String, (Vec<u8>, i32)> = BTreeMap::new();
     let mut embedded_resources: BTreeMap<String, BTreeMap<String, Vec<u8>>> = BTreeMap::new();
     let mut embedded_built_extension_modules = BTreeMap::new();
@@ -435,7 +436,7 @@ pub fn resolve_python_resources(
                     },
                 ) => {
                     warn!(logger, "adding embedded module source: {}", name);
-                    embedded_sources.insert(name.clone(), source);
+                    embedded_sources.insert(name.clone(), PackagedModuleSource { source });
                 }
                 (
                     ResourceAction::Add,
@@ -458,7 +459,7 @@ pub fn resolve_python_resources(
                         .get_mut(&path)
                         .unwrap()
                         .module_sources
-                        .insert(name.clone(), source);
+                        .insert(name.clone(), PackagedModuleSource { source });
                 }
                 (
                     ResourceAction::Remove,
@@ -1387,7 +1388,7 @@ fn install_app_relative(
 
     let packages = app_relative.package_names();
 
-    for (module_name, module_data) in &app_relative.module_sources {
+    for (module_name, module_source) in &app_relative.module_sources {
         // foo.bar -> foo/bar
         let mut module_path = dest_path.clone();
         module_path.extend(module_name.split('.'));
@@ -1417,7 +1418,7 @@ fn install_app_relative(
             ))
         })?;
 
-        fs::write(&module_path, module_data)
+        fs::write(&module_path, &module_source.source)
             .or_else(|_| Err(format!("failed to write {}", module_path.display())))?;
     }
 
