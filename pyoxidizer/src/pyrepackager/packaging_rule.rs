@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 use slog::{info, warn};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs;
+use std::io::{BufReader, BufRead};
 use std::path::{Path, PathBuf};
 
 /// SPDX licenses in Python distributions that are not GPL.
@@ -872,16 +873,19 @@ fn resolve_pip_install_simple(
         pip_args.extend(rule.extra_args.clone().unwrap());
     }
 
+    let (pipe_reader, pipe_writer) = os_pipe::pipe().unwrap();
+
     let handler = cmd(&dist.python_exe, &pip_args)
         .full_env(&full_env)
         .stderr_to_stdout()
-        .stdout_capture()
+        .stdout_handle(pipe_writer)
         .start()
         .expect("error running pip");
 
-    let output = handler.wait().unwrap();
-    let stdout = &output.stdout;
-    info!(logger, "{}", std::str::from_utf8(&stdout).unwrap());
+    for line in BufReader::new(pipe_reader).lines() {
+        info!(logger, "{}", line.unwrap());
+    }
+    let output = handler.wait().unwrap();    
 
     if !output.status.success() {
         panic!("error running pip");
@@ -1004,19 +1008,23 @@ fn resolve_pip_requirements_file(
         &rule.requirements_path,
     ]);
 
+    let (pipe_reader, pipe_writer) = os_pipe::pipe().unwrap();
+    
     let handler = cmd(
         &dist.python_exe,
         &args,
     )
     .full_env(&full_env)
     .stderr_to_stdout()
-    .stdout_capture()
+    .stdout_handle(pipe_writer)
     .start()
     .expect("error running pip");
 
+    for line in BufReader::new(pipe_reader).lines() {
+        info!(logger, "{}", line.unwrap());
+    }
+
     let output = handler.wait().unwrap();
-    let stdout = &output.stdout;
-    info!(logger, "{}", std::str::from_utf8(&stdout).unwrap());
 
     if !output.status.success() {
         panic!("error running pip");
@@ -1128,6 +1136,8 @@ fn resolve_setup_py_install(
 
     args.extend(&["install", "--prefix", &target_dir_s, "--no-compile"]);
     
+    let (pipe_reader, pipe_writer) = os_pipe::pipe().unwrap();
+
     let handler = cmd(
         &dist.python_exe,
         &args,
@@ -1135,13 +1145,15 @@ fn resolve_setup_py_install(
     .dir(&rule.path)
     .full_env(&full_env)
     .stderr_to_stdout()
-    .stdout_capture()
+    .stdout_handle(pipe_writer)
     .start()
     .expect("error running setup.py");
 
+    for line in BufReader::new(pipe_reader).lines() {
+        info!(logger, "{}", line.unwrap());
+    }
+
     let output = handler.wait().unwrap();
-    let stdout = &output.stdout;
-    info!(logger, "{}", std::str::from_utf8(&stdout).unwrap());
 
     if !output.status.success() {
         panic!("error running setup.py");
