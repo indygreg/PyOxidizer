@@ -391,10 +391,10 @@ struct BytecodeRequest {
 /// Resolves a series of packaging rules to a final set of resources to package.
 pub fn resolve_python_resources(
     logger: &slog::Logger,
-    config: &Config,
+    context: &BuildContext,
     dist: &PythonDistributionInfo,
 ) -> PythonResources {
-    let packages = &config.python_packaging;
+    let packages = &context.config.python_packaging;
 
     // Since bytecode has a non-trivial cost to generate, our strategy is to accumulate
     // requests for bytecode then generate bytecode for the final set of inputs at the
@@ -1732,7 +1732,7 @@ pub fn process_config(
         logger,
         "resolving Python resources (modules, extensions, resource data, etc)..."
     );
-    let resources = resolve_python_resources(logger, &config, &dist);
+    let resources = resolve_python_resources(logger, context, &dist);
 
     warn!(
         logger,
