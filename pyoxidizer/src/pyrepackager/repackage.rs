@@ -415,7 +415,7 @@ pub fn resolve_python_resources(
 
     for packaging in packages {
         warn!(logger, "processing packaging rule: {:?}", packaging);
-        for entry in resolve_python_packaging(logger, packaging, dist) {
+        for entry in resolve_python_packaging(logger, packaging, dist, context.verbose) {
             match (entry.action, entry.location, entry.resource) {
                 (
                     ResourceAction::Add,

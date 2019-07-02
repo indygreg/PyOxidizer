@@ -42,6 +42,13 @@ Bug Fixes
   identified as a package if the file providing it is named ``__init__``. This
   more closely matches the behavior of Python's filesystem based importer. (#53)
 
+New Features
+^^^^^^^^^^^^
+
+* ``pyoxidizer --verbose`` will now pass verbose to invoked ``pip`` and
+  ``setup.py`` scripts. This can help debug what Python packaging tools are
+  doing.
+
 0.2.0
 -----
 

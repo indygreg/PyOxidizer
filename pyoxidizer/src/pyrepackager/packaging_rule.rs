@@ -807,6 +807,7 @@ fn resolve_pip_install_simple(
     logger: &slog::Logger,
     dist: &PythonDistributionInfo,
     rule: &PackagingPipInstallSimple,
+    verbose: bool,
 ) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
 
@@ -823,17 +824,24 @@ fn resolve_pip_install_simple(
     let target_dir_s = target_dir_path.display().to_string();
     warn!(logger, "pip installing to {}", target_dir_s);
 
-    let mut pip_args = vec![
+    let mut pip_args: Vec<String> = vec![
         "-m".to_string(),
         "pip".to_string(),
         "--disable-pip-version-check".to_string(),
+    ];
+
+    if verbose {
+        pip_args.push("--verbose".to_string());
+    }
+
+    pip_args.extend(vec![
         "install".to_string(),
         "--target".to_string(),
         target_dir_s,
         "--no-binary".to_string(),
         ":all:".to_string(),
         rule.package.clone(),
-    ];
+    ]);
 
     if rule.extra_args.is_some() {
         pip_args.extend(rule.extra_args.clone().unwrap());
@@ -940,6 +948,7 @@ fn resolve_pip_requirements_file(
     logger: &slog::Logger,
     dist: &PythonDistributionInfo,
     rule: &PackagingPipRequirementsFile,
+    verbose: bool,
 ) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
 
@@ -957,20 +966,25 @@ fn resolve_pip_requirements_file(
     let target_dir_s = target_dir_path.display().to_string();
     warn!(logger, "pip installing to {}", target_dir_s);
 
+    let mut args = vec!["-m", "pip", "--disable-pip-version-check"];
+
+    if verbose {
+        args.push("--verbose");
+    }
+
+    args.extend(&[
+        "install",
+        "--target",
+        &target_dir_s,
+        "--no-binary",
+        ":all:",
+        "--requirement",
+        &rule.requirements_path,
+    ]);
+
     // TODO send stderr to stdout.
     let mut cmd = std::process::Command::new(&dist.python_exe)
-        .args(&[
-            "-m",
-            "pip",
-            "--disable-pip-version-check",
-            "install",
-            "--target",
-            &target_dir_s,
-            "--no-binary",
-            ":all:",
-            "--requirement",
-            &rule.requirements_path,
-        ])
+        .args(&args)
         .envs(&extra_envs)
         .stdout(std::process::Stdio::piped())
         .spawn()
@@ -1054,6 +1068,7 @@ fn resolve_setup_py_install(
     logger: &slog::Logger,
     dist: &PythonDistributionInfo,
     rule: &PackagingSetupPyInstall,
+    verbose: bool,
 ) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
 
@@ -1069,16 +1084,18 @@ fn resolve_setup_py_install(
     let target_dir_s = target_dir_path.display().to_string();
     warn!(logger, "python setup.py installing to {}", target_dir_s);
 
+    let mut args = vec!["setup.py"];
+
+    if verbose {
+        args.push("--verbose");
+    }
+
+    args.extend(&["install", "--prefix", &target_dir_s, "--no-compile"]);
+
     // TODO send stderr to stdout.
     let mut cmd = std::process::Command::new(&dist.python_exe)
         .current_dir(&rule.path)
-        .args(&[
-            "setup.py",
-            "install",
-            "--prefix",
-            &target_dir_s,
-            "--no-compile",
-        ])
+        .args(&args)
         .envs(&extra_envs)
         .stdout(std::process::Stdio::piped())
         .spawn()
@@ -1174,6 +1191,7 @@ pub fn resolve_python_packaging(
     logger: &slog::Logger,
     package: &PythonPackaging,
     dist: &PythonDistributionInfo,
+    verbose: bool,
 ) -> Vec<PythonResourceAction> {
     match package {
         PythonPackaging::StdlibExtensionsPolicy(rule) => {
@@ -1198,13 +1216,17 @@ pub fn resolve_python_packaging(
 
         PythonPackaging::PackageRoot(rule) => resolve_package_root(&rule),
 
-        PythonPackaging::PipInstallSimple(rule) => resolve_pip_install_simple(logger, dist, &rule),
-
-        PythonPackaging::PipRequirementsFile(rule) => {
-            resolve_pip_requirements_file(logger, dist, &rule)
+        PythonPackaging::PipInstallSimple(rule) => {
+            resolve_pip_install_simple(logger, dist, &rule, verbose)
         }
 
-        PythonPackaging::SetupPyInstall(rule) => resolve_setup_py_install(logger, dist, &rule),
+        PythonPackaging::PipRequirementsFile(rule) => {
+            resolve_pip_requirements_file(logger, dist, &rule, verbose)
+        }
+
+        PythonPackaging::SetupPyInstall(rule) => {
+            resolve_setup_py_install(logger, dist, &rule, verbose)
+        }
 
         PythonPackaging::WriteLicenseFiles(_) => Vec::new(),
 
