@@ -237,7 +237,9 @@ pub fn run_cli() -> Result<(), String> {
         )
         .get_matches();
 
-    let log_level = if matches.is_present("verbose") {
+    let verbose = matches.is_present("verbose");
+
+    let log_level = if verbose {
         slog::Level::Info
     } else {
         slog::Level::Warning
