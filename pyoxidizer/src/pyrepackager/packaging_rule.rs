@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use slog::{info, warn};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs;
-use std::io::{BufReader, BufRead};
+use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
 /// SPDX licenses in Python distributions that are not GPL.
