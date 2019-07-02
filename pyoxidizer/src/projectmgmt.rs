@@ -532,6 +532,7 @@ pub fn resolve_build_context(
     target: Option<&str>,
     release: bool,
     force_artifacts_path: Option<&Path>,
+    verbose: bool,
 ) -> Result<BuildContext, String> {
     let path = canonicalize_path(&PathBuf::from(project_path))
         .or_else(|e| Err(e.description().to_owned()))?;
@@ -560,6 +561,7 @@ pub fn resolve_build_context(
         &target,
         release,
         force_artifacts_path,
+        verbose,
     )
 }
 
@@ -599,8 +601,10 @@ pub fn build(
     project_path: &str,
     target: Option<&str>,
     release: bool,
+    verbose: bool,
 ) -> Result<(), String> {
-    let mut context = resolve_build_context(logger, project_path, None, target, release, None)?;
+    let mut context =
+        resolve_build_context(logger, project_path, None, target, release, None, verbose)?;
     build_project(logger, &mut context)?;
     package_project(logger, &mut context)?;
 
@@ -619,6 +623,7 @@ pub fn build_artifacts(
     dest_path: &Path,
     target: Option<&str>,
     release: bool,
+    verbose: bool,
 ) -> Result<(), String> {
     let mut context = resolve_build_context(
         logger,
@@ -627,6 +632,7 @@ pub fn build_artifacts(
         target,
         release,
         Some(dest_path),
+        verbose,
     )?;
 
     build_pyoxidizer_artifacts(logger, &mut context)?;
@@ -640,8 +646,10 @@ pub fn run(
     target: Option<&str>,
     release: bool,
     extra_args: &[&str],
+    verbose: bool,
 ) -> Result<(), String> {
-    let mut context = resolve_build_context(logger, project_path, None, target, release, None)?;
+    let mut context =
+        resolve_build_context(logger, project_path, None, target, release, None, verbose)?;
 
     run_project(logger, &mut context, extra_args)
 }

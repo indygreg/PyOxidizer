@@ -270,7 +270,14 @@ pub fn run_cli() -> Result<(), String> {
             let dest_path = args.value_of("dest_path").unwrap();
             let dest_path = PathBuf::from(dest_path);
 
-            projectmgmt::build_artifacts(&logger_context.logger, &path, &dest_path, target, release)
+            projectmgmt::build_artifacts(
+                &logger_context.logger,
+                &path,
+                &dest_path,
+                target,
+                release,
+                verbose,
+            )
         }
 
         ("build", Some(args)) => {
@@ -278,7 +285,7 @@ pub fn run_cli() -> Result<(), String> {
             let target = args.value_of("target");
             let path = args.value_of("path").unwrap();
 
-            projectmgmt::build(&logger_context.logger, path, target, release)
+            projectmgmt::build(&logger_context.logger, path, target, release, verbose)
         }
 
         ("init", Some(args)) => {
@@ -318,7 +325,14 @@ pub fn run_cli() -> Result<(), String> {
             let path = args.value_of("path").unwrap();
             let extra: Vec<&str> = args.values_of("extra").unwrap_or_default().collect();
 
-            projectmgmt::run(&logger_context.logger, path, target, release, &extra)
+            projectmgmt::run(
+                &logger_context.logger,
+                path,
+                target,
+                release,
+                &extra,
+                verbose,
+            )
         }
 
         _ => Err("invalid sub-command".to_string()),

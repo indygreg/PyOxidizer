@@ -90,6 +90,9 @@ pub struct BuildContext {
     /// Parsed PyOxidizer configuration file.
     pub config: Config,
 
+    /// Whether to operate in verbose mode.
+    pub verbose: bool,
+
     /// Path to main build directory where all state is stored.
     pub build_path: PathBuf,
 
@@ -143,6 +146,7 @@ impl BuildContext {
         target: &str,
         release: bool,
         force_artifacts_path: Option<&Path>,
+        verbose: bool,
     ) -> Result<Self, String> {
         let host_triple = if let Some(v) = host {
             v.to_string()
@@ -206,6 +210,7 @@ impl BuildContext {
             project_path: project_path.to_path_buf(),
             config_path: config_path.to_path_buf(),
             config,
+            verbose,
             build_path,
             app_name,
             app_path,
@@ -1955,6 +1960,7 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
         profile == "release",
         // TODO Config value won't be honored here. Is that OK?
         Some(&dest_dir),
+        true,
     )
     .unwrap();
 
