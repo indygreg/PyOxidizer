@@ -1180,6 +1180,7 @@ pub fn link_libpython(
     let mut needed_libraries: BTreeSet<&str> = BTreeSet::new();
     let mut needed_frameworks: BTreeSet<&str> = BTreeSet::new();
     let mut needed_system_libraries: BTreeSet<&str> = BTreeSet::new();
+    let mut needed_libraries_external: BTreeSet<&str> = BTreeSet::new();
 
     warn!(
         logger,
@@ -1257,7 +1258,12 @@ pub fn link_libpython(
             build.object(&out_path);
         }
 
-        // TODO collect libraries and frameworks.
+        for library in &em.libraries {
+            warn!(logger, "library {} required by {}", library, name);
+            needed_libraries_external.insert(&library);
+        }
+
+        // TODO do something with library_dirs.
     }
 
     for library in needed_libraries.iter() {
@@ -1283,6 +1289,10 @@ pub fn link_libpython(
     }
 
     for lib in needed_system_libraries {
+        cargo_metadata.push(format!("cargo:rustc-link-lib={}", lib));
+    }
+
+    for lib in needed_libraries_external {
         cargo_metadata.push(format!("cargo:rustc-link-lib={}", lib));
     }
 

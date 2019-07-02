@@ -45,6 +45,9 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* Libraries required by C extensions are now passed into the linker as
+  library dependencies. This should allow C extensions linked against
+  libraries to be embedded into produced executables.
 * ``pyoxidizer --verbose`` will now pass verbose to invoked ``pip`` and
   ``setup.py`` scripts. This can help debug what Python packaging tools are
   doing.

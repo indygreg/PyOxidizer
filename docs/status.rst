@@ -53,7 +53,7 @@ for Windows, Linux, and macOS.
 Support for installing extension modules in app-relative paths is not yet
 implemented.
 
-Support for extension modules that link additional libraries or frameworks
+Support for extension modules that link additional macOS frameworks
 not used by Python itself is not yet implemented (but should be easy to
 do).
 

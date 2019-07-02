@@ -68,6 +68,8 @@ pub struct BuiltExtensionModule {
     pub init_fn: String,
     pub object_file_data: Vec<Vec<u8>>,
     pub is_package: bool,
+    pub libraries: Vec<String>,
+    pub library_dirs: Vec<PathBuf>,
 }
 
 /// Represents a resource to make available to the Python interpreter.
@@ -321,7 +323,6 @@ struct DistutilsExtensionState {
 }
 
 fn resolve_built_extensions(
-    logger: &slog::Logger,
     state_dir: &Path,
     res: &mut Vec<PythonResourceAction>,
     location: &ResourceLocation,
@@ -348,20 +349,16 @@ fn resolve_built_extensions(
 
         let mut object_file_data = Vec::new();
 
-        for object_path in info.objects {
+        for object_path in &info.objects {
             let path = PathBuf::from(object_path);
             let data = fs::read(path).or_else(|e| Err(e.to_string()))?;
 
             object_file_data.push(data);
         }
 
-        if !info.libraries.is_empty() {
-            warn!(
-                logger,
-                "WARNING: libraries found for built extension module {} are not used yet",
-                info.name
-            );
-        }
+        // TODO packaging rule functionality for requiring / denying shared library
+        // linking, annotating licenses of 3rd party libraries, disabling libraries
+        // wholesale, etc.
 
         res.push(PythonResourceAction {
             action: ResourceAction::Add,
@@ -371,6 +368,8 @@ fn resolve_built_extensions(
                 init_fn,
                 object_file_data,
                 is_package: final_name == "__init__",
+                libraries: info.libraries,
+                library_dirs: info.library_dirs.iter().map(|p| PathBuf::from(p)).collect(),
             }),
         });
     }
@@ -934,7 +933,6 @@ fn resolve_pip_install_simple(
     }
 
     resolve_built_extensions(
-        logger,
         &PathBuf::from(extra_envs.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap()),
         &mut res,
         &location,
@@ -1054,7 +1052,6 @@ fn resolve_pip_requirements_file(
     }
 
     resolve_built_extensions(
-        logger,
         &PathBuf::from(extra_envs.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap()),
         &mut res,
         &location,
@@ -1176,7 +1173,6 @@ fn resolve_setup_py_install(
     }
 
     resolve_built_extensions(
-        logger,
         &PathBuf::from(extra_envs.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap()),
         &mut res,
         &location,
