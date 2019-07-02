@@ -838,8 +838,12 @@ fn resolve_pip_install_simple(
     let temp_dir =
         tempdir::TempDir::new("pyoxidizer-pip-install").expect("could not creat temp directory");
 
-    let extra_envs = prepare_hacked_distutils(logger, dist, temp_dir.path(), &[])
-        .expect("unable to hack distutils");
+    let extra_envs =
+        prepare_hacked_distutils(logger, dist, temp_dir.path(), &[]).expect("unable to hack distutils");
+    let mut full_env = HashMap::new();
+    for (key, val) in std::env::vars().chain(extra_envs.clone()) {
+        full_env.insert(key, val);
+    }
 
     let target_dir_path = temp_dir.path().join("install");
     let target_dir_s = target_dir_path.display().to_string();
@@ -869,7 +873,7 @@ fn resolve_pip_install_simple(
     }
 
     let handler = cmd(&dist.python_exe, &pip_args)
-        .full_env(&extra_envs)
+        .full_env(&full_env)
         .stderr_to_stdout()
         .stdout_capture()
         .start()
@@ -973,8 +977,12 @@ fn resolve_pip_requirements_file(
     let temp_dir =
         tempdir::TempDir::new("pyoxidizer-pip-install").expect("could not create temp directory");
 
-    let extra_envs = prepare_hacked_distutils(logger, dist, temp_dir.path(), &[])
-        .expect("unable to hack distutils");
+    let extra_envs =
+        prepare_hacked_distutils(logger, dist, temp_dir.path(), &[]).expect("unable to hack distutils");
+    let mut full_env = HashMap::new();
+    for (key, val) in std::env::vars().chain(extra_envs.clone()) {
+        full_env.insert(key, val);
+    }
 
     let target_dir_path = temp_dir.path().join("install");
     let target_dir_s = target_dir_path.display().to_string();
@@ -1000,7 +1008,7 @@ fn resolve_pip_requirements_file(
         &dist.python_exe,
         &args,
     )
-    .full_env(&extra_envs)
+    .full_env(&full_env)
     .stderr_to_stdout()
     .stdout_capture()
     .start()
@@ -1087,6 +1095,13 @@ fn resolve_setup_py_install(
     let temp_dir = tempdir::TempDir::new("pyoxidizer-setup-py-install")
         .expect("could not create temp directory");
 
+    let extra_envs =
+        prepare_hacked_distutils(logger, dist, temp_dir.path(), &[]).expect("unable to hack distutils");
+    let mut full_env = HashMap::new();
+    for (key, val) in std::env::vars().chain(extra_envs.clone()) {
+        full_env.insert(key, val);
+    }
+
     let target_dir_path = temp_dir.path().join("install");
     let target_dir_s = target_dir_path.display().to_string();
 
@@ -1118,7 +1133,7 @@ fn resolve_setup_py_install(
         &args,
     )
     .dir(&rule.path)
-    .full_env(&extra_envs)
+    .full_env(&full_env)
     .stderr_to_stdout()
     .stdout_capture()
     .start()
