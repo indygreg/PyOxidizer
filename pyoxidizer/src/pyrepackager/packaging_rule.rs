@@ -883,7 +883,7 @@ fn resolve_pip_install_simple(
         .expect("error running pip");
 
     for line in BufReader::new(pipe_reader).lines() {
-        info!(logger, "{}", line.unwrap());
+        warn!(logger, "{}", line.unwrap());
     }
     let output = handler.wait().unwrap();    
 
@@ -1021,7 +1021,7 @@ fn resolve_pip_requirements_file(
     .expect("error running pip");
 
     for line in BufReader::new(pipe_reader).lines() {
-        info!(logger, "{}", line.unwrap());
+        warn!(logger, "{}", line.unwrap());
     }
 
     let output = handler.wait().unwrap();
@@ -1150,7 +1150,7 @@ fn resolve_setup_py_install(
     .expect("error running setup.py");
 
     for line in BufReader::new(pipe_reader).lines() {
-        info!(logger, "{}", line.unwrap());
+        warn!(logger, "{}", line.unwrap());
     }
 
     let output = handler.wait().unwrap();
