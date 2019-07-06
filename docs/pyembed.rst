@@ -66,8 +66,7 @@ When trying to understand the code, a good place to start is
 Python initialization is where most of the magic occurs.
 
 A lot of initialization code revolves around mapping ``PythonConfig`` members to
-C API calls e.g. the ``program_name`` field translates to a call to
-``Py_SetProgramName()``. This functionality is rather straightforward. There't
+C API calls. This functionality is rather straightforward. There's
 nothing really novel or complicated here. So we won't cover it.
 
 Python Memory Allocators

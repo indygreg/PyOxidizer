@@ -200,13 +200,6 @@ behavior:
    This setting is only relevant if ``dont_write_bytecode`` is ``false`` and Python
    modules are being imported from the filesystem.
 
-``program_name`` (string)
-
-   The name of the running application. This value will be passed to
-   ``Py_SetProgramName()``.
-
-   Default value is the value of ``[[build]] application_name``.
-
 ``stdio_encoding`` (string)
 
    Defines the encoding and error handling mode for Python's standard I/O

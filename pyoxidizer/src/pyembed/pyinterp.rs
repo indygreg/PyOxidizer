@@ -272,15 +272,16 @@ impl<'a> MainPythonInterpreter<'a> {
             }
         }
 
-        let home =
-            OwnedPyStr::from_str(exe.to_str().ok_or_else(|| "unable to convert exe to str")?)?;
+        let exe_str = exe.to_str().ok_or_else(|| "unable to convert exe to str")?;
+
+        let home = OwnedPyStr::from_str(exe_str)?;
 
         unsafe {
             // Pointer needs to live for lifetime of interpreter.
             pyffi::Py_SetPythonHome(home.as_wchar_ptr());
         }
 
-        let program_name = OwnedPyStr::from_str(config.program_name.as_str())?;
+        let program_name = OwnedPyStr::from_str(exe_str)?;
 
         unsafe {
             pyffi::Py_SetProgramName(program_name.as_wchar_ptr());

@@ -26,6 +26,9 @@ next
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* The ``program_name`` field from the ``[[embedded_python_config]]`` config
+  section has been removed. At run-time, the current executable's path is
+  always used when calling ``Py_SetProgramName()``.
 * The format of embedded Python module data has changed. The ``pyembed`` crate
   and ``pyoxidizer`` versions must match exactly or else the ``pyembed`` crate
   will likely crash at run-time when parsing module data.
@@ -33,6 +36,7 @@ Backwards Compatibility Notes
 Bug Fixes
 ^^^^^^^^^
 
+* ``import ctypes`` now works on Windows (#61).
 * The in-memory module importer now implements ``get_resource_reader()`` instead
   of ``get_resource_loader()``. (The CPython documentation steered us in the
   wrong direction - https://bugs.python.org/issue37459.)

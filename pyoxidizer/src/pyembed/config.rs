@@ -36,9 +36,6 @@ pub enum PythonRunMode {
 /// a Python interpreter.
 #[derive(Clone, Debug)]
 pub struct PythonConfig {
-    /// Name of the current program to tell to Python.
-    pub program_name: String,
-
     /// Name of encoding for stdio handles.
     pub standard_io_encoding: Option<String>,
 

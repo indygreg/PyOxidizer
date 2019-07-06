@@ -1351,7 +1351,6 @@ pub fn derive_python_config(
 ) -> String {
     format!(
         "PythonConfig {{\n    \
-         program_name: \"{}\".to_string(),\n    \
          standard_io_encoding: {},\n    \
          standard_io_errors: {},\n    \
          opt_level: {},\n    \
@@ -1372,7 +1371,6 @@ pub fn derive_python_config(
          write_modules_directory_env: {},\n    \
          run: {},\n\
          }}",
-        config.program_name,
         match &config.stdio_encoding_name {
             Some(value) => format_args!("Some(\"{}\")", value).to_string(),
             None => "None".to_owned(),

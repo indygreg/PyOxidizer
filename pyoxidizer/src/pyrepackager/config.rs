@@ -66,7 +66,6 @@ struct ConfigPython {
     no_site: Option<bool>,
     no_user_site_directory: Option<bool>,
     optimize_level: Option<i64>,
-    program_name: Option<String>,
     stdio_encoding: Option<String>,
     unbuffered_stdio: Option<bool>,
     filesystem_importer: Option<bool>,
@@ -403,7 +402,6 @@ pub struct Config {
     pub no_site: bool,
     pub no_user_site_directory: bool,
     pub optimize_level: i64,
-    pub program_name: String,
     pub python_distribution: PythonDistribution,
     pub stdio_encoding_name: Option<String>,
     pub stdio_encoding_errors: Option<String>,
@@ -527,7 +525,6 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
     let mut no_site = true;
     let mut no_user_site_directory = true;
     let mut optimize_level = 0;
-    let mut program_name = application_name.unwrap();
     let mut stdio_encoding_name = None;
     let mut stdio_encoding_errors = None;
     let mut unbuffered_stdio = false;
@@ -573,10 +570,6 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                     ))
                 }
             };
-        }
-
-        if let Some(ref v) = python_config.program_name {
-            program_name = v.clone();
         }
 
         if let Some(ref v) = python_config.stdio_encoding {
@@ -908,7 +901,6 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
         no_site,
         no_user_site_directory,
         optimize_level,
-        program_name,
         python_distribution,
         stdio_encoding_name,
         stdio_encoding_errors,
