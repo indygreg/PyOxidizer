@@ -16,6 +16,7 @@ use std::io::{Cursor, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process;
 
+use super::distribution::produce_distributions;
 use super::environment::{
     canonicalize_path, PyOxidizerSource, BUILD_GIT_COMMIT, MINIMUM_RUST_VERSION, PYOXIDIZER_VERSION,
 };
@@ -700,6 +701,22 @@ pub fn init(project_path: &str, code: Option<&str>, pip_install: &[&str]) -> Res
     println!("edit the various pyoxidizer.*.toml config files or the main.rs ");
     println!("file to change behavior. The application will need to be rebuilt ");
     println!("for configuration changes to take effect.");
+
+    Ok(())
+}
+
+/// Produce distributions for an application.
+pub fn distributions(
+    logger: &slog::Logger,
+    project_path: &str,
+    target: Option<&str>,
+    types: &Vec<&str>,
+) -> Result<(), String> {
+    let mut context = resolve_build_context(logger, project_path, None, target, true, None, false)?;
+
+    build_project(logger, &mut context)?;
+    package_project(logger, &mut context)?;
+    produce_distributions(logger, &context, types)?;
 
     Ok(())
 }

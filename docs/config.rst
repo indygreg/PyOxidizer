@@ -899,3 +899,31 @@ Example:
    type = "filter-include"
    files = ["allow-modules"]
    glob_files = ["module-dumps/modules-*"]
+
+.. _config_distribution:
+
+``[[distribution]]``
+--------------------
+
+Instances of the ``[[distribution]]`` section define application distributions
+that can be produced. An application distribution is an entity that can be shared
+across machines to *distribute* the application. Application distributions include
+archives, installers, packages, etc.
+
+Each ``[[distribution]]`` section **must** define a ``type`` key. The value
+of this key defines the *flavor* of the distribution being produced. The
+various distribution ``type``'s are described in the sections below.
+
+``tarball``
+^^^^^^^^^^^
+
+The ``type = "tarball"`` distribution will produce a tar archive from the
+contents of the application directory.
+
+This type accepts the following keys:
+
+``path_prefix``
+   String value that will be prepended to paths in the archive. By default,
+   archive members have no path prefix and extraction of the archive will
+   typically place files in the current directory. Specify this option to
+   prefix all archive members with a path prefix.

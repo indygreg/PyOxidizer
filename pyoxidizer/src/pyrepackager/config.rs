@@ -249,6 +249,17 @@ enum ConfigRunMode {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(tag = "type")]
+enum ConfigDistribution {
+    #[serde(rename = "tarball")]
+    Tarball {
+        #[serde(default = "ALL")]
+        build_target: String,
+        path_prefix: Option<String>,
+    },
+}
+
+#[derive(Debug, Deserialize)]
 struct ParsedConfig {
     #[serde(default, rename = "build")]
     builds: Vec<ConfigBuild>,
@@ -260,6 +271,8 @@ struct ParsedConfig {
     packaging_rules: Vec<ConfigPythonPackaging>,
     #[serde(rename = "embedded_python_run")]
     python_run: Vec<ConfigRunMode>,
+    #[serde(default, rename = "distribution")]
+    distributions: Vec<ConfigDistribution>,
 }
 
 #[derive(Clone, Debug)]
@@ -392,6 +405,17 @@ pub enum RunMode {
     Eval { code: String },
 }
 
+#[derive(Clone, Debug)]
+pub struct DistributionTarball {
+    pub path_prefix: Option<String>,
+}
+
+/// Represents a distribution rule.
+#[derive(Clone, Debug)]
+pub enum Distribution {
+    Tarball(DistributionTarball),
+}
+
 /// Represents a parsed PyOxidizer configuration file.
 #[derive(Clone, Debug)]
 pub struct Config {
@@ -412,6 +436,7 @@ pub struct Config {
     pub sys_paths: Vec<String>,
     pub raw_allocator: RawAllocator,
     pub write_modules_directory_env: Option<String>,
+    pub distributions: Vec<Distribution>,
 }
 
 fn resolve_install_location(value: &str) -> Result<InstallLocation, String> {
@@ -893,6 +918,34 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
 
     filesystem_importer = filesystem_importer || !sys_paths.is_empty();
 
+    let distributions: Result<Vec<Option<Distribution>>, String> = config
+        .distributions
+        .iter()
+        .map(|d| match d {
+            ConfigDistribution::Tarball {
+                build_target: rule_target,
+                path_prefix,
+            } => {
+                if rule_target == "all" || rule_target == target {
+                    Ok(Some(Distribution::Tarball(DistributionTarball {
+                        path_prefix: path_prefix.clone(),
+                    })))
+                } else {
+                    Ok(None)
+                }
+            }
+        })
+        .collect();
+
+    let distributions: Vec<Distribution> = distributions?
+        .clone()
+        .iter()
+        // .clone() is needed to avoid move out of borrowed content. There's surely
+        // a better way to do this. But it isn't performance critical, so low
+        // priority.
+        .filter_map(|v| v.clone())
+        .collect();
+
     Ok(Config {
         config_path: config_path.to_path_buf(),
         build_config,
@@ -911,6 +964,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
         sys_paths,
         raw_allocator,
         write_modules_directory_env,
+        distributions,
     })
 }
 

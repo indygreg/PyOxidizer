@@ -105,6 +105,9 @@ pub struct BuildContext {
     /// Path to application executable in its installed/packaged directory.
     pub app_exe_path: PathBuf,
 
+    /// Path where distribution files should be written.
+    pub distributions_path: PathBuf,
+
     /// Rust target triple for build host.
     pub host_triple: String,
 
@@ -195,6 +198,8 @@ impl BuildContext {
             None => target_triple_base_path.join("pyoxidizer"),
         };
 
+        let distributions_path = build_path.join("distribution");
+
         let distribution_hash = match &config.python_distribution {
             PythonDistribution::Local { sha256, .. } => sha256,
             PythonDistribution::Url { sha256, .. } => sha256,
@@ -215,6 +220,7 @@ impl BuildContext {
             app_name,
             app_path,
             app_exe_path,
+            distributions_path,
             host_triple,
             target_triple: target.to_string(),
             release,

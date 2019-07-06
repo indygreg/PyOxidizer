@@ -49,6 +49,8 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* New ``pyoxidizer distribution`` command for producing distributable artifacts
+  of applications. Currently supports building tar archives.
 * Libraries required by C extensions are now passed into the linker as
   library dependencies. This should allow C extensions linked against
   libraries to be embedded into produced executables.

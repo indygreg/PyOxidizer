@@ -210,6 +210,31 @@ pub fn run_cli() -> Result<(), String> {
                 .arg(Arg::with_name("extra").multiple(true)),
         )
         .subcommand(
+            SubCommand::with_name("distribution")
+                .about("Produce distributions for an application")
+                .arg(
+                    Arg::with_name("target")
+                        .long("target")
+                        .takes_value(true)
+                        .help("Rust target triple to operate on"),
+                )
+                .arg(
+                    Arg::with_name("type")
+                        .long("type")
+                        .short("t")
+                        .takes_value(true)
+                        .multiple(true)
+                        .number_of_values(1)
+                        .help("Type of distribution to produce"),
+                )
+                .arg(
+                    Arg::with_name("path")
+                        .default_value(".")
+                        .value_name("PATH")
+                        .help("Directory containing project to operate on"),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("python-distribution-extract")
                 .about("Extract a Python distribution archive to a directory")
                 .arg(
@@ -286,6 +311,22 @@ pub fn run_cli() -> Result<(), String> {
             let path = args.value_of("path").unwrap();
 
             projectmgmt::build(&logger_context.logger, path, target, release, verbose)
+        }
+
+        ("distribution", Some(args)) => {
+            let target = args.value_of("target");
+            let types = if args.is_present("type") {
+                args.values_of("type").unwrap().collect()
+            } else {
+                Vec::new()
+            };
+            let path = args.value_of("path").unwrap();
+
+            if types.is_empty() {
+                Err("--type argument is required".to_string())
+            } else {
+                projectmgmt::distributions(&logger_context.logger, path, target, &types)
+            }
         }
 
         ("init", Some(args)) => {

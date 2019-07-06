@@ -29,6 +29,7 @@ a rather effective and powerful tool.
 
 mod analyze;
 mod cli;
+mod distribution;
 mod environment;
 mod logging;
 mod projectmgmt;
