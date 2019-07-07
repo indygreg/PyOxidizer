@@ -8,7 +8,7 @@ use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-pub fn walk_tree_files(path: &Path) -> Box<Iterator<Item = walkdir::DirEntry>> {
+pub fn walk_tree_files(path: &Path) -> Box<dyn Iterator<Item = walkdir::DirEntry>> {
     let res = walkdir::WalkDir::new(path).sort_by(|a, b| a.file_name().cmp(b.file_name()));
 
     let filtered = res.into_iter().filter_map(|entry| {
@@ -118,7 +118,7 @@ pub enum PythonFileResource {
 
 pub struct PythonResourceIterator {
     root_path: PathBuf,
-    walkdir_result: Box<Iterator<Item = walkdir::DirEntry>>,
+    walkdir_result: Box<dyn Iterator<Item = walkdir::DirEntry>>,
     seen_packages: HashSet<String>,
     resources: Vec<FileBasedResource>,
 }
