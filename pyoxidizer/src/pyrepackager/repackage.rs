@@ -90,6 +90,9 @@ pub struct BuildContext {
     /// Parsed PyOxidizer configuration file.
     pub config: Config,
 
+    /// Parsed Cargo.toml for Rust project.
+    pub cargo_config: cargo_toml::Manifest,
+
     /// Whether to operate in verbose mode.
     pub verbose: bool,
 
@@ -211,10 +214,20 @@ impl BuildContext {
         let python_distribution_path =
             pyoxidizer_artifacts_path.join(format!("python.{}", distribution_hash));
 
+        let cargo_toml_path = project_path.join("Cargo.toml");
+        if !cargo_toml_path.exists() {
+            return Err(format!("{} does not exist", cargo_toml_path.display()));
+        }
+
+        let cargo_toml_data = fs::read(&cargo_toml_path).or_else(|e| Err(e.to_string()))?;
+        let cargo_config =
+            cargo_toml::Manifest::from_slice(&cargo_toml_data).or_else(|e| Err(e.to_string()))?;
+
         Ok(BuildContext {
             project_path: project_path.to_path_buf(),
             config_path: config_path.to_path_buf(),
             config,
+            cargo_config,
             verbose,
             build_path,
             app_name,
