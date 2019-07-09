@@ -49,6 +49,7 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* Added 32-bit Windows distribution.
 * New ``pyoxidizer distribution`` command for producing distributable artifacts
   of applications. Currently supports building tar archives and ``.msi`` and
   ``.exe`` installers using the WiX Toolset.

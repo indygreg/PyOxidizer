@@ -27,6 +27,11 @@ lazy_static! {
             sha256: String::from("2be2d109b82634b36685b89800887501b619ef946dda182e5a8ab5c7029a8136"),
         });
 
+        res.insert("i686-pc-windows-msvc", HostedDistribution {
+            url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190617/cpython-3.7.3-windows-x86-20190709T0348.tar.zst"),
+            sha256: String::from("5c312f94e297abf55b7e81bdf1ae7a37e9b66d77b42d932901eeac08a4369f70")
+        });
+
         res.insert(
             "x86_64-pc-windows-msvc",
             HostedDistribution {

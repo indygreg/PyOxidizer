@@ -19,6 +19,10 @@ raw_allocator = "jemalloc"
 
 # Windows doesn't support jemalloc.
 [[embedded_python_config]]
+build_target = "i686-pc-windows-msvc"
+raw_allocator = "system"
+
+[[embedded_python_config]]
 build_target = "x86_64-pc-windows-msvc"
 raw_allocator = "system"
 
