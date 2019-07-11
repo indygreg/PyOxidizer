@@ -647,9 +647,9 @@ fn resolve_virtualenv(
         packages_path.push("Lib");
     } else {
         packages_path.push("lib");
+        packages_path.push("python".to_owned() + &dist.version[0..3]);
     }
 
-    packages_path.push("python".to_owned() + &dist.version[0..3]);
     packages_path.push("site-packages");
 
     for resource in find_python_resources(&packages_path) {

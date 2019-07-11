@@ -40,6 +40,8 @@ Backwards Compatibility Notes
 Bug Fixes
 ^^^^^^^^^
 
+* The ``virtualenv`` ``[[packaging_rule]]`` now properly finds the
+  ``site-packages`` directory on Windows (#83).
 * The ``filter-include`` ``[[packaging_rule]]`` no longer requires both
   ``files`` and ``glob_files`` be defined (#88).
 * ``import ctypes`` now works on Windows (#61).

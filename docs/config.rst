@@ -807,7 +807,7 @@ directory.
    The filesystem path to the root of the virtualenv.
 
    Python modules are typically in a ``lib/pythonX.Y/site-packages`` directory
-   under this path.
+   (on UNIX) or ``Lib/site-packages`` directory (on Windows) under this path.
 
 ``optimize_level`` (int)
 
