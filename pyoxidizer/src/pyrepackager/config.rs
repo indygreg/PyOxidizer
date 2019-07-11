@@ -208,7 +208,9 @@ enum ConfigPythonPackaging {
         #[serde(default = "ALL")]
         build_target: String,
 
+        #[serde(default)]
         files: Vec<String>,
+        #[serde(default)]
         glob_files: Vec<String>,
     },
 

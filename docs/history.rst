@@ -40,6 +40,8 @@ Backwards Compatibility Notes
 Bug Fixes
 ^^^^^^^^^
 
+* The ``filter-include`` ``[[packaging_rule]]`` no longer requires both
+  ``files`` and ``glob_files`` be defined (#88).
 * ``import ctypes`` now works on Windows (#61).
 * The in-memory module importer now implements ``get_resource_reader()`` instead
   of ``get_resource_loader()``. (The CPython documentation steered us in the
