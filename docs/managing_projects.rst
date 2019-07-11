@@ -217,8 +217,8 @@ have configured it.
 ``Application Assembly`` is performed into a ``build/apps/<app>`` directory
 under the project root. If your project name is ``myapp``, the application
 will be assembled to a ``build/apps/myapp`` directory. The full path to the
-executable will be ``build/apps/myapp/myapp`` (on Linux and macOS) or
-``build/apps/myapp/myapp.exe`` (on Windows).
+executable will be ``build/apps/myapp/<target>/<build_type>/myapp`` (on Linux
+and macOS) or ``build/apps/myapp/<target>/<build_type>/myapp.exe`` (on Windows).
 
 It's worth noting that the ergonomics of ``pyoxidizer build`` are superior to
 ``cargo build``. With ``pyoxidizer build``, the tool prints information about
@@ -251,7 +251,7 @@ specifically tailored for ``PyOxidizer``.
 
 Run the command with the path to an executable. For example::
 
-   $ pyoxidizer analyze build/apps/myapp/myapp
+   $ pyoxidizer analyze build/apps/myapp/x86_64-unknown-linux-gnu/debug/myapp
 
 Behavior is dependent on the format of the file being analyzed. But the
 general theme is that the command attempts to identify the run-time

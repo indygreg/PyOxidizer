@@ -26,6 +26,10 @@ next
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* Applications are now built into directories named
+  ``apps/<app_name>/<target>/<build_type>`` rather than
+  ``apps/<app_name>/<build_type>``. This enables builds for multiple targets
+  to coexist in an application's output directory.
 * The ``program_name`` field from the ``[[embedded_python_config]]`` config
   section has been removed. At run-time, the current executable's path is
   always used when calling ``Py_SetProgramName()``.

@@ -145,7 +145,7 @@ toolchain.
 Then you can build away::
 
    $ pyoxidizer build --target x86_64-unknown-linux-musl
-   $ ldd build/apps/myapp/myapp
+   $ ldd build/apps/myapp/x86_64-unknown-linux-musl/debug/myapp
         not a dynamic executable
 
 Congratulations, you've produced a fully statically linked executable containing

@@ -223,17 +223,17 @@ Then let's attempt to build the application::
    processing config file /home/gps/src/black/pyoxidizer.toml
    resolving Python distribution...
    ...
-   packaging application into /home/gps/src/black/build/apps/black
-   purging /home/gps/src/black/build/apps/black
-   copying /home/gps/src/black/build/target/x86_64-unknown-linux-gnu/debug/black to /home/gps/src/black/build/apps/black/black
+   packaging application into /home/gps/src/black/build/apps/x86_64-unknown-linux-gnu/debug/black
+   purging /home/gps/src/black/build/apps/black/x86_64-unknown-linux-gnu/debug
+   copying /home/gps/src/black/build/target/x86_64-unknown-linux-gnu/debug/black to /home/gps/src/black/build/apps/black/x86_64-unknown-linux-gnu/debug/black
    resolving packaging state...
-   black packaged into /home/gps/src/black/build/apps/black
+   black packaged into /home/gps/src/black/build/apps/black/x86_64-unknown-linux-gnu/debug
 
 Looking good so far!
 
 Now let's try to run it::
 
-   $  black/build/apps/black/black
+   $  black/build/apps/black/x86_64-unknown-linux-gnu/debug/black
    Traceback (most recent call last):
      File "black", line 46, in <module>
      File "blib2to3.pygram", line 15, in <module>
@@ -294,22 +294,22 @@ Now let's re-build the application::
 
    $ pyoxidizer build black
    ...
-   packaging application into /home/gps/src/black/build/apps/black
-   purging /home/gps/src/black/build/apps/black
-   copying /home/gps/src/black/build/target/x86_64-unknown-linux-gnu/debug/black to /home/gps/src/black/build/apps/black/black
+   packaging application into /home/gps/src/black/build/apps/black/x86_64-unknown-linux-gnu/debug
+   purging /home/gps/src/black/build/apps/black/x86_64-unknown-linux-gnu/debug
+   copying /home/gps/src/black/build/target/x86_64-unknown-linux-gnu/debug/black to /home/gps/src/black/build/apps/black/x86_64-unknown-linux-gnu/debug/black
    resolving packaging state...
    installing resources into 1 app-relative directories
-   installing 46 app-relative Python source modules to /home/gps/src/black/build/apps/black/lib
+   installing 46 app-relative Python source modules to /home/gps/src/black/build/apps/black/x86_64-unknown-linux-gnu/debug/lib
    ...
-   black packaged into /home/gps/src/black/build/apps/black
+   black packaged into /home/gps/src/black/build/apps/black/x86_64-unknown-linux-gnu/debug
 
 If you examine the output, you'll see that various Python modules files were
-written to the ``black/build/apps/black/lib`` directory, just as our packaging
-rules requested!
+written to the ``black/build/apps/black/x86_64-unknown-linux-gnu/debug/lib`` directory, just
+as our packaging rules requested!
 
 Let's try to run the application::
 
-   $  black/build/apps/black/black
+   $  black/build/apps/black/x86_64-unknown-linux-gnu/debug/black
    No paths given. Nothing to do 😴
 
 Success!
