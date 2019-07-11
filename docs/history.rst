@@ -64,6 +64,13 @@ New Features
   ``setup.py`` scripts. This can help debug what Python packaging tools are
   doing.
 
+All Other Relevant Changes
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* The list of modules being added by the Python standard library is
+  no longer printed during rule execution unless ``--verbose`` is used.
+  The output was excessive and usually not very informative.
+
 0.2.0
 -----
 

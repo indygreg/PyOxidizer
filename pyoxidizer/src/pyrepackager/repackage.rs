@@ -434,6 +434,13 @@ pub fn resolve_python_resources(
 
     for packaging in packages {
         warn!(logger, "processing packaging rule: {:?}", packaging);
+
+        let verbose_rule = if let PythonPackaging::Stdlib(_) = packaging {
+            true
+        } else {
+            false
+        };
+
         for entry in resolve_python_packaging(logger, packaging, dist, context.verbose) {
             match (entry.action, entry.location, entry.resource) {
                 (
@@ -468,7 +475,11 @@ pub fn resolve_python_resources(
                         is_package,
                     },
                 ) => {
-                    warn!(logger, "adding embedded module source: {}", name);
+                    if verbose_rule {
+                        info!(logger, "adding embedded module source: {}", name);
+                    } else {
+                        warn!(logger, "adding embedded module source: {}", name);
+                    }
                     embedded_sources
                         .insert(name.clone(), PackagedModuleSource { source, is_package });
                 }
@@ -481,10 +492,17 @@ pub fn resolve_python_resources(
                         is_package,
                     },
                 ) => {
-                    warn!(
-                        logger,
-                        "adding app-relative module source to {}: {}", path, name
-                    );
+                    if verbose_rule {
+                        info!(
+                            logger,
+                            "adding app-relative module source to {}: {}", path, name
+                        );
+                    } else {
+                        warn!(
+                            logger,
+                            "adding app-relative module source to {}: {}", path, name
+                        );
+                    }
                     if !app_relative.contains_key(&path) {
                         app_relative.insert(path.clone(), AppRelativeResources::new());
                     }
@@ -513,7 +531,11 @@ pub fn resolve_python_resources(
                         is_package,
                     },
                 ) => {
-                    warn!(logger, "adding embedded module bytecode: {}", name);
+                    if verbose_rule {
+                        info!(logger, "adding embedded module bytecode: {}", name);
+                    } else {
+                        warn!(logger, "adding embedded module bytecode: {}", name);
+                    }
                     embedded_bytecode_requests.insert(
                         name.clone(),
                         BytecodeRequest {
@@ -533,10 +555,17 @@ pub fn resolve_python_resources(
                         is_package,
                     },
                 ) => {
-                    warn!(
-                        logger,
-                        "adding app-relative module bytecode to {}: {}", path, name
-                    );
+                    if verbose_rule {
+                        info!(
+                            logger,
+                            "adding app-relative module bytecode to {}: {}", path, name
+                        );
+                    } else {
+                        warn!(
+                            logger,
+                            "adding app-relative module bytecode to {}: {}", path, name
+                        );
+                    }
 
                     if !app_relative_bytecode_requests.contains_key(&path) {
                         app_relative_bytecode_requests.insert(path.clone(), BTreeMap::new());
