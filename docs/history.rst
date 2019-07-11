@@ -53,6 +53,8 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* A warning is now emitted when a Python source file contains ``__file__``. This
+  should help trace down modules using ``__file__``.
 * Added 32-bit Windows distribution.
 * New ``pyoxidizer distribution`` command for producing distributable artifacts
   of applications. Currently supports building tar archives and ``.msi`` and
