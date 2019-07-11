@@ -35,6 +35,18 @@ official ``rustup`` install instructions involving a ``curl | sh`` (your
 paranoia is understood), you can find instructions for alternative installation
 methods at https://github.com/rust-lang/rustup.rs/#other-installation-methods.
 
+Other System Dependencies
+-------------------------
+
+You will need a working C compiler/toolchain in order to build some Rust
+crates and their dependencies. If Rust cannot find a C compiler, it should
+print a message at build time and give you instructions on how to install one.
+
+There is a known issue with PyOxidizer on Fedora 30+ that will require you
+to install the ``libxcrypt-compat`` package to avoid an error due to a missing
+``libcrypt.so.1`` file. See https://github.com/indygreg/PyOxidizer/issues/89
+for more info.
+
 Installing PyOxidizer
 ---------------------
 
