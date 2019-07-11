@@ -261,6 +261,7 @@ enum ConfigDistribution {
     WixInstaller {
         #[serde(default = "ALL")]
         build_target: String,
+        msi_upgrade_code_x86: Option<String>,
         msi_upgrade_code_amd64: Option<String>,
         bundle_upgrade_code: Option<String>,
     },
@@ -419,6 +420,7 @@ pub struct DistributionTarball {
 
 #[derive(Clone, Debug)]
 pub struct DistributionWixInstaller {
+    pub msi_upgrade_code_x86: Option<String>,
     pub msi_upgrade_code_amd64: Option<String>,
     pub bundle_upgrade_code: Option<String>,
 }
@@ -950,11 +952,13 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
             }
             ConfigDistribution::WixInstaller {
                 build_target: rule_target,
+                msi_upgrade_code_x86,
                 msi_upgrade_code_amd64,
                 bundle_upgrade_code,
             } => {
                 if rule_target == "all" || rule_target == target {
                     Ok(Some(Distribution::WixInstaller(DistributionWixInstaller {
+                        msi_upgrade_code_x86: msi_upgrade_code_x86.clone(),
                         msi_upgrade_code_amd64: msi_upgrade_code_amd64.clone(),
                         bundle_upgrade_code: bundle_upgrade_code.clone(),
                     })))

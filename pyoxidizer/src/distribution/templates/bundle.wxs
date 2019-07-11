@@ -36,6 +36,14 @@
         </bal:Condition>
 
         <util:RegistrySearch
+            Id="VCRedist2019x86"
+            Root="HKCR"
+            Key="Installer\Dependencies\VC,redist.x86,x86,14.21,bundle"
+            Value="Version"
+            Variable="VCRedist2019x86Installed"
+            />
+
+        <util:RegistrySearch
             Id="VCRedist2019x64"
             Root="HKCR"
             Key="Installer\Dependencies\VC,redist.x64,amd64,14.21,bundle"
@@ -47,6 +55,21 @@
 
         <Chain>
             <!-- Install VC++ Redistributable Bundle, if needed -->
+            <ExePackage
+                    Id="vc_redist.x86.exe"
+                    Name="vc_redist.x86.14.21.27702.exe"
+                    SourceFile="{{{vc_redist_x86_path}}}"
+                    DisplayName="Microsoft Visual C++ 2015-2019 Redistributable (x86) - 14.21.27702"
+                    Cache="no"
+                    Compressed="yes"
+                    PerMachine="yes"
+                    Permanent="yes"
+                    InstallCondition="Not VersionNT64"
+                    DetectCondition="VCRedist2019x86Installed >= VCRedist2019Provided"
+                    InstallCommand="/install /quiet /norestart"
+                    RepairCommand="/repair /quiet /norestart"
+                    UninstallCommand="/uninstall /quiet /norestart" />
+
             <ExePackage
                     Id="vc_redist.x64.exe"
                     Name="vc_redist.x64.14.21.27702.exe"
@@ -64,11 +87,19 @@
 
             <!-- Run our application's installer -->
             <MsiPackage
-                    Id="AppInstaller"
+                    Id="AppInstallerx86"
                     DisplayName="App Installer"
                     ForcePerMachine="yes"
                     Compressed="yes"
-                    SourceFile="{{{app_installer_path}}}"
+                    SourceFile="{{{distributions_path}}}/{{{product_name}}}.x86.msi"
+                    DisplayInternalUI="yes"
+                    InstallCondition="Not VersionNT64"/>
+            <MsiPackage
+                    Id="AppInstallerx64"
+                    DisplayName="App Installer"
+                    ForcePerMachine="yes"
+                    Compressed="yes"
+                    SourceFile="{{{distributions_path}}}/{{{product_name}}}.amd64.msi"
                     DisplayInternalUI="yes"
                     InstallCondition="VersionNT64"/>
         </Chain>

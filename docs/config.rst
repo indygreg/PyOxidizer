@@ -937,6 +937,10 @@ to be easily installed on Windows.
 
 This type accepts the following keys:
 
+``msi_upgrade_code_x86``
+   UUID to use for the x86 MSI installer. If not defined, a deterministic
+   UUID based on the application name will be used.
+
 ``msi_upgrade_code_amd64``
    UUID to use for the x64 MSI installer. If not defined, a deterministic
    UUID based on the application name will be used.

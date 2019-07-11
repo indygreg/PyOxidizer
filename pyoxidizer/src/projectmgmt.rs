@@ -445,7 +445,7 @@ fn build_pyoxidizer_artifacts(
 }
 
 /// Build an oxidized Rust application at the specified project path.
-fn build_project(logger: &slog::Logger, context: &mut BuildContext) -> Result<(), String> {
+pub fn build_project(logger: &slog::Logger, context: &mut BuildContext) -> Result<(), String> {
     if let Ok(rust_version) = rustc_version::version() {
         if rust_version.lt(&MINIMUM_RUST_VERSION) {
             return Err(format!(

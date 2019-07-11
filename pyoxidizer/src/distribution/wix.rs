@@ -17,6 +17,12 @@ const TOOLSET_URL: &str =
     "https://github.com/wixtoolset/wix3/releases/download/wix3111rtm/wix311-binaries.zip";
 const TOOLSET_SHA256: &str = "37f0a533b0978a454efb5dc3bd3598becf9660aaf4287e55bf68ca6b527d051d";
 
+const VC_REDIST_X86_URL: &str =
+    "https://download.visualstudio.microsoft.com/download/pr/c8edbb87-c7ec-4500-a461-71e8912d25e9/99ba493d660597490cbb8b3211d2cae4/vc_redist.x86.exe";
+
+const VC_REDIST_X86_SHA256: &str =
+    "3a43e8a55a3f3e4b73d01872c16d47a19dd825756784f4580187309e7d1fcb74";
+
 const VC_REDIST_X64_URL: &str =
     "https://download.visualstudio.microsoft.com/download/pr/9e04d214-5a9d-4515-9960-3d71398d98c3/1e1e62ab57bbb4bf5199e8ce88f040be/vc_redist.x64.exe";
 
@@ -94,9 +100,14 @@ fn extract_wix(logger: &slog::Logger, path: &Path) -> Result<(), String> {
 }
 
 fn app_installer_path(context: &BuildContext) -> PathBuf {
+    let arch = match context.target_triple.as_str() {
+        "i686-pc-windows-msvc" => "x86",
+        "x86_64-pc-windows-msvc" => "amd64",
+        target => panic!("unsupported target: {}", target),
+    };
     context
         .distributions_path
-        .join(format!("{}.amd64.msi", context.app_name))
+        .join(format!("{}.{}.msi", context.app_name, arch))
 }
 
 fn run_heat(
@@ -104,6 +115,7 @@ fn run_heat(
     wix_toolset_path: &Path,
     build_path: &Path,
     harvest_dir: &Path,
+    platform: &str,
 ) -> Result<(), String> {
     let mut args = vec!["dir"];
 
@@ -112,7 +124,7 @@ fn run_heat(
     args.push(&harvest_str);
     args.push("-nologo");
     args.push("-platform");
-    args.push("x64");
+    args.push(platform);
     args.push("-cg");
     args.push("AppFiles");
     args.push("-dr");
@@ -156,6 +168,12 @@ fn run_candle(
     build_path: &Path,
     wxs_file_name: &str,
 ) -> Result<(), String> {
+    let arch = match context.target_triple.as_str() {
+        "i686-pc-windows-msvc" => "x86",
+        "x86_64-pc-windows-msvc" => "x64",
+        triple => return Err(format!("unhandled target triple: {}", triple)),
+    };
+
     let args = vec![
         "-nologo".to_string(),
         "-ext".to_string(),
@@ -163,7 +181,7 @@ fn run_candle(
         "-ext".to_string(),
         "WixUtilExtension".to_string(),
         "-arch".to_string(),
-        "x64".to_string(),
+        arch.to_string(),
         wxs_file_name.to_string(),
         format!("-dSourceDir={}", context.app_path.display()),
     ];
@@ -214,6 +232,7 @@ fn run_light(
         "-o".to_string(),
         output_path.display().to_string(),
     ];
+
     for p in wixobjs {
         args.push(p.to_string());
     }
@@ -243,12 +262,19 @@ fn run_light(
     }
 }
 
-pub fn build_wix_installer(
+pub fn build_wix_app_installer(
     logger: &slog::Logger,
     context: &BuildContext,
     wix_config: &DistributionWixInstaller,
+    wix_toolset_path: &Path,
 ) -> Result<(), String> {
-    let output_path = context.build_path.join("wix");
+    let arch = match context.target_triple.as_str() {
+        "i686-pc-windows-msvc" => "x86",
+        "x86_64-pc-windows-msvc" => "x64",
+        target => return Err(format!("unhandled target triple: {}", target)),
+    };
+
+    let output_path = context.build_path.join("wix").join(arch);
 
     let mut data = BTreeMap::new();
     data.insert("product_name", &context.app_name);
@@ -265,26 +291,30 @@ pub fn build_wix_installer(
         xml::escape::escape_str_attribute(&cargo_package.authors.join(", ")).to_string();
     data.insert("manufacturer", &manufacturer);
 
-    let bundle_upgrade_code = if let Some(ref code) = wix_config.bundle_upgrade_code {
-        code.clone()
+    let upgrade_code = if arch == "x86" {
+        if let Some(ref code) = wix_config.msi_upgrade_code_x86 {
+            code.clone()
+        } else {
+            uuid::Uuid::new_v5(
+                &uuid::Uuid::NAMESPACE_DNS,
+                format!("pyoxidizer.{}.app.x86", context.app_name).as_bytes(),
+            )
+            .to_string()
+        }
+    } else if arch == "x64" {
+        if let Some(ref code) = wix_config.msi_upgrade_code_amd64 {
+            code.clone()
+        } else {
+            uuid::Uuid::new_v5(
+                &uuid::Uuid::NAMESPACE_DNS,
+                format!("pyoxidizer.{}.app.x64", context.app_name).as_bytes(),
+            )
+            .to_string()
+        }
     } else {
-        uuid::Uuid::new_v5(
-            &uuid::Uuid::NAMESPACE_DNS,
-            format!("pyoxidizer.{}.bundle", context.app_name).as_bytes(),
-        )
-        .to_string()
+        panic!("unhandled arch: {}", arch);
     };
-    data.insert("bundle_upgrade_code", &bundle_upgrade_code);
 
-    let upgrade_code = if let Some(ref code) = wix_config.msi_upgrade_code_amd64 {
-        code.clone()
-    } else {
-        uuid::Uuid::new_v5(
-            &uuid::Uuid::NAMESPACE_DNS,
-            format!("pyoxidizer.{}.app.x64", context.app_name).as_bytes(),
-        )
-        .to_string()
-    };
     data.insert("upgrade_code", &upgrade_code);
 
     let path_component_guid = uuid::Uuid::new_v4().to_string();
@@ -301,13 +331,6 @@ pub fn build_wix_installer(
     let app_exe_source = context.app_exe_path.display().to_string();
     data.insert("app_exe_source", &app_exe_source);
 
-    let app_installer_s = app_installer_path(context).display().to_string();
-    data.insert("app_installer_path", &app_installer_s);
-
-    let redist_x64_path = context.build_path.join("vc_redist.x64.exe");
-    let redist_x64_path_str = redist_x64_path.display().to_string();
-    data.insert("vc_redist_x64_path", &redist_x64_path_str);
-
     let t = HANDLEBARS
         .render("main.wxs", &data)
         .or_else(|e| Err(e.to_string()))?;
@@ -321,27 +344,15 @@ pub fn build_wix_installer(
     let main_wxs_path = output_path.join("main.wxs");
     std::fs::write(&main_wxs_path, t).or_else(|e| Err(e.to_string()))?;
 
-    let t = HANDLEBARS
-        .render("bundle.wxs", &data)
-        .or_else(|e| Err(e.to_string()))?;
+    run_heat(
+        logger,
+        &wix_toolset_path,
+        &output_path,
+        &context.app_path,
+        arch,
+    )?;
 
-    let bundle_wxs_path = output_path.join("bundle.wxs");
-    std::fs::write(&bundle_wxs_path, t).or_else(|e| Err(e.to_string()))?;
-
-    let wix_toolset_path = context.build_path.join("wix-toolset");
-    if !wix_toolset_path.exists() {
-        extract_wix(logger, &wix_toolset_path)?;
-    }
-
-    if !redist_x64_path.exists() {
-        warn!(logger, "fetching Visual C++ Redistributable");
-        let data = download_and_verify(logger, VC_REDIST_X64_URL, VC_REDIST_X64_SHA256)?;
-        std::fs::write(&redist_x64_path, &data).or_else(|e| Err(e.to_string()))?;
-    }
-
-    run_heat(logger, &wix_toolset_path, &output_path, &context.app_path)?;
-
-    let input_basenames = vec!["bundle", "main", "appdir"];
+    let input_basenames = vec!["main", "appdir"];
 
     // compile the .wxs files into .wixobj with candle.
     for basename in &input_basenames {
@@ -359,7 +370,121 @@ pub fn build_wix_installer(
         &app_installer_path(context),
     )?;
 
+    Ok(())
+}
+
+pub fn build_wix_installer(
+    logger: &slog::Logger,
+    context: &BuildContext,
+    wix_config: &DistributionWixInstaller,
+) -> Result<(), String> {
+    // The WiX installer is a unified installer for multiple architectures.
+    // So ensure all Windows architectures are built before proceeding. This is
+    // a bit hacky and should arguably be handled in a better way. Meh.
+    let mut other_context = if context.target_triple == "x86_64-pc-windows-msvc" {
+        warn!(logger, "building application for x86");
+        super::super::projectmgmt::resolve_build_context(
+            logger,
+            context.project_path.to_str().unwrap(),
+            Some(context.config_path.to_str().unwrap()),
+            Some("i686-pc-windows-msvc"),
+            true,
+            None,
+            false,
+        )?
+    } else if context.target_triple == "i686-pc-windows-msvc" {
+        warn!(logger, "building application for x64");
+        super::super::projectmgmt::resolve_build_context(
+            logger,
+            context.project_path.to_str().unwrap(),
+            Some(context.config_path.to_str().unwrap()),
+            Some("x86_64-pc-windows-msvc"),
+            true,
+            None,
+            false,
+        )?
+    } else {
+        return Err(format!(
+            "building for unknown target: {}",
+            context.target_triple
+        ));
+    };
+
+    super::super::projectmgmt::build_project(logger, &mut other_context)?;
+    super::super::pyrepackager::repackage::package_project(logger, &mut other_context)?;
+
+    let wix_toolset_path = context.build_path.join("wix-toolset");
+    if !wix_toolset_path.exists() {
+        extract_wix(logger, &wix_toolset_path)?;
+    }
+
+    // Build the standalone MSI installers for the per-architecture application.
+    build_wix_app_installer(logger, context, wix_config, &wix_toolset_path)?;
+    build_wix_app_installer(logger, &other_context, wix_config, &wix_toolset_path)?;
+
+    // Then build a bundler installer containing all architectures.
+
+    let mut data = BTreeMap::new();
+    data.insert("product_name", &context.app_name);
+
+    let bundle_upgrade_code = if let Some(ref code) = wix_config.bundle_upgrade_code {
+        code.clone()
+    } else {
+        uuid::Uuid::new_v5(
+            &uuid::Uuid::NAMESPACE_DNS,
+            format!("pyoxidizer.{}.bundle", context.app_name).as_bytes(),
+        )
+        .to_string()
+    };
+    data.insert("bundle_upgrade_code", &bundle_upgrade_code);
+
+    let distributions_path_s = context.distributions_path.display().to_string();
+    data.insert("distributions_path", &distributions_path_s);
+
+    let redist_x86_path = context.build_path.join("vc_redist.x86.exe");
+    let redist_x86_path_str = redist_x86_path.display().to_string();
+    data.insert("vc_redist_x86_path", &redist_x86_path_str);
+
+    let redist_x64_path = context.build_path.join("vc_redist.x64.exe");
+    let redist_x64_path_str = redist_x64_path.display().to_string();
+    data.insert("vc_redist_x64_path", &redist_x64_path_str);
+
+    let t = HANDLEBARS
+        .render("bundle.wxs", &data)
+        .or_else(|e| Err(e.to_string()))?;
+
+    let output_path = context.build_path.join("wix").join("bundle");
+
+    if output_path.exists() {
+        std::fs::remove_dir_all(&output_path).or_else(|e| Err(e.to_string()))?;
+    }
+
+    std::fs::create_dir_all(&output_path).or_else(|e| Err(e.to_string()))?;
+
+    let bundle_wxs_path = output_path.join("bundle.wxs");
+    std::fs::write(&bundle_wxs_path, t).or_else(|e| Err(e.to_string()))?;
+
+    if !redist_x86_path.exists() {
+        warn!(logger, "fetching Visual C++ Redistributable (x86)");
+        let data = download_and_verify(logger, VC_REDIST_X86_URL, VC_REDIST_X86_SHA256)?;
+        std::fs::write(&redist_x86_path, &data).or_else(|e| Err(e.to_string()))?;
+    }
+
+    if !redist_x64_path.exists() {
+        warn!(logger, "fetching Visual C++ Redistributable (x64)");
+        let data = download_and_verify(logger, VC_REDIST_X64_URL, VC_REDIST_X64_SHA256)?;
+        std::fs::write(&redist_x64_path, &data).or_else(|e| Err(e.to_string()))?;
+    }
+
     // Then produce a bundle installer for it.
+
+    run_candle(
+        logger,
+        context,
+        &wix_toolset_path,
+        &output_path,
+        "bundle.wxs",
+    )?;
 
     let wixobjs = vec!["bundle.wixobj"];
     let bundle_installer_path = context
