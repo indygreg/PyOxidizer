@@ -204,3 +204,17 @@ should be OK with distributing executables built with PyOxidizer.
 Another implication of static linking is licensing considerations. Static
 linking can trigger stronger licensing protections and requirements.
 Read more at :ref:`licensing_considerations`.
+
+``error while loading shared libraries: libcrypt.so.1: cannot open shared object file: No such file or directory`` When Building
+================================================================================================================================
+
+If you see this error when building, it is because your Linux system does not
+conform to the
+`Linux Standard Base Specification <https://refspecs.linuxfoundation.org/LSB_5.0.0/LSB-Core-AMD64/LSB-Core-AMD64/libcrypt.html>`_,
+does not provide a ``libcrypt.so.1`` file, and the Python distribution that
+PyOxidizer attempts to run to compile Python source modules to bytecode can't
+execute.
+
+Fedora 30+ are known to have this issue. A workaround is to install the
+``libxcrypt-compat`` on the machine running ``pyoxidizer``. See
+https://github.com/indygreg/PyOxidizer/issues/89 for more info.
