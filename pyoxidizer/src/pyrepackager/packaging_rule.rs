@@ -218,6 +218,31 @@ fn resource_full_name(resource: &PythonFileResource) -> &str {
     }
 }
 
+#[allow(dead_code)]
+struct PythonPaths {
+    main: PathBuf,
+    site_packages: PathBuf,
+}
+
+/// Resolve the location of Python modules given a base install path.
+fn resolve_python_paths(base: &Path, python_version: &str, is_windows: bool) -> PythonPaths {
+    let mut p = base.to_path_buf();
+
+    if is_windows {
+        p.push("Lib");
+    } else {
+        p.push("lib");
+        p.push(format!("python{}", &python_version[0..3]));
+    }
+
+    let site_packages = p.join("site-packages");
+
+    PythonPaths {
+        main: p,
+        site_packages,
+    }
+}
+
 lazy_static! {
     static ref MODIFIED_DISTUTILS_FILES: BTreeMap<&'static str, &'static [u8]> = {
         let mut res: BTreeMap<&'static str, &'static [u8]> = BTreeMap::new();
@@ -641,16 +666,9 @@ fn resolve_virtualenv(
 
     let location = ResourceLocation::new(&rule.install_location);
 
-    let mut packages_path = PathBuf::from(&rule.path);
-
-    if dist.os == "windows" {
-        packages_path.push("Lib");
-    } else {
-        packages_path.push("lib");
-        packages_path.push("python".to_owned() + &dist.version[0..3]);
-    }
-
-    packages_path.push("site-packages");
+    let python_paths =
+        resolve_python_paths(&Path::new(&rule.path), &dist.version, dist.os == "windows");
+    let packages_path = python_paths.site_packages;
 
     for resource in find_python_resources(&packages_path) {
         let mut relevant = true;
@@ -1111,16 +1129,8 @@ fn resolve_setup_py_install(
         panic!("error running setup.py");
     }
 
-    let mut packages_path = target_dir_path.to_path_buf();
-
-    if dist.os == "windows" {
-        packages_path.push("Lib");
-    } else {
-        packages_path.push("lib");
-    }
-
-    packages_path.push("python".to_owned() + &dist.version[0..3]);
-    packages_path.push("site-packages");
+    let python_paths = resolve_python_paths(&target_dir_path, &dist.version, dist.os == "windows");
+    let packages_path = python_paths.site_packages;
 
     for resource in find_python_resources(&packages_path) {
         match resource {
