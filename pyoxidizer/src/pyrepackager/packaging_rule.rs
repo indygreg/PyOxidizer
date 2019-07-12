@@ -1101,6 +1101,9 @@ fn resolve_setup_py_install(
 
     let python_paths = resolve_python_paths(&target_dir_path, &dist.version, dist.os == "windows");
 
+    std::fs::create_dir_all(&python_paths.site_packages)
+        .expect("unable to create site-packages directory");
+
     let extra_envs = prepare_hacked_distutils(
         logger,
         dist,

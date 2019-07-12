@@ -40,6 +40,9 @@ Backwards Compatibility Notes
 Bug Fixes
 ^^^^^^^^^
 
+* The ``setup-py-install`` ``[[packaging_rule]]`` now performs actions to
+  appease ``setuptools``, thus allowing installation of packages using
+  ``setuptools`` to (hopefully) work without issue (#70).
 * The ``virtualenv`` ``[[packaging_rule]]`` now properly finds the
   ``site-packages`` directory on Windows (#83).
 * The ``filter-include`` ``[[packaging_rule]]`` no longer requires both
