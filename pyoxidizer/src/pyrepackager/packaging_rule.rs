@@ -1103,13 +1103,6 @@ fn resolve_setup_py_install(
     let temp_dir = tempdir::TempDir::new("pyoxidizer-setup-py-install")
         .expect("could not create temp directory");
 
-    let extra_envs =
-        prepare_hacked_distutils(logger, dist, temp_dir.path(), &[]).expect("unable to hack distutils");
-    let mut full_env = HashMap::new();
-    for (key, val) in std::env::vars().chain(extra_envs.clone()) {
-        full_env.insert(key, val);
-    }
-
     let target_dir_path = temp_dir.path().join("install");
     let target_dir_s = target_dir_path.display().to_string();
 
@@ -1125,6 +1118,11 @@ fn resolve_setup_py_install(
         &[&python_paths.site_packages, &python_paths.main],
     )
     .expect("unable to hack distutils");
+    
+    let mut full_env = HashMap::new();
+    for (key, val) in std::env::vars().chain(extra_envs.clone()) {
+        full_env.insert(key, val);
+    }
 
     warn!(logger, "python setup.py installing to {}", target_dir_s);
 
