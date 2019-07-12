@@ -218,7 +218,6 @@ fn resource_full_name(resource: &PythonFileResource) -> &str {
     }
 }
 
-#[allow(dead_code)]
 struct PythonPaths {
     main: PathBuf,
     site_packages: PathBuf,
@@ -280,7 +279,8 @@ lazy_static! {
 pub fn prepare_hacked_distutils(
     logger: &slog::Logger,
     dist: &PythonDistributionInfo,
-    dest_dir: &std::path::Path,
+    dest_dir: &Path,
+    extra_python_paths: &[&Path],
 ) -> Result<HashMap<String, String>, String> {
     let extra_sys_path = dest_dir.join("packages");
 
@@ -324,11 +324,15 @@ pub fn prepare_hacked_distutils(
     let state_dir = dest_dir.join("pyoxidizer-build-state");
     fs::create_dir_all(&state_dir).or_else(|e| Err(e.to_string()))?;
 
+    let mut python_paths = vec![extra_sys_path.display().to_string()];
+    python_paths.extend(extra_python_paths.iter().map(|p| p.display().to_string()));
+
+    let path_separator = if cfg!(windows) { ";" } else { ":" };
+
+    let python_path = python_paths.join(path_separator);
+
     let mut res = HashMap::new();
-    res.insert(
-        "PYTHONPATH".to_string(),
-        extra_sys_path.display().to_string(),
-    );
+    res.insert("PYTHONPATH".to_string(), python_path);
     res.insert(
         "PYOXIDIZER_DISTUTILS_STATE_DIR".to_string(),
         state_dir.display().to_string(),
@@ -834,8 +838,8 @@ fn resolve_pip_install_simple(
     let temp_dir =
         tempdir::TempDir::new("pyoxidizer-pip-install").expect("could not creat temp directory");
 
-    let extra_envs =
-        prepare_hacked_distutils(logger, dist, temp_dir.path()).expect("unable to hack distutils");
+    let extra_envs = prepare_hacked_distutils(logger, dist, temp_dir.path(), &[])
+        .expect("unable to hack distutils");
 
     let target_dir_path = temp_dir.path().join("install");
     let target_dir_s = target_dir_path.display().to_string();
@@ -975,8 +979,8 @@ fn resolve_pip_requirements_file(
     let temp_dir =
         tempdir::TempDir::new("pyoxidizer-pip-install").expect("could not create temp directory");
 
-    let extra_envs =
-        prepare_hacked_distutils(logger, dist, temp_dir.path()).expect("unable to hack distutils");
+    let extra_envs = prepare_hacked_distutils(logger, dist, temp_dir.path(), &[])
+        .expect("unable to hack distutils");
 
     let target_dir_path = temp_dir.path().join("install");
     let target_dir_s = target_dir_path.display().to_string();
@@ -1092,11 +1096,19 @@ fn resolve_setup_py_install(
     let temp_dir = tempdir::TempDir::new("pyoxidizer-setup-py-install")
         .expect("could not create temp directory");
 
-    let extra_envs =
-        prepare_hacked_distutils(logger, dist, temp_dir.path()).expect("unable to hack distutils");
-
     let target_dir_path = temp_dir.path().join("install");
     let target_dir_s = target_dir_path.display().to_string();
+
+    let python_paths = resolve_python_paths(&target_dir_path, &dist.version, dist.os == "windows");
+
+    let extra_envs = prepare_hacked_distutils(
+        logger,
+        dist,
+        temp_dir.path(),
+        &[&python_paths.site_packages, &python_paths.main],
+    )
+    .expect("unable to hack distutils");
+
     warn!(logger, "python setup.py installing to {}", target_dir_s);
 
     let mut args = vec!["setup.py"];
@@ -1129,7 +1141,6 @@ fn resolve_setup_py_install(
         panic!("error running setup.py");
     }
 
-    let python_paths = resolve_python_paths(&target_dir_path, &dist.version, dist.os == "windows");
     let packages_path = python_paths.site_packages;
 
     for resource in find_python_resources(&packages_path) {
