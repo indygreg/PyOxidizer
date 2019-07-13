@@ -116,11 +116,7 @@ Partial Terminfo and Readline Support
 The readline and curses support for the standalone Python distributions is
 currently not great.
 
-First, the non-GPL ``libedit`` version of the Python ``readline`` extension may
-not work on Linux. So if you want a non-GPL binary that uses the ``readline``
-extension, you may be out of luck until this is fixed.
-
-The bigger issue is with terminal database support. The ``ncurses`` library
+The main issue is with terminal database support. The ``ncurses`` library
 needs to know how to load a ``terminfo`` database so it knows which features
 a terminal supports. Without this database, terminal interaction can be
 wrong or unexpected. For example, pressing the *backspace* key could advance

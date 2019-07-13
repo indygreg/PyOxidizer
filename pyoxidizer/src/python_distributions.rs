@@ -18,31 +18,31 @@ lazy_static! {
         let mut res: BTreeMap<&'static str, HostedDistribution> = BTreeMap::new();
 
         res.insert("x86_64-unknown-linux-gnu", HostedDistribution {
-            url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190617/cpython-3.7.3-linux64-20190618T0324.tar.zst"),
-            sha256: String::from("d6b80a9723c124d6d193f8816fdb874ba6d56abfb35cbfcc2b27de53176d0620"),
+            url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190713/cpython-3.7.4-linux64-20190713T1809.tar.zst"),
+            sha256: String::from("82c27953c8835d1e24fe48f810bfed6cb6f19a234a463802a29ca2a1b56251e8"),
         });
 
         res.insert("x86_64-unknown-linux-musl", HostedDistribution {
-            url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190617/cpython-3.7.3-linux64-musl-20190618T0400.tar.zst"),
-            sha256: String::from("2be2d109b82634b36685b89800887501b619ef946dda182e5a8ab5c7029a8136"),
+            url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190713/cpython-3.7.4-linux64-musl-20190713T1814.tar.zst"),
+            sha256: String::from("0a01a332743f26580772dbcdddf3ff1f65d014a30a68797835cbde9c7b223fee"),
         });
 
         res.insert("i686-pc-windows-msvc", HostedDistribution {
-            url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190617/cpython-3.7.3-windows-x86-20190709T0348.tar.zst"),
-            sha256: String::from("5c312f94e297abf55b7e81bdf1ae7a37e9b66d77b42d932901eeac08a4369f70")
+            url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190713/cpython-3.7.4-windows-x86-20190713T1826.tar.zst"),
+            sha256: String::from("5b9cdfb4fe33837fd77810b13a9f91f3a936422faabe7adc96dd9409eb803ccb")
         });
 
         res.insert(
             "x86_64-pc-windows-msvc",
             HostedDistribution {
-                url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190617/cpython-3.7.3-windows-amd64-20190618T0516.tar.zst"),
-                sha256: String::from("fd43554b5654a914846cf1c251d1ad366f46c7c4d20b7c44572251b533351221"),
+                url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190713/cpython-3.7.4-windows-amd64-20190710T0203.tar.zst"),
+                sha256: String::from("9d7ced27af3de1e16188f2abb03a368beb7beab9a86b29cbdde1a06ae21d957d"),
             },
         );
 
         res.insert("x86_64-apple-darwin", HostedDistribution {
-            url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190617/cpython-3.7.3-macos-20190618T0523.tar.zst"),
-            sha256: String::from("6668202a3225892ce252eff4bb53a58ac058b6a413ab9d37c026a500c2a561ee"),
+            url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190713/cpython-3.7.4-macos-20190710T0233.tar.zst"),
+            sha256: String::from("eec0e971881236baf751588b3d7ae3529c2abee28912427fe08bb50bc69c2890"),
         });
 
         res

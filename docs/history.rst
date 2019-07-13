@@ -26,6 +26,9 @@ next
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* The default musl Python distribution now uses LibreSSL instead of
+  OpenSSL. This should hopefully be an invisible change.
+* Default Python distributions now use CPython 3.7.4 instead of 3.7.3.
 * Applications are now built into directories named
   ``apps/<app_name>/<target>/<build_type>`` rather than
   ``apps/<app_name>/<build_type>``. This enables builds for multiple targets
@@ -40,6 +43,9 @@ Backwards Compatibility Notes
 Bug Fixes
 ^^^^^^^^^
 
+* The ``libedit`` extension variant for the ``readline`` extension should now
+  link on Linux. Before, attempting to link a binary using this extension
+  variant would result in missing symbol errors.
 * The ``setup-py-install`` ``[[packaging_rule]]`` now performs actions to
   appease ``setuptools``, thus allowing installation of packages using
   ``setuptools`` to (hopefully) work without issue (#70).
@@ -60,6 +66,7 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* Default Python distributions now use CPython 3.7.4 instead of 3.7.3.
 * A warning is now emitted when a Python source file contains ``__file__``. This
   should help trace down modules using ``__file__``.
 * Added 32-bit Windows distribution.
