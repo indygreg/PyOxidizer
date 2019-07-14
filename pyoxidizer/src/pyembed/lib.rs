@@ -20,6 +20,7 @@ running code in the interpreter.
 mod config;
 mod data;
 mod importer;
+mod osutils;
 mod pyalloc;
 mod pyinterp;
 mod pystr;

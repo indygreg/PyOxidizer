@@ -113,37 +113,20 @@ texts to satisfy notification requirements in those licenses.
 Partial Terminfo and Readline Support
 -------------------------------------
 
-The readline and curses support for the standalone Python distributions is
-currently not great.
+PyOxidizer has partial support for detecting ``terminfo`` databases. See
+:ref:`terminfo_database` for more.
 
-The main issue is with terminal database support. The ``ncurses`` library
-needs to know how to load a ``terminfo`` database so it knows which features
-a terminal supports. Without this database, terminal interaction can be
-wrong or unexpected. For example, pressing the *backspace* key could advance
-the cursor instead of removing the previous character!
+There's a good chance PyOxidizer's ability to locate ``terminfo`` databases
+in the long tail of Python distributions is lacking. And PyOxidizer doesn't
+currently make it easy to distribute a ``terminfo`` database alongside the
+application.
 
-Typically the path to the database is specified at build time. The ``ncurses``
-library is never distributed across machines, so this is typically fine. Linux
-distributions put the ``terminfo`` database in different locations, so
-hard-coding a fixed location at compile time is the wrong approach for
-PyOxidizer.
+At this time, proper terminal interaction in PyOxidizer applications may be
+hit-or-miss.
 
-It is possible to compile and embed a database into the ``ncurses`` library.
-But it is impossible to embed the entire database because of compilation errors
-in ``ncurses``. And the database could bloat the size of the binary. If we only
-included some database entries, we would be playing gatekeeper and may exclude
-some terminal definitions that people need.
-
-``ncurses`` does support specifying the location to the database via environment
-variables (notably ``TERMINFO`` and ``TERMINFO_DIRS``). One possible approach is
-to sniff for the location of the database at known popular locations at run-time.
-We could potentially make this lazy so it only occurs if Python extensions using
-``ncurses`` are loaded. We could also make it easy to distribute a database next
-to built application and tell built binaries to load it relative to the binary.
-
-There are definitely options here. But for now, the lack of a ``terminfo`` /
-``termcap`` database in the embedded Python distribution can make Python
-interact with terminals in unexpected ways.
+Please file issues at https://github.com/indygreg/PyOxidizer/issues reporting
+known problems with terminal interaction or to request new features for
+terminal interaction, ``terminfo`` database support, etc.
 
 Test Coverage
 -------------

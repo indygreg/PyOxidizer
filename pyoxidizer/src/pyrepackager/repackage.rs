@@ -18,6 +18,7 @@ use std::path::{Path, PathBuf};
 use super::bytecode::BytecodeCompiler;
 use super::config::{
     parse_config_file, Config, PythonDistribution, PythonPackaging, RawAllocator, RunMode,
+    TerminfoResolution,
 };
 use super::dist::{
     analyze_python_distribution_tar_zst, resolve_python_distribution_archive, ExtensionModule,
@@ -1467,6 +1468,7 @@ pub fn derive_python_config(
          py_resources_data: include_bytes!(r#\"{}\"#),\n    \
          argvb: false,\n    \
          raw_allocator: {},\n    \
+         terminfo_resolution: {},\n    \
          write_modules_directory_env: {},\n    \
          run: {},\n\
          }}",
@@ -1500,6 +1502,13 @@ pub fn derive_python_config(
             RawAllocator::Rust => "PythonRawAllocator::Rust",
             RawAllocator::System => "PythonRawAllocator::System",
         },
+        match config.terminfo_resolution {
+            TerminfoResolution::Dynamic => "TerminfoResolution::Dynamic".to_string(),
+            TerminfoResolution::None => "TerminfoResolution::None".to_string(),
+            TerminfoResolution::Static(ref v) => {
+                format!("TerminfoResolution::Static(r###\"{}\"###", v)
+            }
+        },
         match &config.write_modules_directory_env {
             Some(path) => "Some(\"".to_owned() + &path + "\".to_string())",
             _ => "None".to_owned(),
@@ -1520,7 +1529,7 @@ pub fn derive_python_config(
 pub fn write_data_rs(path: &PathBuf, python_config_rs: &str) {
     let mut f = fs::File::create(&path).unwrap();
 
-    f.write_all(b"use super::config::{PythonConfig, PythonRawAllocator, PythonRunMode};\n\n")
+    f.write_all(b"use super::config::{PythonConfig, PythonRawAllocator, PythonRunMode, TerminfoResolution};\n\n")
         .unwrap();
 
     // Ideally we would have a const struct, but we need to do some

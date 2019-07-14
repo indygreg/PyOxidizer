@@ -271,6 +271,42 @@ behavior:
    Default is ``jemalloc`` on non-Windows targets and ``system`` on Windows.
    (The ``jemalloc-sys`` crate doesn't work on Windows MSVC targets.)
 
+.. _config_terminfo_resolution:
+
+``terminfo_resolution`` (string)
+   How the terminal information database (``terminfo``) should be configured.
+
+   See :ref:`terminfo_database` for more about terminal databases.
+
+   The value ``dynamic`` (the default) looks at the currently running
+   operating system and attempts to do something reasonable. For example, on
+   Debian based distributions, it will look for the ``terminfo`` database in
+   ``/etc/terminfo``, ``/lib/terminfo``, and ``/usr/share/terminfo``, which is
+   how Debian configures ``ncurses`` to behave normally. Similar behavior exists
+   for other recognized operating systems. If the operating system is unknown,
+   PyOxidizer falls back to looking for the ``terminfo`` database in well-known
+   directories that often contain the database (like ``/usr/share/terminfo``).
+
+   The value ``none`` indicates that no configuration of the ``terminfo``
+   database path should be performed. This is useful for applications that
+   don't interact with terminals. Using ``none`` can prevent some filesystem
+   I/O at application startup.
+
+   The value ``static`` indicates that a static path should be used for the
+   path to the ``terminfo`` database. That path should be provided by the
+   ``terminfo_dirs`` configuration option.
+
+   ``terminfo`` is not used on Windows and this setting is ignored on that
+   platform.
+
+``terminfo_dirs``
+   Path to the ``terminfo`` database. See the above documentation for
+   ``terminfo_resolution`` for more on the ``terminfo`` database.
+
+   This value consists of a ``:`` delimited list of filesystem paths that
+   ``ncurses`` should be configured to use. This value will be used to
+   populate the ``TERMINFO_DIRS`` environment variable at application run time.
+
 ``write_modules_directory_env`` (string)
 
    Environment variable that defines a directory where ``modules-<UUID>`` files

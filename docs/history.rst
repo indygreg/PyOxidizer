@@ -66,6 +66,12 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* Built applications now have the ability to detect and use ``terminfo``
+  databases on the execution machine. This allows applications to interact
+  with terminals properly. (e.g. the backspace key will now work in interactive
+  ``pdb`` sessions). By default, applications on non-Windows platforms will
+  look for ``terminfo`` databases at well-known locations and attempt to load
+  them.
 * Default Python distributions now use CPython 3.7.4 instead of 3.7.3.
 * A warning is now emitted when a Python source file contains ``__file__``. This
   should help trace down modules using ``__file__``.

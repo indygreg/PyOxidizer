@@ -28,6 +28,17 @@ pub enum PythonRunMode {
     Eval { code: String },
 }
 
+/// Defines `terminfo`` database resolution semantics.
+#[derive(Clone, Debug)]
+pub enum TerminfoResolution {
+    /// Resolve `terminfo` database using appropriate behavior for current OS.
+    Dynamic,
+    /// Do not attempt to resolve the `terminfo` database. Basically a no-op.
+    None,
+    /// Use a specified string as the `TERMINFO_DIRS` value.
+    Static(String),
+}
+
 /// Holds the configuration of an embedded Python interpreter.
 ///
 /// Instances of this struct can be used to construct Python interpreters.
@@ -100,6 +111,9 @@ pub struct PythonConfig {
 
     /// Which memory allocator to use for the raw domain.
     pub raw_allocator: PythonRawAllocator,
+
+    /// How to resolve the `terminfo` database.
+    pub terminfo_resolution: TerminfoResolution,
 
     /// Environment variable holding the directory to write a loaded modules file.
     ///

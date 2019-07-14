@@ -58,6 +58,16 @@ struct ConfigBuild {
 }
 
 #[derive(Debug, Deserialize)]
+enum ConfigTerminfoResolution {
+    #[serde(rename = "dynamic")]
+    Dynamic,
+    #[serde(rename = "none")]
+    None,
+    #[serde(rename = "static")]
+    Static,
+}
+
+#[derive(Debug, Deserialize)]
 struct ConfigPython {
     #[serde(default = "ALL")]
     build_target: String,
@@ -71,6 +81,8 @@ struct ConfigPython {
     filesystem_importer: Option<bool>,
     sys_paths: Option<Vec<String>>,
     raw_allocator: Option<RawAllocator>,
+    terminfo_resolution: Option<ConfigTerminfoResolution>,
+    terminfo_dirs: Option<String>,
     write_modules_directory_env: Option<String>,
 }
 
@@ -434,6 +446,14 @@ pub enum Distribution {
     WixInstaller(DistributionWixInstaller),
 }
 
+/// How the `terminfo` database is resolved at run-time.
+#[derive(Clone, Debug)]
+pub enum TerminfoResolution {
+    Dynamic,
+    None,
+    Static(String),
+}
+
 /// Represents a parsed PyOxidizer configuration file.
 #[derive(Clone, Debug)]
 pub struct Config {
@@ -453,6 +473,7 @@ pub struct Config {
     pub filesystem_importer: bool,
     pub sys_paths: Vec<String>,
     pub raw_allocator: RawAllocator,
+    pub terminfo_resolution: TerminfoResolution,
     pub write_modules_directory_env: Option<String>,
     pub distributions: Vec<Distribution>,
 }
@@ -578,6 +599,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
     } else {
         RawAllocator::Jemalloc
     };
+    let mut terminfo_resolution = TerminfoResolution::Dynamic;
     let mut write_modules_directory_env = None;
 
     for python_config in config
@@ -635,6 +657,22 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
 
         if let Some(ref v) = python_config.raw_allocator {
             raw_allocator = v.clone();
+        }
+
+        if let Some(ref v) = python_config.terminfo_resolution {
+            terminfo_resolution = match v {
+                ConfigTerminfoResolution::Dynamic => TerminfoResolution::Dynamic,
+                ConfigTerminfoResolution::None => TerminfoResolution::None,
+                ConfigTerminfoResolution::Static => match python_config.terminfo_dirs {
+                    Some(ref v) => TerminfoResolution::Static(v.clone()),
+                    None => {
+                        return Err(
+                            "terminfo_resolution = static requires terminfo_dirs to be set"
+                                .to_string(),
+                        );
+                    }
+                },
+            }
         }
 
         if let Some(ref v) = python_config.write_modules_directory_env {
@@ -997,6 +1035,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
         filesystem_importer,
         sys_paths,
         raw_allocator,
+        terminfo_resolution,
         write_modules_directory_env,
         distributions,
     })

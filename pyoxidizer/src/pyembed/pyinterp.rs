@@ -20,8 +20,9 @@ use cpython::{
     Python, PythonObject, ToPyObject,
 };
 
-use super::config::{PythonConfig, PythonRawAllocator, PythonRunMode};
+use super::config::{PythonConfig, PythonRawAllocator, PythonRunMode, TerminfoResolution};
 use super::importer::PyInit__pyoxidizer_importer;
+use super::osutils::resolve_terminfo_dirs;
 #[cfg(feature = "jemalloc-sys")]
 use super::pyalloc::make_raw_jemalloc_allocator;
 use super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator};
@@ -142,6 +143,18 @@ impl<'a> MainPythonInterpreter<'a> {
     ///
     /// The Python interpreter is initialized as a side-effect. The GIL is held.
     pub fn new(config: PythonConfig) -> Result<MainPythonInterpreter<'a>, &'static str> {
+        match config.terminfo_resolution {
+            TerminfoResolution::Dynamic => {
+                if let Some(v) = resolve_terminfo_dirs() {
+                    env::set_var("TERMINFO_DIRS", &v);
+                }
+            }
+            TerminfoResolution::Static(ref v) => {
+                env::set_var("TERMINFO_DIRS", v);
+            }
+            TerminfoResolution::None => {}
+        }
+
         let (raw_allocator, raw_rust_allocator) = match config.raw_allocator {
             PythonRawAllocator::Jemalloc => (Some(raw_jemallocator()), None),
             PythonRawAllocator::Rust => (None, Some(make_raw_rust_memory_allocator())),

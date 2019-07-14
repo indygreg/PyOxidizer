@@ -7,4 +7,5 @@ edition = "2018"
 
 [dependencies]
 jemallocator-global = "0.3"
+lazy_static = "1.3"
 pyembed = { path = "../pyembed" }
