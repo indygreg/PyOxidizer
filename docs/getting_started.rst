@@ -112,9 +112,7 @@ test that::
    processing config file /home/gps/src/pyapp/pyoxidizer.toml
    resolving Python distribution...
    ...
-      Compiling pyapp v0.1.0 (/home/gps/src/pyapp)
-       Finished dev [unoptimized + debuginfo] target(s) in 53.14s
-        Running `target/debug/testapp`
+   pyapp packaged into /home/gps/src/pyapp/build/apps/pyapp/debug
    >>>
 
 If all goes according to plan, you just started a Rust executable which
