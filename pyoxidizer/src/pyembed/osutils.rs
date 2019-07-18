@@ -107,7 +107,7 @@ fn resolve_os_info() -> OsInfo {
 /// no environment variable should be set.
 pub fn resolve_terminfo_dirs() -> Option<String> {
     // Always respect an environment variable, if present.
-    if let Ok(v) = std::env::var("TERMINFO_DIRS") {
+    if std::env::var("TERMINFO_DIRS").is_ok() {
         return None;
     }
 
