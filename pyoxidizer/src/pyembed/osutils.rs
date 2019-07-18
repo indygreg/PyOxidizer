@@ -80,7 +80,7 @@ fn resolve_linux_distro() -> LinuxDistroVariant {
                 } else if line.contains("rhel") || line.contains("fedora") {
                     return LinuxDistroVariant::RedHat;
                 }
-            } else if line.startswith("ID=") {
+            } else if line.starts_with("ID=") {
                 if line.contains("fedora") {
                     return LinuxDistroVariant::RedHat;
                 }
