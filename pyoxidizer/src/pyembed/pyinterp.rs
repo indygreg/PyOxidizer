@@ -285,6 +285,17 @@ impl<'a> MainPythonInterpreter<'a> {
             }
         }
 
+        // TODO call PyImport_ExtendInitTab to avoid O(n) overhead.
+        for e in &config.extra_extension_modules {
+            let res = unsafe {
+                pyffi::PyImport_AppendInittab(e.name.as_ptr() as *const i8, Some(e.init_func))
+            };
+
+            if res != 0 {
+                return Err("unable to register extension module");
+            }
+        }
+
         let exe_str = exe.to_str().ok_or_else(|| "unable to convert exe to str")?;
 
         let home = OwnedPyStr::from_str(exe_str)?;

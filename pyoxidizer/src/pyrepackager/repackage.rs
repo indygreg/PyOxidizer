@@ -1466,6 +1466,7 @@ pub fn derive_python_config(
          frozen_importlib_external_data: include_bytes!(r#\"{}\"#),\n    \
          py_modules_data: include_bytes!(r#\"{}\"#),\n    \
          py_resources_data: include_bytes!(r#\"{}\"#),\n    \
+         extra_extension_modules: vec![],\n    \
          argvb: false,\n    \
          raw_allocator: {},\n    \
          terminfo_resolution: {},\n    \

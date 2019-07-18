@@ -26,6 +26,8 @@ next
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* The ``pyembed::PythonConfig`` struct now has an additional
+  ``extra_extension_modules`` field.
 * The default musl Python distribution now uses LibreSSL instead of
   OpenSSL. This should hopefully be an invisible change.
 * Default Python distributions now use CPython 3.7.4 instead of 3.7.3.
@@ -66,6 +68,10 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* Extra extension modules can now be registered with ``PythonConfig`` instances.
+  This can be useful for having the application embedding Python provide its
+  own extension modules without having to go through Python build mechanisms
+  to integrate those extension modules into the Python executable parts.
 * Built applications now have the ability to detect and use ``terminfo``
   databases on the execution machine. This allows applications to interact
   with terminals properly. (e.g. the backspace key will now work in interactive
