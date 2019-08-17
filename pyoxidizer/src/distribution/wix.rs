@@ -68,7 +68,7 @@ fn download_and_verify(logger: &slog::Logger, url: &str, hash: &str) -> Result<V
     }
 }
 
-fn extract_zip(data: &Vec<u8>, path: &Path) -> Result<(), String> {
+fn extract_zip(data: &[u8], path: &Path) -> Result<(), String> {
     let cursor = std::io::Cursor::new(data);
     let mut za = zip::ZipArchive::new(cursor).or_else(|e| Err(e.to_string()))?;
 
