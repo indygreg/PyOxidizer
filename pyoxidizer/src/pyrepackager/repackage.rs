@@ -530,7 +530,7 @@ pub fn resolve_python_resources(
                         );
                     }
                     if !app_relative.contains_key(&path) {
-                        app_relative.insert(path.clone(), AppRelativeResources::new());
+                        app_relative.insert(path.clone(), AppRelativeResources::default());
                     }
 
                     app_relative
@@ -649,7 +649,7 @@ pub fn resolve_python_resources(
                     warn!(logger, "adding app-relative resource to {}: {}", path, name);
 
                     if !app_relative.contains_key(&path) {
-                        app_relative.insert(path.clone(), AppRelativeResources::new());
+                        app_relative.insert(path.clone(), AppRelativeResources::default());
                     }
 
                     let app_relative = app_relative.get_mut(&path).unwrap();

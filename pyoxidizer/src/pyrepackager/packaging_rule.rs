@@ -145,7 +145,7 @@ pub struct PackagedModuleBytecode {
 }
 
 /// Represents resources to install in an app-relative location.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct AppRelativeResources {
     pub module_sources: BTreeMap<String, PackagedModuleSource>,
     pub module_bytecodes: BTreeMap<String, PackagedModuleBytecode>,
@@ -153,14 +153,6 @@ pub struct AppRelativeResources {
 }
 
 impl AppRelativeResources {
-    pub fn new() -> Self {
-        AppRelativeResources {
-            module_sources: BTreeMap::new(),
-            module_bytecodes: BTreeMap::new(),
-            resources: BTreeMap::new(),
-        }
-    }
-
     pub fn package_names(&self) -> BTreeSet<String> {
         let mut packages = packages_from_module_names(self.module_sources.keys().cloned());
         packages.extend(packages_from_module_names(
