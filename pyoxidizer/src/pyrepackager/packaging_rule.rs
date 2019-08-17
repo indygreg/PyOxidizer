@@ -755,7 +755,7 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceAction
         for package in &rule.packages {
             let prefix = package.clone() + ".";
 
-            if &full_name == package || full_name.starts_with(&prefix) {
+            if full_name == package || full_name.starts_with(&prefix) {
                 relevant = true;
             }
         }
