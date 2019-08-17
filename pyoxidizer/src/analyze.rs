@@ -188,7 +188,7 @@ pub fn analyze_file(path: PathBuf) {
 pub fn analyze_data(buffer: &[u8]) {
     match goblin::Object::parse(buffer).unwrap() {
         goblin::Object::Elf(elf) => {
-            let undefined_symbols =
+            let undefined_symbols: Vec<UndefinedSymbol> =
                 itertools::sorted(find_undefined_elf_symbols(&buffer, &elf).into_iter()).collect();
 
             analyze_elf_libraries(&elf.libraries, &undefined_symbols);
@@ -206,7 +206,7 @@ pub fn analyze_data(buffer: &[u8]) {
     }
 }
 
-pub fn analyze_elf_libraries(libs: &[&str], undefined_symbols: &Vec<UndefinedSymbol>) {
+pub fn analyze_elf_libraries(libs: &[&str], undefined_symbols: &[UndefinedSymbol]) {
     let mut latest_symbols: BTreeMap<String, version_compare::Version> = BTreeMap::new();
 
     println!("Shared Library Dependencies");
