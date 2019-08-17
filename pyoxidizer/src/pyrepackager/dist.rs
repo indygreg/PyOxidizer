@@ -293,7 +293,7 @@ impl PythonDistributionInfo {
             os: self.os.clone(),
             arch: self.arch.clone(),
             extension_modules: self.extension_modules.keys().cloned().collect_vec(),
-            libraries: self.libraries.keys().map(|k| k.clone()).collect_vec(),
+            libraries: self.libraries.keys().cloned().collect_vec(),
             py_module_count: self.py_modules.len(),
         }
     }
@@ -456,7 +456,7 @@ pub fn analyze_python_distribution_data(
                 init_fn: Some(entry.init_fn.clone()),
                 builtin_default: entry.in_core,
                 disableable: !entry.in_core,
-                license_public_domain: entry.license_public_domain.clone(),
+                license_public_domain: entry.license_public_domain,
                 license_paths: match entry.license_paths {
                     Some(ref refs) => Some(refs.iter().map(|p| python_path.join(p)).collect()),
                     None => None,
