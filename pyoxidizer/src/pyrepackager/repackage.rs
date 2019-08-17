@@ -1377,7 +1377,7 @@ pub fn link_libpython(
         let fs_path = dist
             .libraries
             .get(*library)
-            .expect(&format!("unable to find library {}", library));
+            .unwrap_or_else(|| panic!("unable to find library {}", library));
         warn!(logger, "{}", fs_path.display());
 
         let library_path = out_dir.join(format!("lib{}.a", library));
