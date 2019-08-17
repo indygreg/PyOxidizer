@@ -68,6 +68,9 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* The default Python distributions have been updated. Archives are generally
+  about half the size from before. Tcl/tk is included in the Linux and macOS
+  distributions (but PyOxidizer doesn't yet package the Tcl files).
 * Extra extension modules can now be registered with ``PythonConfig`` instances.
   This can be useful for having the application embedding Python provide its
   own extension modules without having to go through Python build mechanisms
