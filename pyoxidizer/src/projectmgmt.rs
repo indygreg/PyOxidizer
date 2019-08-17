@@ -711,7 +711,7 @@ pub fn distributions(
     logger: &slog::Logger,
     project_path: &str,
     target: Option<&str>,
-    types: &Vec<&str>,
+    types: &[&str],
 ) -> Result<(), String> {
     let mut context = resolve_build_context(logger, project_path, None, target, true, None, false)?;
 

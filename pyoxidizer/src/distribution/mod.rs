@@ -12,7 +12,7 @@ pub mod wix;
 pub fn produce_distributions(
     logger: &slog::Logger,
     context: &BuildContext,
-    types: &Vec<&str>,
+    types: &[&str],
 ) -> Result<(), String> {
     for distribution in &context.config.distributions {
         match distribution {
