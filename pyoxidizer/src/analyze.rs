@@ -371,6 +371,7 @@ fn resolve_verneed(
 /// Find undefined dynamic symbols in an ELF binary.
 ///
 /// Will also resolve the filename and symbol version, if available.
+#[allow(clippy::cast_ptr_alignment)]
 pub fn find_undefined_elf_symbols(buffer: &[u8], elf: &goblin::elf::Elf) -> Vec<UndefinedSymbol> {
     let mut verneed_entries: Vec<(Elf64_Verneed, Vec<Elf64_Vernaux>)> = Vec::new();
     let mut versym: Vec<u16> = Vec::new();
