@@ -403,7 +403,7 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
         }
     };
 
-    for line in metadata_data.split("\n") {
+    for line in metadata_data.split('\n') {
         if line.starts_with("cargo:rerun-if-changed=") {
             let path = PathBuf::from(&line[23..line.len()]);
 
