@@ -69,6 +69,7 @@ struct PythonJsonMain {
     build_info: PythonBuildInfo,
     licenses: Option<Vec<String>>,
     license_path: Option<String>,
+    tcl_library_path: Option<String>,
 }
 
 fn parse_python_json(path: &Path) -> PythonJsonMain {
@@ -233,6 +234,9 @@ pub struct PythonDistributionInfo {
 
     /// Path to file holding license text for this distribution.
     pub license_path: Option<PathBuf>,
+
+    /// Path to Tcl library files.
+    pub tcl_library_path: Option<PathBuf>,
 
     /// Object files providing the core Python implementation.
     ///
@@ -517,6 +521,10 @@ pub fn analyze_python_distribution_data(
         stdlib_path,
         licenses: pi.licenses.clone(),
         license_path: match pi.license_path {
+            Some(ref path) => Some(PathBuf::from(path)),
+            None => None,
+        },
+        tcl_library_path: match pi.tcl_library_path {
             Some(ref path) => Some(PathBuf::from(path)),
             None => None,
         },
