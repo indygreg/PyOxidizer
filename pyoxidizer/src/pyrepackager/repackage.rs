@@ -934,7 +934,7 @@ pub fn resolve_python_resources(
 
     let derived_package_names = packages_from_module_names(all_embedded_modules.iter().cloned());
 
-    let mut all_embedded_package_names = BTreeSet::from(annotated_package_names);
+    let mut all_embedded_package_names = annotated_package_names.clone();
     for package in derived_package_names {
         if !all_embedded_package_names.contains(&package) {
             warn!(
