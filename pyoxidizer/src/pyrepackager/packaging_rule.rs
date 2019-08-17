@@ -398,7 +398,7 @@ fn resolve_built_extensions(
                 object_file_data,
                 is_package: final_name == "__init__",
                 libraries: info.libraries,
-                library_dirs: info.library_dirs.iter().map(|p| PathBuf::from(p)).collect(),
+                library_dirs: info.library_dirs.iter().map(PathBuf::from).collect(),
             }),
         });
     }
