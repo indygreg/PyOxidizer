@@ -41,7 +41,7 @@ pub fn produce_tarball(
 
         let path = entry.path();
 
-        if path == &context.app_path {
+        if path == context.app_path {
             continue;
         }
 
