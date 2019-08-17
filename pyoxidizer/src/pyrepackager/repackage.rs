@@ -434,6 +434,7 @@ struct BytecodeRequest {
 }
 
 /// Resolves a series of packaging rules to a final set of resources to package.
+#[allow(clippy::cognitive_complexity)]
 pub fn resolve_python_resources(
     logger: &slog::Logger,
     context: &BuildContext,
@@ -1175,6 +1176,7 @@ pub struct LibpythonInfo {
 /// Create a static libpython from a Python distribution.
 ///
 /// Returns a vector of cargo: lines that can be printed in build scripts.
+#[allow(clippy::cognitive_complexity)]
 pub fn link_libpython(
     logger: &slog::Logger,
     dist: &PythonDistributionInfo,
