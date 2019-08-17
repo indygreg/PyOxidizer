@@ -30,6 +30,7 @@ jobs:
 
   - script: rustup component add clippy
     displayName: Install Clippy
+    condition: ne( variables['rustup_toolchain'], 'nightly' )
 
   - script: |
         rustc -Vv
@@ -44,6 +45,7 @@ jobs:
 
   - script: cargo clippy -p pyoxidizer -- --allow clippy::cast_ptr_alignment
     displayName: Clippy
+    condition: ne( variables['rustup_toolchain'], 'nightly' )
 
   - ${{ if ne(parameters.name, 'Windows') }}:
     - script: |
