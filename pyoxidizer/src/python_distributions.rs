@@ -17,33 +17,51 @@ lazy_static! {
     pub static ref CPYTHON_BY_TRIPLE: BTreeMap<&'static str, HostedDistribution> = {
         let mut res: BTreeMap<&'static str, HostedDistribution> = BTreeMap::new();
 
-        res.insert("x86_64-unknown-linux-gnu", HostedDistribution {
-            url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190713/cpython-3.7.4-linux64-20190713T1809.tar.zst"),
-            sha256: String::from("82c27953c8835d1e24fe48f810bfed6cb6f19a234a463802a29ca2a1b56251e8"),
-        });
+        res.insert(
+            "x86_64-unknown-linux-gnu",
+            HostedDistribution {
+                url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190816/cpython-3.7.4-linux64-20190817T0224.tar.zst"),
+                sha256: String::from(
+                    "1d3b5dc07ee2ddbb5e07bb3f737f368ea0ada088801e1e47d1f12f29cea6a851",
+                ),
+            },
+        );
 
-        res.insert("x86_64-unknown-linux-musl", HostedDistribution {
-            url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190713/cpython-3.7.4-linux64-musl-20190713T1814.tar.zst"),
-            sha256: String::from("0a01a332743f26580772dbcdddf3ff1f65d014a30a68797835cbde9c7b223fee"),
-        });
+        res.insert(
+            "x86_64-unknown-linux-musl",
+            HostedDistribution {
+                url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190816/cpython-3.7.4-linux64-musl-20190817T0227.tar.zst"),
+                sha256: String::from(
+                    "1b20b339fa38aa93b47f754c612fd544a4b82949b51a20b0523430b3abf1d156",
+                ),
+            },
+        );
 
-        res.insert("i686-pc-windows-msvc", HostedDistribution {
-            url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190713/cpython-3.7.4-windows-x86-20190713T1826.tar.zst"),
-            sha256: String::from("5b9cdfb4fe33837fd77810b13a9f91f3a936422faabe7adc96dd9409eb803ccb")
-        });
+        res.insert(
+            "i686-pc-windows-msvc",
+            HostedDistribution {
+                url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190816/cpython-3.7.4-windows-x86-20190817T0235.tar.zst"),
+                sha256: String::from("46c77de57c5ebbcc8c25e1003a77ca827763da01455b097f4e5fc0b782526c9b"),
+            },
+        );
 
         res.insert(
             "x86_64-pc-windows-msvc",
             HostedDistribution {
-                url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190713/cpython-3.7.4-windows-amd64-20190710T0203.tar.zst"),
-                sha256: String::from("9d7ced27af3de1e16188f2abb03a368beb7beab9a86b29cbdde1a06ae21d957d"),
+                url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190816/cpython-3.7.4-windows-amd64-20190817T0227.tar.zst"),
+                sha256: String::from("82ae15f31178c9854bacb5d59e00305c6f6080649c9960a29be6b92517b8e5e5"),
             },
         );
 
-        res.insert("x86_64-apple-darwin", HostedDistribution {
-            url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190713/cpython-3.7.4-macos-20190710T0233.tar.zst"),
-            sha256: String::from("eec0e971881236baf751588b3d7ae3529c2abee28912427fe08bb50bc69c2890"),
-        });
+        res.insert(
+            "x86_64-apple-darwin",
+            HostedDistribution {
+                url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20190816/cpython-3.7.4-macos-20190817T0220.tar.zst"),
+                sha256: String::from(
+                    "4a77d5ca898196bbc977eb126d129340bab14fb6a8feaaa335675613852071de",
+                ),
+            },
+        );
 
         res
     };
