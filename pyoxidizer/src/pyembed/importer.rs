@@ -216,7 +216,7 @@ impl PythonResourcesData {
         }
 
         let mut name_offset = reader.position() as usize;
-        let data_offset = name_offset + total_names_length;
+        let mut data_offset = name_offset + total_names_length;
         let mut res = HashMap::new();
 
         for (package_name_length, package_index) in index {
@@ -238,6 +238,8 @@ impl PythonResourcesData {
                 name_offset += resource_name_length;
 
                 let resource_data = &data[data_offset..data_offset + resource_data_length];
+
+                data_offset += resource_data_length;
 
                 package_data.insert(resource_name, resource_data);
             }
