@@ -24,13 +24,23 @@ new tool, see
 PyInstaller
 ===========
 
-`PyInstaller <https://www.pyinstaller.org/>`_ - like ``PyOxidizer`` - can
-produce a self-contained executable file containing your application.
-However, at run-time, PyInstaller will extract Python source/bytecode
-files to a temporary directory then import modules from the filesystem.
+`PyInstaller <https://www.pyinstaller.org/>`_ is a tool to convert regular
+python scripts to "standalone" executables. The standard packaging produces
+a tiny executable and a custom directory structure to host dynamic libraries
+and Python code (zipped compiled bytecode).
+``PyInstaller`` can produce a self-contained executable file containing your
+application, however, at run-time, PyInstaller will extract binary
+files and a custom _`ZlibArchive <https://pyinstaller.readthedocs.io/en/latest/advanced-topics.html#zlibarchive>`_
+to a temporary directory then import modules from the filesystem.
 ``PyOxidizer`` typically skips this step and loads modules directly from
 memory using zero-copy. This makes ``PyOxidizer`` executables significantly
 faster to start.
+
+Currently a big difference is that ``PyOxidizer`` needs to build all the binary
+dependecies from stratch to facilitate linking into single file,
+``PyInstaller`` can work with normal Python packages with a complex system of
+hooks to find the runtime dependencies, this allow a lot of not easy to build
+packages like PyQt to work out of the box.
 
 .. _compare_py2exe:
 
