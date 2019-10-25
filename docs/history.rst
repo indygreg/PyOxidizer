@@ -23,6 +23,11 @@ next
 
 Not yet released.
 
+Bug Fixes
+^^^^^^^^^
+
+* In-memory ``ResourceReader`` now properly handles multiple resources (#128).
+
 0.3.0
 -----
 
