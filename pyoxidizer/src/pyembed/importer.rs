@@ -395,7 +395,11 @@ py_class!(class PyOxidizerFinder |py| {
             if let KnownModuleFlavor::InMemory { module_data } = flavor {
                 match module_data.get_source_memory_view(py) {
                     Some(value) => {
-                        self.decode_source(py).call(py, (value,), None)
+                        // decode_source (from importlib._bootstrap_external)
+                        // can't handle memoryview. So we take the memory hit and
+                        // cast to bytes.
+                        let b = value.call_method(py, "tobytes", NoArgs, None)?;
+                        self.decode_source(py).call(py, (b,), None)
                     },
                     None => {
                         Err(PyErr::new::<ImportError, _>(py, ("source not available", fullname)))

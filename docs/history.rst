@@ -26,6 +26,8 @@ Not yet released.
 Bug Fixes
 ^^^^^^^^^
 
+* In-memory ``InspectLoader.get_source()`` implementation no longer errors
+  due to passing a ``memoryview`` to a function that can't handle it (#134).
 * In-memory ``ResourceReader`` now properly handles multiple resources (#128).
 
 0.3.0
