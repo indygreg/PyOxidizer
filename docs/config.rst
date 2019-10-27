@@ -839,6 +839,14 @@ resources will be collected and packaged.
 
    Typically inline table syntax is used. e.g. ``extra_env = { FOO = "bar" }``.
 
+``extra_global_arguments`` (array of string)
+
+   Extra arguments to pass to ``setup.py`` before the ``install`` command.
+
+   Some ``setup.py`` scripts accept global arguments to control how the
+   distribution is installed. This option can be defined to specify additional
+   process arguments to the ``setup.py`` command.
+
 ``optimize_level`` (int)
 
    The module optimization level for packaged bytecode.

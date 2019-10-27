@@ -99,6 +99,11 @@ fn EMPTY_MAP() -> HashMap<String, String> {
     HashMap::new()
 }
 
+#[allow(non_snake_case)]
+fn EMPTY_STRING_ARRAY() -> Vec<String> {
+    Vec::new()
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type")]
 enum ConfigPythonPackaging {
@@ -109,6 +114,8 @@ enum ConfigPythonPackaging {
         package_path: String,
         #[serde(default = "EMPTY_MAP")]
         extra_env: HashMap<String, String>,
+        #[serde(default = "EMPTY_STRING_ARRAY")]
+        extra_global_arguments: Vec<String>,
         #[serde(default = "ZERO")]
         optimize_level: i64,
         #[serde(default = "TRUE")]
@@ -329,6 +336,7 @@ pub enum InstallLocation {
 pub struct PackagingSetupPyInstall {
     pub path: String,
     pub extra_env: HashMap<String, String>,
+    pub extra_global_arguments: Vec<String>,
     pub optimize_level: i64,
     pub include_source: bool,
     pub install_location: InstallLocation,
@@ -796,6 +804,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 build_target: rule_target,
                 package_path,
                 extra_env,
+                extra_global_arguments,
                 optimize_level,
                 include_source,
                 install_location,
@@ -805,6 +814,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                         PackagingSetupPyInstall {
                             path: package_path.clone(),
                             extra_env: extra_env.clone(),
+                            extra_global_arguments: extra_global_arguments.clone(),
                             optimize_level: *optimize_level,
                             include_source: *include_source,
                             install_location: resolve_install_location(&install_location)?,

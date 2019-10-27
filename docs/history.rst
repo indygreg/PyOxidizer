@@ -42,6 +42,9 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* The ``setup-py-install`` packaging rule now has an ``extra_global_arguments``
+  option to allow passing additional command line arguments to the ``setup.py``
+  invocation.
 * Packaging rules that invoke ``pip`` or ``setup.py`` will now set a
   ``PYOXIDIZER=1`` environment variable so Python code knows at packaging
   time whether it is running in the context of PyOxidizer.

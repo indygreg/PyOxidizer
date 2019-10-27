@@ -1036,6 +1036,10 @@ fn resolve_setup_py_install(
 
     let mut args = vec!["setup.py"];
 
+    for arg in &rule.extra_global_arguments {
+        args.push(arg);
+    }
+
     if verbose {
         args.push("--verbose");
     }
