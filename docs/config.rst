@@ -830,6 +830,15 @@ resources will be collected and packaged.
    The ``setup.py`` invocation will run with its current working directory set
    to this path.
 
+``extra_env`` (table)
+
+   Extra environment variables to pass to the ``setup.py`` invocation.
+
+   Some ``setup.py`` scripts accept environment variables to customize execution
+   behavior. This option can be defined to pass those along to the invocation.
+
+   Typically inline table syntax is used. e.g. ``extra_env = { FOO = "bar" }``.
+
 ``optimize_level`` (int)
 
    The module optimization level for packaged bytecode.

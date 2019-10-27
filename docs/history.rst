@@ -42,6 +42,8 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* The ``setup-py-install`` packaging rule now has an ``extra_env`` option to
+  allow passing additional environment variables to ``setup.py`` invocations.
 * ``[[embedded_python_config]]`` now supports a ``sys_frozen`` flag to control
   setting ``sys.frozen = True``.
 * ``[[embedded_python_config]]`` now supports a ``sys_meipass`` flag to control

@@ -1019,13 +1019,17 @@ fn resolve_setup_py_install(
     std::fs::create_dir_all(&python_paths.site_packages)
         .expect("unable to create site-packages directory");
 
-    let extra_envs = prepare_hacked_distutils(
+    let mut extra_envs = prepare_hacked_distutils(
         logger,
         dist,
         temp_dir.path(),
         &[&python_paths.site_packages, &python_paths.main],
     )
     .expect("unable to hack distutils");
+
+    for (key, value) in rule.extra_env.iter() {
+        extra_envs.insert(key.clone(), value.clone());
+    }
 
     warn!(logger, "python setup.py installing to {}", target_dir_s);
 
