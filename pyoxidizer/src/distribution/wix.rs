@@ -10,7 +10,7 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 
 use super::super::pyrepackager::config::DistributionWixInstaller;
-use super::super::pyrepackager::repackage::BuildContext;
+use super::super::pyrepackager::state::BuildContext;
 use handlebars::Handlebars;
 
 const TOOLSET_URL: &str =

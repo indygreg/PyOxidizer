@@ -24,8 +24,9 @@ use super::pyrepackager::config::RawAllocator;
 use super::pyrepackager::dist::{analyze_python_distribution_tar_zst, python_exe_path};
 use super::pyrepackager::fsscan::walk_tree_files;
 use super::pyrepackager::repackage::{
-    find_pyoxidizer_config_file_env, package_project, process_config, run_from_build, BuildContext,
+    find_pyoxidizer_config_file_env, package_project, process_config, run_from_build,
 };
+use super::pyrepackager::state::BuildContext;
 use super::python_distributions::CPYTHON_BY_TRIPLE;
 
 lazy_static! {

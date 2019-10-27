@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use super::pyrepackager::config::Distribution;
-use super::pyrepackager::repackage::BuildContext;
+use super::pyrepackager::state::BuildContext;
 
 pub mod tarball;
 pub mod wix;

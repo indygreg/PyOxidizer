@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use super::super::pyrepackager::config::DistributionTarball;
-use super::super::pyrepackager::repackage::BuildContext;
+use super::super::pyrepackager::state::BuildContext;
 use slog::warn;
 use std::path::PathBuf;
 use tar;
