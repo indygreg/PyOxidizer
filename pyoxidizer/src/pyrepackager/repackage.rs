@@ -25,6 +25,8 @@ use super::dist::{
 };
 use super::packaging_rule::{
     packages_from_module_name, packages_from_module_names, resolve_python_packaging,
+};
+use super::resource::{
     AppRelativeResources, BuiltExtensionModule, PackagedModuleBytecode, PackagedModuleSource,
     PythonResource, ResourceAction, ResourceLocation,
 };

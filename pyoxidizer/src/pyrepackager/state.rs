@@ -4,7 +4,7 @@
 
 use super::config::Config;
 use super::dist::LicenseInfo;
-use super::packaging_rule::AppRelativeResources;
+use super::resource::AppRelativeResources;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
