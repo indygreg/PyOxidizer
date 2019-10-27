@@ -14,6 +14,7 @@ use super::resource::{
     AppRelativeResources, BuiltExtensionModule, PythonResource, PythonResourceAction,
     ResourceAction, ResourceLocation,
 };
+use super::state::BuildContext;
 use lazy_static::lazy_static;
 use serde::Deserialize;
 use slog::{info, warn};
@@ -1112,6 +1113,7 @@ fn resolve_setup_py_install(
 /// Resolves a Python packaging rule to resources to package.
 pub fn resolve_python_packaging(
     logger: &slog::Logger,
+    _context: &BuildContext,
     package: &PythonPackaging,
     dist: &PythonDistributionInfo,
     verbose: bool,
