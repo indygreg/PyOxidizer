@@ -641,11 +641,10 @@ pub fn resolve_python_resources(
                         logger,
                         "adding app-relative built extension module {} to {}", em.name, path
                     );
-                    // TODO implement
                     warn!(
                         logger,
-                        "WARNING: app-relative built extension modules not yet supported"
-                    );
+                        "WARNING: incomplete support for app-relative built extension modules: adding a built-in");
+                    embedded_built_extension_modules.insert(em.name.clone(), em.clone());
                 }
                 (
                     ResourceAction::Remove,

@@ -64,6 +64,12 @@ New Features
 * Default Python distribution upgraded to 3.7.5 (from 3.7.4). Various
   dependency packages also upgraded to latest versions.
 
+All Other Relevant Changes
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* Built extension modules marked as app-relative are now embedded in the
+  finaly binary rather than being ignored.
+
 0.3.0
 -----
 
