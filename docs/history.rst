@@ -30,6 +30,12 @@ Bug Fixes
   due to passing a ``memoryview`` to a function that can't handle it (#134).
 * In-memory ``ResourceReader`` now properly handles multiple resources (#128).
 
+New Features
+^^^^^^^^^^^^
+
+* Default Python distribution upgraded to 3.7.5 (from 3.7.4). Various
+  dependency packages also upgraded to latest versions.
+
 0.3.0
 -----
 
