@@ -14,7 +14,7 @@ use std::fs::create_dir_all;
 use std::io::{BufRead, BufReader, Cursor, Error as IOError, Read, Write};
 use std::path::{Path, PathBuf};
 
-use super::bytecode::BytecodeCompiler;
+use super::bytecode::{BytecodeCompiler, CompileMode};
 use super::config::{
     parse_config_file, Config, PythonDistribution, PythonPackaging, RawAllocator, RunMode,
     TerminfoResolution,
@@ -832,7 +832,12 @@ pub fn resolve_python_resources(
         let mut compiler = bytecode_compiler(&dist);
 
         for (name, request) in embedded_bytecode_requests {
-            let bytecode = match compiler.compile(&request.source, &name, request.optimize_level) {
+            let bytecode = match compiler.compile(
+                &request.source,
+                &name,
+                request.optimize_level,
+                CompileMode::Bytecode,
+            ) {
                 Ok(res) => res,
                 Err(msg) => panic!("error compiling bytecode for {}: {}", name, msg),
             };
@@ -847,7 +852,41 @@ pub fn resolve_python_resources(
         }
     }
 
-    // TODO compile app-relative bytecode too.
+    // Compile app-relative bytecode requests.
+    {
+        let mut compiler = bytecode_compiler(&dist);
+
+        for (path, requests) in app_relative_bytecode_requests {
+            if !app_relative.contains_key(&path) {
+                app_relative.insert(path.clone(), AppRelativeResources::default());
+            }
+
+            let app_relative = app_relative.get_mut(&path).unwrap();
+
+            for (name, request) in requests {
+                let bytecode = match compiler.compile(
+                    &request.source,
+                    &name,
+                    request.optimize_level,
+                    // Bytecode in app-relative directories should never be mutated. So we
+                    // shouldn't need to verify its hash at run-time.
+                    // TODO consider making this configurable.
+                    CompileMode::PycUncheckedHash,
+                ) {
+                    Ok(res) => res,
+                    Err(msg) => panic!("error compiling bytecode for {}: {}", name, msg),
+                };
+
+                app_relative.module_bytecodes.insert(
+                    name.clone(),
+                    PackagedModuleBytecode {
+                        bytecode,
+                        is_package: request.is_package,
+                    },
+                );
+            }
+        }
+    }
 
     let mut all_embedded_modules = BTreeSet::new();
     let mut annotated_package_names = BTreeSet::new();
@@ -946,7 +985,7 @@ pub fn derive_importlib(dist: &PythonDistributionInfo) -> ImportlibData {
     let bootstrap_source = fs::read(&mod_bootstrap_path).expect("unable to read bootstrap source");
     let module_name = "<frozen importlib._bootstrap>";
     let bootstrap_bytecode = compiler
-        .compile(&bootstrap_source, module_name, 0)
+        .compile(&bootstrap_source, module_name, 0, CompileMode::Bytecode)
         .expect("error compiling bytecode");
 
     let mut bootstrap_external_source =
@@ -955,7 +994,12 @@ pub fn derive_importlib(dist: &PythonDistributionInfo) -> ImportlibData {
     bootstrap_external_source.extend(PYTHON_IMPORTER);
     let module_name = "<frozen importlib._bootstrap_external>";
     let bootstrap_external_bytecode = compiler
-        .compile(&bootstrap_external_source, module_name, 0)
+        .compile(
+            &bootstrap_external_source,
+            module_name,
+            0,
+            CompileMode::Bytecode,
+        )
         .expect("error compiling bytecode");
 
     ImportlibData {
@@ -1567,7 +1611,6 @@ fn install_app_relative(
             .or_else(|_| Err(format!("failed to write {}", module_path.display())))?;
     }
 
-    // TODO implement.
     warn!(
         logger,
         "resolved {} app-relative Python bytecode modules in {}: {:#?}",
@@ -1575,6 +1618,53 @@ fn install_app_relative(
         path,
         app_relative.module_bytecodes.keys()
     );
+
+    for (module_name, module_bytecode) in &app_relative.module_bytecodes {
+        // foo.bar -> foo/bar
+        let mut module_path = dest_path.clone();
+
+        // .pyc files go into a __pycache__ directory next to the package.
+
+        // __init__ is special.
+        if packages.contains(module_name) {
+            module_path.extend(module_name.split('.'));
+            module_path.push("__pycache__");
+            module_path.push("__init__");
+        } else if module_name.contains('.') {
+            let parts: Vec<&str> = module_name.split('.').collect();
+
+            module_path.extend(parts[0..parts.len() - 1].to_vec());
+            module_path.push("__pycache__");
+            module_path.push(parts[parts.len() - 1].to_string());
+        } else {
+            module_path.push("__pycache__");
+            module_path.push(module_name);
+        }
+
+        module_path.set_file_name(format!(
+            // TODO determine string from Python distribution in use.
+            "{}.cpython-37.pyc",
+            module_path.file_name().unwrap().to_string_lossy()
+        ));
+
+        warn!(
+            logger,
+            "installing Python module bytecode {} to {}",
+            module_name,
+            module_path.display()
+        );
+
+        let parent_dir = module_path.parent().unwrap();
+        create_dir_all(&parent_dir).or_else(|_| {
+            Err(format!(
+                "failed to create directory {}",
+                parent_dir.display()
+            ))
+        })?;
+
+        fs::write(&module_path, &module_bytecode.bytecode)
+            .or_else(|_| Err(format!("failed to write {}", module_path.display())))?;
+    }
 
     let mut resource_count = 0;
     let mut resource_map = BTreeMap::new();

@@ -15,6 +15,16 @@ pub struct BytecodeCompiler {
     command: process::Child,
 }
 
+/// Output mode for BytecodeCompiler.
+pub enum CompileMode {
+    /// Emit just Python bytecode.
+    Bytecode,
+    /// Emit .pyc header with hash verification.
+    PycCheckedHash,
+    /// Emit .pyc header with no hash verification.
+    PycUncheckedHash,
+}
+
 impl BytecodeCompiler {
     pub fn new(python: &Path) -> BytecodeCompiler {
         let temp_dir =
@@ -42,14 +52,12 @@ impl BytecodeCompiler {
     }
 
     /// Compile Python source into bytecode with an optimization level.
-    ///
-    /// This is very similar to converting a .py file into a .pyc file, but without
-    /// the metadata in the header of the .pyc file.
     pub fn compile(
         self: &mut BytecodeCompiler,
         source: &[u8],
         filename: &str,
         optimize: i32,
+        output_mode: CompileMode,
     ) -> Result<Vec<u8>, std::io::Error> {
         let stdin = self.command.stdin.as_mut().expect("failed to get stdin");
         let stdout = self.command.stdout.as_mut().expect("failed to get stdout");
@@ -62,6 +70,12 @@ impl BytecodeCompiler {
         stdin.write_all(source.len().to_string().as_bytes())?;
         stdin.write_all(b"\n")?;
         stdin.write_all(optimize.to_string().as_bytes())?;
+        stdin.write_all(b"\n")?;
+        stdin.write_all(match output_mode {
+            CompileMode::Bytecode => b"bytecode",
+            CompileMode::PycCheckedHash => b"pyc-checked-hash",
+            CompileMode::PycUncheckedHash => b"pyc-unchecked-hash",
+        })?;
         stdin.write_all(b"\n")?;
         stdin.write_all(filename.as_bytes())?;
         stdin.write_all(source)?;

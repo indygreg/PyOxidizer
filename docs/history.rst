@@ -47,6 +47,8 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* ``.py`` files installed into app-relative locations now have corresponding
+  ``.pyc`` bytecode files written.
 * The ``setup-py-install`` packaging rule now has an ``extra_global_arguments``
   option to allow passing additional command line arguments to the ``setup.py``
   invocation.
