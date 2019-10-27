@@ -226,6 +226,25 @@ behavior:
    Default is ``false`` (since PyOxidizer prefers embedding Python modules in
    binaries).
 
+``sys_frozen`` (bool)
+
+   Controls whether to set the ``sys.frozen`` attribute to ``True``. If
+   ``false``, ``sys.frozen`` is not set.
+
+   Default is ``false``.
+
+``sys_meipass`` (bool)
+
+   Controls whether to set the ``sys._MEIPASS`` attribute to the path of
+   the executable.
+
+   Setting this and ``sys_frozen`` to ``true`` will emulate the
+   `behavior of PyInstaller <https://pyinstaller.readthedocs.io/en/v3.3.1/runtime-information.html>`_
+   and could possibly help self-contained applications that are aware of
+   PyInstaller also work with PyOxidizer.
+
+   Default is ``false``.
+
 ``sys_paths`` (array of strings)
 
    Defines filesystem paths to be added to ``sys.path``.

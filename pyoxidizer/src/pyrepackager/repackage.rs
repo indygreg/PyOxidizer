@@ -1470,6 +1470,8 @@ pub fn derive_python_config(
          py_resources_data: include_bytes!(r#\"{}\"#),\n    \
          extra_extension_modules: vec![],\n    \
          argvb: false,\n    \
+         sys_frozen: {},\n    \
+         sys_meipass: {},\n    \
          raw_allocator: {},\n    \
          terminfo_resolution: {},\n    \
          write_modules_directory_env: {},\n    \
@@ -1500,6 +1502,8 @@ pub fn derive_python_config(
         importlib_bootstrap_external_path.display(),
         py_modules_path.display(),
         py_resources_path.display(),
+        config.sys_frozen,
+        config.sys_meipass,
         match config.raw_allocator {
             RawAllocator::Jemalloc => "PythonRawAllocator::Jemalloc",
             RawAllocator::Rust => "PythonRawAllocator::Rust",

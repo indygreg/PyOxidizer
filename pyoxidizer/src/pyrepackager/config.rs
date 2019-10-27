@@ -79,6 +79,8 @@ struct ConfigPython {
     stdio_encoding: Option<String>,
     unbuffered_stdio: Option<bool>,
     filesystem_importer: Option<bool>,
+    sys_frozen: Option<bool>,
+    sys_meipass: Option<bool>,
     sys_paths: Option<Vec<String>>,
     raw_allocator: Option<RawAllocator>,
     terminfo_resolution: Option<ConfigTerminfoResolution>,
@@ -471,6 +473,8 @@ pub struct Config {
     pub python_packaging: Vec<PythonPackaging>,
     pub run: RunMode,
     pub filesystem_importer: bool,
+    pub sys_frozen: bool,
+    pub sys_meipass: bool,
     pub sys_paths: Vec<String>,
     pub raw_allocator: RawAllocator,
     pub terminfo_resolution: TerminfoResolution,
@@ -593,6 +597,8 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
     let mut stdio_encoding_errors = None;
     let mut unbuffered_stdio = false;
     let mut filesystem_importer = false;
+    let mut sys_frozen = false;
+    let mut sys_meipass = false;
     let mut sys_paths = Vec::new();
     let mut raw_allocator = if target == "x86_64-pc-windows-msvc" {
         RawAllocator::System
@@ -649,6 +655,14 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
 
         if let Some(v) = python_config.filesystem_importer {
             filesystem_importer = v;
+        }
+
+        if let Some(v) = python_config.sys_frozen {
+            sys_frozen = v;
+        }
+
+        if let Some(v) = python_config.sys_meipass {
+            sys_meipass = v;
         }
 
         if let Some(ref v) = python_config.sys_paths {
@@ -1033,6 +1047,8 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
         python_packaging,
         run,
         filesystem_importer,
+        sys_frozen,
+        sys_meipass,
         sys_paths,
         raw_allocator,
         terminfo_resolution,

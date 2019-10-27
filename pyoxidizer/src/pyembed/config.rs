@@ -127,6 +127,18 @@ pub struct PythonConfig {
     /// values passed to `int main()`.
     pub argvb: bool,
 
+    /// Whether to set sys.frozen=True.
+    ///
+    /// Setting this will enable Python to emulate "frozen" binaries, such as
+    /// those used by PyInstaller.
+    pub sys_frozen: bool,
+
+    /// Whether to set sys._MEIPASS to the directory of the executable.
+    ///
+    /// Setting this will enable Python to emulate PyInstaller's behavior
+    /// of setting this attribute.
+    pub sys_meipass: bool,
+
     /// Which memory allocator to use for the raw domain.
     pub raw_allocator: PythonRawAllocator,
 

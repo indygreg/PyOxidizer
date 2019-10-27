@@ -35,6 +35,10 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* ``[[embedded_python_config]]`` now supports a ``sys_frozen`` flag to control
+  setting ``sys.frozen = True``.
+* ``[[embedded_python_config]]`` now supports a ``sys_meipass`` flag to control
+  setting ``sys._MEIPASS = <exe directory>``.
 * Default Python distribution upgraded to 3.7.5 (from 3.7.4). Various
   dependency packages also upgraded to latest versions.
 

@@ -15,7 +15,9 @@ raw_allocator = "jemalloc"
 # optimize_level = 0
 # stdio_encoding = "utf-8:strict"
 # unbuffered_stdio = false
-#write_modules_directory_env = "PYOXIDIZER_WRITE_MODULES_DIR"
+# write_modules_directory_env = "PYOXIDIZER_WRITE_MODULES_DIR"
+# sys_frozen = false
+# sys_meipass = false
 
 # Windows doesn't support jemalloc.
 [[embedded_python_config]]

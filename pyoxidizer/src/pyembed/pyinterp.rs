@@ -17,7 +17,7 @@ use std::ptr::null;
 use cpython::exc::ValueError;
 use cpython::{
     GILGuard, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule, PyObject, PyResult,
-    Python, PythonObject, ToPyObject,
+    PyString, Python, PythonObject, ToPyObject,
 };
 
 use super::config::{PythonConfig, PythonRawAllocator, PythonRunMode, TerminfoResolution};
@@ -429,6 +429,29 @@ impl<'a> MainPythonInterpreter<'a> {
         match res {
             0 => (),
             _ => return Err("unable to set sys.oxidized"),
+        }
+
+        if config.sys_frozen {
+            let frozen = b"frozen\0";
+
+            match py.True().with_borrowed_ptr(py, |py_true| unsafe {
+                pyffi::PySys_SetObject(frozen.as_ptr() as *const i8, py_true)
+            }) {
+                0 => (),
+                _ => return Err("unable to set sys.frozen"),
+            }
+        }
+
+        if config.sys_meipass {
+            let meipass = b"_MEIPASS\0";
+            let value = PyString::new(py, &origin);
+
+            match value.with_borrowed_ptr(py, |py_value| unsafe {
+                pyffi::PySys_SetObject(meipass.as_ptr() as *const i8, py_value)
+            }) {
+                0 => (),
+                _ => return Err("unable to set sys._MEIPASS"),
+            }
         }
 
         Ok(py)
