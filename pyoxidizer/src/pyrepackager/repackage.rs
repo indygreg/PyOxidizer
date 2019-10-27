@@ -1898,16 +1898,16 @@ pub fn process_config(
 
     warn!(
         logger,
-        "resolved {} embedded Python source modules: {:#?}",
+        "resolved {} embedded Python source modules",
         resources.embedded.module_sources.len(),
-        resources.embedded.module_sources.keys()
     );
+    info!(logger, "{:#?}", resources.embedded.module_sources.keys());
     warn!(
         logger,
-        "resolved {} embedded Python bytecode modules: {:#?}",
+        "resolved {} embedded Python bytecode modules",
         resources.embedded.module_bytecodes.len(),
-        resources.embedded.module_bytecodes.keys()
     );
+    info!(logger, "{:#?}", resources.embedded.module_bytecodes.keys());
     warn!(
         logger,
         "resolved {} unique embedded Python modules",
@@ -1926,19 +1926,19 @@ pub fn process_config(
 
     warn!(
         logger,
-        "resolved {} embedded resource files across {} packages: {:#?}",
+        "resolved {} embedded resource files across {} packages",
         resource_count,
         resources.embedded.resources.len(),
-        resource_map
     );
+    info!(logger, "{:#?}", resource_map);
 
     let all_extension_modules = resources.embedded.embedded_extension_module_names();
     warn!(
         logger,
-        "resolved {} embedded extension modules: {:#?}",
-        all_extension_modules.len(),
-        all_extension_modules
+        "resolved {} embedded extension modules",
+        all_extension_modules.len()
     );
+    info!(logger, "{:#?}", all_extension_modules);
 
     // Produce the packed data structures containing Python modules.
     // TODO there is tons of room to customize this behavior, including
