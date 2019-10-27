@@ -1592,7 +1592,7 @@ fn install_app_relative(
             module_path.file_name().unwrap().to_string_lossy()
         ));
 
-        warn!(
+        info!(
             logger,
             "installing Python module {} to {}",
             module_name,
@@ -1613,10 +1613,9 @@ fn install_app_relative(
 
     warn!(
         logger,
-        "resolved {} app-relative Python bytecode modules in {}: {:#?}",
+        "resolved {} app-relative Python bytecode modules in {}",
         app_relative.module_bytecodes.len(),
         path,
-        app_relative.module_bytecodes.keys()
     );
 
     for (module_name, module_bytecode) in &app_relative.module_bytecodes {
@@ -1647,7 +1646,7 @@ fn install_app_relative(
             module_path.file_name().unwrap().to_string_lossy()
         ));
 
-        warn!(
+        info!(
             logger,
             "installing Python module bytecode {} to {}",
             module_name,
@@ -1677,19 +1676,26 @@ fn install_app_relative(
 
     warn!(
         logger,
-        "resolved {} app-relative resource files across {} packages: {:#?}",
+        "resolved {} app-relative resource files across {} packages",
         resource_count,
         app_relative.resources.len(),
-        resource_map
     );
 
     for (package, entries) in &app_relative.resources {
         let package_path = dest_path.join(package);
 
+        warn!(
+            logger,
+            "installing {} app-relative resource files to {}:{}",
+            entries.len(),
+            path,
+            package,
+        );
+
         for (name, data) in entries {
             let dest_path = package_path.join(name);
 
-            warn!(
+            info!(
                 logger,
                 "installing app-relative resource {}:{} to {}",
                 package,
