@@ -1310,6 +1310,18 @@ pub fn link_libpython(
         // TODO do something with library_dirs.
     }
 
+    // Windows requires dynamic linking against msvcrt. Ensure that happens.
+    // TODO this workaround feels like a bug in the Python distribution not
+    // advertising a dependency on the CRT linkage type. Consider adding this
+    // to the distribution metadata.
+    if match target {
+        "i686-pc-windows-msvc" => true,
+        "x86_64-pc-windows-msvc" => true,
+        _ => false,
+    } {
+        needed_system_libraries.insert("msvcrt");
+    }
+
     for library in needed_libraries.iter() {
         if OS_IGNORE_LIBRARIES.contains(&library) {
             continue;

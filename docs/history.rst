@@ -33,6 +33,11 @@ Backwards Compatibility Notes
 Bug Fixes
 ^^^^^^^^^
 
+* Windows now explicitly requires dynamic linking against ``msvcrt``.
+  Previously, this wasn't explicit. And sometimes linking the final
+  executable would result in unresolved symbol errors because the Windows
+  Python distributions used external linkage of CRT symbols and for some
+  reason Cargo wasn't dynamically linking the CRT.
 * Read-only files in Python distributions are now made writable to avoid
   future permissions errors (#123).
 * In-memory ``InspectLoader.get_source()`` implementation no longer errors
