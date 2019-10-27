@@ -42,6 +42,9 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* Packaging rules that invoke ``pip`` or ``setup.py`` will now set a
+  ``PYOXIDIZER=1`` environment variable so Python code knows at packaging
+  time whether it is running in the context of PyOxidizer.
 * The ``setup-py-install`` packaging rule now has an ``extra_env`` option to
   allow passing additional environment variables to ``setup.py`` invocations.
 * ``[[embedded_python_config]]`` now supports a ``sys_frozen`` flag to control

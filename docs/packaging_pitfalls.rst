@@ -261,10 +261,17 @@ it may be tracked.
 Identifying PyOxidizer
 ======================
 
-Python code may want to know whether it is running in PyOxidizer.
+Python code may want to know whether it is running in the context of
+PyOxidizer.
 
-PyOxidizer will always set a ``sys.oxidized`` attribute with value ``True``.
-So, Python code can test whether it is running in PyOxidizer like so::
+At packaging time, ``pip`` and ``setup.py`` invocations made by PyOxidizer
+should set a ``PYOXIDIZER=1`` environment variable. ``setup.py`` scripts,
+etc can look for this environment variable to determine if they are being
+packaged by PyOxidizer.
+
+At run-time, PyOxidizer will always set a ``sys.oxidized`` attribute with
+value ``True``. So, Python code can test whether it is running in PyOxidizer
+like so::
 
    import sys
 

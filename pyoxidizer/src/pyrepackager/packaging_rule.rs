@@ -241,6 +241,7 @@ pub fn prepare_hacked_distutils(
         "PYOXIDIZER_DISTUTILS_STATE_DIR".to_string(),
         state_dir.display().to_string(),
     );
+    res.insert("PYOXIDIZER".to_string(), "1".to_string());
 
     Ok(res)
 }
