@@ -989,11 +989,22 @@ fn resolve_pip_requirements_file(
 
 fn resolve_setup_py_install(
     logger: &slog::Logger,
+    context: &BuildContext,
     dist: &PythonDistributionInfo,
     rule: &PackagingSetupPyInstall,
     verbose: bool,
 ) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
+
+    // Execution directory is resolved relative to the active configuration
+    // file unless it is absolute.
+    let rule_path = PathBuf::from(&rule.path);
+
+    let cwd = if rule_path.is_absolute() {
+        rule_path.to_path_buf()
+    } else {
+        context.config_parent_path.join(&rule.path)
+    };
 
     let location = ResourceLocation::new(&rule.install_location);
 
@@ -1028,7 +1039,7 @@ fn resolve_setup_py_install(
 
     // TODO send stderr to stdout.
     let mut cmd = std::process::Command::new(&dist.python_exe)
-        .current_dir(&rule.path)
+        .current_dir(cwd)
         .args(&args)
         .envs(&extra_envs)
         .stdout(std::process::Stdio::piped())
@@ -1113,7 +1124,7 @@ fn resolve_setup_py_install(
 /// Resolves a Python packaging rule to resources to package.
 pub fn resolve_python_packaging(
     logger: &slog::Logger,
-    _context: &BuildContext,
+    context: &BuildContext,
     package: &PythonPackaging,
     dist: &PythonDistributionInfo,
     verbose: bool,
@@ -1150,7 +1161,7 @@ pub fn resolve_python_packaging(
         }
 
         PythonPackaging::SetupPyInstall(rule) => {
-            resolve_setup_py_install(logger, dist, &rule, verbose)
+            resolve_setup_py_install(logger, context, dist, &rule, verbose)
         }
 
         PythonPackaging::WriteLicenseFiles(_) => Vec::new(),

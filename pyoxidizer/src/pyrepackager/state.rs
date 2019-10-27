@@ -28,6 +28,9 @@ pub struct BuildContext {
     /// Path to PyOxidizer configuration file.
     pub config_path: PathBuf,
 
+    /// Path to directory containing PyOxidizer configuration file.
+    pub config_parent_path: PathBuf,
+
     /// Parsed PyOxidizer configuration file.
     pub config: Config,
 

@@ -23,6 +23,13 @@ next
 
 Not yet released.
 
+Backwards Compatibility Notes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* The ``setup-py-install`` packaging rule now has its ``package_path``
+  evaluated relative to the PyOxidizer config file path rather than the
+  current working directory.
+
 Bug Fixes
 ^^^^^^^^^
 

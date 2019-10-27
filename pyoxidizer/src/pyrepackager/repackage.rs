@@ -92,6 +92,10 @@ impl BuildContext {
         force_artifacts_path: Option<&Path>,
         verbose: bool,
     ) -> Result<Self, String> {
+        let config_parent_path = config_path
+            .parent()
+            .ok_or("could not resolve parent path of config".to_string())?;
+
         let host_triple = if let Some(v) = host {
             v.to_string()
         } else {
@@ -164,6 +168,7 @@ impl BuildContext {
         Ok(BuildContext {
             project_path: project_path.to_path_buf(),
             config_path: config_path.to_path_buf(),
+            config_parent_path: config_parent_path.to_path_buf(),
             config,
             cargo_config,
             verbose,

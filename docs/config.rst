@@ -824,6 +824,12 @@ resources will be collected and packaged.
 
    Local filesystem to the directory containing a ``setup.py`` file.
 
+   Can be a relative or absolute path. If relative, it is evaluated relative
+   to the PyOxidizer configuration file.
+
+   The ``setup.py`` invocation will run with its current working directory set
+   to this path.
+
 ``optimize_level`` (int)
 
    The module optimization level for packaged bytecode.
