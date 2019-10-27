@@ -335,9 +335,7 @@ pub fn python_exe_path(dist_dir: &Path) -> PathBuf {
 /// Passing in a data structure with raw file data within is inefficient. But
 /// it makes things easier to implement and allows us to do things like consume
 /// tarballs without filesystem I/O.
-pub fn analyze_python_distribution_data(
-    dist_dir: &Path,
-) -> Result<PythonDistributionInfo, &'static str> {
+pub fn analyze_python_distribution_data(dist_dir: &Path) -> Result<PythonDistributionInfo, String> {
     let mut objs_core: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
     let mut links_core: Vec<LibraryDepends> = Vec::new();
     let mut extension_modules: BTreeMap<String, Vec<ExtensionModule>> = BTreeMap::new();
@@ -545,7 +543,7 @@ pub fn analyze_python_distribution_data(
 pub fn analyze_python_distribution_tar<R: Read>(
     source: R,
     extract_dir: &Path,
-) -> Result<PythonDistributionInfo, &'static str> {
+) -> Result<PythonDistributionInfo, String> {
     let mut tf = tar::Archive::new(source);
 
     // The content of the distribution could change between runs. But caching
@@ -553,9 +551,33 @@ pub fn analyze_python_distribution_tar<R: Read>(
     let test_path = extract_dir.join("python").join("PYTHON.json");
     if !test_path.exists() {
         std::fs::create_dir_all(extract_dir).or_else(|_| Err("unable to create directory"))?;
-        let absolute_path = std::fs::canonicalize(extract_dir);
-        tf.unpack(&absolute_path.unwrap())
+        let absolute_path = std::fs::canonicalize(extract_dir).unwrap();
+        tf.unpack(&absolute_path)
             .expect("unable to extract tar archive");
+
+        // Ensure unpacked files are writable. We've had issues where we
+        // consume archives with read-only file permissions. When we later
+        // copy these files, we can run into trouble overwriting a read-only
+        // file.
+        let walk = walkdir::WalkDir::new(&absolute_path);
+        for entry in walk.into_iter() {
+            let entry = entry.expect("unable to get directory entry");
+
+            let metadata = entry
+                .metadata()
+                .or_else(|_| Err("unable to get path metadata"))?;
+            let mut permissions = metadata.permissions();
+
+            if permissions.readonly() {
+                permissions.set_readonly(false);
+                fs::set_permissions(entry.path(), permissions).or_else(|_| {
+                    Err(format!(
+                        "unable to mark {} as writable",
+                        entry.path().display()
+                    ))
+                })?;
+            }
+        }
     }
 
     analyze_python_distribution_data(extract_dir)
@@ -565,7 +587,7 @@ pub fn analyze_python_distribution_tar<R: Read>(
 pub fn analyze_python_distribution_tar_zst<R: Read>(
     source: R,
     extract_dir: &Path,
-) -> Result<PythonDistributionInfo, &'static str> {
+) -> Result<PythonDistributionInfo, String> {
     let dctx = zstd::stream::Decoder::new(source).unwrap();
 
     analyze_python_distribution_tar(dctx, extract_dir)

@@ -26,6 +26,8 @@ Not yet released.
 Bug Fixes
 ^^^^^^^^^
 
+* Read-only files in Python distributions are now made writable to avoid
+  future permissions errors (#123).
 * In-memory ``InspectLoader.get_source()`` implementation no longer errors
   due to passing a ``memoryview`` to a function that can't handle it (#134).
 * In-memory ``ResourceReader`` now properly handles multiple resources (#128).
