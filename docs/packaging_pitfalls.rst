@@ -257,3 +257,16 @@ If you run into an extension module packaging problem that isn't
 recorded here or on the :ref:`static page <status_extension_modules>`,
 please `file an issue <https://github.com/indygreg/PyOxidizer/issues>`_ so
 it may be tracked.
+
+Identifying PyOxidizer
+======================
+
+Python code may want to know whether it is running in PyOxidizer.
+
+PyOxidizer will always set a ``sys.oxidized`` attribute with value ``True``.
+So, Python code can test whether it is running in PyOxidizer like so::
+
+   import sys
+
+   if getattr(sys, 'oxidized', False):
+       print('running in PyOxidizer!')
