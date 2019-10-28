@@ -122,6 +122,8 @@ enum ConfigPythonPackaging {
         include_source: bool,
         #[serde(default = "EMBEDDED")]
         install_location: String,
+        #[serde(default)]
+        excludes: Vec<String>,
     },
 
     #[serde(rename = "stdlib-extensions-policy")]
@@ -340,6 +342,7 @@ pub struct PackagingSetupPyInstall {
     pub optimize_level: i64,
     pub include_source: bool,
     pub install_location: InstallLocation,
+    pub excludes: Vec<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -808,6 +811,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                 optimize_level,
                 include_source,
                 install_location,
+                excludes,
             } => {
                 if rule_target == "all" || rule_target == target {
                     Ok(Some(PythonPackaging::SetupPyInstall(
@@ -818,6 +822,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
                             optimize_level: *optimize_level,
                             include_source: *include_source,
                             install_location: resolve_install_location(&install_location)?,
+                            excludes: excludes.clone(),
                         },
                     )))
                 } else {

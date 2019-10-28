@@ -1071,6 +1071,21 @@ fn resolve_setup_py_install(
     let packages_path = python_paths.site_packages;
 
     for resource in find_python_resources(&packages_path) {
+        let mut relevant = true;
+        let full_name = resource_full_name(&resource);
+
+        for exclude in &rule.excludes {
+            let prefix = exclude.clone() + ".";
+
+            if full_name == exclude || full_name.starts_with(&prefix) {
+                relevant = false;
+            }
+        }
+
+        if !relevant {
+            continue;
+        }
+
         match resource {
             PythonFileResource::Source {
                 full_name, path, ..

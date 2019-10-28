@@ -47,6 +47,8 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* The ``setup-py-install`` packaging rule now has an ``excludes`` option
+  that allows ignoring specific packages or modules.
 * ``.py`` files installed into app-relative locations now have corresponding
   ``.pyc`` bytecode files written.
 * The ``setup-py-install`` packaging rule now has an ``extra_global_arguments``
