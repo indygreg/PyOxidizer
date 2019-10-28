@@ -18,10 +18,10 @@ Blog Posts
 Version History
 ===============
 
-next
-----
+0.4.0
+-----
 
-Not yet released.
+Released October 27, 2019.
 
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
