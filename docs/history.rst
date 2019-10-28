@@ -18,6 +18,11 @@ Blog Posts
 Version History
 ===============
 
+next
+----
+
+Not yet released.
+
 0.4.0
 -----
 
