@@ -100,6 +100,27 @@ pub fn run_cli() -> Result<(), String> {
                 .arg(Arg::with_name("path").help("Path to executable to analyze")),
         )
         .subcommand(
+            SubCommand::with_name("app-path")
+                .about("Print path to packaged application")
+                .arg(
+                    Arg::with_name("target")
+                        .long("target")
+                        .takes_value(true)
+                        .help("Target triple to resolve"),
+                )
+                .arg(
+                    Arg::with_name("release")
+                        .long("release")
+                        .help("Whether to release a release application"),
+                )
+                .arg(
+                    Arg::with_name("path")
+                        .default_value(".")
+                        .value_name("PATH")
+                        .help("Directory containing project to resolve"),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("run-build-script")
                 .setting(AppSettings::ArgRequiredElseHelp)
                 .about("Run functionality that a build script would perform")
@@ -283,6 +304,26 @@ pub fn run_cli() -> Result<(), String> {
             let path = args.value_of("path").unwrap();
             let path = PathBuf::from(path);
             analyze::analyze_file(path);
+
+            Ok(())
+        }
+
+        ("app-path", Some(args)) => {
+            let release = args.is_present("release");
+            let target = args.value_of("target");
+            let path = args.value_of("path").unwrap();
+
+            let context = projectmgmt::resolve_build_context(
+                &logger_context.logger,
+                path,
+                None,
+                target,
+                release,
+                None,
+                false,
+            )?;
+
+            println!("{}", context.app_path.display());
 
             Ok(())
         }

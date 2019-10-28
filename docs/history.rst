@@ -47,6 +47,10 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* Added an ``app-path`` command that prints the path to a packaged
+  application. This command can be useful for tools calling PyOxidizer,
+  as it will emit the path containing the packaged files without forcing
+  the caller to parse command output.
 * The ``setup-py-install`` packaging rule now has an ``excludes`` option
   that allows ignoring specific packages or modules.
 * ``.py`` files installed into app-relative locations now have corresponding
