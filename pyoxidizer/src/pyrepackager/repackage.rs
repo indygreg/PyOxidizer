@@ -1574,15 +1574,13 @@ fn install_app_relative(
         dest_path.display(),
     );
 
-    let packages = app_relative.package_names();
-
     for (module_name, module_source) in &app_relative.module_sources {
         // foo.bar -> foo/bar
         let mut module_path = dest_path.clone();
         module_path.extend(module_name.split('.'));
 
         // Packages need to get normalized to /__init__.py.
-        if packages.contains(module_name) {
+        if module_source.is_package {
             module_path.push("__init__");
         }
 
@@ -1624,7 +1622,7 @@ fn install_app_relative(
         // .pyc files go into a __pycache__ directory next to the package.
 
         // __init__ is special.
-        if packages.contains(module_name) {
+        if module_bytecode.is_package {
             module_path.extend(module_name.split('.'));
             module_path.push("__pycache__");
             module_path.push("__init__");
