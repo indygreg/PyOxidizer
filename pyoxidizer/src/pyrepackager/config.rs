@@ -322,7 +322,7 @@ pub struct BuildConfig {
     pub build_path: PathBuf,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum PythonDistribution {
     Local { local_path: String, sha256: String },
     Url { url: String, sha256: String },

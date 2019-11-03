@@ -14,11 +14,11 @@ pub struct HostedDistribution {
 }
 
 lazy_static! {
-    pub static ref CPYTHON_BY_TRIPLE: BTreeMap<&'static str, HostedDistribution> = {
-        let mut res: BTreeMap<&'static str, HostedDistribution> = BTreeMap::new();
+    pub static ref CPYTHON_BY_TRIPLE: BTreeMap<String, HostedDistribution> = {
+        let mut res: BTreeMap<String, HostedDistribution> = BTreeMap::new();
 
         res.insert(
-            "x86_64-unknown-linux-gnu",
+            "x86_64-unknown-linux-gnu".to_string(),
             HostedDistribution {
                 url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20191025/cpython-3.7.5-linux64-20191025T0506.tar.zst"),
                 sha256: String::from(
@@ -28,7 +28,7 @@ lazy_static! {
         );
 
         res.insert(
-            "x86_64-unknown-linux-musl",
+            "x86_64-unknown-linux-musl".to_string(),
             HostedDistribution {
                 url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20191025/cpython-3.7.5-linux64-musl-20191026T0603.tar.zst"),
                 sha256: String::from(
@@ -38,7 +38,7 @@ lazy_static! {
         );
 
         res.insert(
-            "i686-pc-windows-msvc",
+            "i686-pc-windows-msvc".to_string(),
             HostedDistribution {
                 url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20191025/cpython-3.7.5-windows-x86-20191025T0549.tar.zst"),
                 sha256: String::from("388d37bcffee183bc23f5fec9c263779c59d298d35c9e4445b407d95f94db19c"),
@@ -46,7 +46,7 @@ lazy_static! {
         );
 
         res.insert(
-            "x86_64-pc-windows-msvc",
+            "x86_64-pc-windows-msvc".to_string(),
             HostedDistribution {
                 url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20191025/cpython-3.7.5-windows-amd64-20191025T0540.tar.zst"),
                 sha256: String::from("86a3260edabeed314c6f32a931e60dd097fa854b1346561443353e1bc90e3edd"),
@@ -54,7 +54,7 @@ lazy_static! {
         );
 
         res.insert(
-            "x86_64-apple-darwin",
+            "x86_64-apple-darwin".to_string(),
             HostedDistribution {
                 url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20191025/cpython-3.7.5-macos-20191026T0535.tar.zst"),
                 sha256: String::from("e8d0710627c017213d9c5c6496577539a5adceb56d3060e07954ce9bf59f39ae"),

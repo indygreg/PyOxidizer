@@ -3,12 +3,43 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use starlark::environment::{Environment, EnvironmentError};
-use starlark::values::{default_compare, TypedValue, Value, ValueError, ValueResult};
+use starlark::values::{
+    default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
+    INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+};
 use starlark::{any, immutable, not_supported};
 use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;
+
+pub fn required_str_arg(name: &str, value: &Value) -> Result<String, ValueError> {
+    match value.get_type() {
+        "string" => Ok(value.to_str()),
+        t => Err(RuntimeError {
+            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+            message: format!("function expects a string for {}; got type {}", name, t),
+            label: format!("expected type string; got {}", t),
+        }
+        .into()),
+    }
+}
+
+pub fn optional_str_arg(name: &str, value: &Value) -> Result<Option<String>, ValueError> {
+    match value.get_type() {
+        "NoneType" => Ok(None),
+        "string" => Ok(Some(value.to_str())),
+        t => Err(RuntimeError {
+            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+            message: format!(
+                "function expects an optional string for {}; got type {}",
+                name, t
+            ),
+            label: format!("expected type string; got {}", t),
+        }
+        .into()),
+    }
+}
 
 /// Holds state for evaluating a starlark environment.
 #[derive(Debug, Clone)]
@@ -55,6 +86,7 @@ impl TypedValue for EnvironmentContext {
 /// Obtain a Starlark environment for evaluating PyOxidizer configurations.
 pub fn global_environment(context: &EnvironmentContext) -> Result<Environment, EnvironmentError> {
     let env = starlark::stdlib::global_environment();
+    let env = super::python_distribution::python_distribution_module(env);
 
     env.set("CONTEXT", Value::new(context.clone()))?;
 
@@ -62,4 +94,25 @@ pub fn global_environment(context: &EnvironmentContext) -> Result<Environment, E
     env.set("BUILD_TARGET", Value::from(context.build_target.clone()))?;
 
     Ok(env)
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::super::testutil::*;
+
+    #[test]
+    fn test_cwd() {
+        let cwd = starlark_ok("CWD");
+        let pwd = std::env::current_dir().unwrap();
+        assert_eq!(cwd.to_str(), pwd.display().to_string());
+    }
+
+    #[test]
+    fn test_build_target() {
+        let target = starlark_ok("BUILD_TARGET");
+        assert_eq!(
+            target.to_str(),
+            super::super::super::pyrepackager::repackage::HOST
+        );
+    }
 }

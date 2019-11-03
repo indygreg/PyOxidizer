@@ -10,3 +10,6 @@ define Oxidized Python binaries.
 
 pub mod env;
 pub mod eval;
+pub mod python_distribution;
+#[cfg(test)]
+mod testutil;
