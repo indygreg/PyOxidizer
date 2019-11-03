@@ -3,9 +3,9 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use super::super::pyrepackager::config::{
-    resolve_install_location, PackagingPackageRoot, PackagingPipInstallSimple,
-    PackagingPipRequirementsFile, PackagingSetupPyInstall, PackagingStdlib,
-    PackagingStdlibExtensionVariant, PackagingStdlibExtensionsExplicitExcludes,
+    resolve_install_location, PackagingFilterInclude, PackagingPackageRoot,
+    PackagingPipInstallSimple, PackagingPipRequirementsFile, PackagingSetupPyInstall,
+    PackagingStdlib, PackagingStdlibExtensionVariant, PackagingStdlibExtensionsExplicitExcludes,
     PackagingStdlibExtensionsExplicitIncludes, PackagingStdlibExtensionsPolicy,
     PackagingVirtualenv,
 };
@@ -25,6 +25,41 @@ use starlark::{
 use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+
+#[derive(Debug, Clone)]
+pub struct FilterInclude {
+    pub rule: PackagingFilterInclude,
+}
+
+impl TypedValue for FilterInclude {
+    immutable!();
+    any!();
+    not_supported!(binop);
+    not_supported!(container);
+    not_supported!(function);
+    not_supported!(get_hash);
+    not_supported!(to_int);
+
+    fn to_str(&self) -> String {
+        format!("FilterInclude<{:#?}>", self.rule)
+    }
+
+    fn to_repr(&self) -> String {
+        self.to_str()
+    }
+
+    fn get_type(&self) -> &'static str {
+        "FilterInclude"
+    }
+
+    fn to_bool(&self) -> bool {
+        true
+    }
+
+    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
+        default_compare(self, other)
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct PackageRoot {
@@ -378,6 +413,30 @@ impl TypedValue for Virtualenv {
 
 starlark_module! { python_packaging_env =>
     #[allow(non_snake_case)]
+    FilterInclude(files=None, glob_files=None) {
+        optional_list_arg("files", "string", &files)?;
+        optional_list_arg("glob_files", "string", &glob_files)?;
+
+        let files = match files.get_type() {
+            "list" => files.into_iter()?.map(|x| x.to_string()).collect(),
+            "NoneType" => Vec::new(),
+            _ => panic!("should have validated type above"),
+        };
+        let glob_files = match glob_files.get_type() {
+            "list" => glob_files.into_iter()?.map(|x| x.to_string()).collect(),
+            "NoneType" => Vec::new(),
+            _ => panic!("should have validated type above"),
+        };
+
+        let rule = PackagingFilterInclude {
+            files,
+            glob_files,
+        };
+
+        Ok(Value::new(FilterInclude { rule }))
+    }
+
+    #[allow(non_snake_case)]
     PackageRoot(
         path,
         packages=None,
@@ -684,6 +743,17 @@ mod tests {
     use super::super::super::pyrepackager::config::InstallLocation;
     use super::super::testutil::*;
     use super::*;
+
+    #[test]
+    fn test_filter_include_default() {
+        let v = starlark_ok("FilterInclude()");
+        let wanted = PackagingFilterInclude {
+            files: Vec::new(),
+            glob_files: Vec::new(),
+        };
+
+        v.downcast_apply(|x: &FilterInclude| assert_eq!(x.rule, wanted));
+    }
 
     #[test]
     fn test_package_root_default() {

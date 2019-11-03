@@ -414,7 +414,7 @@ pub struct PackagingPipRequirementsFile {
     pub install_location: InstallLocation,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PackagingFilterInclude {
     pub files: Vec<String>,
     pub glob_files: Vec<String>,
