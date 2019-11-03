@@ -92,6 +92,7 @@ starlark_module! { config_env =>
         let python_distribution = python_distribution.downcast_apply(|x: &PythonDistribution| -> ConfigPythonDistribution {
             x.distribution.clone()
         });
+
         let python_packaging: Vec<Result<PythonPackaging, ValueError>> = packaging_rules.into_iter()?.map(|x| -> Result<PythonPackaging, ValueError> {
             match x.get_type() {
                 "FilterInclude" => Ok(x.downcast_apply(|x: &FilterInclude| -> PythonPackaging {
@@ -186,6 +187,33 @@ starlark_module! { config_env =>
 
         let config_path = env.get("CONFIG_PATH").expect("CONFIG_PATH should always be available").to_string();
 
+        let mut have_stdlib = false;
+        let mut have_stdlib_extensions_policy = false;
+
+        for packaging in &python_packaging {
+            match packaging {
+                &PythonPackaging::Stdlib(_) => have_stdlib = true,
+                &PythonPackaging::StdlibExtensionsPolicy(_) => have_stdlib_extensions_policy = true,
+                _ => ()
+            }
+        }
+
+        if !have_stdlib_extensions_policy {
+            return Err(RuntimeError {
+                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                message: "no StdLibExtensionsPolicy packaging rule".to_string(),
+                label: "no StdLibExtensionsPolicy packaging rule".to_string(),
+            }.into());
+        }
+
+        if !have_stdlib {
+            return Err(RuntimeError {
+                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                message: "no StdLib packaging rule".to_string(),
+                label: "no StdLib packaging rule".to_string(),
+            }.into());
+        }
+
         let config = ConfigConfig {
             config_path: PathBuf::from(config_path),
             build_config,
@@ -227,7 +255,7 @@ mod tests {
                 embedded_python_config=EmbeddedPythonConfig(),
                 python_distribution=default_python_distribution(),
                 python_run_mode=python_run_mode_repl(),
-                packaging_rules=[Stdlib()],
+                packaging_rules=[Stdlib(), StdlibExtensionsPolicy('minimal')],
             )
         "#
         );
