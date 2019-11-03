@@ -233,6 +233,7 @@ impl TypedValue for EnvironmentContext {
 pub fn global_environment(context: &EnvironmentContext) -> Result<Environment, EnvironmentError> {
     let env = starlark::stdlib::global_environment();
     let env = super::build_config::build_config_env(env);
+    let env = super::distribution::distribution_env(env);
     let env = super::python_distribution::python_distribution_module(env);
     let env = super::embedded_python_config::embedded_python_config_module(env);
     let env = super::python_packaging::python_packaging_env(env);

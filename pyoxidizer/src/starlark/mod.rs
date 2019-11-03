@@ -9,6 +9,7 @@ define Oxidized Python binaries.
 */
 
 pub mod build_config;
+pub mod distribution;
 pub mod embedded_python_config;
 pub mod env;
 pub mod eval;
