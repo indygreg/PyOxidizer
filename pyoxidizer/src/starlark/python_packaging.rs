@@ -7,7 +7,7 @@ use super::super::pyrepackager::config::{
     PackagingPipInstallSimple, PackagingPipRequirementsFile, PackagingSetupPyInstall,
     PackagingStdlib, PackagingStdlibExtensionVariant, PackagingStdlibExtensionsExplicitExcludes,
     PackagingStdlibExtensionsExplicitIncludes, PackagingStdlibExtensionsPolicy,
-    PackagingVirtualenv,
+    PackagingVirtualenv, PackagingWriteLicenseFiles,
 };
 use super::env::{
     optional_dict_arg, optional_list_arg, required_bool_arg, required_list_arg, required_str_arg,
@@ -411,6 +411,41 @@ impl TypedValue for Virtualenv {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct WriteLicenseFiles {
+    pub rule: PackagingWriteLicenseFiles,
+}
+
+impl TypedValue for WriteLicenseFiles {
+    immutable!();
+    any!();
+    not_supported!(binop);
+    not_supported!(container);
+    not_supported!(function);
+    not_supported!(get_hash);
+    not_supported!(to_int);
+
+    fn to_str(&self) -> String {
+        format!("WriteLicenseFiles<{:#?}>", self.rule)
+    }
+
+    fn to_repr(&self) -> String {
+        self.to_str()
+    }
+
+    fn get_type(&self) -> &'static str {
+        "WriteLicenseFiles"
+    }
+
+    fn to_bool(&self) -> bool {
+        true
+    }
+
+    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
+        default_compare(self, other)
+    }
+}
+
 starlark_module! { python_packaging_env =>
     #[allow(non_snake_case)]
     FilterInclude(files=None, glob_files=None) {
@@ -736,6 +771,17 @@ starlark_module! { python_packaging_env =>
 
         Ok(Value::new(Virtualenv { rule }))
     }
+
+    #[allow(non_snake_case)]
+    WriteLicenseFiles(path) {
+        let path = required_str_arg("path", &path)?;
+
+        let rule = PackagingWriteLicenseFiles {
+            path,
+        };
+
+        Ok(Value::new(WriteLicenseFiles { rule }))
+    }
 }
 
 #[cfg(test)]
@@ -945,5 +991,20 @@ mod tests {
             install_location: InstallLocation::Embedded,
         };
         v.downcast_apply(|x: &Virtualenv| assert_eq!(x.rule, wanted));
+    }
+
+    #[test]
+    fn test_write_license_files_default() {
+        let err = starlark_nok("WriteLicenseFiles()");
+        assert!(err.message.starts_with("Missing parameter path"));
+    }
+
+    #[test]
+    fn test_write_license_files_basic() {
+        let v = starlark_ok("WriteLicenseFiles('path')");
+        let wanted = PackagingWriteLicenseFiles {
+            path: "path".to_string(),
+        };
+        v.downcast_apply(|x: &WriteLicenseFiles| assert_eq!(x.rule, wanted));
     }
 }

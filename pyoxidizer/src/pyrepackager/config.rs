@@ -420,7 +420,7 @@ pub struct PackagingFilterInclude {
     pub glob_files: Vec<String>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PackagingWriteLicenseFiles {
     pub path: String,
 }
