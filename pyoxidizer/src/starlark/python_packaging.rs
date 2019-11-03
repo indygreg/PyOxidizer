@@ -4,9 +4,10 @@
 
 use super::super::pyrepackager::config::{
     resolve_install_location, PackagingPackageRoot, PackagingPipInstallSimple,
-    PackagingSetupPyInstall, PackagingStdlib, PackagingStdlibExtensionVariant,
-    PackagingStdlibExtensionsExplicitExcludes, PackagingStdlibExtensionsExplicitIncludes,
-    PackagingStdlibExtensionsPolicy, PackagingVirtualenv,
+    PackagingPipRequirementsFile, PackagingSetupPyInstall, PackagingStdlib,
+    PackagingStdlibExtensionVariant, PackagingStdlibExtensionsExplicitExcludes,
+    PackagingStdlibExtensionsExplicitIncludes, PackagingStdlibExtensionsPolicy,
+    PackagingVirtualenv,
 };
 use super::env::{
     optional_dict_arg, optional_list_arg, required_bool_arg, required_list_arg, required_str_arg,
@@ -84,6 +85,41 @@ impl TypedValue for PipInstallSimple {
 
     fn get_type(&self) -> &'static str {
         "PipInstallSimple"
+    }
+
+    fn to_bool(&self) -> bool {
+        true
+    }
+
+    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
+        default_compare(self, other)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct PipRequirementsFile {
+    pub rule: PackagingPipRequirementsFile,
+}
+
+impl TypedValue for PipRequirementsFile {
+    immutable!();
+    any!();
+    not_supported!(binop);
+    not_supported!(container);
+    not_supported!(function);
+    not_supported!(get_hash);
+    not_supported!(to_int);
+
+    fn to_str(&self) -> String {
+        format!("PipRequirementsFile<{:#?}>", self.rule)
+    }
+
+    fn to_repr(&self) -> String {
+        self.to_str()
+    }
+
+    fn get_type(&self) -> &'static str {
+        "PipRequirementsFile"
     }
 
     fn to_bool(&self) -> bool {
@@ -432,6 +468,37 @@ starlark_module! { python_packaging_env =>
     }
 
     #[allow(non_snake_case)]
+    PipRequirementsFile(
+        requirements_path,
+        optimize_level=0,
+        include_source=true,
+        install_location="embedded"
+    ) {
+        let requirements_path = required_str_arg("path", &requirements_path)?;
+        required_type_arg("optimize_level", "int", &optimize_level)?;
+        let include_source = required_bool_arg("include_source", &include_source)?;
+        let install_location = required_str_arg("install_location", &install_location)?;
+
+        let optimize_level = optimize_level.to_int()?;
+         let install_location = resolve_install_location(&install_location).or_else(|e| {
+            Err(RuntimeError {
+                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                message: e.to_string(),
+                label: e.to_string(),
+            }.into())
+        })?;
+
+        let rule = PackagingPipRequirementsFile {
+            requirements_path,
+            optimize_level,
+            include_source,
+            install_location,
+        };
+
+        Ok(Value::new(PipRequirementsFile { rule }))
+    }
+
+    #[allow(non_snake_case)]
     SetupPyInstall(
         package_path,
         extra_env=None,
@@ -658,6 +725,27 @@ mod tests {
         };
 
         v.downcast_apply(|x: &PipInstallSimple| assert_eq!(x.rule, wanted));
+    }
+
+    #[test]
+    fn test_pip_requirements_file_default() {
+        let err = starlark_nok("PipRequirementsFile()");
+        assert!(err
+            .message
+            .starts_with("Missing parameter requirements_path"));
+    }
+
+    #[test]
+    fn test_pip_requirements_file_basic() {
+        let v = starlark_ok("PipRequirementsFile('path')");
+        let wanted = PackagingPipRequirementsFile {
+            requirements_path: "path".to_string(),
+            optimize_level: 0,
+            include_source: true,
+            install_location: InstallLocation::Embedded,
+        };
+
+        v.downcast_apply(|x: &PipRequirementsFile| assert_eq!(x.rule, wanted));
     }
 
     #[test]

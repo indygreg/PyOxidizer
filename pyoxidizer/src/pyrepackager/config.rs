@@ -405,7 +405,7 @@ pub struct PackagingPipInstallSimple {
     pub extra_args: Option<Vec<String>>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PackagingPipRequirementsFile {
     // TODO resolve to a PathBuf.
     pub requirements_path: String,
