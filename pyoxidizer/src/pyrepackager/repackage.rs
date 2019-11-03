@@ -1448,6 +1448,8 @@ pub fn derive_python_config(
     py_modules_path: &PathBuf,
     py_resources_path: &PathBuf,
 ) -> String {
+    let embedded = &config.embedded_python_config;
+
     format!(
         "PythonConfig {{\n    \
          standard_io_encoding: {},\n    \
@@ -1474,46 +1476,46 @@ pub fn derive_python_config(
          write_modules_directory_env: {},\n    \
          run: {},\n\
          }}",
-        match &config.stdio_encoding_name {
+        match &embedded.stdio_encoding_name {
             Some(value) => format_args!("Some(\"{}\")", value).to_string(),
             None => "None".to_owned(),
         },
-        match &config.stdio_encoding_errors {
+        match &embedded.stdio_encoding_errors {
             Some(value) => format_args!("Some(\"{}\")", value).to_string(),
             None => "None".to_owned(),
         },
-        config.optimize_level,
-        config.filesystem_importer,
-        &config
+        embedded.optimize_level,
+        embedded.filesystem_importer,
+        &embedded
             .sys_paths
             .iter()
             .map(|p| "\"".to_owned() + p + "\".to_string()")
             .collect::<Vec<String>>()
             .join(", "),
-        !config.no_site,
-        !config.no_user_site_directory,
-        config.ignore_environment,
-        config.dont_write_bytecode,
-        config.unbuffered_stdio,
+        !embedded.no_site,
+        !embedded.no_user_site_directory,
+        embedded.ignore_environment,
+        embedded.dont_write_bytecode,
+        embedded.unbuffered_stdio,
         importlib_bootstrap_path.display(),
         importlib_bootstrap_external_path.display(),
         py_modules_path.display(),
         py_resources_path.display(),
-        config.sys_frozen,
-        config.sys_meipass,
-        match config.raw_allocator {
+        embedded.sys_frozen,
+        embedded.sys_meipass,
+        match embedded.raw_allocator {
             RawAllocator::Jemalloc => "PythonRawAllocator::Jemalloc",
             RawAllocator::Rust => "PythonRawAllocator::Rust",
             RawAllocator::System => "PythonRawAllocator::System",
         },
-        match config.terminfo_resolution {
+        match embedded.terminfo_resolution {
             TerminfoResolution::Dynamic => "TerminfoResolution::Dynamic".to_string(),
             TerminfoResolution::None => "TerminfoResolution::None".to_string(),
             TerminfoResolution::Static(ref v) => {
                 format!("TerminfoResolution::Static(r###\"{}\"###", v)
             }
         },
-        match &config.write_modules_directory_env {
+        match &embedded.write_modules_directory_env {
             Some(path) => "Some(\"".to_owned() + &path + "\".to_string())",
             _ => "None".to_owned(),
         },

@@ -469,29 +469,23 @@ pub enum Distribution {
 }
 
 /// How the `terminfo` database is resolved at run-time.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum TerminfoResolution {
     Dynamic,
     None,
     Static(String),
 }
 
-/// Represents a parsed PyOxidizer configuration file.
-#[derive(Clone, Debug)]
-pub struct Config {
-    pub config_path: PathBuf,
-    pub build_config: BuildConfig,
+#[derive(Clone, Debug, PartialEq)]
+pub struct EmbeddedPythonConfig {
     pub dont_write_bytecode: bool,
     pub ignore_environment: bool,
     pub no_site: bool,
     pub no_user_site_directory: bool,
     pub optimize_level: i64,
-    pub python_distribution: PythonDistribution,
     pub stdio_encoding_name: Option<String>,
     pub stdio_encoding_errors: Option<String>,
     pub unbuffered_stdio: bool,
-    pub python_packaging: Vec<PythonPackaging>,
-    pub run: RunMode,
     pub filesystem_importer: bool,
     pub sys_frozen: bool,
     pub sys_meipass: bool,
@@ -499,6 +493,17 @@ pub struct Config {
     pub raw_allocator: RawAllocator,
     pub terminfo_resolution: TerminfoResolution,
     pub write_modules_directory_env: Option<String>,
+}
+
+/// Represents a parsed PyOxidizer configuration file.
+#[derive(Clone, Debug)]
+pub struct Config {
+    pub config_path: PathBuf,
+    pub build_config: BuildConfig,
+    pub embedded_python_config: EmbeddedPythonConfig,
+    pub python_distribution: PythonDistribution,
+    pub python_packaging: Vec<PythonPackaging>,
+    pub run: RunMode,
     pub distributions: Vec<Distribution>,
 }
 
@@ -1058,20 +1063,15 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
         .filter_map(|v| v.clone())
         .collect();
 
-    Ok(Config {
-        config_path: config_path.to_path_buf(),
-        build_config,
+    let embedded_python_config = EmbeddedPythonConfig {
         dont_write_bytecode,
         ignore_environment,
         no_site,
         no_user_site_directory,
         optimize_level,
-        python_distribution,
         stdio_encoding_name,
         stdio_encoding_errors,
         unbuffered_stdio,
-        python_packaging,
-        run,
         filesystem_importer,
         sys_frozen,
         sys_meipass,
@@ -1079,6 +1079,15 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
         raw_allocator,
         terminfo_resolution,
         write_modules_directory_env,
+    };
+
+    Ok(Config {
+        config_path: config_path.to_path_buf(),
+        build_config,
+        embedded_python_config,
+        python_distribution,
+        python_packaging,
+        run,
         distributions,
     })
 }

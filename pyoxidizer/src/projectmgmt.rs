@@ -485,7 +485,7 @@ pub fn build_project(logger: &slog::Logger, context: &mut BuildContext) -> Resul
         args.push("--release");
     }
 
-    if context.config.raw_allocator == RawAllocator::Jemalloc {
+    if context.config.embedded_python_config.raw_allocator == RawAllocator::Jemalloc {
         args.push("--features");
         args.push("jemalloc");
     }
