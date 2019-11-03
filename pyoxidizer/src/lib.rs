@@ -18,3 +18,4 @@ pub mod logging;
 pub mod projectmgmt;
 pub mod pyrepackager;
 pub mod python_distributions;
+pub mod starlark;

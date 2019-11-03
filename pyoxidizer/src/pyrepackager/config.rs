@@ -1098,3 +1098,17 @@ pub fn parse_config_file(config_path: &Path, target: &str) -> Result<Config, Str
         ))
     })
 }
+
+pub fn eval_starlark_config_file(path: &Path) -> Result<Config, String> {
+    let parent = path
+        .parent()
+        .ok_or("unable to resolve parent directory of config".to_string())?;
+
+    let context = super::super::starlark::env::EnvironmentContext {
+        cwd: parent.to_path_buf(),
+    };
+
+    let _res = crate::starlark::eval::evaluate_file(path, &context).or_else(|d| Err(d.message))?;
+
+    Err("not yet implemented".to_string())
+}

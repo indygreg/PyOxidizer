@@ -36,6 +36,7 @@ mod projectmgmt;
 #[allow(unused)]
 mod pyrepackager;
 mod python_distributions;
+pub mod starlark;
 
 fn main() {
     std::process::exit(match cli::run_cli() {
