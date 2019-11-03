@@ -1,0 +1,253 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+use super::super::pyrepackager::config::{default_raw_allocator, RawAllocator, TerminfoResolution};
+use super::env::{optional_list_arg, optional_str_arg, required_bool_arg, required_type_arg};
+use starlark::environment::Environment;
+use starlark::values::{
+    default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
+    INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+};
+use starlark::{
+    any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
+    starlark_signature_extraction, starlark_signatures,
+};
+use std::any::Any;
+use std::cmp::Ordering;
+use std::collections::HashMap;
+
+#[derive(Debug, Clone)]
+pub struct EmbeddedPythonConfig {
+    pub config: super::super::pyrepackager::config::EmbeddedPythonConfig,
+}
+
+impl TypedValue for EmbeddedPythonConfig {
+    immutable!();
+    any!();
+    not_supported!(binop);
+    not_supported!(container);
+    not_supported!(function);
+    not_supported!(get_hash);
+    not_supported!(to_int);
+
+    fn to_str(&self) -> String {
+        format!("EmbeddedPythonConfig<{:#?}>", self.config)
+    }
+
+    fn to_repr(&self) -> String {
+        self.to_str()
+    }
+
+    fn get_type(&self) -> &'static str {
+        "EmbeddedPythonConfig"
+    }
+
+    fn to_bool(&self) -> bool {
+        true
+    }
+
+    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
+        default_compare(self, other)
+    }
+}
+
+starlark_module! { embedded_python_config_module =>
+    #[allow(non_snake_case)]
+    EmbeddedPythonConfig(
+        env env,
+        dont_write_bytecode=true,
+        ignore_environment=true,
+        no_site=true,
+        no_user_site_directory=true,
+        optimize_level=0,
+        stdio_encoding_name=None,
+        stdio_encoding_errors=None,
+        unbuffered_stdio=false,
+        filesystem_importer=false,
+        sys_frozen=false,
+        sys_meipass=false,
+        sys_paths=None,
+        raw_allocator=None,
+        terminfo_resolution="dynamic",
+        terminfo_dirs=None,
+        write_modules_directory_env=None
+    ) {
+        let dont_write_bytecode = required_bool_arg("dont_write_bytecode", &dont_write_bytecode)?;
+        let ignore_environment = required_bool_arg("ignore_environment", &ignore_environment)?;
+        let no_site = required_bool_arg("no_site", &no_site)?;
+        let no_user_site_directory = required_bool_arg("no_user_site_directory", &no_user_site_directory)?;
+        required_type_arg("optimize_level", "int", &optimize_level)?;
+        let stdio_encoding_name = optional_str_arg("stdio_encoding_name", &stdio_encoding_name)?;
+        let stdio_encoding_errors = optional_str_arg("stdio_encoding_errors", &stdio_encoding_errors)?;
+        let unbuffered_stdio = required_bool_arg("unbuffered_stdio", &unbuffered_stdio)?;
+        let filesystem_importer = required_bool_arg("filesystem_importer", &filesystem_importer)?;
+        let sys_frozen = required_bool_arg("sys_frozen", &sys_frozen)?;
+        let sys_meipass = required_bool_arg("sys_meipass", &sys_meipass)?;
+        optional_list_arg("sys_paths", "string", &sys_paths)?;
+        let raw_allocator = optional_str_arg("raw_allocator", &raw_allocator)?;
+        let terminfo_resolution = optional_str_arg("terminfo_resolution", &terminfo_resolution)?;
+        let terminfo_dirs = optional_str_arg("terminfo_dirs", &terminfo_dirs)?;
+        let write_modules_directory_env = optional_str_arg("write_modules_directory_env", &write_modules_directory_env)?;
+
+        let build_target = env.get("BUILD_TARGET").unwrap().to_str();
+
+        let raw_allocator = match raw_allocator {
+            Some(x) => match x.as_ref() {
+                "jemalloc" => RawAllocator::Jemalloc,
+                "rust" => RawAllocator::Rust,
+                "system" => RawAllocator::System,
+                _ => {
+                    return Err(RuntimeError {
+                        code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                        message: "invalid value for raw_allocator".to_string(),
+                        label: "invalid value for raw_allocator".to_string(),
+                    }.into());
+                }
+            },
+            None => default_raw_allocator(&build_target),
+        };
+
+        let terminfo_resolution = match terminfo_resolution {
+            Some(x) => match x.as_ref() {
+                "dynamic" => TerminfoResolution::Dynamic,
+                "static" => {
+                    TerminfoResolution::Static(if let Some(dirs) = terminfo_dirs {
+                        dirs.clone()
+                    } else {
+                        return Err(RuntimeError {
+                            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                            message: "terminfo_dirs must be set when using static resolution".to_string(),
+                            label: "terminfo_dirs must be set when using static resolution".to_string(),
+                        }.into());
+                    })
+                },
+                _ => {
+                    return Err(RuntimeError {
+                        code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                        message: "terminfo_resolution must be 'dynamic' or 'static'".to_string(),
+                        label: "terminfo_resolution must be 'dynamic' or 'static'".to_string()
+                    }.into());
+                }
+            },
+            None => TerminfoResolution::None,
+        };
+
+        let sys_paths = match sys_paths.get_type() {
+            "list" => sys_paths.into_iter().unwrap().map(|x| x.to_string()).collect(),
+            _ => Vec::new(),
+        };
+
+        let config = super::super::pyrepackager::config::EmbeddedPythonConfig {
+            dont_write_bytecode,
+            ignore_environment,
+            no_site,
+            no_user_site_directory,
+            optimize_level: optimize_level.to_int().unwrap(),
+            stdio_encoding_name,
+            stdio_encoding_errors,
+            unbuffered_stdio,
+            filesystem_importer,
+            sys_frozen,
+            sys_meipass,
+            sys_paths,
+            raw_allocator,
+            terminfo_resolution,
+            write_modules_directory_env,
+        };
+
+        Ok(Value::new(EmbeddedPythonConfig { config }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::testutil::*;
+    use super::*;
+
+    #[test]
+    fn test_default() {
+        let c = starlark_ok("EmbeddedPythonConfig()");
+        assert_eq!(c.get_type(), "EmbeddedPythonConfig");
+
+        let wanted = super::super::super::pyrepackager::config::EmbeddedPythonConfig {
+            dont_write_bytecode: true,
+            ignore_environment: true,
+            no_site: true,
+            no_user_site_directory: true,
+            optimize_level: 0,
+            stdio_encoding_name: None,
+            stdio_encoding_errors: None,
+            unbuffered_stdio: false,
+            filesystem_importer: false,
+            sys_frozen: false,
+            sys_meipass: false,
+            sys_paths: Vec::new(),
+            raw_allocator: default_raw_allocator(
+                super::super::super::pyrepackager::repackage::HOST,
+            ),
+            terminfo_resolution: TerminfoResolution::Dynamic,
+            write_modules_directory_env: None,
+        };
+
+        c.downcast_apply(|x: &EmbeddedPythonConfig| assert_eq!(x.config, wanted));
+    }
+
+    #[test]
+    fn test_optimize_level() {
+        let c = starlark_ok("EmbeddedPythonConfig(optimize_level=1)");
+        c.downcast_apply(|x: &EmbeddedPythonConfig| assert_eq!(x.config.optimize_level, 1));
+    }
+
+    #[test]
+    fn test_sys_paths() {
+        let c = starlark_ok("EmbeddedPythonConfig(sys_paths=['foo', 'bar'])");
+        c.downcast_apply(|x: &EmbeddedPythonConfig| {
+            assert_eq!(x.config.sys_paths, ["foo", "bar"]);
+        });
+    }
+
+    #[test]
+    fn test_stdio_encoding() {
+        let c = starlark_ok(
+            "EmbeddedPythonConfig(stdio_encoding_name='foo', stdio_encoding_errors='strict')",
+        );
+        c.downcast_apply(|x: &EmbeddedPythonConfig| {
+            assert_eq!(x.config.stdio_encoding_name, Some("foo".to_string()));
+            assert_eq!(x.config.stdio_encoding_errors, Some("strict".to_string()));
+        })
+    }
+
+    #[test]
+    fn test_raw_allocator() {
+        let c = starlark_ok("EmbeddedPythonConfig(raw_allocator='system')");
+        c.downcast_apply(|x: &EmbeddedPythonConfig| {
+            assert_eq!(x.config.raw_allocator, RawAllocator::System);
+        });
+        let c = starlark_ok("EmbeddedPythonConfig(raw_allocator='jemalloc')");
+        c.downcast_apply(|x: &EmbeddedPythonConfig| {
+            assert_eq!(x.config.raw_allocator, RawAllocator::Jemalloc);
+        });
+        let c = starlark_ok("EmbeddedPythonConfig(raw_allocator='rust')");
+        c.downcast_apply(|x: &EmbeddedPythonConfig| {
+            assert_eq!(x.config.raw_allocator, RawAllocator::Rust);
+        });
+    }
+
+    #[test]
+    fn test_terminfo_resolution() {
+        let c = starlark_ok("EmbeddedPythonConfig(terminfo_resolution=None)");
+        c.downcast_apply(|x: &EmbeddedPythonConfig| {
+            assert_eq!(x.config.terminfo_resolution, TerminfoResolution::None);
+        });
+
+        let c =
+            starlark_ok("EmbeddedPythonConfig(terminfo_resolution='static', terminfo_dirs='foo')");
+        c.downcast_apply(|x: &EmbeddedPythonConfig| {
+            assert_eq!(
+                x.config.terminfo_resolution,
+                TerminfoResolution::Static("foo".to_string())
+            );
+        });
+    }
+}

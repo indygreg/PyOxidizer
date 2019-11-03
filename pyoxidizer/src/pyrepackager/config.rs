@@ -519,6 +519,14 @@ fn resolve_install_location(value: &str) -> Result<InstallLocation, String> {
     }
 }
 
+pub fn default_raw_allocator(target: &str) -> RawAllocator {
+    if target == "x86_64-pc-windows-msvc" {
+        RawAllocator::System
+    } else {
+        RawAllocator::Jemalloc
+    }
+}
+
 /// Parse a PyOxidizer TOML config from raw data.
 ///
 /// Configs are evaluated against a specific build target. Config entries not
@@ -625,11 +633,7 @@ pub fn parse_config(data: &[u8], config_path: &Path, target: &str) -> Result<Con
     let mut sys_frozen = false;
     let mut sys_meipass = false;
     let mut sys_paths = Vec::new();
-    let mut raw_allocator = if target == "x86_64-pc-windows-msvc" {
-        RawAllocator::System
-    } else {
-        RawAllocator::Jemalloc
-    };
+    let mut raw_allocator = default_raw_allocator(target);
     let mut terminfo_resolution = TerminfoResolution::Dynamic;
     let mut write_modules_directory_env = None;
 
