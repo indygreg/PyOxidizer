@@ -395,7 +395,7 @@ pub struct PackagingPackageRoot {
     pub install_location: InstallLocation,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PackagingPipInstallSimple {
     pub package: String,
     pub optimize_level: i64,

@@ -3,10 +3,10 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use super::super::pyrepackager::config::{
-    resolve_install_location, PackagingPackageRoot, PackagingSetupPyInstall, PackagingStdlib,
-    PackagingStdlibExtensionVariant, PackagingStdlibExtensionsExplicitExcludes,
-    PackagingStdlibExtensionsExplicitIncludes, PackagingStdlibExtensionsPolicy,
-    PackagingVirtualenv,
+    resolve_install_location, PackagingPackageRoot, PackagingPipInstallSimple,
+    PackagingSetupPyInstall, PackagingStdlib, PackagingStdlibExtensionVariant,
+    PackagingStdlibExtensionsExplicitExcludes, PackagingStdlibExtensionsExplicitIncludes,
+    PackagingStdlibExtensionsPolicy, PackagingVirtualenv,
 };
 use super::env::{
     optional_dict_arg, optional_list_arg, required_bool_arg, required_list_arg, required_str_arg,
@@ -49,6 +49,41 @@ impl TypedValue for PackageRoot {
 
     fn get_type(&self) -> &'static str {
         "PackageRoot"
+    }
+
+    fn to_bool(&self) -> bool {
+        true
+    }
+
+    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
+        default_compare(self, other)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct PipInstallSimple {
+    pub rule: PackagingPipInstallSimple,
+}
+
+impl TypedValue for PipInstallSimple {
+    immutable!();
+    any!();
+    not_supported!(binop);
+    not_supported!(container);
+    not_supported!(function);
+    not_supported!(get_hash);
+    not_supported!(to_int);
+
+    fn to_str(&self) -> String {
+        format!("PipInstallSimple<{:#?}>", self.rule)
+    }
+
+    fn to_repr(&self) -> String {
+        self.to_str()
+    }
+
+    fn get_type(&self) -> &'static str {
+        "PipInstallSimple"
     }
 
     fn to_bool(&self) -> bool {
@@ -350,6 +385,53 @@ starlark_module! { python_packaging_env =>
     }
 
     #[allow(non_snake_case)]
+    PipInstallSimple(
+        package,
+        optimize_level=0,
+        excludes=None,
+        include_source=true,
+        install_location="embedded",
+        extra_args=None
+    ) {
+        let package = required_str_arg("package", &package)?;
+        required_type_arg("optimize_level", "int", &optimize_level)?;
+        optional_list_arg("excludes", "string", &excludes)?;
+        let include_source = required_bool_arg("include_source", &include_source)?;
+        let install_location = required_str_arg("install_location", &install_location)?;
+        optional_list_arg("extra_args", "string", &extra_args)?;
+
+        let optimize_level = optimize_level.to_int()?;
+        let excludes = match excludes.get_type() {
+            "list" => excludes.into_iter()?.map(|x| x.to_string()).collect(),
+            "NoneType" => Vec::new(),
+            _ => panic!("should have validated type above"),
+        };
+        let install_location = resolve_install_location(&install_location).or_else(|e| {
+            Err(RuntimeError {
+                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                message: e.to_string(),
+                label: e.to_string(),
+            }.into())
+        })?;
+        let extra_args = match extra_args.get_type() {
+            "list" => Some(extra_args.into_iter()?.map(|x| x.to_string()).collect()),
+            "NoneType" => None,
+            _ => panic!("should have validated type above"),
+        };
+
+        let rule = PackagingPipInstallSimple {
+            package,
+            optimize_level,
+            excludes,
+            include_source,
+            install_location,
+            extra_args,
+        };
+
+        Ok(Value::new(PipInstallSimple { rule }))
+    }
+
+    #[allow(non_snake_case)]
     SetupPyInstall(
         package_path,
         extra_env=None,
@@ -555,6 +637,27 @@ mod tests {
         };
 
         v.downcast_apply(|x: &PackageRoot| assert_eq!(x.rule, wanted));
+    }
+
+    #[test]
+    fn test_pip_install_simple_default() {
+        let err = starlark_nok("PipInstallSimple()");
+        assert!(err.message.starts_with("Missing parameter package"));
+    }
+
+    #[test]
+    fn test_pip_install_simple_basic() {
+        let v = starlark_ok("PipInstallSimple('foo')");
+        let wanted = PackagingPipInstallSimple {
+            package: "foo".to_string(),
+            optimize_level: 0,
+            excludes: Vec::new(),
+            include_source: true,
+            install_location: InstallLocation::Embedded,
+            extra_args: None,
+        };
+
+        v.downcast_apply(|x: &PipInstallSimple| assert_eq!(x.rule, wanted));
     }
 
     #[test]
