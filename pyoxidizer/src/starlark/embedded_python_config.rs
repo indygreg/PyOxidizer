@@ -61,8 +61,7 @@ starlark_module! { embedded_python_config_module =>
         no_site=true,
         no_user_site_directory=true,
         optimize_level=0,
-        stdio_encoding_name=None,
-        stdio_encoding_errors=None,
+        stdio_encoding=None,
         unbuffered_stdio=false,
         filesystem_importer=false,
         sys_frozen=false,
@@ -78,8 +77,7 @@ starlark_module! { embedded_python_config_module =>
         let no_site = required_bool_arg("no_site", &no_site)?;
         let no_user_site_directory = required_bool_arg("no_user_site_directory", &no_user_site_directory)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
-        let stdio_encoding_name = optional_str_arg("stdio_encoding_name", &stdio_encoding_name)?;
-        let stdio_encoding_errors = optional_str_arg("stdio_encoding_errors", &stdio_encoding_errors)?;
+        let stdio_encoding = optional_str_arg("stdio_encoding", &stdio_encoding)?;
         let unbuffered_stdio = required_bool_arg("unbuffered_stdio", &unbuffered_stdio)?;
         let filesystem_importer = required_bool_arg("filesystem_importer", &filesystem_importer)?;
         let sys_frozen = required_bool_arg("sys_frozen", &sys_frozen)?;
@@ -91,6 +89,13 @@ starlark_module! { embedded_python_config_module =>
         let write_modules_directory_env = optional_str_arg("write_modules_directory_env", &write_modules_directory_env)?;
 
         let build_target = env.get("BUILD_TARGET").unwrap().to_str();
+
+        let (stdio_encoding_name, stdio_encoding_errors) = if let Some(ref v) = stdio_encoding {
+            let values: Vec<&str> = v.split(':').collect();
+            (Some(values[0].to_string()), Some(values[1].to_string()))
+        } else {
+            (None, None)
+        };
 
         let raw_allocator = match raw_allocator {
             Some(x) => match x.as_ref() {
@@ -209,9 +214,7 @@ mod tests {
 
     #[test]
     fn test_stdio_encoding() {
-        let c = starlark_ok(
-            "EmbeddedPythonConfig(stdio_encoding_name='foo', stdio_encoding_errors='strict')",
-        );
+        let c = starlark_ok("EmbeddedPythonConfig(stdio_encoding='foo:strict')");
         c.downcast_apply(|x: &EmbeddedPythonConfig| {
             assert_eq!(x.config.stdio_encoding_name, Some("foo".to_string()));
             assert_eq!(x.config.stdio_encoding_errors, Some("strict".to_string()));
