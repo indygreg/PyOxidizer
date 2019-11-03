@@ -7,12 +7,14 @@ use codemap::CodeMap;
 use codemap_diagnostic::Diagnostic;
 use starlark::eval;
 use starlark::values::Value;
+use std::path::PathBuf;
 
 pub fn starlark_eval(snippet: &str) -> Result<Value, Diagnostic> {
     let build_target = super::super::pyrepackager::repackage::HOST;
 
     let context = EnvironmentContext {
         cwd: std::env::current_dir().expect("unable to determine CWD"),
+        config_path: PathBuf::from("dummy"),
         build_target: build_target.to_string(),
     };
 

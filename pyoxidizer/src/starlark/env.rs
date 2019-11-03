@@ -30,6 +30,13 @@ pub fn required_type_arg(arg_name: &str, arg_type: &str, value: &Value) -> Resul
     }
 }
 
+pub fn optional_type_arg(arg_name: &str, arg_type: &str, value: &Value) -> Result<(), ValueError> {
+    match value.get_type() {
+        "NoneType" => Ok(()),
+        _ => required_type_arg(arg_name, arg_type, value),
+    }
+}
+
 pub fn required_str_arg(name: &str, value: &Value) -> Result<String, ValueError> {
     match value.get_type() {
         "string" => Ok(value.to_str()),
@@ -195,6 +202,9 @@ pub struct EnvironmentContext {
     /// Typically used to resolve filenames.
     pub cwd: PathBuf,
 
+    /// Path to the configuration file.
+    pub config_path: PathBuf,
+
     /// Target triple we are building for.
     pub build_target: String,
 }
@@ -233,6 +243,7 @@ impl TypedValue for EnvironmentContext {
 pub fn global_environment(context: &EnvironmentContext) -> Result<Environment, EnvironmentError> {
     let env = starlark::stdlib::global_environment();
     let env = super::build_config::build_config_env(env);
+    let env = super::config::config_env(env);
     let env = super::distribution::distribution_env(env);
     let env = super::python_distribution::python_distribution_module(env);
     let env = super::embedded_python_config::embedded_python_config_module(env);
@@ -242,6 +253,10 @@ pub fn global_environment(context: &EnvironmentContext) -> Result<Environment, E
     env.set("CONTEXT", Value::new(context.clone()))?;
 
     env.set("CWD", Value::from(context.cwd.display().to_string()))?;
+    env.set(
+        "CONFIG_PATH",
+        Value::from(context.config_path.display().to_string()),
+    )?;
     env.set("BUILD_TARGET", Value::from(context.build_target.clone()))?;
 
     Ok(env)

@@ -1119,6 +1119,7 @@ pub fn eval_starlark_config_file(path: &Path, build_target: &str) -> Result<Conf
 
     let context = super::super::starlark::env::EnvironmentContext {
         cwd: parent.to_path_buf(),
+        config_path: path.to_path_buf(),
         build_target: build_target.to_string(),
     };
 

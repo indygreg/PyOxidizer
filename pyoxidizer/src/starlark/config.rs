@@ -1,0 +1,238 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+use super::super::pyrepackager::config::{
+    BuildConfig as ConfigBuildConfig, Config as ConfigConfig, Distribution,
+    EmbeddedPythonConfig as ConfigEmbeddedPythonConfig,
+    PythonDistribution as ConfigPythonDistribution, PythonPackaging, RunMode,
+};
+use super::build_config::BuildConfig;
+use super::distribution::{TarballDistribution, WixInstallerDistribution};
+use super::embedded_python_config::EmbeddedPythonConfig;
+use super::env::required_type_arg;
+use super::python_distribution::PythonDistribution;
+use super::python_packaging::{
+    FilterInclude, PackageRoot, PipInstallSimple, PipRequirementsFile, SetupPyInstall, Stdlib,
+    StdlibExtensionVariant, StdlibExtensionsExplicitExcludes, StdlibExtensionsExplicitIncludes,
+    StdlibExtensionsPolicy, Virtualenv, WriteLicenseFiles,
+};
+use super::python_run_mode::PythonRunMode;
+use starlark::environment::Environment;
+use starlark::values::{
+    default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
+    INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+};
+use starlark::{
+    any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
+    starlark_signature_extraction, starlark_signatures,
+};
+use std::any::Any;
+use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::path::PathBuf;
+
+#[derive(Debug, Clone)]
+pub struct Config {
+    pub config: ConfigConfig,
+}
+
+impl TypedValue for Config {
+    immutable!();
+    any!();
+    not_supported!(binop);
+    not_supported!(container);
+    not_supported!(function);
+    not_supported!(get_hash);
+    not_supported!(to_int);
+
+    fn to_str(&self) -> String {
+        format!("Config<{:#?}>", self.config)
+    }
+
+    fn to_repr(&self) -> String {
+        self.to_str()
+    }
+
+    fn get_type(&self) -> &'static str {
+        "Config"
+    }
+
+    fn to_bool(&self) -> bool {
+        true
+    }
+
+    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
+        default_compare(self, other)
+    }
+}
+
+starlark_module! { config_env =>
+    #[allow(non_snake_case)]
+    Config(
+        env env,
+        build_config=None,
+        embedded_python_config=None,
+        python_distribution=None,
+        packaging_rules=None,
+        python_run_mode=None,
+        distributions=None
+    ) {
+        required_type_arg("build_config", "BuildConfig", &build_config)?;
+        required_type_arg("embedded_python_config", "EmbeddedPythonConfig", &embedded_python_config)?;
+        required_type_arg("python_distribution", "PythonDistribution", &python_distribution)?;
+        required_type_arg("python_run_mode", "PythonRunMode", &python_run_mode)?;
+
+        let build_config = build_config.downcast_apply(|x: &BuildConfig| -> ConfigBuildConfig {
+            x.config.clone()
+        });
+        let embedded_python_config = embedded_python_config.downcast_apply(|x: &EmbeddedPythonConfig| -> ConfigEmbeddedPythonConfig {
+            x.config.clone()
+        });
+        let python_distribution = python_distribution.downcast_apply(|x: &PythonDistribution| -> ConfigPythonDistribution {
+            x.distribution.clone()
+        });
+        let python_packaging: Vec<Result<PythonPackaging, ValueError>> = packaging_rules.into_iter()?.map(|x| -> Result<PythonPackaging, ValueError> {
+            match x.get_type() {
+                "FilterInclude" => Ok(x.downcast_apply(|x: &FilterInclude| -> PythonPackaging {
+                    PythonPackaging::FilterInclude(x.rule.clone())
+                })),
+                "PackageRoot" => Ok(x.downcast_apply(|x: &PackageRoot| -> PythonPackaging {
+                    PythonPackaging::PackageRoot(x.rule.clone())
+                })),
+                "PipInstallSimple" => Ok(x.downcast_apply(|x: &PipInstallSimple| -> PythonPackaging {
+                    PythonPackaging::PipInstallSimple(x.rule.clone())
+                })),
+                "PipRequirementsFile" => Ok(x.downcast_apply(|x: &PipRequirementsFile| -> PythonPackaging {
+                    PythonPackaging::PipRequirementsFile(x.rule.clone())
+                })),
+                "SetupPyInstall" => Ok(x.downcast_apply(|x: &SetupPyInstall| -> PythonPackaging {
+                    PythonPackaging::SetupPyInstall(x.rule.clone())
+                })),
+                "Stdlib" => Ok(x.downcast_apply(|x: &Stdlib| -> PythonPackaging {
+                    PythonPackaging::Stdlib(x.rule.clone())
+                })),
+                "StdlibExtensionVariant" => Ok(x.downcast_apply(|x: &StdlibExtensionVariant| -> PythonPackaging {
+                    PythonPackaging::StdlibExtensionVariant(x.rule.clone())
+                })),
+                "StdlibExtensionsExplicitExcludes" => Ok(x.downcast_apply(|x: &StdlibExtensionsExplicitExcludes| -> PythonPackaging {
+                    PythonPackaging::StdlibExtensionsExplicitExcludes(x.rule.clone())
+                })),
+                "StdlibExtensionsExplicitIncludes" => Ok(x.downcast_apply(|x: &StdlibExtensionsExplicitIncludes| -> PythonPackaging {
+                    PythonPackaging::StdlibExtensionsExplicitIncludes(x.rule.clone())
+                })),
+                "StdlibExtensionsPolicy" => Ok(x.downcast_apply(|x: &StdlibExtensionsPolicy| -> PythonPackaging {
+                    PythonPackaging::StdlibExtensionsPolicy(x.rule.clone())
+                })),
+                "Virtualenv" => Ok(x.downcast_apply(|x: &Virtualenv| -> PythonPackaging {
+                    PythonPackaging::Virtualenv(x.rule.clone())
+                })),
+                "WriteLicenseFiles" => Ok(x.downcast_apply(|x: &WriteLicenseFiles| -> PythonPackaging {
+                    PythonPackaging::WriteLicenseFiles(x.rule.clone())
+                })),
+                t => Err(RuntimeError {
+                    code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                    message: format!("invalid packaging rule type: {}", t),
+                    label: format!("invalid packaging rule type: {}", t),
+                }.into()),
+            }
+        // This code is horrible but I couldn't figure out how to get the typing to work right.
+        }).collect();
+        for r in &python_packaging {
+            if r.is_err() {
+                return Err(r.clone().unwrap_err());
+            }
+        }
+        let python_packaging = python_packaging.iter().map(|x| x.clone().unwrap()).collect();
+
+        let run = python_run_mode.downcast_apply(|x: &PythonRunMode| -> RunMode {
+            x.run_mode.clone()
+        });
+
+        let distributions = match distributions.get_type() {
+            "list" => {
+                let temp: Vec<Result<Distribution, RuntimeError>> = distributions.into_iter()?.map(|x| {
+                    match x.get_type() {
+                        "TarballDistribution" => Ok(x.downcast_apply(|x: &TarballDistribution| -> Distribution {
+                            Distribution::Tarball(x.distribution.clone())
+                        })),
+                        "WixInstallerDistribution" => Ok(x.downcast_apply(|x: &WixInstallerDistribution| -> Distribution {
+                            Distribution::WixInstaller(x.distribution.clone())
+                        })),
+                        t => Err(RuntimeError {
+                            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                            message: format!("invalid packaging rule type: {}", t),
+                            label: format!("invalid packaging rule type: {}", t),
+                        }),
+                    }
+                }).collect();
+
+                for r in &temp {
+                    if r.is_err() {
+                        return Err(r.clone().unwrap_err().into());
+                    }
+                }
+
+                temp.iter().map(|x| x.clone().unwrap()).collect()
+            },
+            "NoneType" => Vec::new(),
+            _ => return Err(RuntimeError {
+                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                message: format!("distributions must be a list or None"),
+                label: format!("distributions must be a list or None"),
+            }.into())
+
+        };
+
+        let config_path = env.get("CONFIG_PATH").expect("CONFIG_PATH should always be available").to_string();
+
+        let config = ConfigConfig {
+            config_path: PathBuf::from(config_path),
+            build_config,
+            embedded_python_config,
+            python_distribution,
+            python_packaging,
+            run,
+            distributions,
+        };
+
+        let v = Value::new(Config { config });
+
+        env.set("CONFIG", v.clone()).unwrap();
+
+        Ok(v)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::testutil::*;
+    use indoc::indoc;
+
+    #[test]
+    fn test_config_default() {
+        let err = starlark_nok("Config()");
+        assert_eq!(
+            err.message,
+            "function expects a BuildConfig for build_config; got type NoneType"
+        );
+    }
+
+    #[test]
+    fn test_config_basic() {
+        let content = indoc!(
+            r#"
+            Config(
+                build_config=BuildConfig('myapp'),
+                embedded_python_config=EmbeddedPythonConfig(),
+                python_distribution=default_python_distribution(),
+                python_run_mode=python_run_mode_repl(),
+                packaging_rules=[Stdlib()],
+            )
+        "#
+        );
+
+        let v = starlark_ok(content);
+        assert_eq!(v.get_type(), "Config");
+    }
+}
