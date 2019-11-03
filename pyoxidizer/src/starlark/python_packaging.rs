@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use super::super::pyrepackager::config::{
-    resolve_install_location, PackagingSetupPyInstall, PackagingStdlib,
+    resolve_install_location, PackagingPackageRoot, PackagingSetupPyInstall, PackagingStdlib,
     PackagingStdlibExtensionVariant, PackagingStdlibExtensionsExplicitExcludes,
     PackagingStdlibExtensionsExplicitIncludes, PackagingStdlibExtensionsPolicy,
     PackagingVirtualenv,
@@ -24,6 +24,41 @@ use starlark::{
 use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+
+#[derive(Debug, Clone)]
+pub struct PackageRoot {
+    pub rule: PackagingPackageRoot,
+}
+
+impl TypedValue for PackageRoot {
+    immutable!();
+    any!();
+    not_supported!(binop);
+    not_supported!(container);
+    not_supported!(function);
+    not_supported!(get_hash);
+    not_supported!(to_int);
+
+    fn to_str(&self) -> String {
+        format!("PackageRoot<{:#?}>", self.rule)
+    }
+
+    fn to_repr(&self) -> String {
+        self.to_str()
+    }
+
+    fn get_type(&self) -> &'static str {
+        "PackageRoot"
+    }
+
+    fn to_bool(&self) -> bool {
+        true
+    }
+
+    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
+        default_compare(self, other)
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct SetupPyInstall {
@@ -272,6 +307,49 @@ impl TypedValue for Virtualenv {
 
 starlark_module! { python_packaging_env =>
     #[allow(non_snake_case)]
+    PackageRoot(
+        path,
+        packages=None,
+        optimize_level=0,
+        excludes=None,
+        include_source=true,
+        install_location="embedded"
+    ) {
+        let path = required_str_arg("path", &path)?;
+        required_list_arg("packages", "string", &packages)?;
+        required_type_arg("optimize_level", "int", &optimize_level)?;
+        optional_list_arg("excludes", "string", &excludes)?;
+        let include_source = required_bool_arg("include_source", &include_source)?;
+        let install_location = required_str_arg("install_location", &install_location)?;
+
+        let packages = packages.into_iter()?.map(|x| x.to_string()).collect();
+        let optimize_level = optimize_level.to_int()?;
+        let excludes = match excludes.get_type() {
+            "list" => excludes.into_iter()?.map(|x| x.to_string()).collect(),
+            "NoneType" => Vec::new(),
+            _ => panic!("type should have been validated above"),
+        };
+        let install_location = resolve_install_location(&install_location).or_else(|e| {
+            Err(RuntimeError {
+                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                message: e.to_string(),
+                label: e.to_string(),
+            }.into())
+        })?;
+
+        let rule = PackagingPackageRoot {
+            path,
+            packages,
+            optimize_level,
+            excludes,
+            include_source,
+            install_location,
+        };
+
+        Ok(Value::new(PackageRoot { rule }))
+    }
+
+    #[allow(non_snake_case)]
     SetupPyInstall(
         package_path,
         extra_env=None,
@@ -457,6 +535,27 @@ mod tests {
     use super::super::super::pyrepackager::config::InstallLocation;
     use super::super::testutil::*;
     use super::*;
+
+    #[test]
+    fn test_package_root_default() {
+        let err = starlark_nok("PackageRoot()");
+        assert!(err.message.starts_with("Missing parameter path"));
+    }
+
+    #[test]
+    fn test_package_root_basic() {
+        let v = starlark_ok("PackageRoot('path', ['foo', 'bar'])");
+        let wanted = PackagingPackageRoot {
+            path: "path".to_string(),
+            packages: vec!["foo".to_string(), "bar".to_string()],
+            optimize_level: 0,
+            excludes: Vec::new(),
+            include_source: true,
+            install_location: InstallLocation::Embedded,
+        };
+
+        v.downcast_apply(|x: &PackageRoot| assert_eq!(x.rule, wanted));
+    }
 
     #[test]
     fn test_setup_py_install_default() {

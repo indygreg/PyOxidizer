@@ -385,7 +385,7 @@ pub struct PackagingVirtualenv {
     pub install_location: InstallLocation,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PackagingPackageRoot {
     pub path: String,
     pub packages: Vec<String>,
