@@ -3,8 +3,9 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use super::super::pyrepackager::config::{
-    resolve_install_location, PackagingSetupPyInstall, PackagingStdlibExtensionsExplicitExcludes,
-    PackagingStdlibExtensionsExplicitIncludes, PackagingStdlibExtensionsPolicy,
+    resolve_install_location, PackagingSetupPyInstall, PackagingStdlibExtensionVariant,
+    PackagingStdlibExtensionsExplicitExcludes, PackagingStdlibExtensionsExplicitIncludes,
+    PackagingStdlibExtensionsPolicy,
 };
 use super::env::{
     optional_dict_arg, optional_list_arg, required_bool_arg, required_list_arg, required_str_arg,
@@ -163,6 +164,41 @@ impl TypedValue for StdlibExtensionsExplicitExcludes {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct StdlibExtensionVariant {
+    pub rule: PackagingStdlibExtensionVariant,
+}
+
+impl TypedValue for StdlibExtensionVariant {
+    immutable!();
+    any!();
+    not_supported!(binop);
+    not_supported!(container);
+    not_supported!(function);
+    not_supported!(get_hash);
+    not_supported!(to_int);
+
+    fn to_str(&self) -> String {
+        format!("StdlibExtensionVariant<{:#?}>", self.rule)
+    }
+
+    fn to_repr(&self) -> String {
+        self.to_str()
+    }
+
+    fn get_type(&self) -> &'static str {
+        "StdlibExtensionVariant"
+    }
+
+    fn to_bool(&self) -> bool {
+        true
+    }
+
+    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
+        default_compare(self, other)
+    }
+}
+
 starlark_module! { python_packaging_env =>
     #[allow(non_snake_case)]
     SetupPyInstall(
@@ -258,6 +294,19 @@ starlark_module! { python_packaging_env =>
 
         Ok(Value::new(StdlibExtensionsExplicitExcludes { rule }))
     }
+
+    #[allow(non_snake_case)]
+    StdlibExtensionVariant(extension, variant) {
+        let extension = required_str_arg("extension", &extension)?;
+        let variant = required_str_arg("variant", &variant)?;
+
+        let rule = PackagingStdlibExtensionVariant {
+            extension,
+            variant,
+        };
+
+        Ok(Value::new(StdlibExtensionVariant { rule }))
+    }
 }
 
 #[cfg(test)]
@@ -345,5 +394,21 @@ mod tests {
             excludes: vec!["foo".to_string(), "bar".to_string()],
         };
         v.downcast_apply(|x: &StdlibExtensionsExplicitExcludes| assert_eq!(x.rule, wanted));
+    }
+
+    #[test]
+    fn test_stdlib_extension_variant_default() {
+        let err = starlark_nok("StdlibExtensionVariant()");
+        assert!(err.message.starts_with("Missing parameter extension"));
+    }
+
+    #[test]
+    fn test_stdlib_extension_variant_basic() {
+        let v = starlark_ok("StdlibExtensionVariant('foo', 'bar')");
+        let wanted = PackagingStdlibExtensionVariant {
+            extension: "foo".to_string(),
+            variant: "bar".to_string(),
+        };
+        v.downcast_apply(|x: &StdlibExtensionVariant| assert_eq!(x.rule, wanted));
     }
 }
