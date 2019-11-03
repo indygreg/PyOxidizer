@@ -367,7 +367,7 @@ pub struct PackagingStdlibExtensionVariant {
     pub variant: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PackagingStdlib {
     pub optimize_level: i64,
     pub exclude_test_modules: bool,

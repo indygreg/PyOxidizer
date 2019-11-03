@@ -3,9 +3,9 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use super::super::pyrepackager::config::{
-    resolve_install_location, PackagingSetupPyInstall, PackagingStdlibExtensionVariant,
-    PackagingStdlibExtensionsExplicitExcludes, PackagingStdlibExtensionsExplicitIncludes,
-    PackagingStdlibExtensionsPolicy,
+    resolve_install_location, PackagingSetupPyInstall, PackagingStdlib,
+    PackagingStdlibExtensionVariant, PackagingStdlibExtensionsExplicitExcludes,
+    PackagingStdlibExtensionsExplicitIncludes, PackagingStdlibExtensionsPolicy,
 };
 use super::env::{
     optional_dict_arg, optional_list_arg, required_bool_arg, required_list_arg, required_str_arg,
@@ -199,6 +199,41 @@ impl TypedValue for StdlibExtensionVariant {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct Stdlib {
+    pub rule: PackagingStdlib,
+}
+
+impl TypedValue for Stdlib {
+    immutable!();
+    any!();
+    not_supported!(binop);
+    not_supported!(container);
+    not_supported!(function);
+    not_supported!(get_hash);
+    not_supported!(to_int);
+
+    fn to_str(&self) -> String {
+        format!("Stdlib<{:#?}>", self.rule)
+    }
+
+    fn to_repr(&self) -> String {
+        self.to_str()
+    }
+
+    fn get_type(&self) -> &'static str {
+        "Stdlib"
+    }
+
+    fn to_bool(&self) -> bool {
+        true
+    }
+
+    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
+        default_compare(self, other)
+    }
+}
+
 starlark_module! { python_packaging_env =>
     #[allow(non_snake_case)]
     SetupPyInstall(
@@ -307,6 +342,39 @@ starlark_module! { python_packaging_env =>
 
         Ok(Value::new(StdlibExtensionVariant { rule }))
     }
+
+    #[allow(non_snake_case)]
+    Stdlib(
+        optimize_level=0,
+        exclude_test_modules=true,
+        include_source=true,
+        include_resources=true,
+        install_location="embedded"
+    ) {
+        required_type_arg("optimize_level", "int", &optimize_level)?;
+        let exclude_test_modules = required_bool_arg("exclude_test_modules", &exclude_test_modules)?;
+        let include_source = required_bool_arg("include_source", &include_source)?;
+        let include_resources = required_bool_arg("include_resources", &include_resources)?;
+        let install_location = required_str_arg("install_location", &install_location)?;
+
+        let install_location = resolve_install_location(&install_location).or_else(|e| {
+            Err(RuntimeError {
+                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                message: e.to_string(),
+                label: e.to_string(),
+            }.into())
+        })?;
+
+        let rule = PackagingStdlib {
+            optimize_level: optimize_level.to_int()?,
+            exclude_test_modules,
+            include_source,
+            include_resources,
+            install_location,
+        };
+
+        Ok(Value::new(Stdlib { rule }))
+    }
 }
 
 #[cfg(test)]
@@ -410,5 +478,18 @@ mod tests {
             variant: "bar".to_string(),
         };
         v.downcast_apply(|x: &StdlibExtensionVariant| assert_eq!(x.rule, wanted));
+    }
+
+    #[test]
+    fn test_stdlib_default() {
+        let v = starlark_ok("Stdlib()");
+        let wanted = PackagingStdlib {
+            optimize_level: 0,
+            exclude_test_modules: true,
+            include_source: true,
+            include_resources: true,
+            install_location: InstallLocation::Embedded,
+        };
+        v.downcast_apply(|x: &Stdlib| assert_eq!(x.rule, wanted));
     }
 }
