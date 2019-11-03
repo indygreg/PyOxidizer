@@ -351,7 +351,7 @@ pub struct PackagingStdlibExtensionsPolicy {
     pub policy: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PackagingStdlibExtensionsExplicitIncludes {
     pub includes: Vec<String>,
 }
