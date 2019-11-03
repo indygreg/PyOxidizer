@@ -17,6 +17,9 @@ pub struct EnvironmentContext {
     ///
     /// Typically used to resolve filenames.
     pub cwd: PathBuf,
+
+    /// Target triple we are building for.
+    pub build_target: String,
 }
 
 impl TypedValue for EnvironmentContext {
@@ -56,6 +59,7 @@ pub fn global_environment(context: &EnvironmentContext) -> Result<Environment, E
     env.set("CONTEXT", Value::new(context.clone()))?;
 
     env.set("CWD", Value::from(context.cwd.display().to_string()))?;
+    env.set("BUILD_TARGET", Value::from(context.build_target.clone()))?;
 
     Ok(env)
 }
