@@ -120,6 +120,73 @@ pub fn optional_list_arg(
     required_list_arg(arg_name, value_type, value)
 }
 
+pub fn required_dict_arg(
+    arg_name: &str,
+    key_type: &str,
+    value_type: &str,
+    value: &Value,
+) -> Result<(), ValueError> {
+    match value.get_type() {
+        "dict" => {
+            for k in value.into_iter()? {
+                if k.get_type() == key_type {
+                    Ok(())
+                } else {
+                    Err(RuntimeError {
+                        code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                        message: format!(
+                            "dict {} expects keys of type {}; got {}",
+                            arg_name,
+                            key_type,
+                            k.get_type()
+                        ),
+                        label: format!("expected type {}; got {}", key_type, k.get_type()),
+                    }
+                    .into())
+                }?;
+
+                let v = value.at(k.clone())?;
+
+                if v.get_type() == value_type {
+                    Ok(())
+                } else {
+                    Err(RuntimeError {
+                        code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                        message: format!(
+                            "dict {} expects values of type {}; got {}",
+                            arg_name,
+                            value_type,
+                            v.get_type(),
+                        ),
+                        label: format!("expected type {}; got {}", value_type, v.get_type()),
+                    }
+                    .into())
+                }?;
+            }
+            Ok(())
+        }
+        t => Err(RuntimeError {
+            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+            message: format!("function expects a dict for {}; got type {}", arg_name, t),
+            label: format!("expected type dict; got {}", t),
+        }
+        .into()),
+    }
+}
+
+pub fn optional_dict_arg(
+    arg_name: &str,
+    key_type: &str,
+    value_type: &str,
+    value: &Value,
+) -> Result<(), ValueError> {
+    if value.get_type() == "NoneType" {
+        return Ok(());
+    }
+
+    required_dict_arg(arg_name, key_type, value_type, value)
+}
+
 /// Holds state for evaluating a starlark environment.
 #[derive(Debug, Clone)]
 pub struct EnvironmentContext {
@@ -168,6 +235,7 @@ pub fn global_environment(context: &EnvironmentContext) -> Result<Environment, E
     let env = super::build_config::build_config_env(env);
     let env = super::python_distribution::python_distribution_module(env);
     let env = super::embedded_python_config::embedded_python_config_module(env);
+    let env = super::python_packaging::python_packaging_env(env);
     let env = super::python_run_mode::python_run_mode_env(env);
 
     env.set("CONTEXT", Value::new(context.clone()))?;

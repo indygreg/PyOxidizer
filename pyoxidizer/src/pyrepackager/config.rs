@@ -328,13 +328,13 @@ pub enum PythonDistribution {
     Url { url: String, sha256: String },
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum InstallLocation {
     Embedded,
     AppRelative { path: String },
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PackagingSetupPyInstall {
     pub path: String,
     pub extra_env: HashMap<String, String>,
@@ -507,7 +507,7 @@ pub struct Config {
     pub distributions: Vec<Distribution>,
 }
 
-fn resolve_install_location(value: &str) -> Result<InstallLocation, String> {
+pub fn resolve_install_location(value: &str) -> Result<InstallLocation, String> {
     if value == "embedded" {
         Ok(InstallLocation::Embedded)
     } else if value.starts_with("app-relative:") {
