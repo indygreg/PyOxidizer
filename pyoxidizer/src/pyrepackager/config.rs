@@ -356,7 +356,7 @@ pub struct PackagingStdlibExtensionsExplicitIncludes {
     pub includes: Vec<String>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PackagingStdlibExtensionsExplicitExcludes {
     pub excludes: Vec<String>,
 }
