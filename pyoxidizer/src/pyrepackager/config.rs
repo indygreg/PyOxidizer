@@ -441,7 +441,7 @@ pub enum PythonPackaging {
     WriteLicenseFiles(PackagingWriteLicenseFiles),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum RunMode {
     Noop,
     Repl,

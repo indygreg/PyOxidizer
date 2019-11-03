@@ -12,5 +12,6 @@ pub mod embedded_python_config;
 pub mod env;
 pub mod eval;
 pub mod python_distribution;
+pub mod python_run_mode;
 #[cfg(test)]
 mod testutil;
