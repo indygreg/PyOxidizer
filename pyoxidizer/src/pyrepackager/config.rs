@@ -345,7 +345,7 @@ pub struct PackagingSetupPyInstall {
     pub excludes: Vec<String>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PackagingStdlibExtensionsPolicy {
     // TODO make this an enum.
     pub policy: String,

@@ -2,7 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use super::super::pyrepackager::config::{resolve_install_location, PackagingSetupPyInstall};
+use super::super::pyrepackager::config::{
+    resolve_install_location, PackagingSetupPyInstall, PackagingStdlibExtensionsPolicy,
+};
 use super::env::{
     optional_dict_arg, optional_list_arg, required_bool_arg, required_str_arg, required_type_arg,
 };
@@ -43,6 +45,41 @@ impl TypedValue for SetupPyInstall {
 
     fn get_type(&self) -> &'static str {
         "SetupPyInstall"
+    }
+
+    fn to_bool(&self) -> bool {
+        true
+    }
+
+    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
+        default_compare(self, other)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct StdlibExtensionsPolicy {
+    pub rule: PackagingStdlibExtensionsPolicy,
+}
+
+impl TypedValue for StdlibExtensionsPolicy {
+    immutable!();
+    any!();
+    not_supported!(binop);
+    not_supported!(container);
+    not_supported!(function);
+    not_supported!(get_hash);
+    not_supported!(to_int);
+
+    fn to_str(&self) -> String {
+        format!("StdlibExtensionsPolicy<{:#?}>", self.rule)
+    }
+
+    fn to_repr(&self) -> String {
+        self.to_str()
+    }
+
+    fn get_type(&self) -> &'static str {
+        "StdlibExtensionsPolicy"
     }
 
     fn to_bool(&self) -> bool {
@@ -112,6 +149,17 @@ starlark_module! { python_packaging_env =>
 
         Ok(Value::new(SetupPyInstall { rule }))
     }
+
+    #[allow(non_snake_case)]
+    StdlibExtensionsPolicy(policy) {
+        let policy = required_str_arg("policy", &policy)?;
+
+        let rule = PackagingStdlibExtensionsPolicy {
+            policy,
+        };
+
+        Ok(Value::new(StdlibExtensionsPolicy { rule }))
+    }
 }
 
 #[cfg(test)]
@@ -148,5 +196,20 @@ mod tests {
         v.downcast_apply(|x: &SetupPyInstall| {
             assert_eq!(x.rule.extra_global_arguments, vec!["arg1", "arg2"])
         });
+    }
+
+    #[test]
+    fn test_stdlib_extensions_policy_default() {
+        let err = starlark_nok("StdlibExtensionsPolicy()");
+        assert!(err.message.starts_with("Missing parameter policy"));
+    }
+
+    #[test]
+    fn test_stdlib_extensions_policy_policy() {
+        let v = starlark_ok("StdlibExtensionsPolicy('foo')");
+        let wanted = PackagingStdlibExtensionsPolicy {
+            policy: "foo".to_string(),
+        };
+        v.downcast_apply(|x: &StdlibExtensionsPolicy| assert_eq!(x.rule, wanted));
     }
 }
