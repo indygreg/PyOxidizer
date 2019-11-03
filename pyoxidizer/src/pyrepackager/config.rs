@@ -376,7 +376,7 @@ pub struct PackagingStdlib {
     pub install_location: InstallLocation,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PackagingVirtualenv {
     pub path: String,
     pub optimize_level: i64,
