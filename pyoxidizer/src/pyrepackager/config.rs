@@ -316,7 +316,7 @@ struct ParsedConfig {
     distributions: Vec<ConfigDistribution>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct BuildConfig {
     pub application_name: String,
     pub build_path: PathBuf,
