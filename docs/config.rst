@@ -1005,11 +1005,6 @@ This type accepts the following arguments:
 This type defines the build configuration of an application. All the other types
 in this file do nothing unless they are passed to a ``Config`` instance.
 
-.. important::
-
-   The active ``Config`` instance must be assigned to the ``CONFIG`` global
-   variable or else configuration file evaluation will fail.
-
 This type accepts the following arguments:
 
 ``build_config`` (``BuildConfig``)

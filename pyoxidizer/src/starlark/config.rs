@@ -226,7 +226,7 @@ starlark_module! { config_env =>
 
         let v = Value::new(Config { config });
 
-        env.set("CONFIG", v.clone()).unwrap();
+        env.get_parent().unwrap().set("CONFIG", v.clone()).unwrap();
 
         Ok(v)
     }

@@ -115,7 +115,7 @@ The new ``pyoxidizer.bzl`` file should look something like:
    install_pyflakes = PipInstallSimple("pyflakes==2.1.1")
    python_run_mode = python_run_mode_eval("from pyflakes.api import main; main()")
 
-   CONFIG = Config(
+   Config(
        build_config=build_config,
        embedded_python_config=embedded_python_config,
        python_distribution=default_python_distribution(),
@@ -185,7 +185,7 @@ Then edit the ``pyoxidizer.bzl`` file to have the following:
    install_black = PipInstallSimple("black==19.3b0")
    python_run_mode = python_run_mode_module("black")
 
-   CONFIG = Config(
+   Config(
        build_config=build_config,
        embedded_python_config=embedded_python_config,
        python_distribution=default_python_distribution(),

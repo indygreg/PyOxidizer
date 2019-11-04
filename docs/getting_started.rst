@@ -177,7 +177,7 @@ rule:
    package_pyflakes = PipInstallSimple(package="pyflakes==2.1.1")
    python_run_mode = python_run_mode_eval("from pyflakes.api import main; main()")
 
-   CONFIG = Config(
+   Config(
       ...
       python_run_mode=python_run_mode,
       packaging_rules=[stdlib, stdlib_extensions_policy, package_pyflakes],

@@ -91,7 +91,7 @@ python_run_mode = python_run_mode_eval(r"""{{{code}}}""")
 #python_run_mode = python_run_mode_eval("from mypackage import main; main()")
 {{~/if}}
 
-CONFIG = Config(
+Config(
     build_config=build_config,
     embedded_python_config=embedded_python_config,
     python_distribution=default_python_distribution(),
