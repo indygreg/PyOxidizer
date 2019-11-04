@@ -4,58 +4,94 @@
 Configuration Files
 ===================
 
-PyOxidizer uses TOML configuration files to configure how Python is packaged
-and built applications behave.
+PyOxidizer uses `Starlark <https://github.com/bazelbuild/starlark>`_
+files to configure run-time behavior. Starlark is a dialect of Python
+intended to be used as a configuration language and the syntax should
+be rather obvious to any Python programmer.
 
 Finding Configuration Files
 ===========================
 
-The TOML configuration file is processed as part of building the ``pyembed``
+The Starlark configuration file is processed as part of building the ``pyembed``
 crate. This is the crate that manages an embedded Python interpreter in a
 larger Rust project.
 
 If the ``PYOXIDIZER_CONFIG`` environment variable is set, the path specified
-by this environment variable will be used as the location of the TOML
+by this environment variable will be used as the location of the Starlark
 configuration file.
 
 If ``PYOXIDIZER_CONFIG`` is not set, the build will look for a
-``pyoxidizer.toml`` starting in the directory of the ``pyembed`` crate and
-then traversing ancestor directories until a file is found.
+``pyoxidizer.bzl`` file starting in the directory of the ``pyembed``
+crate and then traversing ancestor directories until a file is found.
 
 If no configuration file is found, an error occurs.
 
 File Processing Semantics
 =========================
 
-Config files are processed by iterating through the various sections within
-them. Unless specified otherwise, when a new section type is encountered,
-a set of default values for that section type is initialized. As each new
-section instance is encountered, the section is examined to see if it is
-*applicable*. If it is, the settings it defines are set on the configuration
-object. The final set of values set for a given section type are used.
+A configuration file is evaluated in a custom Starlark *dialect* which
+provides primitives used by PyOxidizer. This dialect provides some
+well-defined global variables (defined in UPPERCASE) as well as some
+types and functions that can be constructed and called.
 
-The configuration file format is designed to be simultaneously used by multiple
-build *targets*, where a target is a Rust toolchain target triple, such as
-``x86_64-unknown-linux-gnu`` or ``x86_64-pc-windows-msvc``. (Run
-``rustup target list`` to see a list of targets.)
+A configuration file is effectively a sandboxed Python script. While
+many configuration files will be mostly static, it is possible for
+configuration files to dynamically determine what actions to take based
+on global variables, etc. This means there typically only needs to be a
+single configuration file rather than a variant for each build configuration.
 
-Each TOML section accepts an optional ``built_target`` key that can be used to
-control whether the section is applied or ignored. If the ``built_target`` key
-is not defined or has the special value ``all``, it is always applied. Otherwise
-the section is only applied if its ``build_target`` value matches the Rust build
-target.
+Global Environment
+==================
 
-Configuration Sections
-======================
+The evaluation context takes place in a *global environment*.
 
-The following documentation sections describe the various TOML sections.
+This environment contains
+`built-in symbols and constants from Starlark <https://github.com/bazelbuild/starlark/blob/master/spec.md#built-in-constants-and-functions>`_
+in addition to symbols and constants provided by PyOxidizer. The
+following sections describe those symbols.
+
+Global Constants
+================
+
+PyOxidizer provides global constants as defined by the following sections.
+
+BUILD_TARGET
+------------
+
+The string Rust target triple that we're currently building for. Will be
+a value like ``x86_64-unknown-linux-gnu`` or ``x86_64-pc-windows-msvc``.
+Run ``rustup target list`` to see a list of targets.
+
+CONFIG_PATH
+-----------
+
+The string path to the configuration file currently being evaluated.
+
+CONTEXT
+-------
+
+Holds build context. This is an internal variable and accessing it will
+not provide any value.
+
+CWD
+---
+
+The current working directory. Also the directory containing the active
+configuration file.
+
+Global Symbols
+==============
+
+PyOxidizer defines various global symbols to define execution
+behavior. These are explained in the following sections.
 
 .. _config_build:
 
-``[[build]]``
--------------
+``BuildConfig(application_name, build_path=None)``
+--------------------------------------------------
 
-This section configures high-level application build settings.
+This type configured high-level application build settings. It
+accepts the following arguments:
 
 ``application_name``
    Name of the application being built.
@@ -76,8 +112,8 @@ This section configures high-level application build settings.
 
 .. _config_python_distribution:
 
-``[[python_distribution]]``
----------------------------
+``python_distribution(sha256, local_path=None, url=None)``
+----------------------------------------------------------
 
 Defines a Python distribution that can be embedded into a binary.
 
@@ -88,109 +124,101 @@ produced by the
 project. Pre-built distributions are available at
 https://github.com/indygreg/python-build-standalone/releases.
 
-The ``pyoxidizer`` binary has a set of known distributions built-in
-which are automatically added to generated ``pyoxidizer.toml`` config files.
-Typically you don't need to build your own distribution or change
-the distribution manually: distributions are managed automatically
-by ``pyoxidizer``.
-
-A distribution is defined by a target triple, location, and a hash.
+A distribution is defined by a location, and a hash.
 
 One of ``local_path`` or ``url`` MUST be defined.
 
-``build_target`` (string)
-
-   Target triple this distribution is compiled for.
-
 ``sha256`` (string)
-
    The SHA-256 of the distribution archive file.
 
 ``local_path`` (string)
-
    Local filesystem path to the distribution archive.
 
 ``url`` (string)
-
    URL from which a distribution archive can be obtained using an HTTP GET
    request.
 
 Examples:
 
-.. code-block:: toml
+.. code-block:: python
 
-   [[python_distribution]]
-   build_target = "x86_64-unknown-linux-gnu"
-   local_path = "/var/python-distributions/cpython-linux64.tar.zst"
-   sha256 = "11a53f5755773f91111a04f6070a6bc00518a0e8e64d90f58584abf02ca79081"
+   linux = python_distribution(
+       sha256="11a53f5755773f91111a04f6070a6bc00518a0e8e64d90f58584abf02ca79081",
+       local_path="/var/python-distributions/cpython-linux64.tar.zst"
+   )
 
-.. code-block:: toml
+   macos = python_distribution(
+        sha256="b46a861c05cb74b5b668d2ce44dcb65a449b9fef98ba5d9ec6ff6937829d5eec",
+        url="https://github.com/indygreg/python-build-standalone/releases/download/20190505/cpython-3.7.3-macos-20190506T0054.tar.zst"
+   )
 
-   [[python_distribution]]
-   build_target = "x86_64-apple-darwin"
-   url = "https://github.com/indygreg/python-build-standalone/releases/download/20190505/cpython-3.7.3-macos-20190506T0054.tar.zst"
-   sha256 = "b46a861c05cb74b5b668d2ce44dcb65a449b9fef98ba5d9ec6ff6937829d5eec"
+``default_python_distribution(build_target=None)``
+--------------------------------------------------
+
+Resolves the default ``PythonDistribution`` for the given build target,
+which defaults to the active build target as defined by ``BUILD_TARGET``.
+
+The ``pyoxidizer`` binary has a set of known distributions built-in
+which are automatically available and used by default in autogenerated
+config files. Typically you don't need to build your own distribution or
+change the distribution manually: distributions are managed automatically
+by ``pyoxidizer``.
 
 .. _config_embedded_python_config:
 
-``[[embedded_python_config]]``
+``EmbeddedPythonConfig(...)```
 ------------------------------
 
-This section configures the default behavior of the embedded Python interpreter.
+This type configures the default behavior of the embedded Python interpreter.
 
 Embedded Python interpreters are configured and instantiated using a
 ``pyembed::PythonConfig`` data structure. The ``pyembed`` crate defines a
 default instance of this data structure with parameters defined by the settings
-in this TOML section.
+in this type.
 
 .. note::
 
    If you are writing custom Rust code and constructing a custom
    ``pyembed::PythonConfig`` instance and don't use the default instance, this
-   config section is not relevant to you and can be omitted from your config
+   config type is not relevant to you and can be omitted from your config
    file.
 
-The following keys can be defined to control the default ``PythonConfig``
+The following arguments can be defined to control the default ``PythonConfig``
 behavior:
 
 ``dont_write_bytecode`` (bool)
-
    Controls the value of
    `Py_DontWriteBytecodeFlag <https://docs.python.org/3/c-api/init.html#c.Py_DontWriteBytecodeFlag>`_.
 
    This is only relevant if the interpreter is configured to import modules
    from the filesystem.
 
-   Default is ``true``.
+   Default is ``True``.
 
 ``ignore_environment`` (bool)
-
    Controls the value of
    `Py_IgnoreEnvironmentFlag <https://docs.python.org/3/c-api/init.html#c.Py_IgnoreEnvironmentFlag>`_.
 
    This is likely wanted for embedded applications that don't behave like
    ``python`` executables.
 
-   Default is ``true``.
+   Default is ``True``.
 
 ``no_site`` (bool)
-
    Controls the value of
    `Py_NoSiteFlag <https://docs.python.org/3/c-api/init.html#c.Py_NoSiteFlag>`_.
 
    The ``site`` module is typically not needed for standalone Python applications.
 
-   Default is ``true``.
+   Default is ``True``.
 
 ``no_user_site_directory`` (bool)
-
    Controls the value of
    `Py_NoUserSiteDirectory <https://docs.python.org/3/c-api/init.html#c.Py_NoUserSiteDirectory>`_.
 
-   Default is ``true``.
+   Default is ``True``.
 
 ``optimize_level`` (bool)
-
    Controls the value of
    `Py_OptimizeFlag <https://docs.python.org/3/c-api/init.html#c.Py_OptimizeFlag>`_.
 
@@ -201,7 +229,6 @@ behavior:
    modules are being imported from the filesystem.
 
 ``stdio_encoding`` (string)
-
    Defines the encoding and error handling mode for Python's standard I/O
    streams (``sys.stdout``, etc). Values are of the form ``encoding:error`` e.g.
    ``utf-8:ignore`` or ``latin1-strict``.
@@ -210,31 +237,27 @@ behavior:
    Python interpreter initialization. If not, the Python defaults are used.
 
 ``unbuffered_stdio`` (bool)
-
    Controls the value of
    `Py_UnbufferedStdioFlag <https://docs.python.org/3/c-api/init.html#c.Py_UnbufferedStdioFlag>`_.
 
    Setting this makes the standard I/O streams unbuffered.
 
-   Default is ``false``.
+   Default is ``False``.
 
 ``filesystem_importer`` (bool)
-
    Controls whether to enable Python's filesystem based importer. Enabling
    this importer allows Python modules to be imported from the filesystem.
 
-   Default is ``false`` (since PyOxidizer prefers embedding Python modules in
+   Default is ``False`` (since PyOxidizer prefers embedding Python modules in
    binaries).
 
 ``sys_frozen`` (bool)
-
    Controls whether to set the ``sys.frozen`` attribute to ``True``. If
    ``false``, ``sys.frozen`` is not set.
 
-   Default is ``false``.
+   Default is ``False``.
 
 ``sys_meipass`` (bool)
-
    Controls whether to set the ``sys._MEIPASS`` attribute to the path of
    the executable.
 
@@ -243,10 +266,9 @@ behavior:
    and could possibly help self-contained applications that are aware of
    PyInstaller also work with PyOxidizer.
 
-   Default is ``false``.
+   Default is ``False``.
 
 ``sys_paths`` (array of strings)
-
    Defines filesystem paths to be added to ``sys.path``.
 
    Setting this value will imply ``filesystem_importer = true``.
@@ -263,7 +285,6 @@ behavior:
    Default is an empty array (``[]``).
 
 ``raw_allocator`` (string)
-
    Which memory allocator to use for the ``PYMEM_DOMAIN_RAW`` allocator.
 
    This controls the lowest level memory allocator used by Python. All Python
@@ -327,7 +348,6 @@ behavior:
    populate the ``TERMINFO_DIRS`` environment variable at application run time.
 
 ``write_modules_directory_env`` (string)
-
    Environment variable that defines a directory where ``modules-<UUID>`` files
    containing a ``\n`` delimited list of loaded Python modules (from ``sys.modules``)
    will be written upon interpreter shutdown.
@@ -343,16 +363,13 @@ behavior:
 
 .. _config_embedded_python_run:
 
-``[[embedded_python_run]]``
----------------------------
-
-This section configures the default Python code to be executed by built
-binaries.
+Python Run Mode
+---------------
 
 Embedded Python interpreters are configured and instantiated using a
 ``pyembed::PythonConfig`` data structure. The ``pyembed`` crate defines a
-default instance of this data structure with parameters defined by the settings
-in this TOML section.
+default instance of this data structure with parameters defined by a
+``PythonRunMode`` instance.
 
 .. note::
 
@@ -361,45 +378,41 @@ in this TOML section.
    config section is not relevant to you and can be omitted from your config
    file.
 
-Instances of this section have a ``mode`` key that defines the mode of
-execution for the interpreter. The sections below describe these various modes.
+The sections below denote ways of constructing ``PythonRunMode``
+instances.
 
-``eval``
-^^^^^^^^
+``python_run_mode_eval(code)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This mode will evaluate a string containing Python code after the
 interpreter initializes.
 
-This mode requires the ``code`` key to be set to a string containing
+This mode requires the ``code`` argument to be set to a string containing
 Python code to run.
 
 Example:
 
-.. code-block:: toml
+.. code-block:: python
 
-   [[embedded_python_run]]
-   mode = "eval"
-   code = "import mymodule; mymodule.main()"
+   python_run_mode = python_run_mode_eval("import mymodule; mymodule.main()")
 
-``module``
-^^^^^^^^^^
+``python_run_mode_module(module)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This mode will load a named Python module as the ``__main__`` module and
 then execute that module.
 
-This mode requires the ``module`` key to be set to the string value of
+This mode requires the ``module`` argument to be set to the string value of
 the module to load as ``__main__``.
 
 Example:
 
-.. code-block:: toml
+.. code-block:: python
 
-   [[embedded_python_run]]
-   mode = "module"
-   module = "mymodule"
+   python_run_mode = python_run_mode_module("mymodule")
 
-``repl``
-^^^^^^^^
+``python_run_mode_repl()``
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This mode will launch an interactive Python REPL connected to stdin. This
 is similar to the behavior of running a ``python`` executable without any
@@ -407,22 +420,25 @@ arguments.
 
 Example:
 
-.. code-block:: toml
+.. code-block:: python
 
-   [[embedded_python_run]]
-   mode = "repl"
+   python_run_mode = python_run_mode_repl()
 
-``noop``
-^^^^^^^^
+``python_run_mode_noop()``
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This mode will do nothing. It is provided for completeness sake.
 
 .. _config_packaging_rule:
 
-``[[packaging_rule]]``
-----------------------
+Packaging Rules
+---------------
 
-Defines a rule to control the packaging of Python resources.
+There exist several types to control packaging of the built application.
+These types are constructed and then passed into and evaluated sequentially
+as part of building the application.
+
+Packaging rules operate in the domain of Python resources.
 
 A *Python resource* can be one of the following:
 
@@ -443,12 +459,11 @@ Python. Static linking is used, if available. For example, the ``_sqlite3``
 extension module will link the ``libsqlite3`` library (which should be
 included as part of the Python distribution).
 
-Each entry of this section describes a specific rule for finding and
-including or excluding resources. Each section has a ``type`` key
-describing the *flavor* of rule this is.
+Each rule denotes special behavior for finding and including or excluding
+resources.
 
 When packaging goes to resolve the set of resources, it starts with an
-empty set for each resource *flavor*. As sections are read, their results are
+empty set for each resource *flavor*. As rules are read, their results are
 *merged* with the existing resource sets according to the behavior of that
 rule ``type``. If multiple rules add a resource of the same name and flavor, the
 last added version is used. i.e. *last write wins*.
@@ -487,14 +502,14 @@ location has the following values:
 
 The following sections describe the various ``type``'s of rules.
 
-``stdlib-extension-policy``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``StdlibExtensionsPolicy(policy)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This rule defines a base policy for what *extension modules* to include
 from the Python distribution.
 
-This type has a ``policy`` key denoting the *policy* to use. This key can have
-the following values:
+This type has a ``policy`` argument denoting the *policy* to use. This can
+have the following values:
 
 ``minimal``
    Include the minimal set of extension modules required to initialize a
@@ -521,11 +536,11 @@ the following values:
    determining whether a license is GPL is based on an explicit list of non-GPL
    licenses. This ensures new GPL licenses don't slip through.
 
-Example::
+Examples:
 
-   [[packaging_rule]]
-   type = "stdlib-extension-policy"
-   policy = "no-libraries"
+.. code-block:: python
+
+   stdlib_extensions_policy = StdlibExtensionsPolicy("no-libraries")
 
 .. important::
 
@@ -536,13 +551,13 @@ Example::
    license and therefore open source. See :ref:`licensing_considerations` for
    more.
 
-``stdlib-extensions-explicit-includes``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``StdlibExtensionsExplicitIncludes(includes)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This rule allows including explicitly delimited extension modules from
 the Python distribution.
 
-The section must define an ``includes`` key, which is an array of strings
+The rule must define an ``includes`` argument, which is an array of strings
 of extension module names.
 
 This policy is typically combined with the ``minimal`` ``stdlib-extension-policy``
@@ -550,19 +565,17 @@ to cherry pick individual extension modules for inclusion.
 
 Example:
 
-.. code-block:: toml
+.. code-block:: python
 
-   [[packaging_rule]]
-   type = "stdlib-extensions-explicit-includes"
-   includes = ["binascii", "errno", "itertools", "math", "select", "_socket"]
+   StdlibExtensionsExplicitIncludes(["binascii", "errno", "itertools", "math", "select", "_socket"])
 
-``stdlib-extensions-explicit-excludes``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``StdlibExtensionsExplicitExcludes(excludes)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This rule allows excluding explicitly delimited extension modules from
 the Python distribution.
 
-The section must define an ``excludes`` key, which is an array of strings of
+The rule must define an ``excludes`` argument, which is an array of strings of
 extension module names.
 
 Every known extension module not in ``excludes`` will be added. If an extension
@@ -570,14 +583,12 @@ module with a name in ``excludes`` has already been added, it will be removed.
 
 Example:
 
-.. code-block:: toml
+.. code-block:: python
 
-   [[packaging_rule]]
-   type = "stdlib-extensions-explicit-excludes"
-   excludes = ["_ssl"]
+   StdlibExtensionsExplicitExcludes(["_ssl"])
 
-``stdlib-extension-variant``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``StdlibExtensionVariant(extension, variant)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This rule specifies the inclusion of a specific extension module *variant*.
 
@@ -589,20 +600,18 @@ By default, the first listed extension module variant in a Python distribution
 is used. By defining rules of this type, one can use an alternate or explicit
 extension module variation.
 
-Extension module variants are defined the the ``extension`` and ``variant`` keys.
-The former defines the extension module name. The latter its variant name.
+Extension module variants are defined via the ``extension`` and ``variant``
+arguments. The former defines the extension module name. The latter its
+variant name.
 
 Example:
 
-.. code-block:: toml
+.. code-block:: python
 
-   [[packaging_rule]]
-   type = "stdlib-extension-variant"
-   extension = "readline"
-   variant = "libedit"
+   StdlibExtensionVariant("readline", "libedit")
 
-``stdlib``
-^^^^^^^^^^
+``Stdlib(...)``
+^^^^^^^^^^^^^^^
 
 This rule controls packaging of non-extension modules Python resources from
 the Python distribution's standard library. Presence of this rule will
@@ -610,50 +619,45 @@ pull in the Python standard library in its entirety.
 
 .. important::
 
-   A ``stdlib`` rule is required, as Python can't be initialized
+   A ``Stdlib`` rule is required, as Python can't be initialized
    without some modules from the standard library. It should be one of the first
-   ``[[packaging_rule]]`` entries so the standard library forms the base of the
+   packaging rule entries so the standard library forms the base of the
    set of Python modules to include.
 
-The following keys can exist in this rule type:
+The following arguments control behavior:
 
 ``exclude_test_modules`` (bool)
-
    Indicates whether test-only modules should be included in packaging. The
    Python standard library ships various packages and modules that are used for
    testing Python itself. These modules are not referenced by *real* modules
    in the Python standard library and can usually be safely excluded.
 
-   Default is ``true``.
+   Default is ``True``.
 
 ``optimize_level`` (int)
-
    The optimization level for packaged bytecode. Allowed values are ``0``, ``1``, and
    ``2``.
 
    Default is ``0``, which is the Python default.
 
 ``include_source`` (bool)
-
    Whether to include the source code for modules in addition to bytecode.
 
-   Default is ``true``.
+   Default is ``True``.
 
 ``include_resources`` (bool)
-
    Whether to include non-module resource files.
 
    These are files like ``lib2to3/Grammar.txt`` which are present in the
    standard library but aren't typically used for common functionality.
 
-   Default is ``false``.
+   Default is ``False``.
 
 ``install_location`` (string)
-
    Where to package these resources. See :ref:`install_locations`.
 
-``package-root``
-^^^^^^^^^^^^^^^^
+``PackageRoot(...)``
+^^^^^^^^^^^^^^^^^^^^
 
 This rule discovers resources from a directory on the filesystem.
 
@@ -668,14 +672,12 @@ directories (e.g. directories containing a ``setup.py`` file). This
 rule doesn't involve any packaging tools and is a purely driven by
 filesystem walking. It is primitive, yet effective.
 
-This rule has the following keys:
+This rule has the following arguments:
 
 ``path`` (string)
-
    The filesystem path to the directory to scan.
 
 ``optimize_level`` (int)
-
    The module optimization level for packaged bytecode.
 
    Allowed values are ``0``, ``1``, and ``2``.
@@ -683,14 +685,12 @@ This rule has the following keys:
    Defaults to ``0``, which is the Python default.
 
 ``packages`` (array of string)
-
    List of package names to include.
 
    Filesystem walking will find files in a directory ``<path>/<value>/`` or in
    a file ``<path>/<value>.py``.
 
 ``excludes`` (array of string)
-
    An array of package or module names to exclude.
 
    A value in this array will match on an exact full resource name match or
@@ -701,18 +701,16 @@ This rule has the following keys:
    Default is an empty array.
 
 ``include_source`` (bool)
-
    Whether to include the source code for modules in addition to the bytecode.
 
-   Default is ``true``.
+   Default is ``True``.
 
 ``install_location`` (string)
-
    Where to package resources associated with this rule.
    See :ref:`install_locations`.
 
-``pip-install-simple``
-^^^^^^^^^^^^^^^^^^^^^^
+``PipInstallSimple(...)``
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This rule runs ``pip install`` for a single package and will automatically
 package all Python resources associated with that operation, including
@@ -722,12 +720,10 @@ Using this rule, one can easily add multiple Python packages with a single
 rule.
 
 ``package`` (string)
-
    Name of the package to install. This is added as a positional argument to
    ``pip install``.
 
 ``optimize_level`` (int)
-
    The module optimization level for packaged bytecode.
 
    Allowed values are ``0``, ``1``, and ``2``.
@@ -735,49 +731,40 @@ rule.
    Default is ``0``, which is the Python default.
 
 ``include_source`` (bool)
-
    Whether to include the source code for Python modules in addition to
    the byte code.
 
-   Default is ``true``.
+   Default is ``True``.
 
 ``excludes`` (array of string)
-
    An array of package or module names to exclude. See the documentation
    for ``excludes`` for ``package-root`` rules for more.
 
    Default is an empty array.
 
 ``install_location`` (string)
-
    Where to package resources associated with this rule.
    See :ref:`install_locations`.
 
 ``extra_args`` (optional array of string)
-
    An array of arguments added to the pip install command.
 
 This will include the ``pyflakes`` package and all its dependencies as embedded
 resources:
 
-.. code-block:: toml
+.. code-block:: python
 
-   [[packaging_rule]]
-   type = "pip-install-simple"
-   package = "pyflakes"
+   PipInstallSimple(package="pyflakes")
 
 This will include the ``black`` package and all its dependencies in a directory
 next to the produced binary:
 
-.. code-block:: toml
+.. code-block:: python
 
-   [[packaging_rule]]
-   type = "pip-install-simple"
-   package = "black"
-   install_location = "app-relative:lib"
+   PipInstallSimple(package="black", install_location="app-relative:lib")
 
-``pip-requirements-file``
-^^^^^^^^^^^^^^^^^^^^^^^^^
+``PipRequirementsFile(...)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This rule runs ``pip install -r <path>`` for a given
 `pip requirements file <https://pip.pypa.io/en/stable/user_guide/#requirements-files>`_.
@@ -785,11 +772,9 @@ This allows multiple Python packages to be downloaded/installed in a single
 operation.
 
 ``requirements_path`` (string)
-
    Filesystem path to pip requirements file.
 
 ``optimize_level`` (int)
-
    The module optimization level for packaged bytecode.
 
    Allowed values are ``0``, ``1``, and ``2``.
@@ -797,22 +782,19 @@ operation.
    Defaults to ``0``, which is the Python default.
 
 ``include_source`` (bool)
-
    Whether to include the source code for Python modules in addition to the
    bytecode.
 
-   Default is ``true``.
+   Default is ``True``.
 
 Example:
 
-.. code-block:: toml
+.. code-block:: python
 
-   [[packaging_rule]]
-   type = "pip-requirements-file"
-   requirements_path = "/home/gps/src/myapp/requirements.txt"
+   PipRequirementsFile(requirements_path="/home/gps/src/myapp/requirements.txt")
 
-``setup-py-install``
-^^^^^^^^^^^^^^^^^^^^
+``SetupPyInstall(...)``
+^^^^^^^^^^^^^^^^^^^^^^^
 
 This rule runs ``python setup.py install`` for a given directory containing a
 ``setup.py`` ``distutils``/``setuptools`` packaging script.
@@ -821,7 +803,6 @@ The target package will be installed to a temporary directory and its installed
 resources will be collected and packaged.
 
 ``package_path`` (string)
-
    Local filesystem to the directory containing a ``setup.py`` file.
 
    Can be a relative or absolute path. If relative, it is evaluated relative
@@ -830,17 +811,13 @@ resources will be collected and packaged.
    The ``setup.py`` invocation will run with its current working directory set
    to this path.
 
-``extra_env`` (table)
-
+``extra_env`` (dict)
    Extra environment variables to pass to the ``setup.py`` invocation.
 
    Some ``setup.py`` scripts accept environment variables to customize execution
    behavior. This option can be defined to pass those along to the invocation.
 
-   Typically inline table syntax is used. e.g. ``extra_env = { FOO = "bar" }``.
-
 ``extra_global_arguments`` (array of string)
-
    Extra arguments to pass to ``setup.py`` before the ``install`` command.
 
    Some ``setup.py`` scripts accept global arguments to control how the
@@ -848,7 +825,6 @@ resources will be collected and packaged.
    process arguments to the ``setup.py`` command.
 
 ``optimize_level`` (int)
-
    The module optimization level for packaged bytecode.
 
    Allowed values are ``0``, ``1``, and ``2``.
@@ -856,26 +832,23 @@ resources will be collected and packaged.
    Defaults to ``0``, which is the Python default.
 
 ``include_source`` (bool)
-
    Whether to include the source code for Python modules in addition to the
    bytecode.
 
-   Default is ``true``.
+   Default is ``True``.
 
 ``install_location`` (string)
-
    Where to package resources associated with this rule.
    See :ref:`install_locations`.
 
 ``excludes`` (array of string)
-
    An array of package or module names to exclude. See the documentation
    for ``excludes`` for ``package-root`` rules for more.
 
    Default is an empty array.
 
-``virtualenv``
-^^^^^^^^^^^^^^
+``Virtualenv(...)``
+^^^^^^^^^^^^^^^^^^^
 
 This rule will include resources found in a pre-populated *virtualenv*
 directory.
@@ -888,14 +861,12 @@ directory.
    files may not be discovered properly.
 
 ``path`` (string)
-
    The filesystem path to the root of the virtualenv.
 
    Python modules are typically in a ``lib/pythonX.Y/site-packages`` directory
    (on UNIX) or ``Lib/site-packages`` directory (on Windows) under this path.
 
 ``optimize_level`` (int)
-
    The module optimization level for packaged bytecode.
 
    Allowed values are ``0``, ``1``, and ``2``.
@@ -903,7 +874,6 @@ directory.
    Defaults to ``0``, which is the Python default.
 
 ``excludes`` (array of string)
-
    An array of package or module names to exclude. See the documentation
    for ``excludes`` for ``package-root`` rules for more.
 
@@ -913,23 +883,20 @@ directory.
 
    Whether to include the source code for modules in addition to the bytecode.
 
-   Default is ``true``.
+   Default is ``True``.
 
 ``install_location`` (string)
-
    Where to package resources associated with this rule.
    See :ref:`install_locations`.
 
 Example:
 
-.. code-block:: toml
+.. code-block:: python
 
-   [[packaging_rule]]
-   type = "virtualenv"
-   path = "/home/gps/src/myapp/venv"
+   Virtualenv(path="/home/gps/src/myapp/venv")
 
-``write-license-files``
-^^^^^^^^^^^^^^^^^^^^^^^
+``WriteLicenseFiles(path)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This rule instructs packaging to write license files to a directory as
 denoted by this rule.
@@ -942,8 +909,8 @@ denoted by this rule.
 
 .. _rule_filter-include:
 
-``filter-include``
-^^^^^^^^^^^^^^^^^^
+``FilterInclude(...)``
+^^^^^^^^^^^^^^^^^^^^^^
 
 This rule filters all resource names resolved so far through a set of
 resource names resolved from sources defined by this section. Resources
@@ -954,56 +921,49 @@ to aggressively pull in resources only to filter them via this rule.
 This approach is often easier than adding a cherry picked set of resources
 via highly granular addition rules.
 
-The section has keys that define various sources for resource names:
+The rule has arguments that define various sources for resource names:
 
 ``files`` (array of string)
-
    List of filesystem paths to files containing resource names. The file must
    be valid UTF-8 and consist of a ``\n`` delimited list of resource names.
    Empty lines and lines beginning with ``#`` are ignored.
 
 ``glob_files`` (array of string)
-
    List of glob matching patterns of filter files to read. ``*`` denotes
    all files in a directory. ``**`` denotes recursive directories. This uses
    the Rust ``glob`` crate under the hood and the documentation for that crate
    contains more pattern matching info.
 
-   The files read by this key must be the same format as documented by the
-   ``files`` key.
+   The files read by this argument must be the same format as documented by the
+   ``files`` argument.
 
-All defined keys have their resolved resources combined into a set of
+All defined arguments have their resolved resources combined into a set of
 resource names. Each read entity has its values unioned with the set of
 values resolved so far.
 
 Example:
 
-.. code-block:: toml
+.. code-block:: python
 
-   [[packaging_rule]]
-   type = "filter-include"
-   files = ["allow-modules"]
-   glob_files = ["module-dumps/modules-*"]
+   FilterInclude(files=["allow-modules"], glob_files=["module-dumps/modules-*"])
 
 .. _config_distribution:
 
-``[[distribution]]``
---------------------
+Distributions
+-------------
 
-Instances of the ``[[distribution]]`` section define application distributions
+Instances of the ``Distribution`` type define application distributions
 that can be produced. An application distribution is an entity that can be shared
 across machines to *distribute* the application. Application distributions include
 archives, installers, packages, etc.
 
-Each ``[[distribution]]`` section **must** define a ``type`` key. The value
-of this key defines the *flavor* of the distribution being produced. The
-various distribution ``type``'s are described in the sections below.
+Distributions can be constructed from types defined in the following sections.
 
-``tarball``
-^^^^^^^^^^^
+``TarballDistribution(path_prefix=None)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``type = "tarball"`` distribution will produce a tar archive from the
-contents of the application directory.
+This distribution will produce a tar archive from the contents of the
+application directory.
 
 This type accepts the following keys:
 
@@ -1013,14 +973,14 @@ This type accepts the following keys:
    typically place files in the current directory. Specify this option to
    prefix all archive members with a path prefix.
 
-``wix``
-^^^^^^^^^^^^^^^^^
+``WixInstaller(...)``
+^^^^^^^^^^^^^^^^^^^^^
 
-The ``type = "wix"`` distribution will produce Windows installers via the
+This distribution will produce Windows installers via the
 `WiX Toolset <https://wixtoolset.org/>`_. These installers allow the application
 to be easily installed on Windows.
 
-This type accepts the following keys:
+This type accepts the following arguments:
 
 ``msi_upgrade_code_x86``
    UUID to use for the x86 MSI installer. If not defined, a deterministic
@@ -1038,3 +998,36 @@ This type accepts the following keys:
 
    If not defined, a deterministic UUID based on the application name will be
    used.
+
+``Config(...)```
+----------------
+
+This type defines the build configuration of an application. All the other types
+in this file do nothing unless they are passed to a ``Config`` instance.
+
+.. important::
+
+   The active ``Config`` instance must be assigned to the ``CONFIG`` global
+   variable or else configuration file evaluation will fail.
+
+This type accepts the following arguments:
+
+``build_config`` (``BuildConfig``)
+   Defines the application build configuration.
+
+``embedded_python_config`` (``EmbeddedPythonConfig``)
+   Defines the default settings of the embedded Python interpreter.
+
+``python_distribution`` (``PythonDistribution``)
+   Defines the Python distribution to use to build the application.
+
+``packaging_rules`` (list of packaging rules)
+   Defines an ordered list of packaging rules to evaluate when building
+   this application.
+
+``python_run_mode`` (``PythonRunMode``)
+   Defines the default Python execution behavior of the embedded Python
+   interpreter.
+
+``distributions`` (``Distribution``)
+   Packaged distributions to build for this application.

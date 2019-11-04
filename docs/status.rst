@@ -15,7 +15,7 @@ The basic functionality of creating binaries that embed a self-contained
 Python works on Linux, Windows, and macOS. The general approach should
 work for other operating systems.
 
-TOML configuration files allow extensive customization of packaging and
+Starlark configuration files allow extensive customization of packaging and
 run time behavior. Many projects can be successfully packaged with
 PyOxidizer today.
 
@@ -179,10 +179,10 @@ Cross compiling is not yet supported. We hope to and believe we can
 support this someday. We would like to eventually get to a state where you
 can e.g. produce Windows and macOS executables from Linux. It's possible.
 
-TOML Configuration File
------------------------
+Configuration Files
+-------------------
 
-Naming and semantics in the TOML configuration files can be significantly
+Naming and semantics in the configuration files can be significantly
 improved. There's also various missing packaging functionality.
 
 Poor Rust Error Handling

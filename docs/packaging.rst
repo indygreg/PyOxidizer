@@ -32,7 +32,7 @@ that embeds Python and starts a Python REPL. Let's test that::
 
    $ pyoxidizer run pyapp
    no existing PyOxidizer artifacts found
-   processing config file /home/gps/src/pyapp/pyoxidizer.toml
+   processing config file /home/gps/src/pyapp/pyoxidizer.bzl
    resolving Python distribution...
       Compiling pyapp v0.1.0 (/home/gps/src/pyapp)
        Finished dev [unoptimized + debuginfo] target(s) in 53.14s
@@ -80,63 +80,48 @@ First, let's create an empty project::
    $ pyoxidizer init pyflakes
 
 Next, we need to edit the :ref:`configuration file <config_files>` to tell
-PyOxidizer about pyflakes. Open the ``pyflakes/pyoxidizer.toml`` file in your
+PyOxidizer about pyflakes. Open the ``pyflakes/pyoxidizer.bzl`` file in your
 favorite editor.
 
 We first tell PyOxidizer to add the ``pyflakes`` Python package by adding the
 following lines:
 
-.. code-block:: toml
+.. code-block:: python
 
-   [[packaging_rule]]
-   type = "pip-install-simple"
-   package = "pyflakes==2.1.1"
+   install_pyflakes = PipInstallSimple("pyflakes==2.1.1")
 
 This creates a packaging rule that essentially translates to running
 ``pip install pyflakes==2.1.1`` and then finds and packages the files installed
 by that command.
 
 Next, we tell PyOxidizer to run pyflakes when the interpreter is executed.
-Find the ``[[embedded_python_run]]`` section and change its contents to the
-following:
 
-.. code-block:: toml
+.. code-block:: python
 
-   [[embedded_python_run]]
-   mode = "eval"
-   code = "from pyflakes.api import main; main()"
+   python_run_mode = python_run_mode_eval("from pyflakes.api import main; main()")
 
 This says to effectively run the Python code
 ``eval(from pyflakes.api import main; main())`` when the embedded interpreter
 starts.
 
-The new ``pyoxidizer.toml`` file should look something like:
+The new ``pyoxidizer.bzl`` file should look something like:
 
-.. code-block:: toml
+.. code-block:: python
 
-   # Multiple [[python_distribution]] sections elided for brevity.
+   build_config = BuildConfig(application_name="pyflakes")
+   embedded_python_config = EmbeddedPythonConfig()
+   stdlib_extensions_policy = StdlibExtensionsPolicy("all")
+   stdlib = Stdlib(include_source=False)
+   install_pyflakes = PipInstallSimple("pyflakes==2.1.1")
+   python_run_mode = python_run_mode_eval("from pyflakes.api import main; main()")
 
-   [[build]]
-   application_name = "pyflakes"
-
-   [[embedded_python_config]]
-   raw_allocator = "system"
-
-   [[packaging_rule]]
-   type = "stdlib-extensions-policy"
-   policy = "all"
-
-   [[packaging_rule]]
-   type = "stdlib"
-   include_source = false
-
-   [[packaging_rule]]
-   type = "pip-install-simple"
-   package = "pyflakes==2.1.1"
-
-   [[embedded_python_run]]
-   mode = "eval"
-   code = "from pyflakes.api import main; main()"
+   CONFIG = Config(
+       build_config=build_config,
+       embedded_python_config=embedded_python_config,
+       python_distribution=default_python_distribution(),
+       python_run_mode=python_run_mode,
+       packaging_rules=[stdlib, stdlib_extensions_policy, install_pyflakes],
+   )
 
 With the configuration changes made, we can build and run a ``pyflakes``
 native executable::
@@ -189,38 +174,29 @@ We start by creating a new project::
 
    $ pyoxidizer init black
 
-Then edit the ``pyoxidizer.toml`` file to have the following:
+Then edit the ``pyoxidizer.bzl`` file to have the following:
 
-.. code-block:: toml
+.. code-block:: python
 
-   # Multiple [[python_distribution]] sections elided for brevity.
+   build_config = BuildConfig(application_name="black")
+   embedded_python_config = EmbeddedPythonConfig()
+   stdlib_extensions_policy = StdlibExtensionsPolicy("all")
+   stdlib = Stdlib(include_source=False)
+   install_black = PipInstallSimple("black==19.3b0")
+   python_run_mode = python_run_mode_module("black")
 
-   [[build]]
-   application_name = "black"
-
-   [[embedded_python_config]]
-   raw_allocator = "system"
-
-   [[packaging_rule]]
-   type = "stdlib-extensions-policy"
-   policy = "all"
-
-   [[packaging_rule]]
-   type = "stdlib"
-   include_source = false
-
-   [[packaging_rule]]
-   type = "pip-install-simple"
-   package = "black==19.3b0"
-
-   [[embedded_python_run]]
-   mode = "module"
-   module = "black"
+   CONFIG = Config(
+       build_config=build_config,
+       embedded_python_config=embedded_python_config,
+       python_distribution=default_python_distribution(),
+       python_run_mode=python_run_mode,
+       packaging_rules=[stdlib, stdlib_extensions_policy, install_black],
+   )
 
 Then let's attempt to build the application::
 
    $ pyoxidizer build black
-   processing config file /home/gps/src/black/pyoxidizer.toml
+   processing config file /home/gps/src/black/pyoxidizer.bzl
    resolving Python distribution...
    ...
    packaging application into /home/gps/src/black/build/apps/x86_64-unknown-linux-gnu/debug/black
@@ -256,39 +232,32 @@ relative to the built application.
 
 Simply change the following rule:
 
-.. code-block:: toml
+.. code-block:: python
 
-   [[packaging_rule]]
-   type = "pip-install-simple"
-   package = "black==19.3b0"
+   install_black = PipInstallSimple("black==19.3b0")
 
 To:
 
-.. code-block:: toml
+.. code-block:: python
 
-   [[packaging_rule]]
-   type = "pip-install-simple"
-   package = "black==19.3b0"
-   install_location = "app-relative:lib"
+   install_black = PipInstallSimple("black=19.3b0", install_location="app-relative:lib")
 
-The added ``install_location = "app-relative:lib"`` line says to set the
+The added ``install_location="app-relative:lib"`` line says to set the
 installation location for resources found by that rule to a ``lib``
 directory next to the built application.
 
-In addition, we will also need to adjust the ``[[embedded_python_config]]``
+In addition, we will also need to adjust the ``EmbeddedPythonConfig``
 section to have the following:
 
-.. code-block:: toml
+.. code-block:: python
 
-   [[embedded_python_config]]
-   sys_paths = ["$ORIGIN/lib"]
+   embedded_python_config = EmbeddedPythonConfig(sys_paths=["$ORIGIN/lib"])
 
-The added ``sys_paths = ["$ORIGIN/lib"]`` line says to populate Python's
+The added ``sys_paths=["$ORIGIN/lib"]`` line says to populate Python's
 ``sys.path`` list with a single entry which resolves to a ``lib`` sub-directory
 in the executable's directory. This configuration change is necessary to allow
 the Python interpreter to import Python modules from the filesystem and to find
-the modules that our ``[[packaging_rule]]`` installed into the ``lib``
-directory.
+the modules that our packaging rule installed into the ``lib`` directory.
 
 Now let's re-build the application::
 
@@ -327,11 +296,11 @@ example, you may wish to only include Python modules that your application
 uses. This is possible with PyOxidizer.
 
 Essentially, all strategies for managing the set of packaged resources
-boil down to crafting ``[[packaging_rule]]``'s that choose which resources
+boil down to crafting packaging ruless that choose which resources
 are packaged.
 
 The recommended method to manage resources is the :ref:`rule_filter-include`
-``[[packaging_rule]]``. This rule acts as an *allow list* filter against all
+packaging rule. This rule acts as an *allow list* filter against all
 resources identified for packaging. Using this rule, you can construct an
 explicit list of resources that should be packaged.
 
@@ -399,7 +368,7 @@ Since PyOxidizer's run-time behavior is similar to other packaging
 tools, PyOxidizer supports falsely identifying itself as these other
 tools by emulating their fingerprints.
 
-The ``[[embedded_python_config]]`` configuration section defines the
+The ``EmbbedPythonConfig`` configuration section defines the
 boolean flag ``sys_frozen`` to control whether ``sys.frozen = True``
 is set. This can allow PyOxidizer to advertise itself as a *frozen*
 application.

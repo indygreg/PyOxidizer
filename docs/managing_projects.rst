@@ -76,7 +76,7 @@ project::
    $ find pyapp -type f | grep -v .git
    pyapp/Cargo.toml
    pyapp/src/main.rs
-   pyapp/pyoxidizer.toml
+   pyapp/pyoxidizer.bzl
    pyapp/pyembed/src/config.rs
    pyapp/pyembed/src/importer.rs
    pyapp/pyembed/src/data.rs
@@ -153,18 +153,18 @@ unorthodox. But it enables you to build applications without building all
 of PyOxidizer. And since PyOxidizer has a few hundred package dependencies,
 this saves quite a bit of time!
 
-The ``pyoxidizer.toml`` Configuration File
-------------------------------------------
+The ``pyoxidizer.bzl`` Configuration File
+-----------------------------------------
 
-The final file in our newly created project is ``pyoxidizer.toml``. **It is
+The final file in our newly created project is ``pyoxidizer.bzl``. **It is
 the most important file in the project.**
 
-The ``pyoxidizer.toml`` file configures how the embedded Python interpreter
+The ``pyoxidizer.bzl`` file configures how the embedded Python interpreter
 is built. This includes choosing which modules to package. It also configures
 the default run-time settings for the interpreter, including which code to
 run.
 
-See :ref:`config_files` for comprehensive documentation of ``pyoxidizer.toml``
+See :ref:`config_files` for comprehensive documentation of ``pyoxidizer.bzl``
 files and their semantics.
 
 Adding PyOxidizer to an Existing Project with ``add``
@@ -203,7 +203,7 @@ Building PyObject Projects with ``build``
 The ``pyoxidizer build`` command is probably the most important and used
 ``pyoxidizer`` command. This command does the following:
 
-1. Processes the ``pyoxidizer.toml`` configuration file and derives Python
+1. Processes the ``pyoxidizer.bzl`` configuration file and derives Python
    artifacts to incorporate in a larger binary. (The ``Python Building``
    phase of the pipeline described at the top of this document.)
 2. Invokes ``cargo build`` to build the associated Rust project.
@@ -271,7 +271,7 @@ Inspecting Python Distributions
 The ``Python Building`` phase of the lifecycle entails downloading special
 pre-built Python distributions and then linking them into a larger binary.
 You can find the location of these distributions in your project's
-``pyoxidizer.toml`` configuration file.
+``pyoxidizer.bzl`` configuration file.
 
 These Python distributions are zstandard compressed tar files. Zstandard
 is a modern compression format that is really, really, really good.

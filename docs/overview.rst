@@ -200,7 +200,7 @@ to an existing (Rust) project. This entails:
 * Adding a copy of the ``pyembed`` crate to the project.
 * Generating a boilerplate Rust source file to call into the ``pyembed`` crate
   to run a Python interpreter.
-* Generating a working ``pyoxidizer.toml`` :ref:`configuration file <config_files>`.
+* Generating a working ``pyoxidizer.bzl`` :ref:`configuration file <config_files>`.
 * Telling the project's Rust build system about ``PyOxidizer``.
 
 When that project's ``pyembed`` crate is built by Rust's build system, it calls
@@ -224,7 +224,7 @@ typically an executable.
 At run time, an instance of the ``PythonConfig`` struct from the ``pyembed``
 crate is created to define how an embedded Python interpreter should behave.
 (One of the build-time actions performed by ``PyOxidizer`` is to convert the
-TOML configuration file into a default instance of this struct.) This struct
+Starlark configuration file into a default instance of this struct.) This struct
 is used to instantiate a Python interpreter.
 
 The ``pyembed`` crate implements a Python *extension module* which provides
