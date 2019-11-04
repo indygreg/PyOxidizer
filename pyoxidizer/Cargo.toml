@@ -48,7 +48,6 @@ slog = "2.4"
 starlark = "0.2"
 tar = "0.4"
 tempdir = "0.3"
-toml = "0.5"
 url = "1.7"
 uuid = { version = "0.7", features = ["v5"] }
 version-compare = "0.0"
