@@ -1123,7 +1123,19 @@ pub fn eval_starlark_config_file(path: &Path, build_target: &str) -> Result<Conf
         build_target: build_target.to_string(),
     };
 
-    let _res = crate::starlark::eval::evaluate_file(path, &context).or_else(|d| Err(d.message))?;
+    let res = crate::starlark::eval::evaluate_file(path, &context).or_else(|d| Err(d.message))?;
 
-    Err("not yet implemented".to_string())
+    let config = res
+        .env
+        .get("CONFIG")
+        .or_else(|_| Err("CONFIG not assigned".to_string()))?;
+
+    if config.get_type() != "Config" {
+        return Err(format!(
+            "CONFIG must be type Config; got type {}",
+            config.get_type()
+        ));
+    }
+
+    Ok(config.downcast_apply(|x: &crate::starlark::config::Config| -> Config { x.config.clone() }))
 }

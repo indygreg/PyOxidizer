@@ -5,7 +5,6 @@
 //! Manage PyOxidizer projects.
 
 use handlebars::Handlebars;
-use itertools::Itertools;
 use lazy_static::lazy_static;
 use serde::Serialize;
 use slog::warn;
@@ -27,7 +26,6 @@ use super::pyrepackager::repackage::{
     find_pyoxidizer_config_file_env, package_project, process_config, run_from_build,
 };
 use super::pyrepackager::state::BuildContext;
-use super::python_distributions::CPYTHON_BY_TRIPLE;
 
 lazy_static! {
     static ref PYEMBED_RS_FILES: BTreeMap<&'static str, &'static [u8]> = {
@@ -52,8 +50,8 @@ lazy_static! {
             .unwrap();
         handlebars
             .register_template_string(
-                "new-pyoxidizer.toml",
-                include_str!("templates/new-pyoxidizer.toml"),
+                "new-pyoxidizer.bzl",
+                include_str!("templates/new-pyoxidizer.bzl"),
             )
             .unwrap();
         handlebars
@@ -222,30 +220,20 @@ pub fn write_new_pyoxidizer_config_file(
     code: Option<&str>,
     pip_install: &[&str],
 ) -> Result<(), std::io::Error> {
-    let path = project_dir.to_path_buf().join("pyoxidizer.toml");
-
-    let distributions = CPYTHON_BY_TRIPLE
-        .iter()
-        .map(|(triple, dist)| PythonDistribution {
-            build_target: triple.to_string(),
-            url: dist.url.clone(),
-            sha256: dist.sha256.clone(),
-        })
-        .collect_vec();
+    let path = project_dir.to_path_buf().join("pyoxidizer.bzl");
 
     let mut data = TemplateData::new();
     populate_template_data(&mut data);
-    data.python_distributions = distributions;
     data.program_name = Some(name.to_string());
 
     if let Some(code) = code {
-        data.code = Some(toml::to_string(code).unwrap());
+        data.code = Some(code.to_string());
     }
 
     data.pip_install_simple = pip_install.iter().map(|v| v.to_string()).collect();
 
     let t = HANDLEBARS
-        .render("new-pyoxidizer.toml", &data)
+        .render("new-pyoxidizer.bzl", &data)
         .expect("unable to render template");
 
     println!("writing {}", path.to_str().unwrap());
@@ -700,7 +688,7 @@ pub fn init(project_path: &str, code: Option<&str>, pip_install: &[&str]) -> Res
     println!("  $ pyoxidizer run");
     println!();
     println!("The default configuration is to invoke a Python REPL. You can");
-    println!("edit the various pyoxidizer.*.toml config files or the main.rs ");
+    println!("edit the various pyoxidizer.*.bzl config files or the main.rs ");
     println!("file to change behavior. The application will need to be rebuilt ");
     println!("for configuration changes to take effect.");
 

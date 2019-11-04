@@ -30,6 +30,11 @@ Backwards Compatibility Notes
   1.36. This is mainly due to requirements from the ``starlark``
   crate. We could potentially reduce the minimum version requirements
   again with minimal changes to 3rd party crates.
+* PyOxidizer configuration files are now
+  `Starlark <https://github.com/bazelbuild/starlark>`_ instead of TOML
+  files. The default file name is ``pyoxidizer.bzl`` instead of
+  ``pyoxidizer.toml``. All existing configuration files will need to be
+  ported to the new format.
 
 0.4.0
 -----

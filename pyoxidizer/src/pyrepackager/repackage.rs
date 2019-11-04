@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 
 use super::bytecode::{BytecodeCompiler, CompileMode};
 use super::config::{
-    parse_config_file, Config, PythonDistribution, PythonPackaging, RawAllocator, RunMode,
+    eval_starlark_config_file, Config, PythonDistribution, PythonPackaging, RawAllocator, RunMode,
     TerminfoResolution,
 };
 use super::dist::{
@@ -102,7 +102,7 @@ impl BuildContext {
             HOST.to_string()
         };
 
-        let config = parse_config_file(config_path, target)?;
+        let config = eval_starlark_config_file(&config_path, target)?;
 
         let build_path = config.build_config.build_path.clone();
 
@@ -2045,7 +2045,7 @@ pub fn process_config(
 /// Find a pyoxidizer.toml configuration file by walking directory ancestry.
 pub fn find_pyoxidizer_config_file(start_dir: &Path) -> Option<PathBuf> {
     for test_dir in start_dir.ancestors() {
-        let candidate = test_dir.to_path_buf().join("pyoxidizer.toml");
+        let candidate = test_dir.to_path_buf().join("pyoxidizer.bzl");
 
         if candidate.exists() {
             return Some(candidate);
