@@ -999,8 +999,8 @@ This type accepts the following arguments:
    If not defined, a deterministic UUID based on the application name will be
    used.
 
-``Config(...)```
-----------------
+``Config(...)``
+---------------
 
 This type defines the build configuration of an application. All the other types
 in this file do nothing unless they are passed to a ``Config`` instance.
