@@ -112,8 +112,8 @@ accepts the following arguments:
 
 .. _config_python_distribution:
 
-``python_distribution(sha256, local_path=None, url=None)``
-----------------------------------------------------------
+``PythonDistribution(sha256, local_path=None, url=None)``
+---------------------------------------------------------
 
 Defines a Python distribution that can be embedded into a binary.
 
@@ -142,12 +142,12 @@ Examples:
 
 .. code-block:: python
 
-   linux = python_distribution(
+   linux = PythonDistribution(
        sha256="11a53f5755773f91111a04f6070a6bc00518a0e8e64d90f58584abf02ca79081",
        local_path="/var/python-distributions/cpython-linux64.tar.zst"
    )
 
-   macos = python_distribution(
+   macos = PythonDistribution(
         sha256="b46a861c05cb74b5b668d2ce44dcb65a449b9fef98ba5d9ec6ff6937829d5eec",
         url="https://github.com/indygreg/python-build-standalone/releases/download/20190505/cpython-3.7.3-macos-20190506T0054.tar.zst"
    )

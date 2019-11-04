@@ -53,7 +53,8 @@ impl TypedValue for PythonDistribution {
 }
 
 starlark_module! { python_distribution_module =>
-    python_distribution(sha256, local_path=None, url=None) {
+    #[allow(non_snake_case)]
+    PythonDistribution(sha256, local_path=None, url=None) {
         required_str_arg("sha256", &sha256)?;
         optional_str_arg("local_path", &local_path)?;
         optional_str_arg("url", &url)?;
@@ -141,21 +142,21 @@ mod tests {
 
     #[test]
     fn test_python_distribution_no_args() {
-        let err = starlark_nok("python_distribution()");
+        let err = starlark_nok("PythonDistribution()");
         assert!(err.message.starts_with("Missing parameter sha256"));
     }
 
     #[test]
     fn test_python_distribution_multiple_args() {
         let err = starlark_nok(
-            "python_distribution('sha256', url='url_value', local_path='local_path_value')",
+            "PythonDistribution('sha256', url='url_value', local_path='local_path_value')",
         );
         assert_eq!(err.message, "cannot define both local_path and url");
     }
 
     #[test]
     fn test_python_distribution_url() {
-        let dist = starlark_ok("python_distribution('sha256', url='some_url')");
+        let dist = starlark_ok("PythonDistribution('sha256', url='some_url')");
         let wanted = super::super::super::pyrepackager::config::PythonDistribution::Url {
             url: "some_url".to_string(),
             sha256: "sha256".to_string(),
@@ -166,7 +167,7 @@ mod tests {
 
     #[test]
     fn test_python_distribution_local_path() {
-        let dist = starlark_ok("python_distribution('sha256', local_path='some_path')");
+        let dist = starlark_ok("PythonDistribution('sha256', local_path='some_path')");
         let wanted = super::super::super::pyrepackager::config::PythonDistribution::Local {
             local_path: "some_path".to_string(),
             sha256: "sha256".to_string(),
