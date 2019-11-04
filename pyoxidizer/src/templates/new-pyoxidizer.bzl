@@ -87,7 +87,7 @@ python_run_mode = python_run_mode_repl()
 {{~/unless}}
 
 # Import a Python module and run it.
-# python_run = python_run_mode_module("mypackage.__main__")
+# python_run_mode = python_run_mode_module("mypackage.__main__")
 
 # Evaluate some Python code.
 {{#if code~}}
