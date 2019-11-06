@@ -1784,7 +1784,7 @@ pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Res
 /// Instances are typically produced by processing a PyOxidizer config file.
 #[derive(Debug)]
 pub struct EmbeddedPythonConfig {
-    /// Parsed TOML config.
+    /// Parsed starlark config.
     pub config: Config,
 
     /// Path to archive with source Python distribution.
@@ -1819,9 +1819,9 @@ pub struct EmbeddedPythonConfig {
     pub packaging_state_path: PathBuf,
 }
 
-/// Derive build artifacts from a PyOxidizer config file.
+/// Derive build artifacts from a PyOxidizer configuration.
 ///
-/// This function reads a PyOxidizer config file and turns it into a set
+/// This function processes the PyOxidizer configuration and turns it into a set
 /// of derived files that can power an embedded Python interpreter.
 ///
 /// Returns a data structure describing the results.
@@ -1983,6 +1983,9 @@ pub fn process_config(
     for p in &resources.read_files {
         cargo_metadata.push(format!("cargo:rerun-if-changed={}", p.display()));
     }
+
+    warn!(logger, "processing python run mode: {:?}", config.run);
+    warn!(logger, "processing embedded python config: {:?}", config.embedded_python_config);
 
     let python_config_rs = derive_python_config(
         &config,
