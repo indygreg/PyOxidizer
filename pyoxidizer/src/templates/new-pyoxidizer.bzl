@@ -6,7 +6,9 @@
 #     """Defines the application build configuration."""
 build_config = BuildConfig(application_name="{{program_name}}")
 
-# EmbeddedPythonConfig(
+# This variable defines the configuration of the
+# embedded Python interpreter
+embedded_python_config = EmbeddedPythonConfig(
 #     dont_write_bytecode=True,
 #     ignore_environment=True,
 #     no_site=True,
@@ -22,10 +24,7 @@ build_config = BuildConfig(application_name="{{program_name}}")
 #     terminfo_resolution="dynamic",
 #     terminfo_dirs=None,
 #     write_modules_directory_env=None,
-# )
-#     """Defines the configuration of the embedded Python interpreter."""
-
-embedded_python_config = EmbeddedPythonConfig()
+)
 
 # This variable captures all packaging rules. Append to it to perform
 # additional packaging at build time.
