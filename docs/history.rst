@@ -21,7 +21,9 @@ Version History
 next
 ----
 
-Not yet released.
+* The ``stdlib`` packaging rule now supports ``excludes`` option
+  that allows ignoring specific modules, especially useful for removing
+  unnecessary default Python packages such as distutils, pip and ensurepip.
 
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
