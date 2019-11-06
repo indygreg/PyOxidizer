@@ -640,6 +640,16 @@ The following arguments control behavior:
 
    Default is ``0``, which is the Python default.
 
+``excludes`` (array of string)
+   An array of module names to exclude.
+
+   A value in this array will match on an exact full resource name match or
+   on a package prefix match. e.g. ``foo`` will match the module ``foo``, the
+   package ``foo``, and any sub-modules in ``foo``. e.g. it will match
+   ``foo.bar`` but will not match ``foofoo``.
+
+   Default is an empty array.
+
 ``include_source`` (bool)
    Whether to include the source code for modules in addition to bytecode.
 

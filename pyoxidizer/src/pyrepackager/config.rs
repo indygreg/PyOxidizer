@@ -67,6 +67,7 @@ pub struct PackagingStdlibExtensionVariant {
 pub struct PackagingStdlib {
     pub optimize_level: i64,
     pub exclude_test_modules: bool,
+    pub excludes: Vec<String>,
     pub include_source: bool,
     pub include_resources: bool,
     pub install_location: InstallLocation,

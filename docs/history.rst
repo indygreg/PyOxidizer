@@ -21,8 +21,6 @@ Version History
 next
 ----
 
-Not yet released.
-
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -39,6 +37,9 @@ Backwards Compatibility Notes
 New Features
 ^^^^^^^^^^^^
 
+* The ``Stdlib()`` packaging rule now now accepts an optional ``excludes``
+  list of modules to ignore. This is useful for removing unnecessary
+  Python packages such as ``distutils``, ``pip``, and ``ensurepip``.
 * The ``PipRequirementsFile()`` and ``PipInstallSimple()`` packaging rules
   now accept an optional ``extra_env`` dict of extra environment variables
   to set when invoking ``pip install``.

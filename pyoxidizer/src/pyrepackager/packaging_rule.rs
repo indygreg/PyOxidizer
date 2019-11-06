@@ -511,6 +511,20 @@ fn resolve_stdlib(
             continue;
         }
 
+        let mut relevant = true;
+
+        for exclude in &rule.excludes {
+            let prefix = exclude.clone() + ".";
+
+            if name == exclude || name.starts_with(&prefix) {
+                relevant = false;
+            }
+        }
+
+        if !relevant {
+            continue;
+        }
+
         let is_package = is_package_from_path(&fs_path);
         let source = fs::read(fs_path).expect("error reading source file");
 
