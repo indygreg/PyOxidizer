@@ -10,6 +10,7 @@ pub mod distutils;
 pub mod embedded_resource;
 pub mod fsscan;
 pub mod libpython;
+pub mod object;
 pub mod pip;
 pub mod pyembed;
 pub mod resource;

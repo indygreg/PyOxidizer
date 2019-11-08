@@ -14,6 +14,7 @@ use std::path::{Path, PathBuf};
 use super::bytecode::{BytecodeCompiler, CompileMode};
 use super::distribution::{ExtensionModule, LicenseInfo, ParsedPythonDistribution};
 use super::embedded_resource::EmbeddedPythonResources;
+use super::object::rename_init;
 use super::resource::BuiltExtensionModule;
 
 pub const PYTHON_IMPORTER: &[u8] = include_bytes!("memoryimporter.py");
@@ -104,10 +105,21 @@ pub fn make_config_c(
     }
 
     for em in built_extension_modules.values() {
-        lines.push(format!("extern PyObject* {}(void);", em.init_fn));
+        let ambiguous_line = format!("extern PyObject* {}(void);", em.init_fn);
+
+        if lines.contains(&ambiguous_line) {
+            lines.push(format!(
+                "extern PyObject* PyInit_{}(void);",
+                em.name.replace(".", "_")
+            ));
+        } else {
+            lines.push(ambiguous_line);
+        }
     }
 
     lines.push(String::from("struct _inittab _PyImport_Inittab[] = {"));
+
+    let mut ambiguous_init_fns: Vec<String> = Vec::new();
 
     for em in extension_modules.values() {
         if let Some(init_fn) = &em.init_fn {
@@ -116,11 +128,21 @@ pub fn make_config_c(
             }
 
             lines.push(format!("{{\"{}\", {}}},", em.module, init_fn));
+            ambiguous_init_fns.push(init_fn.to_string());
         }
     }
 
     for em in built_extension_modules.values() {
-        lines.push(format!("{{\"{}\", {}}},", em.name, em.init_fn));
+        if ambiguous_init_fns.contains(&em.init_fn) {
+            lines.push(format!(
+                "{{\"{}\", PyInit_{}}},",
+                em.name,
+                em.name.replace(".", "_")
+            ));
+        } else {
+            lines.push(format!("{{\"{}\", {}}},", em.name, em.init_fn));
+            ambiguous_init_fns.push(em.init_fn.clone());
+        }
     }
 
     lines.push(String::from("{0, 0}"));
@@ -275,12 +297,20 @@ pub fn link_libpython(
         // TODO handle static/dynamic libraries.
     }
 
+    let mut ambiguous_init_fns: Vec<String> = Vec::new();
+
     warn!(
         logger,
         "resolving inputs for {} extension modules...",
         extension_modules.len() + built_extension_modules.len()
     );
     for (name, em) in extension_modules {
+        if let Some(init_fn) = &em.init_fn {
+            if init_fn != "NULL" {
+                ambiguous_init_fns.push(init_fn.to_string());
+            }
+        }
+
         if em.builtin_default {
             continue;
         }
@@ -329,16 +359,31 @@ pub fn link_libpython(
             em.object_file_data.len(),
             name
         );
+
         for (i, object_data) in em.object_file_data.iter().enumerate() {
             let out_path = temp_dir_path.join(format!("{}.{}.o", name, i));
 
-            fs::write(&out_path, object_data)?;
+            if i == em.object_file_data.len() - 1 && ambiguous_init_fns.contains(&em.init_fn) {
+                match rename_init(logger, name, object_data) {
+                    Ok(val) => fs::write(&out_path, val)?,
+                    Err(_) => {
+                        fs::write(&out_path, object_data)?
+                    }
+                };
+            } else {
+                fs::write(&out_path, object_data)?;
+            }
+
             build.object(&out_path);
         }
 
         for library in &em.libraries {
             warn!(logger, "library {} required by {}", library, name);
             needed_libraries_external.insert(&library);
+        }
+
+        if !ambiguous_init_fns.contains(&em.init_fn) {
+            ambiguous_init_fns.push(em.init_fn.clone());
         }
 
         // TODO do something with library_dirs.
