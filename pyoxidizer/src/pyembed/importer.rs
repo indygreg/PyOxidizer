@@ -453,6 +453,23 @@ py_class!(class PyOxidizerFinder |py| {
             Ok(py.None())
         }
     }
+
+    // Support for obtaining the internal package list, usable to build Python logic
+    // to inspect the binary or expose the package list in a format usable by Python
+    // libraries.
+    // As an internal support method, this API is not supported and may be removed.
+    def _package_list(&self) -> PyResult<PyObject> {
+        let known_modules = self.known_modules(py);
+        let mut names = Vec::with_capacity(known_modules.len());
+
+        for name in known_modules.keys() {
+            names.push(name.to_py_object(py));
+        }
+
+        let names_list = names.to_py_object(py);
+
+        Ok(names_list.as_object().clone_ref(py))
+    }
 });
 
 #[allow(unused_doc_comments)]
