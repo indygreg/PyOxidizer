@@ -558,7 +558,9 @@ class MSVCCompiler(CCompiler) :
                            extra_postargs=None,
                            build_temp=None,
                            target_lang=None,
-                           name=None):
+                           name=None,
+                           package=None,
+                           ):
 
         if 'PYOXIDIZER_DISTUTILS_STATE_DIR' not in os.environ:
             raise Exception('PYOXIDIZER_DISTUTILS_STATE_DIR not defined')
@@ -593,7 +595,7 @@ class MSVCCompiler(CCompiler) :
         json_path = os.path.join(dest_path, 'extension.%s.json' % name)
         with open(json_path, 'w', encoding='utf-8') as fh:
             data = {
-                'name': name,
+                'name': '%s.%s' % (package, name) if package else name,
                 'objects': object_paths,
                 'output_filename': os.path.abspath(output_filename),
                 'libraries': libraries or [],

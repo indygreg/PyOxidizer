@@ -34,6 +34,13 @@ Backwards Compatibility Notes
   ``pyoxidizer.toml``. All existing configuration files will need to be
   ported to the new format.
 
+Bug Fixes
+^^^^^^^^^
+
+* Compiled C extensions now properly honor the ``ext_package`` argument
+  passed to ``setup()``, resulting in extensions which properly have
+  the package name in their extension name (#26).
+
 New Features
 ^^^^^^^^^^^^
 

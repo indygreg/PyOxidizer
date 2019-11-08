@@ -553,7 +553,7 @@ class build_ext(Command):
 
         if hasattr(self.compiler, 'extension_link_shared_object'):
             fn = self.compiler.extension_link_shared_object
-            extra_kwargs = {'name': ext.name}
+            extra_kwargs = {'name': ext.name, 'package': self.package}
         else:
             fn = self.compiler.link_shared_object
             extra_kwargs = {}
