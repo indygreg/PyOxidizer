@@ -37,6 +37,7 @@ hex = "0.3"
 itertools = "0.8"
 lazy_static = "1.3"
 libc = "0.2"
+object = { version = "0.16.0", features = ["read", "std", "write"] }
 regex = "1"
 reqwest = "0.9"
 rustc_version = "0.2"
