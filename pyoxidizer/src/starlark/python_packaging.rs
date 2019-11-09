@@ -517,6 +517,7 @@ starlark_module! { python_packaging_env =>
     #[allow(non_snake_case)]
     PipInstallSimple(
         package,
+        extra_env=None,
         optimize_level=0,
         excludes=None,
         include_source=true,
@@ -524,11 +525,22 @@ starlark_module! { python_packaging_env =>
         extra_args=None
     ) {
         let package = required_str_arg("package", &package)?;
+        optional_dict_arg("extra_env", "string", "string", &extra_env)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
         optional_list_arg("excludes", "string", &excludes)?;
         let include_source = required_bool_arg("include_source", &include_source)?;
         let install_location = required_str_arg("install_location", &install_location)?;
         optional_list_arg("extra_args", "string", &extra_args)?;
+
+        let extra_env = match extra_env.get_type() {
+            "dict" => extra_env.into_iter()?.map(|key| {
+                let k = key.to_string();
+                let v = extra_env.at(key.clone()).unwrap().to_string();
+                (k, v)
+            }).collect(),
+            "NoneType" => HashMap::new(),
+            _ => panic!("should have validated type above"),
+        };
 
         let optimize_level = optimize_level.to_int()?;
         let excludes = match excludes.get_type() {
@@ -551,6 +563,7 @@ starlark_module! { python_packaging_env =>
 
         let rule = PackagingPipInstallSimple {
             package,
+            extra_env,
             optimize_level,
             excludes,
             include_source,
@@ -564,14 +577,26 @@ starlark_module! { python_packaging_env =>
     #[allow(non_snake_case)]
     PipRequirementsFile(
         requirements_path,
+        extra_env=None,
         optimize_level=0,
         include_source=true,
         install_location="embedded"
     ) {
         let requirements_path = required_str_arg("path", &requirements_path)?;
+        optional_dict_arg("extra_env", "string", "string", &extra_env)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
         let include_source = required_bool_arg("include_source", &include_source)?;
         let install_location = required_str_arg("install_location", &install_location)?;
+
+        let extra_env = match extra_env.get_type() {
+            "dict" => extra_env.into_iter()?.map(|key| {
+                let k = key.to_string();
+                let v = extra_env.at(key.clone()).unwrap().to_string();
+                (k, v)
+            }).collect(),
+            "NoneType" => HashMap::new(),
+            _ => panic!("should have validated type above"),
+        };
 
         let optimize_level = optimize_level.to_int()?;
          let install_location = resolve_install_location(&install_location).or_else(|e| {
@@ -584,6 +609,7 @@ starlark_module! { python_packaging_env =>
 
         let rule = PackagingPipRequirementsFile {
             requirements_path,
+            extra_env,
             optimize_level,
             include_source,
             install_location,
@@ -833,6 +859,7 @@ mod tests {
         let v = starlark_ok("PipInstallSimple('foo')");
         let wanted = PackagingPipInstallSimple {
             package: "foo".to_string(),
+            extra_env: HashMap::new(),
             optimize_level: 0,
             excludes: Vec::new(),
             include_source: true,
@@ -856,6 +883,7 @@ mod tests {
         let v = starlark_ok("PipRequirementsFile('path')");
         let wanted = PackagingPipRequirementsFile {
             requirements_path: "path".to_string(),
+            extra_env: HashMap::new(),
             optimize_level: 0,
             include_source: true,
             install_location: InstallLocation::Embedded,

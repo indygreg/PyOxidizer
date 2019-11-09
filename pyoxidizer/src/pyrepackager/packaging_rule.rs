@@ -743,7 +743,7 @@ fn resolve_pip_install_simple(
     let temp_dir =
         tempdir::TempDir::new("pyoxidizer-pip-install").expect("could not creat temp directory");
 
-    let extra_envs = prepare_hacked_distutils(logger, dist, temp_dir.path(), &[])
+    let mut extra_envs = prepare_hacked_distutils(logger, dist, temp_dir.path(), &[])
         .expect("unable to hack distutils");
 
     let target_dir_path = temp_dir.path().join("install");
@@ -771,6 +771,10 @@ fn resolve_pip_install_simple(
 
     if rule.extra_args.is_some() {
         pip_args.extend(rule.extra_args.clone().unwrap());
+    }
+
+    for (key, value) in rule.extra_env.iter() {
+        extra_envs.insert(key.clone(), value.clone());
     }
 
     // TODO send stderr to stdout.
@@ -884,7 +888,7 @@ fn resolve_pip_requirements_file(
     let temp_dir =
         tempdir::TempDir::new("pyoxidizer-pip-install").expect("could not create temp directory");
 
-    let extra_envs = prepare_hacked_distutils(logger, dist, temp_dir.path(), &[])
+    let mut extra_envs = prepare_hacked_distutils(logger, dist, temp_dir.path(), &[])
         .expect("unable to hack distutils");
 
     let target_dir_path = temp_dir.path().join("install");
@@ -906,6 +910,10 @@ fn resolve_pip_requirements_file(
         "--requirement",
         &rule.requirements_path,
     ]);
+
+    for (key, value) in rule.extra_env.iter() {
+        extra_envs.insert(key.clone(), value.clone());
+    }
 
     // TODO send stderr to stdout.
     let mut cmd = std::process::Command::new(&dist.python_exe)
