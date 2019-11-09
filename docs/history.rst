@@ -39,6 +39,9 @@ Backwards Compatibility Notes
 New Features
 ^^^^^^^^^^^^
 
+* The ``PipRequirementsFile()`` and ``PipInstallSimple()`` packaging rules
+  now accept an optional ``extra_env`` dict of extra environment variables
+  to set when invoking ``pip install``.
 * The ``PipRequirementsFile()`` packaging rule now accepts an optional
   ``extra_args`` list of extra command line arguments to pass to
   ``pip install``.

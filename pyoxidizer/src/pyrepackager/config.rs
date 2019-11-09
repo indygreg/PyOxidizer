@@ -94,6 +94,7 @@ pub struct PackagingPackageRoot {
 #[derive(Clone, Debug, PartialEq)]
 pub struct PackagingPipInstallSimple {
     pub package: String,
+    pub extra_env: HashMap<String, String>,
     pub optimize_level: i64,
     pub excludes: Vec<String>,
     pub include_source: bool,
@@ -105,6 +106,7 @@ pub struct PackagingPipInstallSimple {
 pub struct PackagingPipRequirementsFile {
     // TODO resolve to a PathBuf.
     pub requirements_path: String,
+    pub extra_env: HashMap<String, String>,
     pub optimize_level: i64,
     pub include_source: bool,
     pub install_location: InstallLocation,

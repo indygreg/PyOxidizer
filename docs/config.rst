@@ -723,6 +723,13 @@ rule.
    Name of the package to install. This is added as a positional argument to
    ``pip install``.
 
+``extra_env`` (dict)
+   Extra environment variables to pass to the ``pip install`` invocation.
+
+   ``pip install`` and some ``setup.py`` scripts accept environment variables
+   to customize execution behavior. This option can be defined to pass those
+   along to the invocation.
+
 ``optimize_level`` (int)
    The module optimization level for packaged bytecode.
 
@@ -773,6 +780,13 @@ operation.
 
 ``requirements_path`` (string)
    Filesystem path to pip requirements file.
+
+``extra_env`` (dict)
+   Extra environment variables to pass to the ``pip install`` invocation.
+
+   ``pip install`` and some ``setup.py`` scripts accept environment variables
+   to customize execution behavior. This option can be defined to pass those
+   along to the invocation.
 
 ``optimize_level`` (int)
    The module optimization level for packaged bytecode.
