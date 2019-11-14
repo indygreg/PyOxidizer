@@ -787,6 +787,9 @@ operation.
 
    Default is ``True``.
 
+``extra_args`` (optional array of string)
+   An array of arguments added to the pip install command.
+
 Example:
 
 .. code-block:: python

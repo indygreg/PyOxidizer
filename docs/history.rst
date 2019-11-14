@@ -36,6 +36,13 @@ Backwards Compatibility Notes
   ``pyoxidizer.toml``. All existing configuration files will need to be
   ported to the new format.
 
+New Features
+^^^^^^^^^^^^
+
+* The ``PipRequirementsFile()`` packaging rule now accepts an optional
+  ``extra_args`` list of extra command line arguments to pass to
+  ``pip install``.
+
 0.4.0
 -----
 
