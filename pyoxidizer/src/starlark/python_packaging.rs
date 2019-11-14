@@ -566,12 +566,14 @@ starlark_module! { python_packaging_env =>
         requirements_path,
         optimize_level=0,
         include_source=true,
-        install_location="embedded"
+        install_location="embedded",
+        extra_args=None
     ) {
         let requirements_path = required_str_arg("path", &requirements_path)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
         let include_source = required_bool_arg("include_source", &include_source)?;
         let install_location = required_str_arg("install_location", &install_location)?;
+        optional_list_arg("extra_args", "string", &extra_args)?;
 
         let optimize_level = optimize_level.to_int()?;
          let install_location = resolve_install_location(&install_location).or_else(|e| {
@@ -582,11 +584,18 @@ starlark_module! { python_packaging_env =>
             }.into())
         })?;
 
+        let extra_args = match extra_args.get_type() {
+            "list" => Some(extra_args.into_iter()?.map(|x| x.to_string()).collect()),
+            "NoneType" => None,
+            _ => panic!("should have validated type above"),
+        };
+
         let rule = PackagingPipRequirementsFile {
             requirements_path,
             optimize_level,
             include_source,
             install_location,
+            extra_args,
         };
 
         Ok(Value::new(PipRequirementsFile { rule }))
@@ -859,6 +868,7 @@ mod tests {
             optimize_level: 0,
             include_source: true,
             install_location: InstallLocation::Embedded,
+            extra_args: None,
         };
 
         v.downcast_apply(|x: &PipRequirementsFile| assert_eq!(x.rule, wanted));

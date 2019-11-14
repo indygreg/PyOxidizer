@@ -108,6 +108,7 @@ pub struct PackagingPipRequirementsFile {
     pub optimize_level: i64,
     pub include_source: bool,
     pub install_location: InstallLocation,
+    pub extra_args: Option<Vec<String>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
