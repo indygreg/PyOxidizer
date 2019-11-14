@@ -569,7 +569,7 @@ pub fn resolve_python_resources(
                         data,
                     },
                 ) => {
-                    warn!(logger, "adding embedded resource: {}", name);
+                    warn!(logger, "adding embedded resource: {} / {}", package, name);
 
                     if !embedded_resources.contains_key(&package) {
                         embedded_resources.insert(package.clone(), BTreeMap::new());
