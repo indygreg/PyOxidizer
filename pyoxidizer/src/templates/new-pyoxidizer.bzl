@@ -61,6 +61,12 @@ packaging_rules.append(WriteLicenseFiles(""))
 {{#each pip_install_simple}}
 packaging_rules.append(PipInstallSimple("{{{ this }}}"))
 {{/each}}
+{{#unless pip_install_simple~}}
+# Package using pip, individual packages
+#packaging_rules.append(PipInstallSimple("appdirs"))
+# or use a requirements file
+#packaging_rules.append(PipRequirementsFile("requirements.txt"))
+{{~/unless}}
 
 # Package .py files discovered in a local directory.
 #packaging_rules.append(PackageRoot(
