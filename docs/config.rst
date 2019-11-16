@@ -210,6 +210,12 @@ behavior:
 
    Default is ``True``.
 
+``inspect`` (bool)
+   Controls the value of
+   `Py_InspectFlag <https://docs.python.org/3/c-api/init.html#c.Py_InspectFlag>`_.
+
+   Default is ``False``.
+
 ``interactive`` (bool)
    Controls the value of
    `Py_InteractiveFlag <https://docs.python.org/3/c-api/init.html#c.Py_InspectFlag>`_.

@@ -96,6 +96,9 @@ pub struct PythonConfig {
     /// Whether to ignore various PYTHON* environment variables.
     pub ignore_python_env: bool,
 
+    /// Whether to enter interactive mode after executing a script or a command.
+    pub inspect: bool,
+
     /// Whether to put interpreter in interactive mode.
     pub interactive: bool,
 

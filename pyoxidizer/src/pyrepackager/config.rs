@@ -181,6 +181,7 @@ pub struct EmbeddedPythonConfig {
     pub bytes_warning: i32,
     pub dont_write_bytecode: bool,
     pub ignore_environment: bool,
+    pub inspect: bool,
     pub interactive: bool,
     pub no_site: bool,
     pub no_user_site_directory: bool,

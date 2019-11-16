@@ -1462,6 +1462,7 @@ pub fn derive_python_config(
          import_site: {},\n    \
          import_user_site: {},\n    \
          ignore_python_env: {},\n    \
+         inspect: {},\n    \
          interactive: {},\n    \
          dont_write_bytecode: {},\n    \
          unbuffered_stdio: {},\n    \
@@ -1501,6 +1502,7 @@ pub fn derive_python_config(
         !embedded.no_site,
         !embedded.no_user_site_directory,
         embedded.ignore_environment,
+        embedded.inspect,
         embedded.interactive,
         embedded.dont_write_bytecode,
         embedded.unbuffered_stdio,

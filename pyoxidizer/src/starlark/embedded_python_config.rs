@@ -59,6 +59,7 @@ starlark_module! { embedded_python_config_module =>
         bytes_warning=0,
         dont_write_bytecode=true,
         ignore_environment=true,
+        inspect=false,
         interactive=false,
         no_site=true,
         no_user_site_directory=true,
@@ -80,6 +81,7 @@ starlark_module! { embedded_python_config_module =>
         required_type_arg("bytes_warning", "int", &bytes_warning)?;
         let dont_write_bytecode = required_bool_arg("dont_write_bytecode", &dont_write_bytecode)?;
         let ignore_environment = required_bool_arg("ignore_environment", &ignore_environment)?;
+        let inspect = required_bool_arg("inspect", &inspect)?;
         let interactive = required_bool_arg("interactive", &interactive)?;
         let no_site = required_bool_arg("no_site", &no_site)?;
         let no_user_site_directory = required_bool_arg("no_user_site_directory", &no_user_site_directory)?;
@@ -157,6 +159,7 @@ starlark_module! { embedded_python_config_module =>
             bytes_warning: bytes_warning.to_int().unwrap() as i32,
             dont_write_bytecode,
             ignore_environment,
+            inspect,
             interactive,
             no_site,
             no_user_site_directory,
@@ -194,6 +197,7 @@ mod tests {
             bytes_warning: 0,
             dont_write_bytecode: true,
             ignore_environment: true,
+            inspect: false,
             interactive: false,
             no_site: true,
             no_user_site_directory: true,
