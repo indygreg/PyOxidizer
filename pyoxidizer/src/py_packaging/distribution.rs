@@ -2,30 +2,44 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use copy_dir::copy_dir;
 use fs2::FileExt;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use slog::warn;
-use std::collections::BTreeMap;
+use slog::{info, warn};
+use std::collections::{BTreeMap, HashMap};
+use std::env;
 use std::fs;
 use std::fs::{create_dir_all, File};
-use std::io::{Cursor, Read};
+use std::io::{BufRead, BufReader, Cursor, Read};
 use std::path::{Path, PathBuf};
 use url::Url;
 use uuid::Uuid;
+use which::which;
 
+use super::distutils::prepare_hacked_distutils;
 use super::fsscan::{
     find_python_resources, is_package_from_path, walk_tree_files, PythonFileResource,
 };
 use super::resource::{ResourceData, SourceModule};
+
 use crate::licensing::NON_GPL_LICENSES;
+
+#[cfg(windows)]
+const PYTHON_EXE_BASENAME: &str = "python.exe";
+
+#[cfg(unix)]
+const PYTHON_EXE_BASENAME: &str = "python3";
 
 #[cfg(windows)]
 const PIP_EXE_BASENAME: &str = "pip3.exe";
 
 #[cfg(unix)]
 const PIP_EXE_BASENAME: &str = "pip3";
+
+// This needs to be kept in sync with *compiler.py
+const PYOXIDIZER_STATE_DIR: &str = "state/pyoxidizer";
 
 const STDLIB_TEST_PACKAGES: &[&str] = &[
     "bsddb.test",
@@ -311,6 +325,9 @@ pub struct ParsedPythonDistribution {
 
     /// Describes license info for things in this distribution.
     pub license_infos: BTreeMap<String, Vec<LicenseInfo>>,
+
+    /// Path to copy of hacked dist to use for packaging rules venvs
+    pub venv_base: PathBuf,
 }
 
 #[derive(Debug)]
@@ -331,6 +348,102 @@ pub enum ExtensionModuleFilter {
     All,
     NoLibraries,
     NoGPL,
+}
+
+pub struct PythonPaths {
+    pub prefix: PathBuf,
+    pub bin_dir: PathBuf,
+    pub python_exe: PathBuf,
+    pub stdlib: PathBuf,
+    pub site_packages: PathBuf,
+    pub pyoxidizer_state_dir: PathBuf,
+}
+
+/// Resolve the location of Python modules given a base install path.
+pub fn resolve_python_paths(base: &Path, python_version: &str) -> PythonPaths {
+    let prefix = base.to_path_buf().canonicalize().unwrap();
+
+    let p = prefix.clone();
+
+    let bin_dir = if p.join("Scripts").exists() {
+        p.join("Scripts")
+    } else {
+        p.join("bin")
+    };
+
+    let python_exe = if bin_dir.join(PYTHON_EXE_BASENAME).exists() {
+        bin_dir.join(PYTHON_EXE_BASENAME)
+    } else {
+        p.join(PYTHON_EXE_BASENAME)
+    };
+
+    let mut pyoxidizer_state_dir = p.clone();
+    pyoxidizer_state_dir.extend(PYOXIDIZER_STATE_DIR.split('/'));
+
+    let unix_lib_dir = p.join("lib").join(format!("python{}", &python_version[0..3]));
+
+    let stdlib = if unix_lib_dir.exists() {
+        unix_lib_dir.clone()
+    } else {
+        p.join("Lib")
+    }.canonicalize().unwrap();
+
+    let site_packages = stdlib.join("site-packages");
+
+    PythonPaths {
+        prefix,
+        bin_dir,
+        python_exe,
+        stdlib,
+        site_packages,
+        pyoxidizer_state_dir,
+    }
+}
+
+pub fn invoke_python(python_paths: &PythonPaths, logger: &slog::Logger, args: &[&str]) {
+    let mut site_packages_s = python_paths
+        .site_packages
+        .canonicalize()
+        .unwrap()
+        .display()
+        .to_string();
+
+    if site_packages_s.starts_with("\\\\?\\") {
+        site_packages_s = site_packages_s[4..].to_string();
+    }
+
+    info!(logger, "setting PYTHONPATH {}", site_packages_s);
+
+    let mut extra_envs = HashMap::new();
+    extra_envs.insert("PYTHONPATH".to_string(), site_packages_s);
+
+    info!(
+        logger,
+        "running {} {}",
+        python_paths.python_exe.display(),
+        args.join(" ")
+    );
+
+    let mut cmd = std::process::Command::new(&python_paths.python_exe.canonicalize().unwrap())
+        .args(args)
+        .envs(&extra_envs)
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .expect(
+            format!(
+                "failed to run {} {}",
+                python_paths.python_exe.display(),
+                args.join(" ")
+            )
+            .as_str(),
+        );
+    {
+        let stdout = cmd.stdout.as_mut().unwrap();
+        let reader = BufReader::new(stdout);
+        for line in reader.lines() {
+            warn!(logger, "{}", line.unwrap());
+        }
+    }
 }
 
 impl ParsedPythonDistribution {
@@ -362,22 +475,124 @@ impl ParsedPythonDistribution {
     }
 
     /// Ensure pip is available to run in the distribution.
-    pub fn ensure_pip(&self) -> PathBuf {
-        let pip_path = self
-            .python_exe
-            .parent()
-            .expect("could not derive parent")
-            .to_path_buf()
-            .join(PIP_EXE_BASENAME);
+    /// This is only used by pip.rs
+    pub fn ensure_pip(&self, logger: &slog::Logger) -> PathBuf {
+        let dist_prefix = self.base_dir.join("python").join("install");
+        let python_paths = resolve_python_paths(&dist_prefix, &self.version);
+
+        let pip_path = python_paths.bin_dir.join(PIP_EXE_BASENAME);
 
         if !pip_path.exists() {
-            std::process::Command::new(&self.python_exe)
-                .args(&["-m", "ensurepip"])
-                .status()
-                .expect("failed to run ensurepip");
+            warn!(logger, "{} doesnt exist", pip_path.display().to_string());
+            invoke_python(&python_paths, &logger, &["-m", "ensurepip"]);
         }
 
         pip_path
+    }
+
+    /// Duplicate the python distribution, with distutils hacked
+    pub fn create_hacked_base(&self, logger: &slog::Logger) -> PythonPaths {
+        let venv_base = self.venv_base.clone();
+
+        let venv_dir_s = self.venv_base.display().to_string();
+
+        if !venv_base.exists() {
+            let dist_prefix = self.base_dir.join("python").join("install");
+
+            copy_dir(&dist_prefix, &venv_base).unwrap();
+
+            let dist_prefix_s = dist_prefix.display().to_string();
+            warn!(
+                logger,
+                "copied {} to create hacked base {}", dist_prefix_s, venv_dir_s
+            );
+        }
+
+        let python_paths = resolve_python_paths(&venv_base, &self.version);
+
+        invoke_python(&python_paths, &logger, &["-m", "ensurepip"]);
+
+        prepare_hacked_distutils(logger, &python_paths);
+
+        python_paths
+    }
+
+    /// Create a venv from the distribution at path.
+    pub fn create_venv(&self, logger: &slog::Logger, path: &PathBuf) -> PythonPaths {
+        let venv_dir_s = path.display().to_string();
+
+        // This will recreate it, if it was deleted
+        let python_paths = self.create_hacked_base(&logger);
+
+        if path.exists() {
+            warn!(logger, "re-using {} {}", "venv", venv_dir_s);
+        } else {
+            warn!(logger, "creating {} {}", "venv", venv_dir_s);
+            invoke_python(&python_paths, &logger, &["-m", "venv", venv_dir_s.as_str()]);
+        }
+
+        resolve_python_paths(&path, &self.version)
+    }
+
+    /// Create or re-use an existing venv
+    pub fn prepare_venv(
+        &self,
+        logger: &slog::Logger,
+        venv_path: Option<&String>,
+    ) -> (PythonPaths, HashMap<String, String>) {
+        let venv_dir_path = match venv_path {
+            Some(path_str) => PathBuf::from(path_str),
+            None => tempdir::TempDir::new("pyoxidizer-temp-venv")
+                .expect("could not create temp directory")
+                .path()
+                .join("venv"),
+        };
+
+        let python_paths = self.create_venv(logger, &venv_dir_path);
+
+        let mut extra_envs = HashMap::new();
+
+        let prefix_s = python_paths
+            .prefix
+            .canonicalize()
+            .unwrap()
+            .display()
+            .to_string();
+
+        let venv_path_bin_s = python_paths
+            .bin_dir
+            .canonicalize()
+            .unwrap()
+            .display()
+            .to_string();
+
+        let path_separator = if cfg!(windows) { ";" } else { ":" };
+
+        let process_path_s = env::var("PATH").unwrap();
+
+        extra_envs.insert(
+            "PATH".to_string(),
+            format!("{}{}{}", venv_path_bin_s, path_separator, process_path_s),
+        );
+
+        let mut site_packages_s = python_paths
+            .site_packages
+            .canonicalize()
+            .unwrap()
+            .display()
+            .to_string();
+        if site_packages_s.starts_with("\\\\?\\") {
+            site_packages_s = site_packages_s[4..].to_string();
+        }
+
+        extra_envs.insert("VIRTUAL_ENV".to_string(), prefix_s);
+        extra_envs.insert("PYTHONPATH".to_string(), site_packages_s);
+
+        extra_envs.insert("PYOXIDIZER".to_string(), "1".to_string());
+
+        fs::create_dir_all(&python_paths.pyoxidizer_state_dir).unwrap();
+
+        (python_paths, extra_envs)
     }
 
     /// Obtain resolved `SourceModule` instances for this distribution.
@@ -689,6 +904,8 @@ pub fn analyze_python_distribution_data(
         };
     }
 
+    let venv_base = dist_dir.parent().unwrap().join("hacked_base");
+
     Ok(ParsedPythonDistribution {
         flavor: pi.python_flavor.clone(),
         version: pi.python_version.clone(),
@@ -715,6 +932,7 @@ pub fn analyze_python_distribution_data(
         py_modules,
         resources,
         license_infos,
+        venv_base,
     })
 }
 

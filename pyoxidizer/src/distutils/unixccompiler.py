@@ -14,6 +14,7 @@ the "typical" Unix-style command-line C compiler:
 """
 
 import json, os, sys, re, shutil
+import pathlib
 
 from distutils import sysconfig
 from distutils.dep_util import newer
@@ -224,9 +225,6 @@ class UnixCCompiler(CCompiler):
                            package=None,
                            ):
 
-        if 'PYOXIDIZER_DISTUTILS_STATE_DIR' not in os.environ:
-            raise Exception('PYOXIDIZER_DISTUTILS_STATE_DIR not defined')
-
         self.link(CCompiler.SHARED_OBJECT, objects,
                   output_filename, output_dir,
                   libraries, library_dirs, runtime_library_dirs,
@@ -236,7 +234,10 @@ class UnixCCompiler(CCompiler):
         # In addition to performing the requested link, we also write out
         # files that PyOxidizer can use to embed the extension in a larger
         # binary.
-        dest_path = os.environ['PYOXIDIZER_DISTUTILS_STATE_DIR']
+        dest_path = str(pathlib.Path(sys.prefix) / 'state' / 'pyoxidizer')
+
+        if not os.path.exists(dest_path):
+            os.makedirs(dest_path)
 
         # We need to copy the object files because they may be in a temp
         # directory that doesn't outlive this process.
@@ -260,6 +261,7 @@ class UnixCCompiler(CCompiler):
             }
             json.dump(data, fh, indent=4, sort_keys=True)
 
+        print('Wrote {}'.format(json_path), file=sys.stderr)
 
     # -- Miscellaneous methods -----------------------------------------
     # These are all used by the 'gen_lib_options() function, in

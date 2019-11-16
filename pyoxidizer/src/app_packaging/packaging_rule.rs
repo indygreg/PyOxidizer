@@ -15,12 +15,13 @@ use super::config::{
     PackagingStdlibExtensionsPolicy, PackagingVirtualenv, PythonPackaging,
 };
 use super::state::BuildContext;
-use crate::py_packaging::distribution::{is_stdlib_test_package, ParsedPythonDistribution};
-use crate::py_packaging::distutils::{prepare_hacked_distutils, read_built_extensions};
+use crate::py_packaging::distribution::{
+    is_stdlib_test_package, resolve_python_paths, ParsedPythonDistribution,
+};
+use crate::py_packaging::distutils::read_built_extensions;
 use crate::py_packaging::fsscan::{
     find_python_resources, is_package_from_path, PythonFileResource,
 };
-use crate::py_packaging::pip::pip_install;
 use crate::py_packaging::resource::{AppRelativeResources, PythonResource};
 
 #[derive(Debug)]
@@ -119,30 +120,6 @@ fn python_resource_full_name(resource: &PythonResource) -> String {
     }
 }
 
-struct PythonPaths {
-    main: PathBuf,
-    site_packages: PathBuf,
-}
-
-/// Resolve the location of Python modules given a base install path.
-fn resolve_python_paths(base: &Path, python_version: &str, is_windows: bool) -> PythonPaths {
-    let mut p = base.to_path_buf();
-
-    if is_windows {
-        p.push("Lib");
-    } else {
-        p.push("lib");
-        p.push(format!("python{}", &python_version[0..3]));
-    }
-
-    let site_packages = p.join("site-packages");
-
-    PythonPaths {
-        main: p,
-        site_packages,
-    }
-}
-
 fn resolve_built_extensions(
     state_dir: &Path,
     res: &mut Vec<PythonResourceAction>,
@@ -157,6 +134,122 @@ fn resolve_built_extensions(
     }
 
     Ok(())
+}
+
+/// Processes resources in a path
+/// Args includes and excludes are ignored if None or an empty Vec.
+fn process_resources(
+    logger: &slog::Logger,
+    path: &PathBuf,
+    location: &ResourceLocation,
+    state_dir: Option<&PathBuf>,
+    include_source: bool,
+    optimize_level: i64,
+    includes: Option<&Vec<String>>,
+    excludes: Option<&Vec<String>>,
+) -> Vec<PythonResourceAction> {
+    let mut res = Vec::new();
+
+    let path_s = path.display().to_string();
+    warn!(logger, "processing resources from {}", path_s);
+
+    for resource in find_python_resources(path) {
+        let full_name = resource_full_name(&resource);
+
+        let excluded = match includes {
+            Some(values) => values.iter().any(|v| {
+                let prefix = v.clone() + ".";
+                full_name != v && !full_name.starts_with(&prefix)
+            }),
+            None => false,
+        };
+
+        if excluded {
+            info!(
+                logger,
+                "whitelist skipping {}", full_name
+            );
+            continue;
+        }
+
+        let excluded = match excludes {
+            Some(values) => match values.is_empty() {
+                true => false,
+                false => values.iter().all(|v| {
+                    let prefix = v.clone() + ".";
+                    full_name == v || full_name.starts_with(&prefix)
+                }),
+            },
+            None => false,
+        };
+
+        if excluded {
+            info!(
+                logger,
+                "blacklist skipping {}", full_name
+            );
+            continue;
+        }
+
+        match resource {
+            PythonFileResource::Source {
+                full_name, path, ..
+            } => {
+                let is_package = is_package_from_path(&path);
+                let source = fs::read(path).expect("error reading source file");
+
+                if include_source {
+                    res.push(PythonResourceAction {
+                        action: ResourceAction::Add,
+                        location: location.clone(),
+                        resource: PythonResource::ModuleSource {
+                            name: full_name.clone(),
+                            source: source.clone(),
+                            is_package,
+                        },
+                    });
+                }
+
+                res.push(PythonResourceAction {
+                    action: ResourceAction::Add,
+                    location: location.clone(),
+                    resource: PythonResource::ModuleBytecodeRequest {
+                        name: full_name.clone(),
+                        source,
+                        optimize_level: optimize_level as i32,
+                        is_package,
+                    },
+                });
+            }
+
+            PythonFileResource::Resource(resource) => {
+                let data = fs::read(resource.path).expect("error reading resource file");
+
+                res.push(PythonResourceAction {
+                    action: ResourceAction::Add,
+                    location: location.clone(),
+                    resource: PythonResource::Resource {
+                        package: resource.package.clone(),
+                        name: resource.stem.clone(),
+                        data,
+                    },
+                });
+            }
+
+            _ => {}
+        }
+    }
+
+    match state_dir {
+        Some(dir) => {
+            if dir.exists() {
+                resolve_built_extensions(&dir, &mut res, &location).unwrap();
+            }
+        }
+        None => {}
+    };
+
+    res
 }
 
 fn resolve_stdlib_extensions_policy(
@@ -343,165 +436,44 @@ fn resolve_stdlib(
 }
 
 fn resolve_virtualenv(
+    logger: &slog::Logger,
     dist: &ParsedPythonDistribution,
     rule: &PackagingVirtualenv,
 ) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
     let location = ResourceLocation::new(&rule.install_location);
 
     let python_paths =
-        resolve_python_paths(&Path::new(&rule.path), &dist.version, dist.os == "windows");
-    let packages_path = python_paths.site_packages;
+        resolve_python_paths(&Path::new(&rule.path), &dist.version);
 
-    for resource in find_python_resources(&packages_path) {
-        let mut relevant = true;
-        let full_name = resource_full_name(&resource);
-
-        for exclude in &rule.excludes {
-            let prefix = exclude.clone() + ".";
-
-            if full_name == exclude || full_name.starts_with(&prefix) {
-                relevant = false;
-            }
-        }
-
-        if !relevant {
-            continue;
-        }
-
-        match resource {
-            PythonFileResource::Source {
-                full_name, path, ..
-            } => {
-                let is_package = is_package_from_path(&path);
-                let source = fs::read(path).expect("error reading source file");
-
-                if rule.include_source {
-                    res.push(PythonResourceAction {
-                        action: ResourceAction::Add,
-                        location: location.clone(),
-                        resource: PythonResource::ModuleSource {
-                            name: full_name.clone(),
-                            source: source.clone(),
-                            is_package,
-                        },
-                    });
-                }
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::ModuleBytecodeRequest {
-                        name: full_name.clone(),
-                        source,
-                        optimize_level: rule.optimize_level as i32,
-                        is_package,
-                    },
-                });
-            }
-
-            PythonFileResource::Resource(resource) => {
-                let data = fs::read(resource.path).expect("error reading resource file");
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::Resource {
-                        package: resource.package.clone(),
-                        name: resource.stem.clone(),
-                        data,
-                    },
-                });
-            }
-
-            _ => {}
-        }
-    }
-
-    res
+    process_resources(
+        &logger,
+        &python_paths.site_packages,
+        &location,
+        Some(&python_paths.pyoxidizer_state_dir),
+        rule.include_source,
+        rule.optimize_level,
+        None,
+        Some(&rule.excludes),
+    )
 }
 
-fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
+fn resolve_package_root(
+    logger: &slog::Logger,
+    rule: &PackagingPackageRoot,
+) -> Vec<PythonResourceAction> {
     let location = ResourceLocation::new(&rule.install_location);
     let path = PathBuf::from(&rule.path);
 
-    for resource in find_python_resources(&path) {
-        let mut relevant = false;
-        let full_name = resource_full_name(&resource);
-
-        for package in &rule.packages {
-            let prefix = package.clone() + ".";
-
-            if full_name == package || full_name.starts_with(&prefix) {
-                relevant = true;
-            }
-        }
-
-        for exclude in &rule.excludes {
-            let prefix = exclude.clone() + ".";
-
-            if full_name == exclude || full_name.starts_with(&prefix) {
-                relevant = false;
-            }
-        }
-
-        if !relevant {
-            continue;
-        }
-
-        match resource {
-            PythonFileResource::Source {
-                full_name, path, ..
-            } => {
-                let is_package = is_package_from_path(&path);
-                let source = fs::read(path).expect("error reading source file");
-
-                if rule.include_source {
-                    res.push(PythonResourceAction {
-                        action: ResourceAction::Add,
-                        location: location.clone(),
-                        resource: PythonResource::ModuleSource {
-                            name: full_name.clone(),
-                            source: source.clone(),
-                            is_package,
-                        },
-                    });
-                }
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::ModuleBytecodeRequest {
-                        name: full_name.clone(),
-                        source,
-                        optimize_level: rule.optimize_level as i32,
-                        is_package,
-                    },
-                });
-            }
-
-            PythonFileResource::Resource(resource) => {
-                let data = fs::read(resource.path).expect("error reading resource file");
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::Resource {
-                        package: resource.package.clone(),
-                        name: resource.stem.clone(),
-                        data,
-                    },
-                });
-            }
-
-            _ => {}
-        }
-    }
-
-    res
+    process_resources(
+        &logger,
+        &path,
+        &location,
+        None,
+        rule.include_source,
+        rule.optimize_level,
+        Some(&rule.packages),
+        None,
+    )
 }
 
 fn resolve_pip_install_simple(
@@ -510,97 +482,61 @@ fn resolve_pip_install_simple(
     rule: &PackagingPipInstallSimple,
     verbose: bool,
 ) -> Vec<PythonResourceAction> {
-    let mut install_args = vec![
+    let location = ResourceLocation::new(&rule.install_location);
+
+    let (python_paths, mut extra_envs) = dist.prepare_venv(&logger, rule.venv_path.as_ref());
+
+    let mut pip_args: Vec<String> = vec![
+        "-m".to_string(),
+        "pip".to_string(),
+        "--disable-pip-version-check".to_string(),
+    ];
+
+    if verbose {
+        pip_args.push("--verbose".to_string());
+    }
+
+    pip_args.extend(vec![
+        "install".to_string(),
         "--no-binary".to_string(),
         ":all:".to_string(),
         rule.package.clone(),
-    ];
+    ]);
 
     if let Some(ref args) = rule.extra_args {
-        install_args.extend(args.clone());
+        pip_args.extend(args.clone());
     }
 
-    let resources = pip_install(logger, dist, verbose, &install_args, &rule.extra_env).unwrap();
+    for (key, value) in rule.extra_env.iter() {
+        extra_envs.insert(key.clone(), value.clone());
+    }
 
-    let mut res = Vec::new();
-    let location = ResourceLocation::new(&rule.install_location);
+    // TODO send stderr to stdout.
+    let mut cmd = std::process::Command::new(&python_paths.python_exe)
+        .args(&pip_args)
+        .envs(&extra_envs)
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .expect("error running pip");
+    {
+        let stdout = cmd.stdout.as_mut().unwrap();
+        let reader = BufReader::new(stdout);
 
-    for resource in resources {
-        let mut relevant = true;
-
-        let full_name = python_resource_full_name(&resource);
-
-        for exclude in &rule.excludes {
-            let prefix = exclude.clone() + ".";
-
-            if &full_name == exclude || full_name.starts_with(&prefix) {
-                relevant = false;
-            }
-        }
-
-        if !relevant {
-            continue;
-        }
-
-        match resource {
-            PythonResource::ModuleSource {
-                name,
-                is_package,
-                source,
-            } => {
-                if rule.include_source {
-                    res.push(PythonResourceAction {
-                        action: ResourceAction::Add,
-                        location: location.clone(),
-                        resource: PythonResource::ModuleSource {
-                            name: name.clone(),
-                            source: source.clone(),
-                            is_package,
-                        },
-                    });
-                }
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::ModuleBytecodeRequest {
-                        name,
-                        source,
-                        optimize_level: rule.optimize_level as i32,
-                        is_package,
-                    },
-                });
-            }
-
-            PythonResource::Resource {
-                package,
-                name,
-                data,
-            } => {
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::Resource {
-                        package,
-                        name,
-                        data,
-                    },
-                });
-            }
-
-            PythonResource::BuiltExtensionModule(em) => {
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::BuiltExtensionModule(em),
-                });
-            }
-
-            _ => {}
+        for line in reader.lines() {
+            warn!(logger, "{}", line.unwrap());
         }
     }
 
-    res
+    process_resources(
+        &logger,
+        &python_paths.site_packages,
+        &location,
+        Some(&python_paths.pyoxidizer_state_dir),
+        rule.include_source,
+        rule.optimize_level,
+        None,
+        Some(&rule.excludes),
+    )
 }
 
 fn resolve_pip_requirements_file(
@@ -609,83 +545,69 @@ fn resolve_pip_requirements_file(
     rule: &PackagingPipRequirementsFile,
     verbose: bool,
 ) -> Vec<PythonResourceAction> {
-    let mut install_args = vec![
+    let location = ResourceLocation::new(&rule.install_location);
+
+    let (python_paths, mut extra_envs) = dist.prepare_venv(&logger, rule.venv_path.as_ref());
+
+    let mut pip_args: Vec<String> = vec![
+        "-m".to_string(),
+        "pip".to_string(),
+        "--disable-pip-version-check".to_string(),
+    ];
+
+    if verbose {
+        pip_args.push("--verbose".to_string());
+    }
+
+    pip_args.extend(vec![
+        "install".to_string(),
         "--no-binary".to_string(),
         ":all:".to_string(),
         "--requirement".to_string(),
         rule.requirements_path.to_string(),
-    ];
+    ]);
 
     if let Some(ref args) = rule.extra_args {
-        install_args.extend(args.clone());
+        pip_args.extend(args.clone());
     }
 
-    let resources = pip_install(logger, dist, verbose, &install_args, &rule.extra_env).unwrap();
+    for (key, value) in rule.extra_env.iter() {
+        extra_envs.insert(key.clone(), value.clone());
+    }
 
-    let location = ResourceLocation::new(&rule.install_location);
+    warn!(
+        logger,
+        "Running {} {}",
+        python_paths.python_exe.display(),
+        pip_args.join(" ")
+    );
 
-    let mut res = Vec::new();
+    // TODO send stderr to stdout.
+    let mut cmd = std::process::Command::new(&python_paths.python_exe)
+        .args(&pip_args)
+        .envs(&extra_envs)
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .expect("error running pip");
+    {
+        let stdout = cmd.stdout.as_mut().unwrap();
+        let reader = BufReader::new(stdout);
 
-    for resource in resources {
-        match resource {
-            PythonResource::ModuleSource {
-                name,
-                is_package,
-                source,
-            } => {
-                if rule.include_source {
-                    res.push(PythonResourceAction {
-                        action: ResourceAction::Add,
-                        location: location.clone(),
-                        resource: PythonResource::ModuleSource {
-                            name: name.clone(),
-                            source: source.clone(),
-                            is_package,
-                        },
-                    });
-                }
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::ModuleBytecodeRequest {
-                        name,
-                        source,
-                        optimize_level: rule.optimize_level as i32,
-                        is_package,
-                    },
-                });
-            }
-
-            PythonResource::Resource {
-                package,
-                name,
-                data,
-            } => {
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::Resource {
-                        package,
-                        name,
-                        data,
-                    },
-                });
-            }
-
-            PythonResource::BuiltExtensionModule(em) => {
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::BuiltExtensionModule(em),
-                });
-            }
-
-            _ => {}
+        for line in reader.lines() {
+            warn!(logger, "{}", line.unwrap());
         }
     }
 
-    res
+    process_resources(
+        &logger,
+        &python_paths.site_packages,
+        &location,
+        Some(&python_paths.pyoxidizer_state_dir),
+        rule.include_source,
+        rule.optimize_level,
+        None,
+        None,
+    )
 }
 
 fn resolve_setup_py_install(
@@ -695,8 +617,6 @@ fn resolve_setup_py_install(
     rule: &PackagingSetupPyInstall,
     verbose: bool,
 ) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
     // Execution directory is resolved relative to the active configuration
     // file unless it is absolute.
     let rule_path = PathBuf::from(&rule.path);
@@ -709,30 +629,11 @@ fn resolve_setup_py_install(
 
     let location = ResourceLocation::new(&rule.install_location);
 
-    let temp_dir = tempdir::TempDir::new("pyoxidizer-setup-py-install")
-        .expect("could not create temp directory");
-
-    let target_dir_path = temp_dir.path().join("install");
-    let target_dir_s = target_dir_path.display().to_string();
-
-    let python_paths = resolve_python_paths(&target_dir_path, &dist.version, dist.os == "windows");
-
-    std::fs::create_dir_all(&python_paths.site_packages)
-        .expect("unable to create site-packages directory");
-
-    let mut extra_envs = prepare_hacked_distutils(
-        logger,
-        dist,
-        temp_dir.path(),
-        &[&python_paths.site_packages, &python_paths.main],
-    )
-    .expect("unable to hack distutils");
+    let (python_paths, mut extra_envs) = dist.prepare_venv(&logger, rule.venv_path.as_ref());
 
     for (key, value) in rule.extra_env.iter() {
         extra_envs.insert(key.clone(), value.clone());
     }
-
-    warn!(logger, "python setup.py installing to {}", target_dir_s);
 
     let mut args = vec!["setup.py"];
 
@@ -744,10 +645,19 @@ fn resolve_setup_py_install(
         args.push("--verbose");
     }
 
-    args.extend(&["install", "--prefix", &target_dir_s, "--no-compile"]);
+    let prefix_dir_s = python_paths.prefix.display().to_string();
+
+    args.extend(&["install", "--prefix", &prefix_dir_s, "--no-compile"]);
+
+    warn!(
+        logger,
+        "Running {} {}",
+        python_paths.python_exe.display(),
+        args.join(" ")
+    );
 
     // TODO send stderr to stdout.
-    let mut cmd = std::process::Command::new(&dist.python_exe)
+    let mut cmd = std::process::Command::new(&python_paths.python_exe)
         .current_dir(cwd)
         .args(&args)
         .envs(&extra_envs)
@@ -768,81 +678,16 @@ fn resolve_setup_py_install(
         panic!("error running setup.py");
     }
 
-    let packages_path = python_paths.site_packages;
-
-    for resource in find_python_resources(&packages_path) {
-        let mut relevant = true;
-        let full_name = resource_full_name(&resource);
-
-        for exclude in &rule.excludes {
-            let prefix = exclude.clone() + ".";
-
-            if full_name == exclude || full_name.starts_with(&prefix) {
-                relevant = false;
-            }
-        }
-
-        if !relevant {
-            continue;
-        }
-
-        match resource {
-            PythonFileResource::Source {
-                full_name, path, ..
-            } => {
-                let is_package = is_package_from_path(&path);
-                let source = fs::read(path).expect("error reading source");
-
-                if rule.include_source {
-                    res.push(PythonResourceAction {
-                        action: ResourceAction::Add,
-                        location: location.clone(),
-                        resource: PythonResource::ModuleSource {
-                            name: full_name.clone(),
-                            source: source.clone(),
-                            is_package,
-                        },
-                    });
-                }
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::ModuleBytecodeRequest {
-                        name: full_name.clone(),
-                        source,
-                        optimize_level: rule.optimize_level as i32,
-                        is_package,
-                    },
-                });
-            }
-
-            PythonFileResource::Resource(resource) => {
-                let data = fs::read(resource.path).expect("error reading resource file");
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::Resource {
-                        package: resource.package.clone(),
-                        name: resource.stem.clone(),
-                        data,
-                    },
-                });
-            }
-
-            _ => {}
-        }
-    }
-
-    resolve_built_extensions(
-        &PathBuf::from(extra_envs.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap()),
-        &mut res,
+    process_resources(
+        &logger,
+        &python_paths.site_packages,
         &location,
+        Some(&python_paths.pyoxidizer_state_dir),
+        rule.include_source,
+        rule.optimize_level,
+        None,
+        Some(&rule.excludes),
     )
-    .unwrap();
-
-    res
 }
 
 /// Resolves a Python packaging rule to resources to package.
@@ -872,9 +717,9 @@ pub fn resolve_python_packaging(
 
         PythonPackaging::Stdlib(rule) => resolve_stdlib(logger, dist, &rule),
 
-        PythonPackaging::Virtualenv(rule) => resolve_virtualenv(dist, &rule),
+        PythonPackaging::Virtualenv(rule) => resolve_virtualenv(logger, dist, &rule),
 
-        PythonPackaging::PackageRoot(rule) => resolve_package_root(&rule),
+        PythonPackaging::PackageRoot(rule) => resolve_package_root(logger, &rule),
 
         PythonPackaging::PipInstallSimple(rule) => {
             resolve_pip_install_simple(logger, dist, &rule, verbose)

@@ -14,6 +14,7 @@ for older versions in distutils.msvc9compiler and distutils.msvccompiler.
 # ported to VS 2015 by Steve Dower
 
 import json
+import pathlib
 import os
 import shutil
 import stat
@@ -562,9 +563,6 @@ class MSVCCompiler(CCompiler) :
                            package=None,
                            ):
 
-        if 'PYOXIDIZER_DISTUTILS_STATE_DIR' not in os.environ:
-            raise Exception('PYOXIDIZER_DISTUTILS_STATE_DIR not defined')
-
         # The extension is compiled as a built-in, so linking a shared library
         # won't work due to symbol visibility/export issues. The extension is
         # expecting all CPython symbols to be available in the current binary,
@@ -580,7 +578,10 @@ class MSVCCompiler(CCompiler) :
         # In addition to performing the requested link, we also write out
         # files that PyOxidizer can use to embed the extension in a larger
         # binary.
-        dest_path = os.environ['PYOXIDIZER_DISTUTILS_STATE_DIR']
+        dest_path = str(pathlib.Path(sys.prefix) / 'state' / 'pyoxidizer')
+
+        if not os.path.exists(dest_path):
+            os.makedirs(dest_path)
 
         # We need to copy the object files because they may be in a temp
         # directory that doesn't outlive this process.
@@ -604,6 +605,7 @@ class MSVCCompiler(CCompiler) :
             }
             json.dump(data, fh, indent=4, sort_keys=True)
 
+        print('Wrote {}'.format(json_path), file=sys.stderr)
 
     # -- Miscellaneous methods -----------------------------------------
     # These are all used by the 'gen_lib_options() function, in

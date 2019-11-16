@@ -26,6 +26,7 @@ pub enum InstallLocation {
 #[derive(Clone, Debug, PartialEq)]
 pub struct PackagingSetupPyInstall {
     pub path: String,
+    pub venv_path: Option<String>,
     pub extra_env: HashMap<String, String>,
     pub extra_global_arguments: Vec<String>,
     pub optimize_level: i64,
@@ -87,6 +88,7 @@ pub struct PackagingPackageRoot {
 #[derive(Clone, Debug, PartialEq)]
 pub struct PackagingPipInstallSimple {
     pub package: String,
+    pub venv_path: Option<String>,
     pub extra_env: HashMap<String, String>,
     pub optimize_level: i64,
     pub excludes: Vec<String>,
@@ -99,6 +101,7 @@ pub struct PackagingPipInstallSimple {
 pub struct PackagingPipRequirementsFile {
     // TODO resolve to a PathBuf.
     pub requirements_path: String,
+    pub venv_path: Option<String>,
     pub extra_env: HashMap<String, String>,
     pub optimize_level: i64,
     pub include_source: bool,
