@@ -102,6 +102,9 @@ pub struct PythonConfig {
     /// Whether to put interpreter in interactive mode.
     pub interactive: bool,
 
+    /// Whether to enable isolated mode.
+    pub isolated: bool,
+
     /// Whether to suppress writing of ``.pyc`` files when importing ``.py``
     /// files from the filesystem. This is typically irrelevant since modules
     /// are imported from memory.

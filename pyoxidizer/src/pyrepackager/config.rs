@@ -183,6 +183,7 @@ pub struct EmbeddedPythonConfig {
     pub ignore_environment: bool,
     pub inspect: bool,
     pub interactive: bool,
+    pub isolated: bool,
     pub no_site: bool,
     pub no_user_site_directory: bool,
     pub optimize_level: i64,

@@ -1464,6 +1464,7 @@ pub fn derive_python_config(
          ignore_python_env: {},\n    \
          inspect: {},\n    \
          interactive: {},\n    \
+         isolated: {},\n    \
          dont_write_bytecode: {},\n    \
          unbuffered_stdio: {},\n    \
          parser_debug: {},\n    \
@@ -1505,6 +1506,7 @@ pub fn derive_python_config(
         embedded.ignore_environment,
         embedded.inspect,
         embedded.interactive,
+        embedded.isolated,
         embedded.dont_write_bytecode,
         embedded.unbuffered_stdio,
         embedded.parser_debug,

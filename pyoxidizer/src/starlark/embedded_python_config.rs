@@ -61,6 +61,7 @@ starlark_module! { embedded_python_config_module =>
         ignore_environment=true,
         inspect=false,
         interactive=false,
+        isolated=false,
         no_site=true,
         no_user_site_directory=true,
         optimize_level=0,
@@ -84,6 +85,7 @@ starlark_module! { embedded_python_config_module =>
         let ignore_environment = required_bool_arg("ignore_environment", &ignore_environment)?;
         let inspect = required_bool_arg("inspect", &inspect)?;
         let interactive = required_bool_arg("interactive", &interactive)?;
+        let isolated = required_bool_arg("isolated", &isolated)?;
         let no_site = required_bool_arg("no_site", &no_site)?;
         let no_user_site_directory = required_bool_arg("no_user_site_directory", &no_user_site_directory)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
@@ -163,6 +165,7 @@ starlark_module! { embedded_python_config_module =>
             ignore_environment,
             inspect,
             interactive,
+            isolated,
             no_site,
             no_user_site_directory,
             optimize_level: optimize_level.to_int().unwrap(),
@@ -202,6 +205,7 @@ mod tests {
             ignore_environment: true,
             inspect: false,
             interactive: false,
+            isolated: false,
             no_site: true,
             no_user_site_directory: true,
             optimize_level: 0,
