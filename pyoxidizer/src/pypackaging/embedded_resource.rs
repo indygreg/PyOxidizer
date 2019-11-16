@@ -8,9 +8,7 @@ use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 
-use crate::pypackaging::resource::{
-    BuiltExtensionModule, PackagedModuleBytecode, PackagedModuleSource,
-};
+use super::resource::{BuiltExtensionModule, PackagedModuleBytecode, PackagedModuleSource};
 use crate::pyrepackager::dist::ExtensionModule;
 
 /// Represents Python resources to embed in a binary.

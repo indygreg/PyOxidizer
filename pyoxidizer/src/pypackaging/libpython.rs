@@ -10,12 +10,12 @@ use std::fs;
 use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 
-use super::dist::{ExtensionModule, LicenseInfo, PythonDistributionInfo};
-use crate::pypackaging::bytecode::{BytecodeCompiler, CompileMode};
-use crate::pypackaging::embedded_resource::EmbeddedPythonResources;
-use crate::pypackaging::resource::BuiltExtensionModule;
+use super::bytecode::{BytecodeCompiler, CompileMode};
+use super::embedded_resource::EmbeddedPythonResources;
+use super::resource::BuiltExtensionModule;
+use crate::pyrepackager::dist::{ExtensionModule, LicenseInfo, PythonDistributionInfo};
 
-pub const PYTHON_IMPORTER: &[u8] = include_bytes!("../pypackaging/memoryimporter.py");
+pub const PYTHON_IMPORTER: &[u8] = include_bytes!("memoryimporter.py");
 
 lazy_static! {
     /// Libraries provided by the host that we can ignore in Python module library dependencies.

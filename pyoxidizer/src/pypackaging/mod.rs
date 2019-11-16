@@ -5,5 +5,6 @@
 pub mod bytecode;
 pub mod embedded_resource;
 pub mod fsscan;
+pub mod libpython;
 pub mod pyembed;
 pub mod resource;

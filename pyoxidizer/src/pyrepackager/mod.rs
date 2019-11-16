@@ -4,7 +4,6 @@
 
 pub mod config;
 pub mod dist;
-pub mod libpython;
 pub mod packaging_rule;
 pub mod repackage;
 pub mod state;
