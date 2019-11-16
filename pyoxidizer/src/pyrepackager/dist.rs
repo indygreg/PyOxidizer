@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use url::Url;
 
 use super::config::PythonDistribution;
-use super::fsscan::{find_python_resources, walk_tree_files, PythonFileResource};
+use crate::pypackaging::fsscan::{find_python_resources, walk_tree_files, PythonFileResource};
 
 #[cfg(windows)]
 const PIP_EXE_BASENAME: &str = "pip3.exe";

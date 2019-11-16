@@ -5,7 +5,6 @@
 pub mod config;
 pub mod dist;
 pub mod embedded_resource;
-pub mod fsscan;
 pub mod libpython;
 pub mod packaging_rule;
 pub mod pyembed;

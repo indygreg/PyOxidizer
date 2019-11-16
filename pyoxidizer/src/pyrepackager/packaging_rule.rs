@@ -13,8 +13,8 @@ use super::config::{
     PackagingStdlibExtensionsPolicy, PackagingVirtualenv, PythonPackaging,
 };
 use super::dist::PythonDistributionInfo;
-use super::fsscan::{find_python_resources, PythonFileResource};
 use super::state::BuildContext;
+use crate::pypackaging::fsscan::{find_python_resources, PythonFileResource};
 use lazy_static::lazy_static;
 use serde::Deserialize;
 use slog::{info, warn};
