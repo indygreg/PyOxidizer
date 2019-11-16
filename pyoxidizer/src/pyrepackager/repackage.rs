@@ -13,7 +13,10 @@ use std::io::{BufRead, BufReader, Cursor, Error as IOError, Read, Write};
 use std::path::{Path, PathBuf};
 
 use super::bytecode::{BytecodeCompiler, CompileMode};
-use super::config::{eval_starlark_config_file, Config, PythonDistribution, PythonPackaging};
+use super::config::{
+    eval_starlark_config_file, find_pyoxidizer_config_file_env, Config, PythonDistribution,
+    PythonPackaging,
+};
 use super::dist::{
     analyze_python_distribution_tar_zst, resolve_python_distribution_archive, ExtensionModule,
     PythonDistributionInfo,
@@ -1341,34 +1344,6 @@ pub fn process_config(
         cargo_metadata,
         python_config_rs,
         packaging_state_path,
-    }
-}
-
-/// Find a pyoxidizer.toml configuration file by walking directory ancestry.
-pub fn find_pyoxidizer_config_file(start_dir: &Path) -> Option<PathBuf> {
-    for test_dir in start_dir.ancestors() {
-        let candidate = test_dir.to_path_buf().join("pyoxidizer.bzl");
-
-        if candidate.exists() {
-            return Some(candidate);
-        }
-    }
-
-    None
-}
-
-/// Find a PyOxidizer configuration file from walking the filesystem or an
-/// environment variable override.
-pub fn find_pyoxidizer_config_file_env(logger: &slog::Logger, start_dir: &Path) -> Option<PathBuf> {
-    match env::var("PYOXIDIZER_CONFIG") {
-        Ok(config_env) => {
-            warn!(
-                logger,
-                "using PyOxidizer config file from PYOXIDIZER_CONFIG: {}", config_env
-            );
-            Some(PathBuf::from(config_env))
-        }
-        Err(_) => find_pyoxidizer_config_file(start_dir),
     }
 }
 

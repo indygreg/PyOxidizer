@@ -2,7 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use slog::warn;
 use std::collections::HashMap;
+use std::env;
 use std::path::{Path, PathBuf};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -234,6 +236,34 @@ pub fn default_raw_allocator(target: &str) -> RawAllocator {
         RawAllocator::System
     } else {
         RawAllocator::Jemalloc
+    }
+}
+
+/// Find a pyoxidizer.toml configuration file by walking directory ancestry.
+pub fn find_pyoxidizer_config_file(start_dir: &Path) -> Option<PathBuf> {
+    for test_dir in start_dir.ancestors() {
+        let candidate = test_dir.to_path_buf().join("pyoxidizer.bzl");
+
+        if candidate.exists() {
+            return Some(candidate);
+        }
+    }
+
+    None
+}
+
+/// Find a PyOxidizer configuration file from walking the filesystem or an
+/// environment variable override.
+pub fn find_pyoxidizer_config_file_env(logger: &slog::Logger, start_dir: &Path) -> Option<PathBuf> {
+    match env::var("PYOXIDIZER_CONFIG") {
+        Ok(config_env) => {
+            warn!(
+                logger,
+                "using PyOxidizer config file from PYOXIDIZER_CONFIG: {}", config_env
+            );
+            Some(PathBuf::from(config_env))
+        }
+        Err(_) => find_pyoxidizer_config_file(start_dir),
     }
 }
 
