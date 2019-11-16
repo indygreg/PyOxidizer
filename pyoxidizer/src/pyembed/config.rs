@@ -107,6 +107,9 @@ pub struct PythonConfig {
     /// Whether to enable parser debugging output.
     pub parser_debug: bool,
 
+    /// Controls the level of the verbose mode for the interpreter.
+    pub verbose: i32,
+
     /// Bytecode for the importlib._bootstrap / _frozen_importlib module.
     pub frozen_importlib_data: &'static [u8],
 

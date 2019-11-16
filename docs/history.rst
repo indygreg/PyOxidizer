@@ -44,6 +44,8 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* The ``EmbeddedPythonConfig()`` config function now accepts a ``verbose``
+  argument to control the value of ``Py_VerboseFlag``.
 * The ``EmbeddedPythonConfig()`` config function now accepts a ``parser_debug``
   argument to control the value of ``Py_DebugFlag``.
 * The ``EmbeddedPythonConfig()`` config function now accepts a ``bytes_warning``

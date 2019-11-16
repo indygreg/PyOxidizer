@@ -1465,6 +1465,7 @@ pub fn derive_python_config(
          dont_write_bytecode: {},\n    \
          unbuffered_stdio: {},\n    \
          parser_debug: {},\n    \
+         verbose: {},\n    \
          frozen_importlib_data: include_bytes!(r#\"{}\"#),\n    \
          frozen_importlib_external_data: include_bytes!(r#\"{}\"#),\n    \
          py_modules_data: include_bytes!(r#\"{}\"#),\n    \
@@ -1501,6 +1502,7 @@ pub fn derive_python_config(
         embedded.dont_write_bytecode,
         embedded.unbuffered_stdio,
         embedded.parser_debug,
+        embedded.verbose,
         importlib_bootstrap_path.display(),
         importlib_bootstrap_external_path.display(),
         py_modules_path.display(),

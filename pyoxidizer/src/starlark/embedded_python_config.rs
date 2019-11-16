@@ -72,6 +72,7 @@ starlark_module! { embedded_python_config_module =>
         raw_allocator=None,
         terminfo_resolution="dynamic",
         terminfo_dirs=None,
+        verbose=0,
         write_modules_directory_env=None
     ) {
         required_type_arg("bytes_warning", "int", &bytes_warning)?;
@@ -90,6 +91,7 @@ starlark_module! { embedded_python_config_module =>
         let raw_allocator = optional_str_arg("raw_allocator", &raw_allocator)?;
         let terminfo_resolution = optional_str_arg("terminfo_resolution", &terminfo_resolution)?;
         let terminfo_dirs = optional_str_arg("terminfo_dirs", &terminfo_dirs)?;
+        required_type_arg("verbose", "int", &verbose)?;
         let write_modules_directory_env = optional_str_arg("write_modules_directory_env", &write_modules_directory_env)?;
 
         let build_target = env.get("BUILD_TARGET").unwrap().to_str();
@@ -164,6 +166,7 @@ starlark_module! { embedded_python_config_module =>
             sys_paths,
             raw_allocator,
             terminfo_resolution,
+            verbose: verbose.to_int().unwrap() as i32,
             write_modules_directory_env,
         };
 
@@ -189,6 +192,7 @@ mod tests {
             no_user_site_directory: true,
             optimize_level: 0,
             parser_debug: false,
+            verbose: 0,
             stdio_encoding_name: None,
             stdio_encoding_errors: None,
             unbuffered_stdio: false,
