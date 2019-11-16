@@ -44,6 +44,8 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* The ``EmbeddedPythonConfig()`` config function now accepts a ``use_hash_seed``
+  argument to control the value of ``Py_HashRandomizationFlag``.
 * The ``EmbeddedPythonConfig()`` config function now accepts an ``inspect``
   argument to control the value of ``Py_InspectFlag``.
 * The ``EmbeddedPythonConfig()`` config function now accepts an ``interactive``

@@ -75,6 +75,7 @@ starlark_module! { embedded_python_config_module =>
         raw_allocator=None,
         terminfo_resolution="dynamic",
         terminfo_dirs=None,
+        use_hash_seed=false,
         verbose=0,
         write_modules_directory_env=None
     ) {
@@ -97,6 +98,7 @@ starlark_module! { embedded_python_config_module =>
         let raw_allocator = optional_str_arg("raw_allocator", &raw_allocator)?;
         let terminfo_resolution = optional_str_arg("terminfo_resolution", &terminfo_resolution)?;
         let terminfo_dirs = optional_str_arg("terminfo_dirs", &terminfo_dirs)?;
+        let use_hash_seed = required_bool_arg("use_hash_seed", &use_hash_seed)?;
         required_type_arg("verbose", "int", &verbose)?;
         let write_modules_directory_env = optional_str_arg("write_modules_directory_env", &write_modules_directory_env)?;
 
@@ -175,6 +177,7 @@ starlark_module! { embedded_python_config_module =>
             sys_paths,
             raw_allocator,
             terminfo_resolution,
+            use_hash_seed,
             verbose: verbose.to_int().unwrap() as i32,
             write_modules_directory_env,
         };
@@ -204,6 +207,7 @@ mod tests {
             optimize_level: 0,
             parser_debug: false,
             quiet: false,
+            use_hash_seed: false,
             verbose: 0,
             stdio_encoding_name: None,
             stdio_encoding_errors: None,

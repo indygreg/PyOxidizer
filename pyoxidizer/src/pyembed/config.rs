@@ -116,6 +116,10 @@ pub struct PythonConfig {
     /// Whether to enable quiet mode.
     pub quiet: bool,
 
+    /// Whether to use the PYTHONHASHSEED environment variable to initialize the
+    /// hash seed.
+    pub use_hash_seed: bool,
+
     /// Controls the level of the verbose mode for the interpreter.
     pub verbose: i32,
 

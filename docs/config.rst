@@ -272,6 +272,12 @@ behavior:
 
    Default is ``False``.
 
+``use_hash_seed`` (bool)
+   Controls the value of
+   `https://docs.python.org/3/c-api/init.html#c.Py_HashRandomizationFlag`_.
+
+   Default is ``False``.
+
 ``filesystem_importer`` (bool)
    Controls whether to enable Python's filesystem based importer. Enabling
    this importer allows Python modules to be imported from the filesystem.

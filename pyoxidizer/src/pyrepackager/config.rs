@@ -191,6 +191,7 @@ pub struct EmbeddedPythonConfig {
     pub stdio_encoding_name: Option<String>,
     pub stdio_encoding_errors: Option<String>,
     pub unbuffered_stdio: bool,
+    pub use_hash_seed: bool,
     pub verbose: i32,
     pub filesystem_importer: bool,
     pub sys_frozen: bool,

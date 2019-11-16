@@ -347,6 +347,11 @@ impl<'a> MainPythonInterpreter<'a> {
             pyffi::Py_BytesWarningFlag = config.bytes_warning;
             pyffi::Py_DebugFlag = if config.parser_debug { 1 } else { 0 };
             pyffi::Py_DontWriteBytecodeFlag = if config.dont_write_bytecode { 1 } else { 0 };
+            // TODO we could potentially have the config be an Option<i32> so we can control
+            // the hash seed explicitly. But the APIs in Python 3.7 aren't great here, as we'd
+            // need to set an environment variable. Once we support the new initialization
+            // API in Python 3.8, things will be easier to implement.
+            pyffi::Py_HashRandomizationFlag = if config.use_hash_seed { 1 } else { 0 };
             pyffi::Py_IgnoreEnvironmentFlag = if config.ignore_python_env { 1 } else { 0 };
             pyffi::Py_InteractiveFlag = if config.interactive { 1 } else { 0 };
             pyffi::Py_InspectFlag = if config.inspect { 1 } else { 0 };
