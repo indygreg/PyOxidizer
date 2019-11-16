@@ -250,6 +250,9 @@ pub fn global_environment(context: &EnvironmentContext) -> Result<Environment, E
     let env = super::python_packaging::python_packaging_env(env);
     let env = super::python_run_mode::python_run_mode_env(env);
 
+    let build_path = context.cwd.join("build");
+    env.set("BUILD_PATH", Value::new(build_path.display().to_string()))?;
+
     env.set("CONTEXT", Value::new(context.clone()))?;
 
     env.set("CWD", Value::from(context.cwd.display().to_string()))?;

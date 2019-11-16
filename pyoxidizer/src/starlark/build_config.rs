@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use super::env::{optional_str_arg, required_str_arg};
+use super::env::required_str_arg;
 use starlark::environment::Environment;
 use starlark::values::{default_compare, TypedValue, Value, ValueError, ValueResult};
 use starlark::{
@@ -51,16 +51,10 @@ impl TypedValue for BuildConfig {
 
 starlark_module! { build_config_env =>
     #[allow(non_snake_case)]
-    BuildConfig(env env, application_name, build_path=None) {
+    BuildConfig(env env, application_name) {
         let application_name = required_str_arg("application_name", &application_name)?;
-        let build_path = optional_str_arg("build_path", &build_path)?;
 
-        let cwd = env.get("CWD").expect("CWD not set").to_string();
-
-        let build_path = match build_path {
-            Some(p) => PathBuf::from(p.replace("$ORIGIN", &cwd)),
-            None => PathBuf::from(&cwd).join("build"),
-        };
+        let build_path = PathBuf::from(env.get("BUILD_PATH").expect("BUILD_PATH not set").to_string());
 
         let config = super::super::pyrepackager::config::BuildConfig {
             application_name,
@@ -95,20 +89,9 @@ mod tests {
 
     #[test]
     fn test_build_path_simple() {
-        let v = starlark_ok("BuildConfig('foo', build_path='/some/path')");
+        let v = starlark_ok("BUILD_PATH='/some/path'\nBuildConfig('foo')");
         v.downcast_apply(|x: &BuildConfig| {
             assert_eq!(x.config.build_path, PathBuf::from("/some/path"))
-        });
-    }
-
-    #[test]
-    fn test_build_path_origin() {
-        let v = starlark_ok("BuildConfig('foo', build_path='$ORIGIN/custom')");
-        v.downcast_apply(|x: &BuildConfig| {
-            assert_eq!(
-                x.config.build_path,
-                std::env::current_dir().unwrap().join("custom")
-            );
         });
     }
 }
