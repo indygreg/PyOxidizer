@@ -45,6 +45,9 @@ New Features
 ^^^^^^^^^^^^
 
 * The ``EmbeddedPythonConfig()`` config function now accepts a
+  ``legacy_windows_stdio`` argument to control the value of
+  ``Py_LegacyWindowsStdioFlag`` (#190).
+* The ``EmbeddedPythonConfig()`` config function now accepts a
   ``legacy_windows_fs_encoding`` argument to control the value of
   ``Py_LegacyWindowsFSEncodingFlag``.
 * The ``EmbeddedPythonConfig()`` config function now accepts an ``isolated``

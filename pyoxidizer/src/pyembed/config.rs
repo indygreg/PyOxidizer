@@ -109,6 +109,10 @@ pub struct PythonConfig {
     /// error handler to replace.
     pub legacy_windows_fs_encoding: bool,
 
+    /// Whether io.File instead of io.WindowsConsoleIO for sys.stdin, sys.stdout,
+    /// and sys.stderr.
+    pub legacy_windows_stdio: bool,
+
     /// Whether to suppress writing of ``.pyc`` files when importing ``.py``
     /// files from the filesystem. This is typically irrelevant since modules
     /// are imported from memory.

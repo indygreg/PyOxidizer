@@ -185,6 +185,7 @@ pub struct EmbeddedPythonConfig {
     pub interactive: bool,
     pub isolated: bool,
     pub legacy_windows_fs_encoding: bool,
+    pub legacy_windows_stdio: bool,
     pub no_site: bool,
     pub no_user_site_directory: bool,
     pub optimize_level: i64,

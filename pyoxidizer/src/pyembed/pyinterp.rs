@@ -369,6 +369,7 @@ impl<'a> MainPythonInterpreter<'a> {
                 } else {
                     0
                 };
+                pyffi::Py_LegacyWindowsStdioFlag = if config.legacy_windows_stdio { 1 } else { 0 };
             }
         }
 

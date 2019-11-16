@@ -63,6 +63,7 @@ starlark_module! { embedded_python_config_module =>
         interactive=false,
         isolated=false,
         legacy_windows_fs_encoding=false,
+        legacy_windows_stdio=false,
         no_site=true,
         no_user_site_directory=true,
         optimize_level=0,
@@ -88,6 +89,7 @@ starlark_module! { embedded_python_config_module =>
         let interactive = required_bool_arg("interactive", &interactive)?;
         let isolated = required_bool_arg("isolated", &isolated)?;
         let legacy_windows_fs_encoding = required_bool_arg("legacy_windows_fs_encoding", &legacy_windows_fs_encoding)?;
+        let legacy_windows_stdio = required_bool_arg("legacy_windows_stdio", &legacy_windows_stdio)?;
         let no_site = required_bool_arg("no_site", &no_site)?;
         let no_user_site_directory = required_bool_arg("no_user_site_directory", &no_user_site_directory)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
@@ -169,6 +171,7 @@ starlark_module! { embedded_python_config_module =>
             interactive,
             isolated,
             legacy_windows_fs_encoding,
+            legacy_windows_stdio,
             no_site,
             no_user_site_directory,
             optimize_level: optimize_level.to_int().unwrap(),
@@ -210,6 +213,7 @@ mod tests {
             interactive: false,
             isolated: false,
             legacy_windows_fs_encoding: false,
+            legacy_windows_stdio: false,
             no_site: true,
             no_user_site_directory: true,
             optimize_level: 0,

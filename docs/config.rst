@@ -234,6 +234,14 @@ behavior:
 
    Default is ``False``.
 
+``legacy_windows_stdio`` (bool)
+   Controls the value of
+   `Py_LegacyWindowsStdioFlag <https://docs.python.org/3/c-api/init.html#c.Py_LegacyWindowsStdioFlag>`_.
+
+   Only affects Windows.
+
+   Default is ``False``.
+
 ``no_site`` (bool)
    Controls the value of
    `Py_NoSiteFlag <https://docs.python.org/3/c-api/init.html#c.Py_NoSiteFlag>`_.

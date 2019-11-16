@@ -1466,6 +1466,7 @@ pub fn derive_python_config(
          interactive: {},\n    \
          isolated: {},\n    \
          legacy_windows_fs_encoding: {},\n    \
+         legacy_windows_stdio: {},\n    \
          dont_write_bytecode: {},\n    \
          unbuffered_stdio: {},\n    \
          parser_debug: {},\n    \
@@ -1509,6 +1510,7 @@ pub fn derive_python_config(
         embedded.interactive,
         embedded.isolated,
         embedded.legacy_windows_fs_encoding,
+        embedded.legacy_windows_stdio,
         embedded.dont_write_bytecode,
         embedded.unbuffered_stdio,
         embedded.parser_debug,
