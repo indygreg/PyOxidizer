@@ -12,11 +12,6 @@ use std::fs::create_dir_all;
 use std::io::{BufRead, BufReader, Cursor, Error as IOError, Read, Write};
 use std::path::{Path, PathBuf};
 
-use super::super::pypackaging::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode};
-use super::super::pypackaging::resource::{
-    AppRelativeResources, PackagedModuleBytecode, PackagedModuleSource, PythonResource,
-    ResourceAction, ResourceLocation,
-};
 use super::config::{
     eval_starlark_config_file, find_pyoxidizer_config_file_env, Config, PythonDistribution,
     PythonPackaging,
@@ -32,6 +27,11 @@ use super::packaging_rule::{
 };
 use super::pyembed::{derive_python_config, write_data_rs};
 use super::state::{BuildContext, PackagingState};
+use crate::pypackaging::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode};
+use crate::pypackaging::resource::{
+    AppRelativeResources, PackagedModuleBytecode, PackagedModuleSource, PythonResource,
+    ResourceAction, ResourceLocation,
+};
 
 lazy_static! {
     /// Python extension modules that should never be included.

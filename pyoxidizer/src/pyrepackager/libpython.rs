@@ -10,10 +10,10 @@ use std::fs;
 use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 
-use super::super::pypackaging::bytecode::{BytecodeCompiler, CompileMode};
-use super::super::pypackaging::resource::BuiltExtensionModule;
 use super::dist::{ExtensionModule, LicenseInfo, PythonDistributionInfo};
 use super::embedded_resource::EmbeddedPythonResources;
+use crate::pypackaging::bytecode::{BytecodeCompiler, CompileMode};
+use crate::pypackaging::resource::BuiltExtensionModule;
 
 pub const PYTHON_IMPORTER: &[u8] = include_bytes!("memoryimporter.py");
 

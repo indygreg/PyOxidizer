@@ -2,10 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use super::super::pypackaging::resource::{
-    AppRelativeResources, BuiltExtensionModule, PythonResource, PythonResourceAction,
-    ResourceAction, ResourceLocation,
-};
+use lazy_static::lazy_static;
+use serde::Deserialize;
+use slog::{info, warn};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::fs;
+use std::io::{BufRead, BufReader};
+use std::path::{Path, PathBuf};
+
 use super::config::{
     PackagingPackageRoot, PackagingPipInstallSimple, PackagingPipRequirementsFile,
     PackagingSetupPyInstall, PackagingStdlib, PackagingStdlibExtensionVariant,
@@ -15,13 +19,10 @@ use super::config::{
 use super::dist::PythonDistributionInfo;
 use super::state::BuildContext;
 use crate::pypackaging::fsscan::{find_python_resources, PythonFileResource};
-use lazy_static::lazy_static;
-use serde::Deserialize;
-use slog::{info, warn};
-use std::collections::{BTreeMap, BTreeSet, HashMap};
-use std::fs;
-use std::io::{BufRead, BufReader};
-use std::path::{Path, PathBuf};
+use crate::pypackaging::resource::{
+    AppRelativeResources, BuiltExtensionModule, PythonResource, PythonResourceAction,
+    ResourceAction, ResourceLocation,
+};
 
 /// SPDX licenses in Python distributions that are not GPL.
 ///
