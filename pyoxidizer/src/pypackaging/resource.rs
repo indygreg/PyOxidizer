@@ -2,8 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use super::config::InstallLocation;
-use super::dist::ExtensionModule;
+use super::super::pyrepackager::config::InstallLocation;
+use super::super::pyrepackager::dist::ExtensionModule;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::PathBuf;

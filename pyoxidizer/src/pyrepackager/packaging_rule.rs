@@ -2,6 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use super::super::pypackaging::resource::{
+    AppRelativeResources, BuiltExtensionModule, PythonResource, PythonResourceAction,
+    ResourceAction, ResourceLocation,
+};
 use super::config::{
     PackagingPackageRoot, PackagingPipInstallSimple, PackagingPipRequirementsFile,
     PackagingSetupPyInstall, PackagingStdlib, PackagingStdlibExtensionVariant,
@@ -10,10 +14,6 @@ use super::config::{
 };
 use super::dist::PythonDistributionInfo;
 use super::fsscan::{find_python_resources, PythonFileResource};
-use super::resource::{
-    AppRelativeResources, BuiltExtensionModule, PythonResource, PythonResourceAction,
-    ResourceAction, ResourceLocation,
-};
 use super::state::BuildContext;
 use lazy_static::lazy_static;
 use serde::Deserialize;

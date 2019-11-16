@@ -16,6 +16,7 @@ pub mod distribution;
 pub mod environment;
 pub mod logging;
 pub mod projectmgmt;
+pub mod pypackaging;
 pub mod pyrepackager;
 pub mod python_distributions;
 pub mod starlark;

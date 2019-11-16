@@ -12,6 +12,10 @@ use std::fs::create_dir_all;
 use std::io::{BufRead, BufReader, Cursor, Error as IOError, Read, Write};
 use std::path::{Path, PathBuf};
 
+use super::super::pypackaging::resource::{
+    AppRelativeResources, PackagedModuleBytecode, PackagedModuleSource, PythonResource,
+    ResourceAction, ResourceLocation,
+};
 use super::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode};
 use super::config::{
     eval_starlark_config_file, find_pyoxidizer_config_file_env, Config, PythonDistribution,
@@ -27,10 +31,6 @@ use super::packaging_rule::{
     packages_from_module_name, packages_from_module_names, resolve_python_packaging,
 };
 use super::pyembed::{derive_python_config, write_data_rs};
-use super::resource::{
-    AppRelativeResources, PackagedModuleBytecode, PackagedModuleSource, PythonResource,
-    ResourceAction, ResourceLocation,
-};
 use super::state::{BuildContext, PackagingState};
 
 lazy_static! {

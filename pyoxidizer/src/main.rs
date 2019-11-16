@@ -34,6 +34,8 @@ mod environment;
 mod logging;
 mod projectmgmt;
 #[allow(unused)]
+mod pypackaging;
+#[allow(unused)]
 mod pyrepackager;
 mod python_distributions;
 pub mod starlark;

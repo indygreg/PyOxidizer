@@ -2,9 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use super::super::pypackaging::resource::AppRelativeResources;
 use super::config::Config;
 use super::dist::LicenseInfo;
-use super::resource::AppRelativeResources;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
