@@ -1260,6 +1260,7 @@ pub struct EmbeddedPythonConfig {
 /// of derived files that can power an embedded Python interpreter.
 ///
 /// Returns a data structure describing the results.
+#[allow(clippy::cognitive_complexity)]
 pub fn process_config(
     logger: &slog::Logger,
     context: &mut BuildContext,
