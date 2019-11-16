@@ -210,6 +210,12 @@ behavior:
 
    Default is ``True``.
 
+``interactive`` (bool)
+   Controls the value of
+   `Py_InteractiveFlag <https://docs.python.org/3/c-api/init.html#c.Py_InspectFlag>`_.
+
+   Default is ``False``.
+
 ``no_site`` (bool)
    Controls the value of
    `Py_NoSiteFlag <https://docs.python.org/3/c-api/init.html#c.Py_NoSiteFlag>`_.

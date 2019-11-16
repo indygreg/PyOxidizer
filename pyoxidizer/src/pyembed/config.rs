@@ -96,6 +96,9 @@ pub struct PythonConfig {
     /// Whether to ignore various PYTHON* environment variables.
     pub ignore_python_env: bool,
 
+    /// Whether to put interpreter in interactive mode.
+    pub interactive: bool,
+
     /// Whether to suppress writing of ``.pyc`` files when importing ``.py``
     /// files from the filesystem. This is typically irrelevant since modules
     /// are imported from memory.

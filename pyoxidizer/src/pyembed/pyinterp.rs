@@ -348,6 +348,7 @@ impl<'a> MainPythonInterpreter<'a> {
             pyffi::Py_DebugFlag = if config.parser_debug { 1 } else { 0 };
             pyffi::Py_DontWriteBytecodeFlag = if config.dont_write_bytecode { 1 } else { 0 };
             pyffi::Py_IgnoreEnvironmentFlag = if config.ignore_python_env { 1 } else { 0 };
+            pyffi::Py_InteractiveFlag = if config.interactive { 1 } else { 0 };
             pyffi::Py_NoSiteFlag = if config.import_site { 0 } else { 1 };
             pyffi::Py_NoUserSiteDirectory = if config.import_user_site { 0 } else { 1 };
             pyffi::Py_OptimizeFlag = config.opt_level;
