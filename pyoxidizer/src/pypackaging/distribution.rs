@@ -12,8 +12,8 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use url::Url;
 
-use super::config::PythonDistribution;
-use crate::pypackaging::fsscan::{find_python_resources, walk_tree_files, PythonFileResource};
+use super::fsscan::{find_python_resources, walk_tree_files, PythonFileResource};
+use crate::pyrepackager::config::PythonDistribution;
 
 #[cfg(windows)]
 const PIP_EXE_BASENAME: &str = "pip3.exe";

@@ -11,9 +11,9 @@ use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 
 use super::bytecode::{BytecodeCompiler, CompileMode};
+use super::distribution::{ExtensionModule, LicenseInfo, PythonDistributionInfo};
 use super::embedded_resource::EmbeddedPythonResources;
 use super::resource::BuiltExtensionModule;
-use crate::pyrepackager::dist::{ExtensionModule, LicenseInfo, PythonDistributionInfo};
 
 pub const PYTHON_IMPORTER: &[u8] = include_bytes!("memoryimporter.py");
 

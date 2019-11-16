@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
+use super::distribution::ExtensionModule;
 use crate::pyrepackager::config::InstallLocation;
-use crate::pyrepackager::dist::ExtensionModule;
 
 /// Represents an extension module built during packaging.
 ///

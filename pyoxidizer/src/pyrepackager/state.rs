@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use super::config::Config;
-use super::dist::LicenseInfo;
+use crate::pypackaging::distribution::LicenseInfo;
 use crate::pypackaging::resource::AppRelativeResources;
 
 /// Holds state needed to perform packaging.
