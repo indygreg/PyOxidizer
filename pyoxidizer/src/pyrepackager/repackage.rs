@@ -23,6 +23,7 @@ use super::dist::{
     LicenseInfo, PythonDistributionInfo,
 };
 use super::embedded_resource::EmbeddedPythonResources;
+use super::libpython::derive_importlib;
 use super::packaging_rule::{
     packages_from_module_name, packages_from_module_names, resolve_python_packaging,
 };
@@ -31,8 +32,6 @@ use super::resource::{
     PythonResource, ResourceAction, ResourceLocation,
 };
 use super::state::{BuildContext, PackagingState};
-
-pub const PYTHON_IMPORTER: &[u8] = include_bytes!("memoryimporter.py");
 
 lazy_static! {
     /// Libraries provided by the host that we can ignore in Python module library dependencies.
@@ -872,54 +871,6 @@ pub fn resolve_python_resources(
         app_relative,
         read_files,
         license_files_path,
-    }
-}
-
-pub struct ImportlibData {
-    pub bootstrap_source: Vec<u8>,
-    pub bootstrap_bytecode: Vec<u8>,
-    pub bootstrap_external_source: Vec<u8>,
-    pub bootstrap_external_bytecode: Vec<u8>,
-}
-
-/// Produce frozen importlib bytecode data.
-///
-/// importlib._bootstrap isn't modified.
-///
-/// importlib._bootstrap_external is modified. We take the original Python
-/// source and concatenate with code that provides the memory importer.
-/// Bytecode is then derived from it.
-pub fn derive_importlib(dist: &PythonDistributionInfo) -> ImportlibData {
-    let mut compiler = BytecodeCompiler::new(&dist.python_exe);
-
-    let mod_bootstrap_path = &dist.py_modules["importlib._bootstrap"];
-    let mod_bootstrap_external_path = &dist.py_modules["importlib._bootstrap_external"];
-
-    let bootstrap_source = fs::read(&mod_bootstrap_path).expect("unable to read bootstrap source");
-    let module_name = "<frozen importlib._bootstrap>";
-    let bootstrap_bytecode = compiler
-        .compile(&bootstrap_source, module_name, 0, CompileMode::Bytecode)
-        .expect("error compiling bytecode");
-
-    let mut bootstrap_external_source =
-        fs::read(&mod_bootstrap_external_path).expect("unable to read bootstrap_external source");
-    bootstrap_external_source.extend("\n# END OF importlib/_bootstrap_external.py\n\n".bytes());
-    bootstrap_external_source.extend(PYTHON_IMPORTER);
-    let module_name = "<frozen importlib._bootstrap_external>";
-    let bootstrap_external_bytecode = compiler
-        .compile(
-            &bootstrap_external_source,
-            module_name,
-            0,
-            CompileMode::Bytecode,
-        )
-        .expect("error compiling bytecode");
-
-    ImportlibData {
-        bootstrap_source,
-        bootstrap_bytecode,
-        bootstrap_external_source,
-        bootstrap_external_bytecode,
     }
 }
 
