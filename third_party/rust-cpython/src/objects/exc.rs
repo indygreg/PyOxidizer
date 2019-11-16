@@ -77,26 +77,54 @@ exc_type!(StandardError, PyExc_StandardError);
 exc_type!(LookupError, PyExc_LookupError);
 exc_type!(AssertionError, PyExc_AssertionError);
 exc_type!(AttributeError, PyExc_AttributeError);
+#[cfg(feature="python3-sys")]
+exc_type!(BlockingIOError, PyExc_BlockingIOError);
+#[cfg(feature="python3-sys")]
+exc_type!(BrokenPipeError, PyExc_BrokenPipeError);
+#[cfg(feature="python3-sys")]
+exc_type!(ChildProcessError, PyExc_ChildProcessError);
+#[cfg(feature="python3-sys")]
+exc_type!(ConnectionAbortedError, PyExc_ConnectionAbortedError);
+#[cfg(feature="python3-sys")]
+exc_type!(ConnectionError, PyExc_ConnectionError);
+#[cfg(feature="python3-sys")]
+exc_type!(ConnectionRefusedError, PyExc_ConnectionRefusedError);
+#[cfg(feature="python3-sys")]
+exc_type!(ConnectionResetError, PyExc_ConnectionResetError);
 exc_type!(EOFError, PyExc_EOFError);
 exc_type!(EnvironmentError, PyExc_EnvironmentError);
-#[cfg(feature = "python3-sys")]
+#[cfg(feature="python3-sys")]
+exc_type!(FileExistsError, PyExc_FileExistsError);
+#[cfg(feature="python3-sys")]
 exc_type!(FileNotFoundError, PyExc_FileNotFoundError);
 exc_type!(FloatingPointError, PyExc_FloatingPointError);
 exc_type!(IOError, PyExc_IOError);
 exc_type!(ImportError, PyExc_ImportError);
 exc_type!(IndexError, PyExc_IndexError);
+#[cfg(feature="python3-sys")]
+exc_type!(InterruptedError, PyExc_InterruptedError);
+#[cfg(feature="python3-sys")]
+exc_type!(IsADirectoryError, PyExc_IsADirectoryError);
 exc_type!(KeyError, PyExc_KeyError);
 exc_type!(KeyboardInterrupt, PyExc_KeyboardInterrupt);
 exc_type!(MemoryError, PyExc_MemoryError);
 exc_type!(NameError, PyExc_NameError);
+#[cfg(feature="python3-sys")]
+exc_type!(NotADirectoryError, PyExc_NotADirectoryError);
 exc_type!(NotImplementedError, PyExc_NotImplementedError);
 exc_type!(OSError, PyExc_OSError);
 exc_type!(OverflowError, PyExc_OverflowError);
+#[cfg(feature="python3-sys")]
+exc_type!(PermissionError, PyExc_PermissionError);
+#[cfg(feature="python3-sys")]
+exc_type!(ProcessLookupError, PyExc_ProcessLookupError);
 exc_type!(ReferenceError, PyExc_ReferenceError);
 exc_type!(RuntimeError, PyExc_RuntimeError);
 exc_type!(SyntaxError, PyExc_SyntaxError);
 exc_type!(SystemError, PyExc_SystemError);
 exc_type!(SystemExit, PyExc_SystemExit);
+#[cfg(feature="python3-sys")]
+exc_type!(TimeoutError, PyExc_TimeoutError);
 exc_type!(TypeError, PyExc_TypeError);
 exc_type!(ValueError, PyExc_ValueError);
 #[cfg(target_os="windows")]

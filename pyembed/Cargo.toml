@@ -20,7 +20,7 @@ uuid = { version = "0.7", features = ["v4"] }
 
 [dependencies.cpython]
 path = "../third_party/rust-cpython"
-features = ["link-mode-unresolved-static", "python3-sys", "no-auto-initialize"]
+features = ["link-mode3-unresolved-static", "python3-sys", "no-auto-initialize"]
 
 [features]
 default = ["jemalloc-sys"]

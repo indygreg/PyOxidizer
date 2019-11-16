@@ -36,7 +36,7 @@ tag = "{{{ pyoxidizer_git_tag }}}"
 {{else}}
 path = "{{{ pyoxidizer_local_repo_path }}}/third_party/rust-cpython"
 {{/if~}}
-features = ["link-mode-unresolved-static", "python3-sys", "no-auto-initialize"]
+features = ["link-mode3-unresolved-static", "python3-sys", "no-auto-initialize"]
 
 [features]
 default = []

@@ -39,13 +39,23 @@ extension-module = [ ]
 
 # This feature implies default linking behavior.
 #
-# ``extension-module`` will dictate behavior. The path to the discovered
-# Python libraries will be added to the linker search path.
+# If not an extension module or on Windows, the crate will link against
+# pythonXY where XY is derived from the discovered Python version. The link
+# type will be static, shared, or framework depending on the discovered Python.
+#
+# The path to pythonXY from the discovered Python install may also be
+# added to the linker search path.
 link-mode-default = []
 
-# This feature forces Python symbols to be unresolved. The ``#[link]``
-# attributes in source will require a ``pythonXY`` static library to
-# be made available to the linker.
+# This feature forces Python symbols to be unresolved by emitting a
+# `rustc-link-lib=static-nobundle=python37` directive on Windows (which
+# is the only platform where it makes sense).
+#
+# This mode is useful for scenarios where you want another crate to emit
+# the linker directives that define the location of a static Python library.
+#
+# This mode is typically not needed, as Python distributions on Windows
+# rarely use a static Python library.
 link-mode-unresolved-static = []
 
 # Bind to any python 3.x.

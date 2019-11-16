@@ -341,7 +341,7 @@ fn configure_from_path(expected_version: &PythonVersion) -> Result<String, Strin
     else if link_mode_unresolved_static {
         if cfg!(target_os="windows") {
             // static-nobundle requires a Nightly rustc up to at least
-            // Rust 1.31.
+            // Rust 1.39 (https://github.com/rust-lang/rust/issues/37403).
             //
             // We need to use static linking on Windows to prevent symbol
             // name mangling. Otherwise Rust will prefix extern {} symbols
