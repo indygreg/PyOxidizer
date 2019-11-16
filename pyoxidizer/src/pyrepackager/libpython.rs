@@ -10,8 +10,8 @@ use std::fs;
 use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 
+use super::super::pypackaging::bytecode::{BytecodeCompiler, CompileMode};
 use super::super::pypackaging::resource::BuiltExtensionModule;
-use super::bytecode::{BytecodeCompiler, CompileMode};
 use super::dist::{ExtensionModule, LicenseInfo, PythonDistributionInfo};
 use super::embedded_resource::EmbeddedPythonResources;
 

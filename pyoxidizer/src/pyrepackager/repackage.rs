@@ -12,11 +12,11 @@ use std::fs::create_dir_all;
 use std::io::{BufRead, BufReader, Cursor, Error as IOError, Read, Write};
 use std::path::{Path, PathBuf};
 
+use super::super::pypackaging::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode};
 use super::super::pypackaging::resource::{
     AppRelativeResources, PackagedModuleBytecode, PackagedModuleSource, PythonResource,
     ResourceAction, ResourceLocation,
 };
-use super::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode};
 use super::config::{
     eval_starlark_config_file, find_pyoxidizer_config_file_env, Config, PythonDistribution,
     PythonPackaging,
