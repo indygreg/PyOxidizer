@@ -81,6 +81,7 @@ pub unsafe fn PyObject_CheckBuffer(o: *mut PyObject) -> c_int {
     (!tp_as_buffer.is_null() && (*tp_as_buffer).bf_getbuffer.is_some()) as c_int
 }
 
+// Python 3.8 moved these from Include/abstract.h to Include/cpython/abstract.h
 #[cfg(not(Py_LIMITED_API))]
 #[cfg_attr(windows, link(name="pythonXY"))] extern "C" {
     pub fn PyObject_GetBuffer(obj: *mut PyObject, view: *mut Py_buffer,
@@ -126,7 +127,10 @@ pub unsafe fn PyIter_Check(o: *mut PyObject) -> c_int {
 
 #[cfg_attr(windows, link(name="pythonXY"))] extern "C" {
     pub fn PyIter_Next(arg1: *mut PyObject) -> *mut PyObject;
-    
+    // Note: without Py_LIMITED_API, PyIter_Check is a macro instead
+    #[cfg(all(Py_3_8, Py_LIMITED_API))]
+    pub fn PyIter_Check(o: *mut PyObject) -> c_int;
+
     pub fn PyNumber_Check(o: *mut PyObject) -> c_int;
     pub fn PyNumber_Add(o1: *mut PyObject, o2: *mut PyObject)
      -> *mut PyObject;
@@ -170,6 +174,10 @@ pub unsafe fn PyIndex_Check(o: *mut PyObject) -> c_int {
 }
 
 #[cfg_attr(windows, link(name="pythonXY"))] extern "C" {
+    // Note: without Py_LIMITED_API, PyIndex_Check is a macro instead
+    #[cfg(all(Py_3_8, Py_LIMITED_API))]
+    pub fn PyIndex_Check(o: *mut PyObject) -> c_int;
+
     pub fn PyNumber_Index(o: *mut PyObject) -> *mut PyObject;
     pub fn PyNumber_AsSsize_t(o: *mut PyObject, exc: *mut PyObject)
      -> Py_ssize_t;

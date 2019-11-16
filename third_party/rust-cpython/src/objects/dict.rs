@@ -126,6 +126,7 @@ impl PyDict {
     }
 }
 
+/// Converts a Rust `HashMap` to a Python `dict`.
 impl <K, V, H> ToPyObject for collections::HashMap<K, V, H>
     where K: hash::Hash+cmp::Eq+ToPyObject,
           V: ToPyObject,
@@ -142,6 +143,7 @@ impl <K, V, H> ToPyObject for collections::HashMap<K, V, H>
     }
 }
 
+/// Converts a Rust `BTreeMap` to a Python `dict`.
 impl <K, V> ToPyObject for collections::BTreeMap<K, V>
     where K: cmp::Eq+ToPyObject,
           V: ToPyObject

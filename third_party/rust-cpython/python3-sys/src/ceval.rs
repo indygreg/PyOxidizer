@@ -61,6 +61,7 @@ pub unsafe fn PyEval_CallObject(callable: *mut PyObject, arg: *mut PyObject) -> 
     pub fn PyEval_ReleaseLock() -> ();
     pub fn PyEval_AcquireThread(tstate: *mut PyThreadState) -> ();
     pub fn PyEval_ReleaseThread(tstate: *mut PyThreadState) -> ();
+    #[cfg(not(Py_3_8))]
     pub fn PyEval_ReInitThreads() -> ();
 }
 

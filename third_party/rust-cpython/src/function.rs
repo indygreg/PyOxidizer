@@ -42,6 +42,9 @@ macro_rules! py_method_def {
             ml_doc: 0 as *const $crate::_detail::libc::c_char
         };
         METHOD_DEF.ml_name = concat!($name, "\0").as_ptr() as *const _;
+        if $name.starts_with("r#") {
+            METHOD_DEF.ml_name = METHOD_DEF.ml_name.add(2);
+        }
         if !$doc.is_empty() {
             METHOD_DEF.ml_doc = concat!($doc, "\0").as_ptr() as *const _;
         }
@@ -58,7 +61,7 @@ macro_rules! py_method_def {
 /// There are two forms of this macro:
 ///
 /// 1. `py_fn!(py, f(parameter_list))`
-/// 1. `py_fn!(py, f(parameter_list) -> PyResult<T> { body })`
+/// 2. `py_fn!(py, f(parameter_list) -> PyResult<T> { body })`
 ///
 /// both forms return a value of type `PyObject`.
 /// This python object is a callable object that invokes
@@ -77,12 +80,21 @@ macro_rules! py_method_def {
 ///
 /// Form 2:
 ///
-///  * `py` must be an identifier refers to a `Python` value.
+///  * `py` must be an identifier that refers to a `Python` value.
 ///   The function body will also have access to a `Python` variable of this name.
 ///  * `f` must be an identifier.
 ///  * The function return type must be `PyResult<T>` for some `T` that
 ///   implements `ToPyObject`.
 ///
+/// # Errors
+/// 
+/// * If argument parsing fails, the Rust function will not be called and an
+///   appropriate Python exception is raised instead (usually `TypeError`
+///   when the Python value does not match the expected type;
+///   the implementation of `FromPyObject` for your type may document additional
+///   errors).
+/// * If the Rust function panics, a Python `SystemError` will be raised.
+/// 
 /// # Example
 /// ```
 /// #[macro_use] extern crate cpython;

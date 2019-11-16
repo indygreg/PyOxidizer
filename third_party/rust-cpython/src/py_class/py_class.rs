@@ -396,6 +396,15 @@ py_class!(class MyIterator |py| {
     The return type must be `PyResult<T>` for some `T` that implements `ToPyObject`.
 
 
+# Errors
+ 
+* If argument parsing fails, the Rust method body will not be called and an
+  appropriate Python exception is raised instead (usually `TypeError`
+  when the Python value does not match the expected type;
+  the implementation of `FromPyObject` for your type may document additional
+  errors).
+* If a method panics in Rust, a Python `SystemError` will be raised.
+
 */
 #[macro_export]
 macro_rules! py_class {

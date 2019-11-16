@@ -207,7 +207,9 @@ impl PyString {
     /// On Python 2.7, this function will create a byte string if the
     /// input string is ASCII-only; and a unicode string otherwise.
     /// Use `PyUnicode::new()` to always create a unicode string.
-    ///
+    /// 
+    /// On Python 3.x, this function always creates unicode `str` objects.
+    /// 
     /// Panics if out of memory.
     pub fn new(py: Python, s: &str) -> PyString {
         #[cfg(feature="python27-sys")]
@@ -385,7 +387,12 @@ impl PyUnicode {
 }
 
 /// Converts Rust `str` to Python object.
-/// See `PyString::new` for details on the conversion.
+/// 
+/// On Python 2.7, this impl will create a byte string if the
+/// input string is ASCII-only; and a unicode string otherwise.
+/// Use `PyUnicode::new()` to always create a unicode string.
+/// 
+/// On Python 3.x, this function always creates unicode `str` objects.
 impl ToPyObject for str {
     type ObjectType = PyString;
 
@@ -395,8 +402,13 @@ impl ToPyObject for str {
     }
 }
 
-/// Converts Rust `Cow<str>` to Python object.
-/// See `PyString::new` for details on the conversion.
+/// Converts Rust `str` to Python object.
+/// 
+/// On Python 2.7, this impl will create a byte string if the
+/// input string is ASCII-only; and a unicode string otherwise.
+/// Use `PyUnicode::new()` to always create a unicode string.
+/// 
+/// On Python 3.x, this function always creates unicode `str` objects.
 impl <'a> ToPyObject for Cow<'a, str> {
     type ObjectType = PyString;
 
@@ -406,8 +418,13 @@ impl <'a> ToPyObject for Cow<'a, str> {
     }
 }
 
-/// Converts Rust `String` to Python object.
-/// See `PyString::new` for details on the conversion.
+/// Converts Rust `str` to Python object.
+/// 
+/// On Python 2.7, this impl will create a byte string if the
+/// input string is ASCII-only; and a unicode string otherwise.
+/// Use `PyUnicode::new()` to always create a unicode string.
+/// 
+/// On Python 3.x, this function always creates unicode `str` objects.
 impl ToPyObject for String {
     type ObjectType = PyString;
 
@@ -420,8 +437,12 @@ impl ToPyObject for String {
 /// Allows extracting strings from Python objects.
 /// Accepts Python `str` and `unicode` objects.
 /// In Python 2.7, `str` is expected to be UTF-8 encoded.
-impl <'source> FromPyObject<'source> for Cow<'source, str> {
-    fn extract(py: Python, obj: &'source PyObject) -> PyResult<Self> {
+/// 
+/// Returns a `UnicodeDecodeError` if the input is not valid unicode
+/// (containing unpaired surrogates, or a Python 2.7 byte string that is
+/// not valid UTF-8).
+impl <'s> FromPyObject<'s> for Cow<'s, str> {
+    fn extract(py: Python, obj: &'s PyObject) -> PyResult<Self> {
         obj.cast_as::<PyString>(py)?.to_string(py)
     }
 }
@@ -429,25 +450,36 @@ impl <'source> FromPyObject<'source> for Cow<'source, str> {
 /// Allows extracting strings from Python objects.
 /// Accepts Python `str` and `unicode` objects.
 /// In Python 2.7, `str` is expected to be UTF-8 encoded.
-impl <'source> FromPyObject<'source> for String {
-    fn extract(py: Python, obj: &'source PyObject) -> PyResult<Self> {
+/// 
+/// Returns a `UnicodeDecodeError` if the input is not valid unicode
+/// (containing unpaired surrogates, or a Python 2.7 byte string that is
+/// not valid UTF-8).
+impl <'s> FromPyObject<'s> for String {
+    fn extract(py: Python, obj: &'s PyObject) -> PyResult<Self> {
         obj.extract::<Cow<str>>(py).map(Cow::into_owned)
     }
 }
 
-/// Allows extracting byte arrays from Python objects.
 /// For Python `bytes`, returns a reference to the existing immutable string data.
-/// For other types, converts to an owned `Vec<u8>`.
-impl <'source> FromPyObject<'source> for Cow<'source, [u8]> {
-    fn extract(py: Python, obj: &'source PyObject) -> PyResult<Self> {
+/// If the Python object is a single-dimensional [buffer] of format `c` or `B` (C: `char` or `unsigned char`),
+/// returns an owned copy of the data in the buffer.
+/// Otherwise, uses the sequence protocol and converts each individual element
+/// via `impl FromPyObject for u8`.
+/// 
+/// [buffer]: https://docs.python.org/3/c-api/buffer.html
+impl <'s> FromPyObject<'s> for Cow<'s, [u8]> {
+    fn extract(py: Python, obj: &'s PyObject) -> PyResult<Self> {
         if let Ok(bytes) = obj.cast_as::<PyBytes>(py) {
             Ok(Cow::Borrowed(bytes.data(py)))
         } else {
-            obj.extract::<Vec<u8>>(py).map(Cow::Owned)
+            super::sequence::extract_buffer_or_sequence(py, obj).map(Cow::Owned)
         }
     }
 }
 
+/// Allows extracting strings from Python objects.
+/// Accepts Python `str` and `unicode` objects.
+/// In Python 2.7, `str` is expected to be UTF-8 encoded.
 impl RefFromPyObject for str {
     fn with_extracted<F, R>(py: Python, obj: &PyObject, f: F) -> PyResult<R>
         where F: FnOnce(&str) -> R
@@ -457,6 +489,13 @@ impl RefFromPyObject for str {
     }
 }
 
+/// For Python `bytes`, returns a reference to the existing immutable string data.
+/// If the Python object is a single-dimensional [buffer] of format `c` or `B` (C: `char` or `unsigned char`),
+/// returns an owned copy of the data in the buffer.
+/// Otherwise, uses the sequence protocol and converts each individual element
+/// via `impl FromPyObject for u8`.
+/// 
+/// [buffer]: https://docs.python.org/3/c-api/buffer.html
 impl RefFromPyObject for [u8] {
     fn with_extracted<F, R>(py: Python, obj: &PyObject, f: F) -> PyResult<R>
         where F: FnOnce(&[u8]) -> R

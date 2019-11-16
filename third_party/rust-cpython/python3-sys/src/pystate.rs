@@ -12,6 +12,8 @@ pub enum PyThreadState { }
     pub fn PyInterpreterState_New() -> *mut PyInterpreterState;
     pub fn PyInterpreterState_Clear(arg1: *mut PyInterpreterState) -> ();
     pub fn PyInterpreterState_Delete(arg1: *mut PyInterpreterState) -> ();
+    #[cfg(Py_3_8)]
+    pub fn PyInterpreterState_GetDict(arg1: *mut PyInterpreterState) -> *mut PyObject;
     #[cfg(Py_3_7)]
     pub fn PyInterpreterState_GetID(arg1: *mut PyInterpreterState) -> i64;
     pub fn PyState_FindModule(arg1: *mut PyModuleDef) -> *mut PyObject;

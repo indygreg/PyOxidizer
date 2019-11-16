@@ -6,7 +6,7 @@ use std::sync::atomic::Ordering::Relaxed;
 
 #[test]
 fn no_args() {
-    static CALL_COUNT: atomic::AtomicUsize = atomic::ATOMIC_USIZE_INIT;
+    static CALL_COUNT: atomic::AtomicUsize = atomic::AtomicUsize::new(0);
 
     fn f(_py: Python) -> PyResult<usize> {
         Ok(CALL_COUNT.fetch_add(1, Relaxed))

@@ -104,6 +104,7 @@ impl PyFloat {
 
 macro_rules! int_fits_c_long(
     ($rust_type:ty) => (
+        /// Conversion of Rust integer to Python `int`.
         #[cfg(feature="python27-sys")]
         impl ToPyObject for $rust_type {
             type ObjectType = PyInt;
@@ -116,6 +117,7 @@ macro_rules! int_fits_c_long(
             }
         }
 
+        /// Conversion of Rust integer to Python `int`.
         #[cfg(feature="python3-sys")]
         impl ToPyObject for $rust_type {
             type ObjectType = PyLong;
@@ -128,6 +130,10 @@ macro_rules! int_fits_c_long(
             }
         }
 
+        /// Converts Python integers to Rust integers.
+        /// 
+        /// Returns OverflowError if the input integer does not fit the Rust type;
+        /// or TypeError if the input is not an integer.
         extract!(obj to $rust_type; py => {
             let val = unsafe { ffi::PyLong_AsLong(obj.as_ptr()) };
             if val == -1 && PyErr::occurred(py) {
@@ -144,6 +150,8 @@ macro_rules! int_fits_c_long(
 
 macro_rules! int_fits_larger_int(
     ($rust_type:ty, $larger_type:ty) => (
+        /// Conversion of Rust integer to Python `int`.
+        /// On Python 2.x, may also result in a `long` if the value does not fit into a Python `int`.
         impl ToPyObject for $rust_type {
             type ObjectType = <$larger_type as ToPyObject>::ObjectType;
 
@@ -153,6 +161,10 @@ macro_rules! int_fits_larger_int(
             }
         }
 
+        /// Converts Python integers to Rust integers.
+        /// 
+        /// Returns OverflowError if the input integer does not fit the Rust type;
+        /// or TypeError if the input is not an integer.
         extract!(obj to $rust_type; py => {
             let val = obj.extract::<$larger_type>(py)?;
             match cast::<$larger_type, $rust_type>(val) {
@@ -176,6 +188,8 @@ fn err_if_invalid_value<'p, T: PartialEq>
 
 macro_rules! int_convert_u64_or_i64 (
     ($rust_type:ty, $pylong_from_ll_or_ull:expr, $pylong_as_ull_or_ull:expr) => (
+        /// Conversion of Rust integer to Python `int`.
+        /// On Python 2.x, may also result in a `long` if the value does not fit into a Python `int`.
         impl <'p> ToPyObject for $rust_type {
             #[cfg(feature="python27-sys")]
             type ObjectType = PyObject;
@@ -202,9 +216,13 @@ macro_rules! int_convert_u64_or_i64 (
             }
         }
 
-        impl <'source> FromPyObject<'source> for $rust_type {
+        /// Converts Python integers to Rust integers.
+        /// 
+        /// Returns OverflowError if the input integer does not fit the Rust type;
+        /// or TypeError if the input is not an integer.
+        impl <'s> FromPyObject<'s> for $rust_type {
             #[cfg(feature="python27-sys")]
-            fn extract(py: Python, obj: &'source PyObject) -> PyResult<$rust_type> {
+            fn extract(py: Python, obj: &'s PyObject) -> PyResult<$rust_type> {
                 let ptr = obj.as_ptr();
 
                 unsafe {
@@ -223,7 +241,7 @@ macro_rules! int_convert_u64_or_i64 (
             }
 
             #[cfg(feature="python3-sys")]
-            fn extract(py: Python, obj: &'source PyObject) -> PyResult<$rust_type> {
+            fn extract(py: Python, obj: &'s PyObject) -> PyResult<$rust_type> {
                 let ptr = obj.as_ptr();
                 unsafe {
                     if ffi::PyLong_Check(ptr) != 0 {
@@ -268,6 +286,7 @@ int_fits_larger_int!(usize, u64);
 // u64 has a manual implementation as it never fits into signed long
 int_convert_u64_or_i64!(u64, ffi::PyLong_FromUnsignedLongLong, ffi::PyLong_AsUnsignedLongLong);
 
+/// Conversion of Rust `f64` to Python `float`.
 impl ToPyObject for f64 {
     type ObjectType = PyFloat;
 
@@ -276,6 +295,7 @@ impl ToPyObject for f64 {
     }
 }
 
+/// Converts Python `float` to Rust `f64`.
 extract!(obj to f64; py => {
     let v = unsafe { ffi::PyFloat_AsDouble(obj.as_ptr()) };
     if v == -1.0 && PyErr::occurred(py) {
@@ -289,6 +309,7 @@ fn overflow_error(py: Python) -> PyErr {
     PyErr::new_lazy_init(py.get_type::<exc::OverflowError>(), None)
 }
 
+/// Conversion of Rust `f32` to Python `float`.
 impl ToPyObject for f32 {
     type ObjectType = PyFloat;
 
@@ -297,6 +318,10 @@ impl ToPyObject for f32 {
     }
 }
 
+/// Converts Python `float` to Rust `f32`.
+/// 
+/// This conversion loses precision as the 64-bit float from Python gets
+/// converted to a 32-bit float. Out-of-range numbers may also overflow to infinity.
 extract!(obj to f32; py => {
     Ok(obj.extract::<f64>(py)? as f32)
 });

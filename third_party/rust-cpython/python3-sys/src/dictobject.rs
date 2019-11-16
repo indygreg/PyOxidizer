@@ -10,6 +10,9 @@ use object::*;
     pub static mut PyDictKeys_Type: PyTypeObject;
     pub static mut PyDictItems_Type: PyTypeObject;
     pub static mut PyDictValues_Type: PyTypeObject;
+    #[cfg(Py_3_8)] pub static mut PyDictRevIterKey_Type: PyTypeObject;
+    #[cfg(Py_3_8)] pub static mut PyDictRevIterValue_Type: PyTypeObject;
+    #[cfg(Py_3_8)] pub static mut PyDictRevIterItem_Type: PyTypeObject;
 }
 
 #[inline(always)]
@@ -24,17 +27,17 @@ pub unsafe fn PyDict_CheckExact(op : *mut PyObject) -> c_int {
 
 #[inline(always)]
 pub unsafe fn PyDictKeys_Check(op : *mut PyObject) -> c_int {
-    (Py_TYPE(op) == &mut PyDictKeys_Type) as c_int
+    PyObject_TypeCheck(op, &mut PyDictKeys_Type)
 }
 
 #[inline(always)]
 pub unsafe fn PyDictItems_Check(op : *mut PyObject) -> c_int {
-    (Py_TYPE(op) == &mut PyDictItems_Type) as c_int
+    PyObject_TypeCheck(op, &mut PyDictItems_Type)
 }
 
 #[inline(always)]
 pub unsafe fn PyDictValues_Check(op : *mut PyObject) -> c_int {
-    (Py_TYPE(op) == &mut PyDictValues_Type) as c_int
+    PyObject_TypeCheck(op, &mut PyDictValues_Type)
 }
 
 #[inline(always)]

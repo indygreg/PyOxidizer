@@ -222,7 +222,13 @@ pyobject_newtype!(PyCapsule, PyCapsule_CheckExact, PyCapsule_Type);
 /// The `retrieve()` function is unsafe for the same reasons as [`PyCapsule::import_data`],
 /// upon which it relies.
 ///
+/// The newly defined module also contains a `RawPyObject` type suitable to represent C-level
+/// Python objects. It can be used in `cpython` public API involving raw FFI pointers, such as
+/// [`from_owned_ptr`].
+///
 /// # Examples
+/// ## Using a capsule from the standard library
+///
 /// This retrieves and uses one of the simplest capsules in the Python standard library, found in
 /// the `unicodedata` module. The C API enclosed in this capsule is the same for all Python
 /// versions supported by this crate.
@@ -312,6 +318,40 @@ pyobject_newtype!(PyCapsule, PyCapsule_CheckExact, PyCapsule_Type);
 ///                Err(UnicodeDataError::UnknownName));
 /// }
 /// ```
+///
+/// ## With Python objects
+///
+/// In this example, we lend a Python object and receive a new one of which we take ownership.
+///
+/// ```
+/// #[macro_use] extern crate cpython;
+/// extern crate libc;
+///
+/// use cpython::{PyCapsule, PyObject, PyResult, Python};
+/// use libc::c_void;
+///
+/// // In the struct, we still have to use c_void for C-level Python objects.
+/// #[repr(C)]
+/// pub struct spawn_CAPI {
+///     spawnfrom: unsafe extern "C" fn(obj: *const c_void) -> *mut c_void,
+/// }
+///
+/// py_capsule!(from some.mod import CAPI as capsmod for spawn_CAPI);
+///
+/// impl spawn_CAPI {
+///    pub fn spawn_from(&self, py: Python, obj: PyObject) -> PyResult<PyObject> {
+///        let raw = obj.as_ptr() as *const c_void;
+///        Ok(unsafe {
+///            PyObject::from_owned_ptr(
+///                py,
+///                ((*self).spawnfrom)(raw) as *mut capsmod::RawPyObject)
+///        })
+///    }
+/// }
+///
+/// # fn main() {}  // just to avoid confusion with use due to insertion of main() in doctests
+/// ```
+///
 /// [`PyCapsule`]: struct.PyCapsule.html
 /// [`PyCapsule::import_data`]: struct.PyCapsule.html#method.import_data
 #[macro_export]
@@ -325,6 +365,8 @@ macro_rules! py_capsule {
             static mut CAPS_DATA: Option<$crate::PyResult<&$ruststruct>> = None;
 
             static INIT: Once = Once::new();
+
+            pub type RawPyObject = $crate::_detail::ffi::PyObject;
 
             pub unsafe fn retrieve<'a>(py: $crate::Python) -> $crate::PyResult<&'a $ruststruct> {
                 INIT.call_once(|| {
@@ -354,7 +396,8 @@ macro_rules! py_capsule {
 /// # Usage
 ///
 /// ```ignore
-///    py_capsule_fn!(from some.python.module import capsulename as rustmodule: fn(args) -> ret_type)
+///    py_capsule_fn!(from some.python.module import capsulename as rustmodule
+///                       signature (args) -> ret_type)
 /// ```
 ///
 /// Similarly to [py_capsule!](macro_py_capsule), the macro defines
@@ -369,10 +412,14 @@ macro_rules! py_capsule {
 ///     pub unsafe fn retrieve<'a>(py: Python) -> PyResult<CapsuleFn) { ... }
 /// }
 /// ```
+/// - a `RawPyObject` type suitable for signatures that involve Python C objects;
+///   it can be used in `cpython` public API involving raw FFI pointers, such as
+///   [`from_owned_ptr`].
 ///
 /// The first call to `retrieve()` is cached for subsequent calls.
 ///
 /// # Examples
+/// ## Full example with primitive types
 /// There is in the Python library no capsule enclosing a function pointer directly,
 /// although the documentation presents it as a valid use-case. For this example, we'll
 /// therefore have to create one, using the [`PyCapsule`] constructor, and to set it in an
@@ -421,7 +468,30 @@ macro_rules! py_capsule {
 ///     retrieve_use_capsule();
 /// }
 /// ```
+///
+/// ## With Python objects
+///
+/// In this example, we lend a Python object and receive a new one of which we take ownership.
+///
+/// ```
+/// #[macro_use] extern crate cpython;
+/// use cpython::{PyCapsule, PyObject, PyResult, Python};
+///
+/// py_capsule_fn!(from some.mod import capsfn as capsmod
+///     signature (raw: *mut RawPyObject) -> *mut RawPyObject);
+///
+/// fn retrieve_use_capsule(py: Python, obj: PyObject) -> PyResult<PyObject> {
+///     let fun = capsmod::retrieve(py)?;
+///     let raw = obj.as_ptr();
+///     Ok(unsafe { PyObject::from_owned_ptr(py, fun(raw)) })
+/// }
+///
+/// # fn main() {} // avoid problems with injection of declarations with Rust 1.25
+///
+/// ```
+///
 /// [`PyCapsule`]: struct.PyCapsule.html
+/// [`from_owned_ptr`]: struct.PyObject.html#method.from_owned_ptr`
 #[macro_export]
 macro_rules! py_capsule_fn {
     (from $($capsmod:ident).+ import $capsname:ident as $rustmod:ident signature $( $sig: tt)* ) => (
@@ -431,6 +501,7 @@ macro_rules! py_capsule_fn {
             use $crate::PyClone;
 
             pub type CapsuleFn = unsafe extern "C" fn $( $sig )*;
+            pub type RawPyObject = $crate::_detail::ffi::PyObject;
 
             static mut CAPS_FN: Option<$crate::PyResult<CapsuleFn>> = None;
 

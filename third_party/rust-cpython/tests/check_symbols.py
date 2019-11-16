@@ -63,10 +63,10 @@ doc = json.loads(json_output.decode('utf-8'))
 foreign_symbols = set()
 def visit(node, foreign):
     if isinstance(node, dict):
-        node_node = node.get('node', None)
-        if isinstance(node_node, dict) and node_node.get('variant') in ('Static', 'Fn') and foreign:
-            foreign_symbols.add(node['ident'])
-        if isinstance(node_node, dict) and node_node.get('variant') == 'ForeignMod':
+        kind_node = node.get('kind', None)
+        if isinstance(kind_node, dict) and kind_node.get('variant') in ('Static', 'Fn') and foreign:
+            foreign_symbols.add(node['ident']['name'])
+        if isinstance(kind_node, dict) and kind_node.get('variant') == 'ForeignMod':
             foreign = True
         for v in node.values():
             visit(v, foreign)

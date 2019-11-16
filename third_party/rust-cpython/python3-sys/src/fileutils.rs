@@ -1,6 +1,6 @@
 use libc::{c_char, size_t, wchar_t};
 
-#[cfg(not(Py_LIMITED_API))]
+#[cfg(any(Py_3_5, not(Py_LIMITED_API)))]
 #[cfg_attr(windows, link(name="pythonXY"))]
 extern "C" {
     pub fn Py_DecodeLocale(arg: *const c_char, size: *mut size_t) -> *const wchar_t;

@@ -1,6 +1,6 @@
 [package]
 name = "python3-sys"
-version = "0.2.1"
+version = "0.3.0"
 description = "FFI Declarations for Python 3"
 readme = "README.md"
 keywords = [
@@ -56,6 +56,7 @@ python-3-4 = []
 python-3-5 = []
 python-3-6 = []
 python-3-7 = []
+python-3-8 = []
 
 # Restrict to PEP-384 stable ABI
 pep-384 = []

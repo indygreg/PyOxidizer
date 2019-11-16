@@ -1,26 +1,19 @@
 language: python
 python:
   - "2.7"
-  - "3.3"
   - "3.4"
   - "3.5"
   - "3.6"
+  - "3.7"
+  - "3.8"
 env:
-  - RUST_VERSION=1.25.0
+  - RUST_VERSION=1.30.0
   - RUST_VERSION=nightly
 matrix:
   include:
-    - python: "3.7"
-      dist: xenial
-      sudo: true
-      env: RUST_VERSION=1.25.0
-    - python: "3.7"
-      dist: xenial
-      sudo: true
-      env: RUST_VERSION=nightly
     - os: osx
       language: generic
-      env: RUST_VERSION=1.25.0
+      env: RUST_VERSION=1.30.0
     - os: osx
       language: generic
       env: RUST_VERSION=nightly
@@ -28,7 +21,7 @@ sudo: false
 install:
   - python -V
   - python -c "import sysconfig; print('\n'.join(map(repr,sorted(sysconfig.get_config_vars().items()))))"
-  - curl -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain "$RUST_VERSION"
+  - curl -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile=minimal --default-toolchain "$RUST_VERSION"
   - export PATH="$HOME/.cargo/bin:$PATH"
   - export PYTHON_LIB=$(python -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")
   - find $PYTHON_LIB

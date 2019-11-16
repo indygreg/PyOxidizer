@@ -23,6 +23,7 @@ pub unsafe fn PyModule_CheckExact(op : *mut PyObject) -> c_int {
     pub fn PyModule_GetDict(arg1: *mut PyObject) -> *mut PyObject;
     pub fn PyModule_GetNameObject(arg1: *mut PyObject) -> *mut PyObject;
     pub fn PyModule_GetName(arg1: *mut PyObject) -> *const c_char;
+    #[deprecated(since="0.3.1", note="Deprecated since Python 3.2; use PyModule_GetFilenameObject() instead")]
     pub fn PyModule_GetFilename(arg1: *mut PyObject) -> *const c_char;
     pub fn PyModule_GetFilenameObject(arg1: *mut PyObject) -> *mut PyObject;
     pub fn PyModule_GetDef(arg1: *mut PyObject) -> *mut PyModuleDef;

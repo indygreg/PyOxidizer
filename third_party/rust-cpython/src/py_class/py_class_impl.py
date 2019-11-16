@@ -365,7 +365,12 @@ def generate_class_method(special_name=None, decoration='',
         slot=None, add_member=False, value_macro=None, value_args=None):
     name_pattern = special_name or '$name:ident'
     name_use = special_name or '$name'
-    def impl(with_params):
+    def impl(with_params, with_docs):
+        if with_docs:
+            doc_prefix = '$(#[doc=$doc:expr])*'
+            value_suffix = ', { _cpython__py_class__py_class_impl__concat!($($doc, "\\n"),*) }'
+        else:
+            doc_prefix = value_suffix = ''
         if with_params:
             param_pattern = ', $($p:tt)+'
             impl = '''py_argparse_parse_plist_impl!{
@@ -373,14 +378,14 @@ def generate_class_method(special_name=None, decoration='',
                 [] ($($p)+,)
             }''' % name_use
             value = 'py_argparse_parse_plist_impl!{%s {%s} [] ($($p)+,)}' \
-                    % (value_macro, value_args)
+                    % (value_macro, value_args + value_suffix)
         else:
             param_pattern = ''
             impl = 'py_class_impl_item! { $class, $py,%s($cls: &$crate::PyType,) $res_type; { $($body)* } [] }' \
                 % name_use
-            value = '%s!{%s []}' % (value_macro, value_args)
+            value = '%s!{%s []}' % (value_macro, value_args + value_suffix)
         pattern = '%s def %s ($cls:ident%s) -> $res_type:ty { $( $body:tt )* }' \
-            % (decoration, name_pattern, param_pattern)
+            % (doc_prefix + decoration, name_pattern, param_pattern)
         slots = []
         if slot is not None:
             slots.append((slot, value))
@@ -388,8 +393,11 @@ def generate_class_method(special_name=None, decoration='',
         if add_member:
             members.append((name_use, value))
         generate_case(pattern, new_impl=impl, new_slots=slots, new_members=members)
-    impl(False) # without parameters
-    impl(True) # with parameters
+
+    # Special methods can't handle docs.
+    with_docs = (value_macro == 'py_class_class_method')
+    for with_params in (False, True):
+        impl(with_params, with_docs)
 
 def traverse_and_clear():
     generate_case('def __traverse__(&$slf:tt, $visit:ident) $body:block',
@@ -471,14 +479,14 @@ def generate_instance_method(special_name=None, decoration='',
             members.append((name_use, value))
         generate_case(pattern, new_impl=impl, new_slots=slots, new_members=members)
 
-    # Currently, only instance method implements docs
+    # Special methods can't handle docs.
     with_docs = (value_macro == 'py_class_instance_method')
     for with_params in (False, True):
         impl(with_params, with_docs)
 
 def static_method():
     generate_case(
-        '@staticmethod def $name:ident ($($p:tt)*) -> $res_type:ty { $( $body:tt )* }',
+        '$(#[doc=$doc:expr])* @staticmethod def $name:ident ($($p:tt)*) -> $res_type:ty { $( $body:tt )* }',
         new_impl='''
             py_argparse_parse_plist!{
                 py_class_impl_item { $class, $py, $name() $res_type; { $($body)* } }
@@ -487,7 +495,9 @@ def static_method():
         ''',
         new_members=[('$name', '''
             py_argparse_parse_plist!{
-                py_class_static_method {$py, $class::$name}
+                py_class_static_method {$py, $class::$name, {
+                    _cpython__py_class__py_class_impl__concat!($($doc, "\\n"),*)
+                } }
                 ($($p)*)
             }
         ''')])

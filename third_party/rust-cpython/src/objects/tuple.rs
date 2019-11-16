@@ -98,6 +98,7 @@ fn wrong_tuple_length(py: Python, t: &PyTuple, expected_length: usize) -> PyErr 
 }
 
 macro_rules! tuple_conversion ({$length:expr,$(($refN:ident, $n:tt, $T:ident)),+} => {
+    /// Converts a Rust tuple to a Python `tuple`.
     impl <$($T: ToPyObject),+> ToPyObject for ($($T,)+) {
         type ObjectType = PyTuple;
 
@@ -114,6 +115,10 @@ macro_rules! tuple_conversion ({$length:expr,$(($refN:ident, $n:tt, $T:ident)),+
         }
     }
 
+    /// Converts a Python `tuple` to a Rust tuple.
+    /// 
+    /// Note: only accepts Python `tuple` (or derived classes);
+    /// other types are not accepted.
     impl <'s, $($T: FromPyObject<'s>),+> FromPyObject<'s> for ($($T,)+) {
         fn extract(py: Python, obj: &'s PyObject) -> PyResult<Self> {
             let t = obj.cast_as::<PyTuple>(py)?;
@@ -168,17 +173,18 @@ impl ToPyObject for NoArgs {
     }
 }
 
-/// Returns `Ok(NoArgs)` if the input is an empty Python tuple.
-/// Otherwise, returns an error.
-#[allow(unused_doc_comments)]
-extract!(obj to NoArgs; py => {
-    let t = obj.cast_as::<PyTuple>(py)?;
-    if t.len(py) == 0 {
-        Ok(NoArgs)
-    } else {
-        Err(wrong_tuple_length(py, t, 0))
+extract!(obj to NoArgs;
+    /// Returns `Ok(NoArgs)` if the input is an empty Python tuple.
+    /// Otherwise, returns an error.
+    py => {
+        let t = obj.cast_as::<PyTuple>(py)?;
+        if t.len(py) == 0 {
+            Ok(NoArgs)
+        } else {
+            Err(wrong_tuple_length(py, t, 0))
+        }
     }
-});
+);
 
 
 

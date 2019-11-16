@@ -28,7 +28,8 @@ use pyarena::PyArena;
 #[derive(Copy, Clone)]
 #[cfg(not(Py_LIMITED_API))]
 pub struct PyCompilerFlags {
-    pub cf_flags : c_int
+    pub cf_flags : c_int,
+    #[cfg(Py_3_8)] pub cf_feature_version : c_int
 }
 
 #[cfg(not(Py_LIMITED_API))]
@@ -185,6 +186,9 @@ pub unsafe fn Py_CompileStringFlags(string: *const c_char, p: *const c_char, s: 
      -> c_int;
     pub fn Py_Exit(arg1: c_int) -> ();
     pub fn Py_Main(argc: c_int, argv: *mut *mut wchar_t)
+     -> c_int;
+    #[cfg(Py_3_8)]
+    pub fn Py_BytesMain(argc: c_int, argv: *mut *mut c_char)
      -> c_int;
     pub fn Py_GetProgramFullPath() -> *mut wchar_t;
     pub fn Py_GetPrefix() -> *mut wchar_t;

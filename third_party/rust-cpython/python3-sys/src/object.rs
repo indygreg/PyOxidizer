@@ -231,6 +231,15 @@ pub type allocfunc =
                               (arg1: *mut PyTypeObject,
                                arg2: Py_ssize_t) -> *mut PyObject;
 
+#[cfg(Py_3_8)]
+pub type vectorcallfunc =
+    unsafe extern "C" fn(callable: *mut ::object::PyObject,
+                         args: *const *mut ::object::PyObject,
+                         nargsf: ::libc::size_t,
+                         kwnames: *mut ::object::PyObject
+                        ) -> *mut ::object::PyObject;
+
+
 #[cfg(Py_LIMITED_API)]
 pub enum PyTypeObject { }
 
@@ -436,7 +445,10 @@ mod typeobject {
         pub tp_basicsize: Py_ssize_t,
         pub tp_itemsize: Py_ssize_t,
         pub tp_dealloc: Option<::object::destructor>,
+        #[cfg(not(Py_3_8))]
         pub tp_print: Option<::object::printfunc>,
+        #[cfg(Py_3_8)]
+        pub tp_vectorcall_offset: Py_ssize_t,
         pub tp_getattr: Option<::object::getattrfunc>,
         pub tp_setattr: Option<::object::setattrfunc>,
         #[cfg(Py_3_5)]
@@ -483,6 +495,10 @@ mod typeobject {
         pub tp_version_tag: c_uint,
         #[cfg(Py_3_4)]
         pub tp_finalize: Option<::object::destructor>,
+        #[cfg(Py_3_8)]
+        pub tp_vectorcall: Option<::object::vectorcallfunc>,
+        #[cfg(Py_3_8)]
+        pub tp_print: Option<::object::printfunc>,
         #[cfg(py_sys_config="COUNT_ALLOCS")]
         pub tp_allocs: Py_ssize_t,
         #[cfg(py_sys_config="COUNT_ALLOCS")]
@@ -499,7 +515,7 @@ mod typeobject {
     }
 
     macro_rules! py_type_object_init {
-        ($tp_as_async:ident, $($tail:tt)*) => {
+        ($($tail:tt)*) => {
             as_expr! {
                 PyTypeObject {
                     ob_base: ::object::PyVarObject {
@@ -513,7 +529,6 @@ mod typeobject {
                     tp_print: None,
                     tp_getattr: None,
                     tp_setattr: None,
-                    $tp_as_async: 0 as *mut _,
                     tp_repr: None,
                     tp_as_number: 0 as *mut PyNumberMethods,
                     tp_as_sequence: 0 as *mut PySequenceMethods,
@@ -560,8 +575,8 @@ mod typeobject {
 
     #[cfg(py_sys_config="COUNT_ALLOCS")]
     macro_rules! py_type_object_init_with_count_allocs {
-        ($tp_as_async:ident, $($tail:tt)*) => {
-            py_type_object_init!($tp_as_async,
+        ($($tail:tt)*) => {
+            py_type_object_init!(
                 $($tail)*
                 tp_allocs: 0,
                 tp_frees: 0,
@@ -574,26 +589,34 @@ mod typeobject {
 
     #[cfg(not(py_sys_config="COUNT_ALLOCS"))]
     macro_rules! py_type_object_init_with_count_allocs {
-        ($tp_as_async:ident, $($tail:tt)*) => {
-            py_type_object_init!($tp_as_async, $($tail)*)
+        ($($tail:tt)*) => {
+            py_type_object_init!($($tail)*)
         }
     }
 
-    #[cfg(Py_3_5)]
+    #[cfg(Py_3_8)]
     pub const PyTypeObject_INIT: PyTypeObject = py_type_object_init_with_count_allocs!(
-        tp_as_async,
+        tp_as_async: 0 as *mut PyAsyncMethods,
+        tp_vectorcall_offset: 0,
+        tp_vectorcall: None,
+        tp_finalize: None,
+    );
+
+    #[cfg(all(Py_3_5, not(Py_3_8)))]
+    pub const PyTypeObject_INIT: PyTypeObject = py_type_object_init_with_count_allocs!(
+        tp_as_async: 0 as *mut PyAsyncMethods,
         tp_finalize: None,
     );
 
     #[cfg(all(Py_3_4, not(Py_3_5)))]
     pub const PyTypeObject_INIT: PyTypeObject = py_type_object_init_with_count_allocs!(
-        tp_reserved,
+        tp_reserved: 0 as *mut c_void,
         tp_finalize: None,
     );
 
     #[cfg(not(Py_3_4))]
     pub const PyTypeObject_INIT: PyTypeObject = py_type_object_init_with_count_allocs!(
-        tp_reserved,
+        tp_reserved: 0 as *mut c_void,
     );
 
     impl PyTypeObject {
@@ -789,6 +812,9 @@ pub const Py_TPFLAGS_READYING : c_ulong = (1<<13);
 pub const Py_TPFLAGS_HAVE_GC : c_ulong = (1<<14);
 
 const Py_TPFLAGS_HAVE_STACKLESS_EXTENSION : c_ulong = 0;
+
+#[cfg(Py_3_8)]
+pub const Py_TPFLAGS_METHOD_DESCRIPTOR  : c_ulong = (1<<17);
 
 /// Objects support type attribute cache
 pub const Py_TPFLAGS_HAVE_VERSION_TAG  : c_ulong = (1<<18);

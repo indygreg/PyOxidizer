@@ -18,7 +18,7 @@
 
 #![cfg_attr(feature="nightly", feature(
     const_fn, // for GILProtected::new (#24111)
-    specialization, // for impl FromPyObject<'source> for Vec<...> (#31844)
+    specialization, // for impl FromPyObject<'s> for Vec<...> (#31844)
 ))]
 
 #![allow(unused_imports)] // because some imports are only necessary with python 2.x or 3.x
@@ -167,17 +167,17 @@ macro_rules! py_impl_to_py_object_for_python_object {
 #[macro_export] #[doc(hidden)]
 macro_rules! py_impl_from_py_object_for_python_object {
     ($T:ty) => {
-        impl <'source> $crate::FromPyObject<'source> for $T {
+        impl <'s> $crate::FromPyObject<'s> for $T {
             #[inline]
-            fn extract(py: $crate::Python, obj: &'source $crate::PyObject) -> $crate::PyResult<$T> {
+            fn extract(py: $crate::Python, obj: &'s $crate::PyObject) -> $crate::PyResult<$T> {
                 use $crate::PyClone;
                 Ok(obj.clone_ref(py).cast_into::<$T>(py)?)
             }
         }
 
-        impl <'source> $crate::FromPyObject<'source> for &'source $T {
+        impl <'s> $crate::FromPyObject<'s> for &'s $T {
             #[inline]
-            fn extract(py: $crate::Python, obj: &'source $crate::PyObject) -> $crate::PyResult<&'source $T> {
+            fn extract(py: $crate::Python, obj: &'s $crate::PyObject) -> $crate::PyResult<&'s $T> {
                 Ok(obj.cast_as::<$T>(py)?)
             }
         }

@@ -209,42 +209,64 @@ impl PySequence {
     }
 }
 
+/// Uses the sequence protocol and converts each individual element
+/// via `impl FromPyObject for T`.
+/// 
+/// Note: when using `--features nightly`, a specialization of this impl
+/// may use the buffer protocol to perform a more efficient bulk copy.
 #[cfg(not(feature="nightly"))]
-impl <'source, T> FromPyObject<'source> for Vec<T>
+impl <'s, T> FromPyObject<'s> for Vec<T>
     where for<'a> T: FromPyObject<'a>
 {
-    fn extract(py: Python, obj: &'source PyObject) -> PyResult<Self> {
+    fn extract(py: Python, obj: &'s PyObject) -> PyResult<Self> {
         extract_sequence(py, obj)
     }
 }
 
+/// Uses the sequence protocol and converts each individual element
+/// via `impl FromPyObject for T`.
+/// 
+/// Note: when using `--features nightly`, a specialization of this impl
+/// may use the buffer protocol to perform a more efficient bulk copy.
 #[cfg(feature="nightly")]
-impl <'source, T> FromPyObject<'source> for Vec<T>
+impl <'s, T> FromPyObject<'s> for Vec<T>
     where for<'a> T: FromPyObject<'a>
 {
-    default fn extract(py: Python, obj: &'source PyObject) -> PyResult<Self> {
+    default fn extract(py: Python, obj: &'s PyObject) -> PyResult<Self> {
         extract_sequence(py, obj)
     }
 }
 
+/// If the Python object is a single-dimensional [buffer] of format `c` or `B` (C: `char` or `unsigned char`),
+/// returns an owned copy of the data in the buffer.
+/// Otherwise, uses the sequence protocol and converts each individual element
+/// via `impl FromPyObject for u8`.
+/// 
+/// [buffer]: https://docs.python.org/3/c-api/buffer.html
 #[cfg(feature="nightly")]
-impl <'source, T> FromPyObject<'source> for Vec<T>
+impl <'s, T> FromPyObject<'s> for Vec<T>
     where for<'a> T: FromPyObject<'a> + buffer::Element + Copy
 {
-    fn extract(py: Python, obj: &'source PyObject) -> PyResult<Self> {
-        // first try buffer protocol
-        if let Ok(buf) = buffer::PyBuffer::get(py, obj) {
-            if buf.dimensions() == 1 {
-                if let Ok(v) = buf.to_vec::<T>(py) {
-                    buf.release_ref(py);
-                    return Ok(v);
-                }
-            }
-            buf.release_ref(py);
-        }
-        // fall back to sequence protocol
-        extract_sequence(py, obj)
+    fn extract(py: Python, obj: &'s PyObject) -> PyResult<Self> {
+        extract_buffer_or_sequence(py, obj)
     }
+}
+
+pub(crate) fn extract_buffer_or_sequence<T>(py: Python, obj: &PyObject) -> PyResult<Vec<T>>
+    where for<'a> T: FromPyObject<'a> + buffer::Element + Copy
+{
+    // first try buffer protocol
+    if let Ok(buf) = buffer::PyBuffer::get(py, obj) {
+        if buf.dimensions() == 1 {
+            if let Ok(v) = buf.to_vec::<T>(py) {
+                buf.release_ref(py);
+                return Ok(v);
+            }
+        }
+        buf.release_ref(py);
+    }
+    // fall back to sequence protocol
+    extract_sequence(py, obj)
 }
 
 fn extract_sequence<T>(py: Python, obj: &PyObject) -> PyResult<Vec<T>>

@@ -104,7 +104,7 @@ config = sysconfig.get_config_vars();".to_owned();
     }
 // ~~~~~~~~~~ generated file, modify `python3-sys/build.rs` ~~~~~~~~~~
     let stdout = String::from_utf8(out.stdout).unwrap();
-    let split_stdout: Vec<&str> = stdout.trim_right().split(NEWLINE_SEQUENCE).collect();
+    let split_stdout: Vec<&str> = stdout.trim_end().split(NEWLINE_SEQUENCE).collect();
     if split_stdout.len() != SYSCONFIG_VALUES.len() + SYSCONFIG_FLAGS.len() {
         return Err(
             format!("python stdout len didn't return expected number of lines:
@@ -208,7 +208,7 @@ fn get_rustc_link_lib(_: &PythonVersion, ld_version: &str, enable_shared: bool) 
 fn get_macos_linkmodel() -> Result<String, String> {
     let script = "import sysconfig; print('framework' if sysconfig.get_config_var('PYTHONFRAMEWORK') else ('shared' if sysconfig.get_config_var('Py_ENABLE_SHARED') else 'static'));";
     let out = run_python_script("python", script).unwrap();
-    Ok(out.trim_right().to_owned())
+    Ok(out.trim_end().to_owned())
 }
 // ~~~~~~~~~~ generated file, modify `python3-sys/build.rs` ~~~~~~~~~~
 #[cfg(target_os="macos")]
@@ -277,6 +277,7 @@ fn find_interpreter_and_get_config(expected_version: &PythonVersion) ->
                                interpreter_version));
         }
     }
+// ~~~~~~~~~~ generated file, modify `python3-sys/build.rs` ~~~~~~~~~~
     let mut possible_names = vec![
         "python".to_string(),
         format!("python{}", expected_version.major),
@@ -284,7 +285,7 @@ fn find_interpreter_and_get_config(expected_version: &PythonVersion) ->
     if let Some(minor) = expected_version.minor {
         possible_names.push(format!("python{}.{}", expected_version.major, minor));
     }
-
+// ~~~~~~~~~~ generated file, modify `python3-sys/build.rs` ~~~~~~~~~~
     for name in possible_names.iter() {
         if let Some((executable, interpreter_version, lines)) = get_config_from_interpreter(name).ok() {
             if matching_version(expected_version, &interpreter_version) {

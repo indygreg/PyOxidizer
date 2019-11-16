@@ -23,6 +23,12 @@ use objects::PyObject;
 use err::PyResult;
 
 /// Conversion trait that allows various objects to be converted into Python objects.
+/// 
+/// Note: The associated type `ObjectType` is used so that some Rust types
+/// convert to a more precise type of Python object.
+/// For example, `[T]::to_py_object()` will result in a `PyList`.
+/// You can always calls `val.to_py_object(py).into_py_object()` in order to obtain `PyObject`
+/// (the second into_py_object() call via the PythonObject trait corresponds to the upcast from `PyList` to `PyObject`).
 pub trait ToPyObject {
     type ObjectType : PythonObject;
 
@@ -83,29 +89,46 @@ py_impl_to_py_object_for_python_object!(PyObject);
 /// let value = obj.extract::<TargetType>(py)?;
 /// ```
 ///
-/// TODO: update this documentation
-/// Note: depending on the implementation, the lifetime of the extracted result may
-/// depend on the lifetime of the `obj` or the `prepared` variable.
-///
-/// For example, when extracting `&str` from a python byte string, the resulting string slice will
-/// point to the existing string data (lifetime: `'source`).
-/// On the other hand, when extracting `&str` from a python unicode string, the preparation step
-/// will convert the string to UTF-8, and the resulting string slice will have lifetime `'prepared`.
-/// Since only which of these cases applies depends on the runtime type of the python object,
-/// both the `obj` and `prepared` variables must outlive the resulting string slice.
-///
-/// In cases where the result does not depend on the `'prepared` lifetime,
-/// the inherent method `PyObject::extract()` can be used.
-pub trait FromPyObject<'source> : Sized {
+/// Each target type for this conversion supports a different Python objects as input.
+/// Calls with an unsupported input object will result in an exception (usually a `TypeError`).
+/// 
+/// This trait is also used by the `py_fn!` and `py_class!` and `py_argparse!` macros
+/// in order to translate from Python objects to the expected Rust parameter types.
+/// For example, the parameter `x` in `def method(self, x: i32)` will use
+/// `impl FromPyObject for i32` to convert the input Python object into a Rust `i32`.
+/// When these macros are used with reference parameters (`x: &str`), the trait
+/// `RefFromPyObject` is used instead.
+pub trait FromPyObject<'s> : Sized {
     /// Extracts `Self` from the source `PyObject`.
-    fn extract(py: Python, obj: &'source PyObject) -> PyResult<Self>;
+    fn extract(py: Python, obj: &'s PyObject) -> PyResult<Self>;
 }
 
 
 py_impl_from_py_object_for_python_object!(PyObject);
 
 
-
+/// RefFromPyObject is implemented by various types that can be extracted
+/// as a reference from a Python object.
+/// Depending on the input object, the reference may point into memory owned
+/// by the Python interpreter; or into a temporary object.
+///
+/// ```let obj: PyObject = ...;
+/// let sum_of_bytes = <[u8] as RefFromPyObject>::with_extracted(py, obj,
+///     |data: &[u8]| data.iter().sum()
+/// );
+/// ```
+/// A lambda has to be used because the slice may refer to temporary object
+/// that exists only during the `with_extracted` call.
+///
+/// Each target type for this conversion supports a different Python objects as input.
+/// Calls with an unsupported input object will result in an exception (usually a `TypeError`).
+/// 
+/// This trait is also used by the `py_fn!` and `py_class!` and `py_argparse!` macros
+/// in order to translate from Python objects to the expected Rust parameter types.
+/// For example, the parameter `x` in `def method(self, x: &[u8])` will use
+/// `impl RefFromPyObject for [u8]` to convert the input Python object into a Rust `&[u8]`.
+/// When these macros are used with non-reference parameters (`x: i32`), the trait
+/// `FromPyObject` is used instead.
 pub trait RefFromPyObject {
     fn with_extracted<F, R>(py: Python, obj: &PyObject, f: F) -> PyResult<R>
         where F: FnOnce(&Self) -> R;
@@ -143,7 +166,7 @@ where T: PythonObjectWithCheckedDowncast
 }
 */
 
-// ToPyObject for references
+/// `ToPyObject` for references: calls to_py_object() on the underlying `T`.
 impl <'a, T: ?Sized> ToPyObject for &'a T where T: ToPyObject {
     type ObjectType = T::ObjectType;
 
@@ -185,8 +208,10 @@ impl <T> ToPyObject for Option<T> where T: ToPyObject {
     }
 }
 
-impl <'source, T> FromPyObject<'source> for Option<T> where T: FromPyObject<'source> {
-    fn extract(py: Python, obj: &'source PyObject) -> PyResult<Self> {
+/// If the python value is None, returns `Option::None`.
+/// Otherwise, converts the python value to `T` and returns `Some(T)`.
+impl <'s, T> FromPyObject<'s> for Option<T> where T: FromPyObject<'s> {
+    fn extract(py: Python, obj: &'s PyObject) -> PyResult<Self> {
         if obj.as_ptr() == unsafe { ffi::Py_None() } {
             Ok(None)
         } else {

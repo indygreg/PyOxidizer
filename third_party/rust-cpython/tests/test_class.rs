@@ -1,6 +1,6 @@
 #![allow(dead_code, unused_variables)]
 
-#[macro_use] extern crate cpython;
+extern crate cpython;
 
 use cpython::*;
 use std::{mem, isize, iter};
@@ -166,6 +166,10 @@ py_class!(class InstanceMethodWithArgs |py| {
     def method(&self, multiplier: i32) -> PyResult<i32> {
         Ok(*self.member(py) * multiplier)
     }
+
+    def r#match(&self, r#match: i32) -> PyResult<i32> {
+        Ok(r#match)
+    }
 });
 
 #[test]
@@ -179,6 +183,7 @@ fn instance_method_with_args() {
     d.set_item(py, "obj", obj).unwrap();
     py.run("assert obj.method(3) == 21", None, Some(&d)).unwrap();
     py.run("assert obj.method(multiplier=6) == 42", None, Some(&d)).unwrap();
+    py.run("assert obj.match(match=3) == 3", None, Some(&d)).unwrap();
 }
 
 py_class!(class ClassMethod |py| {
@@ -335,7 +340,7 @@ fn len() {
 }
 
 py_class!(class Iterator |py| {
-    data iter: RefCell<Box<iter::Iterator<Item=i32> + Send>>;
+    data iter: RefCell<Box<dyn iter::Iterator<Item=i32> + Send>>;
 
     def __iter__(&self) -> PyResult<Iterator> {
         Ok(self.clone_ref(py))

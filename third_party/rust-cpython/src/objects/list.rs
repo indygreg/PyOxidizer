@@ -107,6 +107,11 @@ impl <'a, 'p> Iterator for PyListIterator<'a, 'p> {
     // might change during the iteration.
 }
 
+/// Converts a Rust slice to a Python `list`.
+/// 
+/// Note: this conversion can be inefficient since a Python object is created
+/// for each element of the list. For primitive types `T`, consider using
+/// the buffer protocol instead.
 impl <T> ToPyObject for [T] where T: ToPyObject {
     type ObjectType = PyList;
 
@@ -123,6 +128,11 @@ impl <T> ToPyObject for [T] where T: ToPyObject {
     }
 }
 
+/// Converts a Rust slice to a Python `list`.
+/// 
+/// Note: this conversion can be inefficient since a Python object is created
+/// for each element of the list. For primitive types `T`, consider using
+/// the buffer protocol instead.
 impl <T> ToPyObject for Vec<T> where T: ToPyObject {
     type ObjectType = PyList;
 

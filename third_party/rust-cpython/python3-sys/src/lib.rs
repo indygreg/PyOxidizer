@@ -77,7 +77,7 @@ pub use marshal::*;
 mod pyport;
 // mod pymacro; contains nothing of interest for Rust
 
-// mod pyatomic; contains nothing of interest for Rust
+// mod pyatomic; contains nothing of interest for Rust; moved to internal/pycore_atomic.h in 3.8
 
 // mod pymath; contains nothing of interest for Rust
 
@@ -125,6 +125,7 @@ mod warnings; // TODO supports PEP-384 only; needs adjustment for Python 3.3 and
 mod weakrefobject; // TODO supports PEP-384 only; needs adjustment for Python 3.3 and 3.5
 mod structseq; // TODO supports PEP-384 only; needs adjustment for Python 3.3 and 3.5
 // mod namespaceobject; TODO
+// mod picklebufobject; TODO
 
 mod codecs; // TODO supports PEP-384 only; needs adjustment for Python 3.3 and 3.5
 mod pyerrors; // TODO supports PEP-384 only; needs adjustment for Python 3.3 and 3.5
@@ -159,6 +160,7 @@ mod pystrtod; // TODO supports PEP-384 only; needs adjustment for Python 3.3 and
 #[cfg(Py_3_5)]
 mod fileutils;
 // mod pyfpe; TODO probably not interesting for rust
+// mod tracemalloc; TODO probably not interesting for rust
 
 // Additional headers that are not exported by Python.h
 pub mod structmember; // TODO supports PEP-384 only; needs adjustment for Python 3.3 and 3.5

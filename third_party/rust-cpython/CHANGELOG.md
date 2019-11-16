@@ -1,8 +1,29 @@
 # Change Log
 
 ## [Unreleased]
+- Added Python 3.8 support
 
-[Unreleased]: https://github.com/dgrunwald/rust-cpython/compare/0.2.1...HEAD
+[Unreleased]: https://github.com/dgrunwald/rust-cpython/compare/0.3.0...HEAD
+
+## 0.3.0 - 2019-08-01
+- Minumum Rust compiler version is now 1.30.
+- Added [Capsule support][169] (PR by [@gracinet])
+- Added [Rust Docstring support for instance methods][166], [static methods and class methods][179] (PRs by [@quark-zju] and [@AdamRzepka])
+- [Made macros work with Rust 2018][167] (PR by [@derekdreery])
+- [Support Rust raw identifiers for method and keyword names][183] (PR by [@quark-zju])
+- Added `impl RefFromPyObject for [u8]`. This allows using `&[u8]` as parameter type in `py_fn!`.
+  When passing a `bytes` object from Python, this allows accessing the data without a copy.
+  (other mutable Python objects will use a defensive copy)
+
+[166]: https://github.com/dgrunwald/rust-cpython/pull/166
+[183]: https://github.com/dgrunwald/rust-cpython/pull/183
+[@quark-zju]: https://github.com/quark-zju
+[167]: https://github.com/dgrunwald/rust-cpython/pull/167
+[@derekdreery]: https://github.com/derekdreery
+[169]: https://github.com/dgrunwald/rust-cpython/pull/169
+[@gracinet]: https://github.com/gracinet
+[179]: https://github.com/dgrunwald/rust-cpython/pull/179
+[@AdamRzepka]: https://github.com/AdamRzepkaA
 
 ## 0.2.1 - 2018-09-28
 - Added Python 3.7 support

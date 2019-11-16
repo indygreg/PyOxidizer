@@ -1743,7 +1743,7 @@ macro_rules! py_class_impl {
             $name = py_argparse_parse_plist_impl!{py_class_instance_method {$py, $class::$name, { _cpython__py_class__py_class_impl__concat!($($doc, "\n"),*) }} [] ($($p)+,)};
         }
     }};
-    { { @classmethod def $name:ident ($cls:ident) -> $res_type:ty { $( $body:tt )* } $($tail:tt)* }
+    { { $(#[doc=$doc:expr])*@classmethod def $name:ident ($cls:ident) -> $res_type:ty { $( $body:tt )* } $($tail:tt)* }
         $class:ident $py:ident $info:tt $slots:tt
         { $( $imp:item )* }
         { $( $member_name:ident = $member_expr:expr; )* }
@@ -1756,10 +1756,10 @@ macro_rules! py_class_impl {
         }
         /* members: */ {
             $( $member_name = $member_expr; )*
-            $name = py_class_class_method!{$py, $class::$name []};
+            $name = py_class_class_method!{$py, $class::$name, { _cpython__py_class__py_class_impl__concat!($($doc, "\n"),*) } []};
         }
     }};
-    { { @classmethod def $name:ident ($cls:ident, $($p:tt)+) -> $res_type:ty { $( $body:tt )* } $($tail:tt)* }
+    { { $(#[doc=$doc:expr])*@classmethod def $name:ident ($cls:ident, $($p:tt)+) -> $res_type:ty { $( $body:tt )* } $($tail:tt)* }
         $class:ident $py:ident $info:tt $slots:tt
         { $( $imp:item )* }
         { $( $member_name:ident = $member_expr:expr; )* }
@@ -1775,10 +1775,10 @@ macro_rules! py_class_impl {
         }
         /* members: */ {
             $( $member_name = $member_expr; )*
-            $name = py_argparse_parse_plist_impl!{py_class_class_method {$py, $class::$name} [] ($($p)+,)};
+            $name = py_argparse_parse_plist_impl!{py_class_class_method {$py, $class::$name, { _cpython__py_class__py_class_impl__concat!($($doc, "\n"),*) }} [] ($($p)+,)};
         }
     }};
-    { { @staticmethod def $name:ident ($($p:tt)*) -> $res_type:ty { $( $body:tt )* } $($tail:tt)* }
+    { { $(#[doc=$doc:expr])* @staticmethod def $name:ident ($($p:tt)*) -> $res_type:ty { $( $body:tt )* } $($tail:tt)* }
         $class:ident $py:ident $info:tt $slots:tt
         { $( $imp:item )* }
         { $( $member_name:ident = $member_expr:expr; )* }
@@ -1796,7 +1796,9 @@ macro_rules! py_class_impl {
             $( $member_name = $member_expr; )*
             $name = 
             py_argparse_parse_plist!{
-                py_class_static_method {$py, $class::$name}
+                py_class_static_method {$py, $class::$name, {
+                    _cpython__py_class__py_class_impl__concat!($($doc, "\n"),*)
+                    } }
                 ($($p)*)
             }
             ;

@@ -34,6 +34,17 @@ pub struct ParamDescription<'a> {
     pub is_optional: bool
 }
 
+impl<'a> ParamDescription<'a> {
+    /// Name, with leading `r#` stripped.
+    pub fn name(&self) -> &str {
+        if self.name.starts_with("r#") {
+            &self.name[2..]
+        } else {
+            self.name
+        }
+    }
+}
+
 /// Parse argument list
 ///
 ///  * fname:  Name of the current function
@@ -65,14 +76,14 @@ pub fn parse_args(
     let mut used_keywords = 0;
     // Iterate through the parameters and assign values to output:
     for (i, (p, out)) in params.iter().zip(output).enumerate() {
-        match kwargs.and_then(|d| d.get_item(py, p.name)) {
+        match kwargs.and_then(|d| d.get_item(py, p.name())) {
             Some(kwarg) => {
                 *out = Some(kwarg);
                 used_keywords += 1;
                 if i < nargs {
                     return Err(err::PyErr::new::<exc::TypeError, _>(py,
                         format!("Argument given by name ('{}') and position ({})",
-                                p.name, i+1)));
+                                p.name(), i+1)));
                 }
             },
             None => {
@@ -83,7 +94,7 @@ pub fn parse_args(
                     if !p.is_optional {
                         return Err(err::PyErr::new::<exc::TypeError, _>(py,
                             format!("Required argument ('{}') (pos {}) not found",
-                                    p.name, i+1)));
+                                    p.name(), i+1)));
                     }
                 }
             }

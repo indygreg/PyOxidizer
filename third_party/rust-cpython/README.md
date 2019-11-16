@@ -8,15 +8,15 @@ rust-cpython [![Build Status](https://travis-ci.org/dgrunwald/rust-cpython.svg?b
 
 ---
 
-Copyright (c) 2015-2017 Daniel Grunwald.
+Copyright (c) 2015-2019 Daniel Grunwald.
 Rust-cpython is licensed under the [MIT license](http://opensource.org/licenses/MIT).
 Python is licensed under the [Python License](https://docs.python.org/2/license.html).
 
 Supported Python versions:
 * Python 2.7
-* Python 3.3 to 3.7
+* Python 3.3 to 3.8
 
-Requires Rust 1.25.0 or later.
+Requires Rust 1.30.0 or later.
 
 # Usage
 
@@ -24,7 +24,7 @@ To use `cpython`, add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cpython = "0.2"
+cpython = "0.3"
 ```
 
 #### Example program displaying the value of `sys.version`:
@@ -72,7 +72,7 @@ name = "rust2py"
 crate-type = ["cdylib"]
 
 [dependencies.cpython]
-version = "0.2"
+version = "0.3"
 features = ["extension-module"]
 ```
 
