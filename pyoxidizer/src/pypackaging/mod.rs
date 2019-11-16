@@ -4,4 +4,5 @@
 
 pub mod bytecode;
 pub mod fsscan;
+pub mod pyembed;
 pub mod resource;

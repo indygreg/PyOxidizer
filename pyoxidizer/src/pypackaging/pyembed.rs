@@ -7,7 +7,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 
-use super::config::{Config, RawAllocator, RunMode, TerminfoResolution};
+use crate::pyrepackager::config::{Config, RawAllocator, RunMode, TerminfoResolution};
 
 /// Obtain the Rust source code to construct a PythonConfig instance.
 pub fn derive_python_config(
