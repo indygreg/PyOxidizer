@@ -186,6 +186,12 @@ in this type.
 The following arguments can be defined to control the default ``PythonConfig``
 behavior:
 
+``bytes_warning`` (int)
+   Controls the value of
+   ``Py_BytesWarningFlag <https://docs.python.org/3/c-api/init.html#c.Py_BytesWarningFlag>`_.
+
+   Default is ``0``.
+
 ``dont_write_bytecode`` (bool)
    Controls the value of
    `Py_DontWriteBytecodeFlag <https://docs.python.org/3/c-api/init.html#c.Py_DontWriteBytecodeFlag>`_.

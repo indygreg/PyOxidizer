@@ -56,6 +56,7 @@ starlark_module! { embedded_python_config_module =>
     #[allow(non_snake_case)]
     EmbeddedPythonConfig(
         env env,
+        bytes_warning=0,
         dont_write_bytecode=true,
         ignore_environment=true,
         no_site=true,
@@ -72,6 +73,7 @@ starlark_module! { embedded_python_config_module =>
         terminfo_dirs=None,
         write_modules_directory_env=None
     ) {
+        required_type_arg("bytes_warning", "int", &bytes_warning)?;
         let dont_write_bytecode = required_bool_arg("dont_write_bytecode", &dont_write_bytecode)?;
         let ignore_environment = required_bool_arg("ignore_environment", &ignore_environment)?;
         let no_site = required_bool_arg("no_site", &no_site)?;
@@ -144,6 +146,7 @@ starlark_module! { embedded_python_config_module =>
         };
 
         let config = super::super::pyrepackager::config::EmbeddedPythonConfig {
+            bytes_warning: bytes_warning.to_int().unwrap() as i32,
             dont_write_bytecode,
             ignore_environment,
             no_site,
@@ -176,6 +179,7 @@ mod tests {
         assert_eq!(c.get_type(), "EmbeddedPythonConfig");
 
         let wanted = super::super::super::pyrepackager::config::EmbeddedPythonConfig {
+            bytes_warning: 0,
             dont_write_bytecode: true,
             ignore_environment: true,
             no_site: true,
@@ -196,6 +200,12 @@ mod tests {
         };
 
         c.downcast_apply(|x: &EmbeddedPythonConfig| assert_eq!(x.config, wanted));
+    }
+
+    #[test]
+    fn test_bytes_warning() {
+        let c = starlark_ok("EmbeddedPythonConfig(bytes_warning=2)");
+        c.downcast_apply(|x: &EmbeddedPythonConfig| assert_eq!(x.config.bytes_warning, 2));
     }
 
     #[test]

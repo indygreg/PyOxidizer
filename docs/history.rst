@@ -44,6 +44,8 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* The ``EmbeddedPythonConfig()`` config function now accepts a ``bytes_warning``
+  argument to control the value of ``Py_BytesWarningFlag``.
 * The ``Stdlib()`` packaging rule now now accepts an optional ``excludes``
   list of modules to ignore. This is useful for removing unnecessary
   Python packages such as ``distutils``, ``pip``, and ``ensurepip``.

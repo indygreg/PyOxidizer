@@ -1458,6 +1458,7 @@ pub fn derive_python_config(
          use_custom_importlib: true,\n    \
          filesystem_importer: {},\n    \
          sys_paths: [{}].to_vec(),\n    \
+         bytes_warning: {},\n    \
          import_site: {},\n    \
          import_user_site: {},\n    \
          ignore_python_env: {},\n    \
@@ -1492,6 +1493,7 @@ pub fn derive_python_config(
             .map(|p| "\"".to_owned() + p + "\".to_string()")
             .collect::<Vec<String>>()
             .join(", "),
+        embedded.bytes_warning,
         !embedded.no_site,
         !embedded.no_user_site_directory,
         embedded.ignore_environment,
@@ -1985,7 +1987,10 @@ pub fn process_config(
     }
 
     warn!(logger, "processing python run mode: {:?}", config.run);
-    warn!(logger, "processing embedded python config: {:?}", config.embedded_python_config);
+    warn!(
+        logger,
+        "processing embedded python config: {:?}", config.embedded_python_config
+    );
 
     let python_config_rs = derive_python_config(
         &config,

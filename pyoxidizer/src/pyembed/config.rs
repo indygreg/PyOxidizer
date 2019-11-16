@@ -81,6 +81,12 @@ pub struct PythonConfig {
     /// run-time.
     pub sys_paths: Vec<String>,
 
+    /// Controls whether to detect comparing bytes/bytearray with str.
+    ///
+    /// If 1, issues a warning. If 2 or greater, raises a BytesWarning
+    /// exception.
+    pub bytes_warning: i32,
+
     /// Whether to load the site.py module at initialization time.
     pub import_site: bool,
 

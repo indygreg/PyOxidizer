@@ -344,6 +344,7 @@ impl<'a> MainPythonInterpreter<'a> {
         }
 
         unsafe {
+            pyffi::Py_BytesWarningFlag = config.bytes_warning;
             pyffi::Py_DontWriteBytecodeFlag = if config.dont_write_bytecode { 1 } else { 0 };
             pyffi::Py_IgnoreEnvironmentFlag = if config.ignore_python_env { 1 } else { 0 };
             pyffi::Py_NoSiteFlag = if config.import_site { 0 } else { 1 };

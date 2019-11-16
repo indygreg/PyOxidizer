@@ -178,6 +178,7 @@ pub enum TerminfoResolution {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct EmbeddedPythonConfig {
+    pub bytes_warning: i32,
     pub dont_write_bytecode: bool,
     pub ignore_environment: bool,
     pub no_site: bool,
