@@ -9,6 +9,7 @@ pub mod embedded_resource;
 pub mod fsscan;
 pub mod libpython;
 pub mod packaging_rule;
+pub mod pyembed;
 pub mod repackage;
 pub mod resource;
 pub mod state;
