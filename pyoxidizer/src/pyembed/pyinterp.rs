@@ -115,6 +115,21 @@ fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
     panic!("jemalloc is not available in this build configuration");
 }
 
+#[cfg(unix)]
+fn set_windows_flags(_config: &PythonConfig) {}
+
+#[cfg(windows)]
+fn set_windows_flags(config: &PythonConfig) {
+    unsafe {
+        pyffi::Py_LegacyWindowsFSEncodingFlag = if config.legacy_windows_fs_encoding {
+            1
+        } else {
+            0
+        };
+        pyffi::Py_LegacyWindowsStdioFlag = if config.legacy_windows_stdio { 1 } else { 0 };
+    }
+}
+
 /// Manages an embedded Python interpreter.
 ///
 /// **Warning: Python interpreters have global state. There should only be a
@@ -362,16 +377,9 @@ impl<'a> MainPythonInterpreter<'a> {
             pyffi::Py_QuietFlag = if config.quiet { 1 } else { 0 };
             pyffi::Py_UnbufferedStdioFlag = if config.unbuffered_stdio { 1 } else { 0 };
             pyffi::Py_VerboseFlag = config.verbose;
-
-            if cfg!(windows) {
-                pyffi::Py_LegacyWindowsFSEncodingFlag = if config.legacy_windows_fs_encoding {
-                    1
-                } else {
-                    0
-                };
-                pyffi::Py_LegacyWindowsStdioFlag = if config.legacy_windows_stdio { 1 } else { 0 };
-            }
         }
+
+        set_windows_flags(config);
 
         /* Pre-initialization functions we could support:
          *
