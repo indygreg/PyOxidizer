@@ -23,13 +23,13 @@ use super::dist::{
     LicenseInfo, PythonDistributionInfo,
 };
 use super::embedded_resource::EmbeddedPythonResources;
-use super::libpython::derive_importlib;
+use super::libpython::{derive_importlib, make_config_c};
 use super::packaging_rule::{
     packages_from_module_name, packages_from_module_names, resolve_python_packaging,
 };
 use super::resource::{
-    AppRelativeResources, BuiltExtensionModule, PackagedModuleBytecode, PackagedModuleSource,
-    PythonResource, ResourceAction, ResourceLocation,
+    AppRelativeResources, PackagedModuleBytecode, PackagedModuleSource, PythonResource,
+    ResourceAction, ResourceLocation,
 };
 use super::state::{BuildContext, PackagingState};
 
@@ -872,54 +872,6 @@ pub fn resolve_python_resources(
         read_files,
         license_files_path,
     }
-}
-
-/// Produce the content of the config.c file containing built-in extensions.
-fn make_config_c(
-    extension_modules: &BTreeMap<String, ExtensionModule>,
-    built_extension_modules: &BTreeMap<String, BuiltExtensionModule>,
-) -> String {
-    // It is easier to construct the file from scratch than parse the template
-    // and insert things in the right places.
-    let mut lines: Vec<String> = Vec::new();
-
-    lines.push(String::from("#include \"Python.h\""));
-
-    // Declare the initialization functions.
-    for em in extension_modules.values() {
-        if let Some(init_fn) = &em.init_fn {
-            if init_fn == "NULL" {
-                continue;
-            }
-
-            lines.push(format!("extern PyObject* {}(void);", init_fn));
-        }
-    }
-
-    for em in built_extension_modules.values() {
-        lines.push(format!("extern PyObject* {}(void);", em.init_fn));
-    }
-
-    lines.push(String::from("struct _inittab _PyImport_Inittab[] = {"));
-
-    for em in extension_modules.values() {
-        if let Some(init_fn) = &em.init_fn {
-            if init_fn == "NULL" {
-                continue;
-            }
-
-            lines.push(format!("{{\"{}\", {}}},", em.module, init_fn));
-        }
-    }
-
-    for em in built_extension_modules.values() {
-        lines.push(format!("{{\"{}\", {}}},", em.name, em.init_fn));
-    }
-
-    lines.push(String::from("{0, 0}"));
-    lines.push(String::from("};"));
-
-    lines.join("\n")
 }
 
 #[derive(Debug)]

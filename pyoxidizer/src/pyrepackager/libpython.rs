@@ -2,10 +2,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use std::collections::BTreeMap;
 use std::fs;
 
 use super::bytecode::{BytecodeCompiler, CompileMode};
-use super::dist::PythonDistributionInfo;
+use super::dist::{ExtensionModule, PythonDistributionInfo};
+use super::resource::BuiltExtensionModule;
 
 pub const PYTHON_IMPORTER: &[u8] = include_bytes!("memoryimporter.py");
 
@@ -55,4 +57,52 @@ pub fn derive_importlib(dist: &PythonDistributionInfo) -> ImportlibData {
         bootstrap_external_source,
         bootstrap_external_bytecode,
     }
+}
+
+/// Produce the content of the config.c file containing built-in extensions.
+pub fn make_config_c(
+    extension_modules: &BTreeMap<String, ExtensionModule>,
+    built_extension_modules: &BTreeMap<String, BuiltExtensionModule>,
+) -> String {
+    // It is easier to construct the file from scratch than parse the template
+    // and insert things in the right places.
+    let mut lines: Vec<String> = Vec::new();
+
+    lines.push(String::from("#include \"Python.h\""));
+
+    // Declare the initialization functions.
+    for em in extension_modules.values() {
+        if let Some(init_fn) = &em.init_fn {
+            if init_fn == "NULL" {
+                continue;
+            }
+
+            lines.push(format!("extern PyObject* {}(void);", init_fn));
+        }
+    }
+
+    for em in built_extension_modules.values() {
+        lines.push(format!("extern PyObject* {}(void);", em.init_fn));
+    }
+
+    lines.push(String::from("struct _inittab _PyImport_Inittab[] = {"));
+
+    for em in extension_modules.values() {
+        if let Some(init_fn) = &em.init_fn {
+            if init_fn == "NULL" {
+                continue;
+            }
+
+            lines.push(format!("{{\"{}\", {}}},", em.module, init_fn));
+        }
+    }
+
+    for em in built_extension_modules.values() {
+        lines.push(format!("{{\"{}\", {}}},", em.name, em.init_fn));
+    }
+
+    lines.push(String::from("{0, 0}"));
+    lines.push(String::from("};"));
+
+    lines.join("\n")
 }
