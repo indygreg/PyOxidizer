@@ -62,6 +62,7 @@ starlark_module! { embedded_python_config_module =>
         no_site=true,
         no_user_site_directory=true,
         optimize_level=0,
+        parser_debug=false,
         stdio_encoding=None,
         unbuffered_stdio=false,
         filesystem_importer=false,
@@ -79,6 +80,7 @@ starlark_module! { embedded_python_config_module =>
         let no_site = required_bool_arg("no_site", &no_site)?;
         let no_user_site_directory = required_bool_arg("no_user_site_directory", &no_user_site_directory)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
+        let parser_debug = required_bool_arg("parser_debug", &parser_debug)?;
         let stdio_encoding = optional_str_arg("stdio_encoding", &stdio_encoding)?;
         let unbuffered_stdio = required_bool_arg("unbuffered_stdio", &unbuffered_stdio)?;
         let filesystem_importer = required_bool_arg("filesystem_importer", &filesystem_importer)?;
@@ -152,6 +154,7 @@ starlark_module! { embedded_python_config_module =>
             no_site,
             no_user_site_directory,
             optimize_level: optimize_level.to_int().unwrap(),
+            parser_debug,
             stdio_encoding_name,
             stdio_encoding_errors,
             unbuffered_stdio,
@@ -185,6 +188,7 @@ mod tests {
             no_site: true,
             no_user_site_directory: true,
             optimize_level: 0,
+            parser_debug: false,
             stdio_encoding_name: None,
             stdio_encoding_errors: None,
             unbuffered_stdio: false,

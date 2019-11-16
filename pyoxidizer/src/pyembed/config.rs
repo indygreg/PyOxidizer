@@ -104,6 +104,9 @@ pub struct PythonConfig {
     /// Whether stdout and stderr streams should be unbuffered.
     pub unbuffered_stdio: bool,
 
+    /// Whether to enable parser debugging output.
+    pub parser_debug: bool,
+
     /// Bytecode for the importlib._bootstrap / _frozen_importlib module.
     pub frozen_importlib_data: &'static [u8],
 

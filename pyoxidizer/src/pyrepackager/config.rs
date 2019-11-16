@@ -184,6 +184,7 @@ pub struct EmbeddedPythonConfig {
     pub no_site: bool,
     pub no_user_site_directory: bool,
     pub optimize_level: i64,
+    pub parser_debug: bool,
     pub stdio_encoding_name: Option<String>,
     pub stdio_encoding_errors: Option<String>,
     pub unbuffered_stdio: bool,

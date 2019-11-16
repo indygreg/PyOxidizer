@@ -234,6 +234,12 @@ behavior:
    This setting is only relevant if ``dont_write_bytecode`` is ``false`` and Python
    modules are being imported from the filesystem.
 
+``parser_debug`` (bool)
+   Controls the value of
+   `Py_DebugFlag <https://docs.python.org/3/c-api/init.html#c.Py_DebugFlag>`_.
+
+   Default is ``False``.
+
 ``stdio_encoding`` (string)
    Defines the encoding and error handling mode for Python's standard I/O
    streams (``sys.stdout``, etc). Values are of the form ``encoding:error`` e.g.
