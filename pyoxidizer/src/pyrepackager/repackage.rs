@@ -12,7 +12,7 @@ use std::fs::create_dir_all;
 use std::io::{BufRead, BufReader, Cursor, Error as IOError, Read, Write};
 use std::path::{Path, PathBuf};
 
-use super::bytecode::{BytecodeCompiler, CompileMode};
+use super::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode};
 use super::config::{
     eval_starlark_config_file, find_pyoxidizer_config_file_env, Config, PythonDistribution,
     PythonPackaging,
@@ -236,31 +236,6 @@ fn filter_btreemap<V>(logger: &slog::Logger, m: &mut BTreeMap<String, V>, f: &BT
             m.remove(&key);
         }
     }
-}
-
-lazy_static! {
-    static ref RE_CODING: regex::bytes::Regex =
-        { regex::bytes::Regex::new(r"^[ \t\f]*#.*?coding[:=][ \t]*([-_.a-zA-Z0-9]+)").unwrap() };
-}
-
-/// Derive the source encoding from Python source code.
-pub fn python_source_encoding(source: &[u8]) -> Vec<u8> {
-    // Default source encoding is UTF-8. But per PEP 263, the first or second
-    // line of source can match a regular expression to define a custom
-    // encoding.
-    let lines = source.split(|v| v == &b'\n');
-
-    for (i, line) in lines.enumerate() {
-        if i > 1 {
-            break;
-        }
-
-        if let Some(m) = RE_CODING.find(line) {
-            return m.as_bytes().to_vec();
-        }
-    }
-
-    b"utf-8".to_vec()
 }
 
 struct BytecodeRequest {
