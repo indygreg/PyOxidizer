@@ -9,11 +9,18 @@ build_config = BuildConfig(application_name="{{program_name}}")
 # This variable defines the configuration of the
 # embedded Python interpreter
 embedded_python_config = EmbeddedPythonConfig(
+#     bytes_warning=0,
 #     dont_write_bytecode=True,
 #     ignore_environment=True,
+#     inspect=False,
+#     interactive=False,
+#     isolated=False,
+#     legacy_windows_fs_encoding=False,
+#     legacy_windows_stdio=False,
 #     no_site=True,
 #     no_user_site_directory=True,
 #     optimize_level=0,
+#     parser_debug=False,
 #     stdio_encoding=None,
 #     unbuffered_stdio=False,
 #     filesystem_importer=False,
@@ -23,6 +30,8 @@ embedded_python_config = EmbeddedPythonConfig(
 #     raw_allocator=None,
 #     terminfo_resolution="dynamic",
 #     terminfo_dirs=None,
+#     use_hash_seed=False,
+#     verbose=0,
 #     write_modules_directory_env=None,
 )
 
