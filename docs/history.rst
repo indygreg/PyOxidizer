@@ -44,6 +44,8 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* The ``EmbeddedPythonConfig()`` config function now accepts a ``quiet``
+  argument to control the value of ``Py_QuietFlag``.
 * The ``EmbeddedPythonConfig()`` config function now accepts a ``verbose``
   argument to control the value of ``Py_VerboseFlag``.
 * The ``EmbeddedPythonConfig()`` config function now accepts a ``parser_debug``

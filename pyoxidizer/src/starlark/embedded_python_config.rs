@@ -66,6 +66,7 @@ starlark_module! { embedded_python_config_module =>
         stdio_encoding=None,
         unbuffered_stdio=false,
         filesystem_importer=false,
+        quiet=false,
         sys_frozen=false,
         sys_meipass=false,
         sys_paths=None,
@@ -85,6 +86,7 @@ starlark_module! { embedded_python_config_module =>
         let stdio_encoding = optional_str_arg("stdio_encoding", &stdio_encoding)?;
         let unbuffered_stdio = required_bool_arg("unbuffered_stdio", &unbuffered_stdio)?;
         let filesystem_importer = required_bool_arg("filesystem_importer", &filesystem_importer)?;
+        let quiet = required_bool_arg("quiet", &quiet)?;
         let sys_frozen = required_bool_arg("sys_frozen", &sys_frozen)?;
         let sys_meipass = required_bool_arg("sys_meipass", &sys_meipass)?;
         optional_list_arg("sys_paths", "string", &sys_paths)?;
@@ -157,6 +159,7 @@ starlark_module! { embedded_python_config_module =>
             no_user_site_directory,
             optimize_level: optimize_level.to_int().unwrap(),
             parser_debug,
+            quiet,
             stdio_encoding_name,
             stdio_encoding_errors,
             unbuffered_stdio,
@@ -192,6 +195,7 @@ mod tests {
             no_user_site_directory: true,
             optimize_level: 0,
             parser_debug: false,
+            quiet: false,
             verbose: 0,
             stdio_encoding_name: None,
             stdio_encoding_errors: None,

@@ -351,6 +351,7 @@ impl<'a> MainPythonInterpreter<'a> {
             pyffi::Py_NoSiteFlag = if config.import_site { 0 } else { 1 };
             pyffi::Py_NoUserSiteDirectory = if config.import_user_site { 0 } else { 1 };
             pyffi::Py_OptimizeFlag = config.opt_level;
+            pyffi::Py_QuietFlag = if config.quiet { 1 } else { 0 };
             pyffi::Py_UnbufferedStdioFlag = if config.unbuffered_stdio { 1 } else { 0 };
             pyffi::Py_VerboseFlag = config.verbose;
         }

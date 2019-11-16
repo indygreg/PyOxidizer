@@ -240,6 +240,10 @@ behavior:
 
    Default is ``False``.
 
+``quiet`` (bool)
+   Controls the value of
+   `Py_QuietFlag <https://docs.python.org/3/c-api/init.html#c.Py_QuietFlag>`_.
+
 ``stdio_encoding`` (string)
    Defines the encoding and error handling mode for Python's standard I/O
    streams (``sys.stdout``, etc). Values are of the form ``encoding:error`` e.g.
