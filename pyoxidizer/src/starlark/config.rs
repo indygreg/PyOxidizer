@@ -3,9 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use super::super::pyrepackager::config::{
-    BuildConfig as ConfigBuildConfig, Config as ConfigConfig, Distribution,
-    EmbeddedPythonConfig as ConfigEmbeddedPythonConfig,
-    PythonDistribution as ConfigPythonDistribution, PythonPackaging, RunMode,
+    BuildConfig as ConfigBuildConfig, Config as ConfigConfig, Distribution, PythonPackaging,
 };
 use super::distribution::{TarballDistribution, WixInstallerDistribution};
 use super::embedded_python_config::EmbeddedPythonConfig;
@@ -17,6 +15,10 @@ use super::python_packaging::{
     StdlibExtensionsPolicy, Virtualenv, WriteLicenseFiles,
 };
 use super::python_run_mode::PythonRunMode;
+use crate::pypackaging::config::{
+    EmbeddedPythonConfig as ConfigEmbeddedPythonConfig,
+    PythonDistribution as ConfigPythonDistribution, RunMode,
+};
 use starlark::environment::Environment;
 use starlark::values::{
     default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,

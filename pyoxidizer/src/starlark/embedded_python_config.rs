@@ -2,8 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use super::super::pyrepackager::config::{default_raw_allocator, RawAllocator, TerminfoResolution};
+use super::super::pyrepackager::config::default_raw_allocator;
 use super::env::{optional_list_arg, optional_str_arg, required_bool_arg, required_type_arg};
+use crate::pypackaging::config::{RawAllocator, TerminfoResolution};
 use starlark::environment::Environment;
 use starlark::values::{
     default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
@@ -19,7 +20,7 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct EmbeddedPythonConfig {
-    pub config: super::super::pyrepackager::config::EmbeddedPythonConfig,
+    pub config: crate::pypackaging::config::EmbeddedPythonConfig,
 }
 
 impl TypedValue for EmbeddedPythonConfig {
@@ -163,7 +164,7 @@ starlark_module! { embedded_python_config_module =>
             _ => Vec::new(),
         };
 
-        let config = super::super::pyrepackager::config::EmbeddedPythonConfig {
+        let config = crate::pypackaging::config::EmbeddedPythonConfig {
             bytes_warning: bytes_warning.to_int().unwrap() as i32,
             dont_write_bytecode,
             ignore_environment,
@@ -205,7 +206,7 @@ mod tests {
         let c = starlark_ok("EmbeddedPythonConfig()");
         assert_eq!(c.get_type(), "EmbeddedPythonConfig");
 
-        let wanted = super::super::super::pyrepackager::config::EmbeddedPythonConfig {
+        let wanted = crate::pypackaging::config::EmbeddedPythonConfig {
             bytes_warning: 0,
             dont_write_bytecode: true,
             ignore_environment: true,

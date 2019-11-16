@@ -13,14 +13,14 @@ use std::io::{BufRead, BufReader, Cursor, Error as IOError, Read, Write};
 use std::path::{Path, PathBuf};
 
 use super::config::{
-    eval_starlark_config_file, find_pyoxidizer_config_file_env, Config, PythonDistribution,
-    PythonPackaging,
+    eval_starlark_config_file, find_pyoxidizer_config_file_env, Config, PythonPackaging,
 };
 use super::packaging_rule::{
     packages_from_module_name, packages_from_module_names, resolve_python_packaging,
 };
 use super::state::{BuildContext, PackagingState};
 use crate::pypackaging::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode};
+use crate::pypackaging::config::PythonDistribution;
 use crate::pypackaging::distribution::{
     analyze_python_distribution_tar_zst, resolve_python_distribution_archive, ExtensionModule,
     PythonDistributionInfo,

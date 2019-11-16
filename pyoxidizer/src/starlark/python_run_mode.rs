@@ -2,8 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use super::super::pyrepackager::config::RunMode;
 use super::env::required_str_arg;
+use crate::pypackaging::config::RunMode;
 use starlark::environment::Environment;
 use starlark::values::{default_compare, TypedValue, Value, ValueError, ValueResult};
 use starlark::{

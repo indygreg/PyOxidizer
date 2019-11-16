@@ -19,7 +19,7 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct PythonDistribution {
-    pub distribution: super::super::pyrepackager::config::PythonDistribution,
+    pub distribution: crate::pypackaging::config::PythonDistribution,
 }
 
 impl TypedValue for PythonDistribution {
@@ -68,12 +68,12 @@ starlark_module! { python_distribution_module =>
         }
 
         let distribution = if local_path.get_type() != "NoneType" {
-            super::super::pyrepackager::config::PythonDistribution::Local {
+            crate::pypackaging::config::PythonDistribution::Local {
                 local_path: local_path.to_string(),
                 sha256: sha256.to_string(),
             }
         } else {
-            super::super::pyrepackager::config::PythonDistribution::Url {
+            crate::pypackaging::config::PythonDistribution::Url {
                 url: url.to_string(),
                 sha256: sha256.to_string(),
             }
@@ -96,7 +96,7 @@ starlark_module! { python_distribution_module =>
 
         match CPYTHON_BY_TRIPLE.get(&build_target) {
             Some(dist) => {
-                let distribution = super::super::pyrepackager::config::PythonDistribution::Url {
+                let distribution = crate::pypackaging::config::PythonDistribution::Url {
                     url: dist.url.clone(),
                     sha256: dist.sha256.clone(),
                 };
@@ -126,7 +126,7 @@ mod tests {
             .get(super::super::super::pyrepackager::repackage::HOST)
             .unwrap();
 
-        let wanted = super::super::super::pyrepackager::config::PythonDistribution::Url {
+        let wanted = crate::pypackaging::config::PythonDistribution::Url {
             url: host_distribution.url.clone(),
             sha256: host_distribution.sha256.clone(),
         };
@@ -157,7 +157,7 @@ mod tests {
     #[test]
     fn test_python_distribution_url() {
         let dist = starlark_ok("PythonDistribution('sha256', url='some_url')");
-        let wanted = super::super::super::pyrepackager::config::PythonDistribution::Url {
+        let wanted = crate::pypackaging::config::PythonDistribution::Url {
             url: "some_url".to_string(),
             sha256: "sha256".to_string(),
         };
@@ -168,7 +168,7 @@ mod tests {
     #[test]
     fn test_python_distribution_local_path() {
         let dist = starlark_ok("PythonDistribution('sha256', local_path='some_path')");
-        let wanted = super::super::super::pyrepackager::config::PythonDistribution::Local {
+        let wanted = crate::pypackaging::config::PythonDistribution::Local {
             local_path: "some_path".to_string(),
             sha256: "sha256".to_string(),
         };

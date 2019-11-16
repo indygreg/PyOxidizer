@@ -7,23 +7,12 @@ use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum RawAllocator {
-    Jemalloc,
-    Rust,
-    System,
-}
+use crate::pypackaging::config::{EmbeddedPythonConfig, PythonDistribution, RawAllocator, RunMode};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BuildConfig {
     pub application_name: String,
     pub build_path: PathBuf,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum PythonDistribution {
-    Local { local_path: String, sha256: String },
-    Url { url: String, sha256: String },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -143,14 +132,6 @@ pub enum PythonPackaging {
     WriteLicenseFiles(PackagingWriteLicenseFiles),
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum RunMode {
-    Noop,
-    Repl,
-    Module { module: String },
-    Eval { code: String },
-}
-
 #[derive(Clone, Debug)]
 pub struct DistributionTarball {
     pub path_prefix: Option<String>,
@@ -168,43 +149,6 @@ pub struct DistributionWixInstaller {
 pub enum Distribution {
     Tarball(DistributionTarball),
     WixInstaller(DistributionWixInstaller),
-}
-
-/// How the `terminfo` database is resolved at run-time.
-#[derive(Clone, Debug, PartialEq)]
-pub enum TerminfoResolution {
-    Dynamic,
-    None,
-    Static(String),
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct EmbeddedPythonConfig {
-    pub bytes_warning: i32,
-    pub dont_write_bytecode: bool,
-    pub ignore_environment: bool,
-    pub inspect: bool,
-    pub interactive: bool,
-    pub isolated: bool,
-    pub legacy_windows_fs_encoding: bool,
-    pub legacy_windows_stdio: bool,
-    pub no_site: bool,
-    pub no_user_site_directory: bool,
-    pub optimize_level: i64,
-    pub parser_debug: bool,
-    pub quiet: bool,
-    pub stdio_encoding_name: Option<String>,
-    pub stdio_encoding_errors: Option<String>,
-    pub unbuffered_stdio: bool,
-    pub use_hash_seed: bool,
-    pub verbose: i32,
-    pub filesystem_importer: bool,
-    pub sys_frozen: bool,
-    pub sys_meipass: bool,
-    pub sys_paths: Vec<String>,
-    pub raw_allocator: RawAllocator,
-    pub terminfo_resolution: TerminfoResolution,
-    pub write_modules_directory_env: Option<String>,
 }
 
 /// Represents a parsed PyOxidizer configuration file.
