@@ -95,20 +95,6 @@ staging areas for built binaries, etc.
 
 The default value is ``$CWD/build``.
 
-.. _config_build:
-
-``BuildConfig(application_name)``
---------------------------------------------------
-
-This type configured high-level application build settings. It
-accepts the following arguments:
-
-``application_name``
-   Name of the application being built.
-
-   This also corresponds to the name of the Rust binary to be built.
-   A ``cargo build --bin <application_name>`` must work.
-
 .. _config_python_distribution:
 
 ``PythonDistribution(sha256, local_path=None, url=None)``
@@ -1087,8 +1073,11 @@ in this file do nothing unless they are passed to a ``Config`` instance.
 
 This type accepts the following arguments:
 
-``build_config`` (``BuildConfig``)
-   Defines the application build configuration.
+``application_name`` (``string``)
+   Defines the name of the application to build.
+
+   This also corresponds to the name of the Rust binary to be built.
+   A ``cargo build --bin <application_name>`` must work.
 
 ``embedded_python_config`` (``EmbeddedPythonConfig``)
    Defines the default settings of the embedded Python interpreter.

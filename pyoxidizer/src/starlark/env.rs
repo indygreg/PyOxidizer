@@ -242,7 +242,6 @@ impl TypedValue for EnvironmentContext {
 /// Obtain a Starlark environment for evaluating PyOxidizer configurations.
 pub fn global_environment(context: &EnvironmentContext) -> Result<Environment, EnvironmentError> {
     let env = starlark::stdlib::global_environment();
-    let env = super::build_config::build_config_env(env);
     let env = super::config::config_env(env);
     let env = super::distribution::distribution_env(env);
     let env = super::python_distribution::python_distribution_module(env);

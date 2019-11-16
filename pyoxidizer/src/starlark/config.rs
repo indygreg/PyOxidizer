@@ -7,10 +7,9 @@ use super::super::pyrepackager::config::{
     EmbeddedPythonConfig as ConfigEmbeddedPythonConfig,
     PythonDistribution as ConfigPythonDistribution, PythonPackaging, RunMode,
 };
-use super::build_config::BuildConfig;
 use super::distribution::{TarballDistribution, WixInstallerDistribution};
 use super::embedded_python_config::EmbeddedPythonConfig;
-use super::env::required_type_arg;
+use super::env::{required_str_arg, required_type_arg};
 use super::python_distribution::PythonDistribution;
 use super::python_packaging::{
     FilterInclude, PackageRoot, PipInstallSimple, PipRequirementsFile, SetupPyInstall, Stdlib,
@@ -71,21 +70,25 @@ starlark_module! { config_env =>
     #[allow(non_snake_case)]
     Config(
         env env,
-        build_config=None,
+        application_name,
         embedded_python_config=None,
         python_distribution=None,
         packaging_rules=None,
         python_run_mode=None,
         distributions=None
     ) {
-        required_type_arg("build_config", "BuildConfig", &build_config)?;
+        let application_name = required_str_arg("application_name", &application_name)?;
         required_type_arg("embedded_python_config", "EmbeddedPythonConfig", &embedded_python_config)?;
         required_type_arg("python_distribution", "PythonDistribution", &python_distribution)?;
         required_type_arg("python_run_mode", "PythonRunMode", &python_run_mode)?;
 
-        let build_config = build_config.downcast_apply(|x: &BuildConfig| -> ConfigBuildConfig {
-            x.config.clone()
-        });
+        let build_path = PathBuf::from(env.get("BUILD_PATH").expect("BUILD_PATH not set").to_string());
+
+        let build_config = ConfigBuildConfig {
+            application_name,
+            build_path,
+        };
+
         let embedded_python_config = embedded_python_config.downcast_apply(|x: &EmbeddedPythonConfig| -> ConfigEmbeddedPythonConfig {
             x.config.clone()
         });
@@ -240,10 +243,9 @@ mod tests {
     #[test]
     fn test_config_default() {
         let err = starlark_nok("Config()");
-        assert_eq!(
-            err.message,
-            "function expects a BuildConfig for build_config; got type NoneType"
-        );
+        assert!(err
+            .message
+            .starts_with("Missing parameter application_name"));
     }
 
     #[test]
@@ -251,7 +253,7 @@ mod tests {
         let content = indoc!(
             r#"
             Config(
-                build_config=BuildConfig('myapp'),
+                application_name='myapp',
                 embedded_python_config=EmbeddedPythonConfig(),
                 python_distribution=default_python_distribution(),
                 python_run_mode=python_run_mode_repl(),

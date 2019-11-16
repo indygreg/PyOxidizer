@@ -108,7 +108,6 @@ The new ``pyoxidizer.bzl`` file should look something like:
 
 .. code-block:: python
 
-   build_config = BuildConfig(application_name="pyflakes")
    embedded_python_config = EmbeddedPythonConfig()
    stdlib_extensions_policy = StdlibExtensionsPolicy("all")
    stdlib = Stdlib(include_source=False)
@@ -116,7 +115,7 @@ The new ``pyoxidizer.bzl`` file should look something like:
    python_run_mode = python_run_mode_eval("from pyflakes.api import main; main()")
 
    Config(
-       build_config=build_config,
+       application_name="pyflakes",
        embedded_python_config=embedded_python_config,
        python_distribution=default_python_distribution(),
        python_run_mode=python_run_mode,
@@ -178,7 +177,6 @@ Then edit the ``pyoxidizer.bzl`` file to have the following:
 
 .. code-block:: python
 
-   build_config = BuildConfig(application_name="black")
    embedded_python_config = EmbeddedPythonConfig()
    stdlib_extensions_policy = StdlibExtensionsPolicy("all")
    stdlib = Stdlib(include_source=False)
@@ -186,7 +184,7 @@ Then edit the ``pyoxidizer.bzl`` file to have the following:
    python_run_mode = python_run_mode_module("black")
 
    Config(
-       build_config=build_config,
+       application_name="black",
        embedded_python_config=embedded_python_config,
        python_distribution=default_python_distribution(),
        python_run_mode=python_run_mode,

@@ -2,10 +2,6 @@
 # pyoxidizer crate's documentation for extensive documentation
 # on this file format.
 
-# BuildConfig(application_name, build_path=None)
-#     """Defines the application build configuration."""
-build_config = BuildConfig(application_name="{{program_name}}")
-
 # This variable defines the configuration of the
 # embedded Python interpreter
 embedded_python_config = EmbeddedPythonConfig(
@@ -111,7 +107,7 @@ python_run_mode = python_run_mode_eval(r"""{{{code}}}""")
 {{~/if}}
 
 Config(
-    build_config=build_config,
+    application_name="{{program_name}}",
     embedded_python_config=embedded_python_config,
     python_distribution=default_python_distribution(),
     python_run_mode=python_run_mode,
