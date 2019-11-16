@@ -1876,7 +1876,8 @@ pub fn process_config(
 
     // Obtain the configured Python distribution and parse it to a data structure.
     warn!(logger, "resolving Python distribution...");
-    let python_distribution_path = resolve_python_distribution_archive(&config, &dest_dir);
+    let python_distribution_path =
+        resolve_python_distribution_archive(&config.python_distribution, &dest_dir);
     warn!(
         logger,
         "Python distribution available at {}",

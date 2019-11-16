@@ -12,7 +12,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use url::Url;
 
-use super::config::{Config, PythonDistribution};
+use super::config::PythonDistribution;
 use super::fsscan::{find_python_resources, walk_tree_files, PythonFileResource};
 
 #[cfg(windows)]
@@ -725,8 +725,8 @@ pub fn copy_local_distribution(path: &PathBuf, sha256: &str, cache_dir: &Path) -
 /// in ``cache_dir``, it will be verified and returned.
 ///
 /// Local filesystem paths are preferred over remote URLs if both are defined.
-pub fn resolve_python_distribution_archive(config: &Config, cache_dir: &Path) -> PathBuf {
-    match &config.python_distribution {
+pub fn resolve_python_distribution_archive(dist: &PythonDistribution, cache_dir: &Path) -> PathBuf {
+    match dist {
         PythonDistribution::Local { local_path, sha256 } => {
             let p = PathBuf::from(local_path);
             copy_local_distribution(&p, sha256, cache_dir)
