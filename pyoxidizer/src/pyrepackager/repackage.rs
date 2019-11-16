@@ -247,10 +247,6 @@ fn read_resource_names_file(path: &Path) -> Result<BTreeSet<String>, IOError> {
     Ok(res)
 }
 
-fn bytecode_compiler(dist: &PythonDistributionInfo) -> BytecodeCompiler {
-    BytecodeCompiler::new(&dist.python_exe)
-}
-
 fn filter_btreemap<V>(logger: &slog::Logger, m: &mut BTreeMap<String, V>, f: &BTreeSet<String>) {
     let keys: Vec<String> = m.keys().cloned().collect();
 
@@ -746,7 +742,7 @@ pub fn resolve_python_resources(
     let mut embedded_bytecodes: BTreeMap<String, PackagedModuleBytecode> = BTreeMap::new();
 
     {
-        let mut compiler = bytecode_compiler(&dist);
+        let mut compiler = BytecodeCompiler::new(&dist.python_exe);
 
         for (name, request) in embedded_bytecode_requests {
             let bytecode = match compiler.compile(
@@ -771,7 +767,7 @@ pub fn resolve_python_resources(
 
     // Compile app-relative bytecode requests.
     {
-        let mut compiler = bytecode_compiler(&dist);
+        let mut compiler = BytecodeCompiler::new(&dist.python_exe);
 
         for (path, requests) in app_relative_bytecode_requests {
             if !app_relative.contains_key(&path) {
@@ -894,7 +890,7 @@ pub struct ImportlibData {
 /// source and concatenate with code that provides the memory importer.
 /// Bytecode is then derived from it.
 pub fn derive_importlib(dist: &PythonDistributionInfo) -> ImportlibData {
-    let mut compiler = bytecode_compiler(&dist);
+    let mut compiler = BytecodeCompiler::new(&dist.python_exe);
 
     let mod_bootstrap_path = &dist.py_modules["importlib._bootstrap"];
     let mod_bootstrap_external_path = &dist.py_modules["importlib._bootstrap_external"];
