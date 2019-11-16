@@ -105,6 +105,10 @@ pub struct PythonConfig {
     /// Whether to enable isolated mode.
     pub isolated: bool,
 
+    /// If set, set the Windows filesystem encoding to mbcs and the filesystem
+    /// error handler to replace.
+    pub legacy_windows_fs_encoding: bool,
+
     /// Whether to suppress writing of ``.pyc`` files when importing ``.py``
     /// files from the filesystem. This is typically irrelevant since modules
     /// are imported from memory.

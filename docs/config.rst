@@ -226,6 +226,14 @@ behavior:
    Controls the value of
    `Py_IsolatedFlag <https://docs.python.org/3/c-api/init.html#c.Py_IsolatedFlag>`_.
 
+``legacy_windows_fs_encoding`` (bool)
+   Controls the value of
+   `Py_LegacyWindowsFSEncodingFlag <https://docs.python.org/3/c-api/init.html#c.Py_LegacyWindowsFSEncodingFlag>`_.
+
+   Only affects Windows.
+
+   Default is ``False``.
+
 ``no_site`` (bool)
    Controls the value of
    `Py_NoSiteFlag <https://docs.python.org/3/c-api/init.html#c.Py_NoSiteFlag>`_.

@@ -44,6 +44,9 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* The ``EmbeddedPythonConfig()`` config function now accepts a
+  ``legacy_windows_fs_encoding`` argument to control the value of
+  ``Py_LegacyWindowsFSEncodingFlag``.
 * The ``EmbeddedPythonConfig()`` config function now accepts an ``isolated``
   argument to control the value of ``Py_IsolatedFlag``.
 * The ``EmbeddedPythonConfig()`` config function now accepts a ``use_hash_seed``

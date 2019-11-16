@@ -362,6 +362,14 @@ impl<'a> MainPythonInterpreter<'a> {
             pyffi::Py_QuietFlag = if config.quiet { 1 } else { 0 };
             pyffi::Py_UnbufferedStdioFlag = if config.unbuffered_stdio { 1 } else { 0 };
             pyffi::Py_VerboseFlag = config.verbose;
+
+            if cfg!(windows) {
+                pyffi::Py_LegacyWindowsFSEncodingFlag = if config.legacy_windows_fs_encoding {
+                    1
+                } else {
+                    0
+                };
+            }
         }
 
         /* Pre-initialization functions we could support:
