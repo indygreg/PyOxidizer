@@ -727,6 +727,78 @@ pub fn python_distribution_extract(dist_path: &str, dest_path: &str) -> Result<(
     Ok(())
 }
 
+pub fn python_distribution_info(dist_path: &str) -> Result<(), String> {
+    let mut fh = std::fs::File::open(Path::new(dist_path)).or_else(|e| Err(e.to_string()))?;
+    let mut data = Vec::new();
+    fh.read_to_end(&mut data).or_else(|e| Err(e.to_string()))?;
+
+    let temp_dir = tempdir::TempDir::new("python-distribution").or_else(|e| Err(e.to_string()))?;
+    let temp_dir_path = temp_dir.path();
+
+    let cursor = Cursor::new(data);
+    let dist = analyze_python_distribution_tar_zst(cursor, temp_dir_path)?;
+
+    println!("High-Level Metadata");
+    println!("===================");
+    println!();
+    println!("Flavor:       {}", dist.flavor);
+    println!("Version:      {}", dist.version);
+    println!("OS:           {}", dist.os);
+    println!("Architecture: {}", dist.arch);
+    println!();
+
+    println!("Extension Modules");
+    println!("=================");
+    for (name, ems) in dist.extension_modules {
+        println!("{}", name);
+        println!("{}", "-".repeat(name.len()));
+        println!();
+
+        for em in ems {
+            println!("{}", em.variant);
+            println!("{}", "^".repeat(em.variant.len()));
+            println!();
+            println!("Required: {}", em.required);
+            println!("Built-in Default: {}", em.builtin_default);
+            if let Some(licenses) = em.licenses {
+                println!("Licenses: {}", licenses.join(", "));
+            }
+            if !em.links.is_empty() {
+                println!(
+                    "Links: {}",
+                    em.links
+                        .iter()
+                        .map(|l| l.name.clone())
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                );
+            }
+
+            println!();
+        }
+    }
+
+    println!("Python Modules");
+    println!("==============");
+    println!();
+    for name in dist.py_modules.keys() {
+        println!("{}", name);
+    }
+    println!();
+
+    println!("Python Resources");
+    println!("================");
+    println!();
+
+    for (package, resources) in dist.resources {
+        for name in resources.keys() {
+            println!("[{}].{}", package, name);
+        }
+    }
+
+    Ok(())
+}
+
 pub fn python_distribution_licenses(path: &str) -> Result<(), String> {
     let mut fh = std::fs::File::open(Path::new(path)).or_else(|e| Err(e.to_string()))?;
     let mut data = Vec::new();

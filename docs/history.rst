@@ -44,6 +44,8 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* A ``pyoxidizer python-distribution-info`` command has been implemented
+  to print information about a Python distribution archive.
 * The ``EmbeddedPythonConfig()`` config function now accepts a
   ``legacy_windows_stdio`` argument to control the value of
   ``Py_LegacyWindowsStdioFlag`` (#190).

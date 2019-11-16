@@ -272,6 +272,16 @@ pub fn run_cli() -> Result<(), String> {
                 ),
         )
         .subcommand(
+            SubCommand::with_name("python-distribution-info")
+                .about("Show information about a Python distribution archive")
+                .arg(
+                    Arg::with_name("path")
+                        .required(true)
+                        .value_name("PATH")
+                        .help("Path to Python distribution archive to analyze"),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("python-distribution-licenses")
                 .about("Show licenses for a given Python distribution")
                 .arg(
@@ -387,6 +397,12 @@ pub fn run_cli() -> Result<(), String> {
             let dest_path = args.value_of("dest_path").unwrap();
 
             projectmgmt::python_distribution_extract(dist_path, dest_path)
+        }
+
+        ("python-distribution-info", Some(args)) => {
+            let dist_path = args.value_of("path").unwrap();
+
+            projectmgmt::python_distribution_info(dist_path)
         }
 
         ("python-distribution-licenses", Some(args)) => {
