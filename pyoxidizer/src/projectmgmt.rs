@@ -547,6 +547,7 @@ pub fn resolve_build_context(
     };
 
     BuildContext::new(
+        logger,
         &path,
         &config_path,
         None,

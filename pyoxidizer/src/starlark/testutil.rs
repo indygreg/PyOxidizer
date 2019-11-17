@@ -4,19 +4,29 @@
 
 use codemap::CodeMap;
 use codemap_diagnostic::Diagnostic;
+use slog::Drain;
 use starlark::eval;
 use starlark::values::Value;
 
 use super::env::global_environment;
 use crate::app_packaging::environment::EnvironmentContext;
+use crate::logging::PrintlnDrain;
 
 pub fn starlark_eval(snippet: &str) -> Result<Value, Diagnostic> {
+    let logger = slog::Logger::root(
+        PrintlnDrain {
+            min_level: slog::Level::Error,
+        }
+        .fuse(),
+        slog::o!(),
+    );
+
     let build_target = crate::app_packaging::repackage::HOST;
 
     let cwd = std::env::current_dir().expect("unable to determine CWD");
     let config_path = cwd.join("dummy");
 
-    let context = EnvironmentContext::new(&config_path, build_target)
+    let context = EnvironmentContext::new(&logger, &config_path, build_target)
         .expect("unable to create EnvironmentContext");
 
     let mut env = global_environment(&context).expect("unable to get global environment");

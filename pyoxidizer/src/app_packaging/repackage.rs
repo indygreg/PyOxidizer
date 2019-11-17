@@ -63,6 +63,7 @@ pub const HOST: &str = env!("HOST");
 
 impl BuildContext {
     pub fn new(
+        logger: &slog::Logger,
         project_path: &Path,
         config_path: &Path,
         host: Option<&str>,
@@ -81,7 +82,7 @@ impl BuildContext {
             HOST.to_string()
         };
 
-        let config = eval_starlark_config_file(&config_path, target)?;
+        let config = eval_starlark_config_file(logger, &config_path, target)?;
 
         let build_path = config.build_config.build_path.clone();
 
@@ -1366,6 +1367,7 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
     };
 
     let mut context = BuildContext::new(
+        logger,
         &project_path,
         &config_path,
         Some(&host),

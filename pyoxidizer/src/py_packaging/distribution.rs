@@ -8,7 +8,7 @@ use sha2::{Digest, Sha256};
 use slog::warn;
 use std::collections::BTreeMap;
 use std::fs;
-use std::fs::File;
+use std::fs::{create_dir_all, File};
 use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
 use url::Url;
@@ -344,7 +344,6 @@ impl ParsedPythonDistribution {
         fh.read_to_end(&mut python_distribution_data).unwrap();
         let dist_cursor = Cursor::new(python_distribution_data);
         warn!(logger, "reading data from Python distribution...");
-
         analyze_python_distribution_tar_zst(dist_cursor, &extract_dir)
     }
 
@@ -894,6 +893,10 @@ pub fn resolve_python_distribution_archive(
     dist: &PythonDistributionLocation,
     cache_dir: &Path,
 ) -> PathBuf {
+    if !cache_dir.exists() {
+        create_dir_all(cache_dir).unwrap();
+    }
+
     match dist {
         PythonDistributionLocation::Local { local_path, sha256 } => {
             let p = PathBuf::from(local_path);

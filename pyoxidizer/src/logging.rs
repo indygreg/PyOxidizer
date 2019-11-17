@@ -7,7 +7,7 @@ use slog::Drain;
 /// A slog Drain that uses println!.
 pub struct PrintlnDrain {
     /// Minimum logging level that we're emitting.
-    min_level: slog::Level,
+    pub min_level: slog::Level,
 }
 
 /// slog Drain that uses println!.

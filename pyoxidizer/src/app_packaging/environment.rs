@@ -7,6 +7,8 @@ use std::path::{Path, PathBuf};
 /// Holds state for evaluating app packaging.
 #[derive(Debug, Clone)]
 pub struct EnvironmentContext {
+    pub logger: slog::Logger,
+
     /// Directory the environment should be evaluated from.
     ///
     /// Typically used to resolve filenames.
@@ -26,7 +28,11 @@ pub struct EnvironmentContext {
 }
 
 impl EnvironmentContext {
-    pub fn new(config_path: &Path, build_target: &str) -> Result<EnvironmentContext, String> {
+    pub fn new(
+        logger: &slog::Logger,
+        config_path: &Path,
+        build_target: &str,
+    ) -> Result<EnvironmentContext, String> {
         let parent = config_path
             .parent()
             .ok_or("unable to resolve parent directory of config".to_string())?;
@@ -34,6 +40,7 @@ impl EnvironmentContext {
         let build_path = parent.join("build");
 
         Ok(EnvironmentContext {
+            logger: logger.clone(),
             cwd: parent.to_path_buf(),
             config_path: config_path.to_path_buf(),
             build_target: build_target.to_string(),
