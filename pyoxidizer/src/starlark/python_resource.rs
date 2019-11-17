@@ -9,6 +9,7 @@ use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
+use crate::py_packaging::embedded_resource::EmbeddedPythonResources;
 use crate::py_packaging::resource::{BytecodeModule, BytecodeOptimizationLevel, SourceModule};
 
 #[derive(Debug, Clone)]
@@ -139,5 +140,39 @@ impl TypedValue for PythonBytecodeModule {
             "is_package" => true,
             _ => false,
         })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct PythonEmbeddedResources {
+    pub embedded: EmbeddedPythonResources,
+}
+
+impl TypedValue for PythonEmbeddedResources {
+    immutable!();
+    any!();
+    not_supported!(
+        binop, dir_attr, function, get_attr, get_hash, has_attr, indexable, iterable, sequence,
+        set_attr, to_int
+    );
+
+    fn to_str(&self) -> String {
+        "PythonEmbeddedResources<...>".to_string()
+    }
+
+    fn to_repr(&self) -> String {
+        self.to_str()
+    }
+
+    fn get_type(&self) -> &'static str {
+        "PythonEmbeddedResources"
+    }
+
+    fn to_bool(&self) -> bool {
+        true
+    }
+
+    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
+        default_compare(self, other)
     }
 }
