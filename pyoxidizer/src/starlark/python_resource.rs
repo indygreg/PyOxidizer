@@ -13,7 +13,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use super::env::required_type_arg;
-use crate::py_packaging::embedded_resource::EmbeddedPythonResources;
+use crate::py_packaging::embedded_resource::EmbeddedPythonResourcesPrePackaged;
 use crate::py_packaging::resource::{BytecodeModule, BytecodeOptimizationLevel, SourceModule};
 
 #[derive(Debug, Clone)]
@@ -149,7 +149,7 @@ impl TypedValue for PythonBytecodeModule {
 
 #[derive(Debug, Clone)]
 pub struct PythonEmbeddedResources {
-    pub embedded: EmbeddedPythonResources,
+    pub embedded: EmbeddedPythonResourcesPrePackaged,
 }
 
 impl TypedValue for PythonEmbeddedResources {
@@ -184,7 +184,7 @@ impl TypedValue for PythonEmbeddedResources {
 starlark_module! { python_resource_env =>
     #[allow(non_snake_case)]
     PythonEmbeddedResources(env _env) {
-        let embedded = EmbeddedPythonResources::default();
+        let embedded = EmbeddedPythonResourcesPrePackaged::default();
 
         Ok(Value::new(PythonEmbeddedResources { embedded }))
     }

@@ -15,10 +15,33 @@ use super::resource::{
 };
 
 /// Represents Python resources to embed in a binary.
+///
+/// This collection holds resources before packaging. This type is
+/// transformed to `EmbeddedPythonResources` as part of packaging.
+#[derive(Debug, Default, Clone)]
+pub struct EmbeddedPythonResourcesPrePackaged {
+    pub source_modules: BTreeMap<String, SourceModule>,
+    pub bytecode_modules: BTreeMap<String, BytecodeModule>,
+}
+
+impl EmbeddedPythonResourcesPrePackaged {
+    /// Add a source module to the collection of embedded source modules.
+    pub fn add_source_module(&mut self, module: &SourceModule) {
+        self.source_modules
+            .insert(module.name.clone(), module.clone());
+    }
+
+    /// Add a bytecode module to the collection of embedded bytecode modules.
+    pub fn add_bytecode_module(&mut self, module: &BytecodeModule) {
+        self.bytecode_modules
+            .insert(module.name.clone(), module.clone());
+    }
+}
+
+/// Represents Python resources to embed in a binary.
 #[derive(Debug, Default, Clone)]
 pub struct EmbeddedPythonResources {
     pub module_sources: BTreeMap<String, PackagedModuleSource>,
-    pub module_bytecode_requests: BTreeMap<String, BytecodeModule>,
     pub module_bytecodes: BTreeMap<String, PackagedModuleBytecode>,
     pub all_modules: BTreeSet<String>,
     pub all_packages: BTreeSet<String>,
@@ -39,37 +62,6 @@ pub struct ModuleEntry {
 pub type ModuleEntries = Vec<ModuleEntry>;
 
 impl EmbeddedPythonResources {
-    /// Add a source module to the collection of embedded source modules.
-    pub fn add_source_module(&mut self, module: &SourceModule) {
-        self.module_sources.insert(
-            module.name.clone(),
-            PackagedModuleSource {
-                source: module.source.clone(),
-                is_package: module.is_package,
-            },
-        );
-
-        self.all_modules.insert(module.name.clone());
-
-        if module.is_package {
-            self.all_packages.insert(module.name.clone());
-        }
-    }
-
-    /// Add a bytecode module to the collection of embedded bytecode modules.
-    ///
-    /// Actual bytecode will be compiled later.
-    pub fn add_bytecode_module(&mut self, module: &BytecodeModule) {
-        self.module_bytecode_requests
-            .insert(module.name.clone(), module.clone());
-
-        self.all_modules.insert(module.name.clone());
-
-        if module.is_package {
-            self.all_packages.insert(module.name.clone());
-        }
-    }
-
     /// Obtain records for all modules in this resources collection.
     pub fn modules_records(&self) -> ModuleEntries {
         let mut records = ModuleEntries::new();
@@ -220,50 +212,4 @@ pub fn write_resources_entries<W: Write>(
     }
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::super::resource::BytecodeOptimizationLevel;
-    use super::*;
-
-    #[test]
-    fn test_add_source_module() {
-        let mut v = EmbeddedPythonResources::default();
-        v.add_source_module(&SourceModule {
-            name: "foo.bar".to_string(),
-            source: vec![],
-            is_package: false,
-        });
-
-        assert_eq!(v.module_sources.len(), 1);
-        assert!(v.module_sources.contains_key("foo.bar"));
-        assert!(v.all_modules.contains("foo.bar"));
-        assert!(!v.all_packages.contains("foo.bar"));
-
-        v.add_source_module(&SourceModule {
-            name: "foo".to_string(),
-            source: vec![],
-            is_package: true,
-        });
-        assert!(v.module_sources.contains_key("foo"));
-        assert!(v.all_modules.contains("foo"));
-        assert!(v.all_packages.contains("foo"));
-    }
-
-    #[test]
-    fn test_add_bytecode_module() {
-        let mut v = EmbeddedPythonResources::default();
-        v.add_bytecode_module(&BytecodeModule {
-            name: "foo.bar".to_string(),
-            source: vec![],
-            optimize_level: BytecodeOptimizationLevel::Zero,
-            is_package: false,
-        });
-
-        assert_eq!(v.module_bytecode_requests.len(), 1);
-        assert!(v.module_bytecode_requests.contains_key("foo.bar"));
-        assert!(v.all_modules.contains("foo.bar"));
-        assert!(!v.all_packages.contains("foo.bar"));
-    }
 }

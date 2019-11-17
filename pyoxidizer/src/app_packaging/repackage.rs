@@ -817,7 +817,6 @@ pub fn resolve_python_resources(
     PythonResources {
         embedded: EmbeddedPythonResources {
             module_sources: embedded_sources,
-            module_bytecode_requests: BTreeMap::new(),
             module_bytecodes: embedded_bytecodes,
             all_modules: all_embedded_modules,
             all_packages: all_embedded_package_names,
