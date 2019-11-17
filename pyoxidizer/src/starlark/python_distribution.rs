@@ -14,19 +14,26 @@ use starlark::{
 use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 use super::env::{optional_str_arg, required_str_arg};
+use crate::app_packaging::environment::EnvironmentContext;
 use crate::py_packaging::distribution::PythonDistributionLocation;
 use crate::python_distributions::CPYTHON_BY_TRIPLE;
 
 #[derive(Debug, Clone)]
 pub struct PythonDistribution {
     pub source: PythonDistributionLocation,
+
+    dest_dir: PathBuf,
 }
 
 impl PythonDistribution {
-    fn from_location(location: PythonDistributionLocation) -> PythonDistribution {
-        PythonDistribution { source: location }
+    fn from_location(location: PythonDistributionLocation, dest_dir: &Path) -> PythonDistribution {
+        PythonDistribution {
+            source: location,
+            dest_dir: dest_dir.to_path_buf(),
+        }
     }
 }
 
@@ -62,7 +69,7 @@ impl TypedValue for PythonDistribution {
 
 starlark_module! { python_distribution_module =>
     #[allow(non_snake_case)]
-    PythonDistribution(sha256, local_path=None, url=None) {
+    PythonDistribution(env env, sha256, local_path=None, url=None) {
         required_str_arg("sha256", &sha256)?;
         optional_str_arg("local_path", &local_path)?;
         optional_str_arg("url", &url)?;
@@ -87,7 +94,10 @@ starlark_module! { python_distribution_module =>
             }
         };
 
-        Ok(Value::new(PythonDistribution::from_location(distribution)))
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+        let dest_dir = context.downcast_apply(|x: &EnvironmentContext| x.python_distributions_path.clone());
+
+        Ok(Value::new(PythonDistribution::from_location(distribution, &dest_dir)))
     }
 
     default_python_distribution(env env, build_target=None) {
@@ -109,7 +119,10 @@ starlark_module! { python_distribution_module =>
                     sha256: dist.sha256.clone(),
                 };
 
-                Ok(Value::new(PythonDistribution::from_location(distribution)))
+                let context = env.get("CONTEXT").expect("CONTEXT not defined");
+                let dest_dir = context.downcast_apply(|x: &EnvironmentContext| x.python_distributions_path.clone());
+
+                Ok(Value::new(PythonDistribution::from_location(distribution, &dest_dir)))
             }
             None => Err(ValueError::Runtime(RuntimeError {
                 code: "no_default_distribution",
