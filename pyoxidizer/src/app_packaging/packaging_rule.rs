@@ -284,11 +284,7 @@ fn resolve_stdlib(
             res.push(PythonResourceAction {
                 action: ResourceAction::Add,
                 location: location.clone(),
-                resource: PythonResource::ModuleSource {
-                    name: m.name.clone(),
-                    source: m.source.clone(),
-                    is_package: m.is_package,
-                },
+                resource: m.as_python_resource(),
             });
         }
 

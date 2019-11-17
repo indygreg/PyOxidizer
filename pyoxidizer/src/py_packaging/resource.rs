@@ -16,6 +16,16 @@ pub struct SourceModule {
     pub is_package: bool,
 }
 
+impl SourceModule {
+    pub fn as_python_resource(&self) -> PythonResource {
+        PythonResource::ModuleSource {
+            name: self.name.clone(),
+            source: self.source.clone(),
+            is_package: self.is_package,
+        }
+    }
+}
+
 /// Represents an extension module built during packaging.
 ///
 /// This is like a light version of `ExtensionModule`.
