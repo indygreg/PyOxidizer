@@ -26,6 +26,38 @@ impl SourceModule {
     }
 }
 
+/// An optimization level for Python bytecode.
+#[derive(Clone, Debug, PartialEq)]
+pub enum BytecodeOptimizationLevel {
+    Zero,
+    One,
+    Two,
+}
+
+/// Python module bytecode, agnostic of location.
+#[derive(Clone, Debug, PartialEq)]
+pub struct BytecodeModule {
+    pub name: String,
+    pub source: Vec<u8>,
+    pub optimize_level: BytecodeOptimizationLevel,
+    pub is_package: bool,
+}
+
+impl BytecodeModule {
+    pub fn as_python_resource(&self) -> PythonResource {
+        PythonResource::ModuleBytecode {
+            name: self.name.clone(),
+            source: self.source.clone(),
+            optimize_level: match self.optimize_level {
+                BytecodeOptimizationLevel::Zero => 0,
+                BytecodeOptimizationLevel::One => 1,
+                BytecodeOptimizationLevel::Two => 2,
+            },
+            is_package: self.is_package,
+        }
+    }
+}
+
 /// Represents an extension module built during packaging.
 ///
 /// This is like a light version of `ExtensionModule`.
