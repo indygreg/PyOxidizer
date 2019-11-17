@@ -2,8 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use super::super::python_distributions::CPYTHON_BY_TRIPLE;
-use super::env::{optional_str_arg, required_str_arg};
 use starlark::environment::Environment;
 use starlark::values::{
     default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
@@ -16,6 +14,9 @@ use starlark::{
 use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+
+use super::env::{optional_str_arg, required_str_arg};
+use crate::python_distributions::CPYTHON_BY_TRIPLE;
 
 #[derive(Debug, Clone)]
 pub struct PythonDistribution {
