@@ -20,6 +20,9 @@ pub struct EnvironmentContext {
 
     /// Base directory to use for build state.
     pub build_path: PathBuf,
+
+    /// Path where Python distributions are written.
+    pub python_distributions_path: PathBuf,
 }
 
 impl EnvironmentContext {
@@ -34,11 +37,13 @@ impl EnvironmentContext {
             cwd: parent.to_path_buf(),
             config_path: config_path.to_path_buf(),
             build_target: build_target.to_string(),
-            build_path,
+            build_path: build_path.clone(),
+            python_distributions_path: build_path.join("python_distributions"),
         })
     }
 
     pub fn set_build_path(&mut self, path: &Path) {
         self.build_path = path.to_path_buf();
+        self.python_distributions_path = path.join("python_distributions");
     }
 }
