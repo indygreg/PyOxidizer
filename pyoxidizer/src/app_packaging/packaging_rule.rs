@@ -2,7 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use serde::Deserialize;
 use slog::{info, warn};
 use std::collections::BTreeSet;
 use std::fs;
@@ -17,9 +16,9 @@ use super::config::{
 };
 use super::state::BuildContext;
 use crate::py_packaging::distribution::PythonDistributionInfo;
-use crate::py_packaging::distutils::prepare_hacked_distutils;
+use crate::py_packaging::distutils::{prepare_hacked_distutils, read_built_extensions};
 use crate::py_packaging::fsscan::{find_python_resources, PythonFileResource};
-use crate::py_packaging::resource::{AppRelativeResources, BuiltExtensionModule, PythonResource};
+use crate::py_packaging::resource::{AppRelativeResources, PythonResource};
 
 /// SPDX licenses in Python distributions that are not GPL.
 ///
@@ -178,65 +177,16 @@ fn resolve_python_paths(base: &Path, python_version: &str, is_windows: bool) -> 
     }
 }
 
-#[derive(Debug, Deserialize)]
-struct DistutilsExtensionState {
-    name: String,
-    objects: Vec<String>,
-    output_filename: String,
-    libraries: Vec<String>,
-    library_dirs: Vec<String>,
-    runtime_library_dirs: Vec<String>,
-}
-
 fn resolve_built_extensions(
     state_dir: &Path,
     res: &mut Vec<PythonResourceAction>,
     location: &ResourceLocation,
 ) -> Result<(), String> {
-    let entries = fs::read_dir(state_dir).or_else(|e| Err(e.to_string()))?;
-
-    for entry in entries {
-        let entry = entry.or_else(|e| Err(e.to_string()))?;
-        let path = entry.path();
-        let file_name = path.file_name().unwrap().to_str().unwrap();
-
-        if !file_name.starts_with("extension.") || !file_name.ends_with(".json") {
-            continue;
-        }
-
-        let data = fs::read_to_string(&path).or_else(|e| Err(e.to_string()))?;
-
-        let info: DistutilsExtensionState =
-            serde_json::from_str(&data).or_else(|e| Err(e.to_string()))?;
-
-        let module_components: Vec<&str> = info.name.split('.').collect();
-        let final_name = module_components[module_components.len() - 1];
-        let init_fn = "PyInit_".to_string() + final_name;
-
-        let mut object_file_data = Vec::new();
-
-        for object_path in &info.objects {
-            let path = PathBuf::from(object_path);
-            let data = fs::read(path).or_else(|e| Err(e.to_string()))?;
-
-            object_file_data.push(data);
-        }
-
-        // TODO packaging rule functionality for requiring / denying shared library
-        // linking, annotating licenses of 3rd party libraries, disabling libraries
-        // wholesale, etc.
-
+    for ext in read_built_extensions(state_dir)? {
         res.push(PythonResourceAction {
             action: ResourceAction::Add,
             location: location.clone(),
-            resource: PythonResource::BuiltExtensionModule(BuiltExtensionModule {
-                name: info.name.clone(),
-                init_fn,
-                object_file_data,
-                is_package: final_name == "__init__",
-                libraries: info.libraries,
-                library_dirs: info.library_dirs.iter().map(PathBuf::from).collect(),
-            }),
+            resource: PythonResource::BuiltExtensionModule(ext),
         });
     }
 
