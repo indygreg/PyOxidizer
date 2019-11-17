@@ -8,6 +8,11 @@ use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+pub fn is_package_from_path(path: &Path) -> bool {
+    let file_name = path.file_name().unwrap().to_str().unwrap();
+    file_name.starts_with("__init__.")
+}
+
 pub fn walk_tree_files(path: &Path) -> Box<dyn Iterator<Item = walkdir::DirEntry>> {
     let res = walkdir::WalkDir::new(path).sort_by(|a, b| a.file_name().cmp(b.file_name()));
 

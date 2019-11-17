@@ -17,7 +17,9 @@ use super::config::{
 use super::state::BuildContext;
 use crate::py_packaging::distribution::{is_stdlib_test_package, PythonDistributionInfo};
 use crate::py_packaging::distutils::{prepare_hacked_distutils, read_built_extensions};
-use crate::py_packaging::fsscan::{find_python_resources, PythonFileResource};
+use crate::py_packaging::fsscan::{
+    find_python_resources, is_package_from_path, PythonFileResource,
+};
 use crate::py_packaging::resource::{AppRelativeResources, PythonResource};
 
 #[derive(Debug)]
@@ -94,11 +96,6 @@ where
     }
 
     package_names
-}
-
-fn is_package_from_path(path: &Path) -> bool {
-    let file_name = path.file_name().unwrap().to_str().unwrap();
-    file_name.starts_with("__init__.")
 }
 
 fn resource_full_name(resource: &PythonFileResource) -> &str {
