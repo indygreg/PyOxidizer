@@ -278,9 +278,6 @@ pub mod tests {
     #[test]
     fn test_build_target() {
         let target = starlark_ok("BUILD_TARGET");
-        assert_eq!(
-            target.to_str(),
-            super::super::super::pyrepackager::repackage::HOST
-        );
+        assert_eq!(target.to_str(), crate::app_packaging::repackage::HOST);
     }
 }

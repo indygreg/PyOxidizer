@@ -29,7 +29,7 @@ a rather effective and powerful tool.
 
 mod analyze;
 #[allow(unused)]
-mod app_packaging;
+pub mod app_packaging;
 mod cli;
 mod distribution;
 mod environment;
@@ -37,8 +37,6 @@ mod logging;
 mod projectmgmt;
 #[allow(unused)]
 mod py_packaging;
-#[allow(unused)]
-mod pyrepackager;
 mod python_distributions;
 pub mod starlark;
 

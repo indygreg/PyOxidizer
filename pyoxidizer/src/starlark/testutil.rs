@@ -10,7 +10,7 @@ use starlark::values::Value;
 use std::path::PathBuf;
 
 pub fn starlark_eval(snippet: &str) -> Result<Value, Diagnostic> {
-    let build_target = super::super::pyrepackager::repackage::HOST;
+    let build_target = crate::app_packaging::repackage::HOST;
 
     let context = EnvironmentContext {
         cwd: std::env::current_dir().expect("unable to determine CWD"),

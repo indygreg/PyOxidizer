@@ -123,7 +123,7 @@ mod tests {
         assert_eq!(dist.get_type(), "PythonDistribution");
 
         let host_distribution = CPYTHON_BY_TRIPLE
-            .get(super::super::super::pyrepackager::repackage::HOST)
+            .get(crate::app_packaging::repackage::HOST)
             .unwrap();
 
         let wanted = crate::py_packaging::config::PythonDistribution::Url {

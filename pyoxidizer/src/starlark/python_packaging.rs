@@ -830,9 +830,9 @@ starlark_module! { python_packaging_env =>
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::pyrepackager::config::InstallLocation;
     use super::super::testutil::*;
     use super::*;
+    use crate::app_packaging::config::InstallLocation;
 
     #[test]
     fn test_filter_include_default() {

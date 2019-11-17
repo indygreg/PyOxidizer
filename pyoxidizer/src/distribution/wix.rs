@@ -383,7 +383,7 @@ pub fn build_wix_installer(
     // a bit hacky and should arguably be handled in a better way. Meh.
     let mut other_context = if context.target_triple == "x86_64-pc-windows-msvc" {
         warn!(logger, "building application for x86");
-        super::super::projectmgmt::resolve_build_context(
+        crate::projectmgmt::resolve_build_context(
             logger,
             context.project_path.to_str().unwrap(),
             Some(context.config_path.to_str().unwrap()),
@@ -394,7 +394,7 @@ pub fn build_wix_installer(
         )?
     } else if context.target_triple == "i686-pc-windows-msvc" {
         warn!(logger, "building application for x64");
-        super::super::projectmgmt::resolve_build_context(
+        crate::projectmgmt::resolve_build_context(
             logger,
             context.project_path.to_str().unwrap(),
             Some(context.config_path.to_str().unwrap()),
@@ -410,8 +410,8 @@ pub fn build_wix_installer(
         ));
     };
 
-    super::super::projectmgmt::build_project(logger, &mut other_context)?;
-    super::super::pyrepackager::repackage::package_project(logger, &mut other_context)?;
+    crate::projectmgmt::build_project(logger, &mut other_context)?;
+    crate::app_packaging::repackage::package_project(logger, &mut other_context)?;
 
     let wix_toolset_path = context.build_path.join("wix-toolset");
     if !wix_toolset_path.exists() {
