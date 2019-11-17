@@ -1265,7 +1265,8 @@ pub fn process_config(
     );
 
     let python_config_rs = derive_python_config(
-        &config,
+        &config.embedded_python_config,
+        &config.run,
         &importlib_bootstrap_path,
         &importlib_bootstrap_external_path,
         &py_modules_path,

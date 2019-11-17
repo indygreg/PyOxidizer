@@ -7,19 +7,17 @@ use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 
-use super::config::{RawAllocator, RunMode, TerminfoResolution};
-use crate::pyrepackager::config::Config;
+use super::config::{EmbeddedPythonConfig, RawAllocator, RunMode, TerminfoResolution};
 
 /// Obtain the Rust source code to construct a PythonConfig instance.
 pub fn derive_python_config(
-    config: &Config,
+    embedded: &EmbeddedPythonConfig,
+    run_mode: &RunMode,
     importlib_bootstrap_path: &PathBuf,
     importlib_bootstrap_external_path: &PathBuf,
     py_modules_path: &PathBuf,
     py_resources_path: &PathBuf,
 ) -> String {
-    let embedded = &config.embedded_python_config;
-
     format!(
         "PythonConfig {{\n    \
          standard_io_encoding: {},\n    \
@@ -109,7 +107,7 @@ pub fn derive_python_config(
             Some(path) => "Some(\"".to_owned() + &path + "\".to_string())",
             _ => "None".to_owned(),
         },
-        match config.run {
+        match run_mode {
             RunMode::Noop => "PythonRunMode::None".to_owned(),
             RunMode::Repl => "PythonRunMode::Repl".to_owned(),
             RunMode::Module { ref module } => {
