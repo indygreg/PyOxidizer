@@ -10,13 +10,15 @@ use std::path::PathBuf;
 
 use super::distribution::ExtensionModule;
 use super::resource::{
-    BuiltExtensionModule, PackagedModuleBytecode, PackagedModuleSource, SourceModule,
+    BuiltExtensionModule, BytecodeModule, PackagedModuleBytecode, PackagedModuleSource,
+    SourceModule,
 };
 
 /// Represents Python resources to embed in a binary.
 #[derive(Debug, Default, Clone)]
 pub struct EmbeddedPythonResources {
     pub module_sources: BTreeMap<String, PackagedModuleSource>,
+    pub module_bytecode_requests: BTreeMap<String, BytecodeModule>,
     pub module_bytecodes: BTreeMap<String, PackagedModuleBytecode>,
     pub all_modules: BTreeSet<String>,
     pub all_packages: BTreeSet<String>,
@@ -46,6 +48,20 @@ impl EmbeddedPythonResources {
                 is_package: module.is_package,
             },
         );
+
+        self.all_modules.insert(module.name.clone());
+
+        if module.is_package {
+            self.all_packages.insert(module.name.clone());
+        }
+    }
+
+    /// Add a bytecode module to the collection of embedded bytecode modules.
+    ///
+    /// Actual bytecode will be compiled later.
+    pub fn add_bytecode_module(&mut self, module: &BytecodeModule) {
+        self.module_bytecode_requests
+            .insert(module.name.clone(), module.clone());
 
         self.all_modules.insert(module.name.clone());
 
@@ -208,6 +224,7 @@ pub fn write_resources_entries<W: Write>(
 
 #[cfg(test)]
 mod tests {
+    use super::super::resource::BytecodeOptimizationLevel;
     use super::*;
 
     #[test]
@@ -232,5 +249,21 @@ mod tests {
         assert!(v.module_sources.contains_key("foo"));
         assert!(v.all_modules.contains("foo"));
         assert!(v.all_packages.contains("foo"));
+    }
+
+    #[test]
+    fn test_add_bytecode_module() {
+        let mut v = EmbeddedPythonResources::default();
+        v.add_bytecode_module(&BytecodeModule {
+            name: "foo.bar".to_string(),
+            source: vec![],
+            optimize_level: BytecodeOptimizationLevel::Zero,
+            is_package: false,
+        });
+
+        assert_eq!(v.module_bytecode_requests.len(), 1);
+        assert!(v.module_bytecode_requests.contains_key("foo.bar"));
+        assert!(v.all_modules.contains("foo.bar"));
+        assert!(!v.all_packages.contains("foo.bar"));
     }
 }
