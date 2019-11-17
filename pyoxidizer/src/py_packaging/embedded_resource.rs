@@ -9,10 +9,12 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use super::distribution::ExtensionModule;
-use super::resource::{BuiltExtensionModule, PackagedModuleBytecode, PackagedModuleSource};
+use super::resource::{
+    BuiltExtensionModule, PackagedModuleBytecode, PackagedModuleSource, SourceModule,
+};
 
 /// Represents Python resources to embed in a binary.
-#[derive(Debug)]
+#[derive(Debug, Default, Clone)]
 pub struct EmbeddedPythonResources {
     pub module_sources: BTreeMap<String, PackagedModuleSource>,
     pub module_bytecodes: BTreeMap<String, PackagedModuleBytecode>,
@@ -35,6 +37,23 @@ pub struct ModuleEntry {
 pub type ModuleEntries = Vec<ModuleEntry>;
 
 impl EmbeddedPythonResources {
+    /// Add a source module to the collection of embedded source modules.
+    pub fn add_source_module(&mut self, module: &SourceModule) {
+        self.module_sources.insert(
+            module.name.clone(),
+            PackagedModuleSource {
+                source: module.source.clone(),
+                is_package: module.is_package,
+            },
+        );
+
+        self.all_modules.insert(module.name.clone());
+
+        if module.is_package {
+            self.all_packages.insert(module.name.clone());
+        }
+    }
+
     /// Obtain records for all modules in this resources collection.
     pub fn modules_records(&self) -> ModuleEntries {
         let mut records = ModuleEntries::new();
@@ -185,4 +204,33 @@ pub fn write_resources_entries<W: Write>(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_add_source_module() {
+        let mut v = EmbeddedPythonResources::default();
+        v.add_source_module(&SourceModule {
+            name: "foo.bar".to_string(),
+            source: vec![],
+            is_package: false,
+        });
+
+        assert_eq!(v.module_sources.len(), 1);
+        assert!(v.module_sources.contains_key("foo.bar"));
+        assert!(v.all_modules.contains("foo.bar"));
+        assert!(!v.all_packages.contains("foo.bar"));
+
+        v.add_source_module(&SourceModule {
+            name: "foo".to_string(),
+            source: vec![],
+            is_package: true,
+        });
+        assert!(v.module_sources.contains_key("foo"));
+        assert!(v.all_modules.contains("foo"));
+        assert!(v.all_packages.contains("foo"));
+    }
 }
