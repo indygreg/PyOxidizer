@@ -22,6 +22,12 @@ pub struct PythonDistribution {
     pub distribution: crate::py_packaging::config::PythonDistribution,
 }
 
+impl From<crate::py_packaging::config::PythonDistribution> for PythonDistribution {
+    fn from(distribution: crate::py_packaging::config::PythonDistribution) -> Self {
+        PythonDistribution { distribution }
+    }
+}
+
 impl TypedValue for PythonDistribution {
     immutable!();
     any!();
@@ -79,7 +85,7 @@ starlark_module! { python_distribution_module =>
             }
         };
 
-        Ok(Value::new(PythonDistribution { distribution }))
+        Ok(Value::new(PythonDistribution::from(distribution)))
     }
 
     default_python_distribution(env env, build_target=None) {
@@ -101,7 +107,7 @@ starlark_module! { python_distribution_module =>
                     sha256: dist.sha256.clone(),
                 };
 
-                Ok(Value::new(PythonDistribution { distribution }))
+                Ok(Value::new(PythonDistribution::from(distribution)))
             }
             None => Err(ValueError::Runtime(RuntimeError {
                 code: "no_default_distribution",
