@@ -2,17 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use super::super::pyrepackager::config::{
-    resolve_install_location, PackagingFilterInclude, PackagingPackageRoot,
-    PackagingPipInstallSimple, PackagingPipRequirementsFile, PackagingSetupPyInstall,
-    PackagingStdlib, PackagingStdlibExtensionVariant, PackagingStdlibExtensionsExplicitExcludes,
-    PackagingStdlibExtensionsExplicitIncludes, PackagingStdlibExtensionsPolicy,
-    PackagingVirtualenv, PackagingWriteLicenseFiles,
-};
-use super::env::{
-    optional_dict_arg, optional_list_arg, required_bool_arg, required_list_arg, required_str_arg,
-    required_type_arg,
-};
 use starlark::environment::Environment;
 use starlark::values::{
     default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
@@ -25,6 +14,18 @@ use starlark::{
 use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+
+use super::env::{
+    optional_dict_arg, optional_list_arg, required_bool_arg, required_list_arg, required_str_arg,
+    required_type_arg,
+};
+use crate::app_packaging::config::{
+    resolve_install_location, PackagingFilterInclude, PackagingPackageRoot,
+    PackagingPipInstallSimple, PackagingPipRequirementsFile, PackagingSetupPyInstall,
+    PackagingStdlib, PackagingStdlibExtensionVariant, PackagingStdlibExtensionsExplicitExcludes,
+    PackagingStdlibExtensionsExplicitIncludes, PackagingStdlibExtensionsPolicy,
+    PackagingVirtualenv, PackagingWriteLicenseFiles,
+};
 
 #[derive(Debug, Clone)]
 pub struct FilterInclude {

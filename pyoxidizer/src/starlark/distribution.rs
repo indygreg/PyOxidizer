@@ -15,7 +15,7 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct TarballDistribution {
-    pub distribution: super::super::pyrepackager::config::DistributionTarball,
+    pub distribution: crate::app_packaging::config::DistributionTarball,
 }
 
 impl TypedValue for TarballDistribution {
@@ -50,7 +50,7 @@ impl TypedValue for TarballDistribution {
 
 #[derive(Debug, Clone)]
 pub struct WixInstallerDistribution {
-    pub distribution: super::super::pyrepackager::config::DistributionWixInstaller,
+    pub distribution: crate::app_packaging::config::DistributionWixInstaller,
 }
 
 impl TypedValue for WixInstallerDistribution {
@@ -85,7 +85,7 @@ impl TypedValue for WixInstallerDistribution {
 
 #[derive(Debug, Clone)]
 pub struct Distribution {
-    pub distribution: super::super::pyrepackager::config::Distribution,
+    pub distribution: crate::app_packaging::config::Distribution,
 }
 
 impl TypedValue for Distribution {
@@ -123,7 +123,7 @@ starlark_module! { distribution_env =>
     TarballDistribution(path_prefix=None) {
         let path_prefix = optional_str_arg("path_prefix", &path_prefix)?;
 
-        let distribution = super::super::pyrepackager::config::DistributionTarball {
+        let distribution = crate::app_packaging::config::DistributionTarball {
             path_prefix,
         };
 
@@ -140,7 +140,7 @@ starlark_module! { distribution_env =>
         let msi_upgrade_code_amd64 = optional_str_arg("msi_upgrade_code_amd64", &msi_upgrade_code_amd64)?;
         let bundle_upgrade_code = optional_str_arg("bundle_upgrade_code", &bundle_upgrade_code)?;
 
-        let distribution = super::super::pyrepackager::config::DistributionWixInstaller {
+        let distribution = crate::app_packaging::config::DistributionWixInstaller {
             msi_upgrade_code_x86,
             msi_upgrade_code_amd64,
             bundle_upgrade_code,

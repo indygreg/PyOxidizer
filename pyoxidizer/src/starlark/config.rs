@@ -2,23 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use super::super::pyrepackager::config::{
-    BuildConfig as ConfigBuildConfig, Config as ConfigConfig, Distribution, PythonPackaging,
-};
-use super::distribution::{TarballDistribution, WixInstallerDistribution};
-use super::embedded_python_config::EmbeddedPythonConfig;
-use super::env::{required_str_arg, required_type_arg};
-use super::python_distribution::PythonDistribution;
-use super::python_packaging::{
-    FilterInclude, PackageRoot, PipInstallSimple, PipRequirementsFile, SetupPyInstall, Stdlib,
-    StdlibExtensionVariant, StdlibExtensionsExplicitExcludes, StdlibExtensionsExplicitIncludes,
-    StdlibExtensionsPolicy, Virtualenv, WriteLicenseFiles,
-};
-use super::python_run_mode::PythonRunMode;
-use crate::py_packaging::config::{
-    EmbeddedPythonConfig as ConfigEmbeddedPythonConfig,
-    PythonDistribution as ConfigPythonDistribution, RunMode,
-};
 use starlark::environment::Environment;
 use starlark::values::{
     default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
@@ -32,6 +15,24 @@ use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;
+
+use super::distribution::{TarballDistribution, WixInstallerDistribution};
+use super::embedded_python_config::EmbeddedPythonConfig;
+use super::env::{required_str_arg, required_type_arg};
+use super::python_distribution::PythonDistribution;
+use super::python_packaging::{
+    FilterInclude, PackageRoot, PipInstallSimple, PipRequirementsFile, SetupPyInstall, Stdlib,
+    StdlibExtensionVariant, StdlibExtensionsExplicitExcludes, StdlibExtensionsExplicitIncludes,
+    StdlibExtensionsPolicy, Virtualenv, WriteLicenseFiles,
+};
+use super::python_run_mode::PythonRunMode;
+use crate::app_packaging::config::{
+    BuildConfig as ConfigBuildConfig, Config as ConfigConfig, Distribution, PythonPackaging,
+};
+use crate::py_packaging::config::{
+    EmbeddedPythonConfig as ConfigEmbeddedPythonConfig,
+    PythonDistribution as ConfigPythonDistribution, RunMode,
+};
 
 #[derive(Debug, Clone)]
 pub struct Config {

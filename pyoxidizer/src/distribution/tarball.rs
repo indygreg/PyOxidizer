@@ -6,7 +6,7 @@ use slog::warn;
 use std::path::PathBuf;
 use tar;
 
-use super::super::pyrepackager::config::DistributionTarball;
+use crate::app_packaging::config::DistributionTarball;
 use crate::app_packaging::state::BuildContext;
 
 pub fn produce_tarball(

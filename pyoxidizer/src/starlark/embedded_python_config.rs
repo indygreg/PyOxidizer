@@ -2,9 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use super::super::pyrepackager::config::default_raw_allocator;
-use super::env::{optional_list_arg, optional_str_arg, required_bool_arg, required_type_arg};
-use crate::py_packaging::config::{RawAllocator, TerminfoResolution};
 use starlark::environment::Environment;
 use starlark::values::{
     default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
@@ -17,6 +14,10 @@ use starlark::{
 use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+
+use super::env::{optional_list_arg, optional_str_arg, required_bool_arg, required_type_arg};
+use crate::app_packaging::config::default_raw_allocator;
+use crate::py_packaging::config::{RawAllocator, TerminfoResolution};
 
 #[derive(Debug, Clone)]
 pub struct EmbeddedPythonConfig {

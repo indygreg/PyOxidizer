@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 
-use super::super::pyrepackager::config::DistributionWixInstaller;
+use crate::app_packaging::config::DistributionWixInstaller;
 use crate::app_packaging::state::BuildContext;
 
 const TOOLSET_URL: &str =

@@ -5,7 +5,7 @@
 pub mod tarball;
 pub mod wix;
 
-use super::pyrepackager::config::Distribution;
+use crate::app_packaging::config::Distribution;
 use crate::app_packaging::state::BuildContext;
 
 /// Produce distributions from a built application.

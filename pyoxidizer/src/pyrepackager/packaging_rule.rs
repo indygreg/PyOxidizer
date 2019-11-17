@@ -10,7 +10,7 @@ use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
-use super::config::{
+use crate::app_packaging::config::{
     InstallLocation, PackagingPackageRoot, PackagingPipInstallSimple, PackagingPipRequirementsFile,
     PackagingSetupPyInstall, PackagingStdlib, PackagingStdlibExtensionVariant,
     PackagingStdlibExtensionsExplicitExcludes, PackagingStdlibExtensionsExplicitIncludes,
