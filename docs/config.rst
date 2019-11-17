@@ -170,6 +170,23 @@ Each instance has the following attributes:
 
 Instances cannot be manually constructed.
 
+``PythonBytecodeModule``
+------------------------
+
+This type represents a Python module defined through bytecode.
+
+Each instance has the following attributes:
+
+``name`` (string)
+   Fully qualified name of the module. e.g. ``foo.bar``
+
+``optimize_level`` (int)
+   Optimization level of compiled bytecode. Must be the value
+  ``0``, ``1``, or ``2``.
+
+``is_package`` (bool)
+   Whether the module is also a Python package (or sub-package).
+
 .. _config_embedded_python_config:
 
 ``EmbeddedPythonConfig(...)```
