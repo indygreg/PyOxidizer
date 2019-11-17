@@ -2,6 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use itertools::Itertools;
+use slog::warn;
 use starlark::environment::Environment;
 use starlark::values::{
     default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
@@ -17,8 +19,11 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use super::env::{optional_str_arg, required_str_arg};
+use super::python_resource::PythonSourceModule;
 use crate::app_packaging::environment::EnvironmentContext;
-use crate::py_packaging::distribution::PythonDistributionLocation;
+use crate::py_packaging::distribution::{
+    resolve_parsed_distribution, ParsedPythonDistribution, PythonDistributionLocation,
+};
 use crate::python_distributions::CPYTHON_BY_TRIPLE;
 
 #[derive(Debug, Clone)]
@@ -26,6 +31,8 @@ pub struct PythonDistribution {
     pub source: PythonDistributionLocation,
 
     dest_dir: PathBuf,
+
+    distribution: Option<ParsedPythonDistribution>,
 }
 
 impl PythonDistribution {
@@ -33,7 +40,19 @@ impl PythonDistribution {
         PythonDistribution {
             source: location,
             dest_dir: dest_dir.to_path_buf(),
+            distribution: None,
         }
+    }
+
+    fn ensure_distribution_resolved(&mut self, logger: &slog::Logger) {
+        if self.distribution.is_some() {
+            return;
+        }
+
+        let dist = resolve_parsed_distribution(logger, &self.source, &self.dest_dir).unwrap();
+        warn!(logger, "distribution info: {:#?}", dist.as_minimal_info());
+
+        self.distribution = Some(dist);
     }
 }
 
@@ -98,6 +117,20 @@ starlark_module! { python_distribution_module =>
         let dest_dir = context.downcast_apply(|x: &EnvironmentContext| x.python_distributions_path.clone());
 
         Ok(Value::new(PythonDistribution::from_location(distribution, &dest_dir)))
+    }
+
+    PythonDistribution.source_modules(env env, this) {
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        Ok(Value::from(this.downcast_apply_mut(|dist: &mut PythonDistribution| {
+            dist.ensure_distribution_resolved(&logger);
+
+            dist.distribution.as_ref().unwrap().source_modules().iter().map(|module| {
+                Value::new(PythonSourceModule { module: module.clone() })
+            }).collect_vec()
+        })))
     }
 
     default_python_distribution(env env, build_target=None) {
@@ -195,5 +228,11 @@ mod tests {
         };
 
         dist.downcast_apply(|x: &PythonDistribution| assert_eq!(x.source, wanted));
+    }
+
+    #[test]
+    fn test_source_modules() {
+        let mods = starlark_ok("default_python_distribution().source_modules()");
+        assert_eq!(mods.get_type(), "list");
     }
 }

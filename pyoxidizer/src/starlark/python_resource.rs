@@ -24,7 +24,7 @@ impl TypedValue for PythonSourceModule {
     );
 
     fn to_str(&self) -> String {
-        format!("PythonSourceModule<{:#?}>", self.module)
+        format!("PythonSourceModule<name={}>", self.module.name)
     }
 
     fn to_repr(&self) -> String {

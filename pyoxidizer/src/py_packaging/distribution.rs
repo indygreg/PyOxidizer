@@ -239,7 +239,7 @@ pub struct LicenseInfo {
 /// Distribution info is typically derived from a tarball containing a
 /// Python install and its build artifacts.
 #[allow(unused)]
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ParsedPythonDistribution {
     /// Directory where distribution lives in the filesystem.
     pub base_dir: PathBuf,
@@ -906,4 +906,33 @@ pub fn resolve_python_distribution_archive(
             download_distribution(url, sha256, cache_dir)
         }
     }
+}
+
+/// Resolve a parsed distribution from a location and local filesystem path.
+///
+/// The distribution will be copied and extracted into the destination
+/// directory. It will be parsed from the extracted location.
+///
+/// The created files outlive the returned object.
+pub fn resolve_parsed_distribution(
+    logger: &slog::Logger,
+    location: &PythonDistributionLocation,
+    dest_dir: &Path,
+) -> Result<ParsedPythonDistribution, String> {
+    warn!(logger, "resolving Python distribution {:?}", location);
+    let path = resolve_python_distribution_archive(location, dest_dir);
+    warn!(
+        logger,
+        "Python distribution available at {}",
+        path.display()
+    );
+
+    let distribution_hash = match location {
+        PythonDistributionLocation::Local { sha256, .. } => sha256,
+        PythonDistributionLocation::Url { sha256, .. } => sha256,
+    };
+
+    let distribution_path = dest_dir.join(format!("python.{}", distribution_hash));
+
+    ParsedPythonDistribution::from_path(logger, &path, &distribution_path)
 }
