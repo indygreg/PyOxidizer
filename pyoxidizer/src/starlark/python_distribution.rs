@@ -19,7 +19,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use super::env::{optional_str_arg, required_str_arg};
-use super::python_resource::PythonSourceModule;
+use super::python_resource::{PythonResourceData, PythonSourceModule};
 use crate::app_packaging::environment::EnvironmentContext;
 use crate::py_packaging::distribution::{
     resolve_parsed_distribution, ParsedPythonDistribution, PythonDistributionLocation,
@@ -129,6 +129,20 @@ starlark_module! { python_distribution_module =>
 
             dist.distribution.as_ref().unwrap().source_modules().iter().map(|module| {
                 Value::new(PythonSourceModule { module: module.clone() })
+            }).collect_vec()
+        })))
+    }
+
+    PythonDistribution.resources_data(env env, this) {
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        Ok(Value::from(this.downcast_apply_mut(|dist: &mut PythonDistribution| {
+            dist.ensure_distribution_resolved(&logger);
+
+            dist.distribution.as_ref().unwrap().resources_data().iter().map(|data| {
+                Value::new(PythonResourceData { data: data.clone() })
             }).collect_vec()
         })))
     }

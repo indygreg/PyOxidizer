@@ -17,7 +17,9 @@ use std::collections::HashMap;
 
 use super::env::required_type_arg;
 use crate::py_packaging::embedded_resource::EmbeddedPythonResourcesPrePackaged;
-use crate::py_packaging::resource::{BytecodeModule, BytecodeOptimizationLevel, SourceModule};
+use crate::py_packaging::resource::{
+    BytecodeModule, BytecodeOptimizationLevel, ResourceData, SourceModule,
+};
 
 #[derive(Debug, Clone)]
 pub struct PythonSourceModule {
@@ -151,6 +153,68 @@ impl TypedValue for PythonBytecodeModule {
 }
 
 #[derive(Debug, Clone)]
+pub struct PythonResourceData {
+    pub data: ResourceData,
+}
+
+impl TypedValue for PythonResourceData {
+    immutable!();
+    any!();
+    not_supported!(
+        binop, dir_attr, function, get_hash, indexable, iterable, sequence, set_attr, to_int
+    );
+
+    fn to_str(&self) -> String {
+        format!(
+            "PythonResourceData<package={}, name={}>",
+            self.data.package, self.data.name
+        )
+    }
+
+    fn to_repr(&self) -> String {
+        self.to_str()
+    }
+
+    fn get_type(&self) -> &'static str {
+        "PythonResourceData"
+    }
+
+    fn to_bool(&self) -> bool {
+        true
+    }
+
+    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
+        default_compare(self, other)
+    }
+
+    fn get_attr(&self, attribute: &str) -> ValueResult {
+        let v = match attribute {
+            "package" => Value::new(self.data.package.clone()),
+            "name" => Value::new(self.data.name.clone()),
+            // TODO expose raw data
+            attr => {
+                return Err(ValueError::OperationNotSupported {
+                    op: format!(".{}", attr),
+                    left: "PythonResourceData".to_string(),
+                    right: None,
+                })
+            }
+        };
+
+        Ok(v)
+    }
+
+    fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
+        Ok(match attribute {
+            "package" => true,
+            "name" => true,
+            // TODO expose raw data
+            _ => false,
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct PythonEmbeddedResources {
     pub embedded: EmbeddedPythonResourcesPrePackaged,
 }
@@ -232,6 +296,17 @@ starlark_module! { python_resource_env =>
                 optimize_level,
                 is_package: m.is_package,
             });
+        });
+
+        Ok(Value::new(None))
+    }
+
+    PythonEmbeddedResources.add_resource_data(this, resource) {
+        required_type_arg("resource", "PythonResourceData", &resource)?;
+
+        this.downcast_apply_mut(|embedded: &mut PythonEmbeddedResources| {
+            let r = resource.downcast_apply(|r: &PythonResourceData| r.data.clone());
+            embedded.embedded.add_resource(&r);
         });
 
         Ok(Value::new(None))

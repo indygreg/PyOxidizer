@@ -143,6 +143,12 @@ Examples:
 Returns a ``list`` of ``PythonSourceModule`` representing Python
 source modules present in this distribution.
 
+``PythonDistribution.resources_data()``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Returns a ``list`` of ``PythonResourceData`` representing resource files
+present in this distribution.
+
 ``default_python_distribution(build_target=None)``
 --------------------------------------------------
 
@@ -187,6 +193,21 @@ Each instance has the following attributes:
 ``is_package`` (bool)
    Whether the module is also a Python package (or sub-package).
 
+``PythonResourcesData``
+-----------------------
+
+This type represents Python resource data. Resource data is a named
+blob associated with a Python package. It is typically accessed using
+the ``importlib.resources`` API.
+
+Each instance has the following attributes:
+
+``package`` (string)
+   Python package this resource is associated with.
+
+``name`` (string)
+   Name of this resource.
+
 ``PythonEmbeddedResources()``
 -----------------------------
 
@@ -219,6 +240,16 @@ or ``2``.
 
 Only one level of bytecode can be registered per named module. If called
 multiple times for the same module, the last write wins.
+
+``PythonEmbeddedResources.add_resource_data(resource)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method adds a ``PythonResourceData`` instance to the
+``PythonEmbeddedResources`` instance, making that resource available
+via in-memory access.
+
+If multiple resources sharing the same ``(package, name)`` pair are added,
+the last added one is used.
 
 .. _config_embedded_python_config:
 
