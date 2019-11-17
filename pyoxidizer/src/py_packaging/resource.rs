@@ -27,7 +27,7 @@ impl SourceModule {
 }
 
 /// An optimization level for Python bytecode.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BytecodeOptimizationLevel {
     Zero,
     One,

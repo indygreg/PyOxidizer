@@ -3,7 +3,10 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use starlark::environment::Environment;
-use starlark::values::{default_compare, TypedValue, Value, ValueError, ValueResult};
+use starlark::values::{
+    default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
+    INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+};
 use starlark::{
     any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
     starlark_signature_extraction, starlark_signatures,
@@ -189,12 +192,46 @@ starlark_module! { python_resource_env =>
         Ok(Value::new(PythonEmbeddedResources { embedded }))
     }
 
-    PythonEmbeddedResources.add_source_module(this, module) {
+    PythonEmbeddedResources.add_module_source(this, module) {
         required_type_arg("module", "PythonSourceModule", &module)?;
 
         this.downcast_apply_mut(|embedded: &mut PythonEmbeddedResources| {
             let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
             embedded.embedded.add_source_module(&m);
+        });
+
+        Ok(Value::new(None))
+    }
+
+    // TODO consider unifying with add_module_source() so there only needs to be
+    // a single function call.
+    PythonEmbeddedResources.add_module_bytecode(this, module, optimize_level=0) {
+        required_type_arg("module", "PythonSourceModule", &module)?;
+        required_type_arg("optimize_level", "int", &optimize_level)?;
+
+        let optimize_level = optimize_level.to_int().unwrap();
+
+        let optimize_level = match optimize_level {
+            0 => BytecodeOptimizationLevel::Zero,
+            1 => BytecodeOptimizationLevel::One,
+            2 => BytecodeOptimizationLevel::Two,
+            i => {
+                return Err(RuntimeError {
+                    code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                    message: format!("optimize_level must be 0, 1, or 2: got {}", i),
+                    label: "invalid optimize_level value".to_string(),
+                }.into());
+            }
+        };
+
+        this.downcast_apply_mut(|embedded: &mut PythonEmbeddedResources| {
+            let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
+            embedded.embedded.add_bytecode_module(&BytecodeModule {
+                name: m.name.clone(),
+                source: m.source.clone(),
+                optimize_level,
+                is_package: m.is_package,
+            });
         });
 
         Ok(Value::new(None))

@@ -201,11 +201,24 @@ different resource classes. Those resource classes include:
 * Resource files loadable through Python's ``importlib.resources``
   API.
 
-``PythonEmbeddedResources.add_source_module(module)``
+``PythonEmbeddedResources.add_module_source(module)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This method registers a Python source module with a ``PythonEmbeddedResources``
 instance. The argument must be a ``PythonSourceModule`` instance.
+
+If called multiple times for the same module, the last write wins.
+
+``PythonEmbeddedResources.add_module_bytecode(module, optimize_level=0)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method registers a Python module bytecode with a
+``PythonEmbeddedResources`` instance. The first argument must be a
+``PythonSourceModule`` instance and the 2nd argument the value ``0``, ``1``,
+or ``2``.
+
+Only one level of bytecode can be registered per named module. If called
+multiple times for the same module, the last write wins.
 
 .. _config_embedded_python_config:
 
