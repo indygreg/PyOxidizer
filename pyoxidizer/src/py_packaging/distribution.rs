@@ -16,7 +16,7 @@ use url::Url;
 use super::fsscan::{
     find_python_resources, is_package_from_path, walk_tree_files, PythonFileResource,
 };
-use super::resource::{PythonResource, SourceModule};
+use super::resource::{PythonResource, ResourceData, SourceModule};
 use crate::licensing::NON_GPL_LICENSES;
 
 #[cfg(windows)]
@@ -396,6 +396,26 @@ impl ParsedPythonDistribution {
                 }
             })
             .collect()
+    }
+
+    /// Obtain resolved `ResourceData` instances for this distribution.
+    ///
+    /// This effectively resolves the raw file content for resource files
+    /// into `ResourceData` instances.
+    pub fn resources_data(&self) -> Vec<ResourceData> {
+        let mut res = Vec::new();
+
+        for (package, inner) in self.resources.iter() {
+            for (name, path) in inner.iter() {
+                res.push(ResourceData {
+                    package: package.clone(),
+                    name: name.clone(),
+                    data: fs::read(&path).expect("error reading resource file"),
+                });
+            }
+        }
+
+        res
     }
 
     pub fn filter_extension_modules(
