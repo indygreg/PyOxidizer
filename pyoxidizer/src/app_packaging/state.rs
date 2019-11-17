@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use super::config::Config;
 use crate::pypackaging::distribution::LicenseInfo;
 use crate::pypackaging::resource::AppRelativeResources;
+use crate::pyrepackager::config::Config;
 
 /// Holds state needed to perform packaging.
 ///

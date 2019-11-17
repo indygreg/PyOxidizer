@@ -2,11 +2,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use super::super::pyrepackager::config::DistributionTarball;
-use super::super::pyrepackager::state::BuildContext;
 use slog::warn;
 use std::path::PathBuf;
 use tar;
+
+use super::super::pyrepackager::config::DistributionTarball;
+use crate::app_packaging::state::BuildContext;
 
 pub fn produce_tarball(
     logger: &slog::Logger,

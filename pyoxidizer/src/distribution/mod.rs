@@ -2,11 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use super::pyrepackager::config::Distribution;
-use super::pyrepackager::state::BuildContext;
-
 pub mod tarball;
 pub mod wix;
+
+use super::pyrepackager::config::Distribution;
+use crate::app_packaging::state::BuildContext;
 
 /// Produce distributions from a built application.
 pub fn produce_distributions(

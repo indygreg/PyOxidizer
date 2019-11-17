@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use handlebars::Handlebars;
 use lazy_static::lazy_static;
 use sha2::Digest;
 use slog::warn;
@@ -10,8 +11,7 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 
 use super::super::pyrepackager::config::DistributionWixInstaller;
-use super::super::pyrepackager::state::BuildContext;
-use handlebars::Handlebars;
+use crate::app_packaging::state::BuildContext;
 
 const TOOLSET_URL: &str =
     "https://github.com/wixtoolset/wix3/releases/download/wix3111rtm/wix311-binaries.zip";

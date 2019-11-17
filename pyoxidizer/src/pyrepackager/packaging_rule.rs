@@ -16,7 +16,7 @@ use super::config::{
     PackagingStdlibExtensionsExplicitExcludes, PackagingStdlibExtensionsExplicitIncludes,
     PackagingStdlibExtensionsPolicy, PackagingVirtualenv, PythonPackaging,
 };
-use super::state::BuildContext;
+use crate::app_packaging::state::BuildContext;
 use crate::pypackaging::distribution::PythonDistributionInfo;
 use crate::pypackaging::fsscan::{find_python_resources, PythonFileResource};
 use crate::pypackaging::resource::{AppRelativeResources, BuiltExtensionModule, PythonResource};

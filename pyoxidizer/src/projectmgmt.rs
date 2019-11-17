@@ -21,7 +21,7 @@ use super::environment::{
 };
 use super::pyrepackager::config::find_pyoxidizer_config_file_env;
 use super::pyrepackager::repackage::{package_project, process_config, run_from_build};
-use super::pyrepackager::state::BuildContext;
+use crate::app_packaging::state::BuildContext;
 use crate::pypackaging::config::RawAllocator;
 use crate::pypackaging::distribution::{analyze_python_distribution_tar_zst, python_exe_path};
 use crate::pypackaging::fsscan::walk_tree_files;
