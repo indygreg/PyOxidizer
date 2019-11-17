@@ -187,6 +187,26 @@ Each instance has the following attributes:
 ``is_package`` (bool)
    Whether the module is also a Python package (or sub-package).
 
+``PythonEmbeddedResources()``
+-----------------------------
+
+This type represents Python resources to embed in a Python binary.
+
+This type is effectively a meta type representing collections of
+different resource classes. Those resource classes include:
+
+* Python modules as defined by Python source code.
+* Python modules as defined by Python bytecode.
+* Compiled Python extension modules.
+* Resource files loadable through Python's ``importlib.resources``
+  API.
+
+``PythonEmbeddedResources.add_source_module(module)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method registers a Python source module with a ``PythonEmbeddedResources``
+instance. The argument must be a ``PythonSourceModule`` instance.
+
 .. _config_embedded_python_config:
 
 ``EmbeddedPythonConfig(...)```

@@ -4,11 +4,15 @@
 
 use starlark::environment::Environment;
 use starlark::values::{default_compare, TypedValue, Value, ValueError, ValueResult};
-use starlark::{any, immutable, not_supported};
+use starlark::{
+    any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
+    starlark_signature_extraction, starlark_signatures,
+};
 use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
+use super::env::required_type_arg;
 use crate::py_packaging::embedded_resource::EmbeddedPythonResources;
 use crate::py_packaging::resource::{BytecodeModule, BytecodeOptimizationLevel, SourceModule};
 
@@ -174,5 +178,25 @@ impl TypedValue for PythonEmbeddedResources {
 
     fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
         default_compare(self, other)
+    }
+}
+
+starlark_module! { python_resource_env =>
+    #[allow(non_snake_case)]
+    PythonEmbeddedResources(env _env) {
+        let embedded = EmbeddedPythonResources::default();
+
+        Ok(Value::new(PythonEmbeddedResources { embedded }))
+    }
+
+    PythonEmbeddedResources.add_source_module(this, module) {
+        required_type_arg("module", "PythonSourceModule", &module)?;
+
+        this.downcast_apply_mut(|embedded: &mut PythonEmbeddedResources| {
+            let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
+            embedded.embedded.add_source_module(&m);
+        });
+
+        Ok(Value::new(None))
     }
 }
