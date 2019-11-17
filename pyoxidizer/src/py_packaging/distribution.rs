@@ -9,7 +9,7 @@ use slog::warn;
 use std::collections::BTreeMap;
 use std::fs;
 use std::fs::File;
-use std::io::Read;
+use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
 use url::Url;
 
@@ -327,6 +327,22 @@ pub enum ExtensionModuleFilter {
 }
 
 impl ParsedPythonDistribution {
+    pub fn from_path(
+        logger: &slog::Logger,
+        path: &Path,
+        extract_dir: &Path,
+    ) -> Result<ParsedPythonDistribution, String> {
+        let mut fh =
+            fs::File::open(path).or_else(|_| Err(format!("unable to open {}", path.display())))?;
+
+        let mut python_distribution_data = Vec::new();
+        fh.read_to_end(&mut python_distribution_data).unwrap();
+        let dist_cursor = Cursor::new(python_distribution_data);
+        warn!(logger, "reading data from Python distribution...");
+
+        analyze_python_distribution_tar_zst(dist_cursor, &extract_dir)
+    }
+
     pub fn as_minimal_info(&self) -> PythonDistributionMinimalInfo {
         PythonDistributionMinimalInfo {
             flavor: self.flavor.clone(),

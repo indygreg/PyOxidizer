@@ -9,7 +9,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
 use std::fs::create_dir_all;
-use std::io::{BufRead, BufReader, Cursor, Error as IOError, Read, Write};
+use std::io::{BufRead, BufReader, Error as IOError, Write};
 use std::path::{Path, PathBuf};
 
 use super::config::{
@@ -23,8 +23,7 @@ use super::state::{BuildContext, PackagingState};
 use crate::py_packaging::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode};
 use crate::py_packaging::config::PythonDistribution;
 use crate::py_packaging::distribution::{
-    analyze_python_distribution_tar_zst, resolve_python_distribution_archive, ExtensionModule,
-    ParsedPythonDistribution,
+    resolve_python_distribution_archive, ExtensionModule, ParsedPythonDistribution,
 };
 use crate::py_packaging::embedded_resource::EmbeddedPythonResources;
 use crate::py_packaging::libpython::{derive_importlib, link_libpython};
@@ -1136,14 +1135,14 @@ pub fn process_config(
         "Python distribution available at {}",
         python_distribution_path.display()
     );
-    let mut fh = fs::File::open(&python_distribution_path).unwrap();
-    let mut python_distribution_data = Vec::new();
-    fh.read_to_end(&mut python_distribution_data).unwrap();
-    let dist_cursor = Cursor::new(python_distribution_data);
-    warn!(logger, "reading data from Python distribution...");
 
-    let dist = analyze_python_distribution_tar_zst(dist_cursor, &context.python_distribution_path)
-        .unwrap();
+    let dist = ParsedPythonDistribution::from_path(
+        logger,
+        &python_distribution_path,
+        &context.python_distribution_path,
+    )
+    .unwrap();
+
     warn!(logger, "distribution info: {:#?}", dist.as_minimal_info());
 
     // Produce the custom frozen importlib modules.
