@@ -15,7 +15,7 @@ use super::config::{
     PackagingStdlibExtensionsPolicy, PackagingVirtualenv, PythonPackaging,
 };
 use super::state::BuildContext;
-use crate::py_packaging::distribution::PythonDistributionInfo;
+use crate::py_packaging::distribution::{is_stdlib_test_package, PythonDistributionInfo};
 use crate::py_packaging::distutils::{prepare_hacked_distutils, read_built_extensions};
 use crate::py_packaging::fsscan::{find_python_resources, PythonFileResource};
 use crate::py_packaging::resource::{AppRelativeResources, PythonResource};
@@ -33,33 +33,6 @@ const NON_GPL_LICENSES: &[&str] = &[
     "X11",
     "Zlib",
 ];
-
-const STDLIB_TEST_PACKAGES: &[&str] = &[
-    "bsddb.test",
-    "ctypes.test",
-    "distutils.tests",
-    "email.test",
-    "idlelib.idle_test",
-    "json.tests",
-    "lib-tk.test",
-    "lib2to3.tests",
-    "sqlite3.test",
-    "test",
-    "tkinter.test",
-    "unittest.test",
-];
-
-pub fn is_stdlib_test_package(name: &str) -> bool {
-    for package in STDLIB_TEST_PACKAGES {
-        let prefix = format!("{}.", package);
-
-        if &name == package || name.starts_with(&prefix) {
-            return true;
-        }
-    }
-
-    false
-}
 
 #[derive(Debug)]
 pub enum ResourceAction {

@@ -21,6 +21,33 @@ const PIP_EXE_BASENAME: &str = "pip3.exe";
 #[cfg(unix)]
 const PIP_EXE_BASENAME: &str = "pip3";
 
+const STDLIB_TEST_PACKAGES: &[&str] = &[
+    "bsddb.test",
+    "ctypes.test",
+    "distutils.tests",
+    "email.test",
+    "idlelib.idle_test",
+    "json.tests",
+    "lib-tk.test",
+    "lib2to3.tests",
+    "sqlite3.test",
+    "test",
+    "tkinter.test",
+    "unittest.test",
+];
+
+pub fn is_stdlib_test_package(name: &str) -> bool {
+    for package in STDLIB_TEST_PACKAGES {
+        let prefix = format!("{}.", package);
+
+        if &name == package || name.starts_with(&prefix) {
+            return true;
+        }
+    }
+
+    false
+}
+
 #[derive(Debug, Deserialize)]
 struct LinkEntry {
     name: String,
