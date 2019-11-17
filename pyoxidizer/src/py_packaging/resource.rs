@@ -58,6 +58,24 @@ impl BytecodeModule {
     }
 }
 
+/// Python package resource data, agnostic of storage location.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ResourceData {
+    pub package: String,
+    pub name: String,
+    pub data: Vec<u8>,
+}
+
+impl ResourceData {
+    pub fn as_python_resource(&self) -> PythonResource {
+        PythonResource::Resource {
+            package: self.package.clone(),
+            name: self.name.clone(),
+            data: self.data.clone(),
+        }
+    }
+}
+
 /// Represents an extension module built during packaging.
 ///
 /// This is like a light version of `ExtensionModule`.

@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use super::distribution::ExtensionModule;
 use super::resource::{
     BuiltExtensionModule, BytecodeModule, PackagedModuleBytecode, PackagedModuleSource,
-    SourceModule,
+    ResourceData, SourceModule,
 };
 
 /// Represents Python resources to embed in a binary.
@@ -22,6 +22,7 @@ use super::resource::{
 pub struct EmbeddedPythonResourcesPrePackaged {
     pub source_modules: BTreeMap<String, SourceModule>,
     pub bytecode_modules: BTreeMap<String, BytecodeModule>,
+    pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
 }
 
 impl EmbeddedPythonResourcesPrePackaged {
@@ -35,6 +36,19 @@ impl EmbeddedPythonResourcesPrePackaged {
     pub fn add_bytecode_module(&mut self, module: &BytecodeModule) {
         self.bytecode_modules
             .insert(module.name.clone(), module.clone());
+    }
+
+    /// Add resource data.
+    ///
+    /// Resource data belongs to a Python package and has a name and bytes data.
+    pub fn add_resource(&mut self, resource: &ResourceData) {
+        if !self.resources.contains_key(&resource.package) {
+            self.resources
+                .insert(resource.package.clone(), BTreeMap::new());
+        }
+
+        let inner = self.resources.get_mut(&resource.package).unwrap();
+        inner.insert(resource.name.clone(), resource.data.clone());
     }
 }
 
