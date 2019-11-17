@@ -11,7 +11,7 @@ use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
 use super::config::{
-    PackagingPackageRoot, PackagingPipInstallSimple, PackagingPipRequirementsFile,
+    InstallLocation, PackagingPackageRoot, PackagingPipInstallSimple, PackagingPipRequirementsFile,
     PackagingSetupPyInstall, PackagingStdlib, PackagingStdlibExtensionVariant,
     PackagingStdlibExtensionsExplicitExcludes, PackagingStdlibExtensionsExplicitIncludes,
     PackagingStdlibExtensionsPolicy, PackagingVirtualenv, PythonPackaging,
@@ -19,10 +19,7 @@ use super::config::{
 use super::state::BuildContext;
 use crate::pypackaging::distribution::PythonDistributionInfo;
 use crate::pypackaging::fsscan::{find_python_resources, PythonFileResource};
-use crate::pypackaging::resource::{
-    AppRelativeResources, BuiltExtensionModule, PythonResource, PythonResourceAction,
-    ResourceAction, ResourceLocation,
-};
+use crate::pypackaging::resource::{AppRelativeResources, BuiltExtensionModule, PythonResource};
 
 /// SPDX licenses in Python distributions that are not GPL.
 ///
@@ -63,6 +60,40 @@ pub fn is_stdlib_test_package(name: &str) -> bool {
     }
 
     false
+}
+
+#[derive(Debug)]
+pub enum ResourceAction {
+    Add,
+    Remove,
+}
+
+/// Represents the packaging location for a resource.
+#[derive(Clone, Debug)]
+pub enum ResourceLocation {
+    /// Embed the resource in the binary.
+    Embedded,
+
+    /// Install the resource in a path relative to the produced binary.
+    AppRelative { path: String },
+}
+
+impl ResourceLocation {
+    pub fn new(v: &InstallLocation) -> Self {
+        match v {
+            InstallLocation::Embedded => ResourceLocation::Embedded,
+            InstallLocation::AppRelative { path } => {
+                ResourceLocation::AppRelative { path: path.clone() }
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct PythonResourceAction {
+    pub action: ResourceAction,
+    pub location: ResourceLocation,
+    pub resource: PythonResource,
 }
 
 impl AppRelativeResources {

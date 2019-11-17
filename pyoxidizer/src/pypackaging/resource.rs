@@ -7,7 +7,6 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use super::distribution::ExtensionModule;
-use crate::pyrepackager::config::InstallLocation;
 
 /// Represents an extension module built during packaging.
 ///
@@ -46,40 +45,6 @@ pub enum PythonResource {
         data: Vec<u8>,
     },
     BuiltExtensionModule(BuiltExtensionModule),
-}
-
-#[derive(Debug)]
-pub enum ResourceAction {
-    Add,
-    Remove,
-}
-
-/// Represents the packaging location for a resource.
-#[derive(Clone, Debug)]
-pub enum ResourceLocation {
-    /// Embed the resource in the binary.
-    Embedded,
-
-    /// Install the resource in a path relative to the produced binary.
-    AppRelative { path: String },
-}
-
-impl ResourceLocation {
-    pub fn new(v: &InstallLocation) -> Self {
-        match v {
-            InstallLocation::Embedded => ResourceLocation::Embedded,
-            InstallLocation::AppRelative { path } => {
-                ResourceLocation::AppRelative { path: path.clone() }
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct PythonResourceAction {
-    pub action: ResourceAction,
-    pub location: ResourceLocation,
-    pub resource: PythonResource,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

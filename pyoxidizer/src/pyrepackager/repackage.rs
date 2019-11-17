@@ -17,6 +17,7 @@ use super::config::{
 };
 use super::packaging_rule::{
     packages_from_module_name, packages_from_module_names, resolve_python_packaging,
+    ResourceAction, ResourceLocation,
 };
 use super::state::{BuildContext, PackagingState};
 use crate::pypackaging::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode};
@@ -30,7 +31,6 @@ use crate::pypackaging::libpython::{derive_importlib, link_libpython};
 use crate::pypackaging::pyembed::{derive_python_config, write_data_rs};
 use crate::pypackaging::resource::{
     AppRelativeResources, PackagedModuleBytecode, PackagedModuleSource, PythonResource,
-    ResourceAction, ResourceLocation,
 };
 
 lazy_static! {
