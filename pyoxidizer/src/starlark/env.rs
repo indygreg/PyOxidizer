@@ -7,10 +7,14 @@ use starlark::values::{
     default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
     INCORRECT_PARAMETER_TYPE_ERROR_CODE,
 };
-use starlark::{any, immutable, not_supported};
+use starlark::{
+    any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
+    starlark_signature_extraction, starlark_signatures,
+};
 use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 use crate::app_packaging::environment::EnvironmentContext;
 
@@ -225,18 +229,29 @@ impl TypedValue for EnvironmentContext {
     }
 }
 
+starlark_module! { global_module =>
+    set_build_path(env env, path) {
+        let path = required_str_arg("path", &path)?;
+        let mut context = env.get("CONTEXT").expect("CONTEXT not set");
+
+        context.downcast_apply_mut(|x: &mut EnvironmentContext| {
+            x.set_build_path(&PathBuf::from(&path));
+        });
+
+        Ok(Value::new(None))
+    }
+}
+
 /// Obtain a Starlark environment for evaluating PyOxidizer configurations.
 pub fn global_environment(context: &EnvironmentContext) -> Result<Environment, EnvironmentError> {
     let env = starlark::stdlib::global_environment();
+    let env = global_module(env);
     let env = super::config::config_env(env);
     let env = super::distribution::distribution_env(env);
     let env = super::python_distribution::python_distribution_module(env);
     let env = super::embedded_python_config::embedded_python_config_module(env);
     let env = super::python_packaging::python_packaging_env(env);
     let env = super::python_run_mode::python_run_mode_env(env);
-
-    let build_path = context.cwd.join("build");
-    env.set("BUILD_PATH", Value::new(build_path.display().to_string()))?;
 
     env.set("CONTEXT", Value::new(context.clone()))?;
 

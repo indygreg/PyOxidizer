@@ -17,6 +17,9 @@ pub struct EnvironmentContext {
 
     /// Target triple we are building for.
     pub build_target: String,
+
+    /// Base directory to use for build state.
+    pub build_path: PathBuf,
 }
 
 impl EnvironmentContext {
@@ -25,10 +28,17 @@ impl EnvironmentContext {
             .parent()
             .ok_or("unable to resolve parent directory of config".to_string())?;
 
+        let build_path = parent.join("build");
+
         Ok(EnvironmentContext {
             cwd: parent.to_path_buf(),
             config_path: config_path.to_path_buf(),
             build_target: build_target.to_string(),
+            build_path,
         })
+    }
+
+    pub fn set_build_path(&mut self, path: &Path) {
+        self.build_path = path.to_path_buf();
     }
 }

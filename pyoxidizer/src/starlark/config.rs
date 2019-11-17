@@ -29,6 +29,7 @@ use super::python_run_mode::PythonRunMode;
 use crate::app_packaging::config::{
     BuildConfig as ConfigBuildConfig, Config as ConfigConfig, Distribution, PythonPackaging,
 };
+use crate::app_packaging::environment::EnvironmentContext;
 use crate::py_packaging::config::{
     EmbeddedPythonConfig as ConfigEmbeddedPythonConfig,
     PythonDistribution as ConfigPythonDistribution, RunMode,
@@ -85,7 +86,9 @@ starlark_module! { config_env =>
         required_type_arg("python_distribution", "PythonDistribution", &python_distribution)?;
         required_type_arg("python_run_mode", "PythonRunMode", &python_run_mode)?;
 
-        let build_path = PathBuf::from(env.get("BUILD_PATH").expect("BUILD_PATH not set").to_string());
+        let context = env.get("CONTEXT").expect("CONTEXT not set");
+
+        let build_path = context.downcast_apply(|x: &EnvironmentContext| x.build_path.clone());
 
         let build_config = ConfigBuildConfig {
             application_name,

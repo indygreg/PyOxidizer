@@ -2,21 +2,22 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use super::env::{global_environment, EnvironmentContext};
 use codemap::CodeMap;
 use codemap_diagnostic::Diagnostic;
 use starlark::eval;
 use starlark::values::Value;
-use std::path::PathBuf;
+
+use super::env::global_environment;
+use crate::app_packaging::environment::EnvironmentContext;
 
 pub fn starlark_eval(snippet: &str) -> Result<Value, Diagnostic> {
     let build_target = crate::app_packaging::repackage::HOST;
 
-    let context = EnvironmentContext {
-        cwd: std::env::current_dir().expect("unable to determine CWD"),
-        config_path: PathBuf::from("dummy"),
-        build_target: build_target.to_string(),
-    };
+    let cwd = std::env::current_dir().expect("unable to determine CWD");
+    let config_path = cwd.join("dummy");
+
+    let context = EnvironmentContext::new(&config_path, build_target)
+        .expect("unable to create EnvironmentContext");
 
     let mut env = global_environment(&context).expect("unable to get global environment");
 
