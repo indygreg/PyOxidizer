@@ -24,11 +24,9 @@ pub struct PythonDistribution {
     pub source: PythonDistributionLocation,
 }
 
-impl From<PythonDistributionLocation> for PythonDistribution {
-    fn from(distribution: PythonDistributionLocation) -> Self {
-        PythonDistribution {
-            source: distribution,
-        }
+impl PythonDistribution {
+    fn from_location(location: PythonDistributionLocation) -> PythonDistribution {
+        PythonDistribution { source: location }
     }
 }
 
@@ -89,7 +87,7 @@ starlark_module! { python_distribution_module =>
             }
         };
 
-        Ok(Value::new(PythonDistribution::from(distribution)))
+        Ok(Value::new(PythonDistribution::from_location(distribution)))
     }
 
     default_python_distribution(env env, build_target=None) {
@@ -111,7 +109,7 @@ starlark_module! { python_distribution_module =>
                     sha256: dist.sha256.clone(),
                 };
 
-                Ok(Value::new(PythonDistribution::from(distribution)))
+                Ok(Value::new(PythonDistribution::from_location(distribution)))
             }
             None => Err(ValueError::Runtime(RuntimeError {
                 code: "no_default_distribution",
