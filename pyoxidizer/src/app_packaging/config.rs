@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
 
+use super::environment::EnvironmentContext;
 use crate::py_packaging::config::{
     EmbeddedPythonConfig, PythonDistribution, RawAllocator, RunMode,
 };
@@ -218,7 +219,7 @@ pub fn eval_starlark_config_file(path: &Path, build_target: &str) -> Result<Conf
         .parent()
         .ok_or("unable to resolve parent directory of config".to_string())?;
 
-    let context = super::super::starlark::env::EnvironmentContext {
+    let context = EnvironmentContext {
         cwd: parent.to_path_buf(),
         config_path: path.to_path_buf(),
         build_target: build_target.to_string(),

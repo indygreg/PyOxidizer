@@ -2,12 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use super::env::{global_environment, EnvironmentContext};
 use codemap::CodeMap;
 use codemap_diagnostic::{Diagnostic, Level};
 use starlark::environment::Environment;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+
+use super::env::global_environment;
+use crate::app_packaging::environment::EnvironmentContext;
 
 /// Represents the result of evaluating a Starlark environment.
 pub struct EvalResult {

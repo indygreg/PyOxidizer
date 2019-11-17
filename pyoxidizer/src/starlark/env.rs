@@ -11,7 +11,8 @@ use starlark::{any, immutable, not_supported};
 use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::path::PathBuf;
+
+use crate::app_packaging::environment::EnvironmentContext;
 
 pub fn required_type_arg(arg_name: &str, arg_type: &str, value: &Value) -> Result<(), ValueError> {
     let t = value.get_type();
@@ -192,21 +193,6 @@ pub fn optional_dict_arg(
     }
 
     required_dict_arg(arg_name, key_type, value_type, value)
-}
-
-/// Holds state for evaluating a starlark environment.
-#[derive(Debug, Clone)]
-pub struct EnvironmentContext {
-    /// Directory the environment should be evaluated from.
-    ///
-    /// Typically used to resolve filenames.
-    pub cwd: PathBuf,
-
-    /// Path to the configuration file.
-    pub config_path: PathBuf,
-
-    /// Target triple we are building for.
-    pub build_target: String,
 }
 
 impl TypedValue for EnvironmentContext {
