@@ -13,7 +13,6 @@ use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
 use url::Url;
 
-use super::config::PythonDistribution;
 use super::fsscan::{
     find_python_resources, is_package_from_path, walk_tree_files, PythonFileResource,
 };
@@ -51,6 +50,12 @@ pub fn is_stdlib_test_package(name: &str) -> bool {
     }
 
     false
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum PythonDistributionLocation {
+    Local { local_path: String, sha256: String },
+    Url { url: String, sha256: String },
 }
 
 #[derive(Debug, Deserialize)]
@@ -885,12 +890,17 @@ pub fn copy_local_distribution(path: &PathBuf, sha256: &str, cache_dir: &Path) -
 /// in ``cache_dir``, it will be verified and returned.
 ///
 /// Local filesystem paths are preferred over remote URLs if both are defined.
-pub fn resolve_python_distribution_archive(dist: &PythonDistribution, cache_dir: &Path) -> PathBuf {
+pub fn resolve_python_distribution_archive(
+    dist: &PythonDistributionLocation,
+    cache_dir: &Path,
+) -> PathBuf {
     match dist {
-        PythonDistribution::Local { local_path, sha256 } => {
+        PythonDistributionLocation::Local { local_path, sha256 } => {
             let p = PathBuf::from(local_path);
             copy_local_distribution(&p, sha256, cache_dir)
         }
-        PythonDistribution::Url { url, sha256 } => download_distribution(url, sha256, cache_dir),
+        PythonDistributionLocation::Url { url, sha256 } => {
+            download_distribution(url, sha256, cache_dir)
+        }
     }
 }

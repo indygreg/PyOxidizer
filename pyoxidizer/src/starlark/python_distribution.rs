@@ -16,15 +16,16 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use super::env::{optional_str_arg, required_str_arg};
+use crate::py_packaging::distribution::PythonDistributionLocation;
 use crate::python_distributions::CPYTHON_BY_TRIPLE;
 
 #[derive(Debug, Clone)]
 pub struct PythonDistribution {
-    pub source: crate::py_packaging::config::PythonDistribution,
+    pub source: PythonDistributionLocation,
 }
 
-impl From<crate::py_packaging::config::PythonDistribution> for PythonDistribution {
-    fn from(distribution: crate::py_packaging::config::PythonDistribution) -> Self {
+impl From<PythonDistributionLocation> for PythonDistribution {
+    fn from(distribution: PythonDistributionLocation) -> Self {
         PythonDistribution {
             source: distribution,
         }
@@ -77,12 +78,12 @@ starlark_module! { python_distribution_module =>
         }
 
         let distribution = if local_path.get_type() != "NoneType" {
-            crate::py_packaging::config::PythonDistribution::Local {
+            PythonDistributionLocation::Local {
                 local_path: local_path.to_string(),
                 sha256: sha256.to_string(),
             }
         } else {
-            crate::py_packaging::config::PythonDistribution::Url {
+            PythonDistributionLocation::Url {
                 url: url.to_string(),
                 sha256: sha256.to_string(),
             }
@@ -105,7 +106,7 @@ starlark_module! { python_distribution_module =>
 
         match CPYTHON_BY_TRIPLE.get(&build_target) {
             Some(dist) => {
-                let distribution = crate::py_packaging::config::PythonDistribution::Url {
+                let distribution = PythonDistributionLocation::Url {
                     url: dist.url.clone(),
                     sha256: dist.sha256.clone(),
                 };
@@ -135,7 +136,7 @@ mod tests {
             .get(crate::app_packaging::repackage::HOST)
             .unwrap();
 
-        let wanted = crate::py_packaging::config::PythonDistribution::Url {
+        let wanted = PythonDistributionLocation::Url {
             url: host_distribution.url.clone(),
             sha256: host_distribution.sha256.clone(),
         };
@@ -166,7 +167,7 @@ mod tests {
     #[test]
     fn test_python_distribution_url() {
         let dist = starlark_ok("PythonDistribution('sha256', url='some_url')");
-        let wanted = crate::py_packaging::config::PythonDistribution::Url {
+        let wanted = PythonDistributionLocation::Url {
             url: "some_url".to_string(),
             sha256: "sha256".to_string(),
         };
@@ -177,7 +178,7 @@ mod tests {
     #[test]
     fn test_python_distribution_local_path() {
         let dist = starlark_ok("PythonDistribution('sha256', local_path='some_path')");
-        let wanted = crate::py_packaging::config::PythonDistribution::Local {
+        let wanted = PythonDistributionLocation::Local {
             local_path: "some_path".to_string(),
             sha256: "sha256".to_string(),
         };

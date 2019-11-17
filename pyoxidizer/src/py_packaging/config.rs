@@ -10,12 +10,6 @@ pub enum RawAllocator {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum PythonDistribution {
-    Local { local_path: String, sha256: String },
-    Url { url: String, sha256: String },
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub enum RunMode {
     Noop,
     Repl,

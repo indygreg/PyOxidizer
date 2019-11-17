@@ -8,10 +8,8 @@ use std::env;
 use std::path::{Path, PathBuf};
 
 use super::environment::EnvironmentContext;
-use crate::py_packaging::config::{
-    EmbeddedPythonConfig, PythonDistribution, RawAllocator, RunMode,
-};
-use crate::py_packaging::distribution::ExtensionModuleFilter;
+use crate::py_packaging::config::{EmbeddedPythonConfig, RawAllocator, RunMode};
+use crate::py_packaging::distribution::{ExtensionModuleFilter, PythonDistributionLocation};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BuildConfig {
@@ -160,7 +158,7 @@ pub struct Config {
     pub config_path: PathBuf,
     pub build_config: BuildConfig,
     pub embedded_python_config: EmbeddedPythonConfig,
-    pub python_distribution: PythonDistribution,
+    pub python_distribution: PythonDistributionLocation,
     pub python_packaging: Vec<PythonPackaging>,
     pub run: RunMode,
     pub distributions: Vec<Distribution>,

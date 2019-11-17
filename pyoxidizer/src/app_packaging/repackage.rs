@@ -21,9 +21,9 @@ use super::packaging_rule::{
 };
 use super::state::{BuildContext, PackagingState};
 use crate::py_packaging::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode};
-use crate::py_packaging::config::PythonDistribution;
 use crate::py_packaging::distribution::{
     resolve_python_distribution_archive, ExtensionModule, ParsedPythonDistribution,
+    PythonDistributionLocation,
 };
 use crate::py_packaging::embedded_resource::EmbeddedPythonResources;
 use crate::py_packaging::libpython::{derive_importlib, link_libpython};
@@ -125,8 +125,8 @@ impl BuildContext {
         let distributions_path = build_path.join("distribution");
 
         let distribution_hash = match &config.python_distribution {
-            PythonDistribution::Local { sha256, .. } => sha256,
-            PythonDistribution::Url { sha256, .. } => sha256,
+            PythonDistributionLocation::Local { sha256, .. } => sha256,
+            PythonDistributionLocation::Url { sha256, .. } => sha256,
         };
 
         // Take the prefix so paths are shorter.
@@ -1122,7 +1122,7 @@ pub fn process_config(
         create_dir_all(dest_dir).unwrap();
     }
 
-    if let PythonDistribution::Local { local_path, .. } = &config.python_distribution {
+    if let PythonDistributionLocation::Local { local_path, .. } = &config.python_distribution {
         cargo_metadata.push(format!("cargo:rerun-if-changed={}", local_path));
     }
 

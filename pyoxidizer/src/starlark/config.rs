@@ -30,10 +30,8 @@ use crate::app_packaging::config::{
     BuildConfig as ConfigBuildConfig, Config as ConfigConfig, Distribution, PythonPackaging,
 };
 use crate::app_packaging::environment::EnvironmentContext;
-use crate::py_packaging::config::{
-    EmbeddedPythonConfig as ConfigEmbeddedPythonConfig,
-    PythonDistribution as ConfigPythonDistribution, RunMode,
-};
+use crate::py_packaging::config::{EmbeddedPythonConfig as ConfigEmbeddedPythonConfig, RunMode};
+use crate::py_packaging::distribution::PythonDistributionLocation;
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -98,7 +96,7 @@ starlark_module! { config_env =>
         let embedded_python_config = embedded_python_config.downcast_apply(|x: &EmbeddedPythonConfig| -> ConfigEmbeddedPythonConfig {
             x.config.clone()
         });
-        let python_distribution = python_distribution.downcast_apply(|x: &PythonDistribution| -> ConfigPythonDistribution {
+        let python_distribution = python_distribution.downcast_apply(|x: &PythonDistribution| -> PythonDistributionLocation {
             x.source.clone()
         });
 
