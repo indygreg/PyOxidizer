@@ -316,6 +316,7 @@ pub struct PythonDistributionMinimalInfo {
 }
 
 /// Denotes methods to filter extension modules.
+#[derive(Clone, Debug, PartialEq)]
 pub enum ExtensionModuleFilter {
     Minimal,
     All,
@@ -358,7 +359,7 @@ impl PythonDistributionInfo {
     pub fn filter_extension_modules(
         &self,
         logger: &slog::Logger,
-        filter: ExtensionModuleFilter,
+        filter: &ExtensionModuleFilter,
     ) -> Vec<PythonResource> {
         let mut res = Vec::new();
 

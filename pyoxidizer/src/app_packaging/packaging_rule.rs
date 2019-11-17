@@ -15,9 +15,7 @@ use super::config::{
     PackagingStdlibExtensionsPolicy, PackagingVirtualenv, PythonPackaging,
 };
 use super::state::BuildContext;
-use crate::py_packaging::distribution::{
-    is_stdlib_test_package, ExtensionModuleFilter, PythonDistributionInfo,
-};
+use crate::py_packaging::distribution::{is_stdlib_test_package, PythonDistributionInfo};
 use crate::py_packaging::distutils::{prepare_hacked_distutils, read_built_extensions};
 use crate::py_packaging::fsscan::{find_python_resources, PythonFileResource};
 use crate::py_packaging::resource::{AppRelativeResources, PythonResource};
@@ -159,20 +157,9 @@ fn resolve_stdlib_extensions_policy(
     dist: &PythonDistributionInfo,
     rule: &PackagingStdlibExtensionsPolicy,
 ) -> Vec<PythonResourceAction> {
-    // TODO define rule.policy as an ExtensionModuleFilter.
-    let filter = match rule.policy.as_str() {
-        "minimal" => ExtensionModuleFilter::Minimal,
-        "all" => ExtensionModuleFilter::All,
-        "no-libraries" => ExtensionModuleFilter::NoLibraries,
-        "no-gpl" => ExtensionModuleFilter::NoGPL,
-        other => {
-            panic!("illegal policy value: {}", other);
-        }
-    };
-
     let mut res = Vec::new();
 
-    for ext in dist.filter_extension_modules(logger, filter) {
+    for ext in dist.filter_extension_modules(logger, &rule.filter) {
         res.push(PythonResourceAction {
             action: ResourceAction::Add,
             location: ResourceLocation::Embedded,

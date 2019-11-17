@@ -26,6 +26,7 @@ use crate::app_packaging::config::{
     PackagingStdlibExtensionsExplicitIncludes, PackagingStdlibExtensionsPolicy,
     PackagingVirtualenv, PackagingWriteLicenseFiles,
 };
+use crate::py_packaging::distribution::ExtensionModuleFilter;
 
 #[derive(Debug, Clone)]
 pub struct FilterInclude {
@@ -690,8 +691,20 @@ starlark_module! { python_packaging_env =>
     StdlibExtensionsPolicy(policy) {
         let policy = required_str_arg("policy", &policy)?;
 
+        let filter = match policy.as_str() {
+            "minimal" => ExtensionModuleFilter::Minimal,
+            "all" => ExtensionModuleFilter::All,
+            "no-libraries" => ExtensionModuleFilter::NoLibraries,
+            "no-gpl" => ExtensionModuleFilter::NoGPL,
+            _ => return Err(RuntimeError {
+                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                message: "policy must be one of {minimal, all, no-libraries, no-gpl}".to_string(),
+                label: "invalid policy value".to_string(),
+            }.into())
+        };
+
         let rule = PackagingStdlibExtensionsPolicy {
-            policy,
+            filter,
         };
 
         Ok(Value::new(StdlibExtensionsPolicy { rule }))
@@ -964,9 +977,9 @@ mod tests {
 
     #[test]
     fn test_stdlib_extensions_policy_policy() {
-        let v = starlark_ok("StdlibExtensionsPolicy('foo')");
+        let v = starlark_ok("StdlibExtensionsPolicy('all')");
         let wanted = PackagingStdlibExtensionsPolicy {
-            policy: "foo".to_string(),
+            filter: ExtensionModuleFilter::All,
         };
         v.downcast_apply(|x: &StdlibExtensionsPolicy| assert_eq!(x.rule, wanted));
     }

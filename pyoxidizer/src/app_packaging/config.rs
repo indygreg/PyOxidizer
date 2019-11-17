@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 use crate::py_packaging::config::{
     EmbeddedPythonConfig, PythonDistribution, RawAllocator, RunMode,
 };
+use crate::py_packaging::distribution::ExtensionModuleFilter;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BuildConfig {
@@ -36,8 +37,7 @@ pub struct PackagingSetupPyInstall {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct PackagingStdlibExtensionsPolicy {
-    // TODO make this an enum.
-    pub policy: String,
+    pub filter: ExtensionModuleFilter,
 }
 
 #[derive(Clone, Debug, PartialEq)]
