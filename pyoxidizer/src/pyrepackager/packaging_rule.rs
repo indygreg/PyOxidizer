@@ -17,9 +17,9 @@ use super::config::{
     PackagingStdlibExtensionsPolicy, PackagingVirtualenv, PythonPackaging,
 };
 use crate::app_packaging::state::BuildContext;
-use crate::pypackaging::distribution::PythonDistributionInfo;
-use crate::pypackaging::fsscan::{find_python_resources, PythonFileResource};
-use crate::pypackaging::resource::{AppRelativeResources, BuiltExtensionModule, PythonResource};
+use crate::py_packaging::distribution::PythonDistributionInfo;
+use crate::py_packaging::fsscan::{find_python_resources, PythonFileResource};
+use crate::py_packaging::resource::{AppRelativeResources, BuiltExtensionModule, PythonResource};
 
 /// SPDX licenses in Python distributions that are not GPL.
 ///

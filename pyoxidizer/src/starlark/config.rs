@@ -15,7 +15,7 @@ use super::python_packaging::{
     StdlibExtensionsPolicy, Virtualenv, WriteLicenseFiles,
 };
 use super::python_run_mode::PythonRunMode;
-use crate::pypackaging::config::{
+use crate::py_packaging::config::{
     EmbeddedPythonConfig as ConfigEmbeddedPythonConfig,
     PythonDistribution as ConfigPythonDistribution, RunMode,
 };

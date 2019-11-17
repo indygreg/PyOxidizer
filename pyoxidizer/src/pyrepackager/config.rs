@@ -7,7 +7,9 @@ use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
 
-use crate::pypackaging::config::{EmbeddedPythonConfig, PythonDistribution, RawAllocator, RunMode};
+use crate::py_packaging::config::{
+    EmbeddedPythonConfig, PythonDistribution, RawAllocator, RunMode,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BuildConfig {

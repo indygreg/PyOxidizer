@@ -35,7 +35,7 @@ mod environment;
 mod logging;
 mod projectmgmt;
 #[allow(unused)]
-mod pypackaging;
+mod py_packaging;
 #[allow(unused)]
 mod pyrepackager;
 mod python_distributions;

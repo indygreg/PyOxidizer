@@ -20,16 +20,16 @@ use super::packaging_rule::{
     ResourceAction, ResourceLocation,
 };
 use crate::app_packaging::state::{BuildContext, PackagingState};
-use crate::pypackaging::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode};
-use crate::pypackaging::config::PythonDistribution;
-use crate::pypackaging::distribution::{
+use crate::py_packaging::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode};
+use crate::py_packaging::config::PythonDistribution;
+use crate::py_packaging::distribution::{
     analyze_python_distribution_tar_zst, resolve_python_distribution_archive, ExtensionModule,
     PythonDistributionInfo,
 };
-use crate::pypackaging::embedded_resource::EmbeddedPythonResources;
-use crate::pypackaging::libpython::{derive_importlib, link_libpython};
-use crate::pypackaging::pyembed::{derive_python_config, write_data_rs};
-use crate::pypackaging::resource::{
+use crate::py_packaging::embedded_resource::EmbeddedPythonResources;
+use crate::py_packaging::libpython::{derive_importlib, link_libpython};
+use crate::py_packaging::pyembed::{derive_python_config, write_data_rs};
+use crate::py_packaging::resource::{
     AppRelativeResources, PackagedModuleBytecode, PackagedModuleSource, PythonResource,
 };
 

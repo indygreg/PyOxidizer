@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use super::env::required_str_arg;
-use crate::pypackaging::config::RunMode;
+use crate::py_packaging::config::RunMode;
 use starlark::environment::Environment;
 use starlark::values::{default_compare, TypedValue, Value, ValueError, ValueResult};
 use starlark::{
