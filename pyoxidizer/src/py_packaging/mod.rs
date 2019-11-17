@@ -5,6 +5,7 @@
 pub mod bytecode;
 pub mod config;
 pub mod distribution;
+pub mod distutils;
 pub mod embedded_resource;
 pub mod fsscan;
 pub mod libpython;

@@ -2,10 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use lazy_static::lazy_static;
 use serde::Deserialize;
 use slog::{info, warn};
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::BTreeSet;
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -18,6 +17,7 @@ use super::config::{
 };
 use super::state::BuildContext;
 use crate::py_packaging::distribution::PythonDistributionInfo;
+use crate::py_packaging::distutils::prepare_hacked_distutils;
 use crate::py_packaging::fsscan::{find_python_resources, PythonFileResource};
 use crate::py_packaging::resource::{AppRelativeResources, BuiltExtensionModule, PythonResource};
 
@@ -176,106 +176,6 @@ fn resolve_python_paths(base: &Path, python_version: &str, is_windows: bool) -> 
         main: p,
         site_packages,
     }
-}
-
-lazy_static! {
-    static ref MODIFIED_DISTUTILS_FILES: BTreeMap<&'static str, &'static [u8]> = {
-        let mut res: BTreeMap<&'static str, &'static [u8]> = BTreeMap::new();
-
-        res.insert(
-            "command/build_ext.py",
-            include_bytes!("../distutils/command/build_ext.py"),
-        );
-        res.insert(
-            "_msvccompiler.py",
-            include_bytes!("../distutils/_msvccompiler.py"),
-        );
-        res.insert(
-            "unixccompiler.py",
-            include_bytes!("../distutils/unixccompiler.py"),
-        );
-
-        res
-    };
-}
-
-/// Prepare a hacked install of distutils to use with Python packaging.
-///
-/// The idea is we use the distutils in the distribution as a base then install
-/// our own hacks on top of it to make it perform the functionality that we want.
-/// This enables things using it (like setup.py scripts) to invoke our
-/// functionality, without requiring them to change anything.
-///
-/// An alternate considered implementation was to "prepend" code to the invoked
-/// setup.py or Python process so that the in-process distutils was monkeypatched.
-/// This approach felt less robust than modifying distutils itself because a
-/// modified distutils will survive multiple process invocations, unlike a
-/// monkeypatch. People do weird things in setup.py scripts and we want to
-/// support as many as possible.
-pub fn prepare_hacked_distutils(
-    logger: &slog::Logger,
-    dist: &PythonDistributionInfo,
-    dest_dir: &Path,
-    extra_python_paths: &[&Path],
-) -> Result<HashMap<String, String>, String> {
-    let extra_sys_path = dest_dir.join("packages");
-
-    warn!(
-        logger,
-        "installing modified distutils to {}",
-        extra_sys_path.display()
-    );
-
-    let orig_distutils_path = dist.stdlib_path.join("distutils");
-    let dest_distutils_path = extra_sys_path.join("distutils");
-
-    for entry in walkdir::WalkDir::new(&orig_distutils_path) {
-        match entry {
-            Ok(entry) => {
-                if entry.path().is_dir() {
-                    continue;
-                }
-
-                let source_path = entry.path();
-                let rel_path = source_path
-                    .strip_prefix(&orig_distutils_path)
-                    .or_else(|_| Err("unable to strip prefix"))?;
-                let dest_path = dest_distutils_path.join(rel_path);
-
-                let dest_dir = dest_path.parent().unwrap();
-                std::fs::create_dir_all(&dest_dir).or_else(|e| Err(e.to_string()))?;
-                std::fs::copy(&source_path, &dest_path).or_else(|e| Err(e.to_string()))?;
-            }
-            Err(e) => return Err(e.to_string()),
-        }
-    }
-
-    for (path, data) in MODIFIED_DISTUTILS_FILES.iter() {
-        let dest_path = dest_distutils_path.join(path);
-
-        warn!(logger, "modifying distutils/{} for oxidation", path);
-        std::fs::write(dest_path, data).or_else(|e| Err(e.to_string()))?;
-    }
-
-    let state_dir = dest_dir.join("pyoxidizer-build-state");
-    fs::create_dir_all(&state_dir).or_else(|e| Err(e.to_string()))?;
-
-    let mut python_paths = vec![extra_sys_path.display().to_string()];
-    python_paths.extend(extra_python_paths.iter().map(|p| p.display().to_string()));
-
-    let path_separator = if cfg!(windows) { ";" } else { ":" };
-
-    let python_path = python_paths.join(path_separator);
-
-    let mut res = HashMap::new();
-    res.insert("PYTHONPATH".to_string(), python_path);
-    res.insert(
-        "PYOXIDIZER_DISTUTILS_STATE_DIR".to_string(),
-        state_dir.display().to_string(),
-    );
-    res.insert("PYOXIDIZER".to_string(), "1".to_string());
-
-    Ok(res)
 }
 
 #[derive(Debug, Deserialize)]
