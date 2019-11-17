@@ -215,15 +215,7 @@ pub fn find_pyoxidizer_config_file_env(logger: &slog::Logger, start_dir: &Path) 
 }
 
 pub fn eval_starlark_config_file(path: &Path, build_target: &str) -> Result<Config, String> {
-    let parent = path
-        .parent()
-        .ok_or("unable to resolve parent directory of config".to_string())?;
-
-    let context = EnvironmentContext {
-        cwd: parent.to_path_buf(),
-        config_path: path.to_path_buf(),
-        build_target: build_target.to_string(),
-    };
+    let context = EnvironmentContext::new(path, build_target)?;
 
     let res = crate::starlark::eval::evaluate_file(path, &context).or_else(|d| Err(d.message))?;
 
