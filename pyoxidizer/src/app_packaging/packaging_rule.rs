@@ -260,9 +260,9 @@ fn resolve_stdlib(
 
     let location = ResourceLocation::new(&rule.install_location);
 
-    for (name, fs_path) in &dist.py_modules {
-        if is_stdlib_test_package(&name) && rule.exclude_test_modules {
-            info!(logger, "skipping test stdlib module: {}", name);
+    for m in dist.source_modules() {
+        if is_stdlib_test_package(&m.name) && rule.exclude_test_modules {
+            info!(logger, "skipping test stdlib module: {}", m.name);
             continue;
         }
 
@@ -271,7 +271,7 @@ fn resolve_stdlib(
         for exclude in &rule.excludes {
             let prefix = exclude.clone() + ".";
 
-            if name == exclude || name.starts_with(&prefix) {
+            if &m.name == exclude || m.name.starts_with(&prefix) {
                 relevant = false;
             }
         }
@@ -280,17 +280,14 @@ fn resolve_stdlib(
             continue;
         }
 
-        let is_package = is_package_from_path(&fs_path);
-        let source = fs::read(fs_path).expect("error reading source file");
-
         if rule.include_source {
             res.push(PythonResourceAction {
                 action: ResourceAction::Add,
                 location: location.clone(),
                 resource: PythonResource::ModuleSource {
-                    name: name.clone(),
-                    source: source.clone(),
-                    is_package,
+                    name: m.name.clone(),
+                    source: m.source.clone(),
+                    is_package: m.is_package,
                 },
             });
         }
@@ -299,10 +296,10 @@ fn resolve_stdlib(
             action: ResourceAction::Add,
             location: location.clone(),
             resource: PythonResource::ModuleBytecode {
-                name: name.clone(),
-                source,
+                name: m.name,
+                source: m.source,
                 optimize_level: rule.optimize_level as i32,
-                is_package,
+                is_package: m.is_package,
             },
         });
     }

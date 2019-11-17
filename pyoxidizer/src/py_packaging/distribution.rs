@@ -14,8 +14,10 @@ use std::path::{Path, PathBuf};
 use url::Url;
 
 use super::config::PythonDistribution;
-use super::fsscan::{find_python_resources, walk_tree_files, PythonFileResource};
-use super::resource::PythonResource;
+use super::fsscan::{
+    find_python_resources, is_package_from_path, walk_tree_files, PythonFileResource,
+};
+use super::resource::{PythonResource, SourceModule};
 use crate::licensing::NON_GPL_LICENSES;
 
 #[cfg(windows)]
@@ -354,6 +356,26 @@ impl PythonDistributionInfo {
         }
 
         pip_path
+    }
+
+    /// Obtain resolved `SourceModule` instances for this distribution.
+    ///
+    /// This effectively resolves the raw file content for .py files into
+    /// `SourceModule` instances.
+    pub fn source_modules(&self) -> Vec<SourceModule> {
+        self.py_modules
+            .iter()
+            .map(|(name, path)| {
+                let is_package = is_package_from_path(&path);
+                let source = fs::read(&path).expect("error reading source file");
+
+                SourceModule {
+                    name: name.clone(),
+                    source,
+                    is_package,
+                }
+            })
+            .collect()
     }
 
     pub fn filter_extension_modules(

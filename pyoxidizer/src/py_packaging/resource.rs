@@ -8,6 +8,14 @@ use std::path::PathBuf;
 
 use super::distribution::ExtensionModule;
 
+/// A Python source module agnostic of location.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SourceModule {
+    pub name: String,
+    pub source: Vec<u8>,
+    pub is_package: bool,
+}
+
 /// Represents an extension module built during packaging.
 ///
 /// This is like a light version of `ExtensionModule`.
