@@ -19,12 +19,14 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct PythonDistribution {
-    pub distribution: crate::py_packaging::config::PythonDistribution,
+    pub source: crate::py_packaging::config::PythonDistribution,
 }
 
 impl From<crate::py_packaging::config::PythonDistribution> for PythonDistribution {
     fn from(distribution: crate::py_packaging::config::PythonDistribution) -> Self {
-        PythonDistribution { distribution }
+        PythonDistribution {
+            source: distribution,
+        }
     }
 }
 
@@ -38,7 +40,7 @@ impl TypedValue for PythonDistribution {
     not_supported!(to_int);
 
     fn to_str(&self) -> String {
-        format!("PythonDistribution<{:#?}>", self.distribution)
+        format!("PythonDistribution<{:#?}>", self.source)
     }
 
     fn to_repr(&self) -> String {
@@ -137,7 +139,7 @@ mod tests {
             sha256: host_distribution.sha256.clone(),
         };
 
-        dist.downcast_apply(|x: &PythonDistribution| assert_eq!(x.distribution, wanted));
+        dist.downcast_apply(|x: &PythonDistribution| assert_eq!(x.source, wanted));
     }
 
     #[test]
@@ -168,7 +170,7 @@ mod tests {
             sha256: "sha256".to_string(),
         };
 
-        dist.downcast_apply(|x: &PythonDistribution| assert_eq!(x.distribution, wanted));
+        dist.downcast_apply(|x: &PythonDistribution| assert_eq!(x.source, wanted));
     }
 
     #[test]
@@ -179,6 +181,6 @@ mod tests {
             sha256: "sha256".to_string(),
         };
 
-        dist.downcast_apply(|x: &PythonDistribution| assert_eq!(x.distribution, wanted));
+        dist.downcast_apply(|x: &PythonDistribution| assert_eq!(x.source, wanted));
     }
 }

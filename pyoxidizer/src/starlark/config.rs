@@ -96,7 +96,7 @@ starlark_module! { config_env =>
             x.config.clone()
         });
         let python_distribution = python_distribution.downcast_apply(|x: &PythonDistribution| -> ConfigPythonDistribution {
-            x.distribution.clone()
+            x.source.clone()
         });
 
         let python_packaging: Vec<Result<PythonPackaging, ValueError>> = packaging_rules.into_iter()?.map(|x| -> Result<PythonPackaging, ValueError> {
