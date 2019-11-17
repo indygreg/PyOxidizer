@@ -11,7 +11,7 @@ use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 
 use super::bytecode::{BytecodeCompiler, CompileMode};
-use super::distribution::{ExtensionModule, LicenseInfo, PythonDistributionInfo};
+use super::distribution::{ExtensionModule, LicenseInfo, ParsedPythonDistribution};
 use super::embedded_resource::EmbeddedPythonResources;
 use super::resource::BuiltExtensionModule;
 
@@ -50,7 +50,7 @@ pub struct ImportlibData {
 /// importlib._bootstrap_external is modified. We take the original Python
 /// source and concatenate with code that provides the memory importer.
 /// Bytecode is then derived from it.
-pub fn derive_importlib(dist: &PythonDistributionInfo) -> ImportlibData {
+pub fn derive_importlib(dist: &ParsedPythonDistribution) -> ImportlibData {
     let mut compiler = BytecodeCompiler::new(&dist.python_exe);
 
     let mod_bootstrap_path = &dist.py_modules["importlib._bootstrap"];
@@ -145,7 +145,7 @@ pub struct LibpythonInfo {
 #[allow(clippy::cognitive_complexity)]
 pub fn link_libpython(
     logger: &slog::Logger,
-    dist: &PythonDistributionInfo,
+    dist: &ParsedPythonDistribution,
     resources: &EmbeddedPythonResources,
     out_dir: &Path,
     host: &str,

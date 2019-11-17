@@ -15,7 +15,7 @@ use super::config::{
     PackagingStdlibExtensionsPolicy, PackagingVirtualenv, PythonPackaging,
 };
 use super::state::BuildContext;
-use crate::py_packaging::distribution::{is_stdlib_test_package, PythonDistributionInfo};
+use crate::py_packaging::distribution::{is_stdlib_test_package, ParsedPythonDistribution};
 use crate::py_packaging::distutils::{prepare_hacked_distutils, read_built_extensions};
 use crate::py_packaging::fsscan::{
     find_python_resources, is_package_from_path, PythonFileResource,
@@ -151,7 +151,7 @@ fn resolve_built_extensions(
 
 fn resolve_stdlib_extensions_policy(
     logger: &slog::Logger,
-    dist: &PythonDistributionInfo,
+    dist: &ParsedPythonDistribution,
     rule: &PackagingStdlibExtensionsPolicy,
 ) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
@@ -168,7 +168,7 @@ fn resolve_stdlib_extensions_policy(
 }
 
 fn resolve_stdlib_extensions_explicit_includes(
-    dist: &PythonDistributionInfo,
+    dist: &ParsedPythonDistribution,
     rule: &PackagingStdlibExtensionsExplicitIncludes,
 ) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
@@ -190,7 +190,7 @@ fn resolve_stdlib_extensions_explicit_includes(
 }
 
 fn resolve_stdlib_extensions_explicit_excludes(
-    dist: &PythonDistributionInfo,
+    dist: &ParsedPythonDistribution,
     rule: &PackagingStdlibExtensionsExplicitExcludes,
 ) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
@@ -221,7 +221,7 @@ fn resolve_stdlib_extensions_explicit_excludes(
 }
 
 fn resolve_stdlib_extension_variant(
-    dist: &PythonDistributionInfo,
+    dist: &ParsedPythonDistribution,
     rule: &PackagingStdlibExtensionVariant,
 ) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
@@ -253,7 +253,7 @@ fn resolve_stdlib_extension_variant(
 
 fn resolve_stdlib(
     logger: &slog::Logger,
-    dist: &PythonDistributionInfo,
+    dist: &ParsedPythonDistribution,
     rule: &PackagingStdlib,
 ) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
@@ -330,7 +330,7 @@ fn resolve_stdlib(
 }
 
 fn resolve_virtualenv(
-    dist: &PythonDistributionInfo,
+    dist: &ParsedPythonDistribution,
     rule: &PackagingVirtualenv,
 ) -> Vec<PythonResourceAction> {
     let mut res = Vec::new();
@@ -493,7 +493,7 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceAction
 
 fn resolve_pip_install_simple(
     logger: &slog::Logger,
-    dist: &PythonDistributionInfo,
+    dist: &ParsedPythonDistribution,
     rule: &PackagingPipInstallSimple,
     verbose: bool,
 ) -> Vec<PythonResourceAction> {
@@ -637,7 +637,7 @@ fn resolve_pip_install_simple(
 
 fn resolve_pip_requirements_file(
     logger: &slog::Logger,
-    dist: &PythonDistributionInfo,
+    dist: &ParsedPythonDistribution,
     rule: &PackagingPipRequirementsFile,
     verbose: bool,
 ) -> Vec<PythonResourceAction> {
@@ -769,7 +769,7 @@ fn resolve_pip_requirements_file(
 fn resolve_setup_py_install(
     logger: &slog::Logger,
     context: &BuildContext,
-    dist: &PythonDistributionInfo,
+    dist: &ParsedPythonDistribution,
     rule: &PackagingSetupPyInstall,
     verbose: bool,
 ) -> Vec<PythonResourceAction> {
@@ -928,7 +928,7 @@ pub fn resolve_python_packaging(
     logger: &slog::Logger,
     context: &BuildContext,
     package: &PythonPackaging,
-    dist: &PythonDistributionInfo,
+    dist: &ParsedPythonDistribution,
     verbose: bool,
 ) -> Vec<PythonResourceAction> {
     match package {

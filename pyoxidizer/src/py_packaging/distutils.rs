@@ -9,7 +9,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::fs::{create_dir_all, read_dir, read_to_string};
 use std::path::{Path, PathBuf};
 
-use super::distribution::PythonDistributionInfo;
+use super::distribution::ParsedPythonDistribution;
 use super::resource::BuiltExtensionModule;
 
 lazy_static! {
@@ -48,7 +48,7 @@ lazy_static! {
 /// support as many as possible.
 pub fn prepare_hacked_distutils(
     logger: &slog::Logger,
-    dist: &PythonDistributionInfo,
+    dist: &ParsedPythonDistribution,
     dest_dir: &Path,
     extra_python_paths: &[&Path],
 ) -> Result<HashMap<String, String>, String> {

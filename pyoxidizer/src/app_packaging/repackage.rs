@@ -24,7 +24,7 @@ use crate::py_packaging::bytecode::{python_source_encoding, BytecodeCompiler, Co
 use crate::py_packaging::config::PythonDistribution;
 use crate::py_packaging::distribution::{
     analyze_python_distribution_tar_zst, resolve_python_distribution_archive, ExtensionModule,
-    PythonDistributionInfo,
+    ParsedPythonDistribution,
 };
 use crate::py_packaging::embedded_resource::EmbeddedPythonResources;
 use crate::py_packaging::libpython::{derive_importlib, link_libpython};
@@ -249,7 +249,7 @@ struct BytecodeRequest {
 pub fn resolve_python_resources(
     logger: &slog::Logger,
     context: &BuildContext,
-    dist: &PythonDistributionInfo,
+    dist: &ParsedPythonDistribution,
 ) -> PythonResources {
     let packages = &context.config.python_packaging;
 

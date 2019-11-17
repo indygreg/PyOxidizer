@@ -235,7 +235,7 @@ pub struct LicenseInfo {
 /// Python install and its build artifacts.
 #[allow(unused)]
 #[derive(Debug)]
-pub struct PythonDistributionInfo {
+pub struct ParsedPythonDistribution {
     /// Directory where distribution lives in the filesystem.
     pub base_dir: PathBuf,
 
@@ -326,7 +326,7 @@ pub enum ExtensionModuleFilter {
     NoGPL,
 }
 
-impl PythonDistributionInfo {
+impl ParsedPythonDistribution {
     pub fn as_minimal_info(&self) -> PythonDistributionMinimalInfo {
         PythonDistributionMinimalInfo {
             flavor: self.flavor.clone(),
@@ -477,7 +477,9 @@ pub fn python_exe_path(dist_dir: &Path) -> PathBuf {
 /// Passing in a data structure with raw file data within is inefficient. But
 /// it makes things easier to implement and allows us to do things like consume
 /// tarballs without filesystem I/O.
-pub fn analyze_python_distribution_data(dist_dir: &Path) -> Result<PythonDistributionInfo, String> {
+pub fn analyze_python_distribution_data(
+    dist_dir: &Path,
+) -> Result<ParsedPythonDistribution, String> {
     let mut objs_core: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
     let mut links_core: Vec<LibraryDepends> = Vec::new();
     let mut extension_modules: BTreeMap<String, Vec<ExtensionModule>> = BTreeMap::new();
@@ -652,7 +654,7 @@ pub fn analyze_python_distribution_data(dist_dir: &Path) -> Result<PythonDistrib
         };
     }
 
-    Ok(PythonDistributionInfo {
+    Ok(ParsedPythonDistribution {
         flavor: pi.python_flavor.clone(),
         version: pi.python_version.clone(),
         os: pi.os.clone(),
@@ -685,7 +687,7 @@ pub fn analyze_python_distribution_data(dist_dir: &Path) -> Result<PythonDistrib
 pub fn analyze_python_distribution_tar<R: Read>(
     source: R,
     extract_dir: &Path,
-) -> Result<PythonDistributionInfo, String> {
+) -> Result<ParsedPythonDistribution, String> {
     let mut tf = tar::Archive::new(source);
 
     // The content of the distribution could change between runs. But caching
@@ -729,7 +731,7 @@ pub fn analyze_python_distribution_tar<R: Read>(
 pub fn analyze_python_distribution_tar_zst<R: Read>(
     source: R,
     extract_dir: &Path,
-) -> Result<PythonDistributionInfo, String> {
+) -> Result<ParsedPythonDistribution, String> {
     let dctx = zstd::stream::Decoder::new(source).unwrap();
 
     analyze_python_distribution_tar(dctx, extract_dir)
