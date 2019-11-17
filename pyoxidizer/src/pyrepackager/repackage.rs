@@ -12,12 +12,12 @@ use std::fs::create_dir_all;
 use std::io::{BufRead, BufReader, Cursor, Error as IOError, Read, Write};
 use std::path::{Path, PathBuf};
 
-use super::packaging_rule::{
-    packages_from_module_name, packages_from_module_names, resolve_python_packaging,
-    ResourceAction, ResourceLocation,
-};
 use crate::app_packaging::config::{
     eval_starlark_config_file, find_pyoxidizer_config_file_env, Config, PythonPackaging,
+};
+use crate::app_packaging::packaging_rule::{
+    packages_from_module_name, packages_from_module_names, resolve_python_packaging,
+    ResourceAction, ResourceLocation,
 };
 use crate::app_packaging::state::{BuildContext, PackagingState};
 use crate::py_packaging::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode};

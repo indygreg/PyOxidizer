@@ -10,13 +10,13 @@ use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
-use crate::app_packaging::config::{
+use super::config::{
     InstallLocation, PackagingPackageRoot, PackagingPipInstallSimple, PackagingPipRequirementsFile,
     PackagingSetupPyInstall, PackagingStdlib, PackagingStdlibExtensionVariant,
     PackagingStdlibExtensionsExplicitExcludes, PackagingStdlibExtensionsExplicitIncludes,
     PackagingStdlibExtensionsPolicy, PackagingVirtualenv, PythonPackaging,
 };
-use crate::app_packaging::state::BuildContext;
+use super::state::BuildContext;
 use crate::py_packaging::distribution::PythonDistributionInfo;
 use crate::py_packaging::fsscan::{find_python_resources, PythonFileResource};
 use crate::py_packaging::resource::{AppRelativeResources, BuiltExtensionModule, PythonResource};

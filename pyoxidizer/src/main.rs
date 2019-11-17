@@ -28,6 +28,7 @@ a rather effective and powerful tool.
 */
 
 mod analyze;
+#[allow(unused)]
 mod app_packaging;
 mod cli;
 mod distribution;
