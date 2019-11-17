@@ -15,6 +15,7 @@ pub mod analyze;
 pub mod app_packaging;
 pub mod distribution;
 pub mod environment;
+mod licensing;
 pub mod logging;
 pub mod projectmgmt;
 pub mod py_packaging;

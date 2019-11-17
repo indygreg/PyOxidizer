@@ -15,24 +15,12 @@ use super::config::{
     PackagingStdlibExtensionsPolicy, PackagingVirtualenv, PythonPackaging,
 };
 use super::state::BuildContext;
-use crate::py_packaging::distribution::{is_stdlib_test_package, PythonDistributionInfo};
+use crate::py_packaging::distribution::{
+    is_stdlib_test_package, ExtensionModuleFilter, PythonDistributionInfo,
+};
 use crate::py_packaging::distutils::{prepare_hacked_distutils, read_built_extensions};
 use crate::py_packaging::fsscan::{find_python_resources, PythonFileResource};
 use crate::py_packaging::resource::{AppRelativeResources, PythonResource};
-
-/// SPDX licenses in Python distributions that are not GPL.
-///
-/// We store an allow list of licenses rather than trying to deny GPL licenses
-/// because if we miss a new GPL license, we accidentally let in GPL.
-const NON_GPL_LICENSES: &[&str] = &[
-    "BSD-3-Clause",
-    "bzip2-1.0.6",
-    "MIT",
-    "OpenSSL",
-    "Sleepycat",
-    "X11",
-    "Zlib",
-];
 
 #[derive(Debug)]
 pub enum ResourceAction {
@@ -171,97 +159,25 @@ fn resolve_stdlib_extensions_policy(
     dist: &PythonDistributionInfo,
     rule: &PackagingStdlibExtensionsPolicy,
 ) -> Vec<PythonResourceAction> {
+    // TODO define rule.policy as an ExtensionModuleFilter.
+    let filter = match rule.policy.as_str() {
+        "minimal" => ExtensionModuleFilter::Minimal,
+        "all" => ExtensionModuleFilter::All,
+        "no-libraries" => ExtensionModuleFilter::NoLibraries,
+        "no-gpl" => ExtensionModuleFilter::NoGPL,
+        other => {
+            panic!("illegal policy value: {}", other);
+        }
+    };
+
     let mut res = Vec::new();
 
-    for (name, variants) in &dist.extension_modules {
-        match rule.policy.as_str() {
-            "minimal" => {
-                let em = &variants[0];
-
-                if em.builtin_default || em.required {
-                    res.push(PythonResourceAction {
-                        action: ResourceAction::Add,
-                        location: ResourceLocation::Embedded,
-                        resource: PythonResource::ExtensionModule {
-                            name: name.clone(),
-                            module: em.clone(),
-                        },
-                    });
-                }
-            }
-
-            "all" => {
-                let em = &variants[0];
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: ResourceLocation::Embedded,
-                    resource: PythonResource::ExtensionModule {
-                        name: name.clone(),
-                        module: em.clone(),
-                    },
-                });
-            }
-
-            "no-libraries" => {
-                for em in variants {
-                    if em.links.is_empty() {
-                        res.push(PythonResourceAction {
-                            action: ResourceAction::Add,
-                            location: ResourceLocation::Embedded,
-                            resource: PythonResource::ExtensionModule {
-                                name: name.clone(),
-                                module: em.clone(),
-                            },
-                        });
-
-                        break;
-                    }
-                }
-            }
-
-            "no-gpl" => {
-                for em in variants {
-                    let suitable = if em.links.is_empty() {
-                        true
-                    } else {
-                        // Public domain is always allowed.
-                        if em.license_public_domain == Some(true) {
-                            true
-                        // Use explicit license list if one is defined.
-                        } else if let Some(ref licenses) = em.licenses {
-                            // We filter through an allow list because it is safer. (No new GPL
-                            // licenses can slip through.)
-                            licenses
-                                .iter()
-                                .all(|license| NON_GPL_LICENSES.contains(&license.as_str()))
-                        } else {
-                            // In lack of evidence that it isn't GPL, assume GPL.
-                            // TODO consider improving logic here, like allowing known system
-                            // and framework libraries to be used.
-                            warn!(logger, "unable to determine {} is not GPL; ignoring", &name);
-                            false
-                        }
-                    };
-
-                    if suitable {
-                        res.push(PythonResourceAction {
-                            action: ResourceAction::Add,
-                            location: ResourceLocation::Embedded,
-                            resource: PythonResource::ExtensionModule {
-                                name: name.clone(),
-                                module: em.clone(),
-                            },
-                        });
-
-                        break;
-                    }
-                }
-            }
-
-            other => {
-                panic!("illegal policy value: {}", other);
-            }
-        }
+    for ext in dist.filter_extension_modules(logger, filter) {
+        res.push(PythonResourceAction {
+            action: ResourceAction::Add,
+            location: ResourceLocation::Embedded,
+            resource: ext,
+        });
     }
 
     res

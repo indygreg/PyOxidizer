@@ -5,6 +5,7 @@
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use slog::warn;
 use std::collections::BTreeMap;
 use std::fs;
 use std::fs::File;
@@ -14,6 +15,8 @@ use url::Url;
 
 use super::config::PythonDistribution;
 use super::fsscan::{find_python_resources, walk_tree_files, PythonFileResource};
+use super::resource::PythonResource;
+use crate::licensing::NON_GPL_LICENSES;
 
 #[cfg(windows)]
 const PIP_EXE_BASENAME: &str = "pip3.exe";
@@ -312,6 +315,14 @@ pub struct PythonDistributionMinimalInfo {
     pub py_module_count: usize,
 }
 
+/// Denotes methods to filter extension modules.
+pub enum ExtensionModuleFilter {
+    Minimal,
+    All,
+    NoLibraries,
+    NoGPL,
+}
+
 impl PythonDistributionInfo {
     pub fn as_minimal_info(&self) -> PythonDistributionMinimalInfo {
         PythonDistributionMinimalInfo {
@@ -342,6 +353,87 @@ impl PythonDistributionInfo {
         }
 
         pip_path
+    }
+
+    pub fn filter_extension_modules(
+        &self,
+        logger: &slog::Logger,
+        filter: ExtensionModuleFilter,
+    ) -> Vec<PythonResource> {
+        let mut res = Vec::new();
+
+        for (name, variants) in &self.extension_modules {
+            match filter {
+                ExtensionModuleFilter::Minimal => {
+                    let em = &variants[0];
+
+                    if em.builtin_default || em.required {
+                        res.push(PythonResource::ExtensionModule {
+                            name: name.clone(),
+                            module: em.clone(),
+                        });
+                    }
+                }
+
+                ExtensionModuleFilter::All => {
+                    let em = &variants[0];
+                    res.push(PythonResource::ExtensionModule {
+                        name: name.clone(),
+                        module: em.clone(),
+                    });
+                }
+
+                ExtensionModuleFilter::NoLibraries => {
+                    for em in variants {
+                        if em.links.is_empty() {
+                            res.push(PythonResource::ExtensionModule {
+                                name: name.clone(),
+                                module: em.clone(),
+                            });
+
+                            break;
+                        }
+                    }
+                }
+
+                ExtensionModuleFilter::NoGPL => {
+                    for em in variants {
+                        let suitable = if em.links.is_empty() {
+                            true
+                        } else {
+                            // Public domain is always allowed.
+                            if em.license_public_domain == Some(true) {
+                                true
+                            // Use explicit license list if one is defined.
+                            } else if let Some(ref licenses) = em.licenses {
+                                // We filter through an allow list because it is safer. (No new GPL
+                                // licenses can slip through.)
+                                licenses
+                                    .iter()
+                                    .all(|license| NON_GPL_LICENSES.contains(&license.as_str()))
+                            } else {
+                                // In lack of evidence that it isn't GPL, assume GPL.
+                                // TODO consider improving logic here, like allowing known system
+                                // and framework libraries to be used.
+                                warn!(logger, "unable to determine {} is not GPL; ignoring", &name);
+                                false
+                            }
+                        };
+
+                        if suitable {
+                            res.push(PythonResource::ExtensionModule {
+                                name: name.clone(),
+                                module: em.clone(),
+                            });
+
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        res
     }
 }
 

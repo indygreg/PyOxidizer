@@ -33,6 +33,7 @@ pub mod app_packaging;
 mod cli;
 mod distribution;
 mod environment;
+mod licensing;
 mod logging;
 mod projectmgmt;
 #[allow(unused)]
