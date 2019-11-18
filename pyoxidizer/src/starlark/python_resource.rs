@@ -16,6 +16,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use super::env::required_type_arg;
+use crate::py_packaging::distribution::ExtensionModule;
 use crate::py_packaging::embedded_resource::EmbeddedPythonResourcesPrePackaged;
 use crate::py_packaging::resource::{
     BytecodeModule, BytecodeOptimizationLevel, ResourceData, SourceModule,
@@ -209,6 +210,61 @@ impl TypedValue for PythonResourceData {
             "package" => true,
             "name" => true,
             // TODO expose raw data
+            _ => false,
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct PythonExtensionModule {
+    pub em: ExtensionModule,
+}
+
+impl TypedValue for PythonExtensionModule {
+    immutable!();
+    any!();
+    not_supported!(
+        binop, dir_attr, function, get_hash, indexable, iterable, sequence, set_attr, to_int
+    );
+
+    fn to_str(&self) -> String {
+        format!("PythonExtensionModule<name={}>", self.em.module)
+    }
+
+    fn to_repr(&self) -> String {
+        self.to_str()
+    }
+
+    fn get_type(&self) -> &'static str {
+        "PythonExtensionModule"
+    }
+
+    fn to_bool(&self) -> bool {
+        true
+    }
+
+    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
+        default_compare(self, other)
+    }
+
+    fn get_attr(&self, attribute: &str) -> ValueResult {
+        let v = match attribute {
+            "name" => Value::new(self.em.module.clone()),
+            attr => {
+                return Err(ValueError::OperationNotSupported {
+                    op: format!(".{}", attr),
+                    left: "PythonExtensionModule".to_string(),
+                    right: None,
+                })
+            }
+        };
+
+        Ok(v)
+    }
+
+    fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
+        Ok(match attribute {
+            "name" => true,
             _ => false,
         })
     }

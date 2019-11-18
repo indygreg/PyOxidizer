@@ -149,6 +149,28 @@ source modules present in this distribution.
 Returns a ``list`` of ``PythonResourceData`` representing resource files
 present in this distribution.
 
+``PythonDistribution.extension_modules(filter='all')``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Returns a ``list`` of ``PythonExtensionModule`` representing extension
+modules in this distribution.
+
+The ``filter`` argument denotes how to filter the extension modules. The
+following values are recognized:
+
+``all``
+   Return the first variant of every named extension module.
+
+``minimal``
+   Return only extension modules that are required to initialize a
+   Python interpreter.
+
+``no-libraries``
+   Return only extension modules that don't require any additional libraries.
+
+``no-gpl``
+   Return only extension modules that aren't GPL-licensed.
+
 ``default_python_distribution(build_target=None)``
 --------------------------------------------------
 
@@ -207,6 +229,16 @@ Each instance has the following attributes:
 
 ``name`` (string)
    Name of this resource.
+
+``PythonExtensionModule``
+-------------------------
+
+This type represents a compiled Python extension module.
+
+Each instance has the following attributes:
+
+``name`` (string)
+   Unique name of the module being provided.
 
 ``PythonEmbeddedResources()``
 -----------------------------

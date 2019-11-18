@@ -19,10 +19,11 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use super::env::{optional_str_arg, required_str_arg};
-use super::python_resource::{PythonResourceData, PythonSourceModule};
+use super::python_resource::{PythonExtensionModule, PythonResourceData, PythonSourceModule};
 use crate::app_packaging::environment::EnvironmentContext;
 use crate::py_packaging::distribution::{
-    resolve_parsed_distribution, ParsedPythonDistribution, PythonDistributionLocation,
+    resolve_parsed_distribution, ExtensionModuleFilter, ParsedPythonDistribution,
+    PythonDistributionLocation,
 };
 use crate::python_distributions::CPYTHON_BY_TRIPLE;
 
@@ -117,6 +118,34 @@ starlark_module! { python_distribution_module =>
         let dest_dir = context.downcast_apply(|x: &EnvironmentContext| x.python_distributions_path.clone());
 
         Ok(Value::new(PythonDistribution::from_location(distribution, &dest_dir)))
+    }
+
+    PythonDistribution.extension_modules(env env, this, filter="all") {
+        let filter = required_str_arg("filter", &filter)?;
+
+        let filter = match filter.as_str() {
+            "minimal" => ExtensionModuleFilter::Minimal,
+            "all" => ExtensionModuleFilter::All,
+            "no-libraries" => ExtensionModuleFilter::NoLibraries,
+            "no-gpl" => ExtensionModuleFilter::NoGPL,
+            _ => return Err(RuntimeError {
+                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                message: "policy must be one of {minimal, all, no-libraries, no-gpl}".to_string(),
+                label: "invalid policy value".to_string(),
+            }.into())
+        };
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        Ok(Value::from(this.downcast_apply_mut(|dist: &mut PythonDistribution| {
+            dist.ensure_distribution_resolved(&logger);
+
+            dist.distribution.as_ref().unwrap().filter_extension_modules(&logger, &filter).iter().map(|em| {
+                Value::new(PythonExtensionModule { em: em.clone() })
+            }).collect_vec()
+        })))
     }
 
     PythonDistribution.source_modules(env env, this) {
