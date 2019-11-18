@@ -20,6 +20,7 @@ use crate::py_packaging::distutils::{prepare_hacked_distutils, read_built_extens
 use crate::py_packaging::fsscan::{
     find_python_resources, is_package_from_path, PythonFileResource,
 };
+use crate::py_packaging::pip::pip_install;
 use crate::py_packaging::resource::{AppRelativeResources, PythonResource};
 
 #[derive(Debug)]
@@ -106,6 +107,15 @@ fn resource_full_name(resource: &PythonFileResource) -> &str {
         PythonFileResource::BytecodeOpt2 { full_name, .. } => &full_name,
         PythonFileResource::Resource(resource) => &resource.full_name,
         _ => "",
+    }
+}
+
+fn python_resource_full_name(resource: &PythonResource) -> String {
+    match resource {
+        PythonResource::ModuleSource { name, .. } => name.clone(),
+        PythonResource::Resource { package, name, .. } => format!("{}.{}", package, name),
+        PythonResource::BuiltExtensionModule(em) => em.name.clone(),
+        _ => "".to_string(),
     }
 }
 
@@ -500,77 +510,30 @@ fn resolve_pip_install_simple(
     rule: &PackagingPipInstallSimple,
     verbose: bool,
 ) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
-    let location = ResourceLocation::new(&rule.install_location);
-
-    dist.ensure_pip();
-    let temp_dir =
-        tempdir::TempDir::new("pyoxidizer-pip-install").expect("could not creat temp directory");
-
-    let mut extra_envs = prepare_hacked_distutils(logger, dist, temp_dir.path(), &[])
-        .expect("unable to hack distutils");
-
-    let target_dir_path = temp_dir.path().join("install");
-    let target_dir_s = target_dir_path.display().to_string();
-    warn!(logger, "pip installing to {}", target_dir_s);
-
-    let mut pip_args: Vec<String> = vec![
-        "-m".to_string(),
-        "pip".to_string(),
-        "--disable-pip-version-check".to_string(),
-    ];
-
-    if verbose {
-        pip_args.push("--verbose".to_string());
-    }
-
-    pip_args.extend(vec![
-        "install".to_string(),
-        "--target".to_string(),
-        target_dir_s,
+    let mut install_args = vec![
         "--no-binary".to_string(),
         ":all:".to_string(),
         rule.package.clone(),
-    ]);
+    ];
 
-    if rule.extra_args.is_some() {
-        pip_args.extend(rule.extra_args.clone().unwrap());
+    if let Some(ref args) = rule.extra_args {
+        install_args.extend(args.clone());
     }
 
-    for (key, value) in rule.extra_env.iter() {
-        extra_envs.insert(key.clone(), value.clone());
-    }
+    let resources = pip_install(logger, dist, verbose, install_args, &rule.extra_env).unwrap();
 
-    // TODO send stderr to stdout.
-    let mut cmd = std::process::Command::new(&dist.python_exe)
-        .args(&pip_args)
-        .envs(&extra_envs)
-        .stdout(std::process::Stdio::piped())
-        .spawn()
-        .expect("error running pip");
-    {
-        let stdout = cmd.stdout.as_mut().unwrap();
-        let reader = BufReader::new(stdout);
+    let mut res = Vec::new();
+    let location = ResourceLocation::new(&rule.install_location);
 
-        for line in reader.lines() {
-            warn!(logger, "{}", line.unwrap());
-        }
-    }
-
-    let status = cmd.wait().unwrap();
-    if !status.success() {
-        panic!("error running pip");
-    }
-
-    for resource in find_python_resources(&target_dir_path) {
+    for resource in resources {
         let mut relevant = true;
-        let full_name = resource_full_name(&resource);
+
+        let full_name = python_resource_full_name(&resource);
 
         for exclude in &rule.excludes {
             let prefix = exclude.clone() + ".";
 
-            if full_name == exclude || full_name.starts_with(&prefix) {
+            if &full_name == exclude || full_name.starts_with(&prefix) {
                 relevant = false;
             }
         }
@@ -580,18 +543,17 @@ fn resolve_pip_install_simple(
         }
 
         match resource {
-            PythonFileResource::Source {
-                full_name, path, ..
+            PythonResource::ModuleSource {
+                name,
+                is_package,
+                source,
             } => {
-                let is_package = is_package_from_path(&path);
-                let source = fs::read(path).expect("error reading source file");
-
                 if rule.include_source {
                     res.push(PythonResourceAction {
                         action: ResourceAction::Add,
                         location: location.clone(),
                         resource: PythonResource::ModuleSource {
-                            name: full_name.clone(),
+                            name: name.clone(),
                             source: source.clone(),
                             is_package,
                         },
@@ -602,7 +564,7 @@ fn resolve_pip_install_simple(
                     action: ResourceAction::Add,
                     location: location.clone(),
                     resource: PythonResource::ModuleBytecode {
-                        name: full_name.clone(),
+                        name,
                         source,
                         optimize_level: rule.optimize_level as i32,
                         is_package,
@@ -610,30 +572,33 @@ fn resolve_pip_install_simple(
                 });
             }
 
-            PythonFileResource::Resource(resource) => {
-                let data = fs::read(resource.path).expect("error reading resource file");
-
+            PythonResource::Resource {
+                package,
+                name,
+                data,
+            } => {
                 res.push(PythonResourceAction {
                     action: ResourceAction::Add,
                     location: location.clone(),
                     resource: PythonResource::Resource {
-                        package: resource.package.clone(),
-                        name: resource.stem.clone(),
+                        package,
+                        name,
                         data,
                     },
+                });
+            }
+
+            PythonResource::BuiltExtensionModule(em) => {
+                res.push(PythonResourceAction {
+                    action: ResourceAction::Add,
+                    location: location.clone(),
+                    resource: PythonResource::BuiltExtensionModule(em),
                 });
             }
 
             _ => {}
         }
     }
-
-    resolve_built_extensions(
-        &PathBuf::from(extra_envs.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap()),
-        &mut res,
-        &location,
-    )
-    .unwrap();
 
     res
 }
@@ -644,85 +609,36 @@ fn resolve_pip_requirements_file(
     rule: &PackagingPipRequirementsFile,
     verbose: bool,
 ) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
-    let location = ResourceLocation::new(&rule.install_location);
-
-    dist.ensure_pip();
-
-    let temp_dir =
-        tempdir::TempDir::new("pyoxidizer-pip-install").expect("could not create temp directory");
-
-    let mut extra_envs = prepare_hacked_distutils(logger, dist, temp_dir.path(), &[])
-        .expect("unable to hack distutils");
-
-    let target_dir_path = temp_dir.path().join("install");
-    let target_dir_s = target_dir_path.display().to_string();
-    warn!(logger, "pip installing to {}", target_dir_s);
-
-    let mut args: Vec<String> = vec![
-        "-m".to_string(),
-        "pip".to_string(),
-        "--disable-pip-version-check".to_string(),
-    ];
-
-    if verbose {
-        args.push("--verbose".to_string());
-    }
-
-    args.extend(vec![
-        "install".to_string(),
-        "--target".to_string(),
-        target_dir_s,
+    let mut install_args = vec![
         "--no-binary".to_string(),
         ":all:".to_string(),
         "--requirement".to_string(),
         rule.requirements_path.to_string(),
-    ]);
+    ];
 
-    if rule.extra_args.is_some() {
-        args.extend(rule.extra_args.clone().unwrap());
-    };
-
-    for (key, value) in rule.extra_env.iter() {
-        extra_envs.insert(key.clone(), value.clone());
+    if let Some(ref args) = rule.extra_args {
+        install_args.extend(args.clone());
     }
 
-    // TODO send stderr to stdout.
-    let mut cmd = std::process::Command::new(&dist.python_exe)
-        .args(&args)
-        .envs(&extra_envs)
-        .stdout(std::process::Stdio::piped())
-        .spawn()
-        .expect("error running pip");
-    {
-        let stdout = cmd.stdout.as_mut().unwrap();
-        let reader = BufReader::new(stdout);
+    let resources = pip_install(logger, dist, verbose, install_args, &rule.extra_env).unwrap();
 
-        for line in reader.lines() {
-            warn!(logger, "{}", line.unwrap());
-        }
-    }
+    let location = ResourceLocation::new(&rule.install_location);
 
-    let status = cmd.wait().unwrap();
-    if !status.success() {
-        panic!("error running pip");
-    }
+    let mut res = Vec::new();
 
-    for resource in find_python_resources(&target_dir_path) {
+    for resource in resources {
         match resource {
-            PythonFileResource::Source {
-                full_name, path, ..
+            PythonResource::ModuleSource {
+                name,
+                is_package,
+                source,
             } => {
-                let is_package = is_package_from_path(&path);
-                let source = fs::read(path).expect("error reading source file");
-
                 if rule.include_source {
                     res.push(PythonResourceAction {
                         action: ResourceAction::Add,
                         location: location.clone(),
                         resource: PythonResource::ModuleSource {
-                            name: full_name.clone(),
+                            name: name.clone(),
                             source: source.clone(),
                             is_package,
                         },
@@ -733,7 +649,7 @@ fn resolve_pip_requirements_file(
                     action: ResourceAction::Add,
                     location: location.clone(),
                     resource: PythonResource::ModuleBytecode {
-                        name: full_name.clone(),
+                        name,
                         source,
                         optimize_level: rule.optimize_level as i32,
                         is_package,
@@ -741,30 +657,33 @@ fn resolve_pip_requirements_file(
                 });
             }
 
-            PythonFileResource::Resource(resource) => {
-                let data = fs::read(resource.path).expect("error reading resource file");
-
+            PythonResource::Resource {
+                package,
+                name,
+                data,
+            } => {
                 res.push(PythonResourceAction {
                     action: ResourceAction::Add,
                     location: location.clone(),
                     resource: PythonResource::Resource {
-                        package: resource.package.clone(),
-                        name: resource.stem.clone(),
+                        package,
+                        name,
                         data,
                     },
+                });
+            }
+
+            PythonResource::BuiltExtensionModule(em) => {
+                res.push(PythonResourceAction {
+                    action: ResourceAction::Add,
+                    location: location.clone(),
+                    resource: PythonResource::BuiltExtensionModule(em),
                 });
             }
 
             _ => {}
         }
     }
-
-    resolve_built_extensions(
-        &PathBuf::from(extra_envs.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap()),
-        &mut res,
-        &location,
-    )
-    .unwrap();
 
     res
 }
