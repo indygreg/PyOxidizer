@@ -367,4 +367,15 @@ starlark_module! { python_resource_env =>
 
         Ok(Value::new(None))
     }
+
+    PythonEmbeddedResources.add_extension_module(this, module) {
+        required_type_arg("resource", "PythonExtensionModule", &module)?;
+
+        this.downcast_apply_mut(|embedded: &mut PythonEmbeddedResources| {
+            let m = module.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
+            embedded.embedded.add_extension_module(&m);
+        });
+
+        Ok(Value::new(None))
+    }
 }

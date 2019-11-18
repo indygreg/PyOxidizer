@@ -283,6 +283,17 @@ via in-memory access.
 If multiple resources sharing the same ``(package, name)`` pair are added,
 the last added one is used.
 
+``PythonEmbeddedResources.add_extension_module(module)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method registers a ``PythonExtensionModule`` instance with a
+``PythonEmbeddedResources`` instance. The extension module will be statically
+linked into the binary produced from the ``PythonEmbeddedResources``
+instance.
+
+If multiple extension modules with the same name are added, the last
+added one is used.
+
 .. _config_embedded_python_config:
 
 ``EmbeddedPythonConfig(...)```

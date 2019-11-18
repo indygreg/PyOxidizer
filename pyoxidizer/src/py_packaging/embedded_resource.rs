@@ -23,6 +23,7 @@ pub struct EmbeddedPythonResourcesPrePackaged {
     pub source_modules: BTreeMap<String, SourceModule>,
     pub bytecode_modules: BTreeMap<String, BytecodeModule>,
     pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
+    pub extension_modules: BTreeMap<String, ExtensionModule>,
 }
 
 impl EmbeddedPythonResourcesPrePackaged {
@@ -49,6 +50,12 @@ impl EmbeddedPythonResourcesPrePackaged {
 
         let inner = self.resources.get_mut(&resource.package).unwrap();
         inner.insert(resource.name.clone(), resource.data.clone());
+    }
+
+    /// Add an extension module.
+    pub fn add_extension_module(&mut self, module: &ExtensionModule) {
+        self.extension_modules
+            .insert(module.module.clone(), module.clone());
     }
 }
 
