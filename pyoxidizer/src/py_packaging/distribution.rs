@@ -16,7 +16,7 @@ use url::Url;
 use super::fsscan::{
     find_python_resources, is_package_from_path, walk_tree_files, PythonFileResource,
 };
-use super::resource::{PythonResource, ResourceData, SourceModule};
+use super::resource::{ResourceData, SourceModule};
 use crate::licensing::NON_GPL_LICENSES;
 
 #[cfg(windows)]
@@ -422,7 +422,7 @@ impl ParsedPythonDistribution {
         &self,
         logger: &slog::Logger,
         filter: &ExtensionModuleFilter,
-    ) -> Vec<PythonResource> {
+    ) -> Vec<ExtensionModule> {
         let mut res = Vec::new();
 
         for (name, variants) in &self.extension_modules {
@@ -431,28 +431,19 @@ impl ParsedPythonDistribution {
                     let em = &variants[0];
 
                     if em.builtin_default || em.required {
-                        res.push(PythonResource::ExtensionModule {
-                            name: name.clone(),
-                            module: em.clone(),
-                        });
+                        res.push(em.clone());
                     }
                 }
 
                 ExtensionModuleFilter::All => {
                     let em = &variants[0];
-                    res.push(PythonResource::ExtensionModule {
-                        name: name.clone(),
-                        module: em.clone(),
-                    });
+                    res.push(em.clone());
                 }
 
                 ExtensionModuleFilter::NoLibraries => {
                     for em in variants {
                         if em.links.is_empty() {
-                            res.push(PythonResource::ExtensionModule {
-                                name: name.clone(),
-                                module: em.clone(),
-                            });
+                            res.push(em.clone());
 
                             break;
                         }
@@ -484,10 +475,7 @@ impl ParsedPythonDistribution {
                         };
 
                         if suitable {
-                            res.push(PythonResource::ExtensionModule {
-                                name: name.clone(),
-                                module: em.clone(),
-                            });
+                            res.push(em.clone());
 
                             break;
                         }

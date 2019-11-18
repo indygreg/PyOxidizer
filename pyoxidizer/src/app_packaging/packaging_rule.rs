@@ -160,7 +160,10 @@ fn resolve_stdlib_extensions_policy(
         res.push(PythonResourceAction {
             action: ResourceAction::Add,
             location: ResourceLocation::Embedded,
-            resource: ext,
+            resource: PythonResource::ExtensionModule {
+                name: ext.module.clone(),
+                module: ext,
+            },
         });
     }
 
