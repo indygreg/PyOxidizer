@@ -497,15 +497,31 @@ impl ParsedPythonDistribution {
         let venv_dir_s = self.venv_base.display().to_string();
 
         if !venv_base.exists() {
-            let dist_prefix = self.base_dir.join("python").join("install");
+            if self.os == "windows" {
+                let external_python = which("python").unwrap().clone();
+                warn!(logger, "python={}", external_python.display().to_string());
+                // TODO: check python version
 
-            copy_dir(&dist_prefix, &venv_base).unwrap();
+                let external_dist_prefix = external_python.parent().unwrap();
 
-            let dist_prefix_s = dist_prefix.display().to_string();
-            warn!(
-                logger,
-                "copied {} to create hacked base {}", dist_prefix_s, venv_dir_s
-            );
+                copy_dir(&external_dist_prefix, &venv_base).unwrap();
+
+                let external_dist_prefix_s = external_dist_prefix.display().to_string();
+                warn!(
+                    logger,
+                    "copied {} to create hacked base {}", external_dist_prefix_s, venv_dir_s
+                );
+            } else {
+                let dist_prefix = self.base_dir.join("python").join("install");
+
+                copy_dir(&dist_prefix, &venv_base).unwrap();
+
+                let dist_prefix_s = dist_prefix.display().to_string();
+                warn!(
+                    logger,
+                    "copied {} to create hacked base {}", dist_prefix_s, venv_dir_s
+                );
+            };
         }
 
         let python_paths = resolve_python_paths(&venv_base, &self.version);
