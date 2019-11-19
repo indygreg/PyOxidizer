@@ -49,12 +49,12 @@ jobs:
 
   - ${{ if ne(parameters.name, 'Windows') }}:
     - script: |
-        cargo run --bin pyoxidizer -- init --python-code 'print("hello, world")' ~/pyapp
-        cargo run --bin pyoxidizer -- run ~/pyapp
+        cargo run --bin pyoxidizer -- init --pip-install appdirs==1.4.3 --pip-install zero-buffer==0.5.1 ~/pyapp
+        cat ci/pyapp.py | cargo run --bin pyoxidizer -- run ~/pyapp
       displayName: Build Oxidized Application
 
   - ${{ if eq(parameters.name, 'Windows') }}:
     - script: |
-        cargo run --bin pyoxidizer -- init --python-code 'print("hello, world")' %USERPROFILE%/pyapp
-        cargo run --bin pyoxidizer -- run %USERPROFILE%/pyapp
+        cargo run --bin pyoxidizer -- init --pip-install appdirs==1.4.3 --pip-install zero-buffer==0.5.1 %USERPROFILE%/pyapp
+        cat ci/pyapp.py | cargo run --bin pyoxidizer -- run %USERPROFILE%/pyapp
       displayName: Build Oxidized Application (Windows)
