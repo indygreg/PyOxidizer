@@ -19,6 +19,7 @@ import os
 import shutil
 import stat
 import subprocess
+import sys
 import winreg
 
 from distutils.errors import DistutilsExecError, DistutilsPlatformError, \
@@ -427,6 +428,18 @@ class MSVCCompiler(CCompiler) :
             except DistutilsExecError as msg:
                 raise CompileError(msg)
 
+            obj_index = args.index("/Fo" + obj)
+            args.remove("/Fo" + obj)
+            args.insert(obj_index, "/Fo" + obj + '.static')
+            # This is needed to activate specific symbol visibility / linking
+            # behavior on Windows. It isn't needed on UNIX but should be harmless.
+            args.append('/DPy_BUILD_CORE_BUILTIN=1')
+
+            try:
+                self.spawn(args)
+            except DistutilsExecError as msg:
+                raise CompileError(msg)
+
         return objects
 
 
@@ -563,18 +576,6 @@ class MSVCCompiler(CCompiler) :
                            package=None,
                            ):
 
-        # The extension is compiled as a built-in, so linking a shared library
-        # won't work due to symbol visibility/export issues. The extension is
-        # expecting all CPython symbols to be available in the current binary,
-        # which they won't be for a shared library. PyOxidizer doesn't use the
-        # library anyway (at least not yet), so don't even bother with any
-        # linking.
-        #self.link(CCompiler.SHARED_OBJECT, objects,
-        #          output_filename, output_dir,
-        #          libraries, library_dirs, runtime_library_dirs,
-        #          export_symbols, debug,
-        #          extra_preargs, extra_postargs, build_temp, target_lang)
-
         # In addition to performing the requested link, we also write out
         # files that PyOxidizer can use to embed the extension in a larger
         # binary.
@@ -583,10 +584,11 @@ class MSVCCompiler(CCompiler) :
         if not os.path.exists(dest_path):
             os.makedirs(dest_path)
 
-        # We need to copy the object files because they may be in a temp
+        # We need to copy the static object files because they may be in a temp
         # directory that doesn't outlive this process.
         object_paths = []
         for i, o in enumerate(objects):
+            o = o + '.static'
             p = os.path.join(dest_path, '%s.%d.o' % (name, i))
             shutil.copyfile(o, p)
             object_paths.append(p)
@@ -606,6 +608,20 @@ class MSVCCompiler(CCompiler) :
             json.dump(data, fh, indent=4, sort_keys=True)
 
         print('Wrote {}'.format(json_path), file=sys.stderr)
+
+        # This is the shared library, which would only be used if this is a
+        # build dependencies during the packaging rule processing, and even
+        # then it is possible that the package is usable as a build dependency
+        # without this extension.
+        try:
+            self.link(CCompiler.SHARED_OBJECT, objects,
+                      output_filename, output_dir,
+                      libraries, library_dirs, runtime_library_dirs,
+                      export_symbols, debug,
+                      extra_preargs, extra_postargs, build_temp, target_lang)
+        except Exception as e:
+            print('Linking shared {} failed: {!r}'.format(name, e),
+                  file=sys.stderr)
 
     # -- Miscellaneous methods -----------------------------------------
     # These are all used by the 'gen_lib_options() function, in
