@@ -47,14 +47,26 @@ jobs:
     displayName: Clippy
     condition: ne( variables['rustup_toolchain'], 'nightly' )
 
-  - ${{ if ne(parameters.name, 'Windows') }}:
+  - ${{ if eq(parameters.name, 'Linux') }}:
     - script: |
-        cargo run --bin pyoxidizer -- init --pip-install appdirs==1.4.3 --pip-install zero-buffer==0.5.1 ~/pyapp
+        cargo run --bin pyoxidizer -- init --pip-install appdirs==1.4.3 --pip-install cryptography ~/pyapp
+        cat ci/pyapp.py | cargo run --bin pyoxidizer -- run ~/pyapp
+      displayName: Build Oxidized Application
+
+  - ${{ if eq(parameters.name, 'macOS') }}:
+    - script: brew install openssl@1.1
+      displayName: 'Install OpenSSL'
+
+  - ${{ if eq(parameters.name, 'macOS') }}:
+    - script: |
+        export CPPFLAGS="-I$(brew --prefix openssl@1.1)/include"
+        export LDFLAGS="-L$(brew --prefix openssl@1.1)/lib"
+        cargo run --bin pyoxidizer -- init --pip-install appdirs==1.4.3 --pip-install cryptography==2.8 ~/pyapp
         cat ci/pyapp.py | cargo run --bin pyoxidizer -- run ~/pyapp
       displayName: Build Oxidized Application
 
   - ${{ if eq(parameters.name, 'Windows') }}:
     - script: |
-        cargo run --bin pyoxidizer -- init --pip-install appdirs==1.4.3 --pip-install zero-buffer==0.5.1 %USERPROFILE%/pyapp
+        cargo run --bin pyoxidizer -- init --pip-install appdirs==1.4.3 --pip-install cryptography==2.8 %USERPROFILE%/pyapp
         cat ci/pyapp.py | cargo run --bin pyoxidizer -- run %USERPROFILE%/pyapp
       displayName: Build Oxidized Application (Windows)
