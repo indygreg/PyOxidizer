@@ -66,7 +66,18 @@ jobs:
       displayName: Build Oxidized Application
 
   - ${{ if eq(parameters.name, 'Windows') }}:
+    - script: choco install openssl
+      displayName: 'Install OpenSSL'
+
+  - ${{ if eq(parameters.name, 'Windows') }}:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.7'
+
+  - ${{ if eq(parameters.name, 'Windows') }}:
     - script: |
+        set INCLUDE=%ProgramFiles%\OpenSSL-Win64\include;%INCLUDE%
+        set LIB=%ProgramFiles%\OpenSSL-Win64\lib\;%LIB%
         cargo run --bin pyoxidizer -- init --pip-install appdirs==1.4.3 --pip-install cryptography==2.8 %USERPROFILE%/pyapp
         cat ci/pyapp.py | cargo run --bin pyoxidizer -- run %USERPROFILE%/pyapp
       displayName: Build Oxidized Application (Windows)
