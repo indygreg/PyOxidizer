@@ -4,6 +4,7 @@
 
 use itertools::Itertools;
 use lazy_static::lazy_static;
+use memmap::Mmap;
 use slog::{info, warn};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -103,7 +104,11 @@ pub fn make_config_c(
                 continue;
             }
 
-            lines.push(format!("extern PyObject* {}(void);", init_fn));
+            if init_fn == "PyInit__queue" && built_extension_modules.contains_key("gevent._queue") {
+                lines.push("extern PyObject* PyInit_stdlib_queue(void);".to_string());
+            } else {
+                lines.push(format!("extern PyObject* {}(void);", init_fn));
+            }
         }
     }
 
@@ -130,8 +135,12 @@ pub fn make_config_c(
                 continue;
             }
 
-            lines.push(format!("{{\"{}\", {}}},", em.module, init_fn));
-            ambiguous_init_fns.push(init_fn.to_string());
+            if init_fn == "PyInit__queue" && built_extension_modules.contains_key("gevent._queue") {
+                lines.push("{\"_queue\", PyInit_stdlib_queue},".to_string());
+            } else {
+                lines.push(format!("{{\"{}\", {}}},", em.module, init_fn));
+                ambiguous_init_fns.push(init_fn.to_string());
+            }
         }
     }
 
@@ -296,7 +305,9 @@ pub fn link_libpython(
     );
     for (name, em) in extension_modules {
         if let Some(init_fn) = &em.init_fn {
-            if init_fn != "NULL" {
+            if init_fn == "PyInit__queue" && built_extension_modules.contains_key("gevent._queue") {
+                ambiguous_init_fns.push("PyInit_stdlib_queue".to_string());
+            } else if init_fn != "NULL" {
                 ambiguous_init_fns.push(init_fn.to_string());
             }
         }
@@ -313,7 +324,23 @@ pub fn link_libpython(
             em.object_paths
         );
         for path in &em.object_paths {
-            build.object(path);
+            let mut out_path = path.clone();
+            if (path.ends_with("_queuemodule.o") || path.ends_with("_queuemodule.obj"))
+                && built_extension_modules.contains_key("gevent._queue")
+            {
+                out_path = temp_dir_path.join(format!("{}_stdlib_prefixed.o", path.display()));
+
+                let file = fs::File::open(&path).unwrap();
+                let object_data = unsafe { Mmap::map(&file).unwrap() };
+
+                match rename_init(logger, &"stdlib_queue".to_string(), &object_data) {
+                    Ok(val) => fs::write(&out_path, val).expect("unable to write object file"),
+                    Err(err) => {
+                        println!("Failed to rename symbol in '{}': {}", path.display(), err);
+                    }
+                };
+            }
+            build.object(out_path);
         }
 
         for entry in &em.links {
