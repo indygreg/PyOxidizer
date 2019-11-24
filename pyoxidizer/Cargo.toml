@@ -50,7 +50,7 @@ starlark = "0.2"
 tar = "0.4"
 tempdir = "0.3"
 url = "1.7"
-uuid = { version = "0.7", features = ["v5"] }
+uuid = { version = "0.7", features = ["v4", "v5"] }
 version-compare = "0.0"
 walkdir = "2"
 xml-rs = "0.8"

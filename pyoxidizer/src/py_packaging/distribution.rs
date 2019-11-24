@@ -13,6 +13,7 @@ use std::fs::{create_dir_all, File};
 use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
 use url::Url;
+use uuid::Uuid;
 
 use super::fsscan::{
     find_python_resources, is_package_from_path, walk_tree_files, PythonFileResource,
@@ -878,16 +879,8 @@ pub fn download_distribution(url: &str, sha256: &str, cache_dir: &Path) -> PathB
         panic!("sha256 of Python distribution does not validate");
     }
 
-    // We write to a temporary file and do an atomic rename to mitigate race
-    // conditions when multiple clients download simultaneously.
     let mut temp_cache_path = cache_path.clone();
-    temp_cache_path.set_file_name(format!(
-        "{}.tmp",
-        temp_cache_path
-            .file_name()
-            .expect("unable to resolve file name")
-            .to_string_lossy()
-    ));
+    temp_cache_path.set_file_name(format!("{}.tmp", Uuid::new_v4()));
 
     fs::write(&temp_cache_path, data).expect("unable to write file");
     fs::rename(&temp_cache_path, &cache_path).expect("unable to rename file");
