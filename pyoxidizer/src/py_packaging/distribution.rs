@@ -773,6 +773,9 @@ pub fn analyze_python_distribution_tar<R: Read>(
         }
     }
 
+    file.unlock()
+        .or_else(|e| Err(format!("unable to release lock: {}", e)))?;
+
     analyze_python_distribution_data(extract_dir)
 }
 
