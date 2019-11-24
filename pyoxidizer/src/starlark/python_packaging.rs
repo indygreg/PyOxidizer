@@ -449,7 +449,7 @@ impl TypedValue for WriteLicenseFiles {
 }
 
 starlark_module! { python_packaging_env =>
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, clippy::ptr_arg)]
     FilterInclude(files=None, glob_files=None) {
         optional_list_arg("files", "string", &files)?;
         optional_list_arg("glob_files", "string", &glob_files)?;
@@ -473,7 +473,7 @@ starlark_module! { python_packaging_env =>
         Ok(Value::new(FilterInclude { rule }))
     }
 
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, clippy::ptr_arg)]
     PackageRoot(
         path,
         packages=None,
@@ -516,7 +516,7 @@ starlark_module! { python_packaging_env =>
         Ok(Value::new(PackageRoot { rule }))
     }
 
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, clippy::ptr_arg)]
     PipInstallSimple(
         package,
         extra_env=None,
@@ -576,7 +576,7 @@ starlark_module! { python_packaging_env =>
         Ok(Value::new(PipInstallSimple { rule }))
     }
 
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, clippy::ptr_arg)]
     PipRequirementsFile(
         requirements_path,
         extra_env=None,
@@ -629,7 +629,7 @@ starlark_module! { python_packaging_env =>
         Ok(Value::new(PipRequirementsFile { rule }))
     }
 
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, clippy::ptr_arg)]
     SetupPyInstall(
         package_path,
         extra_env=None,
@@ -687,7 +687,7 @@ starlark_module! { python_packaging_env =>
         Ok(Value::new(SetupPyInstall { rule }))
     }
 
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, clippy::ptr_arg)]
     StdlibExtensionsPolicy(policy) {
         let policy = required_str_arg("policy", &policy)?;
 
@@ -710,7 +710,7 @@ starlark_module! { python_packaging_env =>
         Ok(Value::new(StdlibExtensionsPolicy { rule }))
     }
 
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, clippy::ptr_arg)]
     StdlibExtensionsExplicitIncludes(includes=None) {
         required_list_arg("includes", "string", &includes)?;
 
@@ -723,7 +723,7 @@ starlark_module! { python_packaging_env =>
         Ok(Value::new(StdlibExtensionsExplicitIncludes { rule }))
     }
 
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, clippy::ptr_arg)]
     StdlibExtensionsExplicitExcludes(excludes=None) {
         required_list_arg("excludes", "string", &excludes)?;
 
@@ -736,7 +736,7 @@ starlark_module! { python_packaging_env =>
         Ok(Value::new(StdlibExtensionsExplicitExcludes { rule }))
     }
 
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, clippy::ptr_arg)]
     StdlibExtensionVariant(extension, variant) {
         let extension = required_str_arg("extension", &extension)?;
         let variant = required_str_arg("variant", &variant)?;
@@ -749,7 +749,7 @@ starlark_module! { python_packaging_env =>
         Ok(Value::new(StdlibExtensionVariant { rule }))
     }
 
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, clippy::ptr_arg)]
     Stdlib(
         optimize_level=0,
         exclude_test_modules=true,
@@ -790,7 +790,7 @@ starlark_module! { python_packaging_env =>
         Ok(Value::new(Stdlib { rule }))
     }
 
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, clippy::ptr_arg)]
     Virtualenv(
         path,
         optimize_level=0,
@@ -829,7 +829,7 @@ starlark_module! { python_packaging_env =>
         Ok(Value::new(Virtualenv { rule }))
     }
 
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, clippy::ptr_arg)]
     WriteLicenseFiles(path) {
         let path = required_str_arg("path", &path)?;
 

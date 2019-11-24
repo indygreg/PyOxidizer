@@ -69,7 +69,7 @@ impl TypedValue for Config {
 }
 
 starlark_module! { config_env =>
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, clippy::ptr_arg)]
     Config(
         env env,
         application_name,

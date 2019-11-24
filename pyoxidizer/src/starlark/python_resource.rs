@@ -305,13 +305,14 @@ impl TypedValue for PythonEmbeddedResources {
 }
 
 starlark_module! { python_resource_env =>
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, clippy::ptr_arg)]
     PythonEmbeddedResources(env _env) {
         let embedded = EmbeddedPythonResourcesPrePackaged::default();
 
         Ok(Value::new(PythonEmbeddedResources { embedded }))
     }
 
+    #[allow(clippy::ptr_arg)]
     PythonEmbeddedResources.add_module_source(this, module) {
         required_type_arg("module", "PythonSourceModule", &module)?;
 
@@ -325,6 +326,7 @@ starlark_module! { python_resource_env =>
 
     // TODO consider unifying with add_module_source() so there only needs to be
     // a single function call.
+    #[allow(clippy::ptr_arg)]
     PythonEmbeddedResources.add_module_bytecode(this, module, optimize_level=0) {
         required_type_arg("module", "PythonSourceModule", &module)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
@@ -357,6 +359,7 @@ starlark_module! { python_resource_env =>
         Ok(Value::new(None))
     }
 
+    #[allow(clippy::ptr_arg)]
     PythonEmbeddedResources.add_resource_data(this, resource) {
         required_type_arg("resource", "PythonResourceData", &resource)?;
 
@@ -368,6 +371,7 @@ starlark_module! { python_resource_env =>
         Ok(Value::new(None))
     }
 
+    #[allow(clippy::ptr_arg)]
     PythonEmbeddedResources.add_extension_module(this, module) {
         required_type_arg("resource", "PythonExtensionModule", &module)?;
 

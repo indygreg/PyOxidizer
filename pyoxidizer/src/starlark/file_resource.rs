@@ -136,13 +136,14 @@ impl TypedValue for FileManifest {
 }
 
 starlark_module! { file_resource_env =>
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, clippy::ptr_arg)]
     FileManifest(env _env) {
         let manifest = RawFileManifest::default();
 
         Ok(Value::new(FileManifest { manifest }))
     }
 
+    #[allow(clippy::ptr_arg)]
     FileManifest.add_python_resource(this, prefix, resource) {
         let prefix = required_str_arg("prefix", &prefix)?;
 
@@ -191,6 +192,7 @@ starlark_module! { file_resource_env =>
         Ok(Value::new(None))
     }
 
+    #[allow(clippy::ptr_arg)]
     FileManifest.add_python_resources(call_stack cs, env env, this, prefix, resources) {
         required_str_arg("prefix", &prefix)?;
 

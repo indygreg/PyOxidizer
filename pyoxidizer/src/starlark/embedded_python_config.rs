@@ -55,7 +55,7 @@ impl TypedValue for EmbeddedPythonConfig {
 }
 
 starlark_module! { embedded_python_config_module =>
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, clippy::ptr_arg)]
     EmbeddedPythonConfig(
         env env,
         bytes_warning=0,

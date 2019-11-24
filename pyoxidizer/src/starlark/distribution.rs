@@ -119,7 +119,7 @@ impl TypedValue for Distribution {
 }
 
 starlark_module! { distribution_env =>
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, clippy::ptr_arg)]
     TarballDistribution(path_prefix=None) {
         let path_prefix = optional_str_arg("path_prefix", &path_prefix)?;
 
@@ -130,7 +130,7 @@ starlark_module! { distribution_env =>
         Ok(Value::new(TarballDistribution { distribution }))
     }
 
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, clippy::ptr_arg)]
     WixInstaller(
         msi_upgrade_code_x86=None,
         msi_upgrade_code_amd64=None,

@@ -230,6 +230,7 @@ impl TypedValue for EnvironmentContext {
 }
 
 starlark_module! { global_module =>
+    #[allow(clippy::ptr_arg)]
     set_build_path(env env, path) {
         let path = required_str_arg("path", &path)?;
         let mut context = env.get("CONTEXT").expect("CONTEXT not set");

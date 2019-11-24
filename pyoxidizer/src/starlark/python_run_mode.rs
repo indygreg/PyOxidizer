@@ -50,20 +50,24 @@ impl TypedValue for PythonRunMode {
 }
 
 starlark_module! { python_run_mode_env =>
+    #[allow(clippy::ptr_arg)]
     python_run_mode_noop(call_stack _stack) {
         Ok(Value::new(PythonRunMode { run_mode: RunMode::Noop }))
     }
 
+    #[allow(clippy::ptr_arg)]
     python_run_mode_repl(call_stack _stack) {
         Ok(Value::new(PythonRunMode { run_mode: RunMode::Repl }))
     }
 
+    #[allow(clippy::ptr_arg)]
     python_run_mode_module(module) {
         let module = required_str_arg("module", &module)?;
 
         Ok(Value::new(PythonRunMode { run_mode: RunMode::Module { module }}))
     }
 
+    #[allow(clippy::ptr_arg)]
     python_run_mode_eval(code) {
         let code = required_str_arg("code", &code)?;
 

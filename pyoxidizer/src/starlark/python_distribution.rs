@@ -88,7 +88,7 @@ impl TypedValue for PythonDistribution {
 }
 
 starlark_module! { python_distribution_module =>
-    #[allow(non_snake_case)]
+    #[allow(non_snake_case, clippy::ptr_arg)]
     PythonDistribution(env env, sha256, local_path=None, url=None) {
         required_str_arg("sha256", &sha256)?;
         optional_str_arg("local_path", &local_path)?;
@@ -120,6 +120,7 @@ starlark_module! { python_distribution_module =>
         Ok(Value::new(PythonDistribution::from_location(distribution, &dest_dir)))
     }
 
+    #[allow(clippy::ptr_arg)]
     PythonDistribution.extension_modules(env env, this, filter="all") {
         let filter = required_str_arg("filter", &filter)?;
 
@@ -148,6 +149,7 @@ starlark_module! { python_distribution_module =>
         })))
     }
 
+    #[allow(clippy::ptr_arg)]
     PythonDistribution.source_modules(env env, this) {
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
 
@@ -162,6 +164,7 @@ starlark_module! { python_distribution_module =>
         })))
     }
 
+    #[allow(clippy::ptr_arg)]
     PythonDistribution.resources_data(env env, this) {
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
 
@@ -176,6 +179,7 @@ starlark_module! { python_distribution_module =>
         })))
     }
 
+    #[allow(clippy::ptr_arg)]
     default_python_distribution(env env, build_target=None) {
         let build_target = match build_target.get_type() {
             "NoneType" => env.get("BUILD_TARGET").unwrap().to_string(),
