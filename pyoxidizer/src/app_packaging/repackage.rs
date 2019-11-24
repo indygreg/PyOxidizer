@@ -62,6 +62,7 @@ lazy_static! {
 pub const HOST: &str = env!("HOST");
 
 impl BuildContext {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         logger: &slog::Logger,
         project_path: &Path,
