@@ -549,8 +549,13 @@ pub fn analyze_python_distribution_data(
 
     if let Some(ref python_license_path) = pi.license_path {
         let license_path = python_path.join(python_license_path);
-        let license_text =
-            fs::read_to_string(&license_path).or_else(|_| Err("unable to read Python license"))?;
+        let license_text = fs::read_to_string(&license_path).or_else(|e| {
+            Err(format!(
+                "unable to read Python license {}: {}",
+                license_path.display(),
+                e
+            ))
+        })?;
 
         let mut licenses = Vec::new();
         licenses.push(LicenseInfo {
