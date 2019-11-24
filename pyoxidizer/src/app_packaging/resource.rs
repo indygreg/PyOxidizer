@@ -25,11 +25,14 @@ pub struct FileManifest {
 impl FileManifest {
     /// Add a file to the manifest.
     pub fn add_file(&mut self, path: &Path, content: &FileContent) -> Result<(), String> {
-        if path.display().to_string().contains("..") {
+        let path_s = path.display().to_string();
+
+        if path_s.contains("..") {
             return Err(format!("path cannot contain '..': {}", path.display()));
         }
 
-        if path.is_absolute() {
+        // is_absolute() on Windows doesn't check for leading /.
+        if path_s.starts_with('/') || path.is_absolute() {
             return Err(format!("path cannot be absolute: {}", path.display()));
         }
 
