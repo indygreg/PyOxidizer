@@ -29,6 +29,10 @@ impl FileManifest {
             return Err(format!("path cannot contain '..': {}", path.display()));
         }
 
+        if path.is_absolute() {
+            return Err(format!("path cannot be absolute: {}", path.display()));
+        }
+
         self.files.insert(path.to_path_buf(), content.clone());
 
         Ok(())
@@ -106,6 +110,9 @@ mod tests {
         };
 
         let res = v.add_file(&PathBuf::from("../etc/passwd"), &f);
+        assert!(res.is_err());
+
+        let res = v.add_file(&PathBuf::from("/foo"), &f);
         assert!(res.is_err());
     }
 
