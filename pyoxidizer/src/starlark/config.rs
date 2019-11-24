@@ -186,8 +186,8 @@ starlark_module! { config_env =>
             "NoneType" => Vec::new(),
             _ => return Err(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                message: format!("distributions must be a list or None"),
-                label: format!("distributions must be a list or None"),
+                message: "distributions must be a list or None".to_string(),
+                label: "distributions must be a list or None".to_string(),
             }.into())
 
         };
