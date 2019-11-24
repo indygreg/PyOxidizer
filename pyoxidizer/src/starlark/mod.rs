@@ -13,6 +13,7 @@ pub mod distribution;
 pub mod embedded_python_config;
 pub mod env;
 pub mod eval;
+pub mod file_resource;
 pub mod python_distribution;
 pub mod python_packaging;
 pub mod python_resource;

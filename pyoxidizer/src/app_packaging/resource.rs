@@ -17,7 +17,7 @@ pub struct FileContent {
 }
 
 /// Represents a virtual tree of files.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct FileManifest {
     files: BTreeMap<PathBuf, FileContent>,
 }

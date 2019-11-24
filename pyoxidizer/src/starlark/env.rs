@@ -248,6 +248,7 @@ pub fn global_environment(context: &EnvironmentContext) -> Result<Environment, E
     let env = global_module(env);
     let env = super::config::config_env(env);
     let env = super::distribution::distribution_env(env);
+    let env = super::file_resource::file_resource_env(env);
     let env = super::python_distribution::python_distribution_module(env);
     let env = super::embedded_python_config::embedded_python_config_module(env);
     let env = super::python_packaging::python_packaging_env(env);
