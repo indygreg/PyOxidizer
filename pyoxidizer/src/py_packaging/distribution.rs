@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use fs2::FileExt;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -722,6 +723,21 @@ pub fn analyze_python_distribution_tar<R: Read>(
     extract_dir: &Path,
 ) -> Result<ParsedPythonDistribution, String> {
     let mut tf = tar::Archive::new(source);
+
+    // Multiple threads or processes could race to extract the archive.
+    // So we use a lock file to ensure exclusive access.
+    // TODO use more granular lock based on the output directory (possibly
+    // by putting lock in output directory itself).
+    let lock_path = extract_dir
+        .parent()
+        .unwrap()
+        .join("distribution-extract-lock");
+
+    let file = File::create(&lock_path)
+        .or_else(|e| Err(format!("unable to open {}: {}", lock_path.display(), e)))?;
+
+    file.lock_exclusive()
+        .or_else(|_| Err(format!("failed to obtain lock for {}", lock_path.display())))?;
 
     // The content of the distribution could change between runs. But caching
     // the extraction does keep things fast.
