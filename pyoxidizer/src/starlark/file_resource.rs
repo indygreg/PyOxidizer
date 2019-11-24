@@ -63,7 +63,7 @@ pub struct FileManifest {
 }
 
 impl FileManifest {
-    fn add_source_module(&mut self, prefix: &str, module: &SourceModule) {
+    fn add_source_module(&mut self, prefix: &str, module: &SourceModule) -> Result<(), String> {
         let content = RawFileContent {
             data: module.source.clone(),
             executable: false,
@@ -82,7 +82,7 @@ impl FileManifest {
             module_path.file_name().unwrap().to_string_lossy()
         ));
 
-        self.manifest.add_file(&module_path, &content);
+        self.manifest.add_file(&module_path, &content)
     }
 
     // TODO implement.
@@ -90,7 +90,7 @@ impl FileManifest {
         println!("support for adding bytecode modules not yet implemented");
     }
 
-    fn add_resource_data(&mut self, prefix: &str, resource: &ResourceData) {
+    fn add_resource_data(&mut self, prefix: &str, resource: &ResourceData) -> Result<(), String> {
         let mut dest_path = PathBuf::from(prefix);
         dest_path.extend(resource.package.split('.'));
         dest_path.push(&resource.name);
@@ -100,7 +100,7 @@ impl FileManifest {
             executable: false,
         };
 
-        self.manifest.add_file(&dest_path, &content);
+        self.manifest.add_file(&dest_path, &content)
     }
 
     // TODO implement.
@@ -150,9 +150,13 @@ starlark_module! { file_resource_env =>
             match resource.get_type() {
                 "PythonSourceModule" => {
                     let m = resource.downcast_apply(|m: &PythonSourceModule| m.module.clone());
-                    manifest.add_source_module(&prefix, &m);
-
-                    Ok(())
+                    manifest.add_source_module(&prefix, &m).or_else(|e| {
+                        Err(RuntimeError {
+                            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                            message: e.clone(),
+                            label: e,
+                        }.into())
+                    })
                 },
                 "PythonBytecodeModule" => {
                     let m = resource.downcast_apply(|m: &PythonBytecodeModule| m.module.clone());
@@ -162,9 +166,13 @@ starlark_module! { file_resource_env =>
                 },
                 "PythonResourceData" => {
                     let m = resource.downcast_apply(|m: &PythonResourceData| m.data.clone());
-                    manifest.add_resource_data(&prefix, &m);
-
-                    Ok(())
+                    manifest.add_resource_data(&prefix, &m).or_else(|e| {
+                        Err(RuntimeError {
+                            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                            message: e.clone(),
+                            label: e,
+                        }.into())
+                    })
                 },
                 "PythonExtensionModule" => {
                     let m = resource.downcast_apply(|m: &PythonExtensionModule| m.em.clone());

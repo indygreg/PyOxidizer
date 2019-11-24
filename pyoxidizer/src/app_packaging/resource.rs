@@ -24,8 +24,14 @@ pub struct FileManifest {
 
 impl FileManifest {
     /// Add a file to the manifest.
-    pub fn add_file(&mut self, path: &Path, content: &FileContent) {
+    pub fn add_file(&mut self, path: &Path, content: &FileContent) -> Result<(), String> {
+        if path.display().to_string().contains("..") {
+            return Err(format!("path cannot contain '..': {}", path.display()));
+        }
+
         self.files.insert(path.to_path_buf(), content.clone());
+
+        Ok(())
     }
 
     /// All relative directories contained within files in this manifest.
@@ -82,13 +88,25 @@ mod tests {
             executable: false,
         };
 
-        v.add_file(&PathBuf::from("foo"), &f);
+        v.add_file(&PathBuf::from("foo"), &f).unwrap();
 
         let entries = v.entries().collect_vec();
 
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].0, &PathBuf::from("foo"));
         assert_eq!(entries[0].1, &f);
+    }
+
+    #[test]
+    fn test_add_bad_path() {
+        let mut v = FileManifest::default();
+        let f = FileContent {
+            data: vec![],
+            executable: false,
+        };
+
+        let res = v.add_file(&PathBuf::from("../etc/passwd"), &f);
+        assert!(res.is_err());
     }
 
     #[test]
@@ -99,11 +117,11 @@ mod tests {
             executable: false,
         };
 
-        v.add_file(&PathBuf::from("foo"), &f);
+        v.add_file(&PathBuf::from("foo"), &f).unwrap();
         let dirs = v.relative_directories();
         assert_eq!(dirs.len(), 0);
 
-        v.add_file(&PathBuf::from("dir1/dir2/foo"), &f);
+        v.add_file(&PathBuf::from("dir1/dir2/foo"), &f).unwrap();
         let dirs = v.relative_directories();
         assert_eq!(
             dirs,
@@ -119,8 +137,8 @@ mod tests {
             executable: false,
         };
 
-        v.add_file(&PathBuf::from("foo"), &f);
-        v.add_file(&PathBuf::from("dir1/dir2/foo"), &f);
+        v.add_file(&PathBuf::from("foo"), &f).unwrap();
+        v.add_file(&PathBuf::from("dir1/dir2/foo"), &f).unwrap();
 
         let dirs = v.resolve_directories(&PathBuf::from("/tmp"));
         assert_eq!(
