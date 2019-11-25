@@ -56,7 +56,8 @@ pub fn prepare_hacked_distutils(logger: &slog::Logger, target: &PythonPaths) {
     let dest_distutils_path = target.stdlib.join("distutils");
 
     for (path, data) in MODIFIED_DISTUTILS_FILES.iter() {
-        let dest_path = dest_distutils_path.join(path);
+        let mut dest_path = dest_distutils_path.clone();
+        dest_path.extend(path.split('/'));
 
         warn!(logger, "modifying distutils/{} for oxidation", path);
         std::fs::write(dest_path, data).unwrap();
