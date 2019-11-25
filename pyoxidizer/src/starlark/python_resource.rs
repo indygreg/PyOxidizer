@@ -319,7 +319,7 @@ impl<'a> From<&'a PythonResource> for Value {
                 },
             }),
 
-            PythonResource::ModuleBytecode {
+            PythonResource::ModuleBytecodeRequest {
                 name,
                 source,
                 optimize_level,

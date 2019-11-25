@@ -363,7 +363,7 @@ pub fn resolve_python_resources(
                 (
                     ResourceAction::Add,
                     ResourceLocation::Embedded,
-                    PythonResource::ModuleBytecode {
+                    PythonResource::ModuleBytecodeRequest {
                         name,
                         source,
                         optimize_level,
@@ -387,7 +387,7 @@ pub fn resolve_python_resources(
                 (
                     ResourceAction::Add,
                     ResourceLocation::AppRelative { path },
-                    PythonResource::ModuleBytecode {
+                    PythonResource::ModuleBytecodeRequest {
                         name,
                         source,
                         optimize_level,
@@ -425,7 +425,7 @@ pub fn resolve_python_resources(
                 (
                     ResourceAction::Remove,
                     ResourceLocation::Embedded,
-                    PythonResource::ModuleBytecode { name, .. },
+                    PythonResource::ModuleBytecodeRequest { name, .. },
                 ) => {
                     warn!(logger, "removing embedded module bytecode: {}", name);
                     embedded_bytecode_requests.remove(&name);

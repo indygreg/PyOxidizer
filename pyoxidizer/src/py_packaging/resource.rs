@@ -56,7 +56,7 @@ pub struct BytecodeModule {
 
 impl BytecodeModule {
     pub fn as_python_resource(&self) -> PythonResource {
-        PythonResource::ModuleBytecode {
+        PythonResource::ModuleBytecodeRequest {
             name: self.name.clone(),
             source: self.source.clone(),
             optimize_level: match self.optimize_level {
@@ -112,7 +112,7 @@ pub enum PythonResource {
         source: Vec<u8>,
         is_package: bool,
     },
-    ModuleBytecode {
+    ModuleBytecodeRequest {
         name: String,
         source: Vec<u8>,
         optimize_level: i32,

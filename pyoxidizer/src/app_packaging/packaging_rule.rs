@@ -304,7 +304,7 @@ fn resolve_stdlib(
         res.push(PythonResourceAction {
             action: ResourceAction::Add,
             location: location.clone(),
-            resource: PythonResource::ModuleBytecode {
+            resource: PythonResource::ModuleBytecodeRequest {
                 name: m.name,
                 source: m.source,
                 optimize_level: rule.optimize_level as i32,
@@ -392,7 +392,7 @@ fn resolve_virtualenv(
                 res.push(PythonResourceAction {
                     action: ResourceAction::Add,
                     location: location.clone(),
-                    resource: PythonResource::ModuleBytecode {
+                    resource: PythonResource::ModuleBytecodeRequest {
                         name: full_name.clone(),
                         source,
                         optimize_level: rule.optimize_level as i32,
@@ -474,7 +474,7 @@ fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceAction
                 res.push(PythonResourceAction {
                     action: ResourceAction::Add,
                     location: location.clone(),
-                    resource: PythonResource::ModuleBytecode {
+                    resource: PythonResource::ModuleBytecodeRequest {
                         name: full_name.clone(),
                         source,
                         optimize_level: rule.optimize_level as i32,
@@ -563,7 +563,7 @@ fn resolve_pip_install_simple(
                 res.push(PythonResourceAction {
                     action: ResourceAction::Add,
                     location: location.clone(),
-                    resource: PythonResource::ModuleBytecode {
+                    resource: PythonResource::ModuleBytecodeRequest {
                         name,
                         source,
                         optimize_level: rule.optimize_level as i32,
@@ -648,7 +648,7 @@ fn resolve_pip_requirements_file(
                 res.push(PythonResourceAction {
                     action: ResourceAction::Add,
                     location: location.clone(),
-                    resource: PythonResource::ModuleBytecode {
+                    resource: PythonResource::ModuleBytecodeRequest {
                         name,
                         source,
                         optimize_level: rule.optimize_level as i32,
@@ -808,7 +808,7 @@ fn resolve_setup_py_install(
                 res.push(PythonResourceAction {
                     action: ResourceAction::Add,
                     location: location.clone(),
-                    resource: PythonResource::ModuleBytecode {
+                    resource: PythonResource::ModuleBytecodeRequest {
                         name: full_name.clone(),
                         source,
                         optimize_level: rule.optimize_level as i32,
