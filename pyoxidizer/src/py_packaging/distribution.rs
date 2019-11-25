@@ -839,9 +839,9 @@ pub fn get_http_client() -> reqwest::Result<reqwest::Client> {
 /// The path to the downloaded and validated file is returned.
 pub fn download_distribution(url: &str, sha256: &str, cache_dir: &Path) -> PathBuf {
     let expected_hash = hex::decode(sha256).expect("could not parse SHA256 hash");
-    let url = Url::parse(url).expect("failed to parse URL");
+    let u = Url::parse(url).expect("failed to parse URL");
 
-    let basename = url
+    let basename = u
         .path_segments()
         .expect("cannot be base path")
         .last()
@@ -861,10 +861,10 @@ pub fn download_distribution(url: &str, sha256: &str, cache_dir: &Path) -> PathB
 
     let mut data: Vec<u8> = Vec::new();
 
-    println!("downloading {}", url);
+    println!("downloading {}", u);
     let client = get_http_client().expect("unable to get HTTP client");
     let mut response = client
-        .get(url)
+        .get(u)
         .send()
         .expect("unable to perform HTTP request");
     response
@@ -883,7 +883,19 @@ pub fn download_distribution(url: &str, sha256: &str, cache_dir: &Path) -> PathB
     temp_cache_path.set_file_name(format!("{}.tmp", Uuid::new_v4()));
 
     fs::write(&temp_cache_path, data).expect("unable to write file");
-    fs::rename(&temp_cache_path, &cache_path).expect("unable to rename file");
+
+    fs::rename(&temp_cache_path, &cache_path)
+        .or_else(|e| {
+            fs::remove_file(&temp_cache_path).expect("unable to remove temp file");
+
+            if cache_path.exists() {
+                download_distribution(url, sha256, cache_dir);
+                return Ok(());
+            }
+
+            Err(e)
+        })
+        .expect("unable to rename downloaded file");
 
     cache_path
 }
