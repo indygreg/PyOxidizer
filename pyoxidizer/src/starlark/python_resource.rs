@@ -333,6 +333,10 @@ impl<'a> From<&'a PythonResource> for Value {
                 },
             }),
 
+            PythonResource::ModuleBytecode { .. } => {
+                panic!("not yet implemented");
+            }
+
             PythonResource::Resource {
                 package,
                 name,

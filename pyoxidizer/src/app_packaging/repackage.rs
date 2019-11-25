@@ -433,6 +433,32 @@ pub fn resolve_python_resources(
                 (
                     ResourceAction::Add,
                     ResourceLocation::Embedded,
+                    PythonResource::ModuleBytecode { .. },
+                ) => {
+                    panic!("adding embedded ModuleBytecode not supported");
+                }
+                (
+                    ResourceAction::Remove,
+                    ResourceLocation::Embedded,
+                    PythonResource::ModuleBytecode { .. },
+                ) => {
+                    panic!("removing embedded ModuleBytecode not supported");
+                }
+                (
+                    ResourceAction::Add,
+                    ResourceLocation::AppRelative { .. },
+                    PythonResource::ModuleBytecode { .. },
+                ) => {
+                    panic!("adding app-relative ModuleBytecode not supported");
+                }
+                (
+                    ResourceAction::Remove,
+                    ResourceLocation::AppRelative { .. },
+                    PythonResource::ModuleBytecode { .. },
+                ) => panic!("removing app-relative ModuleBytecode not supported"),
+                (
+                    ResourceAction::Add,
+                    ResourceLocation::Embedded,
                     PythonResource::Resource {
                         package,
                         name,

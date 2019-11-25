@@ -118,6 +118,12 @@ pub enum PythonResource {
         optimize_level: i32,
         is_package: bool,
     },
+    ModuleBytecode {
+        name: String,
+        bytecode: Vec<u8>,
+        optimize_level: BytecodeOptimizationLevel,
+        is_package: bool,
+    },
     Resource {
         package: String,
         name: String,
