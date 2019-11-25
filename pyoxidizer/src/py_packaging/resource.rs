@@ -34,6 +34,17 @@ pub enum BytecodeOptimizationLevel {
     Two,
 }
 
+impl From<i32> for BytecodeOptimizationLevel {
+    fn from(i: i32) -> Self {
+        match i {
+            0 => BytecodeOptimizationLevel::Zero,
+            1 => BytecodeOptimizationLevel::One,
+            2 => BytecodeOptimizationLevel::Two,
+            _ => panic!("unsupported bytecode optimization level"),
+        }
+    }
+}
+
 /// Python module bytecode, agnostic of location.
 #[derive(Clone, Debug, PartialEq)]
 pub struct BytecodeModule {

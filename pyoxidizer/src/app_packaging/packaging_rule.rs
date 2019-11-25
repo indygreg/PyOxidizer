@@ -520,7 +520,7 @@ fn resolve_pip_install_simple(
         install_args.extend(args.clone());
     }
 
-    let resources = pip_install(logger, dist, verbose, install_args, &rule.extra_env).unwrap();
+    let resources = pip_install(logger, dist, verbose, &install_args, &rule.extra_env).unwrap();
 
     let mut res = Vec::new();
     let location = ResourceLocation::new(&rule.install_location);
@@ -620,7 +620,7 @@ fn resolve_pip_requirements_file(
         install_args.extend(args.clone());
     }
 
-    let resources = pip_install(logger, dist, verbose, install_args, &rule.extra_env).unwrap();
+    let resources = pip_install(logger, dist, verbose, &install_args, &rule.extra_env).unwrap();
 
     let location = ResourceLocation::new(&rule.install_location);
 

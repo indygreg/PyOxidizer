@@ -18,13 +18,14 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use super::env::{optional_str_arg, required_str_arg};
+use super::env::{optional_dict_arg, optional_str_arg, required_list_arg, required_str_arg};
 use super::python_resource::{PythonExtensionModule, PythonResourceData, PythonSourceModule};
 use crate::app_packaging::environment::EnvironmentContext;
 use crate::py_packaging::distribution::{
     resolve_parsed_distribution, ExtensionModuleFilter, ParsedPythonDistribution,
     PythonDistributionLocation,
 };
+use crate::py_packaging::pip::pip_install as raw_pip_install;
 use crate::python_distributions::CPYTHON_BY_TRIPLE;
 
 #[derive(Debug, Clone)]
@@ -180,6 +181,43 @@ starlark_module! { python_distribution_module =>
     }
 
     #[allow(clippy::ptr_arg)]
+    PythonDistribution.pip_install(env env, this, args, extra_envs=None) {
+        required_list_arg("args", "string", &args)?;
+        optional_dict_arg("extra_envs", "string", "string", &extra_envs)?;
+
+        let args: Vec<String> = args.into_iter()?.map(|x| x.to_string()).collect();
+
+        let extra_envs = match extra_envs.get_type() {
+            "dict" => extra_envs.into_iter()?.map(|key| {
+                let k = key.to_string();
+                let v = extra_envs.at(key.clone()).unwrap().to_string();
+                (k, v)
+            }).collect(),
+            "NoneType" => HashMap::new(),
+            _ => panic!("should have validated type above"),
+        };
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        let resources = this.downcast_apply_mut(|dist: &mut PythonDistribution| {
+            dist.ensure_distribution_resolved(&logger);
+
+            let dist = dist.distribution.as_ref().unwrap();
+            // TODO get verbose flag from context.
+            raw_pip_install(&logger, &dist, false, &args, &extra_envs)
+        }).or_else(|e| Err(
+            RuntimeError {
+                code: "PIP_INSTALL_ERROR",
+                message: format!("error running pip install: {}", e),
+                label: "pip_install()".to_string(),
+            }.into()
+        ))?;
+
+        Ok(Value::from(resources.iter().map(Value::from).collect::<Vec<Value>>()))
+    }
+
+    #[allow(clippy::ptr_arg)]
     default_python_distribution(env env, build_target=None) {
         let build_target = match build_target.get_type() {
             "NoneType" => env.get("BUILD_TARGET").unwrap().to_string(),
@@ -281,5 +319,21 @@ mod tests {
     fn test_source_modules() {
         let mods = starlark_ok("default_python_distribution().source_modules()");
         assert_eq!(mods.get_type(), "list");
+    }
+
+    #[test]
+    fn test_pip_install_simple() {
+        let resources =
+            starlark_ok("default_python_distribution().pip_install(['pyflakes==2.1.1'])");
+        assert_eq!(resources.get_type(), "list");
+
+        let mut it = resources.into_iter().unwrap();
+
+        let v = it.next().unwrap();
+        assert_eq!(v.get_type(), "PythonSourceModule");
+        v.downcast_apply(|x: &PythonSourceModule| {
+            assert_eq!(x.module.name, "pyflakes");
+            assert!(x.module.is_package);
+        });
     }
 }

@@ -171,6 +171,26 @@ following values are recognized:
 ``no-gpl``
    Return only extension modules that aren't GPL-licensed.
 
+``PythonDistribution.pip_install(args, extra_envs={})``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method runs ``pip install <args>`` with the specified distribution.
+
+``args``
+   List of strings defining raw process arguments to pass to ``pip install``.
+
+``extra_envs``
+   Optional dict of string key-value pairs constituting extra environment
+   variables to set in the invoked ``pip`` process.
+
+Returns a ``list`` of objects representing Python resources installed as
+part of the operation. The types of these objects can be ``PythonSourceMode``,
+``PythonBytecodeModule``, ``PythonResourceData``, etc.
+
+The returned resources are typically added to a ``FileManifest`` or
+``PythonEmbeddedResources`` to make them available to a packaged
+application.
+
 ``default_python_distribution(build_target=None)``
 --------------------------------------------------
 

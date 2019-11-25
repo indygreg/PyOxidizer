@@ -19,7 +19,7 @@ use super::env::required_type_arg;
 use crate::py_packaging::distribution::ExtensionModule;
 use crate::py_packaging::embedded_resource::EmbeddedPythonResourcesPrePackaged;
 use crate::py_packaging::resource::{
-    BytecodeModule, BytecodeOptimizationLevel, ResourceData, SourceModule,
+    BytecodeModule, BytecodeOptimizationLevel, PythonResource, ResourceData, SourceModule,
 };
 
 #[derive(Debug, Clone)]
@@ -301,6 +301,58 @@ impl TypedValue for PythonEmbeddedResources {
 
     fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
         default_compare(self, other)
+    }
+}
+
+impl<'a> From<&'a PythonResource> for Value {
+    fn from(resource: &'a PythonResource) -> Value {
+        match resource {
+            PythonResource::ModuleSource {
+                name,
+                source,
+                is_package,
+            } => Value::new(PythonSourceModule {
+                module: SourceModule {
+                    name: name.clone(),
+                    source: source.clone(),
+                    is_package: *is_package,
+                },
+            }),
+
+            PythonResource::ModuleBytecode {
+                name,
+                source,
+                optimize_level,
+                is_package,
+            } => Value::new(PythonBytecodeModule {
+                module: BytecodeModule {
+                    name: name.clone(),
+                    source: source.clone(),
+                    optimize_level: BytecodeOptimizationLevel::from(*optimize_level),
+                    is_package: *is_package,
+                },
+            }),
+
+            PythonResource::Resource {
+                package,
+                name,
+                data,
+            } => Value::new(PythonResourceData {
+                data: ResourceData {
+                    package: package.clone(),
+                    name: name.clone(),
+                    data: data.clone(),
+                },
+            }),
+
+            PythonResource::ExtensionModule { .. } => {
+                panic!("not yet implemented");
+            }
+
+            PythonResource::BuiltExtensionModule(_em) => {
+                panic!("not yet implemented");
+            }
+        }
     }
 }
 

@@ -17,7 +17,7 @@ pub fn pip_install(
     logger: &slog::Logger,
     dist: &ParsedPythonDistribution,
     verbose: bool,
-    install_args: Vec<String>,
+    install_args: &[String],
     extra_envs: &HashMap<String, String>,
 ) -> Result<Vec<PythonResource>, String> {
     let temp_dir = tempdir::TempDir::new("pyoxidizer-pip-install")
@@ -51,7 +51,7 @@ pub fn pip_install(
         format!("{}", target_dir.display()),
     ]);
 
-    pip_args.extend(install_args);
+    pip_args.extend(install_args.iter().map(|x| x.clone()));
 
     // TODO send stderr to stdout
     let mut cmd = std::process::Command::new(&dist.python_exe)
