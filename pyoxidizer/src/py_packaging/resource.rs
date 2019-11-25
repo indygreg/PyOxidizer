@@ -4,9 +4,11 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::convert::TryFrom;
 use std::path::PathBuf;
 
 use super::distribution::ExtensionModule;
+use super::fsscan::{is_package_from_path, PythonFileResource};
 
 /// A Python source module agnostic of location.
 #[derive(Clone, Debug, PartialEq)]
@@ -130,6 +132,106 @@ pub enum PythonResource {
         data: Vec<u8>,
     },
     BuiltExtensionModule(BuiltExtensionModule),
+}
+
+impl TryFrom<&PythonFileResource> for PythonResource {
+    type Error = String;
+
+    fn try_from(resource: &PythonFileResource) -> Result<PythonResource, String> {
+        match resource {
+            PythonFileResource::Source {
+                full_name, path, ..
+            } => {
+                let source = std::fs::read(&path)
+                    .or_else(|_| Err(format!("unable to read {}", path.display())))?;
+
+                Ok(PythonResource::ModuleSource {
+                    name: full_name.clone(),
+                    source,
+                    is_package: is_package_from_path(&path),
+                })
+            }
+
+            PythonFileResource::Bytecode {
+                full_name, path, ..
+            } => {
+                let bytecode = std::fs::read(&path)
+                    .or_else(|_| Err(format!("unable to read {}", path.display())))?;
+
+                // First 16 bytes are a validation header.
+                let bytecode = bytecode[16..bytecode.len()].to_vec();
+
+                Ok(PythonResource::ModuleBytecode {
+                    name: full_name.clone(),
+                    bytecode,
+                    optimize_level: BytecodeOptimizationLevel::Zero,
+                    is_package: is_package_from_path(&path),
+                })
+            }
+
+            PythonFileResource::BytecodeOpt1 {
+                full_name, path, ..
+            } => {
+                let bytecode = std::fs::read(&path)
+                    .or_else(|_| Err(format!("unable to read {}", path.display())))?;
+
+                // First 16 bytes are a validation header.
+                let bytecode = bytecode[16..bytecode.len()].to_vec();
+
+                Ok(PythonResource::ModuleBytecode {
+                    name: full_name.clone(),
+                    bytecode,
+                    optimize_level: BytecodeOptimizationLevel::One,
+                    is_package: is_package_from_path(&path),
+                })
+            }
+
+            PythonFileResource::BytecodeOpt2 {
+                full_name, path, ..
+            } => {
+                let bytecode = std::fs::read(&path)
+                    .or_else(|_| Err(format!("unable to read {}", path.display())))?;
+
+                // First 16 bytes are a validation header.
+                let bytecode = bytecode[16..bytecode.len()].to_vec();
+
+                Ok(PythonResource::ModuleBytecode {
+                    name: full_name.clone(),
+                    bytecode,
+                    optimize_level: BytecodeOptimizationLevel::Two,
+                    is_package: is_package_from_path(&path),
+                })
+            }
+
+            PythonFileResource::Resource(resource) => {
+                let path = &(resource.path);
+                let data = std::fs::read(path)
+                    .or_else(|_| Err(format!("unable to read {}", path.display())))?;
+
+                Ok(PythonResource::Resource {
+                    package: resource.package.clone(),
+                    name: resource.stem.clone(),
+                    data,
+                })
+            }
+
+            PythonFileResource::ExtensionModule { .. } => {
+                Err("converting ExtensionModule not yet supported".to_string())
+            }
+
+            PythonFileResource::EggFile { .. } => {
+                Err("converting egg files not yet supported".to_string())
+            }
+
+            PythonFileResource::PthFile { .. } => {
+                Err("converting pth files not yet supported".to_string())
+            }
+
+            PythonFileResource::Other { .. } => {
+                Err("converting other files not yet supported".to_string())
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

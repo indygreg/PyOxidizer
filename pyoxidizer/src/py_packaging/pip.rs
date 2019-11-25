@@ -4,12 +4,13 @@
 
 use slog::warn;
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 
 use super::distribution::ParsedPythonDistribution;
 use super::distutils::{prepare_hacked_distutils, read_built_extensions};
-use super::fsscan::{find_python_resources, is_package_from_path, PythonFileResource};
+use super::fsscan::{find_python_resources, PythonFileResource};
 use super::resource::PythonResource;
 
 /// Run `pip install` and return found resources.
@@ -85,29 +86,12 @@ pub fn pip_install(
 
     for r in find_python_resources(&target_dir) {
         match r {
-            PythonFileResource::Source {
-                full_name, path, ..
-            } => {
-                let source =
-                    std::fs::read(&path).or(Err(format!("unable to read {}", path.display())))?;
-
-                res.push(PythonResource::ModuleSource {
-                    name: full_name,
-                    source,
-                    is_package: is_package_from_path(&path),
-                });
+            PythonFileResource::Source { .. } => {
+                res.push(PythonResource::try_from(&r)?);
             }
 
-            PythonFileResource::Resource(resource) => {
-                let path = &resource.path;
-                let data =
-                    std::fs::read(path).or(Err(format!("unable to read {}", path.display())))?;
-
-                res.push(PythonResource::Resource {
-                    package: resource.package.clone(),
-                    name: resource.stem.clone(),
-                    data,
-                });
+            PythonFileResource::Resource(..) => {
+                res.push(PythonResource::try_from(&r)?);
             }
 
             _ => {}
