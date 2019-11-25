@@ -588,6 +588,11 @@ class MSVCCompiler(CCompiler) :
         # directory that doesn't outlive this process.
         object_paths = []
         for i, o in enumerate(objects):
+            if 'libffi_msvc' in o:
+                print('Ignored static {}'.format(o))
+                # https://github.com/indygreg/python-build-standalone/issues/23
+                # cffi includes a near replica of CPython 3.7's custom libffi.
+                continue
             o = o + '.static'
             p = os.path.join(dest_path, '%s.%d.o' % (name, i))
             shutil.copyfile(o, p)
