@@ -14,7 +14,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::ptr::null;
 
-use cpython::exc::ValueError;
+use cpython::exc::{SystemExit, ValueError};
 use cpython::{
     GILGuard, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule, PyObject, PyResult,
     PyString, Python, PythonObject, ToPyObject,
@@ -733,13 +733,17 @@ impl<'a> MainPythonInterpreter<'a> {
             .or_else(|_| Err(PyErr::new::<ValueError, _>(py, "could not create CString")))?;
         let mut cf = pyffi::PyCompilerFlags { cf_flags: 0 };
 
-        // TODO use return value.
         unsafe {
             let stdin = stdin_to_file();
-            pyffi::PyRun_AnyFileExFlags(stdin, filename.as_ptr() as *const c_char, 0, &mut cf)
-        };
+            let res =
+                pyffi::PyRun_AnyFileExFlags(stdin, filename.as_ptr() as *const c_char, 0, &mut cf);
 
-        Ok(py.None())
+            if res == 0 {
+                Ok(py.None())
+            } else {
+                Err(PyErr::new::<SystemExit, _>(py, 1))
+            }
+        }
     }
 
     /// Runs Python code provided by a string.
