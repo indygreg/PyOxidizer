@@ -114,7 +114,7 @@ pub fn pip_install(
         }
     }
 
-    let state_dir = PathBuf::from(env.get("PYOXIDIZER_DISTUTILS>STATE_DIR").unwrap());
+    let state_dir = PathBuf::from(env.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap());
     for ext in read_built_extensions(&state_dir)? {
         res.push(PythonResource::BuiltExtensionModule(ext));
     }
