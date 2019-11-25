@@ -37,6 +37,8 @@ Backwards Compatibility Notes
 Bug Fixes
 ^^^^^^^^^
 
+* The ``repl`` run mode now properly exits with a non-zero exit code
+  if an error occurs.
 * Compiled C extensions now properly honor the ``ext_package`` argument
   passed to ``setup()``, resulting in extensions which properly have
   the package name in their extension name (#26).
