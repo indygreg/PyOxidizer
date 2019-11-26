@@ -111,6 +111,7 @@ fn resource_full_name(resource: &PythonFileResource) -> &str {
     }
 }
 
+// part of new approach from pip.rs; unused atm
 fn python_resource_full_name(resource: &PythonResource) -> String {
     match resource {
         PythonResource::ModuleSource { name, .. } => name.clone(),
