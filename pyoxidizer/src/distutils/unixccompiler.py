@@ -114,6 +114,18 @@ class UnixCCompiler(CCompiler):
         if sys.platform == 'darwin':
             compiler_so = _osx_support.compiler_fixup(compiler_so,
                                                     cc_args + extra_postargs)
+
+        # If the PyInit symbol need to be renamed, any syms in common section
+        # may cause a breakage on Linux, and -fno-common avoids that.
+        # https://github.com/gimli-rs/object/issues/149
+        # It may also help with macOS
+        # https://github.com/gimli-rs/object/issues/158
+        # gevent on Linux could be solved this way, but it isnt, as rewriting
+        # the stdlib _queue is the solution ofr as macOS and Windows and it is
+        # better for all three platforms to use the same solution.
+        if '-fno-common' not in compiler_so:
+            compiler_so.insert(1, '-fno-common')
+
         try:
             self.spawn(compiler_so + cc_args + [src, '-o', obj] +
                        extra_postargs)
