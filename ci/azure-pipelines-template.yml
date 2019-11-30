@@ -66,7 +66,9 @@ jobs:
       displayName: Build Oxidized Application
 
   - ${{ if eq(parameters.name, 'Windows') }}:
-    - script: choco install openssl
+    - powershell: |
+        git clone 'https://github.com/Badgerati/Fudge'
+        .\Fudge\src\Fudge.ps1 install -adhoc openssl
       displayName: 'Install OpenSSL'
 
   - ${{ if eq(parameters.name, 'Windows') }}:
