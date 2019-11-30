@@ -15,7 +15,9 @@ use super::config::{
     PackagingStdlibExtensionsPolicy, PackagingVirtualenv, PythonPackaging,
 };
 use super::state::BuildContext;
-use crate::py_packaging::distribution::{is_stdlib_test_package, ParsedPythonDistribution};
+use crate::py_packaging::distribution::{
+    is_stdlib_test_package, resolve_python_paths, ParsedPythonDistribution,
+};
 use crate::py_packaging::distutils::{prepare_hacked_distutils, read_built_extensions};
 use crate::py_packaging::fsscan::{
     find_python_resources, is_package_from_path, PythonFileResource,
@@ -116,30 +118,6 @@ fn python_resource_full_name(resource: &PythonResource) -> String {
         PythonResource::Resource { package, name, .. } => format!("{}.{}", package, name),
         PythonResource::BuiltExtensionModule(em) => em.name.clone(),
         _ => "".to_string(),
-    }
-}
-
-struct PythonPaths {
-    main: PathBuf,
-    site_packages: PathBuf,
-}
-
-/// Resolve the location of Python modules given a base install path.
-fn resolve_python_paths(base: &Path, python_version: &str, is_windows: bool) -> PythonPaths {
-    let mut p = base.to_path_buf();
-
-    if is_windows {
-        p.push("Lib");
-    } else {
-        p.push("lib");
-        p.push(format!("python{}", &python_version[0..3]));
-    }
-
-    let site_packages = p.join("site-packages");
-
-    PythonPaths {
-        main: p,
-        site_packages,
     }
 }
 
@@ -350,8 +328,7 @@ fn resolve_virtualenv(
 
     let location = ResourceLocation::new(&rule.install_location);
 
-    let python_paths =
-        resolve_python_paths(&Path::new(&rule.path), &dist.version, dist.os == "windows");
+    let python_paths = resolve_python_paths(&Path::new(&rule.path), &dist.version);
     let packages_path = python_paths.site_packages;
 
     for resource in find_python_resources(&packages_path) {
@@ -715,7 +692,7 @@ fn resolve_setup_py_install(
     let target_dir_path = temp_dir.path().join("install");
     let target_dir_s = target_dir_path.display().to_string();
 
-    let python_paths = resolve_python_paths(&target_dir_path, &dist.version, dist.os == "windows");
+    let python_paths = resolve_python_paths(&target_dir_path, &dist.version);
 
     std::fs::create_dir_all(&python_paths.site_packages)
         .expect("unable to create site-packages directory");
@@ -724,7 +701,7 @@ fn resolve_setup_py_install(
         logger,
         dist,
         temp_dir.path(),
-        &[&python_paths.site_packages, &python_paths.main],
+        &[&python_paths.site_packages, &python_paths.stdlib],
     )
     .expect("unable to hack distutils");
 
