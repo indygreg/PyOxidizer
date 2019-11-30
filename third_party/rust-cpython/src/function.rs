@@ -26,7 +26,7 @@ use conversion::ToPyObject;
 use ffi;
 use err::{self, PyResult};
 
-#[macro_export]
+#[macro_export(local_inner_macros)]
 #[doc(hidden)]
 macro_rules! py_method_def {
     ($name: expr, $flags: expr, $wrap: expr) => {{
@@ -41,12 +41,12 @@ macro_rules! py_method_def {
             ml_flags: $crate::_detail::ffi::METH_VARARGS | $crate::_detail::ffi::METH_KEYWORDS | $flags,
             ml_doc: 0 as *const $crate::_detail::libc::c_char
         };
-        METHOD_DEF.ml_name = concat!($name, "\0").as_ptr() as *const _;
+        METHOD_DEF.ml_name = _cpython__concat!($name, "\0").as_ptr() as *const _;
         if $name.starts_with("r#") {
             METHOD_DEF.ml_name = METHOD_DEF.ml_name.add(2);
         }
         if !$doc.is_empty() {
-            METHOD_DEF.ml_doc = concat!($doc, "\0").as_ptr() as *const _;
+            METHOD_DEF.ml_doc = _cpython__concat!($doc, "\0").as_ptr() as *const _;
         }
         METHOD_DEF.ml_meth = Some(
             ::std::mem::transmute::<$crate::_detail::ffi::PyCFunctionWithKeywords,
@@ -149,7 +149,7 @@ macro_rules! py_fn_impl {
         }
         unsafe {
             $crate::_detail::py_fn_impl($py,
-                py_method_def!(_cpython__function__stringify!($f), 0, wrap, ""))
+                py_method_def!(_cpython__function__stringify!($f), 0, wrap))
         }
     }};
     // Form 2: inline function definition
@@ -259,5 +259,14 @@ macro_rules! _cpython__function__stringify {
         stringify! { $($inner)* }
     }
 }
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! _cpython__concat {
+    ($($inner:tt)*) => {
+        concat! { $($inner)* }
+    }
+}
+
 
 // Tests for this file are in tests/test_function.rs
