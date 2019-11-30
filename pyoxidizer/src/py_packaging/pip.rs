@@ -24,7 +24,7 @@ pub fn pip_install(
     let temp_dir = tempdir::TempDir::new("pyoxidizer-pip-install")
         .or_else(|_| Err("could not create temp directory".to_string()))?;
 
-    dist.ensure_pip();
+    dist.ensure_pip(logger);
 
     let mut env = prepare_hacked_distutils(logger, dist, temp_dir.path(), &[])?;
 
