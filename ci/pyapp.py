@@ -1,6 +1,12 @@
 import appdirs
 import _cffi_backend
 
+import markupsafe._speedups
+import simplejson._speedups
+
+import markupsafe
+import simplejson
+
 print("hello, world")
 
 import cryptography.fernet
