@@ -137,6 +137,116 @@ fn resolve_built_extensions(
     Ok(())
 }
 
+/// Processes resources in a path
+/// Args includes and excludes are ignored if None or an empty Vec.
+fn process_resources(
+    logger: &slog::Logger,
+    path: &PathBuf,
+    location: &ResourceLocation,
+    state_dir: Option<&PathBuf>,
+    include_source: bool,
+    optimize_level: i64,
+    includes: Option<&Vec<String>>,
+    excludes: Option<&Vec<String>>,
+) -> Vec<PythonResourceAction> {
+    let mut res = Vec::new();
+
+    let path_s = path.display().to_string();
+    warn!(logger, "processing resources from {}", path_s);
+
+    for resource in find_python_resources(path) {
+        let full_name = resource_full_name(&resource);
+
+        let excluded = match includes {
+            Some(values) => values.iter().any(|v| {
+                let prefix = v.clone() + ".";
+                full_name != v && !full_name.starts_with(&prefix)
+            }),
+            None => false,
+        };
+
+        if excluded {
+            info!(logger, "whitelist skipping {}", full_name);
+            continue;
+        }
+
+        let excluded = match excludes {
+            Some(values) => match values.is_empty() {
+                true => false,
+                false => values.iter().all(|v| {
+                    let prefix = v.clone() + ".";
+                    full_name == v || full_name.starts_with(&prefix)
+                }),
+            },
+            None => false,
+        };
+
+        if excluded {
+            info!(logger, "blacklist skipping {}", full_name);
+            continue;
+        }
+
+        match resource {
+            PythonFileResource::Source {
+                full_name, path, ..
+            } => {
+                let is_package = is_package_from_path(&path);
+                let source = fs::read(path).expect("error reading source file");
+
+                if include_source {
+                    res.push(PythonResourceAction {
+                        action: ResourceAction::Add,
+                        location: location.clone(),
+                        resource: PythonResource::ModuleSource {
+                            name: full_name.clone(),
+                            source: source.clone(),
+                            is_package,
+                        },
+                    });
+                }
+
+                res.push(PythonResourceAction {
+                    action: ResourceAction::Add,
+                    location: location.clone(),
+                    resource: PythonResource::ModuleBytecodeRequest {
+                        name: full_name.clone(),
+                        source,
+                        optimize_level: optimize_level as i32,
+                        is_package,
+                    },
+                });
+            }
+
+            PythonFileResource::Resource(resource) => {
+                let data = fs::read(resource.path).expect("error reading resource file");
+
+                res.push(PythonResourceAction {
+                    action: ResourceAction::Add,
+                    location: location.clone(),
+                    resource: PythonResource::Resource {
+                        package: resource.package.clone(),
+                        name: resource.stem.clone(),
+                        data,
+                    },
+                });
+            }
+
+            _ => {}
+        }
+    }
+
+    match state_dir {
+        Some(dir) => {
+            if dir.exists() {
+                resolve_built_extensions(&dir, &mut res, &location).unwrap();
+            }
+        }
+        None => {}
+    };
+
+    res
+}
+
 fn resolve_stdlib_extensions_policy(
     logger: &slog::Logger,
     dist: &ParsedPythonDistribution,
@@ -321,82 +431,24 @@ fn resolve_stdlib(
 }
 
 fn resolve_virtualenv(
+    logger: &slog::Logger,
     dist: &ParsedPythonDistribution,
     rule: &PackagingVirtualenv,
 ) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
     let location = ResourceLocation::new(&rule.install_location);
 
     let python_paths = resolve_python_paths(&Path::new(&rule.path), &dist.version);
-    let packages_path = python_paths.site_packages;
 
-    for resource in find_python_resources(&packages_path) {
-        let mut relevant = true;
-        let full_name = resource_full_name(&resource);
-
-        for exclude in &rule.excludes {
-            let prefix = exclude.clone() + ".";
-
-            if full_name == exclude || full_name.starts_with(&prefix) {
-                relevant = false;
-            }
-        }
-
-        if !relevant {
-            continue;
-        }
-
-        match resource {
-            PythonFileResource::Source {
-                full_name, path, ..
-            } => {
-                let is_package = is_package_from_path(&path);
-                let source = fs::read(path).expect("error reading source file");
-
-                if rule.include_source {
-                    res.push(PythonResourceAction {
-                        action: ResourceAction::Add,
-                        location: location.clone(),
-                        resource: PythonResource::ModuleSource {
-                            name: full_name.clone(),
-                            source: source.clone(),
-                            is_package,
-                        },
-                    });
-                }
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::ModuleBytecodeRequest {
-                        name: full_name.clone(),
-                        source,
-                        optimize_level: rule.optimize_level as i32,
-                        is_package,
-                    },
-                });
-            }
-
-            PythonFileResource::Resource(resource) => {
-                let data = fs::read(resource.path).expect("error reading resource file");
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::Resource {
-                        package: resource.package.clone(),
-                        name: resource.stem.clone(),
-                        data,
-                    },
-                });
-            }
-
-            _ => {}
-        }
-    }
-
-    res
+    process_resources(
+        &logger,
+        &python_paths.site_packages,
+        &location,
+        Some(&python_paths.pyoxidizer_state_dir),
+        rule.include_source,
+        rule.optimize_level,
+        None,
+        Some(&rule.excludes),
+    )
 }
 
 fn resolve_package_root(rule: &PackagingPackageRoot) -> Vec<PythonResourceAction> {
@@ -849,7 +901,7 @@ pub fn resolve_python_packaging(
 
         PythonPackaging::Stdlib(rule) => resolve_stdlib(logger, dist, &rule),
 
-        PythonPackaging::Virtualenv(rule) => resolve_virtualenv(dist, &rule),
+        PythonPackaging::Virtualenv(rule) => resolve_virtualenv(logger, dist, &rule),
 
         PythonPackaging::PackageRoot(rule) => resolve_package_root(&rule),
 
