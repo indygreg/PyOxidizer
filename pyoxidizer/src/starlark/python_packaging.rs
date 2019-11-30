@@ -16,8 +16,8 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use super::env::{
-    optional_dict_arg, optional_list_arg, required_bool_arg, required_list_arg, required_str_arg,
-    required_type_arg,
+    optional_dict_arg, optional_list_arg, optional_str_arg, required_bool_arg, required_list_arg,
+    required_str_arg, required_type_arg,
 };
 use crate::app_packaging::config::{
     resolve_install_location, PackagingFilterInclude, PackagingPackageRoot,
@@ -519,6 +519,7 @@ starlark_module! { python_packaging_env =>
     #[allow(non_snake_case, clippy::ptr_arg)]
     PipInstallSimple(
         package,
+        venv_path=None,
         extra_env=None,
         optimize_level=0,
         excludes=None,
@@ -527,6 +528,7 @@ starlark_module! { python_packaging_env =>
         extra_args=None
     ) {
         let package = required_str_arg("package", &package)?;
+        let venv_path = optional_str_arg("venv_path", &venv_path)?;
         optional_dict_arg("extra_env", "string", "string", &extra_env)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
         optional_list_arg("excludes", "string", &excludes)?;
@@ -565,6 +567,7 @@ starlark_module! { python_packaging_env =>
 
         let rule = PackagingPipInstallSimple {
             package,
+            venv_path,
             extra_env,
             optimize_level,
             excludes,
@@ -579,6 +582,7 @@ starlark_module! { python_packaging_env =>
     #[allow(non_snake_case, clippy::ptr_arg)]
     PipRequirementsFile(
         requirements_path,
+        venv_path=None,
         extra_env=None,
         optimize_level=0,
         include_source=true,
@@ -586,6 +590,7 @@ starlark_module! { python_packaging_env =>
         extra_args=None
     ) {
         let requirements_path = required_str_arg("path", &requirements_path)?;
+        let venv_path = optional_str_arg("venv_path", &venv_path)?;
         optional_dict_arg("extra_env", "string", "string", &extra_env)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
         let include_source = required_bool_arg("include_source", &include_source)?;
@@ -618,6 +623,7 @@ starlark_module! { python_packaging_env =>
         };
 
         let rule = PackagingPipRequirementsFile {
+            venv_path,
             requirements_path,
             extra_env,
             optimize_level,
@@ -632,6 +638,7 @@ starlark_module! { python_packaging_env =>
     #[allow(non_snake_case, clippy::ptr_arg)]
     SetupPyInstall(
         package_path,
+        venv_path=None,
         extra_env=None,
         extra_global_arguments=None,
         optimize_level=0,
@@ -640,6 +647,7 @@ starlark_module! { python_packaging_env =>
         excludes=None
     ) {
         let package_path = required_str_arg("package_path", &package_path)?;
+        let venv_path = optional_str_arg("venv_path", &venv_path)?;
         optional_dict_arg("extra_env", "string", "string", &extra_env)?;
         optional_list_arg("extra_global_arguments", "string", &extra_global_arguments)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
@@ -676,6 +684,7 @@ starlark_module! { python_packaging_env =>
 
         let rule = PackagingSetupPyInstall {
             path: package_path,
+            venv_path,
             extra_env,
             extra_global_arguments,
             optimize_level: optimize_level.to_int().unwrap(),
@@ -890,6 +899,7 @@ mod tests {
         let v = starlark_ok("PipInstallSimple('foo')");
         let wanted = PackagingPipInstallSimple {
             package: "foo".to_string(),
+            venv_path: None,
             extra_env: HashMap::new(),
             optimize_level: 0,
             excludes: Vec::new(),
@@ -914,6 +924,7 @@ mod tests {
         let v = starlark_ok("PipRequirementsFile('path')");
         let wanted = PackagingPipRequirementsFile {
             requirements_path: "path".to_string(),
+            venv_path: None,
             extra_env: HashMap::new(),
             optimize_level: 0,
             include_source: true,
@@ -928,6 +939,7 @@ mod tests {
     fn test_pip_requirements_file_extra_args() {
         let v = starlark_ok("PipRequirementsFile('path', extra_args=['foo'])");
         let wanted = PackagingPipRequirementsFile {
+            venv_path: None,
             requirements_path: "path".to_string(),
             extra_env: HashMap::new(),
             optimize_level: 0,
@@ -950,6 +962,7 @@ mod tests {
         let v = starlark_ok("SetupPyInstall('foo')");
         let wanted = PackagingSetupPyInstall {
             path: "foo".to_string(),
+            venv_path: None,
             extra_env: HashMap::new(),
             extra_global_arguments: Vec::new(),
             optimize_level: 0,

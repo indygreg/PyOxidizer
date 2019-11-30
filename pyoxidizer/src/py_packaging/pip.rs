@@ -6,14 +6,18 @@ use slog::warn;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
 
-use super::distribution::ParsedPythonDistribution;
+use super::distribution::{ParsedPythonDistribution};
 use super::distutils::{prepare_hacked_distutils, read_built_extensions};
 use super::fsscan::{find_python_resources, PythonFileResource};
 use super::resource::PythonResource;
 
 /// Run `pip install` and return found resources.
+/// This is unused at the moment as it is based around pip install --target
+/// instead of `venv`s.
+/// It doesnt use prepare_hacked_distutils as that isnt needed for its test
+/// case, and a rewrite is needed to support core Python modules like
+/// cffi, cryptography, Cython, PyNaCl, etc.
 pub fn pip_install(
     logger: &slog::Logger,
     dist: &ParsedPythonDistribution,
@@ -24,9 +28,9 @@ pub fn pip_install(
     let temp_dir = tempdir::TempDir::new("pyoxidizer-pip-install")
         .or_else(|_| Err("could not create temp directory".to_string()))?;
 
-    dist.ensure_pip();
+    dist.ensure_pip(&logger);
 
-    let mut env = prepare_hacked_distutils(logger, dist, temp_dir.path(), &[])?;
+    let mut env = HashMap::new();
 
     for (key, value) in extra_envs.iter() {
         env.insert(key.clone(), value.clone());
@@ -96,11 +100,6 @@ pub fn pip_install(
 
             _ => {}
         }
-    }
-
-    let state_dir = PathBuf::from(env.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap());
-    for ext in read_built_extensions(&state_dir)? {
-        res.push(PythonResource::BuiltExtensionModule(ext));
     }
 
     Ok(res)
