@@ -49,7 +49,7 @@ jobs:
 
   - ${{ if eq(parameters.name, 'Linux') }}:
     - script: |
-        cargo run --bin pyoxidizer -- init --pip-install appdirs==1.4.3 --pip-install cryptography --pip-install markupsafe==1.1.1 --pip-install simplejson==3.17.0 ~/pyapp
+        cargo run --bin pyoxidizer -- init --pip-install appdirs==1.4.3 --pip-install cryptography --pip-install markupsafe==1.1.1 --pip-install simplejson==3.17.0 --pip-install gevent==1.4.0 ~/pyapp
         cat ci/pyapp.py | cargo run --bin pyoxidizer -- run ~/pyapp
       displayName: Build Oxidized Application
 
@@ -61,7 +61,7 @@ jobs:
     - script: |
         export CPPFLAGS="-I$(brew --prefix openssl@1.1)/include"
         export LDFLAGS="-L$(brew --prefix openssl@1.1)/lib"
-        cargo run --bin pyoxidizer -- init --pip-install appdirs==1.4.3 --pip-install cryptography==2.8 --pip-install markupsafe==1.1.1 --pip-install simplejson==3.17.0 ~/pyapp
+        cargo run --bin pyoxidizer -- init --pip-install appdirs==1.4.3 --pip-install cryptography==2.8 --pip-install markupsafe==1.1.1 --pip-install simplejson==3.17.0 --pip-install gevent==1.4.0 ~/pyapp
         cat ci/pyapp.py | cargo run --bin pyoxidizer -- run ~/pyapp
       displayName: Build Oxidized Application
 
@@ -78,6 +78,6 @@ jobs:
     - script: |
         set INCLUDE=%ProgramFiles%\OpenSSL-Win64\include;%INCLUDE%
         set LIB=%ProgramFiles%\OpenSSL-Win64\lib\;%LIB%
-        cargo run --bin pyoxidizer -- init --pip-install appdirs==1.4.3 --pip-install cryptography==2.8 --pip-install markupsafe==1.1.1 --pip-install simplejson==3.17.0 %USERPROFILE%/pyapp
+        cargo run --bin pyoxidizer -- init --pip-install appdirs==1.4.3 --pip-install cryptography==2.8 --pip-install markupsafe==1.1.1 --pip-install simplejson==3.17.0 --pip-install gevent==1.4.0 %USERPROFILE%/pyapp
         cat ci/pyapp.py | cargo run --bin pyoxidizer -- run %USERPROFILE%/pyapp
       displayName: Build Oxidized Application (Windows)
