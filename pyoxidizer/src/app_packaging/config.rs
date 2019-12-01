@@ -3,7 +3,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use slog::warn;
-use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
 
@@ -21,17 +20,6 @@ pub struct BuildConfig {
 pub enum InstallLocation {
     Embedded,
     AppRelative { path: String },
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct PackagingSetupPyInstall {
-    pub path: String,
-    pub extra_env: HashMap<String, String>,
-    pub extra_global_arguments: Vec<String>,
-    pub optimize_level: i64,
-    pub include_source: bool,
-    pub install_location: InstallLocation,
-    pub excludes: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -97,7 +85,6 @@ pub struct PackagingWriteLicenseFiles {
 
 #[derive(Clone, Debug)]
 pub enum PythonPackaging {
-    SetupPyInstall(PackagingSetupPyInstall),
     StdlibExtensionsPolicy(PackagingStdlibExtensionsPolicy),
     StdlibExtensionsExplicitIncludes(PackagingStdlibExtensionsExplicitIncludes),
     StdlibExtensionsExplicitExcludes(PackagingStdlibExtensionsExplicitExcludes),

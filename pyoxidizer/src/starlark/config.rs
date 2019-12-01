@@ -21,9 +21,8 @@ use super::embedded_python_config::EmbeddedPythonConfig;
 use super::env::{required_str_arg, required_type_arg};
 use super::python_distribution::PythonDistribution;
 use super::python_packaging::{
-    FilterInclude, PackageRoot, SetupPyInstall, Stdlib, StdlibExtensionVariant,
-    StdlibExtensionsExplicitExcludes, StdlibExtensionsExplicitIncludes, StdlibExtensionsPolicy,
-    Virtualenv, WriteLicenseFiles,
+    FilterInclude, PackageRoot, Stdlib, StdlibExtensionVariant, StdlibExtensionsExplicitExcludes,
+    StdlibExtensionsExplicitIncludes, StdlibExtensionsPolicy, Virtualenv, WriteLicenseFiles,
 };
 use super::python_run_mode::PythonRunMode;
 use crate::app_packaging::config::{
@@ -107,9 +106,6 @@ starlark_module! { config_env =>
                 })),
                 "PackageRoot" => Ok(x.downcast_apply(|x: &PackageRoot| -> PythonPackaging {
                     PythonPackaging::PackageRoot(x.rule.clone())
-                })),
-                "SetupPyInstall" => Ok(x.downcast_apply(|x: &SetupPyInstall| -> PythonPackaging {
-                    PythonPackaging::SetupPyInstall(x.rule.clone())
                 })),
                 "Stdlib" => Ok(x.downcast_apply(|x: &Stdlib| -> PythonPackaging {
                     PythonPackaging::Stdlib(x.rule.clone())

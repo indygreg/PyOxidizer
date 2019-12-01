@@ -5,20 +5,18 @@
 use slog::{info, warn};
 use std::collections::BTreeSet;
 use std::fs;
-use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
 use super::config::{
-    InstallLocation, PackagingPackageRoot, PackagingSetupPyInstall, PackagingStdlib,
-    PackagingStdlibExtensionVariant, PackagingStdlibExtensionsExplicitExcludes,
-    PackagingStdlibExtensionsExplicitIncludes, PackagingStdlibExtensionsPolicy,
-    PackagingVirtualenv, PythonPackaging,
+    InstallLocation, PackagingPackageRoot, PackagingStdlib, PackagingStdlibExtensionVariant,
+    PackagingStdlibExtensionsExplicitExcludes, PackagingStdlibExtensionsExplicitIncludes,
+    PackagingStdlibExtensionsPolicy, PackagingVirtualenv, PythonPackaging,
 };
 use super::state::BuildContext;
 use crate::py_packaging::distribution::{
     is_stdlib_test_package, resolve_python_paths, ParsedPythonDistribution,
 };
-use crate::py_packaging::distutils::{prepare_hacked_distutils, read_built_extensions};
+use crate::py_packaging::distutils::read_built_extensions;
 use crate::py_packaging::fsscan::{
     find_python_resources, is_package_from_path, PythonFileResource,
 };
@@ -460,103 +458,13 @@ fn resolve_package_root(
     )
 }
 
-fn resolve_setup_py_install(
-    logger: &slog::Logger,
-    context: &BuildContext,
-    dist: &ParsedPythonDistribution,
-    rule: &PackagingSetupPyInstall,
-    verbose: bool,
-) -> Vec<PythonResourceAction> {
-    // Execution directory is resolved relative to the active configuration
-    // file unless it is absolute.
-    let rule_path = PathBuf::from(&rule.path);
-
-    let cwd = if rule_path.is_absolute() {
-        rule_path.to_path_buf()
-    } else {
-        context.config_parent_path.join(&rule.path)
-    };
-
-    let location = ResourceLocation::new(&rule.install_location);
-
-    let temp_dir = tempdir::TempDir::new("pyoxidizer-setup-py-install")
-        .expect("could not create temp directory");
-
-    let target_dir_path = temp_dir.path().join("install");
-    let target_dir_s = target_dir_path.display().to_string();
-
-    let python_paths = resolve_python_paths(&target_dir_path, &dist.version);
-
-    std::fs::create_dir_all(&python_paths.site_packages)
-        .expect("unable to create site-packages directory");
-
-    let mut extra_envs = prepare_hacked_distutils(
-        logger,
-        dist,
-        temp_dir.path(),
-        &[&python_paths.site_packages, &python_paths.stdlib],
-    )
-    .expect("unable to hack distutils");
-
-    for (key, value) in rule.extra_env.iter() {
-        extra_envs.insert(key.clone(), value.clone());
-    }
-
-    warn!(logger, "python setup.py installing to {}", target_dir_s);
-
-    let mut args = vec!["setup.py"];
-
-    for arg in &rule.extra_global_arguments {
-        args.push(arg);
-    }
-
-    if verbose {
-        args.push("--verbose");
-    }
-
-    args.extend(&["install", "--prefix", &target_dir_s, "--no-compile"]);
-
-    // TODO send stderr to stdout.
-    let mut cmd = std::process::Command::new(&dist.python_exe)
-        .current_dir(cwd)
-        .args(&args)
-        .envs(&extra_envs)
-        .stdout(std::process::Stdio::piped())
-        .spawn()
-        .expect("error running setup.py");
-    {
-        let stdout = cmd.stdout.as_mut().unwrap();
-        let reader = BufReader::new(stdout);
-
-        for line in reader.lines() {
-            warn!(logger, "{}", line.unwrap());
-        }
-    }
-
-    let status = cmd.wait().unwrap();
-    if !status.success() {
-        panic!("error running setup.py");
-    }
-
-    process_resources(
-        &logger,
-        &python_paths.site_packages,
-        &location,
-        Some(&python_paths.pyoxidizer_state_dir),
-        rule.include_source,
-        rule.optimize_level,
-        None,
-        Some(&rule.excludes),
-    )
-}
-
 /// Resolves a Python packaging rule to resources to package.
 pub fn resolve_python_packaging(
     logger: &slog::Logger,
-    context: &BuildContext,
+    _context: &BuildContext,
     package: &PythonPackaging,
     dist: &ParsedPythonDistribution,
-    verbose: bool,
+    _verbose: bool,
 ) -> Vec<PythonResourceAction> {
     match package {
         PythonPackaging::StdlibExtensionsPolicy(rule) => {
@@ -580,10 +488,6 @@ pub fn resolve_python_packaging(
         PythonPackaging::Virtualenv(rule) => resolve_virtualenv(logger, dist, &rule),
 
         PythonPackaging::PackageRoot(rule) => resolve_package_root(logger, &rule),
-
-        PythonPackaging::SetupPyInstall(rule) => {
-            resolve_setup_py_install(logger, context, dist, &rule, verbose)
-        }
 
         PythonPackaging::WriteLicenseFiles(_) => Vec::new(),
 
