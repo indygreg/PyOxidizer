@@ -528,6 +528,44 @@ impl ParsedPythonDistribution {
         resolve_python_paths(&path, &self.version)
     }
 
+    /// Create or re-use an existing venv
+    pub fn prepare_venv(
+        &self,
+        logger: &slog::Logger,
+        venv_dir_path: &Path,
+    ) -> Result<(PythonPaths, HashMap<String, String>), String> {
+        let python_paths = self.create_venv(logger, &venv_dir_path);
+
+        let mut extra_envs = HashMap::new();
+
+        let prefix_s = python_paths.prefix.display().to_string();
+
+        let venv_path_bin_s = python_paths.bin_dir.display().to_string();
+
+        let path_separator = if cfg!(windows) { ";" } else { ":" };
+
+        if let Ok(path) = std::env::var("PATH") {
+            extra_envs.insert(
+                "PATH".to_string(),
+                format!("{}{}{}", venv_path_bin_s, path_separator, path),
+            );
+        } else {
+            extra_envs.insert("PATH".to_string(), venv_path_bin_s);
+        }
+
+        let site_packages_s = python_paths.site_packages.display().to_string();
+        if site_packages_s.starts_with("\\\\?\\") {
+            panic!("unexpected Windows UNC path in site-packages");
+        }
+
+        extra_envs.insert("VIRTUAL_ENV".to_string(), prefix_s);
+        extra_envs.insert("PYTHONPATH".to_string(), site_packages_s);
+
+        extra_envs.insert("PYOXIDIZER".to_string(), "1".to_string());
+
+        Ok((python_paths, extra_envs))
+    }
+
     /// Obtain resolved `SourceModule` instances for this distribution.
     ///
     /// This effectively resolves the raw file content for .py files into
