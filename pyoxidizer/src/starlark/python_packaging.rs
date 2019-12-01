@@ -22,7 +22,7 @@ use crate::app_packaging::config::{
     resolve_install_location, PackagingFilterInclude, PackagingPackageRoot, PackagingStdlib,
     PackagingStdlibExtensionVariant, PackagingStdlibExtensionsExplicitExcludes,
     PackagingStdlibExtensionsExplicitIncludes, PackagingStdlibExtensionsPolicy,
-    PackagingVirtualenv, PackagingWriteLicenseFiles,
+    PackagingWriteLicenseFiles,
 };
 use crate::py_packaging::distribution::ExtensionModuleFilter;
 
@@ -272,41 +272,6 @@ impl TypedValue for Stdlib {
 }
 
 #[derive(Debug, Clone)]
-pub struct Virtualenv {
-    pub rule: PackagingVirtualenv,
-}
-
-impl TypedValue for Virtualenv {
-    immutable!();
-    any!();
-    not_supported!(binop);
-    not_supported!(container);
-    not_supported!(function);
-    not_supported!(get_hash);
-    not_supported!(to_int);
-
-    fn to_str(&self) -> String {
-        format!("Virtualenv<{:#?}>", self.rule)
-    }
-
-    fn to_repr(&self) -> String {
-        self.to_str()
-    }
-
-    fn get_type(&self) -> &'static str {
-        "Virtualenv"
-    }
-
-    fn to_bool(&self) -> bool {
-        true
-    }
-
-    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
-        default_compare(self, other)
-    }
-}
-
-#[derive(Debug, Clone)]
 pub struct WriteLicenseFiles {
     pub rule: PackagingWriteLicenseFiles,
 }
@@ -513,45 +478,6 @@ starlark_module! { python_packaging_env =>
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
-    Virtualenv(
-        path,
-        optimize_level=0,
-        excludes=None,
-        include_source=true,
-        install_location="embedded"
-    ) {
-        let path = required_str_arg("path", &path)?;
-        required_type_arg("optimize_level", "int", &optimize_level)?;
-        optional_list_arg("excludes", "string", &excludes)?;
-        let include_source = required_bool_arg("include_source", &include_source)?;
-        let install_location = required_str_arg("include_location", &install_location)?;
-
-        let optimize_level = optimize_level.to_int()?;
-        let excludes = match excludes.get_type() {
-            "list" => excludes.into_iter()?.map(|x| x.to_string()).collect(),
-            "NoneType" => Vec::new(),
-            _ => panic!("should have validated type above"),
-        };
-        let install_location = resolve_install_location(&install_location).or_else(|e| {
-            Err(RuntimeError {
-                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                message: e.to_string(),
-                label: e.to_string(),
-            }.into())
-        })?;
-
-        let rule = PackagingVirtualenv {
-            path,
-            optimize_level,
-            excludes,
-            include_source,
-            install_location,
-        };
-
-        Ok(Value::new(Virtualenv { rule }))
-    }
-
-    #[allow(non_snake_case, clippy::ptr_arg)]
     WriteLicenseFiles(path) {
         let path = required_str_arg("path", &path)?;
 
@@ -680,25 +606,6 @@ mod tests {
             install_location: InstallLocation::Embedded,
         };
         v.downcast_apply(|x: &Stdlib| assert_eq!(x.rule, wanted));
-    }
-
-    #[test]
-    fn test_virtualenv_default() {
-        let err = starlark_nok("Virtualenv()");
-        assert!(err.message.starts_with("Missing parameter path"));
-    }
-
-    #[test]
-    fn test_virtualenv_basic() {
-        let v = starlark_ok("Virtualenv('path')");
-        let wanted = PackagingVirtualenv {
-            path: "path".to_string(),
-            optimize_level: 0,
-            excludes: Vec::new(),
-            include_source: true,
-            install_location: InstallLocation::Embedded,
-        };
-        v.downcast_apply(|x: &Virtualenv| assert_eq!(x.rule, wanted));
     }
 
     #[test]

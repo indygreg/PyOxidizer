@@ -10,11 +10,9 @@ use std::path::{Path, PathBuf};
 use super::config::{
     InstallLocation, PackagingPackageRoot, PackagingStdlib, PackagingStdlibExtensionVariant,
     PackagingStdlibExtensionsExplicitExcludes, PackagingStdlibExtensionsExplicitIncludes,
-    PackagingStdlibExtensionsPolicy, PackagingVirtualenv, PythonPackaging,
+    PackagingStdlibExtensionsPolicy, PythonPackaging,
 };
-use crate::py_packaging::distribution::{
-    is_stdlib_test_package, resolve_python_paths, ParsedPythonDistribution,
-};
+use crate::py_packaging::distribution::{is_stdlib_test_package, ParsedPythonDistribution};
 use crate::py_packaging::distutils::read_built_extensions;
 use crate::py_packaging::fsscan::{
     find_python_resources, is_package_from_path, PythonFileResource,
@@ -417,27 +415,6 @@ fn resolve_stdlib(
     res
 }
 
-fn resolve_virtualenv(
-    logger: &slog::Logger,
-    dist: &ParsedPythonDistribution,
-    rule: &PackagingVirtualenv,
-) -> Vec<PythonResourceAction> {
-    let location = ResourceLocation::new(&rule.install_location);
-
-    let python_paths = resolve_python_paths(&Path::new(&rule.path), &dist.version);
-
-    process_resources(
-        &logger,
-        &python_paths.site_packages,
-        &location,
-        Some(&python_paths.pyoxidizer_state_dir),
-        rule.include_source,
-        rule.optimize_level,
-        None,
-        Some(&rule.excludes),
-    )
-}
-
 fn resolve_package_root(
     logger: &slog::Logger,
     rule: &PackagingPackageRoot,
@@ -481,8 +458,6 @@ pub fn resolve_python_packaging(
         }
 
         PythonPackaging::Stdlib(rule) => resolve_stdlib(logger, dist, &rule),
-
-        PythonPackaging::Virtualenv(rule) => resolve_virtualenv(logger, dist, &rule),
 
         PythonPackaging::PackageRoot(rule) => resolve_package_root(logger, &rule),
 

@@ -1016,54 +1016,6 @@ This rule has the following arguments:
    Where to package resources associated with this rule.
    See :ref:`install_locations`.
 
-``Virtualenv(...)``
-^^^^^^^^^^^^^^^^^^^
-
-This rule will include resources found in a pre-populated *virtualenv*
-directory.
-
-.. important::
-
-   PyOxidizer only supports finding modules and resources
-   populated via *traditional* means (e.g. ``pip install`` or ``python setup.py
-   install``). If ``.pth`` or similar mechanisms are used for installing modules,
-   files may not be discovered properly.
-
-``path`` (string)
-   The filesystem path to the root of the virtualenv.
-
-   Python modules are typically in a ``lib/pythonX.Y/site-packages`` directory
-   (on UNIX) or ``Lib/site-packages`` directory (on Windows) under this path.
-
-``optimize_level`` (int)
-   The module optimization level for packaged bytecode.
-
-   Allowed values are ``0``, ``1``, and ``2``.
-
-   Defaults to ``0``, which is the Python default.
-
-``excludes`` (array of string)
-   An array of package or module names to exclude. See the documentation
-   for ``excludes`` for ``package-root`` rules for more.
-
-   Default is an empty array.
-
-``include_source`` (bool)
-
-   Whether to include the source code for modules in addition to the bytecode.
-
-   Default is ``True``.
-
-``install_location`` (string)
-   Where to package resources associated with this rule.
-   See :ref:`install_locations`.
-
-Example:
-
-.. code-block:: python
-
-   Virtualenv(path="/home/gps/src/myapp/venv")
-
 ``WriteLicenseFiles(path)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
