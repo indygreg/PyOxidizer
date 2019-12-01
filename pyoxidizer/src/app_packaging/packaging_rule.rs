@@ -2,10 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use slog::{info, warn};
+use slog::info;
 use std::collections::BTreeSet;
 use std::fs;
-use std::path::{Path, PathBuf};
 
 use super::config::{
     InstallLocation, PackagingStdlib, PackagingStdlibExtensionVariant,
@@ -13,10 +12,6 @@ use super::config::{
     PackagingStdlibExtensionsPolicy, PythonPackaging,
 };
 use crate::py_packaging::distribution::{is_stdlib_test_package, ParsedPythonDistribution};
-use crate::py_packaging::distutils::read_built_extensions;
-use crate::py_packaging::fsscan::{
-    find_python_resources, is_package_from_path, PythonFileResource,
-};
 use crate::py_packaging::resource::{AppRelativeResources, PythonResource};
 
 #[derive(Debug)]
@@ -80,144 +75,6 @@ where
     }
 
     package_names
-}
-
-fn resource_full_name(resource: &PythonFileResource) -> &str {
-    match resource {
-        PythonFileResource::Source { full_name, .. } => &full_name,
-        PythonFileResource::Bytecode { full_name, .. } => &full_name,
-        PythonFileResource::BytecodeOpt1 { full_name, .. } => &full_name,
-        PythonFileResource::BytecodeOpt2 { full_name, .. } => &full_name,
-        PythonFileResource::Resource(resource) => &resource.full_name,
-        _ => "",
-    }
-}
-
-fn resolve_built_extensions(
-    state_dir: &Path,
-    res: &mut Vec<PythonResourceAction>,
-    location: &ResourceLocation,
-) -> Result<(), String> {
-    for ext in read_built_extensions(state_dir)? {
-        res.push(PythonResourceAction {
-            action: ResourceAction::Add,
-            location: location.clone(),
-            resource: PythonResource::BuiltExtensionModule(ext),
-        });
-    }
-
-    Ok(())
-}
-
-/// Processes resources in a path
-/// Args includes and excludes are ignored if None or an empty Vec.
-#[allow(clippy::too_many_arguments)]
-fn process_resources(
-    logger: &slog::Logger,
-    path: &PathBuf,
-    location: &ResourceLocation,
-    state_dir: Option<&PathBuf>,
-    include_source: bool,
-    optimize_level: i64,
-    includes: Option<&Vec<String>>,
-    excludes: Option<&Vec<String>>,
-) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
-    let path_s = path.display().to_string();
-    warn!(logger, "processing resources from {}", path_s);
-
-    for resource in find_python_resources(path) {
-        let full_name = resource_full_name(&resource);
-
-        let excluded = match includes {
-            Some(values) => values.iter().any(|v| {
-                let prefix = v.clone() + ".";
-                full_name != v && !full_name.starts_with(&prefix)
-            }),
-            None => false,
-        };
-
-        if excluded {
-            info!(logger, "whitelist skipping {}", full_name);
-            continue;
-        }
-
-        let excluded = match excludes {
-            Some(values) => {
-                if values.is_empty() {
-                    false
-                } else {
-                    values.iter().all(|v| {
-                        let prefix = v.clone() + ".";
-                        full_name == v || full_name.starts_with(&prefix)
-                    })
-                }
-            }
-            None => false,
-        };
-
-        if excluded {
-            info!(logger, "blacklist skipping {}", full_name);
-            continue;
-        }
-
-        match resource {
-            PythonFileResource::Source {
-                full_name, path, ..
-            } => {
-                let is_package = is_package_from_path(&path);
-                let source = fs::read(path).expect("error reading source file");
-
-                if include_source {
-                    res.push(PythonResourceAction {
-                        action: ResourceAction::Add,
-                        location: location.clone(),
-                        resource: PythonResource::ModuleSource {
-                            name: full_name.clone(),
-                            source: source.clone(),
-                            is_package,
-                        },
-                    });
-                }
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::ModuleBytecodeRequest {
-                        name: full_name.clone(),
-                        source,
-                        optimize_level: optimize_level as i32,
-                        is_package,
-                    },
-                });
-            }
-
-            PythonFileResource::Resource(resource) => {
-                let data = fs::read(resource.path).expect("error reading resource file");
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::Resource {
-                        package: resource.package.clone(),
-                        name: resource.stem.clone(),
-                        data,
-                    },
-                });
-            }
-
-            _ => {}
-        }
-    }
-
-    if let Some(dir) = state_dir {
-        if dir.exists() {
-            resolve_built_extensions(&dir, &mut res, &location).unwrap();
-        }
-    };
-
-    res
 }
 
 fn resolve_stdlib_extensions_policy(
