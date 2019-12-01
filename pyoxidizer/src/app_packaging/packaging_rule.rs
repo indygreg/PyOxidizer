@@ -124,6 +124,7 @@ fn resolve_built_extensions(
 
 /// Processes resources in a path
 /// Args includes and excludes are ignored if None or an empty Vec.
+#[allow(clippy::too_many_arguments)]
 fn process_resources(
     logger: &slog::Logger,
     path: &PathBuf,
@@ -156,13 +157,16 @@ fn process_resources(
         }
 
         let excluded = match excludes {
-            Some(values) => match values.is_empty() {
-                true => false,
-                false => values.iter().all(|v| {
-                    let prefix = v.clone() + ".";
-                    full_name == v || full_name.starts_with(&prefix)
-                }),
-            },
+            Some(values) => {
+                if values.is_empty() {
+                    false
+                } else {
+                    values.iter().all(|v| {
+                        let prefix = v.clone() + ".";
+                        full_name == v || full_name.starts_with(&prefix)
+                    })
+                }
+            }
             None => false,
         };
 
@@ -220,13 +224,10 @@ fn process_resources(
         }
     }
 
-    match state_dir {
-        Some(dir) => {
-            if dir.exists() {
-                resolve_built_extensions(&dir, &mut res, &location).unwrap();
-            }
+    if let Some(dir) = state_dir {
+        if dir.exists() {
+            resolve_built_extensions(&dir, &mut res, &location).unwrap();
         }
-        None => {}
     };
 
     res
