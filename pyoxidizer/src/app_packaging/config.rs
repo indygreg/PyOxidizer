@@ -85,28 +85,6 @@ pub struct PackagingPackageRoot {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct PackagingPipInstallSimple {
-    pub package: String,
-    pub extra_env: HashMap<String, String>,
-    pub optimize_level: i64,
-    pub excludes: Vec<String>,
-    pub include_source: bool,
-    pub install_location: InstallLocation,
-    pub extra_args: Option<Vec<String>>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct PackagingPipRequirementsFile {
-    // TODO resolve to a PathBuf.
-    pub requirements_path: String,
-    pub extra_env: HashMap<String, String>,
-    pub optimize_level: i64,
-    pub include_source: bool,
-    pub install_location: InstallLocation,
-    pub extra_args: Option<Vec<String>>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub struct PackagingFilterInclude {
     pub files: Vec<String>,
     pub glob_files: Vec<String>,
@@ -127,8 +105,6 @@ pub enum PythonPackaging {
     Stdlib(PackagingStdlib),
     Virtualenv(PackagingVirtualenv),
     PackageRoot(PackagingPackageRoot),
-    PipInstallSimple(PackagingPipInstallSimple),
-    PipRequirementsFile(PackagingPipRequirementsFile),
     FilterInclude(PackagingFilterInclude),
     WriteLicenseFiles(PackagingWriteLicenseFiles),
 }

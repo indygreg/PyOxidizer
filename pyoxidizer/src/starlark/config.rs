@@ -21,9 +21,9 @@ use super::embedded_python_config::EmbeddedPythonConfig;
 use super::env::{required_str_arg, required_type_arg};
 use super::python_distribution::PythonDistribution;
 use super::python_packaging::{
-    FilterInclude, PackageRoot, PipInstallSimple, PipRequirementsFile, SetupPyInstall, Stdlib,
-    StdlibExtensionVariant, StdlibExtensionsExplicitExcludes, StdlibExtensionsExplicitIncludes,
-    StdlibExtensionsPolicy, Virtualenv, WriteLicenseFiles,
+    FilterInclude, PackageRoot, SetupPyInstall, Stdlib, StdlibExtensionVariant,
+    StdlibExtensionsExplicitExcludes, StdlibExtensionsExplicitIncludes, StdlibExtensionsPolicy,
+    Virtualenv, WriteLicenseFiles,
 };
 use super::python_run_mode::PythonRunMode;
 use crate::app_packaging::config::{
@@ -107,12 +107,6 @@ starlark_module! { config_env =>
                 })),
                 "PackageRoot" => Ok(x.downcast_apply(|x: &PackageRoot| -> PythonPackaging {
                     PythonPackaging::PackageRoot(x.rule.clone())
-                })),
-                "PipInstallSimple" => Ok(x.downcast_apply(|x: &PipInstallSimple| -> PythonPackaging {
-                    PythonPackaging::PipInstallSimple(x.rule.clone())
-                })),
-                "PipRequirementsFile" => Ok(x.downcast_apply(|x: &PipRequirementsFile| -> PythonPackaging {
-                    PythonPackaging::PipRequirementsFile(x.rule.clone())
                 })),
                 "SetupPyInstall" => Ok(x.downcast_apply(|x: &SetupPyInstall| -> PythonPackaging {
                     PythonPackaging::SetupPyInstall(x.rule.clone())

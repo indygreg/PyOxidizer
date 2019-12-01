@@ -21,10 +21,9 @@ use super::env::{
 };
 use crate::app_packaging::config::{
     resolve_install_location, PackagingFilterInclude, PackagingPackageRoot,
-    PackagingPipInstallSimple, PackagingPipRequirementsFile, PackagingSetupPyInstall,
-    PackagingStdlib, PackagingStdlibExtensionVariant, PackagingStdlibExtensionsExplicitExcludes,
-    PackagingStdlibExtensionsExplicitIncludes, PackagingStdlibExtensionsPolicy,
-    PackagingVirtualenv, PackagingWriteLicenseFiles,
+    PackagingSetupPyInstall, PackagingStdlib, PackagingStdlibExtensionVariant,
+    PackagingStdlibExtensionsExplicitExcludes, PackagingStdlibExtensionsExplicitIncludes,
+    PackagingStdlibExtensionsPolicy, PackagingVirtualenv, PackagingWriteLicenseFiles,
 };
 use crate::py_packaging::distribution::ExtensionModuleFilter;
 
@@ -87,76 +86,6 @@ impl TypedValue for PackageRoot {
 
     fn get_type(&self) -> &'static str {
         "PackageRoot"
-    }
-
-    fn to_bool(&self) -> bool {
-        true
-    }
-
-    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
-        default_compare(self, other)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct PipInstallSimple {
-    pub rule: PackagingPipInstallSimple,
-}
-
-impl TypedValue for PipInstallSimple {
-    immutable!();
-    any!();
-    not_supported!(binop);
-    not_supported!(container);
-    not_supported!(function);
-    not_supported!(get_hash);
-    not_supported!(to_int);
-
-    fn to_str(&self) -> String {
-        format!("PipInstallSimple<{:#?}>", self.rule)
-    }
-
-    fn to_repr(&self) -> String {
-        self.to_str()
-    }
-
-    fn get_type(&self) -> &'static str {
-        "PipInstallSimple"
-    }
-
-    fn to_bool(&self) -> bool {
-        true
-    }
-
-    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
-        default_compare(self, other)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct PipRequirementsFile {
-    pub rule: PackagingPipRequirementsFile,
-}
-
-impl TypedValue for PipRequirementsFile {
-    immutable!();
-    any!();
-    not_supported!(binop);
-    not_supported!(container);
-    not_supported!(function);
-    not_supported!(get_hash);
-    not_supported!(to_int);
-
-    fn to_str(&self) -> String {
-        format!("PipRequirementsFile<{:#?}>", self.rule)
-    }
-
-    fn to_repr(&self) -> String {
-        self.to_str()
-    }
-
-    fn get_type(&self) -> &'static str {
-        "PipRequirementsFile"
     }
 
     fn to_bool(&self) -> bool {
@@ -517,119 +446,6 @@ starlark_module! { python_packaging_env =>
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PipInstallSimple(
-        package,
-        extra_env=None,
-        optimize_level=0,
-        excludes=None,
-        include_source=true,
-        install_location="embedded",
-        extra_args=None
-    ) {
-        let package = required_str_arg("package", &package)?;
-        optional_dict_arg("extra_env", "string", "string", &extra_env)?;
-        required_type_arg("optimize_level", "int", &optimize_level)?;
-        optional_list_arg("excludes", "string", &excludes)?;
-        let include_source = required_bool_arg("include_source", &include_source)?;
-        let install_location = required_str_arg("install_location", &install_location)?;
-        optional_list_arg("extra_args", "string", &extra_args)?;
-
-        let extra_env = match extra_env.get_type() {
-            "dict" => extra_env.into_iter()?.map(|key| {
-                let k = key.to_string();
-                let v = extra_env.at(key.clone()).unwrap().to_string();
-                (k, v)
-            }).collect(),
-            "NoneType" => HashMap::new(),
-            _ => panic!("should have validated type above"),
-        };
-
-        let optimize_level = optimize_level.to_int()?;
-        let excludes = match excludes.get_type() {
-            "list" => excludes.into_iter()?.map(|x| x.to_string()).collect(),
-            "NoneType" => Vec::new(),
-            _ => panic!("should have validated type above"),
-        };
-        let install_location = resolve_install_location(&install_location).or_else(|e| {
-            Err(RuntimeError {
-                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                message: e.to_string(),
-                label: e.to_string(),
-            }.into())
-        })?;
-        let extra_args = match extra_args.get_type() {
-            "list" => Some(extra_args.into_iter()?.map(|x| x.to_string()).collect()),
-            "NoneType" => None,
-            _ => panic!("should have validated type above"),
-        };
-
-        let rule = PackagingPipInstallSimple {
-            package,
-            extra_env,
-            optimize_level,
-            excludes,
-            include_source,
-            install_location,
-            extra_args,
-        };
-
-        Ok(Value::new(PipInstallSimple { rule }))
-    }
-
-    #[allow(non_snake_case, clippy::ptr_arg)]
-    PipRequirementsFile(
-        requirements_path,
-        extra_env=None,
-        optimize_level=0,
-        include_source=true,
-        install_location="embedded",
-        extra_args=None
-    ) {
-        let requirements_path = required_str_arg("path", &requirements_path)?;
-        optional_dict_arg("extra_env", "string", "string", &extra_env)?;
-        required_type_arg("optimize_level", "int", &optimize_level)?;
-        let include_source = required_bool_arg("include_source", &include_source)?;
-        let install_location = required_str_arg("install_location", &install_location)?;
-        optional_list_arg("extra_args", "string", &extra_args)?;
-
-        let extra_env = match extra_env.get_type() {
-            "dict" => extra_env.into_iter()?.map(|key| {
-                let k = key.to_string();
-                let v = extra_env.at(key.clone()).unwrap().to_string();
-                (k, v)
-            }).collect(),
-            "NoneType" => HashMap::new(),
-            _ => panic!("should have validated type above"),
-        };
-
-        let optimize_level = optimize_level.to_int()?;
-         let install_location = resolve_install_location(&install_location).or_else(|e| {
-            Err(RuntimeError {
-                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                message: e.to_string(),
-                label: e.to_string(),
-            }.into())
-        })?;
-
-        let extra_args = match extra_args.get_type() {
-            "list" => Some(extra_args.into_iter()?.map(|x| x.to_string()).collect()),
-            "NoneType" => None,
-            _ => panic!("should have validated type above"),
-        };
-
-        let rule = PackagingPipRequirementsFile {
-            requirements_path,
-            extra_env,
-            optimize_level,
-            include_source,
-            install_location,
-            extra_args,
-        };
-
-        Ok(Value::new(PipRequirementsFile { rule }))
-    }
-
-    #[allow(non_snake_case, clippy::ptr_arg)]
     SetupPyInstall(
         package_path,
         extra_env=None,
@@ -877,66 +693,6 @@ mod tests {
         };
 
         v.downcast_apply(|x: &PackageRoot| assert_eq!(x.rule, wanted));
-    }
-
-    #[test]
-    fn test_pip_install_simple_default() {
-        let err = starlark_nok("PipInstallSimple()");
-        assert!(err.message.starts_with("Missing parameter package"));
-    }
-
-    #[test]
-    fn test_pip_install_simple_basic() {
-        let v = starlark_ok("PipInstallSimple('foo')");
-        let wanted = PackagingPipInstallSimple {
-            package: "foo".to_string(),
-            extra_env: HashMap::new(),
-            optimize_level: 0,
-            excludes: Vec::new(),
-            include_source: true,
-            install_location: InstallLocation::Embedded,
-            extra_args: None,
-        };
-
-        v.downcast_apply(|x: &PipInstallSimple| assert_eq!(x.rule, wanted));
-    }
-
-    #[test]
-    fn test_pip_requirements_file_default() {
-        let err = starlark_nok("PipRequirementsFile()");
-        assert!(err
-            .message
-            .starts_with("Missing parameter requirements_path"));
-    }
-
-    #[test]
-    fn test_pip_requirements_file_basic() {
-        let v = starlark_ok("PipRequirementsFile('path')");
-        let wanted = PackagingPipRequirementsFile {
-            requirements_path: "path".to_string(),
-            extra_env: HashMap::new(),
-            optimize_level: 0,
-            include_source: true,
-            install_location: InstallLocation::Embedded,
-            extra_args: None,
-        };
-
-        v.downcast_apply(|x: &PipRequirementsFile| assert_eq!(x.rule, wanted));
-    }
-
-    #[test]
-    fn test_pip_requirements_file_extra_args() {
-        let v = starlark_ok("PipRequirementsFile('path', extra_args=['foo'])");
-        let wanted = PackagingPipRequirementsFile {
-            requirements_path: "path".to_string(),
-            extra_env: HashMap::new(),
-            optimize_level: 0,
-            include_source: true,
-            install_location: InstallLocation::Embedded,
-            extra_args: Some(vec!["foo".to_string()]),
-        };
-
-        v.downcast_apply(|x: &PipRequirementsFile| assert_eq!(x.rule, wanted));
     }
 
     #[test]
