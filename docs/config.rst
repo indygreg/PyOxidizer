@@ -184,12 +184,40 @@ This method runs ``pip install <args>`` with the specified distribution.
    variables to set in the invoked ``pip`` process.
 
 Returns a ``list`` of objects representing Python resources installed as
-part of the operation. The types of these objects can be ``PythonSourceMode``,
+part of the operation. The types of these objects can be ``PythonSourceModule``,
 ``PythonBytecodeModule``, ``PythonResourceData``, etc.
 
 The returned resources are typically added to a ``FileManifest`` or
 ``PythonEmbeddedResources`` to make them available to a packaged
 application.
+
+``PythonDistribution.setup_py_install(...)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method runs ``python setup.py install`` against a package at the
+specified path.
+
+It accepts the following arguments:
+
+``package_path``
+   String filesystem path to directory containing a ``setup.py`` to invoke.
+
+``extra_envs={}``
+   Optional dict of string key-value pairs constituting extra environment
+   variables to set in the invoked ``python`` process.
+
+``extra_global_arguments=[]``
+   Optional list of strings of extra command line arguments to pass to
+   ``python setup.py``. These will be added before the ``install``
+   argument.
+
+Returns a ``list`` of objects representing Python resources installed
+as part of the operation. The types of these objects can be
+``PythonSourceModule``, ``PythonBytecodeModule``, ``PythonResourceData``,
+etc.
+
+The returned resources are typically added to a ``FileManifest`` or
+``PythonEmbeddedResources`` to make them available to a packaged application.
 
 ``default_python_distribution(build_target=None)``
 --------------------------------------------------
