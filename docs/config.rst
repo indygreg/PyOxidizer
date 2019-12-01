@@ -987,60 +987,6 @@ This rule has the following arguments:
    Where to package resources associated with this rule.
    See :ref:`install_locations`.
 
-``SetupPyInstall(...)``
-^^^^^^^^^^^^^^^^^^^^^^^
-
-This rule runs ``python setup.py install`` for a given directory containing a
-``setup.py`` ``distutils``/``setuptools`` packaging script.
-
-The target package will be installed to a temporary directory and its installed
-resources will be collected and packaged.
-
-``package_path`` (string)
-   Local filesystem to the directory containing a ``setup.py`` file.
-
-   Can be a relative or absolute path. If relative, it is evaluated relative
-   to the PyOxidizer configuration file.
-
-   The ``setup.py`` invocation will run with its current working directory set
-   to this path.
-
-``extra_env`` (dict)
-   Extra environment variables to pass to the ``setup.py`` invocation.
-
-   Some ``setup.py`` scripts accept environment variables to customize execution
-   behavior. This option can be defined to pass those along to the invocation.
-
-``extra_global_arguments`` (array of string)
-   Extra arguments to pass to ``setup.py`` before the ``install`` command.
-
-   Some ``setup.py`` scripts accept global arguments to control how the
-   distribution is installed. This option can be defined to specify additional
-   process arguments to the ``setup.py`` command.
-
-``optimize_level`` (int)
-   The module optimization level for packaged bytecode.
-
-   Allowed values are ``0``, ``1``, and ``2``.
-
-   Defaults to ``0``, which is the Python default.
-
-``include_source`` (bool)
-   Whether to include the source code for Python modules in addition to the
-   bytecode.
-
-   Default is ``True``.
-
-``install_location`` (string)
-   Where to package resources associated with this rule.
-   See :ref:`install_locations`.
-
-``excludes`` (array of string)
-   An array of package or module names to exclude. See the documentation
-   for ``excludes`` for ``package-root`` rules for more.
-
-   Default is an empty array.
-
 ``Virtualenv(...)``
 ^^^^^^^^^^^^^^^^^^^
 
