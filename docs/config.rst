@@ -191,6 +191,35 @@ The returned resources are typically added to a ``FileManifest`` or
 ``PythonEmbeddedResources`` to make them available to a packaged
 application.
 
+``PythonDistribution.read_virtualenv(path)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method attempts to read Python resources from an already built
+virtualenv.
+
+.. important::
+
+   PyOxidizer only supports finding modules and resources
+   populated via *traditional* means (e.g. ``pip install`` or ``python setup.py
+   install``). If ``.pth`` or similar mechanisms are used for installing modules,
+   files may not be discovered properly.
+
+It accepts the following arguments:
+
+``path`` (string)
+   The filesystem path to the root of the virtualenv.
+
+   Python modules are typically in a ``lib/pythonX.Y/site-packages`` directory
+   (on UNIX) or ``Lib/site-packages`` directory (on Windows) under this path.
+
+Returns a ``list`` of objects representing Python resources found in the virtualenv.
+The types of these objects can be ``PythonSourceModule``, ``PythonBytecodeModule``,
+``PythonResourceData``, etc.
+
+The returned resources are typically added to a ``FileManifest`` or
+``PythonEmbeddedResources`` to make them available to a packaged
+application.
+
 ``PythonDistribution.setup_py_install(...)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

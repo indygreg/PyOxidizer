@@ -251,6 +251,36 @@ starlark_module! { python_distribution_module =>
     }
 
     #[allow(clippy::ptr_arg)]
+    PythonDistribution.read_virtualenv(
+        env env,
+        this,
+        path
+    ) {
+        let path = required_str_arg("path", &path)?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        let resources = this.downcast_apply_mut(|dist: &mut PythonDistribution| -> Result<Vec<PythonResource>, ValueError> {
+            dist.ensure_distribution_resolved(&logger);
+
+            let dist = dist.distribution.as_ref().unwrap();
+
+            let python_paths = resolve_python_paths(&Path::new(&path), &dist.version);
+
+            find_resources(&python_paths.site_packages, None).or_else(|e| Err(
+                RuntimeError {
+                    code: "VIRTUALENV_ERROR",
+                    message: format!("could not find resources: {}", e),
+                    label: "read_virtualenv()".to_string(),
+                }.into()
+            ))
+        })?;
+
+        Ok(Value::from(resources.iter().map(Value::from).collect::<Vec<Value>>()))
+    }
+
+    #[allow(clippy::ptr_arg)]
     PythonDistribution.setup_py_install(
         env env,
         this,
