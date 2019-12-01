@@ -6,8 +6,10 @@ use byteorder::{LittleEndian, WriteBytesExt};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::Write;
-use std::path::PathBuf;
+use std::iter::FromIterator;
+use std::path::{Path, PathBuf};
 
+use super::bytecode::{BytecodeCompiler, CompileMode};
 use super::distribution::ExtensionModule;
 use super::resource::{
     BuiltExtensionModule, BytecodeModule, PackagedModuleBytecode, PackagedModuleSource,
@@ -56,6 +58,70 @@ impl EmbeddedPythonResourcesPrePackaged {
     pub fn add_extension_module(&mut self, module: &ExtensionModule) {
         self.extension_modules
             .insert(module.module.clone(), module.clone());
+    }
+
+    pub fn package(&self, python_exe: &Path) -> Result<EmbeddedPythonResources, String> {
+        let mut all_modules = BTreeSet::new();
+        let mut all_packages = BTreeSet::new();
+
+        let module_sources = BTreeMap::from_iter(self.source_modules.iter().map(|(k, v)| {
+            all_modules.insert(k.clone());
+            if v.is_package {
+                all_packages.insert(k.clone());
+            }
+
+            (
+                k.clone(),
+                PackagedModuleSource {
+                    source: v.source.clone(),
+                    is_package: v.is_package,
+                },
+            )
+        }));
+
+        let mut module_bytecodes = BTreeMap::new();
+        {
+            let mut compiler = BytecodeCompiler::new(&python_exe);
+
+            for (name, request) in &self.bytecode_modules {
+                let bytecode = compiler
+                    .compile(
+                        &request.source,
+                        &request.name,
+                        request.optimize_level.into(),
+                        CompileMode::Bytecode,
+                    )
+                    .or_else(|e| Err(format!("error compiling bytecode: {}", e)))?;
+
+                all_modules.insert(name.clone());
+                if request.is_package {
+                    all_packages.insert(name.clone());
+                }
+
+                module_bytecodes.insert(
+                    name.clone(),
+                    PackagedModuleBytecode {
+                        bytecode,
+                        is_package: request.is_package,
+                    },
+                );
+            }
+        }
+
+        let resources = self.resources.clone();
+        all_packages.extend(resources.keys().cloned());
+
+        let extension_modules = self.extension_modules.clone();
+
+        Ok(EmbeddedPythonResources {
+            module_sources,
+            module_bytecodes,
+            all_modules,
+            all_packages,
+            resources,
+            extension_modules,
+            built_extension_modules: Default::default(),
+        })
     }
 }
 

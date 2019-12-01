@@ -60,6 +60,16 @@ impl From<i32> for BytecodeOptimizationLevel {
     }
 }
 
+impl From<BytecodeOptimizationLevel> for i32 {
+    fn from(level: BytecodeOptimizationLevel) -> Self {
+        match level {
+            BytecodeOptimizationLevel::Zero => 0,
+            BytecodeOptimizationLevel::One => 1,
+            BytecodeOptimizationLevel::Two => 2,
+        }
+    }
+}
+
 /// Python module bytecode, agnostic of location.
 #[derive(Clone, Debug, PartialEq)]
 pub struct BytecodeModule {
