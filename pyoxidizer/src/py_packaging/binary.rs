@@ -61,6 +61,23 @@ impl PreBuiltPythonExecutable {
             cargo_metadata,
         })
     }
+
+    /// Generate data embedded in binaries representing Python resource data.
+    pub fn build_embedded_blobs(&self) -> Result<EmbeddedResourcesBlobs, String> {
+        let embedded_resources = self.resources.package(&self.distribution.python_exe)?;
+
+        let mut module_names = Vec::new();
+        let mut modules = Vec::new();
+        let mut resources = Vec::new();
+
+        embedded_resources.write_blobs(&mut module_names, &mut modules, &mut resources);
+
+        Ok(EmbeddedResourcesBlobs {
+            module_names,
+            modules,
+            resources,
+        })
+    }
 }
 
 /// A self-contained Python executable after it is built.
@@ -68,4 +85,11 @@ pub struct PythonLibrary {
     pub pre_built: PreBuiltPythonExecutable,
     pub data: Vec<u8>,
     pub cargo_metadata: Vec<String>,
+}
+
+/// Represents serialized data embedded in binaries for loading Python resources.
+pub struct EmbeddedResourcesBlobs {
+    pub module_names: Vec<u8>,
+    pub modules: Vec<u8>,
+    pub resources: Vec<u8>,
 }
