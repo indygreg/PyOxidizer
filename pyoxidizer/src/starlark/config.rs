@@ -21,7 +21,7 @@ use super::embedded_python_config::EmbeddedPythonConfig;
 use super::env::{required_str_arg, required_type_arg};
 use super::python_distribution::PythonDistribution;
 use super::python_packaging::{
-    FilterInclude, PackageRoot, Stdlib, StdlibExtensionVariant, StdlibExtensionsExplicitExcludes,
+    FilterInclude, Stdlib, StdlibExtensionVariant, StdlibExtensionsExplicitExcludes,
     StdlibExtensionsExplicitIncludes, StdlibExtensionsPolicy, WriteLicenseFiles,
 };
 use super::python_run_mode::PythonRunMode;
@@ -103,9 +103,6 @@ starlark_module! { config_env =>
             match x.get_type() {
                 "FilterInclude" => Ok(x.downcast_apply(|x: &FilterInclude| -> PythonPackaging {
                     PythonPackaging::FilterInclude(x.rule.clone())
-                })),
-                "PackageRoot" => Ok(x.downcast_apply(|x: &PackageRoot| -> PythonPackaging {
-                    PythonPackaging::PackageRoot(x.rule.clone())
                 })),
                 "Stdlib" => Ok(x.downcast_apply(|x: &Stdlib| -> PythonPackaging {
                     PythonPackaging::Stdlib(x.rule.clone())

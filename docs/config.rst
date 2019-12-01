@@ -998,59 +998,6 @@ The following arguments control behavior:
 ``install_location`` (string)
    Where to package these resources. See :ref:`install_locations`.
 
-``PackageRoot(...)``
-^^^^^^^^^^^^^^^^^^^^
-
-This rule discovers resources from a directory on the filesystem.
-
-The specified directory will be scanned for resource files. However,
-only specific named *packages* will be packaged. e.g. if the directory
-contains sub-directories ``foo/`` and ``bar``, you must explicitly
-state that you want the ``foo`` and/or ``bar`` package to be included so files
-from these directories will be included.
-
-This rule is frequently used to pull in packages from local source
-directories (e.g. directories containing a ``setup.py`` file). This
-rule doesn't involve any packaging tools and is a purely driven by
-filesystem walking. It is primitive, yet effective.
-
-This rule has the following arguments:
-
-``path`` (string)
-   The filesystem path to the directory to scan.
-
-``optimize_level`` (int)
-   The module optimization level for packaged bytecode.
-
-   Allowed values are ``0``, ``1``, and ``2``.
-
-   Defaults to ``0``, which is the Python default.
-
-``packages`` (array of string)
-   List of package names to include.
-
-   Filesystem walking will find files in a directory ``<path>/<value>/`` or in
-   a file ``<path>/<value>.py``.
-
-``excludes`` (array of string)
-   An array of package or module names to exclude.
-
-   A value in this array will match on an exact full resource name match or
-   on a package prefix match. e.g. ``foo`` will match the module ``foo``, the
-   package ``foo``, and any sub-modules in ``foo``. e.g. it will match
-   ``foo.bar`` but will not match ``foofoo``.
-
-   Default is an empty array.
-
-``include_source`` (bool)
-   Whether to include the source code for modules in addition to the bytecode.
-
-   Default is ``True``.
-
-``install_location`` (string)
-   Where to package resources associated with this rule.
-   See :ref:`install_locations`.
-
 ``WriteLicenseFiles(path)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

@@ -8,7 +8,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use super::config::{
-    InstallLocation, PackagingPackageRoot, PackagingStdlib, PackagingStdlibExtensionVariant,
+    InstallLocation, PackagingStdlib, PackagingStdlibExtensionVariant,
     PackagingStdlibExtensionsExplicitExcludes, PackagingStdlibExtensionsExplicitIncludes,
     PackagingStdlibExtensionsPolicy, PythonPackaging,
 };
@@ -403,25 +403,6 @@ fn resolve_stdlib(
     res
 }
 
-fn resolve_package_root(
-    logger: &slog::Logger,
-    rule: &PackagingPackageRoot,
-) -> Vec<PythonResourceAction> {
-    let location = ResourceLocation::new(&rule.install_location);
-    let path = PathBuf::from(&rule.path);
-
-    process_resources(
-        &logger,
-        &path,
-        &location,
-        None,
-        rule.include_source,
-        rule.optimize_level,
-        Some(&rule.packages),
-        None,
-    )
-}
-
 /// Resolves a Python packaging rule to resources to package.
 pub fn resolve_python_packaging(
     logger: &slog::Logger,
@@ -446,8 +427,6 @@ pub fn resolve_python_packaging(
         }
 
         PythonPackaging::Stdlib(rule) => resolve_stdlib(logger, dist, &rule),
-
-        PythonPackaging::PackageRoot(rule) => resolve_package_root(logger, &rule),
 
         PythonPackaging::WriteLicenseFiles(_) => Vec::new(),
 

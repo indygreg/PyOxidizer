@@ -54,16 +54,6 @@ pub struct PackagingStdlib {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct PackagingPackageRoot {
-    pub path: String,
-    pub packages: Vec<String>,
-    pub optimize_level: i64,
-    pub excludes: Vec<String>,
-    pub include_source: bool,
-    pub install_location: InstallLocation,
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub struct PackagingFilterInclude {
     pub files: Vec<String>,
     pub glob_files: Vec<String>,
@@ -81,7 +71,6 @@ pub enum PythonPackaging {
     StdlibExtensionsExplicitExcludes(PackagingStdlibExtensionsExplicitExcludes),
     StdlibExtensionVariant(PackagingStdlibExtensionVariant),
     Stdlib(PackagingStdlib),
-    PackageRoot(PackagingPackageRoot),
     FilterInclude(PackagingFilterInclude),
     WriteLicenseFiles(PackagingWriteLicenseFiles),
 }
