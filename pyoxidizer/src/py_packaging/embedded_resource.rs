@@ -7,7 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io::Write;
 use std::iter::FromIterator;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use super::bytecode::{BytecodeCompiler, CompileMode};
 use super::distribution::ExtensionModule;
@@ -176,9 +176,9 @@ impl EmbeddedPythonResources {
 
     pub fn write_blobs(
         &self,
-        module_names_path: &PathBuf,
-        modules_path: &PathBuf,
-        resources_path: &PathBuf,
+        module_names_path: &Path,
+        modules_path: &Path,
+        resources_path: &Path,
     ) {
         let mut fh = fs::File::create(module_names_path).expect("error creating file");
         for name in &self.all_modules {
