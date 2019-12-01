@@ -15,6 +15,7 @@ pub mod env;
 pub mod eval;
 pub mod file_resource;
 pub mod python_distribution;
+pub mod python_executable;
 pub mod python_packaging;
 pub mod python_resource;
 pub mod python_run_mode;

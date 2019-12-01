@@ -41,7 +41,7 @@ pub struct PythonDistribution {
 
     dest_dir: PathBuf,
 
-    distribution: Option<ParsedPythonDistribution>,
+    pub distribution: Option<ParsedPythonDistribution>,
 }
 
 impl PythonDistribution {
@@ -53,7 +53,7 @@ impl PythonDistribution {
         }
     }
 
-    fn ensure_distribution_resolved(&mut self, logger: &slog::Logger) {
+    pub fn ensure_distribution_resolved(&mut self, logger: &slog::Logger) {
         if self.distribution.is_some() {
             return;
         }

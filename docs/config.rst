@@ -725,6 +725,30 @@ Example:
 
 This mode will do nothing. It is provided for completeness sake.
 
+``PythonExecutable(...)``
+-------------------------
+
+The ``PythonExecutable`` type represents an executable file containing
+the Python interpreter, Python resources to make available to the interpreter,
+and a default run-time configuration for that interpreter.
+
+Instances are constructed by passing arguments to a ``PythonExecutable()``
+function. The accepted arguments are:
+
+``distribution`` (``PythonDistribution``)
+   The Python distribution to use to construct this executable. The
+   interpreter from the distribution will be compiled into the produced
+   executable.
+
+``resources`` (``PythonEmbeddedResources``)
+   Python resources to make available to the embedded interpreter.
+
+``config`` (``PythonEmbeddedConfig``)
+   The default configuration of the embedded Python interpreter.
+
+``run_mode`` (``PythonRunMode``)
+   The default run-time behavior of the embedded Python interpreter.
+
 ``FileManifest()``
 ------------------
 
