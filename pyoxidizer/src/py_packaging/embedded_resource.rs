@@ -4,8 +4,7 @@
 
 use byteorder::{LittleEndian, WriteBytesExt};
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
-use std::io::{BufWriter, Write};
+use std::io::Write;
 use std::iter::FromIterator;
 use std::path::Path;
 
@@ -174,27 +173,17 @@ impl EmbeddedPythonResources {
         records
     }
 
-    pub fn write_blobs(
-        &self,
-        module_names_path: &Path,
-        modules_path: &Path,
-        resources_path: &Path,
-    ) {
-        let mut fh =
-            BufWriter::new(fs::File::create(module_names_path).expect("error creating file"));
+    pub fn write_blobs<W: Write>(&self, module_names: &mut W, modules: &mut W, resources: &mut W) {
         for name in &self.all_modules {
-            fh.write_all(name.as_bytes()).expect("failed to write");
-            fh.write_all(b"\n").expect("failed to write");
+            module_names
+                .write_all(name.as_bytes())
+                .expect("failed to write");
+            module_names.write_all(b"\n").expect("failed to write");
         }
-        fh.flush().unwrap();
 
-        let mut fh = BufWriter::new(fs::File::create(modules_path).unwrap());
-        write_modules_entries(&mut fh, &self.modules_records()).unwrap();
-        fh.flush().unwrap();
+        write_modules_entries(modules, &self.modules_records()).unwrap();
 
-        let mut fh = BufWriter::new(fs::File::create(resources_path).unwrap());
-        write_resources_entries(&mut fh, &self.resources).unwrap();
-        fh.flush().unwrap();
+        write_resources_entries(resources, &self.resources).unwrap();
     }
 
     pub fn embedded_extension_module_names(&self) -> BTreeSet<String> {

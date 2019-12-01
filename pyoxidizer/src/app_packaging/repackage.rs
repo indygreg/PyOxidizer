@@ -9,7 +9,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
 use std::fs::create_dir_all;
-use std::io::{BufRead, BufReader, Error as IOError, Write};
+use std::io::{BufRead, BufReader, BufWriter, Error as IOError, Write};
 use std::path::{Path, PathBuf};
 
 use super::config::{
@@ -1248,9 +1248,21 @@ pub fn process_config(
     let module_names_path = Path::new(&dest_dir).join("py-module-names");
     let py_modules_path = Path::new(&dest_dir).join("py-modules");
     let resources_path = Path::new(&dest_dir).join("python-resources");
+
+    let mut module_names_fh =
+        BufWriter::new(fs::File::create(&module_names_path).expect("error creating file"));
+    let mut modules_fh =
+        BufWriter::new(fs::File::create(&py_modules_path).expect("error creating file"));
+    let mut resources_fh =
+        BufWriter::new(fs::File::create(&resources_path).expect("error creating file"));
+
     resources
         .embedded
-        .write_blobs(&module_names_path, &py_modules_path, &resources_path);
+        .write_blobs(&mut module_names_fh, &mut modules_fh, &mut resources_fh);
+
+    module_names_fh.flush().unwrap();
+    modules_fh.flush().unwrap();
+    resources_fh.flush().unwrap();
 
     warn!(
         logger,
@@ -1328,7 +1340,7 @@ pub fn process_config(
         "writing packaging state to {}",
         packaging_state_path.display()
     );
-    let mut fh = std::io::BufWriter::new(
+    let mut fh = BufWriter::new(
         fs::File::create(&packaging_state_path).expect("unable to create packaging_state.cbor"),
     );
     serde_cbor::to_writer(&mut fh, &packaging_state).unwrap();
