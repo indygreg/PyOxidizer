@@ -64,19 +64,6 @@ impl AppRelativeResources {
     }
 }
 
-pub fn packages_from_module_name(module: &str) -> BTreeSet<String> {
-    let mut package_names = BTreeSet::new();
-
-    let mut search: &str = &module;
-
-    while let Some(idx) = search.rfind('.') {
-        package_names.insert(search[0..idx].to_string());
-        search = &search[0..idx];
-    }
-
-    package_names
-}
-
 pub fn packages_from_module_names<I>(names: I) -> BTreeSet<String>
 where
     I: Iterator<Item = String>,

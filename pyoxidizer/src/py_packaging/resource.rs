@@ -3,12 +3,25 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryFrom;
 use std::path::PathBuf;
 
 use super::distribution::ExtensionModule;
 use super::fsscan::{is_package_from_path, PythonFileResource};
+
+pub fn packages_from_module_name(module: &str) -> BTreeSet<String> {
+    let mut package_names = BTreeSet::new();
+
+    let mut search: &str = &module;
+
+    while let Some(idx) = search.rfind('.') {
+        package_names.insert(search[0..idx].to_string());
+        search = &search[0..idx];
+    }
+
+    package_names
+}
 
 /// A Python source module agnostic of location.
 #[derive(Clone, Debug, PartialEq)]
@@ -231,6 +244,27 @@ impl TryFrom<&PythonFileResource> for PythonResource {
                 Err("converting other files not yet supported".to_string())
             }
         }
+    }
+}
+
+impl PythonResource {
+    pub fn is_in_packages(&self, packages: &Vec<String>) -> bool {
+        let name = match self {
+            PythonResource::ModuleSource { name, .. } => name,
+            PythonResource::ModuleBytecode { name, .. } => name,
+            PythonResource::ModuleBytecodeRequest { name, .. } => name,
+            PythonResource::Resource { package, .. } => package,
+            PythonResource::BuiltExtensionModule(em) => &em.name,
+            PythonResource::ExtensionModule { name, .. } => name,
+        };
+
+        for package in packages {
+            if packages_from_module_name(&name).contains(package) {
+                return true;
+            }
+        }
+
+        false
     }
 }
 
