@@ -48,13 +48,15 @@ jobs:
     condition: ne( variables['rustup_toolchain'], 'nightly' )
 
   - ${{ if ne(parameters.name, 'Windows') }}:
+    # TODO add `--pip-install appdirs==1.4.3 --pip-install zero-buffer==0.5.1` once
+    # auto-generated pyoxidizer.bzl support this functionality again.
     - script: |
-        cargo run --bin pyoxidizer -- init --pip-install appdirs==1.4.3 --pip-install zero-buffer==0.5.1 ~/pyapp
+        cargo run --bin pyoxidizer -- init ~/pyapp
         cat ci/pyapp.py | cargo run --bin pyoxidizer -- run ~/pyapp
       displayName: Build Oxidized Application
 
   - ${{ if eq(parameters.name, 'Windows') }}:
     - script: |
-        cargo run --bin pyoxidizer -- init --pip-install appdirs==1.4.3 --pip-install zero-buffer==0.5.1 %USERPROFILE%/pyapp
+        cargo run --bin pyoxidizer -- init %USERPROFILE%/pyapp
         cat ci/pyapp.py | cargo run --bin pyoxidizer -- run %USERPROFILE%/pyapp
       displayName: Build Oxidized Application (Windows)
