@@ -661,8 +661,6 @@ fn resolve_setup_py_install(
     rule: &PackagingSetupPyInstall,
     verbose: bool,
 ) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
     // Execution directory is resolved relative to the active configuration
     // file unless it is absolute.
     let rule_path = PathBuf::from(&rule.path);
@@ -734,81 +732,16 @@ fn resolve_setup_py_install(
         panic!("error running setup.py");
     }
 
-    let packages_path = python_paths.site_packages;
-
-    for resource in find_python_resources(&packages_path) {
-        let mut relevant = true;
-        let full_name = resource_full_name(&resource);
-
-        for exclude in &rule.excludes {
-            let prefix = exclude.clone() + ".";
-
-            if full_name == exclude || full_name.starts_with(&prefix) {
-                relevant = false;
-            }
-        }
-
-        if !relevant {
-            continue;
-        }
-
-        match resource {
-            PythonFileResource::Source {
-                full_name, path, ..
-            } => {
-                let is_package = is_package_from_path(&path);
-                let source = fs::read(path).expect("error reading source");
-
-                if rule.include_source {
-                    res.push(PythonResourceAction {
-                        action: ResourceAction::Add,
-                        location: location.clone(),
-                        resource: PythonResource::ModuleSource {
-                            name: full_name.clone(),
-                            source: source.clone(),
-                            is_package,
-                        },
-                    });
-                }
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::ModuleBytecodeRequest {
-                        name: full_name.clone(),
-                        source,
-                        optimize_level: rule.optimize_level as i32,
-                        is_package,
-                    },
-                });
-            }
-
-            PythonFileResource::Resource(resource) => {
-                let data = fs::read(resource.path).expect("error reading resource file");
-
-                res.push(PythonResourceAction {
-                    action: ResourceAction::Add,
-                    location: location.clone(),
-                    resource: PythonResource::Resource {
-                        package: resource.package.clone(),
-                        name: resource.stem.clone(),
-                        data,
-                    },
-                });
-            }
-
-            _ => {}
-        }
-    }
-
-    resolve_built_extensions(
-        &PathBuf::from(extra_envs.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap()),
-        &mut res,
+    process_resources(
+        &logger,
+        &python_paths.site_packages,
         &location,
+        Some(&python_paths.pyoxidizer_state_dir),
+        rule.include_source,
+        rule.optimize_level,
+        None,
+        Some(&rule.excludes),
     )
-    .unwrap();
-
-    res
 }
 
 /// Resolves a Python packaging rule to resources to package.
