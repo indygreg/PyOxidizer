@@ -12,7 +12,6 @@ use super::config::{
     PackagingStdlibExtensionsExplicitExcludes, PackagingStdlibExtensionsExplicitIncludes,
     PackagingStdlibExtensionsPolicy, PackagingVirtualenv, PythonPackaging,
 };
-use super::state::BuildContext;
 use crate::py_packaging::distribution::{
     is_stdlib_test_package, resolve_python_paths, ParsedPythonDistribution,
 };
@@ -461,10 +460,8 @@ fn resolve_package_root(
 /// Resolves a Python packaging rule to resources to package.
 pub fn resolve_python_packaging(
     logger: &slog::Logger,
-    _context: &BuildContext,
     package: &PythonPackaging,
     dist: &ParsedPythonDistribution,
-    _verbose: bool,
 ) -> Vec<PythonResourceAction> {
     match package {
         PythonPackaging::StdlibExtensionsPolicy(rule) => {

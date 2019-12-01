@@ -280,7 +280,7 @@ pub fn resolve_python_resources(
             false
         };
 
-        for entry in resolve_python_packaging(logger, context, packaging, dist, context.verbose) {
+        for entry in resolve_python_packaging(logger, packaging, dist) {
             match (entry.action, entry.location, entry.resource) {
                 (
                     ResourceAction::Add,
