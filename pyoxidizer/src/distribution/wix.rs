@@ -385,8 +385,7 @@ pub fn build_wix_installer(
             true,
             None,
             false,
-        )
-        .or_else(|e| Err(anyhow!(e)))?
+        )?
     } else if context.target_triple == "i686-pc-windows-msvc" {
         warn!(logger, "building application for x64");
         crate::projectmgmt::resolve_build_context(
@@ -397,8 +396,7 @@ pub fn build_wix_installer(
             true,
             None,
             false,
-        )
-        .or_else(|e| Err(anyhow!(e)))?
+        )?
     } else {
         return Err(anyhow!(
             "building for unknown target: {}",
@@ -406,7 +404,7 @@ pub fn build_wix_installer(
         ));
     };
 
-    crate::projectmgmt::build_project(logger, &mut other_context).or_else(|e| Err(anyhow!(e)))?;
+    crate::projectmgmt::build_project(logger, &mut other_context)?;
     crate::app_packaging::repackage::package_project(logger, &mut other_context)?;
 
     let wix_toolset_path = context.build_path.join("wix-toolset");
