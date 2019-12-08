@@ -307,7 +307,7 @@ pub fn run_cli() -> Result<(), String> {
         ("add", Some(args)) => {
             let path = args.value_of("path").unwrap();
 
-            projectmgmt::add_pyoxidizer(Path::new(path), false)
+            projectmgmt::add_pyoxidizer(Path::new(path), false).or_else(|e| Err(e.to_string()))
         }
 
         ("analyze", Some(args)) => {
@@ -331,7 +331,8 @@ pub fn run_cli() -> Result<(), String> {
                 release,
                 None,
                 false,
-            )?;
+            )
+            .or_else(|e| Err(e.to_string()))?;
 
             println!("{}", context.app_path.display());
 
@@ -354,6 +355,7 @@ pub fn run_cli() -> Result<(), String> {
                 release,
                 verbose,
             )
+            .or_else(|e| Err(e.to_string()))
         }
 
         ("build", Some(args)) => {
@@ -362,6 +364,7 @@ pub fn run_cli() -> Result<(), String> {
             let path = args.value_of("path").unwrap();
 
             projectmgmt::build(&logger_context.logger, path, target, release, verbose)
+                .or_else(|e| Err(e.to_string()))
         }
 
         ("distribution", Some(args)) => {
@@ -377,6 +380,7 @@ pub fn run_cli() -> Result<(), String> {
                 Err("--type argument is required".to_string())
             } else {
                 projectmgmt::distributions(&logger_context.logger, path, target, &types)
+                    .or_else(|e| Err(e.to_string()))
             }
         }
 
@@ -389,7 +393,7 @@ pub fn run_cli() -> Result<(), String> {
             };
             let name = args.value_of("name").unwrap();
 
-            projectmgmt::init(name, code, &pip_install)
+            projectmgmt::init(name, code, &pip_install).or_else(|e| Err(e.to_string()))
         }
 
         ("python-distribution-extract", Some(args)) => {
@@ -397,24 +401,26 @@ pub fn run_cli() -> Result<(), String> {
             let dest_path = args.value_of("dest_path").unwrap();
 
             projectmgmt::python_distribution_extract(dist_path, dest_path)
+                .or_else(|e| Err(e.to_string()))
         }
 
         ("python-distribution-info", Some(args)) => {
             let dist_path = args.value_of("path").unwrap();
 
-            projectmgmt::python_distribution_info(dist_path)
+            projectmgmt::python_distribution_info(dist_path).or_else(|e| Err(e.to_string()))
         }
 
         ("python-distribution-licenses", Some(args)) => {
             let path = args.value_of("path").unwrap();
 
-            projectmgmt::python_distribution_licenses(path)
+            projectmgmt::python_distribution_licenses(path).or_else(|e| Err(e.to_string()))
         }
 
         ("run-build-script", Some(args)) => {
             let build_script = args.value_of("build-script-name").unwrap();
 
             projectmgmt::run_build_script(&logger_context.logger, build_script)
+                .or_else(|e| Err(e.to_string()))
         }
 
         ("run", Some(args)) => {
@@ -431,6 +437,7 @@ pub fn run_cli() -> Result<(), String> {
                 &extra,
                 verbose,
             )
+            .or_else(|e| Err(e.to_string()))
         }
 
         _ => Err("invalid sub-command".to_string()),

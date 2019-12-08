@@ -4,12 +4,12 @@
 
 //! Manage PyOxidizer projects.
 
+use anyhow::{anyhow, Result};
 use handlebars::Handlebars;
 use lazy_static::lazy_static;
 use serde::Serialize;
 use slog::warn;
 use std::collections::BTreeMap;
-use std::error::Error;
 use std::fs::create_dir_all;
 use std::io::{Cursor, Read, Write};
 use std::path::{Path, PathBuf};
@@ -71,7 +71,7 @@ lazy_static! {
 }
 
 /// Attempt to resolve the default Rust target for a build.
-pub fn default_target() -> Result<String, String> {
+pub fn default_target() -> Result<String> {
     // TODO derive these more intelligently.
     if cfg!(target_os = "linux") {
         Ok("x86_64-unknown-linux-gnu".to_string())
@@ -80,7 +80,7 @@ pub fn default_target() -> Result<String, String> {
     } else if cfg!(target_os = "macos") {
         Ok("x86_64-apple-darwin".to_string())
     } else {
-        Err("unable to resolve target".to_string())
+        Err(anyhow!("unable to resolve target"))
     }
 }
 
@@ -162,7 +162,7 @@ fn populate_template_data(data: &mut TemplateData) {
     }
 }
 
-pub fn update_new_cargo_toml(path: &Path) -> Result<(), std::io::Error> {
+pub fn update_new_cargo_toml(path: &Path) -> Result<()> {
     let mut fh = std::fs::OpenOptions::new().append(true).open(path)?;
 
     fh.write_all(b"jemallocator-global = { version = \"0.3\", optional = true }\n")?;
@@ -176,7 +176,7 @@ pub fn update_new_cargo_toml(path: &Path) -> Result<(), std::io::Error> {
 }
 
 /// Write a new build.rs file supporting PyOxidizer.
-pub fn write_pyembed_build_rs(project_dir: &Path) -> Result<(), std::io::Error> {
+pub fn write_pyembed_build_rs(project_dir: &Path) -> Result<()> {
     let mut data: BTreeMap<String, String> = BTreeMap::new();
     data.insert(
         "pyoxidizer_exe".to_string(),
@@ -185,9 +185,7 @@ pub fn write_pyembed_build_rs(project_dir: &Path) -> Result<(), std::io::Error> 
             .to_string(),
     );
 
-    let t = HANDLEBARS
-        .render("pyembed-build.rs", &data)
-        .expect("unable to render pyembed-build.rs");
+    let t = HANDLEBARS.render("pyembed-build.rs", &data)?;
 
     let path = project_dir.to_path_buf().join("build.rs");
 
@@ -199,11 +197,9 @@ pub fn write_pyembed_build_rs(project_dir: &Path) -> Result<(), std::io::Error> 
 }
 
 /// Write a new main.rs file that runs the embedded Python interpreter.
-pub fn write_new_main_rs(path: &Path) -> Result<(), std::io::Error> {
+pub fn write_new_main_rs(path: &Path) -> Result<()> {
     let data: BTreeMap<String, String> = BTreeMap::new();
-    let t = HANDLEBARS
-        .render("new-main.rs", &data)
-        .expect("unable to render template");
+    let t = HANDLEBARS.render("new-main.rs", &data)?;
 
     println!("writing {}", path.to_str().unwrap());
     let mut fh = std::fs::File::create(path)?;
@@ -218,7 +214,7 @@ pub fn write_new_pyoxidizer_config_file(
     name: &str,
     code: Option<&str>,
     pip_install: &[&str],
-) -> Result<(), std::io::Error> {
+) -> Result<()> {
     let path = project_dir.to_path_buf().join("pyoxidizer.bzl");
 
     let mut data = TemplateData::new();
@@ -233,9 +229,7 @@ pub fn write_new_pyoxidizer_config_file(
 
     data.pip_install_simple = pip_install.iter().map(|v| v.to_string()).collect();
 
-    let t = HANDLEBARS
-        .render("new-pyoxidizer.bzl", &data)
-        .expect("unable to render template");
+    let t = HANDLEBARS.render("new-pyoxidizer.bzl", &data)?;
 
     println!("writing {}", path.to_str().unwrap());
     let mut fh = std::fs::File::create(path)?;
@@ -245,7 +239,7 @@ pub fn write_new_pyoxidizer_config_file(
 }
 
 /// Write files for the pyembed crate into a destination directory.
-pub fn write_pyembed_crate_files(dest_dir: &Path) -> Result<(), std::io::Error> {
+pub fn write_pyembed_crate_files(dest_dir: &Path) -> Result<()> {
     println!("creating {}", dest_dir.to_str().unwrap());
     create_dir_all(dest_dir)?;
 
@@ -263,9 +257,7 @@ pub fn write_pyembed_crate_files(dest_dir: &Path) -> Result<(), std::io::Error> 
     let mut data = TemplateData::new();
     populate_template_data(&mut data);
 
-    let t = HANDLEBARS
-        .render("pyembed-cargo.toml", &data)
-        .expect("unable to render pyembed-cargo.toml");
+    let t = HANDLEBARS.render("pyembed-cargo.toml", &data)?;
 
     let path = dest_dir.to_path_buf().join("Cargo.toml");
     println!("writing {}", path.to_str().unwrap());
@@ -291,25 +283,24 @@ pub fn write_pyembed_crate_files(dest_dir: &Path) -> Result<(), std::io::Error> 
 ///
 /// The Rust source files added to the target project are installed into
 /// a sub-directory defined by ``module_name``. This is typically ``pyembed``.
-pub fn add_pyoxidizer(project_dir: &Path, _suppress_help: bool) -> Result<(), String> {
+pub fn add_pyoxidizer(project_dir: &Path, _suppress_help: bool) -> Result<()> {
     let existing_files = find_pyoxidizer_files(&project_dir);
 
     if !existing_files.is_empty() {
-        return Err("existing PyOxidizer files found; cannot add".to_string());
+        return Err(anyhow!("existing PyOxidizer files found; cannot add"));
     }
 
     let cargo_toml = project_dir.to_path_buf().join("Cargo.toml");
 
     if !cargo_toml.exists() {
-        return Err("Cargo.toml does not exist at destination".to_string());
+        return Err(anyhow!("Cargo.toml does not exist at destination"));
     }
 
     let pyembed_dir = project_dir.to_path_buf().join("pyembed");
-    write_pyembed_crate_files(&pyembed_dir).or(Err("error writing pyembed crate files"))?;
+    write_pyembed_crate_files(&pyembed_dir)?;
 
-    let cargo_toml_data = std::fs::read(cargo_toml).or(Err("error reading Cargo.toml"))?;
-    let manifest =
-        cargo_toml::Manifest::from_slice(&cargo_toml_data).expect("unable to parse Cargo.toml");
+    let cargo_toml_data = std::fs::read(cargo_toml)?;
+    let manifest = cargo_toml::Manifest::from_slice(&cargo_toml_data)?;
 
     let _package = match &manifest.package {
         Some(package) => package,
@@ -417,16 +408,12 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
 }
 
 /// Build PyOxidizer artifacts for a project.
-fn build_pyoxidizer_artifacts(
-    logger: &slog::Logger,
-    context: &mut BuildContext,
-) -> Result<(), String> {
+fn build_pyoxidizer_artifacts(logger: &slog::Logger, context: &mut BuildContext) -> Result<()> {
     let pyoxidizer_artifacts_path = &context.pyoxidizer_artifacts_path;
 
-    create_dir_all(&pyoxidizer_artifacts_path).or_else(|e| Err(e.to_string()))?;
+    create_dir_all(&pyoxidizer_artifacts_path)?;
 
-    let pyoxidizer_artifacts_path = canonicalize_path(pyoxidizer_artifacts_path)
-        .expect("unable to canonicalize artifacts directory");
+    let pyoxidizer_artifacts_path = canonicalize_path(pyoxidizer_artifacts_path)?;
 
     if !artifacts_current(logger, &context.config_path, &pyoxidizer_artifacts_path) {
         process_config(logger, context, "0");
@@ -436,16 +423,19 @@ fn build_pyoxidizer_artifacts(
 }
 
 /// Build an oxidized Rust application at the specified project path.
-pub fn build_project(logger: &slog::Logger, context: &mut BuildContext) -> Result<(), String> {
+pub fn build_project(logger: &slog::Logger, context: &mut BuildContext) -> Result<()> {
     if let Ok(rust_version) = rustc_version::version() {
         if rust_version.lt(&MINIMUM_RUST_VERSION) {
-            return Err(format!(
+            return Err(anyhow!(
                 "PyOxidizer requires Rust {}; version {} found",
-                *MINIMUM_RUST_VERSION, rust_version,
+                *MINIMUM_RUST_VERSION,
+                rust_version,
             ));
         }
     } else {
-        return Err("unable to determine Rust version; is Rust installed?".to_string());
+        return Err(anyhow!(
+            "unable to determine Rust version; is Rust installed?"
+        ));
     }
 
     // Our build process is to first generate artifacts from the PyOxidizer
@@ -500,20 +490,16 @@ pub fn build_project(logger: &slog::Logger, context: &mut BuildContext) -> Resul
         envs.push(("RUSTC_BOOTSTRAP", "1".to_string()));
     }
 
-    match process::Command::new("cargo")
+    let status = process::Command::new("cargo")
         .args(args)
         .current_dir(&context.project_path)
         .envs(envs)
-        .status()
-    {
-        Ok(status) => {
-            if status.success() {
-                Ok(())
-            } else {
-                Err("cargo build failed".to_string())
-            }
-        }
-        Err(e) => Err(e.to_string()),
+        .status()?;
+
+    if status.success() {
+        Ok(())
+    } else {
+        Err(anyhow!("cargo build failed"))
     }
 }
 
@@ -525,12 +511,11 @@ pub fn resolve_build_context(
     release: bool,
     force_artifacts_path: Option<&Path>,
     verbose: bool,
-) -> Result<BuildContext, String> {
-    let path = canonicalize_path(&PathBuf::from(project_path))
-        .or_else(|e| Err(e.description().to_owned()))?;
+) -> Result<BuildContext> {
+    let path = canonicalize_path(&PathBuf::from(project_path))?;
 
     if find_pyoxidizer_files(&path).is_empty() {
-        return Err("no PyOxidizer files in specified path".to_string());
+        return Err(anyhow!("no PyOxidizer files in specified path"));
     }
 
     let target = match target {
@@ -542,7 +527,7 @@ pub fn resolve_build_context(
         Some(p) => PathBuf::from(p),
         None => match find_pyoxidizer_config_file_env(logger, &path) {
             Some(p) => p,
-            None => return Err("unable to find PyOxidizer config file".to_string()),
+            None => return Err(anyhow!("unable to find PyOxidizer config file")),
         },
     };
 
@@ -556,33 +541,28 @@ pub fn resolve_build_context(
         force_artifacts_path,
         verbose,
     )
-    .or_else(|e| Err(e.to_string()))
 }
 
 fn run_project(
     logger: &slog::Logger,
     context: &mut BuildContext,
     extra_args: &[&str],
-) -> Result<(), String> {
+) -> Result<()> {
     // We call our build wrapper and invoke the binary directly. This allows
     // build output to be printed.
     build_project(logger, context)?;
 
-    package_project(logger, context).or_else(|e| Err(e.to_string()))?;
+    package_project(logger, context)?;
 
-    match process::Command::new(&context.app_exe_path)
+    let status = process::Command::new(&context.app_exe_path)
         .current_dir(&context.project_path)
         .args(extra_args)
-        .status()
-    {
-        Ok(status) => {
-            if status.success() {
-                Ok(())
-            } else {
-                Err("cargo run failed".to_string())
-            }
-        }
-        Err(e) => Err(e.to_string()),
+        .status()?;
+
+    if status.success() {
+        Ok(())
+    } else {
+        Err(anyhow!("cargo run failed"))
     }
 }
 
@@ -596,11 +576,11 @@ pub fn build(
     target: Option<&str>,
     release: bool,
     verbose: bool,
-) -> Result<(), String> {
+) -> Result<()> {
     let mut context =
         resolve_build_context(logger, project_path, None, target, release, None, verbose)?;
     build_project(logger, &mut context)?;
-    package_project(logger, &mut context).or_else(|e| Err(e.to_string()))?;
+    package_project(logger, &mut context)?;
 
     warn!(
         logger,
@@ -618,7 +598,7 @@ pub fn build_artifacts(
     target: Option<&str>,
     release: bool,
     verbose: bool,
-) -> Result<(), String> {
+) -> Result<()> {
     let mut context = resolve_build_context(
         logger,
         project_path.to_str().unwrap(),
@@ -641,7 +621,7 @@ pub fn run(
     release: bool,
     extra_args: &[&str],
     verbose: bool,
-) -> Result<(), String> {
+) -> Result<()> {
     let mut context =
         resolve_build_context(logger, project_path, None, target, release, None, verbose)?;
 
@@ -654,29 +634,23 @@ pub fn run(
 /// application.
 ///
 /// `pip_install` can specify Python packages to `pip install` for the application.
-pub fn init(project_path: &str, code: Option<&str>, pip_install: &[&str]) -> Result<(), String> {
-    let res = process::Command::new("cargo")
+pub fn init(project_path: &str, code: Option<&str>, pip_install: &[&str]) -> Result<()> {
+    let status = process::Command::new("cargo")
         .arg("init")
         .arg("--bin")
         .arg(project_path)
-        .status();
+        .status()?;
 
-    match res {
-        Ok(status) => {
-            if !status.success() {
-                return Err("cargo init failed".to_string());
-            }
-        }
-        Err(e) => return Err(e.to_string()),
+    if !status.success() {
+        return Err(anyhow!("cargo init failed"));
     }
 
     let path = PathBuf::from(project_path);
     let name = path.iter().last().unwrap().to_str().unwrap();
     add_pyoxidizer(&path, true)?;
-    update_new_cargo_toml(&path.join("Cargo.toml")).or(Err("unable to update Cargo.toml"))?;
-    write_new_main_rs(&path.join("src").join("main.rs")).or(Err("unable to write main.rs"))?;
-    write_new_pyoxidizer_config_file(&path, &name, code, pip_install)
-        .or(Err("unable to write PyOxidizer config files"))?;
+    update_new_cargo_toml(&path.join("Cargo.toml"))?;
+    write_new_main_rs(&path.join("src").join("main.rs"))?;
+    write_new_pyoxidizer_config_file(&path, &name, code, pip_install)?;
 
     println!();
     println!(
@@ -704,41 +678,40 @@ pub fn distributions(
     project_path: &str,
     target: Option<&str>,
     types: &[&str],
-) -> Result<(), String> {
+) -> Result<()> {
     let mut context = resolve_build_context(logger, project_path, None, target, true, None, false)?;
 
     build_project(logger, &mut context)?;
-    package_project(logger, &mut context).or_else(|e| Err(e.to_string()))?;
-    produce_distributions(logger, &context, types).or_else(|e| Err(e.to_string()))?;
+    package_project(logger, &mut context)?;
+    produce_distributions(logger, &context, types)?;
 
     Ok(())
 }
 
-pub fn python_distribution_extract(dist_path: &str, dest_path: &str) -> Result<(), String> {
-    let mut fh = std::fs::File::open(Path::new(dist_path)).or_else(|e| Err(e.to_string()))?;
+pub fn python_distribution_extract(dist_path: &str, dest_path: &str) -> Result<()> {
+    let mut fh = std::fs::File::open(Path::new(dist_path))?;
     let mut data = Vec::new();
-    fh.read_to_end(&mut data).or_else(|e| Err(e.to_string()))?;
+    fh.read_to_end(&mut data)?;
     let cursor = Cursor::new(data);
-    let dctx = zstd::stream::Decoder::new(cursor).or_else(|e| Err(e.to_string()))?;
+    let dctx = zstd::stream::Decoder::new(cursor)?;
     let mut tf = tar::Archive::new(dctx);
 
     println!("extracting archive to {}", dest_path);
-    tf.unpack(dest_path).or_else(|e| Err(e.to_string()))?;
+    tf.unpack(dest_path)?;
 
     Ok(())
 }
 
-pub fn python_distribution_info(dist_path: &str) -> Result<(), String> {
-    let mut fh = std::fs::File::open(Path::new(dist_path)).or_else(|e| Err(e.to_string()))?;
+pub fn python_distribution_info(dist_path: &str) -> Result<()> {
+    let mut fh = std::fs::File::open(Path::new(dist_path))?;
     let mut data = Vec::new();
-    fh.read_to_end(&mut data).or_else(|e| Err(e.to_string()))?;
+    fh.read_to_end(&mut data)?;
 
-    let temp_dir = tempdir::TempDir::new("python-distribution").or_else(|e| Err(e.to_string()))?;
+    let temp_dir = tempdir::TempDir::new("python-distribution")?;
     let temp_dir_path = temp_dir.path();
 
     let cursor = Cursor::new(data);
-    let dist = analyze_python_distribution_tar_zst(cursor, temp_dir_path)
-        .or_else(|e| Err(e.to_string()))?;
+    let dist = analyze_python_distribution_tar_zst(cursor, temp_dir_path)?;
 
     println!("High-Level Metadata");
     println!("===================");
@@ -801,17 +774,16 @@ pub fn python_distribution_info(dist_path: &str) -> Result<(), String> {
     Ok(())
 }
 
-pub fn python_distribution_licenses(path: &str) -> Result<(), String> {
-    let mut fh = std::fs::File::open(Path::new(path)).or_else(|e| Err(e.to_string()))?;
+pub fn python_distribution_licenses(path: &str) -> Result<()> {
+    let mut fh = std::fs::File::open(Path::new(path))?;
     let mut data = Vec::new();
-    fh.read_to_end(&mut data).or_else(|e| Err(e.to_string()))?;
+    fh.read_to_end(&mut data)?;
 
-    let temp_dir = tempdir::TempDir::new("python-distribution").or_else(|e| Err(e.to_string()))?;
+    let temp_dir = tempdir::TempDir::new("python-distribution")?;
     let temp_dir_path = temp_dir.path();
 
     let cursor = Cursor::new(data);
-    let dist = analyze_python_distribution_tar_zst(cursor, temp_dir_path)
-        .or_else(|e| Err(e.to_string()))?;
+    let dist = analyze_python_distribution_tar_zst(cursor, temp_dir_path)?;
 
     println!(
         "Python Distribution Licenses: {}",
@@ -875,7 +847,7 @@ pub fn python_distribution_licenses(path: &str) -> Result<(), String> {
     Ok(())
 }
 
-pub fn run_build_script(logger: &slog::Logger, build_script: &str) -> Result<(), String> {
+pub fn run_build_script(logger: &slog::Logger, build_script: &str) -> Result<()> {
     run_from_build(logger, build_script);
 
     Ok(())
