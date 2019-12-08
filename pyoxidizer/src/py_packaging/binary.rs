@@ -31,7 +31,10 @@ impl PreBuiltPythonExecutable {
         target: &str,
         opt_level: &str,
     ) -> Result<PythonLibrary, String> {
-        let resources = self.resources.package(&self.distribution.python_exe)?;
+        let resources = self
+            .resources
+            .package(&self.distribution.python_exe)
+            .or_else(|e| Err(e.to_string()))?;
 
         let temp_dir = TempDir::new("pyoxidizer-build-exe").or_else(|e| Err(e.to_string()))?;
         let temp_dir_path = temp_dir.path();
@@ -64,7 +67,10 @@ impl PreBuiltPythonExecutable {
 
     /// Generate data embedded in binaries representing Python resource data.
     pub fn build_embedded_blobs(&self) -> Result<EmbeddedResourcesBlobs, String> {
-        let embedded_resources = self.resources.package(&self.distribution.python_exe)?;
+        let embedded_resources = self
+            .resources
+            .package(&self.distribution.python_exe)
+            .or_else(|e| Err(e.to_string()))?;
 
         let mut module_names = Vec::new();
         let mut modules = Vec::new();

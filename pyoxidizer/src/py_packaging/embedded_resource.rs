@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use anyhow::Result;
 use byteorder::{LittleEndian, WriteBytesExt};
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
@@ -59,7 +60,7 @@ impl EmbeddedPythonResourcesPrePackaged {
             .insert(module.module.clone(), module.clone());
     }
 
-    pub fn package(&self, python_exe: &Path) -> Result<EmbeddedPythonResources, String> {
+    pub fn package(&self, python_exe: &Path) -> Result<EmbeddedPythonResources> {
         let mut all_modules = BTreeSet::new();
         let mut all_packages = BTreeSet::new();
 
@@ -83,14 +84,12 @@ impl EmbeddedPythonResourcesPrePackaged {
             let mut compiler = BytecodeCompiler::new(&python_exe);
 
             for (name, request) in &self.bytecode_modules {
-                let bytecode = compiler
-                    .compile(
-                        &request.source,
-                        &request.name,
-                        request.optimize_level.into(),
-                        CompileMode::Bytecode,
-                    )
-                    .or_else(|e| Err(format!("error compiling bytecode: {}", e)))?;
+                let bytecode = compiler.compile(
+                    &request.source,
+                    &request.name,
+                    request.optimize_level.into(),
+                    CompileMode::Bytecode,
+                )?;
 
                 all_modules.insert(name.clone());
                 if request.is_package {
@@ -203,10 +202,7 @@ impl EmbeddedPythonResources {
 /// Serialize a ModulesEntries to a writer.
 ///
 /// See the documentation in the `pyembed` crate for the data format.
-pub fn write_modules_entries<W: Write>(
-    mut dest: W,
-    entries: &[ModuleEntry],
-) -> std::io::Result<()> {
+pub fn write_modules_entries<W: Write>(mut dest: W, entries: &[ModuleEntry]) -> Result<()> {
     dest.write_u32::<LittleEndian>(entries.len() as u32)?;
 
     for entry in entries.iter() {
@@ -257,7 +253,7 @@ pub fn write_modules_entries<W: Write>(
 pub fn write_resources_entries<W: Write>(
     dest: &mut W,
     entries: &BTreeMap<String, BTreeMap<String, Vec<u8>>>,
-) -> std::io::Result<()> {
+) -> Result<()> {
     dest.write_u32::<LittleEndian>(entries.len() as u32)?;
 
     // All the numeric index data is written in pass 1.
