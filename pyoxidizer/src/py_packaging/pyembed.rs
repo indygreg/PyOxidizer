@@ -2,10 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use anyhow::Result;
 use itertools::Itertools;
 use std::fs::File;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use super::config::{EmbeddedPythonConfig, RawAllocator, RunMode, TerminfoResolution};
 
@@ -120,11 +121,10 @@ pub fn derive_python_config(
     )
 }
 
-pub fn write_data_rs(path: &PathBuf, python_config_rs: &str) {
-    let mut f = File::create(&path).unwrap();
+pub fn write_data_rs(path: &Path, python_config_rs: &str) -> Result<()> {
+    let mut f = File::create(&path)?;
 
-    f.write_all(b"use super::config::{PythonConfig, PythonRawAllocator, PythonRunMode, TerminfoResolution};\n\n")
-        .unwrap();
+    f.write_all(b"use super::config::{PythonConfig, PythonRawAllocator, PythonRunMode, TerminfoResolution};\n\n")?;
 
     // Ideally we would have a const struct, but we need to do some
     // dynamic allocations. Using a function avoids having to pull in a
@@ -142,6 +142,7 @@ pub fn write_data_rs(path: &PathBuf, python_config_rs: &str) {
          /// configuration.
          pub fn default_python_config() -> PythonConfig {{\n{}\n}}\n",
         indented
-    ))
-    .unwrap();
+    ))?;
+
+    Ok(())
 }

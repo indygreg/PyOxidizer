@@ -1295,7 +1295,7 @@ pub fn process_config(
     );
 
     let dest_path = Path::new(&dest_dir).join("data.rs");
-    write_data_rs(&dest_path, &python_config_rs);
+    write_data_rs(&dest_path, &python_config_rs).unwrap();
     // Define the path to the written file in an environment variable so it can
     // be anywhere.
     cargo_metadata.push(format!(

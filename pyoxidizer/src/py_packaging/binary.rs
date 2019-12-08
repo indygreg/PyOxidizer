@@ -13,6 +13,7 @@ use super::config::{EmbeddedPythonConfig, RunMode};
 use super::distribution::ParsedPythonDistribution;
 use super::embedded_resource::EmbeddedPythonResourcesPrePackaged;
 use super::libpython::{derive_importlib, link_libpython, ImportlibData};
+use super::pyembed::{derive_python_config, write_data_rs};
 
 /// A self-contained Python executable before it is compiled.
 #[derive(Debug, Clone)]
@@ -106,10 +107,13 @@ pub struct EmbeddedPythonBinaryPaths {
     pub py_modules: PathBuf,
     pub resources: PathBuf,
     pub libpython: PathBuf,
+    pub config_rs: PathBuf,
 }
 
 /// Represents resources to embed Python in a binary.
 pub struct EmbeddedPythonBinaryData {
+    pub config: EmbeddedPythonConfig,
+    pub run_mode: RunMode,
     pub library: PythonLibrary,
     pub importlib: ImportlibData,
     pub resources: EmbeddedResourcesBlobs,
@@ -132,6 +136,8 @@ impl EmbeddedPythonBinaryData {
         let importlib = derive_importlib(&exe.distribution)?;
 
         Ok(EmbeddedPythonBinaryData {
+            config: exe.config.clone(),
+            run_mode: exe.run_mode.clone(),
             library,
             importlib,
             resources,
@@ -164,6 +170,17 @@ impl EmbeddedPythonBinaryData {
         let mut fh = File::create(&libpython)?;
         fh.write_all(&self.library.data)?;
 
+        let config_rs_data = derive_python_config(
+            &self.config,
+            &self.run_mode,
+            &importlib_bootstrap,
+            &importlib_bootstrap_external,
+            &py_modules,
+            &resources,
+        );
+        let config_rs = dest_dir.join("data.rs");
+        write_data_rs(&config_rs, &config_rs_data)?;
+
         Ok(EmbeddedPythonBinaryPaths {
             importlib_bootstrap,
             importlib_bootstrap_external,
@@ -171,6 +188,7 @@ impl EmbeddedPythonBinaryData {
             py_modules,
             resources,
             libpython,
+            config_rs,
         })
     }
 }
