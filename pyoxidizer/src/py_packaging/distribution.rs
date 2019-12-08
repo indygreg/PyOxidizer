@@ -125,16 +125,16 @@ struct PythonJsonMain {
     tcl_library_path: Option<String>,
 }
 
-fn parse_python_json(path: &Path) -> PythonJsonMain {
+fn parse_python_json(path: &Path) -> Result<PythonJsonMain> {
     if !path.exists() {
         panic!("PYTHON.json does not exist; are you using an up-to-date Python distribution that conforms with our requirements?");
     }
 
-    let buf = fs::read(path).expect("failed to read PYTHON.json");
+    let buf = fs::read(path)?;
 
-    let v: PythonJsonMain = serde_json::from_slice(&buf).expect("failed to parse JSON");
+    let v: PythonJsonMain = serde_json::from_slice(&buf)?;
 
-    v
+    Ok(v)
 }
 
 /// Represents contents of the config.c/config.c.in file.
@@ -678,16 +678,16 @@ impl ParsedPythonDistribution {
     }
 }
 
-fn parse_python_json_from_distribution(dist_dir: &Path) -> PythonJsonMain {
+fn parse_python_json_from_distribution(dist_dir: &Path) -> Result<PythonJsonMain> {
     let python_json_path = dist_dir.join("python").join("PYTHON.json");
     parse_python_json(&python_json_path)
 }
 
 /// Resolve the path to a `python` executable in a Python distribution.
-pub fn python_exe_path(dist_dir: &Path) -> PathBuf {
-    let pi = parse_python_json_from_distribution(dist_dir);
+pub fn python_exe_path(dist_dir: &Path) -> Result<PathBuf> {
+    let pi = parse_python_json_from_distribution(dist_dir)?;
 
-    dist_dir.join("python").join(pi.python_exe)
+    Ok(dist_dir.join("python").join(&pi.python_exe))
 }
 
 /// Extract useful information from the files constituting a Python distribution.
@@ -733,7 +733,7 @@ pub fn analyze_python_distribution_data(dist_dir: &Path) -> Result<ParsedPythonD
         };
     }
 
-    let pi = parse_python_json_from_distribution(dist_dir);
+    let pi = parse_python_json_from_distribution(dist_dir)?;
 
     if let Some(ref python_license_path) = pi.license_path {
         let license_path = python_path.join(python_license_path);
@@ -877,7 +877,7 @@ pub fn analyze_python_distribution_data(dist_dir: &Path) -> Result<ParsedPythonD
         version: pi.python_version.clone(),
         os: pi.os.clone(),
         arch: pi.arch.clone(),
-        python_exe: python_exe_path(dist_dir),
+        python_exe: python_exe_path(dist_dir)?,
         stdlib_path,
         licenses: pi.licenses.clone(),
         license_path: match pi.license_path {

@@ -478,7 +478,7 @@ pub fn build_project(logger: &slog::Logger, context: &mut BuildContext) -> Resul
 
     // Set PYTHON_SYS_EXECUTABLE so python3-sys uses our distribution's Python to
     // configure itself.
-    let python_exe_path = python_exe_path(&context.python_distribution_path);
+    let python_exe_path = python_exe_path(&context.python_distribution_path)?;
     envs.push((
         "PYTHON_SYS_EXECUTABLE",
         python_exe_path.display().to_string(),
