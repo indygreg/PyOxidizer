@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use anyhow::{Context, Result};
 use copy_dir::copy_dir;
 use fs2::FileExt;
 use itertools::Itertools;
@@ -446,12 +447,12 @@ impl ParsedPythonDistribution {
         logger: &slog::Logger,
         path: &Path,
         extract_dir: &Path,
-    ) -> Result<ParsedPythonDistribution, String> {
+    ) -> Result<ParsedPythonDistribution> {
         let mut fh =
-            fs::File::open(path).or_else(|_| Err(format!("unable to open {}", path.display())))?;
+            fs::File::open(path).with_context(|| format!("unable to open {}", path.display()))?;
 
         let mut python_distribution_data = Vec::new();
-        fh.read_to_end(&mut python_distribution_data).unwrap();
+        fh.read_to_end(&mut python_distribution_data)?;
         let dist_cursor = Cursor::new(python_distribution_data);
         warn!(logger, "reading data from Python distribution...");
         analyze_python_distribution_tar_zst(dist_cursor, &extract_dir)
@@ -693,9 +694,7 @@ pub fn python_exe_path(dist_dir: &Path) -> PathBuf {
 /// Passing in a data structure with raw file data within is inefficient. But
 /// it makes things easier to implement and allows us to do things like consume
 /// tarballs without filesystem I/O.
-pub fn analyze_python_distribution_data(
-    dist_dir: &Path,
-) -> Result<ParsedPythonDistribution, String> {
+pub fn analyze_python_distribution_data(dist_dir: &Path) -> Result<ParsedPythonDistribution> {
     let mut objs_core: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
     let mut links_core: Vec<LibraryDepends> = Vec::new();
     let mut extension_modules: BTreeMap<String, Vec<ExtensionModule>> = BTreeMap::new();
@@ -706,8 +705,8 @@ pub fn analyze_python_distribution_data(
     let mut resources: BTreeMap<String, BTreeMap<String, PathBuf>> = BTreeMap::new();
     let mut license_infos: BTreeMap<String, Vec<LicenseInfo>> = BTreeMap::new();
 
-    for entry in fs::read_dir(dist_dir).unwrap() {
-        let entry = entry.expect("unable to get directory entry");
+    for entry in fs::read_dir(dist_dir)? {
+        let entry = entry?;
 
         match entry.file_name().to_str() {
             Some("python") => continue,
@@ -718,8 +717,8 @@ pub fn analyze_python_distribution_data(
 
     let python_path = dist_dir.join("python");
 
-    for entry in fs::read_dir(&python_path).unwrap() {
-        let entry = entry.expect("unable to get directory entry");
+    for entry in fs::read_dir(&python_path)? {
+        let entry = entry?;
 
         match entry.file_name().to_str() {
             Some("build") => continue,
@@ -737,13 +736,8 @@ pub fn analyze_python_distribution_data(
 
     if let Some(ref python_license_path) = pi.license_path {
         let license_path = python_path.join(python_license_path);
-        let license_text = fs::read_to_string(&license_path).or_else(|e| {
-            Err(format!(
-                "unable to read Python license {}: {}",
-                license_path.display(),
-                e
-            ))
-        })?;
+        let license_text = fs::read_to_string(&license_path)
+            .with_context(|| format!("unable to read Python license {}", license_path.display()))?;
 
         let mut licenses = Vec::new();
         licenses.push(LicenseInfo {
@@ -797,7 +791,7 @@ pub fn analyze_python_distribution_data(
                 for license_path in license_paths {
                     let license_path = python_path.join(license_path);
                     let license_text = fs::read_to_string(&license_path)
-                        .or_else(|_| Err("unable to read license file"))?;
+                        .with_context(|| "unable to read license file")?;
 
                     licenses.push(LicenseInfo {
                         licenses: entry.licenses.clone().unwrap(),
@@ -911,7 +905,7 @@ pub fn analyze_python_distribution_data(
 pub fn analyze_python_distribution_tar<R: Read>(
     source: R,
     extract_dir: &Path,
-) -> Result<ParsedPythonDistribution, String> {
+) -> Result<ParsedPythonDistribution> {
     let mut tf = tar::Archive::new(source);
 
     // Multiple threads or processes could race to extract the archive.
@@ -924,19 +918,19 @@ pub fn analyze_python_distribution_tar<R: Read>(
         .join("distribution-extract-lock");
 
     let file = File::create(&lock_path)
-        .or_else(|e| Err(format!("unable to open {}: {}", lock_path.display(), e)))?;
+        .with_context(|| format!("could not create {}", lock_path.display()))?;
 
     file.lock_exclusive()
-        .or_else(|_| Err(format!("failed to obtain lock for {}", lock_path.display())))?;
+        .with_context(|| format!("failed to obtain lock for {}", lock_path.display()))?;
 
     // The content of the distribution could change between runs. But caching
     // the extraction does keep things fast.
     let test_path = extract_dir.join("python").join("PYTHON.json");
     if !test_path.exists() {
-        std::fs::create_dir_all(extract_dir).or_else(|_| Err("unable to create directory"))?;
-        let absolute_path = std::fs::canonicalize(extract_dir).unwrap();
+        std::fs::create_dir_all(extract_dir)?;
+        let absolute_path = std::fs::canonicalize(extract_dir)?;
         tf.unpack(&absolute_path)
-            .expect("unable to extract tar archive");
+            .with_context(|| "unable to extract tar archive")?;
 
         // Ensure unpacked files are writable. We've had issues where we
         // consume archives with read-only file permissions. When we later
@@ -944,27 +938,22 @@ pub fn analyze_python_distribution_tar<R: Read>(
         // file.
         let walk = walkdir::WalkDir::new(&absolute_path);
         for entry in walk.into_iter() {
-            let entry = entry.expect("unable to get directory entry");
+            let entry = entry?;
 
-            let metadata = entry
-                .metadata()
-                .or_else(|_| Err("unable to get path metadata"))?;
+            let metadata = entry.metadata()?;
             let mut permissions = metadata.permissions();
 
             if permissions.readonly() {
                 permissions.set_readonly(false);
-                fs::set_permissions(entry.path(), permissions).or_else(|_| {
-                    Err(format!(
-                        "unable to mark {} as writable",
-                        entry.path().display()
-                    ))
+                fs::set_permissions(entry.path(), permissions).with_context(|| {
+                    format!("unable to mark {} as writable", entry.path().display())
                 })?;
             }
         }
     }
 
     file.unlock()
-        .or_else(|e| Err(format!("unable to release lock: {}", e)))?;
+        .with_context(|| format!("releasing lock on {}", lock_path.display()))?;
 
     analyze_python_distribution_data(extract_dir)
 }
@@ -973,8 +962,8 @@ pub fn analyze_python_distribution_tar<R: Read>(
 pub fn analyze_python_distribution_tar_zst<R: Read>(
     source: R,
     extract_dir: &Path,
-) -> Result<ParsedPythonDistribution, String> {
-    let dctx = zstd::stream::Decoder::new(source).unwrap();
+) -> Result<ParsedPythonDistribution> {
+    let dctx = zstd::stream::Decoder::new(source)?;
 
     analyze_python_distribution_tar(dctx, extract_dir)
 }
@@ -1156,7 +1145,7 @@ pub fn resolve_parsed_distribution(
     logger: &slog::Logger,
     location: &PythonDistributionLocation,
     dest_dir: &Path,
-) -> Result<ParsedPythonDistribution, String> {
+) -> Result<ParsedPythonDistribution> {
     warn!(logger, "resolving Python distribution {:?}", location);
     let path = resolve_python_distribution_archive(location, dest_dir);
     warn!(

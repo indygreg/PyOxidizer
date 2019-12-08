@@ -736,7 +736,8 @@ pub fn python_distribution_info(dist_path: &str) -> Result<(), String> {
     let temp_dir_path = temp_dir.path();
 
     let cursor = Cursor::new(data);
-    let dist = analyze_python_distribution_tar_zst(cursor, temp_dir_path)?;
+    let dist = analyze_python_distribution_tar_zst(cursor, temp_dir_path)
+        .or_else(|e| Err(e.to_string()))?;
 
     println!("High-Level Metadata");
     println!("===================");
@@ -808,7 +809,8 @@ pub fn python_distribution_licenses(path: &str) -> Result<(), String> {
     let temp_dir_path = temp_dir.path();
 
     let cursor = Cursor::new(data);
-    let dist = analyze_python_distribution_tar_zst(cursor, temp_dir_path)?;
+    let dist = analyze_python_distribution_tar_zst(cursor, temp_dir_path)
+        .or_else(|e| Err(e.to_string()))?;
 
     println!(
         "Python Distribution Licenses: {}",
