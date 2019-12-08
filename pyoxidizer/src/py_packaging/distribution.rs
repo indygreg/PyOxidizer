@@ -534,7 +534,7 @@ impl ParsedPythonDistribution {
         &self,
         logger: &slog::Logger,
         venv_dir_path: &Path,
-    ) -> Result<(PythonPaths, HashMap<String, String>), String> {
+    ) -> Result<(PythonPaths, HashMap<String, String>)> {
         let python_paths = self.create_venv(logger, &venv_dir_path);
 
         let mut extra_envs = HashMap::new();
