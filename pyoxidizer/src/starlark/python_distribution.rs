@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use anyhow::Result;
 use itertools::Itertools;
 use slog::warn;
 use starlark::environment::Environment;
@@ -95,17 +96,17 @@ impl TypedValue for PythonDistribution {
     }
 }
 
-fn find_resources(path: &Path, state_dir: Option<&Path>) -> Result<Vec<PythonResource>, String> {
+fn find_resources(path: &Path, state_dir: Option<&Path>) -> Result<Vec<PythonResource>> {
     let mut res = Vec::new();
 
     for r in find_python_resources(&path) {
         match r {
             PythonFileResource::Source { .. } => {
-                res.push(PythonResource::try_from(&r).or_else(|e| Err(e.to_string()))?);
+                res.push(PythonResource::try_from(&r)?);
             }
 
             PythonFileResource::Resource(..) => {
-                res.push(PythonResource::try_from(&r).or_else(|e| Err(e.to_string()))?);
+                res.push(PythonResource::try_from(&r)?);
             }
 
             _ => {}
@@ -113,7 +114,7 @@ fn find_resources(path: &Path, state_dir: Option<&Path>) -> Result<Vec<PythonRes
     }
 
     if let Some(p) = state_dir {
-        for ext in read_built_extensions(&p).or_else(|e| Err(e.to_string()))? {
+        for ext in read_built_extensions(&p)? {
             res.push(PythonResource::BuiltExtensionModule(ext));
         }
     }

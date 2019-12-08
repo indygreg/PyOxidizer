@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use anyhow::Result;
 use starlark::environment::Environment;
 use starlark::values::{
     default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
@@ -63,7 +64,7 @@ pub struct FileManifest {
 }
 
 impl FileManifest {
-    fn add_source_module(&mut self, prefix: &str, module: &SourceModule) -> Result<(), String> {
+    fn add_source_module(&mut self, prefix: &str, module: &SourceModule) -> Result<()> {
         let content = RawFileContent {
             data: module.source.clone(),
             executable: false,
@@ -82,9 +83,7 @@ impl FileManifest {
             module_path.file_name().unwrap().to_string_lossy()
         ));
 
-        self.manifest
-            .add_file(&module_path, &content)
-            .or_else(|e| Err(e.to_string()))
+        self.manifest.add_file(&module_path, &content)
     }
 
     // TODO implement.
@@ -92,7 +91,7 @@ impl FileManifest {
         println!("support for adding bytecode modules not yet implemented");
     }
 
-    fn add_resource_data(&mut self, prefix: &str, resource: &ResourceData) -> Result<(), String> {
+    fn add_resource_data(&mut self, prefix: &str, resource: &ResourceData) -> Result<()> {
         let mut dest_path = PathBuf::from(prefix);
         dest_path.extend(resource.package.split('.'));
         dest_path.push(&resource.name);
@@ -102,9 +101,7 @@ impl FileManifest {
             executable: false,
         };
 
-        self.manifest
-            .add_file(&dest_path, &content)
-            .or_else(|e| Err(e.to_string()))
+        self.manifest.add_file(&dest_path, &content)
     }
 
     // TODO implement.
@@ -158,8 +155,8 @@ starlark_module! { file_resource_env =>
                     manifest.add_source_module(&prefix, &m).or_else(|e| {
                         Err(RuntimeError {
                             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                            message: e.clone(),
-                            label: e,
+                            message: e.to_string(),
+                            label: e.to_string(),
                         }.into())
                     })
                 },
@@ -174,8 +171,8 @@ starlark_module! { file_resource_env =>
                     manifest.add_resource_data(&prefix, &m).or_else(|e| {
                         Err(RuntimeError {
                             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                            message: e.clone(),
-                            label: e,
+                            message: e.to_string(),
+                            label: e.to_string(),
                         }.into())
                     })
                 },
