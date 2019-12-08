@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use anyhow::{anyhow, Result};
 use std::collections::btree_map::Iter;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -24,16 +25,16 @@ pub struct FileManifest {
 
 impl FileManifest {
     /// Add a file to the manifest.
-    pub fn add_file(&mut self, path: &Path, content: &FileContent) -> Result<(), String> {
+    pub fn add_file(&mut self, path: &Path, content: &FileContent) -> Result<()> {
         let path_s = path.display().to_string();
 
         if path_s.contains("..") {
-            return Err(format!("path cannot contain '..': {}", path.display()));
+            return Err(anyhow!("path cannot contain '..': {}", path.display()));
         }
 
         // is_absolute() on Windows doesn't check for leading /.
         if path_s.starts_with('/') || path.is_absolute() {
-            return Err(format!("path cannot be absolute: {}", path.display()));
+            return Err(anyhow!("path cannot be absolute: {}", path.display()));
         }
 
         self.files.insert(path.to_path_buf(), content.clone());

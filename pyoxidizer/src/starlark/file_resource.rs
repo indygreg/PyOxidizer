@@ -82,7 +82,9 @@ impl FileManifest {
             module_path.file_name().unwrap().to_string_lossy()
         ));
 
-        self.manifest.add_file(&module_path, &content)
+        self.manifest
+            .add_file(&module_path, &content)
+            .or_else(|e| Err(e.to_string()))
     }
 
     // TODO implement.
@@ -100,7 +102,9 @@ impl FileManifest {
             executable: false,
         };
 
-        self.manifest.add_file(&dest_path, &content)
+        self.manifest
+            .add_file(&dest_path, &content)
+            .or_else(|e| Err(e.to_string()))
     }
 
     // TODO implement.
