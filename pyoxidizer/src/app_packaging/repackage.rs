@@ -1160,7 +1160,7 @@ pub fn process_config(
         logger,
         "compiling custom importlib modules to support in-memory importing"
     );
-    let importlib = derive_importlib(&dist);
+    let importlib = derive_importlib(&dist).unwrap();
 
     let importlib_bootstrap_path = Path::new(&dest_dir).join("importlib_bootstrap");
     let mut fh = fs::File::create(&importlib_bootstrap_path).unwrap();

@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use anyhow::Result;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use slog::{info, warn};
@@ -50,38 +51,34 @@ pub struct ImportlibData {
 /// importlib._bootstrap_external is modified. We take the original Python
 /// source and concatenate with code that provides the memory importer.
 /// Bytecode is then derived from it.
-pub fn derive_importlib(dist: &ParsedPythonDistribution) -> ImportlibData {
+pub fn derive_importlib(dist: &ParsedPythonDistribution) -> Result<ImportlibData> {
     let mut compiler = BytecodeCompiler::new(&dist.python_exe);
 
     let mod_bootstrap_path = &dist.py_modules["importlib._bootstrap"];
     let mod_bootstrap_external_path = &dist.py_modules["importlib._bootstrap_external"];
 
-    let bootstrap_source = fs::read(&mod_bootstrap_path).expect("unable to read bootstrap source");
+    let bootstrap_source = fs::read(&mod_bootstrap_path)?;
     let module_name = "<frozen importlib._bootstrap>";
-    let bootstrap_bytecode = compiler
-        .compile(&bootstrap_source, module_name, 0, CompileMode::Bytecode)
-        .expect("error compiling bytecode");
+    let bootstrap_bytecode =
+        compiler.compile(&bootstrap_source, module_name, 0, CompileMode::Bytecode)?;
 
-    let mut bootstrap_external_source =
-        fs::read(&mod_bootstrap_external_path).expect("unable to read bootstrap_external source");
+    let mut bootstrap_external_source = fs::read(&mod_bootstrap_external_path)?;
     bootstrap_external_source.extend("\n# END OF importlib/_bootstrap_external.py\n\n".bytes());
     bootstrap_external_source.extend(PYTHON_IMPORTER);
     let module_name = "<frozen importlib._bootstrap_external>";
-    let bootstrap_external_bytecode = compiler
-        .compile(
-            &bootstrap_external_source,
-            module_name,
-            0,
-            CompileMode::Bytecode,
-        )
-        .expect("error compiling bytecode");
+    let bootstrap_external_bytecode = compiler.compile(
+        &bootstrap_external_source,
+        module_name,
+        0,
+        CompileMode::Bytecode,
+    )?;
 
-    ImportlibData {
+    Ok(ImportlibData {
         bootstrap_source,
         bootstrap_bytecode,
         bootstrap_external_source,
         bootstrap_external_bytecode,
-    }
+    })
 }
 
 /// Produce the content of the config.c file containing built-in extensions.
