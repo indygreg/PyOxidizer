@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use anyhow::Result;
 use slog::warn;
 use tempdir::TempDir;
 
@@ -30,13 +31,10 @@ impl PreBuiltPythonExecutable {
         host: &str,
         target: &str,
         opt_level: &str,
-    ) -> Result<PythonLibrary, String> {
-        let resources = self
-            .resources
-            .package(&self.distribution.python_exe)
-            .or_else(|e| Err(e.to_string()))?;
+    ) -> Result<PythonLibrary> {
+        let resources = self.resources.package(&self.distribution.python_exe)?;
 
-        let temp_dir = TempDir::new("pyoxidizer-build-exe").or_else(|e| Err(e.to_string()))?;
+        let temp_dir = TempDir::new("pyoxidizer-build-exe")?;
         let temp_dir_path = temp_dir.path();
 
         warn!(
@@ -56,7 +54,7 @@ impl PreBuiltPythonExecutable {
         let mut cargo_metadata: Vec<String> = Vec::new();
         cargo_metadata.extend(library_info.cargo_metadata);
 
-        let data = std::fs::read(&library_info.path).or_else(|e| Err(e.to_string()))?;
+        let data = std::fs::read(&library_info.path)?;
 
         Ok(PythonLibrary {
             pre_built: self.clone(),
@@ -66,11 +64,8 @@ impl PreBuiltPythonExecutable {
     }
 
     /// Generate data embedded in binaries representing Python resource data.
-    pub fn build_embedded_blobs(&self) -> Result<EmbeddedResourcesBlobs, String> {
-        let embedded_resources = self
-            .resources
-            .package(&self.distribution.python_exe)
-            .or_else(|e| Err(e.to_string()))?;
+    pub fn build_embedded_blobs(&self) -> Result<EmbeddedResourcesBlobs> {
+        let embedded_resources = self.resources.package(&self.distribution.python_exe)?;
 
         let mut module_names = Vec::new();
         let mut modules = Vec::new();
