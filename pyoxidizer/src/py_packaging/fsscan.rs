@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use anyhow::{Context, Result};
 use itertools::Itertools;
 use std::collections::{BTreeMap, HashSet};
 use std::ffi::OsStr;
@@ -507,7 +508,7 @@ pub fn find_python_resources(root_path: &Path) -> PythonResourceIterator {
     PythonResourceIterator::new(root_path)
 }
 
-pub fn find_python_modules(root_path: &Path) -> Result<BTreeMap<String, Vec<u8>>, &'static str> {
+pub fn find_python_modules(root_path: &Path) -> Result<BTreeMap<String, Vec<u8>>> {
     let mut mods = BTreeMap::new();
 
     for resource in find_python_resources(root_path) {
@@ -515,7 +516,7 @@ pub fn find_python_modules(root_path: &Path) -> Result<BTreeMap<String, Vec<u8>>
             full_name, path, ..
         } = resource
         {
-            let data = fs::read(path).expect("unable to read file");
+            let data = fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
 
             mods.insert(full_name, data);
         }
