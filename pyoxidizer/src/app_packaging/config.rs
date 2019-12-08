@@ -160,8 +160,7 @@ pub fn eval_starlark_config_file(
     path: &Path,
     build_target: &str,
 ) -> Result<Config> {
-    let context =
-        EnvironmentContext::new(logger, path, build_target).or_else(|e| Err(anyhow!(e)))?;
+    let context = EnvironmentContext::new(logger, path, build_target)?;
 
     let res = crate::starlark::eval::evaluate_file(path, &context)
         .or_else(|d| Err(anyhow!(d.message)))?;
