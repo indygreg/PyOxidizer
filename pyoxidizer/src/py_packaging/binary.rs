@@ -4,6 +4,9 @@
 
 use anyhow::Result;
 use slog::warn;
+use std::fs::File;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 use tempdir::TempDir;
 
 use super::config::{EmbeddedPythonConfig, RunMode};
@@ -95,6 +98,16 @@ pub struct EmbeddedResourcesBlobs {
     pub resources: Vec<u8>,
 }
 
+/// Holds filesystem paths to resources required to build a binary embedding Python.
+pub struct EmbeddedPythonBinaryPaths {
+    pub importlib_bootstrap: PathBuf,
+    pub importlib_bootstrap_external: PathBuf,
+    pub module_names: PathBuf,
+    pub py_modules: PathBuf,
+    pub resources: PathBuf,
+    pub libpython: PathBuf,
+}
+
 /// Represents resources to embed Python in a binary.
 pub struct EmbeddedPythonBinaryData {
     pub library: PythonLibrary,
@@ -124,6 +137,42 @@ impl EmbeddedPythonBinaryData {
             resources,
         })
     }
+
+    /// Write out files needed to link a binary.
+    pub fn write_files(&self, dest_dir: &Path) -> Result<EmbeddedPythonBinaryPaths> {
+        let importlib_bootstrap = dest_dir.join("importlib_bootstrap");
+        let mut fh = File::create(&importlib_bootstrap)?;
+        fh.write_all(&self.importlib.bootstrap_bytecode)?;
+
+        let importlib_bootstrap_external = dest_dir.join("importlib_bootstrap_external");
+        let mut fh = File::create(&importlib_bootstrap_external)?;
+        fh.write_all(&self.importlib.bootstrap_external_bytecode)?;
+
+        let module_names = dest_dir.join("py-module-names");
+        let mut fh = File::create(&module_names)?;
+        fh.write_all(&self.resources.module_names)?;
+
+        let py_modules = dest_dir.join("py-modules");
+        let mut fh = File::create(&py_modules)?;
+        fh.write_all(&self.resources.modules)?;
+
+        let resources = dest_dir.join("python-resources");
+        let mut fh = File::create(&resources)?;
+        fh.write_all(&self.resources.resources)?;
+
+        let libpython = dest_dir.join("libpython");
+        let mut fh = File::create(&libpython)?;
+        fh.write_all(&self.library.data)?;
+
+        Ok(EmbeddedPythonBinaryPaths {
+            importlib_bootstrap,
+            importlib_bootstrap_external,
+            module_names,
+            py_modules,
+            resources,
+            libpython,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -131,8 +180,7 @@ mod tests {
     use super::*;
     use crate::testutil::*;
 
-    #[test]
-    fn test_build_simple() -> Result<()> {
+    fn get_embedded() -> Result<EmbeddedPythonBinaryData> {
         let resources = EmbeddedPythonResourcesPrePackaged::default();
         let config = EmbeddedPythonConfig::default();
         let run_mode = RunMode::Noop;
@@ -150,7 +198,22 @@ mod tests {
             env!("HOST"),
             env!("HOST"),
             "0",
-        )?;
+        )
+    }
+
+    #[test]
+    fn test_write_embedded_files() -> Result<()> {
+        let embedded = get_embedded()?;
+        let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
+
+        embedded.write_files(temp_dir.path())?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_build_simple() -> Result<()> {
+        get_embedded()?;
 
         Ok(())
     }
