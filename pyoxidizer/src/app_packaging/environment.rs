@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
 /// Holds state for evaluating app packaging.
@@ -32,10 +33,10 @@ impl EnvironmentContext {
         logger: &slog::Logger,
         config_path: &Path,
         build_target: &str,
-    ) -> Result<EnvironmentContext, String> {
+    ) -> Result<EnvironmentContext> {
         let parent = config_path
             .parent()
-            .ok_or("unable to resolve parent directory of config".to_string())?;
+            .with_context(|| "resolving parent directory of config".to_string())?;
 
         let build_path = parent.join("build");
 
