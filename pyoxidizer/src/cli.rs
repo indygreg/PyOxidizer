@@ -2,12 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use anyhow::{anyhow, Result};
+use clap::{App, AppSettings, Arg, SubCommand};
+use std::path::{Path, PathBuf};
+
 use super::analyze;
 use super::environment::BUILD_SEMVER_LIGHTWEIGHT;
 use super::logging;
 use super::projectmgmt;
-use clap::{App, AppSettings, Arg, SubCommand};
-use std::path::{Path, PathBuf};
 
 const ADD_ABOUT: &str = "\
 Add PyOxidizer to an existing Rust project.
@@ -70,7 +72,7 @@ This command is essentially identical to `build-artifacts` except the
 output is tailored for the Rust build system.
 ";
 
-pub fn run_cli() -> Result<(), String> {
+pub fn run_cli() -> Result<()> {
     let matches = App::new("PyOxidizer")
         .setting(AppSettings::ArgRequiredElseHelp)
         .version(BUILD_SEMVER_LIGHTWEIGHT)
@@ -307,7 +309,7 @@ pub fn run_cli() -> Result<(), String> {
         ("add", Some(args)) => {
             let path = args.value_of("path").unwrap();
 
-            projectmgmt::add_pyoxidizer(Path::new(path), false).or_else(|e| Err(e.to_string()))
+            projectmgmt::add_pyoxidizer(Path::new(path), false)
         }
 
         ("analyze", Some(args)) => {
@@ -331,8 +333,7 @@ pub fn run_cli() -> Result<(), String> {
                 release,
                 None,
                 false,
-            )
-            .or_else(|e| Err(e.to_string()))?;
+            )?;
 
             println!("{}", context.app_path.display());
 
@@ -355,7 +356,6 @@ pub fn run_cli() -> Result<(), String> {
                 release,
                 verbose,
             )
-            .or_else(|e| Err(e.to_string()))
         }
 
         ("build", Some(args)) => {
@@ -364,7 +364,6 @@ pub fn run_cli() -> Result<(), String> {
             let path = args.value_of("path").unwrap();
 
             projectmgmt::build(&logger_context.logger, path, target, release, verbose)
-                .or_else(|e| Err(e.to_string()))
         }
 
         ("distribution", Some(args)) => {
@@ -377,10 +376,9 @@ pub fn run_cli() -> Result<(), String> {
             let path = args.value_of("path").unwrap();
 
             if types.is_empty() {
-                Err("--type argument is required".to_string())
+                Err(anyhow!("--type argument is required"))
             } else {
                 projectmgmt::distributions(&logger_context.logger, path, target, &types)
-                    .or_else(|e| Err(e.to_string()))
             }
         }
 
@@ -393,7 +391,7 @@ pub fn run_cli() -> Result<(), String> {
             };
             let name = args.value_of("name").unwrap();
 
-            projectmgmt::init(name, code, &pip_install).or_else(|e| Err(e.to_string()))
+            projectmgmt::init(name, code, &pip_install)
         }
 
         ("python-distribution-extract", Some(args)) => {
@@ -401,26 +399,24 @@ pub fn run_cli() -> Result<(), String> {
             let dest_path = args.value_of("dest_path").unwrap();
 
             projectmgmt::python_distribution_extract(dist_path, dest_path)
-                .or_else(|e| Err(e.to_string()))
         }
 
         ("python-distribution-info", Some(args)) => {
             let dist_path = args.value_of("path").unwrap();
 
-            projectmgmt::python_distribution_info(dist_path).or_else(|e| Err(e.to_string()))
+            projectmgmt::python_distribution_info(dist_path)
         }
 
         ("python-distribution-licenses", Some(args)) => {
             let path = args.value_of("path").unwrap();
 
-            projectmgmt::python_distribution_licenses(path).or_else(|e| Err(e.to_string()))
+            projectmgmt::python_distribution_licenses(path)
         }
 
         ("run-build-script", Some(args)) => {
             let build_script = args.value_of("build-script-name").unwrap();
 
             projectmgmt::run_build_script(&logger_context.logger, build_script)
-                .or_else(|e| Err(e.to_string()))
         }
 
         ("run", Some(args)) => {
@@ -437,9 +433,8 @@ pub fn run_cli() -> Result<(), String> {
                 &extra,
                 verbose,
             )
-            .or_else(|e| Err(e.to_string()))
         }
 
-        _ => Err("invalid sub-command".to_string()),
+        _ => Err(anyhow!("invalid sub-command")),
     }
 }
