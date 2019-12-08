@@ -26,7 +26,8 @@ pub fn pip_install(
 
     dist.ensure_pip(logger);
 
-    let mut env = prepare_hacked_distutils(logger, dist, temp_dir.path(), &[])?;
+    let mut env = prepare_hacked_distutils(logger, dist, temp_dir.path(), &[])
+        .or_else(|e| Err(e.to_string()))?;
 
     for (key, value) in extra_envs.iter() {
         env.insert(key.clone(), value.clone());
@@ -99,7 +100,7 @@ pub fn pip_install(
     }
 
     let state_dir = PathBuf::from(env.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap());
-    for ext in read_built_extensions(&state_dir)? {
+    for ext in read_built_extensions(&state_dir).or_else(|e| Err(e.to_string()))? {
         res.push(PythonResource::BuiltExtensionModule(ext));
     }
 

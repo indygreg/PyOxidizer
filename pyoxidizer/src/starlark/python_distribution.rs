@@ -113,7 +113,7 @@ fn find_resources(path: &Path, state_dir: Option<&Path>) -> Result<Vec<PythonRes
     }
 
     if let Some(p) = state_dir {
-        for ext in read_built_extensions(&p)? {
+        for ext in read_built_extensions(&p).or_else(|e| Err(e.to_string()))? {
             res.push(PythonResource::BuiltExtensionModule(ext));
         }
     }

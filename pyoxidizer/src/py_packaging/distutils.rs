@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use anyhow::{Context, Result};
 use lazy_static::lazy_static;
 use serde::Deserialize;
 use slog::warn;
@@ -51,7 +52,7 @@ pub fn prepare_hacked_distutils(
     dist: &ParsedPythonDistribution,
     dest_dir: &Path,
     extra_python_paths: &[&Path],
-) -> Result<HashMap<String, String>, String> {
+) -> Result<HashMap<String, String>> {
     let extra_sys_path = dest_dir.join("packages");
 
     warn!(
@@ -64,35 +65,33 @@ pub fn prepare_hacked_distutils(
     let dest_distutils_path = extra_sys_path.join("distutils");
 
     for entry in walkdir::WalkDir::new(&orig_distutils_path) {
-        match entry {
-            Ok(entry) => {
-                if entry.path().is_dir() {
-                    continue;
-                }
+        let entry = entry?;
 
-                let source_path = entry.path();
-                let rel_path = source_path
-                    .strip_prefix(&orig_distutils_path)
-                    .or_else(|_| Err("unable to strip prefix"))?;
-                let dest_path = dest_distutils_path.join(rel_path);
-
-                let dest_dir = dest_path.parent().unwrap();
-                std::fs::create_dir_all(&dest_dir).or_else(|e| Err(e.to_string()))?;
-                std::fs::copy(&source_path, &dest_path).or_else(|e| Err(e.to_string()))?;
-            }
-            Err(e) => return Err(e.to_string()),
+        if entry.path().is_dir() {
+            continue;
         }
+
+        let source_path = entry.path();
+        let rel_path = source_path
+            .strip_prefix(&orig_distutils_path)
+            .with_context(|| format!("stripping prefix from {}", source_path.display()))?;
+        let dest_path = dest_distutils_path.join(rel_path);
+
+        let dest_dir = dest_path.parent().unwrap();
+        std::fs::create_dir_all(&dest_dir)?;
+        std::fs::copy(&source_path, &dest_path)?;
     }
 
     for (path, data) in MODIFIED_DISTUTILS_FILES.iter() {
         let dest_path = dest_distutils_path.join(path);
 
         warn!(logger, "modifying distutils/{} for oxidation", path);
-        std::fs::write(dest_path, data).or_else(|e| Err(e.to_string()))?;
+        std::fs::write(&dest_path, data)
+            .with_context(|| format!("writing {}", dest_path.display()))?;
     }
 
     let state_dir = dest_dir.join("pyoxidizer-build-state");
-    create_dir_all(&state_dir).or_else(|e| Err(e.to_string()))?;
+    create_dir_all(&state_dir)?;
 
     let mut python_paths = vec![extra_sys_path.display().to_string()];
     python_paths.extend(extra_python_paths.iter().map(|p| p.display().to_string()));
@@ -122,13 +121,13 @@ struct DistutilsExtensionState {
     runtime_library_dirs: Vec<String>,
 }
 
-pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<BuiltExtensionModule>, String> {
+pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<BuiltExtensionModule>> {
     let mut res = Vec::new();
 
-    let entries = read_dir(state_dir).or_else(|e| Err(e.to_string()))?;
+    let entries = read_dir(state_dir)?;
 
     for entry in entries {
-        let entry = entry.or_else(|e| Err(e.to_string()))?;
+        let entry = entry?;
         let path = entry.path();
         let file_name = path.file_name().unwrap().to_str().unwrap();
 
@@ -136,10 +135,9 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<BuiltExtensionModul
             continue;
         }
 
-        let data = read_to_string(&path).or_else(|e| Err(e.to_string()))?;
+        let data = read_to_string(&path)?;
 
-        let info: DistutilsExtensionState =
-            serde_json::from_str(&data).or_else(|e| Err(e.to_string()))?;
+        let info: DistutilsExtensionState = serde_json::from_str(&data)?;
 
         let module_components: Vec<&str> = info.name.split('.').collect();
         let final_name = module_components[module_components.len() - 1];
@@ -149,7 +147,7 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<BuiltExtensionModul
 
         for object_path in &info.objects {
             let path = PathBuf::from(object_path);
-            let data = std::fs::read(path).or_else(|e| Err(e.to_string()))?;
+            let data = std::fs::read(path)?;
 
             object_file_data.push(data);
         }
