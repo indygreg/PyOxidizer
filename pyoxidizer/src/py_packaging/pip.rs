@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use anyhow::{anyhow, Result};
 use slog::warn;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -20,14 +21,12 @@ pub fn pip_install(
     verbose: bool,
     install_args: &[String],
     extra_envs: &HashMap<String, String>,
-) -> Result<Vec<PythonResource>, String> {
-    let temp_dir = tempdir::TempDir::new("pyoxidizer-pip-install")
-        .or_else(|_| Err("could not create temp directory".to_string()))?;
+) -> Result<Vec<PythonResource>> {
+    let temp_dir = tempdir::TempDir::new("pyoxidizer-pip-install")?;
 
     dist.ensure_pip(logger);
 
-    let mut env = prepare_hacked_distutils(logger, dist, temp_dir.path(), &[])
-        .or_else(|e| Err(e.to_string()))?;
+    let mut env = prepare_hacked_distutils(logger, dist, temp_dir.path(), &[])?;
 
     for (key, value) in extra_envs.iter() {
         env.insert(key.clone(), value.clone());
@@ -60,27 +59,19 @@ pub fn pip_install(
         .args(&pip_args)
         .envs(&env)
         .stdout(std::process::Stdio::piped())
-        .spawn()
-        .or(Err("error running pip".to_string()))?;
+        .spawn()?;
     {
-        let stdout = cmd
-            .stdout
-            .as_mut()
-            .ok_or("could not open stdout from pip".to_string())?;
+        let stdout = cmd.stdout.as_mut().ok_or(anyhow!("unable to get stdout"))?;
         let reader = BufReader::new(stdout);
 
         for line in reader.lines() {
-            warn!(
-                logger,
-                "{}",
-                line.or(Err("could not read line".to_string()))?
-            );
+            warn!(logger, "{}", line?);
         }
     }
 
     let status = cmd.wait().unwrap();
     if !status.success() {
-        return Err("error running pip".to_string());
+        return Err(anyhow!("error running pip"));
     }
 
     let mut res = Vec::new();
@@ -88,11 +79,11 @@ pub fn pip_install(
     for r in find_python_resources(&target_dir) {
         match r {
             PythonFileResource::Source { .. } => {
-                res.push(PythonResource::try_from(&r)?);
+                res.push(PythonResource::try_from(&r).or_else(|e| Err(anyhow!(e)))?);
             }
 
             PythonFileResource::Resource(..) => {
-                res.push(PythonResource::try_from(&r)?);
+                res.push(PythonResource::try_from(&r).or_else(|e| Err(anyhow!(e)))?);
             }
 
             _ => {}
@@ -100,7 +91,7 @@ pub fn pip_install(
     }
 
     let state_dir = PathBuf::from(env.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap());
-    for ext in read_built_extensions(&state_dir).or_else(|e| Err(e.to_string()))? {
+    for ext in read_built_extensions(&state_dir)? {
         res.push(PythonResource::BuiltExtensionModule(ext));
     }
 
