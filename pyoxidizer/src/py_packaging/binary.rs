@@ -9,7 +9,7 @@ use tempdir::TempDir;
 use super::config::{EmbeddedPythonConfig, RunMode};
 use super::distribution::ParsedPythonDistribution;
 use super::embedded_resource::EmbeddedPythonResourcesPrePackaged;
-use super::libpython::link_libpython;
+use super::libpython::{derive_importlib, link_libpython, ImportlibData};
 
 /// A self-contained Python executable before it is compiled.
 #[derive(Debug, Clone)]
@@ -98,6 +98,7 @@ pub struct EmbeddedResourcesBlobs {
 /// Represents resources to embed Python in a binary.
 pub struct EmbeddedPythonBinaryData {
     pub library: PythonLibrary,
+    pub importlib: ImportlibData,
     pub resources: EmbeddedResourcesBlobs,
 }
 
@@ -111,8 +112,17 @@ impl EmbeddedPythonBinaryData {
     ) -> Result<EmbeddedPythonBinaryData> {
         let library = exe.build_libpython(logger, host, target, opt_level)?;
         let resources = exe.build_embedded_blobs()?;
+        warn!(
+            logger,
+            "deriving custom importlib modules to support in-memory importing"
+        );
+        let importlib = derive_importlib(&exe.distribution)?;
 
-        Ok(EmbeddedPythonBinaryData { library, resources })
+        Ok(EmbeddedPythonBinaryData {
+            library,
+            importlib,
+            resources,
+        })
     }
 }
 
