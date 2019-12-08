@@ -251,6 +251,43 @@ starlark_module! { python_distribution_module =>
     }
 
     #[allow(clippy::ptr_arg)]
+    PythonDistribution.pip_requirements_file(env env, this, path, extra_envs=None) {
+        required_str_arg("path", &path)?;
+        optional_dict_arg("extra_envs", "string", "string", &extra_envs)?;
+
+        let pip_args: Vec<String> = vec!["-r".to_string(), path.to_string()];
+
+        let extra_envs = match extra_envs.get_type() {
+            "dict" => extra_envs.into_iter()?.map(|key| {
+                let k = key.to_string();
+                let v = extra_envs.at(key.clone()).unwrap().to_string();
+                (k, v)
+            }).collect(),
+            "NoneType" => HashMap::new(),
+            _ => panic!("should have validated type above"),
+        };
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        let resources = this.downcast_apply_mut(|dist: &mut PythonDistribution| {
+            dist.ensure_distribution_resolved(&logger);
+
+            let dist = dist.distribution.as_ref().unwrap();
+            // TODO get verbose flag from context.
+            raw_pip_install(&logger, &dist, false, &pip_args, &extra_envs)
+        }).or_else(|e| Err(
+            RuntimeError {
+                code: "PIP_INSTALL_ERROR",
+                message: format!("error running pip install: {}", e),
+                label: "pip_install()".to_string(),
+            }.into()
+        ))?;
+
+        Ok(Value::from(resources.iter().map(Value::from).collect::<Vec<Value>>()))
+    }
+
+    #[allow(clippy::ptr_arg)]
     PythonDistribution.read_package_root(
         env env,
         this,
