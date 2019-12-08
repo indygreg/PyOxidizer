@@ -411,7 +411,8 @@ pub fn build_wix_installer(
     };
 
     crate::projectmgmt::build_project(logger, &mut other_context)?;
-    crate::app_packaging::repackage::package_project(logger, &mut other_context)?;
+    crate::app_packaging::repackage::package_project(logger, &mut other_context)
+        .or_else(|e| Err(e.to_string()))?;
 
     let wix_toolset_path = context.build_path.join("wix-toolset");
     if !wix_toolset_path.exists() {

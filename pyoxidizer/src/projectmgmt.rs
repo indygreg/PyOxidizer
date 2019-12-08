@@ -556,6 +556,7 @@ pub fn resolve_build_context(
         force_artifacts_path,
         verbose,
     )
+    .or_else(|e| Err(e.to_string()))
 }
 
 fn run_project(
@@ -567,7 +568,7 @@ fn run_project(
     // build output to be printed.
     build_project(logger, context)?;
 
-    package_project(logger, context)?;
+    package_project(logger, context).or_else(|e| Err(e.to_string()))?;
 
     match process::Command::new(&context.app_exe_path)
         .current_dir(&context.project_path)
@@ -599,7 +600,7 @@ pub fn build(
     let mut context =
         resolve_build_context(logger, project_path, None, target, release, None, verbose)?;
     build_project(logger, &mut context)?;
-    package_project(logger, &mut context)?;
+    package_project(logger, &mut context).or_else(|e| Err(e.to_string()))?;
 
     warn!(
         logger,
@@ -707,7 +708,7 @@ pub fn distributions(
     let mut context = resolve_build_context(logger, project_path, None, target, true, None, false)?;
 
     build_project(logger, &mut context)?;
-    package_project(logger, &mut context)?;
+    package_project(logger, &mut context).or_else(|e| Err(e.to_string()))?;
     produce_distributions(logger, &context, types)?;
 
     Ok(())

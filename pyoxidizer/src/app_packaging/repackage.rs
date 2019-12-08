@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use anyhow::{anyhow, Context, Result};
 use glob::glob as findglob;
 use lazy_static::lazy_static;
 use slog::{info, warn};
@@ -9,7 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
 use std::fs::create_dir_all;
-use std::io::{BufRead, BufReader, BufWriter, Error as IOError, Write};
+use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::{Path, PathBuf};
 
 use super::config::{
@@ -72,10 +73,10 @@ impl BuildContext {
         release: bool,
         force_artifacts_path: Option<&Path>,
         verbose: bool,
-    ) -> Result<Self, String> {
+    ) -> Result<Self> {
         let config_parent_path = config_path
             .parent()
-            .ok_or("could not resolve parent path of config".to_string())?;
+            .with_context(|| "resolving parent path of config")?;
 
         let host_triple = if let Some(v) = host {
             v.to_string()
@@ -83,8 +84,7 @@ impl BuildContext {
             HOST.to_string()
         };
 
-        let config = eval_starlark_config_file(logger, &config_path, target)
-            .or_else(|e| Err(e.to_string()))?;
+        let config = eval_starlark_config_file(logger, &config_path, target)?;
 
         let build_path = config.build_config.build_path.clone();
 
@@ -140,12 +140,11 @@ impl BuildContext {
 
         let cargo_toml_path = project_path.join("Cargo.toml");
         if !cargo_toml_path.exists() {
-            return Err(format!("{} does not exist", cargo_toml_path.display()));
+            return Err(anyhow!("{} does not exist", cargo_toml_path.display()));
         }
 
-        let cargo_toml_data = fs::read(&cargo_toml_path).or_else(|e| Err(e.to_string()))?;
-        let cargo_config =
-            cargo_toml::Manifest::from_slice(&cargo_toml_data).or_else(|e| Err(e.to_string()))?;
+        let cargo_toml_data = fs::read(&cargo_toml_path)?;
+        let cargo_config = cargo_toml::Manifest::from_slice(&cargo_toml_data)?;
 
         Ok(BuildContext {
             project_path: project_path.to_path_buf(),
@@ -176,15 +175,12 @@ impl BuildContext {
     ///
     /// This basically reads the packaging_state.cbor file from the artifacts
     /// directory.
-    pub fn get_packaging_state(&mut self) -> Result<PackagingState, String> {
+    pub fn get_packaging_state(&mut self) -> Result<PackagingState> {
         if self.packaging_state.is_none() {
             let path = self.pyoxidizer_artifacts_path.join("packaging_state.cbor");
-            let fh = std::io::BufReader::new(
-                std::fs::File::open(&path).or_else(|e| Err(e.to_string()))?,
-            );
+            let fh = std::io::BufReader::new(std::fs::File::open(&path)?);
 
-            let state: PackagingState =
-                serde_cbor::from_reader(fh).or_else(|e| Err(e.to_string()))?;
+            let state: PackagingState = serde_cbor::from_reader(fh)?;
 
             self.packaging_state = Some(state);
         }
@@ -211,7 +207,7 @@ pub struct PythonResources {
     pub license_files_path: Option<String>,
 }
 
-fn read_resource_names_file(path: &Path) -> Result<BTreeSet<String>, IOError> {
+fn read_resource_names_file(path: &Path) -> Result<BTreeSet<String>> {
     let fh = fs::File::open(path)?;
 
     let mut res: BTreeSet<String> = BTreeSet::new();
@@ -864,10 +860,10 @@ fn install_app_relative(
     context: &BuildContext,
     path: &str,
     app_relative: &AppRelativeResources,
-) -> Result<(), String> {
+) -> Result<()> {
     let dest_path = context.app_exe_path.parent().unwrap().join(path);
 
-    create_dir_all(&dest_path).or_else(|_| Err("could not create app-relative path"))?;
+    create_dir_all(&dest_path)?;
 
     warn!(
         logger,
@@ -899,15 +895,8 @@ fn install_app_relative(
         );
 
         let parent_dir = module_path.parent().unwrap();
-        create_dir_all(&parent_dir).or_else(|_| {
-            Err(format!(
-                "failed to create directory {}",
-                parent_dir.display()
-            ))
-        })?;
-
-        fs::write(&module_path, &module_source.source)
-            .or_else(|_| Err(format!("failed to write {}", module_path.display())))?;
+        create_dir_all(&parent_dir)?;
+        fs::write(&module_path, &module_source.source)?;
     }
 
     warn!(
@@ -953,15 +942,9 @@ fn install_app_relative(
         );
 
         let parent_dir = module_path.parent().unwrap();
-        create_dir_all(&parent_dir).or_else(|_| {
-            Err(format!(
-                "failed to create directory {}",
-                parent_dir.display()
-            ))
-        })?;
+        create_dir_all(&parent_dir)?;
 
-        fs::write(&module_path, &module_bytecode.bytecode)
-            .or_else(|_| Err(format!("failed to write {}", module_path.display())))?;
+        fs::write(&module_path, &module_bytecode.bytecode)?;
     }
 
     let mut resource_count = 0;
@@ -1002,10 +985,9 @@ fn install_app_relative(
                 dest_path.display()
             );
 
-            create_dir_all(dest_path.parent().unwrap()).or_else(|e| Err(e.to_string()))?;
+            create_dir_all(dest_path.parent().unwrap())?;
 
-            fs::write(&dest_path, data)
-                .or_else(|_| Err(format!("failed to write {}", dest_path.display())))?;
+            fs::write(&dest_path, data)?;
         }
     }
 
@@ -1015,7 +997,7 @@ fn install_app_relative(
 /// Package a built Rust project into its packaging directory.
 ///
 /// This will delete all content in the application's package directory.
-pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Result<(), String> {
+pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Result<()> {
     warn!(
         logger,
         "packaging application into {}",
@@ -1024,10 +1006,10 @@ pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Res
 
     if context.app_path.exists() {
         warn!(logger, "purging {}", context.app_path.display());
-        std::fs::remove_dir_all(&context.app_path).or_else(|e| Err(e.to_string()))?;
+        std::fs::remove_dir_all(&context.app_path)?;
     }
 
-    create_dir_all(&context.app_path).or_else(|e| Err(e.to_string()))?;
+    create_dir_all(&context.app_path)?;
 
     warn!(
         logger,
@@ -1035,8 +1017,7 @@ pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Res
         context.app_exe_target_path.display(),
         context.app_exe_path.display()
     );
-    std::fs::copy(&context.app_exe_target_path, &context.app_exe_path)
-        .or_else(|_| Err("failed to copy built application"))?;
+    std::fs::copy(&context.app_exe_target_path, &context.app_exe_path)?;
 
     warn!(logger, "resolving packaging state...");
     let state = context.get_packaging_state()?;
@@ -1052,7 +1033,7 @@ pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Res
             for li in lis {
                 let path = licenses_path.join(&li.license_filename);
                 warn!(logger, "writing license for {} to {}", name, path.display());
-                fs::write(&path, li.license_text.as_bytes()).or_else(|e| Err(e.to_string()))?;
+                fs::write(&path, li.license_text.as_bytes())?;
             }
         }
     }
