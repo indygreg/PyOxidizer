@@ -53,3 +53,35 @@ pub struct EmbeddedPythonConfig {
     pub terminfo_resolution: TerminfoResolution,
     pub write_modules_directory_env: Option<String>,
 }
+
+impl Default for EmbeddedPythonConfig {
+    fn default() -> Self {
+        EmbeddedPythonConfig {
+            bytes_warning: 0,
+            dont_write_bytecode: true,
+            ignore_environment: true,
+            inspect: false,
+            interactive: false,
+            isolated: false,
+            legacy_windows_fs_encoding: false,
+            legacy_windows_stdio: false,
+            no_site: true,
+            no_user_site_directory: true,
+            optimize_level: 0,
+            parser_debug: false,
+            quiet: false,
+            stdio_encoding_name: None,
+            stdio_encoding_errors: None,
+            unbuffered_stdio: false,
+            use_hash_seed: false,
+            verbose: 0,
+            filesystem_importer: false,
+            sys_frozen: false,
+            sys_meipass: false,
+            sys_paths: Vec::new(),
+            raw_allocator: RawAllocator::System,
+            terminfo_resolution: TerminfoResolution::None,
+            write_modules_directory_env: None,
+        }
+    }
+}
