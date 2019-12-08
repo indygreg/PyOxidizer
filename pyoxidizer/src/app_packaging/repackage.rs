@@ -83,7 +83,8 @@ impl BuildContext {
             HOST.to_string()
         };
 
-        let config = eval_starlark_config_file(logger, &config_path, target)?;
+        let config = eval_starlark_config_file(logger, &config_path, target)
+            .or_else(|e| Err(e.to_string()))?;
 
         let build_path = config.build_config.build_path.clone();
 

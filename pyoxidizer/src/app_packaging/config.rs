@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use anyhow::{anyhow, Result};
 use slog::warn;
 use std::env;
 use std::path::{Path, PathBuf};
@@ -106,7 +107,7 @@ pub struct Config {
     pub distributions: Vec<Distribution>,
 }
 
-pub fn resolve_install_location(value: &str) -> Result<InstallLocation, String> {
+pub fn resolve_install_location(value: &str) -> Result<InstallLocation> {
     if value == "embedded" {
         Ok(InstallLocation::Embedded)
     } else if value.starts_with("app-relative:") {
@@ -114,7 +115,7 @@ pub fn resolve_install_location(value: &str) -> Result<InstallLocation, String> 
 
         Ok(InstallLocation::AppRelative { path })
     } else {
-        Err(format!("invalid install_location: {}", value))
+        Err(anyhow!("invalid install_location: {}", value))
     }
 }
 
@@ -158,18 +159,20 @@ pub fn eval_starlark_config_file(
     logger: &slog::Logger,
     path: &Path,
     build_target: &str,
-) -> Result<Config, String> {
-    let context = EnvironmentContext::new(logger, path, build_target)?;
+) -> Result<Config> {
+    let context =
+        EnvironmentContext::new(logger, path, build_target).or_else(|e| Err(anyhow!(e)))?;
 
-    let res = crate::starlark::eval::evaluate_file(path, &context).or_else(|d| Err(d.message))?;
+    let res = crate::starlark::eval::evaluate_file(path, &context)
+        .or_else(|d| Err(anyhow!(d.message)))?;
 
     let config = res
         .env
         .get("CONFIG")
-        .or_else(|_| Err("CONFIG not assigned".to_string()))?;
+        .or_else(|_| Err(anyhow!("CONFIG does not exist")))?;
 
     if config.get_type() != "Config" {
-        return Err(format!(
+        return Err(anyhow!(
             "CONFIG must be type Config; got type {}",
             config.get_type()
         ));
