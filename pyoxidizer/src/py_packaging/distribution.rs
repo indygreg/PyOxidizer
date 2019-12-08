@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use copy_dir::copy_dir;
 use fs2::FileExt;
 use itertools::Itertools;
@@ -24,6 +24,7 @@ use super::fsscan::{
 use super::resource::{ResourceData, SourceModule};
 
 use crate::licensing::NON_GPL_LICENSES;
+use crate::python_distributions::CPYTHON_BY_TRIPLE;
 
 #[cfg(windows)]
 const PYTHON_EXE_BASENAME: &str = "python.exe";
@@ -1162,4 +1163,41 @@ pub fn resolve_parsed_distribution(
     let distribution_path = dest_dir.join(format!("python.{}", distribution_hash));
 
     ParsedPythonDistribution::from_path(logger, &path, &distribution_path)
+}
+
+/// Resolve the default Python distribution for a build target.
+pub fn default_distribution(
+    logger: &slog::Logger,
+    target: &str,
+    dest_dir: &Path,
+) -> Result<ParsedPythonDistribution> {
+    let dist = CPYTHON_BY_TRIPLE.get(target).ok_or(anyhow!(
+        "could not find default Python distribution for {}",
+        target
+    ))?;
+
+    let location = PythonDistributionLocation::Url {
+        url: dist.url.clone(),
+        sha256: dist.sha256.clone(),
+    };
+
+    resolve_parsed_distribution(logger, &location, dest_dir)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testutil::*;
+
+    #[test]
+    fn test_default_distribution() -> Result<()> {
+        let logger = get_logger()?;
+        let target = std::env!("HOST");
+
+        let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
+
+        default_distribution(&logger, target, temp_dir.path())?;
+
+        Ok(())
+    }
 }

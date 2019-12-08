@@ -21,3 +21,6 @@ pub mod projectmgmt;
 pub mod py_packaging;
 pub mod python_distributions;
 pub mod starlark;
+
+#[cfg(test)]
+mod testutil;

@@ -40,6 +40,8 @@ mod projectmgmt;
 mod py_packaging;
 mod python_distributions;
 pub mod starlark;
+#[cfg(test)]
+mod testutil;
 
 fn main() {
     std::process::exit(match cli::run_cli() {
