@@ -4,6 +4,7 @@
 
 //! Resolve details about the PyOxidizer execution environment.
 
+use anyhow::{anyhow, Result};
 use git2::{Commit, Repository};
 use lazy_static::lazy_static;
 use std::env;
@@ -113,12 +114,11 @@ pub fn built_git_url() -> PyOxidizerSource {
     }
 }
 
-pub fn resolve_environment() -> Result<Environment, &'static str> {
+pub fn resolve_environment() -> Result<Environment> {
     let exe_path = PathBuf::from(
-        env::current_exe()
-            .or_else(|_| Err("could not resolve current exe"))?
+        env::current_exe()?
             .parent()
-            .ok_or_else(|| "could not resolve parent of current exe")?,
+            .ok_or_else(|| anyhow!("could not resolve parent of current exe"))?,
     );
 
     let pyoxidizer_semver = BUILD_SEMVER.to_string();
@@ -133,9 +133,8 @@ pub fn resolve_environment() -> Result<Environment, &'static str> {
                 PyOxidizerSource::LocalPath {
                     path: canonicalize_path(
                         repo.workdir()
-                            .ok_or_else(|| "unable to resolve Git workdir")?,
-                    )
-                    .or_else(|_| Err("unable to canonicalize path"))?,
+                            .ok_or_else(|| anyhow!("unable to resolve Git workdir"))?,
+                    )?,
                 }
             } else {
                 // The pyoxidizer binary is in a directory that is in a Git repo that isn't
