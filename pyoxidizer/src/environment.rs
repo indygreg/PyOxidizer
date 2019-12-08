@@ -31,7 +31,7 @@ pub const BUILD_SEMVER_LIGHTWEIGHT: &str = env!("VERGEN_SEMVER_LIGHTWEIGHT");
 
 lazy_static! {
     /// Minimum version of Rust required to build PyOxidizer applications.
-    pub static ref MINIMUM_RUST_VERSION: semver::Version = semver::Version::new(1, 31, 0);
+    pub static ref MINIMUM_RUST_VERSION: semver::Version = semver::Version::new(1, 36, 0);
 }
 
 /// Find the root Git commit given a starting Git commit.
