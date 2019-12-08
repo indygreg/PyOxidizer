@@ -5,6 +5,8 @@
 pub mod tarball;
 pub mod wix;
 
+use anyhow::Result;
+
 use crate::app_packaging::config::Distribution;
 use crate::app_packaging::state::BuildContext;
 
@@ -13,7 +15,7 @@ pub fn produce_distributions(
     logger: &slog::Logger,
     context: &BuildContext,
     types: &[&str],
-) -> Result<(), String> {
+) -> Result<()> {
     for distribution in &context.config.distributions {
         match distribution {
             Distribution::Tarball(tarball) => {

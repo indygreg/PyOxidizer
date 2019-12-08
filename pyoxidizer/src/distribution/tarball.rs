@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use anyhow::{anyhow, Result};
 use slog::warn;
 use std::path::PathBuf;
 use tar;
@@ -13,21 +14,19 @@ pub fn produce_tarball(
     logger: &slog::Logger,
     context: &BuildContext,
     config: &DistributionTarball,
-) -> Result<(), String> {
+) -> Result<()> {
     let basename = format!("{}.tar", context.app_name);
     let filename = context.distributions_path.join(basename);
 
     warn!(logger, "writing tarball to {}", filename.display());
 
-    std::fs::create_dir_all(filename.parent().unwrap()).or_else(|_| {
-        Err(format!(
-            "unable to create directory for {}",
-            filename.display()
-        ))
-    })?;
+    std::fs::create_dir_all(
+        filename
+            .parent()
+            .ok_or(anyhow!("could not find parent directory"))?,
+    )?;
 
-    let fh = std::fs::File::create(&filename)
-        .or_else(|_| Err(format!("unable to open {} for writing", filename.display())))?;
+    let fh = std::fs::File::create(&filename)?;
 
     let mut builder = tar::Builder::new(fh);
     builder.mode(tar::HeaderMode::Deterministic);
@@ -38,7 +37,7 @@ pub fn produce_tarball(
         walkdir::WalkDir::new(&context.app_path).sort_by(|a, b| a.file_name().cmp(b.file_name()));
 
     for entry in walk {
-        let entry = entry.or_else(|e| Err(e.to_string()))?;
+        let entry = entry?;
 
         let path = entry.path();
 
@@ -46,9 +45,7 @@ pub fn produce_tarball(
             continue;
         }
 
-        let rel_path = path
-            .strip_prefix(&context.app_path)
-            .or_else(|_| Err("unable to strip directory prefix".to_string()))?;
+        let rel_path = path.strip_prefix(&context.app_path)?;
 
         let archive_path = if let Some(value) = &config.path_prefix {
             PathBuf::from(value).join(rel_path)
@@ -62,12 +59,10 @@ pub fn produce_tarball(
             path.display(),
             archive_path.display()
         );
-        builder
-            .append_path_with_name(path, &archive_path)
-            .or_else(|e| Err(e.to_string()))?;
+        builder.append_path_with_name(path, &archive_path)?;
     }
 
-    builder.finish().or_else(|e| Err(e.to_string()))?;
+    builder.finish()?;
 
     Ok(())
 }

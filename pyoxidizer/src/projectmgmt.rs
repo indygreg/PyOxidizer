@@ -709,7 +709,7 @@ pub fn distributions(
 
     build_project(logger, &mut context)?;
     package_project(logger, &mut context).or_else(|e| Err(e.to_string()))?;
-    produce_distributions(logger, &context, types)?;
+    produce_distributions(logger, &context, types).or_else(|e| Err(e.to_string()))?;
 
     Ok(())
 }

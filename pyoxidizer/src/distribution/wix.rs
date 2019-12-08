@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use anyhow::{anyhow, Result};
 use handlebars::Handlebars;
 use lazy_static::lazy_static;
 use sha2::Digest;
@@ -45,54 +46,52 @@ lazy_static! {
     };
 }
 
-fn download_and_verify(logger: &slog::Logger, url: &str, hash: &str) -> Result<Vec<u8>, String> {
+fn download_and_verify(logger: &slog::Logger, url: &str, hash: &str) -> Result<Vec<u8>> {
     warn!(logger, "downloading {}", url);
-    let mut response = reqwest::get(url).or_else(|e| Err(e.to_string()))?;
+    let mut response = reqwest::get(url)?;
 
     let mut data: Vec<u8> = Vec::new();
-    response
-        .read_to_end(&mut data)
-        .or_else(|e| Err(e.to_string()))?;
+    response.read_to_end(&mut data)?;
 
     warn!(logger, "validating hash...");
     let mut hasher = sha2::Sha256::new();
     hasher.input(&data);
 
     let url_hash = hasher.result().to_vec();
-    let expected_hash = hex::decode(hash).or_else(|e| Err(e.to_string()))?;
+    let expected_hash = hex::decode(hash)?;
 
     if expected_hash == url_hash {
         Ok(data)
     } else {
-        Err("hash mismatch of downloaded file".to_string())
+        Err(anyhow!("hash mismatch of downloaded file"))
     }
 }
 
-fn extract_zip(data: &[u8], path: &Path) -> Result<(), String> {
+fn extract_zip(data: &[u8], path: &Path) -> Result<()> {
     let cursor = std::io::Cursor::new(data);
-    let mut za = zip::ZipArchive::new(cursor).or_else(|e| Err(e.to_string()))?;
+    let mut za = zip::ZipArchive::new(cursor)?;
 
     for i in 0..za.len() {
-        let mut file = za.by_index(i).or_else(|e| Err(e.to_string()))?;
+        let mut file = za.by_index(i)?;
 
         let dest_path = path.join(file.name());
         let parent = dest_path.parent().unwrap();
 
         if !parent.exists() {
-            std::fs::create_dir_all(parent).or_else(|e| Err(e.to_string()))?;
+            std::fs::create_dir_all(parent)?;
         }
 
         let mut b: Vec<u8> = Vec::new();
-        file.read_to_end(&mut b).or_else(|e| Err(e.to_string()))?;
-        let mut fh = std::fs::File::create(dest_path).unwrap();
+        file.read_to_end(&mut b)?;
+        let mut fh = std::fs::File::create(dest_path)?;
 
-        fh.write_all(&b).or_else(|e| Err(e.to_string()))?;
+        fh.write_all(&b)?;
     }
 
     Ok(())
 }
 
-fn extract_wix(logger: &slog::Logger, path: &Path) -> Result<(), String> {
+fn extract_wix(logger: &slog::Logger, path: &Path) -> Result<()> {
     warn!(logger, "downloading WiX Toolset...");
     let data = download_and_verify(logger, TOOLSET_URL, TOOLSET_SHA256)?;
     warn!(logger, "extracting WiX...");
@@ -116,7 +115,7 @@ fn run_heat(
     build_path: &Path,
     harvest_dir: &Path,
     platform: &str,
-) -> Result<(), String> {
+) -> Result<()> {
     let mut args = vec!["dir"];
 
     let harvest_str = harvest_dir.display().to_string();
@@ -142,8 +141,7 @@ fn run_heat(
         .args(&args)
         .stdout(std::process::Stdio::piped())
         .current_dir(build_path)
-        .spawn()
-        .expect("error running heat.exe");
+        .spawn()?;
     {
         let stdout = cmd.stdout.as_mut().unwrap();
         let reader = BufReader::new(stdout);
@@ -157,7 +155,7 @@ fn run_heat(
     if status.success() {
         Ok(())
     } else {
-        Err("error running light.exe".to_string())
+        Err(anyhow!("error running light.exe"))
     }
 }
 
@@ -167,11 +165,11 @@ fn run_candle(
     wix_toolset_path: &Path,
     build_path: &Path,
     wxs_file_name: &str,
-) -> Result<(), String> {
+) -> Result<()> {
     let arch = match context.target_triple.as_str() {
         "i686-pc-windows-msvc" => "x86",
         "x86_64-pc-windows-msvc" => "x64",
-        triple => return Err(format!("unhandled target triple: {}", triple)),
+        triple => return Err(anyhow!("unhandled target triple: {}", triple)),
     };
 
     let args = vec![
@@ -193,8 +191,7 @@ fn run_candle(
         .args(&args)
         .stdout(std::process::Stdio::piped())
         .current_dir(build_path)
-        .spawn()
-        .expect("error running candle.exe");
+        .spawn()?;
     {
         let stdout = cmd.stdout.as_mut().unwrap();
         let reader = BufReader::new(stdout);
@@ -208,7 +205,7 @@ fn run_candle(
     if status.success() {
         Ok(())
     } else {
-        Err("error running candle.exe".to_string())
+        Err(anyhow!("error running candle.exe"))
     }
 }
 
@@ -218,7 +215,7 @@ fn run_light(
     build_path: &Path,
     wixobjs: &[&str],
     output_path: &Path,
-) -> Result<(), String> {
+) -> Result<()> {
     let light_exe = wix_toolset_path.join("light.exe");
 
     let mut args: Vec<String> = vec![
@@ -243,8 +240,7 @@ fn run_light(
         .args(&args)
         .stdout(std::process::Stdio::piped())
         .current_dir(build_path)
-        .spawn()
-        .expect("error running light.exe");
+        .spawn()?;
     {
         let stdout = cmd.stdout.as_mut().unwrap();
         let reader = BufReader::new(stdout);
@@ -258,7 +254,7 @@ fn run_light(
     if status.success() {
         Ok(())
     } else {
-        Err("error running light.exe".to_string())
+        Err(anyhow!("error running light.exe"))
     }
 }
 
@@ -267,11 +263,11 @@ pub fn build_wix_app_installer(
     context: &BuildContext,
     wix_config: &DistributionWixInstaller,
     wix_toolset_path: &Path,
-) -> Result<(), String> {
+) -> Result<()> {
     let arch = match context.target_triple.as_str() {
         "i686-pc-windows-msvc" => "x86",
         "x86_64-pc-windows-msvc" => "x64",
-        target => return Err(format!("unhandled target triple: {}", target)),
+        target => return Err(anyhow!("unhandled target triple: {}", target)),
     };
 
     let output_path = context.build_path.join("wix").join(arch);
@@ -283,7 +279,7 @@ pub fn build_wix_app_installer(
         .cargo_config
         .package
         .clone()
-        .ok_or_else(|| "no [package] found in Cargo.toml".to_string())?;
+        .ok_or_else(|| anyhow!("no [package] found in Cargo.toml"))?;
 
     data.insert("version", &cargo_package.version);
 
@@ -331,18 +327,16 @@ pub fn build_wix_app_installer(
     let app_exe_source = context.app_exe_path.display().to_string();
     data.insert("app_exe_source", &app_exe_source);
 
-    let t = HANDLEBARS
-        .render("main.wxs", &data)
-        .or_else(|e| Err(e.to_string()))?;
+    let t = HANDLEBARS.render("main.wxs", &data)?;
 
     if output_path.exists() {
-        std::fs::remove_dir_all(&output_path).or_else(|e| Err(e.to_string()))?;
+        std::fs::remove_dir_all(&output_path)?;
     }
 
-    std::fs::create_dir_all(&output_path).or_else(|e| Err(e.to_string()))?;
+    std::fs::create_dir_all(&output_path)?;
 
     let main_wxs_path = output_path.join("main.wxs");
-    std::fs::write(&main_wxs_path, t).or_else(|e| Err(e.to_string()))?;
+    std::fs::write(&main_wxs_path, t)?;
 
     run_heat(
         logger,
@@ -377,7 +371,7 @@ pub fn build_wix_installer(
     logger: &slog::Logger,
     context: &BuildContext,
     wix_config: &DistributionWixInstaller,
-) -> Result<(), String> {
+) -> Result<()> {
     // The WiX installer is a unified installer for multiple architectures.
     // So ensure all Windows architectures are built before proceeding. This is
     // a bit hacky and should arguably be handled in a better way. Meh.
@@ -391,7 +385,8 @@ pub fn build_wix_installer(
             true,
             None,
             false,
-        )?
+        )
+        .or_else(|e| Err(anyhow!(e)))?
     } else if context.target_triple == "i686-pc-windows-msvc" {
         warn!(logger, "building application for x64");
         crate::projectmgmt::resolve_build_context(
@@ -402,17 +397,17 @@ pub fn build_wix_installer(
             true,
             None,
             false,
-        )?
+        )
+        .or_else(|e| Err(anyhow!(e)))?
     } else {
-        return Err(format!(
+        return Err(anyhow!(
             "building for unknown target: {}",
             context.target_triple
         ));
     };
 
-    crate::projectmgmt::build_project(logger, &mut other_context)?;
-    crate::app_packaging::repackage::package_project(logger, &mut other_context)
-        .or_else(|e| Err(e.to_string()))?;
+    crate::projectmgmt::build_project(logger, &mut other_context).or_else(|e| Err(anyhow!(e)))?;
+    crate::app_packaging::repackage::package_project(logger, &mut other_context)?;
 
     let wix_toolset_path = context.build_path.join("wix-toolset");
     if !wix_toolset_path.exists() {
@@ -450,31 +445,29 @@ pub fn build_wix_installer(
     let redist_x64_path_str = redist_x64_path.display().to_string();
     data.insert("vc_redist_x64_path", &redist_x64_path_str);
 
-    let t = HANDLEBARS
-        .render("bundle.wxs", &data)
-        .or_else(|e| Err(e.to_string()))?;
+    let t = HANDLEBARS.render("bundle.wxs", &data)?;
 
     let output_path = context.build_path.join("wix").join("bundle");
 
     if output_path.exists() {
-        std::fs::remove_dir_all(&output_path).or_else(|e| Err(e.to_string()))?;
+        std::fs::remove_dir_all(&output_path)?;
     }
 
-    std::fs::create_dir_all(&output_path).or_else(|e| Err(e.to_string()))?;
+    std::fs::create_dir_all(&output_path)?;
 
     let bundle_wxs_path = output_path.join("bundle.wxs");
-    std::fs::write(&bundle_wxs_path, t).or_else(|e| Err(e.to_string()))?;
+    std::fs::write(&bundle_wxs_path, t)?;
 
     if !redist_x86_path.exists() {
         warn!(logger, "fetching Visual C++ Redistributable (x86)");
         let data = download_and_verify(logger, VC_REDIST_X86_URL, VC_REDIST_X86_SHA256)?;
-        std::fs::write(&redist_x86_path, &data).or_else(|e| Err(e.to_string()))?;
+        std::fs::write(&redist_x86_path, &data)?;
     }
 
     if !redist_x64_path.exists() {
         warn!(logger, "fetching Visual C++ Redistributable (x64)");
         let data = download_and_verify(logger, VC_REDIST_X64_URL, VC_REDIST_X64_SHA256)?;
-        std::fs::write(&redist_x64_path, &data).or_else(|e| Err(e.to_string()))?;
+        std::fs::write(&redist_x64_path, &data)?;
     }
 
     // Then produce a bundle installer for it.
