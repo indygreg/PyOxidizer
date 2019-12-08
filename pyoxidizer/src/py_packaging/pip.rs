@@ -79,11 +79,11 @@ pub fn pip_install(
     for r in find_python_resources(&target_dir) {
         match r {
             PythonFileResource::Source { .. } => {
-                res.push(PythonResource::try_from(&r).or_else(|e| Err(anyhow!(e)))?);
+                res.push(PythonResource::try_from(&r)?);
             }
 
             PythonFileResource::Resource(..) => {
-                res.push(PythonResource::try_from(&r).or_else(|e| Err(anyhow!(e)))?);
+                res.push(PythonResource::try_from(&r)?);
             }
 
             _ => {}
