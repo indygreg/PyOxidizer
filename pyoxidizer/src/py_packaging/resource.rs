@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use anyhow::{anyhow, Context, Error, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryFrom;
@@ -158,15 +159,15 @@ pub enum PythonResource {
 }
 
 impl TryFrom<&PythonFileResource> for PythonResource {
-    type Error = String;
+    type Error = Error;
 
-    fn try_from(resource: &PythonFileResource) -> Result<PythonResource, String> {
+    fn try_from(resource: &PythonFileResource) -> Result<PythonResource> {
         match resource {
             PythonFileResource::Source {
                 full_name, path, ..
             } => {
-                let source = std::fs::read(&path)
-                    .or_else(|_| Err(format!("unable to read {}", path.display())))?;
+                let source =
+                    std::fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
 
                 Ok(PythonResource::ModuleSource {
                     name: full_name.clone(),
@@ -178,8 +179,8 @@ impl TryFrom<&PythonFileResource> for PythonResource {
             PythonFileResource::Bytecode {
                 full_name, path, ..
             } => {
-                let bytecode = std::fs::read(&path)
-                    .or_else(|_| Err(format!("unable to read {}", path.display())))?;
+                let bytecode =
+                    std::fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
 
                 // First 16 bytes are a validation header.
                 let bytecode = bytecode[16..bytecode.len()].to_vec();
@@ -195,8 +196,8 @@ impl TryFrom<&PythonFileResource> for PythonResource {
             PythonFileResource::BytecodeOpt1 {
                 full_name, path, ..
             } => {
-                let bytecode = std::fs::read(&path)
-                    .or_else(|_| Err(format!("unable to read {}", path.display())))?;
+                let bytecode =
+                    std::fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
 
                 // First 16 bytes are a validation header.
                 let bytecode = bytecode[16..bytecode.len()].to_vec();
@@ -212,8 +213,8 @@ impl TryFrom<&PythonFileResource> for PythonResource {
             PythonFileResource::BytecodeOpt2 {
                 full_name, path, ..
             } => {
-                let bytecode = std::fs::read(&path)
-                    .or_else(|_| Err(format!("unable to read {}", path.display())))?;
+                let bytecode =
+                    std::fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
 
                 // First 16 bytes are a validation header.
                 let bytecode = bytecode[16..bytecode.len()].to_vec();
@@ -228,8 +229,8 @@ impl TryFrom<&PythonFileResource> for PythonResource {
 
             PythonFileResource::Resource(resource) => {
                 let path = &(resource.path);
-                let data = std::fs::read(path)
-                    .or_else(|_| Err(format!("unable to read {}", path.display())))?;
+                let data =
+                    std::fs::read(path).with_context(|| format!("reading {}", path.display()))?;
 
                 Ok(PythonResource::Resource {
                     package: resource.package.clone(),
@@ -239,19 +240,19 @@ impl TryFrom<&PythonFileResource> for PythonResource {
             }
 
             PythonFileResource::ExtensionModule { .. } => {
-                Err("converting ExtensionModule not yet supported".to_string())
+                Err(anyhow!("converting ExtensionModule not yet supported"))
             }
 
             PythonFileResource::EggFile { .. } => {
-                Err("converting egg files not yet supported".to_string())
+                Err(anyhow!("converting egg files not yet supported"))
             }
 
             PythonFileResource::PthFile { .. } => {
-                Err("converting pth files not yet supported".to_string())
+                Err(anyhow!("converting pth files not yet supported"))
             }
 
             PythonFileResource::Other { .. } => {
-                Err("converting other files not yet supported".to_string())
+                Err(anyhow!("converting other files not yet supported"))
             }
         }
     }

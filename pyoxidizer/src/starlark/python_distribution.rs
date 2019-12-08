@@ -101,11 +101,11 @@ fn find_resources(path: &Path, state_dir: Option<&Path>) -> Result<Vec<PythonRes
     for r in find_python_resources(&path) {
         match r {
             PythonFileResource::Source { .. } => {
-                res.push(PythonResource::try_from(&r)?);
+                res.push(PythonResource::try_from(&r).or_else(|e| Err(e.to_string()))?);
             }
 
             PythonFileResource::Resource(..) => {
-                res.push(PythonResource::try_from(&r)?);
+                res.push(PythonResource::try_from(&r).or_else(|e| Err(e.to_string()))?);
             }
 
             _ => {}
