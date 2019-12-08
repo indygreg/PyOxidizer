@@ -147,8 +147,8 @@ mod tests {
         EmbeddedPythonBinaryData::from_pre_built_python_executable(
             &pre_built,
             &get_logger()?,
-            std::env!("HOST"),
-            std::env!("HOST"),
+            env!("HOST"),
+            env!("HOST"),
             "0",
         )?;
 

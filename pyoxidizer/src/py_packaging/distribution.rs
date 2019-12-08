@@ -1192,7 +1192,7 @@ mod tests {
     #[test]
     fn test_default_distribution() -> Result<()> {
         let logger = get_logger()?;
-        let target = std::env!("HOST");
+        let target = env!("HOST");
 
         let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
 

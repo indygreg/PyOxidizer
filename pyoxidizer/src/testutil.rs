@@ -26,7 +26,7 @@ lazy_static! {
         let path = DEFAULT_DISTRIBUTION_TEMP_DIR.path();
 
         let logger = get_logger().expect("unable to construct logger");
-        let target = std::env!("HOST");
+        let target = env!("HOST");
 
         default_distribution(&logger, target, path).expect("unable to obtain distribution")
     };
