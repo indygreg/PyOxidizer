@@ -572,18 +572,18 @@ impl ParsedPythonDistribution {
     ///
     /// This effectively resolves the raw file content for .py files into
     /// `SourceModule` instances.
-    pub fn source_modules(&self) -> Vec<SourceModule> {
+    pub fn source_modules(&self) -> Result<Vec<SourceModule>> {
         self.py_modules
             .iter()
             .map(|(name, path)| {
                 let is_package = is_package_from_path(&path);
-                let source = fs::read(&path).expect("error reading source file");
+                let source = fs::read(&path)?;
 
-                SourceModule {
+                Ok(SourceModule {
                     name: name.clone(),
                     source,
                     is_package,
-                }
+                })
             })
             .collect()
     }
@@ -592,7 +592,7 @@ impl ParsedPythonDistribution {
     ///
     /// This effectively resolves the raw file content for resource files
     /// into `ResourceData` instances.
-    pub fn resources_data(&self) -> Vec<ResourceData> {
+    pub fn resources_data(&self) -> Result<Vec<ResourceData>> {
         let mut res = Vec::new();
 
         for (package, inner) in self.resources.iter() {
@@ -600,12 +600,12 @@ impl ParsedPythonDistribution {
                 res.push(ResourceData {
                     package: package.clone(),
                     name: name.clone(),
-                    data: fs::read(&path).expect("error reading resource file"),
+                    data: fs::read(&path)?,
                 });
             }
         }
 
-        res
+        Ok(res)
     }
 
     pub fn filter_extension_modules(

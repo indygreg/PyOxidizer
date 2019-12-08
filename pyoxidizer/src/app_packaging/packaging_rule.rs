@@ -191,7 +191,7 @@ fn resolve_stdlib(
 
     let location = ResourceLocation::new(&rule.install_location);
 
-    for m in dist.source_modules() {
+    for m in dist.source_modules().unwrap() {
         if is_stdlib_test_package(&m.name) && rule.exclude_test_modules {
             info!(logger, "skipping test stdlib module: {}", m.name);
             continue;

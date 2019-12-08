@@ -193,10 +193,16 @@ starlark_module! { python_distribution_module =>
         Ok(Value::from(this.downcast_apply_mut(|dist: &mut PythonDistribution| {
             dist.ensure_distribution_resolved(&logger);
 
-            dist.distribution.as_ref().unwrap().source_modules().iter().map(|module| {
+            let modules = dist.distribution.as_ref().unwrap().source_modules().or_else(|e| Err(RuntimeError {
+                code: "PYTHON_DISTRIBUTION",
+                message: e.to_string(),
+                label: e.to_string(),
+            }.into()))?;
+
+            Ok(modules.iter().map(|module| {
                 Value::new(PythonSourceModule { module: module.clone() })
-            }).collect_vec()
-        })))
+            }).collect_vec())
+        })?))
     }
 
     #[allow(clippy::ptr_arg)]
@@ -208,10 +214,16 @@ starlark_module! { python_distribution_module =>
         Ok(Value::from(this.downcast_apply_mut(|dist: &mut PythonDistribution| {
             dist.ensure_distribution_resolved(&logger);
 
-            dist.distribution.as_ref().unwrap().resources_data().iter().map(|data| {
+            let resources = dist.distribution.as_ref().unwrap().resources_data().or_else(|e| Err(RuntimeError {
+                code: "PYTHON_DISTRIBUTION",
+                message: e.to_string(),
+                label: e.to_string(),
+            }.into()))?;
+
+            Ok(resources.iter().map(|data| {
                 Value::new(PythonResourceData { data: data.clone() })
-            }).collect_vec()
-        })))
+            }).collect_vec())
+        })?))
     }
 
     #[allow(clippy::ptr_arg)]
