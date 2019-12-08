@@ -81,7 +81,7 @@ impl EmbeddedPythonResourcesPrePackaged {
 
         let mut module_bytecodes = BTreeMap::new();
         {
-            let mut compiler = BytecodeCompiler::new(&python_exe);
+            let mut compiler = BytecodeCompiler::new(&python_exe)?;
 
             for (name, request) in &self.bytecode_modules {
                 let bytecode = compiler.compile(

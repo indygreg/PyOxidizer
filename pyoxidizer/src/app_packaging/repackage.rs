@@ -721,7 +721,7 @@ pub fn resolve_python_resources(
     let mut embedded_bytecodes: BTreeMap<String, PackagedModuleBytecode> = BTreeMap::new();
 
     {
-        let mut compiler = BytecodeCompiler::new(&dist.python_exe);
+        let mut compiler = BytecodeCompiler::new(&dist.python_exe).unwrap();
 
         for (name, request) in embedded_bytecode_requests {
             let bytecode = match compiler.compile(
@@ -746,7 +746,7 @@ pub fn resolve_python_resources(
 
     // Compile app-relative bytecode requests.
     {
-        let mut compiler = BytecodeCompiler::new(&dist.python_exe);
+        let mut compiler = BytecodeCompiler::new(&dist.python_exe).unwrap();
 
         for (path, requests) in app_relative_bytecode_requests {
             if !app_relative.contains_key(&path) {

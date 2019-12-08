@@ -53,29 +53,26 @@ pub enum CompileMode {
 }
 
 impl BytecodeCompiler {
-    pub fn new(python: &Path) -> BytecodeCompiler {
-        let temp_dir =
-            tempdir::TempDir::new("bytecode-compiler").expect("could not create temp directory");
+    pub fn new(python: &Path) -> Result<BytecodeCompiler> {
+        let temp_dir = tempdir::TempDir::new("bytecode-compiler")?;
 
         let script_path = PathBuf::from(temp_dir.path()).join("bytecodecompiler.py");
 
         {
-            let mut fh = File::create(&script_path).expect("could not create temp path");
-            fh.write_all(BYTECODE_COMPILER)
-                .expect("could not write bytecodecompiler.py");
+            let mut fh = File::create(&script_path)?;
+            fh.write_all(BYTECODE_COMPILER)?;
         }
 
         let command = process::Command::new(python)
             .arg(script_path.clone())
             .stdin(process::Stdio::piped())
             .stdout(process::Stdio::piped())
-            .spawn()
-            .expect("Python compiler process invoked");
+            .spawn()?;
 
-        BytecodeCompiler {
+        Ok(BytecodeCompiler {
             _temp_dir: temp_dir,
             command,
-        }
+        })
     }
 
     /// Compile Python source into bytecode with an optimization level.

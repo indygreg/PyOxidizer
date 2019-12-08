@@ -52,7 +52,7 @@ pub struct ImportlibData {
 /// source and concatenate with code that provides the memory importer.
 /// Bytecode is then derived from it.
 pub fn derive_importlib(dist: &ParsedPythonDistribution) -> Result<ImportlibData> {
-    let mut compiler = BytecodeCompiler::new(&dist.python_exe);
+    let mut compiler = BytecodeCompiler::new(&dist.python_exe)?;
 
     let mod_bootstrap_path = &dist.py_modules["importlib._bootstrap"];
     let mod_bootstrap_external_path = &dist.py_modules["importlib._bootstrap_external"];
