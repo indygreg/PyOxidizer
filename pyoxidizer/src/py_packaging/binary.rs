@@ -108,6 +108,7 @@ pub struct EmbeddedPythonBinaryPaths {
     pub resources: PathBuf,
     pub libpython: PathBuf,
     pub config_rs: PathBuf,
+    pub cargo_metadata: PathBuf,
 }
 
 /// Represents resources to embed Python in a binary.
@@ -181,6 +182,17 @@ impl EmbeddedPythonBinaryData {
         let config_rs = dest_dir.join("data.rs");
         write_data_rs(&config_rs, &config_rs_data)?;
 
+        let mut cargo_metadata_lines = Vec::new();
+        cargo_metadata_lines.extend(self.library.cargo_metadata.clone());
+        cargo_metadata_lines.push(format!(
+            "cargo:rustc-env=PYEMBED_DATA_RS_PATH={}",
+            config_rs.display()
+        ));
+
+        let cargo_metadata = dest_dir.join("cargo_metadata.txt");
+        let mut fh = File::create(&cargo_metadata)?;
+        fh.write_all(cargo_metadata_lines.join("\n").as_bytes())?;
+
         Ok(EmbeddedPythonBinaryPaths {
             importlib_bootstrap,
             importlib_bootstrap_external,
@@ -189,6 +201,7 @@ impl EmbeddedPythonBinaryData {
             resources,
             libpython,
             config_rs,
+            cargo_metadata,
         })
     }
 }
