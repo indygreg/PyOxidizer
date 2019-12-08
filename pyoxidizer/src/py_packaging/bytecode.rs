@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use anyhow::Result;
 use lazy_static::lazy_static;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Write};
@@ -84,7 +85,7 @@ impl BytecodeCompiler {
         filename: &str,
         optimize: i32,
         output_mode: CompileMode,
-    ) -> Result<Vec<u8>, std::io::Error> {
+    ) -> Result<Vec<u8>> {
         let stdin = self.command.stdin.as_mut().expect("failed to get stdin");
         let stdout = self.command.stdout.as_mut().expect("failed to get stdout");
 

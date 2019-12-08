@@ -21,6 +21,7 @@ path = "src/lib.rs"
 vergen = "3"
 
 [dependencies]
+anyhow = "1.0"
 byteorder = "1.2"
 cargo_toml = "0.6"
 cc = "1.0"
