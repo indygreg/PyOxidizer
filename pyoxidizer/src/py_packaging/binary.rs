@@ -94,3 +94,54 @@ pub struct EmbeddedResourcesBlobs {
     pub modules: Vec<u8>,
     pub resources: Vec<u8>,
 }
+
+/// Represents resources to embed Python in a binary.
+pub struct EmbeddedPythonBinaryData {
+    pub library: PythonLibrary,
+    pub resources: EmbeddedResourcesBlobs,
+}
+
+impl EmbeddedPythonBinaryData {
+    pub fn from_pre_built_python_executable(
+        exe: &PreBuiltPythonExecutable,
+        logger: &slog::Logger,
+        host: &str,
+        target: &str,
+        opt_level: &str,
+    ) -> Result<EmbeddedPythonBinaryData> {
+        let library = exe.build_libpython(logger, host, target, opt_level)?;
+        let resources = exe.build_embedded_blobs()?;
+
+        Ok(EmbeddedPythonBinaryData { library, resources })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testutil::*;
+
+    #[test]
+    fn test_build_simple() -> Result<()> {
+        let resources = EmbeddedPythonResourcesPrePackaged::default();
+        let config = EmbeddedPythonConfig::default();
+        let run_mode = RunMode::Noop;
+
+        let pre_built = PreBuiltPythonExecutable {
+            distribution: get_default_distribution()?,
+            resources,
+            config,
+            run_mode,
+        };
+
+        EmbeddedPythonBinaryData::from_pre_built_python_executable(
+            &pre_built,
+            &get_logger()?,
+            std::env!("HOST"),
+            std::env!("HOST"),
+            "0",
+        )?;
+
+        Ok(())
+    }
+}
