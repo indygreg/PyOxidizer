@@ -14,7 +14,7 @@ use crate::py_packaging::config::RawAllocator;
 /// Build an executable embedding Python using an existing Rust project.
 ///
 /// The path to the produced executable is returned.
-pub fn build_with_rust_project(
+pub fn build_executable_with_rust_project(
     logger: &slog::Logger,
     project_path: &Path,
     bin_name: &str,
@@ -137,7 +137,7 @@ mod tests {
         let build_path = project_path.join("build");
         let artifacts_path = build_path.join("artifacts");
 
-        build_with_rust_project(
+        build_executable_with_rust_project(
             &logger,
             &project_path,
             "myapp",
