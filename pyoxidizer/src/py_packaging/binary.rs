@@ -230,24 +230,33 @@ impl EmbeddedPythonBinaryData {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use crate::py_packaging::distribution::ExtensionModuleFilter;
     use crate::testutil::*;
 
-    pub fn get_prebuilt() -> Result<PreBuiltPythonExecutable> {
-        let resources = EmbeddedPythonResourcesPrePackaged::default();
+    pub fn get_prebuilt(logger: &slog::Logger) -> Result<PreBuiltPythonExecutable> {
+        let distribution = get_default_distribution()?;
+        let mut resources = EmbeddedPythonResourcesPrePackaged::default();
+
+        // We need to add minimal extension modules so builds actually work. If they are missing,
+        // we'll get missing symbol errors during linking.
+        for ext in distribution.filter_extension_modules(logger, &ExtensionModuleFilter::Minimal) {
+            resources.add_extension_module(&ext);
+        }
+
         let config = EmbeddedPythonConfig::default();
         let run_mode = RunMode::Noop;
 
         Ok(PreBuiltPythonExecutable {
-            distribution: get_default_distribution()?,
+            distribution,
             resources,
             config,
             run_mode,
         })
     }
 
-    pub fn get_embedded() -> Result<EmbeddedPythonBinaryData> {
+    pub fn get_embedded(logger: &slog::Logger) -> Result<EmbeddedPythonBinaryData> {
         EmbeddedPythonBinaryData::from_pre_built_python_executable(
-            &get_prebuilt()?,
+            &get_prebuilt(logger)?,
             &get_logger()?,
             env!("HOST"),
             env!("HOST"),
@@ -257,7 +266,8 @@ pub mod tests {
 
     #[test]
     fn test_write_embedded_files() -> Result<()> {
-        let embedded = get_embedded()?;
+        let logger = get_logger()?;
+        let embedded = get_embedded(&logger)?;
         let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
 
         embedded.write_files(temp_dir.path())?;
@@ -267,7 +277,8 @@ pub mod tests {
 
     #[test]
     fn test_build_simple() -> Result<()> {
-        get_embedded()?;
+        let logger = get_logger()?;
+        get_embedded(&logger)?;
 
         Ok(())
     }

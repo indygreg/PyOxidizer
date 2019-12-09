@@ -133,12 +133,12 @@ mod tests {
         crate::projectmgmt::init(&project_path.display().to_string(), None, &[])?;
 
         let logger = get_logger()?;
-        let pre_built = get_prebuilt()?;
+        let pre_built = get_prebuilt(&logger)?;
 
         let build_path = project_path.join("build");
         let artifacts_path = build_path.join("artifacts");
 
-        assert!(build_with_rust_project(
+        build_with_rust_project(
             &logger,
             &project_path,
             "myapp",
@@ -149,8 +149,7 @@ mod tests {
             env!("HOST"),
             "0",
             false,
-        )
-        .is_err());
+        )?;
 
         Ok(())
     }
