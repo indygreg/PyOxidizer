@@ -1337,7 +1337,7 @@ pub fn process_config(
         module_names_path,
         py_modules_path,
         resources_path,
-        libpython_path: libpython_info.path,
+        libpython_path: libpython_info.libpython_path,
         cargo_metadata,
         python_config_rs,
         packaging_state_path,

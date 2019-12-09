@@ -58,11 +58,13 @@ impl PreBuiltPythonExecutable {
         let mut cargo_metadata: Vec<String> = Vec::new();
         cargo_metadata.extend(library_info.cargo_metadata);
 
-        let data = std::fs::read(&library_info.path)?;
+        let libpython_data = std::fs::read(&library_info.libpython_path)?;
+        let libpyembeddedconfig_data = std::fs::read(&library_info.libpyembeddedconfig_path)?;
 
         Ok(PythonLibrary {
             pre_built: self.clone(),
-            data,
+            libpython_data,
+            libpyembeddedconfig_data,
             cargo_metadata,
         })
     }
@@ -88,7 +90,8 @@ impl PreBuiltPythonExecutable {
 /// A self-contained Python executable after it is built.
 pub struct PythonLibrary {
     pub pre_built: PreBuiltPythonExecutable,
-    pub data: Vec<u8>,
+    pub libpython_data: Vec<u8>,
+    pub libpyembeddedconfig_data: Vec<u8>,
     pub cargo_metadata: Vec<String>,
 }
 
@@ -107,6 +110,7 @@ pub struct EmbeddedPythonBinaryPaths {
     pub py_modules: PathBuf,
     pub resources: PathBuf,
     pub libpython: PathBuf,
+    pub libpyembeddedconfig: PathBuf,
     pub config_rs: PathBuf,
     pub cargo_metadata: PathBuf,
 }
@@ -118,6 +122,8 @@ pub struct EmbeddedPythonBinaryData {
     pub library: PythonLibrary,
     pub importlib: ImportlibData,
     pub resources: EmbeddedResourcesBlobs,
+    pub host: String,
+    pub target: String,
 }
 
 impl EmbeddedPythonBinaryData {
@@ -142,6 +148,8 @@ impl EmbeddedPythonBinaryData {
             library,
             importlib,
             resources,
+            host: host.to_string(),
+            target: target.to_string(),
         })
     }
 
@@ -167,9 +175,13 @@ impl EmbeddedPythonBinaryData {
         let mut fh = File::create(&resources)?;
         fh.write_all(&self.resources.resources)?;
 
-        let libpython = dest_dir.join("libpython");
+        let libpython = dest_dir.join("libpythonXY.a");
         let mut fh = File::create(&libpython)?;
-        fh.write_all(&self.library.data)?;
+        fh.write_all(&self.library.libpython_data)?;
+
+        let libpyembeddedconfig = dest_dir.join("libpyembeddedconfig.a");
+        let mut fh = File::create(&libpyembeddedconfig)?;
+        fh.write_all(&self.library.libpyembeddedconfig_data)?;
 
         let config_rs_data = derive_python_config(
             &self.config,
@@ -184,6 +196,14 @@ impl EmbeddedPythonBinaryData {
 
         let mut cargo_metadata_lines = Vec::new();
         cargo_metadata_lines.extend(self.library.cargo_metadata.clone());
+
+        // Tell Cargo where libpythonXY is located.
+        cargo_metadata_lines.push(format!(
+            "cargo:rustc-link-search=native={}",
+            dest_dir.display()
+        ));
+
+        // Give pyembed the path to the config file.
         cargo_metadata_lines.push(format!(
             "cargo:rustc-env=PYEMBED_DATA_RS_PATH={}",
             config_rs.display()
@@ -200,6 +220,7 @@ impl EmbeddedPythonBinaryData {
             py_modules,
             resources,
             libpython,
+            libpyembeddedconfig,
             config_rs,
             cargo_metadata,
         })
@@ -207,24 +228,26 @@ impl EmbeddedPythonBinaryData {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use crate::testutil::*;
 
-    fn get_embedded() -> Result<EmbeddedPythonBinaryData> {
+    pub fn get_prebuilt() -> Result<PreBuiltPythonExecutable> {
         let resources = EmbeddedPythonResourcesPrePackaged::default();
         let config = EmbeddedPythonConfig::default();
         let run_mode = RunMode::Noop;
 
-        let pre_built = PreBuiltPythonExecutable {
+        Ok(PreBuiltPythonExecutable {
             distribution: get_default_distribution()?,
             resources,
             config,
             run_mode,
-        };
+        })
+    }
 
+    pub fn get_embedded() -> Result<EmbeddedPythonBinaryData> {
         EmbeddedPythonBinaryData::from_pre_built_python_executable(
-            &pre_built,
+            &get_prebuilt()?,
             &get_logger()?,
             env!("HOST"),
             env!("HOST"),

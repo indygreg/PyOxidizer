@@ -131,7 +131,8 @@ pub fn make_config_c(
 
 #[derive(Debug)]
 pub struct LibpythonInfo {
-    pub path: PathBuf,
+    pub libpython_path: PathBuf,
+    pub libpyembeddedconfig_path: PathBuf,
     pub cargo_metadata: Vec<String>,
     pub license_infos: BTreeMap<String, Vec<LicenseInfo>>,
 }
@@ -199,6 +200,8 @@ pub fn link_libpython(
         .flag("-std=c99")
         .cargo_metadata(false)
         .compile("pyembeddedconfig");
+
+    let libpyembeddedconfig_path = out_dir.join("libpyembeddedconfig.a");
 
     // Since we disabled cargo metadata lines above.
     cargo_metadata.push("cargo:rustc-link-lib=static=pyembeddedconfig".to_string());
@@ -412,7 +415,8 @@ pub fn link_libpython(
     }
 
     LibpythonInfo {
-        path: out_dir.join("libpythonXY.a"),
+        libpython_path: out_dir.join("libpythonXY.a"),
+        libpyembeddedconfig_path,
         cargo_metadata,
         license_infos,
     }
