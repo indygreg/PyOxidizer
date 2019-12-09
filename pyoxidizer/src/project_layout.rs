@@ -276,3 +276,45 @@ pub fn add_pyoxidizer(project_dir: &Path, _suppress_help: bool) -> Result<()> {
 
     Ok(())
 }
+
+pub fn update_new_cargo_toml(path: &Path) -> Result<()> {
+    let mut fh = std::fs::OpenOptions::new().append(true).open(path)?;
+
+    fh.write_all(b"jemallocator-global = { version = \"0.3\", optional = true }\n")?;
+    fh.write_all(b"pyembed = { path = \"pyembed\" }\n")?;
+    fh.write_all(b"\n")?;
+    fh.write_all(b"[features]\n")?;
+    fh.write_all(b"default = []\n")?;
+    fh.write_all(b"jemalloc = [\"jemallocator-global\", \"pyembed/jemalloc\"]\n")?;
+
+    Ok(())
+}
+
+/// Initialize a new Rust project using PyOxidizer.
+///
+/// The created binary application will have the name of the final
+/// path component.
+pub fn initialize_project(
+    project_path: &Path,
+    code: Option<&str>,
+    pip_install: &[&str],
+) -> Result<()> {
+    let status = std::process::Command::new("cargo")
+        .arg("init")
+        .arg("--bin")
+        .arg(project_path)
+        .status()?;
+
+    if !status.success() {
+        return Err(anyhow!("cargo init failed"));
+    }
+
+    let path = PathBuf::from(project_path);
+    let name = path.iter().last().unwrap().to_str().unwrap();
+    add_pyoxidizer(&path, true)?;
+    update_new_cargo_toml(&path.join("Cargo.toml"))?;
+    write_new_main_rs(&path.join("src").join("main.rs"))?;
+    write_new_pyoxidizer_config_file(&path, &name, code, pip_install)?;
+
+    Ok(())
+}

@@ -7,7 +7,7 @@
 use anyhow::{anyhow, Result};
 use slog::warn;
 use std::fs::create_dir_all;
-use std::io::{Cursor, Read, Write};
+use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
 use std::process;
 
@@ -16,9 +16,7 @@ use super::environment::{canonicalize_path, MINIMUM_RUST_VERSION};
 use crate::app_packaging::config::find_pyoxidizer_config_file_env;
 use crate::app_packaging::repackage::{package_project, process_config, run_from_build};
 use crate::app_packaging::state::BuildContext;
-use crate::project_layout::{
-    add_pyoxidizer, find_pyoxidizer_files, write_new_main_rs, write_new_pyoxidizer_config_file,
-};
+use crate::project_layout::{find_pyoxidizer_files, initialize_project};
 use crate::py_packaging::config::RawAllocator;
 use crate::py_packaging::distribution::{analyze_python_distribution_tar_zst, python_exe_path};
 
@@ -34,19 +32,6 @@ pub fn default_target() -> Result<String> {
     } else {
         Err(anyhow!("unable to resolve target"))
     }
-}
-
-pub fn update_new_cargo_toml(path: &Path) -> Result<()> {
-    let mut fh = std::fs::OpenOptions::new().append(true).open(path)?;
-
-    fh.write_all(b"jemallocator-global = { version = \"0.3\", optional = true }\n")?;
-    fh.write_all(b"pyembed = { path = \"pyembed\" }\n")?;
-    fh.write_all(b"\n")?;
-    fh.write_all(b"[features]\n")?;
-    fh.write_all(b"default = []\n")?;
-    fh.write_all(b"jemalloc = [\"jemallocator-global\", \"pyembed/jemalloc\"]\n")?;
-
-    Ok(())
 }
 
 fn dependency_current(
@@ -372,23 +357,9 @@ pub fn run(
 ///
 /// `pip_install` can specify Python packages to `pip install` for the application.
 pub fn init(project_path: &str, code: Option<&str>, pip_install: &[&str]) -> Result<()> {
-    let status = process::Command::new("cargo")
-        .arg("init")
-        .arg("--bin")
-        .arg(project_path)
-        .status()?;
+    let path = Path::new(project_path);
 
-    if !status.success() {
-        return Err(anyhow!("cargo init failed"));
-    }
-
-    let path = PathBuf::from(project_path);
-    let name = path.iter().last().unwrap().to_str().unwrap();
-    add_pyoxidizer(&path, true)?;
-    update_new_cargo_toml(&path.join("Cargo.toml"))?;
-    write_new_main_rs(&path.join("src").join("main.rs"))?;
-    write_new_pyoxidizer_config_file(&path, &name, code, pip_install)?;
-
+    initialize_project(&path, code, pip_install)?;
     println!();
     println!(
         "A new Rust binary application has been created in {}",
