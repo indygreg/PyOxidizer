@@ -5,8 +5,6 @@
 //! Manage PyOxidizer projects.
 
 use anyhow::{anyhow, Result};
-use handlebars::Handlebars;
-use lazy_static::lazy_static;
 use serde::Serialize;
 use slog::warn;
 use std::collections::BTreeMap;
@@ -22,53 +20,10 @@ use super::environment::{
 use crate::app_packaging::config::find_pyoxidizer_config_file_env;
 use crate::app_packaging::repackage::{package_project, process_config, run_from_build};
 use crate::app_packaging::state::BuildContext;
+use crate::project_layout::{HANDLEBARS, PYEMBED_RS_FILES};
 use crate::py_packaging::config::RawAllocator;
 use crate::py_packaging::distribution::{analyze_python_distribution_tar_zst, python_exe_path};
 use crate::py_packaging::fsscan::walk_tree_files;
-
-lazy_static! {
-    static ref PYEMBED_RS_FILES: BTreeMap<&'static str, &'static [u8]> = {
-        let mut res: BTreeMap<&'static str, &'static [u8]> = BTreeMap::new();
-
-        res.insert("config.rs", include_bytes!("pyembed/config.rs"));
-        res.insert("lib.rs", include_bytes!("pyembed/lib.rs"));
-        res.insert("data.rs", include_bytes!("pyembed/data.rs"));
-        res.insert("importer.rs", include_bytes!("pyembed/importer.rs"));
-        res.insert("osutils.rs", include_bytes!("pyembed/osutils.rs"));
-        res.insert("pyalloc.rs", include_bytes!("pyembed/pyalloc.rs"));
-        res.insert("pyinterp.rs", include_bytes!("pyembed/pyinterp.rs"));
-        res.insert("pystr.rs", include_bytes!("pyembed/pystr.rs"));
-
-        res
-    };
-    static ref HANDLEBARS: Handlebars = {
-        let mut handlebars = Handlebars::new();
-
-        handlebars
-            .register_template_string("new-main.rs", include_str!("templates/new-main.rs"))
-            .unwrap();
-        handlebars
-            .register_template_string(
-                "new-pyoxidizer.bzl",
-                include_str!("templates/new-pyoxidizer.bzl"),
-            )
-            .unwrap();
-        handlebars
-            .register_template_string(
-                "pyembed-build.rs",
-                include_str!("templates/pyembed-build.rs"),
-            )
-            .unwrap();
-        handlebars
-            .register_template_string(
-                "pyembed-cargo.toml",
-                include_str!("templates/pyembed-cargo.toml"),
-            )
-            .unwrap();
-
-        handlebars
-    };
-}
 
 /// Attempt to resolve the default Rust target for a build.
 pub fn default_target() -> Result<String> {

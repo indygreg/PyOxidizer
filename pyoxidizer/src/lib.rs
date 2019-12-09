@@ -17,6 +17,7 @@ pub mod distribution;
 pub mod environment;
 mod licensing;
 pub mod logging;
+pub mod project_layout;
 pub mod projectmgmt;
 pub mod py_packaging;
 pub mod python_distributions;
