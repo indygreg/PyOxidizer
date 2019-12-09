@@ -149,10 +149,10 @@ pub fn link_libpython(
     host: &str,
     target: &str,
     opt_level: &str,
-) -> LibpythonInfo {
+) -> Result<LibpythonInfo> {
     let mut cargo_metadata: Vec<String> = Vec::new();
 
-    let temp_dir = tempdir::TempDir::new("libpython").unwrap();
+    let temp_dir = tempdir::TempDir::new("libpython")?;
     let temp_dir_path = temp_dir.path();
 
     let extension_modules = &resources.extension_modules;
@@ -176,14 +176,14 @@ pub fn link_libpython(
     let config_c_path = out_dir.join("config.c");
     let config_c_temp_path = temp_dir_path.join("config.c");
 
-    fs::write(&config_c_path, config_c_source.as_bytes()).expect("unable to write config.c");
-    fs::write(&config_c_temp_path, config_c_source.as_bytes()).expect("unable to write config.c");
+    fs::write(&config_c_path, config_c_source.as_bytes())?;
+    fs::write(&config_c_temp_path, config_c_source.as_bytes())?;
 
     // We need to make all .h includes accessible.
     for (name, fs_path) in &dist.includes {
         let full = temp_dir_path.join(name);
-        create_dir_all(full.parent().expect("parent directory")).expect("create include directory");
-        fs::copy(fs_path, full).expect("unable to copy include file");
+        create_dir_all(full.parent().expect("parent directory"))?;
+        fs::copy(fs_path, full)?;
     }
 
     // TODO flags should come from parsed distribution config.
@@ -234,10 +234,10 @@ pub fn link_libpython(
         }
 
         let parent = temp_dir_path.join(rel_path.parent().unwrap());
-        create_dir_all(parent).unwrap();
+        create_dir_all(parent)?;
 
         let full = temp_dir_path.join(rel_path);
-        fs::copy(fs_path, &full).expect("unable to copy object file");
+        fs::copy(fs_path, &full)?;
 
         build.object(&full);
     }
@@ -322,7 +322,7 @@ pub fn link_libpython(
         for (i, object_data) in em.object_file_data.iter().enumerate() {
             let out_path = temp_dir_path.join(format!("{}.{}.o", name, i));
 
-            fs::write(&out_path, object_data).expect("unable to write object file");
+            fs::write(&out_path, object_data)?;
             build.object(&out_path);
         }
 
@@ -359,7 +359,7 @@ pub fn link_libpython(
         warn!(logger, "{}", fs_path.display());
 
         let library_path = out_dir.join(format!("lib{}.a", library));
-        fs::copy(fs_path, library_path).expect("unable to copy library file");
+        fs::copy(fs_path, library_path)?;
 
         cargo_metadata.push(format!("cargo:rustc-link-lib=static={}", library))
     }
@@ -414,10 +414,10 @@ pub fn link_libpython(
         }
     }
 
-    LibpythonInfo {
+    Ok(LibpythonInfo {
         libpython_path: out_dir.join("libpythonXY.a"),
         libpyembeddedconfig_path,
         cargo_metadata,
         license_infos,
-    }
+    })
 }

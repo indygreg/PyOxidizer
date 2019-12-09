@@ -1272,7 +1272,8 @@ pub fn process_config(
         &context.host_triple,
         &context.target_triple,
         opt_level,
-    );
+    )
+    .unwrap();
     cargo_metadata.extend(libpython_info.cargo_metadata);
 
     for p in &resources.read_files {

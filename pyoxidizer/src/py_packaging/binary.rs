@@ -53,7 +53,7 @@ impl PreBuiltPythonExecutable {
             host,
             target,
             opt_level,
-        );
+        )?;
 
         let mut cargo_metadata: Vec<String> = Vec::new();
         cargo_metadata.extend(library_info.cargo_metadata);
