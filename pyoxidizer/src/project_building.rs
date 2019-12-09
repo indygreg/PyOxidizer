@@ -8,6 +8,7 @@ use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 
 use crate::environment::MINIMUM_RUST_VERSION;
+use crate::project_layout::initialize_project;
 use crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable};
 use crate::py_packaging::config::RawAllocator;
 
@@ -118,6 +119,45 @@ pub fn build_executable_with_rust_project(
     Ok(exe_path)
 }
 
+/// Build a Python executable using a temporary Rust project.
+///
+/// Returns the binary data constituting the built executable.
+pub fn build_python_executable(
+    logger: &slog::Logger,
+    bin_name: &str,
+    exe: &PreBuiltPythonExecutable,
+    host: &str,
+    target: &str,
+    opt_level: &str,
+    release: bool,
+) -> Result<Vec<u8>> {
+    let temp_dir = tempdir::TempDir::new("pyoxidizer")?;
+
+    // Directory needs to have name of project.
+    let project_path = temp_dir.path().join(bin_name);
+    let build_path = temp_dir.path().join("build");
+    let artifacts_path = temp_dir.path().join("artifacts");
+
+    initialize_project(&project_path, None, &[])?;
+
+    let exe_path = build_executable_with_rust_project(
+        logger,
+        &project_path,
+        bin_name,
+        exe,
+        &build_path,
+        &artifacts_path,
+        host,
+        target,
+        opt_level,
+        release,
+    )?;
+
+    let data = std::fs::read(&exe_path)?;
+
+    Ok(data)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -126,24 +166,13 @@ mod tests {
 
     #[test]
     fn test_empty_project() -> Result<()> {
-        let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
-        let project_path = temp_dir.path().join("myapp");
-
-        crate::projectmgmt::init(&project_path.display().to_string(), None, &[])?;
-
         let logger = get_logger()?;
         let pre_built = get_prebuilt(&logger)?;
 
-        let build_path = project_path.join("build");
-        let artifacts_path = build_path.join("artifacts");
-
-        build_executable_with_rust_project(
+        build_python_executable(
             &logger,
-            &project_path,
             "myapp",
             &pre_built,
-            &build_path,
-            &artifacts_path,
             env!("HOST"),
             env!("HOST"),
             "0",
