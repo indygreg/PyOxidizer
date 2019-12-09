@@ -63,7 +63,11 @@ impl PreBuiltPythonExecutable {
 
         Ok(PythonLibrary {
             pre_built: self.clone(),
+            libpython_filename: PathBuf::from(library_info.libpython_path.file_name().unwrap()),
             libpython_data,
+            libpyembeddedconfig_filename: PathBuf::from(
+                library_info.libpyembeddedconfig_path.file_name().unwrap(),
+            ),
             libpyembeddedconfig_data,
             cargo_metadata,
         })
@@ -90,7 +94,9 @@ impl PreBuiltPythonExecutable {
 /// A self-contained Python executable after it is built.
 pub struct PythonLibrary {
     pub pre_built: PreBuiltPythonExecutable,
+    pub libpython_filename: PathBuf,
     pub libpython_data: Vec<u8>,
+    pub libpyembeddedconfig_filename: PathBuf,
     pub libpyembeddedconfig_data: Vec<u8>,
     pub cargo_metadata: Vec<String>,
 }
@@ -175,11 +181,11 @@ impl EmbeddedPythonBinaryData {
         let mut fh = File::create(&resources)?;
         fh.write_all(&self.resources.resources)?;
 
-        let libpython = dest_dir.join("libpythonXY.a");
+        let libpython = dest_dir.join(&self.library.libpython_filename);
         let mut fh = File::create(&libpython)?;
         fh.write_all(&self.library.libpython_data)?;
 
-        let libpyembeddedconfig = dest_dir.join("libpyembeddedconfig.a");
+        let libpyembeddedconfig = dest_dir.join(&self.library.libpyembeddedconfig_filename);
         let mut fh = File::create(&libpyembeddedconfig)?;
         fh.write_all(&self.library.libpyembeddedconfig_data)?;
 
