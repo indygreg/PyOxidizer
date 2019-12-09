@@ -7,9 +7,9 @@ use slog::warn;
 use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 
-use super::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable};
-use super::config::RawAllocator;
 use crate::environment::MINIMUM_RUST_VERSION;
+use crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable};
+use crate::py_packaging::config::RawAllocator;
 
 /// Build an executable embedding Python using an existing Rust project.
 ///

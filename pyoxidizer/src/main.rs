@@ -35,6 +35,7 @@ mod distribution;
 mod environment;
 mod licensing;
 mod logging;
+mod project_building;
 mod project_layout;
 mod projectmgmt;
 #[allow(unused)]

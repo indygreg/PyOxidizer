@@ -11,6 +11,5 @@ pub mod embedded_resource;
 pub mod fsscan;
 pub mod libpython;
 pub mod pip;
-pub mod project;
 pub mod pyembed;
 pub mod resource;
