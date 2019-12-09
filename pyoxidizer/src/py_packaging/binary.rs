@@ -274,12 +274,4 @@ pub mod tests {
 
         Ok(())
     }
-
-    #[test]
-    fn test_build_simple() -> Result<()> {
-        let logger = get_logger()?;
-        get_embedded(&logger)?;
-
-        Ok(())
-    }
 }
