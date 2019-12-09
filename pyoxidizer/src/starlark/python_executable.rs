@@ -13,12 +13,13 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use super::embedded_python_config::EmbeddedPythonConfig;
-use super::env::required_type_arg;
+use super::env::{required_str_arg, required_type_arg};
 use super::python_distribution::PythonDistribution;
 use super::python_resource::PythonEmbeddedResources;
 use super::python_run_mode::PythonRunMode;
 use crate::app_packaging::environment::EnvironmentContext;
 use crate::py_packaging::binary::PreBuiltPythonExecutable;
+use crate::py_packaging::distribution::ExtensionModuleFilter;
 
 impl TypedValue for PreBuiltPythonExecutable {
     immutable!();
@@ -48,7 +49,8 @@ impl TypedValue for PreBuiltPythonExecutable {
 
 starlark_module! { python_executable_env =>
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable(env env, distribution, resources, config, run_mode) {
+    PythonExecutable(env env, name, distribution, resources, config, run_mode) {
+        let name = required_str_arg("name", &name)?;
         required_type_arg("distribution", "PythonDistribution", &distribution)?;
         required_type_arg("resources", "PythonEmbeddedResources", &resources)?;
         required_type_arg("config", "EmbeddedPythonConfig", &config)?;
@@ -65,11 +67,18 @@ starlark_module! { python_executable_env =>
             dist.distribution.clone().unwrap().clone()
         });
 
-        let resources = resources.downcast_apply(|r: &PythonEmbeddedResources| r.embedded.clone());
+        let mut resources = resources.downcast_apply(|r: &PythonEmbeddedResources| r.embedded.clone());
         let config = config.downcast_apply(|c: &EmbeddedPythonConfig| c.config.clone());
         let run_mode = run_mode.downcast_apply(|m: &PythonRunMode| m.run_mode.clone());
 
+        // Always ensure minimal extension modules are present, otherwise we get
+        // missing symbol errors at link time.
+        for ext in distribution.filter_extension_modules(&logger, &ExtensionModuleFilter::Minimal) {
+            resources.add_extension_module(&ext);
+        }
+
         Ok(Value::new(PreBuiltPythonExecutable {
+            name,
             distribution,
             resources,
             config,
@@ -86,7 +95,7 @@ mod tests {
     #[test]
     fn test_no_args() {
         let err = starlark_nok("PythonExecutable()");
-        assert!(err.message.starts_with("Missing parameter distribution"));
+        assert!(err.message.starts_with("Missing parameter name"));
     }
 
     #[test]
@@ -100,7 +109,7 @@ mod tests {
 
         let exe = starlark_eval_in_env(
             &mut env,
-            "PythonExecutable(dist, resources, config, run_mode)",
+            "PythonExecutable('testapp', dist, resources, config, run_mode)",
         )
         .unwrap();
 

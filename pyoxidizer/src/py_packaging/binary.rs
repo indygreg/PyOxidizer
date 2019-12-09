@@ -18,6 +18,7 @@ use super::pyembed::{derive_python_config, write_data_rs};
 /// A self-contained Python executable before it is compiled.
 #[derive(Debug, Clone)]
 pub struct PreBuiltPythonExecutable {
+    pub name: String,
     pub distribution: ParsedPythonDistribution,
     pub resources: EmbeddedPythonResourcesPrePackaged,
     pub config: EmbeddedPythonConfig,
@@ -253,6 +254,7 @@ pub mod tests {
         let run_mode = RunMode::Noop;
 
         Ok(PreBuiltPythonExecutable {
+            name: "testapp".to_string(),
             distribution,
             resources,
             config,

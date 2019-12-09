@@ -130,7 +130,7 @@ pub fn build_python_executable(
     target: &str,
     opt_level: &str,
     release: bool,
-) -> Result<Vec<u8>> {
+) -> Result<(String, Vec<u8>)> {
     let temp_dir = tempdir::TempDir::new("pyoxidizer")?;
 
     // Directory needs to have name of project.
@@ -154,8 +154,9 @@ pub fn build_python_executable(
     )?;
 
     let data = std::fs::read(&exe_path)?;
+    let filename = exe_path.file_name().unwrap().to_string_lossy().to_string();
 
-    Ok(data)
+    Ok((filename, data))
 }
 
 #[cfg(test)]

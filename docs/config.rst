@@ -735,6 +735,10 @@ and a default run-time configuration for that interpreter.
 Instances are constructed by passing arguments to a ``PythonExecutable()``
 function. The accepted arguments are:
 
+``name`` (``str``)
+   The name of the application being built. This will be used to construct the
+   default filename of the executable.
+
 ``distribution`` (``PythonDistribution``)
    The Python distribution to use to construct this executable. The
    interpreter from the distribution will be compiled into the produced

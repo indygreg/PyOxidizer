@@ -15,15 +15,18 @@ use starlark::{
 use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use super::env::required_str_arg;
 use super::python_resource::{
     PythonBytecodeModule, PythonExtensionModule, PythonResourceData, PythonSourceModule,
 };
+use crate::app_packaging::environment::EnvironmentContext;
 use crate::app_packaging::resource::{
     FileContent as RawFileContent, FileManifest as RawFileManifest,
 };
+use crate::project_building::build_python_executable;
+use crate::py_packaging::binary::PreBuiltPythonExecutable;
 use crate::py_packaging::distribution::ExtensionModule;
 use crate::py_packaging::resource::{BytecodeModule, ResourceData, SourceModule};
 
@@ -108,6 +111,26 @@ impl FileManifest {
     fn add_extension_module(&self, _prefix: &str, _em: &ExtensionModule) {
         println!("support for adding extension modules not yet implemented");
     }
+
+    fn add_python_executable(
+        &mut self,
+        logger: &slog::Logger,
+        prefix: &str,
+        exe: &PreBuiltPythonExecutable,
+        target: &str,
+    ) -> Result<()> {
+        let (filename, data) =
+            build_python_executable(logger, &exe.name, exe, env!("HOST"), target, "0", true)?;
+
+        let content = RawFileContent {
+            data,
+            executable: true,
+        };
+
+        let path = Path::new(&prefix).join(filename);
+        self.manifest.add_file(&path, &content)?;
+        Ok(())
+    }
 }
 
 impl TypedValue for FileManifest {
@@ -145,7 +168,7 @@ starlark_module! { file_resource_env =>
     }
 
     #[allow(clippy::ptr_arg)]
-    FileManifest.add_python_resource(this, prefix, resource) {
+    FileManifest.add_python_resource(env env, this, prefix, resource) {
         let prefix = required_str_arg("prefix", &prefix)?;
 
         this.downcast_apply_mut(|manifest: &mut FileManifest| -> Result<(), ValueError> {
@@ -181,6 +204,21 @@ starlark_module! { file_resource_env =>
                     manifest.add_extension_module(&prefix, &m);
 
                     Ok(())
+                },
+                "PythonExecutable" => {
+                    let context = env.get("CONTEXT").expect("CONTEXT not defined");
+                    let (logger, target) = context.downcast_apply(|x: &EnvironmentContext| {
+                        (x.logger.clone(), x.build_target.clone())
+                    });
+
+                    let exe = resource.downcast_apply(|exe: &PreBuiltPythonExecutable| exe.clone());
+
+                    manifest.add_python_executable(&logger, &prefix, &exe, &target)
+                        .or_else(|e| Err(RuntimeError {
+                            code: "PYOXIDIZER_BUILD",
+                            message: e.to_string(),
+                            label: "add_python_resource".to_string(),
+                        }.into()))
                 },
                 t => Err(RuntimeError {
                     code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -299,7 +337,30 @@ mod tests {
     }
 
     #[test]
-    fn test_app_python_resources() {
+    fn test_add_python_resources() {
         starlark_ok("dist = default_python_distribution(); m = FileManifest(); m.add_python_resources('lib', dist.source_modules())");
+    }
+
+    #[test]
+    fn test_add_python_executable() {
+        let mut env = starlark_env();
+
+        starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
+        starlark_eval_in_env(&mut env, "resources = PythonEmbeddedResources()").unwrap();
+        starlark_eval_in_env(&mut env, "run_mode = python_run_mode_noop()").unwrap();
+        starlark_eval_in_env(&mut env, "config = EmbeddedPythonConfig()").unwrap();
+        starlark_eval_in_env(
+            &mut env,
+            "exe = PythonExecutable('testapp', dist, resources, config, run_mode)",
+        )
+        .unwrap();
+
+        let m = Value::new(FileManifest {
+            manifest: RawFileManifest::default(),
+        });
+
+        env.set("m", m).unwrap();
+
+        starlark_eval_in_env(&mut env, "m.add_python_resource('bin', exe)").unwrap();
     }
 }
