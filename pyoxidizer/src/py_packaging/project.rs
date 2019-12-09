@@ -122,7 +122,6 @@ pub fn build_with_rust_project(
 mod tests {
     use super::*;
     use crate::py_packaging::binary::tests::get_prebuilt;
-    use crate::py_packaging::embedded_resource::EmbeddedPythonResourcesPrePackaged;
     use crate::testutil::*;
 
     #[test]
