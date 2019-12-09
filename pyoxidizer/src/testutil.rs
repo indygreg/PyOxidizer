@@ -12,7 +12,7 @@ use crate::py_packaging::distribution::{default_distribution, ParsedPythonDistri
 pub fn get_logger() -> Result<slog::Logger> {
     Ok(Logger::root(
         PrintlnDrain {
-            min_level: slog::Level::Error,
+            min_level: slog::Level::Warning,
         }
         .fuse(),
         slog::o!(),
