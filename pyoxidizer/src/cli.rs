@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use super::analyze;
 use super::environment::BUILD_SEMVER_LIGHTWEIGHT;
 use super::logging;
+use super::project_layout;
 use super::projectmgmt;
 
 const ADD_ABOUT: &str = "\
@@ -309,7 +310,7 @@ pub fn run_cli() -> Result<()> {
         ("add", Some(args)) => {
             let path = args.value_of("path").unwrap();
 
-            projectmgmt::add_pyoxidizer(Path::new(path), false)
+            project_layout::add_pyoxidizer(Path::new(path), false)
         }
 
         ("analyze", Some(args)) => {
