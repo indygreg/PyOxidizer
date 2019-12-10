@@ -2,9 +2,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use std::collections::btree_map::Iter;
 use std::collections::{BTreeMap, BTreeSet};
+use std::io::Write;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
 /// Represents file content, agnostic of storage location.
@@ -79,6 +82,37 @@ impl FileManifest {
     /// Obtain an iterator over paths and file content in this manifest.
     pub fn entries(&self) -> Iter<PathBuf, FileContent> {
         self.files.iter()
+    }
+
+    /// Write the contents of the install manifest to a filesystem path.
+    pub fn write_to_path(&self, path: &Path) -> Result<()> {
+        for (p, c) in &self.files {
+            let dest_path = path.join(p);
+            let parent = dest_path
+                .parent()
+                .ok_or_else(|| anyhow!("unable to resolve parent directory"))?;
+
+            std::fs::create_dir_all(parent)
+                .context("creating parent directory for FileManifest")?;
+
+            let mut fh = std::fs::File::create(&dest_path)?;
+            fh.write_all(&c.data)?;
+            if cfg!(unix) {
+                fh.metadata()?.permissions().set_mode(0o770);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Write the contents of the install manifest to a filesystem path,
+    /// replacing any existing content at the specified path.
+    pub fn replace_path(&self, path: &Path) -> Result<()> {
+        if path.exists() {
+            std::fs::remove_dir_all(path)?;
+        }
+
+        self.write_to_path(path)
     }
 }
 

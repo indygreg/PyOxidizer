@@ -789,6 +789,17 @@ source modules in a directory named ``lib``::
    dist = default_python_distribution()
    m.add_python_resources(dist.source_modules())
 
+``FileManifest.install(path, replace=True)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method writes the content of the ``FileManifest`` to a directory
+specified by ``path``. The path is evaluated relative to the path
+specified by ``BUILD_PATH``.
+
+If ``replace`` is True (the default), the destination directory will
+be deleted and the final state of the destination directory should
+exactly match the state of the ``FileManifest``.
+
 .. _config_packaging_rule:
 
 Packaging Rules

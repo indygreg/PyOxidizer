@@ -17,7 +17,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use super::env::required_str_arg;
+use super::env::{required_bool_arg, required_str_arg};
 use super::python_resource::{
     PythonBytecodeModule, PythonExtensionModule, PythonResourceData, PythonSourceModule,
 };
@@ -243,6 +243,31 @@ starlark_module! { file_resource_env =>
 
         Ok(Value::new(None))
     }
+
+    #[allow(clippy::ptr_arg)]
+    FileManifest.install(env env, this, path, replace=true) {
+        let path = required_str_arg("path", &path)?;
+        let replace = required_bool_arg("replace", &replace)?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+        let build_path = context.downcast_apply(|x: &EnvironmentContext| x.build_path.clone());
+
+        let dest_path = build_path.join(path);
+
+        this.downcast_apply(|manifest: &FileManifest| {
+            if replace {
+                manifest.manifest.replace_path(&dest_path)
+            } else {
+                manifest.manifest.write_to_path(&dest_path)
+            }
+        }.or_else(|e| Err(RuntimeError {
+            code: "PYOXIDIZER_INSTALL",
+            message: format!("error installing FileManifest: {}", e),
+            label: "FileManifest.install()".to_string()
+        }.into())))?;
+
+        Ok(Value::new(None))
+    }
 }
 
 #[cfg(test)]
@@ -362,5 +387,46 @@ mod tests {
         env.set("m", m).unwrap();
 
         starlark_eval_in_env(&mut env, "m.add_python_resource('bin', exe)").unwrap();
+    }
+
+    #[test]
+    fn test_install() {
+        let mut env = starlark_env();
+
+        starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
+        starlark_eval_in_env(&mut env, "resources = PythonEmbeddedResources()").unwrap();
+        starlark_eval_in_env(&mut env, "run_mode = python_run_mode_noop()").unwrap();
+        starlark_eval_in_env(&mut env, "config = EmbeddedPythonConfig()").unwrap();
+        starlark_eval_in_env(
+            &mut env,
+            "exe = PythonExecutable('testapp', dist, resources, config, run_mode)",
+        )
+        .unwrap();
+
+        let m = Value::new(FileManifest {
+            manifest: RawFileManifest::default(),
+        });
+
+        env.set("m", m).unwrap();
+
+        starlark_eval_in_env(&mut env, "m.add_python_resource('bin', exe)").unwrap();
+        starlark_eval_in_env(&mut env, "m.install('myapp')").unwrap();
+
+        let context = env
+            .get("CONTEXT")
+            .unwrap()
+            .downcast_apply(|x: &EnvironmentContext| x.clone());
+
+        let dest_path = context.build_path.join("myapp");
+        assert!(dest_path.exists());
+
+        // There should be an executable at myapp/bin/testapp[.exe].
+        let app_exe = if cfg!(windows) {
+            dest_path.join("bin").join("testapp.exe")
+        } else {
+            dest_path.join("bin").join("testapp")
+        };
+
+        assert!(app_exe.exists());
     }
 }
