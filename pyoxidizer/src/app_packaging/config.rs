@@ -120,7 +120,11 @@ pub fn resolve_install_location(value: &str) -> Result<InstallLocation> {
 }
 
 pub fn default_raw_allocator(target: &str) -> RawAllocator {
-    if target == "x86_64-pc-windows-msvc" {
+    // Jemalloc doesn't work on Windows.
+    //
+    // We don't use Jemalloc by default in the test environment because it slows down
+    // builds of test projects.
+    if target == "x86_64-pc-windows-msvc" || cfg!(test) {
         RawAllocator::System
     } else {
         RawAllocator::Jemalloc
