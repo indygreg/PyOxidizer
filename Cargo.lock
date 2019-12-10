@@ -539,12 +539,12 @@ dependencies = [
 
 [[package]]
 name = "git2"
-version = "0.9.2"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "bitflags 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)",
- "libgit2-sys 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libgit2-sys 0.9.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl-probe 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl-sys 0.9.53 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -842,7 +842,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "libgit2-sys"
-version = "0.8.2"
+version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cc 1.0.48 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1274,7 +1274,7 @@ dependencies = [
  "copy_dir 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "encoding_rs 0.8.20 (registry+https://github.com/rust-lang/crates.io-index)",
  "fs2 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "git2 0.9.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "git2 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "glob 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "goblin 0.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "handlebars 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2390,7 +2390,7 @@ dependencies = [
 "checksum futures-cpupool 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)" = "ab90cde24b3319636588d0c35fe03b1333857621051837ed769faefb4c2162e4"
 "checksum generic-array 0.12.3 (registry+https://github.com/rust-lang/crates.io-index)" = "c68f0274ae0e023facc3c97b2e00f076be70e254bc851d972503b328db79b2ec"
 "checksum getrandom 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)" = "e7db7ca94ed4cd01190ceee0d8a8052f08a247aa1b469a7f68c6a3b71afcf407"
-"checksum git2 0.9.2 (registry+https://github.com/rust-lang/crates.io-index)" = "8cb400360e8a4d61b10e648285bbfa919bbf9519d0d5d5720354456f44349226"
+"checksum git2 0.10.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7c1af51ea8a906616af45a4ce78eacf25860f7a13ae7bf8a814693f0f4037a26"
 "checksum glob 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
 "checksum goblin 0.0.24 (registry+https://github.com/rust-lang/crates.io-index)" = "e3fa261d919c1ae9d1e4533c4a2f99e10938603c4208d56c05bec7a872b661b0"
 "checksum h2 0.1.26 (registry+https://github.com/rust-lang/crates.io-index)" = "a5b34c246847f938a410a03c5458c7fee2274436675e76d8b903c08efc29c462"
@@ -2420,7 +2420,7 @@ dependencies = [
 "checksum lalrpop-util 0.16.3 (registry+https://github.com/rust-lang/crates.io-index)" = "33b27d8490dbe1f9704b0088d61e8d46edc10d5673a8829836c6ded26a9912c7"
 "checksum lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 "checksum libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)" = "d515b1f41455adea1313a4a2ac8a8a477634fbae63cc6100e3aebb207ce61558"
-"checksum libgit2-sys 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)" = "4c179ed6d19cd3a051e68c177fbbc214e79ac4724fac3a850ec9f3d3eb8a5578"
+"checksum libgit2-sys 0.9.2 (registry+https://github.com/rust-lang/crates.io-index)" = "4870c781f6063efb83150cd22c1ddf6ecf58531419e7570cdcced46970f64a16"
 "checksum libssh2-sys 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)" = "5fcd5a428a31cbbfe059812d74f4b6cd3b9b7426c2bdaec56993c5365da1c328"
 "checksum libz-sys 1.0.25 (registry+https://github.com/rust-lang/crates.io-index)" = "2eb5e43362e38e2bca2fd5f5134c4d4564a23a5c28e9b95411652021a8675ebe"
 "checksum linked-hash-map 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "ae91b68aebc4ddb91978b11a1b02ddd8602a05ec19002801c5666000e05e0f83"
