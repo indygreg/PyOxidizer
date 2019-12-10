@@ -998,8 +998,8 @@ pub fn get_http_client() -> reqwest::Result<reqwest::Client> {
 
             if let Ok(url) = Url::parse(&value) {
                 if let Some(proxy) = match schema {
-                    "http" => Some(reqwest::Proxy::http(url)),
-                    "https" => Some(reqwest::Proxy::https(url)),
+                    "http" => Some(reqwest::Proxy::http(url.as_str())),
+                    "https" => Some(reqwest::Proxy::https(url.as_str())),
                     _ => None,
                 } {
                     if let Ok(proxy) = proxy {
@@ -1043,7 +1043,7 @@ pub fn download_distribution(url: &str, sha256: &str, cache_dir: &Path) -> PathB
     println!("downloading {}", u);
     let client = get_http_client().expect("unable to get HTTP client");
     let mut response = client
-        .get(u)
+        .get(u.as_str())
         .send()
         .expect("unable to perform HTTP request");
     response

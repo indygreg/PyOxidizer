@@ -1294,7 +1294,7 @@ dependencies = [
  "starlark 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tar 0.4.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempdir 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "url 1.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "url 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "uuid 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "vergen 3.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "version-compare 0.0.10 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -51,7 +51,7 @@ slog = "2.4"
 starlark = "0.2"
 tar = "0.4"
 tempdir = "0.3"
-url = "1.7"
+url = "2.1"
 uuid = { version = "0.8", features = ["v4", "v5"] }
 version-compare = "0.0"
 walkdir = "2"
