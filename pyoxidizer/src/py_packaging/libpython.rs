@@ -158,6 +158,12 @@ pub fn link_libpython(
     let extension_modules = &resources.extension_modules;
     let built_extension_modules = &resources.built_extension_modules;
 
+    let windows = match target {
+        "i686-pc-windows-msvc" => true,
+        "x86_64-pc-windows-msvc" => true,
+        _ => false,
+    };
+
     // Sometimes we have canonicalized paths. These can break cc/cl.exe when they
     // are \\?\ paths on Windows for some reason. We hack around this by doing
     // operations in the temp directory and copying files to their final resting
@@ -201,7 +207,11 @@ pub fn link_libpython(
         .cargo_metadata(false)
         .compile("pyembeddedconfig");
 
-    let libpyembeddedconfig_path = out_dir.join("libpyembeddedconfig.a");
+    let libpyembeddedconfig_path = out_dir.join(if windows {
+        "pyembeddedconfig.lib"
+    } else {
+        "libpyembeddedconfig.a"
+    });
 
     // Since we disabled cargo metadata lines above.
     cargo_metadata.push("cargo:rustc-link-lib=static=pyembeddedconfig".to_string());
@@ -338,11 +348,7 @@ pub fn link_libpython(
     // TODO this workaround feels like a bug in the Python distribution not
     // advertising a dependency on the CRT linkage type. Consider adding this
     // to the distribution metadata.
-    if match target {
-        "i686-pc-windows-msvc" => true,
-        "x86_64-pc-windows-msvc" => true,
-        _ => false,
-    } {
+    if windows {
         needed_system_libraries.insert("msvcrt");
     }
 
@@ -396,6 +402,12 @@ pub fn link_libpython(
     build.compile("pythonXY");
     warn!(logger, "libpythonXY created");
 
+    let libpython_path = out_dir.join(if windows {
+        "pythonXY.lib"
+    } else {
+        "libpythonXY.a"
+    });
+
     cargo_metadata.push("cargo:rustc-link-lib=static=pythonXY".to_string());
     cargo_metadata.push(format!(
         "cargo:rustc-link-search=native={}",
@@ -415,7 +427,7 @@ pub fn link_libpython(
     }
 
     Ok(LibpythonInfo {
-        libpython_path: out_dir.join("libpythonXY.a"),
+        libpython_path,
         libpyembeddedconfig_path,
         cargo_metadata,
         license_infos,
