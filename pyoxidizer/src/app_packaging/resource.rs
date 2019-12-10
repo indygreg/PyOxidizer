@@ -10,6 +10,17 @@ use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
+#[cfg(unix)]
+fn set_executable(file: &mut std::fs::File) -> Result<()> {
+    file.metadata()?.permissions().set_mode(0o770);
+    Ok(())
+}
+
+#[cfg(windows)]
+fn set_executable(_file: &mut std::fs::File) -> Result<()> {
+    Ok(())
+}
+
 /// Represents file content, agnostic of storage location.
 #[derive(Clone, Debug, PartialEq)]
 pub struct FileContent {
@@ -97,9 +108,7 @@ impl FileManifest {
 
             let mut fh = std::fs::File::create(&dest_path)?;
             fh.write_all(&c.data)?;
-            if cfg!(unix) {
-                fh.metadata()?.permissions().set_mode(0o770);
-            }
+            set_executable(&mut fh)?;
         }
 
         Ok(())
