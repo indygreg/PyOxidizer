@@ -23,7 +23,7 @@ vergen = "3"
 [dependencies]
 anyhow = "1.0"
 byteorder = "1.2"
-cargo_toml = "0.6"
+cargo_toml = "0.8"
 cc = "1.0"
 clap = "2.32"
 codemap = "0.1"
