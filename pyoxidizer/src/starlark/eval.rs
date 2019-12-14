@@ -18,7 +18,11 @@ pub struct EvalResult {
     pub context: EnvironmentContext,
 }
 
-pub fn evaluate_file(path: &Path, context: &EnvironmentContext) -> Result<EvalResult, Diagnostic> {
+pub fn evaluate_file(
+    logger: &slog::Logger,
+    path: &Path,
+    context: &EnvironmentContext,
+) -> Result<EvalResult, Diagnostic> {
     let mut env = global_environment(context).or_else(|_| {
         Err(Diagnostic {
             level: Level::Error,
@@ -29,7 +33,20 @@ pub fn evaluate_file(path: &Path, context: &EnvironmentContext) -> Result<EvalRe
     })?;
 
     let map = Arc::new(Mutex::new(CodeMap::new()));
-    starlark::eval::simple::eval_file(&map, &path.display().to_string(), false, &mut env)?;
+    starlark::eval::simple::eval_file(&map, &path.display().to_string(), false, &mut env).or_else(
+        |e| {
+            let mut msg = Vec::new();
+            let raw_map = map.lock().unwrap();
+            {
+                let mut emitter = codemap_diagnostic::Emitter::vec(&mut msg, Some(&raw_map));
+                emitter.emit(&[e.clone()]);
+            }
+
+            slog::error!(logger, "{}", String::from_utf8_lossy(&msg));
+
+            Err(e)
+        },
+    )?;
 
     Ok(EvalResult {
         env,
