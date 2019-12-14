@@ -772,24 +772,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "jemallocator"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "jemalloc-sys 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "jemallocator-global"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "cfg-if 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "jemallocator 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "jobserver"
 version = "0.1.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1234,15 +1216,6 @@ dependencies = [
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "pyapp"
-version = "0.1.0"
-dependencies = [
- "jemallocator-global 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "pyembed 0.5.0",
 ]
 
 [[package]]
@@ -2401,8 +2374,6 @@ dependencies = [
 "checksum itertools 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)" = "f56a2d0bc861f9165be4eb3442afd3c236d8a98afd426f65d92324ae1091a484"
 "checksum itoa 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)" = "501266b7edd0174f8530248f87f99c88fbe60ca4ef3dd486835b8d8d53136f7f"
 "checksum jemalloc-sys 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "0d3b9f3f5c9b31aa0f5ed3260385ac205db665baa41d49bb8338008ae94ede45"
-"checksum jemallocator 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "43ae63fcfc45e99ab3d1b29a46782ad679e98436c3169d15a167a1108a724b69"
-"checksum jemallocator-global 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "991b61de8365c8b5707cf6cabbff98cfd6eaca9b851948b883efea408c7f581e"
 "checksum jobserver 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)" = "f2b1d42ef453b30b7387e113da1c83ab1605d90c5b4e0eb8e96d016ed3b8c160"
 "checksum kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7507624b29483431c0ba2d82aece8ca6cdba9382bff4ddd0f7490560c056098d"
 "checksum lalrpop 0.16.3 (registry+https://github.com/rust-lang/crates.io-index)" = "4e2e80bee40b22bca46665b4ef1f3cd88ed0fb043c971407eac17a0712c02572"
