@@ -5,7 +5,6 @@
 use anyhow::{anyhow, Context, Result};
 use copy_dir::copy_dir;
 use fs2::FileExt;
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use slog::{info, warn};
@@ -336,8 +335,6 @@ pub struct PythonDistributionMinimalInfo {
     pub version: String,
     pub os: String,
     pub arch: String,
-    pub extension_modules: Vec<String>,
-    pub libraries: Vec<String>,
     pub py_module_count: usize,
 }
 
@@ -465,8 +462,6 @@ impl ParsedPythonDistribution {
             version: self.version.clone(),
             os: self.os.clone(),
             arch: self.arch.clone(),
-            extension_modules: self.extension_modules.keys().cloned().collect_vec(),
-            libraries: self.libraries.keys().cloned().collect_vec(),
             py_module_count: self.py_modules.len(),
         }
     }
