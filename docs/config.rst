@@ -406,6 +406,43 @@ instance.
 If multiple extension modules with the same name are added, the last
 added one is used.
 
+``PythonEmbeddedResources.add_python_resource(...)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method registers a Python resource of various types. It accepts a
+``resource`` argument which can be a ``PythonSourceModule``,
+``PythonBytecodeModule``, ``PythonResourceData``, or ``PythonExtensionModule``
+and registers that resource with this instance. This method is a glorified
+proxy to the appropriate ``add_*`` method.
+
+The following arguments are accepted:
+
+``resource``
+   The resource to add to the embedded Python environment.
+
+``add_source_module`` (bool)
+   When the resource is a ``PythonSourceModule``, this flag determines
+   whether to add the source for that resource.
+
+   Default is ``True``.
+
+``add_bytecode_module`` (bool)
+   When the resource is a ``PythonSourceModule``, this flag determines
+   whether to add the bytecode for that module source.
+
+   Default is ``True``.
+
+``optimize_level`` (int)
+   Bytecode optimization level when compiling bytecode.
+
+``PythonEmbeddedResources.add_python_resources(...)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method registers an iterable of Python resources of various types.
+This method is identical to ``PythonEmbeddedResources.add_python_resource()``
+except the first argument is an iterable of resources. All other arguments
+are identical.
+
 .. _config_embedded_python_config:
 
 ``EmbeddedPythonConfig(...)```

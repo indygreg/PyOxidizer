@@ -15,7 +15,7 @@ use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
-use super::env::required_type_arg;
+use super::env::{required_bool_arg, required_type_arg};
 use crate::py_packaging::distribution::ExtensionModule;
 use crate::py_packaging::embedded_resource::EmbeddedPythonResourcesPrePackaged;
 use crate::py_packaging::resource::{
@@ -435,6 +435,86 @@ starlark_module! { python_resource_env =>
             let m = module.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
             embedded.embedded.add_extension_module(&m);
         });
+
+        Ok(Value::new(None))
+    }
+
+    #[allow(clippy::ptr_arg)]
+    PythonEmbeddedResources.add_python_resource(
+        call_stack call_stack,
+        env env,
+        this,
+        resource,
+        add_source_module=true,
+        add_bytecode_module=true,
+        optimize_level=0
+        ) {
+        let add_source_module = required_bool_arg("add_source_module", &add_source_module)?;
+        let add_bytecode_module = required_bool_arg("add_bytecode_module", &add_bytecode_module)?;
+        required_type_arg("optimize_level", "int", &optimize_level)?;
+
+        match resource.get_type() {
+            "PythonSourceModule" => {
+                if add_source_module {
+                    let f = env.get_type_value(&this, "add_module_source").unwrap();
+                    f.call(call_stack, env.clone(), vec![this.clone(), resource.clone()], HashMap::new(), None, None)?;
+                }
+                if add_bytecode_module {
+                    let f = env.get_type_value(&this, "add_module_bytecode").unwrap();
+                    f.call(call_stack, env.clone(), vec![this, resource, optimize_level], HashMap::new(), None, None)?;
+                }
+
+                Ok(Value::new(None))
+            }
+            "PythonBytecodeModule" => {
+                let f = env.get_type_value(&this, "add_module_bytecode").unwrap();
+                f.call(call_stack, env.clone(), vec![this, resource, optimize_level], HashMap::new(), None, None)?;
+                Ok(Value::new(None))
+            }
+            "PythonResourceData" => {
+                let f = env.get_type_value(&this, "add_resource_data").unwrap();
+                f.call(call_stack, env.clone(), vec![this, resource], HashMap::new(), None, None)?;
+                Ok(Value::new(None))
+            }
+            "PythonExtensionModule" => {
+                let f = env.get_type_value(&this, "add_extension_module").unwrap();
+                f.call(call_stack, env.clone(), vec![this, resource], HashMap::new(), None, None)?;
+                Ok(Value::new(None))
+            }
+            _ => Err(RuntimeError {
+                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                message: "resource argument must be a Python resource type".to_string(),
+                label: ".add_python_resource()".to_string(),
+            }.into())
+        }
+    }
+
+    #[allow(clippy::ptr_arg)]
+    PythonEmbeddedResources.add_python_resources(
+        call_stack call_stack,
+        env env,
+        this,
+        resources,
+        add_source_module=true,
+        add_bytecode_module=true,
+        optimize_level=0
+    ) {
+        required_bool_arg("add_source_module", &add_source_module)?;
+        required_bool_arg("add_bytecode_module", &add_bytecode_module)?;
+        required_type_arg("optimize_level", "int", &optimize_level)?;
+
+        let f = env.get_type_value(&this, "add_python_resource").unwrap();
+
+        for resource in resources.into_iter()? {
+            let args = vec![
+                this.clone(),
+                resource,
+                add_source_module.clone(),
+                add_bytecode_module.clone(),
+                optimize_level.clone(),
+            ];
+            f.call(call_stack, env.clone(), args, HashMap::new(), None, None)?;
+        }
 
         Ok(Value::new(None))
     }
