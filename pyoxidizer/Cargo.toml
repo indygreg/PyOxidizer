@@ -20,6 +20,12 @@ path = "src/lib.rs"
 [build-dependencies]
 vergen = "3"
 
+# Contains many fixes
+[dependencies.object]
+git = "https://github.com/gimli-rs/object.git"
+rev = "dc1ca8cddaade970f125da9713a1455f36ba9e85"
+features = ["read", "std", "write", "compression", "wasm"]
+
 [dependencies]
 anyhow = "1.0"
 byteorder = "1.2"
@@ -39,7 +45,6 @@ hex = "0.4"
 itertools = "0.8"
 lazy_static = "1.3"
 libc = "0.2"
-object = { version = "0.16.0", features = ["read", "std", "write"] }
 regex = "1"
 reqwest = "0.9"
 rustc_version = "0.2"
