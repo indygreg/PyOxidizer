@@ -10,4 +10,10 @@
 #except AttributeError:
 #    pass
 
+#import markupsafe._speedups
+#import simplejson._speedups
+
+#import markupsafe
+#import simplejson
+
 print("hello, world")

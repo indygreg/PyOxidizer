@@ -265,7 +265,7 @@ class MSVCCompiler(CCompiler) :
         # use /MT[d] to build statically, then switch from libucrt[d].lib to ucrt[d].lib
         # later to dynamically link to ucrtbase but not vcruntime.
         self.compile_options = [
-            '/nologo', '/Ox', '/W3', '/GL', '/DNDEBUG'
+            '/nologo', '/Ox', '/W3', '/DNDEBUG'
         ]
         self.compile_options.append('/MD' if self._vcruntime_redist else '/MT')
 
@@ -586,6 +586,11 @@ class MSVCCompiler(CCompiler) :
         # directory that doesn't outlive this process.
         object_paths = []
         for i, o in enumerate(objects):
+            if 'libffi_msvc' in o:
+                print('Ignored static {}'.format(o))
+                # https://github.com/indygreg/python-build-standalone/issues/23
+                # cffi includes a near replica of CPython's custom libffi.
+                continue
             p = os.path.join(dest_path, '%s.%d.o' % (name, i))
             shutil.copyfile(o, p)
             object_paths.append(p)
