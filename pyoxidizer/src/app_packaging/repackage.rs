@@ -271,11 +271,7 @@ pub fn resolve_python_resources(
     for packaging in packages {
         warn!(logger, "processing packaging rule: {:?}", packaging);
 
-        let verbose_rule = if let PythonPackaging::Stdlib(_) = packaging {
-            true
-        } else {
-            false
-        };
+        let verbose_rule = false;
 
         for entry in resolve_python_packaging(logger, packaging, dist) {
             match (entry.action, entry.location, entry.resource) {

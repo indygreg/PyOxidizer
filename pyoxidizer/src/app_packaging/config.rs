@@ -24,16 +24,6 @@ pub enum InstallLocation {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct PackagingStdlib {
-    pub optimize_level: i64,
-    pub exclude_test_modules: bool,
-    pub excludes: Vec<String>,
-    pub include_source: bool,
-    pub include_resources: bool,
-    pub install_location: InstallLocation,
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub struct PackagingFilterInclude {
     pub files: Vec<String>,
     pub glob_files: Vec<String>,
@@ -46,7 +36,6 @@ pub struct PackagingWriteLicenseFiles {
 
 #[derive(Clone, Debug)]
 pub enum PythonPackaging {
-    Stdlib(PackagingStdlib),
     FilterInclude(PackagingFilterInclude),
     WriteLicenseFiles(PackagingWriteLicenseFiles),
 }
