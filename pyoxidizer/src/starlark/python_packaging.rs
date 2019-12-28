@@ -17,8 +17,7 @@ use std::collections::HashMap;
 
 use super::env::{optional_list_arg, required_bool_arg, required_str_arg, required_type_arg};
 use crate::app_packaging::config::{
-    resolve_install_location, PackagingFilterInclude, PackagingStdlib,
-    PackagingStdlibExtensionVariant, PackagingWriteLicenseFiles,
+    resolve_install_location, PackagingFilterInclude, PackagingStdlib, PackagingWriteLicenseFiles,
 };
 
 #[derive(Debug, Clone)]
@@ -45,41 +44,6 @@ impl TypedValue for FilterInclude {
 
     fn get_type(&self) -> &'static str {
         "FilterInclude"
-    }
-
-    fn to_bool(&self) -> bool {
-        true
-    }
-
-    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
-        default_compare(self, other)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct StdlibExtensionVariant {
-    pub rule: PackagingStdlibExtensionVariant,
-}
-
-impl TypedValue for StdlibExtensionVariant {
-    immutable!();
-    any!();
-    not_supported!(binop);
-    not_supported!(container);
-    not_supported!(function);
-    not_supported!(get_hash);
-    not_supported!(to_int);
-
-    fn to_str(&self) -> String {
-        format!("StdlibExtensionVariant<{:#?}>", self.rule)
-    }
-
-    fn to_repr(&self) -> String {
-        self.to_str()
-    }
-
-    fn get_type(&self) -> &'static str {
-        "StdlibExtensionVariant"
     }
 
     fn to_bool(&self) -> bool {
@@ -187,19 +151,6 @@ starlark_module! { python_packaging_env =>
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
-    StdlibExtensionVariant(extension, variant) {
-        let extension = required_str_arg("extension", &extension)?;
-        let variant = required_str_arg("variant", &variant)?;
-
-        let rule = PackagingStdlibExtensionVariant {
-            extension,
-            variant,
-        };
-
-        Ok(Value::new(StdlibExtensionVariant { rule }))
-    }
-
-    #[allow(non_snake_case, clippy::ptr_arg)]
     Stdlib(
         optimize_level=0,
         exclude_test_modules=true,
@@ -267,22 +218,6 @@ mod tests {
         };
 
         v.downcast_apply(|x: &FilterInclude| assert_eq!(x.rule, wanted));
-    }
-
-    #[test]
-    fn test_stdlib_extension_variant_default() {
-        let err = starlark_nok("StdlibExtensionVariant()");
-        assert!(err.message.starts_with("Missing parameter extension"));
-    }
-
-    #[test]
-    fn test_stdlib_extension_variant_basic() {
-        let v = starlark_ok("StdlibExtensionVariant('foo', 'bar')");
-        let wanted = PackagingStdlibExtensionVariant {
-            extension: "foo".to_string(),
-            variant: "bar".to_string(),
-        };
-        v.downcast_apply(|x: &StdlibExtensionVariant| assert_eq!(x.rule, wanted));
     }
 
     #[test]

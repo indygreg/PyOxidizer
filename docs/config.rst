@@ -976,29 +976,6 @@ location has the following values:
 
 The following sections describe the various ``type``'s of rules.
 
-``StdlibExtensionVariant(extension, variant)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This rule specifies the inclusion of a specific extension module *variant*.
-
-Some Python distributions offer multiple variants for an individual extension
-module. For example, the ``readline`` extension module may offer a ``libedit``
-variant that is compiled against ``libedit`` instead of ``libreadline`` (the default).
-
-By default, the first listed extension module variant in a Python distribution
-is used. By defining rules of this type, one can use an alternate or explicit
-extension module variation.
-
-Extension module variants are defined via the ``extension`` and ``variant``
-arguments. The former defines the extension module name. The latter its
-variant name.
-
-Example:
-
-.. code-block:: python
-
-   StdlibExtensionVariant("readline", "libedit")
-
 ``Stdlib(...)``
 ^^^^^^^^^^^^^^^
 
