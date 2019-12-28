@@ -184,14 +184,30 @@ starlark_module! { python_distribution_module =>
     }
 
     #[allow(clippy::ptr_arg)]
-    PythonDistribution.extension_modules(env env, this, filter="all") {
+    PythonDistribution.extension_modules(env env, this, filter="all", preferred_variants=None) {
         let filter = required_str_arg("filter", &filter)?;
+        optional_dict_arg("preferred_variants", "string", "string", &preferred_variants)?;
 
         let filter = ExtensionModuleFilter::from_str(&filter).or_else(|e| Err(RuntimeError {
             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
             message: e.to_string(),
             label: "invalid policy value".to_string(),
         }.into()))?;
+
+        let preferred_variants = match preferred_variants.get_type() {
+            "NoneType" => None,
+            "dict" => {
+                let mut m = HashMap::new();
+
+                for k in preferred_variants.into_iter()? {
+                    let v = preferred_variants.at(k.clone())?.to_string();
+                    m.insert(k.to_string(), v);
+                }
+
+                Some(m)
+            }
+            _ => panic!("type should have been validated above")
+        };
 
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
 
@@ -200,7 +216,7 @@ starlark_module! { python_distribution_module =>
         Ok(Value::from(this.downcast_apply_mut(|dist: &mut PythonDistribution| {
             dist.ensure_distribution_resolved(&logger);
 
-            dist.distribution.as_ref().unwrap().filter_extension_modules(&logger, &filter, None).iter().map(|em| {
+            dist.distribution.as_ref().unwrap().filter_extension_modules(&logger, &filter, preferred_variants.clone()).iter().map(|em| {
                 Value::new(PythonExtensionModule { em: em.clone() })
             }).collect_vec()
         })))

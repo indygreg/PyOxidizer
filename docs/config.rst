@@ -151,8 +151,8 @@ present in this distribution.
 
 .. _config_python_distribution_extension_modules:
 
-``PythonDistribution.extension_modules(filter='all')``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonDistribution.extension_modules(filter='all', preferred_variants=None)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Returns a ``list`` of ``PythonExtensionModule`` representing extension
 modules in this distribution.
@@ -161,7 +161,7 @@ The ``filter`` argument denotes how to filter the extension modules. The
 following values are recognized:
 
 ``all``
-   Return the first variant of every named extension module.
+   Every named extension module will be included.
 
 ``minimal``
    Return only extension modules that are required to initialize a
@@ -183,6 +183,11 @@ following values are recognized:
    not included because it *could* be GPL licensed. Similarly, the mechanism for
    determining whether a license is GPL is based on an explicit list of non-GPL
    licenses. This ensures new GPL licenses don't slip through.
+
+The ``preferred_variants`` argument denotes a string to string mapping of
+extension module name to its preferred variant name. If multiple variants of
+an extension module meet the filter requirements, the preferred variant from
+this mapping will be used. Otherwise the first variant will be used.
 
 .. important::
 
@@ -485,6 +490,12 @@ The arguments are as follows:
    values are accepted and their behavior.
 
    Default is ``all``.
+
+``preferred_extension_module_variants`` (``dict`` of ``string`` to ``string``)
+   Preferred extension module variants to use. See
+   See :ref:`config_python_distribution_extension_modules`_ for behavior.
+
+   Default is ``None``, which will use the first variant.
 
 ``include_sources`` (``bool``)
    Boolean to control whether sources of Python modules are added in addition

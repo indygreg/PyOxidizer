@@ -15,7 +15,9 @@ use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
-use super::env::{optional_type_arg, required_bool_arg, required_str_arg, required_type_arg};
+use super::env::{
+    optional_dict_arg, optional_type_arg, required_bool_arg, required_str_arg, required_type_arg,
+};
 use super::python_distribution::{resolve_default_python_distribution, PythonDistribution};
 use crate::app_packaging::environment::EnvironmentContext;
 use crate::py_packaging::distribution::{ExtensionModule, ExtensionModuleFilter};
@@ -526,12 +528,13 @@ starlark_module! { python_resource_env =>
         env env,
         dist=None,
         extension_module_filter="all",
+        preferred_extension_module_variants=None,
         include_sources=true,
-        include_resources=false
-        )
+        include_resources=false)
     {
         optional_type_arg("dist", "PythonDistribution", &dist)?;
         let extension_module_filter = required_str_arg("extension_module_filter", &extension_module_filter)?;
+        optional_dict_arg("preferred_extension_module_variants", "string", "string", &preferred_extension_module_variants)?;
         let include_sources = required_bool_arg("include_sources", &include_sources)?;
         let include_resources = required_bool_arg("include_resources", &include_resources)?;
 
@@ -553,6 +556,21 @@ starlark_module! { python_resource_env =>
             label: "invalid policy value".to_string(),
         }.into()))?;
 
+        let preferred_extension_module_variants = match preferred_extension_module_variants.get_type() {
+            "NoneType" => None,
+            "dict" => {
+                let mut m = HashMap::new();
+
+                for k in preferred_extension_module_variants.into_iter()? {
+                    let v = preferred_extension_module_variants.at(k.clone())?.to_string();
+                    m.insert(k.to_string(), v);
+                }
+
+                Some(m)
+            }
+            _ => panic!("type should have been validated above")
+        };
+
         dist.downcast_apply_mut(|dist: &mut PythonDistribution| {
             dist.ensure_distribution_resolved(&logger);
 
@@ -560,7 +578,7 @@ starlark_module! { python_resource_env =>
 
             let dist_ref = dist.distribution.as_ref().unwrap();
 
-            for ext in dist_ref.filter_extension_modules(&logger, &extension_module_filter, None) {
+            for ext in dist_ref.filter_extension_modules(&logger, &extension_module_filter, preferred_extension_module_variants.clone()) {
                 embedded.add_extension_module(&ext);
             }
 
