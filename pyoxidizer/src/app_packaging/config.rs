@@ -24,12 +24,6 @@ pub enum InstallLocation {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct PackagingStdlibExtensionVariant {
-    pub extension: String,
-    pub variant: String,
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub struct PackagingStdlib {
     pub optimize_level: i64,
     pub exclude_test_modules: bool,
@@ -52,7 +46,6 @@ pub struct PackagingWriteLicenseFiles {
 
 #[derive(Clone, Debug)]
 pub enum PythonPackaging {
-    StdlibExtensionVariant(PackagingStdlibExtensionVariant),
     Stdlib(PackagingStdlib),
     FilterInclude(PackagingFilterInclude),
     WriteLicenseFiles(PackagingWriteLicenseFiles),

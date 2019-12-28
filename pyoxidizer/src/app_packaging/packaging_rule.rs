@@ -6,9 +6,7 @@ use slog::info;
 use std::collections::BTreeSet;
 use std::fs;
 
-use super::config::{
-    InstallLocation, PackagingStdlib, PackagingStdlibExtensionVariant, PythonPackaging,
-};
+use super::config::{InstallLocation, PackagingStdlib, PythonPackaging};
 use crate::py_packaging::distribution::{is_stdlib_test_package, ParsedPythonDistribution};
 use crate::py_packaging::resource::{AppRelativeResources, PythonResource};
 
@@ -73,37 +71,6 @@ where
     }
 
     package_names
-}
-
-fn resolve_stdlib_extension_variant(
-    dist: &ParsedPythonDistribution,
-    rule: &PackagingStdlibExtensionVariant,
-) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
-    let variants = &dist.extension_modules[&rule.extension];
-
-    for em in variants {
-        if em.variant == rule.variant {
-            res.push(PythonResourceAction {
-                action: ResourceAction::Add,
-                location: ResourceLocation::Embedded,
-                resource: PythonResource::ExtensionModule {
-                    name: rule.extension.clone(),
-                    module: em.clone(),
-                },
-            });
-        }
-    }
-
-    if res.is_empty() {
-        panic!(
-            "extension {} has no variant {}",
-            rule.extension, rule.variant
-        );
-    }
-
-    res
 }
 
 fn resolve_stdlib(
@@ -191,10 +158,6 @@ pub fn resolve_python_packaging(
     dist: &ParsedPythonDistribution,
 ) -> Vec<PythonResourceAction> {
     match package {
-        PythonPackaging::StdlibExtensionVariant(rule) => {
-            resolve_stdlib_extension_variant(dist, rule)
-        }
-
         PythonPackaging::Stdlib(rule) => resolve_stdlib(logger, dist, &rule),
 
         PythonPackaging::WriteLicenseFiles(_) => Vec::new(),
