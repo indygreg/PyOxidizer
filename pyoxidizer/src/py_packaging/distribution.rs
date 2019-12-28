@@ -639,6 +639,7 @@ impl ParsedPythonDistribution {
         Ok(res)
     }
 
+    #[allow(clippy::if_same_then_else)]
     pub fn filter_extension_modules(
         &self,
         logger: &slog::Logger,
