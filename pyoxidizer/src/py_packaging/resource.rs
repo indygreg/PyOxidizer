@@ -33,6 +33,14 @@ pub struct SourceModule {
 }
 
 impl SourceModule {
+    pub fn package(&self) -> String {
+        if let Some(idx) = self.name.rfind('.') {
+            self.name[0..idx].to_string()
+        } else {
+            self.name.clone()
+        }
+    }
+
     pub fn as_python_resource(&self) -> PythonResource {
         PythonResource::ModuleSource {
             name: self.name.clone(),

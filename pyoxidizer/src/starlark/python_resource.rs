@@ -20,7 +20,9 @@ use super::env::{
 };
 use super::python_distribution::{resolve_default_python_distribution, PythonDistribution};
 use crate::app_packaging::environment::EnvironmentContext;
-use crate::py_packaging::distribution::{ExtensionModule, ExtensionModuleFilter};
+use crate::py_packaging::distribution::{
+    is_stdlib_test_package, ExtensionModule, ExtensionModuleFilter,
+};
 use crate::py_packaging::embedded_resource::EmbeddedPythonResourcesPrePackaged;
 use crate::py_packaging::resource::{
     BytecodeModule, BytecodeOptimizationLevel, PythonResource, ResourceData, SourceModule,
@@ -530,13 +532,15 @@ starlark_module! { python_resource_env =>
         extension_module_filter="all",
         preferred_extension_module_variants=None,
         include_sources=true,
-        include_resources=false)
+        include_resources=false,
+        include_test=false)
     {
         optional_type_arg("dist", "PythonDistribution", &dist)?;
         let extension_module_filter = required_str_arg("extension_module_filter", &extension_module_filter)?;
         optional_dict_arg("preferred_extension_module_variants", "string", "string", &preferred_extension_module_variants)?;
         let include_sources = required_bool_arg("include_sources", &include_sources)?;
         let include_resources = required_bool_arg("include_resources", &include_resources)?;
+        let include_test = required_bool_arg("include_test", &include_test)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
@@ -589,6 +593,10 @@ starlark_module! { python_resource_env =>
             }.into()))?;
 
             for source in sources {
+                if !include_test && is_stdlib_test_package(&source.package()) {
+                    continue;
+                }
+
                 if include_sources {
                     embedded.add_source_module(&source);
                 }
@@ -604,6 +612,10 @@ starlark_module! { python_resource_env =>
                 }.into()))?;
 
                 for resource in resources {
+                    if !include_test && is_stdlib_test_package(&resource.package) {
+                        continue;
+                    }
+
                     embedded.add_resource(&resource);
                 }
             }

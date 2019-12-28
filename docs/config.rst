@@ -512,6 +512,11 @@ The arguments are as follows:
 
    Default is ``False``.
 
+``include_test`` (``bool``)
+   Boolean to control whether test-specific objects are included.
+
+   Default is ``False``.
+
 .. _config_embedded_python_config:
 
 ``EmbeddedPythonConfig(...)```
