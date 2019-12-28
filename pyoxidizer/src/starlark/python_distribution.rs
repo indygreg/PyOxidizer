@@ -122,6 +122,34 @@ fn find_resources(path: &Path, state_dir: Option<&Path>) -> Result<Vec<PythonRes
     Ok(res)
 }
 
+pub fn resolve_default_python_distribution(env: &Environment, build_target: &str) -> ValueResult {
+    match CPYTHON_BY_TRIPLE.get(build_target) {
+        Some(dist) => {
+            let distribution = PythonDistributionLocation::Url {
+                url: dist.url.clone(),
+                sha256: dist.sha256.clone(),
+            };
+
+            let context = env.get("CONTEXT").expect("CONTEXT not defined");
+            let dest_dir = context
+                .downcast_apply(|x: &EnvironmentContext| x.python_distributions_path.clone());
+
+            Ok(Value::new(PythonDistribution::from_location(
+                distribution,
+                &dest_dir,
+            )))
+        }
+        None => Err(ValueError::Runtime(RuntimeError {
+            code: "no_default_distribution",
+            message: format!(
+                "could not find default Python distribution for {}",
+                build_target
+            ),
+            label: "build_target".to_string(),
+        })),
+    }
+}
+
 starlark_module! { python_distribution_module =>
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonDistribution(env env, sha256, local_path=None, url=None) {
@@ -469,24 +497,7 @@ starlark_module! { python_distribution_module =>
             }
         };
 
-        match CPYTHON_BY_TRIPLE.get(&build_target) {
-            Some(dist) => {
-                let distribution = PythonDistributionLocation::Url {
-                    url: dist.url.clone(),
-                    sha256: dist.sha256.clone(),
-                };
-
-                let context = env.get("CONTEXT").expect("CONTEXT not defined");
-                let dest_dir = context.downcast_apply(|x: &EnvironmentContext| x.python_distributions_path.clone());
-
-                Ok(Value::new(PythonDistribution::from_location(distribution, &dest_dir)))
-            }
-            None => Err(ValueError::Runtime(RuntimeError {
-                code: "no_default_distribution",
-                message: format!("could not find default Python distribution for {}", build_target),
-                label: "build_target".to_string(),
-            }))
-        }
+        resolve_default_python_distribution(&env, &build_target)
     }
 }
 
