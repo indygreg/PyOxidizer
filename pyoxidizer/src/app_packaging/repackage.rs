@@ -16,9 +16,7 @@ use std::path::{Path, PathBuf};
 use super::config::{
     eval_starlark_config_file, find_pyoxidizer_config_file_env, Config, PythonPackaging,
 };
-use super::packaging_rule::{
-    packages_from_module_names, resolve_python_packaging, ResourceAction, ResourceLocation,
-};
+use super::packaging_rule::packages_from_module_names;
 use super::state::{BuildContext, PackagingState};
 use crate::py_packaging::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode};
 use crate::py_packaging::distribution::{
@@ -29,8 +27,8 @@ use crate::py_packaging::embedded_resource::EmbeddedPythonResources;
 use crate::py_packaging::libpython::{derive_importlib, link_libpython};
 use crate::py_packaging::pyembed::{derive_python_config, write_data_rs};
 use crate::py_packaging::resource::{
-    packages_from_module_name, AppRelativeResources, PackagedModuleBytecode, PackagedModuleSource,
-    PythonResource,
+    packages_from_module_name, AppRelativeResources, BuiltExtensionModule, PackagedModuleBytecode,
+    PackagedModuleSource,
 };
 
 lazy_static! {
@@ -259,7 +257,8 @@ pub fn resolve_python_resources(
     let mut embedded_sources: BTreeMap<String, PackagedModuleSource> = BTreeMap::new();
     let mut embedded_bytecode_requests: BTreeMap<String, BytecodeRequest> = BTreeMap::new();
     let mut embedded_resources: BTreeMap<String, BTreeMap<String, Vec<u8>>> = BTreeMap::new();
-    let mut embedded_built_extension_modules = BTreeMap::new();
+    let mut embedded_built_extension_modules: BTreeMap<String, BuiltExtensionModule> =
+        BTreeMap::new();
 
     let mut app_relative: BTreeMap<String, AppRelativeResources> = BTreeMap::new();
     let mut app_relative_bytecode_requests: BTreeMap<String, BTreeMap<String, BytecodeRequest>> =
@@ -270,284 +269,6 @@ pub fn resolve_python_resources(
 
     for packaging in packages {
         warn!(logger, "processing packaging rule: {:?}", packaging);
-
-        let verbose_rule = false;
-
-        for entry in resolve_python_packaging(logger, packaging, dist) {
-            match (entry.action, entry.location, entry.resource) {
-                (
-                    ResourceAction::Add,
-                    ResourceLocation::Embedded,
-                    PythonResource::ExtensionModule { name, module },
-                ) => {
-                    warn!(logger, "adding embedded extension module: {}", name);
-                    embedded_extension_modules.insert(name, module);
-                }
-                (
-                    ResourceAction::Add,
-                    ResourceLocation::AppRelative { .. },
-                    PythonResource::ExtensionModule { .. },
-                ) => {
-                    panic!("should not have gotten an app-relative extension module");
-                }
-                (
-                    ResourceAction::Remove,
-                    ResourceLocation::Embedded,
-                    PythonResource::ExtensionModule { name, .. },
-                ) => {
-                    warn!(logger, "removing embedded extension module: {}", name);
-                    embedded_extension_modules.remove(&name);
-                }
-                (
-                    ResourceAction::Add,
-                    ResourceLocation::Embedded,
-                    PythonResource::ModuleSource {
-                        name,
-                        source,
-                        is_package,
-                    },
-                ) => {
-                    if verbose_rule {
-                        info!(logger, "adding embedded module source: {}", name);
-                    } else {
-                        warn!(logger, "adding embedded module source: {}", name);
-                    }
-                    embedded_sources
-                        .insert(name.clone(), PackagedModuleSource { source, is_package });
-                }
-                (
-                    ResourceAction::Add,
-                    ResourceLocation::AppRelative { path },
-                    PythonResource::ModuleSource {
-                        name,
-                        source,
-                        is_package,
-                    },
-                ) => {
-                    if verbose_rule {
-                        info!(
-                            logger,
-                            "adding app-relative module source to {}: {}", path, name
-                        );
-                    } else {
-                        warn!(
-                            logger,
-                            "adding app-relative module source to {}: {}", path, name
-                        );
-                    }
-                    if !app_relative.contains_key(&path) {
-                        app_relative.insert(path.clone(), AppRelativeResources::default());
-                    }
-
-                    app_relative
-                        .get_mut(&path)
-                        .unwrap()
-                        .module_sources
-                        .insert(name.clone(), PackagedModuleSource { source, is_package });
-                }
-                (
-                    ResourceAction::Remove,
-                    ResourceLocation::Embedded,
-                    PythonResource::ModuleSource { name, .. },
-                ) => {
-                    warn!(logger, "removing embedded module source: {}", name);
-                    embedded_sources.remove(&name);
-                }
-                (
-                    ResourceAction::Add,
-                    ResourceLocation::Embedded,
-                    PythonResource::ModuleBytecodeRequest {
-                        name,
-                        source,
-                        optimize_level,
-                        is_package,
-                    },
-                ) => {
-                    if verbose_rule {
-                        info!(logger, "adding embedded module bytecode: {}", name);
-                    } else {
-                        warn!(logger, "adding embedded module bytecode: {}", name);
-                    }
-                    embedded_bytecode_requests.insert(
-                        name.clone(),
-                        BytecodeRequest {
-                            source,
-                            optimize_level,
-                            is_package,
-                        },
-                    );
-                }
-                (
-                    ResourceAction::Add,
-                    ResourceLocation::AppRelative { path },
-                    PythonResource::ModuleBytecodeRequest {
-                        name,
-                        source,
-                        optimize_level,
-                        is_package,
-                    },
-                ) => {
-                    if verbose_rule {
-                        info!(
-                            logger,
-                            "adding app-relative module bytecode to {}: {}", path, name
-                        );
-                    } else {
-                        warn!(
-                            logger,
-                            "adding app-relative module bytecode to {}: {}", path, name
-                        );
-                    }
-
-                    if !app_relative_bytecode_requests.contains_key(&path) {
-                        app_relative_bytecode_requests.insert(path.clone(), BTreeMap::new());
-                    }
-
-                    app_relative_bytecode_requests
-                        .get_mut(&path)
-                        .unwrap()
-                        .insert(
-                            name.clone(),
-                            BytecodeRequest {
-                                source,
-                                optimize_level,
-                                is_package,
-                            },
-                        );
-                }
-                (
-                    ResourceAction::Remove,
-                    ResourceLocation::Embedded,
-                    PythonResource::ModuleBytecodeRequest { name, .. },
-                ) => {
-                    warn!(logger, "removing embedded module bytecode: {}", name);
-                    embedded_bytecode_requests.remove(&name);
-                }
-                (
-                    ResourceAction::Add,
-                    ResourceLocation::Embedded,
-                    PythonResource::ModuleBytecode { .. },
-                ) => {
-                    panic!("adding embedded ModuleBytecode not supported");
-                }
-                (
-                    ResourceAction::Remove,
-                    ResourceLocation::Embedded,
-                    PythonResource::ModuleBytecode { .. },
-                ) => {
-                    panic!("removing embedded ModuleBytecode not supported");
-                }
-                (
-                    ResourceAction::Add,
-                    ResourceLocation::AppRelative { .. },
-                    PythonResource::ModuleBytecode { .. },
-                ) => {
-                    panic!("adding app-relative ModuleBytecode not supported");
-                }
-                (
-                    ResourceAction::Remove,
-                    ResourceLocation::AppRelative { .. },
-                    PythonResource::ModuleBytecode { .. },
-                ) => panic!("removing app-relative ModuleBytecode not supported"),
-                (
-                    ResourceAction::Add,
-                    ResourceLocation::Embedded,
-                    PythonResource::Resource {
-                        package,
-                        name,
-                        data,
-                    },
-                ) => {
-                    warn!(logger, "adding embedded resource: {} / {}", package, name);
-
-                    if !embedded_resources.contains_key(&package) {
-                        embedded_resources.insert(package.clone(), BTreeMap::new());
-                    }
-
-                    embedded_resources
-                        .get_mut(&package)
-                        .unwrap()
-                        .insert(name, data);
-                }
-                (
-                    ResourceAction::Add,
-                    ResourceLocation::AppRelative { path },
-                    PythonResource::Resource {
-                        package,
-                        name,
-                        data,
-                    },
-                ) => {
-                    warn!(logger, "adding app-relative resource to {}: {}", path, name);
-
-                    if !app_relative.contains_key(&path) {
-                        app_relative.insert(path.clone(), AppRelativeResources::default());
-                    }
-
-                    let app_relative = app_relative.get_mut(&path).unwrap();
-
-                    if !app_relative.resources.contains_key(&package) {
-                        app_relative
-                            .resources
-                            .insert(package.clone(), BTreeMap::new());
-                    }
-
-                    app_relative
-                        .resources
-                        .get_mut(&package)
-                        .unwrap()
-                        .insert(name, data);
-                }
-                (
-                    ResourceAction::Remove,
-                    ResourceLocation::Embedded,
-                    PythonResource::Resource { name, .. },
-                ) => {
-                    warn!(logger, "removing embedded resource: {}", name);
-                    embedded_resources.remove(&name);
-                }
-                (ResourceAction::Remove, ResourceLocation::AppRelative { .. }, _) => {
-                    panic!("should not have gotten an action to remove an app-relative resource");
-                }
-                (
-                    ResourceAction::Add,
-                    ResourceLocation::Embedded,
-                    PythonResource::BuiltExtensionModule(em),
-                ) => {
-                    warn!(
-                        logger,
-                        "adding embedded built extension module: {}", em.name
-                    );
-
-                    embedded_built_extension_modules.insert(em.name.clone(), em.clone());
-                }
-                (
-                    ResourceAction::Add,
-                    ResourceLocation::AppRelative { path },
-                    PythonResource::BuiltExtensionModule(em),
-                ) => {
-                    warn!(
-                        logger,
-                        "adding app-relative built extension module {} to {}", em.name, path
-                    );
-                    warn!(
-                        logger,
-                        "WARNING: incomplete support for app-relative built extension modules: adding a built-in");
-                    embedded_built_extension_modules.insert(em.name.clone(), em.clone());
-                }
-                (
-                    ResourceAction::Remove,
-                    ResourceLocation::Embedded,
-                    PythonResource::BuiltExtensionModule(em),
-                ) => {
-                    warn!(
-                        logger,
-                        "removing embedded built extension module {}", em.name
-                    );
-                    embedded_built_extension_modules.remove(&em.name);
-                }
-            }
-        }
 
         if let PythonPackaging::WriteLicenseFiles(rule) = packaging {
             license_files_path = Some(rule.path.clone());

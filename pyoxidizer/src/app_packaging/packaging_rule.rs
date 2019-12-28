@@ -4,8 +4,7 @@
 
 use std::collections::BTreeSet;
 
-use super::config::{InstallLocation, PythonPackaging};
-use crate::py_packaging::distribution::ParsedPythonDistribution;
+use super::config::InstallLocation;
 use crate::py_packaging::resource::{AppRelativeResources, PythonResource};
 
 #[derive(Debug)]
@@ -69,18 +68,4 @@ where
     }
 
     package_names
-}
-
-/// Resolves a Python packaging rule to resources to package.
-pub fn resolve_python_packaging(
-    logger: &slog::Logger,
-    package: &PythonPackaging,
-    dist: &ParsedPythonDistribution,
-) -> Vec<PythonResourceAction> {
-    match package {
-        PythonPackaging::WriteLicenseFiles(_) => Vec::new(),
-
-        // This is a no-op because it can only be handled at a higher level.
-        PythonPackaging::FilterInclude(_) => Vec::new(),
-    }
 }
