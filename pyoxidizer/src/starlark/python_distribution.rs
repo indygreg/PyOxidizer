@@ -22,13 +22,14 @@ use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
 use super::env::{
-    optional_dict_arg, optional_list_arg, optional_str_arg, required_list_arg, required_str_arg,
+    optional_dict_arg, optional_list_arg, optional_str_arg, required_bool_arg, required_list_arg,
+    required_str_arg,
 };
 use super::python_resource::{PythonExtensionModule, PythonResourceData, PythonSourceModule};
 use crate::app_packaging::environment::EnvironmentContext;
 use crate::py_packaging::distribution::{
-    resolve_parsed_distribution, resolve_python_paths, ExtensionModuleFilter,
-    ParsedPythonDistribution, PythonDistributionLocation,
+    is_stdlib_test_package, resolve_parsed_distribution, resolve_python_paths,
+    ExtensionModuleFilter, ParsedPythonDistribution, PythonDistributionLocation,
 };
 use crate::py_packaging::distutils::{prepare_hacked_distutils, read_built_extensions};
 use crate::py_packaging::fsscan::{find_python_resources, PythonFileResource};
@@ -244,7 +245,9 @@ starlark_module! { python_distribution_module =>
     }
 
     #[allow(clippy::ptr_arg)]
-    PythonDistribution.resources_data(env env, this) {
+    PythonDistribution.resources_data(env env, this, include_test=false) {
+        let include_test = required_bool_arg("include_test", &include_test)?;
+
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
 
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
@@ -258,8 +261,12 @@ starlark_module! { python_distribution_module =>
                 label: e.to_string(),
             }.into()))?;
 
-            Ok(resources.iter().map(|data| {
-                Value::new(PythonResourceData { data: data.clone() })
+            Ok(resources.iter().filter_map(|data| {
+                if !include_test && is_stdlib_test_package(&data.package) {
+                    None
+                } else {
+                    Some(Value::new(PythonResourceData { data: data.clone() }))
+                }
             }).collect_vec())
         })?))
     }
@@ -579,6 +586,15 @@ mod tests {
     fn test_source_modules() {
         let mods = starlark_ok("default_python_distribution().source_modules()");
         assert_eq!(mods.get_type(), "list");
+    }
+
+    #[test]
+    fn test_resources_data() {
+        let data_default = starlark_ok("default_python_distribution().resources_data()");
+        let data_tests =
+            starlark_ok("default_python_distribution().resources_data(include_test=True)");
+
+        assert!(data_default.length().unwrap() < data_tests.length().unwrap());
     }
 
     #[test]

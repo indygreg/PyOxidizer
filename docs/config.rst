@@ -143,11 +143,14 @@ Examples:
 Returns a ``list`` of ``PythonSourceModule`` representing Python
 source modules present in this distribution.
 
-``PythonDistribution.resources_data()``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonDistribution.resources_data(include_test=False)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Returns a ``list`` of ``PythonResourceData`` representing resource files
 present in this distribution.
+
+The ``include_test`` boolean argument controls whether resources associated
+with test packages are included.
 
 .. _config_python_distribution_extension_modules:
 
