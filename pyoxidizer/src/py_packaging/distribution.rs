@@ -347,6 +347,18 @@ pub enum ExtensionModuleFilter {
     NoGPL,
 }
 
+impl ExtensionModuleFilter {
+    pub fn from_str(s: &str) -> Result<ExtensionModuleFilter> {
+        match s {
+            "minimal" => Ok(ExtensionModuleFilter::Minimal),
+            "all" => Ok(ExtensionModuleFilter::All),
+            "no-libraries" => Ok(ExtensionModuleFilter::NoLibraries),
+            "no-gpl" => Ok(ExtensionModuleFilter::NoGPL),
+            t => Err(anyhow!("{} is not a valid extension module filter", t)),
+        }
+    }
+}
+
 pub struct PythonPaths {
     pub prefix: PathBuf,
     pub bin_dir: PathBuf,

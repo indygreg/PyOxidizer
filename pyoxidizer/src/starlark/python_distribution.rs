@@ -187,17 +187,11 @@ starlark_module! { python_distribution_module =>
     PythonDistribution.extension_modules(env env, this, filter="all") {
         let filter = required_str_arg("filter", &filter)?;
 
-        let filter = match filter.as_str() {
-            "minimal" => ExtensionModuleFilter::Minimal,
-            "all" => ExtensionModuleFilter::All,
-            "no-libraries" => ExtensionModuleFilter::NoLibraries,
-            "no-gpl" => ExtensionModuleFilter::NoGPL,
-            _ => return Err(RuntimeError {
-                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                message: "policy must be one of {minimal, all, no-libraries, no-gpl}".to_string(),
-                label: "invalid policy value".to_string(),
-            }.into())
-        };
+        let filter = ExtensionModuleFilter::from_str(&filter).or_else(|e| Err(RuntimeError {
+            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+            message: e.to_string(),
+            label: "invalid policy value".to_string(),
+        }.into()))?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
 
