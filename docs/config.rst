@@ -950,38 +950,6 @@ empty set for each resource *flavor*. As rules are read, their results are
 rule ``type``. If multiple rules add a resource of the same name and flavor, the
 last added version is used. i.e. *last write wins*.
 
-.. _install_locations:
-
-Install Locations
-^^^^^^^^^^^^^^^^^
-
-Some rules support the concept of *install locations*. This allows resources
-to be packaged in different locations. For example, some resources can be
-embedded in the produced binary and others can live as files on the
-filesystem (like how Python traditionally works).
-
-If a rule supports *install locations*, the string value defining an install
-location has the following values:
-
-``embedded``
-   Resource will be embedded in the produced binary.
-
-   This is usually the default install location.
-
-``app-relative:<path>``
-   Strings prefixed with ``app-relative:`` denote a path relative to the
-   produced binary. The value following the prefix will be joined with the
-   parent directory of the produced binary to form a base path for resources
-   to be installed into.
-
-   For example, ``app-relative:lib`` would install resources into a ``lib``
-   child directory underneath where the produced binary lives.
-
-   Different resource types are mapped to different semantics for choosing the
-   exact final path. Using the above example, a Python source module for the
-   ``foo.bar`` module would be installed to ``lib/foo/bar.py`` or
-   ``lib/foo/bar/__init__.py`` if it is a package module.
-
 The following sections describe the various ``type``'s of rules.
 
 ``WriteLicenseFiles(path)``

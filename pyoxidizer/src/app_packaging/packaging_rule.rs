@@ -4,42 +4,7 @@
 
 use std::collections::BTreeSet;
 
-use super::config::InstallLocation;
-use crate::py_packaging::resource::{AppRelativeResources, PythonResource};
-
-#[derive(Debug)]
-pub enum ResourceAction {
-    Add,
-    Remove,
-}
-
-/// Represents the packaging location for a resource.
-#[derive(Clone, Debug)]
-pub enum ResourceLocation {
-    /// Embed the resource in the binary.
-    Embedded,
-
-    /// Install the resource in a path relative to the produced binary.
-    AppRelative { path: String },
-}
-
-impl ResourceLocation {
-    pub fn new(v: &InstallLocation) -> Self {
-        match v {
-            InstallLocation::Embedded => ResourceLocation::Embedded,
-            InstallLocation::AppRelative { path } => {
-                ResourceLocation::AppRelative { path: path.clone() }
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct PythonResourceAction {
-    pub action: ResourceAction,
-    pub location: ResourceLocation,
-    pub resource: PythonResource,
-}
+use crate::py_packaging::resource::AppRelativeResources;
 
 impl AppRelativeResources {
     pub fn package_names(&self) -> BTreeSet<String> {

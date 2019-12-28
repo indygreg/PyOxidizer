@@ -162,10 +162,6 @@ to a single executable and can result in
 But sometimes embedded resources into the binary isn't desired or doesn't
 work. Fear not: PyOxidizer has you covered!
 
-As documented at :ref:`install_locations`, many packaging rules in PyOxidizer
-configuration files can define an ``install_location`` that denotes where
-resources found by a packaging rule are installed.
-
 Let's give an example of this by attempting to package
 `black <https://github.com/python/black>`_, a Python code formatter.
 

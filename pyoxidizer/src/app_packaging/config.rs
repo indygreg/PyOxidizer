@@ -18,12 +18,6 @@ pub struct BuildConfig {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum InstallLocation {
-    Embedded,
-    AppRelative { path: String },
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub struct PackagingFilterInclude {
     pub files: Vec<String>,
     pub glob_files: Vec<String>,
@@ -69,18 +63,6 @@ pub struct Config {
     pub python_packaging: Vec<PythonPackaging>,
     pub run: RunMode,
     pub distributions: Vec<Distribution>,
-}
-
-pub fn resolve_install_location(value: &str) -> Result<InstallLocation> {
-    if value == "embedded" {
-        Ok(InstallLocation::Embedded)
-    } else if value.starts_with("app-relative:") {
-        let path = value[13..value.len()].to_string();
-
-        Ok(InstallLocation::AppRelative { path })
-    } else {
-        Err(anyhow!("invalid install_location: {}", value))
-    }
 }
 
 pub fn default_raw_allocator(target: &str) -> RawAllocator {
