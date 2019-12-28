@@ -40,6 +40,16 @@ impl SourceModule {
             is_package: self.is_package,
         }
     }
+
+    /// Convert the instance to a BytecodeModule.
+    pub fn as_bytecode_module(&self, optimize_level: BytecodeOptimizationLevel) -> BytecodeModule {
+        BytecodeModule {
+            name: self.name.clone(),
+            source: self.source.clone(),
+            optimize_level,
+            is_package: self.is_package,
+        }
+    }
 }
 
 /// An optimization level for Python bytecode.

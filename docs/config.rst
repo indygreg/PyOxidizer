@@ -149,6 +149,8 @@ source modules present in this distribution.
 Returns a ``list`` of ``PythonResourceData`` representing resource files
 present in this distribution.
 
+.. _config_python_distribution_extension_modules:
+
 ``PythonDistribution.extension_modules(filter='all')``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -442,6 +444,39 @@ This method registers an iterable of Python resources of various types.
 This method is identical to ``PythonEmbeddedResources.add_python_resource()``
 except the first argument is an iterable of resources. All other arguments
 are identical.
+
+``python_embedded_resources_from_distribution(...)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Construct a ``PythonEmbeddedResources`` from a ``PythonDistribution`` instance,
+with control over common settings.
+
+The arguments are as follows:
+
+``dist`` (``PythonDistribution``)
+   The Python distribution to use.
+
+   If not defined, the result of ``default_python_distribution()`` will be used.
+
+``extension_module_filter`` (``str``)
+   The filter to apply to determine which extension modules to add.
+
+   See :ref:`config_python_distribution_extension_modules`_ for what
+   values are accepted and their behavior.
+
+   Default is ``all``.
+
+``include_sources`` (``bool``)
+   Boolean to control whether sources of Python modules are added in addition
+   to bytecode.
+
+   Default is ``True``.
+
+``include_resources`` (``bool``)
+   Boolean to control whether non-module resource data from the distribution is
+   added.
+
+   Default is ``False``.
 
 .. _config_embedded_python_config:
 

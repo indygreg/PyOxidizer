@@ -15,8 +15,10 @@ use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
-use super::env::{required_bool_arg, required_type_arg};
-use crate::py_packaging::distribution::ExtensionModule;
+use super::env::{optional_type_arg, required_bool_arg, required_str_arg, required_type_arg};
+use super::python_distribution::{resolve_default_python_distribution, PythonDistribution};
+use crate::app_packaging::environment::EnvironmentContext;
+use crate::py_packaging::distribution::{ExtensionModule, ExtensionModuleFilter};
 use crate::py_packaging::embedded_resource::EmbeddedPythonResourcesPrePackaged;
 use crate::py_packaging::resource::{
     BytecodeModule, BytecodeOptimizationLevel, PythonResource, ResourceData, SourceModule,
@@ -517,5 +519,107 @@ starlark_module! { python_resource_env =>
         }
 
         Ok(Value::new(None))
+    }
+
+    #[allow(non_snake_case, clippy::ptr_arg)]
+    python_embedded_resources_from_distribution(
+        env env,
+        dist=None,
+        extension_module_filter="all",
+        include_sources=true,
+        include_resources=false
+        )
+    {
+        optional_type_arg("dist", "PythonDistribution", &dist)?;
+        let extension_module_filter = required_str_arg("extension_module_filter", &extension_module_filter)?;
+        let include_sources = required_bool_arg("include_sources", &include_sources)?;
+        let include_resources = required_bool_arg("include_resources", &include_resources)?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        let mut dist = match dist.get_type() {
+            "NoneType" => {
+                let build_target = env.get("BUILD_TARGET").unwrap().to_string();
+                resolve_default_python_distribution(&env, &build_target)?
+            },
+            "PythonDistribution" => dist.clone(),
+            _ => panic!("type of dist should have been validated above")
+        };
+
+        let extension_module_filter = ExtensionModuleFilter::from_str(&extension_module_filter).or_else(|e| Err(RuntimeError {
+            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+            message: e.to_string(),
+            label: "invalid policy value".to_string(),
+        }.into()))?;
+
+        dist.downcast_apply_mut(|dist: &mut PythonDistribution| {
+            dist.ensure_distribution_resolved(&logger);
+
+            let mut embedded = EmbeddedPythonResourcesPrePackaged::default();
+
+            let dist_ref = dist.distribution.as_ref().unwrap();
+
+            for ext in dist_ref.filter_extension_modules(&logger, &extension_module_filter) {
+                embedded.add_extension_module(&ext);
+            }
+
+            let sources = dist_ref.source_modules().or_else(|e| Err(RuntimeError {
+                code: "PYTHON_DISTRIBUTION",
+                message: e.to_string(),
+                label: e.to_string(),
+            }.into()))?;
+
+            for source in sources {
+                if include_sources {
+                    embedded.add_source_module(&source);
+                }
+
+                embedded.add_bytecode_module(&source.as_bytecode_module(BytecodeOptimizationLevel::Zero));
+            }
+
+            if include_resources {
+                let resources = dist_ref.resources_data().or_else(|e| Err(RuntimeError {
+                    code: "PYTHON_DISTRIBUTION",
+                    message: e.to_string(),
+                    label: e.to_string(),
+                }.into()))?;
+
+                for resource in resources {
+                    embedded.add_resource(&resource);
+                }
+            }
+
+            Ok(Value::new(PythonEmbeddedResources { embedded }))
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::testutil::*;
+    use super::*;
+
+    #[test]
+    fn test_python_embedded_resources_from_distribution_default() {
+        let embedded = starlark_eval("python_embedded_resources_from_distribution()").unwrap();
+
+        embedded.downcast_apply(|embedded: &PythonEmbeddedResources| {
+            assert!(!embedded.embedded.extension_modules.is_empty());
+            assert!(!embedded.embedded.bytecode_modules.is_empty());
+            assert!(!embedded.embedded.source_modules.is_empty());
+            assert!(embedded.embedded.resources.is_empty());
+        });
+    }
+
+    #[test]
+    fn test_python_embedded_resources_from_distribution_no_sources() {
+        let embedded =
+            starlark_eval("python_embedded_resources_from_distribution(include_sources=False)")
+                .unwrap();
+
+        embedded.downcast_apply(|embedded: &PythonEmbeddedResources| {
+            assert!(embedded.embedded.source_modules.is_empty());
+        });
     }
 }
