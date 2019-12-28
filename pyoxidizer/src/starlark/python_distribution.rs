@@ -200,7 +200,7 @@ starlark_module! { python_distribution_module =>
         Ok(Value::from(this.downcast_apply_mut(|dist: &mut PythonDistribution| {
             dist.ensure_distribution_resolved(&logger);
 
-            dist.distribution.as_ref().unwrap().filter_extension_modules(&logger, &filter).iter().map(|em| {
+            dist.distribution.as_ref().unwrap().filter_extension_modules(&logger, &filter, None).iter().map(|em| {
                 Value::new(PythonExtensionModule { em: em.clone() })
             }).collect_vec()
         })))

@@ -560,7 +560,7 @@ starlark_module! { python_resource_env =>
 
             let dist_ref = dist.distribution.as_ref().unwrap();
 
-            for ext in dist_ref.filter_extension_modules(&logger, &extension_module_filter) {
+            for ext in dist_ref.filter_extension_modules(&logger, &extension_module_filter, None) {
                 embedded.add_extension_module(&ext);
             }
 

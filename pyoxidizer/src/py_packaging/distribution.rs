@@ -452,6 +452,30 @@ pub fn invoke_python(python_paths: &PythonPaths, logger: &slog::Logger, args: &[
     }
 }
 
+pub fn choose_variant(
+    extensions: &[ExtensionModule],
+    variants: &Option<HashMap<String, String>>,
+) -> ExtensionModule {
+    if let Some(variants) = variants {
+        if let Some(preferred) = variants.get(&extensions[0].module) {
+            let mut desired = extensions[0].clone();
+
+            for em in extensions {
+                if &em.variant == preferred {
+                    desired = em.clone();
+                    break;
+                }
+            }
+
+            desired
+        } else {
+            extensions[0].clone()
+        }
+    } else {
+        extensions[0].clone()
+    }
+}
+
 impl ParsedPythonDistribution {
     pub fn from_path(
         logger: &slog::Logger,
@@ -619,63 +643,83 @@ impl ParsedPythonDistribution {
         &self,
         logger: &slog::Logger,
         filter: &ExtensionModuleFilter,
+        variants: Option<HashMap<String, String>>,
     ) -> Vec<ExtensionModule> {
         let mut res = Vec::new();
 
-        for (name, variants) in &self.extension_modules {
+        for (name, ext_variants) in &self.extension_modules {
             match filter {
                 ExtensionModuleFilter::Minimal => {
-                    let em = &variants[0];
+                    let ext_variants = ext_variants
+                        .iter()
+                        .filter_map(|em| {
+                            if em.builtin_default || em.required {
+                                Some(em.clone())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<ExtensionModule>>();
 
-                    if em.builtin_default || em.required {
-                        res.push(em.clone());
+                    if !ext_variants.is_empty() {
+                        res.push(choose_variant(&ext_variants, &variants));
                     }
                 }
 
                 ExtensionModuleFilter::All => {
-                    let em = &variants[0];
-                    res.push(em.clone());
+                    res.push(choose_variant(&ext_variants, &variants));
                 }
 
                 ExtensionModuleFilter::NoLibraries => {
-                    for em in variants {
-                        if em.links.is_empty() {
-                            res.push(em.clone());
+                    let ext_variants = ext_variants
+                        .iter()
+                        .filter_map(|em| {
+                            if em.links.is_empty() {
+                                Some(em.clone())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<ExtensionModule>>();
 
-                            break;
-                        }
+                    if !ext_variants.is_empty() {
+                        res.push(choose_variant(&ext_variants, &variants));
                     }
                 }
 
                 ExtensionModuleFilter::NoGPL => {
-                    for em in variants {
-                        let suitable = if em.links.is_empty() {
-                            true
-                        } else {
+                    let ext_variants = ext_variants
+                        .iter()
+                        .filter_map(|em| {
+                            if em.links.is_empty() {
+                                Some(em.clone())
                             // Public domain is always allowed.
-                            if em.license_public_domain == Some(true) {
-                                true
+                            } else if em.license_public_domain == Some(true) {
+                                Some(em.clone())
                             // Use explicit license list if one is defined.
                             } else if let Some(ref licenses) = em.licenses {
                                 // We filter through an allow list because it is safer. (No new GPL
                                 // licenses can slip through.)
-                                licenses
+                                if licenses
                                     .iter()
                                     .all(|license| NON_GPL_LICENSES.contains(&license.as_str()))
+                                {
+                                    Some(em.clone())
+                                } else {
+                                    None
+                                }
                             } else {
                                 // In lack of evidence that it isn't GPL, assume GPL.
                                 // TODO consider improving logic here, like allowing known system
                                 // and framework libraries to be used.
                                 warn!(logger, "unable to determine {} is not GPL; ignoring", &name);
-                                false
+                                None
                             }
-                        };
+                        })
+                        .collect::<Vec<ExtensionModule>>();
 
-                        if suitable {
-                            res.push(em.clone());
-
-                            break;
-                        }
+                    if !ext_variants.is_empty() {
+                        res.push(choose_variant(&ext_variants, &variants));
                     }
                 }
             }

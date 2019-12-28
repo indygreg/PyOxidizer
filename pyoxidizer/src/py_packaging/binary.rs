@@ -246,7 +246,9 @@ pub mod tests {
 
         // We need to add minimal extension modules so builds actually work. If they are missing,
         // we'll get missing symbol errors during linking.
-        for ext in distribution.filter_extension_modules(logger, &ExtensionModuleFilter::Minimal) {
+        for ext in
+            distribution.filter_extension_modules(logger, &ExtensionModuleFilter::Minimal, None)
+        {
             resources.add_extension_module(&ext);
         }
 

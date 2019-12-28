@@ -73,7 +73,7 @@ starlark_module! { python_executable_env =>
 
         // Always ensure minimal extension modules are present, otherwise we get
         // missing symbol errors at link time.
-        for ext in distribution.filter_extension_modules(&logger, &ExtensionModuleFilter::Minimal) {
+        for ext in distribution.filter_extension_modules(&logger, &ExtensionModuleFilter::Minimal, None) {
             resources.add_extension_module(&ext);
         }
 
