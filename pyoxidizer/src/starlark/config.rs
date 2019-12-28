@@ -22,7 +22,7 @@ use super::env::{required_str_arg, required_type_arg};
 use super::python_distribution::PythonDistribution;
 use super::python_packaging::{
     FilterInclude, Stdlib, StdlibExtensionVariant, StdlibExtensionsExplicitExcludes,
-    StdlibExtensionsExplicitIncludes, WriteLicenseFiles,
+    WriteLicenseFiles,
 };
 use super::python_run_mode::PythonRunMode;
 use crate::app_packaging::config::{
@@ -112,9 +112,6 @@ starlark_module! { config_env =>
                 })),
                 "StdlibExtensionsExplicitExcludes" => Ok(x.downcast_apply(|x: &StdlibExtensionsExplicitExcludes| -> PythonPackaging {
                     PythonPackaging::StdlibExtensionsExplicitExcludes(x.rule.clone())
-                })),
-                "StdlibExtensionsExplicitIncludes" => Ok(x.downcast_apply(|x: &StdlibExtensionsExplicitIncludes| -> PythonPackaging {
-                    PythonPackaging::StdlibExtensionsExplicitIncludes(x.rule.clone())
                 })),
                 "WriteLicenseFiles" => Ok(x.downcast_apply(|x: &WriteLicenseFiles| -> PythonPackaging {
                     PythonPackaging::WriteLicenseFiles(x.rule.clone())

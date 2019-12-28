@@ -965,24 +965,6 @@ location has the following values:
 
 The following sections describe the various ``type``'s of rules.
 
-``StdlibExtensionsExplicitIncludes(includes)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This rule allows including explicitly delimited extension modules from
-the Python distribution.
-
-The rule must define an ``includes`` argument, which is an array of strings
-of extension module names.
-
-This policy is typically combined with the ``minimal`` ``stdlib-extension-policy``
-to cherry pick individual extension modules for inclusion.
-
-Example:
-
-.. code-block:: python
-
-   StdlibExtensionsExplicitIncludes(["binascii", "errno", "itertools", "math", "select", "_socket"])
-
 ``StdlibExtensionsExplicitExcludes(excludes)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
