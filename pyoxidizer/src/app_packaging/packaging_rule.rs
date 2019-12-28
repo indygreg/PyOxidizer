@@ -7,9 +7,7 @@ use std::collections::BTreeSet;
 use std::fs;
 
 use super::config::{
-    InstallLocation, PackagingStdlib, PackagingStdlibExtensionVariant,
-    PackagingStdlibExtensionsExplicitExcludes, PackagingStdlibExtensionsExplicitIncludes,
-    PackagingStdlibExtensionsPolicy, PythonPackaging,
+    InstallLocation, PackagingStdlib, PackagingStdlibExtensionVariant, PythonPackaging,
 };
 use crate::py_packaging::distribution::{is_stdlib_test_package, ParsedPythonDistribution};
 use crate::py_packaging::resource::{AppRelativeResources, PythonResource};
@@ -75,80 +73,6 @@ where
     }
 
     package_names
-}
-
-fn resolve_stdlib_extensions_policy(
-    logger: &slog::Logger,
-    dist: &ParsedPythonDistribution,
-    rule: &PackagingStdlibExtensionsPolicy,
-) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
-    for ext in dist.filter_extension_modules(logger, &rule.filter) {
-        res.push(PythonResourceAction {
-            action: ResourceAction::Add,
-            location: ResourceLocation::Embedded,
-            resource: PythonResource::ExtensionModule {
-                name: ext.module.clone(),
-                module: ext,
-            },
-        });
-    }
-
-    res
-}
-
-fn resolve_stdlib_extensions_explicit_includes(
-    dist: &ParsedPythonDistribution,
-    rule: &PackagingStdlibExtensionsExplicitIncludes,
-) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
-    for name in &rule.includes {
-        if let Some(modules) = &dist.extension_modules.get(name) {
-            res.push(PythonResourceAction {
-                action: ResourceAction::Add,
-                location: ResourceLocation::Embedded,
-                resource: PythonResource::ExtensionModule {
-                    name: name.clone(),
-                    module: modules[0].clone(),
-                },
-            });
-        }
-    }
-
-    res
-}
-
-fn resolve_stdlib_extensions_explicit_excludes(
-    dist: &ParsedPythonDistribution,
-    rule: &PackagingStdlibExtensionsExplicitExcludes,
-) -> Vec<PythonResourceAction> {
-    let mut res = Vec::new();
-
-    for (name, modules) in &dist.extension_modules {
-        if rule.excludes.contains(name) {
-            res.push(PythonResourceAction {
-                action: ResourceAction::Remove,
-                location: ResourceLocation::Embedded,
-                resource: PythonResource::ExtensionModule {
-                    name: name.clone(),
-                    module: modules[0].clone(),
-                },
-            });
-        } else {
-            res.push(PythonResourceAction {
-                action: ResourceAction::Add,
-                location: ResourceLocation::Embedded,
-                resource: PythonResource::ExtensionModule {
-                    name: name.clone(),
-                    module: modules[0].clone(),
-                },
-            });
-        }
-    }
-
-    res
 }
 
 fn resolve_stdlib_extension_variant(
@@ -267,18 +191,6 @@ pub fn resolve_python_packaging(
     dist: &ParsedPythonDistribution,
 ) -> Vec<PythonResourceAction> {
     match package {
-        PythonPackaging::StdlibExtensionsPolicy(rule) => {
-            resolve_stdlib_extensions_policy(logger, dist, &rule)
-        }
-
-        PythonPackaging::StdlibExtensionsExplicitIncludes(rule) => {
-            resolve_stdlib_extensions_explicit_includes(dist, &rule)
-        }
-
-        PythonPackaging::StdlibExtensionsExplicitExcludes(rule) => {
-            resolve_stdlib_extensions_explicit_excludes(dist, &rule)
-        }
-
         PythonPackaging::StdlibExtensionVariant(rule) => {
             resolve_stdlib_extension_variant(dist, rule)
         }

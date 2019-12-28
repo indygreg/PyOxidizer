@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 
 use super::environment::EnvironmentContext;
 use crate::py_packaging::config::{EmbeddedPythonConfig, RawAllocator, RunMode};
-use crate::py_packaging::distribution::{ExtensionModuleFilter, PythonDistributionLocation};
+use crate::py_packaging::distribution::PythonDistributionLocation;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BuildConfig {
@@ -21,21 +21,6 @@ pub struct BuildConfig {
 pub enum InstallLocation {
     Embedded,
     AppRelative { path: String },
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct PackagingStdlibExtensionsPolicy {
-    pub filter: ExtensionModuleFilter,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct PackagingStdlibExtensionsExplicitIncludes {
-    pub includes: Vec<String>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct PackagingStdlibExtensionsExplicitExcludes {
-    pub excludes: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -67,9 +52,6 @@ pub struct PackagingWriteLicenseFiles {
 
 #[derive(Clone, Debug)]
 pub enum PythonPackaging {
-    StdlibExtensionsPolicy(PackagingStdlibExtensionsPolicy),
-    StdlibExtensionsExplicitIncludes(PackagingStdlibExtensionsExplicitIncludes),
-    StdlibExtensionsExplicitExcludes(PackagingStdlibExtensionsExplicitExcludes),
     StdlibExtensionVariant(PackagingStdlibExtensionVariant),
     Stdlib(PackagingStdlib),
     FilterInclude(PackagingFilterInclude),
