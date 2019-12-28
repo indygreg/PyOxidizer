@@ -21,10 +21,8 @@ use super::env::{
 use crate::app_packaging::config::{
     resolve_install_location, PackagingFilterInclude, PackagingStdlib,
     PackagingStdlibExtensionVariant, PackagingStdlibExtensionsExplicitExcludes,
-    PackagingStdlibExtensionsExplicitIncludes, PackagingStdlibExtensionsPolicy,
-    PackagingWriteLicenseFiles,
+    PackagingStdlibExtensionsExplicitIncludes, PackagingWriteLicenseFiles,
 };
-use crate::py_packaging::distribution::ExtensionModuleFilter;
 
 #[derive(Debug, Clone)]
 pub struct FilterInclude {
@@ -50,41 +48,6 @@ impl TypedValue for FilterInclude {
 
     fn get_type(&self) -> &'static str {
         "FilterInclude"
-    }
-
-    fn to_bool(&self) -> bool {
-        true
-    }
-
-    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
-        default_compare(self, other)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct StdlibExtensionsPolicy {
-    pub rule: PackagingStdlibExtensionsPolicy,
-}
-
-impl TypedValue for StdlibExtensionsPolicy {
-    immutable!();
-    any!();
-    not_supported!(binop);
-    not_supported!(container);
-    not_supported!(function);
-    not_supported!(get_hash);
-    not_supported!(to_int);
-
-    fn to_str(&self) -> String {
-        format!("StdlibExtensionsPolicy<{:#?}>", self.rule)
-    }
-
-    fn to_repr(&self) -> String {
-        self.to_str()
-    }
-
-    fn get_type(&self) -> &'static str {
-        "StdlibExtensionsPolicy"
     }
 
     fn to_bool(&self) -> bool {
@@ -297,29 +260,6 @@ starlark_module! { python_packaging_env =>
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
-    StdlibExtensionsPolicy(policy) {
-        let policy = required_str_arg("policy", &policy)?;
-
-        let filter = match policy.as_str() {
-            "minimal" => ExtensionModuleFilter::Minimal,
-            "all" => ExtensionModuleFilter::All,
-            "no-libraries" => ExtensionModuleFilter::NoLibraries,
-            "no-gpl" => ExtensionModuleFilter::NoGPL,
-            _ => return Err(RuntimeError {
-                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                message: "policy must be one of {minimal, all, no-libraries, no-gpl}".to_string(),
-                label: "invalid policy value".to_string(),
-            }.into())
-        };
-
-        let rule = PackagingStdlibExtensionsPolicy {
-            filter,
-        };
-
-        Ok(Value::new(StdlibExtensionsPolicy { rule }))
-    }
-
-    #[allow(non_snake_case, clippy::ptr_arg)]
     StdlibExtensionsExplicitIncludes(includes=None) {
         required_list_arg("includes", "string", &includes)?;
 
@@ -426,21 +366,6 @@ mod tests {
         };
 
         v.downcast_apply(|x: &FilterInclude| assert_eq!(x.rule, wanted));
-    }
-
-    #[test]
-    fn test_stdlib_extensions_policy_default() {
-        let err = starlark_nok("StdlibExtensionsPolicy()");
-        assert!(err.message.starts_with("Missing parameter policy"));
-    }
-
-    #[test]
-    fn test_stdlib_extensions_policy_policy() {
-        let v = starlark_ok("StdlibExtensionsPolicy('all')");
-        let wanted = PackagingStdlibExtensionsPolicy {
-            filter: ExtensionModuleFilter::All,
-        };
-        v.downcast_apply(|x: &StdlibExtensionsPolicy| assert_eq!(x.rule, wanted));
     }
 
     #[test]

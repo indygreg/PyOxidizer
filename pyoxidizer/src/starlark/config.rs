@@ -22,7 +22,7 @@ use super::env::{required_str_arg, required_type_arg};
 use super::python_distribution::PythonDistribution;
 use super::python_packaging::{
     FilterInclude, Stdlib, StdlibExtensionVariant, StdlibExtensionsExplicitExcludes,
-    StdlibExtensionsExplicitIncludes, StdlibExtensionsPolicy, WriteLicenseFiles,
+    StdlibExtensionsExplicitIncludes, WriteLicenseFiles,
 };
 use super::python_run_mode::PythonRunMode;
 use crate::app_packaging::config::{
@@ -116,9 +116,6 @@ starlark_module! { config_env =>
                 "StdlibExtensionsExplicitIncludes" => Ok(x.downcast_apply(|x: &StdlibExtensionsExplicitIncludes| -> PythonPackaging {
                     PythonPackaging::StdlibExtensionsExplicitIncludes(x.rule.clone())
                 })),
-                "StdlibExtensionsPolicy" => Ok(x.downcast_apply(|x: &StdlibExtensionsPolicy| -> PythonPackaging {
-                    PythonPackaging::StdlibExtensionsPolicy(x.rule.clone())
-                })),
                 "WriteLicenseFiles" => Ok(x.downcast_apply(|x: &WriteLicenseFiles| -> PythonPackaging {
                     PythonPackaging::WriteLicenseFiles(x.rule.clone())
                 })),
@@ -179,22 +176,12 @@ starlark_module! { config_env =>
         let config_path = env.get("CONFIG_PATH").expect("CONFIG_PATH should always be available").to_string();
 
         let mut have_stdlib = false;
-        let mut have_stdlib_extensions_policy = false;
 
         for packaging in &python_packaging {
             match packaging {
                 &PythonPackaging::Stdlib(_) => have_stdlib = true,
-                &PythonPackaging::StdlibExtensionsPolicy(_) => have_stdlib_extensions_policy = true,
                 _ => ()
             }
-        }
-
-        if !have_stdlib_extensions_policy {
-            return Err(RuntimeError {
-                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                message: "no StdLibExtensionsPolicy packaging rule".to_string(),
-                label: "no StdLibExtensionsPolicy packaging rule".to_string(),
-            }.into());
         }
 
         if !have_stdlib {
@@ -245,7 +232,7 @@ mod tests {
                 embedded_python_config=EmbeddedPythonConfig(),
                 python_distribution=default_python_distribution(),
                 python_run_mode=python_run_mode_repl(),
-                packaging_rules=[Stdlib(), StdlibExtensionsPolicy('minimal')],
+                packaging_rules=[Stdlib()],
             )
         "#
         );

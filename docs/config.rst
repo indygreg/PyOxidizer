@@ -165,13 +165,33 @@ following values are recognized:
 
 ``minimal``
    Return only extension modules that are required to initialize a
-   Python interpreter.
+   Python interpreter. This is a very small set and various functionality
+   from the Python standard library will not work with this value.
 
 ``no-libraries``
    Return only extension modules that don't require any additional libraries.
 
+   Most common Python extension modules are included. Extension modules
+   like ``_ssl`` (links against OpenSSL) and ``zlib`` are not included.
+
 ``no-gpl``
-   Return only extension modules that aren't GPL-licensed.
+   Return only extension modules that do not link against GPL licensed
+   libraries.
+
+   Not all Python distributions may annotate license info for all extensions or
+   the libraries they link against. If license info is missing, the extension is
+   not included because it *could* be GPL licensed. Similarly, the mechanism for
+   determining whether a license is GPL is based on an explicit list of non-GPL
+   licenses. This ensures new GPL licenses don't slip through.
+
+.. important::
+
+   Libraries that extension modules link against have various software
+   licenses, including GPL version 3. Adding these extension modules will
+   also include the library. This typically exposes your program to additional
+   licensing requirements, including making your application subject to that
+   license and therefore open source. See :ref:`licensing_considerations` for
+   more.
 
 ``PythonDistribution.pip_install(args, extra_envs={})``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -944,55 +964,6 @@ location has the following values:
    ``lib/foo/bar/__init__.py`` if it is a package module.
 
 The following sections describe the various ``type``'s of rules.
-
-``StdlibExtensionsPolicy(policy)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This rule defines a base policy for what *extension modules* to include
-from the Python distribution.
-
-This type has a ``policy`` argument denoting the *policy* to use. This can
-have the following values:
-
-``minimal``
-   Include the minimal set of extension modules required to initialize a
-   Python interpreter. This is a very small set and various common
-   functionality from the Python standard library will not work with this
-   value.
-
-``all``
-   Includes all available extension modules in the Python distribution.
-
-``no-libraries``
-   Includes all available extension modules in the Python distribution that
-   do not have an additional library dependency. Most common Python extension
-   modules are included. Extension modules like ``_ssl`` (links against
-   OpenSSL) and ``zlib`` are not included.
-
-``no-gpl``
-   Includes all available extension modules in the Python distribution that
-   do not link against GPL licensed libraries.
-
-   Not all Python distributions may annotate license info for all extensions or
-   the libraries they link against. If license info is missing, the extension is
-   not included because it *could* be GPL licensed. Similarly, the mechanism for
-   determining whether a license is GPL is based on an explicit list of non-GPL
-   licenses. This ensures new GPL licenses don't slip through.
-
-Examples:
-
-.. code-block:: python
-
-   stdlib_extensions_policy = StdlibExtensionsPolicy("no-libraries")
-
-.. important::
-
-   Libraries that extension modules link against have various software
-   licenses, including GPL version 3. Adding these extension modules will
-   also include the library. This typically exposes your program to additional
-   licensing requirements, including making your application subject to that
-   license and therefore open source. See :ref:`licensing_considerations` for
-   more.
 
 ``StdlibExtensionsExplicitIncludes(includes)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
