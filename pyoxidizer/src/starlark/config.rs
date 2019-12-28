@@ -20,7 +20,7 @@ use super::distribution::{TarballDistribution, WixInstallerDistribution};
 use super::embedded_python_config::EmbeddedPythonConfig;
 use super::env::{required_str_arg, required_type_arg};
 use super::python_distribution::PythonDistribution;
-use super::python_packaging::{FilterInclude, Stdlib, WriteLicenseFiles};
+use super::python_packaging::{FilterInclude, WriteLicenseFiles};
 use super::python_run_mode::PythonRunMode;
 use crate::app_packaging::config::{
     BuildConfig as ConfigBuildConfig, Config as ConfigConfig, Distribution, PythonPackaging,
@@ -101,9 +101,6 @@ starlark_module! { config_env =>
                 "FilterInclude" => Ok(x.downcast_apply(|x: &FilterInclude| -> PythonPackaging {
                     PythonPackaging::FilterInclude(x.rule.clone())
                 })),
-                "Stdlib" => Ok(x.downcast_apply(|x: &Stdlib| -> PythonPackaging {
-                    PythonPackaging::Stdlib(x.rule.clone())
-                })),
                 "WriteLicenseFiles" => Ok(x.downcast_apply(|x: &WriteLicenseFiles| -> PythonPackaging {
                     PythonPackaging::WriteLicenseFiles(x.rule.clone())
                 })),
@@ -163,23 +160,6 @@ starlark_module! { config_env =>
 
         let config_path = env.get("CONFIG_PATH").expect("CONFIG_PATH should always be available").to_string();
 
-        let mut have_stdlib = false;
-
-        for packaging in &python_packaging {
-            match packaging {
-                &PythonPackaging::Stdlib(_) => have_stdlib = true,
-                _ => ()
-            }
-        }
-
-        if !have_stdlib {
-            return Err(RuntimeError {
-                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                message: "no StdLib packaging rule".to_string(),
-                label: "no StdLib packaging rule".to_string(),
-            }.into());
-        }
-
         let config = ConfigConfig {
             config_path: PathBuf::from(config_path),
             build_config,
@@ -220,7 +200,7 @@ mod tests {
                 embedded_python_config=EmbeddedPythonConfig(),
                 python_distribution=default_python_distribution(),
                 python_run_mode=python_run_mode_repl(),
-                packaging_rules=[Stdlib()],
+                packaging_rules=[],
             )
         "#
         );

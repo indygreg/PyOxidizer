@@ -984,62 +984,6 @@ location has the following values:
 
 The following sections describe the various ``type``'s of rules.
 
-``Stdlib(...)``
-^^^^^^^^^^^^^^^
-
-This rule controls packaging of non-extension modules Python resources from
-the Python distribution's standard library. Presence of this rule will
-pull in the Python standard library in its entirety.
-
-.. important::
-
-   A ``Stdlib`` rule is required, as Python can't be initialized
-   without some modules from the standard library. It should be one of the first
-   packaging rule entries so the standard library forms the base of the
-   set of Python modules to include.
-
-The following arguments control behavior:
-
-``exclude_test_modules`` (bool)
-   Indicates whether test-only modules should be included in packaging. The
-   Python standard library ships various packages and modules that are used for
-   testing Python itself. These modules are not referenced by *real* modules
-   in the Python standard library and can usually be safely excluded.
-
-   Default is ``True``.
-
-``optimize_level`` (int)
-   The optimization level for packaged bytecode. Allowed values are ``0``, ``1``, and
-   ``2``.
-
-   Default is ``0``, which is the Python default.
-
-``excludes`` (array of string)
-   An array of module names to exclude.
-
-   A value in this array will match on an exact full resource name match or
-   on a package prefix match. e.g. ``foo`` will match the module ``foo``, the
-   package ``foo``, and any sub-modules in ``foo``. e.g. it will match
-   ``foo.bar`` but will not match ``foofoo``.
-
-   Default is an empty array.
-
-``include_source`` (bool)
-   Whether to include the source code for modules in addition to bytecode.
-
-   Default is ``True``.
-
-``include_resources`` (bool)
-   Whether to include non-module resource files.
-
-   These are files like ``lib2to3/Grammar.txt`` which are present in the
-   standard library but aren't typically used for common functionality.
-
-   Default is ``False``.
-
-``install_location`` (string)
-   Where to package these resources. See :ref:`install_locations`.
-
 ``WriteLicenseFiles(path)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
