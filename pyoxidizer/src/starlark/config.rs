@@ -20,10 +20,7 @@ use super::distribution::{TarballDistribution, WixInstallerDistribution};
 use super::embedded_python_config::EmbeddedPythonConfig;
 use super::env::{required_str_arg, required_type_arg};
 use super::python_distribution::PythonDistribution;
-use super::python_packaging::{
-    FilterInclude, Stdlib, StdlibExtensionVariant, StdlibExtensionsExplicitExcludes,
-    WriteLicenseFiles,
-};
+use super::python_packaging::{FilterInclude, Stdlib, StdlibExtensionVariant, WriteLicenseFiles};
 use super::python_run_mode::PythonRunMode;
 use crate::app_packaging::config::{
     BuildConfig as ConfigBuildConfig, Config as ConfigConfig, Distribution, PythonPackaging,
@@ -109,9 +106,6 @@ starlark_module! { config_env =>
                 })),
                 "StdlibExtensionVariant" => Ok(x.downcast_apply(|x: &StdlibExtensionVariant| -> PythonPackaging {
                     PythonPackaging::StdlibExtensionVariant(x.rule.clone())
-                })),
-                "StdlibExtensionsExplicitExcludes" => Ok(x.downcast_apply(|x: &StdlibExtensionsExplicitExcludes| -> PythonPackaging {
-                    PythonPackaging::StdlibExtensionsExplicitExcludes(x.rule.clone())
                 })),
                 "WriteLicenseFiles" => Ok(x.downcast_apply(|x: &WriteLicenseFiles| -> PythonPackaging {
                     PythonPackaging::WriteLicenseFiles(x.rule.clone())

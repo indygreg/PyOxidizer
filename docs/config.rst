@@ -965,24 +965,6 @@ location has the following values:
 
 The following sections describe the various ``type``'s of rules.
 
-``StdlibExtensionsExplicitExcludes(excludes)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This rule allows excluding explicitly delimited extension modules from
-the Python distribution.
-
-The rule must define an ``excludes`` argument, which is an array of strings of
-extension module names.
-
-Every known extension module not in ``excludes`` will be added. If an extension
-module with a name in ``excludes`` has already been added, it will be removed.
-
-Example:
-
-.. code-block:: python
-
-   StdlibExtensionsExplicitExcludes(["_ssl"])
-
 ``StdlibExtensionVariant(extension, variant)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

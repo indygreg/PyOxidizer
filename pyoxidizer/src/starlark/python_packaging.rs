@@ -15,13 +15,10 @@ use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
-use super::env::{
-    optional_list_arg, required_bool_arg, required_list_arg, required_str_arg, required_type_arg,
-};
+use super::env::{optional_list_arg, required_bool_arg, required_str_arg, required_type_arg};
 use crate::app_packaging::config::{
     resolve_install_location, PackagingFilterInclude, PackagingStdlib,
-    PackagingStdlibExtensionVariant, PackagingStdlibExtensionsExplicitExcludes,
-    PackagingWriteLicenseFiles,
+    PackagingStdlibExtensionVariant, PackagingWriteLicenseFiles,
 };
 
 #[derive(Debug, Clone)]
@@ -48,41 +45,6 @@ impl TypedValue for FilterInclude {
 
     fn get_type(&self) -> &'static str {
         "FilterInclude"
-    }
-
-    fn to_bool(&self) -> bool {
-        true
-    }
-
-    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
-        default_compare(self, other)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct StdlibExtensionsExplicitExcludes {
-    pub rule: PackagingStdlibExtensionsExplicitExcludes,
-}
-
-impl TypedValue for StdlibExtensionsExplicitExcludes {
-    immutable!();
-    any!();
-    not_supported!(binop);
-    not_supported!(container);
-    not_supported!(function);
-    not_supported!(get_hash);
-    not_supported!(to_int);
-
-    fn to_str(&self) -> String {
-        format!("StdlibExtensionsExplicitExcludes<{:#?}>", self.rule)
-    }
-
-    fn to_repr(&self) -> String {
-        self.to_str()
-    }
-
-    fn get_type(&self) -> &'static str {
-        "StdlibExtensionsExplicitExcludes"
     }
 
     fn to_bool(&self) -> bool {
@@ -225,19 +187,6 @@ starlark_module! { python_packaging_env =>
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
-    StdlibExtensionsExplicitExcludes(excludes=None) {
-        required_list_arg("excludes", "string", &excludes)?;
-
-        let excludes = excludes.into_iter()?.map(|x| x.to_string()).collect();
-
-        let rule = PackagingStdlibExtensionsExplicitExcludes {
-            excludes,
-        };
-
-        Ok(Value::new(StdlibExtensionsExplicitExcludes { rule }))
-    }
-
-    #[allow(non_snake_case, clippy::ptr_arg)]
     StdlibExtensionVariant(extension, variant) {
         let extension = required_str_arg("extension", &extension)?;
         let variant = required_str_arg("variant", &variant)?;
@@ -318,24 +267,6 @@ mod tests {
         };
 
         v.downcast_apply(|x: &FilterInclude| assert_eq!(x.rule, wanted));
-    }
-
-    #[test]
-    fn test_stdlib_extensions_explicit_excludes_default() {
-        let err = starlark_nok("StdlibExtensionsExplicitExcludes()");
-        assert_eq!(
-            err.message,
-            "function expects a list for excludes; got type NoneType"
-        );
-    }
-
-    #[test]
-    fn test_stdlib_extensions_explicit_excludes_excludes() {
-        let v = starlark_ok("StdlibExtensionsExplicitExcludes(['foo', 'bar'])");
-        let wanted = PackagingStdlibExtensionsExplicitExcludes {
-            excludes: vec!["foo".to_string(), "bar".to_string()],
-        };
-        v.downcast_apply(|x: &StdlibExtensionsExplicitExcludes| assert_eq!(x.rule, wanted));
     }
 
     #[test]
