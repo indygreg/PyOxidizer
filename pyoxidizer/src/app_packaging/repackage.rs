@@ -16,7 +16,6 @@ use std::path::{Path, PathBuf};
 use super::config::{
     eval_starlark_config_file, find_pyoxidizer_config_file_env, Config, PythonPackaging,
 };
-use super::packaging_rule::packages_from_module_names;
 use super::state::{BuildContext, PackagingState};
 use crate::py_packaging::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode};
 use crate::py_packaging::distribution::{
@@ -27,8 +26,8 @@ use crate::py_packaging::embedded_resource::EmbeddedPythonResources;
 use crate::py_packaging::libpython::{derive_importlib, link_libpython};
 use crate::py_packaging::pyembed::{derive_python_config, write_data_rs};
 use crate::py_packaging::resource::{
-    packages_from_module_name, AppRelativeResources, BuiltExtensionModule, PackagedModuleBytecode,
-    PackagedModuleSource,
+    packages_from_module_name, packages_from_module_names, AppRelativeResources,
+    BuiltExtensionModule, PackagedModuleBytecode, PackagedModuleSource,
 };
 
 lazy_static! {

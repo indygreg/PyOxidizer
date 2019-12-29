@@ -24,6 +24,24 @@ pub fn packages_from_module_name(module: &str) -> BTreeSet<String> {
     package_names
 }
 
+pub fn packages_from_module_names<I>(names: I) -> BTreeSet<String>
+where
+    I: Iterator<Item = String>,
+{
+    let mut package_names = BTreeSet::new();
+
+    for name in names {
+        let mut search: &str = &name;
+
+        while let Some(idx) = search.rfind('.') {
+            package_names.insert(search[0..idx].to_string());
+            search = &search[0..idx];
+        }
+    }
+
+    package_names
+}
+
 /// A Python source module agnostic of location.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SourceModule {
@@ -315,4 +333,15 @@ pub struct AppRelativeResources {
     pub module_sources: BTreeMap<String, PackagedModuleSource>,
     pub module_bytecodes: BTreeMap<String, PackagedModuleBytecode>,
     pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
+}
+
+impl AppRelativeResources {
+    pub fn package_names(&self) -> BTreeSet<String> {
+        let mut packages = packages_from_module_names(self.module_sources.keys().cloned());
+        packages.extend(packages_from_module_names(
+            self.module_bytecodes.keys().cloned(),
+        ));
+
+        packages
+    }
 }
