@@ -10,7 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
 use std::fs::create_dir_all;
-use std::io::{BufRead, BufReader, BufWriter, Write};
+use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 
 use super::config::{
@@ -23,6 +23,7 @@ use crate::py_packaging::distribution::{
     PythonDistributionLocation,
 };
 use crate::py_packaging::embedded_resource::EmbeddedPythonResources;
+use crate::py_packaging::filtering::{filter_btreemap, read_resource_names_file};
 use crate::py_packaging::libpython::{derive_importlib, link_libpython};
 use crate::py_packaging::pyembed::{derive_python_config, write_data_rs};
 use crate::py_packaging::resource::{
@@ -202,35 +203,6 @@ pub struct PythonResources {
 
     /// Path where to write license files.
     pub license_files_path: Option<String>,
-}
-
-fn read_resource_names_file(path: &Path) -> Result<BTreeSet<String>> {
-    let fh = fs::File::open(path)?;
-
-    let mut res: BTreeSet<String> = BTreeSet::new();
-
-    for line in BufReader::new(fh).lines() {
-        let line = line?;
-
-        if line.starts_with('#') || line.is_empty() {
-            continue;
-        }
-
-        res.insert(line);
-    }
-
-    Ok(res)
-}
-
-fn filter_btreemap<V>(logger: &slog::Logger, m: &mut BTreeMap<String, V>, f: &BTreeSet<String>) {
-    let keys: Vec<String> = m.keys().cloned().collect();
-
-    for key in keys {
-        if !f.contains(&key) {
-            warn!(logger, "removing {}", key);
-            m.remove(&key);
-        }
-    }
 }
 
 struct BytecodeRequest {
