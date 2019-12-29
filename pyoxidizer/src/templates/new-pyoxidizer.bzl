@@ -135,11 +135,10 @@ exe = PythonExecutable(
 )
 
 # Add the generated executable to our install layout in the root directory.
-# TODO this is busted
-#files.add_python_resource(".", exe)
+files.add_python_resource(".", exe)
 
-# Materialize the install layout in the destination directory.
-#files.install()
+# Materialize the install layout in a destination directory.
+files.install("{{program_name}}")
 
 # LEGACY CONTENT BELOW.
 

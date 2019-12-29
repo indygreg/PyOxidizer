@@ -352,20 +352,20 @@ pub fn link_libpython(
         needed_system_libraries.insert("msvcrt");
     }
 
+    let mut extra_library_paths = BTreeSet::new();
+
     for library in needed_libraries.iter() {
         if OS_IGNORE_LIBRARIES.contains(&library) {
             continue;
         }
 
-        // Otherwise find the library in the distribution. Extract it. And statically link against it.
+        // Find the library in the distribution and statically link against it.
         let fs_path = dist
             .libraries
             .get(*library)
             .unwrap_or_else(|| panic!("unable to find library {}", library));
-        warn!(logger, "{}", fs_path.display());
 
-        let library_path = out_dir.join(format!("lib{}.a", library));
-        fs::copy(fs_path, library_path)?;
+        extra_library_paths.insert(fs_path.parent().unwrap().to_path_buf());
 
         cargo_metadata.push(format!("cargo:rustc-link-lib=static={}", library))
     }
@@ -413,6 +413,10 @@ pub fn link_libpython(
         "cargo:rustc-link-search=native={}",
         out_dir.display()
     ));
+
+    for path in extra_library_paths {
+        cargo_metadata.push(format!("cargo:rustc-link-search=native={}", path.display()));
+    }
 
     let mut license_infos = BTreeMap::new();
 
