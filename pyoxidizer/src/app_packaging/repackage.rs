@@ -59,16 +59,16 @@ pub const HOST: &str = env!("HOST");
 impl BuildContext {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        logger: &slog::Logger,
         project_path: &Path,
-        config_path: &Path,
+        config: Config,
         host: Option<&str>,
         target: &str,
         release: bool,
         force_artifacts_path: Option<&Path>,
         verbose: bool,
     ) -> Result<Self> {
-        let config_parent_path = config_path
+        let config_parent_path = config
+            .config_path
             .parent()
             .with_context(|| "resolving parent path of config")?;
 
@@ -77,8 +77,6 @@ impl BuildContext {
         } else {
             HOST.to_string()
         };
-
-        let config = eval_starlark_config_file(logger, &config_path, target)?;
 
         let build_path = config.build_config.build_path.clone();
 
@@ -142,7 +140,7 @@ impl BuildContext {
 
         Ok(BuildContext {
             project_path: project_path.to_path_buf(),
-            config_path: config_path.to_path_buf(),
+            config_path: config.config_path.clone(),
             config_parent_path: config_parent_path.to_path_buf(),
             config,
             cargo_config,
@@ -973,10 +971,11 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
         Err(_) => PathBuf::from(env::var("OUT_DIR").unwrap()),
     };
 
+    let config = eval_starlark_config_file(logger, &config_path, &target).unwrap();
+
     let mut context = BuildContext::new(
-        logger,
         &project_path,
-        &config_path,
+        config,
         Some(&host),
         &target,
         profile == "release",

@@ -13,7 +13,7 @@ use std::process;
 
 use super::distribution::produce_distributions;
 use super::environment::{canonicalize_path, MINIMUM_RUST_VERSION};
-use crate::app_packaging::config::find_pyoxidizer_config_file_env;
+use crate::app_packaging::config::{eval_starlark_config_file, find_pyoxidizer_config_file_env};
 use crate::app_packaging::repackage::{package_project, process_config, run_from_build};
 use crate::app_packaging::state::BuildContext;
 use crate::project_layout::{find_pyoxidizer_files, initialize_project};
@@ -253,10 +253,11 @@ pub fn resolve_build_context(
         },
     };
 
+    let config = eval_starlark_config_file(logger, &config_path, &target)?;
+
     BuildContext::new(
-        logger,
         &path,
-        &config_path,
+        config,
         None,
         &target,
         release,
