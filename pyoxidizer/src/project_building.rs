@@ -15,6 +15,7 @@ use crate::py_packaging::config::RawAllocator;
 /// Build an executable embedding Python using an existing Rust project.
 ///
 /// The path to the produced executable is returned.
+#[allow(clippy::too_many_arguments)]
 pub fn build_executable_with_rust_project(
     logger: &slog::Logger,
     project_path: &Path,
