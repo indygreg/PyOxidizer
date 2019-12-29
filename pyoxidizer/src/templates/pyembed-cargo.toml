@@ -8,9 +8,9 @@ build = "build.rs"
 [dependencies]
 byteorder = "1"
 jemalloc-sys = { version = "0.3", optional = true }
-lazy_static = "1.3"
+lazy_static = "1.4"
 libc = "0.2"
-uuid = { version = "0.7", features = ["v4"] }
+uuid = { version = "0.8", features = ["v4"] }
 
 [dependencies.python3-sys]
 {{~#if pyoxidizer_git_url}}
