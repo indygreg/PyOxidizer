@@ -313,6 +313,45 @@ etc.
 The returned resources are typically added to a ``FileManifest`` or
 ``PythonEmbeddedResources`` to make them available to a packaged application.
 
+``PythonDistribution.to_embedded_resources(...)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Construct a ``PythonEmbeddedResources`` from a ``PythonDistribution`` instance,
+with control over common settings.
+
+The arguments are as follows:
+
+``extension_module_filter`` (``str``)
+   The filter to apply to determine which extension modules to add.
+
+   See :ref:`config_python_distribution_extension_modules`_ for what
+   values are accepted and their behavior.
+
+   Default is ``all``.
+
+``preferred_extension_module_variants`` (``dict`` of ``string`` to ``string``)
+   Preferred extension module variants to use. See
+   See :ref:`config_python_distribution_extension_modules`_ for behavior.
+
+   Default is ``None``, which will use the first variant.
+
+``include_sources`` (``bool``)
+   Boolean to control whether sources of Python modules are added in addition
+   to bytecode.
+
+   Default is ``True``.
+
+``include_resources`` (``bool``)
+   Boolean to control whether non-module resource data from the distribution is
+   added.
+
+   Default is ``False``.
+
+``include_test`` (``bool``)
+   Boolean to control whether test-specific objects are included.
+
+   Default is ``False``.
+
 ``default_python_distribution(build_target=None)``
 --------------------------------------------------
 
@@ -499,50 +538,6 @@ This method accepts the following arguments:
 All defined files are first read and the resource names encountered are
 unioned into a set. This set is then used to filter entities currently
 registered with the instance.
-
-``python_embedded_resources_from_distribution(...)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Construct a ``PythonEmbeddedResources`` from a ``PythonDistribution`` instance,
-with control over common settings.
-
-The arguments are as follows:
-
-``dist`` (``PythonDistribution``)
-   The Python distribution to use.
-
-   If not defined, the result of ``default_python_distribution()`` will be used.
-
-``extension_module_filter`` (``str``)
-   The filter to apply to determine which extension modules to add.
-
-   See :ref:`config_python_distribution_extension_modules`_ for what
-   values are accepted and their behavior.
-
-   Default is ``all``.
-
-``preferred_extension_module_variants`` (``dict`` of ``string`` to ``string``)
-   Preferred extension module variants to use. See
-   See :ref:`config_python_distribution_extension_modules`_ for behavior.
-
-   Default is ``None``, which will use the first variant.
-
-``include_sources`` (``bool``)
-   Boolean to control whether sources of Python modules are added in addition
-   to bytecode.
-
-   Default is ``True``.
-
-``include_resources`` (``bool``)
-   Boolean to control whether non-module resource data from the distribution is
-   added.
-
-   Default is ``False``.
-
-``include_test`` (``bool``)
-   Boolean to control whether test-specific objects are included.
-
-   Default is ``False``.
 
 .. _config_embedded_python_config:
 

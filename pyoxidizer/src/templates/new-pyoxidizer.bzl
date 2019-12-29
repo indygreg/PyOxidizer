@@ -14,8 +14,7 @@ dist = default_python_distribution()
 # This type represents the Python distribution and embedded Python resources
 # (source modules, bytecode modules, and non-module resource files) to embed
 # in a binary.
-embedded = python_embedded_resources_from_distribution(
-    dist,
+embedded = dist.to_embedded_resources(
     # Embed all extension modules, making this a fully-featured Python.
     extension_module_filter='all',
 
