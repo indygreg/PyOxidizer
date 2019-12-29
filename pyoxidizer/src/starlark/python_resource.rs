@@ -14,9 +14,11 @@ use starlark::{
 use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 use super::env::{
-    optional_dict_arg, optional_type_arg, required_bool_arg, required_str_arg, required_type_arg,
+    optional_dict_arg, optional_list_arg, optional_type_arg, required_bool_arg, required_str_arg,
+    required_type_arg,
 };
 use super::python_distribution::{resolve_default_python_distribution, PythonDistribution};
 use crate::app_packaging::environment::EnvironmentContext;
@@ -521,6 +523,46 @@ starlark_module! { python_resource_env =>
             ];
             f.call(call_stack, env.clone(), args, HashMap::new(), None, None)?;
         }
+
+        Ok(Value::new(None))
+    }
+
+    #[allow(clippy::ptr_arg)]
+    PythonEmbeddedResources.filter_from_files(
+        env env,
+        this,
+        files=None,
+        glob_files=None) {
+        optional_list_arg("files", "string", &files)?;
+        optional_list_arg("glob_files", "string", &glob_files)?;
+
+        let files = match files.get_type() {
+            "list" => files.into_iter()?.map(|x| PathBuf::from(x.to_string())).collect(),
+            "NoneType" => Vec::new(),
+            _ => panic!("type should have been validated above"),
+        };
+
+        let glob_files = match glob_files.get_type() {
+            "list" => glob_files.into_iter()?.map(|x| x.to_string()).collect(),
+            "NoneType" => Vec::new(),
+            _ => panic!("type should have been validated above"),
+        };
+
+        let files_refs = files.iter().map(|x| x.as_ref()).collect::<Vec<&Path>>();
+        let glob_files_refs = glob_files.iter().map(|x| x.as_ref()).collect::<Vec<&str>>();
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        this.downcast_apply_mut(|embedded: &mut PythonEmbeddedResources| {
+            embedded.embedded.filter_from_files(&logger, &files_refs, &glob_files_refs)
+        }).or_else(|e| Err(
+            RuntimeError {
+                code: "RUNTIME_ERROR",
+                message: e.to_string(),
+                label: "filter_from_files()".to_string(),
+            }.into()
+        ))?;
 
         Ok(Value::new(None))
     }

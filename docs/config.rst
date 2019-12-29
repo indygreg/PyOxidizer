@@ -473,6 +473,33 @@ This method is identical to ``PythonEmbeddedResources.add_python_resource()``
 except the first argument is an iterable of resources. All other arguments
 are identical.
 
+``PythonEmbeddedResources.filter_from_files(files=[], glob_patterns=[])``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method filters all embedded resources (source modules, bytecode modules,
+and resource names) currently present on the instance through a set of
+resource names resolved from files.
+
+This method accepts the following arguments:
+
+``files`` (array of string)
+   List of filesystem paths to files containing resource names. The file
+   must be valid UTF-8 and consist of a ``\n`` delimited list of resource
+   names. Empty lines and lines beginning with ``#`` are ignored.
+
+``glob_files`` (array of string)
+   List of glob matching patterns of filter files to read. ``*`` denotes
+   all files in a directory. ``**`` denotes recursive directories. This
+   uses the Rust ``glob`` crate under the hood and the documentation for that
+   crate contains more pattern matching info.
+
+   The files read by this argument must be the same format as documented
+   by the ``files`` argument.
+
+All defined files are first read and the resource names encountered are
+unioned into a set. This set is then used to filter entities currently
+registered with the instance.
+
 ``python_embedded_resources_from_distribution(...)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
