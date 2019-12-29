@@ -3,7 +3,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use anyhow::{anyhow, Context, Result};
-use glob::glob as findglob;
 use lazy_static::lazy_static;
 use slog::{info, warn};
 use std::collections::{BTreeMap, BTreeSet};
@@ -13,9 +12,7 @@ use std::fs::create_dir_all;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 
-use super::config::{
-    eval_starlark_config_file, find_pyoxidizer_config_file_env, Config, PythonPackaging,
-};
+use super::config::{eval_starlark_config_file, find_pyoxidizer_config_file_env, Config};
 use super::state::{BuildContext, PackagingState};
 use crate::py_packaging::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode};
 use crate::py_packaging::distribution::{
@@ -23,7 +20,6 @@ use crate::py_packaging::distribution::{
     PythonDistributionLocation,
 };
 use crate::py_packaging::embedded_resource::EmbeddedPythonResources;
-use crate::py_packaging::filtering::{filter_btreemap, read_resource_names_file};
 use crate::py_packaging::libpython::{derive_importlib, link_libpython};
 use crate::py_packaging::pyembed::{derive_python_config, write_data_rs};
 use crate::py_packaging::resource::{
@@ -215,124 +211,25 @@ struct BytecodeRequest {
 #[allow(clippy::cognitive_complexity)]
 pub fn resolve_python_resources(
     logger: &slog::Logger,
-    context: &BuildContext,
+    _context: &BuildContext,
     dist: &ParsedPythonDistribution,
 ) -> PythonResources {
-    let packages = &context.config.python_packaging;
-
     // Since bytecode has a non-trivial cost to generate, our strategy is to accumulate
     // requests for bytecode then generate bytecode for the final set of inputs at the
     // end of processing. That way we don't generate bytecode only to throw it away later.
 
     let mut embedded_extension_modules: BTreeMap<String, ExtensionModule> = BTreeMap::new();
-    let mut embedded_sources: BTreeMap<String, PackagedModuleSource> = BTreeMap::new();
+    let embedded_sources: BTreeMap<String, PackagedModuleSource> = BTreeMap::new();
     let mut embedded_bytecode_requests: BTreeMap<String, BytecodeRequest> = BTreeMap::new();
-    let mut embedded_resources: BTreeMap<String, BTreeMap<String, Vec<u8>>> = BTreeMap::new();
-    let mut embedded_built_extension_modules: BTreeMap<String, BuiltExtensionModule> =
-        BTreeMap::new();
+    let embedded_resources: BTreeMap<String, BTreeMap<String, Vec<u8>>> = BTreeMap::new();
+    let embedded_built_extension_modules: BTreeMap<String, BuiltExtensionModule> = BTreeMap::new();
 
     let mut app_relative: BTreeMap<String, AppRelativeResources> = BTreeMap::new();
-    let mut app_relative_bytecode_requests: BTreeMap<String, BTreeMap<String, BytecodeRequest>> =
+    let app_relative_bytecode_requests: BTreeMap<String, BTreeMap<String, BytecodeRequest>> =
         BTreeMap::new();
 
-    let mut read_files: Vec<PathBuf> = Vec::new();
-    let mut license_files_path = None;
-
-    for packaging in packages {
-        warn!(logger, "processing packaging rule: {:?}", packaging);
-
-        if let PythonPackaging::WriteLicenseFiles(rule) = packaging {
-            license_files_path = Some(rule.path.clone());
-        }
-
-        if let PythonPackaging::FilterInclude(rule) = packaging {
-            let mut include_names: BTreeSet<String> = BTreeSet::new();
-
-            for path in &rule.files {
-                let path = PathBuf::from(path);
-                let new_names =
-                    read_resource_names_file(&path).expect("failed to read resource names file");
-
-                include_names.extend(new_names);
-                read_files.push(path);
-            }
-
-            for glob in &rule.glob_files {
-                let mut new_names: BTreeSet<String> = BTreeSet::new();
-
-                for entry in findglob(glob).expect("glob_files glob match failed") {
-                    match entry {
-                        Ok(path) => {
-                            new_names.extend(
-                                read_resource_names_file(&path)
-                                    .expect("failed to read resource names"),
-                            );
-                            read_files.push(path);
-                        }
-                        Err(e) => {
-                            panic!("error reading resource names file: {:?}", e);
-                        }
-                    }
-                }
-
-                if new_names.is_empty() {
-                    panic!(
-                        "glob filter resolves to empty set; are you sure the paths are correct?"
-                    );
-                }
-
-                include_names.extend(new_names);
-            }
-
-            warn!(
-                logger,
-                "filtering embedded extension modules from {:?}", packaging
-            );
-            filter_btreemap(logger, &mut embedded_extension_modules, &include_names);
-            warn!(
-                logger,
-                "filtering embedded module sources from {:?}", packaging
-            );
-            filter_btreemap(logger, &mut embedded_sources, &include_names);
-            warn!(
-                logger,
-                "filtering app-relative module sources from {:?}", packaging
-            );
-            for value in app_relative.values_mut() {
-                filter_btreemap(logger, &mut value.module_sources, &include_names);
-            }
-            warn!(
-                logger,
-                "filtering embedded module bytecode from {:?}", packaging
-            );
-            filter_btreemap(logger, &mut embedded_bytecode_requests, &include_names);
-            warn!(
-                logger,
-                "filtering app-relative module bytecode from {:?}", packaging
-            );
-            for value in app_relative_bytecode_requests.values_mut() {
-                filter_btreemap(logger, value, &include_names);
-            }
-            warn!(logger, "filtering embedded resources from {:?}", packaging);
-            filter_btreemap(logger, &mut embedded_resources, &include_names);
-            warn!(
-                logger,
-                "filtering app-relative resources from {:?}", packaging
-            );
-            for value in app_relative.values_mut() {
-                filter_btreemap(logger, &mut value.resources, &include_names);
-            }
-            warn!(
-                logger,
-                "filtering embedded built extension modules from {:?}", packaging
-            );
-            filter_btreemap(
-                logger,
-                &mut embedded_built_extension_modules,
-                &include_names,
-            );
-        }
-    }
+    let read_files: Vec<PathBuf> = Vec::new();
+    let license_files_path = None;
 
     // Add empty modules for missing parent packages. This could happen if there are
     // namespace packages, for example.

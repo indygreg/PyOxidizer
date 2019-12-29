@@ -20,7 +20,7 @@ use super::distribution::{TarballDistribution, WixInstallerDistribution};
 use super::embedded_python_config::EmbeddedPythonConfig;
 use super::env::{required_str_arg, required_type_arg};
 use super::python_distribution::PythonDistribution;
-use super::python_packaging::{FilterInclude, WriteLicenseFiles};
+use super::python_packaging::WriteLicenseFiles;
 use super::python_run_mode::PythonRunMode;
 use crate::app_packaging::config::{
     BuildConfig as ConfigBuildConfig, Config as ConfigConfig, Distribution, PythonPackaging,
@@ -98,9 +98,6 @@ starlark_module! { config_env =>
 
         let python_packaging: Vec<Result<PythonPackaging, ValueError>> = packaging_rules.into_iter()?.map(|x| -> Result<PythonPackaging, ValueError> {
             match x.get_type() {
-                "FilterInclude" => Ok(x.downcast_apply(|x: &FilterInclude| -> PythonPackaging {
-                    PythonPackaging::FilterInclude(x.rule.clone())
-                })),
                 "WriteLicenseFiles" => Ok(x.downcast_apply(|x: &WriteLicenseFiles| -> PythonPackaging {
                     PythonPackaging::WriteLicenseFiles(x.rule.clone())
                 })),

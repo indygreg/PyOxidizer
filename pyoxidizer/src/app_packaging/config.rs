@@ -18,19 +18,12 @@ pub struct BuildConfig {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct PackagingFilterInclude {
-    pub files: Vec<String>,
-    pub glob_files: Vec<String>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub struct PackagingWriteLicenseFiles {
     pub path: String,
 }
 
 #[derive(Clone, Debug)]
 pub enum PythonPackaging {
-    FilterInclude(PackagingFilterInclude),
     WriteLicenseFiles(PackagingWriteLicenseFiles),
 }
 

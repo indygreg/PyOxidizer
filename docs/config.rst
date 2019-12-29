@@ -991,46 +991,6 @@ denoted by this rule.
    Value is relative to the application binary. An empty string denotes
    to write files in the same directory as the application binary.
 
-.. _rule_filter-include:
-
-``FilterInclude(...)``
-^^^^^^^^^^^^^^^^^^^^^^
-
-This rule filters all resource names resolved so far through a set of
-resource names resolved from sources defined by this section. Resources
-not contained in the set defined by this section will be removed.
-
-This rule is effectively an *allow list*. This rule allows earlier rules
-to aggressively pull in resources only to filter them via this rule.
-This approach is often easier than adding a cherry picked set of resources
-via highly granular addition rules.
-
-The rule has arguments that define various sources for resource names:
-
-``files`` (array of string)
-   List of filesystem paths to files containing resource names. The file must
-   be valid UTF-8 and consist of a ``\n`` delimited list of resource names.
-   Empty lines and lines beginning with ``#`` are ignored.
-
-``glob_files`` (array of string)
-   List of glob matching patterns of filter files to read. ``*`` denotes
-   all files in a directory. ``**`` denotes recursive directories. This uses
-   the Rust ``glob`` crate under the hood and the documentation for that crate
-   contains more pattern matching info.
-
-   The files read by this argument must be the same format as documented by the
-   ``files`` argument.
-
-All defined arguments have their resolved resources combined into a set of
-resource names. Each read entity has its values unioned with the set of
-values resolved so far.
-
-Example:
-
-.. code-block:: python
-
-   FilterInclude(files=["allow-modules"], glob_files=["module-dumps/modules-*"])
-
 .. _config_distribution:
 
 Distributions
