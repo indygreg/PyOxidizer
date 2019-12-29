@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use super::bytecode::{BytecodeCompiler, CompileMode};
 use super::distribution::{ExtensionModule, LicenseInfo, ParsedPythonDistribution};
 use super::embedded_resource::EmbeddedPythonResources;
-use super::resource::BuiltExtensionModule;
+use super::resource::{BuiltExtensionModule, BytecodeOptimizationLevel};
 
 pub const PYTHON_IMPORTER: &[u8] = include_bytes!("memoryimporter.py");
 
@@ -59,8 +59,12 @@ pub fn derive_importlib(dist: &ParsedPythonDistribution) -> Result<ImportlibData
 
     let bootstrap_source = fs::read(&mod_bootstrap_path)?;
     let module_name = "<frozen importlib._bootstrap>";
-    let bootstrap_bytecode =
-        compiler.compile(&bootstrap_source, module_name, 0, CompileMode::Bytecode)?;
+    let bootstrap_bytecode = compiler.compile(
+        &bootstrap_source,
+        module_name,
+        BytecodeOptimizationLevel::Zero,
+        CompileMode::Bytecode,
+    )?;
 
     let mut bootstrap_external_source = fs::read(&mod_bootstrap_external_path)?;
     bootstrap_external_source.extend("\n# END OF importlib/_bootstrap_external.py\n\n".bytes());
@@ -69,7 +73,7 @@ pub fn derive_importlib(dist: &ParsedPythonDistribution) -> Result<ImportlibData
     let bootstrap_external_bytecode = compiler.compile(
         &bootstrap_external_source,
         module_name,
-        0,
+        BytecodeOptimizationLevel::Zero,
         CompileMode::Bytecode,
     )?;
 

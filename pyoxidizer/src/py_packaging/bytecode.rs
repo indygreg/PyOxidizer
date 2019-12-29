@@ -9,6 +9,8 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process;
 
+use super::resource::BytecodeOptimizationLevel;
+
 pub const BYTECODE_COMPILER: &[u8] = include_bytes!("bytecodecompiler.py");
 
 lazy_static! {
@@ -80,7 +82,7 @@ impl BytecodeCompiler {
         self: &mut BytecodeCompiler,
         source: &[u8],
         filename: &str,
-        optimize: i32,
+        optimize: BytecodeOptimizationLevel,
         output_mode: CompileMode,
     ) -> Result<Vec<u8>> {
         let stdin = self.command.stdin.as_mut().expect("failed to get stdin");
@@ -93,7 +95,7 @@ impl BytecodeCompiler {
         stdin.write_all(b"\n")?;
         stdin.write_all(source.len().to_string().as_bytes())?;
         stdin.write_all(b"\n")?;
-        stdin.write_all(optimize.to_string().as_bytes())?;
+        stdin.write_all(i32::from(optimize).to_string().as_bytes())?;
         stdin.write_all(b"\n")?;
         stdin.write_all(match output_mode {
             CompileMode::Bytecode => b"bytecode",

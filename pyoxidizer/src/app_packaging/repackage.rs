@@ -23,7 +23,7 @@ use crate::py_packaging::libpython::{derive_importlib, link_libpython};
 use crate::py_packaging::pyembed::{derive_python_config, write_data_rs};
 use crate::py_packaging::resource::{
     packages_from_module_name, packages_from_module_names, AppRelativeResources,
-    BuiltExtensionModule, PackagedModuleBytecode, PackagedModuleSource,
+    BuiltExtensionModule, BytecodeOptimizationLevel, PackagedModuleBytecode, PackagedModuleSource,
 };
 
 pub const HOST: &str = env!("HOST");
@@ -282,7 +282,7 @@ pub fn resolve_python_resources(
             let bytecode = match compiler.compile(
                 &request.source,
                 &name,
-                request.optimize_level,
+                BytecodeOptimizationLevel::from(request.optimize_level),
                 CompileMode::Bytecode,
             ) {
                 Ok(res) => res,
@@ -314,7 +314,7 @@ pub fn resolve_python_resources(
                 let bytecode = match compiler.compile(
                     &request.source,
                     &name,
-                    request.optimize_level,
+                    BytecodeOptimizationLevel::from(request.optimize_level),
                     // Bytecode in app-relative directories should never be mutated. So we
                     // shouldn't need to verify its hash at run-time.
                     // TODO consider making this configurable.
