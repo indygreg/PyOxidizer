@@ -4,6 +4,7 @@
 
 use anyhow::Result;
 use byteorder::{LittleEndian, WriteBytesExt};
+use lazy_static::lazy_static;
 use slog::warn;
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
@@ -17,6 +18,33 @@ use super::resource::{
     BuiltExtensionModule, BytecodeModule, PackagedModuleBytecode, PackagedModuleSource,
     ResourceData, SourceModule,
 };
+
+lazy_static! {
+    /// Python extension modules that should never be included.
+    ///
+    /// Ideally this data structure doesn't exist. But there are some problems
+    /// with various extensions on various targets.
+    pub static ref OS_IGNORE_EXTENSIONS: Vec<&'static str> = {
+        let mut v = Vec::new();
+
+        if cfg!(target_os = "linux") {
+            // Linking issues.
+            v.push("_crypt");
+
+            // Linking issues.
+            v.push("nis");
+        }
+
+        else if cfg!(target_os = "macos") {
+            // curses and readline have linking issues.
+            v.push("_curses");
+            v.push("_curses_panel");
+            v.push("readline");
+        }
+
+        v
+    };
+}
 
 /// Represents Python resources to embed in a binary.
 ///

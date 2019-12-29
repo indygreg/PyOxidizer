@@ -3,7 +3,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use anyhow::{anyhow, Context, Result};
-use lazy_static::lazy_static;
 use slog::{info, warn};
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
@@ -19,40 +18,13 @@ use crate::py_packaging::distribution::{
     resolve_python_distribution_archive, ExtensionModule, ParsedPythonDistribution,
     PythonDistributionLocation,
 };
-use crate::py_packaging::embedded_resource::EmbeddedPythonResources;
+use crate::py_packaging::embedded_resource::{EmbeddedPythonResources, OS_IGNORE_EXTENSIONS};
 use crate::py_packaging::libpython::{derive_importlib, link_libpython};
 use crate::py_packaging::pyembed::{derive_python_config, write_data_rs};
 use crate::py_packaging::resource::{
     packages_from_module_name, packages_from_module_names, AppRelativeResources,
     BuiltExtensionModule, PackagedModuleBytecode, PackagedModuleSource,
 };
-
-lazy_static! {
-    /// Python extension modules that should never be included.
-    ///
-    /// Ideally this data structure doesn't exist. But there are some problems
-    /// with various extensions on various targets.
-    static ref OS_IGNORE_EXTENSIONS: Vec<&'static str> = {
-        let mut v = Vec::new();
-
-        if cfg!(target_os = "linux") {
-            // Linking issues.
-            v.push("_crypt");
-
-            // Linking issues.
-            v.push("nis");
-        }
-
-        else if cfg!(target_os = "macos") {
-            // curses and readline have linking issues.
-            v.push("_curses");
-            v.push("_curses_panel");
-            v.push("readline");
-        }
-
-        v
-    };
-}
 
 pub const HOST: &str = env!("HOST");
 
