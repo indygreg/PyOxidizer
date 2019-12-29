@@ -140,7 +140,6 @@ starlark_module! { config_env =>
             build_config,
             embedded_python_config,
             python_distribution,
-            python_packaging: Vec::new(),
             run,
             distributions,
         };

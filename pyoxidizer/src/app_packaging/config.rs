@@ -17,16 +17,6 @@ pub struct BuildConfig {
     pub build_path: PathBuf,
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct PackagingWriteLicenseFiles {
-    pub path: String,
-}
-
-#[derive(Clone, Debug)]
-pub enum PythonPackaging {
-    WriteLicenseFiles(PackagingWriteLicenseFiles),
-}
-
 #[derive(Clone, Debug)]
 pub struct DistributionTarball {
     pub path_prefix: Option<String>,
@@ -53,7 +43,6 @@ pub struct Config {
     pub build_config: BuildConfig,
     pub embedded_python_config: EmbeddedPythonConfig,
     pub python_distribution: PythonDistributionLocation,
-    pub python_packaging: Vec<PythonPackaging>,
     pub run: RunMode,
     pub distributions: Vec<Distribution>,
 }
