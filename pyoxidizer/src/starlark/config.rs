@@ -99,7 +99,6 @@ starlark_module! { config_env =>
             embedded_python_config,
             python_distribution,
             run,
-            distributions: Vec::new(),
         };
 
         let v = Value::new(Config { config });

@@ -2,38 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+#[allow(unused)]
 pub mod tarball;
+#[allow(unused)]
 pub mod wix;
-
-use anyhow::Result;
-
-use crate::app_packaging::config::Distribution;
-use crate::app_packaging::state::BuildContext;
-
-/// Produce distributions from a built application.
-pub fn produce_distributions(
-    logger: &slog::Logger,
-    context: &BuildContext,
-    types: &[&str],
-) -> Result<()> {
-    for distribution in &context.config.distributions {
-        match distribution {
-            Distribution::Tarball(tarball) => {
-                if !types.contains(&"tarball") {
-                    continue;
-                }
-
-                tarball::produce_tarball(logger, context, tarball)?;
-            }
-            Distribution::WixInstaller(wix) => {
-                if !types.contains(&"wix") {
-                    continue;
-                }
-
-                wix::build_wix_installer(logger, context, wix)?;
-            }
-        }
-    }
-
-    Ok(())
-}

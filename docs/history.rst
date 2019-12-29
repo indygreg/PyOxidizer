@@ -24,6 +24,7 @@ next
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* Support for building distributions has been removed.
 * The minimum Rust version to build has been increased from 1.31 to
   1.36. This is mainly due to requirements from the ``starlark``
   crate. We could potentially reduce the minimum version requirements

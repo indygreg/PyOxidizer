@@ -44,7 +44,6 @@ pub struct Config {
     pub embedded_python_config: EmbeddedPythonConfig,
     pub python_distribution: PythonDistributionLocation,
     pub run: RunMode,
-    pub distributions: Vec<Distribution>,
 }
 
 pub fn default_raw_allocator(target: &str) -> RawAllocator {

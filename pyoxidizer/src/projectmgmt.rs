@@ -11,7 +11,6 @@ use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
 use std::process;
 
-use super::distribution::produce_distributions;
 use super::environment::{canonicalize_path, MINIMUM_RUST_VERSION};
 use crate::app_packaging::config::{eval_starlark_config_file, find_pyoxidizer_config_file_env};
 use crate::app_packaging::repackage::{package_project, process_config, run_from_build};
@@ -377,22 +376,6 @@ pub fn init(project_path: &str, code: Option<&str>, pip_install: &[&str]) -> Res
     println!("edit the various pyoxidizer.*.bzl config files or the main.rs ");
     println!("file to change behavior. The application will need to be rebuilt ");
     println!("for configuration changes to take effect.");
-
-    Ok(())
-}
-
-/// Produce distributions for an application.
-pub fn distributions(
-    logger: &slog::Logger,
-    project_path: &str,
-    target: Option<&str>,
-    types: &[&str],
-) -> Result<()> {
-    let mut context = resolve_build_context(logger, project_path, None, target, true, None, false)?;
-
-    build_project(logger, &mut context)?;
-    package_project(logger, &mut context)?;
-    produce_distributions(logger, &context, types)?;
 
     Ok(())
 }
