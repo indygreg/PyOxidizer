@@ -253,7 +253,6 @@ pub fn global_environment(context: &EnvironmentContext) -> Result<Environment, E
     let env = super::python_distribution::python_distribution_module(env);
     let env = super::embedded_python_config::embedded_python_config_module(env);
     let env = super::python_executable::python_executable_env(env);
-    let env = super::python_packaging::python_packaging_env(env);
     let env = super::python_resource::python_resource_env(env);
     let env = super::python_run_mode::python_run_mode_env(env);
 

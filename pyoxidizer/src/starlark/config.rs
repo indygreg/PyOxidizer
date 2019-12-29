@@ -20,10 +20,9 @@ use super::distribution::{TarballDistribution, WixInstallerDistribution};
 use super::embedded_python_config::EmbeddedPythonConfig;
 use super::env::{required_str_arg, required_type_arg};
 use super::python_distribution::PythonDistribution;
-use super::python_packaging::WriteLicenseFiles;
 use super::python_run_mode::PythonRunMode;
 use crate::app_packaging::config::{
-    BuildConfig as ConfigBuildConfig, Config as ConfigConfig, Distribution, PythonPackaging,
+    BuildConfig as ConfigBuildConfig, Config as ConfigConfig, Distribution,
 };
 use crate::app_packaging::environment::EnvironmentContext;
 use crate::py_packaging::config::{EmbeddedPythonConfig as ConfigEmbeddedPythonConfig, RunMode};
@@ -96,26 +95,6 @@ starlark_module! { config_env =>
             x.source.clone()
         });
 
-        let python_packaging: Vec<Result<PythonPackaging, ValueError>> = packaging_rules.into_iter()?.map(|x| -> Result<PythonPackaging, ValueError> {
-            match x.get_type() {
-                "WriteLicenseFiles" => Ok(x.downcast_apply(|x: &WriteLicenseFiles| -> PythonPackaging {
-                    PythonPackaging::WriteLicenseFiles(x.rule.clone())
-                })),
-                t => Err(RuntimeError {
-                    code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                    message: format!("invalid packaging rule type: {}", t),
-                    label: format!("invalid packaging rule type: {}", t),
-                }.into()),
-            }
-        // This code is horrible but I couldn't figure out how to get the typing to work right.
-        }).collect();
-        for r in &python_packaging {
-            if r.is_err() {
-                return Err(r.clone().unwrap_err());
-            }
-        }
-        let python_packaging = python_packaging.iter().map(|x| x.clone().unwrap()).collect();
-
         let run = python_run_mode.downcast_apply(|x: &PythonRunMode| -> RunMode {
             x.run_mode.clone()
         });
@@ -162,7 +141,7 @@ starlark_module! { config_env =>
             build_config,
             embedded_python_config,
             python_distribution,
-            python_packaging,
+            python_packaging: Vec::new(),
             run,
             distributions,
         };

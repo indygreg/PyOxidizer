@@ -938,59 +938,6 @@ If ``replace`` is True (the default), the destination directory will
 be deleted and the final state of the destination directory should
 exactly match the state of the ``FileManifest``.
 
-.. _config_packaging_rule:
-
-Packaging Rules
----------------
-
-There exist several types to control packaging of the built application.
-These types are constructed and then passed into and evaluated sequentially
-as part of building the application.
-
-Packaging rules operate in the domain of Python resources.
-
-A *Python resource* can be one of the following:
-
-* *Extension module*. An extension module is a Python module backed by compiled
-  code (typically written in C).
-* *Python module source*. A Python module's source code. This is typically the
-  content of a ``.py`` file.
-* *Python module bytecode*. A Python module's source compiled to Python
-  bytecode. This is similar to a ``.pyc`` files but isn't exactly the same
-  (``.pyc`` files have a header in addition to the raw bytecode).
-* *Resource file*. Non-module files that can be accessed via APIs in Python's
-  importing mechanism.
-
-*Extension modules* are a bit special in that they can have library
-dependencies. If an extension module has an annotated library dependency,
-that library will automatically be linked into the produced binary containing
-Python. Static linking is used, if available. For example, the ``_sqlite3``
-extension module will link the ``libsqlite3`` library (which should be
-included as part of the Python distribution).
-
-Each rule denotes special behavior for finding and including or excluding
-resources.
-
-When packaging goes to resolve the set of resources, it starts with an
-empty set for each resource *flavor*. As rules are read, their results are
-*merged* with the existing resource sets according to the behavior of that
-rule ``type``. If multiple rules add a resource of the same name and flavor, the
-last added version is used. i.e. *last write wins*.
-
-The following sections describe the various ``type``'s of rules.
-
-``WriteLicenseFiles(path)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This rule instructs packaging to write license files to a directory as
-denoted by this rule.
-
-``path`` (string)
-   Filesystem path to directory where licenses should be written.
-
-   Value is relative to the application binary. An empty string denotes
-   to write files in the same directory as the application binary.
-
 .. _config_distribution:
 
 Distributions
