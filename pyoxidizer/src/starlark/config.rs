@@ -3,10 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use starlark::environment::Environment;
-use starlark::values::{
-    default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
-    INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-};
+use starlark::values::{default_compare, TypedValue, Value, ValueError, ValueResult};
 use starlark::{
     any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
     starlark_signature_extraction, starlark_signatures,
@@ -16,14 +13,11 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use super::distribution::{TarballDistribution, WixInstallerDistribution};
 use super::embedded_python_config::EmbeddedPythonConfig;
 use super::env::{required_str_arg, required_type_arg};
 use super::python_distribution::PythonDistribution;
 use super::python_run_mode::PythonRunMode;
-use crate::app_packaging::config::{
-    BuildConfig as ConfigBuildConfig, Config as ConfigConfig, Distribution,
-};
+use crate::app_packaging::config::{BuildConfig as ConfigBuildConfig, Config as ConfigConfig};
 use crate::app_packaging::environment::EnvironmentContext;
 use crate::py_packaging::config::{EmbeddedPythonConfig as ConfigEmbeddedPythonConfig, RunMode};
 use crate::py_packaging::distribution::PythonDistributionLocation;
@@ -70,8 +64,7 @@ starlark_module! { config_env =>
         application_name,
         embedded_python_config=None,
         python_distribution=None,
-        python_run_mode=None,
-        distributions=None
+        python_run_mode=None
     ) {
         let application_name = required_str_arg("application_name", &application_name)?;
         required_type_arg("embedded_python_config", "EmbeddedPythonConfig", &embedded_python_config)?;
@@ -98,41 +91,6 @@ starlark_module! { config_env =>
             x.run_mode.clone()
         });
 
-        let distributions = match distributions.get_type() {
-            "list" => {
-                let temp: Vec<Result<Distribution, RuntimeError>> = distributions.into_iter()?.map(|x| {
-                    match x.get_type() {
-                        "TarballDistribution" => Ok(x.downcast_apply(|x: &TarballDistribution| -> Distribution {
-                            Distribution::Tarball(x.distribution.clone())
-                        })),
-                        "WixInstallerDistribution" => Ok(x.downcast_apply(|x: &WixInstallerDistribution| -> Distribution {
-                            Distribution::WixInstaller(x.distribution.clone())
-                        })),
-                        t => Err(RuntimeError {
-                            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                            message: format!("invalid packaging rule type: {}", t),
-                            label: format!("invalid packaging rule type: {}", t),
-                        }),
-                    }
-                }).collect();
-
-                for r in &temp {
-                    if r.is_err() {
-                        return Err(r.clone().unwrap_err().into());
-                    }
-                }
-
-                temp.iter().map(|x| x.clone().unwrap()).collect()
-            },
-            "NoneType" => Vec::new(),
-            _ => return Err(RuntimeError {
-                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                message: "distributions must be a list or None".to_string(),
-                label: "distributions must be a list or None".to_string(),
-            }.into())
-
-        };
-
         let config_path = env.get("CONFIG_PATH").expect("CONFIG_PATH should always be available").to_string();
 
         let config = ConfigConfig {
@@ -141,7 +99,7 @@ starlark_module! { config_env =>
             embedded_python_config,
             python_distribution,
             run,
-            distributions,
+            distributions: Vec::new(),
         };
 
         let v = Value::new(Config { config });

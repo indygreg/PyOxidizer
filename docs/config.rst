@@ -933,58 +933,6 @@ If ``replace`` is True (the default), the destination directory will
 be deleted and the final state of the destination directory should
 exactly match the state of the ``FileManifest``.
 
-.. _config_distribution:
-
-Distributions
--------------
-
-Instances of the ``Distribution`` type define application distributions
-that can be produced. An application distribution is an entity that can be shared
-across machines to *distribute* the application. Application distributions include
-archives, installers, packages, etc.
-
-Distributions can be constructed from types defined in the following sections.
-
-``TarballDistribution(path_prefix=None)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This distribution will produce a tar archive from the contents of the
-application directory.
-
-This type accepts the following keys:
-
-``path_prefix``
-   String value that will be prepended to paths in the archive. By default,
-   archive members have no path prefix and extraction of the archive will
-   typically place files in the current directory. Specify this option to
-   prefix all archive members with a path prefix.
-
-``WixInstaller(...)``
-^^^^^^^^^^^^^^^^^^^^^
-
-This distribution will produce Windows installers via the
-`WiX Toolset <https://wixtoolset.org/>`_. These installers allow the application
-to be easily installed on Windows.
-
-This type accepts the following arguments:
-
-``msi_upgrade_code_x86``
-   UUID to use for the x86 MSI installer. If not defined, a deterministic
-   UUID based on the application name will be used.
-
-``msi_upgrade_code_amd64``
-   UUID to use for the x64 MSI installer. If not defined, a deterministic
-   UUID based on the application name will be used.
-
-``bundle_upgrade_code``
-   UUID to use for the unified ``.exe`` bundle installer. The bundle installer
-   contains the application's MSI installer as well as other dependencies (such
-   as the Visual C++ Redistributable). This is typically the installer given to
-   users.
-
-   If not defined, a deterministic UUID based on the application name will be
-   used.
-
 ``Config(...)``
 ---------------
 
@@ -1008,6 +956,3 @@ This type accepts the following arguments:
 ``python_run_mode`` (``PythonRunMode``)
    Defines the default Python execution behavior of the embedded Python
    interpreter.
-
-``distributions`` (``Distribution``)
-   Packaged distributions to build for this application.
