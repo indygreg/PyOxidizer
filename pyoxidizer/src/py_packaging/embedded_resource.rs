@@ -4,6 +4,7 @@
 
 use anyhow::Result;
 use byteorder::{LittleEndian, WriteBytesExt};
+use slog::warn;
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
 use std::iter::FromIterator;
@@ -11,6 +12,7 @@ use std::path::Path;
 
 use super::bytecode::{BytecodeCompiler, CompileMode};
 use super::distribution::ExtensionModule;
+use super::filtering::{filter_btreemap, resolve_resource_names_from_files};
 use super::resource::{
     BuiltExtensionModule, BytecodeModule, PackagedModuleBytecode, PackagedModuleSource,
     ResourceData, SourceModule,
@@ -58,6 +60,27 @@ impl EmbeddedPythonResourcesPrePackaged {
     pub fn add_extension_module(&mut self, module: &ExtensionModule) {
         self.extension_modules
             .insert(module.module.clone(), module.clone());
+    }
+
+    /// Filter the entities in this instance against names in files.
+    pub fn filter_from_files(
+        &mut self,
+        logger: &slog::Logger,
+        files: &[&Path],
+        glob_patterns: &[&str],
+    ) -> Result<()> {
+        let resource_names = resolve_resource_names_from_files(files, glob_patterns)?;
+
+        warn!(logger, "filtering embedded extension modules");
+        filter_btreemap(logger, &mut self.extension_modules, &resource_names);
+        warn!(logger, "filtering embedded module sources");
+        filter_btreemap(logger, &mut self.source_modules, &resource_names);
+        warn!(logger, "filtering embedded module bytecode");
+        filter_btreemap(logger, &mut self.bytecode_modules, &resource_names);
+        warn!(logger, "filtering embedded resources");
+        filter_btreemap(logger, &mut self.resources, &resource_names);
+
+        Ok(())
     }
 
     pub fn package(&self, python_exe: &Path) -> Result<EmbeddedPythonResources> {
