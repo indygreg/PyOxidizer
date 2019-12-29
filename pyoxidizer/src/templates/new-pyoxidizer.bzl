@@ -44,6 +44,35 @@ embedded = dist.to_embedded_resources(
     include_test=False,
 )
 
+# Invoke `pip install` with our Python distribution to install a single package.
+# `pip_install()` returns objects representing installed files.
+# `add_python_resources()` adds these objects to our embedded context.
+#embedded.add_python_resources(dist.pip_install(["appdirs"]))
+
+# Invoke `pip install` using a requirements file and add the collected files
+# to our embedded context.
+#embedded.add_python_resources(dist.pip_install(["-r", "requirements.txt"]))
+
+{{#each pip_install_simple}}
+embedded.add_python_resources(dist.pip_install("{{{ this }}}"))
+{{/each}}
+
+# Read Python files from a local directory and add them to our embedded
+# context, taking just the resources belonging to the `foo` and `bar`
+# Python packages.
+#embedded.add_python_resources(dist.read_package_root(
+#    path="/src/mypackage",
+#    packages=["foo", "bar"],
+#)
+
+# Discover Python files from a virtualenv and add them to our embedded
+# context.
+#embedded.add_python_resources(dist.read_virtualenv(path="/path/to/venv"))
+
+# Filter all resources collected so far through a filter of names
+# in a file.
+#embedded.filter_from_files(files=["/path/to/filter-file"]))
+
 # This variable defines the configuration of the
 # embedded Python interpreter
 embedded_python_config = EmbeddedPythonConfig(
@@ -120,28 +149,6 @@ packaging_rules = []
 
 # Write out license files next to the produced binary.
 #packaging_rules.append(WriteLicenseFiles(""))
-
-{{#each pip_install_simple}}
-packaging_rules.append(PipInstallSimple("{{{ this }}}"))
-{{/each}}
-{{#unless pip_install_simple~}}
-# Package using pip, individual packages
-#packaging_rules.append(PipInstallSimple("appdirs"))
-# or use a requirements file
-#packaging_rules.append(PipRequirementsFile("requirements.txt"))
-{{~/unless}}
-
-# Package .py files discovered in a local directory.
-#packaging_rules.append(PackageRoot(
-#    path="/src/mypackage", packages=["foo", "bar"],
-#))
-
-# Package things from a populated virtualenv.
-#packaging_rules.append(Virtualenv(path="/path/to/venv"))
-
-# Filter all resources collected so far through a filter of names
-# in a file.
-#packaging_rules.append(FilterInclude(files=["/path/to/filter-file"]))
 
 Config(
     application_name="{{program_name}}",
