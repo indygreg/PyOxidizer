@@ -160,7 +160,19 @@ impl EmbeddedPythonResourcesPrePackaged {
         let resources = self.resources.clone();
         all_packages.extend(resources.keys().cloned());
 
-        let extension_modules = self.extension_modules.clone();
+        let ignored = OS_IGNORE_EXTENSIONS
+            .iter()
+            .map(|k| k.to_string())
+            .collect::<Vec<String>>();
+
+        let extension_modules =
+            BTreeMap::from_iter(self.extension_modules.iter().filter_map(|(k, v)| {
+                if ignored.contains(k) {
+                    None
+                } else {
+                    Some((k.clone(), v.clone()))
+                }
+            }));
 
         Ok(EmbeddedPythonResources {
             module_sources,
