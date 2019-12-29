@@ -70,7 +70,6 @@ starlark_module! { config_env =>
         application_name,
         embedded_python_config=None,
         python_distribution=None,
-        packaging_rules=None,
         python_run_mode=None,
         distributions=None
     ) {
@@ -176,7 +175,6 @@ mod tests {
                 embedded_python_config=EmbeddedPythonConfig(),
                 python_distribution=default_python_distribution(),
                 python_run_mode=python_run_mode_repl(),
-                packaging_rules=[],
             )
         "#
         );

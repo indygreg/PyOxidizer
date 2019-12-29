@@ -1010,10 +1010,6 @@ This type accepts the following arguments:
 ``python_distribution`` (``PythonDistribution``)
    Defines the Python distribution to use to build the application.
 
-``packaging_rules`` (list of packaging rules)
-   Defines an ordered list of packaging rules to evaluate when building
-   this application.
-
 ``python_run_mode`` (``PythonRunMode``)
    Defines the default Python execution behavior of the embedded Python
    interpreter.
