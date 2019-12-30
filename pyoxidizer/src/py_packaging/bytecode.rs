@@ -39,6 +39,7 @@ pub fn python_source_encoding(source: &[u8]) -> Vec<u8> {
 }
 
 /// An entity to perform Python bytecode compilation.
+#[derive(Debug)]
 pub struct BytecodeCompiler {
     _temp_dir: tempdir::TempDir,
     command: process::Child,

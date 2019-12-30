@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use slog::warn;
 use starlark::environment::Environment;
@@ -29,6 +29,7 @@ use super::python_resource::{
     PythonEmbeddedResources, PythonExtensionModule, PythonResourceData, PythonSourceModule,
 };
 use crate::app_packaging::environment::EnvironmentContext;
+use crate::py_packaging::bytecode::{BytecodeCompiler, CompileMode};
 use crate::py_packaging::distribution::{
     is_stdlib_test_package, resolve_parsed_distribution, resolve_python_paths,
     ExtensionModuleFilter, ParsedPythonDistribution, PythonDistributionLocation,
@@ -40,13 +41,15 @@ use crate::py_packaging::pip::pip_install as raw_pip_install;
 use crate::py_packaging::resource::{BytecodeOptimizationLevel, PythonResource};
 use crate::python_distributions::CPYTHON_BY_TRIPLE;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PythonDistribution {
     pub source: PythonDistributionLocation,
 
     dest_dir: PathBuf,
 
     pub distribution: Option<ParsedPythonDistribution>,
+
+    compiler: Option<BytecodeCompiler>,
 }
 
 impl PythonDistribution {
@@ -55,6 +58,7 @@ impl PythonDistribution {
             source: location,
             dest_dir: dest_dir.to_path_buf(),
             distribution: None,
+            compiler: None,
         }
     }
 
@@ -67,6 +71,35 @@ impl PythonDistribution {
         warn!(logger, "distribution info: {:#?}", dist.as_minimal_info());
 
         self.distribution = Some(dist);
+    }
+
+    /// Compile bytecode using this distribution.
+    ///
+    /// A bytecode compiler will be lazily instantiated and preserved for the
+    /// lifetime of the instance. So calling multiple times does not pay a
+    /// recurring performance penalty for instantiating the bytecode compiler.
+    pub fn compile_bytecode(
+        &mut self,
+        logger: &slog::Logger,
+        source: &[u8],
+        filename: &str,
+        optimize: BytecodeOptimizationLevel,
+        output_mode: CompileMode,
+    ) -> Result<Vec<u8>> {
+        self.ensure_distribution_resolved(logger);
+
+        if let Some(dist) = &self.distribution {
+            if self.compiler.is_none() {
+                let compiler = BytecodeCompiler::new(&dist.python_exe)?;
+                self.compiler = Some(compiler);
+            }
+        }
+
+        if let Some(compiler) = &mut self.compiler {
+            compiler.compile(source, filename, optimize, output_mode)
+        } else {
+            Err(anyhow!("bytecode compiler should exist"))
+        }
     }
 }
 
