@@ -26,7 +26,9 @@ mod pyinterp;
 mod pystr;
 
 #[allow(unused_imports)]
-pub use crate::config::PythonConfig;
+pub use crate::config::{
+    ExtensionModule, PythonConfig, PythonRawAllocator, PythonRunMode, TerminfoResolution,
+};
 
 #[allow(unused_imports)]
 pub use crate::data::default_python_config;
