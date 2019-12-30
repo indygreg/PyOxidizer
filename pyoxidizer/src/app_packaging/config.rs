@@ -96,17 +96,5 @@ pub fn eval_starlark_config_file(
     let res = crate::starlark::eval::evaluate_file(logger, path, &context)
         .or_else(|d| Err(anyhow!(d.message)))?;
 
-    let config = res
-        .env
-        .get("CONFIG")
-        .or_else(|_| Err(anyhow!("CONFIG does not exist")))?;
-
-    if config.get_type() != "Config" {
-        return Err(anyhow!(
-            "CONFIG must be type Config; got type {}",
-            config.get_type()
-        ));
-    }
-
-    Ok(config.downcast_apply(|x: &crate::starlark::config::Config| -> Config { x.config.clone() }))
+    Ok(res.config)
 }
