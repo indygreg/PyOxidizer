@@ -931,11 +931,11 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
         Err(_) => PathBuf::from(env::var("OUT_DIR").unwrap()),
     };
 
-    let config = eval_starlark_config_file(logger, &config_path, &target).unwrap();
+    let res = eval_starlark_config_file(logger, &config_path, &target).unwrap();
 
     let mut context = BuildContext::new(
         &project_path,
-        config,
+        res.config,
         Some(&host),
         &target,
         profile == "release",

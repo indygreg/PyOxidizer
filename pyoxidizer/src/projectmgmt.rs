@@ -252,11 +252,11 @@ pub fn resolve_build_context(
         },
     };
 
-    let config = eval_starlark_config_file(logger, &config_path, &target)?;
+    let res = eval_starlark_config_file(logger, &config_path, &target)?;
 
     BuildContext::new(
         &path,
-        config,
+        res.config,
         None,
         &target,
         release,

@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 use super::environment::EnvironmentContext;
 use crate::py_packaging::config::{EmbeddedPythonConfig, RawAllocator, RunMode};
 use crate::py_packaging::distribution::PythonDistributionLocation;
+use crate::starlark::eval::EvalResult;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BuildConfig {
@@ -90,11 +91,9 @@ pub fn eval_starlark_config_file(
     logger: &slog::Logger,
     path: &Path,
     build_target: &str,
-) -> Result<Config> {
+) -> Result<EvalResult> {
     let context = EnvironmentContext::new(logger, path, build_target)?;
 
-    let res = crate::starlark::eval::evaluate_file(logger, path, &context)
-        .or_else(|d| Err(anyhow!(d.message)))?;
-
-    Ok(res.config)
+    crate::starlark::eval::evaluate_file(logger, path, &context)
+        .or_else(|d| Err(anyhow!(d.message)))
 }
