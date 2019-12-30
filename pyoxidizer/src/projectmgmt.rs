@@ -129,20 +129,18 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
 }
 
 /// Build PyOxidizer artifacts for a project.
-fn build_pyoxidizer_artifacts(logger: &slog::Logger, context: &mut BuildContext) -> Result<()> {
-    let pyoxidizer_artifacts_path = &context.pyoxidizer_artifacts_path;
+fn build_pyoxidizer_artifacts(
+    logger: &slog::Logger,
+    config_path: &Path,
+    artifacts_path: &Path,
+    target_triple: &str,
+) -> Result<()> {
+    create_dir_all(artifacts_path)?;
 
-    create_dir_all(&pyoxidizer_artifacts_path)?;
+    let artifacts_path = canonicalize_path(artifacts_path)?;
 
-    let pyoxidizer_artifacts_path = canonicalize_path(pyoxidizer_artifacts_path)?;
-
-    if !artifacts_current(logger, &context.config_path, &pyoxidizer_artifacts_path) {
-        eval_starlark_config_file(
-            logger,
-            &context.config_path,
-            &context.target_triple,
-            Some(&context.pyoxidizer_artifacts_path),
-        )?;
+    if !artifacts_current(logger, config_path, &artifacts_path) {
+        eval_starlark_config_file(logger, config_path, target_triple, Some(&artifacts_path))?;
     }
 
     Ok(())
@@ -168,7 +166,12 @@ pub fn build_project(logger: &slog::Logger, context: &mut BuildContext) -> Resul
     // configuration within this process then call out to `cargo build`. We do
     // this because it is easier to emit output from this process than to have
     // it proxied via cargo.
-    build_pyoxidizer_artifacts(logger, context)?;
+    build_pyoxidizer_artifacts(
+        logger,
+        &context.config_path,
+        &context.pyoxidizer_artifacts_path,
+        &context.target_triple,
+    )?;
 
     let mut args = Vec::new();
     args.push("build");
@@ -326,7 +329,7 @@ pub fn build_artifacts(
     release: bool,
     verbose: bool,
 ) -> Result<()> {
-    let mut context = resolve_build_context(
+    let context = resolve_build_context(
         logger,
         project_path.to_str().unwrap(),
         None,
@@ -336,7 +339,12 @@ pub fn build_artifacts(
         verbose,
     )?;
 
-    build_pyoxidizer_artifacts(logger, &mut context)?;
+    build_pyoxidizer_artifacts(
+        logger,
+        &context.config_path,
+        &context.pyoxidizer_artifacts_path,
+        &context.target_triple,
+    )?;
 
     Ok(())
 }
