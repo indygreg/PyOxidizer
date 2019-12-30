@@ -463,24 +463,24 @@ starlark_module! { python_resource_env =>
                 }
                 if add_bytecode_module {
                     let f = env.get_type_value(&this, "add_module_bytecode").unwrap();
-                    f.call(call_stack, env.clone(), vec![this, resource, optimize_level], HashMap::new(), None, None)?;
+                    f.call(call_stack, env, vec![this, resource, optimize_level], HashMap::new(), None, None)?;
                 }
 
                 Ok(Value::new(None))
             }
             "PythonBytecodeModule" => {
                 let f = env.get_type_value(&this, "add_module_bytecode").unwrap();
-                f.call(call_stack, env.clone(), vec![this, resource, optimize_level], HashMap::new(), None, None)?;
+                f.call(call_stack, env, vec![this, resource, optimize_level], HashMap::new(), None, None)?;
                 Ok(Value::new(None))
             }
             "PythonResourceData" => {
                 let f = env.get_type_value(&this, "add_resource_data").unwrap();
-                f.call(call_stack, env.clone(), vec![this, resource], HashMap::new(), None, None)?;
+                f.call(call_stack, env, vec![this, resource], HashMap::new(), None, None)?;
                 Ok(Value::new(None))
             }
             "PythonExtensionModule" => {
                 let f = env.get_type_value(&this, "add_extension_module").unwrap();
-                f.call(call_stack, env.clone(), vec![this, resource], HashMap::new(), None, None)?;
+                f.call(call_stack, env, vec![this, resource], HashMap::new(), None, None)?;
                 Ok(Value::new(None))
             }
             _ => Err(RuntimeError {
