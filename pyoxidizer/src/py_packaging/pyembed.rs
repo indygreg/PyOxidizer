@@ -124,7 +124,9 @@ pub fn derive_python_config(
 pub fn write_data_rs(path: &Path, python_config_rs: &str) -> Result<()> {
     let mut f = File::create(&path)?;
 
-    f.write_all(b"use super::config::{PythonConfig, PythonRawAllocator, PythonRunMode, TerminfoResolution};\n\n")?;
+    f.write_all(
+        b"use crate::{PythonConfig, PythonRawAllocator, PythonRunMode, TerminfoResolution};\n\n",
+    )?;
 
     // Ideally we would have a const struct, but we need to do some
     // dynamic allocations. Using a function avoids having to pull in a
