@@ -64,7 +64,6 @@ impl PreBuiltPythonExecutable {
         let libpyembeddedconfig_data = std::fs::read(&library_info.libpyembeddedconfig_path)?;
 
         Ok(PythonLibrary {
-            pre_built: self.clone(),
             libpython_filename: PathBuf::from(library_info.libpython_path.file_name().unwrap()),
             libpython_data,
             libpyembeddedconfig_filename: PathBuf::from(
@@ -95,7 +94,6 @@ impl PreBuiltPythonExecutable {
 
 /// A self-contained Python executable after it is built.
 pub struct PythonLibrary {
-    pub pre_built: PreBuiltPythonExecutable,
     pub libpython_filename: PathBuf,
     pub libpython_data: Vec<u8>,
     pub libpyembeddedconfig_filename: PathBuf,
