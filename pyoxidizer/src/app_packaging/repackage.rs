@@ -194,9 +194,7 @@ pub fn resolve_python_resources(
     let embedded_resources: BTreeMap<String, BTreeMap<String, Vec<u8>>> = BTreeMap::new();
     let embedded_built_extension_modules: BTreeMap<String, BuiltExtensionModule> = BTreeMap::new();
 
-    let mut app_relative: BTreeMap<String, AppRelativeResources> = BTreeMap::new();
-    let app_relative_bytecode_requests: BTreeMap<String, BTreeMap<String, BytecodeRequest>> =
-        BTreeMap::new();
+    let app_relative: BTreeMap<String, AppRelativeResources> = BTreeMap::new();
 
     let read_files: Vec<PathBuf> = Vec::new();
     let license_files_path = None;
@@ -296,42 +294,6 @@ pub fn resolve_python_resources(
                     is_package: request.is_package,
                 },
             );
-        }
-    }
-
-    // Compile app-relative bytecode requests.
-    {
-        let mut compiler = BytecodeCompiler::new(&dist.python_exe).unwrap();
-
-        for (path, requests) in app_relative_bytecode_requests {
-            if !app_relative.contains_key(&path) {
-                app_relative.insert(path.clone(), AppRelativeResources::default());
-            }
-
-            let app_relative = app_relative.get_mut(&path).unwrap();
-
-            for (name, request) in requests {
-                let bytecode = match compiler.compile(
-                    &request.source,
-                    &name,
-                    BytecodeOptimizationLevel::from(request.optimize_level),
-                    // Bytecode in app-relative directories should never be mutated. So we
-                    // shouldn't need to verify its hash at run-time.
-                    // TODO consider making this configurable.
-                    CompileMode::PycUncheckedHash,
-                ) {
-                    Ok(res) => res,
-                    Err(msg) => panic!("error compiling bytecode for {}: {}", name, msg),
-                };
-
-                app_relative.module_bytecodes.insert(
-                    name.clone(),
-                    PackagedModuleBytecode {
-                        bytecode,
-                        is_package: request.is_package,
-                    },
-                );
-            }
         }
     }
 
