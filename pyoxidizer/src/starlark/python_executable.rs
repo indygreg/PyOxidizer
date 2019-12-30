@@ -2,8 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use anyhow::Result;
+use slog::warn;
 use starlark::environment::Environment;
-use starlark::values::{default_compare, TypedValue, Value, ValueError, ValueResult};
+use starlark::values::{default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult};
 use starlark::{
     any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
     starlark_signature_extraction, starlark_signatures,
@@ -18,7 +20,7 @@ use super::python_distribution::PythonDistribution;
 use super::python_resource::PythonEmbeddedResources;
 use super::python_run_mode::PythonRunMode;
 use crate::app_packaging::environment::EnvironmentContext;
-use crate::py_packaging::binary::PreBuiltPythonExecutable;
+use crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable};
 use crate::py_packaging::distribution::ExtensionModuleFilter;
 
 impl TypedValue for PreBuiltPythonExecutable {
@@ -85,6 +87,22 @@ starlark_module! { python_executable_env =>
             config,
             run_mode
         };
+
+        context.downcast_apply(|context: &EnvironmentContext| -> Result<()> {
+            if let Some(path) = &context.write_artifacts_path {
+                warn!(&logger, "writing PyOxidizer build artifacts to {}", path.display());
+                let embedded = EmbeddedPythonBinaryData::from_pre_built_python_executable(
+                    &pre_built, &logger, env!("HOST"), &context.build_target, "0")?;
+
+                embedded.write_files(path)?;
+            }
+
+            Ok(())
+        }).or_else(|e| Err(RuntimeError {
+            code: "PYOXIDIZER_BUILD",
+            message: e.to_string(),
+            label: "PythonExecutable()".to_string(),
+        }.into()))?;
 
         Ok(Value::new(pre_built))
     }
