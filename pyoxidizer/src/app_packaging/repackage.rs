@@ -699,23 +699,6 @@ pub fn process_config(
 
     warn!(logger, "distribution info: {:#?}", dist.as_minimal_info());
 
-    // Produce the custom frozen importlib modules.
-    warn!(
-        logger,
-        "compiling custom importlib modules to support in-memory importing"
-    );
-    let importlib = derive_importlib(&dist).unwrap();
-
-    let importlib_bootstrap_path = Path::new(&dest_dir).join("importlib_bootstrap");
-    let mut fh = fs::File::create(&importlib_bootstrap_path).unwrap();
-    fh.write_all(&importlib.bootstrap_bytecode).unwrap();
-
-    let importlib_bootstrap_external_path =
-        Path::new(&dest_dir).join("importlib_bootstrap_external");
-    let mut fh = fs::File::create(&importlib_bootstrap_external_path).unwrap();
-    fh.write_all(&importlib.bootstrap_external_bytecode)
-        .unwrap();
-
     warn!(
         logger,
         "resolving Python resources (modules, extensions, resource data, etc)..."
@@ -823,6 +806,23 @@ pub fn process_config(
     for p in &resources.read_files {
         cargo_metadata.push(format!("cargo:rerun-if-changed={}", p.display()));
     }
+
+    // Produce the custom frozen importlib modules.
+    warn!(
+        logger,
+        "compiling custom importlib modules to support in-memory importing"
+    );
+    let importlib = derive_importlib(&dist).unwrap();
+
+    let importlib_bootstrap_path = Path::new(&dest_dir).join("importlib_bootstrap");
+    let mut fh = fs::File::create(&importlib_bootstrap_path).unwrap();
+    fh.write_all(&importlib.bootstrap_bytecode).unwrap();
+
+    let importlib_bootstrap_external_path =
+        Path::new(&dest_dir).join("importlib_bootstrap_external");
+    let mut fh = fs::File::create(&importlib_bootstrap_external_path).unwrap();
+    fh.write_all(&importlib.bootstrap_external_bytecode)
+        .unwrap();
 
     warn!(logger, "processing python run mode: {:?}", config.run);
     warn!(
