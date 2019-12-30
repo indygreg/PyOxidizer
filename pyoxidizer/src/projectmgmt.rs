@@ -252,7 +252,7 @@ pub fn resolve_build_context(
         },
     };
 
-    let res = eval_starlark_config_file(logger, &config_path, &target)?;
+    let res = eval_starlark_config_file(logger, &config_path, &target, force_artifacts_path)?;
 
     BuildContext::new(
         &path,

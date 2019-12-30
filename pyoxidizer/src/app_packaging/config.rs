@@ -91,8 +91,9 @@ pub fn eval_starlark_config_file(
     logger: &slog::Logger,
     path: &Path,
     build_target: &str,
+    write_artifacts_path: Option<&Path>,
 ) -> Result<EvalResult> {
-    let context = EnvironmentContext::new(logger, path, build_target)?;
+    let context = EnvironmentContext::new(logger, path, build_target, write_artifacts_path)?;
 
     crate::starlark::eval::evaluate_file(logger, path, &context)
         .or_else(|d| Err(anyhow!(d.message)))

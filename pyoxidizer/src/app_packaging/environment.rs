@@ -26,6 +26,9 @@ pub struct EnvironmentContext {
 
     /// Path where Python distributions are written.
     pub python_distributions_path: PathBuf,
+
+    /// Where to automatically write artifacts for built executables.
+    pub write_artifacts_path: Option<PathBuf>,
 }
 
 impl EnvironmentContext {
@@ -33,6 +36,7 @@ impl EnvironmentContext {
         logger: &slog::Logger,
         config_path: &Path,
         build_target: &str,
+        write_artifacts_path: Option<&Path>,
     ) -> Result<EnvironmentContext> {
         let parent = config_path
             .parent()
@@ -47,6 +51,10 @@ impl EnvironmentContext {
             build_target: build_target.to_string(),
             build_path: build_path.clone(),
             python_distributions_path: build_path.join("python_distributions"),
+            write_artifacts_path: match write_artifacts_path {
+                Some(p) => Some(p.to_path_buf()),
+                None => None,
+            },
         })
     }
 
