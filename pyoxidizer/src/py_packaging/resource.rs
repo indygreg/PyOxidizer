@@ -8,6 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryFrom;
 use std::path::PathBuf;
 
+use super::bytecode::{BytecodeCompiler, CompileMode};
 use super::distribution::ExtensionModule;
 use super::fsscan::{is_package_from_path, PythonFileResource};
 
@@ -128,6 +129,11 @@ impl BytecodeModule {
             },
             is_package: self.is_package,
         }
+    }
+
+    /// Compile source to bytecode using a compiler.
+    pub fn compile(&self, compiler: &mut BytecodeCompiler, mode: CompileMode) -> Result<Vec<u8>> {
+        compiler.compile(&self.source, &self.name, self.optimize_level, mode)
     }
 }
 
