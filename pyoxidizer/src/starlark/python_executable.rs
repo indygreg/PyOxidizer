@@ -78,13 +78,15 @@ starlark_module! { python_executable_env =>
             }
         }
 
-        Ok(Value::new(PreBuiltPythonExecutable {
+        let pre_built = PreBuiltPythonExecutable {
             name,
             distribution,
             resources,
             config,
             run_mode
-        }))
+        };
+
+        Ok(Value::new(pre_built))
     }
 }
 
