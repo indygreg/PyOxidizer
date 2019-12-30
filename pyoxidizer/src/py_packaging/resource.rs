@@ -301,7 +301,7 @@ impl TryFrom<&PythonFileResource> for PythonResource {
 }
 
 impl PythonResource {
-    pub fn is_in_packages(&self, packages: &Vec<String>) -> bool {
+    pub fn is_in_packages(&self, packages: &[String]) -> bool {
         let name = match self {
             PythonResource::ModuleSource { name, .. } => name,
             PythonResource::ModuleBytecode { name, .. } => name,
