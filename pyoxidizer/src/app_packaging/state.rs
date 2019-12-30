@@ -2,22 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use super::config::Config;
-use crate::py_packaging::distribution::LicenseInfo;
-
-/// Holds state needed to perform packaging.
-///
-/// Instances are serialized to disk during builds and read during
-/// packaging.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PackagingState {
-    pub license_files_path: Option<String>,
-    pub license_infos: BTreeMap<String, Vec<LicenseInfo>>,
-}
 
 /// Represents environment for a build.
 pub struct BuildContext {
@@ -82,7 +69,4 @@ pub struct BuildContext {
 
     /// Path where PyOxidizer should write its build artifacts.
     pub pyoxidizer_artifacts_path: PathBuf,
-
-    /// State used for packaging.
-    pub packaging_state: Option<PackagingState>,
 }

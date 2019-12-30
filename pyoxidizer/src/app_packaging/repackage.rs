@@ -8,19 +8,20 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs;
 use std::fs::create_dir_all;
-use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use super::config::{eval_starlark_config_file, find_pyoxidizer_config_file_env, Config};
-use super::state::{BuildContext, PackagingState};
+use super::state::BuildContext;
+use crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable};
 use crate::py_packaging::bytecode::python_source_encoding;
 use crate::py_packaging::distribution::{
     resolve_python_distribution_archive, ExtensionModule, ParsedPythonDistribution,
     PythonDistributionLocation,
 };
-use crate::py_packaging::embedded_resource::{EmbeddedPythonResources, OS_IGNORE_EXTENSIONS};
-use crate::py_packaging::libpython::{derive_importlib, link_libpython};
-use crate::py_packaging::pyembed::{derive_python_config, write_data_rs};
+use crate::py_packaging::embedded_resource::{
+    EmbeddedPythonResources, EmbeddedPythonResourcesPrePackaged, OS_IGNORE_EXTENSIONS,
+};
 use crate::py_packaging::resource::{
     packages_from_module_name, packages_from_module_names, AppRelativeResources,
     BuiltExtensionModule, PackagedModuleBytecode, PackagedModuleSource,
@@ -131,27 +132,7 @@ impl BuildContext {
             app_exe_target_path,
             pyoxidizer_artifacts_path,
             python_distribution_path,
-            packaging_state: None,
         })
-    }
-
-    /// Obtain the PackagingState instance for this configuration.
-    ///
-    /// This basically reads the packaging_state.cbor file from the artifacts
-    /// directory.
-    pub fn get_packaging_state(&mut self) -> Result<PackagingState> {
-        if self.packaging_state.is_none() {
-            let path = self.pyoxidizer_artifacts_path.join("packaging_state.cbor");
-            let fh = std::io::BufReader::new(std::fs::File::open(&path)?);
-
-            let state: PackagingState = serde_cbor::from_reader(fh)?;
-
-            self.packaging_state = Some(state);
-        }
-
-        // Ideally we'd return a ref. But lifetimes and mutable borrows can get
-        // tricky. So just stomach the clone() for now.
-        Ok(self.packaging_state.clone().unwrap())
     }
 }
 
@@ -503,24 +484,7 @@ pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Res
     );
     std::fs::copy(&context.app_exe_target_path, &context.app_exe_path)?;
 
-    warn!(logger, "resolving packaging state...");
-    let state = context.get_packaging_state()?;
-
-    if let Some(licenses_path) = state.license_files_path {
-        let licenses_path = if licenses_path.is_empty() {
-            context.app_path.clone()
-        } else {
-            context.app_path.join(licenses_path)
-        };
-
-        for (name, lis) in &state.license_infos {
-            for li in lis {
-                let path = licenses_path.join(&li.license_filename);
-                warn!(logger, "writing license for {} to {}", name, path.display());
-                fs::write(&path, li.license_text.as_bytes())?;
-            }
-        }
-    }
+    // TODO remember to port license files writing.
 
     warn!(
         logger,
@@ -537,39 +501,9 @@ pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Res
 /// Instances are typically produced by processing a PyOxidizer config file.
 #[derive(Debug)]
 pub struct EmbeddedPythonConfig {
-    /// Parsed starlark config.
-    pub config: Config,
-
-    /// Path to archive with source Python distribution.
-    pub python_distribution_path: PathBuf,
-
-    /// Path to frozen importlib._bootstrap bytecode.
-    pub importlib_bootstrap_path: PathBuf,
-
-    /// Path to frozen importlib._bootstrap_external bytecode.
-    pub importlib_bootstrap_external_path: PathBuf,
-
-    /// Path to file containing all known module names.
-    pub module_names_path: PathBuf,
-
-    /// Path to file containing packed Python module source data.
-    pub py_modules_path: PathBuf,
-
-    /// Path to file containing packed Python resources data.
-    pub resources_path: PathBuf,
-
-    /// Path to library file containing Python.
-    pub libpython_path: PathBuf,
-
     /// Lines that can be emitted from Cargo build scripts to describe this
     /// configuration.
     pub cargo_metadata: Vec<String>,
-
-    /// Rust source code to instantiate a PythonConfig instance using this config.
-    pub python_config_rs: String,
-
-    /// Path to file containing packaging state.
-    pub packaging_state_path: PathBuf,
 }
 
 /// Derive build artifacts from a PyOxidizer configuration.
@@ -582,7 +516,7 @@ pub struct EmbeddedPythonConfig {
 pub fn process_config(
     logger: &slog::Logger,
     context: &mut BuildContext,
-    opt_level: &str,
+    _opt_level: &str,
 ) -> EmbeddedPythonConfig {
     let mut cargo_metadata: Vec<String> = Vec::new();
 
@@ -677,143 +611,31 @@ pub fn process_config(
     );
     info!(logger, "{:#?}", all_extension_modules);
 
-    // Produce the packed data structures containing Python modules.
-    // TODO there is tons of room to customize this behavior, including
-    // reordering modules so the memory order matches import order.
-
-    warn!(logger, "writing packed Python module and resource data...");
-    let module_names_path = Path::new(&dest_dir).join("py-module-names");
-    let py_modules_path = Path::new(&dest_dir).join("py-modules");
-    let resources_path = Path::new(&dest_dir).join("python-resources");
-
-    let mut module_names_fh =
-        BufWriter::new(fs::File::create(&module_names_path).expect("error creating file"));
-    let mut modules_fh =
-        BufWriter::new(fs::File::create(&py_modules_path).expect("error creating file"));
-    let mut resources_fh =
-        BufWriter::new(fs::File::create(&resources_path).expect("error creating file"));
-
-    resources
-        .embedded
-        .write_blobs(&mut module_names_fh, &mut modules_fh, &mut resources_fh);
-
-    module_names_fh.flush().unwrap();
-    modules_fh.flush().unwrap();
-    resources_fh.flush().unwrap();
-
-    warn!(
-        logger,
-        "{} bytes of Python module data written to {}",
-        py_modules_path.metadata().unwrap().len(),
-        py_modules_path.display()
-    );
-    warn!(
-        logger,
-        "{} bytes of resources data written to {}",
-        resources_path.metadata().unwrap().len(),
-        resources_path.display()
-    );
-
-    // Produce a static library containing the Python bits we need.
-    warn!(
-        logger,
-        "generating custom link library containing Python..."
-    );
-    let libpython_info = link_libpython(
-        logger,
-        &dist,
-        &resources.embedded,
-        dest_dir,
-        &context.host_triple,
-        &context.target_triple,
-        opt_level,
-    )
-    .unwrap();
-    cargo_metadata.extend(libpython_info.cargo_metadata);
-
-    for p in &resources.read_files {
-        cargo_metadata.push(format!("cargo:rerun-if-changed={}", p.display()));
-    }
-
-    // Produce the custom frozen importlib modules.
-    warn!(
-        logger,
-        "compiling custom importlib modules to support in-memory importing"
-    );
-    let importlib = derive_importlib(&dist).unwrap();
-
-    let importlib_bootstrap_path = Path::new(&dest_dir).join("importlib_bootstrap");
-    let mut fh = fs::File::create(&importlib_bootstrap_path).unwrap();
-    fh.write_all(&importlib.bootstrap_bytecode).unwrap();
-
-    let importlib_bootstrap_external_path =
-        Path::new(&dest_dir).join("importlib_bootstrap_external");
-    let mut fh = fs::File::create(&importlib_bootstrap_external_path).unwrap();
-    fh.write_all(&importlib.bootstrap_external_bytecode)
-        .unwrap();
-
-    warn!(logger, "processing python run mode: {:?}", config.run);
-    warn!(
-        logger,
-        "processing embedded python config: {:?}", config.embedded_python_config
-    );
-
-    let python_config_rs = derive_python_config(
-        &config.embedded_python_config,
-        &config.run,
-        &importlib_bootstrap_path,
-        &importlib_bootstrap_external_path,
-        &py_modules_path,
-        &resources_path,
-    );
-
-    let dest_path = Path::new(&dest_dir).join("data.rs");
-    write_data_rs(&dest_path, &python_config_rs).unwrap();
-    // Define the path to the written file in an environment variable so it can
-    // be anywhere.
-    cargo_metadata.push(format!(
-        "cargo:rustc-env=PYEMBED_DATA_RS_PATH={}",
-        dest_path.display()
-    ));
-
-    // Write a file containing the cargo metadata lines. This allows those
-    // lines to be consumed elsewhere and re-emitted without going through all the
-    // logic in this function.
-    let cargo_metadata_path = Path::new(&dest_dir).join("cargo_metadata.txt");
-    fs::write(&cargo_metadata_path, cargo_metadata.join("\n").as_bytes())
-        .expect("unable to write cargo_metadata.txt");
-
-    let packaging_state = PackagingState {
-        license_files_path: resources.license_files_path,
-        license_infos: libpython_info.license_infos,
+    let pre_built = PreBuiltPythonExecutable {
+        name: context.app_name.clone(),
+        distribution: Arc::new(dist),
+        resources: EmbeddedPythonResourcesPrePackaged {
+            source_modules: BTreeMap::new(),
+            bytecode_modules: BTreeMap::new(),
+            resources: BTreeMap::new(),
+            extension_modules: resources.embedded.extension_modules.clone(),
+        },
+        config: context.config.embedded_python_config.clone(),
+        run_mode: context.config.run.clone(),
     };
 
-    let packaging_state_path = dest_dir.join("packaging_state.cbor");
-    warn!(
+    let embedded_data = EmbeddedPythonBinaryData::from_pre_built_python_executable(
+        &pre_built,
         logger,
-        "writing packaging state to {}",
-        packaging_state_path.display()
-    );
-    let mut fh = BufWriter::new(
-        fs::File::create(&packaging_state_path).expect("unable to create packaging_state.cbor"),
-    );
-    serde_cbor::to_writer(&mut fh, &packaging_state).unwrap();
+        &context.host_triple,
+        &context.target_triple,
+        "0",
+    )
+    .unwrap();
 
-    context.packaging_state = Some(packaging_state);
+    embedded_data.write_files(&dest_dir).unwrap();
 
-    EmbeddedPythonConfig {
-        config: config.clone(),
-        python_distribution_path,
-        importlib_bootstrap_path,
-        importlib_bootstrap_external_path,
-        module_names_path,
-        py_modules_path,
-        resources_path,
-        libpython_path: libpython_info.libpython_path,
-        cargo_metadata,
-        python_config_rs,
-        packaging_state_path,
-    }
+    EmbeddedPythonConfig { cargo_metadata }
 }
 
 /// Runs packaging/embedding from the context of a build script.
