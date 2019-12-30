@@ -8,7 +8,6 @@ use std::path::PathBuf;
 
 use super::config::Config;
 use crate::py_packaging::distribution::LicenseInfo;
-use crate::py_packaging::resource::AppRelativeResources;
 
 /// Holds state needed to perform packaging.
 ///
@@ -16,7 +15,6 @@ use crate::py_packaging::resource::AppRelativeResources;
 /// packaging.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PackagingState {
-    pub app_relative_resources: BTreeMap<String, AppRelativeResources>,
     pub license_files_path: Option<String>,
     pub license_infos: BTreeMap<String, Vec<LicenseInfo>>,
 }

@@ -410,6 +410,7 @@ pub fn resolve_python_resources(
 }
 
 /// Install all app-relative files next to the generated binary.
+#[allow(dead_code)]
 fn install_app_relative(
     logger: &slog::Logger,
     context: &BuildContext,
@@ -591,18 +592,6 @@ pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Res
                 fs::write(&path, li.license_text.as_bytes())?;
             }
         }
-    }
-
-    if !state.app_relative_resources.is_empty() {
-        warn!(
-            logger,
-            "installing resources into {} app-relative directories",
-            state.app_relative_resources.len(),
-        );
-    }
-
-    for (path, v) in &state.app_relative_resources {
-        install_app_relative(logger, context, path.as_str(), v).unwrap();
     }
 
     warn!(
@@ -869,7 +858,6 @@ pub fn process_config(
     let packaging_state = PackagingState {
         license_files_path: resources.license_files_path,
         license_infos: libpython_info.license_infos,
-        app_relative_resources: resources.app_relative,
     };
 
     let packaging_state_path = dest_dir.join("packaging_state.cbor");
