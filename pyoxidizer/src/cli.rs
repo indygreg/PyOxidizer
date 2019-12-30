@@ -187,27 +187,16 @@ pub fn run_cli() -> Result<()> {
             SubCommand::with_name("build-artifacts")
                 .about("Process a PyOxidizer config file and build derived artifacts")
                 .arg(
-                    Arg::with_name("target")
-                        .long("target")
-                        .takes_value(true)
-                        .help("Rust target triple to build for"),
-                )
-                .arg(
-                    Arg::with_name("release")
-                        .long("release")
-                        .help("Build a release binary"),
+                    Arg::with_name("dest_path")
+                        .required(true)
+                        .value_name("DIR")
+                        .help("Directory to write artifacts to"),
                 )
                 .arg(
                     Arg::with_name("path")
                         .default_value(".")
                         .value_name("PROJECT_PATH")
-                        .help("Path to PyOxidizer config file to process"),
-                )
-                .arg(
-                    Arg::with_name("dest_path")
-                        .required(true)
-                        .value_name("DIR")
-                        .help("Directory to write artifacts to"),
+                        .help("Path to PyOxidizer project to process"),
                 ),
         )
         .subcommand(
@@ -317,21 +306,12 @@ pub fn run_cli() -> Result<()> {
         }
 
         ("build-artifacts", Some(args)) => {
-            let target = args.value_of("target");
-            let release = args.is_present("release");
             let path = args.value_of("path").unwrap();
             let path = PathBuf::from(path);
             let dest_path = args.value_of("dest_path").unwrap();
             let dest_path = PathBuf::from(dest_path);
 
-            projectmgmt::build_artifacts(
-                &logger_context.logger,
-                &path,
-                &dest_path,
-                target,
-                release,
-                verbose,
-            )
+            projectmgmt::build_artifacts(&logger_context.logger, &path, &dest_path)
         }
 
         ("build", Some(args)) => {

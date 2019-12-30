@@ -326,30 +326,15 @@ pub fn build(
     Ok(())
 }
 
-pub fn build_artifacts(
-    logger: &slog::Logger,
-    project_path: &Path,
-    dest_path: &Path,
-    target: Option<&str>,
-    release: bool,
-    verbose: bool,
-) -> Result<()> {
-    let context = resolve_build_context(
-        logger,
-        project_path.to_str().unwrap(),
-        None,
-        target,
-        release,
-        Some(dest_path),
-        verbose,
-    )?;
+pub fn build_artifacts(logger: &slog::Logger, project_path: &Path, dest_path: &Path) -> Result<()> {
+    let target = default_target()?;
 
-    build_pyoxidizer_artifacts(
-        logger,
-        &context.config_path,
-        &context.pyoxidizer_artifacts_path,
-        &context.target_triple,
-    )?;
+    let config_path = match find_pyoxidizer_config_file_env(logger, project_path) {
+        Some(p) => p,
+        None => return Err(anyhow!("could not find PyOxidizer config file")),
+    };
+
+    build_pyoxidizer_artifacts(logger, &config_path, dest_path, &target)?;
 
     Ok(())
 }
