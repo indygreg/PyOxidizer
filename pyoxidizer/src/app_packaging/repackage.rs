@@ -523,12 +523,6 @@ pub fn process_config(
     let config = &context.config;
     let dest_dir = &context.pyoxidizer_artifacts_path;
 
-    warn!(
-        logger,
-        "processing config file {}",
-        config.config_path.display()
-    );
-
     cargo_metadata.push(format!(
         "cargo:rerun-if-changed={}",
         config.config_path.display()
@@ -543,14 +537,8 @@ pub fn process_config(
     }
 
     // Obtain the configured Python distribution and parse it to a data structure.
-    warn!(logger, "resolving Python distribution...");
     let python_distribution_path =
         resolve_python_distribution_archive(&config.python_distribution, &dest_dir);
-    warn!(
-        logger,
-        "Python distribution available at {}",
-        python_distribution_path.display()
-    );
 
     let dist = ParsedPythonDistribution::from_path(
         logger,
@@ -559,57 +547,7 @@ pub fn process_config(
     )
     .unwrap();
 
-    warn!(logger, "distribution info: {:#?}", dist.as_minimal_info());
-
-    warn!(
-        logger,
-        "resolving Python resources (modules, extensions, resource data, etc)..."
-    );
     let resources = resolve_python_resources(logger, context, &dist);
-
-    warn!(
-        logger,
-        "resolved {} embedded Python source modules",
-        resources.embedded.module_sources.len(),
-    );
-    info!(logger, "{:#?}", resources.embedded.module_sources.keys());
-    warn!(
-        logger,
-        "resolved {} embedded Python bytecode modules",
-        resources.embedded.module_bytecodes.len(),
-    );
-    info!(logger, "{:#?}", resources.embedded.module_bytecodes.keys());
-    warn!(
-        logger,
-        "resolved {} unique embedded Python modules",
-        resources.embedded.all_modules.len(),
-    );
-    info!(logger, "{:#?}", resources.embedded.all_modules);
-
-    let mut resource_count = 0;
-    let mut resource_map = BTreeMap::new();
-    for (package, entries) in &resources.embedded.resources {
-        let mut names = BTreeSet::new();
-        names.extend(entries.keys());
-        resource_map.insert(package.clone(), names);
-        resource_count += entries.len();
-    }
-
-    warn!(
-        logger,
-        "resolved {} embedded resource files across {} packages",
-        resource_count,
-        resources.embedded.resources.len(),
-    );
-    info!(logger, "{:#?}", resource_map);
-
-    let all_extension_modules = resources.embedded.embedded_extension_module_names();
-    warn!(
-        logger,
-        "resolved {} embedded extension modules",
-        all_extension_modules.len()
-    );
-    info!(logger, "{:#?}", all_extension_modules);
 
     let pre_built = PreBuiltPythonExecutable {
         name: context.app_name.clone(),
