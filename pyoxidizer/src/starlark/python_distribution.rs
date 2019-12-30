@@ -20,6 +20,7 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use super::env::{
     optional_dict_arg, optional_list_arg, optional_str_arg, required_bool_arg, required_list_arg,
@@ -47,7 +48,7 @@ pub struct PythonDistribution {
 
     dest_dir: PathBuf,
 
-    pub distribution: Option<ParsedPythonDistribution>,
+    pub distribution: Option<Arc<ParsedPythonDistribution>>,
 
     compiler: Option<BytecodeCompiler>,
 }
@@ -70,7 +71,7 @@ impl PythonDistribution {
         let dist = resolve_parsed_distribution(logger, &self.source, &self.dest_dir).unwrap();
         warn!(logger, "distribution info: {:#?}", dist.as_minimal_info());
 
-        self.distribution = Some(dist);
+        self.distribution = Some(Arc::new(dist));
     }
 
     /// Compile bytecode using this distribution.
@@ -480,7 +481,7 @@ starlark_module! { python_distribution_module =>
 
             let mut envs = prepare_hacked_distutils(
                 &logger,
-                dist,
+                &dist,
                 temp_dir.path(),
                 &[&python_paths.site_packages, &python_paths.stdlib],
             )

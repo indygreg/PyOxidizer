@@ -63,8 +63,7 @@ starlark_module! { python_executable_env =>
 
         let distribution = distribution.downcast_apply_mut(|dist: &mut PythonDistribution| {
             dist.ensure_distribution_resolved(&logger);
-
-            dist.distribution.clone().unwrap().clone()
+            dist.distribution.as_ref().unwrap().clone()
         });
 
         let mut resources = resources.downcast_apply(|r: &PythonEmbeddedResources| r.embedded.clone());

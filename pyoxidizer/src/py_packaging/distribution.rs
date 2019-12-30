@@ -254,7 +254,7 @@ pub struct LicenseInfo {
 /// Distribution info is typically derived from a tarball containing a
 /// Python install and its build artifacts.
 #[allow(unused)]
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct ParsedPythonDistribution {
     /// Directory where distribution lives in the filesystem.
     pub base_dir: PathBuf,

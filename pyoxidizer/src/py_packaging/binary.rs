@@ -7,6 +7,7 @@ use slog::warn;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use tempdir::TempDir;
 
 use super::config::{EmbeddedPythonConfig, RunMode};
@@ -19,7 +20,7 @@ use super::pyembed::{derive_python_config, write_data_rs};
 #[derive(Debug, Clone)]
 pub struct PreBuiltPythonExecutable {
     pub name: String,
-    pub distribution: ParsedPythonDistribution,
+    pub distribution: Arc<ParsedPythonDistribution>,
     pub resources: EmbeddedPythonResourcesPrePackaged,
     pub config: EmbeddedPythonConfig,
     pub run_mode: RunMode,
