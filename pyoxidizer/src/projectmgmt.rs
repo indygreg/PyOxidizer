@@ -13,7 +13,7 @@ use std::process;
 
 use super::environment::{canonicalize_path, MINIMUM_RUST_VERSION};
 use crate::app_packaging::config::{eval_starlark_config_file, find_pyoxidizer_config_file_env};
-use crate::app_packaging::repackage::{package_project, process_config, run_from_build};
+use crate::app_packaging::repackage::{package_project, run_from_build};
 use crate::app_packaging::state::BuildContext;
 use crate::project_layout::{find_pyoxidizer_files, initialize_project};
 use crate::py_packaging::config::RawAllocator;
@@ -137,7 +137,12 @@ fn build_pyoxidizer_artifacts(logger: &slog::Logger, context: &mut BuildContext)
     let pyoxidizer_artifacts_path = canonicalize_path(pyoxidizer_artifacts_path)?;
 
     if !artifacts_current(logger, &context.config_path, &pyoxidizer_artifacts_path) {
-        process_config(logger, context, "0");
+        eval_starlark_config_file(
+            logger,
+            &context.config_path,
+            &context.target_triple,
+            Some(&context.pyoxidizer_artifacts_path),
+        )?;
     }
 
     Ok(())
