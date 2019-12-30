@@ -9,19 +9,14 @@ use std::env;
 use std::fs;
 use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 use super::config::{eval_starlark_config_file, find_pyoxidizer_config_file_env, Config};
 use super::state::BuildContext;
-use crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable};
 use crate::py_packaging::bytecode::python_source_encoding;
 use crate::py_packaging::distribution::{
-    resolve_python_distribution_archive, ExtensionModule, ParsedPythonDistribution,
-    PythonDistributionLocation,
+    ExtensionModule, ParsedPythonDistribution, PythonDistributionLocation,
 };
-use crate::py_packaging::embedded_resource::{
-    EmbeddedPythonResources, EmbeddedPythonResourcesPrePackaged, OS_IGNORE_EXTENSIONS,
-};
+use crate::py_packaging::embedded_resource::{EmbeddedPythonResources, OS_IGNORE_EXTENSIONS};
 use crate::py_packaging::resource::{
     packages_from_module_name, packages_from_module_names, AppRelativeResources,
     BuiltExtensionModule, PackagedModuleBytecode, PackagedModuleSource,
@@ -496,76 +491,6 @@ pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Res
     Ok(())
 }
 
-/// Derive build artifacts from a PyOxidizer configuration.
-///
-/// This function processes the PyOxidizer configuration and turns it into a set
-/// of derived files that can power an embedded Python interpreter.
-///
-/// Returns a data structure describing the results.
-#[allow(clippy::cognitive_complexity)]
-pub fn process_config(
-    logger: &slog::Logger,
-    context: &mut BuildContext,
-    _opt_level: &str,
-) -> Vec<String> {
-    let mut cargo_metadata: Vec<String> = Vec::new();
-
-    let config = &context.config;
-    let dest_dir = &context.pyoxidizer_artifacts_path;
-
-    cargo_metadata.push(format!(
-        "cargo:rerun-if-changed={}",
-        config.config_path.display()
-    ));
-
-    if !dest_dir.exists() {
-        create_dir_all(dest_dir).unwrap();
-    }
-
-    if let PythonDistributionLocation::Local { local_path, .. } = &config.python_distribution {
-        cargo_metadata.push(format!("cargo:rerun-if-changed={}", local_path));
-    }
-
-    // Obtain the configured Python distribution and parse it to a data structure.
-    let python_distribution_path =
-        resolve_python_distribution_archive(&config.python_distribution, &dest_dir);
-
-    let dist = ParsedPythonDistribution::from_path(
-        logger,
-        &python_distribution_path,
-        &context.python_distribution_path,
-    )
-    .unwrap();
-
-    let resources = resolve_python_resources(logger, context, &dist);
-
-    let pre_built = PreBuiltPythonExecutable {
-        name: context.app_name.clone(),
-        distribution: Arc::new(dist),
-        resources: EmbeddedPythonResourcesPrePackaged {
-            source_modules: BTreeMap::new(),
-            bytecode_modules: BTreeMap::new(),
-            resources: BTreeMap::new(),
-            extension_modules: resources.embedded.extension_modules.clone(),
-        },
-        config: context.config.embedded_python_config.clone(),
-        run_mode: context.config.run.clone(),
-    };
-
-    let embedded_data = EmbeddedPythonBinaryData::from_pre_built_python_executable(
-        &pre_built,
-        logger,
-        &context.host_triple,
-        &context.target_triple,
-        "0",
-    )
-    .unwrap();
-
-    embedded_data.write_files(&dest_dir).unwrap();
-
-    cargo_metadata
-}
-
 /// Runs packaging/embedding from the context of a build script.
 ///
 /// This function should be called by the build script for the package
@@ -587,13 +512,14 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
 
     println!("cargo:rerun-if-env-changed=PYOXIDIZER_CONFIG");
 
-    let host = env::var("HOST").expect("HOST not defined");
+    // TODO use these variables?
+    //let host = env::var("HOST").expect("HOST not defined");
     let target = env::var("TARGET").expect("TARGET not defined");
-    let opt_level = env::var("OPT_LEVEL").expect("OPT_LEVEL not defined");
+    //let opt_level = env::var("OPT_LEVEL").expect("OPT_LEVEL not defined");
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not found");
-    let profile = env::var("PROFILE").expect("PROFILE not defined");
+    //let profile = env::var("PROFILE").expect("PROFILE not defined");
 
-    let project_path = PathBuf::from(&manifest_dir);
+    //let project_path = PathBuf::from(&manifest_dir);
 
     let config_path = match find_pyoxidizer_config_file_env(logger, &PathBuf::from(manifest_dir)) {
         Some(v) => v,
@@ -609,21 +535,10 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
         Err(_) => PathBuf::from(env::var("OUT_DIR").unwrap()),
     };
 
-    let res = eval_starlark_config_file(logger, &config_path, &target, Some(&dest_dir)).unwrap();
+    eval_starlark_config_file(logger, &config_path, &target, Some(&dest_dir)).unwrap();
 
-    let mut context = BuildContext::new(
-        &project_path,
-        res.config,
-        Some(&host),
-        &target,
-        profile == "release",
-        // TODO Config value won't be honored here. Is that OK?
-        Some(&dest_dir),
-        true,
-    )
-    .unwrap();
-
-    for line in process_config(logger, &mut context, &opt_level) {
-        println!("{}", line);
-    }
+    let cargo_metadata = dest_dir.join("cargo_metadata.txt");
+    let content = std::fs::read(&cargo_metadata).unwrap();
+    let content = String::from_utf8(content).unwrap();
+    print!("{}", content);
 }
