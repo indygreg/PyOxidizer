@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 
 use super::config::{eval_starlark_config_file, find_pyoxidizer_config_file_env, Config};
 use super::state::{BuildContext, PackagingState};
-use crate::py_packaging::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode};
+use crate::py_packaging::bytecode::python_source_encoding;
 use crate::py_packaging::distribution::{
     resolve_python_distribution_archive, ExtensionModule, ParsedPythonDistribution,
     PythonDistributionLocation,
@@ -23,7 +23,7 @@ use crate::py_packaging::libpython::{derive_importlib, link_libpython};
 use crate::py_packaging::pyembed::{derive_python_config, write_data_rs};
 use crate::py_packaging::resource::{
     packages_from_module_name, packages_from_module_names, AppRelativeResources,
-    BuiltExtensionModule, BytecodeOptimizationLevel, PackagedModuleBytecode, PackagedModuleSource,
+    BuiltExtensionModule, PackagedModuleBytecode, PackagedModuleSource,
 };
 
 pub const HOST: &str = env!("HOST");
@@ -173,8 +173,6 @@ pub struct PythonResources {
 
 struct BytecodeRequest {
     source: Vec<u8>,
-    optimize_level: i32,
-    is_package: bool,
 }
 
 /// Resolves a series of packaging rules to a final set of resources to package.
@@ -215,14 +213,7 @@ pub fn resolve_python_resources(
             logger,
             "adding empty module for missing package {}", package
         );
-        embedded_bytecode_requests.insert(
-            package.clone(),
-            BytecodeRequest {
-                source: Vec::new(),
-                optimize_level: 0,
-                is_package: true,
-            },
-        );
+        embedded_bytecode_requests.insert(package.clone(), BytecodeRequest { source: Vec::new() });
     }
 
     // Add required extension modules, as some don't show up in the modules list
@@ -271,32 +262,7 @@ pub fn resolve_python_resources(
         warn!(logger, "__file__ was encountered in some modules; PyOxidizer does not set __file__ and this may create problems at run-time; see https://github.com/indygreg/PyOxidizer/issues/69 for more");
     }
 
-    let mut embedded_bytecodes: BTreeMap<String, PackagedModuleBytecode> = BTreeMap::new();
-
-    {
-        let mut compiler = BytecodeCompiler::new(&dist.python_exe).unwrap();
-
-        for (name, request) in embedded_bytecode_requests {
-            let bytecode = match compiler.compile(
-                &request.source,
-                &name,
-                BytecodeOptimizationLevel::from(request.optimize_level),
-                CompileMode::Bytecode,
-            ) {
-                Ok(res) => res,
-                Err(msg) => panic!("error compiling bytecode for {}: {}", name, msg),
-            };
-
-            embedded_bytecodes.insert(
-                name.clone(),
-                PackagedModuleBytecode {
-                    bytecode,
-                    is_package: request.is_package,
-                },
-            );
-        }
-    }
-
+    let embedded_bytecodes: BTreeMap<String, PackagedModuleBytecode> = BTreeMap::new();
     let mut all_embedded_modules = BTreeSet::new();
     let mut annotated_package_names = BTreeSet::new();
 
