@@ -17,7 +17,7 @@ use super::libpython::{derive_importlib, link_libpython, ImportlibData};
 use super::pyembed::{derive_python_config, write_data_rs};
 
 /// A self-contained Python executable before it is compiled.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PreBuiltPythonExecutable {
     pub name: String,
     pub distribution: Arc<ParsedPythonDistribution>,

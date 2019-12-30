@@ -211,14 +211,15 @@ starlark_module! { file_resource_env =>
                         (x.logger.clone(), x.build_target.clone())
                     });
 
-                    let exe = resource.downcast_apply(|exe: &PreBuiltPythonExecutable| exe.clone());
-
-                    manifest.add_python_executable(&logger, &prefix, &exe, &target)
-                        .or_else(|e| Err(RuntimeError {
+                    let raw_exe = resource.0.borrow();
+                    let exe = raw_exe.as_any().downcast_ref::<PreBuiltPythonExecutable>().unwrap();
+                    manifest.add_python_executable(&logger, &prefix, exe, &target).or_else(|e|
+                        Err(RuntimeError {
                             code: "PYOXIDIZER_BUILD",
                             message: e.to_string(),
                             label: "add_python_resource".to_string(),
-                        }.into()))
+                        }.into())
+                    )
                 },
                 t => Err(RuntimeError {
                     code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
