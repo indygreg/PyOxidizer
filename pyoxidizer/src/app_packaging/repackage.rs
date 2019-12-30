@@ -496,16 +496,6 @@ pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Res
     Ok(())
 }
 
-/// Defines files, etc to embed Python in a larger binary.
-///
-/// Instances are typically produced by processing a PyOxidizer config file.
-#[derive(Debug)]
-pub struct EmbeddedPythonConfig {
-    /// Lines that can be emitted from Cargo build scripts to describe this
-    /// configuration.
-    pub cargo_metadata: Vec<String>,
-}
-
 /// Derive build artifacts from a PyOxidizer configuration.
 ///
 /// This function processes the PyOxidizer configuration and turns it into a set
@@ -517,7 +507,7 @@ pub fn process_config(
     logger: &slog::Logger,
     context: &mut BuildContext,
     _opt_level: &str,
-) -> EmbeddedPythonConfig {
+) -> Vec<String> {
     let mut cargo_metadata: Vec<String> = Vec::new();
 
     let config = &context.config;
@@ -573,7 +563,7 @@ pub fn process_config(
 
     embedded_data.write_files(&dest_dir).unwrap();
 
-    EmbeddedPythonConfig { cargo_metadata }
+    cargo_metadata
 }
 
 /// Runs packaging/embedding from the context of a build script.
@@ -633,7 +623,7 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
     )
     .unwrap();
 
-    for line in process_config(logger, &mut context, &opt_level).cargo_metadata {
+    for line in process_config(logger, &mut context, &opt_level) {
         println!("{}", line);
     }
 }
