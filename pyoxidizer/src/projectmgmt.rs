@@ -33,6 +33,14 @@ pub fn default_target() -> Result<String> {
     }
 }
 
+pub fn resolve_target(target: Option<&str>) -> Result<String> {
+    if let Some(s) = target {
+        Ok(s.to_string())
+    } else {
+        default_target()
+    }
+}
+
 fn dependency_current(
     logger: &slog::Logger,
     path: &Path,
@@ -247,10 +255,7 @@ pub fn resolve_build_context(
         return Err(anyhow!("no PyOxidizer files in specified path"));
     }
 
-    let target = match target {
-        Some(v) => v.to_string(),
-        None => default_target()?,
-    };
+    let target = resolve_target(target)?;
 
     let config_path = match config_path {
         Some(p) => PathBuf::from(p),
