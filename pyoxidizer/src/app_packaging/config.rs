@@ -8,7 +8,6 @@ use std::env;
 use std::path::{Path, PathBuf};
 
 use crate::py_packaging::config::{EmbeddedPythonConfig, RawAllocator, RunMode};
-use crate::starlark::env::EnvironmentContext;
 use crate::starlark::eval::EvalResult;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -91,8 +90,6 @@ pub fn eval_starlark_config_file(
     build_target_triple: &str,
     write_artifacts_path: Option<&Path>,
 ) -> Result<EvalResult> {
-    let context = EnvironmentContext::new(logger, path, build_target_triple, write_artifacts_path)?;
-
-    crate::starlark::eval::evaluate_file(logger, path, &context)
+    crate::starlark::eval::evaluate_file(logger, path, build_target_triple, write_artifacts_path)
         .or_else(|d| Err(anyhow!(d.message)))
 }

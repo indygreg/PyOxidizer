@@ -23,10 +23,26 @@ pub struct EvalResult {
 
 pub fn evaluate_file(
     logger: &slog::Logger,
-    path: &Path,
-    context: &EnvironmentContext,
+    config_path: &Path,
+    build_target_triple: &str,
+    write_artifacts_path: Option<&Path>,
 ) -> Result<EvalResult, Diagnostic> {
-    let mut env = global_environment(context).or_else(|_| {
+    let context = EnvironmentContext::new(
+        logger,
+        config_path,
+        build_target_triple,
+        write_artifacts_path,
+    )
+    .or_else(|e| {
+        Err(Diagnostic {
+            level: Level::Error,
+            message: e.to_string(),
+            code: Some("environment".to_string()),
+            spans: vec![],
+        })
+    })?;
+
+    let mut env = global_environment(&context).or_else(|_| {
         Err(Diagnostic {
             level: Level::Error,
             message: "error creating environment".to_string(),
@@ -36,8 +52,8 @@ pub fn evaluate_file(
     })?;
 
     let map = Arc::new(Mutex::new(CodeMap::new()));
-    starlark::eval::simple::eval_file(&map, &path.display().to_string(), false, &mut env).or_else(
-        |e| {
+    starlark::eval::simple::eval_file(&map, &config_path.display().to_string(), false, &mut env)
+        .or_else(|e| {
             let mut msg = Vec::new();
             let raw_map = map.lock().unwrap();
             {
@@ -48,8 +64,7 @@ pub fn evaluate_file(
             slog::error!(logger, "{}", String::from_utf8_lossy(&msg));
 
             Err(e)
-        },
-    )?;
+        })?;
 
     // The EnvironmentContext is cloned as part of evaluation, which is a bit wonky.
     // TODO avoid this clone.
