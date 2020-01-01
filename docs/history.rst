@@ -24,6 +24,7 @@ next
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* The ``pyoxidizer app-path`` sub-command has been removed.
 * Support for building distributions has been removed.
 * The minimum Rust version to build has been increased from 1.31 to
   1.36. This is mainly due to requirements from the ``starlark``
