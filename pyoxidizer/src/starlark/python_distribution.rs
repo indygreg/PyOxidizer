@@ -22,6 +22,7 @@ use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use super::env::EnvironmentContext;
 use super::python_resource::{
     PythonEmbeddedResources, PythonExtensionModule, PythonResourceData, PythonSourceModule,
 };
@@ -29,7 +30,6 @@ use super::util::{
     optional_dict_arg, optional_list_arg, optional_str_arg, required_bool_arg, required_list_arg,
     required_str_arg,
 };
-use crate::app_packaging::environment::EnvironmentContext;
 use crate::py_packaging::bytecode::{BytecodeCompiler, CompileMode};
 use crate::py_packaging::distribution::{
     is_stdlib_test_package, resolve_parsed_distribution, resolve_python_paths,

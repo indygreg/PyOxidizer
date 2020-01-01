@@ -17,11 +17,11 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+use super::env::EnvironmentContext;
 use super::python_resource::{
     PythonBytecodeModule, PythonExtensionModule, PythonResourceData, PythonSourceModule,
 };
 use super::util::{required_bool_arg, required_str_arg};
-use crate::app_packaging::environment::EnvironmentContext;
 use crate::app_packaging::resource::{
     FileContent as RawFileContent, FileManifest as RawFileManifest,
 };

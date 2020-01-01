@@ -8,9 +8,8 @@ use starlark::environment::Environment;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
-use super::env::global_environment;
+use super::env::{global_environment, EnvironmentContext};
 use crate::app_packaging::config::{BuildConfig, Config};
-use crate::app_packaging::environment::EnvironmentContext;
 use crate::py_packaging::config::RunMode;
 
 /// Represents the result of evaluating a Starlark environment.

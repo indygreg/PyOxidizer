@@ -9,8 +9,7 @@ use starlark::environment::Environment;
 use starlark::eval;
 use starlark::values::Value;
 
-use super::env::global_environment;
-use crate::app_packaging::environment::EnvironmentContext;
+use super::env::{global_environment, EnvironmentContext};
 use crate::logging::PrintlnDrain;
 
 pub fn starlark_env() -> Environment {

@@ -15,11 +15,11 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use super::embedded_python_config::EmbeddedPythonConfig;
+use super::env::EnvironmentContext;
 use super::python_distribution::PythonDistribution;
 use super::python_resource::PythonEmbeddedResources;
 use super::python_run_mode::PythonRunMode;
 use super::util::{required_str_arg, required_type_arg};
-use crate::app_packaging::environment::EnvironmentContext;
 use crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable};
 use crate::py_packaging::distribution::ExtensionModuleFilter;
 

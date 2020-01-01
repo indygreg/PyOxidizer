@@ -7,8 +7,8 @@ use slog::warn;
 use std::env;
 use std::path::{Path, PathBuf};
 
-use super::environment::EnvironmentContext;
 use crate::py_packaging::config::{EmbeddedPythonConfig, RawAllocator, RunMode};
+use crate::starlark::env::EnvironmentContext;
 use crate::starlark::eval::EvalResult;
 
 #[derive(Clone, Debug, PartialEq)]
