@@ -247,7 +247,6 @@ starlark_module! { global_module =>
 pub fn global_environment(context: &EnvironmentContext) -> Result<Environment, EnvironmentError> {
     let env = starlark::stdlib::global_environment();
     let env = global_module(env);
-    let env = super::config::config_env(env);
     let env = super::file_resource::file_resource_env(env);
     let env = super::python_distribution::python_distribution_module(env);
     let env = super::embedded_python_config::embedded_python_config_module(env);

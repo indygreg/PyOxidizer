@@ -9,7 +9,6 @@ use std::path::{Path, PathBuf};
 
 use super::environment::EnvironmentContext;
 use crate::py_packaging::config::{EmbeddedPythonConfig, RawAllocator, RunMode};
-use crate::py_packaging::distribution::PythonDistributionLocation;
 use crate::starlark::eval::EvalResult;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -43,7 +42,6 @@ pub struct Config {
     pub config_path: PathBuf,
     pub build_config: BuildConfig,
     pub embedded_python_config: EmbeddedPythonConfig,
-    pub python_distribution: PythonDistributionLocation,
     pub run: RunMode,
 }
 

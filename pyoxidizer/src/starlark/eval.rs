@@ -9,8 +9,9 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use super::env::global_environment;
-use crate::app_packaging::config::Config;
+use crate::app_packaging::config::{BuildConfig, Config};
 use crate::app_packaging::environment::EnvironmentContext;
+use crate::py_packaging::config::RunMode;
 
 /// Represents the result of evaluating a Starlark environment.
 pub struct EvalResult {
@@ -51,28 +52,17 @@ pub fn evaluate_file(
         },
     )?;
 
-    let config = env.get("CONFIG").or_else(|_| {
-        Err(Diagnostic {
-            level: Level::Error,
-            message: "CONFIG not set".to_string(),
-            code: Some("environment".to_string()),
-            spans: vec![],
-        })
-    })?;
-
-    if config.get_type() != "Config" {
-        return Err(Diagnostic {
-            level: Level::Error,
-            message: format!("CONFIG must be type Config; got type {}", config.get_type()),
-            code: Some("environment".to_string()),
-            spans: vec![],
-        });
-    }
-
     Ok(EvalResult {
         env,
         context: context.clone(),
-        config: config
-            .downcast_apply(|x: &crate::starlark::config::Config| -> Config { x.config.clone() }),
+        config: Config {
+            config_path: Default::default(),
+            build_config: BuildConfig {
+                application_name: "".to_string(),
+                build_path: Default::default(),
+            },
+            embedded_python_config: Default::default(),
+            run: RunMode::Noop,
+        },
     })
 }

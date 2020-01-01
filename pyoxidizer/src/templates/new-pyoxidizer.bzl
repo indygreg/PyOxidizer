@@ -140,22 +140,6 @@ files.add_python_resource(".", exe)
 # Materialize the install layout in a destination directory.
 files.install("{{program_name}}")
 
-# LEGACY CONTENT BELOW.
-
-# This variable captures all packaging rules. Append to it to perform
-# additional packaging at build time.
-packaging_rules = []
-
-# Write out license files next to the produced binary.
-#packaging_rules.append(WriteLicenseFiles(""))
-
-Config(
-    application_name="{{program_name}}",
-    embedded_python_config=embedded_python_config,
-    python_distribution=dist,
-    python_run_mode=python_run_mode,
-)
-
 # END OF COMMON USER-ADJUSTED SETTINGS.
 #
 # Everything below this is typically managed by PyOxidizer and doesn't need

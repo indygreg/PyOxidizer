@@ -13,9 +13,7 @@ use std::path::{Path, PathBuf};
 use super::config::{eval_starlark_config_file, find_pyoxidizer_config_file_env, Config};
 use super::state::BuildContext;
 use crate::py_packaging::bytecode::python_source_encoding;
-use crate::py_packaging::distribution::{
-    ExtensionModule, ParsedPythonDistribution, PythonDistributionLocation,
-};
+use crate::py_packaging::distribution::{ExtensionModule, ParsedPythonDistribution};
 use crate::py_packaging::embedded_resource::{EmbeddedPythonResources, OS_IGNORE_EXTENSIONS};
 use crate::py_packaging::resource::{
     packages_from_module_name, packages_from_module_names, AppRelativeResources,
@@ -87,16 +85,7 @@ impl BuildContext {
 
         let distributions_path = build_path.join("distribution");
 
-        let distribution_hash = match &config.python_distribution {
-            PythonDistributionLocation::Local { sha256, .. } => sha256,
-            PythonDistributionLocation::Url { sha256, .. } => sha256,
-        };
-
-        // Take the prefix so paths are shorter.
-        let distribution_hash = &distribution_hash[0..12];
-
-        let python_distribution_path =
-            pyoxidizer_artifacts_path.join(format!("python.{}", distribution_hash));
+        let python_distribution_path = pyoxidizer_artifacts_path.join("python.dummy");
 
         let cargo_toml_path = project_path.join("Cargo.toml");
         if !cargo_toml_path.exists() {

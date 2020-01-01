@@ -932,27 +932,3 @@ specified by ``BUILD_PATH``.
 If ``replace`` is True (the default), the destination directory will
 be deleted and the final state of the destination directory should
 exactly match the state of the ``FileManifest``.
-
-``Config(...)``
----------------
-
-This type defines the build configuration of an application. All the other types
-in this file do nothing unless they are passed to a ``Config`` instance.
-
-This type accepts the following arguments:
-
-``application_name`` (``string``)
-   Defines the name of the application to build.
-
-   This also corresponds to the name of the Rust binary to be built.
-   A ``cargo build --bin <application_name>`` must work.
-
-``embedded_python_config`` (``EmbeddedPythonConfig``)
-   Defines the default settings of the embedded Python interpreter.
-
-``python_distribution`` (``PythonDistribution``)
-   Defines the Python distribution to use to build the application.
-
-``python_run_mode`` (``PythonRunMode``)
-   Defines the default Python execution behavior of the embedded Python
-   interpreter.
