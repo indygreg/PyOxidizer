@@ -15,7 +15,7 @@ use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
-use super::env::{optional_list_arg, optional_str_arg, required_bool_arg, required_type_arg};
+use super::util::{optional_list_arg, optional_str_arg, required_bool_arg, required_type_arg};
 use crate::app_packaging::config::default_raw_allocator;
 use crate::py_packaging::config::{RawAllocator, TerminfoResolution};
 

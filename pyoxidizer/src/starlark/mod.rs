@@ -18,3 +18,4 @@ pub mod python_resource;
 pub mod python_run_mode;
 #[cfg(test)]
 mod testutil;
+pub mod util;

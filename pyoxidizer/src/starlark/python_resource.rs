@@ -16,7 +16,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use super::env::{optional_list_arg, required_bool_arg, required_type_arg};
+use super::util::{optional_list_arg, required_bool_arg, required_type_arg};
 use crate::app_packaging::environment::EnvironmentContext;
 use crate::py_packaging::distribution::ExtensionModule;
 use crate::py_packaging::embedded_resource::EmbeddedPythonResourcesPrePackaged;

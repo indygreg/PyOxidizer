@@ -2,8 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use super::env::required_str_arg;
-use crate::py_packaging::config::RunMode;
 use starlark::environment::Environment;
 use starlark::values::{default_compare, TypedValue, Value, ValueError, ValueResult};
 use starlark::{
@@ -13,6 +11,9 @@ use starlark::{
 use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+
+use super::util::required_str_arg;
+use crate::py_packaging::config::RunMode;
 
 #[derive(Debug, Clone)]
 pub struct PythonRunMode {
