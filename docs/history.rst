@@ -24,6 +24,7 @@ next
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* The ``pyoxidizer init`` sub-command has been renamed to ``init-rust-project``.
 * The ``pyoxidizer app-path`` sub-command has been removed.
 * Support for building distributions has been removed.
 * The minimum Rust version to build has been increased from 1.31 to
@@ -48,6 +49,8 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* A ``pyoxidizer init-config-file`` command has been implemented to create
+  just a ``pyoxidizer.bzl`` configuration file.
 * A ``pyoxidizer python-distribution-info`` command has been implemented
   to print information about a Python distribution archive.
 * The ``EmbeddedPythonConfig()`` config function now accepts a

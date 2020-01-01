@@ -15,7 +15,9 @@ use super::environment::{canonicalize_path, MINIMUM_RUST_VERSION};
 use crate::app_packaging::config::{eval_starlark_config_file, find_pyoxidizer_config_file_env};
 use crate::app_packaging::repackage::{package_project, run_from_build};
 use crate::app_packaging::state::BuildContext;
-use crate::project_layout::{find_pyoxidizer_files, initialize_project};
+use crate::project_layout::{
+    find_pyoxidizer_files, initialize_project, write_new_pyoxidizer_config_file,
+};
 use crate::py_packaging::config::RawAllocator;
 use crate::py_packaging::distribution::{analyze_python_distribution_tar_zst, python_exe_path};
 
@@ -353,14 +355,32 @@ pub fn run(
     run_project(logger, &mut context, extra_args)
 }
 
+/// Initialize a PyOxidizer configuration file in a given directory.
+pub fn init_config_file(
+    project_dir: &Path,
+    code: Option<&str>,
+    pip_install: &[&str],
+) -> Result<()> {
+    if project_dir.exists() && !project_dir.is_dir() {
+        return Err(anyhow!(
+            "existing path must be a directory: {}",
+            project_dir.display()
+        ));
+    }
+
+    if !project_dir.exists() {
+        create_dir_all(project_dir)?;
+    }
+
+    let name = project_dir.iter().last().unwrap().to_str().unwrap();
+
+    write_new_pyoxidizer_config_file(project_dir, name, code, pip_install)
+    // TODO write out instructions for what to do next.
+}
+
 /// Initialize a new Rust project with PyOxidizer support.
-///
-/// `code` can specify custom Python code to run by default in the new
-/// application.
-///
-/// `pip_install` can specify Python packages to `pip install` for the application.
-pub fn init(project_path: &Path, code: Option<&str>, pip_install: &[&str]) -> Result<()> {
-    initialize_project(project_path, code, pip_install)?;
+pub fn init_rust_project(project_path: &Path) -> Result<()> {
+    initialize_project(project_path, None, &[])?;
     println!();
     println!(
         "A new Rust binary application has been created in {}",

@@ -40,7 +40,7 @@ This command will invoke Rust's build system tool (Cargo) to build
 the project.
 ";
 
-const INIT_ABOUT: &str = "\
+const INIT_RUST_PROJECT_ABOUT: &str = "\
 Create a new Rust project embedding Python.
 
 The PATH argument is a filesystem path that should be created to hold the
@@ -114,10 +114,9 @@ pub fn run_cli() -> Result<()> {
                 ),
         )
         .subcommand(
-            SubCommand::with_name("init")
+            SubCommand::with_name("init-config-file")
                 .setting(AppSettings::ArgRequiredElseHelp)
-                .about("Create a new Rust project embedding Python.")
-                .long_about(INIT_ABOUT)
+                .about("Create a new PyOxidizer configuration file.")
                 .arg(
                     Arg::with_name("python-code")
                         .long("python-code")
@@ -130,13 +129,25 @@ pub fn run_cli() -> Result<()> {
                         .takes_value(true)
                         .multiple(true)
                         .number_of_values(1)
-                        .help("Python packages to install via `pip install`"),
+                        .help("Python package to install via `pip install`"),
                 )
                 .arg(
-                    Arg::with_name("name")
+                    Arg::with_name("path")
                         .required(true)
                         .value_name("PATH")
-                        .help("Directory to be created for new project"),
+                        .help("Directory where configuration file should be created"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("init-rust-project")
+                .setting(AppSettings::ArgRequiredElseHelp)
+                .about("Create a new Rust project embedding a Python interpreter")
+                .long_about(INIT_RUST_PROJECT_ABOUT)
+                .arg(
+                    Arg::with_name("path")
+                        .required(true)
+                        .value_name("PATH")
+                        .help("Path of project directory to create"),
                 ),
         )
         .subcommand(
@@ -281,17 +292,24 @@ pub fn run_cli() -> Result<()> {
             projectmgmt::build(&logger_context.logger, path, target, release, verbose)
         }
 
-        ("init", Some(args)) => {
+        ("init-config-file", Some(args)) => {
             let code = args.value_of("python-code");
             let pip_install = if args.is_present("pip-install") {
                 args.values_of("pip-install").unwrap().collect()
             } else {
                 Vec::new()
             };
-            let name = args.value_of("name").unwrap();
-            let project_path = PathBuf::from(name);
+            let path = args.value_of("path").unwrap();
+            let config_path = Path::new(path);
 
-            projectmgmt::init(&project_path, code, &pip_install)
+            projectmgmt::init_config_file(&config_path, code, &pip_install)
+        }
+
+        ("init-rust-project", Some(args)) => {
+            let path = args.value_of("path").unwrap();
+            let project_path = Path::new(path);
+
+            projectmgmt::init_rust_project(&project_path)
         }
 
         ("python-distribution-extract", Some(args)) => {

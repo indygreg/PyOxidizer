@@ -159,7 +159,7 @@ pub fn write_new_pyoxidizer_config_file(
     code: Option<&str>,
     pip_install: &[&str],
 ) -> Result<()> {
-    let path = project_dir.to_path_buf().join("pyoxidizer.bzl");
+    let path = project_dir.join("pyoxidizer.bzl");
 
     let mut data = TemplateData::new();
     populate_template_data(&mut data);
