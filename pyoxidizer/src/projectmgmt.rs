@@ -359,19 +359,17 @@ pub fn run(
 /// application.
 ///
 /// `pip_install` can specify Python packages to `pip install` for the application.
-pub fn init(project_path: &str, code: Option<&str>, pip_install: &[&str]) -> Result<()> {
-    let path = Path::new(project_path);
-
-    initialize_project(&path, code, pip_install)?;
+pub fn init(project_path: &Path, code: Option<&str>, pip_install: &[&str]) -> Result<()> {
+    initialize_project(project_path, code, pip_install)?;
     println!();
     println!(
         "A new Rust binary application has been created in {}",
-        path.display()
+        project_path.display()
     );
     println!();
     println!("This application can be built by doing the following:");
     println!();
-    println!("  $ cd {}", path.display());
+    println!("  $ cd {}", project_path.display());
     println!("  $ pyoxidizer build");
     println!("  $ pyoxidizer run");
     println!();

@@ -289,8 +289,9 @@ pub fn run_cli() -> Result<()> {
                 Vec::new()
             };
             let name = args.value_of("name").unwrap();
+            let project_path = PathBuf::from(name);
 
-            projectmgmt::init(name, code, &pip_install)
+            projectmgmt::init(&project_path, code, &pip_install)
         }
 
         ("python-distribution-extract", Some(args)) => {
