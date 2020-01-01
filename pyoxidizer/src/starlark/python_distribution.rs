@@ -630,7 +630,7 @@ starlark_module! { python_distribution_module =>
     #[allow(clippy::ptr_arg)]
     default_python_distribution(env env, build_target=None) {
         let build_target = match build_target.get_type() {
-            "NoneType" => env.get("BUILD_TARGET").unwrap().to_string(),
+            "NoneType" => env.get("BUILD_TARGET_TRIPLE").unwrap().to_string(),
             "string" => build_target.to_string(),
             t => {
                 return Err(ValueError::TypeNotX {

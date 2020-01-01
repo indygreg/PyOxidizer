@@ -56,8 +56,8 @@ Global Constants
 
 PyOxidizer provides global constants as defined by the following sections.
 
-BUILD_TARGET
-------------
+BUILD_TARGET_TRIPLE
+-------------------
 
 The string Rust target triple that we're currently building for. Will be
 a value like ``x86_64-unknown-linux-gnu`` or ``x86_64-pc-windows-msvc``.

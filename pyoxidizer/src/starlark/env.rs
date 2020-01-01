@@ -261,7 +261,10 @@ pub fn global_environment(context: &EnvironmentContext) -> Result<Environment, E
         "CONFIG_PATH",
         Value::from(context.config_path.display().to_string()),
     )?;
-    env.set("BUILD_TARGET", Value::from(context.build_target.clone()))?;
+    env.set(
+        "BUILD_TARGET_TRIPLE",
+        Value::from(context.build_target.clone()),
+    )?;
 
     Ok(env)
 }
@@ -279,7 +282,7 @@ pub mod tests {
 
     #[test]
     fn test_build_target() {
-        let target = starlark_ok("BUILD_TARGET");
+        let target = starlark_ok("BUILD_TARGET_TRIPLE");
         assert_eq!(target.to_str(), crate::app_packaging::repackage::HOST);
     }
 }

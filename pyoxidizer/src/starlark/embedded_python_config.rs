@@ -110,7 +110,7 @@ starlark_module! { embedded_python_config_module =>
         required_type_arg("verbose", "int", &verbose)?;
         let write_modules_directory_env = optional_str_arg("write_modules_directory_env", &write_modules_directory_env)?;
 
-        let build_target = env.get("BUILD_TARGET").unwrap().to_str();
+        let build_target = env.get("BUILD_TARGET_TRIPLE").unwrap().to_str();
 
         let (stdio_encoding_name, stdio_encoding_errors) = if let Some(ref v) = stdio_encoding {
             let values: Vec<&str> = v.split(':').collect();
