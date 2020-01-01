@@ -52,9 +52,20 @@ pub fn evaluate_file(
         },
     )?;
 
+    // The EnvironmentContext is cloned as part of evaluation, which is a bit wonky.
+    // TODO avoid this clone.
+    let env_context = env.get("CONTEXT").or_else(|_| {
+        Err(Diagnostic {
+            level: Level::Error,
+            message: "CONTEXT not defined".to_string(),
+            code: Some("environment".to_string()),
+            spans: vec![],
+        })
+    })?;
+
     Ok(EvalResult {
         env,
-        context: context.clone(),
+        context: env_context.downcast_apply(|x: &EnvironmentContext| x.clone()),
         config: Config {
             config_path: Default::default(),
             build_config: BuildConfig {
