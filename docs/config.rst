@@ -96,6 +96,11 @@ staging areas for built binaries, etc.
 
 The default value is ``$CWD/build``.
 
+.. important::
+
+   This needs to be called before functionality that utilizes the build path,
+   otherwise the default value will be used.
+
 .. _config_python_distribution:
 
 ``PythonDistribution(sha256, local_path=None, url=None)``
