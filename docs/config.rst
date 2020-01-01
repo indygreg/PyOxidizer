@@ -5,9 +5,10 @@ Configuration Files
 ===================
 
 PyOxidizer uses `Starlark <https://github.com/bazelbuild/starlark>`_
-files to configure run-time behavior. Starlark is a dialect of Python
-intended to be used as a configuration language and the syntax should
-be rather obvious to any Python programmer.
+files to configure run-time behavior.
+
+Starlark is a dialect of Python intended to be used as a configuration
+language and the syntax should be familiar to any Python programmer.
 
 Finding Configuration Files
 ===========================
@@ -32,13 +33,13 @@ File Processing Semantics
 A configuration file is evaluated in a custom Starlark *dialect* which
 provides primitives used by PyOxidizer. This dialect provides some
 well-defined global variables (defined in UPPERCASE) as well as some
-types and functions that can be constructed and called.
+types and functions that can be constructed and called. (See their
+definitions below.)
 
-A configuration file is effectively a sandboxed Python script. While
-many configuration files will be mostly static, it is possible for
-configuration files to dynamically determine what actions to take based
-on global variables, etc. This means there typically only needs to be a
-single configuration file rather than a variant for each build configuration.
+A configuration file is effectively a sandboxed Python script. As
+functions are called, PyOxidizer will perform actions. If all goes according
+to plan, the execution of the configuration file will result in the creation
+of a Python application!
 
 Global Environment
 ==================
