@@ -21,7 +21,7 @@ pub struct EnvironmentContext {
     pub config_path: PathBuf,
 
     /// Target triple we are building for.
-    pub build_target: String,
+    pub build_target_triple: String,
 
     /// Base directory to use for build state.
     pub build_path: PathBuf,
@@ -45,7 +45,7 @@ impl EnvironmentContext {
     pub fn new(
         logger: &slog::Logger,
         config_path: &Path,
-        build_target: &str,
+        build_target_triple: &str,
         write_artifacts_path: Option<&Path>,
     ) -> Result<EnvironmentContext> {
         let parent = config_path
@@ -58,7 +58,7 @@ impl EnvironmentContext {
             logger: logger.clone(),
             cwd: parent.to_path_buf(),
             config_path: config_path.to_path_buf(),
-            build_target: build_target.to_string(),
+            build_target_triple: build_target_triple.to_string(),
             build_path: build_path.clone(),
             python_distributions_path: build_path.join("python_distributions"),
             write_artifacts_path: match write_artifacts_path {

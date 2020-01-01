@@ -208,7 +208,7 @@ starlark_module! { file_resource_env =>
                 "PythonExecutable" => {
                     let context = env.get("CONTEXT").expect("CONTEXT not defined");
                     let (logger, target) = context.downcast_apply(|x: &EnvironmentContext| {
-                        (x.logger.clone(), x.build_target.clone())
+                        (x.logger.clone(), x.build_target_triple.clone())
                     });
 
                     let raw_exe = resource.0.borrow();

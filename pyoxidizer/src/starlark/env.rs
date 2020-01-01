@@ -277,7 +277,7 @@ pub fn global_environment(context: &EnvironmentContext) -> Result<Environment, E
     )?;
     env.set(
         "BUILD_TARGET_TRIPLE",
-        Value::from(context.build_target.clone()),
+        Value::from(context.build_target_triple.clone()),
     )?;
 
     Ok(env)
