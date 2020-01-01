@@ -151,6 +151,17 @@ pub fn run_cli() -> Result<()> {
                 ),
         )
         .subcommand(
+            SubCommand::with_name("list-targets")
+                .setting(AppSettings::ArgRequiredElseHelp)
+                .about("List targets available to resolve in a configuration file")
+                .arg(
+                    Arg::with_name("path")
+                        .default_value(".")
+                        .value_name("PATH")
+                        .help("Path to project to evaluate"),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("build")
                 .setting(AppSettings::ArgRequiredElseHelp)
                 .about("Build a PyOxidizer enabled project")
@@ -303,6 +314,12 @@ pub fn run_cli() -> Result<()> {
             let config_path = Path::new(path);
 
             projectmgmt::init_config_file(&config_path, code, &pip_install)
+        }
+
+        ("list-targets", Some(args)) => {
+            let path = args.value_of("path").unwrap();
+
+            projectmgmt::list_targets(&logger_context.logger, Path::new(path))
         }
 
         ("init-rust-project", Some(args)) => {

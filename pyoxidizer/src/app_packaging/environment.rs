@@ -3,6 +3,8 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use anyhow::{Context, Result};
+use starlark::values::Value;
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 /// Holds state for evaluating app packaging.
@@ -29,6 +31,14 @@ pub struct EnvironmentContext {
 
     /// Where to automatically write artifacts for built executables.
     pub write_artifacts_path: Option<PathBuf>,
+
+    /// Registered build targets.
+    ///
+    /// A target consists of a name and a Starlark callable.
+    pub targets: BTreeMap<String, Value>,
+
+    /// Order targets are registered in.
+    pub targets_order: Vec<String>,
 }
 
 impl EnvironmentContext {
@@ -55,11 +65,29 @@ impl EnvironmentContext {
                 Some(p) => Some(p.to_path_buf()),
                 None => None,
             },
+            targets: BTreeMap::new(),
+            targets_order: Vec::new(),
         })
     }
 
     pub fn set_build_path(&mut self, path: &Path) {
         self.build_path = path.to_path_buf();
         self.python_distributions_path = path.join("python_distributions");
+    }
+
+    pub fn register_target(&mut self, target: String, callable: Value) {
+        if !self.targets.contains_key(&target) {
+            self.targets_order.push(target.clone());
+        }
+
+        self.targets.insert(target, callable);
+    }
+
+    pub fn default_target(&self) -> Option<String> {
+        if self.targets_order.is_empty() {
+            None
+        } else {
+            Some(self.targets_order[0].clone())
+        }
     }
 }

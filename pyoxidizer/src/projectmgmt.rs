@@ -138,6 +138,34 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
     true
 }
 
+pub fn list_targets(logger: &slog::Logger, project_path: &Path) -> Result<()> {
+    let config_path = find_pyoxidizer_config_file_env(logger, project_path).ok_or_else(|| {
+        anyhow!(
+            "unable to find PyOxidizder config file at {}",
+            project_path.display()
+        )
+    })?;
+
+    let target_triple = default_target()?;
+    let res = eval_starlark_config_file(logger, &config_path, &target_triple, None)?;
+
+    if res.context.default_target().is_none() {
+        println!("(no targets defined)");
+        return Ok(());
+    }
+
+    for target in res.context.targets.keys() {
+        let prefix = if Some(target.clone()) == res.context.default_target() {
+            "*"
+        } else {
+            ""
+        };
+        println!("{}{}", prefix, target);
+    }
+
+    Ok(())
+}
+
 /// Build PyOxidizer artifacts for a project.
 fn build_pyoxidizer_artifacts(
     logger: &slog::Logger,

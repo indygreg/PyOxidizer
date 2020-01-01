@@ -37,9 +37,16 @@ types and functions that can be constructed and called. (See their
 definitions below.)
 
 A configuration file is effectively a sandboxed Python script. As
-functions are called, PyOxidizer will perform actions. If all goes according
-to plan, the execution of the configuration file will result in the creation
-of a Python application!
+functions are called, PyOxidizer will perform actions as described
+by those functions.
+
+Configuration files define functions which perform some activity
+then register these functions under a *target* name via the
+``register_target()`` global function. When a configuration
+file is evaluated, PyOxidizer attempts to resolve an ordered set of
+*targets*. This means that configuration files are effectively a mini
+build system, albeit without the complexity and features that a fully
+generic build system entails.
 
 Global Environment
 ==================
@@ -85,6 +92,14 @@ Global Symbols
 
 PyOxidizer defines various global symbols to define execution
 behavior. These are explained in the following sections.
+
+register_target(name, fn)
+-------------------------
+
+Registers a named target that can be resolved by the configuration file.
+
+A target consists of a string name and a callable function, which may return
+a primitive representing the evaluation result.
 
 set_build_path(path)
 --------------------
