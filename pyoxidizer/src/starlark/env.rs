@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use slog::warn;
 use starlark::environment::{Environment, EnvironmentError};
 use starlark::values::{default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult};
@@ -15,6 +15,8 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
+use super::file_resource::FileManifest;
+use super::target::{BuildTarget, ResolvedTarget};
 use super::util::{required_str_arg, required_type_arg};
 
 /// Holds state for evaluating app packaging.
@@ -118,6 +120,26 @@ impl EnvironmentContext {
         } else {
             Vec::new()
         }
+    }
+
+    pub fn run_resolved_target(&self, target: &str) -> Result<()> {
+        let v = if let Some(v) = self.resolved_targets.get(target) {
+            Some(v.clone())
+        } else {
+            None
+        }
+        .ok_or_else(|| anyhow!("target {} was not resolved", target))?;
+
+        let mut raw_value = v.0.borrow_mut();
+        let raw_any = raw_value.as_any_mut();
+
+        let resolved_target: ResolvedTarget = if raw_any.is::<FileManifest>() {
+            raw_any.downcast_mut::<FileManifest>().unwrap().build()
+        } else {
+            Err(anyhow!("could not determine type of target"))
+        }?;
+
+        resolved_target.run()
     }
 }
 

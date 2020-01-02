@@ -225,6 +225,7 @@ pub fn run_cli() -> Result<()> {
                 )
                 .arg(
                     Arg::with_name("path")
+                        .long("path")
                         .default_value(".")
                         .value_name("PATH")
                         .help("Directory containing project to build"),
@@ -382,7 +383,7 @@ pub fn run_cli() -> Result<()> {
 
             projectmgmt::run(
                 &logger_context.logger,
-                path,
+                Path::new(path),
                 target_triple,
                 release,
                 &extra,

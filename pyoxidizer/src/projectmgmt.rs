@@ -13,13 +13,14 @@ use std::process;
 
 use super::environment::{canonicalize_path, MINIMUM_RUST_VERSION};
 use crate::app_packaging::config::{eval_starlark_config_file, find_pyoxidizer_config_file_env};
-use crate::app_packaging::repackage::{package_project, run_from_build};
+use crate::app_packaging::repackage::run_from_build;
 use crate::app_packaging::state::BuildContext;
 use crate::project_layout::{
     find_pyoxidizer_files, initialize_project, write_new_pyoxidizer_config_file,
 };
 use crate::py_packaging::config::RawAllocator;
 use crate::py_packaging::distribution::{analyze_python_distribution_tar_zst, python_exe_path};
+use crate::starlark::env::EnvironmentContext;
 
 /// Attempt to resolve the default Rust target for a build.
 pub fn default_target() -> Result<String> {
@@ -321,29 +322,6 @@ pub fn resolve_build_context(
     )
 }
 
-fn run_project(
-    logger: &slog::Logger,
-    context: &mut BuildContext,
-    extra_args: &[&str],
-) -> Result<()> {
-    // We call our build wrapper and invoke the binary directly. This allows
-    // build output to be printed.
-    build_project(logger, context)?;
-
-    package_project(logger, context)?;
-
-    let status = process::Command::new(&context.app_exe_path)
-        .current_dir(&context.project_path)
-        .args(extra_args)
-        .status()?;
-
-    if status.success() {
-        Ok(())
-    } else {
-        Err(anyhow!("cargo run failed"))
-    }
-}
-
 /// Build a PyOxidizer enabled project.
 ///
 /// This is a glorified wrapper around `cargo build`. Our goal is to get the
@@ -385,16 +363,33 @@ pub fn build_artifacts(logger: &slog::Logger, project_path: &Path, dest_path: &P
 
 pub fn run(
     logger: &slog::Logger,
-    project_path: &str,
-    target: Option<&str>,
-    release: bool,
-    extra_args: &[&str],
-    verbose: bool,
+    project_path: &Path,
+    target_triple: Option<&str>,
+    _release: bool,
+    _extra_args: &[&str],
+    _verbose: bool,
 ) -> Result<()> {
-    let mut context =
-        resolve_build_context(logger, project_path, None, target, release, None, verbose)?;
+    let config_path = find_pyoxidizer_config_file_env(logger, project_path).ok_or_else(|| {
+        anyhow!(
+            "unable to find PyOxidizer config file at {}",
+            project_path.display()
+        )
+    })?;
+    let target_triple = resolve_target(target_triple)?;
 
-    run_project(logger, &mut context, extra_args)
+    // TODO pass in target to resolve.
+    let resolve_targets = None;
+
+    let res =
+        eval_starlark_config_file(logger, &config_path, &target_triple, None, resolve_targets)?;
+
+    let context: &EnvironmentContext = &res.context;
+
+    let run_target = context
+        .default_target()
+        .ok_or_else(|| anyhow!("no default target available"))?;
+
+    context.run_resolved_target(&run_target)
 }
 
 /// Initialize a PyOxidizer configuration file in a given directory.
