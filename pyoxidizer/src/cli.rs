@@ -179,6 +179,8 @@ pub fn run_cli() -> Result<()> {
                 )
                 .arg(
                     Arg::with_name("path")
+                        .long("path")
+                        .takes_value(true)
                         .default_value(".")
                         .value_name("PATH")
                         .help("Directory containing project to build"),
