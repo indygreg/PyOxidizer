@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use anyhow::{Context, Result};
+use slog::warn;
 use starlark::environment::{Environment, EnvironmentError};
 use starlark::values::{default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult};
 use starlark::{
@@ -168,6 +169,7 @@ starlark_module! { global_module =>
     #[allow(clippy::ptr_arg)]
     resolve_targets(env env, call_stack cs) {
         let mut context = env.get("CONTEXT").expect("CONTEXT not set");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
         // We have to watch out for nested downcast_apply_mut(). So our strategy
         // is to collect the Value we need to call then call them 1 at a time
@@ -195,6 +197,7 @@ starlark_module! { global_module =>
         })?;
 
         for (target, value) in callables {
+            warn!(logger, "resolving target {}", target);
             let res = value.call(cs, env.clone(), Vec::new(), HashMap::new(), None, None)?;
 
             context.downcast_apply_mut(|context: &mut EnvironmentContext| {
