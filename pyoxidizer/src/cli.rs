@@ -167,8 +167,8 @@ pub fn run_cli() -> Result<()> {
                 .about("Build a PyOxidizer enabled project")
                 .long_about(BUILD_ABOUT)
                 .arg(
-                    Arg::with_name("target")
-                        .long("target")
+                    Arg::with_name("target_triple")
+                        .long("target-triple")
                         .takes_value(true)
                         .help("Rust target triple to build for"),
                 )
@@ -205,8 +205,8 @@ pub fn run_cli() -> Result<()> {
                 .setting(AppSettings::TrailingVarArg)
                 .about("Build and run a PyOxidizer application")
                 .arg(
-                    Arg::with_name("target")
-                        .long("target")
+                    Arg::with_name("target_triple")
+                        .long("target-triple")
                         .takes_value(true)
                         .help("Rust target triple to build for"),
                 )
@@ -297,10 +297,16 @@ pub fn run_cli() -> Result<()> {
 
         ("build", Some(args)) => {
             let release = args.is_present("release");
-            let target = args.value_of("target");
+            let target_triple = args.value_of("target_triple");
             let path = args.value_of("path").unwrap();
 
-            projectmgmt::build(&logger_context.logger, path, target, release, verbose)
+            projectmgmt::build(
+                &logger_context.logger,
+                path,
+                target_triple,
+                release,
+                verbose,
+            )
         }
 
         ("init-config-file", Some(args)) => {
@@ -355,7 +361,7 @@ pub fn run_cli() -> Result<()> {
         }
 
         ("run", Some(args)) => {
-            let target = args.value_of("target");
+            let target_triple = args.value_of("target_triple");
             let release = args.is_present("release");
             let path = args.value_of("path").unwrap();
             let extra: Vec<&str> = args.values_of("extra").unwrap_or_default().collect();
@@ -363,7 +369,7 @@ pub fn run_cli() -> Result<()> {
             projectmgmt::run(
                 &logger_context.logger,
                 path,
-                target,
+                target_triple,
                 release,
                 &extra,
                 verbose,
