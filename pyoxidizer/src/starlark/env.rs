@@ -196,6 +196,8 @@ starlark_module! { global_module =>
             Ok(values)
         })?;
 
+        warn!(logger, "resolving {} targets", callables.len());
+
         for (target, value) in callables {
             warn!(logger, "resolving target {}", target);
             let res = value.call(cs, env.clone(), Vec::new(), HashMap::new(), None, None)?;
