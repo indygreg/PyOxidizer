@@ -524,7 +524,14 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
         Err(_) => PathBuf::from(env::var("OUT_DIR").unwrap()),
     };
 
-    eval_starlark_config_file(logger, &config_path, &target, Some(&dest_dir)).unwrap();
+    eval_starlark_config_file(
+        logger,
+        &config_path,
+        &target,
+        Some(&dest_dir),
+        Some(Vec::new()),
+    )
+    .unwrap();
 
     let cargo_metadata = dest_dir.join("cargo_metadata.txt");
     let content = std::fs::read(&cargo_metadata).unwrap();

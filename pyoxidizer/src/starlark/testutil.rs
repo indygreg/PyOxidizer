@@ -26,7 +26,7 @@ pub fn starlark_env() -> Environment {
     let cwd = std::env::current_dir().expect("unable to determine CWD");
     let config_path = cwd.join("dummy");
 
-    let context = EnvironmentContext::new(&logger, &config_path, build_target, None)
+    let context = EnvironmentContext::new(&logger, &config_path, build_target, None, None)
         .expect("unable to create EnvironmentContext");
 
     global_environment(&context).expect("unable to get global environment")

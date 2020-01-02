@@ -304,7 +304,7 @@ pub fn run_cli() -> Result<()> {
 
             projectmgmt::build(
                 &logger_context.logger,
-                path,
+                Path::new(path),
                 target_triple,
                 release,
                 verbose,

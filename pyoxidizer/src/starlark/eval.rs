@@ -26,13 +26,14 @@ pub fn evaluate_file(
     config_path: &Path,
     build_target_triple: &str,
     write_artifacts_path: Option<&Path>,
+    resolve_targets: Option<Vec<String>>,
 ) -> Result<EvalResult, Diagnostic> {
     let context = EnvironmentContext::new(
         logger,
         config_path,
         build_target_triple,
         write_artifacts_path,
-        Some(Vec::new()),
+        resolve_targets,
     )
     .or_else(|e| {
         Err(Diagnostic {

@@ -89,7 +89,14 @@ pub fn eval_starlark_config_file(
     path: &Path,
     build_target_triple: &str,
     write_artifacts_path: Option<&Path>,
+    resolve_targets: Option<Vec<String>>,
 ) -> Result<EvalResult> {
-    crate::starlark::eval::evaluate_file(logger, path, build_target_triple, write_artifacts_path)
-        .or_else(|d| Err(anyhow!(d.message)))
+    crate::starlark::eval::evaluate_file(
+        logger,
+        path,
+        build_target_triple,
+        write_artifacts_path,
+        resolve_targets,
+    )
+    .or_else(|d| Err(anyhow!(d.message)))
 }

@@ -147,7 +147,8 @@ pub fn list_targets(logger: &slog::Logger, project_path: &Path) -> Result<()> {
     })?;
 
     let target_triple = default_target()?;
-    let res = eval_starlark_config_file(logger, &config_path, &target_triple, None)?;
+    let res =
+        eval_starlark_config_file(logger, &config_path, &target_triple, None, Some(Vec::new()))?;
 
     if res.context.default_target().is_none() {
         println!("(no targets defined)");
@@ -178,7 +179,13 @@ fn build_pyoxidizer_artifacts(
     let artifacts_path = canonicalize_path(artifacts_path)?;
 
     if !artifacts_current(logger, config_path, &artifacts_path) {
-        eval_starlark_config_file(logger, config_path, target_triple, Some(&artifacts_path))?;
+        eval_starlark_config_file(
+            logger,
+            config_path,
+            target_triple,
+            Some(&artifacts_path),
+            Some(Vec::new()),
+        )?;
     }
 
     Ok(())
@@ -295,7 +302,13 @@ pub fn resolve_build_context(
         },
     };
 
-    let res = eval_starlark_config_file(logger, &config_path, &target, force_artifacts_path)?;
+    let res = eval_starlark_config_file(
+        logger,
+        &config_path,
+        &target,
+        force_artifacts_path,
+        Some(Vec::new()),
+    )?;
 
     BuildContext::new(
         &path,
@@ -337,21 +350,20 @@ fn run_project(
 /// output from repackaging to give the user something for debugging.
 pub fn build(
     logger: &slog::Logger,
-    project_path: &str,
+    project_path: &Path,
     target: Option<&str>,
-    release: bool,
-    verbose: bool,
+    _release: bool,
+    _verbose: bool,
 ) -> Result<()> {
-    let mut context =
-        resolve_build_context(logger, project_path, None, target, release, None, verbose)?;
-    build_project(logger, &mut context)?;
-    package_project(logger, &mut context)?;
+    let config_path = find_pyoxidizer_config_file_env(logger, project_path).ok_or_else(|| {
+        anyhow!(
+            "unable to find PyOxidizer config file at {}",
+            project_path.display()
+        )
+    })?;
+    let target_triple = resolve_target(target)?;
 
-    warn!(
-        logger,
-        "executable path: {}",
-        context.app_exe_path.display()
-    );
+    let _res = eval_starlark_config_file(logger, &config_path, &target_triple, None, None)?;
 
     Ok(())
 }
