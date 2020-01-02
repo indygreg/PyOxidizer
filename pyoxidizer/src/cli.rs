@@ -184,6 +184,12 @@ pub fn run_cli() -> Result<()> {
                         .default_value(".")
                         .value_name("PATH")
                         .help("Directory containing project to build"),
+                )
+                .arg(
+                    Arg::with_name("targets")
+                        .value_name("TARGET")
+                        .multiple(true)
+                        .help("Target to resolve"),
                 ),
         )
         .subcommand(
@@ -301,11 +307,17 @@ pub fn run_cli() -> Result<()> {
             let release = args.is_present("release");
             let target_triple = args.value_of("target_triple");
             let path = args.value_of("path").unwrap();
+            let resolve_targets = if let Some(values) = args.values_of("targets") {
+                Some(values.map(|x| x.to_string()).collect())
+            } else {
+                None
+            };
 
             projectmgmt::build(
                 &logger_context.logger,
                 Path::new(path),
                 target_triple,
+                resolve_targets,
                 release,
                 verbose,
             )

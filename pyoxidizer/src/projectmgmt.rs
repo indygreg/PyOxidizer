@@ -352,6 +352,7 @@ pub fn build(
     logger: &slog::Logger,
     project_path: &Path,
     target: Option<&str>,
+    resolve_targets: Option<Vec<String>>,
     _release: bool,
     _verbose: bool,
 ) -> Result<()> {
@@ -363,7 +364,8 @@ pub fn build(
     })?;
     let target_triple = resolve_target(target)?;
 
-    let _res = eval_starlark_config_file(logger, &config_path, &target_triple, None, None)?;
+    let _res =
+        eval_starlark_config_file(logger, &config_path, &target_triple, None, resolve_targets)?;
 
     Ok(())
 }
