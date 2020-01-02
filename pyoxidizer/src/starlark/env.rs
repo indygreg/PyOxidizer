@@ -169,16 +169,19 @@ starlark_module! { global_module =>
     resolve_targets(env env, call_stack cs) {
         let mut context = env.get("CONTEXT").expect("CONTEXT not set");
 
-        context.downcast_apply_mut(|context: &mut EnvironmentContext| -> ValueResult {
+        // We have to watch out for nested downcast_apply_mut(). So our strategy
+        // is to collect the Value we need to call then call them 1 at a time
+        // outside a downcast_apply_mut() so we don't have nesting issues.
+        let callables = context.downcast_apply(|context: &EnvironmentContext| -> Result<Vec<(String, Value)>, ValueError> {
+            let mut values = Vec::new();
+
             for target in context.targets_to_resolve() {
                 if context.resolved_targets.contains_key(&target) {
                     continue;
                 }
 
                 if let Some(callable) = context.targets.get(&target) {
-                    let res = callable.call(cs, env.clone(), Vec::new(), HashMap::new(), None, None)?;
-
-                    context.resolved_targets.insert(target, res);
+                    values.push((target.clone(), callable.clone()));
                 } else {
                     return Err(RuntimeError {
                         code: "invalid_target",
@@ -188,8 +191,18 @@ starlark_module! { global_module =>
                 }
             }
 
-            Ok(Value::new(None))
-        })
+            Ok(values)
+        })?;
+
+        for (target, value) in callables {
+            let res = value.call(cs, env.clone(), Vec::new(), HashMap::new(), None, None)?;
+
+            context.downcast_apply_mut(|context: &mut EnvironmentContext| {
+                context.resolved_targets.insert(target.clone(), res.clone());
+            });
+        }
+
+        Ok(Value::new(None))
     }
 
     #[allow(clippy::ptr_arg)]
