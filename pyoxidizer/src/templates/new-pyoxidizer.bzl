@@ -144,6 +144,8 @@ def make_application():
     # Materialize the install layout in a destination directory.
     files.install("{{program_name}}")
 
+    return files
+
 # Tell PyOxidizer about the build target defined above.
 register_target("default", make_application)
 
