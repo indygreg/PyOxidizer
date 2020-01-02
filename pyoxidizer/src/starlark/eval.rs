@@ -32,6 +32,7 @@ pub fn evaluate_file(
         config_path,
         build_target_triple,
         write_artifacts_path,
+        Some(Vec::new()),
     )
     .or_else(|e| {
         Err(Diagnostic {

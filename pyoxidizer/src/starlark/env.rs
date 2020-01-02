@@ -4,7 +4,7 @@
 
 use anyhow::{Context, Result};
 use starlark::environment::{Environment, EnvironmentError};
-use starlark::values::{default_compare, TypedValue, Value, ValueError, ValueResult};
+use starlark::values::{default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult};
 use starlark::{
     any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
     starlark_signature_extraction, starlark_signatures,
@@ -48,6 +48,12 @@ pub struct EnvironmentContext {
 
     /// Order targets are registered in.
     pub targets_order: Vec<String>,
+
+    /// List of targets to resolve.
+    pub resolve_targets: Option<Vec<String>>,
+
+    /// Targets that are fully resolved and their resolved value.
+    pub resolved_targets: BTreeMap<String, Value>,
 }
 
 impl EnvironmentContext {
@@ -56,6 +62,7 @@ impl EnvironmentContext {
         config_path: &Path,
         build_target_triple: &str,
         write_artifacts_path: Option<&Path>,
+        resolve_targets: Option<Vec<String>>,
     ) -> Result<EnvironmentContext> {
         let parent = config_path
             .parent()
@@ -76,6 +83,8 @@ impl EnvironmentContext {
             },
             targets: BTreeMap::new(),
             targets_order: Vec::new(),
+            resolve_targets,
+            resolved_targets: BTreeMap::new(),
         })
     }
 
@@ -97,6 +106,16 @@ impl EnvironmentContext {
             None
         } else {
             Some(self.targets_order[0].clone())
+        }
+    }
+
+    pub fn targets_to_resolve(&self) -> Vec<String> {
+        if let Some(targets) = &self.resolve_targets {
+            targets.clone()
+        } else if let Some(target) = self.default_target() {
+            vec![target]
+        } else {
+            Vec::new()
         }
     }
 }
@@ -144,6 +163,33 @@ starlark_module! { global_module =>
         });
 
         Ok(Value::new(None))
+    }
+
+    #[allow(clippy::ptr_arg)]
+    resolve_targets(env env, call_stack cs) {
+        let mut context = env.get("CONTEXT").expect("CONTEXT not set");
+
+        context.downcast_apply_mut(|context: &mut EnvironmentContext| -> ValueResult {
+            for target in context.targets_to_resolve() {
+                if context.resolved_targets.contains_key(&target) {
+                    continue;
+                }
+
+                if let Some(callable) = context.targets.get(&target) {
+                    let res = callable.call(cs, env.clone(), Vec::new(), HashMap::new(), None, None)?;
+
+                    context.resolved_targets.insert(target, res);
+                } else {
+                    return Err(RuntimeError {
+                        code: "invalid_target",
+                        message: format!("target {} not registered", target),
+                        label: "resolve_targets()".to_string(),
+                    }.into());
+                }
+            }
+
+            Ok(Value::new(None))
+        })
     }
 
     #[allow(clippy::ptr_arg)]

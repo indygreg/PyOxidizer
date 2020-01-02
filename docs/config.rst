@@ -101,6 +101,15 @@ Registers a named target that can be resolved by the configuration file.
 A target consists of a string name and a callable function, which may return
 a primitive representing the evaluation result.
 
+resolve_targets()
+-----------------
+
+Triggers resolution of requested build targets.
+
+This is usually the last meaningful line in a config file. It triggers the
+building of targets which have been requested to resolve by whatever is invoking
+the config file.
+
 set_build_path(path)
 --------------------
 

@@ -147,6 +147,10 @@ def make_application():
 # Tell PyOxidizer about the build target defined above.
 register_target("default", make_application)
 
+# Resolve whatever targets the invoker of this configuration file is requesting
+# be resolved.
+resolve_targets()
+
 # END OF COMMON USER-ADJUSTED SETTINGS.
 #
 # Everything below this is typically managed by PyOxidizer and doesn't need
