@@ -104,22 +104,24 @@ But if you aren't, keep reading.
 
 The default project created by ``pyoxidizer init`` will produce an
 executable that embeds Python and starts a Python REPL by default. Let's
-test that::
+build that executable, with ``pyoxidizer build``::
 
    $ cd pyapp
-   $ pyoxidizer run
+   $ pyoxidizer build
    no existing PyOxidizer artifacts found
    processing config file /home/gps/src/pyapp/pyoxidizer.bzl
    resolving Python distribution...
    ...
-      Compiling pyapp v0.1.0 (/home/gps/src/pyapp)
-       Finished dev [unoptimized + debuginfo] target(s) in 53.14s
-        Running `target/debug/testapp`
+   pyapp packaged into /home/gps/src/pyapp/build/apps/pyapp/debug
+   executable path: /home/gps/src/pyapp/build/apps/pyapp/debug/pyapp
+
+Now just run the executable!  The path is given at the end of the
+``pyoxidizer build`` output::
+
+   $ /home/gps/src/pyapp/build/apps/pyapp/debug/pyapp
    >>>
 
-If all goes according to plan, you just started a Rust executable which
-started a Python interpreter, which started an interactive Python debugger!
-Try typing in some Python code::
+Try some Python code into this REPL::
 
    >>> print("hello, world")
    hello, world
