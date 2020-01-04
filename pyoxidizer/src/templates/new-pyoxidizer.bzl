@@ -5,10 +5,7 @@
 # Configuration files consist of functions which define build "targets."
 # This function creates a Python executable and installs it in a destination
 # directory.
-def make_application():
-    # Create an object that represents our installed application file layout.
-    files = FileManifest()
-
+def make_exe():
     # Obtain the default PythonDistribution for our build target. We link
     # this distribution into our produced executable and extract the Python
     # standard library from it.
@@ -130,7 +127,7 @@ def make_application():
     # Produce a Python executable from a Python distribution, embedded
     # resources, and other options. The returned object represents the
     # standalone executable that will be built.
-    exe = PythonExecutable(
+    return PythonExecutable(
         name="{{program_name}}",
         distribution=dist,
         resources=embedded,
@@ -138,8 +135,12 @@ def make_application():
         run_mode=python_run_mode,
     )
 
+def make_install():
+    # Create an object that represents our installed application file layout.
+    files = FileManifest()
+
     # Add the generated executable to our install layout in the root directory.
-    files.add_python_resource(".", exe)
+    files.add_python_resource(".", make_exe())
 
     # Materialize the install layout in a destination directory.
     files.install("{{program_name}}")
@@ -147,7 +148,8 @@ def make_application():
     return files
 
 # Tell PyOxidizer about the build target defined above.
-register_target("default", make_application)
+register_target("exe", make_exe)
+register_target("install", make_install)
 
 # Resolve whatever targets the invoker of this configuration file is requesting
 # be resolved.
