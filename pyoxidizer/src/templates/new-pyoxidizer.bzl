@@ -140,7 +140,7 @@ def make_install():
     files = FileManifest()
 
     # Add the generated executable to our install layout in the root directory.
-    files.add_python_resource(".", make_exe())
+    files.add_python_resource(".", resolve_target('exe'))
 
     # Materialize the install layout in a destination directory.
     files.install("{{program_name}}")

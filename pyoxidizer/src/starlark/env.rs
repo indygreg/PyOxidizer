@@ -189,44 +189,63 @@ starlark_module! { global_module =>
     }
 
     #[allow(clippy::ptr_arg)]
-    resolve_targets(env env, call_stack cs) {
+    resolve_target(env env, call_stack cs, target) {
+        let target = required_str_arg("target", &target)?;
+
         let mut context = env.get("CONTEXT").expect("CONTEXT not set");
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
-        // We have to watch out for nested downcast_apply_mut(). So our strategy
-        // is to collect the Value we need to call then call them 1 at a time
-        // outside a downcast_apply_mut() so we don't have nesting issues.
-        let callables = context.downcast_apply(|context: &EnvironmentContext| -> Result<Vec<(String, Value)>, ValueError> {
-            let mut values = Vec::new();
-
-            for target in context.targets_to_resolve() {
-                if context.resolved_targets.contains_key(&target) {
-                    continue;
-                }
-
-                if let Some(callable) = context.targets.get(&target) {
-                    values.push((target.clone(), callable.clone()));
-                } else {
-                    return Err(RuntimeError {
-                        code: "invalid_target",
-                        message: format!("target {} not registered", target),
-                        label: "resolve_targets()".to_string(),
-                    }.into());
-                }
+        // If we have a resolved value for this target, return it.
+        if let Some(resolved) = context.downcast_apply(|context: &EnvironmentContext| {
+            if let Some(resolved) = context.resolved_targets.get(&target) {
+                Some(resolved.clone())
+            } else {
+                None
             }
+        }) {
+            return Ok(resolved);
+        }
 
-            Ok(values)
+        // Else resolve it.
+        warn!(logger, "resolving target {}", target);
+        let callable = context.downcast_apply(|x: &EnvironmentContext| {
+            if let Some(value) = x.targets.get(&target) {
+                Ok(value.clone())
+            } else {
+                Err(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: format!("target {} does not exist", target),
+                    label: "resolve_target()".to_string(),
+                }.into())
+            }
         })?;
 
-        warn!(logger, "resolving {} targets", callables.len());
+        let res = callable.call(cs, env, Vec::new(), HashMap::new(), None, None)?;
 
-        for (target, value) in callables {
-            warn!(logger, "resolving target {}", target);
-            let res = value.call(cs, env.clone(), Vec::new(), HashMap::new(), None, None)?;
+        // TODO consider replacing the target's callable with a new function that
+        // returns the resolved value. This will ensure a target function is only
+        // called once.
 
-            context.downcast_apply_mut(|context: &mut EnvironmentContext| {
-                context.resolved_targets.insert(target.clone(), res.clone());
-            });
+        context.downcast_apply_mut(|context: &mut EnvironmentContext| {
+            context.resolved_targets.insert(target.clone(), res.clone());
+        });
+
+        Ok(res)
+    }
+
+    #[allow(clippy::ptr_arg)]
+    resolve_targets(env env, call_stack cs) {
+        let context = env.get("CONTEXT").expect("CONTEXT not set");
+
+        let targets = context.downcast_apply(|context: &EnvironmentContext| {
+            context.targets_to_resolve()
+        });
+
+        println!("resolving {} targets", targets.len());
+        for target in targets {
+            let resolve = env.get("resolve_target").unwrap();
+
+            resolve.call(cs, env.clone(), vec![Value::new(target)], HashMap::new(), None, None)?;
         }
 
         Ok(Value::new(None))

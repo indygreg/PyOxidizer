@@ -101,6 +101,20 @@ Registers a named target that can be resolved by the configuration file.
 A target consists of a string name and a callable function, which may return
 a primitive representing the evaluation result.
 
+resolve_target(target)
+----------------------
+
+Triggers resolution of a requested build target.
+
+This function resolves a target registered with ``register_target()`` by
+calling the target's registered function or returning the previously
+resolved value from calling it.
+
+This function should be used in cases where 1 target depends on the
+resolved value of another target. For example, a target to create a
+``FileManifest`` may wish to add a ``PythonExecutable`` that was resolved
+from another target.
+
 resolve_targets()
 -----------------
 
