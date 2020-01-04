@@ -18,6 +18,7 @@ use std::path::{Path, PathBuf};
 use super::file_resource::FileManifest;
 use super::target::{BuildTarget, ResolvedTarget};
 use super::util::{required_str_arg, required_type_arg};
+use crate::py_packaging::binary::PreBuiltPythonExecutable;
 
 /// Holds state for evaluating app packaging.
 #[derive(Debug, Clone)]
@@ -135,6 +136,11 @@ impl EnvironmentContext {
 
         let resolved_target: ResolvedTarget = if raw_any.is::<FileManifest>() {
             raw_any.downcast_mut::<FileManifest>().unwrap().build()
+        } else if raw_any.is::<PreBuiltPythonExecutable>() {
+            raw_any
+                .downcast_mut::<PreBuiltPythonExecutable>()
+                .unwrap()
+                .build()
         } else {
             Err(anyhow!("could not determine type of target"))
         }?;

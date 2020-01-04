@@ -19,6 +19,7 @@ use super::env::EnvironmentContext;
 use super::python_distribution::PythonDistribution;
 use super::python_resource::PythonEmbeddedResources;
 use super::python_run_mode::PythonRunMode;
+use super::target::{BuildTarget, ResolvedTarget};
 use super::util::{required_str_arg, required_type_arg};
 use crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable};
 use crate::py_packaging::distribution::ExtensionModuleFilter;
@@ -46,6 +47,13 @@ impl TypedValue for PreBuiltPythonExecutable {
 
     fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
         default_compare(self, other)
+    }
+}
+
+impl BuildTarget for PreBuiltPythonExecutable {
+    fn build(&mut self) -> Result<ResolvedTarget> {
+        println!("would build python executable");
+        unimplemented!()
     }
 }
 

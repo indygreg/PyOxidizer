@@ -21,7 +21,7 @@ use super::env::EnvironmentContext;
 use super::python_resource::{
     PythonBytecodeModule, PythonExtensionModule, PythonResourceData, PythonSourceModule,
 };
-use super::target::BuildTarget;
+use super::target::{BuildTarget, ResolvedTarget};
 use super::util::{required_bool_arg, required_str_arg};
 use crate::app_packaging::resource::{
     FileContent as RawFileContent, FileManifest as RawFileManifest,
@@ -30,7 +30,6 @@ use crate::project_building::build_python_executable;
 use crate::py_packaging::binary::PreBuiltPythonExecutable;
 use crate::py_packaging::distribution::ExtensionModule;
 use crate::py_packaging::resource::{BytecodeModule, ResourceData, SourceModule};
-use crate::starlark::target::ResolvedTarget;
 
 #[derive(Clone, Debug)]
 pub struct FileContent {
