@@ -245,6 +245,8 @@ this mapping will be used. Otherwise the first variant will be used.
    license and therefore open source. See :ref:`licensing_considerations` for
    more.
 
+.. _config_python_distribution_pip_install:
+
 ``PythonDistribution.pip_install(args, extra_envs={})``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -465,6 +467,8 @@ Each instance has the following attributes:
 ``name`` (string)
    Unique name of the module being provided.
 
+.. _config_python_embedded_resources:
+
 ``PythonEmbeddedResources()``
 -----------------------------
 
@@ -519,6 +523,8 @@ instance.
 If multiple extension modules with the same name are added, the last
 added one is used.
 
+.. _config_python_embedded_resources_add_python_resource:
+
 ``PythonEmbeddedResources.add_python_resource(...)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -547,6 +553,8 @@ The following arguments are accepted:
 
 ``optimize_level`` (int)
    Bytecode optimization level when compiling bytecode.
+
+.. _config_python_embedded_resources_add_python_resources:
 
 ``PythonEmbeddedResources.add_python_resources(...)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -901,6 +909,8 @@ Example:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This mode will do nothing. It is provided for completeness sake.
+
+.. _config_python_executable:
 
 ``PythonExecutable(...)``
 -------------------------
