@@ -21,7 +21,7 @@ use super::env::EnvironmentContext;
 use super::python_resource::{
     PythonBytecodeModule, PythonExtensionModule, PythonResourceData, PythonSourceModule,
 };
-use super::target::{BuildTarget, ResolvedTarget};
+use super::target::{BuildContext, BuildTarget, ResolvedTarget};
 use super::util::{required_bool_arg, required_str_arg};
 use crate::app_packaging::resource::{
     FileContent as RawFileContent, FileManifest as RawFileManifest,
@@ -135,7 +135,7 @@ impl FileManifest {
 }
 
 impl BuildTarget for FileManifest {
-    fn build(&mut self) -> Result<ResolvedTarget> {
+    fn build(&mut self, _context: &BuildContext) -> Result<ResolvedTarget> {
         unimplemented!()
     }
 }

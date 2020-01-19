@@ -16,7 +16,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
 use super::file_resource::FileManifest;
-use super::target::{BuildTarget, ResolvedTarget};
+use super::target::{BuildContext, BuildTarget, ResolvedTarget};
 use super::util::{required_str_arg, required_type_arg};
 use crate::py_packaging::binary::PreBuiltPythonExecutable;
 
@@ -134,13 +134,21 @@ impl EnvironmentContext {
         let mut raw_value = v.0.borrow_mut();
         let raw_any = raw_value.as_any_mut();
 
+        // TODO add debug/release to path
+        let output_path = self.build_path.join(&self.build_target_triple).join(target);
+
+        let context = BuildContext { output_path };
+
         let resolved_target: ResolvedTarget = if raw_any.is::<FileManifest>() {
-            raw_any.downcast_mut::<FileManifest>().unwrap().build()
+            raw_any
+                .downcast_mut::<FileManifest>()
+                .unwrap()
+                .build(&context)
         } else if raw_any.is::<PreBuiltPythonExecutable>() {
             raw_any
                 .downcast_mut::<PreBuiltPythonExecutable>()
                 .unwrap()
-                .build()
+                .build(&context)
         } else {
             Err(anyhow!("could not determine type of target"))
         }?;

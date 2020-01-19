@@ -37,8 +37,16 @@ impl ResolvedTarget {
     }
 }
 
+/// Describes context that a target is built in.
+///
+/// This is used to pass metadata to the `BuildTarget::build()` method.
+pub struct BuildContext {
+    /// Where generated files should be written.
+    pub output_path: PathBuf,
+}
+
 /// Trait that indicates a type can be resolved as a target.
 pub trait BuildTarget {
     /// Build the target, resolving it
-    fn build(&mut self) -> Result<ResolvedTarget>;
+    fn build(&mut self, context: &BuildContext) -> Result<ResolvedTarget>;
 }
