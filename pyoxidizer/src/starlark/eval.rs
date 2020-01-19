@@ -35,6 +35,8 @@ pub fn evaluate_file(
         crate::app_packaging::repackage::HOST,
         build_target_triple,
         release,
+        // TODO this should be an argument.
+        "0",
         write_artifacts_path,
         resolve_targets,
     )

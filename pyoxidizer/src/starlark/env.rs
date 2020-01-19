@@ -42,6 +42,9 @@ pub struct EnvironmentContext {
     /// Whether we are building a debug or release binary.
     pub build_release: bool,
 
+    /// Optimization level when building binaries.
+    pub build_opt_level: String,
+
     /// Base directory to use for build state.
     pub build_path: PathBuf,
 
@@ -73,6 +76,7 @@ impl EnvironmentContext {
         build_host_triple: &str,
         build_target_triple: &str,
         build_release: bool,
+        build_opt_level: &str,
         write_artifacts_path: Option<&Path>,
         resolve_targets: Option<Vec<String>>,
     ) -> Result<EnvironmentContext> {
@@ -89,6 +93,7 @@ impl EnvironmentContext {
             build_host_triple: build_host_triple.to_string(),
             build_target_triple: build_target_triple.to_string(),
             build_release,
+            build_opt_level: build_opt_level.to_string(),
             build_path: build_path.clone(),
             python_distributions_path: build_path.join("python_distributions"),
             write_artifacts_path: match write_artifacts_path {

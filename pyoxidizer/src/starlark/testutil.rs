@@ -32,6 +32,7 @@ pub fn starlark_env() -> Environment {
         build_target,
         build_target,
         false,
+        "0",
         None,
         None,
     )

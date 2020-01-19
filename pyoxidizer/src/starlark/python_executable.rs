@@ -100,7 +100,12 @@ starlark_module! { python_executable_env =>
             if let Some(path) = &context.write_artifacts_path {
                 warn!(&logger, "writing PyOxidizer build artifacts to {}", path.display());
                 let embedded = EmbeddedPythonBinaryData::from_pre_built_python_executable(
-                    &pre_built, &logger, &context.build_host_triple, &context.build_target_triple, "0")?;
+                    &pre_built,
+                    &logger,
+                    &context.build_host_triple,
+                    &context.build_target_triple,
+                    &context.build_opt_level,
+                )?;
 
                 embedded.write_files(path)?;
             }
