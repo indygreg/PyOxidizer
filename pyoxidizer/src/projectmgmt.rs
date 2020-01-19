@@ -387,6 +387,7 @@ pub fn run(
     project_path: &Path,
     target_triple: Option<&str>,
     release: bool,
+    target: Option<&str>,
     _extra_args: &[&str],
     _verbose: bool,
 ) -> Result<()> {
@@ -398,8 +399,11 @@ pub fn run(
     })?;
     let target_triple = resolve_target(target_triple)?;
 
-    // TODO pass in target to resolve.
-    let resolve_targets = None;
+    let resolve_targets = if let Some(target) = target {
+        Some(vec![target.to_string()])
+    } else {
+        None
+    };
 
     let res = eval_starlark_config_file(
         logger,
@@ -412,10 +416,15 @@ pub fn run(
 
     let context: &EnvironmentContext = &res.context;
 
-    let run_target = context
-        .default_target()
-        .ok_or_else(|| anyhow!("no default target available"))?;
+    let run_target = if let Some(target) = target {
+        target.to_string()
+    } else {
+        context
+            .default_target()
+            .ok_or_else(|| anyhow!("no default target available"))?
+    };
 
+    warn!(logger, "running target {}", run_target);
     context.run_resolved_target(&run_target)
 }
 

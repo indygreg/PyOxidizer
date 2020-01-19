@@ -216,7 +216,7 @@ pub fn run_cli() -> Result<()> {
         .subcommand(
             SubCommand::with_name("run")
                 .setting(AppSettings::TrailingVarArg)
-                .about("Build and run a PyOxidizer application")
+                .about("Run a target in a PyOxidizer configuration file")
                 .arg(
                     Arg::with_name("target_triple")
                         .long("target-triple")
@@ -234,6 +234,12 @@ pub fn run_cli() -> Result<()> {
                         .default_value(".")
                         .value_name("PATH")
                         .help("Directory containing project to build"),
+                )
+                .arg(
+                    Arg::with_name("target")
+                        .long("target")
+                        .takes_value(true)
+                        .help("Build target to run"),
                 )
                 .arg(Arg::with_name("extra").multiple(true)),
         )
@@ -385,6 +391,7 @@ pub fn run_cli() -> Result<()> {
             let target_triple = args.value_of("target_triple");
             let release = args.is_present("release");
             let path = args.value_of("path").unwrap();
+            let target = args.value_of("target");
             let extra: Vec<&str> = args.values_of("extra").unwrap_or_default().collect();
 
             projectmgmt::run(
@@ -392,6 +399,7 @@ pub fn run_cli() -> Result<()> {
                 Path::new(path),
                 target_triple,
                 release,
+                target,
                 &extra,
                 verbose,
             )
