@@ -435,7 +435,7 @@ Each instance has the following attributes:
 
 ``optimize_level`` (int)
    Optimization level of compiled bytecode. Must be the value
-  ``0``, ``1``, or ``2``.
+   ``0``, ``1``, or ``2``.
 
 ``is_package`` (bool)
    Whether the module is also a Python package (or sub-package).
