@@ -447,8 +447,22 @@ pub fn init_config_file(
 
     let name = project_dir.iter().last().unwrap().to_str().unwrap();
 
-    write_new_pyoxidizer_config_file(project_dir, name, code, pip_install)
-    // TODO write out instructions for what to do next.
+    write_new_pyoxidizer_config_file(project_dir, name, code, pip_install)?;
+
+    println!();
+    println!("A new PyOxidizer configuration file has been created.");
+    println!("This configuration file can be used by various `pyoxidizer`");
+    println!("commands");
+    println!();
+    println!("For example, to build and run the default Python application:");
+    println!();
+    println!("  $ cd {}", project_dir.display());
+    println!("  $ pyoxidizer run");
+    println!();
+    println!("The default configuration is to invoke a Python REPL. You can");
+    println!("edit the configuration file to change behavior.");
+
+    Ok(())
 }
 
 /// Initialize a new Rust project with PyOxidizer support.
