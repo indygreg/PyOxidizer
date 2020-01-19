@@ -63,9 +63,6 @@ the REPL.)
    ``build/apps`` directory is not performed by the Rust build system, so
    built applications may be incomplete.
 
-If you are curious about what's inside newly-created projects, read
-:ref:`new_project_layout`.
-
 Now that we've got a new project, let's customize it to do something useful.
 
 Packaging an Application from a PyPI Package
