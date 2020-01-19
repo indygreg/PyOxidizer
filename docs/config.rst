@@ -368,14 +368,14 @@ The arguments are as follows:
 ``extension_module_filter`` (``str``)
    The filter to apply to determine which extension modules to add.
 
-   See :ref:`config_python_distribution_extension_modules`_ for what
+   See :ref:`config_python_distribution_extension_modules` for what
    values are accepted and their behavior.
 
    Default is ``all``.
 
 ``preferred_extension_module_variants`` (``dict`` of ``string`` to ``string``)
    Preferred extension module variants to use. See
-   See :ref:`config_python_distribution_extension_modules`_ for behavior.
+   See :ref:`config_python_distribution_extension_modules` for behavior.
 
    Default is ``None``, which will use the first variant.
 
