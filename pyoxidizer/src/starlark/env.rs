@@ -149,10 +149,23 @@ impl EnvironmentContext {
         let mut raw_value = v.0.borrow_mut();
         let raw_any = raw_value.as_any_mut();
 
-        // TODO add debug/release to path
-        let output_path = self.build_path.join(&self.build_target_triple).join(target);
+        let output_path = self
+            .build_path
+            .join(&self.build_target_triple)
+            .join(if self.build_release {
+                "release"
+            } else {
+                "debug"
+            })
+            .join(target);
 
-        let context = BuildContext { output_path };
+        let context = BuildContext {
+            host_triple: self.build_host_triple.clone(),
+            target_triple: self.build_target_triple.clone(),
+            release: self.build_release,
+            opt_level: self.build_opt_level.clone(),
+            output_path,
+        };
 
         let resolved_target: ResolvedTarget = if raw_any.is::<FileManifest>() {
             raw_any

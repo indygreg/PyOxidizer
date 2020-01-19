@@ -41,6 +41,20 @@ impl ResolvedTarget {
 ///
 /// This is used to pass metadata to the `BuildTarget::build()` method.
 pub struct BuildContext {
+    /// Rust target triple for build host.
+    pub host_triple: String,
+
+    /// Rust target triple for build target.
+    pub target_triple: String,
+
+    /// Whether we are building in release mode.
+    ///
+    /// Debug if false.
+    pub release: bool,
+
+    /// Optimization level for Rust compiler.
+    pub opt_level: String,
+
     /// Where generated files should be written.
     pub output_path: PathBuf,
 }
