@@ -147,7 +147,7 @@ def make_install():
 
     return files
 
-# Tell PyOxidizer about the build target defined above.
+# Tell PyOxidizer about the build targets defined above.
 register_target("exe", make_exe)
 register_target("install", make_install)
 
