@@ -607,7 +607,7 @@ behavior:
 
 ``bytes_warning`` (int)
    Controls the value of
-   ``Py_BytesWarningFlag <https://docs.python.org/3/c-api/init.html#c.Py_BytesWarningFlag>`_.
+   `Py_BytesWarningFlag <https://docs.python.org/3/c-api/init.html#c.Py_BytesWarningFlag>`_.
 
    Default is ``0``.
 
