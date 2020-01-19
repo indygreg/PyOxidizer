@@ -3,6 +3,8 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use anyhow::Result;
+use itertools::Itertools;
+use slog::warn;
 use starlark::environment::Environment;
 use starlark::values::{
     default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
@@ -21,7 +23,7 @@ use super::env::EnvironmentContext;
 use super::python_resource::{
     PythonBytecodeModule, PythonExtensionModule, PythonResourceData, PythonSourceModule,
 };
-use super::target::{BuildContext, BuildTarget, ResolvedTarget};
+use super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode};
 use super::util::{required_bool_arg, required_str_arg};
 use crate::app_packaging::resource::{
     FileContent as RawFileContent, FileManifest as RawFileManifest,
@@ -138,8 +140,31 @@ impl FileManifest {
 }
 
 impl BuildTarget for FileManifest {
-    fn build(&mut self, _context: &BuildContext) -> Result<ResolvedTarget> {
-        unimplemented!()
+    fn build(&mut self, context: &BuildContext) -> Result<ResolvedTarget> {
+        warn!(
+            &context.logger,
+            "installing files to {}",
+            context.output_path.display()
+        );
+        self.manifest.replace_path(&context.output_path)?;
+
+        // If there exists a single executable, make it the run target.
+        // TODO support defining default run target in data structure.
+
+        let exes = self
+            .manifest
+            .entries()
+            .filter(|(_, c)| c.executable)
+            .collect_vec();
+        let run_mode = if exes.len() == 1 {
+            RunMode::Path {
+                path: context.output_path.join(exes[0].0),
+            }
+        } else {
+            RunMode::None
+        };
+
+        Ok(ResolvedTarget { run_mode })
     }
 }
 

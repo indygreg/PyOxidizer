@@ -142,9 +142,6 @@ def make_install():
     # Add the generated executable to our install layout in the root directory.
     files.add_python_resource(".", resolve_target('exe'))
 
-    # Materialize the install layout in a destination directory.
-    files.install("{{program_name}}")
-
     return files
 
 # Tell PyOxidizer about the build targets defined above.
