@@ -290,13 +290,8 @@ example, you may wish to only include Python modules that your application
 uses. This is possible with PyOxidizer.
 
 Essentially, all strategies for managing the set of packaged resources
-boil down to crafting packaging ruless that choose which resources
+boil down to crafting config file logic that chooses which resources
 are packaged.
-
-The recommended method to manage resources is the :ref:`rule_filter-include`
-packaging rule. This rule acts as an *allow list* filter against all
-resources identified for packaging. Using this rule, you can construct an
-explicit list of resources that should be packaged.
 
 But maintaining explicit lists of resources can be tedious. There's a better
 way!
