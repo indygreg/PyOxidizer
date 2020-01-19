@@ -15,7 +15,7 @@ pub enum RunMode {
 
 /// Represents a resolved target.
 pub struct ResolvedTarget {
-    run_mode: RunMode,
+    pub run_mode: RunMode,
 }
 
 impl ResolvedTarget {

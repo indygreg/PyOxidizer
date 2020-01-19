@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use slog::warn;
 use starlark::environment::Environment;
 use starlark::values::{default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult};
@@ -13,14 +13,16 @@ use starlark::{
 use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::io::Write;
 
 use super::embedded_python_config::EmbeddedPythonConfig;
 use super::env::EnvironmentContext;
 use super::python_distribution::PythonDistribution;
 use super::python_resource::PythonEmbeddedResources;
 use super::python_run_mode::PythonRunMode;
-use super::target::{BuildContext, BuildTarget, ResolvedTarget};
+use super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode};
 use super::util::{required_str_arg, required_type_arg};
+use crate::project_building::build_python_executable;
 use crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable};
 use crate::py_packaging::distribution::ExtensionModuleFilter;
 
@@ -51,9 +53,36 @@ impl TypedValue for PreBuiltPythonExecutable {
 }
 
 impl BuildTarget for PreBuiltPythonExecutable {
-    fn build(&mut self, _context: &BuildContext) -> Result<ResolvedTarget> {
-        println!("would build python executable");
-        unimplemented!()
+    fn build(&mut self, context: &BuildContext) -> Result<ResolvedTarget> {
+        // Build an executable by writing out a temporary Rust project
+        // and building it.
+        let (exe_name, exe_data) = build_python_executable(
+            &context.logger,
+            &self.name,
+            &self,
+            &context.host_triple,
+            &context.target_triple,
+            &context.opt_level,
+            context.release,
+        )?;
+
+        let dest_path = context.output_path.join(exe_name);
+        warn!(
+            &context.logger,
+            "writing executable to {}",
+            dest_path.display()
+        );
+        let mut fh = std::fs::File::create(&dest_path)
+            .context(format!("creating {}", dest_path.display()))?;
+        fh.write_all(&exe_data)
+            .context(format!("writing {}", dest_path.display()))?;
+
+        crate::app_packaging::resource::set_executable(&mut fh)
+            .context("making binary executable")?;
+
+        Ok(ResolvedTarget {
+            run_mode: RunMode::Path { path: dest_path },
+        })
     }
 }
 

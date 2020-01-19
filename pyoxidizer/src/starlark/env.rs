@@ -159,6 +159,8 @@ impl EnvironmentContext {
             })
             .join(target);
 
+        std::fs::create_dir_all(&output_path).context("creating output path")?;
+
         let context = BuildContext {
             logger: self.logger.clone(),
             host_triple: self.build_host_triple.clone(),
