@@ -12,7 +12,9 @@ use std::path::{Path, PathBuf};
 
 #[cfg(unix)]
 pub fn set_executable(file: &mut std::fs::File) -> Result<()> {
-    file.metadata()?.permissions().set_mode(0o770);
+    let mut permissions = file.metadata()?.permissions();
+    permissions.set_mode(0o770);
+    file.set_permissions(permissions)?;
     Ok(())
 }
 
@@ -108,7 +110,9 @@ impl FileManifest {
 
             let mut fh = std::fs::File::create(&dest_path)?;
             fh.write_all(&c.data)?;
-            set_executable(&mut fh)?;
+            if c.executable {
+                set_executable(&mut fh)?;
+            }
         }
 
         Ok(())
