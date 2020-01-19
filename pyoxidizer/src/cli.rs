@@ -202,6 +202,11 @@ pub fn run_cli() -> Result<()> {
                         .help("Directory to write artifacts to"),
                 )
                 .arg(
+                    Arg::with_name("release")
+                        .long("release")
+                        .help("Build a release binary"),
+                )
+                .arg(
                     Arg::with_name("path")
                         .default_value(".")
                         .value_name("PROJECT_PATH")
@@ -298,10 +303,11 @@ pub fn run_cli() -> Result<()> {
         ("build-artifacts", Some(args)) => {
             let path = args.value_of("path").unwrap();
             let path = PathBuf::from(path);
+            let release = args.is_present("release");
             let dest_path = args.value_of("dest_path").unwrap();
             let dest_path = PathBuf::from(dest_path);
 
-            projectmgmt::build_artifacts(&logger_context.logger, &path, &dest_path)
+            projectmgmt::build_artifacts(&logger_context.logger, &path, &dest_path, release)
         }
 
         ("build", Some(args)) => {

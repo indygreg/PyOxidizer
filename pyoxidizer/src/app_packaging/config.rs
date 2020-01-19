@@ -88,6 +88,7 @@ pub fn eval_starlark_config_file(
     logger: &slog::Logger,
     path: &Path,
     build_target_triple: &str,
+    release: bool,
     write_artifacts_path: Option<&Path>,
     resolve_targets: Option<Vec<String>>,
 ) -> Result<EvalResult> {
@@ -95,6 +96,7 @@ pub fn eval_starlark_config_file(
         logger,
         path,
         build_target_triple,
+        release,
         write_artifacts_path,
         resolve_targets,
     )

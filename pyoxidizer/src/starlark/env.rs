@@ -36,6 +36,9 @@ pub struct EnvironmentContext {
     /// Target triple we are building for.
     pub build_target_triple: String,
 
+    /// Whether we are building a debug or release binary.
+    pub build_release: bool,
+
     /// Base directory to use for build state.
     pub build_path: PathBuf,
 
@@ -65,6 +68,7 @@ impl EnvironmentContext {
         logger: &slog::Logger,
         config_path: &Path,
         build_target_triple: &str,
+        build_release: bool,
         write_artifacts_path: Option<&Path>,
         resolve_targets: Option<Vec<String>>,
     ) -> Result<EnvironmentContext> {
@@ -79,6 +83,7 @@ impl EnvironmentContext {
             cwd: parent.to_path_buf(),
             config_path: config_path.to_path_buf(),
             build_target_triple: build_target_triple.to_string(),
+            build_release,
             build_path: build_path.clone(),
             python_distributions_path: build_path.join("python_distributions"),
             write_artifacts_path: match write_artifacts_path {

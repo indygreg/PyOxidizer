@@ -25,6 +25,7 @@ pub fn evaluate_file(
     logger: &slog::Logger,
     config_path: &Path,
     build_target_triple: &str,
+    release: bool,
     write_artifacts_path: Option<&Path>,
     resolve_targets: Option<Vec<String>>,
 ) -> Result<EvalResult, Diagnostic> {
@@ -32,6 +33,7 @@ pub fn evaluate_file(
         logger,
         config_path,
         build_target_triple,
+        release,
         write_artifacts_path,
         resolve_targets,
     )

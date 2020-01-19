@@ -506,7 +506,7 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
     let target = env::var("TARGET").expect("TARGET not defined");
     //let opt_level = env::var("OPT_LEVEL").expect("OPT_LEVEL not defined");
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not found");
-    //let profile = env::var("PROFILE").expect("PROFILE not defined");
+    let profile = env::var("PROFILE").expect("PROFILE not defined");
 
     //let project_path = PathBuf::from(&manifest_dir);
 
@@ -528,6 +528,7 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
         logger,
         &config_path,
         &target,
+        profile == "release",
         Some(&dest_dir),
         Some(Vec::new()),
     )

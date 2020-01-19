@@ -148,8 +148,14 @@ pub fn list_targets(logger: &slog::Logger, project_path: &Path) -> Result<()> {
     })?;
 
     let target_triple = default_target()?;
-    let res =
-        eval_starlark_config_file(logger, &config_path, &target_triple, None, Some(Vec::new()))?;
+    let res = eval_starlark_config_file(
+        logger,
+        &config_path,
+        &target_triple,
+        false,
+        None,
+        Some(Vec::new()),
+    )?;
 
     if res.context.default_target().is_none() {
         println!("(no targets defined)");
@@ -174,6 +180,7 @@ fn build_pyoxidizer_artifacts(
     config_path: &Path,
     artifacts_path: &Path,
     target_triple: &str,
+    release: bool,
 ) -> Result<()> {
     create_dir_all(artifacts_path)?;
 
@@ -184,6 +191,7 @@ fn build_pyoxidizer_artifacts(
             logger,
             config_path,
             target_triple,
+            release,
             Some(&artifacts_path),
             Some(Vec::new()),
         )?;
@@ -217,6 +225,7 @@ pub fn build_project(logger: &slog::Logger, context: &mut BuildContext) -> Resul
         &context.config_path,
         &context.pyoxidizer_artifacts_path,
         &context.target_triple,
+        context.release,
     )?;
 
     let mut args = Vec::new();
@@ -307,6 +316,7 @@ pub fn resolve_build_context(
         logger,
         &config_path,
         &target,
+        release,
         force_artifacts_path,
         Some(Vec::new()),
     )?;
@@ -331,7 +341,7 @@ pub fn build(
     project_path: &Path,
     target: Option<&str>,
     resolve_targets: Option<Vec<String>>,
-    _release: bool,
+    release: bool,
     _verbose: bool,
 ) -> Result<()> {
     let config_path = find_pyoxidizer_config_file_env(logger, project_path).ok_or_else(|| {
@@ -342,13 +352,24 @@ pub fn build(
     })?;
     let target_triple = resolve_target(target)?;
 
-    let _res =
-        eval_starlark_config_file(logger, &config_path, &target_triple, None, resolve_targets)?;
+    let _res = eval_starlark_config_file(
+        logger,
+        &config_path,
+        &target_triple,
+        release,
+        None,
+        resolve_targets,
+    )?;
 
     Ok(())
 }
 
-pub fn build_artifacts(logger: &slog::Logger, project_path: &Path, dest_path: &Path) -> Result<()> {
+pub fn build_artifacts(
+    logger: &slog::Logger,
+    project_path: &Path,
+    dest_path: &Path,
+    release: bool,
+) -> Result<()> {
     let target = default_target()?;
 
     let config_path = match find_pyoxidizer_config_file_env(logger, project_path) {
@@ -356,7 +377,7 @@ pub fn build_artifacts(logger: &slog::Logger, project_path: &Path, dest_path: &P
         None => return Err(anyhow!("could not find PyOxidizer config file")),
     };
 
-    build_pyoxidizer_artifacts(logger, &config_path, dest_path, &target)?;
+    build_pyoxidizer_artifacts(logger, &config_path, dest_path, &target, release)?;
 
     Ok(())
 }
@@ -365,7 +386,7 @@ pub fn run(
     logger: &slog::Logger,
     project_path: &Path,
     target_triple: Option<&str>,
-    _release: bool,
+    release: bool,
     _extra_args: &[&str],
     _verbose: bool,
 ) -> Result<()> {
@@ -380,8 +401,14 @@ pub fn run(
     // TODO pass in target to resolve.
     let resolve_targets = None;
 
-    let res =
-        eval_starlark_config_file(logger, &config_path, &target_triple, None, resolve_targets)?;
+    let res = eval_starlark_config_file(
+        logger,
+        &config_path,
+        &target_triple,
+        release,
+        None,
+        resolve_targets,
+    )?;
 
     let context: &EnvironmentContext = &res.context;
 
