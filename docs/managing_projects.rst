@@ -8,71 +8,81 @@ The ``pyoxidizer`` command line tool is a frontend to the various
 functionality of ``PyOxidizer``. See :ref:`components` for more
 on the various components of ``PyOxidizer``.
 
-High-Level Project Lifecycle and Pipeline
-=========================================
+High-Level Project Lifecycle
+============================
 
-``PyOxidizer`` projects conceptually progress through a development
-pipeline. This pipeline consists of the following phases:
+``PyOxidizer`` exposes various functionality through the interaction
+of ``pyoxidizer`` commands and configuration files.
 
-1. Creation
-2. Python Building
-3. Application Building
-4. Application Assembly
-5. Validation (manual)
-6. Distribution (not yet implemented)
+The first step of any project is to create it. This is achieved
+with a ``pyoxidizer init-*`` command to create files required by
+``PyOxidizer``.
 
-In ``Creation``, a new project is created.
-
-In ``Python Building``, the Python components of the project are
-derived. This includes fetching any Python package dependencies.
-
-In ``Application Building``, the larger [Rust] application is built.
-this usually entails producing an executable containing an embedded
-Python interpreter along with any embedded python resource data.
-
-In ``Application Assembly``, the built [Rust] application is assembled
-with other packaging pieces. These extra pieces could include Python
-modules not embedded in the [Rust] binary.
-
-In ``Validation``, the assembled application is validated, tested, etc.
-
-In ``Distribution``, distributable versions of the assembled application
-are produced. This includes installable packages, etc.
-
-Typically, ``Python Building``, ``Application Building``, and
-``Application Assembly`` are performed as a single logical step
-(often via ``pyoxidizer build``). But ``PyOxidizer`` supports performing
-each action in isolation in order to facilitate more flexible development
-patterns.
-
-Creating New Projects with ``init``
-===================================
-
-The ``pyoxidizer init`` command will create a new [Rust] project which supports
-embedding Python. Invoke it with the directory you want to create your new
-project in::
-
-   $ pyoxidizer init pyapp
-
-This should have printed out details on what happened and what to do next.
-If you actually ran this in a terminal, hopefully you don't need to continue
-following the directions here as the printed instructions are sufficient!
-
-See :ref:`rust_projects` for more on the composition of Rust projects.
+After that, various ``pyoxidizer`` commands can be used to evaluate
+configuration files and perform actions from the evaluated file.
+``PyOxidizer`` provides functionality for building binaries, installing
+files into a directory tree, and running the results of build actions.
 
 The ``pyoxidizer.bzl`` Configuration File
------------------------------------------
+=========================================
 
-The final file in our newly created project is ``pyoxidizer.bzl``. **It is
-the most important file in the project.**
+The most important file for a ``PyOxidizer`` project is the ``pyoxidizer.bzl``
+configuration file. This is a Starlark file evaluated in a context that
+provides special functionality for ``PyOxidizer``.
 
-The ``pyoxidizer.bzl`` file configures how the embedded Python interpreter
-is built. This includes choosing which modules to package. It also configures
-the default run-time settings for the interpreter, including which code to
-run.
+Starlark is a Python-like interpreted language and its syntax and semantics
+should be familiar to any Python programmer.
+
+From a high-level, ``PyOxidizer``'s configuration files define named
+``targets``, which are callable functions associated with a name - the
+*target* - that resolve to an entity. For example, a configuration file
+may define a ``build_exe()`` function which returns an object representing
+a standalone executable file embedding Python. The ``pyoxidizer build``
+command can be used to evaluate just that target/function.
+
+Target functions can call out to other target functions. For example, there
+may be an ``install`` target that creates a set of files composing a full
+application. Its function may evaluate the ``exe`` target to produce an
+executable file.
 
 See :ref:`config_files` for comprehensive documentation of ``pyoxidizer.bzl``
 files and their semantics.
+
+Creating New Projects with ``init-config-file``
+===============================================
+
+The ``pyoxidizer init-config-file`` command will create a new
+``pyoxidizer.bzl`` configuration file in the target directory::
+
+   $ pyoxidizer init-config-file pyapp
+
+This should have printed out details on what happened and what to do next.
+
+Creating New Rust Projects with ``init-rust-project``
+=====================================================
+
+The ``pyoxidizer init-rust-project`` command creates a minimal
+Rust project configured to build an application that runs an
+embedded Python interpreter from a configuration defined in a
+``pyoxidizer.bzl`` configuration file. Run it by specifying the
+directory to contain the new project::
+
+   $ pyoxidizer init-rust-project pyapp
+
+This should have printed out details on what happened and what to do next.
+
+The explicit creation of Rust projects to use ``PyOxidizer`` is not
+required. If your produced binaries only need to perform actions
+configurable via ``PyOxidizer`` configuration files (like running
+some Python code), an explicit Rust project isn't required, as
+``PyOxidizer`` can auto-generate a temporary Rust project at build time.
+
+But if you want to supplement the behavior of the binaries built
+with Rust, an explicit and persisted Rust project can facilitate that.
+For example, you may want to run custom Rust code before, during, and
+after a Python interpreter runs in the process.
+
+See :ref:`rust_projects` for more on the composition of Rust projects.
 
 Adding PyOxidizer to an Existing Project with ``add``
 =====================================================
@@ -108,46 +118,41 @@ Building PyObject Projects with ``build``
 =========================================
 
 The ``pyoxidizer build`` command is probably the most important and used
-``pyoxidizer`` command. This command does the following:
+``pyoxidizer`` command. This command evaluates a ``pyoxidizer.bzl``
+configuration file by resolving *targets* in it.
 
-1. Processes the ``pyoxidizer.bzl`` configuration file and derives Python
-   artifacts to incorporate in a larger binary. (The ``Python Building``
-   phase of the pipeline described at the top of this document.)
-2. Invokes ``cargo build`` to build the associated Rust project.
-   (The ``Application Building`` phase.)
-3. Performs any post-build actions to assemble extra resources alongside
-   the ``cargo``-built binary. (The ``Application Assembly`` phase.)
+By default, the first defined *target* in the configuration file is
+resolved. However, callers can specify a list of explicit *targets*
+to evaluate. e.g.::
 
-In short, ``pyoxidizer build`` attempts to build your application as you
-have configured it.
+   # Resolve the default target.
+   $ pyoxidizer build
 
-``Application Assembly`` is performed into a ``build/apps/<app>`` directory
-under the project root. If your project name is ``myapp``, the application
-will be assembled to a ``build/apps/myapp`` directory. The full path to the
-executable will be ``build/apps/myapp/<target>/<build_type>/myapp`` (on Linux
-and macOS) or ``build/apps/myapp/<target>/<build_type>/myapp.exe`` (on Windows).
+   # Resolve the "exe" and "install" targets, in that order.
+   $ pyoxidizer build exe install
 
-It's worth noting that the ergonomics of ``pyoxidizer build`` are superior to
-``cargo build``. With ``pyoxidizer build``, the tool prints information about
-Python-specific activity as it is occurring. While it is possible to build
-applications with ``cargo build`` to achieve the same effect, doing so will
-defer Python build steps until later in the build and will hide that activity
-from output. This behavior isn't optimal for people whose primary goal is to
-package Python applications.
+``PyOxidizer`` configuration files are effectively defining a build
+system, hence the name *build* for the command to resolve *targets*
+within.
 
-Running Applications with ``run``
-=================================
+Running the Result of Building with ``run``
+===========================================
 
-Once you have produced an application with ``pyoxidizer build``, you can run
-it with ``pyoxidizer run``. For example::
+Target functions in ``PyOxidizer`` configuration files return objects
+that may be *runnable*. For example, a
+:ref:`PythonExecutable <config_python_executable>` returned by a target
+function that defines a Python executable binary can be *run* by
+executing a new process.
 
-   $ pyoxidizer run -- foo bar'
+The ``pyoxidizer run`` command is used to attempt to *run* an object
+returned by a build target. It is effectively ``pyoxidizer build`` followed
+by *running* the returned object. e.g.::
 
-This command will build your application (if needed) then invoke it with the
-arguments specified.
+   # Run the default target.
+   $ pyoxidizer run
 
-This command is provided for convenience, as it is certainly possible to
-run executables directly from their build location.
+   # Run the "install" target.
+   $ pyoxidizer run --target install
 
 Analyzing Produced Binaries with ``analyze``
 ============================================
@@ -175,10 +180,8 @@ is compatible with.
 Inspecting Python Distributions
 ===============================
 
-The ``Python Building`` phase of the lifecycle entails downloading special
-pre-built Python distributions and then linking them into a larger binary.
-You can find the location of these distributions in your project's
-``pyoxidizer.bzl`` configuration file.
+``PyOxidizer`` uses special pre-built Python distributions to build
+binaries containing Python.
 
 These Python distributions are zstandard compressed tar files. Zstandard
 is a modern compression format that is really, really, really good.
