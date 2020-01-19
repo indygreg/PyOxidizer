@@ -41,6 +41,9 @@ impl ResolvedTarget {
 ///
 /// This is used to pass metadata to the `BuildTarget::build()` method.
 pub struct BuildContext {
+    /// Logger where messages can be written.
+    pub logger: slog::Logger,
+
     /// Rust target triple for build host.
     pub host_triple: String,
 

@@ -160,6 +160,7 @@ impl EnvironmentContext {
             .join(target);
 
         let context = BuildContext {
+            logger: self.logger.clone(),
             host_triple: self.build_host_triple.clone(),
             target_triple: self.build_target_triple.clone(),
             release: self.build_release,
