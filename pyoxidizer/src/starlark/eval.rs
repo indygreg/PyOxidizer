@@ -32,6 +32,7 @@ pub fn evaluate_file(
     let context = EnvironmentContext::new(
         logger,
         config_path,
+        crate::app_packaging::repackage::HOST,
         build_target_triple,
         release,
         write_artifacts_path,

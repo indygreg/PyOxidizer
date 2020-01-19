@@ -33,6 +33,9 @@ pub struct EnvironmentContext {
     /// Path to the configuration file.
     pub config_path: PathBuf,
 
+    /// Host triple we are building from.
+    pub build_host_triple: String,
+
     /// Target triple we are building for.
     pub build_target_triple: String,
 
@@ -67,6 +70,7 @@ impl EnvironmentContext {
     pub fn new(
         logger: &slog::Logger,
         config_path: &Path,
+        build_host_triple: &str,
         build_target_triple: &str,
         build_release: bool,
         write_artifacts_path: Option<&Path>,
@@ -82,6 +86,7 @@ impl EnvironmentContext {
             logger: logger.clone(),
             cwd: parent.to_path_buf(),
             config_path: config_path.to_path_buf(),
+            build_host_triple: build_host_triple.to_string(),
             build_target_triple: build_target_triple.to_string(),
             build_release,
             build_path: build_path.clone(),

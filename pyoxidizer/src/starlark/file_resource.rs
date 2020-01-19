@@ -118,10 +118,11 @@ impl FileManifest {
         logger: &slog::Logger,
         prefix: &str,
         exe: &PreBuiltPythonExecutable,
+        host: &str,
         target: &str,
     ) -> Result<()> {
         let (filename, data) =
-            build_python_executable(logger, &exe.name, exe, env!("HOST"), target, "0", true)?;
+            build_python_executable(logger, &exe.name, exe, host, target, "0", true)?;
 
         let content = RawFileContent {
             data,
@@ -214,13 +215,19 @@ starlark_module! { file_resource_env =>
                 },
                 "PythonExecutable" => {
                     let context = env.get("CONTEXT").expect("CONTEXT not defined");
-                    let (logger, target) = context.downcast_apply(|x: &EnvironmentContext| {
-                        (x.logger.clone(), x.build_target_triple.clone())
+                    let (logger, host, target) = context.downcast_apply(|x: &EnvironmentContext| {
+                        (x.logger.clone(), x.build_host_triple.clone(), x.build_target_triple.clone())
                     });
 
                     let raw_exe = resource.0.borrow();
                     let exe = raw_exe.as_any().downcast_ref::<PreBuiltPythonExecutable>().unwrap();
-                    manifest.add_python_executable(&logger, &prefix, exe, &target).or_else(|e|
+                    manifest.add_python_executable(
+                        &logger,
+                        &prefix,
+                        exe,
+                        &host,
+                        &target
+                    ).or_else(|e|
                         Err(RuntimeError {
                             code: "PYOXIDIZER_BUILD",
                             message: e.to_string(),
