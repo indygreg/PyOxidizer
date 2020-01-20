@@ -24,6 +24,8 @@ next
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* ``.egg-info`` directories are now ignored when scanning for Python resources
+  on the filesystem (matching the behavior for ``.dist-info`` directories).
 * The ``pyoxidizer init`` sub-command has been renamed to ``init-rust-project``.
 * The ``pyoxidizer app-path`` sub-command has been removed.
 * Support for building distributions has been removed.

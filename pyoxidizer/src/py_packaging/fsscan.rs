@@ -171,6 +171,11 @@ impl PythonResourceIterator {
             return None;
         }
 
+        // Ditto for .egg-info directories.
+        if components[0].ends_with(".egg-info") {
+            return None;
+        }
+
         // site-packages directories are package roots within package roots. Treat them as
         // such.
         let in_site_packages = if components[0] == "site-packages" {
