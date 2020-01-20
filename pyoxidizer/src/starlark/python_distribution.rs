@@ -318,7 +318,7 @@ starlark_module! { python_distribution_module =>
         let extra_envs = match extra_envs.get_type() {
             "dict" => extra_envs.into_iter()?.map(|key| {
                 let k = key.to_string();
-                let v = extra_envs.at(key.clone()).unwrap().to_string();
+                let v = extra_envs.at(key).unwrap().to_string();
                 (k, v)
             }).collect(),
             "NoneType" => HashMap::new(),
@@ -426,7 +426,7 @@ starlark_module! { python_distribution_module =>
         let extra_envs = match extra_envs.get_type() {
             "dict" => extra_envs.into_iter()?.map(|key| {
                 let k = key.to_string();
-                let v = extra_envs.at(key.clone()).unwrap().to_string();
+                let v = extra_envs.at(key).unwrap().to_string();
                 (k, v)
             }).collect(),
             "NoneType" => HashMap::new(),
