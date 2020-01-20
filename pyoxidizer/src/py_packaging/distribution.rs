@@ -1223,10 +1223,9 @@ pub fn default_distribution(
     target: &str,
     dest_dir: &Path,
 ) -> Result<ParsedPythonDistribution> {
-    let dist = CPYTHON_BY_TRIPLE.get(target).ok_or(anyhow!(
-        "could not find default Python distribution for {}",
-        target
-    ))?;
+    let dist = CPYTHON_BY_TRIPLE
+        .get(target)
+        .ok_or_else(|| anyhow!("could not find default Python distribution for {}", target))?;
 
     let location = PythonDistributionLocation::Url {
         url: dist.url.clone(),
