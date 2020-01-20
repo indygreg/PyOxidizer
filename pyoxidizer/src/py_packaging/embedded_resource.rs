@@ -162,7 +162,7 @@ impl EmbeddedPythonResourcesPrePackaged {
 
         let ignored = OS_IGNORE_EXTENSIONS
             .iter()
-            .map(|k| k.to_string())
+            .map(|k| (*k).to_string())
             .collect::<Vec<String>>();
 
         let extension_modules =
