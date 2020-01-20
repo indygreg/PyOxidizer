@@ -30,6 +30,7 @@ The creator and maintainer of ``PyOxidizer`` is
    packaging_pitfalls
    distributing
    config
+   config_api
    rust_projects
    faq
    status
