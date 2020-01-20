@@ -207,10 +207,14 @@ starlark_module! { file_resource_env =>
     FileManifest.add_python_resource(env env, this, prefix, resource) {
         let prefix = required_str_arg("prefix", &prefix)?;
 
+        let context = env.get("CONTEXT").expect("CONTEXT not set");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
         this.downcast_apply_mut(|manifest: &mut FileManifest| -> Result<(), ValueError> {
             match resource.get_type() {
                 "PythonSourceModule" => {
                     let m = resource.downcast_apply(|m: &PythonSourceModule| m.module.clone());
+                    warn!(logger, "adding source module {} to {}", m.name, prefix);
                     manifest.add_source_module(&prefix, &m).or_else(|e| {
                         Err(RuntimeError {
                             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -221,12 +225,14 @@ starlark_module! { file_resource_env =>
                 },
                 "PythonBytecodeModule" => {
                     let m = resource.downcast_apply(|m: &PythonBytecodeModule| m.module.clone());
+                    warn!(logger, "adding bytecode module {} to {}", m.name, prefix);
                     manifest.add_bytecode_module(&prefix, &m);
 
                     Ok(())
                 },
                 "PythonResourceData" => {
                     let m = resource.downcast_apply(|m: &PythonResourceData| m.data.clone());
+                    warn!(logger, "adding resource file {} to {}", m.full_name(), prefix);
                     manifest.add_resource_data(&prefix, &m).or_else(|e| {
                         Err(RuntimeError {
                             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -237,15 +243,15 @@ starlark_module! { file_resource_env =>
                 },
                 "PythonExtensionModule" => {
                     let m = resource.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
+                    warn!(logger, "adding extension module {} to {}", m.module, prefix);
                     manifest.add_extension_module(&prefix, &m);
 
                     Ok(())
                 },
                 "PythonExecutable" => {
                     let context = env.get("CONTEXT").expect("CONTEXT not defined");
-                    let (logger, host, target, release, opt_level) = context.downcast_apply(|x: &EnvironmentContext| {
+                    let (host, target, release, opt_level) = context.downcast_apply(|x: &EnvironmentContext| {
                         (
-                            x.logger.clone(),
                             x.build_host_triple.clone(),
                             x.build_target_triple.clone(),
                             x.build_release,
@@ -255,6 +261,7 @@ starlark_module! { file_resource_env =>
 
                     let raw_exe = resource.0.borrow();
                     let exe = raw_exe.as_any().downcast_ref::<PreBuiltPythonExecutable>().unwrap();
+                    warn!(logger, "adding Python executable {} to {}", exe.name, prefix);
                     manifest.add_python_executable(
                         &logger,
                         &prefix,

@@ -146,6 +146,10 @@ pub struct ResourceData {
 }
 
 impl ResourceData {
+    pub fn full_name(&self) -> String {
+        format!("{}:{}", self.package, self.name)
+    }
+
     pub fn as_python_resource(&self) -> PythonResource {
         PythonResource::Resource {
             package: self.package.clone(),
