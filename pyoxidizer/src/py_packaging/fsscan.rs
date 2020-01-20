@@ -297,10 +297,10 @@ impl PythonResourceIterator {
                 let mut full_module_name: Vec<&str> = package_parts.to_vec();
 
                 let stem = if module_name == "__init__" {
-                    "".to_string()
+                    ""
                 } else {
                     full_module_name.push(&module_name);
-                    module_name.clone()
+                    &module_name
                 };
 
                 let full_module_name = itertools::join(full_module_name, ".");
@@ -314,21 +314,21 @@ impl PythonResourceIterator {
                 if rel_str.ends_with(".opt-1.pyc") {
                     PythonFileResource::BytecodeOpt1 {
                         package,
-                        stem,
+                        stem: stem.to_string(),
                         full_name: full_module_name,
                         path: path.to_path_buf(),
                     }
                 } else if rel_str.ends_with(".opt-2.pyc") {
                     PythonFileResource::BytecodeOpt2 {
                         package,
-                        stem,
+                        stem: stem.to_string(),
                         full_name: full_module_name,
                         path: path.to_path_buf(),
                     }
                 } else {
                     PythonFileResource::Bytecode {
                         package,
-                        stem,
+                        stem: stem.to_string(),
                         full_name: full_module_name,
                         path: path.to_path_buf(),
                     }
