@@ -140,7 +140,7 @@ starlark_module! { embedded_python_config_module =>
                 "dynamic" => TerminfoResolution::Dynamic,
                 "static" => {
                     TerminfoResolution::Static(if let Some(dirs) = terminfo_dirs {
-                        dirs.clone()
+                        dirs
                     } else {
                         return Err(RuntimeError {
                             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
