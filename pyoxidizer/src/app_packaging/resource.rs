@@ -68,7 +68,7 @@ impl FileManifest {
             let mut ans = p.ancestors();
             ans.next();
 
-            while let Some(a) = ans.next() {
+            for a in ans {
                 if a.display().to_string() != "" {
                     dirs.insert(a.to_path_buf());
                 }
