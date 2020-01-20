@@ -394,7 +394,7 @@ pub fn resolve_python_paths(base: &Path, python_version: &str) -> PythonPaths {
         .join(format!("python{}", &python_version[0..3]));
 
     let stdlib = if unix_lib_dir.exists() {
-        unix_lib_dir.clone()
+        unix_lib_dir
     } else {
         p.join("Lib")
     };
