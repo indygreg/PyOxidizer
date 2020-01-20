@@ -24,7 +24,8 @@ use std::sync::Arc;
 
 use super::env::EnvironmentContext;
 use super::python_resource::{
-    PythonEmbeddedResources, PythonExtensionModule, PythonResourceData, PythonSourceModule,
+    PythonEmbeddedResources, PythonExtensionModule, PythonExtensionModuleFlavor,
+    PythonResourceData, PythonSourceModule,
 };
 use super::util::{
     optional_dict_arg, optional_list_arg, optional_str_arg, required_bool_arg, required_list_arg,
@@ -255,7 +256,7 @@ starlark_module! { python_distribution_module =>
             dist.ensure_distribution_resolved(&logger);
 
             dist.distribution.as_ref().unwrap().filter_extension_modules(&logger, &filter, preferred_variants.clone()).iter().map(|em| {
-                Value::new(PythonExtensionModule { em: em.clone() })
+                Value::new(PythonExtensionModule { em: PythonExtensionModuleFlavor::Persisted(em.clone()) })
             }).collect_vec()
         })))
     }

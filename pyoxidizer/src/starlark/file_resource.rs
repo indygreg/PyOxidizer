@@ -20,6 +20,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use super::env::EnvironmentContext;
+use super::python_resource::PythonExtensionModuleFlavor;
 use super::python_resource::{
     PythonBytecodeModule, PythonExtensionModule, PythonResourceData, PythonSourceModule,
 };
@@ -243,10 +244,21 @@ starlark_module! { file_resource_env =>
                 },
                 "PythonExtensionModule" => {
                     let m = resource.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
-                    warn!(logger, "adding extension module {} to {}", m.module, prefix);
-                    manifest.add_extension_module(&prefix, &m);
 
-                    Ok(())
+                    match m {
+                        PythonExtensionModuleFlavor::Persisted(m) => {
+                            warn!(logger, "adding extension module {} to {}", m.module, prefix);
+                            manifest.add_extension_module(&prefix, &m);
+                            Ok(())
+                        }
+                        PythonExtensionModuleFlavor::Built(_) => {
+                            Err(RuntimeError {
+                                code: "PYOXIDIZER_BUILD",
+                                message: "support for built extension modules not yet implemented".to_string(),
+                                label: "add_python_resource()".to_string(),
+                            }.into())
+                        }
+                    }
                 },
                 "PythonExecutable" => {
                     let context = env.get("CONTEXT").expect("CONTEXT not defined");

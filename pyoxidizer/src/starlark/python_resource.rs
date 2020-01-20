@@ -21,7 +21,8 @@ use super::util::{optional_list_arg, required_bool_arg, required_type_arg};
 use crate::py_packaging::distribution::ExtensionModule;
 use crate::py_packaging::embedded_resource::EmbeddedPythonResourcesPrePackaged;
 use crate::py_packaging::resource::{
-    BytecodeModule, BytecodeOptimizationLevel, PythonResource, ResourceData, SourceModule,
+    BuiltExtensionModule, BytecodeModule, BytecodeOptimizationLevel, PythonResource, ResourceData,
+    SourceModule,
 };
 
 #[derive(Debug, Clone)]
@@ -218,8 +219,23 @@ impl TypedValue for PythonResourceData {
 }
 
 #[derive(Debug, Clone)]
+pub enum PythonExtensionModuleFlavor {
+    Persisted(ExtensionModule),
+    Built(BuiltExtensionModule),
+}
+
+impl PythonExtensionModuleFlavor {
+    pub fn name(&self) -> String {
+        match self {
+            PythonExtensionModuleFlavor::Persisted(m) => m.module.clone(),
+            PythonExtensionModuleFlavor::Built(m) => m.name.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct PythonExtensionModule {
-    pub em: ExtensionModule,
+    pub em: PythonExtensionModuleFlavor,
 }
 
 impl TypedValue for PythonExtensionModule {
@@ -230,7 +246,7 @@ impl TypedValue for PythonExtensionModule {
     );
 
     fn to_str(&self) -> String {
-        format!("PythonExtensionModule<name={}>", self.em.module)
+        format!("PythonExtensionModule<name={}>", self.em.name())
     }
 
     fn to_repr(&self) -> String {
@@ -251,7 +267,7 @@ impl TypedValue for PythonExtensionModule {
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
         let v = match attribute {
-            "name" => Value::new(self.em.module.clone()),
+            "name" => Value::new(self.em.name()),
             attr => {
                 return Err(ValueError::OperationNotSupported {
                     op: format!(".{}", attr),
@@ -435,8 +451,18 @@ starlark_module! { python_resource_env =>
 
         this.downcast_apply_mut(|embedded: &mut PythonEmbeddedResources| {
             let m = module.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
-            embedded.embedded.add_extension_module(&m);
-        });
+            match m {
+                PythonExtensionModuleFlavor::Persisted(m) => {
+                    embedded.embedded.add_extension_module(&m);
+                    Ok(())
+                },
+                PythonExtensionModuleFlavor::Built(_) => Err(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: "support for built extension modules not yet implemented".to_string(),
+                    label: "add_extension_module()".to_string(),
+                }.into())
+            }
+        })?;
 
         Ok(Value::new(None))
     }
