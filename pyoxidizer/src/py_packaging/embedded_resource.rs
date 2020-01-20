@@ -138,7 +138,7 @@ impl EmbeddedPythonResourcesPrePackaged {
                 let bytecode = compiler.compile(
                     &request.source,
                     &request.name,
-                    request.optimize_level.into(),
+                    request.optimize_level,
                     CompileMode::Bytecode,
                 )?;
 
