@@ -32,7 +32,9 @@ use crate::app_packaging::resource::{
 use crate::project_building::build_python_executable;
 use crate::py_packaging::binary::PreBuiltPythonExecutable;
 use crate::py_packaging::distribution::ExtensionModule;
-use crate::py_packaging::resource::{BytecodeModule, ResourceData, SourceModule};
+use crate::py_packaging::resource::{
+    BuiltExtensionModule, BytecodeModule, ResourceData, SourceModule,
+};
 
 #[derive(Clone, Debug)]
 pub struct FileContent {
@@ -114,6 +116,23 @@ impl FileManifest {
     // TODO implement.
     fn add_extension_module(&self, _prefix: &str, _em: &ExtensionModule) {
         println!("support for adding extension modules not yet implemented");
+    }
+
+    fn add_built_extension_module(
+        &mut self,
+        prefix: &str,
+        em: &BuiltExtensionModule,
+    ) -> Result<()> {
+        let mut dest_path = PathBuf::from(prefix);
+        dest_path.extend(em.package_parts());
+        dest_path.push(em.file_name());
+
+        let content = RawFileContent {
+            data: em.extension_data.clone(),
+            executable: true,
+        };
+
+        self.manifest.add_file(&dest_path, &content)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -251,12 +270,15 @@ starlark_module! { file_resource_env =>
                             manifest.add_extension_module(&prefix, &m);
                             Ok(())
                         }
-                        PythonExtensionModuleFlavor::Built(_) => {
-                            Err(RuntimeError {
-                                code: "PYOXIDIZER_BUILD",
-                                message: "support for built extension modules not yet implemented".to_string(),
-                                label: "add_python_resource()".to_string(),
-                            }.into())
+                        PythonExtensionModuleFlavor::Built(m) => {
+                            warn!(logger, "adding built extension module {} to {}", m.name, prefix);
+                            manifest.add_built_extension_module(&prefix, &m).or_else(|e| {
+                                Err(RuntimeError {
+                                    code: "PYOXIDIZER_BUILD",
+                                    message: e.to_string(),
+                                    label: "add_python_resource".to_string(),
+                                }.into())
+                            })
                         }
                     }
                 },

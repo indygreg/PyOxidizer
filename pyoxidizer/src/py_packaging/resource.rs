@@ -164,12 +164,45 @@ impl ResourceData {
 /// This is like a light version of `ExtensionModule`.
 #[derive(Clone, Debug)]
 pub struct BuiltExtensionModule {
+    /// The module name this extension module is providing.
     pub name: String,
+    /// Name of the C function initializing this extension module.
     pub init_fn: String,
+    /// Filename suffix to use when writing extension module data.
+    pub extension_file_suffix: String,
+    /// File data for linked extension module.
+    pub extension_data: Vec<u8>,
+    /// File data for object files linked together to produce this extension module.
     pub object_file_data: Vec<Vec<u8>>,
+    /// Whether this extension module is a package.
     pub is_package: bool,
+    /// Names of libraries that we need to link when building extension module.
     pub libraries: Vec<String>,
+    /// Paths to directories holding libraries needed for extension module.
     pub library_dirs: Vec<PathBuf>,
+}
+
+impl BuiltExtensionModule {
+    /// The file name (without parent components) this extension module should be
+    /// realized with.
+    pub fn file_name(&self) -> String {
+        if let Some(idx) = self.name.rfind('.') {
+            let name = &self.name[idx + 1..self.name.len()];
+            format!("{}.{}", name, self.extension_file_suffix)
+        } else {
+            format!("{}.{}", self.name, self.extension_file_suffix)
+        }
+    }
+
+    /// Returns the part strings constituting the package name.
+    pub fn package_parts(&self) -> Vec<String> {
+        if let Some(idx) = self.name.rfind('.') {
+            let prefix = &self.name[0..idx];
+            prefix.split('.').map(|x| x.to_string()).collect()
+        } else {
+            Vec::new()
+        }
+    }
 }
 
 /// Represents a resource to make available to the Python interpreter.

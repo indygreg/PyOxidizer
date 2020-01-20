@@ -143,6 +143,23 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<BuiltExtensionModul
         let final_name = module_components[module_components.len() - 1];
         let init_fn = "PyInit_".to_string() + final_name;
 
+        let extension_path = PathBuf::from(&info.output_filename);
+
+        // Extension file suffix is the part after the first dot in the filename.
+        let extension_file_name = extension_path
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
+
+        let extension_file_suffix = if let Some(idx) = extension_file_name.find('.') {
+            extension_file_name[idx + 1..extension_file_name.len()].to_string()
+        } else {
+            extension_file_name
+        };
+
+        let extension_data = std::fs::read(extension_path)?;
+
         let mut object_file_data = Vec::new();
 
         for object_path in &info.objects {
@@ -159,6 +176,8 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<BuiltExtensionModul
         res.push(BuiltExtensionModule {
             name: info.name.clone(),
             init_fn,
+            extension_file_suffix,
+            extension_data,
             object_file_data,
             is_package: final_name == "__init__",
             libraries: info.libraries,

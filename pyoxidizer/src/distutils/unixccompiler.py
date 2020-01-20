@@ -238,8 +238,11 @@ class UnixCCompiler(CCompiler):
         # binary.
         dest_path = os.environ['PYOXIDIZER_DISTUTILS_STATE_DIR']
 
-        # We need to copy the object files because they may be in a temp
+        # We need to copy the generated files because they may be in a temp
         # directory that doesn't outlive this process.
+        our_output_filename = os.path.join(dest_path, os.path.basename(output_filename))
+        shutil.copyfile(output_filename, our_output_filename)
+
         object_paths = []
         for i, o in enumerate(objects):
             p = os.path.join(dest_path, '%s.%d.o' % (name, i))
@@ -253,7 +256,7 @@ class UnixCCompiler(CCompiler):
             data = {
                 'name': '%s.%s' % (package, name) if package else name,
                 'objects': object_paths,
-                'output_filename': os.path.abspath(output_filename),
+                'output_filename': our_output_filename,
                 'libraries': libraries or [],
                 'library_dirs': library_dirs or [],
                 'runtime_library_dirs': runtime_library_dirs or [],
