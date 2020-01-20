@@ -6,6 +6,7 @@ use anyhow::{anyhow, Result};
 use slog::warn;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::hash::BuildHasher;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 
@@ -15,12 +16,12 @@ use super::fsscan::{find_python_resources, PythonFileResource};
 use super::resource::PythonResource;
 
 /// Run `pip install` and return found resources.
-pub fn pip_install(
+pub fn pip_install<S: BuildHasher>(
     logger: &slog::Logger,
     dist: &ParsedPythonDistribution,
     verbose: bool,
     install_args: &[String],
-    extra_envs: &HashMap<String, String>,
+    extra_envs: &HashMap<String, String, S>,
 ) -> Result<Vec<PythonResource>> {
     let temp_dir = tempdir::TempDir::new("pyoxidizer-pip-install")?;
 

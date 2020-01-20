@@ -11,6 +11,7 @@ use slog::{info, warn};
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::fs::{create_dir_all, File};
+use std::hash::BuildHasher;
 use std::io::{BufRead, BufReader, Cursor, Read};
 use std::path::{Path, PathBuf};
 use url::Url;
@@ -451,9 +452,9 @@ pub fn invoke_python(python_paths: &PythonPaths, logger: &slog::Logger, args: &[
     }
 }
 
-pub fn choose_variant(
+pub fn choose_variant<S: BuildHasher>(
     extensions: &[ExtensionModule],
-    variants: &Option<HashMap<String, String>>,
+    variants: &Option<HashMap<String, String, S>>,
 ) -> ExtensionModule {
     if let Some(variants) = variants {
         if let Some(preferred) = variants.get(&extensions[0].module) {
