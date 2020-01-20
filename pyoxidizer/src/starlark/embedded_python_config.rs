@@ -165,6 +165,8 @@ starlark_module! { embedded_python_config_module =>
             _ => Vec::new(),
         };
 
+        let filesystem_importer = filesystem_importer || !sys_paths.is_empty();
+
         let config = crate::py_packaging::config::EmbeddedPythonConfig {
             bytes_warning: bytes_warning.to_int().unwrap() as i32,
             dont_write_bytecode,
@@ -255,6 +257,8 @@ mod tests {
         let c = starlark_ok("EmbeddedPythonConfig(sys_paths=['foo', 'bar'])");
         c.downcast_apply(|x: &EmbeddedPythonConfig| {
             assert_eq!(x.config.sys_paths, ["foo", "bar"]);
+            // Setting sys_paths enables filesystem importer.
+            assert!(x.config.filesystem_importer);
         });
     }
 
