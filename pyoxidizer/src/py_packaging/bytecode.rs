@@ -67,7 +67,7 @@ impl BytecodeCompiler {
         }
 
         let command = process::Command::new(python)
-            .arg(script_path.clone())
+            .arg(script_path)
             .stdin(process::Stdio::piped())
             .stdout(process::Stdio::piped())
             .spawn()?;
