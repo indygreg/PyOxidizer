@@ -4,39 +4,42 @@
 Packaging User Guide
 ====================
 
-So you want to package a Python application using PyOxidizer? You've come
+So you want to package a Python application using ``PyOxidizer``? You've come
 to the right place to learn how! Read on for all the details on how to
 *oxidize* your Python application!
 
-First, you'll need to install PyOxidizer. See :ref:`installing` for
+First, you'll need to install ``PyOxidizer``. See :ref:`installing` for
 instructions.
 
 Creating a PyOxidizer Project
 =============================
 
-Behind the scenes, PyOxidizer works by creating a Rust project which embeds
-and runs a Python interpreter.
-
 The process for *oxidizing* every Python application looks the same: you
-start by creating a new [Rust] project with the PyOxidizer scaffolding.
-The ``pyoxidizer init`` command does this::
+start by creating a new ``PyOxidizer`` configuration file via the
+``pyoxidizer init-config-file`` command::
 
-   # Create a new project named "pyapp" in the directory "pyapp"
-   $ pyoxidizer init pyapp
+   # Create a new configuration file in the directory "pyapp"
+   $ pyoxidizer init-config-file pyapp
 
-   # Create a new project named "myapp" in the directory "~/src/myapp"
-   $ pyoxidizer init ~/src/myapp
+Behind the scenes, ``PyOxidizer`` works by leveraging a Rust project to
+build binaries embedding Python. The auto-generated project simply
+instantiates and runs an embedded Python interpreter. If you would like
+your built binaries to offer more functionality, you can create a minimal
+Rust project to embed a Python interpreter and customize from there::
 
-The default project created by ``pyoxidizer init`` will produce an executable
-that embeds Python and starts a Python REPL. Let's test that::
+   # Create a new Rust project for your application in ~/src/myapp.
+   $ pyoxidizer init-rust-project ~/src/myapp
 
-   $ pyoxidizer run pyapp
-   no existing PyOxidizer artifacts found
-   processing config file /home/gps/src/pyapp/pyoxidizer.bzl
-   resolving Python distribution...
+The auto-generated configuration file and Rust project will alunch a Python
+REPL by default. And the ``pyoxidizer`` executable will look in the current
+directory for a ``pyoxidizer.bzl`` configuration file. Let's test that the
+new configuration file or project works::
+
+   $ pyoxidizer run
+   ...
       Compiling pyapp v0.1.0 (/home/gps/src/pyapp)
        Finished dev [unoptimized + debuginfo] target(s) in 53.14s
-        Running `target/debug/pyapp`
+   writing executable to /home/gps/src/pyapp/build/x86_64-unknown-linux-gnu/debug/exe/pyapp
    >>>
 
 If all goes according to plan, you just built a Rust executable which
@@ -54,14 +57,14 @@ the REPL.)
 .. note::
 
    If you have built a Rust project before, the output from building a
-   PyOxidizer application may look familiar to you. That's because under the
+   ``PyOxidizer`` application may look familiar to you. That's because under the
    hood Cargo - Rust's package manager and build system - is doing a lot of the
    work to build the application. If you are familiar with Rust development,
-   feel free to use ``cargo build`` and ``cargo run`` directly. However, Rust's
-   build system is only responsible for some functionality. Most notable,
-   all the post-build *packaging* steps such as copying binaries to the
-   ``build/apps`` directory is not performed by the Rust build system, so
-   built applications may be incomplete.
+   you can use ``cargo build`` and ``cargo run`` directly. However, Rust's
+   build system is only responsible for build binaries and some of the
+   higher-level functionality from ``PyOxidizer``'s configuration files (such
+   as application packaging) will likely not be performed unless tweaks are
+   made to the Rust project's ``build.rs``.
 
 Now that we've got a new project, let's customize it to do something useful.
 
@@ -74,24 +77,51 @@ PyPI package. (Pyflakes is a Python linter.)
 
 First, let's create an empty project::
 
-   $ pyoxidizer init pyflakes
+   $ pyoxidizer init-config-file pyflakes
 
 Next, we need to edit the :ref:`configuration file <config_files>` to tell
 PyOxidizer about pyflakes. Open the ``pyflakes/pyoxidizer.bzl`` file in your
 favorite editor.
 
-We first tell PyOxidizer to add the ``pyflakes`` Python package by adding the
-following lines:
+Find the ``make_exe()`` function. This function returns a
+:ref:`PythonExecutable <config_python_executable>` instance which defines
+a standalone executable containing Python. This function declares a
+*target*, which is a named entity that can be individually built or run.
+By returning a ``PythonExecutable`` instance, this function/target is saying
+*build an executable*.
+
+One of the arguments used to construct the ``PythonExecutable`` is an
+instance of :ref:`PythonEmbeddedResources <config_python_embedded_resources>`,
+which defines Python resources like source and bytecode modules that can be
+embedded in that executable binary. This type exposes an
+:ref:`add_python_resources() <config_python_embedded_resources_add_python_resources>`
+method which adds an iterable of objects representing Python resources to the
+set of embedded resources.
+
+Elsewhere in this function, the ``dist`` variable holds an instance of
+:ref:`PythonDistribution <config_python_distribution>`. This type
+represents a Python distribution, which is a fancy way of saying
+*an implementation of Python*. In addition to defining the files
+constituting that distribution, a ``PythonDistribution`` exposes
+methods for performing Python packaging. One of those methods is
+:ref:`pip_install() <config_python_distribution_pip_install>`,
+which invokes ``pip install`` using that Python distribution.
+
+To add a new Python package to our executable, we call
+``dist.pip_install()`` then add the results to our ``PythonEmbeddedResources``
+instance. This is done like so:
 
 .. code-block:: python
 
-   install_pyflakes = PipInstallSimple("pyflakes==2.1.1")
+   embedded.add_python_resources(dist.pip_install(["pyflakes==2.1.1"]))
 
-This creates a packaging rule that essentially translates to running
-``pip install pyflakes==2.1.1`` and then finds and packages the files installed
-by that command.
+The inner call to ``dist.pip_install()`` will effectively run
+``pip install pyflakes==2.1.1`` and collect a set of installed
+Python resources (like module sources and bytecode data) and return
+that as an iterable data structure. The ``embedded.add_python_resources()``
+call will add those resources to the embedded Python interpreter.
 
-Next, we tell PyOxidizer to run pyflakes when the interpreter is executed.
+Next, we tell PyOxidizer to run ``pyflakes`` when the interpreter is executed:
 
 .. code-block:: python
 
@@ -101,29 +131,40 @@ This says to effectively run the Python code
 ``eval(from pyflakes.api import main; main())`` when the embedded interpreter
 starts.
 
-The new ``pyoxidizer.bzl`` file should look something like:
+The new ``make_exe()`` function should look something like the following (with
+comments removed for brevity):
 
 .. code-block:: python
 
-   embedded_python_config = EmbeddedPythonConfig()
-   stdlib_extensions_policy = StdlibExtensionsPolicy("all")
-   stdlib = Stdlib(include_source=False)
-   install_pyflakes = PipInstallSimple("pyflakes==2.1.1")
-   python_run_mode = python_run_mode_eval("from pyflakes.api import main; main()")
+   def make_exe():
+       dist = default_python_distribution()
 
-   Config(
-       application_name="pyflakes",
-       embedded_python_config=embedded_python_config,
-       python_distribution=default_python_distribution(),
-       python_run_mode=python_run_mode,
-       packaging_rules=[stdlib, stdlib_extensions_policy, install_pyflakes],
-   )
+       embedded = dist.to_embedded_resources(
+           extension_module_filter='all',
+           include_sources=True,
+           include_resources=False,
+           include_test=False,
+       )
+
+       embedded.add_python_resources(dist.pip_intsall(["pyflakes==2.1.1"]))
+
+       embedded_python_config = EmbeddedPythonConfig()
+
+       python_run_mode = python_run_mode_eval("from pyflakes.api import main; main()")
+
+       return PythonExecutable(
+           name="pyflakes",
+           distribution=dist,
+           resources=embedded,
+           config=embedded_python_config,
+           run_mode=python_run_mode,
+       )
 
 With the configuration changes made, we can build and run a ``pyflakes``
 native executable::
 
    # From outside the ``pyflakes`` directory
-   $ pyoxidizer run /path/to/pyflakes/project -- /path/to/python/file/to/analyze
+   $ pyoxidizer run --path /path/to/pyflakes/project -- /path/to/python/file/to/analyze
 
    # From inside the ``pyflakes`` directory
    $ pyoxidizer run -- /path/to/python/file/to/analyze
@@ -164,43 +205,46 @@ Let's give an example of this by attempting to package
 
 We start by creating a new project::
 
-   $ pyoxidizer init black
+   $ pyoxidizer init-config-file black
 
 Then edit the ``pyoxidizer.bzl`` file to have the following:
 
 .. code-block:: python
 
-   embedded_python_config = EmbeddedPythonConfig()
-   stdlib_extensions_policy = StdlibExtensionsPolicy("all")
-   stdlib = Stdlib(include_source=False)
-   install_black = PipInstallSimple("black==19.3b0")
-   python_run_mode = python_run_mode_module("black")
+   def make_exe():
+       dist = default_python_distribution()
 
-   Config(
-       application_name="black",
-       embedded_python_config=embedded_python_config,
-       python_distribution=default_python_distribution(),
-       python_run_mode=python_run_mode,
-       packaging_rules=[stdlib, stdlib_extensions_policy, install_black],
-   )
+       embedded = dist.to_embedded_resources(
+           extension_module_filter='all',
+           include_sources=True,
+           include_resources=False,
+           include_test=False,
+       )
+
+       embedded.add_python_resources(dist.pip_intsall(["black==19.3b0"]))
+       embedded_python_config = EmbeddedPythonConfig()
+       python_run_mode = python_run_mode_module("black")
+
+       return PythonExecutable(
+           name="black",
+           distribution=dist,
+           resources=embedded,
+           config=embedded_python_config,
+           run_mode=python_run_mode,
+       )
 
 Then let's attempt to build the application::
 
-   $ pyoxidizer build black
+   $ pyoxidizer build --path black
    processing config file /home/gps/src/black/pyoxidizer.bzl
    resolving Python distribution...
    ...
-   packaging application into /home/gps/src/black/build/apps/x86_64-unknown-linux-gnu/debug/black
-   purging /home/gps/src/black/build/apps/black/x86_64-unknown-linux-gnu/debug
-   copying /home/gps/src/black/build/target/x86_64-unknown-linux-gnu/debug/black to /home/gps/src/black/build/apps/black/x86_64-unknown-linux-gnu/debug/black
-   resolving packaging state...
-   black packaged into /home/gps/src/black/build/apps/black/x86_64-unknown-linux-gnu/debug
 
 Looking good so far!
 
 Now let's try to run it::
 
-   $  black/build/apps/black/x86_64-unknown-linux-gnu/debug/black
+   $ pyoxidizer run --path black
    Traceback (most recent call last):
      File "black", line 46, in <module>
      File "blib2to3.pygram", line 15, in <module>
@@ -211,48 +255,97 @@ Uh oh - that's didn't work as expected.
 
 As the error message shows, the ``blib2to3.pygram`` module is trying to
 access ``__file__``, which is not defined. As explained by :ref:`no_file`,
-PyOxidizer doesn't set ``__file__`` for modules loaded from memory. This is
+``PyOxidizer`` doesn't set ``__file__`` for modules loaded from memory. This is
 perfectly legal as Python doesn't mandate that ``__file__`` be defined. So
 ``black`` (and every other Python file assuming the existence of ``__file__``)
-is buggy.
+is arguably buggy.
 
-Let's assume we can't easily change the offending source code.
+Let's assume we can't easily change the offending source code to work around
+the issue.
 
-To fix this problem, we change the packaging rule to install ``black``
-relative to the built application.
+To fix this problem, we change the configuration file to install ``black``
+relative to the built application. This requires changing our approach a
+little. Before, we ran ``dist.pip_install()`` from ``make_exe()`` to collect
+Python resources and added them to a ``PythonEmbeddedResources`` instance.
+This meant those resources were embedded in the self-contained
+``PythonExecutable`` instance returned from ``make_exe()``.
 
-Simply change the following rule:
+Our auto-generated ``pyoxidizer.bzl`` file also contains an ``install``
+*target* defined by the ``make_install()`` function. This target produces
+an ``FileManifest``, which represents a collection of relative files
+and their content. When this type is *resolved*, those files are manifested
+on the filesystem. To package ``black``'s Python resources next to our
+executable instead of embedded within it, we need to move the ``pip_install()``
+invocation from ``make_exe()`` to ``make_install()``.
 
-.. code-block:: python
-
-   install_black = PipInstallSimple("black==19.3b0")
-
-To:
-
-.. code-block:: python
-
-   install_black = PipInstallSimple("black=19.3b0", install_location="app-relative:lib")
-
-The added ``install_location="app-relative:lib"`` line says to set the
-installation location for resources found by that rule to a ``lib``
-directory next to the built application.
-
-In addition, we will also need to adjust the ``EmbeddedPythonConfig``
-section to have the following:
+Change your configuration file to look like the following:
 
 .. code-block:: python
 
-   embedded_python_config = EmbeddedPythonConfig(sys_paths=["$ORIGIN/lib"])
+   def make_dist():
+       return default_python_distribution()
 
-The added ``sys_paths=["$ORIGIN/lib"]`` line says to populate Python's
-``sys.path`` list with a single entry which resolves to a ``lib`` sub-directory
-in the executable's directory. This configuration change is necessary to allow
-the Python interpreter to import Python modules from the filesystem and to find
-the modules that our packaging rule installed into the ``lib`` directory.
+   def make_exe():
+       dist = resolve_target("python_dist")
 
-Now let's re-build the application::
+       embedded = dist.to_embedded_resources(
+           extension_module_filter='all',
+           include_sources=True,
+           include_resources=False,
+           include_test=False,
+       )
 
-   $ pyoxidizer build black
+       embedded_python_config = EmbeddedPythonConfig(
+           sys_paths=["$ORIGIN/lib"],
+       )
+       python_run_mode = python_run_mode_module("black")
+
+       return PythonExecutable(
+           name="black",
+           distribution=dist,
+           resources=embedded,
+           config=embedded_python_config,
+           run_mode=python_run_mode,
+       )
+
+
+   def make_install():
+       files = FileManifest()
+
+       files.add_python_resource(".", resolve_target("exe"))
+
+       files.add_python_resources("lib", dist.pip_install(["black==19.3b0"]))
+
+       return files
+
+   register_target("exe", make_exe)
+   register_target("python_dist", make_dist)
+   register_target("install", make_install)
+
+   resolve_targets()
+
+There are a few changes here.
+
+We added a new ``make_dist()`` function and ``python_dist`` *target* to
+represent obtaining the Python distribution. This isn't strictly required,
+but it helps avoid redundant work during execution.
+
+The ``EmbeddedPythonConfig`` construction adds a ``sys_paths=["$ORIGIN/lib"]``
+argument. This argument says *adjust ``sys.path`` at run-time to include the
+``lib`` directory next to the executable file*. It allows the Python
+interpreter to import Python files on the filesystem instead of just from
+memory.
+
+The ``make_install()`` function/target has also gained a call to
+``files.add_python_resources()``. This method call takes the Python resources
+collected from running ``pip install black==19.3b0`` and adds them to the
+``FileManifest`` instance under the ``lib`` directory. When the ``FileManifest``
+is resolved, those Python resources will be manifested as files on the
+filesystem (e.g. as ``.py`` and ``.pyc`` files).
+
+With the new configuration in place, let's re-build the application::
+
+   $ pyoxidizer build --path black install
    ...
    packaging application into /home/gps/src/black/build/apps/black/x86_64-unknown-linux-gnu/debug
    purging /home/gps/src/black/build/apps/black/x86_64-unknown-linux-gnu/debug
@@ -264,12 +357,11 @@ Now let's re-build the application::
    black packaged into /home/gps/src/black/build/apps/black/x86_64-unknown-linux-gnu/debug
 
 If you examine the output, you'll see that various Python modules files were
-written to the ``black/build/apps/black/x86_64-unknown-linux-gnu/debug/lib`` directory, just
-as our packaging rules requested!
+written to the output directory, just as our configuration file requested!
 
 Let's try to run the application::
 
-   $  black/build/apps/black/x86_64-unknown-linux-gnu/debug/black
+   $ pyoxidizer run --path black --target install
    No paths given. Nothing to do 😴
 
 Success!
@@ -284,38 +376,31 @@ space and can make your binary significantly larger than it could be.
 
 It is often desirable to *prune* your application of unused resources. For
 example, you may wish to only include Python modules that your application
-uses. This is possible with PyOxidizer.
+uses. This is possible with ``PyOxidizer``.
 
 Essentially, all strategies for managing the set of packaged resources
 boil down to crafting config file logic that chooses which resources
 are packaged.
 
-But maintaining explicit lists of resources can be tedious. There's a better
-way!
+But maintaining explicit lists of resources can be tedious. ``PyOxidizer``
+offers a more automated approach to solving this problem.
 
-The :ref:`config_embedded_python_config` config section defines a
+The :ref:`config_embedded_python_config` type defines a
 ``write_modules_directory_env`` setting, which when enabled will instruct
 the embedded Python interpreter to write the list of all loaded modules
 into a randomly named file in the directory identified by the environment
 variable defined by this setting. For example, if you set
-``write_modules_directory_env = "PYOXIDIZER_MODULES_DIR"`` and then
+``write_modules_directory_env="PYOXIDIZER_MODULES_DIR"`` and then
 run your binary with ``PYOXIDIZER_MODULES_DIR=~/tmp/dump-modules``,
 each invocation will write a ``~/tmp/dump-modules/modules-*`` file
 containing the list of Python modules loaded by the Python interpreter.
 
 One can therefore use ``write_modules_directory_env`` to produce files
-that can be referenced in a ``filter-include`` rule's ``files`` and
-``glob_files`` settings.
+that can be referenced in a different build *target* to filter resources
+through a set of *only include* names.
 
-While PyOxidizer doesn't yet automate the process, one could use a two
-phase build to *slim* your binary.
-
-In phase 1, a binary is built with all resources and
-``write_modules_directory_env`` enabled. The binary is then executed and
-``modules-*`` files are written.
-
-In phase 2, the ``filter-include`` rule is enabled and only the modules
-used by the instrumented binary will be packaged.
+TODO this functionality was temporarily dropped as part of the Starlark
+port.
 
 Adding Extension Modules At Run-Time
 ====================================
@@ -323,7 +408,7 @@ Adding Extension Modules At Run-Time
 Normally, Python extension modules are compiled into the binary as part
 of the embedded Python interpreter.
 
-PyOxidizer also supports providing additional extension modules at run-time.
+``PyOxidizer`` also supports providing additional extension modules at run-time.
 This can be useful for larger Rust applications providing extension modules
 that are implemented in Rust and aren't built through normal Python
 build systems (like ``setup.py``).
@@ -342,34 +427,35 @@ Masquerading As Other Packaging Tools
 =====================================
 
 Tools to package and distribute Python applications existed several
-years before PyOxidizer. Many Python packages have learned to perform
+years before ``PyOxidizer``. Many Python packages have learned to perform
 special behavior when the _fingerprint* of these tools is detected at
 run-time.
 
-First, PyOxidizer has its own fingerprint: ``sys.oxidized = True``. The
+First, ``PyOxidizer`` has its own fingerprint: ``sys.oxidized = True``. The
 presence of this attribute can indicate an application running with
-PyOxidizer.
+``PyOxidizer``. Other applications are discouraged from defining this
+attribute.
 
-Since PyOxidizer's run-time behavior is similar to other packaging
-tools, PyOxidizer supports falsely identifying itself as these other
+Since ``PyOxidizer``'s run-time behavior is similar to other packaging
+tools, ``PyOxidizer`` supports falsely identifying itself as these other
 tools by emulating their fingerprints.
 
 The ``EmbbedPythonConfig`` configuration section defines the
 boolean flag ``sys_frozen`` to control whether ``sys.frozen = True``
-is set. This can allow PyOxidizer to advertise itself as a *frozen*
+is set. This can allow ``PyOxidizer`` to advertise itself as a *frozen*
 application.
 
 In addition, the ``sys_meipass`` boolean flag controls whether a
 ``sys._MEIPASS = <exe directory>`` attribute is set. This allows
-PyOxidizer to masquerade as having been built with PyInstaller.
+``PyOxidizer`` to masquerade as having been built with PyInstaller.
 
 .. warning::
 
    Masquerading as other packaging tools is effectively lying and can
    be dangerous, as code relying on these attributes won't know if
-   it is interacting with PyOxidizer or some other tool. It is recommended
-   to only set these attributes to unblock enabling packages to
-   work with PyOxidizer until other packages learn to check for
-   ``sys.oxidized = True``. Setting ``sys._MEIPASS`` is definitely the
-   more risky option, as a case can be made that PyOxidizer should set
-   ``sys.frozen = True`` by default.
+   it is interacting with ``PyOxidizer`` or some other tool. It is
+   recommended    to only set these attributes to unblock enabling
+   packages to work with ``PyOxidizer`` until other packages learn to
+   check for ``sys.oxidized = True``. Setting ``sys._MEIPASS`` is
+   definitely the more risky option, as a case can be made that
+   PyOxidizer should set ``sys.frozen = True`` by default.

@@ -142,16 +142,10 @@ and built. It controls everything from what Python distribution to use,
 which Python packages to install, how the embedded Python interpreter is
 configured, and what code to run in that interpreter.
 
-Open ``pyoxidizer.bzl`` in your favorite editor and find the ``make_exe()``
-function. This function returns a
-:ref:`PythonExecutable <config_python_executable>` instance which defines
-a standalone executable containing Python. One of the arguments used to
-construct this type is ``run_mode``, which controls what the embedded Python
-interpreter does at run time.
-
-Find the line defining the ``python_run_mode`` variable. By default, the
-value should be ``python_run_mode_repl()``, which configures the embedded
-interpreter to run a Python REPL. Let's replace that line with the following:
+Open ``pyoxidizer.bzl`` in your favorite editor and find the line defining
+the ``python_run_mode`` variable. By default, the value should be
+``python_run_mode_repl()``, which configures the embedded interpreter to run
+a Python REPL. Let's replace that line with the following:
 
 .. code-block:: python
 
@@ -177,36 +171,14 @@ Let's do something a little bit more complicated, like package an existing
 Python application!
 
 Find the ``embedded = dist.to_embedded_resources(`` line in the
-``pyoxidizer.bzl`` file. The ``embedded`` variable is an instance of
-:ref:`PythonEmbeddedResources <config_python_embedded_resources>`
-which defines Python resources like source and bytecode modules that
-can be embedded in a binary. This type exposes an
-:ref:`add_python_resources() <config_python_embedded_resources_add_python_resources>`
-method that can add an iterable of objects representing Python resources
-to the collection of embedded resources.
-
-The ``dist`` variable holds an instance of
-:ref:`PythonDistribution <config_python_distribution>`. This type
-represents a Python distribution, which is a fancy way of saying
-*an implementation of Python*. In addition to defining the files
-constituting that distribution, a ``PythonDistribution`` exposes
-methods for performing Python packaging. One of those methods is
-:ref:`pip_install() <config_python_distribution_pip_install>`,
-which invokes ``pip install`` using that Python distribution.
-
-Let's add a new line to ``make_exe()``:
+``pyoxidizer.bzl`` file. Let's add a new line to ``make_exe()`` just
+below where ``embedded`` is assigned:
 
 .. code-block:: python
 
    embedded.add_python_resources(dist.pip_install(["pyflakes==2.1.1"]))
 
-The inner call to ``dist.pip_install()`` will effectively run
-``pip install pyflakes==2.1.1`` and collect a set of installed
-Python resources (like module sources and bytecode data) and return
-that as an iterable data structure. The ``embedded.add_python_resources()``
-call will add those resources to the embedded Python interpreter.
-
-In addition, replace our ``python_run_mode`` variable to execute
+In addition, replace the ``python_run_mode`` variable to execute
 ``pyflakes``:
 
 .. code-block:: python
