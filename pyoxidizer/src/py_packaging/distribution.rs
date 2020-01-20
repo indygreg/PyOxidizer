@@ -435,14 +435,13 @@ pub fn invoke_python(python_paths: &PythonPaths, logger: &slog::Logger, args: &[
         .envs(&extra_envs)
         .stdout(std::process::Stdio::piped())
         .spawn()
-        .expect(
-            format!(
+        .unwrap_or_else(|_| {
+            panic!(
                 "failed to run {} {}",
                 python_paths.python_exe.display(),
                 args.join(" ")
             )
-            .as_str(),
-        );
+        });
     {
         let stdout = cmd.stdout.as_mut().unwrap();
         let reader = BufReader::new(stdout);
