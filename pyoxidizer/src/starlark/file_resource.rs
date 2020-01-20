@@ -115,6 +115,7 @@ impl FileManifest {
         println!("support for adding extension modules not yet implemented");
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn add_python_executable(
         &mut self,
         logger: &slog::Logger,
