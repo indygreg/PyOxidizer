@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use slog::{info, warn};
 use std::collections::{BTreeMap, HashMap};
+use std::convert::TryFrom;
 use std::fs;
 use std::fs::{create_dir_all, File};
 use std::hash::BuildHasher;
@@ -348,14 +349,16 @@ pub enum ExtensionModuleFilter {
     NoGPL,
 }
 
-impl ExtensionModuleFilter {
-    pub fn from_str(s: &str) -> Result<ExtensionModuleFilter> {
-        match s {
+impl TryFrom<&str> for ExtensionModuleFilter {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
             "minimal" => Ok(ExtensionModuleFilter::Minimal),
             "all" => Ok(ExtensionModuleFilter::All),
             "no-libraries" => Ok(ExtensionModuleFilter::NoLibraries),
             "no-gpl" => Ok(ExtensionModuleFilter::NoGPL),
-            t => Err(anyhow!("{} is not a valid extension module filter", t)),
+            t => Err(format!("{} is not a valid extension module filter", t)),
         }
     }
 }

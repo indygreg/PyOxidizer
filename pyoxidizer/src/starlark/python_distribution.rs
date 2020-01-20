@@ -226,9 +226,9 @@ starlark_module! { python_distribution_module =>
         let filter = required_str_arg("filter", &filter)?;
         optional_dict_arg("preferred_variants", "string", "string", &preferred_variants)?;
 
-        let filter = ExtensionModuleFilter::from_str(&filter).or_else(|e| Err(RuntimeError {
+        let filter = ExtensionModuleFilter::try_from(filter.as_str()).or_else(|e| Err(RuntimeError {
             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-            message: e.to_string(),
+            message: e,
             label: "invalid policy value".to_string(),
         }.into()))?;
 
@@ -557,9 +557,9 @@ starlark_module! { python_distribution_module =>
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
-        let extension_module_filter = ExtensionModuleFilter::from_str(&extension_module_filter).or_else(|e| Err(RuntimeError {
+        let extension_module_filter = ExtensionModuleFilter::try_from(extension_module_filter.as_str()).or_else(|e| Err(RuntimeError {
             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-            message: e.to_string(),
+            message: e,
             label: "invalid policy value".to_string(),
         }.into()))?;
 
