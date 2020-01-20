@@ -70,6 +70,7 @@ pub struct EnvironmentContext {
 }
 
 impl EnvironmentContext {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         logger: &slog::Logger,
         config_path: &Path,
