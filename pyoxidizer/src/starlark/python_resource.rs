@@ -371,9 +371,9 @@ impl<'a> From<&'a PythonResource> for Value {
                 panic!("not yet implemented");
             }
 
-            PythonResource::BuiltExtensionModule(_em) => {
-                panic!("not yet implemented");
-            }
+            PythonResource::BuiltExtensionModule(em) => Value::new(PythonExtensionModule {
+                em: PythonExtensionModuleFlavor::Built(em.clone()),
+            }),
         }
     }
 }
