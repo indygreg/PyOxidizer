@@ -52,7 +52,7 @@ pub fn pip_install(
         format!("{}", target_dir.display()),
     ]);
 
-    pip_args.extend(install_args.iter().map(|x| x.clone()));
+    pip_args.extend(install_args.iter().cloned());
 
     // TODO send stderr to stdout
     let mut cmd = std::process::Command::new(&dist.python_exe)
