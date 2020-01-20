@@ -23,7 +23,7 @@ pub fn produce_tarball(
     std::fs::create_dir_all(
         filename
             .parent()
-            .ok_or(anyhow!("could not find parent directory"))?,
+            .ok_or_else(|| anyhow!("could not find parent directory"))?,
     )?;
 
     let fh = std::fs::File::create(&filename)?;
