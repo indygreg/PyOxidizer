@@ -224,7 +224,7 @@ pub fn analyze_elf_libraries(libs: &[&str], undefined_symbols: &[UndefinedSymbol
         let mut symbols: Vec<&UndefinedSymbol> = Vec::new();
 
         for symbol in undefined_symbols {
-            if symbol.filename == Some(lib.to_string()) {
+            if symbol.filename == Some((*lib).to_string()) {
                 symbols.push(symbol);
             }
         }
