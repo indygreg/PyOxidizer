@@ -231,7 +231,7 @@ fn run_light(
     ];
 
     for p in wixobjs {
-        args.push(p.to_string());
+        args.push((*p).to_string());
     }
 
     warn!(logger, "running light to produce {}", output_path.display());
