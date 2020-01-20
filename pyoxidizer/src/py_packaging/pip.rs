@@ -61,7 +61,10 @@ pub fn pip_install(
         .stdout(std::process::Stdio::piped())
         .spawn()?;
     {
-        let stdout = cmd.stdout.as_mut().ok_or(anyhow!("unable to get stdout"))?;
+        let stdout = cmd
+            .stdout
+            .as_mut()
+            .ok_or_else(|| anyhow!("unable to get stdout"))?;
         let reader = BufReader::new(stdout);
 
         for line in reader.lines() {
