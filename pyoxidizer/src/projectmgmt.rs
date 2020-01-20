@@ -157,13 +157,13 @@ pub fn list_targets(logger: &slog::Logger, project_path: &Path) -> Result<()> {
         Some(Vec::new()),
     )?;
 
-    if res.context.default_target().is_none() {
+    if res.context.default_target.is_none() {
         println!("(no targets defined)");
         return Ok(());
     }
 
     for target in res.context.targets.keys() {
-        let prefix = if Some(target.clone()) == res.context.default_target() {
+        let prefix = if Some(target.clone()) == res.context.default_target {
             "*"
         } else {
             ""
@@ -420,8 +420,10 @@ pub fn run(
         target.to_string()
     } else {
         context
-            .default_target()
+            .default_target
+            .as_ref()
             .ok_or_else(|| anyhow!("no default target available"))?
+            .to_string()
     };
 
     warn!(logger, "running target {}", run_target);

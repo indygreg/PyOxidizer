@@ -93,13 +93,33 @@ Global Symbols
 PyOxidizer defines various global symbols to define execution
 behavior. These are explained in the following sections.
 
-register_target(name, fn)
--------------------------
+register_target(name, fn, depends=[], default=False)
+----------------------------------------------------
 
 Registers a named target that can be resolved by the configuration file.
 
-A target consists of a string name and a callable function, which may return
-a primitive representing the evaluation result.
+A target consists of a string name, callable function, and an optional list
+of targets it depends on.
+
+The callable may return one of the types defined by this Starlark dialect
+to facilitate additional behavior, such as how to build and run it.
+
+``depends`` is an optional list of target strings this target depends on.
+If specified, each dependency will be evaluated in order and its returned
+value (possibly cached from prior evaluation) will be passed as a
+positional argument to this target's callable.
+
+``default`` indicates whether this should be the default target
+to evaluate. The last registered target setting this to ``True``
+will be the default. If no target sets this to ``True``, the first
+registered target is the default.
+
+.. note::
+
+   It would be easier for target functions to call ``resolve_target()``
+   within their implementation. However, Starlark doesn't allow recursive
+   function calls. So invocation of target callables must be handled
+   specially to avoid this recursion.
 
 resolve_target(target)
 ----------------------

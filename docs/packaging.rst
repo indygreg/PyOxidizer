@@ -282,12 +282,10 @@ Change your configuration file to look like the following:
 
 .. code-block:: python
 
-   def make_dist():
+   def make_python_dist():
        return default_python_distribution()
 
-   def make_exe():
-       dist = resolve_target("python_dist")
-
+   def make_exe(dist):
        embedded = dist.to_embedded_resources(
            extension_module_filter='all',
            include_sources=True,
@@ -309,18 +307,18 @@ Change your configuration file to look like the following:
        )
 
 
-   def make_install():
+   def make_install(dist, exe):
        files = FileManifest()
 
-       files.add_python_resource(".", resolve_target("exe"))
+       files.add_python_resource(".", exe)
 
        files.add_python_resources("lib", dist.pip_install(["black==19.3b0"]))
 
        return files
 
-   register_target("exe", make_exe)
-   register_target("python_dist", make_dist)
-   register_target("install", make_install)
+   register_target("python_dist", make_python_dist)
+   register_target("exe", make_exe, depends=["python_dist"])
+   register_target("install", make_install, depends=["python_dist", "exe"], default=True)
 
    resolve_targets()
 

@@ -2,15 +2,16 @@
 # performed. See the pyoxidizer crate's documentation for extensive
 # documentation on this file format.
 
+# Obtain the default PythonDistribution for our build target. We link
+# this distribution into our produced executable and extract the Python
+# standard library from it.
+def make_dist():
+    return default_python_distribution()
+
 # Configuration files consist of functions which define build "targets."
 # This function creates a Python executable and installs it in a destination
 # directory.
-def make_exe():
-    # Obtain the default PythonDistribution for our build target. We link
-    # this distribution into our produced executable and extract the Python
-    # standard library from it.
-    dist = default_python_distribution()
-
+def make_exe(dist):
     # Create a PythonEmbeddedResources instance from our Python distribution.
     # This type represents the Python distribution and embedded Python resources
     # (source modules, bytecode modules, and non-module resource files) to embed
@@ -135,18 +136,19 @@ def make_exe():
         run_mode=python_run_mode,
     )
 
-def make_install():
+def make_install(exe):
     # Create an object that represents our installed application file layout.
     files = FileManifest()
 
     # Add the generated executable to our install layout in the root directory.
-    files.add_python_resource(".", resolve_target('exe'))
+    files.add_python_resource(".", exe)
 
     return files
 
 # Tell PyOxidizer about the build targets defined above.
-register_target("exe", make_exe)
-register_target("install", make_install)
+register_target("dist", make_dist)
+register_target("exe", make_exe, depends=["dist"], default=True)
+register_target("install", make_install, depends=["exe"])
 
 # Resolve whatever targets the invoker of this configuration file is requesting
 # be resolved.

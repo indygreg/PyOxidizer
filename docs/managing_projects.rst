@@ -121,9 +121,9 @@ The ``pyoxidizer build`` command is probably the most important and used
 ``pyoxidizer`` command. This command evaluates a ``pyoxidizer.bzl``
 configuration file by resolving *targets* in it.
 
-By default, the first defined *target* in the configuration file is
-resolved. However, callers can specify a list of explicit *targets*
-to evaluate. e.g.::
+By default, the default *target* in the configuration file is resolved.
+However, callers can specify a list of explicit *targets* to resolve.
+e.g.::
 
    # Resolve the default target.
    $ pyoxidizer build
