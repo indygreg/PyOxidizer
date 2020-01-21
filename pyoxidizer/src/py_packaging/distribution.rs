@@ -363,6 +363,7 @@ impl TryFrom<&str> for ExtensionModuleFilter {
     }
 }
 
+#[derive(Debug)]
 pub struct PythonPaths {
     pub prefix: PathBuf,
     pub bin_dir: PathBuf,
