@@ -85,16 +85,16 @@ favorite editor.
 
 Find the ``make_exe()`` function. This function returns a
 :ref:`PythonExecutable <config_python_executable>` instance which defines
-a standalone executable containing Python. This function declares a
+a standalone executable containing Python. This function is a registered
 *target*, which is a named entity that can be individually built or run.
 By returning a ``PythonExecutable`` instance, this function/target is saying
-*build an executable*.
+*build an executable containing Python*.
 
-One of the arguments used to construct the ``PythonExecutable`` is an
-instance of :ref:`PythonEmbeddedResources <config_python_embedded_resources>`,
-which defines Python resources like source and bytecode modules that can be
-embedded in that executable binary. This type exposes an
-:ref:`add_python_resources() <config_python_embedded_resources_add_python_resources>`
+The ``PythonExecutable`` type holds all state needed to package and run
+a Python interpreter. This includes low-level interpreter configuration
+settings to which Python resources (like source and bytecode modules)
+are embedded in that executable binary. This type exposes an
+:ref:`add_python_resources() <config_python_executable_add_python_resources>`
 method which adds an iterable of objects representing Python resources to the
 set of embedded resources.
 
@@ -108,18 +108,18 @@ methods for performing Python packaging. One of those methods is
 which invokes ``pip install`` using that Python distribution.
 
 To add a new Python package to our executable, we call
-``dist.pip_install()`` then add the results to our ``PythonEmbeddedResources``
+``dist.pip_install()`` then add the results to our ``PythonExecutable``
 instance. This is done like so:
 
 .. code-block:: python
 
-   embedded.add_python_resources(dist.pip_install(["pyflakes==2.1.1"]))
+   exe.add_python_resources(dist.pip_install(["pyflakes==2.1.1"]))
 
 The inner call to ``dist.pip_install()`` will effectively run
 ``pip install pyflakes==2.1.1`` and collect a set of installed
 Python resources (like module sources and bytecode data) and return
-that as an iterable data structure. The ``embedded.add_python_resources()``
-call will add those resources to the embedded Python interpreter.
+that as an iterable data structure. The ``exe.add_python_resources()``
+call will then embed these resources in the built executable binary.
 
 Next, we tell PyOxidizer to run ``pyflakes`` when the interpreter is executed:
 
@@ -139,26 +139,24 @@ comments removed for brevity):
    def make_exe():
        dist = default_python_distribution()
 
-       embedded = dist.to_embedded_resources(
-           extension_module_filter='all',
+       embedded_python_config = EmbeddedPythonConfig()
+
+       python_run_mode = python_run_mode_eval("from pyflakes.api import main; main()")
+
+       exe = PythonExecutable(
+           name="pyflakes",
+           distribution=dist,
+           config=embedded_python_config,
+           run_mode=python_run_mode,
+           extension_module_filter="all",
            include_sources=True,
            include_resources=False,
            include_test=False,
        )
 
-       embedded.add_python_resources(dist.pip_intsall(["pyflakes==2.1.1"]))
+       exe.add_python_resources(dist.pip_intsall(["pyflakes==2.1.1"]))
 
-       embedded_python_config = EmbeddedPythonConfig()
-
-       python_run_mode = python_run_mode_eval("from pyflakes.api import main; main()")
-
-       return PythonExecutable(
-           name="pyflakes",
-           distribution=dist,
-           resources=embedded,
-           config=embedded_python_config,
-           run_mode=python_run_mode,
-       )
+       return exe
 
 With the configuration changes made, we can build and run a ``pyflakes``
 native executable::
@@ -213,25 +211,20 @@ Then edit the ``pyoxidizer.bzl`` file to have the following:
 
    def make_exe():
        dist = default_python_distribution()
-
-       embedded = dist.to_embedded_resources(
-           extension_module_filter='all',
-           include_sources=True,
-           include_resources=False,
-           include_test=False,
-       )
-
-       embedded.add_python_resources(dist.pip_intsall(["black==19.3b0"]))
        embedded_python_config = EmbeddedPythonConfig()
        python_run_mode = python_run_mode_module("black")
 
-       return PythonExecutable(
+       exe = PythonExecutable(
            name="black",
            distribution=dist,
            resources=embedded,
            config=embedded_python_config,
            run_mode=python_run_mode,
        )
+
+       exe.add_python_resources(dist.pip_intsall(["black==19.3b0"]))
+
+       return exe
 
 Then let's attempt to build the application::
 

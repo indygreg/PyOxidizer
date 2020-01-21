@@ -463,12 +463,11 @@ mod tests {
         let mut env = starlark_env();
 
         starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
-        starlark_eval_in_env(&mut env, "resources = PythonEmbeddedResources()").unwrap();
         starlark_eval_in_env(&mut env, "run_mode = python_run_mode_noop()").unwrap();
         starlark_eval_in_env(&mut env, "config = EmbeddedPythonConfig()").unwrap();
         starlark_eval_in_env(
             &mut env,
-            "exe = PythonExecutable('testapp', dist, resources, config, run_mode)",
+            "exe = PythonExecutable('testapp', dist, config, run_mode)",
         )
         .unwrap();
 
@@ -486,12 +485,11 @@ mod tests {
         let mut env = starlark_env();
 
         starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
-        starlark_eval_in_env(&mut env, "resources = PythonEmbeddedResources()").unwrap();
         starlark_eval_in_env(&mut env, "run_mode = python_run_mode_noop()").unwrap();
         starlark_eval_in_env(&mut env, "config = EmbeddedPythonConfig()").unwrap();
         starlark_eval_in_env(
             &mut env,
-            "exe = PythonExecutable('testapp', dist, resources, config, run_mode)",
+            "exe = PythonExecutable('testapp', dist, config, run_mode)",
         )
         .unwrap();
 

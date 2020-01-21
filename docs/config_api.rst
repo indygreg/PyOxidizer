@@ -24,7 +24,6 @@ Starlark environment:
 * :ref:`config_file_manifest`
 * :ref:`config_python_bytecode_module`
 * :ref:`config_python_distribution`
-* :ref:`config_python_embedded_resources`
 * :ref:`config_python_executable`
 * :ref:`config_python_extension_module`
 * :ref:`config_python_resources_data`
@@ -56,10 +55,6 @@ The following custom data types are defined in the Starlark environment:
    Represents an implementation of Python.
 
    Used for embedding into binaries and running Python code.
-
-``PythonEmbeddedResources``
-   Represents Python resources (modules, bytecode, etc) to embed in a
-   binary.
 
 ``PythonExecutable``
    Represents an executable file containing a Python interpreter.
@@ -349,7 +344,7 @@ part of the operation. The types of these objects can be ``PythonSourceModule``,
 ``PythonBytecodeModule``, ``PythonResourceData``, etc.
 
 The returned resources are typically added to a ``FileManifest`` or
-``PythonEmbeddedResources`` to make them available to a packaged
+``PythonExecutable`` to make them available to a packaged
 application.
 
 ``PythonDistribution.read_package_root(path, packages)``
@@ -384,8 +379,7 @@ The types of these objects can be ``PythonSourceModule``, ``PythonBytecodeModule
 ``PythonResourceData``, etc.
 
 The returned resources are typically added to a ``FileManifest`` or
-``PythonEmbeddedResources`` to make them available to a packaged
-application.
+``PythonExecutable`` to make them available to a packaged application.
 
 ``PythonDistribution.read_virtualenv(path)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -413,8 +407,7 @@ The types of these objects can be ``PythonSourceModule``, ``PythonBytecodeModule
 ``PythonResourceData``, etc.
 
 The returned resources are typically added to a ``FileManifest`` or
-``PythonEmbeddedResources`` to make them available to a packaged
-application.
+``PythonExecutable`` to make them available to a packaged application.
 
 ``PythonDistribution.setup_py_install(...)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -442,46 +435,7 @@ as part of the operation. The types of these objects can be
 etc.
 
 The returned resources are typically added to a ``FileManifest`` or
-``PythonEmbeddedResources`` to make them available to a packaged application.
-
-``PythonDistribution.to_embedded_resources(...)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Construct a ``PythonEmbeddedResources`` from a ``PythonDistribution`` instance,
-with control over common settings.
-
-The arguments are as follows:
-
-``extension_module_filter`` (``str``)
-   The filter to apply to determine which extension modules to add.
-
-   See :ref:`config_python_distribution_extension_modules` for what
-   values are accepted and their behavior.
-
-   Default is ``all``.
-
-``preferred_extension_module_variants`` (``dict`` of ``string`` to ``string``)
-   Preferred extension module variants to use. See
-   See :ref:`config_python_distribution_extension_modules` for behavior.
-
-   Default is ``None``, which will use the first variant.
-
-``include_sources`` (``bool``)
-   Boolean to control whether sources of Python modules are added in addition
-   to bytecode.
-
-   Default is ``True``.
-
-``include_resources`` (``bool``)
-   Boolean to control whether non-module resource data from the distribution is
-   added.
-
-   Default is ``False``.
-
-``include_test`` (``bool``)
-   Boolean to control whether test-specific objects are included.
-
-   Default is ``False``.
+``PythonExecutable`` to make them available to a packaged application.
 
 .. _config_python_resources:
 
@@ -899,137 +853,6 @@ Example:
 
 This mode will do nothing. It is provided for completeness sake.
 
-Embedded Python Resources
-=========================
-
-Binaries embedding Python have access to :ref:`config_python_resources`
-embedded within the binary. The collection of embedded resources is
-defined by the :ref:`config_python_embedded_resources` type.
-
-.. _config_python_embedded_resources:
-
-``PythonEmbeddedResources()``
------------------------------
-
-This type represents Python resources to embed in a Python binary.
-
-This type is effectively a meta type representing collections of
-different resource classes. Those resource classes include:
-
-* Python modules as defined by Python source code.
-* Python modules as defined by Python bytecode.
-* Compiled Python extension modules.
-* Resource files loadable through Python's ``importlib.resources``
-  API.
-
-``PythonEmbeddedResources.add_module_source(module)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method registers a Python source module with a ``PythonEmbeddedResources``
-instance. The argument must be a ``PythonSourceModule`` instance.
-
-If called multiple times for the same module, the last write wins.
-
-``PythonEmbeddedResources.add_module_bytecode(module, optimize_level=0)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method registers a Python module bytecode with a
-``PythonEmbeddedResources`` instance. The first argument must be a
-``PythonSourceModule`` instance and the 2nd argument the value ``0``, ``1``,
-or ``2``.
-
-Only one level of bytecode can be registered per named module. If called
-multiple times for the same module, the last write wins.
-
-``PythonEmbeddedResources.add_resource_data(resource)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method adds a ``PythonResourceData`` instance to the
-``PythonEmbeddedResources`` instance, making that resource available
-via in-memory access.
-
-If multiple resources sharing the same ``(package, name)`` pair are added,
-the last added one is used.
-
-``PythonEmbeddedResources.add_extension_module(module)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method registers a ``PythonExtensionModule`` instance with a
-``PythonEmbeddedResources`` instance. The extension module will be statically
-linked into the binary produced from the ``PythonEmbeddedResources``
-instance.
-
-If multiple extension modules with the same name are added, the last
-added one is used.
-
-.. _config_python_embedded_resources_add_python_resource:
-
-``PythonEmbeddedResources.add_python_resource(...)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method registers a Python resource of various types. It accepts a
-``resource`` argument which can be a ``PythonSourceModule``,
-``PythonBytecodeModule``, ``PythonResourceData``, or ``PythonExtensionModule``
-and registers that resource with this instance. This method is a glorified
-proxy to the appropriate ``add_*`` method.
-
-The following arguments are accepted:
-
-``resource``
-   The resource to add to the embedded Python environment.
-
-``add_source_module`` (bool)
-   When the resource is a ``PythonSourceModule``, this flag determines
-   whether to add the source for that resource.
-
-   Default is ``True``.
-
-``add_bytecode_module`` (bool)
-   When the resource is a ``PythonSourceModule``, this flag determines
-   whether to add the bytecode for that module source.
-
-   Default is ``True``.
-
-``optimize_level`` (int)
-   Bytecode optimization level when compiling bytecode.
-
-.. _config_python_embedded_resources_add_python_resources:
-
-``PythonEmbeddedResources.add_python_resources(...)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method registers an iterable of Python resources of various types.
-This method is identical to ``PythonEmbeddedResources.add_python_resource()``
-except the first argument is an iterable of resources. All other arguments
-are identical.
-
-``PythonEmbeddedResources.filter_from_files(files=[], glob_patterns=[])``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method filters all embedded resources (source modules, bytecode modules,
-and resource names) currently present on the instance through a set of
-resource names resolved from files.
-
-This method accepts the following arguments:
-
-``files`` (array of string)
-   List of filesystem paths to files containing resource names. The file
-   must be valid UTF-8 and consist of a ``\n`` delimited list of resource
-   names. Empty lines and lines beginning with ``#`` are ignored.
-
-``glob_files`` (array of string)
-   List of glob matching patterns of filter files to read. ``*`` denotes
-   all files in a directory. ``**`` denotes recursive directories. This
-   uses the Rust ``glob`` crate under the hood and the documentation for that
-   crate contains more pattern matching info.
-
-   The files read by this argument must be the same format as documented
-   by the ``files`` argument.
-
-All defined files are first read and the resource names encountered are
-unioned into a set. This set is then used to filter entities currently
-registered with the instance.
-
 .. _config_python_binaries:
 
 Python Binaries
@@ -1060,14 +883,160 @@ function. The accepted arguments are:
    interpreter from the distribution will be compiled into the produced
    executable.
 
-``resources`` (``PythonEmbeddedResources``)
-   Python resources to make available to the embedded interpreter.
-
 ``config`` (``PythonEmbeddedConfig``)
    The default configuration of the embedded Python interpreter.
 
 ``run_mode`` (``PythonRunMode``)
    The default run-time behavior of the embedded Python interpreter.
+
+``extension_module_filter`` (``str``)
+   The filter to apply to determine which extension modules to add.
+
+   See :ref:`config_python_distribution_extension_modules` for what
+   values are accepted and their behavior.
+
+   Default is ``all``.
+
+``preferred_extension_module_variants`` (``dict`` of ``string`` to ``string``)
+   Preferred extension module variants to use. See
+   See :ref:`config_python_distribution_extension_modules` for behavior.
+
+   Default is ``None``, which will use the first variant.
+
+``include_sources`` (``bool``)
+   Boolean to control whether sources of Python modules are added in addition
+   to bytecode.
+
+   Default is ``True``.
+
+``include_resources`` (``bool``)
+   Boolean to control whether non-module resource data from the distribution is
+   added.
+
+   Default is ``False``.
+
+``include_test`` (``bool``)
+   Boolean to control whether test-specific objects are included.
+
+   Default is ``False``.
+
+.. _config_python_executable_add_module_source:
+
+``PythonExecutable.add_module_source(module)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method registers a Python source module with a ``PythonExecutable``
+instance. The argument must be a ``PythonSourceModule`` instance.
+
+If called multiple times for the same module, the last write wins.
+
+.. _config_python_executable_add_module_bytecode:
+
+``PythonExecutable.add_module_bytecode(module, optimize_level=0)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method registers a Python module bytecode with a
+``PythonExecutable`` instance. The first argument must be a
+``PythonSourceModule`` instance and the 2nd argument the value ``0``, ``1``,
+or ``2``.
+
+Only one level of bytecode can be registered per named module. If called
+multiple times for the same module, the last write wins.
+
+.. _config_python_executable_add_resource_data:
+
+``PythonExecutable.add_resource_data(resource)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method adds a ``PythonResourceData`` instance to the
+``PythonExecutable`` instance, making that resource available
+via in-memory access.
+
+If multiple resources sharing the same ``(package, name)`` pair are added,
+the last added one is used.
+
+.. _config_python_executable_add_extension_module:
+
+``PythonExecutable.add_extension_module(module)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method registers a ``PythonExtensionModule`` instance with a
+``PythonExecutable`` instance. The extension module will be statically
+linked into the binary produced from the ``PythonExecutable``
+instance.
+
+If multiple extension modules with the same name are added, the last
+added one is used.
+
+.. _config_python_executable_add_python_resource:
+
+``PythonExecutable.add_python_resource(...)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method registers a Python resource of various types. It accepts a
+``resource`` argument which can be a ``PythonSourceModule``,
+``PythonBytecodeModule``, ``PythonResourceData``, or ``PythonExtensionModule``
+and registers that resource with this instance. This method is a glorified
+proxy to the appropriate ``add_*`` method.
+
+The following arguments are accepted:
+
+``resource``
+   The resource to add to the embedded Python environment.
+
+``add_source_module`` (bool)
+   When the resource is a ``PythonSourceModule``, this flag determines
+   whether to add the source for that resource.
+
+   Default is ``True``.
+
+``add_bytecode_module`` (bool)
+   When the resource is a ``PythonSourceModule``, this flag determines
+   whether to add the bytecode for that module source.
+
+   Default is ``True``.
+
+``optimize_level`` (int)
+   Bytecode optimization level when compiling bytecode.
+
+.. _config_python_executable_add_python_resources:
+
+``PythonExecutable.add_python_resources(...)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method registers an iterable of Python resources of various types.
+This method is identical to ``PythonExecutable.add_python_resource()``
+except the first argument is an iterable of resources. All other arguments
+are identical.
+
+.. _config_python_executable_filter_from_files:
+
+``PythonExecutable.filter_from_files(files=[], glob_patterns=[])``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method filters all embedded resources (source modules, bytecode modules,
+and resource names) currently present on the instance through a set of
+resource names resolved from files.
+
+This method accepts the following arguments:
+
+``files`` (array of string)
+   List of filesystem paths to files containing resource names. The file
+   must be valid UTF-8 and consist of a ``\n`` delimited list of resource
+   names. Empty lines and lines beginning with ``#`` are ignored.
+
+``glob_files`` (array of string)
+   List of glob matching patterns of filter files to read. ``*`` denotes
+   all files in a directory. ``**`` denotes recursive directories. This
+   uses the Rust ``glob`` crate under the hood and the documentation for that
+   crate contains more pattern matching info.
+
+   The files read by this argument must be the same format as documented
+   by the ``files`` argument.
+
+All defined files are first read and the resource names encountered are
+unioned into a set. This set is then used to filter entities currently
+registered with the instance.
 
 Interacting With the Filesystem
 ===============================

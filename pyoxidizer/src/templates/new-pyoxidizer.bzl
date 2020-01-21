@@ -12,69 +12,6 @@ def make_dist():
 # This function creates a Python executable and installs it in a destination
 # directory.
 def make_exe(dist):
-    # Create a PythonEmbeddedResources instance from our Python distribution.
-    # This type represents the Python distribution and embedded Python resources
-    # (source modules, bytecode modules, and non-module resource files) to embed
-    # in a binary.
-    embedded = dist.to_embedded_resources(
-        # Embed all extension modules, making this a fully-featured Python.
-        extension_module_filter='all',
-
-        # Only package the minimal set of extension modules needed to initialize
-        # a Python interpreter. Many common packages in Python's standard
-        # library won't work with this setting.
-        #extension_module_filter='minimal',
-
-        # Only package extension modules that don't require linking against
-        # non-Python libraries. e.g. will exclude support for OpenSSL, SQLite3,
-        # other features that require external libraries.
-        #extension_module_filter='no-libraries',
-
-        # Only package extension modules that don't link against GPL licensed
-        # libraries.
-        #extension_module_filter='no-gpl',
-
-        # Include Python module sources. This isn't strictly required and it does
-        # make binary sizes larger. But having the sources can be useful for
-        # activities such as debugging.
-        include_sources=True,
-
-        # Whether to include non-module resource data/files.
-        include_resources=False,
-
-        # Do not include functionality for testing Python itself.
-        include_test=False,
-    )
-
-    # Invoke `pip install` with our Python distribution to install a single package.
-    # `pip_install()` returns objects representing installed files.
-    # `add_python_resources()` adds these objects to our embedded context.
-    #embedded.add_python_resources(dist.pip_install(["appdirs"]))
-
-    # Invoke `pip install` using a requirements file and add the collected files
-    # to our embedded context.
-    #embedded.add_python_resources(dist.pip_install(["-r", "requirements.txt"]))
-
-    {{#each pip_install_simple}}
-    embedded.add_python_resources(dist.pip_install("{{{ this }}}"))
-    {{/each}}
-
-    # Read Python files from a local directory and add them to our embedded
-    # context, taking just the resources belonging to the `foo` and `bar`
-    # Python packages.
-    #embedded.add_python_resources(dist.read_package_root(
-    #    path="/src/mypackage",
-    #    packages=["foo", "bar"],
-    #)
-
-    # Discover Python files from a virtualenv and add them to our embedded
-    # context.
-    #embedded.add_python_resources(dist.read_virtualenv(path="/path/to/venv"))
-
-    # Filter all resources collected so far through a filter of names
-    # in a file.
-    #embedded.filter_from_files(files=["/path/to/filter-file"]))
-
     # This variable defines the configuration of the
     # embedded Python interpreter
     embedded_python_config = EmbeddedPythonConfig(
@@ -128,13 +65,72 @@ def make_exe(dist):
     # Produce a Python executable from a Python distribution, embedded
     # resources, and other options. The returned object represents the
     # standalone executable that will be built.
-    return PythonExecutable(
+    exe = PythonExecutable(
         name="{{program_name}}",
         distribution=dist,
-        resources=embedded,
         config=embedded_python_config,
         run_mode=python_run_mode,
+        # Embed all extension modules, making this a fully-featured Python.
+        extension_module_filter='all',
+
+        # Only package the minimal set of extension modules needed to initialize
+        # a Python interpreter. Many common packages in Python's standard
+        # library won't work with this setting.
+        #extension_module_filter='minimal',
+
+        # Only package extension modules that don't require linking against
+        # non-Python libraries. e.g. will exclude support for OpenSSL, SQLite3,
+        # other features that require external libraries.
+        #extension_module_filter='no-libraries',
+
+        # Only package extension modules that don't link against GPL licensed
+        # libraries.
+        #extension_module_filter='no-gpl',
+
+        # Include Python module sources. This isn't strictly required and it does
+        # make binary sizes larger. But having the sources can be useful for
+        # activities such as debugging.
+        include_sources=True,
+
+        # Whether to include non-module resource data/files.
+        include_resources=False,
+
+        # Do not include functionality for testing Python itself.
+        include_test=False,
     )
+
+    # Invoke `pip install` with our Python distribution to install a single package.
+    # `pip_install()` returns objects representing installed files.
+    # `add_python_resources()` adds these objects to our embedded context.
+    #exe.add_python_resources(dist.pip_install(["appdirs"]))
+
+    # Invoke `pip install` using a requirements file and add the collected files
+    # to our embedded context.
+    #exe.add_python_resources(dist.pip_install(["-r", "requirements.txt"]))
+
+    {{#each pip_install_simple}}
+    exe.add_python_resources(dist.pip_install("{{{ this }}}"))
+    {{/each}}
+
+    # Read Python files from a local directory and add them to our embedded
+    # context, taking just the resources belonging to the `foo` and `bar`
+    # Python packages.
+    #exe.add_python_resources(dist.read_package_root(
+    #    path="/src/mypackage",
+    #    packages=["foo", "bar"],
+    #)
+
+    # Discover Python files from a virtualenv and add them to our embedded
+    # context.
+    #exe.add_python_resources(dist.read_virtualenv(path="/path/to/venv"))
+
+    # Filter all resources collected so far through a filter of names
+    # in a file.
+    #exe.filter_from_files(files=["/path/to/filter-file"]))
+
+    # Return our `PythonExecutable` instance so it can be built and
+    # referenced by other consumers of this target.
+    return exe
 
 def make_install(exe):
     # Create an object that represents our installed application file layout.
