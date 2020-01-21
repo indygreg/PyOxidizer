@@ -24,8 +24,7 @@ use super::env::EnvironmentContext;
 use super::python_distribution::PythonDistribution;
 use super::python_interpreter_config::PythonInterpreterConfig;
 use super::python_resource::{
-    PythonBytecodeModule, PythonExtensionModule, PythonExtensionModuleFlavor, PythonResourceData,
-    PythonSourceModule,
+    PythonExtensionModule, PythonExtensionModuleFlavor, PythonResourceData, PythonSourceModule,
 };
 use super::python_run_mode::PythonRunMode;
 use super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode};
@@ -255,7 +254,7 @@ starlark_module! { python_executable_env =>
         };
 
         this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
-            let m = module.downcast_apply(|m: &PythonBytecodeModule| m.module.clone());
+            let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
             exe.resources.add_bytecode_module(&BytecodeModule {
                 name: m.name.clone(),
                 source: m.source.clone(),
