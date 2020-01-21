@@ -502,14 +502,8 @@ starlark_module! { python_distribution_module =>
 
             args.extend(&["install", "--prefix", &target_dir_s, "--no-compile"]);
 
-            let python_path = if dist.python_exe.is_relative() {
-                std::env::current_dir().unwrap().join(&dist.python_exe)
-            } else {
-                dist.python_exe.to_path_buf()
-            };
-
             // TODO send stderr to stdout.
-            let mut cmd = std::process::Command::new(&python_path)
+            let mut cmd = std::process::Command::new(&dist.python_exe)
                 .current_dir(&exec_cwd)
                 .args(&args)
                 .envs(&envs)

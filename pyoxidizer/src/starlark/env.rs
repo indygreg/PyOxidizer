@@ -94,11 +94,17 @@ impl EnvironmentContext {
             .parent()
             .with_context(|| "resolving parent directory of config".to_string())?;
 
+        let parent = if parent.is_relative() {
+            std::env::current_dir()?.join(parent)
+        } else {
+            parent.to_path_buf()
+        };
+
         let build_path = parent.join("build");
 
         Ok(EnvironmentContext {
             logger: logger.clone(),
-            cwd: parent.to_path_buf(),
+            cwd: parent,
             config_path: config_path.to_path_buf(),
             build_host_triple: build_host_triple.to_string(),
             build_target_triple: build_target_triple.to_string(),
