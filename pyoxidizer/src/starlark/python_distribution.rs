@@ -538,6 +538,8 @@ starlark_module! { python_distribution_module =>
             ))
         })?;
 
+        warn!(logger, "collected {} resources from setup.py install", resources.len());
+
         Ok(Value::from(resources.iter().map(Value::from).collect::<Vec<Value>>()))
     }
 
