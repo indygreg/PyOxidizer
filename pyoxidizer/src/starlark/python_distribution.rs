@@ -535,7 +535,7 @@ starlark_module! { python_distribution_module =>
             }
 
             let state_dir = PathBuf::from(envs.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap());
-            find_resources(&python_paths.site_packages, Some(&state_dir)).or_else(|e| Err(
+            find_resources(&target_dir_path, Some(&state_dir)).or_else(|e| Err(
                 RuntimeError {
                     code: "SETUP_PY_ERROR",
                     message: format!("could not find resources: {}", e),
