@@ -20,9 +20,9 @@ use std::convert::TryFrom;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use super::embedded_python_config::EmbeddedPythonConfig;
 use super::env::EnvironmentContext;
 use super::python_distribution::PythonDistribution;
+use super::python_interpreter_config::PythonInterpreterConfig;
 use super::python_resource::{
     PythonBytecodeModule, PythonExtensionModule, PythonExtensionModuleFlavor, PythonResourceData,
     PythonSourceModule,
@@ -114,7 +114,7 @@ starlark_module! { python_executable_env =>
     {
         let name = required_str_arg("name", &name)?;
         required_type_arg("distribution", "PythonDistribution", &distribution)?;
-        required_type_arg("config", "EmbeddedPythonConfig", &config)?;
+        required_type_arg("config", "PythonInterpreterConfig", &config)?;
         required_type_arg("run_mode", "PythonRunMode", &run_mode)?;
         let extension_module_filter = required_str_arg("extension_module_filter", &extension_module_filter)?;
         optional_dict_arg("preferred_extension_module_variants", "string", "string", &preferred_extension_module_variants)?;
@@ -167,7 +167,7 @@ starlark_module! { python_executable_env =>
             label: "PythonExecutable()".to_string(),
         }.into()))?;
 
-        let config = config.downcast_apply(|c: &EmbeddedPythonConfig| c.config.clone());
+        let config = config.downcast_apply(|c: &PythonInterpreterConfig| c.config.clone());
         let run_mode = run_mode.downcast_apply(|m: &PythonRunMode| m.run_mode.clone());
 
         // Always ensure minimal extension modules are present, otherwise we get
@@ -429,7 +429,7 @@ mod tests {
 
         starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
         starlark_eval_in_env(&mut env, "run_mode = python_run_mode_noop()").unwrap();
-        starlark_eval_in_env(&mut env, "config = EmbeddedPythonConfig()").unwrap();
+        starlark_eval_in_env(&mut env, "config = PythonInterpreterConfig()").unwrap();
 
         let exe = starlark_eval_in_env(
             &mut env,
@@ -454,7 +454,7 @@ mod tests {
 
         starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
         starlark_eval_in_env(&mut env, "run_mode = python_run_mode_noop()").unwrap();
-        starlark_eval_in_env(&mut env, "config = EmbeddedPythonConfig()").unwrap();
+        starlark_eval_in_env(&mut env, "config = PythonInterpreterConfig()").unwrap();
 
         let exe = starlark_eval_in_env(
             &mut env,

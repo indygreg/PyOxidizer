@@ -14,7 +14,7 @@ def make_dist():
 def make_exe(dist):
     # This variable defines the configuration of the
     # embedded Python interpreter
-    embedded_python_config = EmbeddedPythonConfig(
+    python_config = PythonInterpreterConfig(
     #     bytes_warning=0,
     #     dont_write_bytecode=True,
     #     ignore_environment=True,
@@ -68,7 +68,7 @@ def make_exe(dist):
     exe = PythonExecutable(
         name="{{program_name}}",
         distribution=dist,
-        config=embedded_python_config,
+        config=python_config,
         run_mode=python_run_mode,
         # Embed all extension modules, making this a fully-featured Python.
         extension_module_filter='all',

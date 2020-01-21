@@ -20,12 +20,12 @@ Starlark environment:
 * :ref:`config_context`
 * :ref:`config_cwd`
 * :ref:`config_default_python_distribution`
-* :ref:`config_embedded_python_config`
 * :ref:`config_file_manifest`
 * :ref:`config_python_bytecode_module`
 * :ref:`config_python_distribution`
 * :ref:`config_python_executable`
 * :ref:`config_python_extension_module`
+* :ref:`config_python_interpreter_config`
 * :ref:`config_python_resources_data`
 * :ref:`config_python_run_mode_eval`
 * :ref:`config_python_run_mode_module`
@@ -41,9 +41,6 @@ Types
 =====
 
 The following custom data types are defined in the Starlark environment:
-
-``EmbeddedPythonConfig``
-   Holds the configuration of a Python interpreter embedded in a binary.
 
 ``FileManifest``
    Represents a mapping of filenames to file content.
@@ -61,6 +58,9 @@ The following custom data types are defined in the Starlark environment:
 
 ``PythonExtensionModule``
    Represents a compiled Python extension module.
+
+``PythonInterpreterConfig``
+   Represents the configuration of a Python interpreter.
 
 ``PythonResourcesData``
    Represents a non-module *resource* data file.
@@ -517,19 +517,17 @@ Each instance has the following attributes:
 ``name`` (string)
    Unique name of the module being provided.
 
-.. _config_python_interpreter_config:
-
 Python Interpreter Configuration
 ================================
 
 A Python interpreter has settings to control how it runs. Configuration
 files represent these settings through the types
-:ref:`config_embedded_python_config` and :ref:`config_python_run_mode`.
+:ref:`config_python_interpreter_config` and :ref:`config_python_run_mode`.
 
-.. _config_embedded_python_config:
+.. _config_python_interpreter_config:
 
-``EmbeddedPythonConfig(...)```
-------------------------------
+``PythonInterpreterConfig(...)```
+---------------------------------
 
 This type configures the default behavior of the embedded Python interpreter.
 

@@ -8,12 +8,12 @@ The `starlark` module and related sub-modules define the
 define Oxidized Python binaries.
 */
 
-pub mod embedded_python_config;
 pub mod env;
 pub mod eval;
 pub mod file_resource;
 pub mod python_distribution;
 pub mod python_executable;
+pub mod python_interpreter_config;
 pub mod python_resource;
 pub mod python_run_mode;
 pub mod target;

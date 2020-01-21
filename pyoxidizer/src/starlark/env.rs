@@ -373,8 +373,8 @@ pub fn global_environment(context: &EnvironmentContext) -> Result<Environment, E
     let env = global_module(env);
     let env = super::file_resource::file_resource_env(env);
     let env = super::python_distribution::python_distribution_module(env);
-    let env = super::embedded_python_config::embedded_python_config_module(env);
     let env = super::python_executable::python_executable_env(env);
+    let env = super::python_interpreter_config::embedded_python_config_module(env);
     let env = super::python_run_mode::python_run_mode_env(env);
 
     env.set("CONTEXT", Value::new(context.clone()))?;

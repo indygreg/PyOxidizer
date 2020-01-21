@@ -139,14 +139,14 @@ comments removed for brevity):
    def make_exe():
        dist = default_python_distribution()
 
-       embedded_python_config = EmbeddedPythonConfig()
+       python_config = PythonInterpreterConfig()
 
        python_run_mode = python_run_mode_eval("from pyflakes.api import main; main()")
 
        exe = PythonExecutable(
            name="pyflakes",
            distribution=dist,
-           config=embedded_python_config,
+           config=python_config,
            run_mode=python_run_mode,
            extension_module_filter="all",
            include_sources=True,
@@ -211,14 +211,14 @@ Then edit the ``pyoxidizer.bzl`` file to have the following:
 
    def make_exe():
        dist = default_python_distribution()
-       embedded_python_config = EmbeddedPythonConfig()
+       python_config = PythonInterpreterConfig()
        python_run_mode = python_run_mode_module("black")
 
        exe = PythonExecutable(
            name="black",
            distribution=dist,
            resources=embedded,
-           config=embedded_python_config,
+           config=python_config,
            run_mode=python_run_mode,
        )
 
@@ -286,7 +286,7 @@ Change your configuration file to look like the following:
            include_test=False,
        )
 
-       embedded_python_config = EmbeddedPythonConfig(
+       python_config = PythonInterpreterConfig(
            sys_paths=["$ORIGIN/lib"],
        )
        python_run_mode = python_run_mode_module("black")
@@ -295,7 +295,7 @@ Change your configuration file to look like the following:
            name="black",
            distribution=dist,
            resources=embedded,
-           config=embedded_python_config,
+           config=python_config,
            run_mode=python_run_mode,
        )
 
@@ -321,7 +321,7 @@ We added a new ``make_dist()`` function and ``python_dist`` *target* to
 represent obtaining the Python distribution. This isn't strictly required,
 but it helps avoid redundant work during execution.
 
-The ``EmbeddedPythonConfig`` construction adds a ``sys_paths=["$ORIGIN/lib"]``
+The ``PythonInterpreterConfig`` construction adds a ``sys_paths=["$ORIGIN/lib"]``
 argument. This argument says *adjust ``sys.path`` at run-time to include the
 ``lib`` directory next to the executable file*. It allows the Python
 interpreter to import Python files on the filesystem instead of just from
@@ -376,7 +376,7 @@ are packaged.
 But maintaining explicit lists of resources can be tedious. ``PyOxidizer``
 offers a more automated approach to solving this problem.
 
-The :ref:`config_embedded_python_config` type defines a
+The :ref:`config_python_interpreter_config` type defines a
 ``write_modules_directory_env`` setting, which when enabled will instruct
 the embedded Python interpreter to write the list of all loaded modules
 into a randomly named file in the directory identified by the environment
