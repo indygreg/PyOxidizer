@@ -379,7 +379,7 @@ pub fn resolve_python_paths(base: &Path, python_version: &str) -> PythonPaths {
 
     let p = prefix.clone();
 
-    let bin_dir = if p.join("Scripts").exists() {
+    let bin_dir = if p.join("Scripts").exists() || cfg!(windows) {
         p.join("Scripts")
     } else {
         p.join("bin")
@@ -400,8 +400,10 @@ pub fn resolve_python_paths(base: &Path, python_version: &str) -> PythonPaths {
 
     let stdlib = if unix_lib_dir.exists() {
         unix_lib_dir
-    } else {
+    } else if cfg!(windows) {
         p.join("Lib")
+    } else {
+        unix_lib_dir
     };
 
     let site_packages = stdlib.join("site-packages");
