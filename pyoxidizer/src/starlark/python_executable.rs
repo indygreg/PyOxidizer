@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use anyhow::{Context, Result};
-use slog::warn;
+use slog::{info, warn};
 use starlark::environment::Environment;
 use starlark::values::{
     default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
@@ -220,11 +220,15 @@ starlark_module! { python_executable_env =>
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_module_source(this, module) {
+    PythonExecutable.add_module_source(env env, this, module) {
         required_type_arg("module", "PythonSourceModule", &module)?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not set");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
         this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
             let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
+            info!(&logger, "adding embedded source module {}", m.name);
             exe.resources.add_source_module(&m);
         });
 
@@ -234,9 +238,12 @@ starlark_module! { python_executable_env =>
     // TODO consider unifying with add_module_source() so there only needs to be
     // a single function call.
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_module_bytecode(this, module, optimize_level=0) {
+    PythonExecutable.add_module_bytecode(env env, this, module, optimize_level=0) {
         required_type_arg("module", "PythonSourceModule", &module)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not set");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
         let optimize_level = optimize_level.to_int().unwrap();
 
@@ -255,6 +262,7 @@ starlark_module! { python_executable_env =>
 
         this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
             let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
+            info!(&logger, "adding embedded bytecode module {}", m.name);
             exe.resources.add_bytecode_module(&BytecodeModule {
                 name: m.name.clone(),
                 source: m.source.clone(),
@@ -267,11 +275,15 @@ starlark_module! { python_executable_env =>
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_resource_data(this, resource) {
+    PythonExecutable.add_resource_data(env env, this, resource) {
         required_type_arg("resource", "PythonResourceData", &resource)?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not set");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
         this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
             let r = resource.downcast_apply(|r: &PythonResourceData| r.data.clone());
+            info!(&logger, "adding embedded resource data {}:{}", r.package, r.name);
             exe.resources.add_resource(&r);
         });
 
@@ -279,11 +291,16 @@ starlark_module! { python_executable_env =>
     }
 
     #[allow(clippy::ptr_arg)]
-    PythonExecutable.add_extension_module(this, module) {
+    PythonExecutable.add_extension_module(env env, this, module) {
         required_type_arg("resource", "PythonExtensionModule", &module)?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not set");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
         this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
             let m = module.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
+            info!(&logger, "adding embedded extension module {}", m.name());
+
             match m {
                 PythonExtensionModuleFlavor::Persisted(m) => {
                     exe.resources.add_extension_module(&m);
