@@ -490,7 +490,7 @@ starlark_module! { python_distribution_module =>
                 envs.insert(key.clone(), value.clone());
             }
 
-            warn!(logger, "python setup.py installing to {}", target_dir_s);
+            warn!(logger, "python setup.py installing {} to {}", exec_cwd.display(), target_dir_s);
 
             let mut args = vec!["setup.py"];
 
@@ -521,7 +521,11 @@ starlark_module! { python_distribution_module =>
 
             let status = cmd.wait().unwrap();
             if !status.success() {
-                panic!("error running setup.py");
+                return Err(RuntimeError {
+                    code: "SETUP_PY_ERROR",
+                    message: "error running setup.py".to_string(),
+                    label: "setup_py_install()".to_string(),
+                }.into());
             }
 
             let state_dir = PathBuf::from(envs.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap());
