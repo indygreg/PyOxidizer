@@ -464,10 +464,9 @@ mod tests {
 
         starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
         starlark_eval_in_env(&mut env, "run_mode = python_run_mode_noop()").unwrap();
-        starlark_eval_in_env(&mut env, "config = PythonInterpreterConfig()").unwrap();
         starlark_eval_in_env(
             &mut env,
-            "exe = PythonExecutable('testapp', dist, config, run_mode)",
+            "exe = PythonExecutable('testapp', dist, run_mode)",
         )
         .unwrap();
 
@@ -486,10 +485,9 @@ mod tests {
 
         starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
         starlark_eval_in_env(&mut env, "run_mode = python_run_mode_noop()").unwrap();
-        starlark_eval_in_env(&mut env, "config = PythonInterpreterConfig()").unwrap();
         starlark_eval_in_env(
             &mut env,
-            "exe = PythonExecutable('testapp', dist, config, run_mode)",
+            "exe = PythonExecutable('testapp', dist, run_mode)",
         )
         .unwrap();
 

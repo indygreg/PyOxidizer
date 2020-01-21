@@ -139,14 +139,11 @@ comments removed for brevity):
    def make_exe():
        dist = default_python_distribution()
 
-       python_config = PythonInterpreterConfig()
-
        python_run_mode = python_run_mode_eval("from pyflakes.api import main; main()")
 
        exe = PythonExecutable(
            name="pyflakes",
            distribution=dist,
-           config=python_config,
            run_mode=python_run_mode,
            extension_module_filter="all",
            include_sources=True,
@@ -211,14 +208,11 @@ Then edit the ``pyoxidizer.bzl`` file to have the following:
 
    def make_exe():
        dist = default_python_distribution()
-       python_config = PythonInterpreterConfig()
        python_run_mode = python_run_mode_module("black")
 
        exe = PythonExecutable(
            name="black",
            distribution=dist,
-           resources=embedded,
-           config=python_config,
            run_mode=python_run_mode,
        )
 

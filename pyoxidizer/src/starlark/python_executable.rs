@@ -30,7 +30,8 @@ use super::python_resource::{
 use super::python_run_mode::PythonRunMode;
 use super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode};
 use super::util::{
-    optional_dict_arg, optional_list_arg, required_bool_arg, required_str_arg, required_type_arg,
+    optional_dict_arg, optional_list_arg, optional_type_arg, required_bool_arg, required_str_arg,
+    required_type_arg,
 };
 use crate::project_building::build_python_executable;
 use crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable};
@@ -102,10 +103,11 @@ starlark_module! { python_executable_env =>
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable(
         env env,
+        call_stack cs,
         name,
         distribution,
-        config,
         run_mode,
+        config=None,
         extension_module_filter="all",
         preferred_extension_module_variants=None,
         include_sources=true,
@@ -114,8 +116,8 @@ starlark_module! { python_executable_env =>
     {
         let name = required_str_arg("name", &name)?;
         required_type_arg("distribution", "PythonDistribution", &distribution)?;
-        required_type_arg("config", "PythonInterpreterConfig", &config)?;
         required_type_arg("run_mode", "PythonRunMode", &run_mode)?;
+        optional_type_arg("config", "PythonInterpreterConfig", &config)?;
         let extension_module_filter = required_str_arg("extension_module_filter", &extension_module_filter)?;
         optional_dict_arg("preferred_extension_module_variants", "string", "string", &preferred_extension_module_variants)?;
         let include_sources = required_bool_arg("include_sources", &include_sources)?;
@@ -167,7 +169,15 @@ starlark_module! { python_executable_env =>
             label: "PythonExecutable()".to_string(),
         }.into()))?;
 
-        let config = config.downcast_apply(|c: &PythonInterpreterConfig| c.config.clone());
+        let config = if config.get_type() == "NoneType" {
+            let v = env.get("PythonInterpreterConfig").expect("PythonInterpreterConfig not defined");
+            v.call(cs, env.clone(), Vec::new(), HashMap::new(), None, None)?.downcast_apply(|c: &PythonInterpreterConfig| {
+                c.config.clone()
+            })
+        } else {
+            config.downcast_apply(|c: &PythonInterpreterConfig| c.config.clone())
+        };
+
         let run_mode = run_mode.downcast_apply(|m: &PythonRunMode| m.run_mode.clone());
 
         // Always ensure minimal extension modules are present, otherwise we get
@@ -429,13 +439,9 @@ mod tests {
 
         starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
         starlark_eval_in_env(&mut env, "run_mode = python_run_mode_noop()").unwrap();
-        starlark_eval_in_env(&mut env, "config = PythonInterpreterConfig()").unwrap();
 
-        let exe = starlark_eval_in_env(
-            &mut env,
-            "PythonExecutable('testapp', dist, config, run_mode)",
-        )
-        .unwrap();
+        let exe =
+            starlark_eval_in_env(&mut env, "PythonExecutable('testapp', dist, run_mode)").unwrap();
 
         assert_eq!(exe.get_type(), "PythonExecutable");
 
@@ -454,11 +460,10 @@ mod tests {
 
         starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
         starlark_eval_in_env(&mut env, "run_mode = python_run_mode_noop()").unwrap();
-        starlark_eval_in_env(&mut env, "config = PythonInterpreterConfig()").unwrap();
 
         let exe = starlark_eval_in_env(
             &mut env,
-            "PythonExecutable('testapp', dist, config, run_mode, include_sources=False)",
+            "PythonExecutable('testapp', dist, run_mode, include_sources=False)",
         )
         .unwrap();
 

@@ -881,11 +881,13 @@ function. The accepted arguments are:
    interpreter from the distribution will be compiled into the produced
    executable.
 
+``run_mode`` (``PythonRunMode``)
+   The default run-time behavior of the embedded Python interpreter.
+
 ``config`` (``PythonEmbeddedConfig``)
    The default configuration of the embedded Python interpreter.
 
-``run_mode`` (``PythonRunMode``)
-   The default run-time behavior of the embedded Python interpreter.
+   Default is what ``PythonInterpreterConfig()`` returns.
 
 ``extension_module_filter`` (``str``)
    The filter to apply to determine which extension modules to add.
