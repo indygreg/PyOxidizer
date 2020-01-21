@@ -28,6 +28,7 @@ pub fn starlark_env() -> Environment {
 
     let context = EnvironmentContext::new(
         &logger,
+        false,
         &config_path,
         build_target,
         build_target,

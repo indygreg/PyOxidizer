@@ -26,11 +26,13 @@ pub fn evaluate_file(
     config_path: &Path,
     build_target_triple: &str,
     release: bool,
+    verbose: bool,
     write_artifacts_path: Option<&Path>,
     resolve_targets: Option<Vec<String>>,
 ) -> Result<EvalResult, Diagnostic> {
     let context = EnvironmentContext::new(
         logger,
+        verbose,
         config_path,
         crate::app_packaging::repackage::HOST,
         build_target_triple,

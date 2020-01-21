@@ -153,6 +153,7 @@ pub fn list_targets(logger: &slog::Logger, project_path: &Path) -> Result<()> {
         &config_path,
         &target_triple,
         false,
+        false,
         None,
         Some(Vec::new()),
     )?;
@@ -181,6 +182,7 @@ fn build_pyoxidizer_artifacts(
     artifacts_path: &Path,
     target_triple: &str,
     release: bool,
+    verbose: bool,
 ) -> Result<()> {
     create_dir_all(artifacts_path)?;
 
@@ -192,6 +194,7 @@ fn build_pyoxidizer_artifacts(
             config_path,
             target_triple,
             release,
+            verbose,
             Some(&artifacts_path),
             Some(Vec::new()),
         )?;
@@ -226,6 +229,7 @@ pub fn build_project(logger: &slog::Logger, context: &mut BuildContext) -> Resul
         &context.pyoxidizer_artifacts_path,
         &context.target_triple,
         context.release,
+        context.verbose,
     )?;
 
     let mut args = Vec::new();
@@ -317,6 +321,7 @@ pub fn resolve_build_context(
         &config_path,
         &target,
         release,
+        verbose,
         force_artifacts_path,
         Some(Vec::new()),
     )?;
@@ -342,7 +347,7 @@ pub fn build(
     target: Option<&str>,
     resolve_targets: Option<Vec<String>>,
     release: bool,
-    _verbose: bool,
+    verbose: bool,
 ) -> Result<()> {
     let config_path = find_pyoxidizer_config_file_env(logger, project_path).ok_or_else(|| {
         anyhow!(
@@ -357,6 +362,7 @@ pub fn build(
         &config_path,
         &target_triple,
         release,
+        verbose,
         None,
         resolve_targets,
     )?;
@@ -369,6 +375,7 @@ pub fn build_artifacts(
     project_path: &Path,
     dest_path: &Path,
     release: bool,
+    verbose: bool,
 ) -> Result<()> {
     let target = default_target()?;
 
@@ -377,7 +384,7 @@ pub fn build_artifacts(
         None => return Err(anyhow!("could not find PyOxidizer config file")),
     };
 
-    build_pyoxidizer_artifacts(logger, &config_path, dest_path, &target, release)?;
+    build_pyoxidizer_artifacts(logger, &config_path, dest_path, &target, release, verbose)?;
 
     Ok(())
 }
@@ -389,7 +396,7 @@ pub fn run(
     release: bool,
     target: Option<&str>,
     _extra_args: &[&str],
-    _verbose: bool,
+    verbose: bool,
 ) -> Result<()> {
     let config_path = find_pyoxidizer_config_file_env(logger, project_path).ok_or_else(|| {
         anyhow!(
@@ -410,6 +417,7 @@ pub fn run(
         &config_path,
         &target_triple,
         release,
+        verbose,
         None,
         resolve_targets,
     )?;

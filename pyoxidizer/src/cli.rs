@@ -313,7 +313,13 @@ pub fn run_cli() -> Result<()> {
             let dest_path = args.value_of("dest_path").unwrap();
             let dest_path = PathBuf::from(dest_path);
 
-            projectmgmt::build_artifacts(&logger_context.logger, &path, &dest_path, release)
+            projectmgmt::build_artifacts(
+                &logger_context.logger,
+                &path,
+                &dest_path,
+                release,
+                verbose,
+            )
         }
 
         ("build", Some(args)) => {

@@ -89,6 +89,7 @@ pub fn eval_starlark_config_file(
     path: &Path,
     build_target_triple: &str,
     release: bool,
+    verbose: bool,
     write_artifacts_path: Option<&Path>,
     resolve_targets: Option<Vec<String>>,
 ) -> Result<EvalResult> {
@@ -97,6 +98,7 @@ pub fn eval_starlark_config_file(
         path,
         build_target_triple,
         release,
+        verbose,
         write_artifacts_path,
         resolve_targets,
     )

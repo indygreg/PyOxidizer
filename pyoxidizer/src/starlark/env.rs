@@ -31,6 +31,9 @@ pub struct Target {
 pub struct EnvironmentContext {
     pub logger: slog::Logger,
 
+    /// Whether executing in verbose mode.
+    pub verbose: bool,
+
     /// Directory the environment should be evaluated from.
     ///
     /// Typically used to resolve filenames.
@@ -82,6 +85,7 @@ impl EnvironmentContext {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         logger: &slog::Logger,
+        verbose: bool,
         config_path: &Path,
         build_host_triple: &str,
         build_target_triple: &str,
@@ -104,6 +108,7 @@ impl EnvironmentContext {
 
         Ok(EnvironmentContext {
             logger: logger.clone(),
+            verbose,
             cwd: parent,
             config_path: config_path.to_path_buf(),
             build_host_triple: build_host_triple.to_string(),

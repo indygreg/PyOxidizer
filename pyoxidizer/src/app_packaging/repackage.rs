@@ -529,6 +529,7 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
         &config_path,
         &target,
         profile == "release",
+        false,
         Some(&dest_dir),
         Some(Vec::new()),
     )
