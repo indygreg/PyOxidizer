@@ -147,7 +147,7 @@ starlark_module! { python_executable_env =>
             _ => panic!("type should have been validated above")
         };
 
-        let mut distribution = distribution.clone();
+        let mut distribution = distribution;
 
         let distribution = distribution.downcast_apply_mut(|dist: &mut PythonDistribution| {
             dist.ensure_distribution_resolved(&logger);
@@ -170,7 +170,7 @@ starlark_module! { python_executable_env =>
 
         let config = if config.get_type() == "NoneType" {
             let v = env.get("PythonInterpreterConfig").expect("PythonInterpreterConfig not defined");
-            v.call(cs, env.clone(), Vec::new(), HashMap::new(), None, None)?.downcast_apply(|c: &PythonInterpreterConfig| {
+            v.call(cs, env, Vec::new(), HashMap::new(), None, None)?.downcast_apply(|c: &PythonInterpreterConfig| {
                 c.config.clone()
             })
         } else {
