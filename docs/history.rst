@@ -53,6 +53,7 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* The in-memory ``MetaPathFinder`` now implements ``find_module()``.
 * A ``pyoxidizer init-config-file`` command has been implemented to create
   just a ``pyoxidizer.bzl`` configuration file.
 * A ``pyoxidizer python-distribution-info`` command has been implemented

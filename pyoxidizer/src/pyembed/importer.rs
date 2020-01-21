@@ -303,10 +303,16 @@ py_class!(class PyOxidizerFinder |py| {
         }
     }
 
-    def find_module(&self, _fullname: &PyObject, _path: &PyObject) -> PyResult<PyObject> {
-        // Method is deprecated. Always returns None.
-        // We /could/ call find_spec(). Meh.
-        Ok(py.None())
+    def find_module(&self, fullname: &PyObject, path: &PyObject) -> PyResult<PyObject> {
+        let finder = self.as_object();
+        let find_spec = finder.getattr(py, "find_spec")?;
+        let spec = find_spec.call(py, (fullname, path), None)?;
+
+        if spec == py.None() {
+            Ok(py.None())
+        } else {
+            spec.getattr(py, "loader")
+        }
     }
 
     def invalidate_caches(&self) -> PyResult<PyObject> {
