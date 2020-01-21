@@ -76,7 +76,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         for ext in distribution.filter_extension_modules(
             logger,
             extension_module_filter,
-            preferred_extension_module_variants.clone(),
+            preferred_extension_module_variants,
         ) {
             embedded.add_extension_module(&ext);
         }
