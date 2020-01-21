@@ -600,14 +600,12 @@ behavior:
 
    Default is ``0``.
 
-``dont_write_bytecode`` (bool)
-   Controls the value of
-   `Py_DontWriteBytecodeFlag <https://docs.python.org/3/c-api/init.html#c.Py_DontWriteBytecodeFlag>`_.
+``filesystem_importer`` (bool)
+   Controls whether to enable Python's filesystem based importer. Enabling
+   this importer allows Python modules to be imported from the filesystem.
 
-   This is only relevant if the interpreter is configured to import modules
-   from the filesystem.
-
-   Default is ``True``.
+   Default is ``False`` (since PyOxidizer prefers embedding Python modules in
+   binaries).
 
 ``ignore_environment`` (bool)
    Controls the value of
@@ -650,20 +648,6 @@ behavior:
 
    Default is ``False``.
 
-``no_site`` (bool)
-   Controls the value of
-   `Py_NoSiteFlag <https://docs.python.org/3/c-api/init.html#c.Py_NoSiteFlag>`_.
-
-   The ``site`` module is typically not needed for standalone Python applications.
-
-   Default is ``True``.
-
-``no_user_site_directory`` (bool)
-   Controls the value of
-   `Py_NoUserSiteDirectory <https://docs.python.org/3/c-api/init.html#c.Py_NoUserSiteDirectory>`_.
-
-   Default is ``True``.
-
 ``optimize_level`` (bool)
    Controls the value of
    `Py_OptimizeFlag <https://docs.python.org/3/c-api/init.html#c.Py_OptimizeFlag>`_.
@@ -684,6 +668,41 @@ behavior:
    Controls the value of
    `Py_QuietFlag <https://docs.python.org/3/c-api/init.html#c.Py_QuietFlag>`_.
 
+``raw_allocator`` (string)
+   Which memory allocator to use for the ``PYMEM_DOMAIN_RAW`` allocator.
+
+   This controls the lowest level memory allocator used by Python. All Python
+   memory allocations use memory allocated by this allocator (higher-level
+   allocators call into this pool to allocate large blocks then allocate
+   memory out of those blocks instead of using the *raw* memory allocator).
+
+   Values can be ``jemalloc``, ``rust``, or ``system``.
+
+   ``jemalloc`` will have Python use the jemalloc allocator directly.
+
+   ``rust`` will use Rust's global allocator (whatever that may be).
+
+   ``system`` will use the default allocator functions exposed to the binary
+   (``malloc()``, ``free()``, etc).
+
+   The ``jemalloc`` allocator requires the ``jemalloc-sys`` crate to be
+   available. A run-time error will occur if ``jemalloc`` is configured but this
+   allocator isn't available.
+
+   **Important**: the ``rust`` crate is not recommended because it introduces
+   performance overhead.
+
+   Default is ``jemalloc`` on non-Windows targets and ``system`` on Windows.
+   (The ``jemalloc-sys`` crate doesn't work on Windows MSVC targets.)
+
+``site_import`` (bool)
+   Controls the inverse value of
+   `Py_NoSiteFlag <https://docs.python.org/3/c-api/init.html#c.Py_NoSiteFlag>`_.
+
+   The ``site`` module is typically not needed for standalone Python applications.
+
+   Default is ``False``.
+
 ``stdio_encoding`` (string)
    Defines the encoding and error handling mode for Python's standard I/O
    streams (``sys.stdout``, etc). Values are of the form ``encoding:error`` e.g.
@@ -691,27 +710,6 @@ behavior:
 
    If defined, the ``Py_SetStandardStreamEncoding()`` function is called during
    Python interpreter initialization. If not, the Python defaults are used.
-
-``unbuffered_stdio`` (bool)
-   Controls the value of
-   `Py_UnbufferedStdioFlag <https://docs.python.org/3/c-api/init.html#c.Py_UnbufferedStdioFlag>`_.
-
-   Setting this makes the standard I/O streams unbuffered.
-
-   Default is ``False``.
-
-``use_hash_seed`` (bool)
-   Controls the value of
-   `Py_HashRandomizationFlag <https://docs.python.org/3/c-api/init.html#c.Py_HashRandomizationFlag>`_.
-
-   Default is ``False``.
-
-``filesystem_importer`` (bool)
-   Controls whether to enable Python's filesystem based importer. Enabling
-   this importer allows Python modules to be imported from the filesystem.
-
-   Default is ``False`` (since PyOxidizer prefers embedding Python modules in
-   binaries).
 
 ``sys_frozen`` (bool)
    Controls whether to set the ``sys.frozen`` attribute to ``True``. If
@@ -745,33 +743,6 @@ behavior:
    values (values are not merged).
 
    Default is an empty array (``[]``).
-
-``raw_allocator`` (string)
-   Which memory allocator to use for the ``PYMEM_DOMAIN_RAW`` allocator.
-
-   This controls the lowest level memory allocator used by Python. All Python
-   memory allocations use memory allocated by this allocator (higher-level
-   allocators call into this pool to allocate large blocks then allocate
-   memory out of those blocks instead of using the *raw* memory allocator).
-
-   Values can be ``jemalloc``, ``rust``, or ``system``.
-
-   ``jemalloc`` will have Python use the jemalloc allocator directly.
-
-   ``rust`` will use Rust's global allocator (whatever that may be).
-
-   ``system`` will use the default allocator functions exposed to the binary
-   (``malloc()``, ``free()``, etc).
-
-   The ``jemalloc`` allocator requires the ``jemalloc-sys`` crate to be
-   available. A run-time error will occur if ``jemalloc`` is configured but this
-   allocator isn't available.
-
-   **Important**: the ``rust`` crate is not recommended because it introduces
-   performance overhead.
-
-   Default is ``jemalloc`` on non-Windows targets and ``system`` on Windows.
-   (The ``jemalloc-sys`` crate doesn't work on Windows MSVC targets.)
 
 .. _config_terminfo_resolution:
 
@@ -808,6 +779,35 @@ behavior:
    This value consists of a ``:`` delimited list of filesystem paths that
    ``ncurses`` should be configured to use. This value will be used to
    populate the ``TERMINFO_DIRS`` environment variable at application run time.
+
+``unbuffered_stdio`` (bool)
+   Controls the value of
+   `Py_UnbufferedStdioFlag <https://docs.python.org/3/c-api/init.html#c.Py_UnbufferedStdioFlag>`_.
+
+   Setting this makes the standard I/O streams unbuffered.
+
+   Default is ``False``.
+
+``use_hash_seed`` (bool)
+   Controls the value of
+   `Py_HashRandomizationFlag <https://docs.python.org/3/c-api/init.html#c.Py_HashRandomizationFlag>`_.
+
+   Default is ``False``.
+
+``user_site_directory`` (bool)
+   Controls the inverse value of
+   `Py_NoUserSiteDirectory <https://docs.python.org/3/c-api/init.html#c.Py_NoUserSiteDirectory>`_.
+
+   Default is ``False``.
+
+``write_bytecode`` (bool)
+   Controls the inverse value of
+   `Py_DontWriteBytecodeFlag <https://docs.python.org/3/c-api/init.html#c.Py_DontWriteBytecodeFlag>`_.
+
+   This is only relevant if the interpreter is configured to import modules
+   from the filesystem.
+
+   Default is ``False``.
 
 ``write_modules_directory_env`` (string)
    Environment variable that defines a directory where ``modules-<UUID>`` files

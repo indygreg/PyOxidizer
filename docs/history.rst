@@ -24,6 +24,8 @@ next
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* Python interpreter configuration setting names have been changed to reflect
+  names from Python 3.8's interpreter initialization API.
 * ``.egg-info`` directories are now ignored when scanning for Python resources
   on the filesystem (matching the behavior for ``.dist-info`` directories).
 * The ``pyoxidizer init`` sub-command has been renamed to ``init-rust-project``.

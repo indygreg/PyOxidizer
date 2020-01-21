@@ -59,21 +59,19 @@ starlark_module! { embedded_python_config_module =>
     EmbeddedPythonConfig(
         env env,
         bytes_warning=0,
-        dont_write_bytecode=true,
         ignore_environment=true,
         inspect=false,
         interactive=false,
         isolated=false,
         legacy_windows_fs_encoding=false,
         legacy_windows_stdio=false,
-        no_site=true,
-        no_user_site_directory=true,
         optimize_level=0,
         parser_debug=false,
         stdio_encoding=None,
         unbuffered_stdio=false,
         filesystem_importer=false,
         quiet=false,
+        site_import=false,
         sys_frozen=false,
         sys_meipass=false,
         sys_paths=None,
@@ -81,19 +79,18 @@ starlark_module! { embedded_python_config_module =>
         terminfo_resolution="dynamic",
         terminfo_dirs=None,
         use_hash_seed=false,
+        user_site_directory=false,
         verbose=0,
+        write_bytecode=false,
         write_modules_directory_env=None
     ) {
         required_type_arg("bytes_warning", "int", &bytes_warning)?;
-        let dont_write_bytecode = required_bool_arg("dont_write_bytecode", &dont_write_bytecode)?;
         let ignore_environment = required_bool_arg("ignore_environment", &ignore_environment)?;
         let inspect = required_bool_arg("inspect", &inspect)?;
         let interactive = required_bool_arg("interactive", &interactive)?;
         let isolated = required_bool_arg("isolated", &isolated)?;
         let legacy_windows_fs_encoding = required_bool_arg("legacy_windows_fs_encoding", &legacy_windows_fs_encoding)?;
         let legacy_windows_stdio = required_bool_arg("legacy_windows_stdio", &legacy_windows_stdio)?;
-        let no_site = required_bool_arg("no_site", &no_site)?;
-        let no_user_site_directory = required_bool_arg("no_user_site_directory", &no_user_site_directory)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
         let parser_debug = required_bool_arg("parser_debug", &parser_debug)?;
         let stdio_encoding = optional_str_arg("stdio_encoding", &stdio_encoding)?;
@@ -104,10 +101,13 @@ starlark_module! { embedded_python_config_module =>
         let sys_meipass = required_bool_arg("sys_meipass", &sys_meipass)?;
         optional_list_arg("sys_paths", "string", &sys_paths)?;
         let raw_allocator = optional_str_arg("raw_allocator", &raw_allocator)?;
+        let site_import = required_bool_arg("site_importer", &site_import)?;
         let terminfo_resolution = optional_str_arg("terminfo_resolution", &terminfo_resolution)?;
         let terminfo_dirs = optional_str_arg("terminfo_dirs", &terminfo_dirs)?;
         let use_hash_seed = required_bool_arg("use_hash_seed", &use_hash_seed)?;
+        let user_site_directory = required_bool_arg("user_site_directory", &user_site_directory)?;
         required_type_arg("verbose", "int", &verbose)?;
+        let write_bytecode = required_bool_arg("write_bytecode", &write_bytecode)?;
         let write_modules_directory_env = optional_str_arg("write_modules_directory_env", &write_modules_directory_env)?;
 
         let build_target = env.get("BUILD_TARGET_TRIPLE").unwrap().to_str();
@@ -169,15 +169,15 @@ starlark_module! { embedded_python_config_module =>
 
         let config = crate::py_packaging::config::EmbeddedPythonConfig {
             bytes_warning: bytes_warning.to_int().unwrap() as i32,
-            dont_write_bytecode,
+            dont_write_bytecode: !write_bytecode,
             ignore_environment,
             inspect,
             interactive,
             isolated,
             legacy_windows_fs_encoding,
             legacy_windows_stdio,
-            no_site,
-            no_user_site_directory,
+            no_site: !site_import,
+            no_user_site_directory: !user_site_directory,
             optimize_level: optimize_level.to_int().unwrap(),
             parser_debug,
             quiet,
