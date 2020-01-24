@@ -90,6 +90,13 @@ New Features
   ``extra_args`` list of extra command line arguments to pass to
   ``pip install``.
 
+Other Relevant Changes
+^^^^^^^^^^^^^^^^^^^^^^
+
+* PyOxidizer no longer requires a forked version of the ``rust-cpython``
+  project (the ``python3-sys`` and ``cpython`` crates. All changes required
+  by PyOxidizer are now present in the official project.
+
 0.4.0
 -----
 

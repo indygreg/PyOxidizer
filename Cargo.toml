@@ -1,3 +1,2 @@
 [workspace]
 members = ["pyembed", "pyoxidizer"]
-exclude = ["third_party/rust-cpython"]

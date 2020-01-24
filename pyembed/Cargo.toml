@@ -15,12 +15,13 @@ slog = "2.4"
 byteorder = "1"
 jemalloc-sys = { version = "0.3", optional = true }
 libc = "0.2"
-python3-sys = { path = "../third_party/rust-cpython/python3-sys" }
+python3-sys = { git = "https://github.com/dgrunwald/rust-cpython", rev = "a989865c3dd861267a42ceb726f2fc831637fe5b" }
 uuid = { version = "0.8", features = ["v4"] }
 
 [dependencies.cpython]
-path = "../third_party/rust-cpython"
-features = ["link-mode3-unresolved-static", "python3-sys", "no-auto-initialize"]
+git = "https://github.com/dgrunwald/rust-cpython"
+rev = "a989865c3dd861267a42ceb726f2fc831637fe5b"
+features = ["py-link-mode-unresolved-static", "python3-sys", "no-auto-initialize"]
 
 [features]
 default = ["jemalloc-sys"]
