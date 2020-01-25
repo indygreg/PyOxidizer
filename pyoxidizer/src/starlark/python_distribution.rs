@@ -249,6 +249,29 @@ impl PythonDistribution {
         ))
     }
 
+    pub fn read_virtualenv(&mut self, env: &Environment, path: &Value) -> ValueResult {
+        let path = required_str_arg("path", &path)?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        self.ensure_distribution_resolved(&logger);
+        let dist = self.distribution.as_ref().unwrap();
+
+        let resources = raw_read_virtualenv(&dist, &Path::new(&path)).or_else(|e| {
+            Err(RuntimeError {
+                code: "VIRTUALENV_ERROR",
+                message: format!("could not find resources: {}", e),
+                label: "read_virtualenv()".to_string(),
+            }
+            .into())
+        })?;
+
+        Ok(Value::from(
+            resources.iter().map(Value::from).collect::<Vec<Value>>(),
+        ))
+    }
+
     pub fn ensure_distribution_resolved(&mut self, logger: &slog::Logger) {
         if self.distribution.is_some() {
             return;
@@ -493,26 +516,9 @@ starlark_module! { python_distribution_module =>
         this,
         path
     ) {
-        let path = required_str_arg("path", &path)?;
-
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
-
-        let resources = this.downcast_apply_mut(|dist: &mut PythonDistribution| {
-            dist.ensure_distribution_resolved(&logger);
-
-            let dist = dist.distribution.as_ref().unwrap();
-
-            raw_read_virtualenv(&dist, &Path::new(&path))
-        }).or_else(|e| Err(
-            RuntimeError {
-                code: "VIRTUALENV_ERROR",
-                message: format!("could not find resources: {}", e),
-                label: "read_virtualenv()".to_string(),
-            }.into()
-        ))?;
-
-        Ok(Value::from(resources.iter().map(Value::from).collect::<Vec<Value>>()))
+        this.downcast_apply_mut(|dist: &mut PythonDistribution| {
+            dist.read_virtualenv(&env, &path)
+        })
     }
 
     #[allow(clippy::ptr_arg)]
