@@ -34,11 +34,12 @@ use super::util::{
 use crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable};
 use crate::py_packaging::bytecode::{BytecodeCompiler, CompileMode};
 use crate::py_packaging::distribution::{
-    is_stdlib_test_package, resolve_parsed_distribution, resolve_python_paths,
-    ExtensionModuleFilter, ParsedPythonDistribution, PythonDistributionLocation,
+    is_stdlib_test_package, resolve_parsed_distribution, ExtensionModuleFilter,
+    ParsedPythonDistribution, PythonDistributionLocation,
 };
 use crate::py_packaging::packaging_tool::{
-    find_resources, pip_install as raw_pip_install, setup_py_install as raw_setup_py_install,
+    find_resources, pip_install as raw_pip_install, read_virtualenv as raw_read_virtualenv,
+    setup_py_install as raw_setup_py_install,
 };
 use crate::py_packaging::resource::{BytecodeOptimizationLevel, PythonResource};
 use crate::python_distributions::CPYTHON_BY_TRIPLE;
@@ -467,21 +468,19 @@ starlark_module! { python_distribution_module =>
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
-        let resources = this.downcast_apply_mut(|dist: &mut PythonDistribution| -> Result<Vec<PythonResource>, ValueError> {
+        let resources = this.downcast_apply_mut(|dist: &mut PythonDistribution| {
             dist.ensure_distribution_resolved(&logger);
 
             let dist = dist.distribution.as_ref().unwrap();
 
-            let python_paths = resolve_python_paths(&Path::new(&path), &dist.version);
-
-            find_resources(&python_paths.site_packages, None).or_else(|e| Err(
-                RuntimeError {
-                    code: "VIRTUALENV_ERROR",
-                    message: format!("could not find resources: {}", e),
-                    label: "read_virtualenv()".to_string(),
-                }.into()
-            ))
-        })?;
+            raw_read_virtualenv(&dist, &Path::new(&path))
+        }).or_else(|e| Err(
+            RuntimeError {
+                code: "VIRTUALENV_ERROR",
+                message: format!("could not find resources: {}", e),
+                label: "read_virtualenv()".to_string(),
+            }.into()
+        ))?;
 
         Ok(Value::from(resources.iter().map(Value::from).collect::<Vec<Value>>()))
     }

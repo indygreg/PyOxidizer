@@ -109,6 +109,16 @@ pub fn pip_install<S: BuildHasher>(
     find_resources(&target_dir, Some(&state_dir))
 }
 
+/// Discover Python resources from a populated virtualenv directory.
+pub fn read_virtualenv(
+    dist: &ParsedPythonDistribution,
+    path: &Path,
+) -> Result<Vec<PythonResource>> {
+    let python_paths = resolve_python_paths(path, &dist.version);
+
+    find_resources(&python_paths.site_packages, None)
+}
+
 /// Run `setup.py install` against a path and return found resources.
 pub fn setup_py_install<S: BuildHasher>(
     logger: &slog::Logger,
