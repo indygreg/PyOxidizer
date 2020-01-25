@@ -41,7 +41,7 @@ use crate::py_packaging::packaging_tool::{
     find_resources, pip_install as raw_pip_install, read_virtualenv as raw_read_virtualenv,
     setup_py_install as raw_setup_py_install,
 };
-use crate::py_packaging::resource::{BytecodeOptimizationLevel, PythonResource};
+use crate::py_packaging::resource::BytecodeOptimizationLevel;
 use crate::python_distributions::CPYTHON_BY_TRIPLE;
 
 #[derive(Debug)]
@@ -209,6 +209,43 @@ impl PythonDistribution {
 
         Ok(Value::from(
             resources.iter().map(Value::from).collect::<Vec<Value>>(),
+        ))
+    }
+
+    pub fn read_package_root(
+        &mut self,
+        env: &Environment,
+        path: &Value,
+        packages: &Value,
+    ) -> ValueResult {
+        let path = required_str_arg("path", &path)?;
+        required_list_arg("packages", "string", &packages)?;
+
+        let packages = packages
+            .into_iter()?
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>();
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        self.ensure_distribution_resolved(&logger);
+
+        let resources = find_resources(&Path::new(&path), None).or_else(|e| {
+            Err(RuntimeError {
+                code: "PACKAGE_ROOT_ERROR",
+                message: format!("could not find resources: {}", e),
+                label: "read_package_root()".to_string(),
+            }
+            .into())
+        })?;
+
+        Ok(Value::from(
+            resources
+                .iter()
+                .filter(|x| x.is_in_packages(&packages))
+                .map(Value::from)
+                .collect::<Vec<Value>>(),
         ))
     }
 
@@ -445,33 +482,9 @@ starlark_module! { python_distribution_module =>
         path,
         packages
     ) {
-        let path = required_str_arg("path", &path)?;
-        required_list_arg("packages", "string", &packages)?;
-
-        let packages = packages.into_iter()?.map(|x| x.to_string()).collect::<Vec<String>>();
-
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
-
-        let resources: Vec<PythonResource> = this.downcast_apply_mut(|dist: &mut PythonDistribution| -> Result<Vec<PythonResource>, ValueError> {
-            dist.ensure_distribution_resolved(&logger);
-
-            find_resources(&Path::new(&path), None).or_else(|e| Err(
-                RuntimeError {
-                    code: "PACKAGE_ROOT_ERROR",
-                    message: format!("could not find resources: {}", e),
-                    label: "read_package_root()".to_string(),
-                }.into()
-            ))
-        })?;
-
-        Ok(
-            Value::from(
-                resources
-                    .iter()
-                    .filter(|x| x.is_in_packages(&packages))
-                    .map(Value::from)
-                    .collect::<Vec<Value>>()))
+        this.downcast_apply_mut(|dist: &mut PythonDistribution| {
+            dist.read_package_root(&env, &path, &packages)
+        })
     }
 
     #[allow(clippy::ptr_arg)]
