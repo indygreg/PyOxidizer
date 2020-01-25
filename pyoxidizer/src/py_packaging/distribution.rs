@@ -622,10 +622,7 @@ impl ParsedPythonDistribution {
             .collect()
     }
 
-    /// Obtain resolved `ResourceData` instances for this distribution.
-    ///
-    /// This effectively resolves the raw file content for resource files
-    /// into `ResourceData` instances.
+    /// Obtain `ResourceData` instances for this distribution.
     pub fn resources_data(&self) -> Result<Vec<ResourceData>> {
         let mut res = Vec::new();
 
@@ -634,7 +631,7 @@ impl ParsedPythonDistribution {
                 res.push(ResourceData {
                     package: package.clone(),
                     name: name.clone(),
-                    data: DataLocation::Memory(fs::read(&path)?),
+                    data: DataLocation::Path(path.clone()),
                 });
             }
         }
