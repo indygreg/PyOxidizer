@@ -300,6 +300,20 @@ impl ExtensionModuleData {
             Vec::new()
         }
     }
+
+    pub fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
+        let mut dest_path = PathBuf::from(prefix);
+        dest_path.extend(self.package_parts());
+        dest_path.push(self.file_name());
+
+        manifest.add_file(
+            &dest_path,
+            &FileContent {
+                data: self.extension_data.clone(),
+                executable: true,
+            },
+        )
+    }
 }
 
 /// Represents a resource to make available to the Python interpreter.
