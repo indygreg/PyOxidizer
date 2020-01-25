@@ -337,6 +337,23 @@ impl FileManifest {
 
         Ok(Value::new(None))
     }
+
+    /// FileManifest.add_python_resources(prefix, resources)
+    #[allow(clippy::ptr_arg)]
+    pub fn add_python_resources(
+        &mut self,
+        env: &Environment,
+        prefix: &Value,
+        resources: &Value,
+    ) -> ValueResult {
+        required_str_arg("prefix", &prefix)?;
+
+        for resource in resources.into_iter()? {
+            self.add_python_resource(env, &prefix.clone(), &resource)?;
+        }
+
+        Ok(Value::new(None))
+    }
 }
 
 starlark_module! { file_resource_env =>
@@ -353,16 +370,10 @@ starlark_module! { file_resource_env =>
     }
 
     #[allow(clippy::ptr_arg)]
-    FileManifest.add_python_resources(call_stack cs, env env, this, prefix, resources) {
-        required_str_arg("prefix", &prefix)?;
-
-        let f = env.get_type_value(&this, "add_python_resource").unwrap();
-
-        for resource in resources.into_iter()? {
-            f.call(cs, env.clone(), vec![this.clone(), prefix.clone(), resource], HashMap::new(), None, None)?;
-        }
-
-        Ok(Value::new(None))
+    FileManifest.add_python_resources(env env, this, prefix, resources) {
+        this.downcast_apply_mut(|manifest: &mut FileManifest| {
+            manifest.add_python_resources(&env, &prefix, &resources)
+        })
     }
 
     #[allow(clippy::ptr_arg)]
