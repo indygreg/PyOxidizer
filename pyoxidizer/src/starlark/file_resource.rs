@@ -354,6 +354,33 @@ impl FileManifest {
 
         Ok(Value::new(None))
     }
+
+    /// FileManifest.install(path, replace=true)
+    pub fn install(&self, env: &Environment, path: &Value, replace: &Value) -> ValueResult {
+        let path = required_str_arg("path", &path)?;
+        let replace = required_bool_arg("replace", &replace)?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+        let build_path = context.downcast_apply(|x: &EnvironmentContext| x.build_path.clone());
+
+        let dest_path = build_path.join(path);
+
+        if replace {
+            self.manifest.replace_path(&dest_path)
+        } else {
+            self.manifest.write_to_path(&dest_path)
+        }
+        .or_else(|e| {
+            Err(RuntimeError {
+                code: "PYOXIDIZER_INSTALL",
+                message: format!("error installing FileManifest: {}", e),
+                label: "FileManifest.install()".to_string(),
+            }
+            .into())
+        })?;
+
+        Ok(Value::new(None))
+    }
 }
 
 starlark_module! { file_resource_env =>
@@ -378,27 +405,9 @@ starlark_module! { file_resource_env =>
 
     #[allow(clippy::ptr_arg)]
     FileManifest.install(env env, this, path, replace=true) {
-        let path = required_str_arg("path", &path)?;
-        let replace = required_bool_arg("replace", &replace)?;
-
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let build_path = context.downcast_apply(|x: &EnvironmentContext| x.build_path.clone());
-
-        let dest_path = build_path.join(path);
-
         this.downcast_apply(|manifest: &FileManifest| {
-            if replace {
-                manifest.manifest.replace_path(&dest_path)
-            } else {
-                manifest.manifest.write_to_path(&dest_path)
-            }
-        }.or_else(|e| Err(RuntimeError {
-            code: "PYOXIDIZER_INSTALL",
-            message: format!("error installing FileManifest: {}", e),
-            label: "FileManifest.install()".to_string()
-        }.into())))?;
-
-        Ok(Value::new(None))
+            manifest.install(&env, &path, &replace)
+        })
     }
 }
 
