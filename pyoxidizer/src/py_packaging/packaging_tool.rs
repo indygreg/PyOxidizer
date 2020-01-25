@@ -8,12 +8,39 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::hash::BuildHasher;
 use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use super::distribution::ParsedPythonDistribution;
 use super::distutils::{prepare_hacked_distutils, read_built_extensions};
 use super::fsscan::{find_python_resources, PythonFileResource};
 use super::resource::PythonResource;
+
+/// Find resources installed as part of a packaging operation.
+pub fn find_resources(path: &Path, state_dir: Option<&Path>) -> Result<Vec<PythonResource>> {
+    let mut res = Vec::new();
+
+    for r in find_python_resources(&path) {
+        match r {
+            PythonFileResource::Source { .. } => {
+                res.push(PythonResource::try_from(&r)?);
+            }
+
+            PythonFileResource::Resource(..) => {
+                res.push(PythonResource::try_from(&r)?);
+            }
+
+            _ => {}
+        }
+    }
+
+    if let Some(p) = state_dir {
+        for ext in read_built_extensions(&p)? {
+            res.push(PythonResource::BuiltExtensionModule(ext));
+        }
+    }
+
+    Ok(res)
+}
 
 /// Run `pip install` and return found resources.
 pub fn pip_install<S: BuildHasher>(

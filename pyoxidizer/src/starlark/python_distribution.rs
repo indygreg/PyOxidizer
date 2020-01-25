@@ -38,9 +38,8 @@ use crate::py_packaging::distribution::{
     is_stdlib_test_package, resolve_parsed_distribution, resolve_python_paths,
     ExtensionModuleFilter, ParsedPythonDistribution, PythonDistributionLocation,
 };
-use crate::py_packaging::distutils::{prepare_hacked_distutils, read_built_extensions};
-use crate::py_packaging::fsscan::{find_python_resources, PythonFileResource};
-use crate::py_packaging::packaging_tool::pip_install as raw_pip_install;
+use crate::py_packaging::distutils::prepare_hacked_distutils;
+use crate::py_packaging::packaging_tool::{find_resources, pip_install as raw_pip_install};
 use crate::py_packaging::resource::{BytecodeOptimizationLevel, PythonResource};
 use crate::python_distributions::CPYTHON_BY_TRIPLE;
 
@@ -234,32 +233,6 @@ impl TypedValue for PythonDistribution {
     fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
         default_compare(self, other)
     }
-}
-
-fn find_resources(path: &Path, state_dir: Option<&Path>) -> Result<Vec<PythonResource>> {
-    let mut res = Vec::new();
-
-    for r in find_python_resources(&path) {
-        match r {
-            PythonFileResource::Source { .. } => {
-                res.push(PythonResource::try_from(&r)?);
-            }
-
-            PythonFileResource::Resource(..) => {
-                res.push(PythonResource::try_from(&r)?);
-            }
-
-            _ => {}
-        }
-    }
-
-    if let Some(p) = state_dir {
-        for ext in read_built_extensions(&p)? {
-            res.push(PythonResource::BuiltExtensionModule(ext));
-        }
-    }
-
-    Ok(res)
 }
 
 pub fn resolve_default_python_distribution(env: &Environment, build_target: &str) -> ValueResult {
