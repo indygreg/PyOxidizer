@@ -35,7 +35,6 @@ use super::util::{
 use crate::project_building::build_python_executable;
 use crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable};
 use crate::py_packaging::distribution::ExtensionModuleFilter;
-use crate::py_packaging::embedded_resource::EmbeddedPythonResourcesPrePackaged;
 use crate::py_packaging::resource::{BytecodeModule, BytecodeOptimizationLevel};
 
 impl TypedValue for PreBuiltPythonExecutable {
@@ -154,20 +153,6 @@ starlark_module! { python_executable_env =>
             dist.distribution.as_ref().unwrap().clone()
         });
 
-        let mut resources = EmbeddedPythonResourcesPrePackaged::from_distribution(
-            &logger,
-            distribution.clone(),
-            &extension_module_filter,
-            preferred_extension_module_variants,
-            include_sources,
-            include_resources,
-            include_test,
-        ).or_else(|e| Err(RuntimeError {
-            code: "PYOXIDIZER_BUILD",
-            message: e.to_string(),
-            label: "PythonExecutable()".to_string(),
-        }.into()))?;
-
         let config = if config.get_type() == "NoneType" {
             let v = env.get("PythonInterpreterConfig").expect("PythonInterpreterConfig not defined");
             v.call(cs, env, Vec::new(), HashMap::new(), None, None)?.downcast_apply(|c: &PythonInterpreterConfig| {
@@ -179,21 +164,22 @@ starlark_module! { python_executable_env =>
 
         let run_mode = run_mode.downcast_apply(|m: &PythonRunMode| m.run_mode.clone());
 
-        // Always ensure minimal extension modules are present, otherwise we get
-        // missing symbol errors at link time.
-        for ext in distribution.filter_extension_modules(&logger, &ExtensionModuleFilter::Minimal, None) {
-            if !resources.extension_modules.contains_key(&ext.module) {
-                resources.add_extension_module(&ext);
-            }
-        }
-
-        let pre_built = PreBuiltPythonExecutable {
-            name,
+        let pre_built = PreBuiltPythonExecutable::from_python_distribution(
+            &logger,
             distribution,
-            resources,
-            config,
-            run_mode
-        };
+            &name,
+            &run_mode,
+            &config,
+            &extension_module_filter,
+            preferred_extension_module_variants,
+            include_sources,
+            include_resources,
+            include_test,
+        ).or_else(|e| Err(RuntimeError {
+            code: "PYOXIDIZER_BUILD",
+            message: e.to_string(),
+            label: "PythonExecutable()".to_string(),
+        }.into()))?;
 
         context.downcast_apply(|context: &EnvironmentContext| -> Result<()> {
             if let Some(path) = &context.write_artifacts_path {

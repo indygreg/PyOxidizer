@@ -4,6 +4,7 @@
 
 use anyhow::Result;
 use slog::warn;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -11,7 +12,7 @@ use std::sync::Arc;
 use tempdir::TempDir;
 
 use super::config::{EmbeddedPythonConfig, RunMode};
-use super::distribution::ParsedPythonDistribution;
+use super::distribution::{ExtensionModuleFilter, ParsedPythonDistribution};
 use super::embedded_resource::EmbeddedPythonResourcesPrePackaged;
 use super::libpython::{derive_importlib, link_libpython, ImportlibData};
 use super::pyembed::{derive_python_config, write_data_rs};
@@ -27,6 +28,49 @@ pub struct PreBuiltPythonExecutable {
 }
 
 impl PreBuiltPythonExecutable {
+    /// Create an instance from a Python distribution, using settings.
+    #[allow(clippy::too_many_arguments)]
+    pub fn from_python_distribution(
+        logger: &slog::Logger,
+        distribution: Arc<ParsedPythonDistribution>,
+        name: &str,
+        run_mode: &RunMode,
+        config: &EmbeddedPythonConfig,
+        extension_module_filter: &ExtensionModuleFilter,
+        preferred_extension_module_variants: Option<HashMap<String, String>>,
+        include_sources: bool,
+        include_resources: bool,
+        include_test: bool,
+    ) -> Result<Self> {
+        let mut resources = EmbeddedPythonResourcesPrePackaged::from_distribution(
+            logger,
+            distribution.clone(),
+            extension_module_filter,
+            preferred_extension_module_variants,
+            include_sources,
+            include_resources,
+            include_test,
+        )?;
+
+        // Always ensure minimal extension modules are present, otherwise we get
+        // missing symbol errors at link time.
+        for ext in
+            distribution.filter_extension_modules(&logger, &ExtensionModuleFilter::Minimal, None)
+        {
+            if !resources.extension_modules.contains_key(&ext.module) {
+                resources.add_extension_module(&ext);
+            }
+        }
+
+        Ok(PreBuiltPythonExecutable {
+            name: name.to_string(),
+            distribution,
+            resources,
+            config: config.clone(),
+            run_mode: run_mode.clone(),
+        })
+    }
+
     /// Build a Python library suitable for linking.
     ///
     /// This will take the underlying distribution, resources, and
