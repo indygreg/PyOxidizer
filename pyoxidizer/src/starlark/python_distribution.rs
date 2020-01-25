@@ -22,7 +22,6 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use super::env::EnvironmentContext;
-use super::python_interpreter_config::PythonInterpreterConfig;
 use super::python_resource::{
     PythonExtensionModule, PythonExtensionModuleFlavor, PythonResourceData, PythonSourceModule,
 };
@@ -33,6 +32,7 @@ use super::util::{
 };
 use crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable};
 use crate::py_packaging::bytecode::{BytecodeCompiler, CompileMode};
+use crate::py_packaging::config::EmbeddedPythonConfig;
 use crate::py_packaging::distribution::{
     is_stdlib_test_package, resolve_parsed_distribution, ExtensionModuleFilter,
     ParsedPythonDistribution, PythonDistributionLocation,
@@ -190,9 +190,9 @@ impl PythonDistribution {
                 .get("PythonInterpreterConfig")
                 .expect("PythonInterpreterConfig not defined");
             v.call(call_stack, env, Vec::new(), HashMap::new(), None, None)?
-                .downcast_apply(|c: &PythonInterpreterConfig| c.config.clone())
+                .downcast_apply(|c: &EmbeddedPythonConfig| c.clone())
         } else {
-            config.downcast_apply(|c: &PythonInterpreterConfig| c.config.clone())
+            config.downcast_apply(|c: &EmbeddedPythonConfig| c.clone())
         };
 
         let run_mode = run_mode.downcast_apply(|m: &PythonRunMode| m.run_mode.clone());
