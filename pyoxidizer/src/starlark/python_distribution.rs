@@ -56,6 +56,47 @@ pub struct PythonDistribution {
 }
 
 impl PythonDistribution {
+    fn from_args(
+        env: &Environment,
+        sha256: &Value,
+        local_path: &Value,
+        url: &Value,
+    ) -> ValueResult {
+        required_str_arg("sha256", &sha256)?;
+        optional_str_arg("local_path", &local_path)?;
+        optional_str_arg("url", &url)?;
+
+        if local_path.get_type() != "NoneType" && url.get_type() != "NoneType" {
+            return Err(RuntimeError {
+                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                message: "cannot define both local_path and url".to_string(),
+                label: "cannot define both local_path and url".to_string(),
+            }
+            .into());
+        }
+
+        let distribution = if local_path.get_type() != "NoneType" {
+            PythonDistributionLocation::Local {
+                local_path: local_path.to_string(),
+                sha256: sha256.to_string(),
+            }
+        } else {
+            PythonDistributionLocation::Url {
+                url: url.to_string(),
+                sha256: sha256.to_string(),
+            }
+        };
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+        let dest_dir =
+            context.downcast_apply(|x: &EnvironmentContext| x.python_distributions_path.clone());
+
+        Ok(Value::new(PythonDistribution::from_location(
+            distribution,
+            &dest_dir,
+        )))
+    }
+
     fn default_python_distribution(env: &Environment, build_target: &Value) -> ValueResult {
         let build_target = match build_target.get_type() {
             "NoneType" => env.get("BUILD_TARGET_TRIPLE").unwrap().to_string(),
@@ -626,34 +667,7 @@ pub fn resolve_default_python_distribution(env: &Environment, build_target: &str
 starlark_module! { python_distribution_module =>
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonDistribution(env env, sha256, local_path=None, url=None) {
-        required_str_arg("sha256", &sha256)?;
-        optional_str_arg("local_path", &local_path)?;
-        optional_str_arg("url", &url)?;
-
-        if local_path.get_type() != "NoneType" && url.get_type() != "NoneType" {
-            return Err(RuntimeError {
-                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                message: "cannot define both local_path and url".to_string(),
-                label: "cannot define both local_path and url".to_string(),
-            }.into());
-        }
-
-        let distribution = if local_path.get_type() != "NoneType" {
-            PythonDistributionLocation::Local {
-                local_path: local_path.to_string(),
-                sha256: sha256.to_string(),
-            }
-        } else {
-            PythonDistributionLocation::Url {
-                url: url.to_string(),
-                sha256: sha256.to_string(),
-            }
-        };
-
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let dest_dir = context.downcast_apply(|x: &EnvironmentContext| x.python_distributions_path.clone());
-
-        Ok(Value::new(PythonDistribution::from_location(distribution, &dest_dir)))
+        PythonDistribution::from_args(&env, &sha256, &local_path, &url)
     }
 
     #[allow(clippy::ptr_arg)]
