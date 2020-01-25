@@ -452,11 +452,6 @@ The accepted arguments are:
    The name of the application being built. This will be used to construct the
    default filename of the executable.
 
-``distribution`` (``PythonDistribution``)
-   The Python distribution to use to construct this executable. The
-   interpreter from the distribution will be compiled into the produced
-   executable.
-
 ``run_mode`` (``PythonRunMode``)
    The default run-time behavior of the embedded Python interpreter.
 

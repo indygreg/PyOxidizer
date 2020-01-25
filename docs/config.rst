@@ -13,17 +13,14 @@ language and the syntax should be familiar to any Python programmer.
 Finding Configuration Files
 ===========================
 
-The Starlark configuration file is processed as part of building the ``pyembed``
-crate. This is the crate that manages an embedded Python interpreter in a
-larger Rust project.
-
 If the ``PYOXIDIZER_CONFIG`` environment variable is set, the path specified
 by this environment variable will be used as the location of the Starlark
 configuration file.
 
-If ``PYOXIDIZER_CONFIG`` is not set, the build will look for a
-``pyoxidizer.bzl`` file starting in the directory of the ``pyembed``
-crate and then traversing ancestor directories until a file is found.
+If ``PYOXIDIZER_CONFIG`` is not set, ``PyOxidizer`` will look for a
+``pyoxidizer.bzl`` file starting in either the current working directory
+or from the directory containing the ``pyembed`` crate and then will traverse
+ancestor directories until a file is found.
 
 If no configuration file is found, an error occurs.
 
@@ -33,28 +30,100 @@ File Processing Semantics
 A configuration file is evaluated in a custom Starlark *dialect* which
 provides primitives used by PyOxidizer. This dialect provides some
 well-defined global variables (defined in UPPERCASE) as well as some
-types and functions that can be constructed and called. (See their
-definitions below.)
+types and functions that can be constructed and called. See below
+for general usage and :ref:`config_api` for a full reference of what's
+available to the Starlark environment.
 
-A configuration file is effectively a sandboxed Python script. As
-functions are called, PyOxidizer will perform actions as described
-by those functions.
+Since Starlark is effectively a subset of Python, executing a ``PyOxidizer``
+configuration file is effectively running a sandboxed Python script. It is
+conceptually similar to running ``python setup.py`` to build a Python
+package. As functions withink the Starlark environment are called,
+``PyOxidizer`` will perform actions as described by those functions.
 
-Configuration files define functions which perform some activity
-then register these functions under a *target* name via the
-``register_target()`` global function. When a configuration
-file is evaluated, PyOxidizer attempts to resolve an ordered set of
-*targets*. This means that configuration files are effectively a mini
-build system, albeit without the complexity and features that a fully
-generic build system entails.
+Targets
+=======
 
-Global Environment
-==================
+``PyOxidizer`` configuration files are composed of functions registered
+as named *targets*. You define a function that does something then
+register it was a target by calling the
+:ref:`config_register_target` global function provided by our Starlark
+dialect. e.g.:
 
-The evaluation context takes place in a *global environment*.
+.. code-block:: python
 
-This environment contains
-`built-in symbols and constants from Starlark <https://github.com/bazelbuild/starlark/blob/master/spec.md#built-in-constants-and-functions>`_
-in addition to symbols and constants provided by ``PyOxidizer``. See
-:ref:`config_api` for documentation of every available symbol and
-type in our Starlark dialect.
+   def get_python_distribution():
+       return default_python_distribution()
+
+   register_target("dist", get_python_distribution)
+
+When a configuration file is evaluated, ``PyOxidizer`` attempts to
+*resolve* an ordered list of *targets* This list of targets is either
+specified by the end-user or is derived from the configuration file.
+The first ``register_target()`` target or the last ``register_target()``
+call passing ``default=True`` is the default target.
+
+``PyOxidizer`` calls the registered target functions in order to
+*resolve* the requested set of targets.
+
+Target functions can depend on other targets and dependent target functions
+will automatically be called and have their return value passed as an
+argument to the target function depending on it. See
+:ref:`config_register_target` for more.
+
+The value returned by a target function is special. If that value is one
+of the special types defined by our Starlark dialect (e.g.
+:ref:`config_python_distribution` or :ref:`config_python_executable`),
+``PyOxidizer`` will attempt to invoke special functionality depending
+on the run mode. For example, when running ``pyoxidizer build`` to
+*build* a target, ``PyOxidizer`` will invoke any *build* functionality
+on the value returned by a target function, if present. For example,
+a ``PythonExecutable``'s *build* functionality would compile an
+executable binary embedding Python.
+
+Common Operations
+=================
+
+Obtain a Python Distribution
+----------------------------
+
+A :ref:`PythonDistribution <config_python_distribution>` type defines a
+Python distribution from which you can derive binaries, perform packaging
+actions, etc. Every configuration file will likely utilize this type.
+
+Instances are typically constructed from
+:ref:`default_python_distribution() <config_default_python_distribution>`
+and are registered as their own target, since multiple targets may want
+to reference the distribution instance:
+
+.. code-block:: python
+
+   def make_dist():
+      return default_python_distribution()
+
+   register_target("dist", make_dist)
+
+Creating an Executable File Embedding Python
+--------------------------------------------
+
+A :ref:`config_python_executable` type defines an executable file embedding
+Python.
+
+Instances are derived from a ``PythonDistribution`` instance, usually
+by using target dependencies. In this example, we create an executable
+that runs a Python REPL on startup:
+
+.. code-block:: python
+
+   def make_dist():
+       return default_python_distribution()
+
+   def make_exe(dist):
+       return dist.to_python_executable(
+           "myapp",
+           python_run_mode_repl(),
+       )
+
+   register_target("dist", make_dist)
+   register_target("exe", make_exe, depends=["dist"], default=True)
+
+See :ref:`packaging` for more examples.
