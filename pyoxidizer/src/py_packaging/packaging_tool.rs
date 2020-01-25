@@ -101,3 +101,28 @@ pub fn pip_install<S: BuildHasher>(
 
     Ok(res)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testutil::*;
+
+    #[test]
+    fn test_install_black() -> Result<()> {
+        let logger = get_logger()?;
+        let distribution = get_default_distribution()?;
+
+        let resources: Vec<PythonResource> = pip_install(
+            &logger,
+            &distribution,
+            false,
+            &["black==19.10b0".to_string()],
+            &HashMap::new(),
+        )?;
+
+        assert!(resources.iter().any(|r| r.full_name() == "appdirs"));
+        assert!(resources.iter().any(|r| r.full_name() == "black"));
+
+        Ok(())
+    }
+}

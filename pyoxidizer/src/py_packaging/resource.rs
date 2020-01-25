@@ -340,6 +340,18 @@ impl TryFrom<&PythonFileResource> for PythonResource {
 }
 
 impl PythonResource {
+    /// Resolves the fully qualified resource name.
+    pub fn full_name(&self) -> String {
+        match self {
+            PythonResource::ModuleSource { name, .. } => name.clone(),
+            PythonResource::ModuleBytecode { name, .. } => name.clone(),
+            PythonResource::ModuleBytecodeRequest { name, .. } => name.clone(),
+            PythonResource::Resource { package, name, .. } => format!("{}.{}", package, name),
+            PythonResource::BuiltExtensionModule(em) => em.name.clone(),
+            PythonResource::ExtensionModule { name, .. } => name.clone(),
+        }
+    }
+
     pub fn is_in_packages(&self, packages: &[String]) -> bool {
         let name = match self {
             PythonResource::ModuleSource { name, .. } => name,
