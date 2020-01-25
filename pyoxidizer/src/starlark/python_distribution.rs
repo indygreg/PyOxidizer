@@ -56,6 +56,21 @@ pub struct PythonDistribution {
 }
 
 impl PythonDistribution {
+    fn default_python_distribution(env: &Environment, build_target: &Value) -> ValueResult {
+        let build_target = match build_target.get_type() {
+            "NoneType" => env.get("BUILD_TARGET_TRIPLE").unwrap().to_string(),
+            "string" => build_target.to_string(),
+            t => {
+                return Err(ValueError::TypeNotX {
+                    object_type: t.to_string(),
+                    op: "str".to_string(),
+                })
+            }
+        };
+
+        resolve_default_python_distribution(&env, &build_target)
+    }
+
     fn from_location(location: PythonDistributionLocation, dest_dir: &Path) -> PythonDistribution {
         PythonDistribution {
             source: location,
@@ -737,18 +752,7 @@ starlark_module! { python_distribution_module =>
 
     #[allow(clippy::ptr_arg)]
     default_python_distribution(env env, build_target=None) {
-        let build_target = match build_target.get_type() {
-            "NoneType" => env.get("BUILD_TARGET_TRIPLE").unwrap().to_string(),
-            "string" => build_target.to_string(),
-            t => {
-                return Err(ValueError::TypeNotX {
-                    object_type: t.to_string(),
-                    op: "str".to_string(),
-                })
-            }
-        };
-
-        resolve_default_python_distribution(&env, &build_target)
+        PythonDistribution::default_python_distribution(&env, &build_target)
     }
 }
 
