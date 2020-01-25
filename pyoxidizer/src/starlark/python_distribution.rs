@@ -67,7 +67,7 @@ impl PythonDistribution {
 
     /// Convert a PythonDistribution to a PythonExecutable from Starlark values.
     #[allow(clippy::ptr_arg, clippy::too_many_arguments)]
-    fn as_python_distribution_starlark(
+    fn as_python_executable_starlark(
         &mut self,
         env: Environment,
         call_stack: &Vec<(String, String)>,
@@ -696,7 +696,7 @@ starlark_module! { python_distribution_module =>
             }
         });
 
-        let pre_built = distribution.as_python_distribution_starlark(
+        let pre_built = distribution.as_python_executable_starlark(
             env.clone(),
             call_stack,
             name,
