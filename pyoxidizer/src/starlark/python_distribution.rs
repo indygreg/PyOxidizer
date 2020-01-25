@@ -2,46 +2,47 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use anyhow::{anyhow, Result};
-use itertools::Itertools;
-use slog::warn;
-use starlark::environment::Environment;
-use starlark::values::{
-    default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
-    INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+use {
+    super::env::EnvironmentContext,
+    super::python_resource::{
+        PythonExtensionModule, PythonExtensionModuleFlavor, PythonResourceData, PythonSourceModule,
+    },
+    super::util::{
+        optional_dict_arg, optional_list_arg, optional_str_arg, optional_type_arg,
+        required_bool_arg, required_list_arg, required_str_arg, required_type_arg,
+    },
+    crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable},
+    crate::py_packaging::bytecode::{BytecodeCompiler, CompileMode},
+    crate::py_packaging::config::{EmbeddedPythonConfig, RunMode},
+    crate::py_packaging::distribution::{
+        is_stdlib_test_package, resolve_parsed_distribution, ExtensionModuleFilter,
+        ParsedPythonDistribution, PythonDistributionLocation,
+    },
+    crate::py_packaging::packaging_tool::{
+        find_resources, pip_install as raw_pip_install, read_virtualenv as raw_read_virtualenv,
+        setup_py_install as raw_setup_py_install,
+    },
+    crate::py_packaging::resource::BytecodeOptimizationLevel,
+    crate::python_distributions::CPYTHON_BY_TRIPLE,
+    anyhow::{anyhow, Result},
+    itertools::Itertools,
+    slog::warn,
+    starlark::environment::Environment,
+    starlark::values::{
+        default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
+        INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+    },
+    starlark::{
+        any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
+        starlark_signature_extraction, starlark_signatures,
+    },
+    std::any::Any,
+    std::cmp::Ordering,
+    std::collections::HashMap,
+    std::convert::TryFrom,
+    std::path::{Path, PathBuf},
+    std::sync::Arc,
 };
-use starlark::{
-    any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
-    starlark_signature_extraction, starlark_signatures,
-};
-use std::any::Any;
-use std::cmp::Ordering;
-use std::collections::HashMap;
-use std::convert::TryFrom;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
-
-use super::env::EnvironmentContext;
-use super::python_resource::{
-    PythonExtensionModule, PythonExtensionModuleFlavor, PythonResourceData, PythonSourceModule,
-};
-use super::util::{
-    optional_dict_arg, optional_list_arg, optional_str_arg, optional_type_arg, required_bool_arg,
-    required_list_arg, required_str_arg, required_type_arg,
-};
-use crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable};
-use crate::py_packaging::bytecode::{BytecodeCompiler, CompileMode};
-use crate::py_packaging::config::{EmbeddedPythonConfig, RunMode};
-use crate::py_packaging::distribution::{
-    is_stdlib_test_package, resolve_parsed_distribution, ExtensionModuleFilter,
-    ParsedPythonDistribution, PythonDistributionLocation,
-};
-use crate::py_packaging::packaging_tool::{
-    find_resources, pip_install as raw_pip_install, read_virtualenv as raw_read_virtualenv,
-    setup_py_install as raw_setup_py_install,
-};
-use crate::py_packaging::resource::BytecodeOptimizationLevel;
-use crate::python_distributions::CPYTHON_BY_TRIPLE;
 
 #[derive(Debug)]
 pub struct PythonDistribution {

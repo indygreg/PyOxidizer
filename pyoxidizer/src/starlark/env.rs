@@ -2,23 +2,24 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use anyhow::{anyhow, Context, Result};
-use slog::warn;
-use starlark::environment::{Environment, EnvironmentError};
-use starlark::values::{default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult};
-use starlark::{
-    any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
-    starlark_signature_extraction, starlark_signatures,
+use {
+    super::file_resource::FileManifest,
+    super::target::{BuildContext, BuildTarget, ResolvedTarget},
+    super::util::{optional_list_arg, required_bool_arg, required_str_arg, required_type_arg},
+    crate::py_packaging::binary::PreBuiltPythonExecutable,
+    anyhow::{anyhow, Context, Result},
+    slog::warn,
+    starlark::environment::{Environment, EnvironmentError},
+    starlark::values::{default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult},
+    starlark::{
+        any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
+        starlark_signature_extraction, starlark_signatures,
+    },
+    std::any::Any,
+    std::cmp::Ordering,
+    std::collections::{BTreeMap, HashMap},
+    std::path::{Path, PathBuf},
 };
-use std::any::Any;
-use std::cmp::Ordering;
-use std::collections::{BTreeMap, HashMap};
-use std::path::{Path, PathBuf};
-
-use super::file_resource::FileManifest;
-use super::target::{BuildContext, BuildTarget, ResolvedTarget};
-use super::util::{optional_list_arg, required_bool_arg, required_str_arg, required_type_arg};
-use crate::py_packaging::binary::PreBuiltPythonExecutable;
 
 #[derive(Debug, Clone)]
 pub struct Target {

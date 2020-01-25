@@ -2,22 +2,23 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use starlark::environment::Environment;
-use starlark::values::{
-    default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
-    INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+use {
+    super::util::{optional_list_arg, optional_str_arg, required_bool_arg, required_type_arg},
+    crate::app_packaging::config::default_raw_allocator,
+    crate::py_packaging::config::{EmbeddedPythonConfig, RawAllocator, TerminfoResolution},
+    starlark::environment::Environment,
+    starlark::values::{
+        default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
+        INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+    },
+    starlark::{
+        any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
+        starlark_signature_extraction, starlark_signatures,
+    },
+    std::any::Any,
+    std::cmp::Ordering,
+    std::collections::HashMap,
 };
-use starlark::{
-    any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
-    starlark_signature_extraction, starlark_signatures,
-};
-use std::any::Any;
-use std::cmp::Ordering;
-use std::collections::HashMap;
-
-use super::util::{optional_list_arg, optional_str_arg, required_bool_arg, required_type_arg};
-use crate::app_packaging::config::default_raw_allocator;
-use crate::py_packaging::config::{EmbeddedPythonConfig, RawAllocator, TerminfoResolution};
 
 impl TypedValue for EmbeddedPythonConfig {
     immutable!();

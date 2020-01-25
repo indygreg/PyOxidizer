@@ -2,18 +2,19 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use starlark::environment::Environment;
-use starlark::values::{default_compare, TypedValue, Value, ValueError, ValueResult};
-use starlark::{
-    any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
-    starlark_signature_extraction, starlark_signatures,
+use {
+    super::util::required_str_arg,
+    crate::py_packaging::config::RunMode,
+    starlark::environment::Environment,
+    starlark::values::{default_compare, TypedValue, Value, ValueError, ValueResult},
+    starlark::{
+        any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
+        starlark_signature_extraction, starlark_signatures,
+    },
+    std::any::Any,
+    std::cmp::Ordering,
+    std::collections::HashMap,
 };
-use std::any::Any;
-use std::cmp::Ordering;
-use std::collections::HashMap;
-
-use super::util::required_str_arg;
-use crate::py_packaging::config::RunMode;
 
 impl TypedValue for RunMode {
     immutable!();

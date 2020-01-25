@@ -2,32 +2,33 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use anyhow::{Context, Result};
-use slog::{info, warn};
-use starlark::environment::Environment;
-use starlark::values::{
-    default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
-    INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+use {
+    super::env::EnvironmentContext,
+    super::python_resource::{
+        PythonExtensionModule, PythonExtensionModuleFlavor, PythonResourceData, PythonSourceModule,
+    },
+    super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
+    super::util::{optional_list_arg, required_bool_arg, required_type_arg},
+    crate::project_building::build_python_executable,
+    crate::py_packaging::binary::PreBuiltPythonExecutable,
+    crate::py_packaging::resource::{BytecodeModule, BytecodeOptimizationLevel},
+    anyhow::{Context, Result},
+    slog::{info, warn},
+    starlark::environment::Environment,
+    starlark::values::{
+        default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
+        INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+    },
+    starlark::{
+        any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
+        starlark_signature_extraction, starlark_signatures,
+    },
+    std::any::Any,
+    std::cmp::Ordering,
+    std::collections::HashMap,
+    std::io::Write,
+    std::path::{Path, PathBuf},
 };
-use starlark::{
-    any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
-    starlark_signature_extraction, starlark_signatures,
-};
-use std::any::Any;
-use std::cmp::Ordering;
-use std::collections::HashMap;
-use std::io::Write;
-use std::path::{Path, PathBuf};
-
-use super::env::EnvironmentContext;
-use super::python_resource::{
-    PythonExtensionModule, PythonExtensionModuleFlavor, PythonResourceData, PythonSourceModule,
-};
-use super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode};
-use super::util::{optional_list_arg, required_bool_arg, required_type_arg};
-use crate::project_building::build_python_executable;
-use crate::py_packaging::binary::PreBuiltPythonExecutable;
-use crate::py_packaging::resource::{BytecodeModule, BytecodeOptimizationLevel};
 
 impl TypedValue for PreBuiltPythonExecutable {
     immutable!();

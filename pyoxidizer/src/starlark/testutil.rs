@@ -2,15 +2,16 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use codemap::CodeMap;
-use codemap_diagnostic::Diagnostic;
-use slog::Drain;
-use starlark::environment::Environment;
-use starlark::eval;
-use starlark::values::Value;
-
-use super::env::{global_environment, EnvironmentContext};
-use crate::logging::PrintlnDrain;
+use {
+    super::env::{global_environment, EnvironmentContext},
+    crate::logging::PrintlnDrain,
+    codemap::CodeMap,
+    codemap_diagnostic::Diagnostic,
+    slog::Drain,
+    starlark::environment::Environment,
+    starlark::eval,
+    starlark::values::Value,
+};
 
 pub fn starlark_env() -> Environment {
     let logger = slog::Logger::root(

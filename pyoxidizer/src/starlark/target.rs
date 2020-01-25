@@ -2,8 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use anyhow::{anyhow, Result};
-use std::path::PathBuf;
+use {
+    anyhow::{anyhow, Result},
+    std::path::PathBuf,
+};
 
 /// How a resolved target can be run.
 pub enum RunMode {

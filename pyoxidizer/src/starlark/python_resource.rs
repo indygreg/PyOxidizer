@@ -2,17 +2,18 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use starlark::environment::Environment;
-use starlark::values::{default_compare, TypedValue, Value, ValueError, ValueResult};
-use starlark::{any, immutable, not_supported};
-use std::any::Any;
-use std::cmp::Ordering;
-use std::collections::HashMap;
-
-use crate::py_packaging::distribution::ExtensionModule;
-use crate::py_packaging::resource::{
-    BytecodeModule, BytecodeOptimizationLevel, ExtensionModuleData, PythonResource, ResourceData,
-    SourceModule,
+use {
+    crate::py_packaging::distribution::ExtensionModule,
+    crate::py_packaging::resource::{
+        BytecodeModule, BytecodeOptimizationLevel, ExtensionModuleData, PythonResource,
+        ResourceData, SourceModule,
+    },
+    starlark::environment::Environment,
+    starlark::values::{default_compare, TypedValue, Value, ValueError, ValueResult},
+    starlark::{any, immutable, not_supported},
+    std::any::Any,
+    std::cmp::Ordering,
+    std::collections::HashMap,
 };
 
 #[derive(Debug, Clone)]

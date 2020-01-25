@@ -2,15 +2,16 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use codemap::CodeMap;
-use codemap_diagnostic::{Diagnostic, Level};
-use starlark::environment::Environment;
-use std::path::Path;
-use std::sync::{Arc, Mutex};
-
-use super::env::{global_environment, EnvironmentContext};
-use crate::app_packaging::config::{BuildConfig, Config};
-use crate::py_packaging::config::RunMode;
+use {
+    super::env::{global_environment, EnvironmentContext},
+    crate::app_packaging::config::{BuildConfig, Config},
+    crate::py_packaging::config::RunMode,
+    codemap::CodeMap,
+    codemap_diagnostic::{Diagnostic, Level},
+    starlark::environment::Environment,
+    std::path::Path,
+    std::sync::{Arc, Mutex},
+};
 
 /// Represents the result of evaluating a Starlark environment.
 pub struct EvalResult {

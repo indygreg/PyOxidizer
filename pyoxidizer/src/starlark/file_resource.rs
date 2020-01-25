@@ -2,37 +2,38 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use anyhow::Result;
-use itertools::Itertools;
-use slog::warn;
-use starlark::environment::Environment;
-use starlark::values::{
-    default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
-    INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+use {
+    super::env::EnvironmentContext,
+    super::python_resource::PythonExtensionModuleFlavor,
+    super::python_resource::{
+        PythonBytecodeModule, PythonExtensionModule, PythonResourceData, PythonSourceModule,
+    },
+    super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
+    super::util::{required_bool_arg, required_str_arg},
+    crate::app_packaging::resource::{
+        FileContent as RawFileContent, FileManifest as RawFileManifest,
+    },
+    crate::project_building::build_python_executable,
+    crate::py_packaging::binary::PreBuiltPythonExecutable,
+    crate::py_packaging::distribution::ExtensionModule,
+    crate::py_packaging::resource::BytecodeModule,
+    anyhow::Result,
+    itertools::Itertools,
+    slog::warn,
+    starlark::environment::Environment,
+    starlark::values::{
+        default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
+        INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+    },
+    starlark::{
+        any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
+        starlark_signature_extraction, starlark_signatures,
+    },
+    std::any::Any,
+    std::cmp::Ordering,
+    std::collections::HashMap,
+    std::path::Path,
 };
-use starlark::{
-    any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
-    starlark_signature_extraction, starlark_signatures,
-};
-use std::any::Any;
-use std::cmp::Ordering;
-use std::collections::HashMap;
-use std::path::Path;
-
-use super::env::EnvironmentContext;
-use super::python_resource::PythonExtensionModuleFlavor;
-use super::python_resource::{
-    PythonBytecodeModule, PythonExtensionModule, PythonResourceData, PythonSourceModule,
-};
-use super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode};
-use super::util::{required_bool_arg, required_str_arg};
-use crate::app_packaging::resource::{
-    FileContent as RawFileContent, FileManifest as RawFileManifest,
-};
-use crate::project_building::build_python_executable;
-use crate::py_packaging::binary::PreBuiltPythonExecutable;
-use crate::py_packaging::distribution::ExtensionModule;
-use crate::py_packaging::resource::BytecodeModule;
 
 #[derive(Clone, Debug)]
 pub struct FileContent {
