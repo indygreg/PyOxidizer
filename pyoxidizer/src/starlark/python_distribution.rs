@@ -213,7 +213,7 @@ impl PythonDistribution {
             self.distribution
                 .as_ref()
                 .unwrap()
-                .filter_extension_modules(&logger, &filter, preferred_variants.clone())
+                .filter_extension_modules(&logger, &filter, preferred_variants)
                 .iter()
                 .map(|em| {
                     Value::new(PythonExtensionModule {
