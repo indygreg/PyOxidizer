@@ -12,6 +12,7 @@ use super::bytecode::{BytecodeCompiler, CompileMode};
 use super::distribution::ExtensionModule;
 use super::fsscan::{is_package_from_path, PythonFileResource};
 
+/// Resolve the set of packages present in a fully qualified module name.
 pub fn packages_from_module_name(module: &str) -> BTreeSet<String> {
     let mut package_names = BTreeSet::new();
 
@@ -25,6 +26,7 @@ pub fn packages_from_module_name(module: &str) -> BTreeSet<String> {
     package_names
 }
 
+/// Resolve the set of packages present in a series of fully qualified module names.
 pub fn packages_from_module_names<I>(names: I) -> BTreeSet<String>
 where
     I: Iterator<Item = String>,
