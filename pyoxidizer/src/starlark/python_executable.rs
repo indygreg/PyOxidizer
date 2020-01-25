@@ -16,25 +16,17 @@ use starlark::{
 use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::convert::TryFrom;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use super::env::EnvironmentContext;
-use super::python_distribution::PythonDistribution;
-use super::python_interpreter_config::PythonInterpreterConfig;
 use super::python_resource::{
     PythonExtensionModule, PythonExtensionModuleFlavor, PythonResourceData, PythonSourceModule,
 };
-use super::python_run_mode::PythonRunMode;
 use super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode};
-use super::util::{
-    optional_dict_arg, optional_list_arg, optional_type_arg, required_bool_arg, required_str_arg,
-    required_type_arg,
-};
+use super::util::{optional_list_arg, required_bool_arg, required_type_arg};
 use crate::project_building::build_python_executable;
-use crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable};
-use crate::py_packaging::distribution::ExtensionModuleFilter;
+use crate::py_packaging::binary::PreBuiltPythonExecutable;
 use crate::py_packaging::resource::{BytecodeModule, BytecodeOptimizationLevel};
 
 impl TypedValue for PreBuiltPythonExecutable {
@@ -98,113 +90,6 @@ impl BuildTarget for PreBuiltPythonExecutable {
 }
 
 starlark_module! { python_executable_env =>
-    #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable(
-        env env,
-        call_stack cs,
-        name,
-        distribution,
-        run_mode,
-        config=None,
-        extension_module_filter="all",
-        preferred_extension_module_variants=None,
-        include_sources=true,
-        include_resources=false,
-        include_test=false)
-    {
-        let name = required_str_arg("name", &name)?;
-        required_type_arg("distribution", "PythonDistribution", &distribution)?;
-        required_type_arg("run_mode", "PythonRunMode", &run_mode)?;
-        optional_type_arg("config", "PythonInterpreterConfig", &config)?;
-        let extension_module_filter = required_str_arg("extension_module_filter", &extension_module_filter)?;
-        optional_dict_arg("preferred_extension_module_variants", "string", "string", &preferred_extension_module_variants)?;
-        let include_sources = required_bool_arg("include_sources", &include_sources)?;
-        let include_resources = required_bool_arg("include_resources", &include_resources)?;
-        let include_test = required_bool_arg("include_test", &include_test)?;
-
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
-
-        let extension_module_filter = ExtensionModuleFilter::try_from(extension_module_filter.as_str()).or_else(|e| Err(RuntimeError {
-            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-            message: e,
-            label: "invalid policy value".to_string(),
-        }.into()))?;
-
-        let preferred_extension_module_variants = match preferred_extension_module_variants.get_type() {
-            "NoneType" => None,
-            "dict" => {
-                let mut m = HashMap::new();
-
-                for k in preferred_extension_module_variants.into_iter()? {
-                    let v = preferred_extension_module_variants.at(k.clone())?.to_string();
-                    m.insert(k.to_string(), v);
-                }
-
-                Some(m)
-            }
-            _ => panic!("type should have been validated above")
-        };
-
-        let mut distribution = distribution;
-
-        let distribution = distribution.downcast_apply_mut(|dist: &mut PythonDistribution| {
-            dist.ensure_distribution_resolved(&logger);
-            dist.distribution.as_ref().unwrap().clone()
-        });
-
-        let config = if config.get_type() == "NoneType" {
-            let v = env.get("PythonInterpreterConfig").expect("PythonInterpreterConfig not defined");
-            v.call(cs, env, Vec::new(), HashMap::new(), None, None)?.downcast_apply(|c: &PythonInterpreterConfig| {
-                c.config.clone()
-            })
-        } else {
-            config.downcast_apply(|c: &PythonInterpreterConfig| c.config.clone())
-        };
-
-        let run_mode = run_mode.downcast_apply(|m: &PythonRunMode| m.run_mode.clone());
-
-        let pre_built = PreBuiltPythonExecutable::from_python_distribution(
-            &logger,
-            distribution,
-            &name,
-            &run_mode,
-            &config,
-            &extension_module_filter,
-            preferred_extension_module_variants,
-            include_sources,
-            include_resources,
-            include_test,
-        ).or_else(|e| Err(RuntimeError {
-            code: "PYOXIDIZER_BUILD",
-            message: e.to_string(),
-            label: "PythonExecutable()".to_string(),
-        }.into()))?;
-
-        context.downcast_apply(|context: &EnvironmentContext| -> Result<()> {
-            if let Some(path) = &context.write_artifacts_path {
-                warn!(&logger, "writing PyOxidizer build artifacts to {}", path.display());
-                let embedded = EmbeddedPythonBinaryData::from_pre_built_python_executable(
-                    &pre_built,
-                    &logger,
-                    &context.build_host_triple,
-                    &context.build_target_triple,
-                    &context.build_opt_level,
-                )?;
-
-                embedded.write_files(path)?;
-            }
-
-            Ok(())
-        }).or_else(|e| Err(RuntimeError {
-            code: "PYOXIDIZER_BUILD",
-            message: e.to_string(),
-            label: "PythonExecutable()".to_string(),
-        }.into()))?;
-
-        Ok(Value::new(pre_built))
-    }
-
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_module_source(env env, this, module) {
         required_type_arg("module", "PythonSourceModule", &module)?;
@@ -429,20 +314,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_no_args() {
-        let err = starlark_nok("PythonExecutable()");
-        assert!(err.message.starts_with("Missing parameter name"));
-    }
-
-    #[test]
     fn test_default_values() {
         let mut env = starlark_env();
 
         starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
         starlark_eval_in_env(&mut env, "run_mode = python_run_mode_noop()").unwrap();
 
-        let exe =
-            starlark_eval_in_env(&mut env, "PythonExecutable('testapp', dist, run_mode)").unwrap();
+        let exe = starlark_eval_in_env(&mut env, "dist.to_python_executable('testapp', run_mode)")
+            .unwrap();
 
         assert_eq!(exe.get_type(), "PythonExecutable");
 
@@ -464,7 +343,7 @@ mod tests {
 
         let exe = starlark_eval_in_env(
             &mut env,
-            "PythonExecutable('testapp', dist, run_mode, include_sources=False)",
+            "dist.to_python_executable('testapp', run_mode, include_sources=False)",
         )
         .unwrap();
 

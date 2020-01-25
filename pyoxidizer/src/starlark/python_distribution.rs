@@ -23,13 +23,16 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use super::env::EnvironmentContext;
+use super::python_interpreter_config::PythonInterpreterConfig;
 use super::python_resource::{
     PythonExtensionModule, PythonExtensionModuleFlavor, PythonResourceData, PythonSourceModule,
 };
+use super::python_run_mode::PythonRunMode;
 use super::util::{
-    optional_dict_arg, optional_list_arg, optional_str_arg, required_bool_arg, required_list_arg,
-    required_str_arg,
+    optional_dict_arg, optional_list_arg, optional_str_arg, optional_type_arg, required_bool_arg,
+    required_list_arg, required_str_arg, required_type_arg,
 };
+use crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable};
 use crate::py_packaging::bytecode::{BytecodeCompiler, CompileMode};
 use crate::py_packaging::distribution::{
     is_stdlib_test_package, resolve_parsed_distribution, resolve_python_paths,
@@ -60,6 +63,106 @@ impl PythonDistribution {
             distribution: None,
             compiler: None,
         }
+    }
+
+    /// Convert a PythonDistribution to a PythonExecutable from Starlark values.
+    #[allow(clippy::ptr_arg, clippy::too_many_arguments)]
+    fn as_python_distribution_starlark(
+        &mut self,
+        env: Environment,
+        call_stack: &Vec<(String, String)>,
+        name: Value,
+        run_mode: Value,
+        config: Value,
+        extension_module_filter: Value,
+        preferred_extension_module_variants: Value,
+        include_sources: Value,
+        include_resources: Value,
+        include_test: Value,
+    ) -> ValueResult {
+        let name = required_str_arg("name", &name)?;
+        required_type_arg("run_mode", "PythonRunMode", &run_mode)?;
+        optional_type_arg("config", "PythonInterpreterConfig", &config)?;
+        let extension_module_filter =
+            required_str_arg("extension_module_filter", &extension_module_filter)?;
+        optional_dict_arg(
+            "preferred_extension_module_variants",
+            "string",
+            "string",
+            &preferred_extension_module_variants,
+        )?;
+        let include_sources = required_bool_arg("include_sources", &include_sources)?;
+        let include_resources = required_bool_arg("include_resources", &include_resources)?;
+        let include_test = required_bool_arg("include_test", &include_test)?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        let extension_module_filter =
+            ExtensionModuleFilter::try_from(extension_module_filter.as_str()).or_else(|e| {
+                Err(RuntimeError {
+                    code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                    message: e,
+                    label: "invalid policy value".to_string(),
+                }
+                .into())
+            })?;
+
+        let preferred_extension_module_variants =
+            match preferred_extension_module_variants.get_type() {
+                "NoneType" => None,
+                "dict" => {
+                    let mut m = HashMap::new();
+
+                    for k in preferred_extension_module_variants.into_iter()? {
+                        let v = preferred_extension_module_variants
+                            .at(k.clone())?
+                            .to_string();
+                        m.insert(k.to_string(), v);
+                    }
+
+                    Some(m)
+                }
+                _ => panic!("type should have been validated above"),
+            };
+
+        self.ensure_distribution_resolved(&logger);
+        let dist = self.distribution.as_ref().unwrap().clone();
+
+        let config = if config.get_type() == "NoneType" {
+            let v = env
+                .get("PythonInterpreterConfig")
+                .expect("PythonInterpreterConfig not defined");
+            v.call(call_stack, env, Vec::new(), HashMap::new(), None, None)?
+                .downcast_apply(|c: &PythonInterpreterConfig| c.config.clone())
+        } else {
+            config.downcast_apply(|c: &PythonInterpreterConfig| c.config.clone())
+        };
+
+        let run_mode = run_mode.downcast_apply(|m: &PythonRunMode| m.run_mode.clone());
+
+        let pre_built = PreBuiltPythonExecutable::from_python_distribution(
+            &logger,
+            dist,
+            &name,
+            &run_mode,
+            &config,
+            &extension_module_filter,
+            preferred_extension_module_variants,
+            include_sources,
+            include_resources,
+            include_test,
+        )
+        .or_else(|e| {
+            Err(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "to_python_executable()".to_string(),
+            }
+            .into())
+        })?;
+
+        Ok(Value::new(pre_built))
     }
 
     pub fn ensure_distribution_resolved(&mut self, logger: &slog::Logger) {
@@ -542,6 +645,73 @@ starlark_module! { python_distribution_module =>
         warn!(logger, "collected {} resources from setup.py install", resources.len());
 
         Ok(Value::from(resources.iter().map(Value::from).collect::<Vec<Value>>()))
+    }
+
+    #[allow(non_snake_case, clippy::ptr_arg)]
+    PythonDistribution.to_python_executable(
+        env env,
+        call_stack call_stack,
+        this,
+        name,
+        run_mode,
+        config=None,
+        extension_module_filter="all",
+        preferred_extension_module_variants=None,
+        include_sources=true,
+        include_resources=false,
+        include_test=false
+    ) {
+        let mut distribution = this.downcast_apply(|x: &PythonDistribution| {
+            PythonDistribution {
+                source: x.source.clone(),
+                distribution: x.distribution.clone(),
+                dest_dir: x.dest_dir.clone(),
+                compiler: None,
+            }
+        });
+
+        let pre_built = distribution.as_python_distribution_starlark(
+            env.clone(),
+            call_stack,
+            name,
+            run_mode,
+            config,
+            extension_module_filter,
+            preferred_extension_module_variants,
+            include_sources,
+            include_resources,
+            include_test,
+        )?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        context.downcast_apply(|context: &EnvironmentContext| -> Result<()> {
+            if let Some(path) = &context.write_artifacts_path {
+                pre_built.downcast_apply(|pre_built: &PreBuiltPythonExecutable| -> Result<()> {
+                    warn!(&logger, "writing PyOxidizer build artifacts to {}", path.display());
+                    let embedded = EmbeddedPythonBinaryData::from_pre_built_python_executable(
+                        pre_built,
+                        &logger,
+                        &context.build_host_triple,
+                        &context.build_target_triple,
+                        &context.build_opt_level,
+                    )?;
+
+                    embedded.write_files(path)?;
+
+                    Ok(())
+                })
+            } else {
+                Ok(())
+            }
+        }).or_else(|e| Err(RuntimeError {
+            code: "PYOXIDIZER_BUILD",
+            message: e.to_string(),
+            label: "to_python_executable()".to_string(),
+        }.into()))?;
+
+        Ok(pre_built)
     }
 
     #[allow(clippy::ptr_arg)]

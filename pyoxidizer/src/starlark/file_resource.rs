@@ -462,7 +462,7 @@ mod tests {
         starlark_eval_in_env(&mut env, "run_mode = python_run_mode_noop()").unwrap();
         starlark_eval_in_env(
             &mut env,
-            "exe = PythonExecutable('testapp', dist, run_mode)",
+            "exe = dist.to_python_executable('testapp', run_mode)",
         )
         .unwrap();
 
@@ -483,7 +483,7 @@ mod tests {
         starlark_eval_in_env(&mut env, "run_mode = python_run_mode_noop()").unwrap();
         starlark_eval_in_env(
             &mut env,
-            "exe = PythonExecutable('testapp', dist, run_mode)",
+            "exe = dist.to_python_executable('testapp', run_mode)",
         )
         .unwrap();
 

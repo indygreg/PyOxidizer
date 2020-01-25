@@ -62,12 +62,11 @@ def make_exe(dist):
     #python_run_mode = python_run_mode_eval("from mypackage import main; main()")
     {{~/if}}
 
-    # Produce a Python executable from a Python distribution, embedded
+    # Produce a PythonExecutable from a Python distribution, embedded
     # resources, and other options. The returned object represents the
     # standalone executable that will be built.
-    exe = PythonExecutable(
+    exe = dist.to_python_executable(
         name="{{program_name}}",
-        distribution=dist,
         config=python_config,
         run_mode=python_run_mode,
         # Embed all extension modules, making this a fully-featured Python.

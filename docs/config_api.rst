@@ -437,6 +437,65 @@ etc.
 The returned resources are typically added to a ``FileManifest`` or
 ``PythonExecutable`` to make them available to a packaged application.
 
+.. _config_python_distribution_to_python_executable:
+
+``PythonDistribution.to_python_executable(...)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method constructs a :ref:`config_python_executable` instance. It
+essentially says *build an executable embedding Python from this
+distribution*.
+
+The accepted arguments are:
+
+``name`` (``str``)
+   The name of the application being built. This will be used to construct the
+   default filename of the executable.
+
+``distribution`` (``PythonDistribution``)
+   The Python distribution to use to construct this executable. The
+   interpreter from the distribution will be compiled into the produced
+   executable.
+
+``run_mode`` (``PythonRunMode``)
+   The default run-time behavior of the embedded Python interpreter.
+
+``config`` (``PythonEmbeddedConfig``)
+   The default configuration of the embedded Python interpreter.
+
+   Default is what ``PythonInterpreterConfig()`` returns.
+
+``extension_module_filter`` (``str``)
+   The filter to apply to determine which extension modules to add.
+
+   See :ref:`config_python_distribution_extension_modules` for what
+   values are accepted and their behavior.
+
+   Default is ``all``.
+
+``preferred_extension_module_variants`` (``dict`` of ``string`` to ``string``)
+   Preferred extension module variants to use. See
+   See :ref:`config_python_distribution_extension_modules` for behavior.
+
+   Default is ``None``, which will use the first variant.
+
+``include_sources`` (``bool``)
+   Boolean to control whether sources of Python modules are added in addition
+   to bytecode.
+
+   Default is ``True``.
+
+``include_resources`` (``bool``)
+   Boolean to control whether non-module resource data from the distribution is
+   added.
+
+   Default is ``False``.
+
+``include_test`` (``bool``)
+   Boolean to control whether test-specific objects are included.
+
+   Default is ``False``.
+
 .. _config_python_resources:
 
 Python Resources
@@ -862,63 +921,15 @@ type.
 
 .. _config_python_executable:
 
-``PythonExecutable(...)``
--------------------------
+``PythonExecutable``
+--------------------
 
 The ``PythonExecutable`` type represents an executable file containing
 the Python interpreter, Python resources to make available to the interpreter,
 and a default run-time configuration for that interpreter.
 
-Instances are constructed by passing arguments to a ``PythonExecutable()``
-function. The accepted arguments are:
-
-``name`` (``str``)
-   The name of the application being built. This will be used to construct the
-   default filename of the executable.
-
-``distribution`` (``PythonDistribution``)
-   The Python distribution to use to construct this executable. The
-   interpreter from the distribution will be compiled into the produced
-   executable.
-
-``run_mode`` (``PythonRunMode``)
-   The default run-time behavior of the embedded Python interpreter.
-
-``config`` (``PythonEmbeddedConfig``)
-   The default configuration of the embedded Python interpreter.
-
-   Default is what ``PythonInterpreterConfig()`` returns.
-
-``extension_module_filter`` (``str``)
-   The filter to apply to determine which extension modules to add.
-
-   See :ref:`config_python_distribution_extension_modules` for what
-   values are accepted and their behavior.
-
-   Default is ``all``.
-
-``preferred_extension_module_variants`` (``dict`` of ``string`` to ``string``)
-   Preferred extension module variants to use. See
-   See :ref:`config_python_distribution_extension_modules` for behavior.
-
-   Default is ``None``, which will use the first variant.
-
-``include_sources`` (``bool``)
-   Boolean to control whether sources of Python modules are added in addition
-   to bytecode.
-
-   Default is ``True``.
-
-``include_resources`` (``bool``)
-   Boolean to control whether non-module resource data from the distribution is
-   added.
-
-   Default is ``False``.
-
-``include_test`` (``bool``)
-   Boolean to control whether test-specific objects are included.
-
-   Default is ``False``.
+Instances are constructed from ``PythonDistribution`` instances using
+:ref:`config_python_distribution_to_python_executable`.
 
 .. _config_python_executable_add_module_source:
 
