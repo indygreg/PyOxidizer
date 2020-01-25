@@ -89,21 +89,29 @@ impl BuildTarget for PreBuiltPythonExecutable {
     }
 }
 
-starlark_module! { python_executable_env =>
-    #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_module_source(env env, this, module) {
+// Starlark functions.
+impl PreBuiltPythonExecutable {
+    /// PythonExecutable.add_module_source(module)
+    pub fn starlark_add_module_source(&mut self, env: &Environment, module: &Value) -> ValueResult {
         required_type_arg("module", "PythonSourceModule", &module)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
-        this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
-            let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
-            info!(&logger, "adding embedded source module {}", m.name);
-            exe.resources.add_source_module(&m);
-        });
+        let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
+        info!(&logger, "adding embedded source module {}", m.name);
+        self.resources.add_source_module(&m);
 
         Ok(Value::new(None))
+    }
+}
+
+starlark_module! { python_executable_env =>
+    #[allow(non_snake_case, clippy::ptr_arg)]
+    PythonExecutable.add_module_source(env env, this, module) {
+        this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
+            exe.starlark_add_module_source(&env, &module)
+        })
     }
 
     // TODO consider unifying with add_module_source() so there only needs to be
