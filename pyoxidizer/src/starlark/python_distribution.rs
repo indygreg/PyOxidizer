@@ -165,6 +165,53 @@ impl PythonDistribution {
         Ok(Value::new(pre_built))
     }
 
+    /// Runs pip_install() from the context of starlark.
+    pub fn pip_install(
+        &mut self,
+        env: &Environment,
+        args: &Value,
+        extra_envs: &Value,
+    ) -> ValueResult {
+        required_list_arg("args", "string", &args)?;
+        optional_dict_arg("extra_envs", "string", "string", &extra_envs)?;
+
+        let args: Vec<String> = args.into_iter()?.map(|x| x.to_string()).collect();
+
+        let extra_envs = match extra_envs.get_type() {
+            "dict" => extra_envs
+                .into_iter()?
+                .map(|key| {
+                    let k = key.to_string();
+                    let v = extra_envs.at(key).unwrap().to_string();
+                    (k, v)
+                })
+                .collect(),
+            "NoneType" => HashMap::new(),
+            _ => panic!("should have validated type above"),
+        };
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        self.ensure_distribution_resolved(&logger);
+        let dist = self.distribution.as_ref().unwrap();
+
+        // TODO get verbose flag from context.
+        let resources =
+            raw_pip_install(&logger, &dist, false, &args, &extra_envs).or_else(|e| {
+                Err(RuntimeError {
+                    code: "PIP_INSTALL_ERROR",
+                    message: format!("error running pip install: {}", e),
+                    label: "pip_install()".to_string(),
+                }
+                .into())
+            })?;
+
+        Ok(Value::from(
+            resources.iter().map(Value::from).collect::<Vec<Value>>(),
+        ))
+    }
+
     pub fn ensure_distribution_resolved(&mut self, logger: &slog::Logger) {
         if self.distribution.is_some() {
             return;
@@ -386,39 +433,9 @@ starlark_module! { python_distribution_module =>
 
     #[allow(clippy::ptr_arg)]
     PythonDistribution.pip_install(env env, this, args, extra_envs=None) {
-        required_list_arg("args", "string", &args)?;
-        optional_dict_arg("extra_envs", "string", "string", &extra_envs)?;
-
-        let args: Vec<String> = args.into_iter()?.map(|x| x.to_string()).collect();
-
-        let extra_envs = match extra_envs.get_type() {
-            "dict" => extra_envs.into_iter()?.map(|key| {
-                let k = key.to_string();
-                let v = extra_envs.at(key).unwrap().to_string();
-                (k, v)
-            }).collect(),
-            "NoneType" => HashMap::new(),
-            _ => panic!("should have validated type above"),
-        };
-
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
-
-        let resources = this.downcast_apply_mut(|dist: &mut PythonDistribution| {
-            dist.ensure_distribution_resolved(&logger);
-
-            let dist = dist.distribution.as_ref().unwrap();
-            // TODO get verbose flag from context.
-            raw_pip_install(&logger, &dist, false, &args, &extra_envs)
-        }).or_else(|e| Err(
-            RuntimeError {
-                code: "PIP_INSTALL_ERROR",
-                message: format!("error running pip install: {}", e),
-                label: "pip_install()".to_string(),
-            }.into()
-        ))?;
-
-        Ok(Value::from(resources.iter().map(Value::from).collect::<Vec<Value>>()))
+        this.downcast_apply_mut(|dist: &mut PythonDistribution| {
+            dist.pip_install(&env, &args, &extra_envs)
+        })
     }
 
     #[allow(clippy::ptr_arg)]
