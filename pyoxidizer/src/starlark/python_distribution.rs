@@ -272,6 +272,82 @@ impl PythonDistribution {
         ))
     }
 
+    pub fn setup_py_install(
+        &mut self,
+        env: &Environment,
+        package_path: &Value,
+        extra_envs: &Value,
+        extra_global_arguments: &Value,
+    ) -> ValueResult {
+        let package_path = required_str_arg("package_path", &package_path)?;
+        optional_dict_arg("extra_envs", "string", "string", &extra_envs)?;
+        optional_list_arg("extra_global_arguments", "string", &extra_global_arguments)?;
+
+        let extra_envs = match extra_envs.get_type() {
+            "dict" => extra_envs
+                .into_iter()?
+                .map(|key| {
+                    let k = key.to_string();
+                    let v = extra_envs.at(key).unwrap().to_string();
+                    (k, v)
+                })
+                .collect(),
+            "NoneType" => HashMap::new(),
+            _ => panic!("should have validated type above"),
+        };
+        let extra_global_arguments = match extra_global_arguments.get_type() {
+            "list" => extra_global_arguments
+                .into_iter()?
+                .map(|x| x.to_string())
+                .collect(),
+            "NoneType" => Vec::new(),
+            _ => panic!("should have validated type above"),
+        };
+
+        let package_path = PathBuf::from(package_path);
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+        let cwd = env.get("CWD").expect("CWD not defined").to_string();
+        let (logger, verbose) =
+            context.downcast_apply(|x: &EnvironmentContext| (x.logger.clone(), x.verbose));
+
+        let package_path = if package_path.is_absolute() {
+            package_path
+        } else {
+            PathBuf::from(cwd).join(package_path)
+        };
+
+        self.ensure_distribution_resolved(&logger);
+        let dist = self.distribution.as_ref().unwrap();
+
+        let resources = raw_setup_py_install(
+            &logger,
+            dist,
+            &package_path,
+            verbose,
+            &extra_envs,
+            &extra_global_arguments,
+        )
+        .or_else(|e| {
+            Err(RuntimeError {
+                code: "SETUP_PY_ERROR",
+                message: e.to_string(),
+                label: "setup_py_install()".to_string(),
+            }
+            .into())
+        })?;
+
+        warn!(
+            logger,
+            "collected {} resources from setup.py install",
+            resources.len()
+        );
+
+        Ok(Value::from(
+            resources.iter().map(Value::from).collect::<Vec<Value>>(),
+        ))
+    }
+
     pub fn ensure_distribution_resolved(&mut self, logger: &slog::Logger) {
         if self.distribution.is_some() {
             return;
@@ -529,56 +605,9 @@ starlark_module! { python_distribution_module =>
         extra_envs=None,
         extra_global_arguments=None
     ) {
-        let package_path = required_str_arg("package_path", &package_path)?;
-        optional_dict_arg("extra_envs", "string", "string", &extra_envs)?;
-        optional_list_arg("extra_global_arguments", "string", &extra_global_arguments)?;
-
-        let extra_envs = match extra_envs.get_type() {
-            "dict" => extra_envs.into_iter()?.map(|key| {
-                let k = key.to_string();
-                let v = extra_envs.at(key).unwrap().to_string();
-                (k, v)
-            }).collect(),
-            "NoneType" => HashMap::new(),
-            _ => panic!("should have validated type above"),
-        };
-        let extra_global_arguments = match extra_global_arguments.get_type() {
-            "list" => extra_global_arguments.into_iter()?.map(|x| x.to_string()).collect(),
-            "NoneType" => Vec::new(),
-            _ => panic!("should have validated type above"),
-        };
-
-        let package_path = PathBuf::from(package_path);
-
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let cwd = env.get("CWD").expect("CWD not defined").to_string();
-        let (logger, verbose) = context.downcast_apply(|x: &EnvironmentContext| {
-            (x.logger.clone(), x.verbose)
-        });
-
-        let package_path = if package_path.is_absolute() {
-            package_path
-        } else {
-            PathBuf::from(cwd).join(package_path)
-        };
-
-        let resources = this.downcast_apply_mut(|dist: &mut PythonDistribution| {
-            dist.ensure_distribution_resolved(&logger);
-
-            let dist = dist.distribution.as_ref().unwrap();
-
-            raw_setup_py_install(&logger, dist, &package_path, verbose, &extra_envs, &extra_global_arguments)
-        }).or_else(|e| Err(
-            RuntimeError {
-                code: "SETUP_PY_ERROR",
-                message: e.to_string(),
-                label: "setup_py_install()".to_string(),
-            }.into()
-        ))?;
-
-        warn!(logger, "collected {} resources from setup.py install", resources.len());
-
-        Ok(Value::from(resources.iter().map(Value::from).collect::<Vec<Value>>()))
+        this.downcast_apply_mut(|dist: &mut PythonDistribution| {
+            dist.setup_py_install(&env, &package_path, &extra_envs, &extra_global_arguments)
+        })
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
