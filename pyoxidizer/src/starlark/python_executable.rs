@@ -256,6 +256,51 @@ impl PreBuiltPythonExecutable {
 
         Ok(Value::new(None))
     }
+
+    /// PythonExecutable.filter_resources_from_files(files=None, glob_files=None)
+    pub fn starlark_filter_resources_from_files(
+        &mut self,
+        env: &Environment,
+        files: &Value,
+        glob_files: &Value,
+    ) -> ValueResult {
+        optional_list_arg("files", "string", &files)?;
+        optional_list_arg("glob_files", "string", &glob_files)?;
+
+        let files = match files.get_type() {
+            "list" => files
+                .into_iter()?
+                .map(|x| PathBuf::from(x.to_string()))
+                .collect(),
+            "NoneType" => Vec::new(),
+            _ => panic!("type should have been validated above"),
+        };
+
+        let glob_files = match glob_files.get_type() {
+            "list" => glob_files.into_iter()?.map(|x| x.to_string()).collect(),
+            "NoneType" => Vec::new(),
+            _ => panic!("type should have been validated above"),
+        };
+
+        let files_refs = files.iter().map(|x| x.as_ref()).collect::<Vec<&Path>>();
+        let glob_files_refs = glob_files.iter().map(|x| x.as_ref()).collect::<Vec<&str>>();
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        self.resources
+            .filter_from_files(&logger, &files_refs, &glob_files_refs)
+            .or_else(|e| {
+                Err(RuntimeError {
+                    code: "RUNTIME_ERROR",
+                    message: e.to_string(),
+                    label: "filter_from_files()".to_string(),
+                }
+                .into())
+            })?;
+
+        Ok(Value::new(None))
+    }
 }
 
 starlark_module! { python_executable_env =>
@@ -335,39 +380,11 @@ starlark_module! { python_executable_env =>
         env env,
         this,
         files=None,
-        glob_files=None) {
-        optional_list_arg("files", "string", &files)?;
-        optional_list_arg("glob_files", "string", &glob_files)?;
-
-        let files = match files.get_type() {
-            "list" => files.into_iter()?.map(|x| PathBuf::from(x.to_string())).collect(),
-            "NoneType" => Vec::new(),
-            _ => panic!("type should have been validated above"),
-        };
-
-        let glob_files = match glob_files.get_type() {
-            "list" => glob_files.into_iter()?.map(|x| x.to_string()).collect(),
-            "NoneType" => Vec::new(),
-            _ => panic!("type should have been validated above"),
-        };
-
-        let files_refs = files.iter().map(|x| x.as_ref()).collect::<Vec<&Path>>();
-        let glob_files_refs = glob_files.iter().map(|x| x.as_ref()).collect::<Vec<&str>>();
-
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
-
+        glob_files=None)
+    {
         this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
-            exe.resources.filter_from_files(&logger, &files_refs, &glob_files_refs)
-        }).or_else(|e| Err(
-            RuntimeError {
-                code: "RUNTIME_ERROR",
-                message: e.to_string(),
-                label: "filter_from_files()".to_string(),
-            }.into()
-        ))?;
-
-        Ok(Value::new(None))
+            exe.starlark_filter_resources_from_files(&env, &files, &glob_files)
+        })
     }
 }
 
