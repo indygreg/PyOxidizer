@@ -166,6 +166,32 @@ impl PreBuiltPythonExecutable {
 
         Ok(Value::new(None))
     }
+
+    /// PythonExecutable.add_extension_module(module)
+    pub fn starlark_add_extension_module(
+        &mut self,
+        env: &Environment,
+        module: &Value,
+    ) -> ValueResult {
+        required_type_arg("resource", "PythonExtensionModule", &module)?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not set");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        let m = module.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
+        info!(&logger, "adding embedded extension module {}", m.name());
+
+        match m {
+            PythonExtensionModuleFlavor::Persisted(m) => {
+                self.resources.add_extension_module(&m);
+            }
+            PythonExtensionModuleFlavor::Built(m) => {
+                self.resources.add_extension_module_data(&m);
+            }
+        }
+
+        Ok(Value::new(None))
+    }
 }
 
 starlark_module! { python_executable_env =>
@@ -194,28 +220,9 @@ starlark_module! { python_executable_env =>
 
     #[allow(clippy::ptr_arg)]
     PythonExecutable.add_extension_module(env env, this, module) {
-        required_type_arg("resource", "PythonExtensionModule", &module)?;
-
-        let context = env.get("CONTEXT").expect("CONTEXT not set");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
-
         this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
-            let m = module.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
-            info!(&logger, "adding embedded extension module {}", m.name());
-
-            match m {
-                PythonExtensionModuleFlavor::Persisted(m) => {
-                    exe.resources.add_extension_module(&m);
-                    Ok(())
-                },
-                PythonExtensionModuleFlavor::Built(m) => {
-                    exe.resources.add_extension_module_data(&m);
-                    Ok(())
-                }
-            }
-        })?;
-
-        Ok(Value::new(None))
+            exe.starlark_add_extension_module(&env, &module)
+        })
     }
 
     #[allow(clippy::ptr_arg)]
