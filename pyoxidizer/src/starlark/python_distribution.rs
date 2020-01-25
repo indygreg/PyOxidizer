@@ -385,6 +385,39 @@ impl PythonDistribution {
         ))
     }
 
+    pub fn source_modules(&mut self, env: &Environment) -> ValueResult {
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        self.ensure_distribution_resolved(&logger);
+
+        let modules = self
+            .distribution
+            .as_ref()
+            .unwrap()
+            .source_modules()
+            .or_else(|e| {
+                Err(RuntimeError {
+                    code: "PYTHON_DISTRIBUTION",
+                    message: e.to_string(),
+                    label: e.to_string(),
+                }
+                .into())
+            })?;
+
+        Ok(Value::from(
+            modules
+                .iter()
+                .map(|module| {
+                    Value::new(PythonSourceModule {
+                        module: module.clone(),
+                    })
+                })
+                .collect_vec(),
+        ))
+    }
+
     pub fn ensure_distribution_resolved(&mut self, logger: &slog::Logger) {
         if self.distribution.is_some() {
             return;
@@ -558,23 +591,9 @@ starlark_module! { python_distribution_module =>
 
     #[allow(clippy::ptr_arg)]
     PythonDistribution.source_modules(env env, this) {
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
-
-        Ok(Value::from(this.downcast_apply_mut(|dist: &mut PythonDistribution| {
-            dist.ensure_distribution_resolved(&logger);
-
-            let modules = dist.distribution.as_ref().unwrap().source_modules().or_else(|e| Err(RuntimeError {
-                code: "PYTHON_DISTRIBUTION",
-                message: e.to_string(),
-                label: e.to_string(),
-            }.into()))?;
-
-            Ok(modules.iter().map(|module| {
-                Value::new(PythonSourceModule { module: module.clone() })
-            }).collect_vec())
-        })?))
+        this.downcast_apply_mut(|dist: &mut PythonDistribution| {
+            dist.source_modules(&env)
+        })
     }
 
     #[allow(clippy::ptr_arg)]
