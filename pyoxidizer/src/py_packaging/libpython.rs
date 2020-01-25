@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use super::bytecode::{BytecodeCompiler, CompileMode};
 use super::distribution::{ExtensionModule, LicenseInfo, ParsedPythonDistribution};
 use super::embedded_resource::EmbeddedPythonResources;
-use super::resource::{BuiltExtensionModule, BytecodeOptimizationLevel};
+use super::resource::{BytecodeOptimizationLevel, ExtensionModuleData};
 
 pub const PYTHON_IMPORTER: &[u8] = include_bytes!("memoryimporter.py");
 
@@ -88,7 +88,7 @@ pub fn derive_importlib(dist: &ParsedPythonDistribution) -> Result<ImportlibData
 /// Produce the content of the config.c file containing built-in extensions.
 pub fn make_config_c(
     extension_modules: &BTreeMap<String, ExtensionModule>,
-    built_extension_modules: &BTreeMap<String, BuiltExtensionModule>,
+    built_extension_modules: &BTreeMap<String, ExtensionModuleData>,
 ) -> String {
     // It is easier to construct the file from scratch than parse the template
     // and insert things in the right places.

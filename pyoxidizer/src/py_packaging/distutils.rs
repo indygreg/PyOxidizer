@@ -11,7 +11,7 @@ use std::fs::{create_dir_all, read_dir, read_to_string};
 use std::path::{Path, PathBuf};
 
 use super::distribution::ParsedPythonDistribution;
-use super::resource::BuiltExtensionModule;
+use super::resource::ExtensionModuleData;
 
 lazy_static! {
     static ref MODIFIED_DISTUTILS_FILES: BTreeMap<&'static str, &'static [u8]> = {
@@ -121,7 +121,7 @@ struct DistutilsExtensionState {
     runtime_library_dirs: Vec<String>,
 }
 
-pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<BuiltExtensionModule>> {
+pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<ExtensionModuleData>> {
     let mut res = Vec::new();
 
     let entries = read_dir(state_dir)?;
@@ -173,7 +173,7 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<BuiltExtensionModul
         // linking, annotating licenses of 3rd party libraries, disabling libraries
         // wholesale, etc.
 
-        res.push(BuiltExtensionModule {
+        res.push(ExtensionModuleData {
             name: info.name.clone(),
             init_fn,
             extension_file_suffix,

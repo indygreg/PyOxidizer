@@ -18,7 +18,7 @@ use super::distribution::{
 };
 use super::filtering::{filter_btreemap, resolve_resource_names_from_files};
 use super::resource::{
-    BuiltExtensionModule, BytecodeModule, BytecodeOptimizationLevel, PackagedModuleBytecode,
+    BytecodeModule, BytecodeOptimizationLevel, ExtensionModuleData, PackagedModuleBytecode,
     PackagedModuleSource, ResourceData, SourceModule,
 };
 
@@ -243,7 +243,7 @@ pub struct EmbeddedPythonResources {
     pub all_packages: BTreeSet<String>,
     pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
     pub extension_modules: BTreeMap<String, ExtensionModule>,
-    pub built_extension_modules: BTreeMap<String, BuiltExtensionModule>,
+    pub built_extension_modules: BTreeMap<String, ExtensionModuleData>,
 }
 
 /// Represents a single module's data record.

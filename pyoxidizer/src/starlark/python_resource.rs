@@ -11,7 +11,7 @@ use std::collections::HashMap;
 
 use crate::py_packaging::distribution::ExtensionModule;
 use crate::py_packaging::resource::{
-    BuiltExtensionModule, BytecodeModule, BytecodeOptimizationLevel, PythonResource, ResourceData,
+    BytecodeModule, BytecodeOptimizationLevel, ExtensionModuleData, PythonResource, ResourceData,
     SourceModule,
 };
 
@@ -211,7 +211,7 @@ impl TypedValue for PythonResourceData {
 #[derive(Debug, Clone)]
 pub enum PythonExtensionModuleFlavor {
     Persisted(ExtensionModule),
-    Built(BuiltExtensionModule),
+    Built(ExtensionModuleData),
 }
 
 impl PythonExtensionModuleFlavor {

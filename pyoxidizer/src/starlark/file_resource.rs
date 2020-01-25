@@ -33,7 +33,7 @@ use crate::project_building::build_python_executable;
 use crate::py_packaging::binary::PreBuiltPythonExecutable;
 use crate::py_packaging::distribution::ExtensionModule;
 use crate::py_packaging::resource::{
-    BuiltExtensionModule, BytecodeModule, ResourceData, SourceModule,
+    BytecodeModule, ExtensionModuleData, ResourceData, SourceModule,
 };
 
 #[derive(Clone, Debug)]
@@ -118,11 +118,7 @@ impl FileManifest {
         println!("support for adding extension modules not yet implemented");
     }
 
-    fn add_built_extension_module(
-        &mut self,
-        prefix: &str,
-        em: &BuiltExtensionModule,
-    ) -> Result<()> {
+    fn add_built_extension_module(&mut self, prefix: &str, em: &ExtensionModuleData) -> Result<()> {
         let mut dest_path = PathBuf::from(prefix);
         dest_path.extend(em.package_parts());
         dest_path.push(em.file_name());

@@ -17,7 +17,7 @@ use crate::py_packaging::distribution::{ExtensionModule, ParsedPythonDistributio
 use crate::py_packaging::embedded_resource::{EmbeddedPythonResources, OS_IGNORE_EXTENSIONS};
 use crate::py_packaging::resource::{
     packages_from_module_name, packages_from_module_names, AppRelativeResources,
-    BuiltExtensionModule, PackagedModuleBytecode, PackagedModuleSource,
+    ExtensionModuleData, PackagedModuleBytecode, PackagedModuleSource,
 };
 
 pub const HOST: &str = env!("HOST");
@@ -155,7 +155,7 @@ pub fn resolve_python_resources(
     let embedded_sources: BTreeMap<String, PackagedModuleSource> = BTreeMap::new();
     let mut embedded_bytecode_requests: BTreeMap<String, BytecodeRequest> = BTreeMap::new();
     let embedded_resources: BTreeMap<String, BTreeMap<String, Vec<u8>>> = BTreeMap::new();
-    let embedded_built_extension_modules: BTreeMap<String, BuiltExtensionModule> = BTreeMap::new();
+    let embedded_built_extension_modules: BTreeMap<String, ExtensionModuleData> = BTreeMap::new();
 
     let app_relative: BTreeMap<String, AppRelativeResources> = BTreeMap::new();
 

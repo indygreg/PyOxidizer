@@ -165,7 +165,7 @@ impl ResourceData {
 ///
 /// This is like a light version of `ExtensionModule`.
 #[derive(Clone, Debug)]
-pub struct BuiltExtensionModule {
+pub struct ExtensionModuleData {
     /// The module name this extension module is providing.
     pub name: String,
     /// Name of the C function initializing this extension module.
@@ -184,7 +184,7 @@ pub struct BuiltExtensionModule {
     pub library_dirs: Vec<PathBuf>,
 }
 
-impl BuiltExtensionModule {
+impl ExtensionModuleData {
     /// The file name (without parent components) this extension module should be
     /// realized with.
     pub fn file_name(&self) -> String {
@@ -236,7 +236,7 @@ pub enum PythonResource {
         name: String,
         data: Vec<u8>,
     },
-    BuiltExtensionModule(BuiltExtensionModule),
+    BuiltExtensionModule(ExtensionModuleData),
 }
 
 impl TryFrom<&PythonFileResource> for PythonResource {
