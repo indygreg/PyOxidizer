@@ -192,6 +192,44 @@ impl PreBuiltPythonExecutable {
 
         Ok(Value::new(None))
     }
+
+    /// PythonExecutable.add_python_resource(resource, add_source_module=true, add_bytecode_module=true, optimize_level=0)
+    pub fn starlark_add_python_resource(
+        &mut self,
+        env: &Environment,
+        resource: &Value,
+        add_source_module: &Value,
+        add_bytecode_module: &Value,
+        optimize_level: &Value,
+    ) -> ValueResult {
+        let add_source_module = required_bool_arg("add_source_module", &add_source_module)?;
+        let add_bytecode_module = required_bool_arg("add_bytecode_module", &add_bytecode_module)?;
+        required_type_arg("optimize_level", "int", &optimize_level)?;
+
+        match resource.get_type() {
+            "PythonSourceModule" => {
+                if add_source_module {
+                    self.starlark_add_module_source(env, resource)?;
+                }
+                if add_bytecode_module {
+                    self.starlark_add_module_bytecode(env, resource, optimize_level)?;
+                }
+
+                Ok(Value::new(None))
+            }
+            "PythonBytecodeModule" => {
+                self.starlark_add_module_bytecode(env, resource, optimize_level)
+            }
+            "PythonResourceData" => self.starlark_add_resource_data(env, resource),
+            "PythonExtensionModule" => self.starlark_add_extension_module(env, resource),
+            _ => Err(RuntimeError {
+                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                message: "resource argument must be a Python resource type".to_string(),
+                label: ".add_python_resource()".to_string(),
+            }
+            .into()),
+        }
+    }
 }
 
 starlark_module! { python_executable_env =>
@@ -227,52 +265,22 @@ starlark_module! { python_executable_env =>
 
     #[allow(clippy::ptr_arg)]
     PythonExecutable.add_python_resource(
-        call_stack call_stack,
         env env,
         this,
         resource,
         add_source_module=true,
         add_bytecode_module=true,
         optimize_level=0
-        ) {
-        let add_source_module = required_bool_arg("add_source_module", &add_source_module)?;
-        let add_bytecode_module = required_bool_arg("add_bytecode_module", &add_bytecode_module)?;
-        required_type_arg("optimize_level", "int", &optimize_level)?;
-
-        match resource.get_type() {
-            "PythonSourceModule" => {
-                if add_source_module {
-                    let f = env.get_type_value(&this, "add_module_source").unwrap();
-                    f.call(call_stack, env.clone(), vec![this.clone(), resource.clone()], HashMap::new(), None, None)?;
-                }
-                if add_bytecode_module {
-                    let f = env.get_type_value(&this, "add_module_bytecode").unwrap();
-                    f.call(call_stack, env, vec![this, resource, optimize_level], HashMap::new(), None, None)?;
-                }
-
-                Ok(Value::new(None))
-            }
-            "PythonBytecodeModule" => {
-                let f = env.get_type_value(&this, "add_module_bytecode").unwrap();
-                f.call(call_stack, env, vec![this, resource, optimize_level], HashMap::new(), None, None)?;
-                Ok(Value::new(None))
-            }
-            "PythonResourceData" => {
-                let f = env.get_type_value(&this, "add_resource_data").unwrap();
-                f.call(call_stack, env, vec![this, resource], HashMap::new(), None, None)?;
-                Ok(Value::new(None))
-            }
-            "PythonExtensionModule" => {
-                let f = env.get_type_value(&this, "add_extension_module").unwrap();
-                f.call(call_stack, env, vec![this, resource], HashMap::new(), None, None)?;
-                Ok(Value::new(None))
-            }
-            _ => Err(RuntimeError {
-                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                message: "resource argument must be a Python resource type".to_string(),
-                label: ".add_python_resource()".to_string(),
-            }.into())
-        }
+        )
+    {
+        this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
+            exe.starlark_add_python_resource(
+                &env,
+                &resource,
+                &add_source_module,
+                &add_bytecode_module,
+                &optimize_level)
+        })
     }
 
     #[allow(clippy::ptr_arg)]
