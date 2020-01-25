@@ -272,6 +272,43 @@ impl PythonDistribution {
         ))
     }
 
+    pub fn resources_data(&mut self, env: &Environment, include_test: &Value) -> ValueResult {
+        let include_test = required_bool_arg("include_test", &include_test)?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        self.ensure_distribution_resolved(&logger);
+
+        let resources = self
+            .distribution
+            .as_ref()
+            .unwrap()
+            .resources_data()
+            .or_else(|e| {
+                Err(RuntimeError {
+                    code: "PYTHON_DISTRIBUTION",
+                    message: e.to_string(),
+                    label: e.to_string(),
+                }
+                .into())
+            })?;
+
+        Ok(Value::from(
+            resources
+                .iter()
+                .filter_map(|data| {
+                    if !include_test && is_stdlib_test_package(&data.package) {
+                        None
+                    } else {
+                        Some(Value::new(PythonResourceData { data: data.clone() }))
+                    }
+                })
+                .collect_vec(),
+        ))
+    }
+
     pub fn setup_py_install(
         &mut self,
         env: &Environment,
@@ -542,29 +579,9 @@ starlark_module! { python_distribution_module =>
 
     #[allow(clippy::ptr_arg)]
     PythonDistribution.resources_data(env env, this, include_test=false) {
-        let include_test = required_bool_arg("include_test", &include_test)?;
-
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
-
-        Ok(Value::from(this.downcast_apply_mut(|dist: &mut PythonDistribution| {
-            dist.ensure_distribution_resolved(&logger);
-
-            let resources = dist.distribution.as_ref().unwrap().resources_data().or_else(|e| Err(RuntimeError {
-                code: "PYTHON_DISTRIBUTION",
-                message: e.to_string(),
-                label: e.to_string(),
-            }.into()))?;
-
-            Ok(resources.iter().filter_map(|data| {
-                if !include_test && is_stdlib_test_package(&data.package) {
-                    None
-                } else {
-                    Some(Value::new(PythonResourceData { data: data.clone() }))
-                }
-            }).collect_vec())
-        })?))
+        this.downcast_apply_mut(|dist: &mut PythonDistribution| {
+            dist.resources_data(&env, &include_test)
+        })
     }
 
     #[allow(clippy::ptr_arg)]
