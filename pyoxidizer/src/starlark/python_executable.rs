@@ -145,6 +145,27 @@ impl PreBuiltPythonExecutable {
 
         Ok(Value::new(None))
     }
+
+    /// PythonExecutable.add_resource_data(resource)
+    pub fn starlark_add_resource_data(
+        &mut self,
+        env: &Environment,
+        resource: &Value,
+    ) -> ValueResult {
+        required_type_arg("resource", "PythonResourceData", &resource)?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not set");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        let r = resource.downcast_apply(|r: &PythonResourceData| r.data.clone());
+        info!(
+            &logger,
+            "adding embedded resource data {}:{}", r.package, r.name
+        );
+        self.resources.add_resource(&r);
+
+        Ok(Value::new(None))
+    }
 }
 
 starlark_module! { python_executable_env =>
@@ -166,18 +187,9 @@ starlark_module! { python_executable_env =>
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_resource_data(env env, this, resource) {
-        required_type_arg("resource", "PythonResourceData", &resource)?;
-
-        let context = env.get("CONTEXT").expect("CONTEXT not set");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
-
         this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
-            let r = resource.downcast_apply(|r: &PythonResourceData| r.data.clone());
-            info!(&logger, "adding embedded resource data {}:{}", r.package, r.name);
-            exe.resources.add_resource(&r);
-        });
-
-        Ok(Value::new(None))
+            exe.starlark_add_resource_data(&env, &resource)
+        })
     }
 
     #[allow(clippy::ptr_arg)]
