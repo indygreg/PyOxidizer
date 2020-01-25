@@ -242,6 +242,7 @@ pub struct EmbeddedPythonResources {
     pub all_modules: BTreeSet<String>,
     pub all_packages: BTreeSet<String>,
     pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
+    // TODO combine the extension module types.
     pub extension_modules: BTreeMap<String, ExtensionModule>,
     pub built_extension_modules: BTreeMap<String, ExtensionModuleData>,
 }
