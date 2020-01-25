@@ -606,20 +606,16 @@ impl ParsedPythonDistribution {
         Ok((python_paths, extra_envs))
     }
 
-    /// Obtain resolved `SourceModule` instances for this distribution.
-    ///
-    /// This effectively resolves the raw file content for .py files into
-    /// `SourceModule` instances.
+    /// Obtain `SourceModule` instances for this distribution.
     pub fn source_modules(&self) -> Result<Vec<SourceModule>> {
         self.py_modules
             .iter()
             .map(|(name, path)| {
                 let is_package = is_package_from_path(&path);
-                let source = fs::read(&path)?;
 
                 Ok(SourceModule {
                     name: name.clone(),
-                    source: DataLocation::Memory(source),
+                    source: DataLocation::Path(path.clone()),
                     is_package,
                 })
             })
