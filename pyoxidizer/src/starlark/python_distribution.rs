@@ -18,7 +18,6 @@ use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -38,8 +37,9 @@ use crate::py_packaging::distribution::{
     is_stdlib_test_package, resolve_parsed_distribution, resolve_python_paths,
     ExtensionModuleFilter, ParsedPythonDistribution, PythonDistributionLocation,
 };
-use crate::py_packaging::distutils::prepare_hacked_distutils;
-use crate::py_packaging::packaging_tool::{find_resources, pip_install as raw_pip_install};
+use crate::py_packaging::packaging_tool::{
+    find_resources, pip_install as raw_pip_install, setup_py_install as raw_setup_py_install,
+};
 use crate::py_packaging::resource::{BytecodeOptimizationLevel, PythonResource};
 use crate::python_distributions::CPYTHON_BY_TRIPLE;
 
@@ -517,103 +517,29 @@ starlark_module! { python_distribution_module =>
 
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
         let cwd = env.get("CWD").expect("CWD not defined").to_string();
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let (logger, verbose) = context.downcast_apply(|x: &EnvironmentContext| {
+            (x.logger.clone(), x.verbose)
+        });
 
-        // TODO most of the logic in this function should ideally be contained within
-        // a library function, outside the context of Starlark.
-
-        let exec_cwd = if package_path.is_absolute() {
+        let package_path = if package_path.is_absolute() {
             package_path
         } else {
             PathBuf::from(cwd).join(package_path)
         };
 
-        let temp_dir = tempdir::TempDir::new("pyoxidizer-setup-py-install").or_else(|e| Err(
-            RuntimeError {
-                code: "SETUP_PY_ERROR",
-                message: format!("error creating temporary directory: {}", e),
-                label: "setup_py_install()".to_string(),
-            }.into()
-        ))?;
-
-        let target_dir_path = temp_dir.path().join("install");
-        let target_dir_s = target_dir_path.display().to_string();
-
-        let resources = this.downcast_apply_mut(|dist: &mut PythonDistribution| -> Result<Vec<PythonResource>, ValueError> {
+        let resources = this.downcast_apply_mut(|dist: &mut PythonDistribution| {
             dist.ensure_distribution_resolved(&logger);
 
             let dist = dist.distribution.as_ref().unwrap();
 
-            let python_paths = resolve_python_paths(&target_dir_path, &dist.version);
-
-            std::fs::create_dir_all(&python_paths.site_packages).or_else(|e| Err(
-                RuntimeError {
-                    code: "SETUP_PY_ERROR",
-                    message: format!("error creating directory: {}", e),
-                    label: "setup_py_install()".to_string(),
-                }.into()
-            ))?;
-
-            let mut envs = prepare_hacked_distutils(
-                &logger,
-                &dist,
-                temp_dir.path(),
-                &[&python_paths.site_packages, &python_paths.stdlib],
-            )
-            .expect("unable to hack distutils");
-
-            for (key, value) in &extra_envs {
-                envs.insert(key.clone(), value.clone());
-            }
-
-            warn!(logger, "python setup.py installing {} to {}", exec_cwd.display(), target_dir_s);
-
-            let mut args = vec!["setup.py"];
-
-            for arg in &extra_global_arguments {
-                args.push(arg);
-            }
-
-            // TODO add --verbose based on context flag
-
-            args.extend(&["install", "--prefix", &target_dir_s, "--no-compile"]);
-
-            // TODO send stderr to stdout.
-            let mut cmd = std::process::Command::new(&dist.python_exe)
-                .current_dir(&exec_cwd)
-                .args(&args)
-                .envs(&envs)
-                .stdout(std::process::Stdio::piped())
-                .spawn()
-                .expect("error running setup.py");
-            {
-                let stdout = cmd.stdout.as_mut().unwrap();
-                let reader = BufReader::new(stdout);
-
-                for line in reader.lines() {
-                    warn!(logger, "{}", line.unwrap());
-                }
-            }
-
-            let status = cmd.wait().unwrap();
-            if !status.success() {
-                return Err(RuntimeError {
-                    code: "SETUP_PY_ERROR",
-                    message: "error running setup.py".to_string(),
-                    label: "setup_py_install()".to_string(),
-                }.into());
-            }
-
-            let state_dir = PathBuf::from(envs.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap());
-            warn!(logger, "scanning {} for resources", python_paths.site_packages.display());
-            find_resources(&python_paths.site_packages, Some(&state_dir)).or_else(|e| Err(
-                RuntimeError {
-                    code: "SETUP_PY_ERROR",
-                    message: format!("could not find resources: {}", e),
-                    label: "setup_py_install()".to_string(),
-                }.into()
-            ))
-        })?;
+            raw_setup_py_install(&logger, dist, &package_path, verbose, &extra_envs, &extra_global_arguments)
+        }).or_else(|e| Err(
+            RuntimeError {
+                code: "SETUP_PY_ERROR",
+                message: e.to_string(),
+                label: "setup_py_install()".to_string(),
+            }.into()
+        ))?;
 
         warn!(logger, "collected {} resources from setup.py install", resources.len());
 

@@ -10,7 +10,7 @@ use std::hash::BuildHasher;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
-use super::distribution::ParsedPythonDistribution;
+use super::distribution::{resolve_python_paths, ParsedPythonDistribution};
 use super::distutils::{prepare_hacked_distutils, read_built_extensions};
 use super::fsscan::{find_python_resources, PythonFileResource};
 use super::resource::PythonResource;
@@ -107,6 +107,92 @@ pub fn pip_install<S: BuildHasher>(
 
     let state_dir = PathBuf::from(env.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap());
     find_resources(&target_dir, Some(&state_dir))
+}
+
+/// Run `setup.py install` against a path and return found resources.
+pub fn setup_py_install<S: BuildHasher>(
+    logger: &slog::Logger,
+    dist: &ParsedPythonDistribution,
+    package_path: &Path,
+    verbose: bool,
+    extra_envs: &HashMap<String, String, S>,
+    extra_global_arguments: &[String],
+) -> Result<Vec<PythonResource>> {
+    if !package_path.is_absolute() {
+        return Err(anyhow!(
+            "package_path must be absolute: got {:?}",
+            package_path.display()
+        ));
+    }
+
+    let temp_dir = tempdir::TempDir::new("pyoxidizer-setup-py-install")?;
+
+    let target_dir_path = temp_dir.path().join("install");
+    let target_dir_s = target_dir_path.display().to_string();
+
+    let python_paths = resolve_python_paths(&target_dir_path, &dist.version);
+
+    std::fs::create_dir_all(&python_paths.site_packages)?;
+
+    let mut envs = prepare_hacked_distutils(
+        &logger,
+        &dist,
+        temp_dir.path(),
+        &[&python_paths.site_packages, &python_paths.stdlib],
+    )?;
+
+    for (key, value) in extra_envs {
+        envs.insert(key.clone(), value.clone());
+    }
+
+    warn!(
+        logger,
+        "python setup.py installing {} to {}",
+        package_path.display(),
+        target_dir_s
+    );
+
+    let mut args = vec!["setup.py"];
+
+    if verbose {
+        args.push("--verbose");
+    }
+
+    for arg in extra_global_arguments {
+        args.push(arg);
+    }
+
+    args.extend(&["install", "--prefix", &target_dir_s, "--no-compile"]);
+
+    // TODO send stderr to stdout.
+    let mut cmd = std::process::Command::new(&dist.python_exe)
+        .current_dir(package_path)
+        .args(&args)
+        .envs(&envs)
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .expect("error running setup.py");
+    {
+        let stdout = cmd.stdout.as_mut().unwrap();
+        let reader = BufReader::new(stdout);
+
+        for line in reader.lines() {
+            warn!(logger, "{}", line.unwrap());
+        }
+    }
+
+    let status = cmd.wait().unwrap();
+    if !status.success() {
+        return Err(anyhow!("error running setup.py"));
+    }
+
+    let state_dir = PathBuf::from(envs.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap());
+    warn!(
+        logger,
+        "scanning {} for resources",
+        python_paths.site_packages.display()
+    );
+    find_resources(&python_paths.site_packages, Some(&state_dir))
 }
 
 #[cfg(test)]
