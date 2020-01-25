@@ -49,43 +49,47 @@ impl TypedValue for EmbeddedPythonConfig {
     }
 }
 
-starlark_module! { embedded_python_config_module =>
-    #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonInterpreterConfig(
-        env env,
-        bytes_warning=0,
-        ignore_environment=true,
-        inspect=false,
-        interactive=false,
-        isolated=false,
-        legacy_windows_fs_encoding=false,
-        legacy_windows_stdio=false,
-        optimize_level=0,
-        parser_debug=false,
-        stdio_encoding=None,
-        unbuffered_stdio=false,
-        filesystem_importer=false,
-        quiet=false,
-        site_import=false,
-        sys_frozen=false,
-        sys_meipass=false,
-        sys_paths=None,
-        raw_allocator=None,
-        terminfo_resolution="dynamic",
-        terminfo_dirs=None,
-        use_hash_seed=false,
-        user_site_directory=false,
-        verbose=0,
-        write_bytecode=false,
-        write_modules_directory_env=None
-    ) {
+// Starlark functions.
+impl EmbeddedPythonConfig {
+    /// PythonInterpreterConfig(...)
+    #[allow(clippy::too_many_arguments)]
+    pub fn starlark_new(
+        env: &Environment,
+        bytes_warning: &Value,
+        ignore_environment: &Value,
+        inspect: &Value,
+        interactive: &Value,
+        isolated: &Value,
+        legacy_windows_fs_encoding: &Value,
+        legacy_windows_stdio: &Value,
+        optimize_level: &Value,
+        parser_debug: &Value,
+        stdio_encoding: &Value,
+        unbuffered_stdio: &Value,
+        filesystem_importer: &Value,
+        quiet: &Value,
+        site_import: &Value,
+        sys_frozen: &Value,
+        sys_meipass: &Value,
+        sys_paths: &Value,
+        raw_allocator: &Value,
+        terminfo_resolution: &Value,
+        terminfo_dirs: &Value,
+        use_hash_seed: &Value,
+        user_site_directory: &Value,
+        verbose: &Value,
+        write_bytecode: &Value,
+        write_modules_directory_env: &Value,
+    ) -> ValueResult {
         required_type_arg("bytes_warning", "int", &bytes_warning)?;
         let ignore_environment = required_bool_arg("ignore_environment", &ignore_environment)?;
         let inspect = required_bool_arg("inspect", &inspect)?;
         let interactive = required_bool_arg("interactive", &interactive)?;
         let isolated = required_bool_arg("isolated", &isolated)?;
-        let legacy_windows_fs_encoding = required_bool_arg("legacy_windows_fs_encoding", &legacy_windows_fs_encoding)?;
-        let legacy_windows_stdio = required_bool_arg("legacy_windows_stdio", &legacy_windows_stdio)?;
+        let legacy_windows_fs_encoding =
+            required_bool_arg("legacy_windows_fs_encoding", &legacy_windows_fs_encoding)?;
+        let legacy_windows_stdio =
+            required_bool_arg("legacy_windows_stdio", &legacy_windows_stdio)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
         let parser_debug = required_bool_arg("parser_debug", &parser_debug)?;
         let stdio_encoding = optional_str_arg("stdio_encoding", &stdio_encoding)?;
@@ -103,7 +107,8 @@ starlark_module! { embedded_python_config_module =>
         let user_site_directory = required_bool_arg("user_site_directory", &user_site_directory)?;
         required_type_arg("verbose", "int", &verbose)?;
         let write_bytecode = required_bool_arg("write_bytecode", &write_bytecode)?;
-        let write_modules_directory_env = optional_str_arg("write_modules_directory_env", &write_modules_directory_env)?;
+        let write_modules_directory_env =
+            optional_str_arg("write_modules_directory_env", &write_modules_directory_env)?;
 
         let build_target = env.get("BUILD_TARGET_TRIPLE").unwrap().to_str();
 
@@ -124,7 +129,8 @@ starlark_module! { embedded_python_config_module =>
                         code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                         message: "invalid value for raw_allocator".to_string(),
                         label: "invalid value for raw_allocator".to_string(),
-                    }.into());
+                    }
+                    .into());
                 }
             },
             None => default_raw_allocator(&build_target),
@@ -133,30 +139,35 @@ starlark_module! { embedded_python_config_module =>
         let terminfo_resolution = match terminfo_resolution {
             Some(x) => match x.as_ref() {
                 "dynamic" => TerminfoResolution::Dynamic,
-                "static" => {
-                    TerminfoResolution::Static(if let Some(dirs) = terminfo_dirs {
-                        dirs
-                    } else {
-                        return Err(RuntimeError {
-                            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                            message: "terminfo_dirs must be set when using static resolution".to_string(),
-                            label: "terminfo_dirs must be set when using static resolution".to_string(),
-                        }.into());
-                    })
-                },
+                "static" => TerminfoResolution::Static(if let Some(dirs) = terminfo_dirs {
+                    dirs
+                } else {
+                    return Err(RuntimeError {
+                        code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                        message: "terminfo_dirs must be set when using static resolution"
+                            .to_string(),
+                        label: "terminfo_dirs must be set when using static resolution".to_string(),
+                    }
+                    .into());
+                }),
                 _ => {
                     return Err(RuntimeError {
                         code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                         message: "terminfo_resolution must be 'dynamic' or 'static'".to_string(),
-                        label: "terminfo_resolution must be 'dynamic' or 'static'".to_string()
-                    }.into());
+                        label: "terminfo_resolution must be 'dynamic' or 'static'".to_string(),
+                    }
+                    .into());
                 }
             },
             None => TerminfoResolution::None,
         };
 
         let sys_paths = match sys_paths.get_type() {
-            "list" => sys_paths.into_iter().unwrap().map(|x| x.to_string()).collect(),
+            "list" => sys_paths
+                .into_iter()
+                .unwrap()
+                .map(|x| x.to_string())
+                .collect(),
             _ => Vec::new(),
         };
 
@@ -189,6 +200,67 @@ starlark_module! { embedded_python_config_module =>
             verbose: verbose.to_int().unwrap() as i32,
             write_modules_directory_env,
         }))
+    }
+}
+
+starlark_module! { embedded_python_config_module =>
+    #[allow(non_snake_case, clippy::ptr_arg)]
+    PythonInterpreterConfig(
+        env env,
+        bytes_warning=0,
+        ignore_environment=true,
+        inspect=false,
+        interactive=false,
+        isolated=false,
+        legacy_windows_fs_encoding=false,
+        legacy_windows_stdio=false,
+        optimize_level=0,
+        parser_debug=false,
+        stdio_encoding=None,
+        unbuffered_stdio=false,
+        filesystem_importer=false,
+        quiet=false,
+        site_import=false,
+        sys_frozen=false,
+        sys_meipass=false,
+        sys_paths=None,
+        raw_allocator=None,
+        terminfo_resolution="dynamic",
+        terminfo_dirs=None,
+        use_hash_seed=false,
+        user_site_directory=false,
+        verbose=0,
+        write_bytecode=false,
+        write_modules_directory_env=None
+    ) {
+        EmbeddedPythonConfig::starlark_new(
+            &env,
+            &bytes_warning,
+            &ignore_environment,
+            &inspect,
+            &interactive,
+            &isolated,
+            &legacy_windows_fs_encoding,
+            &legacy_windows_stdio,
+            &optimize_level,
+            &parser_debug,
+            &stdio_encoding,
+            &unbuffered_stdio,
+            &filesystem_importer,
+            &quiet,
+            &site_import,
+            &sys_frozen,
+            &sys_meipass,
+            &sys_paths,
+            &raw_allocator,
+            &terminfo_resolution,
+            &terminfo_dirs,
+            &use_hash_seed,
+            &user_site_directory,
+            &verbose,
+            &write_bytecode,
+            &write_modules_directory_env
+        )
     }
 }
 
