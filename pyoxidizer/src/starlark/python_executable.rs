@@ -230,6 +230,32 @@ impl PreBuiltPythonExecutable {
             .into()),
         }
     }
+
+    /// PythonExecutable.add_python_resources(resources, add_source_module=true, add_bytecode_module=true, optimize_level=0)
+    pub fn starlark_add_python_resources(
+        &mut self,
+        env: &Environment,
+        resources: &Value,
+        add_source_module: &Value,
+        add_bytecode_module: &Value,
+        optimize_level: &Value,
+    ) -> ValueResult {
+        required_bool_arg("add_source_module", &add_source_module)?;
+        required_bool_arg("add_bytecode_module", &add_bytecode_module)?;
+        required_type_arg("optimize_level", "int", &optimize_level)?;
+
+        for resource in resources.into_iter()? {
+            self.starlark_add_python_resource(
+                env,
+                &resource,
+                add_source_module,
+                add_bytecode_module,
+                optimize_level,
+            )?;
+        }
+
+        Ok(Value::new(None))
+    }
 }
 
 starlark_module! { python_executable_env =>
@@ -279,13 +305,13 @@ starlark_module! { python_executable_env =>
                 &resource,
                 &add_source_module,
                 &add_bytecode_module,
-                &optimize_level)
+                &optimize_level,
+            )
         })
     }
 
     #[allow(clippy::ptr_arg)]
     PythonExecutable.add_python_resources(
-        call_stack call_stack,
         env env,
         this,
         resources,
@@ -293,24 +319,15 @@ starlark_module! { python_executable_env =>
         add_bytecode_module=true,
         optimize_level=0
     ) {
-        required_bool_arg("add_source_module", &add_source_module)?;
-        required_bool_arg("add_bytecode_module", &add_bytecode_module)?;
-        required_type_arg("optimize_level", "int", &optimize_level)?;
-
-        let f = env.get_type_value(&this, "add_python_resource").unwrap();
-
-        for resource in resources.into_iter()? {
-            let args = vec![
-                this.clone(),
-                resource,
-                add_source_module.clone(),
-                add_bytecode_module.clone(),
-                optimize_level.clone(),
-            ];
-            f.call(call_stack, env.clone(), args, HashMap::new(), None, None)?;
-        }
-
-        Ok(Value::new(None))
+        this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
+            exe.starlark_add_python_resources(
+                &env,
+                &resources,
+                &add_source_module,
+                &add_bytecode_module,
+                &optimize_level,
+            )
+        })
     }
 
     #[allow(clippy::ptr_arg)]
