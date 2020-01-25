@@ -97,6 +97,11 @@ impl FileManifest {
         self.files.iter()
     }
 
+    /// Whether this manifest contains the specified file path.
+    pub fn has_path(&self, path: &Path) -> bool {
+        self.files.contains_key(path)
+    }
+
     /// Write the contents of the install manifest to a filesystem path.
     pub fn write_to_path(&self, path: &Path) -> Result<()> {
         for (p, c) in &self.files {

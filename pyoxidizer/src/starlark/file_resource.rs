@@ -32,9 +32,7 @@ use crate::app_packaging::resource::{
 use crate::project_building::build_python_executable;
 use crate::py_packaging::binary::PreBuiltPythonExecutable;
 use crate::py_packaging::distribution::ExtensionModule;
-use crate::py_packaging::resource::{
-    BytecodeModule, ExtensionModuleData, ResourceData, SourceModule,
-};
+use crate::py_packaging::resource::{BytecodeModule, ExtensionModuleData, ResourceData};
 
 #[derive(Clone, Debug)]
 pub struct FileContent {
@@ -73,28 +71,6 @@ pub struct FileManifest {
 }
 
 impl FileManifest {
-    fn add_source_module(&mut self, prefix: &str, module: &SourceModule) -> Result<()> {
-        let content = RawFileContent {
-            data: module.source.clone(),
-            executable: false,
-        };
-
-        let mut module_path = PathBuf::from(prefix);
-        module_path.extend(module.name.split('.'));
-
-        // Packages get normalized to /__init__.py.
-        if module.is_package {
-            module_path.push("__init__");
-        }
-
-        module_path.set_file_name(format!(
-            "{}.py",
-            module_path.file_name().unwrap().to_string_lossy()
-        ));
-
-        self.manifest.add_file(&module_path, &content)
-    }
-
     // TODO implement.
     fn add_bytecode_module(&self, _prefix: &str, _module: &BytecodeModule) {
         println!("support for adding bytecode modules not yet implemented");
@@ -236,14 +212,16 @@ impl FileManifest {
             "PythonSourceModule" => {
                 let m = resource.downcast_apply(|m: &PythonSourceModule| m.module.clone());
                 warn!(logger, "adding source module {} to {}", m.name, prefix);
-                self.add_source_module(&prefix, &m).or_else(|e| {
-                    Err(RuntimeError {
-                        code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                        message: e.to_string(),
-                        label: e.to_string(),
-                    }
-                    .into())
-                })
+
+                m.add_to_file_manifest(&mut self.manifest, &prefix)
+                    .or_else(|e| {
+                        Err(RuntimeError {
+                            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                            message: e.to_string(),
+                            label: e.to_string(),
+                        }
+                        .into())
+                    })
             }
             "PythonBytecodeModule" => {
                 let m = resource.downcast_apply(|m: &PythonBytecodeModule| m.module.clone());
@@ -415,6 +393,7 @@ starlark_module! { file_resource_env =>
 mod tests {
     use super::super::testutil::*;
     use super::*;
+    use crate::py_packaging::resource::SourceModule;
 
     #[test]
     fn test_new_file_manifest() {
@@ -449,8 +428,18 @@ mod tests {
         let m = env.get("m").unwrap();
         m.downcast_apply(|m: &FileManifest| {
             let mut entries = m.manifest.entries();
-            let (p, c) = entries.next().unwrap();
 
+            let (p, c) = entries.next().unwrap();
+            assert_eq!(p, &PathBuf::from("lib/foo/__init__.py"));
+            assert_eq!(
+                c,
+                &RawFileContent {
+                    data: vec![],
+                    executable: false,
+                }
+            );
+
+            let (p, c) = entries.next().unwrap();
             assert_eq!(p, &PathBuf::from("lib/foo/bar.py"));
             assert_eq!(
                 c,
