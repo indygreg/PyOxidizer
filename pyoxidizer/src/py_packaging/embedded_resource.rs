@@ -58,7 +58,9 @@ pub struct EmbeddedPythonResourcesPrePackaged {
     pub source_modules: BTreeMap<String, SourceModule>,
     pub bytecode_modules: BTreeMap<String, BytecodeModule>,
     pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
+    // TODO combine into single extension module type.
     pub extension_modules: BTreeMap<String, ExtensionModule>,
+    pub extension_module_datas: BTreeMap<String, ExtensionModuleData>,
 }
 
 impl EmbeddedPythonResourcesPrePackaged {
@@ -136,6 +138,12 @@ impl EmbeddedPythonResourcesPrePackaged {
     pub fn add_extension_module(&mut self, module: &ExtensionModule) {
         self.extension_modules
             .insert(module.module.clone(), module.clone());
+    }
+
+    /// Add an extension module.
+    pub fn add_extension_module_data(&mut self, module: &ExtensionModuleData) {
+        self.extension_module_datas
+            .insert(module.name.clone(), module.clone());
     }
 
     /// Filter the entities in this instance against names in files.
@@ -222,6 +230,15 @@ impl EmbeddedPythonResourcesPrePackaged {
                 }
             }));
 
+        let built_extension_modules =
+            BTreeMap::from_iter(self.extension_module_datas.iter().filter_map(|(k, v)| {
+                if ignored.contains(k) {
+                    None
+                } else {
+                    Some((k.clone(), v.clone()))
+                }
+            }));
+
         Ok(EmbeddedPythonResources {
             module_sources,
             module_bytecodes,
@@ -229,7 +246,7 @@ impl EmbeddedPythonResourcesPrePackaged {
             all_packages,
             resources,
             extension_modules,
-            built_extension_modules: Default::default(),
+            built_extension_modules,
         })
     }
 }

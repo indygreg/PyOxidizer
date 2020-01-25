@@ -306,11 +306,10 @@ starlark_module! { python_executable_env =>
                     exe.resources.add_extension_module(&m);
                     Ok(())
                 },
-                PythonExtensionModuleFlavor::Built(_) => Err(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: "support for built extension modules not yet implemented".to_string(),
-                    label: "add_extension_module()".to_string(),
-                }.into())
+                PythonExtensionModuleFlavor::Built(m) => {
+                    exe.resources.add_extension_module_data(&m);
+                    Ok(())
+                }
             }
         })?;
 
