@@ -55,6 +55,105 @@ pub struct PythonDistribution {
 }
 
 impl PythonDistribution {
+    fn from_location(location: PythonDistributionLocation, dest_dir: &Path) -> PythonDistribution {
+        PythonDistribution {
+            source: location,
+            dest_dir: dest_dir.to_path_buf(),
+            distribution: None,
+            compiler: None,
+        }
+    }
+
+    pub fn ensure_distribution_resolved(&mut self, logger: &slog::Logger) {
+        if self.distribution.is_some() {
+            return;
+        }
+
+        let dist = resolve_parsed_distribution(logger, &self.source, &self.dest_dir).unwrap();
+        warn!(logger, "distribution info: {:#?}", dist.as_minimal_info());
+
+        self.distribution = Some(Arc::new(dist));
+    }
+
+    /// Compile bytecode using this distribution.
+    ///
+    /// A bytecode compiler will be lazily instantiated and preserved for the
+    /// lifetime of the instance. So calling multiple times does not pay a
+    /// recurring performance penalty for instantiating the bytecode compiler.
+    pub fn compile_bytecode(
+        &mut self,
+        logger: &slog::Logger,
+        source: &[u8],
+        filename: &str,
+        optimize: BytecodeOptimizationLevel,
+        output_mode: CompileMode,
+    ) -> Result<Vec<u8>> {
+        self.ensure_distribution_resolved(logger);
+
+        if let Some(dist) = &self.distribution {
+            if self.compiler.is_none() {
+                let compiler = BytecodeCompiler::new(&dist.python_exe)?;
+                self.compiler = Some(compiler);
+            }
+        }
+
+        if let Some(compiler) = &mut self.compiler {
+            compiler.compile(source, filename, optimize, output_mode)
+        } else {
+            Err(anyhow!("bytecode compiler should exist"))
+        }
+    }
+}
+
+impl TypedValue for PythonDistribution {
+    immutable!();
+    any!();
+    not_supported!(binop);
+    not_supported!(container);
+    not_supported!(function);
+    not_supported!(get_hash);
+    not_supported!(to_int);
+
+    fn to_str(&self) -> String {
+        format!("PythonDistribution<{:#?}>", self.source)
+    }
+
+    fn to_repr(&self) -> String {
+        self.to_str()
+    }
+
+    fn get_type(&self) -> &'static str {
+        "PythonDistribution"
+    }
+
+    fn to_bool(&self) -> bool {
+        true
+    }
+
+    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
+        default_compare(self, other)
+    }
+}
+
+// Starlark functions.
+impl PythonDistribution {
+    /// default_python_distribution(build_target=None)
+    fn default_python_distribution(env: &Environment, build_target: &Value) -> ValueResult {
+        let build_target = match build_target.get_type() {
+            "NoneType" => env.get("BUILD_TARGET_TRIPLE").unwrap().to_string(),
+            "string" => build_target.to_string(),
+            t => {
+                return Err(ValueError::TypeNotX {
+                    object_type: t.to_string(),
+                    op: "str".to_string(),
+                })
+            }
+        };
+
+        resolve_default_python_distribution(&env, &build_target)
+    }
+
+    /// PythonDistribution()
     fn from_args(
         env: &Environment,
         sha256: &Value,
@@ -96,31 +195,16 @@ impl PythonDistribution {
         )))
     }
 
-    fn default_python_distribution(env: &Environment, build_target: &Value) -> ValueResult {
-        let build_target = match build_target.get_type() {
-            "NoneType" => env.get("BUILD_TARGET_TRIPLE").unwrap().to_string(),
-            "string" => build_target.to_string(),
-            t => {
-                return Err(ValueError::TypeNotX {
-                    object_type: t.to_string(),
-                    op: "str".to_string(),
-                })
-            }
-        };
-
-        resolve_default_python_distribution(&env, &build_target)
-    }
-
-    fn from_location(location: PythonDistributionLocation, dest_dir: &Path) -> PythonDistribution {
-        PythonDistribution {
-            source: location,
-            dest_dir: dest_dir.to_path_buf(),
-            distribution: None,
-            compiler: None,
-        }
-    }
-
-    /// Convert a PythonDistribution to a PythonExecutable from Starlark values.
+    /// PythonDistribution.to_python_executable(
+    ///     name,
+    ///     run_mode,
+    ///     config=None,
+    ///     extension_module_filter="all",
+    ///     preferred_extension_module_variants=None,
+    ///     include_sources=true,
+    ///     include_resources=true,
+    ///     include_test=false,
+    /// )
     #[allow(clippy::ptr_arg, clippy::too_many_arguments)]
     fn as_python_executable_starlark(
         &mut self,
@@ -252,6 +336,7 @@ impl PythonDistribution {
         Ok(Value::new(pre_built))
     }
 
+    /// PythonDistribution.extension_modules(filter="all", preferred_variants=None)
     pub fn extension_modules(
         &mut self,
         env: &Environment,
@@ -311,7 +396,7 @@ impl PythonDistribution {
         ))
     }
 
-    /// Runs pip_install() from the context of starlark.
+    /// PythonDistribution.pip_install(args, extra_envs=None)
     pub fn pip_install(
         &mut self,
         env: &Environment,
@@ -358,6 +443,7 @@ impl PythonDistribution {
         ))
     }
 
+    /// PythonDistribution.read_package_root(path, packages)
     pub fn read_package_root(
         &mut self,
         env: &Environment,
@@ -395,6 +481,7 @@ impl PythonDistribution {
         ))
     }
 
+    /// PythonDistribution.read_virtualenv(path)
     pub fn read_virtualenv(&mut self, env: &Environment, path: &Value) -> ValueResult {
         let path = required_str_arg("path", &path)?;
 
@@ -418,6 +505,7 @@ impl PythonDistribution {
         ))
     }
 
+    /// PythonDistribution.resources_data(include_test=false)
     pub fn resources_data(&mut self, env: &Environment, include_test: &Value) -> ValueResult {
         let include_test = required_bool_arg("include_test", &include_test)?;
 
@@ -455,6 +543,7 @@ impl PythonDistribution {
         ))
     }
 
+    /// PythonDistribution.setup_py_install(package_path, extra_envs=None, extra_global_arguments=None)
     pub fn setup_py_install(
         &mut self,
         env: &Environment,
@@ -531,6 +620,7 @@ impl PythonDistribution {
         ))
     }
 
+    /// PythonDistribution.source_modules()
     pub fn source_modules(&mut self, env: &Environment) -> ValueResult {
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
 
@@ -562,76 +652,6 @@ impl PythonDistribution {
                 })
                 .collect_vec(),
         ))
-    }
-
-    pub fn ensure_distribution_resolved(&mut self, logger: &slog::Logger) {
-        if self.distribution.is_some() {
-            return;
-        }
-
-        let dist = resolve_parsed_distribution(logger, &self.source, &self.dest_dir).unwrap();
-        warn!(logger, "distribution info: {:#?}", dist.as_minimal_info());
-
-        self.distribution = Some(Arc::new(dist));
-    }
-
-    /// Compile bytecode using this distribution.
-    ///
-    /// A bytecode compiler will be lazily instantiated and preserved for the
-    /// lifetime of the instance. So calling multiple times does not pay a
-    /// recurring performance penalty for instantiating the bytecode compiler.
-    pub fn compile_bytecode(
-        &mut self,
-        logger: &slog::Logger,
-        source: &[u8],
-        filename: &str,
-        optimize: BytecodeOptimizationLevel,
-        output_mode: CompileMode,
-    ) -> Result<Vec<u8>> {
-        self.ensure_distribution_resolved(logger);
-
-        if let Some(dist) = &self.distribution {
-            if self.compiler.is_none() {
-                let compiler = BytecodeCompiler::new(&dist.python_exe)?;
-                self.compiler = Some(compiler);
-            }
-        }
-
-        if let Some(compiler) = &mut self.compiler {
-            compiler.compile(source, filename, optimize, output_mode)
-        } else {
-            Err(anyhow!("bytecode compiler should exist"))
-        }
-    }
-}
-
-impl TypedValue for PythonDistribution {
-    immutable!();
-    any!();
-    not_supported!(binop);
-    not_supported!(container);
-    not_supported!(function);
-    not_supported!(get_hash);
-    not_supported!(to_int);
-
-    fn to_str(&self) -> String {
-        format!("PythonDistribution<{:#?}>", self.source)
-    }
-
-    fn to_repr(&self) -> String {
-        self.to_str()
-    }
-
-    fn get_type(&self) -> &'static str {
-        "PythonDistribution"
-    }
-
-    fn to_bool(&self) -> bool {
-        true
-    }
-
-    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
-        default_compare(self, other)
     }
 }
 
