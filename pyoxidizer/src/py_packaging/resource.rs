@@ -239,6 +239,21 @@ impl ResourceData {
             data: self.data.clone(),
         }
     }
+
+    pub fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
+        // TODO this logic needs shoring up and testing.
+        let mut dest_path = PathBuf::from(prefix);
+        dest_path.extend(self.package.split('.'));
+        dest_path.push(&self.name);
+
+        manifest.add_file(
+            &dest_path,
+            &FileContent {
+                data: self.data.clone(),
+                executable: false,
+            },
+        )
+    }
 }
 
 /// Represents an extension module built during packaging.

@@ -32,7 +32,7 @@ use crate::app_packaging::resource::{
 use crate::project_building::build_python_executable;
 use crate::py_packaging::binary::PreBuiltPythonExecutable;
 use crate::py_packaging::distribution::ExtensionModule;
-use crate::py_packaging::resource::{BytecodeModule, ExtensionModuleData, ResourceData};
+use crate::py_packaging::resource::{BytecodeModule, ExtensionModuleData};
 
 #[derive(Clone, Debug)]
 pub struct FileContent {
@@ -74,19 +74,6 @@ impl FileManifest {
     // TODO implement.
     fn add_bytecode_module(&self, _prefix: &str, _module: &BytecodeModule) {
         println!("support for adding bytecode modules not yet implemented");
-    }
-
-    fn add_resource_data(&mut self, prefix: &str, resource: &ResourceData) -> Result<()> {
-        let mut dest_path = PathBuf::from(prefix);
-        dest_path.extend(resource.package.split('.'));
-        dest_path.push(&resource.name);
-
-        let content = RawFileContent {
-            data: resource.data.clone(),
-            executable: false,
-        };
-
-        self.manifest.add_file(&dest_path, &content)
     }
 
     // TODO implement.
@@ -238,14 +225,15 @@ impl FileManifest {
                     m.full_name(),
                     prefix
                 );
-                self.add_resource_data(&prefix, &m).or_else(|e| {
-                    Err(RuntimeError {
-                        code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                        message: e.to_string(),
-                        label: e.to_string(),
-                    }
-                    .into())
-                })
+                m.add_to_file_manifest(&mut self.manifest, &prefix)
+                    .or_else(|e| {
+                        Err(RuntimeError {
+                            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                            message: e.to_string(),
+                            label: e.to_string(),
+                        }
+                        .into())
+                    })
             }
             "PythonExtensionModule" => {
                 let m = resource.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
@@ -391,9 +379,11 @@ starlark_module! { file_resource_env =>
 
 #[cfg(test)]
 mod tests {
-    use super::super::testutil::*;
-    use super::*;
-    use crate::py_packaging::resource::SourceModule;
+    use {
+        super::super::testutil::*,
+        super::*,
+        crate::py_packaging::resource::{ResourceData, SourceModule},
+    };
 
     #[test]
     fn test_new_file_manifest() {
