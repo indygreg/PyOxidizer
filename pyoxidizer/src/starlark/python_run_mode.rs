@@ -15,12 +15,7 @@ use std::collections::HashMap;
 use super::util::required_str_arg;
 use crate::py_packaging::config::RunMode;
 
-#[derive(Debug, Clone)]
-pub struct PythonRunMode {
-    pub run_mode: RunMode,
-}
-
-impl TypedValue for PythonRunMode {
+impl TypedValue for RunMode {
     immutable!();
     any!();
     not_supported!(binop);
@@ -30,7 +25,7 @@ impl TypedValue for PythonRunMode {
     not_supported!(to_int);
 
     fn to_str(&self) -> String {
-        format!("PythonRunMode<{:#?}>", self.run_mode)
+        format!("PythonRunMode<{:#?}>", self)
     }
 
     fn to_repr(&self) -> String {
@@ -53,26 +48,26 @@ impl TypedValue for PythonRunMode {
 starlark_module! { python_run_mode_env =>
     #[allow(clippy::ptr_arg)]
     python_run_mode_noop(call_stack _stack) {
-        Ok(Value::new(PythonRunMode { run_mode: RunMode::Noop }))
+        Ok(Value::new(RunMode::Noop))
     }
 
     #[allow(clippy::ptr_arg)]
     python_run_mode_repl(call_stack _stack) {
-        Ok(Value::new(PythonRunMode { run_mode: RunMode::Repl }))
+        Ok(Value::new(RunMode::Repl))
     }
 
     #[allow(clippy::ptr_arg)]
     python_run_mode_module(module) {
         let module = required_str_arg("module", &module)?;
 
-        Ok(Value::new(PythonRunMode { run_mode: RunMode::Module { module }}))
+        Ok(Value::new(RunMode::Module { module }))
     }
 
     #[allow(clippy::ptr_arg)]
     python_run_mode_eval(code) {
         let code = required_str_arg("code", &code)?;
 
-        Ok(Value::new(PythonRunMode { run_mode: RunMode::Eval { code }}))
+        Ok(Value::new(RunMode::Eval { code }))
     }
 }
 
@@ -84,22 +79,22 @@ mod tests {
     #[test]
     fn test_run_mode_noop() {
         let v = starlark_ok("python_run_mode_noop()");
-        v.downcast_apply(|x: &PythonRunMode| assert_eq!(x.run_mode, RunMode::Noop));
+        v.downcast_apply(|x: &RunMode| assert_eq!(x, &RunMode::Noop));
     }
 
     #[test]
     fn test_run_mode_repl() {
         let v = starlark_ok("python_run_mode_repl()");
-        v.downcast_apply(|x: &PythonRunMode| assert_eq!(x.run_mode, RunMode::Repl));
+        v.downcast_apply(|x: &RunMode| assert_eq!(x, &RunMode::Repl));
     }
 
     #[test]
     fn test_run_mode_module() {
         let v = starlark_ok("python_run_mode_module('mod')");
-        v.downcast_apply(|x: &PythonRunMode| {
+        v.downcast_apply(|x: &RunMode| {
             assert_eq!(
-                x.run_mode,
-                RunMode::Module {
+                x,
+                &RunMode::Module {
                     module: "mod".to_string()
                 }
             );
@@ -109,10 +104,10 @@ mod tests {
     #[test]
     fn test_run_mode_eval() {
         let v = starlark_ok("python_run_mode_eval('code')");
-        v.downcast_apply(|x: &PythonRunMode| {
+        v.downcast_apply(|x: &RunMode| {
             assert_eq!(
-                x.run_mode,
-                RunMode::Eval {
+                x,
+                &RunMode::Eval {
                     code: "code".to_string()
                 }
             );

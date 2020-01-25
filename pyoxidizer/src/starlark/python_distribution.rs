@@ -25,14 +25,13 @@ use super::env::EnvironmentContext;
 use super::python_resource::{
     PythonExtensionModule, PythonExtensionModuleFlavor, PythonResourceData, PythonSourceModule,
 };
-use super::python_run_mode::PythonRunMode;
 use super::util::{
     optional_dict_arg, optional_list_arg, optional_str_arg, optional_type_arg, required_bool_arg,
     required_list_arg, required_str_arg, required_type_arg,
 };
 use crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable};
 use crate::py_packaging::bytecode::{BytecodeCompiler, CompileMode};
-use crate::py_packaging::config::EmbeddedPythonConfig;
+use crate::py_packaging::config::{EmbeddedPythonConfig, RunMode};
 use crate::py_packaging::distribution::{
     is_stdlib_test_package, resolve_parsed_distribution, ExtensionModuleFilter,
     ParsedPythonDistribution, PythonDistributionLocation,
@@ -195,7 +194,7 @@ impl PythonDistribution {
             config.downcast_apply(|c: &EmbeddedPythonConfig| c.clone())
         };
 
-        let run_mode = run_mode.downcast_apply(|m: &PythonRunMode| m.run_mode.clone());
+        let run_mode = run_mode.downcast_apply(|m: &RunMode| m.clone());
 
         let pre_built = PreBuiltPythonExecutable::from_python_distribution(
             &logger,
