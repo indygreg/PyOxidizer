@@ -131,7 +131,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         }
 
         let inner = self.resources.get_mut(&resource.package).unwrap();
-        inner.insert(resource.name.clone(), resource.data.clone());
+        inner.insert(resource.name.clone(), resource.data.resolve().unwrap());
     }
 
     /// Add an extension module.
@@ -180,7 +180,8 @@ impl EmbeddedPythonResourcesPrePackaged {
             (
                 k.clone(),
                 PackagedModuleSource {
-                    source: v.source.clone(),
+                    // TODO avoid this unwrap
+                    source: v.source.resolve().unwrap(),
                     is_package: v.is_package,
                 },
             )
@@ -192,7 +193,7 @@ impl EmbeddedPythonResourcesPrePackaged {
 
             for (name, request) in &self.bytecode_modules {
                 let bytecode = compiler.compile(
-                    &request.source,
+                    &request.source.resolve()?,
                     &request.name,
                     request.optimize_level,
                     CompileMode::Bytecode,

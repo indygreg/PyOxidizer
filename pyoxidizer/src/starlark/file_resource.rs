@@ -371,6 +371,7 @@ mod tests {
     use {
         super::super::testutil::*,
         super::*,
+        crate::py_packaging::resource::DataLocation,
         crate::py_packaging::resource::{ResourceData, SourceModule},
         std::path::PathBuf,
     };
@@ -394,7 +395,7 @@ mod tests {
         let v = Value::new(PythonSourceModule {
             module: SourceModule {
                 name: "foo.bar".to_string(),
-                source: vec![],
+                source: DataLocation::Memory(vec![]),
                 is_package: false,
             },
         });
@@ -443,7 +444,7 @@ mod tests {
             data: ResourceData {
                 package: "foo.bar".to_string(),
                 name: "resource.txt".to_string(),
-                data: vec![],
+                data: DataLocation::Memory(vec![]),
             },
         });
 

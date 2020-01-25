@@ -25,6 +25,7 @@ use super::fsscan::{
 use super::resource::{ResourceData, SourceModule};
 
 use crate::licensing::NON_GPL_LICENSES;
+use crate::py_packaging::resource::DataLocation;
 use crate::python_distributions::CPYTHON_BY_TRIPLE;
 
 #[cfg(windows)]
@@ -618,7 +619,7 @@ impl ParsedPythonDistribution {
 
                 Ok(SourceModule {
                     name: name.clone(),
-                    source,
+                    source: DataLocation::Memory(source),
                     is_package,
                 })
             })
@@ -637,7 +638,7 @@ impl ParsedPythonDistribution {
                 res.push(ResourceData {
                     package: package.clone(),
                     name: name.clone(),
-                    data: fs::read(&path)?,
+                    data: DataLocation::Memory(fs::read(&path)?),
                 });
             }
         }

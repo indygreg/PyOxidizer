@@ -93,11 +93,28 @@ pub fn resolve_path_for_module(
     module_path
 }
 
+/// Represents binary data that can be fetched from somewhere.
+#[derive(Clone, Debug, PartialEq)]
+pub enum DataLocation {
+    Path(PathBuf),
+    Memory(Vec<u8>),
+}
+
+impl DataLocation {
+    /// Resolve the raw content of this instance.
+    pub fn resolve(&self) -> Result<Vec<u8>> {
+        match self {
+            DataLocation::Path(p) => std::fs::read(p).context(format!("reading {}", p.display())),
+            DataLocation::Memory(data) => Ok(data.clone()),
+        }
+    }
+}
+
 /// A Python source module agnostic of location.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SourceModule {
     pub name: String,
-    pub source: Vec<u8>,
+    pub source: DataLocation,
     pub is_package: bool,
 }
 
@@ -134,7 +151,7 @@ impl SourceModule {
     /// reflect modification made to this instance.
     pub fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
         let content = FileContent {
-            data: self.source.clone(),
+            data: self.source.resolve()?,
             executable: false,
         };
 
@@ -194,7 +211,7 @@ impl From<BytecodeOptimizationLevel> for i32 {
 #[derive(Clone, Debug, PartialEq)]
 pub struct BytecodeModule {
     pub name: String,
-    pub source: Vec<u8>,
+    pub source: DataLocation,
     pub optimize_level: BytecodeOptimizationLevel,
     pub is_package: bool,
 }
@@ -215,7 +232,12 @@ impl BytecodeModule {
 
     /// Compile source to bytecode using a compiler.
     pub fn compile(&self, compiler: &mut BytecodeCompiler, mode: CompileMode) -> Result<Vec<u8>> {
-        compiler.compile(&self.source, &self.name, self.optimize_level, mode)
+        compiler.compile(
+            &self.source.resolve()?,
+            &self.name,
+            self.optimize_level,
+            mode,
+        )
     }
 }
 
@@ -224,7 +246,7 @@ impl BytecodeModule {
 pub struct ResourceData {
     pub package: String,
     pub name: String,
-    pub data: Vec<u8>,
+    pub data: DataLocation,
 }
 
 impl ResourceData {
@@ -249,7 +271,7 @@ impl ResourceData {
         manifest.add_file(
             &dest_path,
             &FileContent {
-                data: self.data.clone(),
+                data: self.data.resolve()?,
                 executable: false,
             },
         )
@@ -325,25 +347,25 @@ pub enum PythonResource {
     },
     ModuleSource {
         name: String,
-        source: Vec<u8>,
+        source: DataLocation,
         is_package: bool,
     },
     ModuleBytecodeRequest {
         name: String,
-        source: Vec<u8>,
+        source: DataLocation,
         optimize_level: i32,
         is_package: bool,
     },
     ModuleBytecode {
         name: String,
-        bytecode: Vec<u8>,
+        bytecode: DataLocation,
         optimize_level: BytecodeOptimizationLevel,
         is_package: bool,
     },
     Resource {
         package: String,
         name: String,
-        data: Vec<u8>,
+        data: DataLocation,
     },
     BuiltExtensionModule(ExtensionModuleData),
 }
@@ -361,7 +383,7 @@ impl TryFrom<&PythonFileResource> for PythonResource {
 
                 Ok(PythonResource::ModuleSource {
                     name: full_name.clone(),
-                    source,
+                    source: DataLocation::Memory(source),
                     is_package: is_package_from_path(&path),
                 })
             }
@@ -377,7 +399,7 @@ impl TryFrom<&PythonFileResource> for PythonResource {
 
                 Ok(PythonResource::ModuleBytecode {
                     name: full_name.clone(),
-                    bytecode,
+                    bytecode: DataLocation::Memory(bytecode),
                     optimize_level: BytecodeOptimizationLevel::Zero,
                     is_package: is_package_from_path(&path),
                 })
@@ -394,7 +416,7 @@ impl TryFrom<&PythonFileResource> for PythonResource {
 
                 Ok(PythonResource::ModuleBytecode {
                     name: full_name.clone(),
-                    bytecode,
+                    bytecode: DataLocation::Memory(bytecode),
                     optimize_level: BytecodeOptimizationLevel::One,
                     is_package: is_package_from_path(&path),
                 })
@@ -411,7 +433,7 @@ impl TryFrom<&PythonFileResource> for PythonResource {
 
                 Ok(PythonResource::ModuleBytecode {
                     name: full_name.clone(),
-                    bytecode,
+                    bytecode: DataLocation::Memory(bytecode),
                     optimize_level: BytecodeOptimizationLevel::Two,
                     is_package: is_package_from_path(&path),
                 })
@@ -425,7 +447,7 @@ impl TryFrom<&PythonFileResource> for PythonResource {
                 Ok(PythonResource::Resource {
                     package: resource.package.clone(),
                     name: resource.stem.clone(),
-                    data,
+                    data: DataLocation::Memory(data),
                 })
             }
 
@@ -574,14 +596,14 @@ mod tests {
 
         SourceModule {
             name: "foo".to_string(),
-            source: vec![],
+            source: DataLocation::Memory(vec![]),
             is_package: false,
         }
         .add_to_file_manifest(&mut m, ".")?;
 
         SourceModule {
             name: "bar".to_string(),
-            source: vec![],
+            source: DataLocation::Memory(vec![]),
             is_package: false,
         }
         .add_to_file_manifest(&mut m, ".")?;
@@ -600,7 +622,7 @@ mod tests {
 
         SourceModule {
             name: "foo".to_string(),
-            source: vec![],
+            source: DataLocation::Memory(vec![]),
             is_package: true,
         }
         .add_to_file_manifest(&mut m, ".")?;
@@ -618,7 +640,7 @@ mod tests {
 
         SourceModule {
             name: "root.parent.child".to_string(),
-            source: vec![],
+            source: DataLocation::Memory(vec![]),
             is_package: false,
         }
         .add_to_file_manifest(&mut m, ".")?;
@@ -638,7 +660,7 @@ mod tests {
 
         SourceModule {
             name: "root.parent.child".to_string(),
-            source: vec![],
+            source: DataLocation::Memory(vec![]),
             is_package: true,
         }
         .add_to_file_manifest(&mut m, ".")?;
