@@ -40,7 +40,7 @@ use crate::py_packaging::distribution::{
 };
 use crate::py_packaging::distutils::{prepare_hacked_distutils, read_built_extensions};
 use crate::py_packaging::fsscan::{find_python_resources, PythonFileResource};
-use crate::py_packaging::pip::pip_install as raw_pip_install;
+use crate::py_packaging::packaging_tool::pip_install as raw_pip_install;
 use crate::py_packaging::resource::{BytecodeOptimizationLevel, PythonResource};
 use crate::python_distributions::CPYTHON_BY_TRIPLE;
 
