@@ -104,20 +104,14 @@ impl PreBuiltPythonExecutable {
 
         Ok(Value::new(None))
     }
-}
 
-starlark_module! { python_executable_env =>
-    #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_module_source(env env, this, module) {
-        this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
-            exe.starlark_add_module_source(&env, &module)
-        })
-    }
-
-    // TODO consider unifying with add_module_source() so there only needs to be
-    // a single function call.
-    #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_module_bytecode(env env, this, module, optimize_level=0) {
+    /// PythonExecutable.add_module_bytecode(module, optimize_level=0)
+    pub fn starlark_add_module_bytecode(
+        &mut self,
+        env: &Environment,
+        module: &Value,
+        optimize_level: &Value,
+    ) -> ValueResult {
         required_type_arg("module", "PythonSourceModule", &module)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
 
@@ -135,22 +129,39 @@ starlark_module! { python_executable_env =>
                     code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                     message: format!("optimize_level must be 0, 1, or 2: got {}", i),
                     label: "invalid optimize_level value".to_string(),
-                }.into());
+                }
+                .into());
             }
         };
 
-        this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
-            let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
-            info!(&logger, "adding embedded bytecode module {}", m.name);
-            exe.resources.add_bytecode_module(&BytecodeModule {
-                name: m.name.clone(),
-                source: m.source.clone(),
-                optimize_level,
-                is_package: m.is_package,
-            });
+        let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
+        info!(&logger, "adding embedded bytecode module {}", m.name);
+        self.resources.add_bytecode_module(&BytecodeModule {
+            name: m.name.clone(),
+            source: m.source.clone(),
+            optimize_level,
+            is_package: m.is_package,
         });
 
         Ok(Value::new(None))
+    }
+}
+
+starlark_module! { python_executable_env =>
+    #[allow(non_snake_case, clippy::ptr_arg)]
+    PythonExecutable.add_module_source(env env, this, module) {
+        this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
+            exe.starlark_add_module_source(&env, &module)
+        })
+    }
+
+    // TODO consider unifying with add_module_source() so there only needs to be
+    // a single function call.
+    #[allow(non_snake_case, clippy::ptr_arg)]
+    PythonExecutable.add_module_bytecode(env env, this, module, optimize_level=0) {
+        this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
+            exe.starlark_add_module_bytecode(&env, &module, &optimize_level)
+        })
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
