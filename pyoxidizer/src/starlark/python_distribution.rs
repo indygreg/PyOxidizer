@@ -71,14 +71,14 @@ impl PythonDistribution {
         &mut self,
         env: Environment,
         call_stack: &Vec<(String, String)>,
-        name: Value,
-        run_mode: Value,
-        config: Value,
-        extension_module_filter: Value,
-        preferred_extension_module_variants: Value,
-        include_sources: Value,
-        include_resources: Value,
-        include_test: Value,
+        name: &Value,
+        run_mode: &Value,
+        config: &Value,
+        extension_module_filter: &Value,
+        preferred_extension_module_variants: &Value,
+        include_sources: &Value,
+        include_resources: &Value,
+        include_test: &Value,
     ) -> ValueResult {
         let name = required_str_arg("name", &name)?;
         required_type_arg("run_mode", "PythonRunMode", &run_mode)?;
@@ -161,6 +161,38 @@ impl PythonDistribution {
             }
             .into())
         })?;
+
+        context
+            .downcast_apply(|context: &EnvironmentContext| -> Result<()> {
+                if let Some(path) = &context.write_artifacts_path {
+                    warn!(
+                        &logger,
+                        "writing PyOxidizer build artifacts to {}",
+                        path.display()
+                    );
+                    let embedded = EmbeddedPythonBinaryData::from_pre_built_python_executable(
+                        &pre_built,
+                        &logger,
+                        &context.build_host_triple,
+                        &context.build_target_triple,
+                        &context.build_opt_level,
+                    )?;
+
+                    embedded.write_files(path)?;
+
+                    Ok(())
+                } else {
+                    Ok(())
+                }
+            })
+            .or_else(|e| {
+                Err(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "to_python_executable()".to_string(),
+                }
+                .into())
+            })?;
 
         Ok(Value::new(pre_built))
     }
@@ -687,57 +719,20 @@ starlark_module! { python_distribution_module =>
         include_resources=false,
         include_test=false
     ) {
-        let mut distribution = this.downcast_apply(|x: &PythonDistribution| {
-            PythonDistribution {
-                source: x.source.clone(),
-                distribution: x.distribution.clone(),
-                dest_dir: x.dest_dir.clone(),
-                compiler: None,
-            }
-        });
-
-        let pre_built = distribution.as_python_executable_starlark(
-            env.clone(),
-            call_stack,
-            name,
-            run_mode,
-            config,
-            extension_module_filter,
-            preferred_extension_module_variants,
-            include_sources,
-            include_resources,
-            include_test,
-        )?;
-
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
-
-        context.downcast_apply(|context: &EnvironmentContext| -> Result<()> {
-            if let Some(path) = &context.write_artifacts_path {
-                pre_built.downcast_apply(|pre_built: &PreBuiltPythonExecutable| -> Result<()> {
-                    warn!(&logger, "writing PyOxidizer build artifacts to {}", path.display());
-                    let embedded = EmbeddedPythonBinaryData::from_pre_built_python_executable(
-                        pre_built,
-                        &logger,
-                        &context.build_host_triple,
-                        &context.build_target_triple,
-                        &context.build_opt_level,
-                    )?;
-
-                    embedded.write_files(path)?;
-
-                    Ok(())
-                })
-            } else {
-                Ok(())
-            }
-        }).or_else(|e| Err(RuntimeError {
-            code: "PYOXIDIZER_BUILD",
-            message: e.to_string(),
-            label: "to_python_executable()".to_string(),
-        }.into()))?;
-
-        Ok(pre_built)
+        this.downcast_apply_mut(|dist: &mut PythonDistribution| {
+            dist.as_python_executable_starlark(
+                env.clone(),
+                call_stack,
+                &name,
+                &run_mode,
+                &config,
+                &extension_module_filter,
+                &preferred_extension_module_variants,
+                &include_sources,
+                &include_resources,
+                &include_test,
+            )
+        })
     }
 
     #[allow(clippy::ptr_arg)]
