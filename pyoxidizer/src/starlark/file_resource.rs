@@ -211,12 +211,20 @@ impl TypedValue for FileManifest {
     }
 }
 
-starlark_module! { file_resource_env =>
-    #[allow(non_snake_case, clippy::ptr_arg)]
-    FileManifest(env _env) {
+// Starlark functions.
+impl FileManifest {
+    /// FileManifest()
+    fn new_from_args() -> ValueResult {
         let manifest = RawFileManifest::default();
 
         Ok(Value::new(FileManifest { manifest }))
+    }
+}
+
+starlark_module! { file_resource_env =>
+    #[allow(non_snake_case, clippy::ptr_arg)]
+    FileManifest(env _env) {
+        FileManifest::new_from_args()
     }
 
     #[allow(clippy::ptr_arg)]
