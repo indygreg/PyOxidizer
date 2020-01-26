@@ -85,6 +85,14 @@ impl FileManifest {
         Ok(())
     }
 
+    pub fn add_manifest(&mut self, other: &FileManifest) -> Result<()> {
+        for (key, value) in &other.files {
+            self.add_file(key.as_path(), value)?;
+        }
+
+        Ok(())
+    }
+
     /// All relative directories contained within files in this manifest.
     ///
     /// The root directory is not represented in the return value.

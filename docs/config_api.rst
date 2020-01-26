@@ -993,6 +993,13 @@ filesystem layout of an installed application.
 Conceptually, a ``FileManifest`` is a dict mapping relative paths to
 file content.
 
+``FileManifest.add_manifest(manifest)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method overlays another ``FileManifest`` on this one. If the other
+manifest provides a path already in this manifest, its content will be
+replaced by what is in the other manifest.
+
 ``FileManifest.add_python_resource(prefix, value)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

@@ -9,7 +9,7 @@ use {
         PythonBytecodeModule, PythonExtensionModule, PythonResourceData, PythonSourceModule,
     },
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
-    super::util::{optional_str_arg, required_bool_arg, required_str_arg},
+    super::util::{optional_str_arg, required_bool_arg, required_str_arg, required_type_arg},
     crate::app_packaging::glob::evaluate_glob,
     crate::app_packaging::resource::{
         FileContent as RawFileContent, FileManifest as RawFileManifest,
@@ -171,6 +171,24 @@ impl FileManifest {
         let manifest = RawFileManifest::default();
 
         Ok(Value::new(FileManifest { manifest }))
+    }
+
+    /// FileManifest.add_manifest(other)
+    pub fn add_manifest(&mut self, other: &Value) -> ValueResult {
+        required_type_arg("other", "FileManifest", other)?;
+
+        let other = other.downcast_apply(|other: &FileManifest| other.manifest.clone());
+
+        self.manifest.add_manifest(&other).or_else(|e| {
+            Err(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "add_manifest()".to_string(),
+            }
+            .into())
+        })?;
+
+        Ok(Value::new(None))
     }
 
     /// FileManifest.add_python_resource(prefix, resource)
@@ -490,6 +508,13 @@ starlark_module! { file_resource_env =>
     #[allow(non_snake_case, clippy::ptr_arg)]
     FileManifest(env _env) {
         FileManifest::new_from_args()
+    }
+
+    #[allow(non_snake_case, clippy::ptr_arg)]
+    FileManifest.add_manifest(this, other) {
+        this.downcast_apply_mut(|manifest: &mut FileManifest| {
+            manifest.add_manifest(&other)
+        })
     }
 
     #[allow(clippy::ptr_arg)]
