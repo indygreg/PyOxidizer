@@ -218,7 +218,7 @@ pub fn build(
     })?;
     let target_triple = resolve_target(target)?;
 
-    let _res = eval_starlark_config_file(
+    let mut res = eval_starlark_config_file(
         logger,
         &config_path,
         &target_triple,
@@ -227,6 +227,16 @@ pub fn build(
         None,
         resolve_targets,
     )?;
+
+    let build_target = if let Some(t) = target {
+        t.to_string()
+    } else if let Some(t) = &res.context.default_target {
+        t.to_string()
+    } else {
+        return Err(anyhow!("unable to determine target to build"));
+    };
+
+    res.context.build_resolved_target(&build_target)?;
 
     Ok(())
 }
