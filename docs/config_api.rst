@@ -24,6 +24,7 @@ Starlark environment:
 * :ref:`config_glob`
 * :ref:`config_python_bytecode_module`
 * :ref:`config_python_distribution`
+* :ref:`config_python_embedded_data`
 * :ref:`config_python_executable`
 * :ref:`config_python_extension_module`
 * :ref:`config_python_interpreter_config`
@@ -49,6 +50,10 @@ The following custom data types are defined in the Starlark environment:
    Represents an implementation of Python.
 
    Used for embedding into binaries and running Python code.
+
+``PythonEmbeddedData``
+   Represents resources embedded in a binary to define and run a Python
+   interpreter.
 
 ``PythonExecutable``
    Represents an executable file containing a Python interpreter.
@@ -848,7 +853,30 @@ Python Binaries
 
 Binaries containing an embedded Python interpreter can be defined by
 configuration files. They are defined via the :ref:`config_python_executable`
-type.
+type. In addition, the :ref:`config_python_embedded_data` type defines the raw
+resources that constitute an embedded Python interpreter.
+
+.. _config_python_embedded_data:
+
+``PythonEmbeddedData``
+----------------------
+
+The ``PythonEmbeddedData`` type represents resources embedded within a binary
+to provide a Python interpreter. The various resources tracked by this type are
+consumed by the ``pyembed`` at build and run time. Various tracked resources
+include:
+
+* A link library providing the Python interpreter symbols.
+* A :ref:`config_python_interpreter_config` defining a default Python interpreter
+  configuration.
+* Python module and resource data to be embedded in the binary.
+
+Instances of this type are constructed by transforming a type representing
+a Python binary. e.g. :ref:`config_python_executable_to_embedded_data`.
+
+If this type is returned by a target function, its build action will write
+out files that represent the various resources encapsulated by this type. There
+is no run action associated with this type.
 
 .. _config_python_executable:
 
@@ -979,6 +1007,17 @@ This method accepts the following arguments:
 All defined files are first read and the resource names encountered are
 unioned into a set. This set is then used to filter entities currently
 registered with the instance.
+
+.. _config_python_executable_to_embedded_data:
+
+``PythonExecutable.to_embedded_data()``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Obtains a :ref:`config_python_embedded_data` instance representing resources
+to be embedded in a binary which are then used by the ``pyembed`` Rust crate
+to instantiate and run a Python interpreter.
+
+See the :ref:`config_python_embedded_data` type documentation for more.
 
 Interacting With the Filesystem
 ===============================

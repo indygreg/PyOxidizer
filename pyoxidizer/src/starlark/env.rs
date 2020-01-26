@@ -6,7 +6,7 @@ use {
     super::file_resource::FileManifest,
     super::target::{BuildContext, BuildTarget, ResolvedTarget},
     super::util::{optional_list_arg, required_bool_arg, required_str_arg, required_type_arg},
-    crate::py_packaging::binary::PreBuiltPythonExecutable,
+    crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable},
     anyhow::{anyhow, Context, Result},
     path_dedot::ParseDot,
     slog::warn,
@@ -242,6 +242,11 @@ impl EnvironmentContext {
         } else if raw_any.is::<PreBuiltPythonExecutable>() {
             raw_any
                 .downcast_mut::<PreBuiltPythonExecutable>()
+                .unwrap()
+                .build(&context)
+        } else if raw_any.is::<EmbeddedPythonBinaryData>() {
+            raw_any
+                .downcast_mut::<EmbeddedPythonBinaryData>()
                 .unwrap()
                 .build(&context)
         } else {

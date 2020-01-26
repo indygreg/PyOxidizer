@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use crate::py_packaging::binary::EmbeddedPythonBinaryData;
 use {
     super::env::EnvironmentContext,
     super::python_resource::{
@@ -258,6 +259,34 @@ impl PreBuiltPythonExecutable {
         Ok(Value::new(None))
     }
 
+    /// PythonExecutable.to_embedded_data()
+    pub fn starlark_to_embedded_data(&self, env: &Environment) -> ValueResult {
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+
+        let embedded = context
+            .downcast_apply(|context: &EnvironmentContext| {
+                EmbeddedPythonBinaryData::from_pre_built_python_executable(
+                    self,
+                    &context.logger,
+                    &context.build_host_triple,
+                    &context.build_target_triple,
+                    &context.build_opt_level,
+                )
+            })
+            .or_else(|e| {
+                {
+                    Err(RuntimeError {
+                        code: "PYOXIDIZER_BUILD",
+                        message: e.to_string(),
+                        label: "to_embedded_data()".to_string(),
+                    }
+                    .into())
+                }
+            })?;
+
+        Ok(Value::new(embedded))
+    }
+
     /// PythonExecutable.filter_resources_from_files(files=None, glob_files=None)
     pub fn starlark_filter_resources_from_files(
         &mut self,
@@ -385,6 +414,13 @@ starlark_module! { python_executable_env =>
     {
         this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
             exe.starlark_filter_resources_from_files(&env, &files, &glob_files)
+        })
+    }
+
+    #[allow(clippy::ptr_arg)]
+    PythonExecutable.to_embedded_data(env env, this) {
+        this.downcast_apply(|exe: &PreBuiltPythonExecutable| {
+            exe.starlark_to_embedded_data(&env)
         })
     }
 }
