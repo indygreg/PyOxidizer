@@ -63,14 +63,11 @@ const RUN_BUILD_SCRIPT_ABOUT: &str = "\
 Runs a crate build script to generate Python artifacts.
 
 When the Rust crate embedding Python is built, it needs to consume various
-artifacts derived from processing the active PyOxidizer TOML config file.
+artifacts derived from processing the active PyOxidizer config file.
 These files are typically generated when the crate's build script runs.
 
 This command executes the functionality to derive various artifacts and
 emits special lines that tell the Rust build system how to consume them.
-
-This command is essentially identical to `build-artifacts` except the
-output is tailored for the Rust build system.
 ";
 
 pub fn run_cli() -> Result<()> {
@@ -199,27 +196,6 @@ pub fn run_cli() -> Result<()> {
                 ),
         )
         .subcommand(
-            SubCommand::with_name("build-artifacts")
-                .about("Process a PyOxidizer config file and build derived artifacts")
-                .arg(
-                    Arg::with_name("dest_path")
-                        .required(true)
-                        .value_name("DIR")
-                        .help("Directory to write artifacts to"),
-                )
-                .arg(
-                    Arg::with_name("release")
-                        .long("release")
-                        .help("Build a release binary"),
-                )
-                .arg(
-                    Arg::with_name("path")
-                        .default_value(".")
-                        .value_name("PROJECT_PATH")
-                        .help("Path to PyOxidizer project to process"),
-                ),
-        )
-        .subcommand(
             SubCommand::with_name("run")
                 .setting(AppSettings::TrailingVarArg)
                 .about("Run a target in a PyOxidizer configuration file")
@@ -310,22 +286,6 @@ pub fn run_cli() -> Result<()> {
             analyze::analyze_file(path);
 
             Ok(())
-        }
-
-        ("build-artifacts", Some(args)) => {
-            let path = args.value_of("path").unwrap();
-            let path = PathBuf::from(path);
-            let release = args.is_present("release");
-            let dest_path = args.value_of("dest_path").unwrap();
-            let dest_path = PathBuf::from(dest_path);
-
-            projectmgmt::build_artifacts(
-                &logger_context.logger,
-                &path,
-                &dest_path,
-                release,
-                verbose,
-            )
         }
 
         ("build", Some(args)) => {

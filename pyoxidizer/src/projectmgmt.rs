@@ -236,6 +236,7 @@ pub fn build(
     Ok(())
 }
 
+#[allow(unused)]
 pub fn build_artifacts(
     logger: &slog::Logger,
     project_path: &Path,
