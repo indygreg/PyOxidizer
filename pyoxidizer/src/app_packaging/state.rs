@@ -4,8 +4,6 @@
 
 use std::path::PathBuf;
 
-use super::config::Config;
-
 /// Represents environment for a build.
 pub struct BuildContext {
     /// Path to Rust project.
@@ -16,9 +14,6 @@ pub struct BuildContext {
 
     /// Path to directory containing PyOxidizer configuration file.
     pub config_parent_path: PathBuf,
-
-    /// Parsed PyOxidizer configuration file.
-    pub config: Config,
 
     /// Parsed Cargo.toml for Rust project.
     pub cargo_config: cargo_toml::Manifest,

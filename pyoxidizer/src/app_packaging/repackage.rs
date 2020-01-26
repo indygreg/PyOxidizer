@@ -100,7 +100,6 @@ impl BuildContext {
             project_path: project_path.to_path_buf(),
             config_path: config.config_path.clone(),
             config_parent_path: config_parent_path.to_path_buf(),
-            config,
             cargo_config,
             verbose,
             build_path,
