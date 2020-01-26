@@ -39,6 +39,18 @@ fn main() {
         println!("invoking PyOxidizer natively to build artifacts");
         let logger_context = logger_from_env(slog::Level::Info);
 
-        run_from_build(&logger_context.logger, "build.rs", None).unwrap();
+        let target = if let Ok(target) = env::var("PYOXIDIZER_BUILD_TARGET") {
+            Some(target)
+        } else {
+            None
+        };
+
+        let resolve_target = if let Some(target) = &target {
+            Some(target.as_ref())
+        } else {
+            None
+        };
+
+        run_from_build(&logger_context.logger, "build.rs", resolve_target).unwrap();
     }
 }
