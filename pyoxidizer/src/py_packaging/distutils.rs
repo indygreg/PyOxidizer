@@ -124,7 +124,10 @@ struct DistutilsExtensionState {
 pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<ExtensionModuleData>> {
     let mut res = Vec::new();
 
-    let entries = read_dir(state_dir)?;
+    let entries = read_dir(state_dir).context(format!(
+        "reading built extensions from {}",
+        state_dir.display()
+    ))?;
 
     for entry in entries {
         let entry = entry?;
@@ -135,9 +138,9 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<ExtensionModuleData
             continue;
         }
 
-        let data = read_to_string(&path)?;
+        let data = read_to_string(&path).context(format!("reading {}", path.display()))?;
 
-        let info: DistutilsExtensionState = serde_json::from_str(&data)?;
+        let info: DistutilsExtensionState = serde_json::from_str(&data).context("parsing JSON")?;
 
         let module_components: Vec<&str> = info.name.split('.').collect();
         let final_name = module_components[module_components.len() - 1];
@@ -158,13 +161,14 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<ExtensionModuleData
             extension_file_name
         };
 
-        let extension_data = std::fs::read(extension_path)?;
+        let extension_data = std::fs::read(&extension_path)
+            .context(format!("reading {}", extension_path.display()))?;
 
         let mut object_file_data = Vec::new();
 
         for object_path in &info.objects {
             let path = PathBuf::from(object_path);
-            let data = std::fs::read(path)?;
+            let data = std::fs::read(&path).context(format!("reading {}", path.display()))?;
 
             object_file_data.push(data);
         }

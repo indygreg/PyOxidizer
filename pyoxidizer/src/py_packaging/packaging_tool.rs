@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use slog::warn;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -22,11 +22,17 @@ pub fn find_resources(path: &Path, state_dir: Option<&Path>) -> Result<Vec<Pytho
     for r in find_python_resources(&path) {
         match r {
             PythonFileResource::Source { .. } => {
-                res.push(PythonResource::try_from(&r)?);
+                res.push(
+                    PythonResource::try_from(&r)
+                        .context("converting source module to PythonResource")?,
+                );
             }
 
             PythonFileResource::Resource(..) => {
-                res.push(PythonResource::try_from(&r)?);
+                res.push(
+                    PythonResource::try_from(&r)
+                        .context("converting resource file to PythonResource")?,
+                );
             }
 
             _ => {}
