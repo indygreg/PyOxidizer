@@ -375,6 +375,18 @@ fn starlark_resolve_targets(env: &Environment, call_stack: &Vec<(String, String)
     Ok(Value::new(None))
 }
 
+/// set_build_path(path)
+fn starlark_set_build_path(env: &Environment, path: &Value) -> ValueResult {
+    let path = required_str_arg("path", &path)?;
+    let mut context = env.get("CONTEXT").expect("CONTEXT not set");
+
+    context.downcast_apply_mut(|x: &mut EnvironmentContext| {
+        x.set_build_path(&PathBuf::from(&path));
+    });
+
+    Ok(Value::new(None))
+}
+
 starlark_module! { global_module =>
     #[allow(clippy::ptr_arg)]
     register_target(env env, target, callable, depends=None, default=false) {
@@ -395,14 +407,7 @@ starlark_module! { global_module =>
 
     #[allow(clippy::ptr_arg)]
     set_build_path(env env, path) {
-        let path = required_str_arg("path", &path)?;
-        let mut context = env.get("CONTEXT").expect("CONTEXT not set");
-
-        context.downcast_apply_mut(|x: &mut EnvironmentContext| {
-            x.set_build_path(&PathBuf::from(&path));
-        });
-
-        Ok(Value::new(None))
+        starlark_set_build_path(&env, &path)
     }
 }
 
