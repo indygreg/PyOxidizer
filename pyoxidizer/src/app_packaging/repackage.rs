@@ -20,7 +20,6 @@ use {
     std::collections::{BTreeMap, BTreeSet},
     std::env,
     std::fs,
-    std::fs::create_dir_all,
     std::path::{Path, PathBuf},
 };
 
@@ -294,41 +293,4 @@ pub fn resolve_python_resources(
         read_files,
         license_files_path,
     }
-}
-
-/// Package a built Rust project into its packaging directory.
-///
-/// This will delete all content in the application's package directory.
-pub fn package_project(logger: &slog::Logger, context: &mut BuildContext) -> Result<()> {
-    warn!(
-        logger,
-        "packaging application into {}",
-        context.app_path.display()
-    );
-
-    if context.app_path.exists() {
-        warn!(logger, "purging {}", context.app_path.display());
-        std::fs::remove_dir_all(&context.app_path)?;
-    }
-
-    create_dir_all(&context.app_path)?;
-
-    warn!(
-        logger,
-        "copying {} to {}",
-        context.app_exe_target_path.display(),
-        context.app_exe_path.display()
-    );
-    std::fs::copy(&context.app_exe_target_path, &context.app_exe_path)?;
-
-    // TODO remember to port license files writing.
-
-    warn!(
-        logger,
-        "{} packaged into {}",
-        context.app_name,
-        context.app_path.display()
-    );
-
-    Ok(())
 }
