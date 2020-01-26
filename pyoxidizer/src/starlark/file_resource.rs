@@ -9,7 +9,8 @@ use {
         PythonBytecodeModule, PythonExtensionModule, PythonResourceData, PythonSourceModule,
     },
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
-    super::util::{required_bool_arg, required_str_arg},
+    super::util::{optional_str_arg, required_bool_arg, required_str_arg},
+    crate::app_packaging::glob::evaluate_glob,
     crate::app_packaging::resource::{
         FileContent as RawFileContent, FileManifest as RawFileManifest,
     },
@@ -31,7 +32,8 @@ use {
     },
     std::any::Any,
     std::cmp::Ordering,
-    std::collections::HashMap,
+    std::collections::{HashMap, HashSet},
+    std::convert::TryFrom,
     std::path::Path,
 };
 
@@ -338,7 +340,153 @@ impl FileManifest {
     }
 }
 
+/// glob(include, exclude=None, relative_to=None)
+fn starlark_glob(
+    env: &Environment,
+    include: &Value,
+    exclude: &Value,
+    strip_prefix: &Value,
+) -> ValueResult {
+    let strip_prefix = optional_str_arg("strip_prefix", &strip_prefix)?;
+
+    let context = env.get("CONTEXT").expect("unable to get CONTEXT");
+    let cwd = context.downcast_apply(|x: &EnvironmentContext| x.cwd.clone());
+
+    let mut result = HashSet::new();
+
+    // Evaluate all the includes first.
+    match include.get_type() {
+        "string" => {
+            for p in evaluate_glob(&cwd, &include.to_str()).or_else(|e| {
+                Err(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "glob()".to_string(),
+                }
+                .into())
+            })? {
+                result.insert(p);
+            }
+        }
+        "list" => {
+            for v in include.into_iter()? {
+                if v.get_type() != "string" {
+                    return Err(ValueError::TypeNotX {
+                        object_type: v.get_type().to_string(),
+                        op: "string".to_string(),
+                    });
+                }
+
+                for p in evaluate_glob(&cwd, &v.to_str()).or_else(|e| {
+                    Err(RuntimeError {
+                        code: "PYOXIDIZER_BUILD",
+                        message: e.to_string(),
+                        label: "glob()".to_string(),
+                    }
+                    .into())
+                })? {
+                    result.insert(p);
+                }
+            }
+        }
+        t => {
+            return Err(ValueError::TypeNotX {
+                object_type: t.to_string(),
+                op: "string".to_string(),
+            });
+        }
+    }
+
+    // Then apply excludes.
+    match exclude.get_type() {
+        "NoneType" => {}
+        "string" => {
+            for p in evaluate_glob(&cwd, &exclude.to_str()).or_else(|e| {
+                Err(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "glob()".to_string(),
+                }
+                .into())
+            })? {
+                result.remove(&p);
+            }
+        }
+        "list" => {
+            for v in exclude.into_iter()? {
+                if v.get_type() != "string" {
+                    return Err(ValueError::TypeNotX {
+                        object_type: v.get_type().to_string(),
+                        op: "string".to_string(),
+                    });
+                }
+
+                for p in evaluate_glob(&cwd, &v.to_str()).or_else(|e| {
+                    Err(RuntimeError {
+                        code: "PYOXIDIZER_BUILD",
+                        message: e.to_string(),
+                        label: "glob()".to_string(),
+                    }
+                    .into())
+                })? {
+                    result.remove(&p);
+                }
+            }
+        }
+        t => {
+            return Err(ValueError::TypeNotX {
+                object_type: t.to_string(),
+                op: "string".to_string(),
+            });
+        }
+    }
+
+    let mut manifest = RawFileManifest::default();
+
+    for path in result {
+        let content = RawFileContent::try_from(path.as_path()).or_else(|e| {
+            Err(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "glob()".to_string(),
+            }
+            .into())
+        })?;
+
+        let path = if let Some(prefix) = &strip_prefix {
+            path.strip_prefix(prefix)
+                .or_else(|e| {
+                    Err(RuntimeError {
+                        code: "PYOXIDIZER_BUILD",
+                        message: e.to_string(),
+                        label: "glob()".to_string(),
+                    }
+                    .into())
+                })?
+                .to_path_buf()
+        } else {
+            path.to_path_buf()
+        };
+
+        manifest.add_file(&path, &content).or_else(|e| {
+            Err(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "glob()".to_string(),
+            }
+            .into())
+        })?;
+    }
+
+    Ok(Value::new(FileManifest { manifest }))
+}
+
 starlark_module! { file_resource_env =>
+    #[allow(clippy::ptr_arg)]
+    glob(env env, include, exclude=None, strip_prefix=None) {
+        starlark_glob(&env, &include, &exclude, &strip_prefix)
+    }
+
     #[allow(non_snake_case, clippy::ptr_arg)]
     FileManifest(env _env) {
         FileManifest::new_from_args()

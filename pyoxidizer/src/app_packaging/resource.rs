@@ -2,13 +2,17 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use anyhow::{anyhow, Context, Result};
-use std::collections::btree_map::Iter;
-use std::collections::{BTreeMap, BTreeSet};
-use std::io::Write;
+use {
+    anyhow::{anyhow, Context, Result},
+    std::collections::btree_map::Iter,
+    std::collections::{BTreeMap, BTreeSet},
+    std::convert::TryFrom,
+    std::io::Write,
+    std::path::{Path, PathBuf},
+};
+
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
-use std::path::{Path, PathBuf};
 
 #[cfg(unix)]
 pub fn set_executable(file: &mut std::fs::File) -> Result<()> {
@@ -23,6 +27,17 @@ pub fn set_executable(_file: &mut std::fs::File) -> Result<()> {
     Ok(())
 }
 
+#[cfg(unix)]
+pub fn is_executable(metadata: &std::fs::Metadata) -> bool {
+    let permissions = metadata.permissions();
+    permissions.mode() & 0o111 != 0
+}
+
+#[cfg(windows)]
+pub fn is_executable(metadata: &std::fs::Metadata) -> bool {
+    false
+}
+
 /// Represents file content, agnostic of storage location.
 #[derive(Clone, Debug, PartialEq)]
 pub struct FileContent {
@@ -31,6 +46,18 @@ pub struct FileContent {
 
     /// Whether the file is executable.
     pub executable: bool,
+}
+
+impl TryFrom<&Path> for FileContent {
+    type Error = std::io::Error;
+
+    fn try_from(value: &Path) -> Result<Self, Self::Error> {
+        let data = std::fs::read(value)?;
+        let metadata = std::fs::metadata(value)?;
+        let executable = is_executable(&metadata);
+
+        Ok(FileContent { data, executable })
+    }
 }
 
 /// Represents a virtual tree of files.
@@ -136,9 +163,7 @@ impl FileManifest {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
-
-    use super::*;
+    use {super::*, itertools::Itertools};
 
     #[test]
     fn test_add() {

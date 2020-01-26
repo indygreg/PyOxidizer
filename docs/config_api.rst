@@ -21,6 +21,7 @@ Starlark environment:
 * :ref:`config_cwd`
 * :ref:`config_default_python_distribution`
 * :ref:`config_file_manifest`
+* :ref:`config_glob`
 * :ref:`config_python_bytecode_module`
 * :ref:`config_python_distribution`
 * :ref:`config_python_executable`
@@ -1027,3 +1028,23 @@ specified by ``BUILD_PATH``.
 If ``replace`` is True (the default), the destination directory will
 be deleted and the final state of the destination directory should
 exactly match the state of the ``FileManifest``.
+
+.. _config_glob:
+
+``glob(include, exclude=None, strip_prefix=None)``
+--------------------------------------------------
+
+The ``glob()`` function resolves file patterns to a ``FileManifest``.
+
+``include`` is a ``str`` or ``list`` of ``str`` containing file patterns that
+will be matched using the ``glob`` Rust crate. If patterns begin with ``/``, they
+are absolute. Otherwise they are evaluated relative to the directory of the
+current config file.
+
+``exclude`` has the same type as ``include`` but is used to exclude files from
+the result. All patterns in ``include`` are evaluated before ``exclude``.
+
+``strip_prefix`` is an optional ``str`` to strip from the beginning of
+matched files.
+
+Returns a ``FileManifest``.
