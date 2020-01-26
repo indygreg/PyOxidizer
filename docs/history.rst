@@ -21,9 +21,36 @@ Version History
 next
 ----
 
+General Notes
+^^^^^^^^^^^^^
+
+This release of PyOxidizer is significant rewrite of the previous version.
+The impetus for the rewrite is to transition from TOML to Starlark
+configuration files. The new configuration file format should allow
+vastly greater flexibility for building applications and will unlock a
+world of new possibilities.
+
+The transition to Starlark configuration files represented a shift from
+static configuration to something more dynamic. This required refactoring
+a ton of code.
+
+As part of refactoring code, we took the opportunity to shore up lots
+of the code base. PyOxidizer was the project author's first real Rust
+project and a lot of bad practices (such as use of `.unwrap()`/panics)
+were prevalent. The code mostly now has proper error handling. Another
+new addition to the code is unit tests. While coverage still isn't
+great, we now have tests performing meaningful packaging activities.
+So regressions should hopefully be less common going forward.
+
+Because of the scale of the rewritten code in this release, it is expected
+that there are tons of bugs of regressions. This will likely be a transitional
+release with a more robust release to follow.
+
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* Support for building distributions/installers has been temporarily dropped.
+* Support for installing license files has been temporarily dropped.
 * Python interpreter configuration setting names have been changed to reflect
   names from Python 3.8's interpreter initialization API.
 * ``.egg-info`` directories are now ignored when scanning for Python resources
