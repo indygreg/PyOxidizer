@@ -417,14 +417,14 @@ impl PythonDistribution {
         };
 
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let (logger, verbose) =
+            context.downcast_apply(|x: &EnvironmentContext| (x.logger.clone(), x.verbose));
 
         self.ensure_distribution_resolved(&logger);
         let dist = self.distribution.as_ref().unwrap();
 
-        // TODO get verbose flag from context.
         let resources =
-            raw_pip_install(&logger, &dist, false, &args, &extra_envs).or_else(|e| {
+            raw_pip_install(&logger, &dist, verbose, &args, &extra_envs).or_else(|e| {
                 Err(RuntimeError {
                     code: "PIP_INSTALL_ERROR",
                     message: format!("error running pip install: {}", e),
