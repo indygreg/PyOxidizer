@@ -222,6 +222,10 @@ pub fn build_pyembed_artifacts(
                 dest_path.display()
             ))?;
         }
+
+        // TODO should we normalize paths to pyoxidizer build directory in cargo_metadata.txt
+        // with the new artifacts directory?
+
         return Ok(());
     }
 
