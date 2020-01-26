@@ -350,7 +350,7 @@ mod tests {
             sys_frozen: false,
             sys_meipass: false,
             sys_paths: Vec::new(),
-            raw_allocator: default_raw_allocator(crate::app_packaging::repackage::HOST),
+            raw_allocator: default_raw_allocator(crate::project_building::HOST),
             run_mode: RunMode::Repl,
             terminfo_resolution: TerminfoResolution::Dynamic,
             write_modules_directory_env: None,

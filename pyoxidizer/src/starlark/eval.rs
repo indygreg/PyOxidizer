@@ -31,7 +31,7 @@ pub fn evaluate_file(
         logger,
         verbose,
         config_path,
-        crate::app_packaging::repackage::HOST,
+        crate::project_building::HOST,
         build_target_triple,
         release,
         // TODO this should be an argument.

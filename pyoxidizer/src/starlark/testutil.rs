@@ -22,7 +22,7 @@ pub fn starlark_env() -> Environment {
         slog::o!(),
     );
 
-    let build_target = crate::app_packaging::repackage::HOST;
+    let build_target = crate::project_building::HOST;
 
     let cwd = std::env::current_dir().expect("unable to determine CWD");
     let config_path = cwd.join("dummy");

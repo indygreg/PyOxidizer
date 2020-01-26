@@ -531,7 +531,7 @@ pub mod tests {
     #[test]
     fn test_build_target() {
         let target = starlark_ok("BUILD_TARGET_TRIPLE");
-        assert_eq!(target.to_str(), crate::app_packaging::repackage::HOST);
+        assert_eq!(target.to_str(), crate::project_building::HOST);
     }
 
     #[test]

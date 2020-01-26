@@ -8,6 +8,7 @@
 use {
     super::config::Config,
     super::state::BuildContext,
+    crate::project_building::HOST,
     crate::py_packaging::bytecode::python_source_encoding,
     crate::py_packaging::distribution::{ExtensionModule, ParsedPythonDistribution},
     crate::py_packaging::embedded_resource::EmbeddedPythonResources,
@@ -18,12 +19,9 @@ use {
     anyhow::{anyhow, Context, Result},
     slog::warn,
     std::collections::{BTreeMap, BTreeSet},
-    std::env,
     std::fs,
     std::path::{Path, PathBuf},
 };
-
-pub const HOST: &str = env!("HOST");
 
 impl BuildContext {
     #[allow(clippy::too_many_arguments)]

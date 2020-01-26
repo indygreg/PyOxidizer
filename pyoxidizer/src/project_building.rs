@@ -17,6 +17,8 @@ use {
     std::path::{Path, PathBuf},
 };
 
+pub const HOST: &str = env!("HOST");
+
 /// Build an executable embedding Python using an existing Rust project.
 ///
 /// The path to the produced executable is returned.
