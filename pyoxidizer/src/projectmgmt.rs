@@ -285,18 +285,7 @@ pub fn run(
         resolve_targets,
     )?;
 
-    let run_target = if let Some(target) = target {
-        target.to_string()
-    } else {
-        res.context
-            .default_target
-            .as_ref()
-            .ok_or_else(|| anyhow!("no default target available"))?
-            .to_string()
-    };
-
-    warn!(logger, "running target {}", run_target);
-    res.context.run_resolved_target(&run_target)
+    res.context.run_target(target)
 }
 
 /// Initialize a PyOxidizer configuration file in a given directory.

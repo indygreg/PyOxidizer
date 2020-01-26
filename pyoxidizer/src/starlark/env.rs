@@ -261,6 +261,18 @@ impl EnvironmentContext {
 
         resolved_target.run()
     }
+
+    pub fn run_target(&mut self, target: Option<&str>) -> Result<()> {
+        let target = if let Some(t) = target {
+            t.to_string()
+        } else if let Some(t) = &self.default_target {
+            t.to_string()
+        } else {
+            return Err(anyhow!("unable to determine target to run"));
+        };
+
+        self.run_resolved_target(&target)
+    }
 }
 
 impl TypedValue for EnvironmentContext {
