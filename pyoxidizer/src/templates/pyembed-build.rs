@@ -2,6 +2,27 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+/*!
+Build script to embed Python in a binary.
+
+The goal of this build script is to emit metadata to tell the build
+system how to embed a Python interpreter into a binary.
+
+This is done by printing the content of an artifact (cargo_metadata.txt)
+produced by PyOxidizer. This artifact in turn references other build
+artifacts.
+
+The following strategies exist for obtaining the build artifacts needed
+by this crate:
+
+1. Call `pyoxidizer run-build-script` and use its output verbatim.
+2. Call into the PyOxidizer library directly to perform the equivalent
+   of `pyoxidizer run-build-script`. (See bottom of file for an example.)
+3. Build artifacts out-of-band and consume them manually in this script
+   (e.g. by calling `pyoxidizer build` and then reading the generated
+   `cargo_metadata.txt` file manually.)
+*/
+
 use std::env;
 use std::path::PathBuf;
 use std::process;
@@ -65,3 +86,21 @@ fn main() {
         }
     }
 }
+
+// To call into PyOxidizer as a library, replace the code above with something
+// like the code below example. Don't forget to add a [[build-dependencies]] entry in the
+// Cargo.toml file!
+//
+// Please note that PyOxidizer has a lot of dependencies and building them all can take
+// a while.
+/*
+use {
+    pyoxidizerlib::logging::logger_from_env,
+    pyoxidizerlib::project_building::run_from_build,
+}
+
+fn main() {
+    let logger_context = logger_from_env(slog::Level::Info);
+    run_from_build(&logger_context.logger, "build.rs", Some("embedded")).unwrap();
+}
+*/
