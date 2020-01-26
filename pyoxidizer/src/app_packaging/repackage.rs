@@ -2,12 +2,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+// THIS MODULE IS DEPRECATED AND THE CODE SHOULD NOT BE USED ANY MORE.
+// IT IS AROUND TO SERVE AS A REFERENCE TO HOW THINGS ONCE WERE.
+
 use {
     super::config::Config,
     super::state::BuildContext,
     crate::py_packaging::bytecode::python_source_encoding,
     crate::py_packaging::distribution::{ExtensionModule, ParsedPythonDistribution},
-    crate::py_packaging::embedded_resource::{EmbeddedPythonResources, OS_IGNORE_EXTENSIONS},
+    crate::py_packaging::embedded_resource::EmbeddedPythonResources,
     crate::py_packaging::resource::{
         packages_from_module_name, packages_from_module_names, AppRelativeResources,
         ExtensionModuleData, PackagedModuleBytecode, PackagedModuleSource,
@@ -190,15 +193,6 @@ pub fn resolve_python_resources(
             warn!(logger, "adding required embedded extension module {}", name);
             embedded_extension_modules.insert(name.clone(), em.clone());
         }
-    }
-
-    // Remove extension modules that have problems.
-    for e in OS_IGNORE_EXTENSIONS.as_slice() {
-        warn!(
-            logger,
-            "removing extension module due to incompatibility: {}", e
-        );
-        embedded_extension_modules.remove(&String::from(*e));
     }
 
     // Audit Python source for __file__, which could be problematic.
