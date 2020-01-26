@@ -350,6 +350,31 @@ fn starlark_register_target(
     Ok(Value::new(None))
 }
 
+/// resolve_targets()
+#[allow(clippy::ptr_arg)]
+fn starlark_resolve_targets(env: &Environment, call_stack: &Vec<(String, String)>) -> ValueResult {
+    let context = env.get("CONTEXT").expect("CONTEXT not set");
+
+    let targets =
+        context.downcast_apply(|context: &EnvironmentContext| context.targets_to_resolve());
+
+    println!("resolving {} targets", targets.len());
+    for target in targets {
+        let resolve = env.get("resolve_target").unwrap();
+
+        resolve.call(
+            call_stack,
+            env.clone(),
+            vec![Value::new(target)],
+            HashMap::new(),
+            None,
+            None,
+        )?;
+    }
+
+    Ok(Value::new(None))
+}
+
 starlark_module! { global_module =>
     #[allow(clippy::ptr_arg)]
     register_target(env env, target, callable, depends=None, default=false) {
@@ -365,20 +390,7 @@ starlark_module! { global_module =>
 
     #[allow(clippy::ptr_arg)]
     resolve_targets(env env, call_stack cs) {
-        let context = env.get("CONTEXT").expect("CONTEXT not set");
-
-        let targets = context.downcast_apply(|context: &EnvironmentContext| {
-            context.targets_to_resolve()
-        });
-
-        println!("resolving {} targets", targets.len());
-        for target in targets {
-            let resolve = env.get("resolve_target").unwrap();
-
-            resolve.call(cs, env.clone(), vec![Value::new(target)], HashMap::new(), None, None)?;
-        }
-
-        Ok(Value::new(None))
+        starlark_resolve_targets(&env, &cs)
     }
 
     #[allow(clippy::ptr_arg)]
