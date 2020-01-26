@@ -39,6 +39,6 @@ fn main() {
         println!("invoking PyOxidizer natively to build artifacts");
         let logger_context = logger_from_env(slog::Level::Info);
 
-        run_from_build(&logger_context.logger, "build.rs", None);
+        run_from_build(&logger_context.logger, "build.rs", None).unwrap();
     }
 }

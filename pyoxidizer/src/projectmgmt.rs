@@ -516,7 +516,5 @@ pub fn run_build_script(
     build_script: &str,
     resolve_target: Option<&str>,
 ) -> Result<()> {
-    run_from_build(logger, build_script, resolve_target);
-
-    Ok(())
+    run_from_build(logger, build_script, resolve_target)
 }

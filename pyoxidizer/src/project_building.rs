@@ -185,7 +185,11 @@ pub fn build_python_executable(
 ///
 /// For this to work as expected, the target resolved in the config file must
 /// return a `PythonEmbeddedData` starlark type.
-pub fn run_from_build(logger: &slog::Logger, build_script: &str, resolve_target: Option<&str>) {
+pub fn run_from_build(
+    logger: &slog::Logger,
+    build_script: &str,
+    resolve_target: Option<&str>,
+) -> Result<()> {
     // Adding our our rerun-if-changed lines will overwrite the default, so
     // we need to emit the build script name explicitly.
     println!("cargo:rerun-if-changed={}", build_script);
@@ -194,10 +198,10 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str, resolve_target:
 
     // TODO use these variables?
     //let host = env::var("HOST").expect("HOST not defined");
-    let target = env::var("TARGET").expect("TARGET not defined");
+    let target = env::var("TARGET").context("TARGET")?;
     //let opt_level = env::var("OPT_LEVEL").expect("OPT_LEVEL not defined");
-    let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not found");
-    let profile = env::var("PROFILE").expect("PROFILE not defined");
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").context("CARGO_MANIFEST_DIR")?;
+    let profile = env::var("PROFILE").context("PROFILE")?;
 
     //let project_path = PathBuf::from(&manifest_dir);
 
@@ -212,7 +216,7 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str, resolve_target:
 
     let dest_dir = match env::var("PYOXIDIZER_ARTIFACT_DIR") {
         Ok(ref v) => PathBuf::from(v),
-        Err(_) => PathBuf::from(env::var("OUT_DIR").unwrap()),
+        Err(_) => PathBuf::from(env::var("OUT_DIR").context("OUT_DIR")?),
     };
 
     let mut res: EvalResult = eval_starlark_config_file(
@@ -227,19 +231,18 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str, resolve_target:
         } else {
             None
         },
-    )
-    .unwrap();
+    )?;
 
     for target in res.context.targets_to_resolve() {
-        res.context
-            .build_resolved_target(&target)
-            .expect("unable to build resolved target");
+        res.context.build_resolved_target(&target)?;
     }
 
     let cargo_metadata = dest_dir.join("cargo_metadata.txt");
-    let content = std::fs::read(&cargo_metadata).unwrap();
-    let content = String::from_utf8(content).unwrap();
+    let content = std::fs::read(&cargo_metadata).context("reading cargo_metadata.txt")?;
+    let content = String::from_utf8(content).context("converting cargo_metadata.txt to string")?;
     print!("{}", content);
+
+    Ok(())
 }
 
 #[cfg(test)]
