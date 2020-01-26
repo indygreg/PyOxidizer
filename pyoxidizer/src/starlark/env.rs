@@ -8,6 +8,7 @@ use {
     super::util::{optional_list_arg, required_bool_arg, required_str_arg, required_type_arg},
     crate::py_packaging::binary::PreBuiltPythonExecutable,
     anyhow::{anyhow, Context, Result},
+    path_dedot::ParseDot,
     slog::warn,
     starlark::environment::{Environment, EnvironmentError},
     starlark::values::{default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult},
@@ -138,9 +139,18 @@ impl EnvironmentContext {
         })
     }
 
-    pub fn set_build_path(&mut self, path: &Path) {
-        self.build_path = path.to_path_buf();
+    pub fn set_build_path(&mut self, path: &Path) -> Result<()> {
+        let path = if path.is_relative() {
+            self.cwd.join(path)
+        } else {
+            path.to_path_buf()
+        }
+        .parse_dot()?;
+
+        self.build_path = path.clone();
         self.python_distributions_path = path.join("python_distributions");
+
+        Ok(())
     }
 
     /// Register a named target.
@@ -446,9 +456,16 @@ fn starlark_set_build_path(env: &Environment, path: &Value) -> ValueResult {
     let path = required_str_arg("path", &path)?;
     let mut context = env.get("CONTEXT").expect("CONTEXT not set");
 
-    context.downcast_apply_mut(|x: &mut EnvironmentContext| {
-        x.set_build_path(&PathBuf::from(&path));
-    });
+    context
+        .downcast_apply_mut(|x: &mut EnvironmentContext| x.set_build_path(&PathBuf::from(&path)))
+        .or_else(|e| {
+            Err(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "set_build_path()".to_string(),
+            }
+            .into())
+        })?;
 
     Ok(Value::new(None))
 }
