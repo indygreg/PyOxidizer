@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use crate::starlark::target::ResolvedTarget;
 use {
     crate::app_packaging::config::{eval_starlark_config_file, find_pyoxidizer_config_file_env},
     crate::environment::MINIMUM_RUST_VERSION,
@@ -233,16 +234,39 @@ pub fn run_from_build(
         },
     )?;
 
+    // TODO should we honor only the specified target if one is given?
     for target in res.context.targets_to_resolve() {
-        res.context.build_resolved_target(&target)?;
+        let resolved: ResolvedTarget = res.context.build_resolved_target(&target)?;
+
+        let cargo_metadata = resolved.output_path.join("cargo_metadata.txt");
+
+        if !cargo_metadata.exists() {
+            continue;
+        }
+
+        for p in std::fs::read_dir(&resolved.output_path).context(format!(
+            "reading directory {}",
+            &resolved.output_path.display()
+        ))? {
+            let p = p?;
+
+            let dest_path = dest_dir.join(p.file_name());
+            std::fs::copy(&p.path(), &dest_path).context(format!(
+                "copying {} to {}",
+                p.path().display(),
+                dest_path.display()
+            ))?;
+        }
+
+        let content = std::fs::read(&cargo_metadata)
+            .context(format!("reading {}", cargo_metadata.display()))?;
+        let content =
+            String::from_utf8(content).context("converting cargo_metadata.txt to string")?;
+        print!("{}", content);
+        return Ok(());
     }
 
-    let cargo_metadata = dest_dir.join("cargo_metadata.txt");
-    let content = std::fs::read(&cargo_metadata).context("reading cargo_metadata.txt")?;
-    let content = String::from_utf8(content).context("converting cargo_metadata.txt to string")?;
-    print!("{}", content);
-
-    Ok(())
+    Err(anyhow!("unable to find generated cargo_metadata.txt; did you specify the correct target to resolve?"))
 }
 
 #[cfg(test)]

@@ -87,6 +87,7 @@ impl BuildTarget for PreBuiltPythonExecutable {
 
         Ok(ResolvedTarget {
             run_mode: RunMode::Path { path: dest_path },
+            output_path: context.output_path.clone(),
         })
     }
 }

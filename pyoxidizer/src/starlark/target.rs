@@ -19,7 +19,11 @@ pub enum RunMode {
 /// Represents a resolved target.
 #[derive(Debug, Clone)]
 pub struct ResolvedTarget {
+    /// How the built target can be run.
     pub run_mode: RunMode,
+
+    /// Where build artifacts are stored on the filesystem.
+    pub output_path: PathBuf,
 }
 
 impl ResolvedTarget {

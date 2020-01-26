@@ -137,7 +137,10 @@ impl BuildTarget for FileManifest {
             RunMode::None
         };
 
-        Ok(ResolvedTarget { run_mode })
+        Ok(ResolvedTarget {
+            run_mode,
+            output_path: context.output_path.clone(),
+        })
     }
 }
 

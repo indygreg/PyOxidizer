@@ -56,6 +56,7 @@ impl BuildTarget for EmbeddedPythonBinaryData {
 
         Ok(ResolvedTarget {
             run_mode: RunMode::None,
+            output_path: context.output_path.clone(),
         })
     }
 }
