@@ -181,6 +181,9 @@ impl EnvironmentContext {
     }
 
     /// Determine what targets should be resolved.
+    ///
+    /// This isn't the full list of targets that will be resolved, only the main
+    /// targets that we will instruct the resolver to resolve.
     pub fn targets_to_resolve(&self) -> Vec<String> {
         if let Some(targets) = &self.resolve_targets {
             targets.clone()

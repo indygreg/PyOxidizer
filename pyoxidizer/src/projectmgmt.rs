@@ -10,6 +10,7 @@ use {
     crate::project_building::run_from_build,
     crate::project_layout::{initialize_project, write_new_pyoxidizer_config_file},
     crate::py_packaging::distribution::analyze_python_distribution_tar_zst,
+    crate::starlark::eval::EvalResult,
     anyhow::{anyhow, Result},
     slog::warn,
     std::fs::create_dir_all,
@@ -205,7 +206,7 @@ fn build_pyoxidizer_artifacts(
 pub fn build(
     logger: &slog::Logger,
     project_path: &Path,
-    target: Option<&str>,
+    target_triple: Option<&str>,
     resolve_targets: Option<Vec<String>>,
     release: bool,
     verbose: bool,
@@ -216,9 +217,9 @@ pub fn build(
             project_path.display()
         )
     })?;
-    let target_triple = resolve_target(target)?;
+    let target_triple = resolve_target(target_triple)?;
 
-    let mut res = eval_starlark_config_file(
+    let mut res: EvalResult = eval_starlark_config_file(
         logger,
         &config_path,
         &target_triple,
@@ -228,7 +229,9 @@ pub fn build(
         resolve_targets,
     )?;
 
-    res.context.build_target(target)?;
+    for target in res.context.targets_to_resolve() {
+        res.context.build_resolved_target(&target)?;
+    }
 
     Ok(())
 }
@@ -275,7 +278,7 @@ pub fn run(
         None
     };
 
-    let mut res = eval_starlark_config_file(
+    let mut res: EvalResult = eval_starlark_config_file(
         logger,
         &config_path,
         &target_triple,
