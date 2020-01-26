@@ -9,7 +9,9 @@ use {
 
 /// Evaluate a file matching glob relative to the current working directory.
 pub fn evaluate_glob(cwd: &Path, pattern: &str) -> Result<Vec<PathBuf>> {
-    let search = if pattern.starts_with('/') {
+    let pattern_path = PathBuf::from(pattern);
+
+    let search = if pattern.starts_with('/') || pattern_path.is_absolute() {
         pattern.to_string()
     } else {
         format!("{}/{}", cwd.display(), pattern)
