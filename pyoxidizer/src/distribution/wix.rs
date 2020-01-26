@@ -372,6 +372,8 @@ pub fn build_wix_installer(
     context: &BuildContext,
     wix_config: &DistributionWixInstaller,
 ) -> Result<()> {
+    Err(anyhow!("not yet implemented"))
+    /*
     // The WiX installer is a unified installer for multiple architectures.
     // So ensure all Windows architectures are built before proceeding. This is
     // a bit hacky and should arguably be handled in a better way. Meh.
@@ -491,4 +493,5 @@ pub fn build_wix_installer(
     )?;
 
     Ok(())
+    */
 }

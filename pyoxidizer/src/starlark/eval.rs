@@ -4,8 +4,6 @@
 
 use {
     super::env::{global_environment, EnvironmentContext},
-    crate::app_packaging::config::{BuildConfig, Config},
-    crate::py_packaging::config::RunMode,
     codemap::CodeMap,
     codemap_diagnostic::{Diagnostic, Level},
     starlark::environment::Environment,
@@ -18,8 +16,6 @@ pub struct EvalResult {
     pub env: Environment,
 
     pub context: EnvironmentContext,
-
-    pub config: Config,
 }
 
 /// Evaluate a Starlark configuration file, returning a low-level result.
@@ -91,14 +87,5 @@ pub fn evaluate_file(
     Ok(EvalResult {
         env,
         context: env_context.downcast_apply(|x: &EnvironmentContext| x.clone()),
-        config: Config {
-            config_path: Default::default(),
-            build_config: BuildConfig {
-                application_name: "".to_string(),
-                build_path: Default::default(),
-            },
-            embedded_python_config: Default::default(),
-            run: RunMode::Noop,
-        },
     })
 }

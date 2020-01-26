@@ -5,22 +5,17 @@
 //! Manage PyOxidizer projects.
 
 use {
-    super::environment::{canonicalize_path, MINIMUM_RUST_VERSION},
+    super::environment::canonicalize_path,
     crate::app_packaging::config::{eval_starlark_config_file, find_pyoxidizer_config_file_env},
-    crate::app_packaging::state::BuildContext,
     crate::project_building::run_from_build,
-    crate::project_layout::{
-        find_pyoxidizer_files, initialize_project, write_new_pyoxidizer_config_file,
-    },
-    crate::py_packaging::config::RawAllocator,
-    crate::py_packaging::distribution::{analyze_python_distribution_tar_zst, python_exe_path},
+    crate::project_layout::{initialize_project, write_new_pyoxidizer_config_file},
+    crate::py_packaging::distribution::analyze_python_distribution_tar_zst,
     crate::starlark::env::EnvironmentContext,
     anyhow::{anyhow, Result},
     slog::warn,
     std::fs::create_dir_all,
     std::io::{Cursor, Read},
     std::path::{Path, PathBuf},
-    std::process,
 };
 
 /// Attempt to resolve the default Rust target for a build.
@@ -202,140 +197,6 @@ fn build_pyoxidizer_artifacts(
     }
 
     Ok(())
-}
-
-/// Build an oxidized Rust application at the specified project path.
-pub fn build_project(logger: &slog::Logger, context: &mut BuildContext) -> Result<()> {
-    if let Ok(rust_version) = rustc_version::version() {
-        if rust_version.lt(&MINIMUM_RUST_VERSION) {
-            return Err(anyhow!(
-                "PyOxidizer requires Rust {}; version {} found",
-                *MINIMUM_RUST_VERSION,
-                rust_version,
-            ));
-        }
-    } else {
-        return Err(anyhow!(
-            "unable to determine Rust version; is Rust installed?"
-        ));
-    }
-
-    // Our build process is to first generate artifacts from the PyOxidizer
-    // configuration within this process then call out to `cargo build`. We do
-    // this because it is easier to emit output from this process than to have
-    // it proxied via cargo.
-    build_pyoxidizer_artifacts(
-        logger,
-        &context.config_path,
-        &context.pyoxidizer_artifacts_path,
-        &context.target_triple,
-        context.release,
-        context.verbose,
-    )?;
-
-    let mut args = Vec::new();
-    args.push("build");
-
-    args.push("--target");
-    args.push(&context.target_triple);
-
-    // We use an explicit target directory so we can be sure we write our
-    // artifacts to the same directory that cargo is using (unless the config
-    // file overwrites the artifacts directory, of course).
-    let target_dir = context.target_base_path.display().to_string();
-    args.push("--target-dir");
-    args.push(&target_dir);
-
-    args.push("--bin");
-    args.push(&context.config.build_config.application_name);
-
-    if context.release {
-        args.push("--release");
-    }
-
-    if context.config.embedded_python_config.raw_allocator == RawAllocator::Jemalloc {
-        args.push("--features");
-        args.push("jemalloc");
-    }
-
-    let mut envs = Vec::new();
-    envs.push((
-        "PYOXIDIZER_ARTIFACT_DIR",
-        context.pyoxidizer_artifacts_path.display().to_string(),
-    ));
-    envs.push(("PYOXIDIZER_REUSE_ARTIFACTS", "1".to_string()));
-
-    // Set PYTHON_SYS_EXECUTABLE so python3-sys uses our distribution's Python to
-    // configure itself.
-    let python_exe_path = python_exe_path(&context.python_distribution_path)?;
-    envs.push((
-        "PYTHON_SYS_EXECUTABLE",
-        python_exe_path.display().to_string(),
-    ));
-
-    // static-nobundle link kind requires nightly Rust compiler until
-    // https://github.com/rust-lang/rust/issues/37403 is resolved.
-    if cfg!(windows) {
-        envs.push(("RUSTC_BOOTSTRAP", "1".to_string()));
-    }
-
-    let status = process::Command::new("cargo")
-        .args(args)
-        .current_dir(&context.project_path)
-        .envs(envs)
-        .status()?;
-
-    if status.success() {
-        Ok(())
-    } else {
-        Err(anyhow!("cargo build failed"))
-    }
-}
-
-pub fn resolve_build_context(
-    logger: &slog::Logger,
-    project_path: &str,
-    config_path: Option<&str>,
-    target: Option<&str>,
-    release: bool,
-    force_artifacts_path: Option<&Path>,
-    verbose: bool,
-) -> Result<BuildContext> {
-    let path = canonicalize_path(&PathBuf::from(project_path))?;
-
-    if find_pyoxidizer_files(&path).is_empty() {
-        return Err(anyhow!("no PyOxidizer files in specified path"));
-    }
-
-    let target = resolve_target(target)?;
-
-    let config_path = match config_path {
-        Some(p) => PathBuf::from(p),
-        None => match find_pyoxidizer_config_file_env(logger, &path) {
-            Some(p) => p,
-            None => return Err(anyhow!("unable to find PyOxidizer config file")),
-        },
-    };
-
-    let res = eval_starlark_config_file(
-        logger,
-        &config_path,
-        &target,
-        release,
-        verbose,
-        force_artifacts_path,
-        Some(Vec::new()),
-    )?;
-
-    BuildContext::new(
-        &path,
-        res.config,
-        None,
-        &target,
-        release,
-        force_artifacts_path,
-        verbose,
-    )
 }
 
 /// Build a PyOxidizer enabled project.
