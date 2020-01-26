@@ -84,6 +84,7 @@ pub fn find_pyoxidizer_config_file_env(logger: &slog::Logger, start_dir: &Path) 
     }
 }
 
+/// Evaluate a Starlark configuration file and return its result.
 pub fn eval_starlark_config_file(
     logger: &slog::Logger,
     path: &Path,

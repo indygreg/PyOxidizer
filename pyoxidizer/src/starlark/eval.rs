@@ -22,6 +22,7 @@ pub struct EvalResult {
     pub config: Config,
 }
 
+/// Evaluate a Starlark configuration file, returning a low-level result.
 pub fn evaluate_file(
     logger: &slog::Logger,
     config_path: &Path,
