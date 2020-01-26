@@ -14,6 +14,7 @@ slog = "2.4"
 # Update documentation in lib.rs when new dependencies are added.
 byteorder = "1"
 jemalloc-sys = { version = "0.3", optional = true }
+lazy_static = "1.4"
 libc = "0.2"
 python3-sys = { git = "https://github.com/dgrunwald/rust-cpython", rev = "a989865c3dd861267a42ceb726f2fc831637fe5b" }
 uuid = { version = "0.8", features = ["v4"] }
