@@ -111,6 +111,12 @@ pub fn run_cli() -> Result<()> {
                     Arg::with_name("build-script-name")
                         .required(true)
                         .help("Value to use for Rust build script"),
+                )
+                .arg(
+                    Arg::with_name("target")
+                        .long("target")
+                        .takes_value(true)
+                        .help("The config file target to resolve"),
                 ),
         )
         .subcommand(
@@ -389,8 +395,9 @@ pub fn run_cli() -> Result<()> {
 
         ("run-build-script", Some(args)) => {
             let build_script = args.value_of("build-script-name").unwrap();
+            let target = args.value_of("target");
 
-            projectmgmt::run_build_script(&logger_context.logger, build_script)
+            projectmgmt::run_build_script(&logger_context.logger, build_script, target)
         }
 
         ("run", Some(args)) => {

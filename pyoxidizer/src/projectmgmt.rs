@@ -510,8 +510,13 @@ pub fn python_distribution_licenses(path: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn run_build_script(logger: &slog::Logger, build_script: &str) -> Result<()> {
-    run_from_build(logger, build_script);
+/// Run a build from the context of a Rust build script.
+pub fn run_build_script(
+    logger: &slog::Logger,
+    build_script: &str,
+    resolve_target: Option<&str>,
+) -> Result<()> {
+    run_from_build(logger, build_script, resolve_target);
 
     Ok(())
 }

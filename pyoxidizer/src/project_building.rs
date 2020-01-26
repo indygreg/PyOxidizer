@@ -8,6 +8,7 @@ use {
     crate::project_layout::initialize_project,
     crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable},
     crate::py_packaging::config::RawAllocator,
+    crate::starlark::eval::EvalResult,
     anyhow::{anyhow, Context, Result},
     slog::warn,
     std::env,
@@ -177,7 +178,14 @@ pub fn build_python_executable(
 /// If everything works as planned, this whole process should be largely
 /// invisible and the calling application will have an embedded Python
 /// interpreter when it is built.
-pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
+///
+/// Receives a logger for receiving log messages, the path to the Rust
+/// build script invoking us, and an optional named target in the config
+/// file to resolve.
+///
+/// For this to work as expected, the target resolved in the config file must
+/// return a `PythonEmbeddedData` starlark type.
+pub fn run_from_build(logger: &slog::Logger, build_script: &str, resolve_target: Option<&str>) {
     // Adding our our rerun-if-changed lines will overwrite the default, so
     // we need to emit the build script name explicitly.
     println!("cargo:rerun-if-changed={}", build_script);
@@ -207,18 +215,26 @@ pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
         Err(_) => PathBuf::from(env::var("OUT_DIR").unwrap()),
     };
 
-    let mut res = eval_starlark_config_file(
+    let mut res: EvalResult = eval_starlark_config_file(
         logger,
         &config_path,
         &target,
         profile == "release",
         false,
         Some(&dest_dir),
-        None,
+        if let Some(target) = resolve_target {
+            Some(vec![target.to_string()])
+        } else {
+            None
+        },
     )
     .unwrap();
 
-    res.context.build_target(None).unwrap();
+    for target in res.context.targets_to_resolve() {
+        res.context
+            .build_resolved_target(&target)
+            .expect("unable to build resolved target");
+    }
 
     let cargo_metadata = dest_dir.join("cargo_metadata.txt");
     let content = std::fs::read(&cargo_metadata).unwrap();

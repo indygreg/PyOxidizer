@@ -125,6 +125,9 @@ def make_exe(dist):
     # referenced by other consumers of this target.
     return exe
 
+def make_embedded_data(exe):
+    return exe.to_embedded_data()
+
 def make_install(exe):
     # Create an object that represents our installed application file layout.
     files = FileManifest()
@@ -137,6 +140,7 @@ def make_install(exe):
 # Tell PyOxidizer about the build targets defined above.
 register_target("dist", make_dist)
 register_target("exe", make_exe, depends=["dist"], default=True)
+register_target("embedded", make_embedded_data, depends=["exe"])
 register_target("install", make_install, depends=["exe"])
 
 # Resolve whatever targets the invoker of this configuration file is requesting

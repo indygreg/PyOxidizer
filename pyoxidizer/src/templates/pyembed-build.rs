@@ -52,6 +52,8 @@ fn main() {
         match process::Command::new(&pyoxidizer_exe)
             .arg("run-build-script")
             .arg("build.rs")
+            .arg("--target")
+            .arg("embedded")
             .status()
         {
             Ok(status) => {
