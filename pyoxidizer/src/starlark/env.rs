@@ -21,10 +21,17 @@ use {
     std::path::{Path, PathBuf},
 };
 
+/// Represents a registered target in the Starlark environment.
 #[derive(Debug, Clone)]
 pub struct Target {
+    /// The Starlark callable registered to this target.
     pub callable: Value,
+
+    /// Other targets this one depends on.
     pub depends: Vec<String>,
+
+    /// What calling callable returned, if it has been called.
+    pub resolved_value: Option<Value>,
 }
 
 /// Holds state for evaluating a Starlark config file.
@@ -77,9 +84,6 @@ pub struct EnvironmentContext {
 
     /// List of targets to resolve.
     pub resolve_targets: Option<Vec<String>>,
-
-    /// Targets that are fully resolved and their resolved value.
-    pub resolved_targets: BTreeMap<String, Value>,
 }
 
 impl EnvironmentContext {
@@ -126,7 +130,6 @@ impl EnvironmentContext {
             targets_order: Vec::new(),
             default_target: None,
             resolve_targets,
-            resolved_targets: BTreeMap::new(),
         })
     }
 
@@ -147,8 +150,14 @@ impl EnvironmentContext {
             self.targets_order.push(target.clone());
         }
 
-        self.targets
-            .insert(target.clone(), Target { callable, depends });
+        self.targets.insert(
+            target.clone(),
+            Target {
+                callable,
+                depends,
+                resolved_value: None,
+            },
+        );
 
         if default || self.default_target.is_none() {
             self.default_target = Some(target);
@@ -168,12 +177,15 @@ impl EnvironmentContext {
 
     /// Evaluate a target and run it, if possible.
     pub fn run_resolved_target(&self, target: &str) -> Result<()> {
-        let v = if let Some(v) = self.resolved_targets.get(target) {
-            Some(v.clone())
+        let v = if let Some(t) = self.targets.get(target) {
+            if let Some(v) = &t.resolved_value {
+                Ok(v.clone())
+            } else {
+                Err(anyhow!("target {} was not resolved", target))
+            }
         } else {
-            None
-        }
-        .ok_or_else(|| anyhow!("target {} was not resolved", target))?;
+            Err(anyhow!("target {} is not registered", target))
+        }?;
 
         let mut raw_value = v.0.borrow_mut();
         let raw_any = raw_value.as_any_mut();
@@ -302,12 +314,16 @@ fn starlark_resolve_target(
 ) -> ValueResult {
     let target = required_str_arg("target", &target)?;
 
-    let context = env.get("CONTEXT").expect("CONTEXT not set");
+    let mut context = env.get("CONTEXT").expect("CONTEXT not set");
 
     // If we have a resolved value for this target, return it.
     if let Some(v) = context.downcast_apply(|x: &EnvironmentContext| {
-        if let Some(v) = x.resolved_targets.get(&target) {
-            Some(v.clone())
+        if let Some(t) = x.targets.get(&target) {
+            if let Some(v) = &t.resolved_value {
+                Some(v.clone())
+            } else {
+                None
+            }
         } else {
             None
         }
@@ -345,9 +361,10 @@ fn starlark_resolve_target(
     // TODO consider replacing the target's callable with a new function that returns the
     // resolved value. This will ensure a target function is only ever called once.
 
-    let mut context = env.get("CONTEXT").expect("CONTEXT not set");
     context.downcast_apply_mut(|x: &mut EnvironmentContext| {
-        x.resolved_targets.insert(target.to_string(), res.clone());
+        if let Some(target_entry) = x.targets.get_mut(&target) {
+            target_entry.resolved_value = Some(res.clone());
+        }
     });
 
     Ok(res)
