@@ -7,7 +7,6 @@
 use {
     super::environment::canonicalize_path,
     crate::app_packaging::config::{eval_starlark_config_file, find_pyoxidizer_config_file_env},
-    crate::project_building::run_from_build,
     crate::project_layout::{initialize_project, write_new_pyoxidizer_config_file},
     crate::py_packaging::distribution::analyze_python_distribution_tar_zst,
     crate::starlark::eval::EvalResult,
@@ -505,13 +504,4 @@ pub fn python_distribution_licenses(path: &str) -> Result<()> {
     }
 
     Ok(())
-}
-
-/// Run a build from the context of a Rust build script.
-pub fn run_build_script(
-    logger: &slog::Logger,
-    build_script: &str,
-    resolve_target: Option<&str>,
-) -> Result<()> {
-    run_from_build(logger, build_script, resolve_target)
 }

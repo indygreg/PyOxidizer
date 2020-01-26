@@ -2,15 +2,17 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use anyhow::{anyhow, Result};
-use clap::{App, AppSettings, Arg, SubCommand};
-use std::path::{Path, PathBuf};
-
-use super::analyze;
-use super::environment::BUILD_SEMVER_LIGHTWEIGHT;
-use super::logging;
-use super::project_layout;
-use super::projectmgmt;
+use {
+    super::analyze,
+    super::environment::BUILD_SEMVER_LIGHTWEIGHT,
+    super::logging,
+    super::project_building,
+    super::project_layout,
+    super::projectmgmt,
+    anyhow::{anyhow, Result},
+    clap::{App, AppSettings, Arg, SubCommand},
+    std::path::{Path, PathBuf},
+};
 
 const ADD_ABOUT: &str = "\
 Add PyOxidizer to an existing Rust project.
@@ -357,7 +359,7 @@ pub fn run_cli() -> Result<()> {
             let build_script = args.value_of("build-script-name").unwrap();
             let target = args.value_of("target");
 
-            projectmgmt::run_build_script(&logger_context.logger, build_script, target)
+            project_building::run_from_build(&logger_context.logger, build_script, target)
         }
 
         ("run", Some(args)) => {
