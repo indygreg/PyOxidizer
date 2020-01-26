@@ -247,78 +247,6 @@ impl TypedValue for EnvironmentContext {
     }
 }
 
-/// Resolve a single target.
-///
-/// This will return a Value returned from the called function.
-///
-/// If the target is already resolved, its cached return value is returned
-/// immediately.
-///
-/// If the target depends on other targets, those targets will be resolved
-/// recursively before calling the target's function.
-///
-/// This exists as a standalone function and operates against the raw Starlark
-/// `Environment` and has wonky handling of `EnvironmentContext` instances in
-/// order to avoid nested mutable borrows. If we passed an
-/// `&mut EnvironmentContext` around then called a Starlark function that performed
-/// a `.downcast_apply_mut()` (which most of them do), we would have nested mutable
-/// borrows and Rust would panic at runtime.
-#[allow(clippy::ptr_arg)]
-fn resolve_target_raw(
-    call_stack: &Vec<(String, String)>,
-    env: Environment,
-    target: &str,
-) -> Result<Value, ValueError> {
-    let context = env.get("CONTEXT").expect("CONTEXT not set");
-
-    // If we have a resolved value for this target, return it.
-    if let Some(v) = context.downcast_apply(|x: &EnvironmentContext| {
-        if let Some(v) = x.resolved_targets.get(target) {
-            Some(v.clone())
-        } else {
-            None
-        }
-    }) {
-        return Ok(v);
-    }
-
-    let target_entry = context.downcast_apply(|x: &EnvironmentContext| {
-        warn!(&x.logger, "resolving target {}", target);
-
-        match &x.targets.get(target) {
-            Some(v) => Ok((*v).clone()),
-            None => Err(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: format!("target {} does not exist", target),
-                label: "resolve_target()".to_string(),
-            }
-            .into()),
-        }
-    })?;
-
-    // Resolve target dependencies.
-    let mut args = Vec::new();
-
-    for depend_target in target_entry.depends {
-        args.push(resolve_target_raw(call_stack, env.clone(), &depend_target)?);
-    }
-
-    let res =
-        target_entry
-            .callable
-            .call(call_stack, env.clone(), args, HashMap::new(), None, None)?;
-
-    // TODO consider replacing the target's callable with a new function that returns the
-    // resolved value. This will ensure a target function is only ever called once.
-
-    let mut context = env.get("CONTEXT").expect("CONTEXT not set");
-    context.downcast_apply_mut(|x: &mut EnvironmentContext| {
-        x.resolved_targets.insert(target.to_string(), res.clone());
-    });
-
-    Ok(res)
-}
-
 /// register_target(target, callable, depends=None, default=false)
 fn starlark_register_target(
     env: &Environment,
@@ -348,6 +276,81 @@ fn starlark_register_target(
     });
 
     Ok(Value::new(None))
+}
+
+/// resolve_target(target)
+///
+/// This will return a Value returned from the called function.
+///
+/// If the target is already resolved, its cached return value is returned
+/// immediately.
+///
+/// If the target depends on other targets, those targets will be resolved
+/// recursively before calling the target's function.
+///
+/// This exists as a standalone function and operates against the raw Starlark
+/// `Environment` and has wonky handling of `EnvironmentContext` instances in
+/// order to avoid nested mutable borrows. If we passed an
+/// `&mut EnvironmentContext` around then called a Starlark function that performed
+/// a `.downcast_apply_mut()` (which most of them do), we would have nested mutable
+/// borrows and Rust would panic at runtime.
+#[allow(clippy::ptr_arg)]
+fn starlark_resolve_target(
+    env: &Environment,
+    call_stack: &Vec<(String, String)>,
+    target: &Value,
+) -> ValueResult {
+    let target = required_str_arg("target", &target)?;
+
+    let context = env.get("CONTEXT").expect("CONTEXT not set");
+
+    // If we have a resolved value for this target, return it.
+    if let Some(v) = context.downcast_apply(|x: &EnvironmentContext| {
+        if let Some(v) = x.resolved_targets.get(&target) {
+            Some(v.clone())
+        } else {
+            None
+        }
+    }) {
+        return Ok(v);
+    }
+
+    let target_entry = context.downcast_apply(|x: &EnvironmentContext| {
+        warn!(&x.logger, "resolving target {}", target);
+
+        match &x.targets.get(&target) {
+            Some(v) => Ok((*v).clone()),
+            None => Err(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: format!("target {} does not exist", target),
+                label: "resolve_target()".to_string(),
+            }
+            .into()),
+        }
+    })?;
+
+    // Resolve target dependencies.
+    let mut args = Vec::new();
+
+    for depend_target in target_entry.depends {
+        let depend_target = Value::new(depend_target);
+        args.push(starlark_resolve_target(env, call_stack, &depend_target)?);
+    }
+
+    let res =
+        target_entry
+            .callable
+            .call(call_stack, env.clone(), args, HashMap::new(), None, None)?;
+
+    // TODO consider replacing the target's callable with a new function that returns the
+    // resolved value. This will ensure a target function is only ever called once.
+
+    let mut context = env.get("CONTEXT").expect("CONTEXT not set");
+    context.downcast_apply_mut(|x: &mut EnvironmentContext| {
+        x.resolved_targets.insert(target.to_string(), res.clone());
+    });
+
+    Ok(res)
 }
 
 /// resolve_targets()
@@ -395,9 +398,7 @@ starlark_module! { global_module =>
 
     #[allow(clippy::ptr_arg)]
     resolve_target(env env, call_stack cs, target) {
-        let target = required_str_arg("target", &target)?;
-
-        resolve_target_raw(cs, env, &target)
+        starlark_resolve_target(&env, &cs, &target)
     }
 
     #[allow(clippy::ptr_arg)]
