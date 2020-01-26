@@ -34,7 +34,7 @@ pub fn is_executable(metadata: &std::fs::Metadata) -> bool {
 }
 
 #[cfg(windows)]
-pub fn is_executable(metadata: &std::fs::Metadata) -> bool {
+pub fn is_executable(_metadata: &std::fs::Metadata) -> bool {
     false
 }
 
