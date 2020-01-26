@@ -5,7 +5,7 @@
 use crate::starlark::target::ResolvedTarget;
 use {
     crate::app_packaging::config::{eval_starlark_config_file, find_pyoxidizer_config_file_env},
-    crate::environment::MINIMUM_RUST_VERSION,
+    crate::environment::{canonicalize_path, MINIMUM_RUST_VERSION},
     crate::project_layout::initialize_project,
     crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable},
     crate::py_packaging::config::RawAllocator,
@@ -165,6 +165,69 @@ pub fn build_python_executable(
     Ok((filename, data))
 }
 
+/// Build artifacts needed by the pyembed crate.
+///
+/// This will resolve `resolve_target` or the default then build it. Built
+/// artifacts (if any) are written to `artifacts_path`.
+pub fn build_pyembed_artifacts(
+    logger: &slog::Logger,
+    config_path: &Path,
+    artifacts_path: &Path,
+    resolve_target: Option<&str>,
+    target_triple: &str,
+    release: bool,
+    verbose: bool,
+) -> Result<()> {
+    create_dir_all(artifacts_path)?;
+
+    let artifacts_path = canonicalize_path(artifacts_path)?;
+
+    if artifacts_current(logger, config_path, &artifacts_path) {
+        return Ok(());
+    }
+
+    let mut res: EvalResult = eval_starlark_config_file(
+        logger,
+        config_path,
+        target_triple,
+        release,
+        verbose,
+        if let Some(target) = resolve_target {
+            Some(vec![target.to_string()])
+        } else {
+            None
+        },
+    )?;
+
+    // TODO should we honor only the specified target if one is given?
+    for target in res.context.targets_to_resolve() {
+        let resolved: ResolvedTarget = res.context.build_resolved_target(&target)?;
+
+        let cargo_metadata = resolved.output_path.join("cargo_metadata.txt");
+
+        if !cargo_metadata.exists() {
+            continue;
+        }
+
+        for p in std::fs::read_dir(&resolved.output_path).context(format!(
+            "reading directory {}",
+            &resolved.output_path.display()
+        ))? {
+            let p = p?;
+
+            let dest_path = artifacts_path.join(p.file_name());
+            std::fs::copy(&p.path(), &dest_path).context(format!(
+                "copying {} to {}",
+                p.path().display(),
+                dest_path.display()
+            ))?;
+        }
+        return Ok(());
+    }
+
+    Err(anyhow!("unable to find generated cargo_metadata.txt; did you specify the correct target to resolve?"))
+}
+
 /// Runs packaging/embedding from the context of a Rust build script.
 ///
 /// This function should be called by the build script for the package
@@ -220,52 +283,24 @@ pub fn run_from_build(
         Err(_) => PathBuf::from(env::var("OUT_DIR").context("OUT_DIR")?),
     };
 
-    let mut res: EvalResult = eval_starlark_config_file(
+    build_pyembed_artifacts(
         logger,
         &config_path,
+        &dest_dir,
+        resolve_target,
         &target,
         profile == "release",
         false,
-        if let Some(target) = resolve_target {
-            Some(vec![target.to_string()])
-        } else {
-            None
-        },
     )?;
 
-    // TODO should we honor only the specified target if one is given?
-    for target in res.context.targets_to_resolve() {
-        let resolved: ResolvedTarget = res.context.build_resolved_target(&target)?;
+    let cargo_metadata = dest_dir.join("cargo_metadata.txt");
 
-        let cargo_metadata = resolved.output_path.join("cargo_metadata.txt");
+    let content =
+        std::fs::read(&cargo_metadata).context(format!("reading {}", cargo_metadata.display()))?;
+    let content = String::from_utf8(content).context("converting cargo_metadata.txt to string")?;
+    print!("{}", content);
 
-        if !cargo_metadata.exists() {
-            continue;
-        }
-
-        for p in std::fs::read_dir(&resolved.output_path).context(format!(
-            "reading directory {}",
-            &resolved.output_path.display()
-        ))? {
-            let p = p?;
-
-            let dest_path = dest_dir.join(p.file_name());
-            std::fs::copy(&p.path(), &dest_path).context(format!(
-                "copying {} to {}",
-                p.path().display(),
-                dest_path.display()
-            ))?;
-        }
-
-        let content = std::fs::read(&cargo_metadata)
-            .context(format!("reading {}", cargo_metadata.display()))?;
-        let content =
-            String::from_utf8(content).context("converting cargo_metadata.txt to string")?;
-        print!("{}", content);
-        return Ok(());
-    }
-
-    Err(anyhow!("unable to find generated cargo_metadata.txt; did you specify the correct target to resolve?"))
+    Ok(())
 }
 
 fn dependency_current(
@@ -300,7 +335,7 @@ fn dependency_current(
 }
 
 /// Determines whether PyOxidizer artifacts are current.
-pub fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: &Path) -> bool {
+fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: &Path) -> bool {
     let metadata_path = artifacts_path.join("cargo_metadata.txt");
 
     if !metadata_path.exists() {

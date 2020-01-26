@@ -5,7 +5,6 @@
 //! Manage PyOxidizer projects.
 
 use {
-    super::environment::canonicalize_path,
     crate::app_packaging::config::{eval_starlark_config_file, find_pyoxidizer_config_file_env},
     crate::project_layout::{initialize_project, write_new_pyoxidizer_config_file},
     crate::py_packaging::distribution::analyze_python_distribution_tar_zst,
@@ -73,33 +72,6 @@ pub fn list_targets(logger: &slog::Logger, project_path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Build PyOxidizer artifacts for a project.
-fn build_pyoxidizer_artifacts(
-    logger: &slog::Logger,
-    config_path: &Path,
-    artifacts_path: &Path,
-    target_triple: &str,
-    release: bool,
-    verbose: bool,
-) -> Result<()> {
-    create_dir_all(artifacts_path)?;
-
-    let artifacts_path = canonicalize_path(artifacts_path)?;
-
-    if !super::project_building::artifacts_current(logger, config_path, &artifacts_path) {
-        eval_starlark_config_file(
-            logger,
-            config_path,
-            target_triple,
-            release,
-            verbose,
-            Some(Vec::new()),
-        )?;
-    }
-
-    Ok(())
-}
-
 /// Build a PyOxidizer enabled project.
 ///
 /// This is a glorified wrapper around `cargo build`. Our goal is to get the
@@ -132,26 +104,6 @@ pub fn build(
     for target in res.context.targets_to_resolve() {
         res.context.build_resolved_target(&target)?;
     }
-
-    Ok(())
-}
-
-#[allow(unused)]
-pub fn build_artifacts(
-    logger: &slog::Logger,
-    project_path: &Path,
-    dest_path: &Path,
-    release: bool,
-    verbose: bool,
-) -> Result<()> {
-    let target = default_target()?;
-
-    let config_path = match find_pyoxidizer_config_file_env(logger, project_path) {
-        Some(p) => p,
-        None => return Err(anyhow!("could not find PyOxidizer config file")),
-    };
-
-    build_pyoxidizer_artifacts(logger, &config_path, dest_path, &target, release, verbose)?;
 
     Ok(())
 }
