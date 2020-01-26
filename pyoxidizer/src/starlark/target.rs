@@ -8,6 +8,7 @@ use {
 };
 
 /// How a resolved target can be run.
+#[derive(Debug, Clone)]
 pub enum RunMode {
     /// Target cannot be run.
     None,
@@ -16,6 +17,7 @@ pub enum RunMode {
 }
 
 /// Represents a resolved target.
+#[derive(Debug, Clone)]
 pub struct ResolvedTarget {
     pub run_mode: RunMode,
 }

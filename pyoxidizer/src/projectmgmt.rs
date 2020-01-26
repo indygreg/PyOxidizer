@@ -10,7 +10,6 @@ use {
     crate::project_building::run_from_build,
     crate::project_layout::{initialize_project, write_new_pyoxidizer_config_file},
     crate::py_packaging::distribution::analyze_python_distribution_tar_zst,
-    crate::starlark::env::EnvironmentContext,
     anyhow::{anyhow, Result},
     slog::warn,
     std::fs::create_dir_all,
@@ -274,7 +273,7 @@ pub fn run(
         None
     };
 
-    let res = eval_starlark_config_file(
+    let mut res = eval_starlark_config_file(
         logger,
         &config_path,
         &target_triple,
@@ -284,12 +283,10 @@ pub fn run(
         resolve_targets,
     )?;
 
-    let context: &EnvironmentContext = &res.context;
-
     let run_target = if let Some(target) = target {
         target.to_string()
     } else {
-        context
+        res.context
             .default_target
             .as_ref()
             .ok_or_else(|| anyhow!("no default target available"))?
@@ -297,7 +294,7 @@ pub fn run(
     };
 
     warn!(logger, "running target {}", run_target);
-    context.run_resolved_target(&run_target)
+    res.context.run_resolved_target(&run_target)
 }
 
 /// Initialize a PyOxidizer configuration file in a given directory.

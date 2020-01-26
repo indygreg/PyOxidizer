@@ -32,6 +32,11 @@ pub struct Target {
 
     /// What calling callable returned, if it has been called.
     pub resolved_value: Option<Value>,
+
+    /// The `ResolvedTarget` instance this target's build() returned.
+    ///
+    /// TODO consider making this an Arc<T> so we don't have to clone it.
+    pub built_target: Option<ResolvedTarget>,
 }
 
 /// Holds state for evaluating a Starlark config file.
@@ -156,6 +161,7 @@ impl EnvironmentContext {
                 callable,
                 depends,
                 resolved_value: None,
+                built_target: None,
             },
         );
 
@@ -175,19 +181,23 @@ impl EnvironmentContext {
         }
     }
 
-    /// Evaluate a target and run it, if possible.
-    pub fn run_resolved_target(&self, target: &str) -> Result<()> {
-        let v = if let Some(t) = self.targets.get(target) {
+    /// Build a resolved target.
+    pub fn build_resolved_target(&mut self, target: &str) -> Result<ResolvedTarget> {
+        let resolved_value = if let Some(t) = self.targets.get(target) {
+            if let Some(t) = &t.built_target {
+                return Ok(t.clone());
+            }
+
             if let Some(v) = &t.resolved_value {
-                Ok(v.clone())
+                v.clone()
             } else {
-                Err(anyhow!("target {} was not resolved", target))
+                return Err(anyhow!("target {} is not resolved", target));
             }
         } else {
-            Err(anyhow!("target {} is not registered", target))
-        }?;
+            return Err(anyhow!("target {} is not registered", target));
+        };
 
-        let mut raw_value = v.0.borrow_mut();
+        let mut raw_value = resolved_value.0.borrow_mut();
         let raw_any = raw_value.as_any_mut();
 
         let output_path = self
@@ -224,6 +234,15 @@ impl EnvironmentContext {
         } else {
             Err(anyhow!("could not determine type of target"))
         }?;
+
+        self.targets.get_mut(target).unwrap().built_target = Some(resolved_target.clone());
+
+        Ok(resolved_target)
+    }
+
+    /// Evaluate a target and run it, if possible.
+    pub fn run_resolved_target(&mut self, target: &str) -> Result<()> {
+        let resolved_target = self.build_resolved_target(target)?;
 
         resolved_target.run()
     }
