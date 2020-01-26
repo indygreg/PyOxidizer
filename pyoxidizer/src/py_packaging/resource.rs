@@ -290,7 +290,7 @@ pub struct ExtensionModuleData {
     /// Filename suffix to use when writing extension module data.
     pub extension_file_suffix: String,
     /// File data for linked extension module.
-    pub extension_data: Vec<u8>,
+    pub extension_data: Option<Vec<u8>>,
     /// File data for object files linked together to produce this extension module.
     pub object_file_data: Vec<Vec<u8>>,
     /// Whether this extension module is a package.
@@ -324,17 +324,21 @@ impl ExtensionModuleData {
     }
 
     pub fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
-        let mut dest_path = PathBuf::from(prefix);
-        dest_path.extend(self.package_parts());
-        dest_path.push(self.file_name());
+        if let Some(data) = &self.extension_data {
+            let mut dest_path = PathBuf::from(prefix);
+            dest_path.extend(self.package_parts());
+            dest_path.push(self.file_name());
 
-        manifest.add_file(
-            &dest_path,
-            &FileContent {
-                data: self.extension_data.clone(),
-                executable: true,
-            },
-        )
+            manifest.add_file(
+                &dest_path,
+                &FileContent {
+                    data: data.clone(),
+                    executable: true,
+                },
+            )
+        } else {
+            Ok(())
+        }
     }
 }
 

@@ -161,8 +161,8 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<ExtensionModuleData
             extension_file_name
         };
 
-        let extension_data = std::fs::read(&extension_path)
-            .context(format!("reading {}", extension_path.display()))?;
+        // Extension files may not always be written. So ignore errors on missing file.
+        let extension_data = std::fs::read(&extension_path).ok();
 
         let mut object_file_data = Vec::new();
 
