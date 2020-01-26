@@ -319,26 +319,41 @@ fn resolve_target_raw(
     Ok(res)
 }
 
+/// register_target(target, callable, depends=None, default=false)
+fn starlark_register_target(
+    env: &Environment,
+    target: &Value,
+    callable: &Value,
+    depends: &Value,
+    default: &Value,
+) -> ValueResult {
+    let target = required_str_arg("target", &target)?;
+    required_type_arg("callable", "function", &callable)?;
+    optional_list_arg("depends", "string", &depends)?;
+    let default = required_bool_arg("default", &default)?;
+
+    let depends = match depends.get_type() {
+        "list" => depends
+            .into_iter()
+            .unwrap()
+            .map(|x| x.to_string())
+            .collect(),
+        _ => Vec::new(),
+    };
+
+    let mut context = env.get("CONTEXT").expect("CONTEXT not set");
+
+    context.downcast_apply_mut(|x: &mut EnvironmentContext| {
+        x.register_target(target.clone(), callable.clone(), depends.clone(), default)
+    });
+
+    Ok(Value::new(None))
+}
+
 starlark_module! { global_module =>
     #[allow(clippy::ptr_arg)]
     register_target(env env, target, callable, depends=None, default=false) {
-        let target = required_str_arg("target", &target)?;
-        required_type_arg("callable", "function", &callable)?;
-        optional_list_arg("depends", "string", &depends)?;
-        let default = required_bool_arg("default", &default)?;
-
-        let depends = match depends.get_type() {
-            "list" => depends.into_iter().unwrap().map(|x| x.to_string()).collect(),
-            _ => Vec::new(),
-        };
-
-        let mut context = env.get("CONTEXT").expect("CONTEXT not set");
-
-        context.downcast_apply_mut(|x: &mut EnvironmentContext| {
-            x.register_target(target.clone(), callable.clone(), depends.clone(), default)
-        });
-
-        Ok(Value::new(None))
+        starlark_register_target(&env, &target, &callable, &depends, &default)
     }
 
     #[allow(clippy::ptr_arg)]
