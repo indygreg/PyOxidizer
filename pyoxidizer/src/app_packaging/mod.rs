@@ -4,6 +4,7 @@
 
 pub mod config;
 pub mod glob;
-pub mod repackage;
+#[allow(unused)]
+mod repackage;
 pub mod resource;
 pub mod state;
