@@ -53,6 +53,8 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* A :ref:`config_glob` function has been added to config files to allow
+  referencing existing files on the filesystem.
 * The in-memory ``MetaPathFinder`` now implements ``find_module()``.
 * A ``pyoxidizer init-config-file`` command has been implemented to create
   just a ``pyoxidizer.bzl`` configuration file.
