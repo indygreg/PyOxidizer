@@ -5,8 +5,9 @@
 use crate::py_packaging::config::RunMode;
 use {
     super::util::{optional_list_arg, optional_str_arg, required_bool_arg, required_type_arg},
-    crate::app_packaging::config::default_raw_allocator,
-    crate::py_packaging::config::{EmbeddedPythonConfig, RawAllocator, TerminfoResolution},
+    crate::py_packaging::config::{
+        default_raw_allocator, EmbeddedPythonConfig, RawAllocator, TerminfoResolution,
+    },
     starlark::environment::Environment,
     starlark::values::{
         default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,

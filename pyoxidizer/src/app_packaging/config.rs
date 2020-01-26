@@ -7,7 +7,7 @@ use slog::warn;
 use std::env;
 use std::path::{Path, PathBuf};
 
-use crate::py_packaging::config::{EmbeddedPythonConfig, RawAllocator, RunMode};
+use crate::py_packaging::config::{EmbeddedPythonConfig, RunMode};
 use crate::starlark::eval::EvalResult;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -42,18 +42,6 @@ pub struct Config {
     pub build_config: BuildConfig,
     pub embedded_python_config: EmbeddedPythonConfig,
     pub run: RunMode,
-}
-
-pub fn default_raw_allocator(target: &str) -> RawAllocator {
-    // Jemalloc doesn't work on Windows.
-    //
-    // We don't use Jemalloc by default in the test environment because it slows down
-    // builds of test projects.
-    if target == "x86_64-pc-windows-msvc" || cfg!(test) {
-        RawAllocator::System
-    } else {
-        RawAllocator::Jemalloc
-    }
 }
 
 /// Find a pyoxidizer.toml configuration file by walking directory ancestry.
