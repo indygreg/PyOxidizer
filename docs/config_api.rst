@@ -1048,15 +1048,16 @@ exactly match the state of the ``FileManifest``.
 
 The ``glob()`` function resolves file patterns to a ``FileManifest``.
 
-``include`` is a ``str`` or ``list`` of ``str`` containing file patterns that
-will be matched using the ``glob`` Rust crate. If patterns begin with ``/``, they
-are absolute. Otherwise they are evaluated relative to the directory of the
-current config file.
+``include`` is a ``list`` of ``str`` containing file patterns that will be
+matched using the ``glob`` Rust crate. If patterns begin with ``/`` or
+look like a filesystem absolute path, they are absolute. Otherwise they are
+evaluated relative to the directory of the current config file.
 
-``exclude`` has the same type as ``include`` but is used to exclude files from
-the result. All patterns in ``include`` are evaluated before ``exclude``.
+``exclude`` is an optional ``list`` of ``str`` and is used to exclude files
+from the result. All patterns in ``include`` are evaluated before ``exclude``.
 
 ``strip_prefix`` is an optional ``str`` to strip from the beginning of
-matched files.
+matched files. ``strip_prefix`` is stripped after ``include`` and ``exclude``
+are processed.
 
 Returns a ``FileManifest``.

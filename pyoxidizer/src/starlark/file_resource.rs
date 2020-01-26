@@ -9,7 +9,10 @@ use {
         PythonBytecodeModule, PythonExtensionModule, PythonResourceData, PythonSourceModule,
     },
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
-    super::util::{optional_str_arg, required_bool_arg, required_str_arg, required_type_arg},
+    super::util::{
+        optional_list_arg, optional_str_arg, required_bool_arg, required_list_arg,
+        required_str_arg, required_type_arg,
+    },
     crate::app_packaging::glob::evaluate_glob,
     crate::app_packaging::resource::{
         FileContent as RawFileContent, FileManifest as RawFileManifest,
@@ -365,7 +368,19 @@ fn starlark_glob(
     exclude: &Value,
     strip_prefix: &Value,
 ) -> ValueResult {
-    let strip_prefix = optional_str_arg("strip_prefix", &strip_prefix)?;
+    required_list_arg("include", "string", include)?;
+    optional_list_arg("exclude", "string", exclude)?;
+    let strip_prefix = optional_str_arg("strip_prefix", strip_prefix)?;
+
+    let include = include
+        .into_iter()?
+        .map(|x| x.to_string())
+        .collect::<Vec<String>>();
+
+    let exclude = match exclude.get_type() {
+        "list" => exclude.into_iter()?.map(|x| x.to_string()).collect(),
+        _ => Vec::new(),
+    };
 
     let context = env.get("CONTEXT").expect("unable to get CONTEXT");
     let cwd = context.downcast_apply(|x: &EnvironmentContext| x.cwd.clone());
@@ -373,89 +388,30 @@ fn starlark_glob(
     let mut result = HashSet::new();
 
     // Evaluate all the includes first.
-    match include.get_type() {
-        "string" => {
-            for p in evaluate_glob(&cwd, &include.to_str()).or_else(|e| {
-                Err(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
-                    label: "glob()".to_string(),
-                }
-                .into())
-            })? {
-                result.insert(p);
+    for v in include {
+        for p in evaluate_glob(&cwd, &v).or_else(|e| {
+            Err(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "glob()".to_string(),
             }
-        }
-        "list" => {
-            for v in include.into_iter()? {
-                if v.get_type() != "string" {
-                    return Err(ValueError::TypeNotX {
-                        object_type: v.get_type().to_string(),
-                        op: "string".to_string(),
-                    });
-                }
-
-                for p in evaluate_glob(&cwd, &v.to_str()).or_else(|e| {
-                    Err(RuntimeError {
-                        code: "PYOXIDIZER_BUILD",
-                        message: e.to_string(),
-                        label: "glob()".to_string(),
-                    }
-                    .into())
-                })? {
-                    result.insert(p);
-                }
-            }
-        }
-        t => {
-            return Err(ValueError::TypeNotX {
-                object_type: t.to_string(),
-                op: "string".to_string(),
-            });
+            .into())
+        })? {
+            result.insert(p);
         }
     }
 
     // Then apply excludes.
-    match exclude.get_type() {
-        "NoneType" => {}
-        "string" => {
-            for p in evaluate_glob(&cwd, &exclude.to_str()).or_else(|e| {
-                Err(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
-                    label: "glob()".to_string(),
-                }
-                .into())
-            })? {
-                result.remove(&p);
+    for v in exclude {
+        for p in evaluate_glob(&cwd, &v).or_else(|e| {
+            Err(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "glob()".to_string(),
             }
-        }
-        "list" => {
-            for v in exclude.into_iter()? {
-                if v.get_type() != "string" {
-                    return Err(ValueError::TypeNotX {
-                        object_type: v.get_type().to_string(),
-                        op: "string".to_string(),
-                    });
-                }
-
-                for p in evaluate_glob(&cwd, &v.to_str()).or_else(|e| {
-                    Err(RuntimeError {
-                        code: "PYOXIDIZER_BUILD",
-                        message: e.to_string(),
-                        label: "glob()".to_string(),
-                    }
-                    .into())
-                })? {
-                    result.remove(&p);
-                }
-            }
-        }
-        t => {
-            return Err(ValueError::TypeNotX {
-                object_type: t.to_string(),
-                op: "string".to_string(),
-            });
+            .into())
+        })? {
+            result.remove(&p);
         }
     }
 
