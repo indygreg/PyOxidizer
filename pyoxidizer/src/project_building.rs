@@ -268,6 +268,101 @@ pub fn run_from_build(
     Err(anyhow!("unable to find generated cargo_metadata.txt; did you specify the correct target to resolve?"))
 }
 
+fn dependency_current(
+    logger: &slog::Logger,
+    path: &Path,
+    built_time: std::time::SystemTime,
+) -> bool {
+    match path.metadata() {
+        Ok(md) => match md.modified() {
+            Ok(t) => {
+                if t > built_time {
+                    warn!(
+                        logger,
+                        "building artifacts because {} changed",
+                        path.display()
+                    );
+                    false
+                } else {
+                    true
+                }
+            }
+            Err(_) => {
+                warn!(logger, "error resolving mtime of {}", path.display());
+                false
+            }
+        },
+        Err(_) => {
+            warn!(logger, "error resolving metadata of {}", path.display());
+            false
+        }
+    }
+}
+
+/// Determines whether PyOxidizer artifacts are current.
+pub fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: &Path) -> bool {
+    let metadata_path = artifacts_path.join("cargo_metadata.txt");
+
+    if !metadata_path.exists() {
+        warn!(logger, "no existing PyOxidizer artifacts found");
+        return false;
+    }
+
+    // We assume the mtime of the metadata file is the built time. If we
+    // encounter any modified times newer than that file, we're not up to date.
+    let built_time = match metadata_path.metadata() {
+        Ok(md) => match md.modified() {
+            Ok(t) => t,
+            Err(_) => {
+                warn!(
+                    logger,
+                    "error determining mtime of {}",
+                    metadata_path.display()
+                );
+                return false;
+            }
+        },
+        Err(_) => {
+            warn!(
+                logger,
+                "error resolving metadata of {}",
+                metadata_path.display()
+            );
+            return false;
+        }
+    };
+
+    let metadata_data = match std::fs::read_to_string(&metadata_path) {
+        Ok(data) => data,
+        Err(_) => {
+            warn!(logger, "error reading {}", metadata_path.display());
+            return false;
+        }
+    };
+
+    for line in metadata_data.split('\n') {
+        if line.starts_with("cargo:rerun-if-changed=") {
+            let path = PathBuf::from(&line[23..line.len()]);
+
+            if !dependency_current(logger, &path, built_time) {
+                return false;
+            }
+        }
+    }
+
+    let current_exe = std::env::current_exe().expect("unable to determine current exe");
+    if !dependency_current(logger, &current_exe, built_time) {
+        return false;
+    }
+
+    if !dependency_current(logger, config_path, built_time) {
+        return false;
+    }
+
+    // TODO detect config file change.
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
