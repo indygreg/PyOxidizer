@@ -25,7 +25,6 @@ pub fn evaluate_file(
     build_target_triple: &str,
     release: bool,
     verbose: bool,
-    write_artifacts_path: Option<&Path>,
     resolve_targets: Option<Vec<String>>,
 ) -> Result<EvalResult, Diagnostic> {
     let context = EnvironmentContext::new(
@@ -37,7 +36,6 @@ pub fn evaluate_file(
         release,
         // TODO this should be an argument.
         "0",
-        write_artifacts_path,
         resolve_targets,
     )
     .or_else(|e| {

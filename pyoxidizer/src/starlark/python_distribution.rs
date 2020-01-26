@@ -11,7 +11,7 @@ use {
         optional_dict_arg, optional_list_arg, optional_str_arg, optional_type_arg,
         required_bool_arg, required_list_arg, required_str_arg,
     },
-    crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable},
+    crate::py_packaging::binary::PreBuiltPythonExecutable,
     crate::py_packaging::bytecode::{BytecodeCompiler, CompileMode},
     crate::py_packaging::config::EmbeddedPythonConfig,
     crate::py_packaging::distribution::{
@@ -276,49 +276,18 @@ impl PythonDistribution {
             config.downcast_apply(|c: &EmbeddedPythonConfig| c.clone())
         };
 
-        let pre_built = PreBuiltPythonExecutable::from_python_distribution(
-            &logger,
-            dist,
-            &name,
-            &config,
-            &extension_module_filter,
-            preferred_extension_module_variants,
-            include_sources,
-            include_resources,
-            include_test,
-        )
-        .or_else(|e| {
-            Err(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "to_python_executable()".to_string(),
-            }
-            .into())
-        })?;
-
-        context
-            .downcast_apply(|context: &EnvironmentContext| -> Result<()> {
-                if let Some(path) = &context.write_artifacts_path {
-                    warn!(
-                        &logger,
-                        "writing PyOxidizer build artifacts to {}",
-                        path.display()
-                    );
-                    let embedded = EmbeddedPythonBinaryData::from_pre_built_python_executable(
-                        &pre_built,
-                        &logger,
-                        &context.build_host_triple,
-                        &context.build_target_triple,
-                        &context.build_opt_level,
-                    )?;
-
-                    embedded.write_files(path)?;
-
-                    Ok(())
-                } else {
-                    Ok(())
-                }
-            })
+        Ok(Value::new(
+            PreBuiltPythonExecutable::from_python_distribution(
+                &logger,
+                dist,
+                &name,
+                &config,
+                &extension_module_filter,
+                preferred_extension_module_variants,
+                include_sources,
+                include_resources,
+                include_test,
+            )
             .or_else(|e| {
                 Err(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
@@ -326,9 +295,8 @@ impl PythonDistribution {
                     label: "to_python_executable()".to_string(),
                 }
                 .into())
-            })?;
-
-        Ok(Value::new(pre_built))
+            })?,
+        ))
     }
 
     /// PythonDistribution.extension_modules(filter="all", preferred_variants=None)

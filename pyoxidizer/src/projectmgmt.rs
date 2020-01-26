@@ -150,7 +150,6 @@ pub fn list_targets(logger: &slog::Logger, project_path: &Path) -> Result<()> {
         &target_triple,
         false,
         false,
-        None,
         Some(Vec::new()),
     )?;
 
@@ -191,7 +190,6 @@ fn build_pyoxidizer_artifacts(
             target_triple,
             release,
             verbose,
-            Some(&artifacts_path),
             Some(Vec::new()),
         )?;
     }
@@ -225,7 +223,6 @@ pub fn build(
         &target_triple,
         release,
         verbose,
-        None,
         resolve_targets,
     )?;
 
@@ -285,7 +282,6 @@ pub fn run(
         &target_triple,
         release,
         verbose,
-        None,
         resolve_targets,
     )?;
 

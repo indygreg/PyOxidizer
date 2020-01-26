@@ -74,9 +74,6 @@ pub struct EnvironmentContext {
     /// Path where Python distributions are written.
     pub python_distributions_path: PathBuf,
 
-    /// Where to automatically write artifacts for built executables.
-    pub write_artifacts_path: Option<PathBuf>,
-
     /// Registered build targets.
     ///
     /// A target consists of a name and a Starlark callable.
@@ -102,7 +99,6 @@ impl EnvironmentContext {
         build_target_triple: &str,
         build_release: bool,
         build_opt_level: &str,
-        write_artifacts_path: Option<&Path>,
         resolve_targets: Option<Vec<String>>,
     ) -> Result<EnvironmentContext> {
         let parent = config_path
@@ -128,10 +124,6 @@ impl EnvironmentContext {
             build_opt_level: build_opt_level.to_string(),
             build_path: build_path.clone(),
             python_distributions_path: build_path.join("python_distributions"),
-            write_artifacts_path: match write_artifacts_path {
-                Some(p) => Some(p.to_path_buf()),
-                None => None,
-            },
             targets: BTreeMap::new(),
             targets_order: Vec::new(),
             default_target: None,

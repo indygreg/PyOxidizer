@@ -36,7 +36,6 @@ pub fn starlark_env() -> Environment {
         false,
         "0",
         None,
-        None,
     )
     .expect("unable to create EnvironmentContext");
 

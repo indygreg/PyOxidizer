@@ -226,7 +226,6 @@ pub fn run_from_build(
         &target,
         profile == "release",
         false,
-        Some(&dest_dir),
         if let Some(target) = resolve_target {
             Some(vec![target.to_string()])
         } else {
