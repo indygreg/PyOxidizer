@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use crate::py_packaging::config::RunMode;
 use {
     super::util::{optional_list_arg, optional_str_arg, required_bool_arg, required_type_arg},
     crate::app_packaging::config::default_raw_allocator,
@@ -69,6 +70,10 @@ impl EmbeddedPythonConfig {
         unbuffered_stdio: &Value,
         filesystem_importer: &Value,
         quiet: &Value,
+        run_eval: &Value,
+        run_module: &Value,
+        run_noop: &Value,
+        run_repl: &Value,
         site_import: &Value,
         sys_frozen: &Value,
         sys_meipass: &Value,
@@ -97,6 +102,10 @@ impl EmbeddedPythonConfig {
         let unbuffered_stdio = required_bool_arg("unbuffered_stdio", &unbuffered_stdio)?;
         let filesystem_importer = required_bool_arg("filesystem_importer", &filesystem_importer)?;
         let quiet = required_bool_arg("quiet", &quiet)?;
+        let run_eval = optional_str_arg("run_eval", &run_eval)?;
+        let run_module = optional_str_arg("run_module", &run_module)?;
+        let run_noop = required_bool_arg("run_noop", &run_noop)?;
+        let run_repl = required_bool_arg("run_repl", &run_repl)?;
         let sys_frozen = required_bool_arg("sys_frozen", &sys_frozen)?;
         let sys_meipass = required_bool_arg("sys_meipass", &sys_meipass)?;
         optional_list_arg("sys_paths", "string", &sys_paths)?;
@@ -112,6 +121,39 @@ impl EmbeddedPythonConfig {
             optional_str_arg("write_modules_directory_env", &write_modules_directory_env)?;
 
         let build_target = env.get("BUILD_TARGET_TRIPLE").unwrap().to_str();
+
+        let mut run_count = 0;
+        if run_eval.is_some() {
+            run_count += 1;
+        }
+        if run_module.is_some() {
+            run_count += 1;
+        }
+        if run_noop {
+            run_count += 1;
+        }
+        if run_repl {
+            run_count += 1;
+        }
+
+        if run_count > 1 {
+            return Err(RuntimeError {
+                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                message: "multiple run_* arguments specified; use at most 1".to_string(),
+                label: "PythonInterpreterConfig()".to_string(),
+            }
+            .into());
+        }
+
+        let run_mode = if let Some(code) = run_eval {
+            RunMode::Eval { code }
+        } else if let Some(module) = run_module {
+            RunMode::Module { module }
+        } else if run_noop {
+            RunMode::Noop
+        } else {
+            RunMode::Repl
+        };
 
         let (stdio_encoding_name, stdio_encoding_errors) = if let Some(ref v) = stdio_encoding {
             let values: Vec<&str> = v.split(':').collect();
@@ -196,6 +238,7 @@ impl EmbeddedPythonConfig {
             sys_meipass,
             sys_paths,
             raw_allocator,
+            run_mode,
             terminfo_resolution,
             use_hash_seed,
             verbose: verbose.to_int().unwrap() as i32,
@@ -221,6 +264,10 @@ starlark_module! { embedded_python_config_module =>
         unbuffered_stdio=false,
         filesystem_importer=false,
         quiet=false,
+        run_eval=None,
+        run_module=None,
+        run_noop=false,
+        run_repl=false,
         site_import=false,
         sys_frozen=false,
         sys_meipass=false,
@@ -249,6 +296,10 @@ starlark_module! { embedded_python_config_module =>
             &unbuffered_stdio,
             &filesystem_importer,
             &quiet,
+            &run_eval,
+            &run_module,
+            &run_noop,
+            &run_repl,
             &site_import,
             &sys_frozen,
             &sys_meipass,
@@ -299,6 +350,7 @@ mod tests {
             sys_meipass: false,
             sys_paths: Vec::new(),
             raw_allocator: default_raw_allocator(crate::app_packaging::repackage::HOST),
+            run_mode: RunMode::Repl,
             terminfo_resolution: TerminfoResolution::Dynamic,
             write_modules_directory_env: None,
         };
@@ -350,6 +402,48 @@ mod tests {
         let c = starlark_ok("PythonInterpreterConfig(raw_allocator='rust')");
         c.downcast_apply(|x: &EmbeddedPythonConfig| {
             assert_eq!(x.raw_allocator, RawAllocator::Rust);
+        });
+    }
+
+    #[test]
+    fn test_run_eval() {
+        let c = starlark_ok("PythonInterpreterConfig(run_eval='1')");
+        c.downcast_apply(|x: &EmbeddedPythonConfig| {
+            assert_eq!(
+                x.run_mode,
+                RunMode::Eval {
+                    code: "1".to_string()
+                }
+            );
+        });
+    }
+
+    #[test]
+    fn test_run_module() {
+        let c = starlark_ok("PythonInterpreterConfig(run_module='main')");
+        c.downcast_apply(|x: &EmbeddedPythonConfig| {
+            assert_eq!(
+                x.run_mode,
+                RunMode::Module {
+                    module: "main".to_string()
+                }
+            );
+        });
+    }
+
+    #[test]
+    fn test_run_noop() {
+        let c = starlark_ok("PythonInterpreterConfig(run_noop=True)");
+        c.downcast_apply(|x: &EmbeddedPythonConfig| {
+            assert_eq!(x.run_mode, RunMode::Noop);
+        });
+    }
+
+    #[test]
+    fn test_run_repl() {
+        let c = starlark_ok("PythonInterpreterConfig(run_repl=True)");
+        c.downcast_apply(|x: &EmbeddedPythonConfig| {
+            assert_eq!(x.run_mode, RunMode::Repl);
         });
     }
 

@@ -120,7 +120,7 @@ that runs a Python REPL on startup:
    def make_exe(dist):
        return dist.to_python_executable(
            "myapp",
-           python_run_mode_repl(),
+           run_repl=True,
        )
 
    register_target("dist", make_dist)

@@ -9,11 +9,11 @@ use {
     },
     super::util::{
         optional_dict_arg, optional_list_arg, optional_str_arg, optional_type_arg,
-        required_bool_arg, required_list_arg, required_str_arg, required_type_arg,
+        required_bool_arg, required_list_arg, required_str_arg,
     },
     crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable},
     crate::py_packaging::bytecode::{BytecodeCompiler, CompileMode},
-    crate::py_packaging::config::{EmbeddedPythonConfig, RunMode},
+    crate::py_packaging::config::EmbeddedPythonConfig,
     crate::py_packaging::distribution::{
         is_stdlib_test_package, resolve_parsed_distribution, ExtensionModuleFilter,
         ParsedPythonDistribution, PythonDistributionLocation,
@@ -198,7 +198,6 @@ impl PythonDistribution {
 
     /// PythonDistribution.to_python_executable(
     ///     name,
-    ///     run_mode,
     ///     config=None,
     ///     extension_module_filter="all",
     ///     preferred_extension_module_variants=None,
@@ -212,7 +211,6 @@ impl PythonDistribution {
         env: Environment,
         call_stack: &Vec<(String, String)>,
         name: &Value,
-        run_mode: &Value,
         config: &Value,
         extension_module_filter: &Value,
         preferred_extension_module_variants: &Value,
@@ -221,7 +219,6 @@ impl PythonDistribution {
         include_test: &Value,
     ) -> ValueResult {
         let name = required_str_arg("name", &name)?;
-        required_type_arg("run_mode", "PythonRunMode", &run_mode)?;
         optional_type_arg("config", "PythonInterpreterConfig", &config)?;
         let extension_module_filter =
             required_str_arg("extension_module_filter", &extension_module_filter)?;
@@ -279,13 +276,10 @@ impl PythonDistribution {
             config.downcast_apply(|c: &EmbeddedPythonConfig| c.clone())
         };
 
-        let run_mode = run_mode.downcast_apply(|m: &RunMode| m.clone());
-
         let pre_built = PreBuiltPythonExecutable::from_python_distribution(
             &logger,
             dist,
             &name,
-            &run_mode,
             &config,
             &extension_module_filter,
             preferred_extension_module_variants,
@@ -760,7 +754,6 @@ starlark_module! { python_distribution_module =>
         call_stack call_stack,
         this,
         name,
-        run_mode,
         config=None,
         extension_module_filter="all",
         preferred_extension_module_variants=None,
@@ -773,7 +766,6 @@ starlark_module! { python_distribution_module =>
                 env.clone(),
                 call_stack,
                 &name,
-                &run_mode,
                 &config,
                 &extension_module_filter,
                 &preferred_extension_module_variants,

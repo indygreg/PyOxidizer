@@ -125,7 +125,7 @@ Next, we tell PyOxidizer to run ``pyflakes`` when the interpreter is executed:
 
 .. code-block:: python
 
-   python_run_mode = python_run_mode_eval("from pyflakes.api import main; main()")
+   run_eval="from pyflakes.api import main; main()",
 
 This says to effectively run the Python code
 ``eval(from pyflakes.api import main; main())`` when the embedded interpreter
@@ -139,12 +139,13 @@ comments removed for brevity):
    def make_exe():
        dist = default_python_distribution()
 
-       python_run_mode = python_run_mode_eval("from pyflakes.api import main; main()")
+       config = PythonInterpreterConfig(
+           run_eval="from pyflakes.api import main; main()",
+       )
 
-       exe = PythonExecutable(
+       exe = dist.to_python_executable(
            name="pyflakes",
-           distribution=dist,
-           run_mode=python_run_mode,
+           config=config,
            extension_module_filter="all",
            include_sources=True,
            include_resources=False,
@@ -208,12 +209,13 @@ Then edit the ``pyoxidizer.bzl`` file to have the following:
 
    def make_exe():
        dist = default_python_distribution()
-       python_run_mode = python_run_mode_module("black")
 
-       exe = PythonExecutable(
+       config = PythonInterpreterConfig(
+           run_module="black",
+       )
+
+       exe = dist.to_python_executable(
            name="black",
-           distribution=dist,
-           run_mode=python_run_mode,
        )
 
        exe.add_python_resources(dist.pip_intsall(["black==19.3b0"]))
@@ -281,16 +283,14 @@ Change your configuration file to look like the following:
        )
 
        python_config = PythonInterpreterConfig(
+           run_module="black",
            sys_paths=["$ORIGIN/lib"],
        )
-       python_run_mode = python_run_mode_module("black")
 
-       return PythonExecutable(
+       return dist.to_python_executable(
            name="black",
-           distribution=dist,
-           resources=embedded,
            config=python_config,
-           run_mode=python_run_mode,
+           resources=embedded,
        )
 
 

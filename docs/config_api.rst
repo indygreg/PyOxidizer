@@ -27,10 +27,6 @@ Starlark environment:
 * :ref:`config_python_extension_module`
 * :ref:`config_python_interpreter_config`
 * :ref:`config_python_resources_data`
-* :ref:`config_python_run_mode_eval`
-* :ref:`config_python_run_mode_module`
-* :ref:`config_python_run_mode_noop`
-* :ref:`config_python_run_mode_repl`
 * :ref:`config_python_source_module`
 * :ref:`config_register_target`
 * :ref:`config_resolve_target`
@@ -64,9 +60,6 @@ The following custom data types are defined in the Starlark environment:
 
 ``PythonResourcesData``
    Represents a non-module *resource* data file.
-
-``PythonRunMode``
-   Represents what code a Python interpreter should run.
 
 ``PythonSourceModule``
    Represents a ``.py`` file containing Python source code.
@@ -452,9 +445,6 @@ The accepted arguments are:
    The name of the application being built. This will be used to construct the
    default filename of the executable.
 
-``run_mode`` (``PythonRunMode``)
-   The default run-time behavior of the embedded Python interpreter.
-
 ``config`` (``PythonEmbeddedConfig``)
    The default configuration of the embedded Python interpreter.
 
@@ -575,8 +565,8 @@ Python Interpreter Configuration
 ================================
 
 A Python interpreter has settings to control how it runs. Configuration
-files represent these settings through the types
-:ref:`config_python_interpreter_config` and :ref:`config_python_run_mode`.
+files represent these settings through the
+:ref:`config_python_interpreter_config` type.
 
 .. _config_python_interpreter_config:
 
@@ -700,6 +690,24 @@ behavior:
 
    Default is ``jemalloc`` on non-Windows targets and ``system`` on Windows.
    (The ``jemalloc-sys`` crate doesn't work on Windows MSVC targets.)
+
+``run_eval`` (string)
+   Will cause the interpreter to evaluate a Python code string defined by this
+   value after the interpreter initializes.
+
+   An example value would be ``import mymodule; mymodule.main()``.
+
+``run_module`` (string)
+   The Python interpreter will load a Python module with this value's name
+   as the ``__main__`` module and then execute that module.
+
+``run_noop`` (bool)
+   Instructs the Python interpreter to do nothing after initialization.
+
+``run_repl`` (bool)
+   The Python interpreter will launch an interactive Python REPL connected to
+   stdio. This is similar to the default behavior of running a ``python``
+   executable without any arguments.
 
 ``site_import`` (bool)
    Controls the inverse value of
@@ -828,82 +836,6 @@ behavior:
 
    This setting is useful for determining which Python modules are loaded when
    running Python code.
-
-.. _config_python_run_mode:
-
-``PythonRunMode``
------------------
-
-Embedded Python interpreters are configured and instantiated using a
-``pyembed::PythonConfig`` data structure. The ``pyembed`` crate defines a
-default instance of this data structure with parameters defined by a
-``PythonRunMode`` instance.
-
-.. note::
-
-   If you are writing custom Rust code and constructing a custom
-   ``pyembed::PythonConfig`` instance and don't use the default instance, this
-   config section is not relevant to you and can be omitted from your config
-   file.
-
-The sections below denote ways of constructing ``PythonRunMode``
-instances.
-
-.. _config_python_run_mode_eval:
-
-``python_run_mode_eval(code)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This mode will evaluate a string containing Python code after the
-interpreter initializes.
-
-This mode requires the ``code`` argument to be set to a string containing
-Python code to run.
-
-Example:
-
-.. code-block:: python
-
-   python_run_mode = python_run_mode_eval("import mymodule; mymodule.main()")
-
-.. _config_python_run_mode_module:
-
-``python_run_mode_module(module)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This mode will load a named Python module as the ``__main__`` module and
-then execute that module.
-
-This mode requires the ``module`` argument to be set to the string value of
-the module to load as ``__main__``.
-
-Example:
-
-.. code-block:: python
-
-   python_run_mode = python_run_mode_module("mymodule")
-
-.. _config_python_run_mode_repl:
-
-``python_run_mode_repl()``
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This mode will launch an interactive Python REPL connected to stdin. This
-is similar to the behavior of running a ``python`` executable without any
-arguments.
-
-Example:
-
-.. code-block:: python
-
-   python_run_mode = python_run_mode_repl()
-
-.. _config_python_run_mode_noop:
-
-``python_run_mode_noop()``
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This mode will do nothing. It is provided for completeness sake.
 
 .. _config_python_binaries:
 

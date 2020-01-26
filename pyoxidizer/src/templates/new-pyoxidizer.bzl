@@ -13,7 +13,7 @@ def make_dist():
 # directory.
 def make_exe(dist):
     # This variable defines the configuration of the
-    # embedded Python interpreter
+    # embedded Python interpreter.
     python_config = PythonInterpreterConfig(
     #     bytes_warning=0,
     #     dont_write_bytecode=True,
@@ -39,28 +39,23 @@ def make_exe(dist):
     #     use_hash_seed=False,
     #     verbose=0,
     #     write_modules_directory_env=None,
+    #     run_eval={{#if code}}(r"""{{{code}}}"""{{else}}None{{/if}},
+    #     run_module=None,
+    #     run_noop=False,
+    #     run_repl={{#if code}}False{{else}}True{{/if}},
     )
 
-    # What the Python interpreter should run by default. This value can be
-    # ignored for projects not producing Python executables or customizing
-    # the Rust code that manages to embedded Python interpreter.
-
-    # Run an interactive Python interpreter.
-    {{#unless code~}}
-    python_run_mode = python_run_mode_repl()
-    {{~else~}}
-    # python_run_mode = python_run_mode_repl()
-    {{~/unless}}
-
-    # Import a Python module and run it.
-    # python_run_mode = python_run_mode_module("mypackage.__main__")
-
-    # Evaluate some Python code.
-    {{#if code~}}
-    python_run_mode = python_run_mode_eval(r"""{{{code}}}""")
-    {{~else~}}
-    #python_run_mode = python_run_mode_eval("from mypackage import main; main()")
-    {{~/if}}
+    # The run_eval, run_module, run_noop, and run_repl arguments are mutually
+    # exclusive controls over what the interpreter should do once it initializes.
+    #
+    # run_eval -- Run the specified string value via `eval()`.
+    # run_module -- Import the specified module as __main__ and run it.
+    # run_noop -- Do nothing.
+    # run_repl -- Start a Python REPL.
+    #
+    # These arguments can be ignored if you are providing your own Rust code for
+    # starting the interpreter, as Rust code has full control over interpreter
+    # behavior.
 
     # Produce a PythonExecutable from a Python distribution, embedded
     # resources, and other options. The returned object represents the
@@ -68,7 +63,6 @@ def make_exe(dist):
     exe = dist.to_python_executable(
         name="{{program_name}}",
         config=python_config,
-        run_mode=python_run_mode,
         # Embed all extension modules, making this a fully-featured Python.
         extension_module_filter='all',
 

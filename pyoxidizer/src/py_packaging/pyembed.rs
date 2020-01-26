@@ -13,7 +13,6 @@ use super::config::{EmbeddedPythonConfig, RawAllocator, RunMode, TerminfoResolut
 /// Obtain the Rust source code to construct a PythonConfig instance.
 pub fn derive_python_config(
     embedded: &EmbeddedPythonConfig,
-    run_mode: &RunMode,
     importlib_bootstrap_path: &PathBuf,
     importlib_bootstrap_external_path: &PathBuf,
     py_modules_path: &PathBuf,
@@ -108,7 +107,7 @@ pub fn derive_python_config(
             Some(path) => "Some(\"".to_owned() + &path + "\".to_string())",
             _ => "None".to_owned(),
         },
-        match run_mode {
+        match embedded.run_mode {
             RunMode::Noop => "PythonRunMode::None".to_owned(),
             RunMode::Repl => "PythonRunMode::Repl".to_owned(),
             RunMode::Module { ref module } => {

@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tempdir::TempDir;
 
-use super::config::{EmbeddedPythonConfig, RunMode};
+use super::config::EmbeddedPythonConfig;
 use super::distribution::{ExtensionModuleFilter, ParsedPythonDistribution};
 use super::embedded_resource::EmbeddedPythonResourcesPrePackaged;
 use super::libpython::{derive_importlib, link_libpython, ImportlibData};
@@ -24,7 +24,6 @@ pub struct PreBuiltPythonExecutable {
     pub distribution: Arc<ParsedPythonDistribution>,
     pub resources: EmbeddedPythonResourcesPrePackaged,
     pub config: EmbeddedPythonConfig,
-    pub run_mode: RunMode,
 }
 
 impl PreBuiltPythonExecutable {
@@ -34,7 +33,6 @@ impl PreBuiltPythonExecutable {
         logger: &slog::Logger,
         distribution: Arc<ParsedPythonDistribution>,
         name: &str,
-        run_mode: &RunMode,
         config: &EmbeddedPythonConfig,
         extension_module_filter: &ExtensionModuleFilter,
         preferred_extension_module_variants: Option<HashMap<String, String>>,
@@ -67,7 +65,6 @@ impl PreBuiltPythonExecutable {
             distribution,
             resources,
             config: config.clone(),
-            run_mode: run_mode.clone(),
         })
     }
 
@@ -168,7 +165,6 @@ pub struct EmbeddedPythonBinaryPaths {
 /// Represents resources to embed Python in a binary.
 pub struct EmbeddedPythonBinaryData {
     pub config: EmbeddedPythonConfig,
-    pub run_mode: RunMode,
     pub library: PythonLibrary,
     pub importlib: ImportlibData,
     pub resources: EmbeddedResourcesBlobs,
@@ -194,7 +190,6 @@ impl EmbeddedPythonBinaryData {
 
         Ok(EmbeddedPythonBinaryData {
             config: exe.config.clone(),
-            run_mode: exe.run_mode.clone(),
             library,
             importlib,
             resources,
@@ -235,7 +230,6 @@ impl EmbeddedPythonBinaryData {
 
         let config_rs_data = derive_python_config(
             &self.config,
-            &self.run_mode,
             &importlib_bootstrap,
             &importlib_bootstrap_external,
             &py_modules,
@@ -296,14 +290,12 @@ pub mod tests {
         }
 
         let config = EmbeddedPythonConfig::default();
-        let run_mode = RunMode::Noop;
 
         Ok(PreBuiltPythonExecutable {
             name: "testapp".to_string(),
             distribution,
             resources,
             config,
-            run_mode,
         })
     }
 

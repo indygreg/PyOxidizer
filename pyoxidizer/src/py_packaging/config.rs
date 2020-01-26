@@ -50,6 +50,7 @@ pub struct EmbeddedPythonConfig {
     pub sys_meipass: bool,
     pub sys_paths: Vec<String>,
     pub raw_allocator: RawAllocator,
+    pub run_mode: RunMode,
     pub terminfo_resolution: TerminfoResolution,
     pub write_modules_directory_env: Option<String>,
 }
@@ -80,6 +81,7 @@ impl Default for EmbeddedPythonConfig {
             sys_meipass: false,
             sys_paths: Vec::new(),
             raw_allocator: RawAllocator::System,
+            run_mode: RunMode::Repl,
             terminfo_resolution: TerminfoResolution::None,
             write_modules_directory_env: None,
         }

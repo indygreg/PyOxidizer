@@ -399,15 +399,12 @@ mod tests {
         let mut env = starlark_env();
 
         starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
-        starlark_eval_in_env(&mut env, "run_mode = python_run_mode_noop()").unwrap();
 
-        let exe = starlark_eval_in_env(&mut env, "dist.to_python_executable('testapp', run_mode)")
-            .unwrap();
+        let exe = starlark_eval_in_env(&mut env, "dist.to_python_executable('testapp')").unwrap();
 
         assert_eq!(exe.get_type(), "PythonExecutable");
 
         exe.downcast_apply(|exe: &PreBuiltPythonExecutable| {
-            assert_eq!(exe.run_mode, crate::py_packaging::config::RunMode::Noop);
             assert!(!exe.resources.extension_modules.is_empty());
             assert!(!exe.resources.source_modules.is_empty());
             assert!(!exe.resources.bytecode_modules.is_empty());
@@ -420,11 +417,10 @@ mod tests {
         let mut env = starlark_env();
 
         starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
-        starlark_eval_in_env(&mut env, "run_mode = python_run_mode_noop()").unwrap();
 
         let exe = starlark_eval_in_env(
             &mut env,
-            "dist.to_python_executable('testapp', run_mode, include_sources=False)",
+            "dist.to_python_executable('testapp', include_sources=False)",
         )
         .unwrap();
 

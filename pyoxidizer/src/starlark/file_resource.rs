@@ -482,12 +482,7 @@ mod tests {
         let mut env = starlark_env();
 
         starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
-        starlark_eval_in_env(&mut env, "run_mode = python_run_mode_noop()").unwrap();
-        starlark_eval_in_env(
-            &mut env,
-            "exe = dist.to_python_executable('testapp', run_mode)",
-        )
-        .unwrap();
+        starlark_eval_in_env(&mut env, "exe = dist.to_python_executable('testapp')").unwrap();
 
         let m = Value::new(FileManifest {
             manifest: RawFileManifest::default(),
@@ -503,12 +498,7 @@ mod tests {
         let mut env = starlark_env();
 
         starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
-        starlark_eval_in_env(&mut env, "run_mode = python_run_mode_noop()").unwrap();
-        starlark_eval_in_env(
-            &mut env,
-            "exe = dist.to_python_executable('testapp', run_mode)",
-        )
-        .unwrap();
+        starlark_eval_in_env(&mut env, "exe = dist.to_python_executable('testapp')").unwrap();
 
         let m = Value::new(FileManifest {
             manifest: RawFileManifest::default(),

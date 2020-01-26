@@ -15,7 +15,6 @@ pub mod python_distribution;
 pub mod python_executable;
 pub mod python_interpreter_config;
 pub mod python_resource;
-pub mod python_run_mode;
 pub mod target;
 #[cfg(test)]
 mod testutil;
