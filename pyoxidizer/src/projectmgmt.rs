@@ -228,15 +228,7 @@ pub fn build(
         resolve_targets,
     )?;
 
-    let build_target = if let Some(t) = target {
-        t.to_string()
-    } else if let Some(t) = &res.context.default_target {
-        t.to_string()
-    } else {
-        return Err(anyhow!("unable to determine target to build"));
-    };
-
-    res.context.build_resolved_target(&build_target)?;
+    res.context.build_target(target)?;
 
     Ok(())
 }
