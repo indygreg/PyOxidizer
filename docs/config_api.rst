@@ -993,6 +993,8 @@ filesystem layout of an installed application.
 Conceptually, a ``FileManifest`` is a dict mapping relative paths to
 file content.
 
+.. _config_file_manifest_add_manifest:
+
 ``FileManifest.add_manifest(manifest)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

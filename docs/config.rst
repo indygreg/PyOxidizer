@@ -127,3 +127,38 @@ that runs a Python REPL on startup:
    register_target("exe", make_exe, depends=["dist"], default=True)
 
 See :ref:`packaging` for more examples.
+
+Copying Files Next To Your Application
+--------------------------------------
+
+The `:ref:`config_file_manifest` type represents a collection of files
+and their content. When ``FileManifest`` instances are returned from a
+target function, their build action results in their contents being
+manifested in a directory having the name of the build target.
+
+``FileManifest`` instances can be used to construct custom file *install
+layouts*.
+
+Say you have an existing directory tree of files you want to copy
+next to your application.
+
+The :ref:`config_glob` function can be used to discover existing files
+on the filesystem and turn them into a ``FileManifest``. You can then
+return this ``FileManifest`` directory or overlay it onto another
+instance using :ref:`config_file_manifest_add_manifest`. Here's an
+example:
+
+.. code-block:: python
+
+   def make_install():
+       m = FileManifest()
+
+       templates = glob("/path/to/project/templates/**/*", strip_prefix="/path/to/project/")
+       m.add_manifest(templates)
+
+       return m
+
+This will take all files ``/path/to/project/templates/``, strip the path
+prefix ``/path/to/project/`` from them and then add all those files to your
+main ``FileManifest``. The files should be installed as ``templates/*`` when
+the ``InstallManifest`` is materialized.
