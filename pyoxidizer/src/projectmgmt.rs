@@ -4,23 +4,24 @@
 
 //! Manage PyOxidizer projects.
 
-use anyhow::{anyhow, Result};
-use slog::warn;
-use std::fs::create_dir_all;
-use std::io::{Cursor, Read};
-use std::path::{Path, PathBuf};
-use std::process;
-
-use super::environment::{canonicalize_path, MINIMUM_RUST_VERSION};
-use crate::app_packaging::config::{eval_starlark_config_file, find_pyoxidizer_config_file_env};
-use crate::app_packaging::repackage::run_from_build;
-use crate::app_packaging::state::BuildContext;
-use crate::project_layout::{
-    find_pyoxidizer_files, initialize_project, write_new_pyoxidizer_config_file,
+use {
+    super::environment::{canonicalize_path, MINIMUM_RUST_VERSION},
+    crate::app_packaging::config::{eval_starlark_config_file, find_pyoxidizer_config_file_env},
+    crate::app_packaging::state::BuildContext,
+    crate::project_building::run_from_build,
+    crate::project_layout::{
+        find_pyoxidizer_files, initialize_project, write_new_pyoxidizer_config_file,
+    },
+    crate::py_packaging::config::RawAllocator,
+    crate::py_packaging::distribution::{analyze_python_distribution_tar_zst, python_exe_path},
+    crate::starlark::env::EnvironmentContext,
+    anyhow::{anyhow, Result},
+    slog::warn,
+    std::fs::create_dir_all,
+    std::io::{Cursor, Read},
+    std::path::{Path, PathBuf},
+    std::process,
 };
-use crate::py_packaging::config::RawAllocator;
-use crate::py_packaging::distribution::{analyze_python_distribution_tar_zst, python_exe_path};
-use crate::starlark::env::EnvironmentContext;
 
 /// Attempt to resolve the default Rust target for a build.
 pub fn default_target() -> Result<String> {

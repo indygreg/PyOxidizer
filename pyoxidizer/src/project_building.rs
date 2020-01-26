@@ -2,15 +2,18 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use anyhow::{anyhow, Context, Result};
-use slog::warn;
-use std::fs::create_dir_all;
-use std::path::{Path, PathBuf};
-
-use crate::environment::MINIMUM_RUST_VERSION;
-use crate::project_layout::initialize_project;
-use crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable};
-use crate::py_packaging::config::RawAllocator;
+use {
+    crate::app_packaging::config::{eval_starlark_config_file, find_pyoxidizer_config_file_env},
+    crate::environment::MINIMUM_RUST_VERSION,
+    crate::project_layout::initialize_project,
+    crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable},
+    crate::py_packaging::config::RawAllocator,
+    anyhow::{anyhow, Context, Result},
+    slog::warn,
+    std::env,
+    std::fs::create_dir_all,
+    std::path::{Path, PathBuf},
+};
 
 /// Build an executable embedding Python using an existing Rust project.
 ///
@@ -158,6 +161,67 @@ pub fn build_python_executable(
     let filename = exe_path.file_name().unwrap().to_string_lossy().to_string();
 
     Ok((filename, data))
+}
+
+/// Runs packaging/embedding from the context of a Rust build script.
+///
+/// This function should be called by the build script for the package
+/// that wishes to embed a Python interpreter/application. When called,
+/// a PyOxidizer configuration file is found and read. The configuration
+/// is then applied to the current build. This involves obtaining a
+/// Python distribution to embed (possibly by downloading it from the Internet),
+/// analyzing the contents of that distribution, extracting relevant files
+/// from the distribution, compiling Python bytecode, and generating
+/// resources required to build the ``pyembed`` crate/modules.
+///
+/// If everything works as planned, this whole process should be largely
+/// invisible and the calling application will have an embedded Python
+/// interpreter when it is built.
+pub fn run_from_build(logger: &slog::Logger, build_script: &str) {
+    // Adding our our rerun-if-changed lines will overwrite the default, so
+    // we need to emit the build script name explicitly.
+    println!("cargo:rerun-if-changed={}", build_script);
+
+    println!("cargo:rerun-if-env-changed=PYOXIDIZER_CONFIG");
+
+    // TODO use these variables?
+    //let host = env::var("HOST").expect("HOST not defined");
+    let target = env::var("TARGET").expect("TARGET not defined");
+    //let opt_level = env::var("OPT_LEVEL").expect("OPT_LEVEL not defined");
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not found");
+    let profile = env::var("PROFILE").expect("PROFILE not defined");
+
+    //let project_path = PathBuf::from(&manifest_dir);
+
+    let config_path = match find_pyoxidizer_config_file_env(logger, &PathBuf::from(manifest_dir)) {
+        Some(v) => v,
+        None => panic!("Could not find PyOxidizer config file"),
+    };
+
+    if !config_path.exists() {
+        panic!("PyOxidizer config file does not exist");
+    }
+
+    let dest_dir = match env::var("PYOXIDIZER_ARTIFACT_DIR") {
+        Ok(ref v) => PathBuf::from(v),
+        Err(_) => PathBuf::from(env::var("OUT_DIR").unwrap()),
+    };
+
+    eval_starlark_config_file(
+        logger,
+        &config_path,
+        &target,
+        profile == "release",
+        false,
+        Some(&dest_dir),
+        Some(Vec::new()),
+    )
+    .unwrap();
+
+    let cargo_metadata = dest_dir.join("cargo_metadata.txt");
+    let content = std::fs::read(&cargo_metadata).unwrap();
+    let content = String::from_utf8(content).unwrap();
+    print!("{}", content);
 }
 
 #[cfg(test)]

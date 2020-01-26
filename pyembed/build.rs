@@ -2,10 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use pyoxidizerlib::app_packaging::repackage::run_from_build;
-use pyoxidizerlib::logging::logger_from_env;
-use std::env;
-use std::path::PathBuf;
+use {
+    pyoxidizerlib::logging::logger_from_env, pyoxidizerlib::project_building::run_from_build,
+    std::env, std::path::PathBuf,
+};
 
 fn main() {
     // We support using pre-built artifacts, in which case we emit the
