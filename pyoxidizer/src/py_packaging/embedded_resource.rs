@@ -19,7 +19,6 @@ use {
     slog::warn,
     std::collections::{BTreeMap, BTreeSet, HashMap},
     std::io::Write,
-    std::iter::FromIterator,
     std::path::Path,
     std::sync::Arc,
 };
@@ -304,31 +303,31 @@ impl EmbeddedPythonResourcesPrePackaged {
             }
         }
 
-        let resources = self.resources.clone();
-        all_packages.extend(resources.keys().cloned());
-
         let ignored = OS_IGNORE_EXTENSIONS
             .iter()
             .map(|k| (*k).to_string())
             .collect::<Vec<String>>();
 
-        let extension_modules =
-            BTreeMap::from_iter(self.extension_modules.iter().filter_map(|(k, v)| {
-                if ignored.contains(k) {
-                    None
-                } else {
-                    Some((k.clone(), v.clone()))
-                }
-            }));
+        let mut extension_modules = BTreeMap::new();
+        for (name, em) in &self.extension_modules {
+            if ignored.contains(name) {
+                continue;
+            }
 
-        let built_extension_modules =
-            BTreeMap::from_iter(self.extension_module_datas.iter().filter_map(|(k, v)| {
-                if ignored.contains(k) {
-                    None
-                } else {
-                    Some((k.clone(), v.clone()))
-                }
-            }));
+            extension_modules.insert(name.clone(), em.clone());
+        }
+
+        let mut built_extension_modules = BTreeMap::new();
+        for (name, em) in &self.extension_module_datas {
+            if ignored.contains(name) {
+                continue;
+            }
+
+            built_extension_modules.insert(name.clone(), em.clone());
+        }
+
+        let resources = self.resources.clone();
+        all_packages.extend(resources.keys().cloned());
 
         Ok(EmbeddedPythonResources {
             module_sources,
