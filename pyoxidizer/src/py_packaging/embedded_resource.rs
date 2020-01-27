@@ -260,21 +260,22 @@ impl EmbeddedPythonResourcesPrePackaged {
         let mut all_modules = BTreeSet::new();
         let mut all_packages = BTreeSet::new();
 
-        let module_sources = BTreeMap::from_iter(self.source_modules.iter().map(|(k, v)| {
-            all_modules.insert(k.clone());
-            if v.is_package {
-                all_packages.insert(k.clone());
+        let mut module_sources = BTreeMap::new();
+
+        for (name, module) in &self.source_modules {
+            all_modules.insert(name.clone());
+            if module.is_package {
+                all_packages.insert(name.clone());
             }
 
-            (
-                k.clone(),
+            module_sources.insert(
+                name.clone(),
                 PackagedModuleSource {
-                    // TODO avoid this unwrap
-                    source: v.source.resolve().unwrap(),
-                    is_package: v.is_package,
+                    source: module.source.resolve()?,
+                    is_package: module.is_package,
                 },
-            )
-        }));
+            );
+        }
 
         let mut module_bytecodes = BTreeMap::new();
         {
