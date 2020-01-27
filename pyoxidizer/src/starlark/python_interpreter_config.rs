@@ -72,6 +72,7 @@ impl EmbeddedPythonConfig {
         filesystem_importer: &Value,
         quiet: &Value,
         run_eval: &Value,
+        run_file: &Value,
         run_module: &Value,
         run_noop: &Value,
         run_repl: &Value,
@@ -104,6 +105,7 @@ impl EmbeddedPythonConfig {
         let filesystem_importer = required_bool_arg("filesystem_importer", &filesystem_importer)?;
         let quiet = required_bool_arg("quiet", &quiet)?;
         let run_eval = optional_str_arg("run_eval", &run_eval)?;
+        let run_file = optional_str_arg("run_file", &run_file)?;
         let run_module = optional_str_arg("run_module", &run_module)?;
         let run_noop = required_bool_arg("run_noop", &run_noop)?;
         let run_repl = required_bool_arg("run_repl", &run_repl)?;
@@ -127,6 +129,9 @@ impl EmbeddedPythonConfig {
         if run_eval.is_some() {
             run_count += 1;
         }
+        if run_file.is_some() {
+            run_count += 1;
+        }
         if run_module.is_some() {
             run_count += 1;
         }
@@ -148,6 +153,8 @@ impl EmbeddedPythonConfig {
 
         let run_mode = if let Some(code) = run_eval {
             RunMode::Eval { code }
+        } else if let Some(path) = run_file {
+            RunMode::File { path }
         } else if let Some(module) = run_module {
             RunMode::Module { module }
         } else if run_noop {
@@ -266,6 +273,7 @@ starlark_module! { embedded_python_config_module =>
         filesystem_importer=false,
         quiet=false,
         run_eval=None,
+        run_file=None,
         run_module=None,
         run_noop=false,
         run_repl=false,
@@ -298,6 +306,7 @@ starlark_module! { embedded_python_config_module =>
             &filesystem_importer,
             &quiet,
             &run_eval,
+            &run_file,
             &run_module,
             &run_noop,
             &run_repl,
@@ -319,8 +328,7 @@ starlark_module! { embedded_python_config_module =>
 
 #[cfg(test)]
 mod tests {
-    use super::super::testutil::*;
-    use super::*;
+    use {super::super::testutil::*, super::*};
 
     #[test]
     fn test_default() {
@@ -414,6 +422,19 @@ mod tests {
                 x.run_mode,
                 RunMode::Eval {
                     code: "1".to_string()
+                }
+            );
+        });
+    }
+
+    #[test]
+    fn test_run_file() {
+        let c = starlark_ok("PythonInterpreterConfig(run_file='hello.py')");
+        c.downcast_apply(|x: &EmbeddedPythonConfig| {
+            assert_eq!(
+                x.run_mode,
+                RunMode::File {
+                    path: "hello.py".to_string(),
                 }
             );
         });

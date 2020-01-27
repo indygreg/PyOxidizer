@@ -32,6 +32,7 @@ pub enum RunMode {
     Repl,
     Module { module: String },
     Eval { code: String },
+    File { path: String },
 }
 
 /// How the `terminfo` database is resolved at run-time.

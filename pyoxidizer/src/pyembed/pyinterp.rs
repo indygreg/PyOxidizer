@@ -4,29 +4,29 @@
 
 //! Manage an embedded Python interpreter.
 
-use libc::c_char;
-use python3_sys as pyffi;
-use std::collections::BTreeSet;
-use std::env;
-use std::ffi::CString;
-use std::fs;
-use std::io::Write;
-use std::path::PathBuf;
-use std::ptr::null;
-
-use cpython::exc::{SystemExit, ValueError};
-use cpython::{
-    GILGuard, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule, PyObject, PyResult,
-    PyString, Python, PythonObject, ToPyObject,
-};
-
-use super::config::{PythonConfig, PythonRawAllocator, PythonRunMode, TerminfoResolution};
-use super::importer::PyInit__pyoxidizer_importer;
-use super::osutils::resolve_terminfo_dirs;
 #[cfg(feature = "jemalloc-sys")]
 use super::pyalloc::make_raw_jemalloc_allocator;
-use super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator};
-use super::pystr::{osstring_to_bytes, osstring_to_str, OwnedPyStr};
+use {
+    super::config::{PythonConfig, PythonRawAllocator, PythonRunMode, TerminfoResolution},
+    super::importer::PyInit__pyoxidizer_importer,
+    super::osutils::resolve_terminfo_dirs,
+    super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
+    super::pystr::{osstring_to_bytes, osstring_to_str, OwnedPyStr},
+    cpython::exc::{SystemExit, ValueError},
+    cpython::{
+        GILGuard, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule, PyObject,
+        PyResult, PyString, Python, PythonObject, ToPyObject,
+    },
+    libc::c_char,
+    python3_sys as pyffi,
+    std::collections::BTreeSet,
+    std::env,
+    std::ffi::{CStr, CString},
+    std::fs,
+    std::io::Write,
+    std::path::PathBuf,
+    std::ptr::null,
+};
 
 pub const PYOXIDIZER_IMPORTER_NAME: &[u8] = b"_pyoxidizer_importer\0";
 
@@ -525,6 +525,7 @@ impl<'a> MainPythonInterpreter<'a> {
             PythonRunMode::Repl => self.run_repl(),
             PythonRunMode::Module { module } => self.run_module_as_main(&module),
             PythonRunMode::Eval { code } => self.run_code(&code),
+            PythonRunMode::File { path } => self.run_file(&path),
         }
     }
 
@@ -783,6 +784,24 @@ impl<'a> MainPythonInterpreter<'a> {
             } else {
                 Ok(PyObject::from_owned_ptr(py, res))
             }
+        }
+    }
+
+    /// Runs Python code in a filesystem path.
+    pub fn run_file(&mut self, filename: &CStr) -> PyResult<PyObject> {
+        let py = self.acquire_gil();
+
+        let res = unsafe {
+            let fp = libc::fopen(filename.as_ptr(), "rb\0".as_ptr() as *const _);
+            let mut cf = pyffi::PyCompilerFlags { cf_flags: 0 };
+
+            pyffi::PyRun_AnyFileExFlags(fp, filename.as_ptr(), 1, &mut cf)
+        };
+
+        if res == 0 {
+            Ok(py.None())
+        } else {
+            Err(PyErr::new::<SystemExit, _>(py, 1))
         }
     }
 

@@ -25,6 +25,13 @@ next
 
 Not yet released.
 
+New Features
+^^^^^^^^^^^^
+
+* Embedded Python interpreters can now be configured to run a file specified
+  by a filename. See the ``run_file`` argument of
+  :ref:`config_python_interpreter_config`.
+
 .. _version_0_5_1:
 
 0.5.1

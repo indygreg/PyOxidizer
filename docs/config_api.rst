@@ -706,6 +706,13 @@ behavior:
 
    An example value would be ``import mymodule; mymodule.main()``.
 
+``run_file`` (string)
+   Will cause the interpreter to evaluate a file at the specified filename.
+
+   The filename is resolved at run-time using whatever mechanisms the Python
+   interpreter applies. i.e. this is little different from running
+   ``python <path>``.
+
 ``run_module`` (string)
    The Python interpreter will load a Python module with this value's name
    as the ``__main__`` module and then execute that module.

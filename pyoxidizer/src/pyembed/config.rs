@@ -4,8 +4,7 @@
 
 //! Data structures for configuring a Python interpreter.
 
-use python3_sys as pyffi;
-use std::ffi::CString;
+use {python3_sys as pyffi, std::ffi::CString};
 
 /// Defines which allocator to use for the raw domain.
 #[derive(Clone, Debug)]
@@ -29,6 +28,12 @@ pub enum PythonRunMode {
     Module { module: String },
     /// Evaluate Python code from a string.
     Eval { code: String },
+    /// Execute Python code in a file.
+    ///
+    /// We define this as a CString because the underlying API wants
+    /// a char* and we want the constructor of this type to worry about
+    /// the type coercion.
+    File { path: CString },
 }
 
 /// Defines `terminfo`` database resolution semantics.

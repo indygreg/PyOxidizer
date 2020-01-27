@@ -120,6 +120,11 @@ pub fn derive_python_config(
             RunMode::Eval { ref code } => {
                 "PythonRunMode::Eval { code: r###\"".to_owned() + code + "\"###.to_string() }"
             }
+            RunMode::File { ref path } => {
+                "PythonRunMode::File { path: std::ffi::CString::new(r###\"".to_owned()
+                    + path
+                    + "\"###).expect(\"converting filename path to CString\") }"
+            }
         },
     )
 }
