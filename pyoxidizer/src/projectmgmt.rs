@@ -5,11 +5,10 @@
 //! Manage PyOxidizer projects.
 
 use {
-    crate::app_packaging::config::eval_starlark_config_file,
     crate::project_building::find_pyoxidizer_config_file_env,
     crate::project_layout::{initialize_project, write_new_pyoxidizer_config_file},
     crate::py_packaging::distribution::analyze_python_distribution_tar_zst,
-    crate::starlark::eval::EvalResult,
+    crate::starlark::eval::{eval_starlark_config_file, EvalResult},
     anyhow::{anyhow, Result},
     std::fs::create_dir_all,
     std::io::{Cursor, Read},

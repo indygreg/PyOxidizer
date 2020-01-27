@@ -4,6 +4,7 @@
 
 use {
     super::env::{global_environment, EnvironmentContext},
+    anyhow::{anyhow, Result},
     codemap::CodeMap,
     codemap_diagnostic::{Diagnostic, Level},
     starlark::environment::Environment,
@@ -86,4 +87,24 @@ pub fn evaluate_file(
         env,
         context: env_context.downcast_apply(|x: &EnvironmentContext| x.clone()),
     })
+}
+
+/// Evaluate a Starlark configuration file and return its result.
+pub fn eval_starlark_config_file(
+    logger: &slog::Logger,
+    path: &Path,
+    build_target_triple: &str,
+    release: bool,
+    verbose: bool,
+    resolve_targets: Option<Vec<String>>,
+) -> Result<EvalResult> {
+    crate::starlark::eval::evaluate_file(
+        logger,
+        path,
+        build_target_triple,
+        release,
+        verbose,
+        resolve_targets,
+    )
+    .or_else(|d| Err(anyhow!(d.message)))
 }

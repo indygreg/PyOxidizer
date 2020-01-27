@@ -3,12 +3,11 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::app_packaging::config::eval_starlark_config_file,
     crate::environment::{canonicalize_path, MINIMUM_RUST_VERSION},
     crate::project_layout::initialize_project,
     crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable},
     crate::py_packaging::config::RawAllocator,
-    crate::starlark::eval::EvalResult,
+    crate::starlark::eval::{eval_starlark_config_file, EvalResult},
     crate::starlark::target::ResolvedTarget,
     anyhow::{anyhow, Context, Result},
     slog::warn,
