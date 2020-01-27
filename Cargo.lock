@@ -1232,14 +1232,14 @@ dependencies = [
 
 [[package]]
 name = "pyembed"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "cpython 0.3.0 (git+https://github.com/dgrunwald/rust-cpython?rev=a989865c3dd861267a42ceb726f2fc831637fe5b)",
  "jemalloc-sys 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)",
- "pyoxidizer 0.5.1",
+ "pyoxidizer 0.6.0",
  "python3-sys 0.3.0 (git+https://github.com/dgrunwald/rust-cpython?rev=a989865c3dd861267a42ceb726f2fc831637fe5b)",
  "slog 2.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "uuid 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1247,7 +1247,7 @@ dependencies = [
 
 [[package]]
 name = "pyoxidizer"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -20,6 +20,11 @@ Blog Posts
 Version History
 ===============
 
+next
+----
+
+Not yet released.
+
 .. _version_0_5_1:
 
 0.5.1
