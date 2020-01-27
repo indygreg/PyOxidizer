@@ -2,14 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use crate::starlark::target::ResolvedTarget;
 use {
-    crate::app_packaging::config::{eval_starlark_config_file, find_pyoxidizer_config_file_env},
+    crate::app_packaging::config::eval_starlark_config_file,
     crate::environment::{canonicalize_path, MINIMUM_RUST_VERSION},
     crate::project_layout::initialize_project,
     crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable},
     crate::py_packaging::config::RawAllocator,
     crate::starlark::eval::EvalResult,
+    crate::starlark::target::ResolvedTarget,
     anyhow::{anyhow, Context, Result},
     slog::warn,
     std::env,
@@ -18,6 +18,34 @@ use {
 };
 
 pub const HOST: &str = env!("HOST");
+
+/// Find a pyoxidizer.toml configuration file by walking directory ancestry.
+pub fn find_pyoxidizer_config_file(start_dir: &Path) -> Option<PathBuf> {
+    for test_dir in start_dir.ancestors() {
+        let candidate = test_dir.to_path_buf().join("pyoxidizer.bzl");
+
+        if candidate.exists() {
+            return Some(candidate);
+        }
+    }
+
+    None
+}
+
+/// Find a PyOxidizer configuration file from walking the filesystem or an
+/// environment variable override.
+pub fn find_pyoxidizer_config_file_env(logger: &slog::Logger, start_dir: &Path) -> Option<PathBuf> {
+    match env::var("PYOXIDIZER_CONFIG") {
+        Ok(config_env) => {
+            warn!(
+                logger,
+                "using PyOxidizer config file from PYOXIDIZER_CONFIG: {}", config_env
+            );
+            Some(PathBuf::from(config_env))
+        }
+        Err(_) => find_pyoxidizer_config_file(start_dir),
+    }
+}
 
 /// Build an executable embedding Python using an existing Rust project.
 ///
