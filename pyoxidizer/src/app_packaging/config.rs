@@ -7,42 +7,7 @@ use slog::warn;
 use std::env;
 use std::path::{Path, PathBuf};
 
-use crate::py_packaging::config::{EmbeddedPythonConfig, RunMode};
 use crate::starlark::eval::EvalResult;
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct BuildConfig {
-    pub application_name: String,
-    pub build_path: PathBuf,
-}
-
-#[derive(Clone, Debug)]
-pub struct DistributionTarball {
-    pub path_prefix: Option<String>,
-}
-
-#[derive(Clone, Debug)]
-pub struct DistributionWixInstaller {
-    pub msi_upgrade_code_x86: Option<String>,
-    pub msi_upgrade_code_amd64: Option<String>,
-    pub bundle_upgrade_code: Option<String>,
-}
-
-/// Represents a distribution rule.
-#[derive(Clone, Debug)]
-pub enum Distribution {
-    Tarball(DistributionTarball),
-    WixInstaller(DistributionWixInstaller),
-}
-
-/// Represents a parsed PyOxidizer configuration file.
-#[derive(Clone, Debug)]
-pub struct Config {
-    pub config_path: PathBuf,
-    pub build_config: BuildConfig,
-    pub embedded_python_config: EmbeddedPythonConfig,
-    pub run: RunMode,
-}
 
 /// Find a pyoxidizer.toml configuration file by walking directory ancestry.
 pub fn find_pyoxidizer_config_file(start_dir: &Path) -> Option<PathBuf> {
