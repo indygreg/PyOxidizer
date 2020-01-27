@@ -80,7 +80,7 @@ impl EmbeddedPythonResourcesPrePackaged {
             logger,
             extension_module_filter,
             preferred_extension_module_variants,
-        ) {
+        )? {
             embedded.add_extension_module(&ext);
         }
 

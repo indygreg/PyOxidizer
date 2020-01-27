@@ -8,12 +8,13 @@ use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use slog::{info, warn};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::convert::TryFrom;
 use std::fs;
 use std::fs::{create_dir_all, File};
 use std::hash::BuildHasher;
 use std::io::{BufRead, BufReader, Cursor, Read};
+use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
 use url::Url;
 use uuid::Uuid;
@@ -645,7 +646,7 @@ impl ParsedPythonDistribution {
         logger: &slog::Logger,
         filter: &ExtensionModuleFilter,
         variants: Option<HashMap<String, String>>,
-    ) -> Vec<ExtensionModule> {
+    ) -> Result<Vec<ExtensionModule>> {
         let mut res = Vec::new();
 
         for (name, ext_variants) in &self.extension_modules {
@@ -726,7 +727,20 @@ impl ParsedPythonDistribution {
             }
         }
 
-        res
+        // Do a sanity pass to ensure we got all builtin default or required extension modules.
+        let added: BTreeSet<String> = BTreeSet::from_iter(res.iter().map(|em| em.module.clone()));
+
+        for (name, ext_variants) in &self.extension_modules {
+            let required = ext_variants
+                .iter()
+                .any(|em| em.builtin_default || em.required);
+
+            if required && !added.contains(name) {
+                return Err(anyhow!("required extension module {} missing", name));
+            }
+        }
+
+        Ok(res)
     }
 }
 

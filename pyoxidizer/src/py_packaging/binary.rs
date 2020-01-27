@@ -53,7 +53,7 @@ impl PreBuiltPythonExecutable {
         // Always ensure minimal extension modules are present, otherwise we get
         // missing symbol errors at link time.
         for ext in
-            distribution.filter_extension_modules(&logger, &ExtensionModuleFilter::Minimal, None)
+            distribution.filter_extension_modules(&logger, &ExtensionModuleFilter::Minimal, None)?
         {
             if !resources.extension_modules.contains_key(&ext.module) {
                 resources.add_extension_module(&ext);
@@ -288,7 +288,7 @@ pub mod tests {
         // We need to add minimal extension modules so builds actually work. If they are missing,
         // we'll get missing symbol errors during linking.
         for ext in
-            distribution.filter_extension_modules(logger, &ExtensionModuleFilter::Minimal, None)
+            distribution.filter_extension_modules(logger, &ExtensionModuleFilter::Minimal, None)?
         {
             resources.add_extension_module(&ext);
         }

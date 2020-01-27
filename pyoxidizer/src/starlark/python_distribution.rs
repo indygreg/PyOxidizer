@@ -349,6 +349,14 @@ impl PythonDistribution {
                 .as_ref()
                 .unwrap()
                 .filter_extension_modules(&logger, &filter, preferred_variants)
+                .or_else(|e| {
+                    Err(RuntimeError {
+                        code: "PYOXIDIZER_BUILD",
+                        message: e.to_string(),
+                        label: "extension_modules()".to_string(),
+                    }
+                    .into())
+                })?
                 .iter()
                 .map(|em| {
                     Value::new(PythonExtensionModule {
