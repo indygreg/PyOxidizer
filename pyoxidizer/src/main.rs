@@ -31,7 +31,7 @@ mod analyze;
 #[allow(unused)]
 pub mod app_packaging;
 mod cli;
-mod distribution;
+//mod distribution;
 mod environment;
 mod licensing;
 mod logging;
