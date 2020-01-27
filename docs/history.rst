@@ -26,6 +26,7 @@ Not yet released.
 Bug Fixes
 ^^^^^^^^^
 
+* Fixed bad Starlark example for building ``black`` in docs.
 * Remove resources attached to packages that don't exist. (This was a
   regression in 0.5.)
 * Warn on failure to annotate a package. (This was a regression in 0.5.)

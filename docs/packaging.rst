@@ -275,13 +275,6 @@ Change your configuration file to look like the following:
        return default_python_distribution()
 
    def make_exe(dist):
-       embedded = dist.to_embedded_resources(
-           extension_module_filter='all',
-           include_sources=True,
-           include_resources=False,
-           include_test=False,
-       )
-
        python_config = PythonInterpreterConfig(
            run_module="black",
            sys_paths=["$ORIGIN/lib"],
@@ -290,7 +283,10 @@ Change your configuration file to look like the following:
        return dist.to_python_executable(
            name="black",
            config=python_config,
-           resources=embedded,
+           extension_module_filter='all',
+           include_sources=True,
+           include_resources=False,
+           include_test=False,
        )
 
 
