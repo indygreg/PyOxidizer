@@ -9,18 +9,9 @@ use {
     super::config::Config,
     super::state::BuildContext,
     crate::project_building::HOST,
-    crate::py_packaging::bytecode::python_source_encoding,
-    crate::py_packaging::distribution::{ExtensionModule, ParsedPythonDistribution},
-    crate::py_packaging::embedded_resource::EmbeddedPythonResources,
-    crate::py_packaging::resource::{
-        packages_from_module_name, packages_from_module_names, AppRelativeResources,
-        ExtensionModuleData, PackagedModuleBytecode, PackagedModuleSource,
-    },
     anyhow::{anyhow, Context, Result},
-    slog::warn,
-    std::collections::{BTreeMap, BTreeSet},
     std::fs,
-    std::path::{Path, PathBuf},
+    std::path::Path,
 };
 
 impl BuildContext {
@@ -117,73 +108,5 @@ impl BuildContext {
             pyoxidizer_artifacts_path,
             python_distribution_path,
         })
-    }
-}
-
-/// Represents resources to package with an application.
-#[derive(Debug)]
-pub struct PythonResources {
-    /// Resources to be embedded in the binary.
-    pub embedded: EmbeddedPythonResources,
-
-    /// Resources to install in paths relative to the produced binary.
-    pub app_relative: BTreeMap<String, AppRelativeResources>,
-
-    /// Files that are read to resolve this data structure.
-    pub read_files: Vec<PathBuf>,
-
-    /// Path where to write license files.
-    pub license_files_path: Option<String>,
-}
-
-struct BytecodeRequest {
-    source: Vec<u8>,
-}
-
-/// Resolves a series of packaging rules to a final set of resources to package.
-#[allow(clippy::cognitive_complexity)]
-pub fn resolve_python_resources(
-    logger: &slog::Logger,
-    _context: &BuildContext,
-    dist: &ParsedPythonDistribution,
-) -> PythonResources {
-    // Since bytecode has a non-trivial cost to generate, our strategy is to accumulate
-    // requests for bytecode then generate bytecode for the final set of inputs at the
-    // end of processing. That way we don't generate bytecode only to throw it away later.
-
-    let mut embedded_extension_modules: BTreeMap<String, ExtensionModule> = BTreeMap::new();
-    let embedded_sources: BTreeMap<String, PackagedModuleSource> = BTreeMap::new();
-    let mut embedded_bytecode_requests: BTreeMap<String, BytecodeRequest> = BTreeMap::new();
-    let embedded_built_extension_modules: BTreeMap<String, ExtensionModuleData> = BTreeMap::new();
-
-    let app_relative: BTreeMap<String, AppRelativeResources> = BTreeMap::new();
-
-    let read_files: Vec<PathBuf> = Vec::new();
-    let license_files_path = None;
-
-    // Add required extension modules, as some don't show up in the modules list
-    // and may have been filtered or not added in the first place.
-    for (name, variants) in &dist.extension_modules {
-        let em = &variants[0];
-
-        if (em.builtin_default || em.required) && !embedded_extension_modules.contains_key(name) {
-            warn!(logger, "adding required embedded extension module {}", name);
-            embedded_extension_modules.insert(name.clone(), em.clone());
-        }
-    }
-
-    PythonResources {
-        embedded: EmbeddedPythonResources {
-            module_sources: embedded_sources,
-            module_bytecodes: BTreeMap::new(),
-            all_modules: BTreeSet::new(),
-            all_packages: BTreeSet::new(),
-            resources: BTreeMap::new(),
-            extension_modules: embedded_extension_modules,
-            built_extension_modules: embedded_built_extension_modules,
-        },
-        app_relative,
-        read_files,
-        license_files_path,
     }
 }
