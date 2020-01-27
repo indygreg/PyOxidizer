@@ -154,7 +154,6 @@ pub fn resolve_python_resources(
     let mut embedded_extension_modules: BTreeMap<String, ExtensionModule> = BTreeMap::new();
     let embedded_sources: BTreeMap<String, PackagedModuleSource> = BTreeMap::new();
     let mut embedded_bytecode_requests: BTreeMap<String, BytecodeRequest> = BTreeMap::new();
-    let embedded_resources: BTreeMap<String, BTreeMap<String, Vec<u8>>> = BTreeMap::new();
     let embedded_built_extension_modules: BTreeMap<String, ExtensionModuleData> = BTreeMap::new();
 
     let app_relative: BTreeMap<String, AppRelativeResources> = BTreeMap::new();
@@ -173,72 +172,13 @@ pub fn resolve_python_resources(
         }
     }
 
-    let embedded_bytecodes: BTreeMap<String, PackagedModuleBytecode> = BTreeMap::new();
-    let mut all_embedded_modules = BTreeSet::new();
-    let mut annotated_package_names = BTreeSet::new();
-
-    for (name, source) in &embedded_sources {
-        all_embedded_modules.insert(name.clone());
-
-        if source.is_package {
-            annotated_package_names.insert(name.clone());
-        }
-    }
-    for (name, bytecode) in &embedded_bytecodes {
-        all_embedded_modules.insert(name.clone());
-
-        if bytecode.is_package {
-            annotated_package_names.insert(name.clone());
-        }
-    }
-
-    for (name, extension) in &embedded_built_extension_modules {
-        all_embedded_modules.insert(name.clone());
-
-        if extension.is_package {
-            annotated_package_names.insert(name.clone());
-        }
-    }
-
-    let derived_package_names = packages_from_module_names(all_embedded_modules.iter().cloned());
-
-    let mut all_embedded_package_names = annotated_package_names;
-    for package in derived_package_names {
-        if !all_embedded_package_names.contains(&package) {
-            warn!(
-                logger,
-                "package {} not initially detected as such; is package detection buggy?", package
-            );
-            all_embedded_package_names.insert(package);
-        }
-    }
-
-    // Prune resource files that belong to packages that don't have a corresponding
-    // Python module package, as they won't be loadable by our custom importer.
-    let embedded_resources = embedded_resources
-        .iter()
-        .filter_map(|(package, values)| {
-            if !all_embedded_package_names.contains(package) {
-                warn!(
-                    logger,
-                    "package {} does not exist; excluding resources: {:?}",
-                    package,
-                    values.keys()
-                );
-                None
-            } else {
-                Some((package.clone(), values.clone()))
-            }
-        })
-        .collect();
-
     PythonResources {
         embedded: EmbeddedPythonResources {
             module_sources: embedded_sources,
-            module_bytecodes: embedded_bytecodes,
-            all_modules: all_embedded_modules,
-            all_packages: all_embedded_package_names,
-            resources: embedded_resources,
+            module_bytecodes: BTreeMap::new(),
+            all_modules: BTreeSet::new(),
+            all_packages: BTreeSet::new(),
+            resources: BTreeMap::new(),
             extension_modules: embedded_extension_modules,
             built_extension_modules: embedded_built_extension_modules,
         },
