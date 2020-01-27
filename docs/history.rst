@@ -26,6 +26,8 @@ Not yet released.
 Bug Fixes
 ^^^^^^^^^
 
+* Building embedded Python resources now emits warnings when ``__file__``
+  is seen. (This was a regression in 0.5.)
 * Missing parent packages are now automatically added when constructing
   embedded resources. (This was a regression in 0.5.)
 

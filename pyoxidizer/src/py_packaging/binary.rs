@@ -180,6 +180,24 @@ impl EmbeddedPythonBinaryData {
         target: &str,
         opt_level: &str,
     ) -> Result<EmbeddedPythonBinaryData> {
+        let mut file_seen = false;
+        for module in exe.resources.find_dunder_file()? {
+            file_seen = true;
+            warn!(logger, "warning: {} contains __file__", module);
+        }
+
+        if file_seen {
+            warn!(logger, "__file__ was encountered in some embedded modules");
+            warn!(
+                logger,
+                "PyOxidizer does not set __file__ and this may create problems at run-time"
+            );
+            warn!(
+                logger,
+                "See https://github.com/indygreg/PyOxidizer/issues/69 for more"
+            );
+        }
+
         let library = exe.build_libpython(logger, host, target, opt_level)?;
         let resources = exe.build_embedded_blobs()?;
         warn!(

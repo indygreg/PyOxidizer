@@ -173,32 +173,6 @@ pub fn resolve_python_resources(
         }
     }
 
-    // Audit Python source for __file__, which could be problematic.
-    let mut file_seen = false;
-
-    for (name, request) in &embedded_bytecode_requests {
-        // We can't just look for b"__file__ because the source file may be in
-        // encodings like UTF-16. So we need to decode to Unicode first then look for
-        // the code points.
-        let encoding = python_source_encoding(&request.source);
-
-        let encoder = match encoding_rs::Encoding::for_label(&encoding) {
-            Some(encoder) => encoder,
-            None => encoding_rs::UTF_8,
-        };
-
-        let (source, ..) = encoder.decode(&request.source);
-
-        if source.contains("__file__") {
-            warn!(logger, "warning: {} contains __file__", name);
-            file_seen = true;
-        }
-    }
-
-    if file_seen {
-        warn!(logger, "__file__ was encountered in some modules; PyOxidizer does not set __file__ and this may create problems at run-time; see https://github.com/indygreg/PyOxidizer/issues/69 for more");
-    }
-
     let embedded_bytecodes: BTreeMap<String, PackagedModuleBytecode> = BTreeMap::new();
     let mut all_embedded_modules = BTreeSet::new();
     let mut annotated_package_names = BTreeSet::new();
