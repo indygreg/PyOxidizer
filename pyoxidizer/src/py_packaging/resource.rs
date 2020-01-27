@@ -281,7 +281,7 @@ impl ResourceData {
 /// Represents an extension module built during packaging.
 ///
 /// This is like a light version of `ExtensionModule`.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ExtensionModuleData {
     /// The module name this extension module is providing.
     pub name: String,

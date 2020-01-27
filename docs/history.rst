@@ -23,6 +23,12 @@ next
 
 Not yet released.
 
+Bug Fixes
+^^^^^^^^^
+
+* Missing parent packages are now automatically added when constructing
+  embedded resources. (This was a regression in 0.5.)
+
 0.5.0
 -----
 

@@ -152,7 +152,7 @@ pub struct ConfigC {
 /// If the license fields are Some value, then license metadata was
 /// present in the distribution. If the values are None, then license
 /// metadata is not known.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct LibraryDepends {
     /// Name of the library we depend on.
     pub name: String,
@@ -171,7 +171,7 @@ pub struct LibraryDepends {
 }
 
 /// Describes an extension module in a Python distribution.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ExtensionModule {
     /// Name of the Python module this extension module provides.
     pub module: String,
