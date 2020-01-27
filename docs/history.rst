@@ -20,10 +20,12 @@ Blog Posts
 Version History
 ===============
 
-next
-----
+.. _version_0_5_1:
 
-Not yet released.
+0.5.1
+-----
+
+Released January 26, 2020.
 
 Bug Fixes
 ^^^^^^^^^
