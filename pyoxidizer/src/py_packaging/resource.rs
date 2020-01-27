@@ -2,6 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+/*!
+Defines primitives representing Python resources.
+*/
+
 use {
     super::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode},
     super::distribution::ExtensionModule,

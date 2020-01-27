@@ -2,6 +2,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+/*!
+Functionality for interacting with Python.
+
+This module tree holds functionality that is centered around Python.
+*/
+
 pub mod binary;
 pub mod bytecode;
 pub mod config;

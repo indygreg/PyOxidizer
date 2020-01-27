@@ -2,6 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+/*!
+Configuring a Python interpreter.
+*/
+
 /// Determine the default raw allocator for a target triple.
 pub fn default_raw_allocator(target_triple: &str) -> RawAllocator {
     // Jemalloc doesn't work on Windows.
