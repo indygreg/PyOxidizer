@@ -79,7 +79,9 @@ impl PreBuiltPythonExecutable {
         target: &str,
         opt_level: &str,
     ) -> Result<PythonLibrary> {
-        let resources = self.resources.package(&self.distribution.python_exe)?;
+        let resources = self
+            .resources
+            .package(logger, &self.distribution.python_exe)?;
 
         let temp_dir = TempDir::new("pyoxidizer-build-exe")?;
         let temp_dir_path = temp_dir.path();
@@ -116,8 +118,10 @@ impl PreBuiltPythonExecutable {
     }
 
     /// Generate data embedded in binaries representing Python resource data.
-    pub fn build_embedded_blobs(&self) -> Result<EmbeddedResourcesBlobs> {
-        let embedded_resources = self.resources.package(&self.distribution.python_exe)?;
+    pub fn build_embedded_blobs(&self, logger: &slog::Logger) -> Result<EmbeddedResourcesBlobs> {
+        let embedded_resources = self
+            .resources
+            .package(logger, &self.distribution.python_exe)?;
 
         let mut module_names = Vec::new();
         let mut modules = Vec::new();
@@ -199,7 +203,7 @@ impl EmbeddedPythonBinaryData {
         }
 
         let library = exe.build_libpython(logger, host, target, opt_level)?;
-        let resources = exe.build_embedded_blobs()?;
+        let resources = exe.build_embedded_blobs(logger)?;
         warn!(
             logger,
             "deriving custom importlib modules to support in-memory importing"

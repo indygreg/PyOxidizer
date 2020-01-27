@@ -9,9 +9,9 @@ use {
     },
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
     super::resource::{
-        packages_from_module_name, BytecodeModule, BytecodeOptimizationLevel, DataLocation,
-        ExtensionModuleData, PackagedModuleBytecode, PackagedModuleSource, ResourceData,
-        SourceModule,
+        packages_from_module_name, packages_from_module_names, BytecodeModule,
+        BytecodeOptimizationLevel, DataLocation, ExtensionModuleData, PackagedModuleBytecode,
+        PackagedModuleSource, ResourceData, SourceModule,
     },
     anyhow::Result,
     byteorder::{LittleEndian, WriteBytesExt},
@@ -255,7 +255,11 @@ impl EmbeddedPythonResourcesPrePackaged {
     ///
     /// This method performs actions necessary to produce entities which will allow the
     /// resources to be embedded in a binary.
-    pub fn package(&self, python_exe: &Path) -> Result<EmbeddedPythonResources> {
+    pub fn package(
+        &self,
+        logger: &slog::Logger,
+        python_exe: &Path,
+    ) -> Result<EmbeddedPythonResources> {
         let mut all_modules = BTreeSet::new();
         let mut all_packages = BTreeSet::new();
 
@@ -314,6 +318,8 @@ impl EmbeddedPythonResourcesPrePackaged {
                 continue;
             }
 
+            all_modules.insert(name.clone());
+
             extension_modules.insert(name.clone(), em.clone());
         }
 
@@ -323,11 +329,44 @@ impl EmbeddedPythonResourcesPrePackaged {
                 continue;
             }
 
+            all_modules.insert(name.clone());
+            if em.is_package {
+                all_packages.insert(em.name.clone());
+            }
+
             built_extension_modules.insert(name.clone(), em.clone());
         }
 
-        let resources = self.resources.clone();
-        all_packages.extend(resources.keys().cloned());
+        let derived_package_names = packages_from_module_names(all_modules.iter().cloned());
+
+        for package in derived_package_names {
+            if !all_packages.contains(&package) {
+                warn!(
+                    logger,
+                    "package {} not initially detected as such; possible package detection bug",
+                    package
+                );
+                all_packages.insert(package);
+            }
+        }
+
+        let resources = self
+            .resources
+            .iter()
+            .filter_map(|(package, values)| {
+                if !all_packages.contains(package) {
+                    warn!(
+                        logger,
+                        "package {} does not exist; excluding resources: {:?}",
+                        package,
+                        values.keys()
+                    );
+                    None
+                } else {
+                    Some((package.clone(), values.clone()))
+                }
+            })
+            .collect();
 
         Ok(EmbeddedPythonResources {
             module_sources,
