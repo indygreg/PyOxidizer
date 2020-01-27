@@ -15,6 +15,8 @@ Blog Posts
 * `Faster In-Memory Python Module Importing <https://gregoryszorc.com/blog/2018/12/28/faster-in-memory-python-module-importing>`_ (2018-12-28)
 * `Distributing Standalone Python Applications <https://gregoryszorc.com/blog/2018/12/18/distributing-standalone-python-applications>`_ (2018-12-18)
 
+.. _version_history:
+
 Version History
 ===============
 
@@ -34,6 +36,8 @@ Bug Fixes
   is seen. (This was a regression in 0.5.)
 * Missing parent packages are now automatically added when constructing
   embedded resources. (This was a regression in 0.5.)
+
+.. _version_0_5_0:
 
 0.5.0
 -----
@@ -145,6 +149,8 @@ Other Relevant Changes
   project (the ``python3-sys`` and ``cpython`` crates. All changes required
   by PyOxidizer are now present in the official project.
 
+.. _version_0_4_0:
+
 0.4.0
 -----
 
@@ -202,6 +208,8 @@ All Other Relevant Changes
 
 * Built extension modules marked as app-relative are now embedded in the
   finaly binary rather than being ignored.
+
+.. _version_0_3_0:
 
 0.3.0
 -----
@@ -286,6 +294,8 @@ All Other Relevant Changes
 * The list of modules being added by the Python standard library is
   no longer printed during rule execution unless ``--verbose`` is used.
   The output was excessive and usually not very informative.
+
+.. _version_0_2_0:
 
 0.2.0
 -----
