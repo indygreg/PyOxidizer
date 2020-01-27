@@ -252,6 +252,10 @@ impl EmbeddedPythonResourcesPrePackaged {
         Ok(res)
     }
 
+    /// Transform this instance into embedded resources data.
+    ///
+    /// This method performs actions necessary to produce entities which will allow the
+    /// resources to be embedded in a binary.
     pub fn package(&self, python_exe: &Path) -> Result<EmbeddedPythonResources> {
         let mut all_modules = BTreeSet::new();
         let mut all_packages = BTreeSet::new();
