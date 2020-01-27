@@ -18,8 +18,10 @@ Blog Posts
 Version History
 ===============
 
-next
-----
+0.5.0
+-----
+
+Released January 26, 2020.
 
 General Notes
 ^^^^^^^^^^^^^
