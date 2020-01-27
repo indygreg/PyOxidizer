@@ -162,25 +162,6 @@ pub fn resolve_python_resources(
     let read_files: Vec<PathBuf> = Vec::new();
     let license_files_path = None;
 
-    // Add empty modules for missing parent packages. This could happen if there are
-    // namespace packages, for example.
-    let mut missing_packages = BTreeSet::new();
-    for name in embedded_bytecode_requests.keys() {
-        for package in packages_from_module_name(&name) {
-            if !embedded_bytecode_requests.contains_key(&package) {
-                missing_packages.insert(package.clone());
-            }
-        }
-    }
-
-    for package in missing_packages {
-        warn!(
-            logger,
-            "adding empty module for missing package {}", package
-        );
-        embedded_bytecode_requests.insert(package.clone(), BytecodeRequest { source: Vec::new() });
-    }
-
     // Add required extension modules, as some don't show up in the modules list
     // and may have been filtered or not added in the first place.
     for (name, variants) in &dist.extension_modules {
