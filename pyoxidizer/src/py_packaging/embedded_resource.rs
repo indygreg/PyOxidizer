@@ -230,6 +230,28 @@ impl EmbeddedPythonResourcesPrePackaged {
         Ok(())
     }
 
+    /// Searches for embedded module sources for references to __file__.
+    ///
+    /// __file__ usage can be problematic for in-memory modules. This method searches
+    /// for its occurrences and returns module names having it present.
+    pub fn find_dunder_file(&self) -> Result<BTreeSet<String>> {
+        let mut res = BTreeSet::new();
+
+        for (name, module) in &self.source_modules {
+            if module.has_dunder_file()? {
+                res.insert(name.clone());
+            }
+        }
+
+        for (name, module) in &self.bytecode_modules {
+            if module.has_dunder_file()? {
+                res.insert(name.clone());
+            }
+        }
+
+        Ok(res)
+    }
+
     pub fn package(&self, python_exe: &Path) -> Result<EmbeddedPythonResources> {
         let mut all_modules = BTreeSet::new();
         let mut all_packages = BTreeSet::new();
@@ -684,5 +706,37 @@ mod tests {
                 is_package: true,
             })
         );
+    }
+
+    #[test]
+    fn test_find_dunder_file() -> Result<()> {
+        let mut r = EmbeddedPythonResourcesPrePackaged::default();
+        assert_eq!(r.find_dunder_file()?.len(), 0);
+
+        r.add_source_module(&SourceModule {
+            name: "foo.bar".to_string(),
+            source: DataLocation::Memory(vec![]),
+            is_package: false,
+        });
+        assert_eq!(r.find_dunder_file()?.len(), 0);
+
+        r.add_source_module(&SourceModule {
+            name: "baz".to_string(),
+            source: DataLocation::Memory(Vec::from("import foo; if __file__ == 'ignored'")),
+            is_package: false,
+        });
+        assert_eq!(r.find_dunder_file()?.len(), 1);
+        assert!(r.find_dunder_file()?.contains("baz"));
+
+        r.add_bytecode_module(&BytecodeModule {
+            name: "bytecode".to_string(),
+            source: DataLocation::Memory(Vec::from("import foo; if __file__")),
+            optimize_level: BytecodeOptimizationLevel::Zero,
+            is_package: false,
+        });
+        assert_eq!(r.find_dunder_file()?.len(), 2);
+        assert!(r.find_dunder_file()?.contains("bytecode"));
+
+        Ok(())
     }
 }

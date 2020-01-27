@@ -2,16 +2,17 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use anyhow::{anyhow, Context, Error, Result};
-use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet};
-use std::convert::TryFrom;
-use std::path::PathBuf;
-
-use super::bytecode::{BytecodeCompiler, CompileMode};
-use super::distribution::ExtensionModule;
-use super::fsscan::{is_package_from_path, PythonFileResource};
-use crate::app_packaging::resource::{FileContent, FileManifest};
+use {
+    super::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode},
+    super::distribution::ExtensionModule,
+    super::fsscan::{is_package_from_path, PythonFileResource},
+    crate::app_packaging::resource::{FileContent, FileManifest},
+    anyhow::{anyhow, Context, Error, Result},
+    serde::{Deserialize, Serialize},
+    std::collections::{BTreeMap, BTreeSet},
+    std::convert::TryFrom,
+    std::path::PathBuf,
+};
 
 /// Resolve the set of packages present in a fully qualified module name.
 pub fn packages_from_module_name(module: &str) -> BTreeSet<String> {
@@ -91,6 +92,23 @@ pub fn resolve_path_for_module(
     module_path.push(format!("{}{}", basename, suffix));
 
     module_path
+}
+
+/// Whether __file__ occurs in Python source code.
+pub fn has_dunder_file(source: &[u8]) -> Result<bool> {
+    // We can't just look for b"__file__ because the source file may be in
+    // encodings like UTF-16. So we need to decode to Unicode first then look for
+    // the code points.
+    let encoding = python_source_encoding(source);
+
+    let encoder = match encoding_rs::Encoding::for_label(&encoding) {
+        Some(encoder) => encoder,
+        None => encoding_rs::UTF_8,
+    };
+
+    let (source, ..) = encoder.decode(source);
+
+    Ok(source.contains("__file__"))
 }
 
 /// Represents binary data that can be fetched from somewhere.
@@ -176,6 +194,11 @@ impl SourceModule {
 
         Ok(())
     }
+
+    /// Whether the source code for this module has __file__
+    pub fn has_dunder_file(&self) -> Result<bool> {
+        has_dunder_file(&self.source.resolve()?)
+    }
 }
 
 /// An optimization level for Python bytecode.
@@ -238,6 +261,11 @@ impl BytecodeModule {
             self.optimize_level,
             mode,
         )
+    }
+
+    /// Whether the source for this module has __file__.
+    pub fn has_dunder_file(&self) -> Result<bool> {
+        has_dunder_file(&self.source.resolve()?)
     }
 }
 
