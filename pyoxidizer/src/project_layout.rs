@@ -277,6 +277,7 @@ pub fn add_pyoxidizer(project_dir: &Path, _suppress_help: bool) -> Result<()> {
     Ok(())
 }
 
+/// Update the Cargo.toml of a new Rust project to use pyembed.
 pub fn update_new_cargo_toml(path: &Path) -> Result<()> {
     let mut fh = std::fs::OpenOptions::new().append(true).open(path)?;
 
