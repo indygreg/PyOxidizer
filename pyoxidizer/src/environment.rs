@@ -99,7 +99,9 @@ impl Environment {
     /// yet.
     pub fn as_pyembed_location(&self) -> PyembedLocation {
         match &self.pyoxidizer_source {
-            PyOxidizerSource::LocalPath { path } => PyembedLocation::Path(path.join("pyembed")),
+            PyOxidizerSource::LocalPath { path } => {
+                PyembedLocation::Path(canonicalize_path(&path.join("pyembed")).unwrap())
+            }
             PyOxidizerSource::GitUrl { .. } => {
                 PyembedLocation::Version(PYOXIDIZER_VERSION.to_string())
             }
