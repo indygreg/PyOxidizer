@@ -25,6 +25,14 @@ next
 
 Not yet released.
 
+Backwards Compatibility Notes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* The fields of ``EmbeddedPythonConfig`` have been renamed and reordered to
+  align with Python 3.8's config API naming. This was done for the Starlark
+  type in version 0.5. We have made similar changes to 0.6 so naming is
+  consistent across the various types.
+
 New Features
 ^^^^^^^^^^^^
 

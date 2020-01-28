@@ -226,15 +226,12 @@ impl EmbeddedPythonConfig {
 
         Ok(Value::new(EmbeddedPythonConfig {
             bytes_warning: bytes_warning.to_int().unwrap() as i32,
-            dont_write_bytecode: !write_bytecode,
             ignore_environment,
             inspect,
             interactive,
             isolated,
             legacy_windows_fs_encoding,
             legacy_windows_stdio,
-            no_site: !site_import,
-            no_user_site_directory: !user_site_directory,
             optimize_level: optimize_level.to_int().unwrap(),
             parser_debug,
             quiet,
@@ -242,6 +239,7 @@ impl EmbeddedPythonConfig {
             stdio_encoding_errors,
             unbuffered_stdio,
             filesystem_importer,
+            site_import,
             sys_frozen,
             sys_meipass,
             sys_paths,
@@ -249,7 +247,9 @@ impl EmbeddedPythonConfig {
             run_mode,
             terminfo_resolution,
             use_hash_seed,
+            user_site_directory,
             verbose: verbose.to_int().unwrap() as i32,
+            write_bytecode,
             write_modules_directory_env,
         }))
     }
@@ -337,15 +337,12 @@ mod tests {
 
         let wanted = crate::py_packaging::config::EmbeddedPythonConfig {
             bytes_warning: 0,
-            dont_write_bytecode: true,
             ignore_environment: true,
             inspect: false,
             interactive: false,
             isolated: false,
             legacy_windows_fs_encoding: false,
             legacy_windows_stdio: false,
-            no_site: true,
-            no_user_site_directory: true,
             optimize_level: 0,
             parser_debug: false,
             quiet: false,
@@ -355,12 +352,15 @@ mod tests {
             stdio_encoding_errors: None,
             unbuffered_stdio: false,
             filesystem_importer: false,
+            site_import: false,
             sys_frozen: false,
             sys_meipass: false,
             sys_paths: Vec::new(),
             raw_allocator: default_raw_allocator(crate::project_building::HOST),
             run_mode: RunMode::Repl,
             terminfo_resolution: TerminfoResolution::Dynamic,
+            user_site_directory: false,
+            write_bytecode: false,
             write_modules_directory_env: None,
         };
 
