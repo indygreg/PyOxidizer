@@ -28,6 +28,11 @@ Not yet released.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* The ``pyembed`` crate is no longer added to created Rust projects. Instead,
+  the generated ``Cargo.toml`` will reference a version of the ``pyembed`` crate
+  identical to the ``PyOxidizer`` version currently running. Or if ``pyoxidizer``
+  is running from a Git checkout of the canonical ``PyOxidizer`` Git repository,
+  a local filesystem path will be used.
 * The fields of ``EmbeddedPythonConfig`` and ``pyembed::PythonConfig`` have been
   renamed and reordered to align with Python 3.8's config API naming. This was done
   for the Starlark type in version 0.5. We have made similar changes to 0.6 so

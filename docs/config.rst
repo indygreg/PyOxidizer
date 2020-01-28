@@ -10,6 +10,8 @@ files to configure run-time behavior.
 Starlark is a dialect of Python intended to be used as a configuration
 language and the syntax should be familiar to any Python programmer.
 
+.. _config_finding_configuration_files:
+
 Finding Configuration Files
 ===========================
 
