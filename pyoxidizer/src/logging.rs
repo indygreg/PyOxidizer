@@ -39,3 +39,17 @@ pub fn logger_from_env(min_level: slog::Level) -> LoggerContext {
         logger: slog::Logger::root(PrintlnDrain { min_level }.fuse(), slog::o!()),
     }
 }
+
+impl Default for LoggerContext {
+    fn default() -> Self {
+        LoggerContext {
+            logger: slog::Logger::root(
+                PrintlnDrain {
+                    min_level: slog::Level::Warning,
+                }
+                .fuse(),
+                slog::o!(),
+            ),
+        }
+    }
+}

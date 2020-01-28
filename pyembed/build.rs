@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    pyoxidizerlib::logging::logger_from_env, pyoxidizerlib::project_building::run_from_build,
+    pyoxidizerlib::logging::LoggerContext, pyoxidizerlib::project_building::run_from_build,
     std::env, std::path::PathBuf,
 };
 
@@ -37,7 +37,7 @@ fn main() {
         println!("{}", metadata);
     } else {
         println!("invoking PyOxidizer natively to build artifacts");
-        let logger_context = logger_from_env(slog::Level::Info);
+        let logger_context = LoggerContext::default();
 
         let target = if let Ok(target) = env::var("PYOXIDIZER_BUILD_TARGET") {
             Some(target)

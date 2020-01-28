@@ -95,12 +95,12 @@ fn main() {
 // a while.
 /*
 use {
-    pyoxidizerlib::logging::logger_from_env,
+    pyoxidizerlib::logging::LoggerContext,
     pyoxidizerlib::project_building::run_from_build,
 }
 
 fn main() {
-    let logger_context = logger_from_env(slog::Level::Info);
+    let logger_context = LoggerContext::default();
     run_from_build(&logger_context.logger, "build.rs", Some("embedded")).unwrap();
 }
 */
