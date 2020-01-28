@@ -3,9 +3,22 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    pyoxidizerlib::logging::LoggerContext, pyoxidizerlib::project_building::run_from_build,
-    std::env, std::path::PathBuf,
+    pyoxidizerlib::logging::LoggerContext,
+    pyoxidizerlib::project_building::run_from_build,
+    std::env,
+    std::path::{Path, PathBuf},
 };
+
+/// Build with PyOxidizer artifacts in a directory.
+fn build_with_artifacts_in_dir(path: &Path) {
+    println!("using pre-built artifacts from {}", path.display());
+
+    // Emit the cargo metadata lines to register libraries for linking.
+    let cargo_metadata_path = path.join("cargo_metadata.txt");
+    let metadata = std::fs::read_to_string(&cargo_metadata_path)
+        .expect(format!("failed to read {}", cargo_metadata_path.display()).as_str());
+    println!("{}", metadata);
+}
 
 fn main() {
     // We support using pre-built artifacts, in which case we emit the
@@ -22,19 +35,9 @@ fn main() {
             }
         };
 
-        println!(
-            "using pre-built artifacts from {}",
-            artifact_dir_path.display()
-        );
-
         println!("cargo:rerun-if-env-changed=PYOXIDIZER_REUSE_ARTIFACTS");
         println!("cargo:rerun-if-env-changed=PYOXIDIZER_ARTIFACT_DIR");
-
-        // Emit the cargo metadata lines to register libraries for linking.
-        let cargo_metadata_path = artifact_dir_path.join("cargo_metadata.txt");
-        let metadata = std::fs::read_to_string(&cargo_metadata_path)
-            .expect(format!("failed to read {}", cargo_metadata_path.display()).as_str());
-        println!("{}", metadata);
+        build_with_artifacts_in_dir(&artifact_dir_path);
     } else {
         println!("invoking PyOxidizer natively to build artifacts");
         let logger_context = LoggerContext::default();
