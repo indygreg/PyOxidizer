@@ -42,6 +42,13 @@ New Features
   by a filename. See the ``run_file`` argument of
   :ref:`config_python_interpreter_config`.
 
+Other Relevant Changes
+^^^^^^^^^^^^^^^^^^^^^^
+
+* The ``pyembed`` crate's ``build.rs`` has been tweaked so it can support
+  calling out to ``pyoxidizer``. It also no longer has a build dependency
+  on ``pyoxidizer``.
+
 .. _version_0_5_1:
 
 0.5.1

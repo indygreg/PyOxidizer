@@ -6,9 +6,6 @@ edition = "2018"
 license = "Python-2.0 AND MPL-2.0"
 build = "build.rs"
 
-[build-dependencies]
-pyoxidizer = { path = "../pyoxidizer" }
-
 [dependencies]
 # Update documentation in lib.rs when new dependencies are added.
 byteorder = "1"

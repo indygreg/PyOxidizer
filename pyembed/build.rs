@@ -3,8 +3,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    pyoxidizerlib::logging::LoggerContext,
-    pyoxidizerlib::project_building::run_from_build,
     std::env,
     std::path::{Path, PathBuf},
 };
@@ -20,6 +18,40 @@ fn build_with_artifacts_in_dir(path: &Path) {
     println!("{}", metadata);
 }
 
+/// Build by calling a `pyoxidizer` executable to generate build artifacts.
+fn build_with_pyoxidizer_exe(exe: Option<String>, resolve_target: Option<&str>) {
+    let pyoxidizer_exe = if let Some(path) = exe {
+        path.clone()
+    } else {
+        "pyoxidizer".to_string()
+    };
+
+    let mut args = vec!["run-build-script", "build.rs"];
+    if let Some(target) = resolve_target {
+        args.push("--target");
+        args.push(target);
+    }
+
+    match std::process::Command::new(pyoxidizer_exe)
+        .args(args)
+        .status()
+    {
+        Ok(status) => {
+            if !status.success() {
+                panic!("`pyoxidizer run-build-script` failed");
+            }
+        }
+        Err(e) => panic!("`pyoxidizer run-build-script` failed: {}", e.to_string()),
+    }
+}
+
+/* UNCOMMENT THE FOLLOWING TO ENABLE BUILDING IN LIBRARY MODE.
+
+use {
+    pyoxidizerlib::logging::LoggerContext,
+    pyoxidizerlib::project_building::run_from_build,
+};
+
 /// Build by calling PyOxidizer natively as a Rust library.
 ///
 /// Uses the build output from config file target `resolve_target` or the
@@ -30,6 +62,7 @@ fn build_with_pyoxidizer_native(resolve_target: Option<&str>) {
 
     run_from_build(&logger_context.logger, "build.rs", resolve_target).unwrap();
 }
+*/
 
 fn main() {
     // We support using pre-built artifacts, in which case we emit the
@@ -56,10 +89,13 @@ fn main() {
             None
         };
 
-        build_with_pyoxidizer_native(if let Some(target) = &target {
-            Some(target.as_ref())
-        } else {
-            None
-        });
+        build_with_pyoxidizer_exe(
+            env::var("PYOXIDIZER_EXE").ok(),
+            if let Some(target) = &target {
+                Some(target.as_ref())
+            } else {
+                None
+            },
+        );
     }
 }
