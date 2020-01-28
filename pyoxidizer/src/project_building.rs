@@ -33,17 +33,40 @@ pub fn find_pyoxidizer_config_file(start_dir: &Path) -> Option<PathBuf> {
 
 /// Find a PyOxidizer configuration file from walking the filesystem or an
 /// environment variable override.
+///
+/// We first honor the `PYOXIDIZER_CONFIG` environment variable. This allows
+/// explicit control over an exact file to use.
+///
+/// We then try scanning ancestor directories of `OUT_DIR`. This variable is
+/// populated by Cargo to contain the output directory for build artifacts
+/// for this crate. The assumption here is that this code is running from
+/// the `pyembed` build script or as `pyoxidizer`. In the latter, `OUT_DIR`
+/// should not be set. In the former, the crate that is building `pyembed`
+/// likely has a config file and `OUT_DIR` is in that crate. This doesn't
+/// always hold. But until Cargo starts passing an environment variable
+/// defining the path of the main or calling manifest being built, it is
+/// the best we can do.
+///
+/// If none of the above find a config file, we fall back to traversing ancestors
+/// of `start_dir`.
 pub fn find_pyoxidizer_config_file_env(logger: &slog::Logger, start_dir: &Path) -> Option<PathBuf> {
-    match env::var("PYOXIDIZER_CONFIG") {
-        Ok(config_env) => {
-            warn!(
-                logger,
-                "using PyOxidizer config file from PYOXIDIZER_CONFIG: {}", config_env
-            );
-            Some(PathBuf::from(config_env))
-        }
-        Err(_) => find_pyoxidizer_config_file(start_dir),
+    if let Ok(path) = env::var("PYOXIDIZER_CONFIG") {
+        warn!(
+            logger,
+            "using PyOxidizer config file from PYOXIDIZER_CONFIG: {}", path
+        );
+        return Some(PathBuf::from(path));
     }
+
+    if let Ok(path) = env::var("OUT_DIR") {
+        warn!(logger, "looking for config file in ancestry of {}", path);
+        let res = find_pyoxidizer_config_file(&Path::new(&path));
+        if res.is_some() {
+            return res;
+        }
+    }
+
+    find_pyoxidizer_config_file(start_dir)
 }
 
 /// Build an executable embedding Python using an existing Rust project.
