@@ -45,7 +45,6 @@ reqwest = "0.9"
 rustc_version = "0.2"
 semver = "0.9"
 serde = { version = "1.0", features = ["derive"] }
-serde_cbor = "0.10"
 serde_json = "1.0"
 sha2 = "0.8"
 slog = "2.4"
@@ -56,8 +55,6 @@ url = "2.1"
 uuid = { version = "0.8", features = ["v4", "v5"] }
 version-compare = "0.0"
 walkdir = "2"
-xml-rs = "0.8"
-zip = "0.5"
 zstd = "0.5"
 
 [dev-dependencies]
