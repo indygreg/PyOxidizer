@@ -121,7 +121,7 @@ pub struct PythonConfig {
     /// Whether to suppress writing of ``.pyc`` files when importing ``.py``
     /// files from the filesystem. This is typically irrelevant since modules
     /// are imported from memory.
-    pub dont_write_bytecode: bool,
+    pub write_bytecode: bool,
 
     /// Whether stdout and stderr streams should be unbuffered.
     pub unbuffered_stdio: bool,

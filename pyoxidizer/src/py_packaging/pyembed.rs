@@ -39,7 +39,7 @@ pub fn derive_python_config(
          isolated: {},\n    \
          legacy_windows_fs_encoding: {},\n    \
          legacy_windows_stdio: {},\n    \
-         dont_write_bytecode: {},\n    \
+         write_bytecode: {},\n    \
          unbuffered_stdio: {},\n    \
          parser_debug: {},\n    \
          quiet: {},\n    \
@@ -83,7 +83,7 @@ pub fn derive_python_config(
         embedded.isolated,
         embedded.legacy_windows_fs_encoding,
         embedded.legacy_windows_stdio,
-        !embedded.write_bytecode,
+        embedded.write_bytecode,
         embedded.unbuffered_stdio,
         embedded.parser_debug,
         embedded.quiet,

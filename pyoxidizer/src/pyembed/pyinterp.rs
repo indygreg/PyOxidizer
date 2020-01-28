@@ -361,7 +361,7 @@ impl<'a> MainPythonInterpreter<'a> {
         unsafe {
             pyffi::Py_BytesWarningFlag = config.bytes_warning;
             pyffi::Py_DebugFlag = if config.parser_debug { 1 } else { 0 };
-            pyffi::Py_DontWriteBytecodeFlag = if config.dont_write_bytecode { 1 } else { 0 };
+            pyffi::Py_DontWriteBytecodeFlag = if config.write_bytecode { 0 } else { 1 };
             // TODO we could potentially have the config be an Option<i32> so we can control
             // the hash seed explicitly. But the APIs in Python 3.7 aren't great here, as we'd
             // need to set an environment variable. Once we support the new initialization
