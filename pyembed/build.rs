@@ -20,6 +20,17 @@ fn build_with_artifacts_in_dir(path: &Path) {
     println!("{}", metadata);
 }
 
+/// Build by calling PyOxidizer natively as a Rust library.
+///
+/// Uses the build output from config file target `resolve_target` or the
+/// default if not set.
+fn build_with_pyoxidizer_native(resolve_target: Option<&str>) {
+    println!("invoking PyOxidizer natively to build artifacts");
+    let logger_context = LoggerContext::default();
+
+    run_from_build(&logger_context.logger, "build.rs", resolve_target).unwrap();
+}
+
 fn main() {
     // We support using pre-built artifacts, in which case we emit the
     // cargo metadata lines from the "original" build to "register" the
@@ -39,21 +50,16 @@ fn main() {
         println!("cargo:rerun-if-env-changed=PYOXIDIZER_ARTIFACT_DIR");
         build_with_artifacts_in_dir(&artifact_dir_path);
     } else {
-        println!("invoking PyOxidizer natively to build artifacts");
-        let logger_context = LoggerContext::default();
-
         let target = if let Ok(target) = env::var("PYOXIDIZER_BUILD_TARGET") {
             Some(target)
         } else {
             None
         };
 
-        let resolve_target = if let Some(target) = &target {
+        build_with_pyoxidizer_native(if let Some(target) = &target {
             Some(target.as_ref())
         } else {
             None
-        };
-
-        run_from_build(&logger_context.logger, "build.rs", resolve_target).unwrap();
+        });
     }
 }
