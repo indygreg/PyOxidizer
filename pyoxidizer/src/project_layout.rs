@@ -190,7 +190,9 @@ pub fn add_pyoxidizer(project_dir: &Path, _suppress_help: bool) -> Result<()> {
     Ok(())
 }
 
-/// How to defined the ``pyembed`` crate dependency.
+/// How to define the ``pyembed`` crate dependency.
+///
+/// TODO support a Git repository location.
 pub enum PyembedLocation {
     /// Use a specific version, installed from the crate registry.
     ///
