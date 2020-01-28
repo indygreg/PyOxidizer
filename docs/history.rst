@@ -28,6 +28,8 @@ Not yet released.
 New Features
 ^^^^^^^^^^^^
 
+* The ``pyembed`` crate now builds against published ``cpython`` and
+  ``python3-sys`` crates instead of a a specific Git commit.
 * Embedded Python interpreters can now be configured to run a file specified
   by a filename. See the ``run_file`` argument of
   :ref:`config_python_interpreter_config`.

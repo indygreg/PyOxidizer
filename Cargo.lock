@@ -285,12 +285,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "cpython"
-version = "0.3.0"
-source = "git+https://github.com/dgrunwald/rust-cpython?rev=a989865c3dd861267a42ceb726f2fc831637fe5b#a989865c3dd861267a42ceb726f2fc831637fe5b"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
- "python3-sys 0.3.0 (git+https://github.com/dgrunwald/rust-cpython?rev=a989865c3dd861267a42ceb726f2fc831637fe5b)",
+ "python3-sys 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1235,12 +1235,12 @@ name = "pyembed"
 version = "0.6.0"
 dependencies = [
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "cpython 0.3.0 (git+https://github.com/dgrunwald/rust-cpython?rev=a989865c3dd861267a42ceb726f2fc831637fe5b)",
+ "cpython 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "jemalloc-sys 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)",
  "pyoxidizer 0.6.0",
- "python3-sys 0.3.0 (git+https://github.com/dgrunwald/rust-cpython?rev=a989865c3dd861267a42ceb726f2fc831637fe5b)",
+ "python3-sys 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "slog 2.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "uuid 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -1293,8 +1293,8 @@ dependencies = [
 
 [[package]]
 name = "python3-sys"
-version = "0.3.0"
-source = "git+https://github.com/dgrunwald/rust-cpython?rev=a989865c3dd861267a42ceb726f2fc831637fe5b#a989865c3dd861267a42ceb726f2fc831637fe5b"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2326,7 +2326,7 @@ dependencies = [
 "checksum copy_dir 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6e4281031634644843bd2f5aa9c48cf98fc48d6b083bd90bb11becf10deaf8b0"
 "checksum core-foundation 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)" = "25b9e03f145fd4f2bf705e07b900cd41fc636598fe5dc452fd0db1441c3f496d"
 "checksum core-foundation-sys 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e7ca8a5221364ef15ce201e8ed2f609fc312682a8f4e0e3d4aa5879764e0fa3b"
-"checksum cpython 0.3.0 (git+https://github.com/dgrunwald/rust-cpython?rev=a989865c3dd861267a42ceb726f2fc831637fe5b)" = "<none>"
+"checksum cpython 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "86eab84f48335293c53d06565bcffe4024f7294edaf223e499fda536532e4b55"
 "checksum crc32fast 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ba125de2af0df55319f41944744ad91c71113bf74a4646efff39afe1f6842db1"
 "checksum crossbeam-deque 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)" = "c3aa945d63861bfe624b55d153a39684da1e8c0bc8fba932f7ee3a3c16cea3ca"
 "checksum crossbeam-epoch 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5064ebdbf05ce3cb95e45c8b086f72263f4166b29b97f6baff7ef7fe047b55ac"
@@ -2435,7 +2435,7 @@ dependencies = [
 "checksum proc-macro-hack 0.5.11 (registry+https://github.com/rust-lang/crates.io-index)" = "ecd45702f76d6d3c75a80564378ae228a85f0b59d2f3ed43c91b4a69eb2ebfc5"
 "checksum proc-macro2 1.0.8 (registry+https://github.com/rust-lang/crates.io-index)" = "3acb317c6ff86a4e579dfa00fc5e6cca91ecbb4e7eb2df0468805b674eb88548"
 "checksum publicsuffix 1.5.4 (registry+https://github.com/rust-lang/crates.io-index)" = "3bbaa49075179162b49acac1c6aa45fb4dafb5f13cf6794276d77bc7fd95757b"
-"checksum python3-sys 0.3.0 (git+https://github.com/dgrunwald/rust-cpython?rev=a989865c3dd861267a42ceb726f2fc831637fe5b)" = "<none>"
+"checksum python3-sys 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d296550fff0db9d77bae50fe3ecd5997e4929aadca4444e57b22a4bc3bf24fd3"
 "checksum quick-error 1.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
 "checksum quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "053a8c8bcc71fcce321828dc897a98ab9760bef03a4fc36693c231e5b3216cfe"
 "checksum rand 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)" = "552840b97013b1a26992c11eac34bdd778e464601a4c2054b5f0bff7c6761293"

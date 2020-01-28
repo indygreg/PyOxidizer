@@ -7,19 +7,12 @@ build = "build.rs"
 
 [dependencies]
 byteorder = "1"
+cpython = { version = "0.4", features = ["py-link-mode-unresolved-static", "python3-sys", "no-auto-initialize"]}
 jemalloc-sys = { version = "0.3", optional = true }
 lazy_static = "1.4"
 libc = "0.2"
+python3-sys = "0.4"
 uuid = { version = "0.8", features = ["v4"] }
-
-[dependencies.python3-sys]
-git = "https://github.com/dgrunwald/rust-cpython"
-rev = "a989865c3dd861267a42ceb726f2fc831637fe5b"
-
-[dependencies.cpython]
-git = "https://github.com/dgrunwald/rust-cpython"
-rev = "a989865c3dd861267a42ceb726f2fc831637fe5b"
-features = ["py-link-mode-unresolved-static", "python3-sys", "no-auto-initialize"]
 
 [features]
 default = []
