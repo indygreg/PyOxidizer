@@ -166,6 +166,9 @@ pub fn build_python_executable(
     opt_level: &str,
     release: bool,
 ) -> Result<(String, Vec<u8>)> {
+    let env = crate::environment::resolve_environment()?;
+    let pyembed_location = env.as_pyembed_location();
+
     let temp_dir = tempdir::TempDir::new("pyoxidizer")?;
 
     // Directory needs to have name of project.
@@ -173,7 +176,7 @@ pub fn build_python_executable(
     let build_path = temp_dir.path().join("build");
     let artifacts_path = temp_dir.path().join("artifacts");
 
-    initialize_project(&project_path, None, &[])?;
+    initialize_project(&project_path, &pyembed_location, None, &[])?;
 
     let exe_path = build_executable_with_rust_project(
         logger,

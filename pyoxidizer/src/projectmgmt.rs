@@ -182,7 +182,10 @@ pub fn init_config_file(
 
 /// Initialize a new Rust project with PyOxidizer support.
 pub fn init_rust_project(project_path: &Path) -> Result<()> {
-    initialize_project(project_path, None, &[])?;
+    let env = crate::environment::resolve_environment()?;
+    let pyembed_location = env.as_pyembed_location();
+
+    initialize_project(project_path, &pyembed_location, None, &[])?;
     println!();
     println!(
         "A new Rust binary application has been created in {}",

@@ -4,11 +4,14 @@
 
 //! Resolve details about the PyOxidizer execution environment.
 
-use anyhow::{anyhow, Result};
-use git2::{Commit, Repository};
-use lazy_static::lazy_static;
-use std::env;
-use std::path::{Path, PathBuf};
+use {
+    crate::project_layout::PyembedLocation,
+    anyhow::{anyhow, Result},
+    git2::{Commit, Repository},
+    lazy_static::lazy_static,
+    std::env,
+    std::path::{Path, PathBuf},
+};
 
 pub const PYOXIDIZER_VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -83,6 +86,25 @@ pub struct Environment {
 
     /// Semantic version string for PyOxidizer.
     pub pyoxidizer_semver: String,
+}
+
+impl Environment {
+    /// Determine the location of the pyembed crate given a run-time environment.
+    ///
+    /// If running from a PyOxidizer Git repository, we reference the pyembed
+    /// crate within the PyOxidizer Git repository. Otherwise we use the pyembed
+    /// crate from the package registry.
+    ///
+    /// There is room to reference a Git repository+commit. But this isn't implemented
+    /// yet.
+    pub fn as_pyembed_location(&self) -> PyembedLocation {
+        match &self.pyoxidizer_source {
+            PyOxidizerSource::LocalPath { path } => PyembedLocation::Path(path.join("pyembed")),
+            PyOxidizerSource::GitUrl { .. } => {
+                PyembedLocation::Version(PYOXIDIZER_VERSION.to_string())
+            }
+        }
+    }
 }
 
 /// Obtain a PyOxidizerSource pointing to the GitUrl this binary was built with.

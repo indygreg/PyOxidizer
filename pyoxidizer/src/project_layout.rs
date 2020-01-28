@@ -317,6 +317,7 @@ pub fn update_new_cargo_toml(path: &Path, pyembed_location: &PyembedLocation) ->
 /// path component.
 pub fn initialize_project(
     project_path: &Path,
+    pyembed_location: &PyembedLocation,
     code: Option<&str>,
     pip_install: &[&str],
 ) -> Result<()> {
@@ -330,12 +331,10 @@ pub fn initialize_project(
         return Err(anyhow!("cargo init failed"));
     }
 
-    let pyembed_location = PyembedLocation::Path(PathBuf::from("pyembed"));
-
     let path = PathBuf::from(project_path);
     let name = path.iter().last().unwrap().to_str().unwrap();
     add_pyoxidizer(&path, true)?;
-    update_new_cargo_toml(&path.join("Cargo.toml"), &pyembed_location)?;
+    update_new_cargo_toml(&path.join("Cargo.toml"), pyembed_location)?;
     write_new_main_rs(&path.join("src").join("main.rs"))?;
     write_new_pyoxidizer_config_file(&path, &name, code, pip_install)?;
 
