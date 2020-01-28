@@ -21,4 +21,5 @@ python3-sys = "0.4"
 uuid = { version = "0.8", features = ["v4"] }
 
 [features]
-default = ["jemalloc-sys"]
+default = []
+jemalloc = ["jemalloc-sys"]
