@@ -252,6 +252,7 @@ pub fn build_pyembed_artifacts(
         } else {
             None
         },
+        true,
     )?;
 
     // TODO should we honor only the specified target if one is given?

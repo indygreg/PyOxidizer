@@ -41,6 +41,9 @@ Backwards Compatibility Notes
 New Features
 ^^^^^^^^^^^^
 
+* The ``register_target()`` Starlark function now accepts an optional
+  ``default_build_script`` argument to define the default target when
+  evaluating in *Rust build script* mode.
 * The ``pyembed`` crate now builds against published ``cpython`` and
   ``python3-sys`` crates instead of a a specific Git commit.
 * Embedded Python interpreters can now be configured to run a file specified

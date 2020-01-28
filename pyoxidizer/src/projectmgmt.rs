@@ -53,6 +53,7 @@ pub fn list_targets(logger: &slog::Logger, project_path: &Path) -> Result<()> {
         false,
         false,
         Some(Vec::new()),
+        false,
     )?;
 
     if res.context.default_target.is_none() {
@@ -99,6 +100,7 @@ pub fn build(
         release,
         verbose,
         resolve_targets,
+        false,
     )?;
 
     for target in res.context.targets_to_resolve() {
@@ -138,6 +140,7 @@ pub fn run(
         release,
         verbose,
         resolve_targets,
+        false,
     )?;
 
     res.context.run_target(target)

@@ -68,6 +68,12 @@ specified by the end-user or is derived from the configuration file.
 The first ``register_target()`` target or the last ``register_target()``
 call passing ``default=True`` is the default target.
 
+When evaluated in *Rust build script mode* (typically via
+``pyoxidizer run-build-script``), the default target will be the one
+specified by the last ``register_target()`` call passing
+``default_build_script=True``, or the default target if no target defines
+itself as the default build script target.
+
 ``PyOxidizer`` calls the registered target functions in order to
 *resolve* the requested set of targets.
 

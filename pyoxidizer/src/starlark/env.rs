@@ -85,8 +85,16 @@ pub struct EnvironmentContext {
     /// Name of default target.
     pub default_target: Option<String>,
 
+    /// Name of default target to resolve in build script mode.
+    pub default_build_script_target: Option<String>,
+
     /// List of targets to resolve.
     pub resolve_targets: Option<Vec<String>>,
+
+    /// Whether we are operating in Rust build script mode.
+    ///
+    /// This will change the default target to resolve.
+    pub build_script_mode: bool,
 }
 
 impl EnvironmentContext {
@@ -100,6 +108,7 @@ impl EnvironmentContext {
         build_release: bool,
         build_opt_level: &str,
         resolve_targets: Option<Vec<String>>,
+        build_script_mode: bool,
     ) -> Result<EnvironmentContext> {
         let parent = config_path
             .parent()
@@ -127,7 +136,9 @@ impl EnvironmentContext {
             targets: BTreeMap::new(),
             targets_order: Vec::new(),
             default_target: None,
+            default_build_script_target: None,
             resolve_targets,
+            build_script_mode,
         })
     }
 
@@ -152,6 +163,7 @@ impl EnvironmentContext {
         callable: Value,
         depends: Vec<String>,
         default: bool,
+        default_build_script: bool,
     ) {
         if !self.targets.contains_key(&target) {
             self.targets_order.push(target.clone());
@@ -168,7 +180,11 @@ impl EnvironmentContext {
         );
 
         if default || self.default_target.is_none() {
-            self.default_target = Some(target);
+            self.default_target = Some(target.clone());
+        }
+
+        if default_build_script || self.default_build_script_target.is_none() {
+            self.default_build_script_target = Some(target);
         }
     }
 
@@ -179,6 +195,8 @@ impl EnvironmentContext {
     pub fn targets_to_resolve(&self) -> Vec<String> {
         if let Some(targets) = &self.resolve_targets {
             targets.clone()
+        } else if self.build_script_mode && self.default_build_script_target.is_some() {
+            vec![self.default_build_script_target.clone().unwrap()]
         } else if let Some(target) = &self.default_target {
             vec![target.to_string()]
         } else {
@@ -322,11 +340,13 @@ fn starlark_register_target(
     callable: &Value,
     depends: &Value,
     default: &Value,
+    default_build_script: &Value,
 ) -> ValueResult {
     let target = required_str_arg("target", &target)?;
     required_type_arg("callable", "function", &callable)?;
     optional_list_arg("depends", "string", &depends)?;
     let default = required_bool_arg("default", &default)?;
+    let default_build_script = required_bool_arg("default_build_script", &default_build_script)?;
 
     let depends = match depends.get_type() {
         "list" => depends
@@ -340,7 +360,13 @@ fn starlark_register_target(
     let mut context = env.get("CONTEXT").expect("CONTEXT not set");
 
     context.downcast_apply_mut(|x: &mut EnvironmentContext| {
-        x.register_target(target.clone(), callable.clone(), depends.clone(), default)
+        x.register_target(
+            target.clone(),
+            callable.clone(),
+            depends.clone(),
+            default,
+            default_build_script,
+        )
     });
 
     Ok(Value::new(None))
@@ -472,8 +498,22 @@ fn starlark_set_build_path(env: &Environment, path: &Value) -> ValueResult {
 
 starlark_module! { global_module =>
     #[allow(clippy::ptr_arg)]
-    register_target(env env, target, callable, depends=None, default=false) {
-        starlark_register_target(&env, &target, &callable, &depends, &default)
+    register_target(
+        env env,
+        target,
+        callable,
+        depends=None,
+        default=false,
+        default_build_script=false
+    ) {
+        starlark_register_target(
+            &env,
+            &target,
+            &callable,
+            &depends,
+            &default,
+            &default_build_script,
+        )
     }
 
     #[allow(clippy::ptr_arg)]

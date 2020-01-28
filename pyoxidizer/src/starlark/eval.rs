@@ -27,6 +27,7 @@ pub fn evaluate_file(
     release: bool,
     verbose: bool,
     resolve_targets: Option<Vec<String>>,
+    build_script_mode: bool,
 ) -> Result<EvalResult, Diagnostic> {
     let context = EnvironmentContext::new(
         logger,
@@ -38,6 +39,7 @@ pub fn evaluate_file(
         // TODO this should be an argument.
         "0",
         resolve_targets,
+        build_script_mode,
     )
     .or_else(|e| {
         Err(Diagnostic {
@@ -97,6 +99,7 @@ pub fn eval_starlark_config_file(
     release: bool,
     verbose: bool,
     resolve_targets: Option<Vec<String>>,
+    build_script_mode: bool,
 ) -> Result<EvalResult> {
     crate::starlark::eval::evaluate_file(
         logger,
@@ -105,6 +108,7 @@ pub fn eval_starlark_config_file(
         release,
         verbose,
         resolve_targets,
+        build_script_mode,
     )
     .or_else(|d| Err(anyhow!(d.message)))
 }

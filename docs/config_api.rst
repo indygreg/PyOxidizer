@@ -135,8 +135,8 @@ Functions for Managing Targets
 
 .. _config_register_target:
 
-register_target(name, fn, depends=[], default=False)
-----------------------------------------------------
+register_target(name, fn, depends=[], default=False, default_build_script=False)
+--------------------------------------------------------------------------------
 
 Registers a named target that can be resolved by the configuration file.
 
@@ -155,6 +155,11 @@ positional argument to this target's callable.
 to evaluate. The last registered target setting this to ``True``
 will be the default. If no target sets this to ``True``, the first
 registered target is the default.
+
+``default_build_script`` indicates whether this should be the default
+target to evaluate when run from the context of a Rust build script (e.g.
+from ``pyoxidizer run-build-script``. It has the same semantics as
+``default``.
 
 .. note::
 
