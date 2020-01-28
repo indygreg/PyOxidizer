@@ -9,30 +9,13 @@ use handlebars::Handlebars;
 use lazy_static::lazy_static;
 use serde::Serialize;
 use std::collections::BTreeMap;
-use std::fs::create_dir_all;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use crate::environment::{
-    canonicalize_path, PyOxidizerSource, BUILD_GIT_COMMIT, PYOXIDIZER_VERSION,
-};
+use crate::environment::{PyOxidizerSource, BUILD_GIT_COMMIT, PYOXIDIZER_VERSION};
 use crate::py_packaging::fsscan::walk_tree_files;
 
 lazy_static! {
-    static ref PYEMBED_RS_FILES: BTreeMap<&'static str, &'static [u8]> = {
-        let mut res: BTreeMap<&'static str, &'static [u8]> = BTreeMap::new();
-
-        res.insert("config.rs", include_bytes!("pyembed/config.rs"));
-        res.insert("lib.rs", include_bytes!("pyembed/lib.rs"));
-        res.insert("data.rs", include_bytes!("pyembed/data.rs"));
-        res.insert("importer.rs", include_bytes!("pyembed/importer.rs"));
-        res.insert("osutils.rs", include_bytes!("pyembed/osutils.rs"));
-        res.insert("pyalloc.rs", include_bytes!("pyembed/pyalloc.rs"));
-        res.insert("pyinterp.rs", include_bytes!("pyembed/pyinterp.rs"));
-        res.insert("pystr.rs", include_bytes!("pyembed/pystr.rs"));
-
-        res
-    };
     static ref HANDLEBARS: Handlebars = {
         let mut handlebars = Handlebars::new();
 
@@ -43,18 +26,6 @@ lazy_static! {
             .register_template_string(
                 "new-pyoxidizer.bzl",
                 include_str!("templates/new-pyoxidizer.bzl"),
-            )
-            .unwrap();
-        handlebars
-            .register_template_string(
-                "pyembed-build.rs",
-                include_str!("templates/pyembed-build.rs"),
-            )
-            .unwrap();
-        handlebars
-            .register_template_string(
-                "pyembed-cargo.toml",
-                include_str!("templates/pyembed-cargo.toml"),
             )
             .unwrap();
 
@@ -182,61 +153,6 @@ pub fn write_new_pyoxidizer_config_file(
     Ok(())
 }
 
-/// Write a new build.rs file supporting PyOxidizer.
-pub fn write_pyembed_build_rs(project_dir: &Path) -> Result<()> {
-    let mut data: BTreeMap<String, String> = BTreeMap::new();
-    data.insert(
-        "pyoxidizer_exe".to_string(),
-        canonicalize_path(&std::env::current_exe()?)?
-            .display()
-            .to_string(),
-    );
-
-    let t = HANDLEBARS.render("pyembed-build.rs", &data)?;
-
-    let path = project_dir.to_path_buf().join("build.rs");
-
-    println!("writing {}", path.to_str().unwrap());
-    let mut fh = std::fs::File::create(path)?;
-    fh.write_all(t.as_bytes())?;
-
-    Ok(())
-}
-
-/// Write files for the pyembed crate into a destination directory.
-pub fn write_pyembed_crate_files(dest_dir: &Path) -> Result<()> {
-    println!("creating {}", dest_dir.to_str().unwrap());
-    create_dir_all(dest_dir)?;
-
-    let src_dir = dest_dir.to_path_buf().join("src");
-    println!("creating {}", src_dir.to_str().unwrap());
-    create_dir_all(&src_dir)?;
-
-    for (rs, data) in PYEMBED_RS_FILES.iter() {
-        let path = src_dir.join(rs);
-        println!("writing {}", path.to_str().unwrap());
-        let mut fh = std::fs::File::create(path)?;
-        fh.write_all(&data)?;
-    }
-
-    let mut data = TemplateData::new();
-    populate_template_data(&mut data);
-
-    let t = HANDLEBARS.render("pyembed-cargo.toml", &data)?;
-
-    let path = dest_dir.to_path_buf().join("Cargo.toml");
-    println!("writing {}", path.to_str().unwrap());
-    let mut fh = std::fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(path)?;
-    fh.write_all(t.as_bytes())?;
-
-    write_pyembed_build_rs(&dest_dir)?;
-
-    Ok(())
-}
-
 /// Add PyOxidizer to an existing Rust project on the filesystem.
 ///
 /// The target directory must not already have PyOxidizer files. This
@@ -247,7 +163,7 @@ pub fn write_pyembed_crate_files(dest_dir: &Path) -> Result<()> {
 /// configuration are also printed to stdout.
 ///
 /// The Rust source files added to the target project are installed into
-/// a sub-directory defined by ``module_name``. This is typically ``pyembed``.
+/// a sub-directory defined by ``module_name``.
 pub fn add_pyoxidizer(project_dir: &Path, _suppress_help: bool) -> Result<()> {
     let existing_files = find_pyoxidizer_files(&project_dir);
 
@@ -260,9 +176,6 @@ pub fn add_pyoxidizer(project_dir: &Path, _suppress_help: bool) -> Result<()> {
     if !cargo_toml.exists() {
         return Err(anyhow!("Cargo.toml does not exist at destination"));
     }
-
-    let pyembed_dir = project_dir.to_path_buf().join("pyembed");
-    write_pyembed_crate_files(&pyembed_dir)?;
 
     let cargo_toml_data = std::fs::read(cargo_toml)?;
     let manifest = cargo_toml::Manifest::from_slice(&cargo_toml_data)?;

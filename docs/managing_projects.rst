@@ -98,8 +98,7 @@ to a project containing a ``Cargo.toml`` file::
    $ pyoxidizer add myrustapp
 
 This will add required files and make required modifications to add
-an embedded Python interpreter to the target project. Most of the
-modifications are in the form of a new ``pyembed`` crate.
+an embedded Python interpreter to the target project.
 
 .. important::
 

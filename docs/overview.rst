@@ -197,7 +197,6 @@ How It Works
 The ``pyoxidizer`` tool is used to create a new project or add ``PyOxidizer``
 to an existing (Rust) project. This entails:
 
-* Adding a copy of the ``pyembed`` crate to the project.
 * Generating a boilerplate Rust source file to call into the ``pyembed`` crate
   to run a Python interpreter.
 * Generating a working ``pyoxidizer.bzl`` :ref:`configuration file <config_files>`.
