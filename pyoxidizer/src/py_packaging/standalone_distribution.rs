@@ -433,7 +433,7 @@ impl StandaloneDistribution {
     /// Create an instance from a .tar.zst file.
     ///
     /// The distribution will be extracted to ``extract_dir`` if necessary.
-    pub fn from_tar_zst(
+    pub fn from_tar_zst_file(
         logger: &slog::Logger,
         path: &Path,
         extract_dir: &Path,
