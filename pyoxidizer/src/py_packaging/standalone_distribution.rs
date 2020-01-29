@@ -453,7 +453,14 @@ impl StandaloneDistribution {
         let reader = BufReader::new(fh);
         warn!(logger, "reading data from Python distribution...");
 
-        analyze_python_distribution_tar_zst(reader, &extract_dir)
+        Self::from_tar_zst(reader, &extract_dir)
+    }
+
+    /// Extract and analyze a standalone distribution from a zstd compressed tar stream.
+    pub fn from_tar_zst<R: Read>(source: R, extract_dir: &Path) -> Result<StandaloneDistribution> {
+        let dctx = zstd::stream::Decoder::new(source)?;
+
+        analyze_python_distribution_tar(dctx, extract_dir)
     }
 
     pub fn as_minimal_info(&self) -> PythonDistributionMinimalInfo {
@@ -975,14 +982,4 @@ pub fn analyze_python_distribution_tar<R: Read>(
     }
 
     analyze_python_distribution_data(extract_dir)
-}
-
-/// Extract Python distribution data from a zstandard compressed tar archive.
-pub fn analyze_python_distribution_tar_zst<R: Read>(
-    source: R,
-    extract_dir: &Path,
-) -> Result<StandaloneDistribution> {
-    let dctx = zstd::stream::Decoder::new(source)?;
-
-    analyze_python_distribution_tar(dctx, extract_dir)
 }

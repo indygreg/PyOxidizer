@@ -7,7 +7,7 @@
 use {
     crate::project_building::find_pyoxidizer_config_file_env,
     crate::project_layout::{initialize_project, write_new_pyoxidizer_config_file},
-    crate::py_packaging::standalone_distribution::analyze_python_distribution_tar_zst,
+    crate::py_packaging::standalone_distribution::StandaloneDistribution,
     crate::starlark::eval::{eval_starlark_config_file, EvalResult},
     anyhow::{anyhow, Result},
     std::fs::create_dir_all,
@@ -224,15 +224,13 @@ pub fn python_distribution_extract(dist_path: &str, dest_path: &str) -> Result<(
 }
 
 pub fn python_distribution_info(dist_path: &str) -> Result<()> {
-    let mut fh = std::fs::File::open(Path::new(dist_path))?;
-    let mut data = Vec::new();
-    fh.read_to_end(&mut data)?;
+    let fh = std::fs::File::open(Path::new(dist_path))?;
+    let reader = std::io::BufReader::new(fh);
 
     let temp_dir = tempdir::TempDir::new("python-distribution")?;
     let temp_dir_path = temp_dir.path();
 
-    let cursor = Cursor::new(data);
-    let dist = analyze_python_distribution_tar_zst(cursor, temp_dir_path)?;
+    let dist = StandaloneDistribution::from_tar_zst(reader, temp_dir_path)?;
 
     println!("High-Level Metadata");
     println!("===================");
@@ -296,15 +294,13 @@ pub fn python_distribution_info(dist_path: &str) -> Result<()> {
 }
 
 pub fn python_distribution_licenses(path: &str) -> Result<()> {
-    let mut fh = std::fs::File::open(Path::new(path))?;
-    let mut data = Vec::new();
-    fh.read_to_end(&mut data)?;
+    let fh = std::fs::File::open(Path::new(path))?;
+    let reader = std::io::BufReader::new(fh);
 
     let temp_dir = tempdir::TempDir::new("python-distribution")?;
     let temp_dir_path = temp_dir.path();
 
-    let cursor = Cursor::new(data);
-    let dist = analyze_python_distribution_tar_zst(cursor, temp_dir_path)?;
+    let dist = StandaloneDistribution::from_tar_zst(reader, temp_dir_path)?;
 
     println!(
         "Python Distribution Licenses: {}",
