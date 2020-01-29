@@ -31,7 +31,7 @@ use super::resource::{ResourceData, SourceModule};
 
 use crate::licensing::NON_GPL_LICENSES;
 use crate::py_packaging::resource::DataLocation;
-use crate::python_distributions::CPYTHON_BY_TRIPLE;
+use crate::python_distributions::CPYTHON_STANDALONE_BY_TRIPLE;
 
 #[cfg(windows)]
 const PYTHON_EXE_BASENAME: &str = "python.exe";
@@ -1241,7 +1241,7 @@ pub fn default_distribution(
     target: &str,
     dest_dir: &Path,
 ) -> Result<ParsedPythonDistribution> {
-    let dist = CPYTHON_BY_TRIPLE
+    let dist = CPYTHON_STANDALONE_BY_TRIPLE
         .get(target)
         .ok_or_else(|| anyhow!("could not find default Python distribution for {}", target))?;
 

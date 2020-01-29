@@ -14,7 +14,7 @@ pub struct HostedDistribution {
 }
 
 lazy_static! {
-    pub static ref CPYTHON_BY_TRIPLE: BTreeMap<String, HostedDistribution> = {
+    pub static ref CPYTHON_STANDALONE_BY_TRIPLE: BTreeMap<String, HostedDistribution> = {
         let mut res: BTreeMap<String, HostedDistribution> = BTreeMap::new();
 
         res.insert(

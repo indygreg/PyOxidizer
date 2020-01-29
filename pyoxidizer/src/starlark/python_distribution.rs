@@ -23,7 +23,7 @@ use {
         setup_py_install as raw_setup_py_install,
     },
     crate::py_packaging::resource::BytecodeOptimizationLevel,
-    crate::python_distributions::CPYTHON_BY_TRIPLE,
+    crate::python_distributions::CPYTHON_STANDALONE_BY_TRIPLE,
     anyhow::{anyhow, Result},
     itertools::Itertools,
     slog::warn,
@@ -627,7 +627,7 @@ impl PythonDistribution {
 }
 
 pub fn resolve_default_python_distribution(env: &Environment, build_target: &str) -> ValueResult {
-    match CPYTHON_BY_TRIPLE.get(build_target) {
+    match CPYTHON_STANDALONE_BY_TRIPLE.get(build_target) {
         Some(dist) => {
             let distribution = PythonDistributionLocation::Url {
                 url: dist.url.clone(),
@@ -768,7 +768,7 @@ mod tests {
         let dist = starlark_ok("default_python_distribution()");
         assert_eq!(dist.get_type(), "PythonDistribution");
 
-        let host_distribution = CPYTHON_BY_TRIPLE
+        let host_distribution = CPYTHON_STANDALONE_BY_TRIPLE
             .get(crate::project_building::HOST)
             .unwrap();
 
