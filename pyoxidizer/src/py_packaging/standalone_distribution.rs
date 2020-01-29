@@ -19,7 +19,7 @@ use {
     std::collections::{BTreeMap, BTreeSet, HashMap},
     std::convert::TryFrom,
     std::hash::BuildHasher,
-    std::io::{BufRead, BufReader, Cursor, Read},
+    std::io::{BufRead, BufReader, Read},
     std::iter::FromIterator,
     std::path::{Path, PathBuf},
 };
@@ -447,15 +447,13 @@ impl StandaloneDistribution {
             return Err(anyhow!("unhandled distribution format: {}", path.display()));
         }
 
-        let mut fh = std::fs::File::open(path)
+        let fh = std::fs::File::open(path)
             .with_context(|| format!("unable to open {}", path.display()))?;
 
-        let mut python_distribution_data = Vec::new();
-        fh.read_to_end(&mut python_distribution_data)?;
-        let dist_cursor = Cursor::new(python_distribution_data);
+        let reader = BufReader::new(fh);
         warn!(logger, "reading data from Python distribution...");
 
-        analyze_python_distribution_tar_zst(dist_cursor, &extract_dir)
+        analyze_python_distribution_tar_zst(reader, &extract_dir)
     }
 
     pub fn as_minimal_info(&self) -> PythonDistributionMinimalInfo {
