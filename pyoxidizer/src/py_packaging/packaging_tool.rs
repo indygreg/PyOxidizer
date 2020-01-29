@@ -14,10 +14,10 @@ use std::hash::BuildHasher;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
-use super::distribution::{resolve_python_paths, ParsedPythonDistribution};
 use super::distutils::{prepare_hacked_distutils, read_built_extensions};
 use super::fsscan::{find_python_resources, PythonFileResource};
 use super::resource::PythonResource;
+use super::standalone_distribution::{resolve_python_paths, ParsedPythonDistribution};
 
 /// Find resources installed as part of a packaging operation.
 pub fn find_resources(path: &Path, state_dir: Option<&Path>) -> Result<Vec<PythonResource>> {

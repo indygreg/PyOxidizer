@@ -8,7 +8,8 @@ use slog::{Drain, Logger};
 use std::sync::Arc;
 
 use crate::logging::PrintlnDrain;
-use crate::py_packaging::distribution::{default_distribution, ParsedPythonDistribution};
+use crate::py_packaging::distribution::default_distribution;
+use crate::py_packaging::standalone_distribution::ParsedPythonDistribution;
 
 pub fn get_logger() -> Result<slog::Logger> {
     Ok(Logger::root(

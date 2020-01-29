@@ -8,14 +8,15 @@ Embedded Python resources in a binary.
 
 use {
     super::bytecode::{BytecodeCompiler, CompileMode},
-    super::distribution::{
-        is_stdlib_test_package, ExtensionModule, ExtensionModuleFilter, ParsedPythonDistribution,
-    },
+    super::distribution::is_stdlib_test_package,
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
     super::resource::{
         packages_from_module_name, packages_from_module_names, BytecodeModule,
         BytecodeOptimizationLevel, DataLocation, ExtensionModuleData, PackagedModuleBytecode,
         PackagedModuleSource, ResourceData, SourceModule,
+    },
+    super::standalone_distribution::{
+        ExtensionModule, ExtensionModuleFilter, ParsedPythonDistribution,
     },
     anyhow::Result,
     byteorder::{LittleEndian, WriteBytesExt},

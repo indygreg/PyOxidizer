@@ -8,8 +8,8 @@ Defines primitives representing Python resources.
 
 use {
     super::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode},
-    super::distribution::ExtensionModule,
     super::fsscan::{is_package_from_path, PythonFileResource},
+    super::standalone_distribution::ExtensionModule,
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Context, Error, Result},
     serde::{Deserialize, Serialize},

@@ -15,14 +15,16 @@ use {
     crate::py_packaging::bytecode::{BytecodeCompiler, CompileMode},
     crate::py_packaging::config::EmbeddedPythonConfig,
     crate::py_packaging::distribution::{
-        is_stdlib_test_package, resolve_parsed_distribution, ExtensionModuleFilter,
-        ParsedPythonDistribution, PythonDistributionLocation,
+        is_stdlib_test_package, resolve_parsed_distribution, PythonDistributionLocation,
     },
     crate::py_packaging::packaging_tool::{
         find_resources, pip_install as raw_pip_install, read_virtualenv as raw_read_virtualenv,
         setup_py_install as raw_setup_py_install,
     },
     crate::py_packaging::resource::BytecodeOptimizationLevel,
+    crate::py_packaging::standalone_distribution::{
+        ExtensionModuleFilter, ParsedPythonDistribution,
+    },
     crate::python_distributions::CPYTHON_STANDALONE_BY_TRIPLE,
     anyhow::{anyhow, Result},
     itertools::Itertools,

@@ -16,10 +16,10 @@ use std::sync::Arc;
 use tempdir::TempDir;
 
 use super::config::EmbeddedPythonConfig;
-use super::distribution::{ExtensionModuleFilter, ParsedPythonDistribution};
 use super::embedded_resource::EmbeddedPythonResourcesPrePackaged;
 use super::libpython::{derive_importlib, link_libpython, ImportlibData};
 use super::pyembed::{derive_python_config, write_data_rs};
+use super::standalone_distribution::{ExtensionModuleFilter, ParsedPythonDistribution};
 
 /// A self-contained Python executable before it is compiled.
 #[derive(Debug)]
@@ -282,7 +282,7 @@ impl EmbeddedPythonBinaryData {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::py_packaging::distribution::ExtensionModuleFilter;
+    use crate::py_packaging::standalone_distribution::ExtensionModuleFilter;
     use crate::testutil::*;
 
     pub fn get_prebuilt(logger: &slog::Logger) -> Result<PreBuiltPythonExecutable> {

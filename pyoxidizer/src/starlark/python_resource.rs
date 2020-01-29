@@ -3,11 +3,11 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::py_packaging::distribution::ExtensionModule,
     crate::py_packaging::resource::{
         BytecodeModule, BytecodeOptimizationLevel, ExtensionModuleData, PythonResource,
         ResourceData, SourceModule,
     },
+    crate::py_packaging::standalone_distribution::ExtensionModule,
     starlark::environment::Environment,
     starlark::values::{default_compare, TypedValue, Value, ValueError, ValueResult},
     starlark::{any, immutable, not_supported},
