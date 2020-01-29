@@ -48,6 +48,31 @@ struct LinkEntry {
     system: Option<bool>,
 }
 
+impl LinkEntry {
+    /// Convert the instance to a `LibraryDepends`.
+    fn to_library_depends(&self, python_path: &Path) -> LibraryDepends {
+        LibraryDepends {
+            name: self.name.clone(),
+            static_path: match &self.path_static {
+                Some(p) => Some(python_path.join(p)),
+                None => None,
+            },
+            dynamic_path: match &self.path_dynamic {
+                Some(_p) => panic!("dynamic_path not yet supported"),
+                None => None,
+            },
+            framework: match &self.framework {
+                Some(v) => *v,
+                None => false,
+            },
+            system: match &self.system {
+                Some(v) => *v,
+                None => false,
+            },
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 struct PythonBuildExtensionInfo {
     in_core: bool,
@@ -569,7 +594,7 @@ impl StandaloneDistribution {
         }
 
         for entry in &pi.build_info.core.links {
-            let depends = link_entry_to_library_depends(entry, &python_path);
+            let depends = entry.to_library_depends(&python_path);
 
             if let Some(p) = &depends.static_path {
                 libraries.insert(depends.name.clone(), p.clone());
@@ -587,7 +612,7 @@ impl StandaloneDistribution {
                 let mut links = Vec::new();
 
                 for link in &entry.links {
-                    let depends = link_entry_to_library_depends(link, &python_path);
+                    let depends = link.to_library_depends(&python_path);
 
                     if let Some(p) = &depends.static_path {
                         libraries.insert(depends.name.clone(), p.clone());
@@ -953,27 +978,5 @@ impl StandaloneDistribution {
         }
 
         Ok(res)
-    }
-}
-
-fn link_entry_to_library_depends(entry: &LinkEntry, python_path: &PathBuf) -> LibraryDepends {
-    LibraryDepends {
-        name: entry.name.clone(),
-        static_path: match &entry.path_static {
-            Some(p) => Some(python_path.join(p)),
-            None => None,
-        },
-        dynamic_path: match &entry.path_dynamic {
-            Some(_p) => panic!("dynamic_path not yet supported"),
-            None => None,
-        },
-        framework: match &entry.framework {
-            Some(v) => *v,
-            None => false,
-        },
-        system: match &entry.system {
-            Some(v) => *v,
-            None => false,
-        },
     }
 }
