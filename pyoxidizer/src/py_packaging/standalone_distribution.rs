@@ -437,7 +437,7 @@ impl StandaloneDistribution {
         logger: &slog::Logger,
         path: &Path,
         extract_dir: &Path,
-    ) -> Result<StandaloneDistribution> {
+    ) -> Result<Self> {
         let basename = path
             .file_name()
             .ok_or_else(|| anyhow!("unable to determine filename"))?
@@ -457,14 +457,14 @@ impl StandaloneDistribution {
     }
 
     /// Extract and analyze a standalone distribution from a zstd compressed tar stream.
-    pub fn from_tar_zst<R: Read>(source: R, extract_dir: &Path) -> Result<StandaloneDistribution> {
+    pub fn from_tar_zst<R: Read>(source: R, extract_dir: &Path) -> Result<Self> {
         let dctx = zstd::stream::Decoder::new(source)?;
 
         Self::from_tar(dctx, extract_dir)
     }
 
     /// Extract and analyze a standalone distribution from a tar stream.
-    pub fn from_tar<R: Read>(source: R, extract_dir: &Path) -> Result<StandaloneDistribution> {
+    pub fn from_tar<R: Read>(source: R, extract_dir: &Path) -> Result<Self> {
         let mut tf = tar::Archive::new(source);
 
         {
@@ -500,7 +500,216 @@ impl StandaloneDistribution {
             }
         }
 
-        analyze_python_distribution_data(extract_dir)
+        Self::from_directory(extract_dir)
+    }
+
+    /// Obtain an instance by scanning a directory containing an extracted distribution.
+    pub fn from_directory(dist_dir: &Path) -> Result<Self> {
+        let mut objs_core: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
+        let mut links_core: Vec<LibraryDepends> = Vec::new();
+        let mut extension_modules: BTreeMap<String, Vec<ExtensionModule>> = BTreeMap::new();
+        let mut includes: BTreeMap<String, PathBuf> = BTreeMap::new();
+        let mut libraries: BTreeMap<String, PathBuf> = BTreeMap::new();
+        let frozen_c: Vec<u8> = Vec::new();
+        let mut py_modules: BTreeMap<String, PathBuf> = BTreeMap::new();
+        let mut resources: BTreeMap<String, BTreeMap<String, PathBuf>> = BTreeMap::new();
+        let mut license_infos: BTreeMap<String, Vec<LicenseInfo>> = BTreeMap::new();
+
+        for entry in std::fs::read_dir(dist_dir)? {
+            let entry = entry?;
+
+            match entry.file_name().to_str() {
+                Some("python") => continue,
+                Some(value) => panic!("unexpected entry in distribution root directory: {}", value),
+                _ => panic!("error listing root directory of Python distribution"),
+            };
+        }
+
+        let python_path = dist_dir.join("python");
+
+        for entry in std::fs::read_dir(&python_path)? {
+            let entry = entry?;
+
+            match entry.file_name().to_str() {
+                Some("build") => continue,
+                Some("install") => continue,
+                Some("lib") => continue,
+                Some("licenses") => continue,
+                Some("LICENSE.rst") => continue,
+                Some("PYTHON.json") => continue,
+                Some(value) => panic!("unexpected entry in python/ directory: {}", value),
+                _ => panic!("error listing python/ directory"),
+            };
+        }
+
+        let pi = parse_python_json_from_distribution(dist_dir)?;
+
+        if let Some(ref python_license_path) = pi.license_path {
+            let license_path = python_path.join(python_license_path);
+            let license_text = std::fs::read_to_string(&license_path).with_context(|| {
+                format!("unable to read Python license {}", license_path.display())
+            })?;
+
+            let mut licenses = Vec::new();
+            licenses.push(LicenseInfo {
+                licenses: pi.licenses.clone().unwrap(),
+                license_filename: "LICENSE.python.txt".to_string(),
+                license_text,
+            });
+
+            license_infos.insert("python".to_string(), licenses);
+        }
+
+        // Collect object files for libpython.
+        for obj in &pi.build_info.core.objs {
+            let rel_path = PathBuf::from(obj);
+            let full_path = python_path.join(obj);
+
+            objs_core.insert(rel_path, full_path);
+        }
+
+        for entry in &pi.build_info.core.links {
+            let depends = link_entry_to_library_depends(entry, &python_path);
+
+            if let Some(p) = &depends.static_path {
+                libraries.insert(depends.name.clone(), p.clone());
+            }
+
+            links_core.push(depends);
+        }
+
+        // Collect extension modules.
+        for (module, variants) in &pi.build_info.extensions {
+            let mut ems: Vec<ExtensionModule> = Vec::new();
+
+            for entry in variants.iter() {
+                let object_paths = entry.objs.iter().map(|p| python_path.join(p)).collect();
+                let mut links = Vec::new();
+
+                for link in &entry.links {
+                    let depends = link_entry_to_library_depends(link, &python_path);
+
+                    if let Some(p) = &depends.static_path {
+                        libraries.insert(depends.name.clone(), p.clone());
+                    }
+
+                    links.push(depends);
+                }
+
+                if let Some(ref license_paths) = entry.license_paths {
+                    let mut licenses = Vec::new();
+
+                    for license_path in license_paths {
+                        let license_path = python_path.join(license_path);
+                        let license_text = std::fs::read_to_string(&license_path)
+                            .with_context(|| "unable to read license file")?;
+
+                        licenses.push(LicenseInfo {
+                            licenses: entry.licenses.clone().unwrap(),
+                            license_filename: license_path
+                                .file_name()
+                                .unwrap()
+                                .to_str()
+                                .unwrap()
+                                .to_string(),
+                            license_text,
+                        });
+                    }
+
+                    license_infos.insert(module.clone(), licenses);
+                }
+
+                ems.push(ExtensionModule {
+                    module: module.clone(),
+                    init_fn: Some(entry.init_fn.clone()),
+                    builtin_default: entry.in_core,
+                    disableable: !entry.in_core,
+                    license_public_domain: entry.license_public_domain,
+                    license_paths: match entry.license_paths {
+                        Some(ref refs) => Some(refs.iter().map(|p| python_path.join(p)).collect()),
+                        None => None,
+                    },
+                    licenses: entry.licenses.clone(),
+                    object_paths,
+                    required: entry.required,
+                    static_library: match &entry.static_lib {
+                        Some(p) => Some(python_path.join(p)),
+                        None => None,
+                    },
+                    links,
+                    variant: entry.variant.clone(),
+                });
+            }
+
+            extension_modules.insert(module.clone(), ems);
+        }
+
+        let include_path = python_path.join(pi.python_include);
+
+        for entry in walk_tree_files(&include_path) {
+            let full_path = entry.path();
+            let rel_path = full_path
+                .strip_prefix(&include_path)
+                .expect("unable to strip prefix");
+            includes.insert(
+                String::from(rel_path.to_str().expect("path to string")),
+                full_path.to_path_buf(),
+            );
+        }
+
+        let stdlib_path = python_path.join(pi.python_stdlib);
+
+        for entry in find_python_resources(&stdlib_path) {
+            match entry {
+                PythonFileResource::Resource(resource) => {
+                    if !resources.contains_key(&resource.package) {
+                        resources.insert(resource.package.clone(), BTreeMap::new());
+                    }
+
+                    resources
+                        .get_mut(&resource.package)
+                        .unwrap()
+                        .insert(resource.stem.clone(), resource.path);
+                }
+                PythonFileResource::Source {
+                    full_name, path, ..
+                } => {
+                    py_modules.insert(full_name.clone(), path);
+                }
+                _ => {}
+            };
+        }
+
+        let venv_base = dist_dir.parent().unwrap().join("hacked_base");
+
+        Ok(Self {
+            flavor: pi.python_flavor.clone(),
+            version: pi.python_version.clone(),
+            os: pi.os.clone(),
+            arch: pi.arch.clone(),
+            python_exe: python_exe_path(dist_dir)?,
+            stdlib_path,
+            licenses: pi.licenses.clone(),
+            license_path: match pi.license_path {
+                Some(ref path) => Some(PathBuf::from(path)),
+                None => None,
+            },
+            tcl_library_path: match pi.tcl_library_path {
+                Some(ref path) => Some(PathBuf::from(path)),
+                None => None,
+            },
+            base_dir: dist_dir.to_path_buf(),
+            extension_modules,
+            frozen_c,
+            includes,
+            links_core,
+            libraries,
+            objs_core,
+            py_modules,
+            resources,
+            license_infos,
+            venv_base,
+        })
     }
 
     pub fn as_minimal_info(&self) -> PythonDistributionMinimalInfo {
@@ -767,216 +976,4 @@ fn link_entry_to_library_depends(entry: &LinkEntry, python_path: &PathBuf) -> Li
             None => false,
         },
     }
-}
-
-/// Extract useful information from the files constituting a Python distribution.
-///
-/// Passing in a data structure with raw file data within is inefficient. But
-/// it makes things easier to implement and allows us to do things like consume
-/// tarballs without filesystem I/O.
-pub fn analyze_python_distribution_data(dist_dir: &Path) -> Result<StandaloneDistribution> {
-    let mut objs_core: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
-    let mut links_core: Vec<LibraryDepends> = Vec::new();
-    let mut extension_modules: BTreeMap<String, Vec<ExtensionModule>> = BTreeMap::new();
-    let mut includes: BTreeMap<String, PathBuf> = BTreeMap::new();
-    let mut libraries: BTreeMap<String, PathBuf> = BTreeMap::new();
-    let frozen_c: Vec<u8> = Vec::new();
-    let mut py_modules: BTreeMap<String, PathBuf> = BTreeMap::new();
-    let mut resources: BTreeMap<String, BTreeMap<String, PathBuf>> = BTreeMap::new();
-    let mut license_infos: BTreeMap<String, Vec<LicenseInfo>> = BTreeMap::new();
-
-    for entry in std::fs::read_dir(dist_dir)? {
-        let entry = entry?;
-
-        match entry.file_name().to_str() {
-            Some("python") => continue,
-            Some(value) => panic!("unexpected entry in distribution root directory: {}", value),
-            _ => panic!("error listing root directory of Python distribution"),
-        };
-    }
-
-    let python_path = dist_dir.join("python");
-
-    for entry in std::fs::read_dir(&python_path)? {
-        let entry = entry?;
-
-        match entry.file_name().to_str() {
-            Some("build") => continue,
-            Some("install") => continue,
-            Some("lib") => continue,
-            Some("licenses") => continue,
-            Some("LICENSE.rst") => continue,
-            Some("PYTHON.json") => continue,
-            Some(value) => panic!("unexpected entry in python/ directory: {}", value),
-            _ => panic!("error listing python/ directory"),
-        };
-    }
-
-    let pi = parse_python_json_from_distribution(dist_dir)?;
-
-    if let Some(ref python_license_path) = pi.license_path {
-        let license_path = python_path.join(python_license_path);
-        let license_text = std::fs::read_to_string(&license_path)
-            .with_context(|| format!("unable to read Python license {}", license_path.display()))?;
-
-        let mut licenses = Vec::new();
-        licenses.push(LicenseInfo {
-            licenses: pi.licenses.clone().unwrap(),
-            license_filename: "LICENSE.python.txt".to_string(),
-            license_text,
-        });
-
-        license_infos.insert("python".to_string(), licenses);
-    }
-
-    // Collect object files for libpython.
-    for obj in &pi.build_info.core.objs {
-        let rel_path = PathBuf::from(obj);
-        let full_path = python_path.join(obj);
-
-        objs_core.insert(rel_path, full_path);
-    }
-
-    for entry in &pi.build_info.core.links {
-        let depends = link_entry_to_library_depends(entry, &python_path);
-
-        if let Some(p) = &depends.static_path {
-            libraries.insert(depends.name.clone(), p.clone());
-        }
-
-        links_core.push(depends);
-    }
-
-    // Collect extension modules.
-    for (module, variants) in &pi.build_info.extensions {
-        let mut ems: Vec<ExtensionModule> = Vec::new();
-
-        for entry in variants.iter() {
-            let object_paths = entry.objs.iter().map(|p| python_path.join(p)).collect();
-            let mut links = Vec::new();
-
-            for link in &entry.links {
-                let depends = link_entry_to_library_depends(link, &python_path);
-
-                if let Some(p) = &depends.static_path {
-                    libraries.insert(depends.name.clone(), p.clone());
-                }
-
-                links.push(depends);
-            }
-
-            if let Some(ref license_paths) = entry.license_paths {
-                let mut licenses = Vec::new();
-
-                for license_path in license_paths {
-                    let license_path = python_path.join(license_path);
-                    let license_text = std::fs::read_to_string(&license_path)
-                        .with_context(|| "unable to read license file")?;
-
-                    licenses.push(LicenseInfo {
-                        licenses: entry.licenses.clone().unwrap(),
-                        license_filename: license_path
-                            .file_name()
-                            .unwrap()
-                            .to_str()
-                            .unwrap()
-                            .to_string(),
-                        license_text,
-                    });
-                }
-
-                license_infos.insert(module.clone(), licenses);
-            }
-
-            ems.push(ExtensionModule {
-                module: module.clone(),
-                init_fn: Some(entry.init_fn.clone()),
-                builtin_default: entry.in_core,
-                disableable: !entry.in_core,
-                license_public_domain: entry.license_public_domain,
-                license_paths: match entry.license_paths {
-                    Some(ref refs) => Some(refs.iter().map(|p| python_path.join(p)).collect()),
-                    None => None,
-                },
-                licenses: entry.licenses.clone(),
-                object_paths,
-                required: entry.required,
-                static_library: match &entry.static_lib {
-                    Some(p) => Some(python_path.join(p)),
-                    None => None,
-                },
-                links,
-                variant: entry.variant.clone(),
-            });
-        }
-
-        extension_modules.insert(module.clone(), ems);
-    }
-
-    let include_path = python_path.join(pi.python_include);
-
-    for entry in walk_tree_files(&include_path) {
-        let full_path = entry.path();
-        let rel_path = full_path
-            .strip_prefix(&include_path)
-            .expect("unable to strip prefix");
-        includes.insert(
-            String::from(rel_path.to_str().expect("path to string")),
-            full_path.to_path_buf(),
-        );
-    }
-
-    let stdlib_path = python_path.join(pi.python_stdlib);
-
-    for entry in find_python_resources(&stdlib_path) {
-        match entry {
-            PythonFileResource::Resource(resource) => {
-                if !resources.contains_key(&resource.package) {
-                    resources.insert(resource.package.clone(), BTreeMap::new());
-                }
-
-                resources
-                    .get_mut(&resource.package)
-                    .unwrap()
-                    .insert(resource.stem.clone(), resource.path);
-            }
-            PythonFileResource::Source {
-                full_name, path, ..
-            } => {
-                py_modules.insert(full_name.clone(), path);
-            }
-            _ => {}
-        };
-    }
-
-    let venv_base = dist_dir.parent().unwrap().join("hacked_base");
-
-    Ok(StandaloneDistribution {
-        flavor: pi.python_flavor.clone(),
-        version: pi.python_version.clone(),
-        os: pi.os.clone(),
-        arch: pi.arch.clone(),
-        python_exe: python_exe_path(dist_dir)?,
-        stdlib_path,
-        licenses: pi.licenses.clone(),
-        license_path: match pi.license_path {
-            Some(ref path) => Some(PathBuf::from(path)),
-            None => None,
-        },
-        tcl_library_path: match pi.tcl_library_path {
-            Some(ref path) => Some(PathBuf::from(path)),
-            None => None,
-        },
-        base_dir: dist_dir.to_path_buf(),
-        extension_modules,
-        frozen_c,
-        includes,
-        links_core,
-        libraries,
-        objs_core,
-        py_modules,
-        resources,
-        license_infos,
-        venv_base,
-    })
 }
