@@ -460,7 +460,47 @@ impl StandaloneDistribution {
     pub fn from_tar_zst<R: Read>(source: R, extract_dir: &Path) -> Result<StandaloneDistribution> {
         let dctx = zstd::stream::Decoder::new(source)?;
 
-        analyze_python_distribution_tar(dctx, extract_dir)
+        Self::from_tar(dctx, extract_dir)
+    }
+
+    /// Extract and analyze a standalone distribution from a tar stream.
+    pub fn from_tar<R: Read>(source: R, extract_dir: &Path) -> Result<StandaloneDistribution> {
+        let mut tf = tar::Archive::new(source);
+
+        {
+            let _lock = DistributionExtractLock::new(extract_dir)?;
+
+            // The content of the distribution could change between runs. But caching
+            // the extraction does keep things fast.
+            let test_path = extract_dir.join("python").join("PYTHON.json");
+            if !test_path.exists() {
+                std::fs::create_dir_all(extract_dir)?;
+                let absolute_path = std::fs::canonicalize(extract_dir)?;
+                tf.unpack(&absolute_path)
+                    .with_context(|| "unable to extract tar archive")?;
+
+                // Ensure unpacked files are writable. We've had issues where we
+                // consume archives with read-only file permissions. When we later
+                // copy these files, we can run into trouble overwriting a read-only
+                // file.
+                let walk = walkdir::WalkDir::new(&absolute_path);
+                for entry in walk.into_iter() {
+                    let entry = entry?;
+
+                    let metadata = entry.metadata()?;
+                    let mut permissions = metadata.permissions();
+
+                    if permissions.readonly() {
+                        permissions.set_readonly(false);
+                        std::fs::set_permissions(entry.path(), permissions).with_context(|| {
+                            format!("unable to mark {} as writable", entry.path().display())
+                        })?;
+                    }
+                }
+            }
+        }
+
+        analyze_python_distribution_data(extract_dir)
     }
 
     pub fn as_minimal_info(&self) -> PythonDistributionMinimalInfo {
@@ -939,47 +979,4 @@ pub fn analyze_python_distribution_data(dist_dir: &Path) -> Result<StandaloneDis
         license_infos,
         venv_base,
     })
-}
-
-/// Extract Python distribution data from a tar archive.
-pub fn analyze_python_distribution_tar<R: Read>(
-    source: R,
-    extract_dir: &Path,
-) -> Result<StandaloneDistribution> {
-    let mut tf = tar::Archive::new(source);
-
-    {
-        let _lock = DistributionExtractLock::new(extract_dir)?;
-
-        // The content of the distribution could change between runs. But caching
-        // the extraction does keep things fast.
-        let test_path = extract_dir.join("python").join("PYTHON.json");
-        if !test_path.exists() {
-            std::fs::create_dir_all(extract_dir)?;
-            let absolute_path = std::fs::canonicalize(extract_dir)?;
-            tf.unpack(&absolute_path)
-                .with_context(|| "unable to extract tar archive")?;
-
-            // Ensure unpacked files are writable. We've had issues where we
-            // consume archives with read-only file permissions. When we later
-            // copy these files, we can run into trouble overwriting a read-only
-            // file.
-            let walk = walkdir::WalkDir::new(&absolute_path);
-            for entry in walk.into_iter() {
-                let entry = entry?;
-
-                let metadata = entry.metadata()?;
-                let mut permissions = metadata.permissions();
-
-                if permissions.readonly() {
-                    permissions.set_readonly(false);
-                    std::fs::set_permissions(entry.path(), permissions).with_context(|| {
-                        format!("unable to mark {} as writable", entry.path().display())
-                    })?;
-                }
-            }
-        }
-    }
-
-    analyze_python_distribution_data(extract_dir)
 }
