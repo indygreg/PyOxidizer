@@ -982,6 +982,37 @@ pub fn analyze_python_distribution_data(dist_dir: &Path) -> Result<ParsedPythonD
     })
 }
 
+/// Multiple threads or processes could race to extract the archive.
+/// So we use a lock file to ensure exclusive access.
+/// TODO use more granular lock based on the output directory (possibly
+/// by putting lock in output directory itself).
+struct DistributionExtractLock {
+    file: std::fs::File,
+}
+
+impl DistributionExtractLock {
+    fn new(extract_dir: &Path) -> Result<Self> {
+        let lock_path = extract_dir
+            .parent()
+            .unwrap()
+            .join("distribution-extract-lock");
+
+        let file = File::create(&lock_path)
+            .context(format!("could not create {}", lock_path.display()))?;
+
+        file.lock_exclusive()
+            .context(format!("failed to obtain lock for {}", lock_path.display()))?;
+
+        Ok(DistributionExtractLock { file })
+    }
+}
+
+impl Drop for DistributionExtractLock {
+    fn drop(&mut self) {
+        self.file.unlock().unwrap();
+    }
+}
+
 /// Extract Python distribution data from a tar archive.
 pub fn analyze_python_distribution_tar<R: Read>(
     source: R,
@@ -989,52 +1020,38 @@ pub fn analyze_python_distribution_tar<R: Read>(
 ) -> Result<ParsedPythonDistribution> {
     let mut tf = tar::Archive::new(source);
 
-    // Multiple threads or processes could race to extract the archive.
-    // So we use a lock file to ensure exclusive access.
-    // TODO use more granular lock based on the output directory (possibly
-    // by putting lock in output directory itself).
-    let lock_path = extract_dir
-        .parent()
-        .unwrap()
-        .join("distribution-extract-lock");
+    {
+        let _lock = DistributionExtractLock::new(extract_dir)?;
 
-    let file = File::create(&lock_path)
-        .with_context(|| format!("could not create {}", lock_path.display()))?;
+        // The content of the distribution could change between runs. But caching
+        // the extraction does keep things fast.
+        let test_path = extract_dir.join("python").join("PYTHON.json");
+        if !test_path.exists() {
+            std::fs::create_dir_all(extract_dir)?;
+            let absolute_path = std::fs::canonicalize(extract_dir)?;
+            tf.unpack(&absolute_path)
+                .with_context(|| "unable to extract tar archive")?;
 
-    file.lock_exclusive()
-        .with_context(|| format!("failed to obtain lock for {}", lock_path.display()))?;
+            // Ensure unpacked files are writable. We've had issues where we
+            // consume archives with read-only file permissions. When we later
+            // copy these files, we can run into trouble overwriting a read-only
+            // file.
+            let walk = walkdir::WalkDir::new(&absolute_path);
+            for entry in walk.into_iter() {
+                let entry = entry?;
 
-    // The content of the distribution could change between runs. But caching
-    // the extraction does keep things fast.
-    let test_path = extract_dir.join("python").join("PYTHON.json");
-    if !test_path.exists() {
-        std::fs::create_dir_all(extract_dir)?;
-        let absolute_path = std::fs::canonicalize(extract_dir)?;
-        tf.unpack(&absolute_path)
-            .with_context(|| "unable to extract tar archive")?;
+                let metadata = entry.metadata()?;
+                let mut permissions = metadata.permissions();
 
-        // Ensure unpacked files are writable. We've had issues where we
-        // consume archives with read-only file permissions. When we later
-        // copy these files, we can run into trouble overwriting a read-only
-        // file.
-        let walk = walkdir::WalkDir::new(&absolute_path);
-        for entry in walk.into_iter() {
-            let entry = entry?;
-
-            let metadata = entry.metadata()?;
-            let mut permissions = metadata.permissions();
-
-            if permissions.readonly() {
-                permissions.set_readonly(false);
-                fs::set_permissions(entry.path(), permissions).with_context(|| {
-                    format!("unable to mark {} as writable", entry.path().display())
-                })?;
+                if permissions.readonly() {
+                    permissions.set_readonly(false);
+                    fs::set_permissions(entry.path(), permissions).with_context(|| {
+                        format!("unable to mark {} as writable", entry.path().display())
+                    })?;
+                }
             }
         }
     }
-
-    file.unlock()
-        .with_context(|| format!("releasing lock on {}", lock_path.display()))?;
 
     analyze_python_distribution_data(extract_dir)
 }
