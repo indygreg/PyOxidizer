@@ -430,11 +430,23 @@ pub struct StandaloneDistribution {
 }
 
 impl StandaloneDistribution {
-    pub fn from_path(
+    /// Create an instance from a .tar.zst file.
+    ///
+    /// The distribution will be extracted to ``extract_dir`` if necessary.
+    pub fn from_tar_zst(
         logger: &slog::Logger,
         path: &Path,
         extract_dir: &Path,
     ) -> Result<StandaloneDistribution> {
+        let basename = path
+            .file_name()
+            .ok_or_else(|| anyhow!("unable to determine filename"))?
+            .to_string_lossy();
+
+        if !basename.ends_with(".tar.zst") {
+            return Err(anyhow!("unhandled distribution format: {}", path.display()));
+        }
+
         let mut fh = std::fs::File::open(path)
             .with_context(|| format!("unable to open {}", path.display()))?;
 
@@ -443,18 +455,7 @@ impl StandaloneDistribution {
         let dist_cursor = Cursor::new(python_distribution_data);
         warn!(logger, "reading data from Python distribution...");
 
-        let basename = path
-            .file_name()
-            .ok_or_else(|| anyhow!("unable to determine filename"))?
-            .to_string_lossy();
-
-        // Sniffing filenames will only take us so far. At some point we should pass an enum
-        // declaring the distribution variant or sniff it from contents.
-        if basename.ends_with(".tar.zst") {
-            analyze_python_distribution_tar_zst(dist_cursor, &extract_dir)
-        } else {
-            Err(anyhow!("unhandled distribution format: {}", path.display()))
-        }
+        analyze_python_distribution_tar_zst(dist_cursor, &extract_dir)
     }
 
     pub fn as_minimal_info(&self) -> PythonDistributionMinimalInfo {

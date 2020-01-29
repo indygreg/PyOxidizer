@@ -287,7 +287,7 @@ pub fn resolve_parsed_distribution(
 
     let distribution_path = dest_dir.join(format!("python.{}", distribution_hash));
 
-    StandaloneDistribution::from_path(logger, &path, &distribution_path)
+    StandaloneDistribution::from_tar_zst(logger, &path, &distribution_path)
 }
 
 /// Resolve the default Python distribution for a build target.
