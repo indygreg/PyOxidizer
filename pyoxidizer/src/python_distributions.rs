@@ -63,4 +63,29 @@ lazy_static! {
 
         res
     };
+    pub static ref CPYTHON_EMBEDDABLE_BY_TRIPLE: BTreeMap<String, HostedDistribution> = {
+        let mut res: BTreeMap<String, HostedDistribution> = BTreeMap::new();
+
+        res.insert(
+            "i686-pc-windows-msvc".to_string(),
+            HostedDistribution {
+                url: "https://www.python.org/ftp/python/3.7.6/python-3.7.6-embed-win32.zip"
+                    .to_string(),
+                sha256: "e2257b87e2e1a131e5d2adf843887fdab5021f8d4d6d68d49691aa965650c3ab"
+                    .to_string(),
+            },
+        );
+
+        res.insert(
+            "x86_64-pc-windows-msvc".to_string(),
+            HostedDistribution {
+                url: "https://www.python.org/ftp/python/3.7.6/python-3.7.6-embed-amd64.zip"
+                    .to_string(),
+                sha256: "114638061d636285600cbc3d4def64b45c43da9b225cb9eeead30fe7fe7d60d4"
+                    .to_string(),
+            },
+        );
+
+        res
+    };
 }
