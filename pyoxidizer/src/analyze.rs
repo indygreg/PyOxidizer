@@ -4,14 +4,17 @@
 
 //! Analyze binaries for distribution compatibility.
 
-use byteorder::ReadBytesExt;
-use lazy_static::lazy_static;
-use std::collections::BTreeMap;
-use std::ffi::CStr;
-use std::fs::File;
-use std::io::{Cursor, Read};
-use std::os::raw::c_char;
-use std::path::PathBuf;
+use {
+    anyhow::Result,
+    byteorder::ReadBytesExt,
+    lazy_static::lazy_static,
+    std::collections::BTreeMap,
+    std::ffi::CStr,
+    std::fs::File,
+    std::io::{Cursor, Read},
+    std::os::raw::c_char,
+    std::path::{Path, PathBuf},
+};
 
 const LSB_SHARED_LIBRARIES: &[&str] = &[
     "ld-linux-x86-64.so.2",
@@ -454,4 +457,14 @@ pub fn find_undefined_elf_symbols(buffer: &[u8], elf: &goblin::elf::Elf) -> Vec<
     }
 
     res
+}
+
+pub fn find_pe_dependencies(data: &[u8]) -> Result<Vec<String>> {
+    let pe = goblin::pe::PE::parse(data)?;
+    Ok(pe.libraries.iter().map(|l| (*l).to_string()).collect())
+}
+
+pub fn find_pe_dependencies_path(path: &Path) -> Result<Vec<String>> {
+    let data = std::fs::read(path)?;
+    find_pe_dependencies(&data)
 }

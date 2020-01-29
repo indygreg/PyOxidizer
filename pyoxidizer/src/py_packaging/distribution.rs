@@ -6,32 +6,32 @@
 Defining and manipulating Python distributions.
 */
 
-use anyhow::{anyhow, Context, Result};
-use copy_dir::copy_dir;
-use fs2::FileExt;
-use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
-use slog::{info, warn};
-use std::collections::{BTreeMap, BTreeSet, HashMap};
-use std::convert::TryFrom;
-use std::fs;
-use std::fs::{create_dir_all, File};
-use std::hash::BuildHasher;
-use std::io::{BufRead, BufReader, Cursor, Read};
-use std::iter::FromIterator;
-use std::path::{Path, PathBuf};
-use url::Url;
-use uuid::Uuid;
-
-use super::distutils::prepare_hacked_distutils;
-use super::fsscan::{
-    find_python_resources, is_package_from_path, walk_tree_files, PythonFileResource,
+use {
+    super::distutils::prepare_hacked_distutils,
+    super::fsscan::{
+        find_python_resources, is_package_from_path, walk_tree_files, PythonFileResource,
+    },
+    super::resource::{ResourceData, SourceModule},
+    crate::licensing::NON_GPL_LICENSES,
+    crate::py_packaging::resource::DataLocation,
+    crate::python_distributions::CPYTHON_STANDALONE_BY_TRIPLE,
+    anyhow::{anyhow, Context, Result},
+    copy_dir::copy_dir,
+    fs2::FileExt,
+    serde::{Deserialize, Serialize},
+    sha2::{Digest, Sha256},
+    slog::{info, warn},
+    std::collections::{BTreeMap, BTreeSet, HashMap},
+    std::convert::TryFrom,
+    std::fs,
+    std::fs::{create_dir_all, File},
+    std::hash::BuildHasher,
+    std::io::{BufRead, BufReader, Cursor, Read},
+    std::iter::FromIterator,
+    std::path::{Path, PathBuf},
+    url::Url,
+    uuid::Uuid,
 };
-use super::resource::{ResourceData, SourceModule};
-
-use crate::licensing::NON_GPL_LICENSES;
-use crate::py_packaging::resource::DataLocation;
-use crate::python_distributions::CPYTHON_STANDALONE_BY_TRIPLE;
 
 #[cfg(windows)]
 const PYTHON_EXE_BASENAME: &str = "python.exe";
@@ -507,6 +507,8 @@ impl ParsedPythonDistribution {
             .ok_or_else(|| anyhow!("unable to determine filename"))?
             .to_string_lossy();
 
+        // Sniffing filenames will only take us so far. At some point we should pass an enum
+        // declaring the distribution variant or sniff it from contents.
         if basename.ends_with(".tar.zst") {
             analyze_python_distribution_tar_zst(dist_cursor, &extract_dir)
         } else {
@@ -986,12 +988,12 @@ pub fn analyze_python_distribution_data(dist_dir: &Path) -> Result<ParsedPythonD
 /// So we use a lock file to ensure exclusive access.
 /// TODO use more granular lock based on the output directory (possibly
 /// by putting lock in output directory itself).
-struct DistributionExtractLock {
+pub struct DistributionExtractLock {
     file: std::fs::File,
 }
 
 impl DistributionExtractLock {
-    fn new(extract_dir: &Path) -> Result<Self> {
+    pub fn new(extract_dir: &Path) -> Result<Self> {
         let lock_path = extract_dir
             .parent()
             .unwrap()
@@ -1282,8 +1284,7 @@ pub fn default_distribution(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::testutil::*;
+    use {super::*, crate::testutil::*};
 
     #[test]
     fn test_default_distribution() -> Result<()> {
