@@ -501,7 +501,17 @@ impl ParsedPythonDistribution {
         fh.read_to_end(&mut python_distribution_data)?;
         let dist_cursor = Cursor::new(python_distribution_data);
         warn!(logger, "reading data from Python distribution...");
-        analyze_python_distribution_tar_zst(dist_cursor, &extract_dir)
+
+        let basename = path
+            .file_name()
+            .ok_or_else(|| anyhow!("unable to determine filename"))?
+            .to_string_lossy();
+
+        if basename.ends_with(".tar.zst") {
+            analyze_python_distribution_tar_zst(dist_cursor, &extract_dir)
+        } else {
+            Err(anyhow!("unhandled distribution format: {}", path.display()))
+        }
     }
 
     pub fn as_minimal_info(&self) -> PythonDistributionMinimalInfo {
