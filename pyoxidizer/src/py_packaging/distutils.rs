@@ -15,7 +15,7 @@ use std::fs::{create_dir_all, read_dir, read_to_string};
 use std::path::{Path, PathBuf};
 
 use super::resource::ExtensionModuleData;
-use super::standalone_distribution::ParsedPythonDistribution;
+use super::standalone_distribution::StandaloneDistribution;
 
 lazy_static! {
     static ref MODIFIED_DISTUTILS_FILES: BTreeMap<&'static str, &'static [u8]> = {
@@ -53,7 +53,7 @@ lazy_static! {
 /// support as many as possible.
 pub fn prepare_hacked_distutils(
     logger: &slog::Logger,
-    dist: &ParsedPythonDistribution,
+    dist: &StandaloneDistribution,
     dest_dir: &Path,
     extra_python_paths: &[&Path],
 ) -> Result<HashMap<String, String>> {

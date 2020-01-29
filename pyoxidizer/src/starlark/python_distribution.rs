@@ -22,9 +22,7 @@ use {
         setup_py_install as raw_setup_py_install,
     },
     crate::py_packaging::resource::BytecodeOptimizationLevel,
-    crate::py_packaging::standalone_distribution::{
-        ExtensionModuleFilter, ParsedPythonDistribution,
-    },
+    crate::py_packaging::standalone_distribution::{ExtensionModuleFilter, StandaloneDistribution},
     crate::python_distributions::CPYTHON_STANDALONE_BY_TRIPLE,
     anyhow::{anyhow, Result},
     itertools::Itertools,
@@ -52,7 +50,7 @@ pub struct PythonDistribution {
 
     dest_dir: PathBuf,
 
-    pub distribution: Option<Arc<ParsedPythonDistribution>>,
+    pub distribution: Option<Arc<StandaloneDistribution>>,
 
     compiler: Option<BytecodeCompiler>,
 }

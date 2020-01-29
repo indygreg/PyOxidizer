@@ -348,13 +348,14 @@ pub struct PythonDistributionMinimalInfo {
     pub py_module_count: usize,
 }
 
-/// Represents a parsed Python distribution.
+/// Represents a standalone Python distribution.
 ///
-/// Distribution info is typically derived from a tarball containing a
-/// Python install and its build artifacts.
+/// This is a Python distributed produced by the `python-build-standalone`
+/// project. It is derived from a tarball containing a `PYTHON.json` file
+/// describing the distribution.
 #[allow(unused)]
 #[derive(Debug)]
-pub struct ParsedPythonDistribution {
+pub struct StandaloneDistribution {
     /// Directory where distribution lives in the filesystem.
     pub base_dir: PathBuf,
 
@@ -428,12 +429,12 @@ pub struct ParsedPythonDistribution {
     pub venv_base: PathBuf,
 }
 
-impl ParsedPythonDistribution {
+impl StandaloneDistribution {
     pub fn from_path(
         logger: &slog::Logger,
         path: &Path,
         extract_dir: &Path,
-    ) -> Result<ParsedPythonDistribution> {
+    ) -> Result<StandaloneDistribution> {
         let mut fh = std::fs::File::open(path)
             .with_context(|| format!("unable to open {}", path.display()))?;
 
@@ -727,7 +728,7 @@ fn link_entry_to_library_depends(entry: &LinkEntry, python_path: &PathBuf) -> Li
 /// Passing in a data structure with raw file data within is inefficient. But
 /// it makes things easier to implement and allows us to do things like consume
 /// tarballs without filesystem I/O.
-pub fn analyze_python_distribution_data(dist_dir: &Path) -> Result<ParsedPythonDistribution> {
+pub fn analyze_python_distribution_data(dist_dir: &Path) -> Result<StandaloneDistribution> {
     let mut objs_core: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
     let mut links_core: Vec<LibraryDepends> = Vec::new();
     let mut extension_modules: BTreeMap<String, Vec<ExtensionModule>> = BTreeMap::new();
@@ -904,7 +905,7 @@ pub fn analyze_python_distribution_data(dist_dir: &Path) -> Result<ParsedPythonD
 
     let venv_base = dist_dir.parent().unwrap().join("hacked_base");
 
-    Ok(ParsedPythonDistribution {
+    Ok(StandaloneDistribution {
         flavor: pi.python_flavor.clone(),
         version: pi.python_version.clone(),
         os: pi.os.clone(),
@@ -938,7 +939,7 @@ pub fn analyze_python_distribution_data(dist_dir: &Path) -> Result<ParsedPythonD
 pub fn analyze_python_distribution_tar<R: Read>(
     source: R,
     extract_dir: &Path,
-) -> Result<ParsedPythonDistribution> {
+) -> Result<StandaloneDistribution> {
     let mut tf = tar::Archive::new(source);
 
     {
@@ -981,7 +982,7 @@ pub fn analyze_python_distribution_tar<R: Read>(
 pub fn analyze_python_distribution_tar_zst<R: Read>(
     source: R,
     extract_dir: &Path,
-) -> Result<ParsedPythonDistribution> {
+) -> Result<StandaloneDistribution> {
     let dctx = zstd::stream::Decoder::new(source)?;
 
     analyze_python_distribution_tar(dctx, extract_dir)

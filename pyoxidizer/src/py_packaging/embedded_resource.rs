@@ -16,7 +16,7 @@ use {
         PackagedModuleSource, ResourceData, SourceModule,
     },
     super::standalone_distribution::{
-        ExtensionModule, ExtensionModuleFilter, ParsedPythonDistribution,
+        ExtensionModule, ExtensionModuleFilter, StandaloneDistribution,
     },
     anyhow::Result,
     byteorder::{LittleEndian, WriteBytesExt},
@@ -72,7 +72,7 @@ pub struct EmbeddedPythonResourcesPrePackaged {
 impl EmbeddedPythonResourcesPrePackaged {
     pub fn from_distribution(
         logger: &slog::Logger,
-        distribution: Arc<ParsedPythonDistribution>,
+        distribution: Arc<StandaloneDistribution>,
         extension_module_filter: &ExtensionModuleFilter,
         preferred_extension_module_variants: Option<HashMap<String, String>>,
         include_sources: bool,

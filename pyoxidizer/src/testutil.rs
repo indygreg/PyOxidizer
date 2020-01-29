@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use crate::logging::PrintlnDrain;
 use crate::py_packaging::distribution::default_distribution;
-use crate::py_packaging::standalone_distribution::ParsedPythonDistribution;
+use crate::py_packaging::standalone_distribution::StandaloneDistribution;
 
 pub fn get_logger() -> Result<slog::Logger> {
     Ok(Logger::root(
@@ -24,7 +24,7 @@ pub fn get_logger() -> Result<slog::Logger> {
 lazy_static! {
     pub static ref DEFAULT_DISTRIBUTION_TEMP_DIR: tempdir::TempDir =
         { tempdir::TempDir::new("pyoxidizer-test").expect("unable to create temp directory") };
-    pub static ref DEFAULT_DISTRIBUTION: Arc<ParsedPythonDistribution> = {
+    pub static ref DEFAULT_DISTRIBUTION: Arc<StandaloneDistribution> = {
         let path = DEFAULT_DISTRIBUTION_TEMP_DIR.path();
 
         let logger = get_logger().expect("unable to construct logger");
@@ -36,6 +36,6 @@ lazy_static! {
     };
 }
 
-pub fn get_default_distribution() -> Result<Arc<ParsedPythonDistribution>> {
+pub fn get_default_distribution() -> Result<Arc<StandaloneDistribution>> {
     Ok(DEFAULT_DISTRIBUTION.clone())
 }

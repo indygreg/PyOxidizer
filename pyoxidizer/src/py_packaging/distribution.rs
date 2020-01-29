@@ -7,7 +7,7 @@ Defining and manipulating Python distributions.
 */
 
 use {
-    super::standalone_distribution::ParsedPythonDistribution,
+    super::standalone_distribution::StandaloneDistribution,
     crate::python_distributions::CPYTHON_STANDALONE_BY_TRIPLE,
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
@@ -271,7 +271,7 @@ pub fn resolve_parsed_distribution(
     logger: &slog::Logger,
     location: &PythonDistributionLocation,
     dest_dir: &Path,
-) -> Result<ParsedPythonDistribution> {
+) -> Result<StandaloneDistribution> {
     warn!(logger, "resolving Python distribution {:?}", location);
     let path = resolve_python_distribution_archive(location, dest_dir);
     warn!(
@@ -287,7 +287,7 @@ pub fn resolve_parsed_distribution(
 
     let distribution_path = dest_dir.join(format!("python.{}", distribution_hash));
 
-    ParsedPythonDistribution::from_path(logger, &path, &distribution_path)
+    StandaloneDistribution::from_path(logger, &path, &distribution_path)
 }
 
 /// Resolve the default Python distribution for a build target.
@@ -295,7 +295,7 @@ pub fn default_distribution(
     logger: &slog::Logger,
     target: &str,
     dest_dir: &Path,
-) -> Result<ParsedPythonDistribution> {
+) -> Result<StandaloneDistribution> {
     let dist = CPYTHON_STANDALONE_BY_TRIPLE
         .get(target)
         .ok_or_else(|| anyhow!("could not find default Python distribution for {}", target))?;

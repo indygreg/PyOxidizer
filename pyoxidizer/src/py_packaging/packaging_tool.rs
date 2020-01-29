@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 use super::distutils::{prepare_hacked_distutils, read_built_extensions};
 use super::fsscan::{find_python_resources, PythonFileResource};
 use super::resource::PythonResource;
-use super::standalone_distribution::{resolve_python_paths, ParsedPythonDistribution};
+use super::standalone_distribution::{resolve_python_paths, StandaloneDistribution};
 
 /// Find resources installed as part of a packaging operation.
 pub fn find_resources(path: &Path, state_dir: Option<&Path>) -> Result<Vec<PythonResource>> {
@@ -55,7 +55,7 @@ pub fn find_resources(path: &Path, state_dir: Option<&Path>) -> Result<Vec<Pytho
 /// Run `pip install` and return found resources.
 pub fn pip_install<S: BuildHasher>(
     logger: &slog::Logger,
-    dist: &ParsedPythonDistribution,
+    dist: &StandaloneDistribution,
     verbose: bool,
     install_args: &[String],
     extra_envs: &HashMap<String, String, S>,
@@ -120,10 +120,7 @@ pub fn pip_install<S: BuildHasher>(
 }
 
 /// Discover Python resources from a populated virtualenv directory.
-pub fn read_virtualenv(
-    dist: &ParsedPythonDistribution,
-    path: &Path,
-) -> Result<Vec<PythonResource>> {
+pub fn read_virtualenv(dist: &StandaloneDistribution, path: &Path) -> Result<Vec<PythonResource>> {
     let python_paths = resolve_python_paths(path, &dist.version);
 
     find_resources(&python_paths.site_packages, None)
@@ -132,7 +129,7 @@ pub fn read_virtualenv(
 /// Run `setup.py install` against a path and return found resources.
 pub fn setup_py_install<S: BuildHasher>(
     logger: &slog::Logger,
-    dist: &ParsedPythonDistribution,
+    dist: &StandaloneDistribution,
     package_path: &Path,
     verbose: bool,
     extra_envs: &HashMap<String, String, S>,

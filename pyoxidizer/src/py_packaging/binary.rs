@@ -19,13 +19,13 @@ use super::config::EmbeddedPythonConfig;
 use super::embedded_resource::EmbeddedPythonResourcesPrePackaged;
 use super::libpython::{derive_importlib, link_libpython, ImportlibData};
 use super::pyembed::{derive_python_config, write_data_rs};
-use super::standalone_distribution::{ExtensionModuleFilter, ParsedPythonDistribution};
+use super::standalone_distribution::{ExtensionModuleFilter, StandaloneDistribution};
 
 /// A self-contained Python executable before it is compiled.
 #[derive(Debug)]
 pub struct PreBuiltPythonExecutable {
     pub name: String,
-    pub distribution: Arc<ParsedPythonDistribution>,
+    pub distribution: Arc<StandaloneDistribution>,
     pub resources: EmbeddedPythonResourcesPrePackaged,
     pub config: EmbeddedPythonConfig,
 }
@@ -35,7 +35,7 @@ impl PreBuiltPythonExecutable {
     #[allow(clippy::too_many_arguments)]
     pub fn from_python_distribution(
         logger: &slog::Logger,
-        distribution: Arc<ParsedPythonDistribution>,
+        distribution: Arc<StandaloneDistribution>,
         name: &str,
         config: &EmbeddedPythonConfig,
         extension_module_filter: &ExtensionModuleFilter,
