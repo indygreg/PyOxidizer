@@ -86,6 +86,10 @@ fn build_with_pyoxidizer_native(resolve_target: Option<&str>) {
 */
 
 fn main() {
+    if env::var("CARGO_FEATURE_STANDALONE").is_ok() {
+        return;
+    }
+
     // We support using pre-built artifacts, in which case we emit the
     // cargo metadata lines from the "original" build to "register" the
     // artifacts with this cargo invocation.

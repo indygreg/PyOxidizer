@@ -19,3 +19,6 @@ uuid = { version = "0.8", features = ["v4"] }
 [features]
 default = []
 jemalloc = ["jemalloc-sys"]
+
+# Build this crate in isolation, without using PyOxidizer.
+standalone = []
