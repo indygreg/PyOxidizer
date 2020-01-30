@@ -251,7 +251,7 @@ impl PythonResourcesData {
     }
 }
 
-#[allow(unused_doc_comments)]
+#[allow(unused_doc_comments, clippy::too_many_arguments)]
 /// Python type to import modules.
 ///
 /// This type implements the importlib.abc.MetaPathFinder interface for
