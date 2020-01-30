@@ -6,7 +6,7 @@
 
 use {
     super::distribution::{
-        resolve_python_distribution_archive, DistributionExtractLock, PythonDistribution,
+        resolve_python_distribution_from_location, DistributionExtractLock, PythonDistribution,
         PythonDistributionLocation,
     },
     super::distutils::prepare_hacked_distutils,
@@ -990,21 +990,9 @@ impl PythonDistribution for StandaloneDistribution {
         location: &PythonDistributionLocation,
         distributions_dir: &Path,
     ) -> Result<Self> {
-        warn!(logger, "resolving Python distribution {:?}", location);
-        let path = resolve_python_distribution_archive(location, distributions_dir)?;
-        warn!(
-            logger,
-            "Python distribution available at {}",
-            path.display()
-        );
+        let (archive_path, extract_path) =
+            resolve_python_distribution_from_location(logger, location, distributions_dir)?;
 
-        let distribution_hash = match location {
-            PythonDistributionLocation::Local { sha256, .. } => sha256,
-            PythonDistributionLocation::Url { sha256, .. } => sha256,
-        };
-
-        let distribution_path = distributions_dir.join(format!("python.{}", distribution_hash));
-
-        Self::from_tar_zst_file(logger, &path, &distribution_path)
+        Self::from_tar_zst_file(logger, &archive_path, &extract_path)
     }
 }

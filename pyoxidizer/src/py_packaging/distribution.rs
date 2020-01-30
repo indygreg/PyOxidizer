@@ -12,6 +12,7 @@ use {
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
     sha2::{Digest, Sha256},
+    slog::warn,
     std::fs,
     std::fs::{create_dir_all, File},
     std::io::Read,
@@ -261,6 +262,32 @@ pub fn resolve_python_distribution_archive(
             download_distribution(url, sha256, cache_dir)
         }
     }
+}
+
+/// Resolve a Python distribution archive.
+///
+/// Returns a tuple of (archive path, extract directory).
+pub fn resolve_python_distribution_from_location(
+    logger: &slog::Logger,
+    location: &PythonDistributionLocation,
+    distributions_dir: &Path,
+) -> Result<(PathBuf, PathBuf)> {
+    warn!(logger, "resolving Python distribution {:?}", location);
+    let path = resolve_python_distribution_archive(location, distributions_dir)?;
+    warn!(
+        logger,
+        "Python distribution available at {}",
+        path.display()
+    );
+
+    let distribution_hash = match location {
+        PythonDistributionLocation::Local { sha256, .. } => sha256,
+        PythonDistributionLocation::Url { sha256, .. } => sha256,
+    };
+
+    let distribution_path = distributions_dir.join(format!("python.{}", distribution_hash));
+
+    Ok((path, distribution_path))
 }
 
 /// Resolve the default Python distribution for a build target.

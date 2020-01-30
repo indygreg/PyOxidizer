@@ -5,7 +5,10 @@
 /*! Functionality for Windows embeddable distributions. */
 
 use {
-    super::distribution::DistributionExtractLock,
+    super::distribution::{
+        resolve_python_distribution_from_location, DistributionExtractLock, PythonDistribution,
+        PythonDistributionLocation,
+    },
     crate::analyze::find_pe_dependencies_path,
     anyhow::{anyhow, Context, Result},
     std::collections::BTreeMap,
@@ -242,6 +245,19 @@ impl WindowsEmbeddableDistribution {
     }
 }
 
+impl PythonDistribution for WindowsEmbeddableDistribution {
+    fn from_location(
+        logger: &slog::Logger,
+        location: &PythonDistributionLocation,
+        distributions_dir: &Path,
+    ) -> Result<Self> {
+        let (archive_path, extract_path) =
+            resolve_python_distribution_from_location(logger, location, distributions_dir)?;
+
+        Self::from_zip_file(&archive_path, &extract_path)
+    }
+}
+
 /// Looks for a DLL in a file names list without case sensitivity.
 ///
 /// PE may list a DLL using UPPERCASE but its filename in the distribution
@@ -324,18 +340,18 @@ mod tests {
             .get("x86_64-pc-windows-msvc")
             .unwrap();
 
-        let zip_path = super::super::distribution::download_distribution(
-            &amd64_dist.url,
-            &amd64_dist.sha256,
+        let dist: WindowsEmbeddableDistribution = WindowsEmbeddableDistribution::from_location(
+            &logger,
+            &PythonDistributionLocation::Url {
+                url: amd64_dist.url.clone(),
+                sha256: amd64_dist.sha256.clone(),
+            },
             temp_dir.path(),
         )?;
 
         let extract_dir = temp_dir
             .path()
             .join(format!("python.{}", amd64_dist.sha256));
-
-        let dist: WindowsEmbeddableDistribution =
-            WindowsEmbeddableDistribution::from_zip_file(&zip_path, &extract_dir)?;
 
         assert_eq!(dist.python_exe, extract_dir.join("python.exe"));
         assert_eq!(
