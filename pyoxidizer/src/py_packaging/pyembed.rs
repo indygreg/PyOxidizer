@@ -23,7 +23,7 @@ pub fn derive_python_config(
     py_resources_path: &PathBuf,
 ) -> String {
     format!(
-        "PythonConfig {{\n    \
+        "pyembed::PythonConfig {{\n    \
          standard_io_encoding: {},\n    \
          standard_io_errors: {},\n    \
          opt_level: {},\n    \
@@ -96,15 +96,15 @@ pub fn derive_python_config(
         embedded.sys_frozen,
         embedded.sys_meipass,
         match embedded.raw_allocator {
-            RawAllocator::Jemalloc => "PythonRawAllocator::Jemalloc",
-            RawAllocator::Rust => "PythonRawAllocator::Rust",
-            RawAllocator::System => "PythonRawAllocator::System",
+            RawAllocator::Jemalloc => "pyembed::PythonRawAllocator::Jemalloc",
+            RawAllocator::Rust => "pyembed::PythonRawAllocator::Rust",
+            RawAllocator::System => "pyembed::PythonRawAllocator::System",
         },
         match embedded.terminfo_resolution {
-            TerminfoResolution::Dynamic => "TerminfoResolution::Dynamic".to_string(),
-            TerminfoResolution::None => "TerminfoResolution::None".to_string(),
+            TerminfoResolution::Dynamic => "pyembed::TerminfoResolution::Dynamic".to_string(),
+            TerminfoResolution::None => "pyembed::TerminfoResolution::None".to_string(),
             TerminfoResolution::Static(ref v) => {
-                format!("TerminfoResolution::Static(r###\"{}\"###", v)
+                format!("pyembed::TerminfoResolution::Static(r###\"{}\"###", v)
             }
         },
         match &embedded.write_modules_directory_env {
@@ -112,16 +112,20 @@ pub fn derive_python_config(
             _ => "None".to_owned(),
         },
         match embedded.run_mode {
-            RunMode::Noop => "PythonRunMode::None".to_owned(),
-            RunMode::Repl => "PythonRunMode::Repl".to_owned(),
+            RunMode::Noop => "pyembed::PythonRunMode::None".to_owned(),
+            RunMode::Repl => "pyembed::PythonRunMode::Repl".to_owned(),
             RunMode::Module { ref module } => {
-                "PythonRunMode::Module { module: \"".to_owned() + module + "\".to_string() }"
+                "pyembed::PythonRunMode::Module { module: \"".to_owned()
+                    + module
+                    + "\".to_string() }"
             }
             RunMode::Eval { ref code } => {
-                "PythonRunMode::Eval { code: r###\"".to_owned() + code + "\"###.to_string() }"
+                "pyembed::PythonRunMode::Eval { code: r###\"".to_owned()
+                    + code
+                    + "\"###.to_string() }"
             }
             RunMode::File { ref path } => {
-                "PythonRunMode::File { path: std::ffi::CString::new(r###\"".to_owned()
+                "pyembed::PythonRunMode::File { path: std::ffi::CString::new(r###\"".to_owned()
                     + path
                     + "\"###).expect(\"converting filename path to CString\") }"
             }
@@ -131,10 +135,6 @@ pub fn derive_python_config(
 
 pub fn write_data_rs(path: &Path, python_config_rs: &str) -> Result<()> {
     let mut f = File::create(&path)?;
-
-    f.write_all(
-        b"use crate::{PythonConfig, PythonRawAllocator, PythonRunMode, TerminfoResolution};\n\n",
-    )?;
 
     // Ideally we would have a const struct, but we need to do some
     // dynamic allocations. Using a function avoids having to pull in a
@@ -147,10 +147,10 @@ pub fn write_data_rs(path: &Path, python_config_rs: &str) -> Result<()> {
     f.write_fmt(format_args!(
         "/// Obtain the default Python configuration\n\
          ///\n\
-         /// The crate is compiled with a default Python configuration embedded
-         /// in the crate. This function will return an instance of that
-         /// configuration.
-         pub fn default_python_config() -> PythonConfig {{\n{}\n}}\n",
+         /// The crate is compiled with a default Python configuration embedded\n\
+         /// in the crate. This function will return an instance of that\n\
+         /// configuration.\n\
+         pub fn default_python_config() -> pyembed::PythonConfig {{\n{}\n}}\n",
         indented
     ))?;
 
