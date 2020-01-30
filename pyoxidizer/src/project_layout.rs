@@ -227,7 +227,7 @@ pub fn update_new_cargo_toml(path: &Path, pyembed_location: &PyembedLocation) ->
         None => return Err(anyhow!("could not find version line in Cargo.toml")),
     };
 
-    let nl_off = match &content[version_start..content.len()].find("\n") {
+    let nl_off = match &content[version_start..content.len()].find('\n') {
         Some(off) => version_start + off + 1,
         None => return Err(anyhow!("could not find newline after version line")),
     };
