@@ -82,34 +82,58 @@ target returning a :ref:`config_python_embedded_data` instance. In the
 auto-generated configuration file, the ``embedded`` target returns such a
 type.
 
-Influencing ``pyembed`` Artifact Generation
-===========================================
+Cargo Features to Control Building
+==================================
 
-By default, the ``pyembed`` crate's build script will run
-``pyoxidizer run-build-script`` using the ``pyoxidizer`` executable on
-``PATH``.
+The ``pyembed`` crate and generated Rust projects share a set of
+``build-mode-*`` Cargo feature flags to control how build artifacts
+are created and consumed.
 
-To use a specific ``pyoxidizer`` executable, specify the ``PYOXIDIZER_EXE``
-environment variable.
+The features are described in the following sections.
 
-When ``pyoxidizer run-build-script`` runs, a ``PyOxidizer`` configuration
-file will be discovered using the heuristics described at
-:ref:`config_finding_configuration_files`. If running from the context of
-``cargo build``, ``OUT_DIR`` is consulted the a ``pyoxidizer.bzl`` next to
-the main Rust project being built should be used.
+``build-mode-standalone``
+-------------------------
 
-``pyoxidizer run-build-script`` will resolve the default build script
-target by default. To override which target should be resolved, specify
-the target name via the ``PYOXIDIZER_BUILD_TARGET`` environment variable. e.g.::
+Do not attempt to invoke ``pyoxidizer`` or find artifacts it would have
+built. It is possible to build the ``pyembed`` crate in this mode if
+the ``rust-cpython`` and ``python3-sys`` crates can find a Python
+interpreter. But, the ``pyembed`` crate may not be usable or work in
+the way you want it to.
 
-   $ PYOXIDIZER_BUILD_TARGET=pyembed-artifacts cargo build
+This mode is intended to be used for performing quick testing on the
+``pyembed`` crate. It is quite possible that linking errors will occur
+in this mode unless you take additional actions to point Cargo at
+appropriate libraries.
 
-If the build artifacts are already generated (perhaps you called
-``pyoxidizer build`` or ``pyoxidizer run-build-script`` outside the context
-of a normal ``cargo build``), you can tell the ``pyembed`` crate to use
-build artifacts in a specific directory by setting the
-``PYOXIDIZER_REUSE_ARTIFACTS`` environment variable to any value and the
-``PYOXIDIZER_ARTIFACT_DIR`` environment variable to the directory containing
-those artifacts. This directory **must** have a ``cargo_metadata.txt`` file,
-which will be printed to stdout by the build script to tell Cargo how to
-link a Python library.
+``build-mode-pyoxidizer-exe``
+-----------------------------
+
+A ``pyoxidizer`` executable will be run to generate build artifacts.
+
+The path to this executable can be defined via the ``PYOXIDIZER_EXE``
+environment variable. Otherwise ``PATH`` will be used.
+
+At build time, ``pyoxidizer run-build-script`` will be run. A
+``PyOxidizer`` configuration file will be discovered using the heuristics
+described at :ref:`config_finding_configuration_files`. ``OUT_DIR`` will
+be set if running from ``cargo``, so a ``pyoxidizer.bzl`` next to the main
+Rust project being built should be found and used.
+
+``pyoxidizer run-build-script`` will resolve the default build script target
+by default. To override which target should be resolved, specify the target
+name via the ``PYOXIDIZER_BUILD_TARGET`` environment variable. e.g.::
+
+   $ PYOXIDIZER_BUILD_TARGET=build-artifacts cargo build
+
+``build-mode-prebuilt-artifacts``
+---------------------------------
+
+This mode tells the build script to reuse artifacts that were already built.
+(Perhaps you called ``pyoxidizer build`` or ``pyoxidizer run-build-script``
+outside the context of a normal ``cargo build``.)
+
+In this mode, the build script will look for artifacts in the directory
+specified by ``PYOXIDIZER_ARTIFACT_DIR`` if set, falling back to ``OUT_DIR``.
+This directory **must** have a ``cargo_metadata.txt`` file, which will be
+printed to stdout by the build script to tell Cargo how to link a Python
+library.

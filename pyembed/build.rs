@@ -86,28 +86,9 @@ fn build_with_pyoxidizer_native(resolve_target: Option<&str>) {
 */
 
 fn main() {
-    if env::var("CARGO_FEATURE_STANDALONE").is_ok() {
+    if env::var("CARGO_FEATURE_BUILD_MODE_STANDALONE").is_ok() {
         return;
-    }
-
-    // We support using pre-built artifacts, in which case we emit the
-    // cargo metadata lines from the "original" build to "register" the
-    // artifacts with this cargo invocation.
-    if env::var("PYOXIDIZER_REUSE_ARTIFACTS").is_ok() {
-        let artifact_dir_env = env::var("PYOXIDIZER_ARTIFACT_DIR");
-
-        let artifact_dir_path = match artifact_dir_env {
-            Ok(ref v) => PathBuf::from(v),
-            Err(_) => {
-                let out_dir = env::var("OUT_DIR").unwrap();
-                PathBuf::from(&out_dir)
-            }
-        };
-
-        println!("cargo:rerun-if-env-changed=PYOXIDIZER_REUSE_ARTIFACTS");
-        println!("cargo:rerun-if-env-changed=PYOXIDIZER_ARTIFACT_DIR");
-        build_with_artifacts_in_dir(&artifact_dir_path);
-    } else {
+    } else if env::var("CARGO_FEATURE_BUILD_MODE_PYOXIDIZER_EXE").is_ok() {
         let target = if let Ok(target) = env::var("PYOXIDIZER_BUILD_TARGET") {
             Some(target)
         } else {
@@ -122,5 +103,20 @@ fn main() {
                 None
             },
         );
+    } else if env::var("CARGO_FEATURE_BUILD_MODE_PREBUILT_ARTIFACTS").is_ok() {
+        let artifact_dir_env = env::var("PYOXIDIZER_ARTIFACT_DIR");
+
+        let artifact_dir_path = match artifact_dir_env {
+            Ok(ref v) => PathBuf::from(v),
+            Err(_) => {
+                let out_dir = env::var("OUT_DIR").unwrap();
+                PathBuf::from(&out_dir)
+            }
+        };
+
+        println!("cargo:rerun-if-env-changed=PYOXIDIZER_ARTIFACT_DIR");
+        build_with_artifacts_in_dir(&artifact_dir_path);
+    } else {
+        panic!("build-mode-* feature not set");
     }
 }

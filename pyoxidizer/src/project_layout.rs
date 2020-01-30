@@ -241,14 +241,23 @@ pub fn update_new_cargo_toml(path: &Path, pyembed_location: &PyembedLocation) ->
     content.push_str("jemallocator-global = { version = \"0.3\", optional = true }\n");
 
     content.push_str(&match pyembed_location {
-        PyembedLocation::Version(version) => format!("pyembed = \"{}\"\n", version),
-        PyembedLocation::Path(path) => format!("pyembed = {{ path = \"{}\" }}\n", path.display()),
+        PyembedLocation::Version(version) => format!(
+            "pyembed = {{ version = \"{}\", default-features=false }}\n",
+            version
+        ),
+        PyembedLocation::Path(path) => format!(
+            "pyembed = {{ path = \"{}\", default-features=false }}\n",
+            path.display()
+        ),
     });
 
     content.push_str("\n");
     content.push_str("[features]\n");
-    content.push_str("default = []\n");
+    content.push_str("default = [\"build-mode-pyoxidizer-exe\"]\n");
     content.push_str("jemalloc = [\"jemallocator-global\", \"pyembed/jemalloc\"]\n");
+    content.push_str("build-mode-pyoxidizer-exe = [\"pyembed/build-mode-pyoxidizer-exe\"]\n");
+    content
+        .push_str("build-mode-prebuilt-artifacts = [\"pyembed/build-mode-prebuilt-artifacts\"]\n");
 
     std::fs::write(path, content)?;
 

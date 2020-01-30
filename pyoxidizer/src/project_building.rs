@@ -126,9 +126,18 @@ pub fn build_executable_with_rust_project(
         args.push("--release");
     }
 
+    args.push("--no-default-features");
+    let mut features = vec!["build-mode-prebuilt-artifacts"];
+
     if exe.config.raw_allocator == RawAllocator::Jemalloc {
+        features.push("jemalloc");
+    }
+
+    let features = features.join(" ");
+
+    if !features.is_empty() {
         args.push("--features");
-        args.push("jemalloc");
+        args.push(&features);
     }
 
     let mut envs = Vec::new();

@@ -46,6 +46,11 @@ Backwards Compatibility Notes
 New Features
 ^^^^^^^^^^^^
 
+* The ``pyembed`` crate and generated Rust projects now have various
+  ``build-mode-*`` feature flags to control how build artifacts are built. See
+  :ref:`rust_projects` for more.
+* The ``pyembed`` crate can now be built standalone, without being bound to
+  a specific ``PyOxidizer`` configuration.
 * The ``register_target()`` Starlark function now accepts an optional
   ``default_build_script`` argument to define the default target when
   evaluating in *Rust build script* mode.
