@@ -28,6 +28,7 @@ Generated Rust projects all have a similar layout::
 
    $ find pyapp -type f | grep -v .git
    Cargo.toml
+   build.rs
    pyoxidizer.bzl
    src/main.rs
 
@@ -36,11 +37,17 @@ Read more in
 `the official Cargo documentation <https://doc.rust-lang.org/cargo/reference/manifest.html>`_.
 The magic lines in this file to enable PyOxidizer are the following::
 
+   [package]
+   build = "build.rs"
+
    [dependencies]
    pyembed = ...
 
 These lines declare a dependency on the ``pyembed`` package, which holds
-all the smarts for embedding Python in a binary.
+the smarts for embedding Python in a binary.
+
+In addition, the ``build = "build.rs"`` tells runs a script that hooks up
+the output of the ``pyembed`` crate with this project.
 
 Next let's look at ``src/main.rs``. If you aren't familiar with Rust
 projects, the ``src/main.rs`` file is the default location for the source

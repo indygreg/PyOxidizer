@@ -20,6 +20,9 @@ lazy_static! {
         let mut handlebars = Handlebars::new();
 
         handlebars
+            .register_template_string("new-build.rs", include_str!("templates/new-build.rs"))
+            .unwrap();
+        handlebars
             .register_template_string("new-main.rs", include_str!("templates/new-main.rs"))
             .unwrap();
         handlebars
@@ -109,6 +112,16 @@ pub fn find_pyoxidizer_files(root: &Path) -> Vec<PathBuf> {
     }
 
     res
+}
+
+pub fn write_new_build_rs(path: &Path) -> Result<()> {
+    let data: BTreeMap<String, String> = BTreeMap::new();
+    let t = HANDLEBARS.render("new-build.rs", &data)?;
+
+    println!("writing {}", path.display());
+    std::fs::write(path, t)?;
+
+    Ok(())
 }
 
 /// Write a new main.rs file that runs the embedded Python interpreter.
@@ -205,7 +218,25 @@ pub enum PyembedLocation {
 
 /// Update the Cargo.toml of a new Rust project to use pyembed.
 pub fn update_new_cargo_toml(path: &Path, pyembed_location: &PyembedLocation) -> Result<()> {
-    let mut content = std::fs::read_to_string(path)?;
+    let content = std::fs::read_to_string(path)?;
+
+    // Insert a `build = build.rs` line after the `version = *\n` line. We key off
+    // version because it should always be present.
+    let version_start = match content.find("version =") {
+        Some(off) => off,
+        None => return Err(anyhow!("could not find version line in Cargo.toml")),
+    };
+
+    let nl_off = match &content[version_start..content.len()].find("\n") {
+        Some(off) => version_start + off + 1,
+        None => return Err(anyhow!("could not find newline after version line")),
+    };
+
+    let (before, after) = content.split_at(nl_off);
+
+    let mut content = before.to_string();
+    content.push_str("build = \"build.rs\"\n");
+    content.push_str(after);
 
     content.push_str("jemallocator-global = { version = \"0.3\", optional = true }\n");
 
@@ -248,6 +279,7 @@ pub fn initialize_project(
     let name = path.iter().last().unwrap().to_str().unwrap();
     add_pyoxidizer(&path, true)?;
     update_new_cargo_toml(&path.join("Cargo.toml"), pyembed_location)?;
+    write_new_build_rs(&path.join("build.rs"))?;
     write_new_main_rs(&path.join("src").join("main.rs"))?;
     write_new_pyoxidizer_config_file(&path, &name, code, pip_install)?;
 

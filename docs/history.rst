@@ -27,7 +27,8 @@ Not yet released.
 
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
+* Rust projects for the main executable now utilize and require a Cargo build script
+  so metadata can be passed from ``pyembed`` to the project that is consuming it.
 * The ``pyembed`` crate is no longer added to created Rust projects. Instead,
   the generated ``Cargo.toml`` will reference a version of the ``pyembed`` crate
   identical to the ``PyOxidizer`` version currently running. Or if ``pyoxidizer``
