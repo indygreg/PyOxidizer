@@ -133,7 +133,8 @@ pub fn derive_python_config(
     )
 }
 
-pub fn write_data_rs(path: &Path, python_config_rs: &str) -> Result<()> {
+/// Write a standalone .rs file containing a function for obtaining the default PythonConfig.
+pub fn write_default_python_config_rs(path: &Path, python_config_rs: &str) -> Result<()> {
     let mut f = File::create(&path)?;
 
     // Ideally we would have a const struct, but we need to do some

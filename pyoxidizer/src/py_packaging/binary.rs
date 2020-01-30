@@ -18,7 +18,7 @@ use tempdir::TempDir;
 use super::config::EmbeddedPythonConfig;
 use super::embedded_resource::EmbeddedPythonResourcesPrePackaged;
 use super::libpython::{link_libpython, ImportlibBytecode};
-use super::pyembed::{derive_python_config, write_data_rs};
+use super::pyembed::{derive_python_config, write_default_python_config_rs};
 use super::standalone_distribution::{ExtensionModuleFilter, StandaloneDistribution};
 use crate::py_packaging::distribution::PythonDistribution;
 
@@ -253,8 +253,8 @@ impl EmbeddedPythonBinaryData {
             &py_modules,
             &resources,
         );
-        let config_rs = dest_dir.join("data.rs");
-        write_data_rs(&config_rs, &config_rs_data)?;
+        let config_rs = dest_dir.join("default_python_config.rs");
+        write_default_python_config_rs(&config_rs, &config_rs_data)?;
 
         let mut cargo_metadata_lines = Vec::new();
         cargo_metadata_lines.extend(self.library.cargo_metadata.clone());
