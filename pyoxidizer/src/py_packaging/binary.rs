@@ -24,9 +24,16 @@ use super::standalone_distribution::{ExtensionModuleFilter, StandaloneDistributi
 /// A self-contained Python executable before it is compiled.
 #[derive(Debug)]
 pub struct PreBuiltPythonExecutable {
+    /// The name of the executable to build.
     pub name: String,
+
+    /// The Python distribution being used to build this executable.
     pub distribution: Arc<StandaloneDistribution>,
+
+    /// Python resources to be embedded in the binary.
     pub resources: EmbeddedPythonResourcesPrePackaged,
+
+    /// Configuration of the embedded Python interpreter.
     pub config: EmbeddedPythonConfig,
 }
 
