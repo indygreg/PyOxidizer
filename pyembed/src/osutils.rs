@@ -73,7 +73,7 @@ fn resolve_linux_distro() -> LinuxDistroVariant {
     let os_release = Path::new("/etc/os-release");
 
     if let Ok(data) = std::fs::read_to_string(os_release) {
-        for line in data.split("\n") {
+        for line in data.split('\n') {
             if line.starts_with("ID_LIKE=") {
                 if line.contains("debian") {
                     return LinuxDistroVariant::Debian;
