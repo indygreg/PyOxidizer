@@ -328,7 +328,7 @@ mod tests {
             &amd64_dist.url,
             &amd64_dist.sha256,
             temp_dir.path(),
-        );
+        )?;
 
         let extract_dir = temp_dir
             .path()
