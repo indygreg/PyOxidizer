@@ -5,6 +5,7 @@
 /*! Functionality for Windows embeddable distributions. */
 
 use {
+    super::bytecode::BytecodeCompiler,
     super::distribution::{
         resolve_python_distribution_from_location, DistributionExtractLock, PythonDistribution,
         PythonDistributionLocation,
@@ -255,6 +256,10 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
             resolve_python_distribution_from_location(logger, location, distributions_dir)?;
 
         Self::from_zip_file(&archive_path, &extract_path)
+    }
+
+    fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler> {
+        BytecodeCompiler::new(&self.python_exe)
     }
 }
 

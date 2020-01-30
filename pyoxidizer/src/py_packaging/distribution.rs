@@ -7,6 +7,7 @@ Defining and manipulating Python distributions.
 */
 
 use {
+    super::bytecode::BytecodeCompiler,
     super::standalone_distribution::StandaloneDistribution,
     crate::python_distributions::CPYTHON_STANDALONE_BY_TRIPLE,
     anyhow::{anyhow, Context, Result},
@@ -68,6 +69,9 @@ where
         location: &PythonDistributionLocation,
         distributions_dir: &Path,
     ) -> Result<Self>;
+
+    /// Create a `BytecodeCompiler` from this instance.
+    fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler>;
 }
 
 /// Multiple threads or processes could race to extract the archive.

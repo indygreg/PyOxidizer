@@ -95,8 +95,7 @@ impl PythonDistribution {
 
         if let Some(dist) = &self.distribution {
             if self.compiler.is_none() {
-                let compiler = BytecodeCompiler::new(&dist.python_exe)?;
-                self.compiler = Some(compiler);
+                self.compiler = Some(dist.create_bytecode_compiler()?);
             }
         }
 
