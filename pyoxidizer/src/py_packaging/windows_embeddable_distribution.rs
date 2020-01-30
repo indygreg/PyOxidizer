@@ -371,7 +371,7 @@ mod tests {
         let distutils = dist.bytecode_modules.get("distutils").unwrap();
         assert_eq!(distutils.name, "distutils".to_string());
         assert!(distutils.is_package);
-        assert!(distutils.code.len() > 0);
+        assert!(!distutils.code.is_empty());
 
         Ok(())
     }
