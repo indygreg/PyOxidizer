@@ -17,7 +17,7 @@ use tempdir::TempDir;
 
 use super::config::EmbeddedPythonConfig;
 use super::embedded_resource::EmbeddedPythonResourcesPrePackaged;
-use super::libpython::{derive_importlib, link_libpython, ImportlibData};
+use super::libpython::{derive_importlib, link_libpython, ImportlibBytecode};
 use super::pyembed::{derive_python_config, write_data_rs};
 use super::standalone_distribution::{ExtensionModuleFilter, StandaloneDistribution};
 
@@ -183,7 +183,7 @@ pub struct EmbeddedPythonBinaryPaths {
 pub struct EmbeddedPythonBinaryData {
     pub config: EmbeddedPythonConfig,
     pub library: PythonLibrary,
-    pub importlib: ImportlibData,
+    pub importlib: ImportlibBytecode,
     pub resources: EmbeddedResourcesBlobs,
     pub host: String,
     pub target: String,
@@ -219,11 +219,11 @@ impl EmbeddedPythonBinaryData {
     pub fn write_files(&self, dest_dir: &Path) -> Result<EmbeddedPythonBinaryPaths> {
         let importlib_bootstrap = dest_dir.join("importlib_bootstrap");
         let mut fh = File::create(&importlib_bootstrap)?;
-        fh.write_all(&self.importlib.bootstrap_bytecode)?;
+        fh.write_all(&self.importlib.bootstrap)?;
 
         let importlib_bootstrap_external = dest_dir.join("importlib_bootstrap_external");
         let mut fh = File::create(&importlib_bootstrap_external)?;
-        fh.write_all(&self.importlib.bootstrap_external_bytecode)?;
+        fh.write_all(&self.importlib.bootstrap_external)?;
 
         let module_names = dest_dir.join("py-module-names");
         let mut fh = File::create(&module_names)?;

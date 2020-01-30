@@ -41,11 +41,13 @@ lazy_static! {
     };
 }
 
-pub struct ImportlibData {
-    pub bootstrap_source: Vec<u8>,
-    pub bootstrap_bytecode: Vec<u8>,
-    pub bootstrap_external_source: Vec<u8>,
-    pub bootstrap_external_bytecode: Vec<u8>,
+/// Holds bytecode for importlib bootstrap modules.
+///
+/// These are made available as frozen modules to the Python interpreter to bootstrap
+/// the importlib module import system.
+pub struct ImportlibBytecode {
+    pub bootstrap: Vec<u8>,
+    pub bootstrap_external: Vec<u8>,
 }
 
 /// Produce frozen importlib bytecode data.
@@ -55,7 +57,7 @@ pub struct ImportlibData {
 /// importlib._bootstrap_external is modified. We take the original Python
 /// source and concatenate with code that provides the memory importer.
 /// Bytecode is then derived from it.
-pub fn derive_importlib(dist: &StandaloneDistribution) -> Result<ImportlibData> {
+pub fn derive_importlib(dist: &StandaloneDistribution) -> Result<ImportlibBytecode> {
     let mut compiler = BytecodeCompiler::new(&dist.python_exe)?;
 
     let mod_bootstrap_path = &dist.py_modules["importlib._bootstrap"];
@@ -81,11 +83,9 @@ pub fn derive_importlib(dist: &StandaloneDistribution) -> Result<ImportlibData> 
         CompileMode::Bytecode,
     )?;
 
-    Ok(ImportlibData {
-        bootstrap_source,
-        bootstrap_bytecode,
-        bootstrap_external_source,
-        bootstrap_external_bytecode,
+    Ok(ImportlibBytecode {
+        bootstrap: bootstrap_bytecode,
+        bootstrap_external: bootstrap_external_bytecode,
     })
 }
 
