@@ -122,7 +122,7 @@ extern "C" fn raw_rust_free(ctx: *mut c_void, ptr: *mut c_void) {
         let key = ptr as *mut u8;
         let layout = (*state)
             .get(&key)
-            .expect(format!("could not find allocated memory record: {:?}", key).as_str());
+            .unwrap_or_else(|| panic!("could not find allocated memory record: {:?}", key));
 
         alloc::dealloc(key, *layout);
         (*state).remove(&key);
