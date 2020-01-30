@@ -13,7 +13,6 @@ use {
     fs2::FileExt,
     sha2::{Digest, Sha256},
     slog::warn,
-    std::collections::BTreeMap,
     std::fs,
     std::fs::{create_dir_all, File},
     std::io::Read,
@@ -53,14 +52,6 @@ pub fn is_stdlib_test_package(name: &str) -> bool {
 pub enum PythonDistributionLocation {
     Local { local_path: String, sha256: String },
     Url { url: String, sha256: String },
-}
-
-/// Represents contents of the config.c/config.c.in file.
-#[derive(Debug)]
-#[allow(unused)]
-pub struct ConfigC {
-    pub init_funcs: Vec<String>,
-    pub init_mods: BTreeMap<String, String>,
 }
 
 /// Multiple threads or processes could race to extract the archive.
