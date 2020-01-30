@@ -140,7 +140,7 @@ pub fn build_executable_with_rust_project(
 
     // Set PYTHON_SYS_EXECUTABLE so python3-sys uses our distribution's Python to configure
     // itself.
-    let python_exe_path = &exe.distribution.python_exe;
+    let python_exe_path = &exe.python_exe;
     envs.push((
         "PYTHON_SYS_EXECUTABLE",
         python_exe_path.display().to_string(),

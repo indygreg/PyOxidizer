@@ -35,6 +35,9 @@ pub struct PreBuiltPythonExecutable {
 
     /// Configuration of the embedded Python interpreter.
     pub config: EmbeddedPythonConfig,
+
+    /// Path to python executable that can be invoked at build time.
+    pub python_exe: PathBuf,
 }
 
 impl PreBuiltPythonExecutable {
@@ -71,11 +74,14 @@ impl PreBuiltPythonExecutable {
             }
         }
 
+        let python_exe = distribution.python_exe.clone();
+
         Ok(PreBuiltPythonExecutable {
             name: name.to_string(),
             distribution,
             resources,
             config: config.clone(),
+            python_exe,
         })
     }
 
@@ -90,9 +96,7 @@ impl PreBuiltPythonExecutable {
         target: &str,
         opt_level: &str,
     ) -> Result<PythonLibrary> {
-        let resources = self
-            .resources
-            .package(logger, &self.distribution.python_exe)?;
+        let resources = self.resources.package(logger, &self.python_exe)?;
 
         let temp_dir = TempDir::new("pyoxidizer-build-exe")?;
         let temp_dir_path = temp_dir.path();
@@ -130,9 +134,7 @@ impl PreBuiltPythonExecutable {
 
     /// Generate data embedded in binaries representing Python resource data.
     pub fn build_embedded_blobs(&self, logger: &slog::Logger) -> Result<EmbeddedResourcesBlobs> {
-        let embedded_resources = self
-            .resources
-            .package(logger, &self.distribution.python_exe)?;
+        let embedded_resources = self.resources.package(logger, &self.python_exe)?;
 
         let mut module_names = Vec::new();
         let mut modules = Vec::new();
@@ -306,11 +308,14 @@ pub mod tests {
 
         let config = EmbeddedPythonConfig::default();
 
+        let python_exe = distribution.python_exe.clone();
+
         Ok(PreBuiltPythonExecutable {
             name: "testapp".to_string(),
             distribution,
             resources,
             config,
+            python_exe,
         })
     }
 
