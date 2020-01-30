@@ -205,23 +205,21 @@ pub enum PyembedLocation {
 
 /// Update the Cargo.toml of a new Rust project to use pyembed.
 pub fn update_new_cargo_toml(path: &Path, pyembed_location: &PyembedLocation) -> Result<()> {
-    let mut fh = std::fs::OpenOptions::new().append(true).open(path)?;
+    let mut content = std::fs::read_to_string(path)?;
 
-    fh.write_all(b"jemallocator-global = { version = \"0.3\", optional = true }\n")?;
+    content.push_str("jemallocator-global = { version = \"0.3\", optional = true }\n");
 
-    match pyembed_location {
-        PyembedLocation::Version(version) => {
-            fh.write_all(format!("pyembed = \"{}\"\n", version).as_bytes())?;
-        }
-        PyembedLocation::Path(path) => {
-            fh.write_all(format!("pyembed = {{ path = \"{}\" }}\n", path.display()).as_bytes())?;
-        }
-    }
+    content.push_str(&match pyembed_location {
+        PyembedLocation::Version(version) => format!("pyembed = \"{}\"\n", version),
+        PyembedLocation::Path(path) => format!("pyembed = {{ path = \"{}\" }}\n", path.display()),
+    });
 
-    fh.write_all(b"\n")?;
-    fh.write_all(b"[features]\n")?;
-    fh.write_all(b"default = []\n")?;
-    fh.write_all(b"jemalloc = [\"jemallocator-global\", \"pyembed/jemalloc\"]\n")?;
+    content.push_str("\n");
+    content.push_str("[features]\n");
+    content.push_str("default = []\n");
+    content.push_str("jemalloc = [\"jemallocator-global\", \"pyembed/jemalloc\"]\n");
+
+    std::fs::write(path, content)?;
 
     Ok(())
 }
