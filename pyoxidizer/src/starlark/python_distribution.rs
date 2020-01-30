@@ -14,9 +14,7 @@ use {
     crate::py_packaging::binary::PreBuiltPythonExecutable,
     crate::py_packaging::bytecode::{BytecodeCompiler, CompileMode},
     crate::py_packaging::config::EmbeddedPythonConfig,
-    crate::py_packaging::distribution::{
-        is_stdlib_test_package, resolve_parsed_distribution, PythonDistributionLocation,
-    },
+    crate::py_packaging::distribution::{is_stdlib_test_package, PythonDistributionLocation},
     crate::py_packaging::packaging_tool::{
         find_resources, pip_install as raw_pip_install, read_virtualenv as raw_read_virtualenv,
         setup_py_install as raw_setup_py_install,
@@ -70,7 +68,8 @@ impl PythonDistribution {
             return;
         }
 
-        let dist = resolve_parsed_distribution(logger, &self.source, &self.dest_dir).unwrap();
+        let dist =
+            StandaloneDistribution::from_location(logger, &self.source, &self.dest_dir).unwrap();
         warn!(logger, "distribution info: {:#?}", dist.as_minimal_info());
 
         self.distribution = Some(Arc::new(dist));

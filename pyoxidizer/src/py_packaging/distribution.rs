@@ -12,7 +12,6 @@ use {
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
     sha2::{Digest, Sha256},
-    slog::warn,
     std::fs,
     std::fs::{create_dir_all, File},
     std::io::Read,
@@ -248,35 +247,6 @@ pub fn resolve_python_distribution_archive(
     }
 }
 
-/// Resolve a parsed distribution from a location and local filesystem path.
-///
-/// The distribution will be copied and extracted into the destination
-/// directory. It will be parsed from the extracted location.
-///
-/// The created files outlive the returned object.
-pub fn resolve_parsed_distribution(
-    logger: &slog::Logger,
-    location: &PythonDistributionLocation,
-    dest_dir: &Path,
-) -> Result<StandaloneDistribution> {
-    warn!(logger, "resolving Python distribution {:?}", location);
-    let path = resolve_python_distribution_archive(location, dest_dir)?;
-    warn!(
-        logger,
-        "Python distribution available at {}",
-        path.display()
-    );
-
-    let distribution_hash = match location {
-        PythonDistributionLocation::Local { sha256, .. } => sha256,
-        PythonDistributionLocation::Url { sha256, .. } => sha256,
-    };
-
-    let distribution_path = dest_dir.join(format!("python.{}", distribution_hash));
-
-    StandaloneDistribution::from_tar_zst_file(logger, &path, &distribution_path)
-}
-
 /// Resolve the default Python distribution for a build target.
 pub fn default_distribution(
     logger: &slog::Logger,
@@ -292,7 +262,7 @@ pub fn default_distribution(
         sha256: dist.sha256.clone(),
     };
 
-    resolve_parsed_distribution(logger, &location, dest_dir)
+    StandaloneDistribution::from_location(logger, &location, dest_dir)
 }
 
 #[cfg(test)]

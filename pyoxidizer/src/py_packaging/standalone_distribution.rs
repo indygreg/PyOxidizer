@@ -5,7 +5,9 @@
 /*! Functionality for standalone Python distributions. */
 
 use {
-    super::distribution::DistributionExtractLock,
+    super::distribution::{
+        resolve_python_distribution_archive, DistributionExtractLock, PythonDistributionLocation,
+    },
     super::distutils::prepare_hacked_distutils,
     super::fsscan::{
         find_python_resources, is_package_from_path, walk_tree_files, PythonFileResource,
@@ -455,6 +457,33 @@ pub struct StandaloneDistribution {
 }
 
 impl StandaloneDistribution {
+    /// Obtain an instance from a source location and destination directory tree.
+    ///
+    /// The distribution will be obtained and extracted into a directory under
+    /// ``distributions_dir``. Those files will outlive the returned instance.
+    pub fn from_location(
+        logger: &slog::Logger,
+        location: &PythonDistributionLocation,
+        distributions_dir: &Path,
+    ) -> Result<Self> {
+        warn!(logger, "resolving Python distribution {:?}", location);
+        let path = resolve_python_distribution_archive(location, distributions_dir)?;
+        warn!(
+            logger,
+            "Python distribution available at {}",
+            path.display()
+        );
+
+        let distribution_hash = match location {
+            PythonDistributionLocation::Local { sha256, .. } => sha256,
+            PythonDistributionLocation::Url { sha256, .. } => sha256,
+        };
+
+        let distribution_path = distributions_dir.join(format!("python.{}", distribution_hash));
+
+        Self::from_tar_zst_file(logger, &path, &distribution_path)
+    }
+
     /// Create an instance from a .tar.zst file.
     ///
     /// The distribution will be extracted to ``extract_dir`` if necessary.
