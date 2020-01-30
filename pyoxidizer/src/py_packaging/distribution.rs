@@ -53,6 +53,22 @@ pub enum PythonDistributionLocation {
     Url { url: String, sha256: String },
 }
 
+/// Describes a generic Python distribution.
+pub trait PythonDistribution
+where
+    Self: Sized,
+{
+    /// Obtain an instance from a source location and destination directory tree.
+    ///
+    /// The distribution will be obtained and extracted into a directory under
+    /// ``distributions_dir``. Those files will outlive the returned instance.
+    fn from_location(
+        logger: &slog::Logger,
+        location: &PythonDistributionLocation,
+        distributions_dir: &Path,
+    ) -> Result<Self>;
+}
+
 /// Multiple threads or processes could race to extract the archive.
 /// So we use a lock file to ensure exclusive access.
 /// TODO use more granular lock based on the output directory (possibly
