@@ -8,6 +8,7 @@ Defining and manipulating Python distributions.
 
 use {
     super::bytecode::BytecodeCompiler,
+    super::libpython::ImportlibBytecode,
     super::standalone_distribution::StandaloneDistribution,
     crate::python_distributions::CPYTHON_STANDALONE_BY_TRIPLE,
     anyhow::{anyhow, Context, Result},
@@ -72,6 +73,15 @@ where
 
     /// Create a `BytecodeCompiler` from this instance.
     fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler>;
+
+    /// Resolve `importlib` bytecode.
+    ///
+    /// The returned struct holds Python bytecode which will be turned into
+    /// a frozen module. This bytecode registers the PyOxidizer memory importer.
+    ///
+    /// The bytecode should be compiled from modified sources of the
+    /// corresponding Python modules.
+    fn resolve_importlib_bytecode(&self) -> Result<ImportlibBytecode>;
 }
 
 /// Multiple threads or processes could race to extract the archive.

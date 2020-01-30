@@ -57,13 +57,11 @@ pub struct ImportlibBytecode {
 /// importlib._bootstrap_external is modified. We take the original Python
 /// source and concatenate with code that provides the memory importer.
 /// Bytecode is then derived from it.
-pub fn derive_importlib(dist: &StandaloneDistribution) -> Result<ImportlibBytecode> {
-    let mut compiler = BytecodeCompiler::new(&dist.python_exe)?;
-
-    let mod_bootstrap_path = &dist.py_modules["importlib._bootstrap"];
-    let mod_bootstrap_external_path = &dist.py_modules["importlib._bootstrap_external"];
-
-    let bootstrap_source = fs::read(&mod_bootstrap_path)?;
+pub fn derive_importlib(
+    bootstrap_source: &[u8],
+    bootstrap_external_source: &[u8],
+    compiler: &mut BytecodeCompiler,
+) -> Result<ImportlibBytecode> {
     let module_name = "<frozen importlib._bootstrap>";
     let bootstrap_bytecode = compiler.compile(
         &bootstrap_source,
@@ -72,7 +70,7 @@ pub fn derive_importlib(dist: &StandaloneDistribution) -> Result<ImportlibByteco
         CompileMode::Bytecode,
     )?;
 
-    let mut bootstrap_external_source = fs::read(&mod_bootstrap_external_path)?;
+    let mut bootstrap_external_source = Vec::from(bootstrap_external_source);
     bootstrap_external_source.extend("\n# END OF importlib/_bootstrap_external.py\n\n".bytes());
     bootstrap_external_source.extend(PYTHON_IMPORTER);
     let module_name = "<frozen importlib._bootstrap_external>";

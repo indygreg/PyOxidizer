@@ -10,6 +10,7 @@ use {
         resolve_python_distribution_from_location, DistributionExtractLock, PythonDistribution,
         PythonDistributionLocation,
     },
+    super::libpython::ImportlibBytecode,
     crate::analyze::find_pe_dependencies_path,
     anyhow::{anyhow, Context, Result},
     std::collections::BTreeMap,
@@ -260,6 +261,17 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
 
     fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler> {
         BytecodeCompiler::new(&self.python_exe)
+    }
+
+    fn resolve_importlib_bytecode(&self) -> Result<ImportlibBytecode> {
+        // TODO implement
+        //
+        // This will require obtaining the source code from somewhere, since it isn't
+        // present in the distribution. We could derive the Git tag and look in the
+        // Git repository. Or we could distribute the source with PyOxidizer. The
+        // source probably doesn't change that often and it would probably be safe to
+        // vendor the latest version from each Python major release.
+        unimplemented!()
     }
 }
 

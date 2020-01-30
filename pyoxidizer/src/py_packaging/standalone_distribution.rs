@@ -14,6 +14,8 @@ use {
     super::fsscan::{
         find_python_resources, is_package_from_path, walk_tree_files, PythonFileResource,
     },
+    super::libpython::derive_importlib,
+    super::libpython::ImportlibBytecode,
     super::resource::{DataLocation, ResourceData, SourceModule},
     crate::licensing::NON_GPL_LICENSES,
     anyhow::{anyhow, Context, Result},
@@ -999,5 +1001,17 @@ impl PythonDistribution for StandaloneDistribution {
 
     fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler> {
         BytecodeCompiler::new(&self.python_exe)
+    }
+
+    fn resolve_importlib_bytecode(&self) -> Result<ImportlibBytecode> {
+        let mod_bootstrap_path = &self.py_modules["importlib._bootstrap"];
+        let mod_bootstrap_external_path = &self.py_modules["importlib._bootstrap_external"];
+
+        let bootstrap_source = std::fs::read(&mod_bootstrap_path)?;
+        let bootstrap_external_source = std::fs::read(&mod_bootstrap_external_path)?;
+
+        let mut compiler = self.create_bytecode_compiler()?;
+
+        derive_importlib(&bootstrap_source, &bootstrap_external_source, &mut compiler)
     }
 }

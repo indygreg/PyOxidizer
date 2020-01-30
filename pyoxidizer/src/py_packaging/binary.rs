@@ -17,9 +17,10 @@ use tempdir::TempDir;
 
 use super::config::EmbeddedPythonConfig;
 use super::embedded_resource::EmbeddedPythonResourcesPrePackaged;
-use super::libpython::{derive_importlib, link_libpython, ImportlibBytecode};
+use super::libpython::{link_libpython, ImportlibBytecode};
 use super::pyembed::{derive_python_config, write_data_rs};
 use super::standalone_distribution::{ExtensionModuleFilter, StandaloneDistribution};
+use crate::py_packaging::distribution::PythonDistribution;
 
 /// A self-contained Python executable before it is compiled.
 #[derive(Debug)]
@@ -203,7 +204,7 @@ impl EmbeddedPythonBinaryData {
             logger,
             "deriving custom importlib modules to support in-memory importing"
         );
-        let importlib = derive_importlib(&exe.distribution)?;
+        let importlib = exe.distribution.resolve_importlib_bytecode()?;
 
         Ok(EmbeddedPythonBinaryData {
             config: exe.config.clone(),
