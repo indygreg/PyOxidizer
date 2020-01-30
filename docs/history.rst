@@ -27,6 +27,10 @@ Not yet released.
 
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* The ``pyembed`` crate no longer includes the auto-generated default configuration
+  file. Instead, it is consumed by the application that instantiates a Python
+  interpreter.
 * Rust projects for the main executable now utilize and require a Cargo build script
   so metadata can be passed from ``pyembed`` to the project that is consuming it.
 * The ``pyembed`` crate is no longer added to created Rust projects. Instead,

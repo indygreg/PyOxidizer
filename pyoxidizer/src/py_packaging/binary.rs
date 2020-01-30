@@ -265,9 +265,9 @@ impl EmbeddedPythonBinaryData {
             dest_dir.display()
         ));
 
-        // Give pyembed the path to the config file.
+        // Give dependent crates the path to the default config file.
         cargo_metadata_lines.push(format!(
-            "cargo:rustc-env=PYEMBED_DATA_RS_PATH={}",
+            "cargo:default-python-config-rs={}",
             config_rs.display()
         ));
 

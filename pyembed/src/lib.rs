@@ -18,7 +18,6 @@ running code in the interpreter.
 */
 
 mod config;
-mod data;
 mod importer;
 mod osutils;
 mod pyalloc;
@@ -29,9 +28,6 @@ mod pystr;
 pub use crate::config::{
     ExtensionModule, PythonConfig, PythonRawAllocator, PythonRunMode, TerminfoResolution,
 };
-
-#[allow(unused_imports)]
-pub use crate::data::default_python_config;
 
 #[allow(unused_imports)]
 pub use crate::pyinterp::MainPythonInterpreter;

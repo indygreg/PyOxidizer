@@ -358,7 +358,7 @@ pub fn run_from_build(
     let content =
         std::fs::read(&cargo_metadata).context(format!("reading {}", cargo_metadata.display()))?;
     let content = String::from_utf8(content).context("converting cargo_metadata.txt to string")?;
-    print!("{}", content);
+    println!("{}", content);
 
     Ok(())
 }

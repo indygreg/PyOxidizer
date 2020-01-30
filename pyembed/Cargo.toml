@@ -5,6 +5,10 @@ authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 edition = "2018"
 license = "Python-2.0 AND MPL-2.0"
 build = "build.rs"
+# Adding this line enables DEP_* environment variables to be set in
+# dependent crates. We rely on this to allow crates embedding this one
+# to access the artifacts we build.
+links = "pythonXY"
 
 [dependencies]
 # Update documentation in lib.rs when new dependencies are added.

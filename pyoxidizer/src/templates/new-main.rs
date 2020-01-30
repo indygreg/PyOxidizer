@@ -1,4 +1,12 @@
-use pyembed::{default_python_config, MainPythonInterpreter};
+use pyembed::MainPythonInterpreter;
+
+// Include an auto-generated file containing the default
+// `pyembed::PythonConfig` derived by the PyOxidizer configuration file.
+//
+// If you do not want to use PyOxidizer to generate this file, simply
+// remove this line and instantiate your own instance of
+// `pyembed::PythonConfig`.
+include!(env!("PYOXIDIZER_DEFAULT_PYTHON_CONFIG_RS"));
 
 fn main() {
     // The following code is in a block so the MainPythonInterpreter is destroyed in an
