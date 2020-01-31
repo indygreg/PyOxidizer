@@ -19,7 +19,7 @@ use super::config::EmbeddedPythonConfig;
 use super::embedded_resource::EmbeddedPythonResourcesPrePackaged;
 use super::libpython::{link_libpython, ImportlibBytecode};
 use super::pyembed::{derive_python_config, write_default_python_config_rs};
-use super::resource::SourceModule;
+use super::resource::{BytecodeModule, SourceModule};
 use super::standalone_distribution::{ExtensionModuleFilter, StandaloneDistribution};
 use crate::py_packaging::distribution::PythonDistribution;
 
@@ -40,6 +40,9 @@ where
 
     /// Add a source module to the collection of embedded source modules.
     fn add_source_module(&mut self, module: &SourceModule);
+
+    /// Add a bytecode module to the collection of embedded bytecode modules.
+    fn add_bytecode_module(&mut self, module: &BytecodeModule);
 }
 
 /// A self-contained Python executable before it is compiled.
@@ -71,6 +74,10 @@ impl PythonBinaryBuilder for PreBuiltPythonExecutable {
 
     fn add_source_module(&mut self, module: &SourceModule) {
         self.resources.add_source_module(module);
+    }
+
+    fn add_bytecode_module(&mut self, module: &BytecodeModule) {
+        self.resources.add_bytecode_module(module);
     }
 }
 

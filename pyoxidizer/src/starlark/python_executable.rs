@@ -139,7 +139,7 @@ impl PreBuiltPythonExecutable {
 
         let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
         info!(&logger, "adding embedded bytecode module {}", m.name);
-        self.resources.add_bytecode_module(&BytecodeModule {
+        self.add_bytecode_module(&BytecodeModule {
             name: m.name.clone(),
             source: m.source.clone(),
             optimize_level,
