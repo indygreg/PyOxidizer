@@ -22,11 +22,27 @@ use super::pyembed::{derive_python_config, write_default_python_config_rs};
 use super::standalone_distribution::{ExtensionModuleFilter, StandaloneDistribution};
 use crate::py_packaging::distribution::PythonDistribution;
 
+/// Describes a generic way to build a Python binary.
+///
+/// Binary here means an executable or library containing or linking to a
+/// Python interpreter. It also includes embeddable resources within that
+/// binary.
+///
+/// Concrete implementations can be turned into build artifacts or binaries
+/// themselves.
+pub trait PythonBinaryBuilder
+where
+    Self: Sized,
+{
+    /// The name of the binary.
+    fn name(&self) -> String;
+}
+
 /// A self-contained Python executable before it is compiled.
 #[derive(Debug)]
 pub struct PreBuiltPythonExecutable {
     /// The name of the executable to build.
-    pub name: String,
+    exe_name: String,
 
     /// The Python distribution being used to build this executable.
     pub distribution: Arc<StandaloneDistribution>,
@@ -42,6 +58,12 @@ pub struct PreBuiltPythonExecutable {
 
     /// Bytecode for importlib bootstrap modules.
     pub importlib_bytecode: ImportlibBytecode,
+}
+
+impl PythonBinaryBuilder for PreBuiltPythonExecutable {
+    fn name(&self) -> String {
+        self.exe_name.clone()
+    }
 }
 
 impl PreBuiltPythonExecutable {
@@ -82,7 +104,7 @@ impl PreBuiltPythonExecutable {
         let importlib_bytecode = distribution.resolve_importlib_bytecode()?;
 
         Ok(PreBuiltPythonExecutable {
-            name: name.to_string(),
+            exe_name: name.to_string(),
             distribution,
             resources,
             config: config.clone(),
@@ -318,7 +340,7 @@ pub mod tests {
         let importlib_bytecode = distribution.resolve_importlib_bytecode()?;
 
         Ok(PreBuiltPythonExecutable {
-            name: "testapp".to_string(),
+            exe_name: "testapp".to_string(),
             distribution,
             resources,
             config,

@@ -11,7 +11,7 @@ use {
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
     super::util::{optional_list_arg, required_bool_arg, required_type_arg},
     crate::project_building::build_python_executable,
-    crate::py_packaging::binary::PreBuiltPythonExecutable,
+    crate::py_packaging::binary::{PreBuiltPythonExecutable, PythonBinaryBuilder},
     crate::py_packaging::resource::{BytecodeModule, BytecodeOptimizationLevel},
     anyhow::{Context, Result},
     slog::{info, warn},
@@ -63,7 +63,7 @@ impl BuildTarget for PreBuiltPythonExecutable {
         // and building it.
         let (exe_name, exe_data) = build_python_executable(
             &context.logger,
-            &self.name,
+            &self.name(),
             &self,
             &context.host_triple,
             &context.target_triple,

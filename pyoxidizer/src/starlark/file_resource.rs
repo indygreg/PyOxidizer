@@ -18,7 +18,7 @@ use {
         FileContent as RawFileContent, FileManifest as RawFileManifest,
     },
     crate::project_building::build_python_executable,
-    crate::py_packaging::binary::PreBuiltPythonExecutable,
+    crate::py_packaging::binary::{PreBuiltPythonExecutable, PythonBinaryBuilder},
     crate::py_packaging::resource::BytecodeModule,
     crate::py_packaging::standalone_distribution::ExtensionModule,
     anyhow::Result,
@@ -99,7 +99,7 @@ impl FileManifest {
         opt_level: &str,
     ) -> Result<()> {
         let (filename, data) =
-            build_python_executable(logger, &exe.name, exe, host, target, opt_level, release)?;
+            build_python_executable(logger, &exe.name(), exe, host, target, opt_level, release)?;
 
         let content = RawFileContent {
             data,
@@ -294,7 +294,9 @@ impl FileManifest {
                     .unwrap();
                 warn!(
                     logger,
-                    "adding Python executable {} to {}", exe.name, prefix
+                    "adding Python executable {} to {}",
+                    exe.name(),
+                    prefix
                 );
                 self.add_python_executable(
                     &logger, &prefix, exe, &host, &target, release, &opt_level,
