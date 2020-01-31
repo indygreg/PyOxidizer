@@ -94,7 +94,7 @@ pub struct PreBuiltPythonExecutable {
     pub distribution: Arc<StandaloneDistribution>,
 
     /// Python resources to be embedded in the binary.
-    pub resources: EmbeddedPythonResourcesPrePackaged,
+    resources: EmbeddedPythonResourcesPrePackaged,
 
     /// Configuration of the embedded Python interpreter.
     pub config: EmbeddedPythonConfig,
