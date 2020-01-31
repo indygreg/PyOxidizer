@@ -11,8 +11,8 @@ use {
     super::bytecode::BytecodeCompiler,
     super::config::{EmbeddedPythonConfig, RawAllocator},
     super::distribution::{
-        resolve_python_distribution_from_location, DistributionExtractLock, PythonDistribution,
-        PythonDistributionLocation,
+        resolve_python_distribution_from_location, DistributionExtractLock, ExtensionModuleFilter,
+        PythonDistribution, PythonDistributionLocation,
     },
     super::distutils::prepare_hacked_distutils,
     super::embedded_resource::EmbeddedPythonResourcesPrePackaged,
@@ -29,7 +29,6 @@ use {
     serde::{Deserialize, Serialize},
     slog::{info, warn},
     std::collections::{BTreeMap, BTreeSet, HashMap},
-    std::convert::TryFrom,
     std::hash::BuildHasher,
     std::io::{BufRead, BufReader, Read},
     std::iter::FromIterator,
@@ -352,29 +351,6 @@ pub struct LicenseInfo {
     pub license_filename: String,
     /// Text of the license.
     pub license_text: String,
-}
-
-/// Denotes methods to filter extension modules.
-#[derive(Clone, Debug, PartialEq)]
-pub enum ExtensionModuleFilter {
-    Minimal,
-    All,
-    NoLibraries,
-    NoGPL,
-}
-
-impl TryFrom<&str> for ExtensionModuleFilter {
-    type Error = String;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value {
-            "minimal" => Ok(ExtensionModuleFilter::Minimal),
-            "all" => Ok(ExtensionModuleFilter::All),
-            "no-libraries" => Ok(ExtensionModuleFilter::NoLibraries),
-            "no-gpl" => Ok(ExtensionModuleFilter::NoGPL),
-            t => Err(format!("{} is not a valid extension module filter", t)),
-        }
-    }
 }
 
 #[derive(Debug)]

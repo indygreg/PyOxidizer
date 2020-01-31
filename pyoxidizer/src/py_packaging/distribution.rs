@@ -11,13 +11,14 @@ use {
     super::bytecode::BytecodeCompiler,
     super::config::EmbeddedPythonConfig,
     super::libpython::ImportlibBytecode,
-    super::standalone_distribution::{ExtensionModuleFilter, StandaloneDistribution},
+    super::standalone_distribution::StandaloneDistribution,
     crate::python_distributions::CPYTHON_STANDALONE_BY_TRIPLE,
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
     sha2::{Digest, Sha256},
     slog::warn,
     std::collections::HashMap,
+    std::convert::TryFrom,
     std::fs,
     std::fs::{create_dir_all, File},
     std::io::Read,
@@ -51,6 +52,29 @@ pub fn is_stdlib_test_package(name: &str) -> bool {
     }
 
     false
+}
+
+/// Denotes methods to filter extension modules.
+#[derive(Clone, Debug, PartialEq)]
+pub enum ExtensionModuleFilter {
+    Minimal,
+    All,
+    NoLibraries,
+    NoGPL,
+}
+
+impl TryFrom<&str> for ExtensionModuleFilter {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "minimal" => Ok(ExtensionModuleFilter::Minimal),
+            "all" => Ok(ExtensionModuleFilter::All),
+            "no-libraries" => Ok(ExtensionModuleFilter::NoLibraries),
+            "no-gpl" => Ok(ExtensionModuleFilter::NoGPL),
+            t => Err(format!("{} is not a valid extension module filter", t)),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

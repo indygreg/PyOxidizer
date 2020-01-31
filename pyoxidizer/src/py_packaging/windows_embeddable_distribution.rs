@@ -9,11 +9,10 @@ use {
     super::bytecode::BytecodeCompiler,
     super::config::EmbeddedPythonConfig,
     super::distribution::{
-        resolve_python_distribution_from_location, DistributionExtractLock, PythonDistribution,
-        PythonDistributionLocation,
+        resolve_python_distribution_from_location, DistributionExtractLock, ExtensionModuleFilter,
+        PythonDistribution, PythonDistributionLocation,
     },
     super::libpython::ImportlibBytecode,
-    super::standalone_distribution::ExtensionModuleFilter,
     crate::analyze::find_pe_dependencies_path,
     anyhow::{anyhow, Context, Result},
     std::collections::{BTreeMap, HashMap},
