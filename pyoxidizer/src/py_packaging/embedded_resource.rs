@@ -25,7 +25,6 @@ use {
     std::collections::{BTreeMap, BTreeSet, HashMap},
     std::io::Write,
     std::path::Path,
-    std::sync::Arc,
 };
 
 lazy_static! {
@@ -72,7 +71,7 @@ pub struct EmbeddedPythonResourcesPrePackaged {
 impl EmbeddedPythonResourcesPrePackaged {
     pub fn from_distribution(
         logger: &slog::Logger,
-        distribution: Arc<Box<StandaloneDistribution>>,
+        distribution: &StandaloneDistribution,
         extension_module_filter: &ExtensionModuleFilter,
         preferred_extension_module_variants: Option<HashMap<String, String>>,
         include_sources: bool,

@@ -7,14 +7,17 @@ Defining and manipulating Python distributions.
 */
 
 use {
+    super::binary::PythonBinaryBuilder,
     super::bytecode::BytecodeCompiler,
+    super::config::EmbeddedPythonConfig,
     super::libpython::ImportlibBytecode,
-    super::standalone_distribution::StandaloneDistribution,
+    super::standalone_distribution::{ExtensionModuleFilter, StandaloneDistribution},
     crate::python_distributions::CPYTHON_STANDALONE_BY_TRIPLE,
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
     sha2::{Digest, Sha256},
     slog::warn,
+    std::collections::HashMap,
     std::fs,
     std::fs::{create_dir_all, File},
     std::io::Read,
@@ -79,6 +82,20 @@ pub trait PythonDistribution {
     /// The bytecode should be compiled from modified sources of the
     /// corresponding Python modules.
     fn resolve_importlib_bytecode(&self) -> Result<ImportlibBytecode>;
+
+    /// Obtain a `PythonBinaryBuilder` for constructing an executable.
+    #[allow(clippy::too_many_arguments)]
+    fn as_python_executable_builder(
+        &self,
+        logger: &slog::Logger,
+        name: &str,
+        config: &EmbeddedPythonConfig,
+        extension_module_filter: &ExtensionModuleFilter,
+        preferred_extension_module_variants: Option<HashMap<String, String>>,
+        include_sources: bool,
+        include_resources: bool,
+        include_test: bool,
+    ) -> Result<Box<dyn PythonBinaryBuilder>>;
 }
 
 /// Multiple threads or processes could race to extract the archive.

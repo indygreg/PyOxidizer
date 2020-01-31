@@ -23,9 +23,7 @@ use {
         setup_py_install as raw_setup_py_install,
     },
     crate::py_packaging::resource::BytecodeOptimizationLevel,
-    crate::py_packaging::standalone_distribution::{
-        ExtensionModuleFilter, StandaloneDistribution, StandalonePythonExecutableBuilder,
-    },
+    crate::py_packaging::standalone_distribution::{ExtensionModuleFilter, StandaloneDistribution},
     crate::python_distributions::CPYTHON_STANDALONE_BY_TRIPLE,
     anyhow::{anyhow, Result},
     itertools::Itertools,
@@ -280,10 +278,9 @@ impl PythonDistribution {
         };
 
         Ok(Value::new(PythonExecutable {
-            exe: Box::new(
-                StandalonePythonExecutableBuilder::from_python_distribution(
+            exe: dist
+                .as_python_executable_builder(
                     &logger,
-                    dist,
                     &name,
                     &config,
                     &extension_module_filter,
@@ -300,7 +297,6 @@ impl PythonDistribution {
                     }
                     .into())
                 })?,
-            ),
         }))
     }
 

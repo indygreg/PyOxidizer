@@ -5,15 +5,18 @@
 /*! Functionality for Windows embeddable distributions. */
 
 use {
+    super::binary::PythonBinaryBuilder,
     super::bytecode::BytecodeCompiler,
+    super::config::EmbeddedPythonConfig,
     super::distribution::{
         resolve_python_distribution_from_location, DistributionExtractLock, PythonDistribution,
         PythonDistributionLocation,
     },
     super::libpython::ImportlibBytecode,
+    super::standalone_distribution::ExtensionModuleFilter,
     crate::analyze::find_pe_dependencies_path,
     anyhow::{anyhow, Context, Result},
-    std::collections::BTreeMap,
+    std::collections::{BTreeMap, HashMap},
     std::convert::TryInto,
     std::fmt::{Debug, Formatter},
     std::io::Read,
@@ -272,6 +275,20 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         // source probably doesn't change that often and it would probably be safe to
         // vendor the latest version from each Python major release.
         unimplemented!()
+    }
+
+    fn as_python_executable_builder(
+        &self,
+        _logger: &slog::Logger,
+        _name: &str,
+        _config: &EmbeddedPythonConfig,
+        _extension_module_filter: &ExtensionModuleFilter,
+        _preferred_extension_module_variants: Option<HashMap<String, String>>,
+        _include_sources: bool,
+        _include_resources: bool,
+        _include_test: bool,
+    ) -> Result<Box<dyn PythonBinaryBuilder>> {
+        unimplemented!();
     }
 }
 
