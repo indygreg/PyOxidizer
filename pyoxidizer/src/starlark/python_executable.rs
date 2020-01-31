@@ -319,8 +319,7 @@ impl PreBuiltPythonExecutable {
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
-        self.resources
-            .filter_from_files(&logger, &files_refs, &glob_files_refs)
+        self.filter_resources_from_files(&logger, &files_refs, &glob_files_refs)
             .or_else(|e| {
                 Err(RuntimeError {
                     code: "RUNTIME_ERROR",

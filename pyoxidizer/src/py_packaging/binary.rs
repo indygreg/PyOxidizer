@@ -54,6 +54,18 @@ where
 
     /// Add an extension module to be embedded in the binary.
     fn add_extension_module_data(&mut self, extension_module_data: &ExtensionModuleData);
+
+    /// Filter embedded resources against names in files.
+    ///
+    /// `files` is files to read names from.
+    ///
+    /// `glob_patterns` is file patterns of files to read names from.
+    fn filter_resources_from_files(
+        &mut self,
+        logger: &slog::Logger,
+        files: &[&Path],
+        glob_patterns: &[&str],
+    ) -> Result<()>;
 }
 
 /// A self-contained Python executable before it is compiled.
@@ -101,6 +113,16 @@ impl PythonBinaryBuilder for PreBuiltPythonExecutable {
 
     fn add_extension_module_data(&mut self, extension_module: &ExtensionModuleData) {
         self.resources.add_extension_module_data(extension_module);
+    }
+
+    fn filter_resources_from_files(
+        &mut self,
+        logger: &slog::Logger,
+        files: &[&Path],
+        glob_patterns: &[&str],
+    ) -> Result<()> {
+        self.resources
+            .filter_from_files(logger, files, glob_patterns)
     }
 }
 
