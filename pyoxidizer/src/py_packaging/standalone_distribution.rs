@@ -5,18 +5,24 @@
 /*! Functionality for standalone Python distributions. */
 
 use {
+    super::binary::{
+        EmbeddedPythonBinaryData, EmbeddedResourcesBlobs, PythonBinaryBuilder, PythonLibrary,
+    },
     super::bytecode::BytecodeCompiler,
+    super::config::{EmbeddedPythonConfig, RawAllocator},
     super::distribution::{
         resolve_python_distribution_from_location, DistributionExtractLock, PythonDistribution,
         PythonDistributionLocation,
     },
     super::distutils::prepare_hacked_distutils,
+    super::embedded_resource::EmbeddedPythonResourcesPrePackaged,
     super::fsscan::{
         find_python_resources, is_package_from_path, walk_tree_files, PythonFileResource,
     },
-    super::libpython::derive_importlib,
-    super::libpython::ImportlibBytecode,
-    super::resource::{DataLocation, ResourceData, SourceModule},
+    super::libpython::{derive_importlib, link_libpython, ImportlibBytecode},
+    super::resource::{
+        BytecodeModule, DataLocation, ExtensionModuleData, ResourceData, SourceModule,
+    },
     crate::licensing::NON_GPL_LICENSES,
     anyhow::{anyhow, Context, Result},
     copy_dir::copy_dir,
@@ -28,6 +34,8 @@ use {
     std::io::{BufRead, BufReader, Read},
     std::iter::FromIterator,
     std::path::{Path, PathBuf},
+    std::sync::Arc,
+    tempdir::TempDir,
 };
 
 // This needs to be kept in sync with *compiler.py
@@ -1017,5 +1025,283 @@ impl PythonDistribution for StandaloneDistribution {
         let mut compiler = self.create_bytecode_compiler()?;
 
         derive_importlib(&bootstrap_source, &bootstrap_external_source, &mut compiler)
+    }
+}
+
+/// A self-contained Python executable before it is compiled.
+#[derive(Debug)]
+pub struct StandalonePythonExecutableBuilder {
+    /// The name of the executable to build.
+    exe_name: String,
+
+    /// The Python distribution being used to build this executable.
+    distribution: Arc<Box<StandaloneDistribution>>,
+
+    /// Python resources to be embedded in the binary.
+    resources: EmbeddedPythonResourcesPrePackaged,
+
+    /// Configuration of the embedded Python interpreter.
+    config: EmbeddedPythonConfig,
+
+    /// Path to python executable that can be invoked at build time.
+    python_exe: PathBuf,
+
+    /// Bytecode for importlib bootstrap modules.
+    importlib_bytecode: ImportlibBytecode,
+}
+
+impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
+    fn name(&self) -> String {
+        self.exe_name.clone()
+    }
+
+    fn python_exe_path(&self) -> &Path {
+        &self.python_exe
+    }
+
+    fn source_modules(&self) -> &BTreeMap<String, SourceModule> {
+        &self.resources.source_modules
+    }
+
+    fn bytecode_modules(&self) -> &BTreeMap<String, BytecodeModule> {
+        &self.resources.bytecode_modules
+    }
+
+    fn resources(&self) -> &BTreeMap<String, BTreeMap<String, Vec<u8>>> {
+        &self.resources.resources
+    }
+
+    fn extension_modules(&self) -> &BTreeMap<String, ExtensionModule> {
+        &self.resources.extension_modules
+    }
+
+    fn extension_module_datas(&self) -> &BTreeMap<String, ExtensionModuleData> {
+        &self.resources.extension_module_datas
+    }
+
+    fn add_source_module(&mut self, module: &SourceModule) {
+        self.resources.add_source_module(module);
+    }
+
+    fn add_bytecode_module(&mut self, module: &BytecodeModule) {
+        self.resources.add_bytecode_module(module);
+    }
+
+    fn add_resource(&mut self, resource: &ResourceData) {
+        self.resources.add_resource(resource);
+    }
+
+    fn add_extension_module(&mut self, extension_module: &ExtensionModule) {
+        self.resources.add_extension_module(extension_module);
+    }
+
+    fn add_extension_module_data(&mut self, extension_module: &ExtensionModuleData) {
+        self.resources.add_extension_module_data(extension_module);
+    }
+
+    fn filter_resources_from_files(
+        &mut self,
+        logger: &slog::Logger,
+        files: &[&Path],
+        glob_patterns: &[&str],
+    ) -> Result<()> {
+        self.resources
+            .filter_from_files(logger, files, glob_patterns)
+    }
+
+    fn requires_jemalloc(&self) -> bool {
+        self.config.raw_allocator == RawAllocator::Jemalloc
+    }
+
+    fn resolve_embedded_resource_blobs(
+        &self,
+        logger: &slog::Logger,
+    ) -> Result<EmbeddedResourcesBlobs> {
+        let embedded_resources = self.resources.package(logger, &self.python_exe)?;
+
+        let mut module_names = Vec::new();
+        let mut modules = Vec::new();
+        let mut resources = Vec::new();
+
+        embedded_resources.write_blobs(&mut module_names, &mut modules, &mut resources);
+
+        Ok(EmbeddedResourcesBlobs {
+            module_names,
+            modules,
+            resources,
+        })
+    }
+
+    /// Build a Python library suitable for linking.
+    ///
+    /// This will take the underlying distribution, resources, and
+    /// configuration and produce a new executable binary.
+    fn resolve_python_library(
+        &self,
+        logger: &slog::Logger,
+        host: &str,
+        target: &str,
+        opt_level: &str,
+    ) -> Result<PythonLibrary> {
+        let resources = self.resources.package(logger, &self.python_exe)?;
+
+        let temp_dir = TempDir::new("pyoxidizer-build-exe")?;
+        let temp_dir_path = temp_dir.path();
+
+        warn!(
+            logger,
+            "generating custom link library containing Python..."
+        );
+        let library_info = link_libpython(
+            logger,
+            &self.distribution,
+            &resources,
+            &temp_dir_path,
+            host,
+            target,
+            opt_level,
+        )?;
+
+        let mut cargo_metadata: Vec<String> = Vec::new();
+        cargo_metadata.extend(library_info.cargo_metadata);
+
+        let libpython_data = std::fs::read(&library_info.libpython_path)?;
+        let libpyembeddedconfig_data = std::fs::read(&library_info.libpyembeddedconfig_path)?;
+
+        Ok(PythonLibrary {
+            libpython_filename: PathBuf::from(library_info.libpython_path.file_name().unwrap()),
+            libpython_data,
+            libpyembeddedconfig_filename: PathBuf::from(
+                library_info.libpyembeddedconfig_path.file_name().unwrap(),
+            ),
+            libpyembeddedconfig_data,
+            cargo_metadata,
+        })
+    }
+
+    fn as_embedded_python_binary_data(
+        &self,
+        logger: &slog::Logger,
+        host: &str,
+        target: &str,
+        opt_level: &str,
+    ) -> Result<EmbeddedPythonBinaryData> {
+        let library = self.resolve_python_library(logger, host, target, opt_level)?;
+        let resources = self.resolve_embedded_resource_blobs(logger)?;
+        warn!(
+            logger,
+            "deriving custom importlib modules to support in-memory importing"
+        );
+        let importlib = self.importlib_bytecode.clone();
+
+        Ok(EmbeddedPythonBinaryData {
+            config: self.config.clone(),
+            library,
+            importlib,
+            resources,
+            host: host.to_string(),
+            target: target.to_string(),
+        })
+    }
+}
+
+impl StandalonePythonExecutableBuilder {
+    /// Create an instance from a Python distribution, using settings.
+    #[allow(clippy::too_many_arguments)]
+    pub fn from_python_distribution(
+        logger: &slog::Logger,
+        distribution: Arc<Box<StandaloneDistribution>>,
+        name: &str,
+        config: &EmbeddedPythonConfig,
+        extension_module_filter: &ExtensionModuleFilter,
+        preferred_extension_module_variants: Option<HashMap<String, String>>,
+        include_sources: bool,
+        include_resources: bool,
+        include_test: bool,
+    ) -> Result<Self> {
+        let mut resources = EmbeddedPythonResourcesPrePackaged::from_distribution(
+            logger,
+            distribution.clone(),
+            extension_module_filter,
+            preferred_extension_module_variants,
+            include_sources,
+            include_resources,
+            include_test,
+        )?;
+
+        // Always ensure minimal extension modules are present, otherwise we get
+        // missing symbol errors at link time.
+        for ext in
+            distribution.filter_extension_modules(&logger, &ExtensionModuleFilter::Minimal, None)?
+        {
+            if !resources.extension_modules.contains_key(&ext.module) {
+                resources.add_extension_module(&ext);
+            }
+        }
+
+        let python_exe = distribution.python_exe.clone();
+        let importlib_bytecode = distribution.resolve_importlib_bytecode()?;
+
+        Ok(StandalonePythonExecutableBuilder {
+            exe_name: name.to_string(),
+            distribution,
+            resources,
+            config: config.clone(),
+            python_exe,
+            importlib_bytecode,
+        })
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use {
+        super::*, crate::py_packaging::standalone_distribution::ExtensionModuleFilter,
+        crate::testutil::*,
+    };
+
+    pub fn get_standalone_executable_builder(
+        logger: &slog::Logger,
+    ) -> Result<StandalonePythonExecutableBuilder> {
+        let distribution = get_default_distribution()?;
+        let mut resources = EmbeddedPythonResourcesPrePackaged::default();
+
+        // We need to add minimal extension modules so builds actually work. If they are missing,
+        // we'll get missing symbol errors during linking.
+        for ext in
+            distribution.filter_extension_modules(logger, &ExtensionModuleFilter::Minimal, None)?
+        {
+            resources.add_extension_module(&ext);
+        }
+
+        let config = EmbeddedPythonConfig::default();
+
+        let python_exe = distribution.python_exe.clone();
+        let importlib_bytecode = distribution.resolve_importlib_bytecode()?;
+
+        Ok(StandalonePythonExecutableBuilder {
+            exe_name: "testapp".to_string(),
+            distribution,
+            resources,
+            config,
+            python_exe,
+            importlib_bytecode,
+        })
+    }
+
+    pub fn get_embedded(logger: &slog::Logger) -> Result<EmbeddedPythonBinaryData> {
+        let exe = get_standalone_executable_builder(logger)?;
+        exe.as_embedded_python_binary_data(&get_logger()?, env!("HOST"), env!("HOST"), "0")
+    }
+
+    #[test]
+    fn test_write_embedded_files() -> Result<()> {
+        let logger = get_logger()?;
+        let embedded = get_embedded(&logger)?;
+        let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
+
+        embedded.write_files(temp_dir.path())?;
+
+        Ok(())
     }
 }

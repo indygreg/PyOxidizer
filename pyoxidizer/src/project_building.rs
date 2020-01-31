@@ -466,14 +466,16 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::py_packaging::binary::tests::get_prebuilt;
-    use crate::testutil::*;
+    use {
+        super::*,
+        crate::py_packaging::standalone_distribution::tests::get_standalone_executable_builder,
+        crate::testutil::*,
+    };
 
     #[test]
     fn test_empty_project() -> Result<()> {
         let logger = get_logger()?;
-        let pre_built = get_prebuilt(&logger)?;
+        let pre_built = get_standalone_executable_builder(&logger)?;
 
         build_python_executable(
             &logger,

@@ -12,7 +12,6 @@ use {
         optional_dict_arg, optional_list_arg, optional_str_arg, optional_type_arg,
         required_bool_arg, required_list_arg, required_str_arg,
     },
-    crate::py_packaging::binary::PreBuiltPythonExecutable,
     crate::py_packaging::bytecode::{BytecodeCompiler, CompileMode},
     crate::py_packaging::config::EmbeddedPythonConfig,
     crate::py_packaging::distribution::{
@@ -24,7 +23,9 @@ use {
         setup_py_install as raw_setup_py_install,
     },
     crate::py_packaging::resource::BytecodeOptimizationLevel,
-    crate::py_packaging::standalone_distribution::{ExtensionModuleFilter, StandaloneDistribution},
+    crate::py_packaging::standalone_distribution::{
+        ExtensionModuleFilter, StandaloneDistribution, StandalonePythonExecutableBuilder,
+    },
     crate::python_distributions::CPYTHON_STANDALONE_BY_TRIPLE,
     anyhow::{anyhow, Result},
     itertools::Itertools,
@@ -280,7 +281,7 @@ impl PythonDistribution {
 
         Ok(Value::new(PythonExecutable {
             exe: Box::new(
-                PreBuiltPythonExecutable::from_python_distribution(
+                StandalonePythonExecutableBuilder::from_python_distribution(
                     &logger,
                     dist,
                     &name,
