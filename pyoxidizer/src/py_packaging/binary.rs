@@ -91,6 +91,12 @@ where
 
     /// Whether the binary requires the jemalloc library.
     fn requires_jemalloc(&self) -> bool;
+
+    /// Resolve blobs representing embedded resource data from the currently configured instance state.
+    fn resolve_embedded_resource_blobs(
+        &self,
+        logger: &slog::Logger,
+    ) -> Result<EmbeddedResourcesBlobs>;
 }
 
 /// A self-contained Python executable before it is compiled.
@@ -176,6 +182,25 @@ impl PythonBinaryBuilder for PreBuiltPythonExecutable {
 
     fn requires_jemalloc(&self) -> bool {
         self.config.raw_allocator == RawAllocator::Jemalloc
+    }
+
+    fn resolve_embedded_resource_blobs(
+        &self,
+        logger: &slog::Logger,
+    ) -> Result<EmbeddedResourcesBlobs> {
+        let embedded_resources = self.resources.package(logger, &self.python_exe)?;
+
+        let mut module_names = Vec::new();
+        let mut modules = Vec::new();
+        let mut resources = Vec::new();
+
+        embedded_resources.write_blobs(&mut module_names, &mut modules, &mut resources);
+
+        Ok(EmbeddedResourcesBlobs {
+            module_names,
+            modules,
+            resources,
+        })
     }
 }
 
@@ -272,23 +297,6 @@ impl PreBuiltPythonExecutable {
             cargo_metadata,
         })
     }
-
-    /// Generate data embedded in binaries representing Python resource data.
-    pub fn build_embedded_blobs(&self, logger: &slog::Logger) -> Result<EmbeddedResourcesBlobs> {
-        let embedded_resources = self.resources.package(logger, &self.python_exe)?;
-
-        let mut module_names = Vec::new();
-        let mut modules = Vec::new();
-        let mut resources = Vec::new();
-
-        embedded_resources.write_blobs(&mut module_names, &mut modules, &mut resources);
-
-        Ok(EmbeddedResourcesBlobs {
-            module_names,
-            modules,
-            resources,
-        })
-    }
 }
 
 /// A self-contained Python executable after it is built.
@@ -339,7 +347,7 @@ impl EmbeddedPythonBinaryData {
         opt_level: &str,
     ) -> Result<EmbeddedPythonBinaryData> {
         let library = exe.build_libpython(logger, host, target, opt_level)?;
-        let resources = exe.build_embedded_blobs(logger)?;
+        let resources = exe.resolve_embedded_resource_blobs(logger)?;
         warn!(
             logger,
             "deriving custom importlib modules to support in-memory importing"
