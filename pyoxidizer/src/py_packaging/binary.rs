@@ -106,6 +106,15 @@ where
         target: &str,
         opt_level: &str,
     ) -> Result<PythonLibrary>;
+
+    /// Obtain an `EmbeddedPythonBinaryData` instance from this one.
+    fn as_embedded_python_binary_data(
+        &self,
+        logger: &slog::Logger,
+        host: &str,
+        target: &str,
+        opt_level: &str,
+    ) -> Result<EmbeddedPythonBinaryData>;
 }
 
 /// A self-contained Python executable before it is compiled.
@@ -258,6 +267,31 @@ impl PythonBinaryBuilder for PreBuiltPythonExecutable {
             cargo_metadata,
         })
     }
+
+    fn as_embedded_python_binary_data(
+        &self,
+        logger: &slog::Logger,
+        host: &str,
+        target: &str,
+        opt_level: &str,
+    ) -> Result<EmbeddedPythonBinaryData> {
+        let library = self.resolve_python_library(logger, host, target, opt_level)?;
+        let resources = self.resolve_embedded_resource_blobs(logger)?;
+        warn!(
+            logger,
+            "deriving custom importlib modules to support in-memory importing"
+        );
+        let importlib = self.importlib_bytecode.clone();
+
+        Ok(EmbeddedPythonBinaryData {
+            config: self.config.clone(),
+            library,
+            importlib,
+            resources,
+            host: host.to_string(),
+            target: target.to_string(),
+        })
+    }
 }
 
 impl PreBuiltPythonExecutable {
@@ -348,31 +382,6 @@ pub struct EmbeddedPythonBinaryData {
 }
 
 impl EmbeddedPythonBinaryData {
-    pub fn from_pre_built_python_executable(
-        exe: &PreBuiltPythonExecutable,
-        logger: &slog::Logger,
-        host: &str,
-        target: &str,
-        opt_level: &str,
-    ) -> Result<EmbeddedPythonBinaryData> {
-        let library = exe.resolve_python_library(logger, host, target, opt_level)?;
-        let resources = exe.resolve_embedded_resource_blobs(logger)?;
-        warn!(
-            logger,
-            "deriving custom importlib modules to support in-memory importing"
-        );
-        let importlib = exe.importlib_bytecode.clone();
-
-        Ok(EmbeddedPythonBinaryData {
-            config: exe.config.clone(),
-            library,
-            importlib,
-            resources,
-            host: host.to_string(),
-            target: target.to_string(),
-        })
-    }
-
     /// Write out files needed to link a binary.
     pub fn write_files(&self, dest_dir: &Path) -> Result<EmbeddedPythonBinaryPaths> {
         let importlib_bootstrap = dest_dir.join("importlib_bootstrap");
@@ -481,13 +490,8 @@ pub mod tests {
     }
 
     pub fn get_embedded(logger: &slog::Logger) -> Result<EmbeddedPythonBinaryData> {
-        EmbeddedPythonBinaryData::from_pre_built_python_executable(
-            &get_prebuilt(logger)?,
-            &get_logger()?,
-            env!("HOST"),
-            env!("HOST"),
-            "0",
-        )
+        let exe = get_prebuilt(logger)?;
+        exe.as_embedded_python_binary_data(&get_logger()?, env!("HOST"), env!("HOST"), "0")
     }
 
     #[test]

@@ -5,9 +5,7 @@
 use {
     crate::environment::{canonicalize_path, MINIMUM_RUST_VERSION},
     crate::project_layout::initialize_project,
-    crate::py_packaging::binary::{
-        EmbeddedPythonBinaryData, PreBuiltPythonExecutable, PythonBinaryBuilder,
-    },
+    crate::py_packaging::binary::{PreBuiltPythonExecutable, PythonBinaryBuilder},
     crate::starlark::eval::{eval_starlark_config_file, EvalResult},
     crate::starlark::target::ResolvedTarget,
     anyhow::{anyhow, Context, Result},
@@ -90,9 +88,7 @@ pub fn build_executable_with_rust_project(
         .with_context(|| "creating directory for PyOxidizer build artifacts")?;
 
     // Derive and write the artifacts needed to build a binary embedding Python.
-    let embedded_data = EmbeddedPythonBinaryData::from_pre_built_python_executable(
-        &exe, logger, host, target, opt_level,
-    )?;
+    let embedded_data = exe.as_embedded_python_binary_data(logger, host, target, opt_level)?;
     embedded_data.write_files(&artifacts_path)?;
 
     let rust_version = rustc_version::version()?;

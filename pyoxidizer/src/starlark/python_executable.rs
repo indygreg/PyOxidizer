@@ -2,7 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use crate::py_packaging::binary::EmbeddedPythonBinaryData;
 use {
     super::env::EnvironmentContext,
     super::python_resource::{
@@ -266,8 +265,7 @@ impl PreBuiltPythonExecutable {
 
         let embedded = context
             .downcast_apply(|context: &EnvironmentContext| {
-                EmbeddedPythonBinaryData::from_pre_built_python_executable(
-                    self,
+                self.as_embedded_python_binary_data(
                     &context.logger,
                     &context.build_host_triple,
                     &context.build_target_triple,
