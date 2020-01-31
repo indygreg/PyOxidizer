@@ -38,6 +38,7 @@ use {
     std::cmp::Ordering,
     std::collections::{HashMap, HashSet},
     std::convert::TryFrom,
+    std::ops::Deref,
     std::path::Path,
 };
 
@@ -93,7 +94,7 @@ impl FileManifest {
         &mut self,
         logger: &slog::Logger,
         prefix: &str,
-        exe: &impl PythonBinaryBuilder,
+        exe: &dyn PythonBinaryBuilder,
         host: &str,
         target: &str,
         release: bool,
@@ -297,7 +298,13 @@ impl FileManifest {
                     prefix
                 );
                 self.add_python_executable(
-                    &logger, &prefix, &exe.exe, &host, &target, release, &opt_level,
+                    &logger,
+                    &prefix,
+                    exe.exe.deref(),
+                    &host,
+                    &target,
+                    release,
+                    &opt_level,
                 )
                 .or_else(|e| {
                     Err(RuntimeError {

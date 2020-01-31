@@ -76,7 +76,7 @@ pub fn build_executable_with_rust_project(
     logger: &slog::Logger,
     project_path: &Path,
     bin_name: &str,
-    exe: &impl PythonBinaryBuilder,
+    exe: &dyn PythonBinaryBuilder,
     build_path: &Path,
     artifacts_path: &Path,
     host: &str,
@@ -189,7 +189,7 @@ pub fn build_executable_with_rust_project(
 pub fn build_python_executable(
     logger: &slog::Logger,
     bin_name: &str,
-    exe: &impl PythonBinaryBuilder,
+    exe: &dyn PythonBinaryBuilder,
     host: &str,
     target: &str,
     opt_level: &str,

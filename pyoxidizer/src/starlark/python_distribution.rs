@@ -279,25 +279,27 @@ impl PythonDistribution {
         };
 
         Ok(Value::new(PythonExecutable {
-            exe: PreBuiltPythonExecutable::from_python_distribution(
-                &logger,
-                dist,
-                &name,
-                &config,
-                &extension_module_filter,
-                preferred_extension_module_variants,
-                include_sources,
-                include_resources,
-                include_test,
-            )
-            .or_else(|e| {
-                Err(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
-                    label: "to_python_executable()".to_string(),
-                }
-                .into())
-            })?,
+            exe: Box::new(
+                PreBuiltPythonExecutable::from_python_distribution(
+                    &logger,
+                    dist,
+                    &name,
+                    &config,
+                    &extension_module_filter,
+                    preferred_extension_module_variants,
+                    include_sources,
+                    include_resources,
+                    include_test,
+                )
+                .or_else(|e| {
+                    Err(RuntimeError {
+                        code: "PYOXIDIZER_BUILD",
+                        message: e.to_string(),
+                        label: "to_python_executable()".to_string(),
+                    }
+                    .into())
+                })?,
+            ),
         }))
     }
 

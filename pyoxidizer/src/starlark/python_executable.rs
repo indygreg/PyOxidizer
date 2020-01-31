@@ -10,7 +10,7 @@ use {
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
     super::util::{optional_list_arg, required_bool_arg, required_type_arg},
     crate::project_building::build_python_executable,
-    crate::py_packaging::binary::{PreBuiltPythonExecutable, PythonBinaryBuilder},
+    crate::py_packaging::binary::PythonBinaryBuilder,
     crate::py_packaging::resource::{BytecodeModule, BytecodeOptimizationLevel},
     anyhow::{Context, Result},
     slog::{info, warn},
@@ -27,12 +27,13 @@ use {
     std::cmp::Ordering,
     std::collections::HashMap,
     std::io::Write,
+    std::ops::Deref,
     std::path::{Path, PathBuf},
 };
 
 /// Represents a builder for a Python executable.
 pub struct PythonExecutable {
-    pub exe: PreBuiltPythonExecutable,
+    pub exe: Box<dyn PythonBinaryBuilder>,
 }
 
 impl TypedValue for PythonExecutable {
@@ -68,7 +69,7 @@ impl BuildTarget for PythonExecutable {
         let (exe_name, exe_data) = build_python_executable(
             &context.logger,
             &self.exe.name(),
-            &self.exe,
+            self.exe.deref(),
             &context.host_triple,
             &context.target_triple,
             &context.opt_level,
