@@ -6,24 +6,25 @@
 Defining and manipulating binaries embedding Python.
 */
 
-use anyhow::Result;
-use slog::warn;
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::Write;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
-use tempdir::TempDir;
-
-use super::config::EmbeddedPythonConfig;
-use super::embedded_resource::EmbeddedPythonResourcesPrePackaged;
-use super::libpython::{link_libpython, ImportlibBytecode};
-use super::pyembed::{derive_python_config, write_default_python_config_rs};
-use super::resource::{BytecodeModule, ExtensionModuleData, ResourceData, SourceModule};
-use super::standalone_distribution::{
-    ExtensionModule, ExtensionModuleFilter, StandaloneDistribution,
+use {
+    super::config::EmbeddedPythonConfig,
+    super::embedded_resource::EmbeddedPythonResourcesPrePackaged,
+    super::libpython::{link_libpython, ImportlibBytecode},
+    super::pyembed::{derive_python_config, write_default_python_config_rs},
+    super::resource::{BytecodeModule, ExtensionModuleData, ResourceData, SourceModule},
+    super::standalone_distribution::{
+        ExtensionModule, ExtensionModuleFilter, StandaloneDistribution,
+    },
+    crate::py_packaging::distribution::PythonDistribution,
+    anyhow::Result,
+    slog::warn,
+    std::collections::HashMap,
+    std::fs::File,
+    std::io::Write,
+    std::path::{Path, PathBuf},
+    std::sync::Arc,
+    tempdir::TempDir,
 };
-use crate::py_packaging::distribution::PythonDistribution;
 
 /// Describes a generic way to build a Python binary.
 ///
@@ -378,9 +379,10 @@ impl EmbeddedPythonBinaryData {
 
 #[cfg(test)]
 pub mod tests {
-    use super::*;
-    use crate::py_packaging::standalone_distribution::ExtensionModuleFilter;
-    use crate::testutil::*;
+    use {
+        super::*, crate::py_packaging::standalone_distribution::ExtensionModuleFilter,
+        crate::testutil::*,
+    };
 
     pub fn get_prebuilt(logger: &slog::Logger) -> Result<PreBuiltPythonExecutable> {
         let distribution = get_default_distribution()?;
