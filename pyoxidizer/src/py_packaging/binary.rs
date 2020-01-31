@@ -18,7 +18,7 @@ use {
     crate::py_packaging::distribution::PythonDistribution,
     anyhow::Result,
     slog::warn,
-    std::collections::HashMap,
+    std::collections::{BTreeMap, HashMap},
     std::fs::File,
     std::io::Write,
     std::path::{Path, PathBuf},
@@ -40,6 +40,21 @@ where
 {
     /// The name of the binary.
     fn name(&self) -> String;
+
+    /// Obtain source modules to be embedded in this instance.
+    fn source_modules(&self) -> &BTreeMap<String, SourceModule>;
+
+    /// Obtain bytecode modules to be embedded in this instance.
+    fn bytecode_modules(&self) -> &BTreeMap<String, BytecodeModule>;
+
+    /// Obtain resource data to be embedded in this instance.
+    fn resources(&self) -> &BTreeMap<String, BTreeMap<String, Vec<u8>>>;
+
+    /// Obtain extension modules to be embedded in this instance.
+    fn extension_modules(&self) -> &BTreeMap<String, ExtensionModule>;
+
+    /// Obtain extension modules to be embedded in this instance.
+    fn extension_module_datas(&self) -> &BTreeMap<String, ExtensionModuleData>;
 
     /// Add a source module to the collection of embedded source modules.
     fn add_source_module(&mut self, module: &SourceModule);
@@ -94,6 +109,26 @@ pub struct PreBuiltPythonExecutable {
 impl PythonBinaryBuilder for PreBuiltPythonExecutable {
     fn name(&self) -> String {
         self.exe_name.clone()
+    }
+
+    fn source_modules(&self) -> &BTreeMap<String, SourceModule> {
+        &self.resources.source_modules
+    }
+
+    fn bytecode_modules(&self) -> &BTreeMap<String, BytecodeModule> {
+        &self.resources.bytecode_modules
+    }
+
+    fn resources(&self) -> &BTreeMap<String, BTreeMap<String, Vec<u8>>> {
+        &self.resources.resources
+    }
+
+    fn extension_modules(&self) -> &BTreeMap<String, ExtensionModule> {
+        &self.resources.extension_modules
+    }
+
+    fn extension_module_datas(&self) -> &BTreeMap<String, ExtensionModuleData> {
+        &self.resources.extension_module_datas
     }
 
     fn add_source_module(&mut self, module: &SourceModule) {

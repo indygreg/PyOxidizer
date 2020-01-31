@@ -441,10 +441,10 @@ mod tests {
         assert_eq!(exe.get_type(), "PythonExecutable");
 
         exe.downcast_apply(|exe: &PreBuiltPythonExecutable| {
-            assert!(!exe.resources.extension_modules.is_empty());
-            assert!(!exe.resources.source_modules.is_empty());
-            assert!(!exe.resources.bytecode_modules.is_empty());
-            assert!(exe.resources.resources.is_empty());
+            assert!(!exe.extension_modules().is_empty());
+            assert!(!exe.source_modules().is_empty());
+            assert!(!exe.bytecode_modules().is_empty());
+            assert!(exe.resources().is_empty());
         });
     }
 
@@ -463,7 +463,7 @@ mod tests {
         assert_eq!(exe.get_type(), "PythonExecutable");
 
         exe.downcast_apply(|exe: &PreBuiltPythonExecutable| {
-            assert!(exe.resources.source_modules.is_empty());
+            assert!(exe.source_modules().is_empty());
         });
     }
 }
