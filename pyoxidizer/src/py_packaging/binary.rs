@@ -7,7 +7,7 @@ Defining and manipulating binaries embedding Python.
 */
 
 use {
-    super::config::EmbeddedPythonConfig,
+    super::config::{EmbeddedPythonConfig, RawAllocator},
     super::embedded_resource::EmbeddedPythonResourcesPrePackaged,
     super::libpython::{link_libpython, ImportlibBytecode},
     super::pyembed::{derive_python_config, write_default_python_config_rs},
@@ -82,6 +82,9 @@ where
         files: &[&Path],
         glob_patterns: &[&str],
     ) -> Result<()>;
+
+    /// Whether the binary requires the jemalloc library.
+    fn requires_jemalloc(&self) -> bool;
 }
 
 /// A self-contained Python executable before it is compiled.
@@ -97,7 +100,7 @@ pub struct PreBuiltPythonExecutable {
     resources: EmbeddedPythonResourcesPrePackaged,
 
     /// Configuration of the embedded Python interpreter.
-    pub config: EmbeddedPythonConfig,
+    config: EmbeddedPythonConfig,
 
     /// Path to python executable that can be invoked at build time.
     pub python_exe: PathBuf,
@@ -159,6 +162,10 @@ impl PythonBinaryBuilder for PreBuiltPythonExecutable {
     ) -> Result<()> {
         self.resources
             .filter_from_files(logger, files, glob_patterns)
+    }
+
+    fn requires_jemalloc(&self) -> bool {
+        self.config.raw_allocator == RawAllocator::Jemalloc
     }
 }
 

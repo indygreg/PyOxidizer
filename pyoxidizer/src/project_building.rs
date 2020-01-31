@@ -5,8 +5,9 @@
 use {
     crate::environment::{canonicalize_path, MINIMUM_RUST_VERSION},
     crate::project_layout::initialize_project,
-    crate::py_packaging::binary::{EmbeddedPythonBinaryData, PreBuiltPythonExecutable},
-    crate::py_packaging::config::RawAllocator,
+    crate::py_packaging::binary::{
+        EmbeddedPythonBinaryData, PreBuiltPythonExecutable, PythonBinaryBuilder,
+    },
     crate::starlark::eval::{eval_starlark_config_file, EvalResult},
     crate::starlark::target::ResolvedTarget,
     anyhow::{anyhow, Context, Result},
@@ -129,7 +130,7 @@ pub fn build_executable_with_rust_project(
     args.push("--no-default-features");
     let mut features = vec!["build-mode-prebuilt-artifacts"];
 
-    if exe.config.raw_allocator == RawAllocator::Jemalloc {
+    if exe.requires_jemalloc() {
         features.push("jemalloc");
     }
 
