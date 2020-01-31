@@ -41,6 +41,12 @@ where
     /// The name of the binary.
     fn name(&self) -> String;
 
+    /// Path to Python executable that can be used to derive info at build time.
+    ///
+    /// The produced binary is effectively a clone of the Python distribution behind the
+    /// returned executable.
+    fn python_exe_path(&self) -> &Path;
+
     /// Obtain source modules to be embedded in this instance.
     fn source_modules(&self) -> &BTreeMap<String, SourceModule>;
 
@@ -103,7 +109,7 @@ pub struct PreBuiltPythonExecutable {
     config: EmbeddedPythonConfig,
 
     /// Path to python executable that can be invoked at build time.
-    pub python_exe: PathBuf,
+    python_exe: PathBuf,
 
     /// Bytecode for importlib bootstrap modules.
     importlib_bytecode: ImportlibBytecode,
@@ -112,6 +118,10 @@ pub struct PreBuiltPythonExecutable {
 impl PythonBinaryBuilder for PreBuiltPythonExecutable {
     fn name(&self) -> String {
         self.exe_name.clone()
+    }
+
+    fn python_exe_path(&self) -> &Path {
+        &self.python_exe
     }
 
     fn source_modules(&self) -> &BTreeMap<String, SourceModule> {
