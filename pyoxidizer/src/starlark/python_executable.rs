@@ -63,7 +63,7 @@ impl BuildTarget for PreBuiltPythonExecutable {
         let (exe_name, exe_data) = build_python_executable(
             &context.logger,
             &self.name(),
-            &self,
+            self,
             &context.host_triple,
             &context.target_triple,
             &context.opt_level,

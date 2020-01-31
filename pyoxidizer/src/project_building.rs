@@ -5,7 +5,7 @@
 use {
     crate::environment::{canonicalize_path, MINIMUM_RUST_VERSION},
     crate::project_layout::initialize_project,
-    crate::py_packaging::binary::{PreBuiltPythonExecutable, PythonBinaryBuilder},
+    crate::py_packaging::binary::PythonBinaryBuilder,
     crate::starlark::eval::{eval_starlark_config_file, EvalResult},
     crate::starlark::target::ResolvedTarget,
     anyhow::{anyhow, Context, Result},
@@ -76,7 +76,7 @@ pub fn build_executable_with_rust_project(
     logger: &slog::Logger,
     project_path: &Path,
     bin_name: &str,
-    exe: &PreBuiltPythonExecutable,
+    exe: &impl PythonBinaryBuilder,
     build_path: &Path,
     artifacts_path: &Path,
     host: &str,
@@ -189,7 +189,7 @@ pub fn build_executable_with_rust_project(
 pub fn build_python_executable(
     logger: &slog::Logger,
     bin_name: &str,
-    exe: &PreBuiltPythonExecutable,
+    exe: &impl PythonBinaryBuilder,
     host: &str,
     target: &str,
     opt_level: &str,

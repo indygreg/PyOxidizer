@@ -92,7 +92,7 @@ impl FileManifest {
         &mut self,
         logger: &slog::Logger,
         prefix: &str,
-        exe: &PreBuiltPythonExecutable,
+        exe: &impl PythonBinaryBuilder,
         host: &str,
         target: &str,
         release: bool,
