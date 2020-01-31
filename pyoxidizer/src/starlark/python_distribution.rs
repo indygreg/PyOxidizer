@@ -4,6 +4,7 @@
 
 use {
     super::env::EnvironmentContext,
+    super::python_executable::PythonExecutable,
     super::python_resource::{
         PythonExtensionModule, PythonExtensionModuleFlavor, PythonResourceData, PythonSourceModule,
     },
@@ -277,8 +278,8 @@ impl PythonDistribution {
             config.downcast_apply(|c: &EmbeddedPythonConfig| c.clone())
         };
 
-        Ok(Value::new(
-            PreBuiltPythonExecutable::from_python_distribution(
+        Ok(Value::new(PythonExecutable {
+            exe: PreBuiltPythonExecutable::from_python_distribution(
                 &logger,
                 dist,
                 &name,
@@ -297,7 +298,7 @@ impl PythonDistribution {
                 }
                 .into())
             })?,
-        ))
+        }))
     }
 
     /// PythonDistribution.extension_modules(filter="all", preferred_variants=None)

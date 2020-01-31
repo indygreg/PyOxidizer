@@ -30,7 +30,12 @@ use {
     std::path::{Path, PathBuf},
 };
 
-impl TypedValue for PreBuiltPythonExecutable {
+/// Represents a builder for a Python executable.
+pub struct PythonExecutable {
+    pub exe: PreBuiltPythonExecutable,
+}
+
+impl TypedValue for PythonExecutable {
     immutable!();
     any!();
     not_supported!(binop, container, function, get_hash, to_int);
@@ -56,14 +61,14 @@ impl TypedValue for PreBuiltPythonExecutable {
     }
 }
 
-impl BuildTarget for PreBuiltPythonExecutable {
+impl BuildTarget for PythonExecutable {
     fn build(&mut self, context: &BuildContext) -> Result<ResolvedTarget> {
         // Build an executable by writing out a temporary Rust project
         // and building it.
         let (exe_name, exe_data) = build_python_executable(
             &context.logger,
-            &self.name(),
-            self,
+            &self.exe.name(),
+            &self.exe,
             &context.host_triple,
             &context.target_triple,
             &context.opt_level,
@@ -92,7 +97,7 @@ impl BuildTarget for PreBuiltPythonExecutable {
 }
 
 // Starlark functions.
-impl PreBuiltPythonExecutable {
+impl PythonExecutable {
     /// PythonExecutable.add_module_source(module)
     pub fn starlark_add_module_source(&mut self, env: &Environment, module: &Value) -> ValueResult {
         required_type_arg("module", "PythonSourceModule", &module)?;
@@ -102,7 +107,7 @@ impl PreBuiltPythonExecutable {
 
         let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
         info!(&logger, "adding embedded source module {}", m.name);
-        self.add_source_module(&m);
+        self.exe.add_source_module(&m);
 
         Ok(Value::new(None))
     }
@@ -138,7 +143,7 @@ impl PreBuiltPythonExecutable {
 
         let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
         info!(&logger, "adding embedded bytecode module {}", m.name);
-        self.add_bytecode_module(&BytecodeModule {
+        self.exe.add_bytecode_module(&BytecodeModule {
             name: m.name.clone(),
             source: m.source.clone(),
             optimize_level,
@@ -164,7 +169,7 @@ impl PreBuiltPythonExecutable {
             &logger,
             "adding embedded resource data {}:{}", r.package, r.name
         );
-        self.add_resource(&r);
+        self.exe.add_resource(&r);
 
         Ok(Value::new(None))
     }
@@ -185,10 +190,10 @@ impl PreBuiltPythonExecutable {
 
         match m {
             PythonExtensionModuleFlavor::Persisted(m) => {
-                self.add_extension_module(&m);
+                self.exe.add_extension_module(&m);
             }
             PythonExtensionModuleFlavor::Built(m) => {
-                self.add_extension_module_data(&m);
+                self.exe.add_extension_module_data(&m);
             }
         }
 
@@ -265,7 +270,7 @@ impl PreBuiltPythonExecutable {
 
         let embedded = context
             .downcast_apply(|context: &EnvironmentContext| {
-                self.as_embedded_python_binary_data(
+                self.exe.as_embedded_python_binary_data(
                     &context.logger,
                     &context.build_host_triple,
                     &context.build_target_triple,
@@ -317,7 +322,8 @@ impl PreBuiltPythonExecutable {
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
-        self.filter_resources_from_files(&logger, &files_refs, &glob_files_refs)
+        self.exe
+            .filter_resources_from_files(&logger, &files_refs, &glob_files_refs)
             .or_else(|e| {
                 Err(RuntimeError {
                     code: "RUNTIME_ERROR",
@@ -334,7 +340,7 @@ impl PreBuiltPythonExecutable {
 starlark_module! { python_executable_env =>
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_module_source(env env, this, module) {
-        this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
+        this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_module_source(&env, &module)
         })
     }
@@ -343,21 +349,21 @@ starlark_module! { python_executable_env =>
     // a single function call.
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_module_bytecode(env env, this, module, optimize_level=0) {
-        this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
+        this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_module_bytecode(&env, &module, &optimize_level)
         })
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_resource_data(env env, this, resource) {
-        this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
+        this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_resource_data(&env, &resource)
         })
     }
 
     #[allow(clippy::ptr_arg)]
     PythonExecutable.add_extension_module(env env, this, module) {
-        this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
+        this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_extension_module(&env, &module)
         })
     }
@@ -372,7 +378,7 @@ starlark_module! { python_executable_env =>
         optimize_level=0
         )
     {
-        this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
+        this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_python_resource(
                 &env,
                 &resource,
@@ -392,7 +398,7 @@ starlark_module! { python_executable_env =>
         add_bytecode_module=true,
         optimize_level=0
     ) {
-        this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
+        this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_python_resources(
                 &env,
                 &resources,
@@ -410,14 +416,14 @@ starlark_module! { python_executable_env =>
         files=None,
         glob_files=None)
     {
-        this.downcast_apply_mut(|exe: &mut PreBuiltPythonExecutable| {
+        this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_filter_resources_from_files(&env, &files, &glob_files)
         })
     }
 
     #[allow(clippy::ptr_arg)]
     PythonExecutable.to_embedded_data(env env, this) {
-        this.downcast_apply(|exe: &PreBuiltPythonExecutable| {
+        this.downcast_apply(|exe: &PythonExecutable| {
             exe.starlark_to_embedded_data(&env)
         })
     }
@@ -438,11 +444,11 @@ mod tests {
 
         assert_eq!(exe.get_type(), "PythonExecutable");
 
-        exe.downcast_apply(|exe: &PreBuiltPythonExecutable| {
-            assert!(!exe.extension_modules().is_empty());
-            assert!(!exe.source_modules().is_empty());
-            assert!(!exe.bytecode_modules().is_empty());
-            assert!(exe.resources().is_empty());
+        exe.downcast_apply(|exe: &PythonExecutable| {
+            assert!(!exe.exe.extension_modules().is_empty());
+            assert!(!exe.exe.source_modules().is_empty());
+            assert!(!exe.exe.bytecode_modules().is_empty());
+            assert!(exe.exe.resources().is_empty());
         });
     }
 
@@ -460,8 +466,8 @@ mod tests {
 
         assert_eq!(exe.get_type(), "PythonExecutable");
 
-        exe.downcast_apply(|exe: &PreBuiltPythonExecutable| {
-            assert!(exe.source_modules().is_empty());
+        exe.downcast_apply(|exe: &PythonExecutable| {
+            assert!(exe.exe.source_modules().is_empty());
         });
     }
 }

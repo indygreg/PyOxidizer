@@ -4,6 +4,7 @@
 
 use {
     super::env::EnvironmentContext,
+    super::python_executable::PythonExecutable,
     super::python_resource::PythonExtensionModuleFlavor,
     super::python_resource::{
         PythonBytecodeModule, PythonExtensionModule, PythonResourceData, PythonSourceModule,
@@ -18,7 +19,7 @@ use {
         FileContent as RawFileContent, FileManifest as RawFileManifest,
     },
     crate::project_building::build_python_executable,
-    crate::py_packaging::binary::{PreBuiltPythonExecutable, PythonBinaryBuilder},
+    crate::py_packaging::binary::PythonBinaryBuilder,
     crate::py_packaging::resource::BytecodeModule,
     crate::py_packaging::standalone_distribution::ExtensionModule,
     anyhow::Result,
@@ -288,18 +289,15 @@ impl FileManifest {
                     });
 
                 let raw_exe = resource.0.borrow();
-                let exe = raw_exe
-                    .as_any()
-                    .downcast_ref::<PreBuiltPythonExecutable>()
-                    .unwrap();
+                let exe = raw_exe.as_any().downcast_ref::<PythonExecutable>().unwrap();
                 warn!(
                     logger,
                     "adding Python executable {} to {}",
-                    exe.name(),
+                    exe.exe.name(),
                     prefix
                 );
                 self.add_python_executable(
-                    &logger, &prefix, exe, &host, &target, release, &opt_level,
+                    &logger, &prefix, &exe.exe, &host, &target, release, &opt_level,
                 )
                 .or_else(|e| {
                     Err(RuntimeError {
