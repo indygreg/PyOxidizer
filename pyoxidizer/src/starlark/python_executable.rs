@@ -165,7 +165,7 @@ impl PreBuiltPythonExecutable {
             &logger,
             "adding embedded resource data {}:{}", r.package, r.name
         );
-        self.resources.add_resource(&r);
+        self.add_resource(&r);
 
         Ok(Value::new(None))
     }
