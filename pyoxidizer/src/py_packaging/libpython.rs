@@ -45,6 +45,7 @@ lazy_static! {
 ///
 /// These are made available as frozen modules to the Python interpreter to bootstrap
 /// the importlib module import system.
+#[derive(Clone, Debug)]
 pub struct ImportlibBytecode {
     pub bootstrap: Vec<u8>,
     pub bootstrap_external: Vec<u8>,

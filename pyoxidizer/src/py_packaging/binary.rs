@@ -39,6 +39,9 @@ pub struct PreBuiltPythonExecutable {
 
     /// Path to python executable that can be invoked at build time.
     pub python_exe: PathBuf,
+
+    /// Bytecode for importlib bootstrap modules.
+    pub importlib_bytecode: ImportlibBytecode,
 }
 
 impl PreBuiltPythonExecutable {
@@ -76,6 +79,7 @@ impl PreBuiltPythonExecutable {
         }
 
         let python_exe = distribution.python_exe.clone();
+        let importlib_bytecode = distribution.resolve_importlib_bytecode()?;
 
         Ok(PreBuiltPythonExecutable {
             name: name.to_string(),
@@ -83,6 +87,7 @@ impl PreBuiltPythonExecutable {
             resources,
             config: config.clone(),
             python_exe,
+            importlib_bytecode,
         })
     }
 
@@ -204,7 +209,7 @@ impl EmbeddedPythonBinaryData {
             logger,
             "deriving custom importlib modules to support in-memory importing"
         );
-        let importlib = exe.distribution.resolve_importlib_bytecode()?;
+        let importlib = exe.importlib_bytecode.clone();
 
         Ok(EmbeddedPythonBinaryData {
             config: exe.config.clone(),
@@ -310,6 +315,7 @@ pub mod tests {
         let config = EmbeddedPythonConfig::default();
 
         let python_exe = distribution.python_exe.clone();
+        let importlib_bytecode = distribution.resolve_importlib_bytecode()?;
 
         Ok(PreBuiltPythonExecutable {
             name: "testapp".to_string(),
@@ -317,6 +323,7 @@ pub mod tests {
             resources,
             config,
             python_exe,
+            importlib_bytecode,
         })
     }
 
