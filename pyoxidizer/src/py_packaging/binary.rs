@@ -91,7 +91,7 @@ pub struct PreBuiltPythonExecutable {
     exe_name: String,
 
     /// The Python distribution being used to build this executable.
-    pub distribution: Arc<StandaloneDistribution>,
+    distribution: Arc<StandaloneDistribution>,
 
     /// Python resources to be embedded in the binary.
     resources: EmbeddedPythonResourcesPrePackaged,
@@ -103,7 +103,7 @@ pub struct PreBuiltPythonExecutable {
     pub python_exe: PathBuf,
 
     /// Bytecode for importlib bootstrap modules.
-    pub importlib_bytecode: ImportlibBytecode,
+    importlib_bytecode: ImportlibBytecode,
 }
 
 impl PythonBinaryBuilder for PreBuiltPythonExecutable {
