@@ -19,8 +19,10 @@ use super::config::EmbeddedPythonConfig;
 use super::embedded_resource::EmbeddedPythonResourcesPrePackaged;
 use super::libpython::{link_libpython, ImportlibBytecode};
 use super::pyembed::{derive_python_config, write_default_python_config_rs};
-use super::resource::{BytecodeModule, ResourceData, SourceModule};
-use super::standalone_distribution::{ExtensionModuleFilter, StandaloneDistribution};
+use super::resource::{BytecodeModule, ExtensionModuleData, ResourceData, SourceModule};
+use super::standalone_distribution::{
+    ExtensionModule, ExtensionModuleFilter, StandaloneDistribution,
+};
 use crate::py_packaging::distribution::PythonDistribution;
 
 /// Describes a generic way to build a Python binary.
@@ -46,6 +48,12 @@ where
 
     /// Add resource data to the collection of embedded resource data.
     fn add_resource(&mut self, resource: &ResourceData);
+
+    /// Add an extension module to be embedded in the binary.
+    fn add_extension_module(&mut self, extension_module: &ExtensionModule);
+
+    /// Add an extension module to be embedded in the binary.
+    fn add_extension_module_data(&mut self, extension_module_data: &ExtensionModuleData);
 }
 
 /// A self-contained Python executable before it is compiled.
@@ -85,6 +93,14 @@ impl PythonBinaryBuilder for PreBuiltPythonExecutable {
 
     fn add_resource(&mut self, resource: &ResourceData) {
         self.resources.add_resource(resource);
+    }
+
+    fn add_extension_module(&mut self, extension_module: &ExtensionModule) {
+        self.resources.add_extension_module(extension_module);
+    }
+
+    fn add_extension_module_data(&mut self, extension_module: &ExtensionModuleData) {
+        self.resources.add_extension_module_data(extension_module);
     }
 }
 

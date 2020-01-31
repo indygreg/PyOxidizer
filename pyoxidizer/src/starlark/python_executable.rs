@@ -186,10 +186,10 @@ impl PreBuiltPythonExecutable {
 
         match m {
             PythonExtensionModuleFlavor::Persisted(m) => {
-                self.resources.add_extension_module(&m);
+                self.add_extension_module(&m);
             }
             PythonExtensionModuleFlavor::Built(m) => {
-                self.resources.add_extension_module_data(&m);
+                self.add_extension_module_data(&m);
             }
         }
 
