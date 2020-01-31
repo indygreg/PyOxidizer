@@ -19,6 +19,7 @@ use super::config::EmbeddedPythonConfig;
 use super::embedded_resource::EmbeddedPythonResourcesPrePackaged;
 use super::libpython::{link_libpython, ImportlibBytecode};
 use super::pyembed::{derive_python_config, write_default_python_config_rs};
+use super::resource::SourceModule;
 use super::standalone_distribution::{ExtensionModuleFilter, StandaloneDistribution};
 use crate::py_packaging::distribution::PythonDistribution;
 
@@ -36,6 +37,9 @@ where
 {
     /// The name of the binary.
     fn name(&self) -> String;
+
+    /// Add a source module to the collection of embedded source modules.
+    fn add_source_module(&mut self, module: &SourceModule);
 }
 
 /// A self-contained Python executable before it is compiled.
@@ -63,6 +67,10 @@ pub struct PreBuiltPythonExecutable {
 impl PythonBinaryBuilder for PreBuiltPythonExecutable {
     fn name(&self) -> String {
         self.exe_name.clone()
+    }
+
+    fn add_source_module(&mut self, module: &SourceModule) {
+        self.resources.add_source_module(module);
     }
 }
 

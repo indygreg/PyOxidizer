@@ -103,7 +103,7 @@ impl PreBuiltPythonExecutable {
 
         let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
         info!(&logger, "adding embedded source module {}", m.name);
-        self.resources.add_source_module(&m);
+        self.add_source_module(&m);
 
         Ok(Value::new(None))
     }
