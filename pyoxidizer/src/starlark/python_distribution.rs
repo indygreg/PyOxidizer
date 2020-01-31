@@ -51,7 +51,7 @@ pub struct PythonDistribution {
 
     dest_dir: PathBuf,
 
-    pub distribution: Option<Arc<StandaloneDistribution>>,
+    pub distribution: Option<Arc<Box<StandaloneDistribution>>>,
 
     compiler: Option<BytecodeCompiler>,
 }

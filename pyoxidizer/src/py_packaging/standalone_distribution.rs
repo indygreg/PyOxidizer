@@ -992,11 +992,15 @@ impl PythonDistribution for StandaloneDistribution {
         logger: &slog::Logger,
         location: &PythonDistributionLocation,
         distributions_dir: &Path,
-    ) -> Result<Self> {
+    ) -> Result<Box<Self>> {
         let (archive_path, extract_path) =
             resolve_python_distribution_from_location(logger, location, distributions_dir)?;
 
-        Self::from_tar_zst_file(logger, &archive_path, &extract_path)
+        Ok(Box::new(Self::from_tar_zst_file(
+            logger,
+            &archive_path,
+            &extract_path,
+        )?))
     }
 
     fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler> {

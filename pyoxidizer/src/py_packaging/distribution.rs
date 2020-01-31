@@ -57,10 +57,7 @@ pub enum PythonDistributionLocation {
 }
 
 /// Describes a generic Python distribution.
-pub trait PythonDistribution
-where
-    Self: Sized,
-{
+pub trait PythonDistribution {
     /// Obtain an instance from a source location and destination directory tree.
     ///
     /// The distribution will be obtained and extracted into a directory under
@@ -69,7 +66,7 @@ where
         logger: &slog::Logger,
         location: &PythonDistributionLocation,
         distributions_dir: &Path,
-    ) -> Result<Self>;
+    ) -> Result<Box<Self>>;
 
     /// Create a `BytecodeCompiler` from this instance.
     fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler>;
@@ -309,7 +306,7 @@ pub fn default_distribution(
     logger: &slog::Logger,
     target: &str,
     dest_dir: &Path,
-) -> Result<StandaloneDistribution> {
+) -> Result<Box<StandaloneDistribution>> {
     let dist = CPYTHON_STANDALONE_BY_TRIPLE
         .get(target)
         .ok_or_else(|| anyhow!("could not find default Python distribution for {}", target))?;

@@ -34,10 +34,7 @@ use {
 ///
 /// Concrete implementations can be turned into build artifacts or binaries
 /// themselves.
-pub trait PythonBinaryBuilder
-where
-    Self: Sized,
-{
+pub trait PythonBinaryBuilder {
     /// The name of the binary.
     fn name(&self) -> String;
 
@@ -124,7 +121,7 @@ pub struct PreBuiltPythonExecutable {
     exe_name: String,
 
     /// The Python distribution being used to build this executable.
-    distribution: Arc<StandaloneDistribution>,
+    distribution: Arc<Box<StandaloneDistribution>>,
 
     /// Python resources to be embedded in the binary.
     resources: EmbeddedPythonResourcesPrePackaged,
@@ -299,7 +296,7 @@ impl PreBuiltPythonExecutable {
     #[allow(clippy::too_many_arguments)]
     pub fn from_python_distribution(
         logger: &slog::Logger,
-        distribution: Arc<StandaloneDistribution>,
+        distribution: Arc<Box<StandaloneDistribution>>,
         name: &str,
         config: &EmbeddedPythonConfig,
         extension_module_filter: &ExtensionModuleFilter,

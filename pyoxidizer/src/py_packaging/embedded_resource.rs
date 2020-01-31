@@ -72,7 +72,7 @@ pub struct EmbeddedPythonResourcesPrePackaged {
 impl EmbeddedPythonResourcesPrePackaged {
     pub fn from_distribution(
         logger: &slog::Logger,
-        distribution: Arc<StandaloneDistribution>,
+        distribution: Arc<Box<StandaloneDistribution>>,
         extension_module_filter: &ExtensionModuleFilter,
         preferred_extension_module_variants: Option<HashMap<String, String>>,
         include_sources: bool,

@@ -24,7 +24,7 @@ pub fn get_logger() -> Result<slog::Logger> {
 lazy_static! {
     pub static ref DEFAULT_DISTRIBUTION_TEMP_DIR: tempdir::TempDir =
         { tempdir::TempDir::new("pyoxidizer-test").expect("unable to create temp directory") };
-    pub static ref DEFAULT_DISTRIBUTION: Arc<StandaloneDistribution> = {
+    pub static ref DEFAULT_DISTRIBUTION: Arc<Box<StandaloneDistribution>> = {
         let path = DEFAULT_DISTRIBUTION_TEMP_DIR.path();
 
         let logger = get_logger().expect("unable to construct logger");
@@ -36,6 +36,6 @@ lazy_static! {
     };
 }
 
-pub fn get_default_distribution() -> Result<Arc<StandaloneDistribution>> {
+pub fn get_default_distribution() -> Result<Arc<Box<StandaloneDistribution>>> {
     Ok(DEFAULT_DISTRIBUTION.clone())
 }

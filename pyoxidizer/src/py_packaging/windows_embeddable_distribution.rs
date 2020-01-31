@@ -252,11 +252,11 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         logger: &slog::Logger,
         location: &PythonDistributionLocation,
         distributions_dir: &Path,
-    ) -> Result<Self> {
+    ) -> Result<Box<Self>> {
         let (archive_path, extract_path) =
             resolve_python_distribution_from_location(logger, location, distributions_dir)?;
 
-        Self::from_zip_file(&archive_path, &extract_path)
+        Ok(Box::new(Self::from_zip_file(&archive_path, &extract_path)?))
     }
 
     fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler> {
@@ -357,14 +357,15 @@ mod tests {
             .get("x86_64-pc-windows-msvc")
             .unwrap();
 
-        let dist: WindowsEmbeddableDistribution = WindowsEmbeddableDistribution::from_location(
-            &logger,
-            &PythonDistributionLocation::Url {
-                url: amd64_dist.url.clone(),
-                sha256: amd64_dist.sha256.clone(),
-            },
-            temp_dir.path(),
-        )?;
+        let dist: Box<WindowsEmbeddableDistribution> =
+            WindowsEmbeddableDistribution::from_location(
+                &logger,
+                &PythonDistributionLocation::Url {
+                    url: amd64_dist.url.clone(),
+                    sha256: amd64_dist.sha256.clone(),
+                },
+                temp_dir.path(),
+            )?;
 
         let extract_dir = temp_dir
             .path()
