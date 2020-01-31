@@ -97,6 +97,15 @@ where
         &self,
         logger: &slog::Logger,
     ) -> Result<EmbeddedResourcesBlobs>;
+
+    /// Resolve a Python library necessary for linking against.
+    fn resolve_python_library(
+        &self,
+        logger: &slog::Logger,
+        host: &str,
+        target: &str,
+        opt_level: &str,
+    ) -> Result<PythonLibrary>;
 }
 
 /// A self-contained Python executable before it is compiled.
@@ -202,6 +211,53 @@ impl PythonBinaryBuilder for PreBuiltPythonExecutable {
             resources,
         })
     }
+
+    /// Build a Python library suitable for linking.
+    ///
+    /// This will take the underlying distribution, resources, and
+    /// configuration and produce a new executable binary.
+    fn resolve_python_library(
+        &self,
+        logger: &slog::Logger,
+        host: &str,
+        target: &str,
+        opt_level: &str,
+    ) -> Result<PythonLibrary> {
+        let resources = self.resources.package(logger, &self.python_exe)?;
+
+        let temp_dir = TempDir::new("pyoxidizer-build-exe")?;
+        let temp_dir_path = temp_dir.path();
+
+        warn!(
+            logger,
+            "generating custom link library containing Python..."
+        );
+        let library_info = link_libpython(
+            logger,
+            &self.distribution,
+            &resources,
+            &temp_dir_path,
+            host,
+            target,
+            opt_level,
+        )?;
+
+        let mut cargo_metadata: Vec<String> = Vec::new();
+        cargo_metadata.extend(library_info.cargo_metadata);
+
+        let libpython_data = std::fs::read(&library_info.libpython_path)?;
+        let libpyembeddedconfig_data = std::fs::read(&library_info.libpyembeddedconfig_path)?;
+
+        Ok(PythonLibrary {
+            libpython_filename: PathBuf::from(library_info.libpython_path.file_name().unwrap()),
+            libpython_data,
+            libpyembeddedconfig_filename: PathBuf::from(
+                library_info.libpyembeddedconfig_path.file_name().unwrap(),
+            ),
+            libpyembeddedconfig_data,
+            cargo_metadata,
+        })
+    }
 }
 
 impl PreBuiltPythonExecutable {
@@ -248,53 +304,6 @@ impl PreBuiltPythonExecutable {
             config: config.clone(),
             python_exe,
             importlib_bytecode,
-        })
-    }
-
-    /// Build a Python library suitable for linking.
-    ///
-    /// This will take the underlying distribution, resources, and
-    /// configuration and produce a new executable binary.
-    pub fn build_libpython(
-        &self,
-        logger: &slog::Logger,
-        host: &str,
-        target: &str,
-        opt_level: &str,
-    ) -> Result<PythonLibrary> {
-        let resources = self.resources.package(logger, &self.python_exe)?;
-
-        let temp_dir = TempDir::new("pyoxidizer-build-exe")?;
-        let temp_dir_path = temp_dir.path();
-
-        warn!(
-            logger,
-            "generating custom link library containing Python..."
-        );
-        let library_info = link_libpython(
-            logger,
-            &self.distribution,
-            &resources,
-            &temp_dir_path,
-            host,
-            target,
-            opt_level,
-        )?;
-
-        let mut cargo_metadata: Vec<String> = Vec::new();
-        cargo_metadata.extend(library_info.cargo_metadata);
-
-        let libpython_data = std::fs::read(&library_info.libpython_path)?;
-        let libpyembeddedconfig_data = std::fs::read(&library_info.libpyembeddedconfig_path)?;
-
-        Ok(PythonLibrary {
-            libpython_filename: PathBuf::from(library_info.libpython_path.file_name().unwrap()),
-            libpython_data,
-            libpyembeddedconfig_filename: PathBuf::from(
-                library_info.libpyembeddedconfig_path.file_name().unwrap(),
-            ),
-            libpyembeddedconfig_data,
-            cargo_metadata,
         })
     }
 }
@@ -346,7 +355,7 @@ impl EmbeddedPythonBinaryData {
         target: &str,
         opt_level: &str,
     ) -> Result<EmbeddedPythonBinaryData> {
-        let library = exe.build_libpython(logger, host, target, opt_level)?;
+        let library = exe.resolve_python_library(logger, host, target, opt_level)?;
         let resources = exe.resolve_embedded_resource_blobs(logger)?;
         warn!(
             logger,
