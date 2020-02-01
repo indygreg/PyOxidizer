@@ -94,7 +94,7 @@ pub fn pip_install<S: BuildHasher>(
     pip_args.extend(install_args.iter().cloned());
 
     // TODO send stderr to stdout
-    let mut cmd = std::process::Command::new(&dist.python_exe)
+    let mut cmd = std::process::Command::new(&dist.python_exe_path())
         .args(&pip_args)
         .envs(&env)
         .stdout(std::process::Stdio::piped())
@@ -130,7 +130,7 @@ pub fn read_virtualenv(dist: &dyn PythonDistribution, path: &Path) -> Result<Vec
 /// Run `setup.py install` against a path and return found resources.
 pub fn setup_py_install<S: BuildHasher>(
     logger: &slog::Logger,
-    dist: &StandaloneDistribution,
+    dist: &dyn PythonDistribution,
     package_path: &Path,
     verbose: bool,
     extra_envs: &HashMap<String, String, S>,

@@ -568,7 +568,7 @@ impl PythonDistribution {
 
         let resources = raw_setup_py_install(
             &logger,
-            dist,
+            dist.deref().as_ref(),
             &package_path,
             verbose,
             &extra_envs,
