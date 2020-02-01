@@ -856,6 +856,10 @@ impl PythonDistribution for StandaloneDistribution {
         &self.python_exe
     }
 
+    fn python_major_minor_version(&self) -> String {
+        self.version[0..3].to_string()
+    }
+
     fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler> {
         BytecodeCompiler::new(&self.python_exe)
     }

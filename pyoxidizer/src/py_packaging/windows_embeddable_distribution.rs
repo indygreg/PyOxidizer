@@ -268,6 +268,10 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         &self.python_exe
     }
 
+    fn python_major_minor_version(&self) -> String {
+        unimplemented!()
+    }
+
     fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler> {
         BytecodeCompiler::new(&self.python_exe)
     }

@@ -102,6 +102,9 @@ pub trait PythonDistribution {
     /// Obtain the filesystem path to a `python` executable for this distribution.
     fn python_exe_path(&self) -> &Path;
 
+    /// Obtain the X.Y Python version component. e.g. `3.7`.
+    fn python_major_minor_version(&self) -> String;
+
     /// Create a `BytecodeCompiler` from this instance.
     fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler>;
 
