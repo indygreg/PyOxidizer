@@ -264,6 +264,10 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         Ok(Box::new(Self::from_zip_file(&archive_path, &extract_path)?))
     }
 
+    fn python_exe_path(&self) -> &Path {
+        &self.python_exe
+    }
+
     fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler> {
         BytecodeCompiler::new(&self.python_exe)
     }

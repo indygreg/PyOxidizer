@@ -99,6 +99,9 @@ pub trait PythonDistribution {
     where
         Self: Sized;
 
+    /// Obtain the filesystem path to a `python` executable for this distribution.
+    fn python_exe_path(&self) -> &Path;
+
     /// Create a `BytecodeCompiler` from this instance.
     fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler>;
 
