@@ -2,14 +2,16 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use anyhow::Result;
-use lazy_static::lazy_static;
-use slog::{Drain, Logger};
-use std::sync::Arc;
-
-use crate::logging::PrintlnDrain;
-use crate::py_packaging::distribution::default_distribution;
-use crate::py_packaging::standalone_distribution::StandaloneDistribution;
+use {
+    crate::logging::PrintlnDrain,
+    crate::py_packaging::distribution::PythonDistributionLocation,
+    crate::py_packaging::standalone_distribution::StandaloneDistribution,
+    crate::python_distributions::CPYTHON_STANDALONE_BY_TRIPLE,
+    anyhow::Result,
+    lazy_static::lazy_static,
+    slog::{Drain, Logger},
+    std::sync::Arc,
+};
 
 pub fn get_logger() -> Result<slog::Logger> {
     Ok(Logger::root(
@@ -27,12 +29,21 @@ lazy_static! {
     pub static ref DEFAULT_DISTRIBUTION: Arc<Box<StandaloneDistribution>> = {
         let path = DEFAULT_DISTRIBUTION_TEMP_DIR.path();
 
-        let logger = get_logger().expect("unable to construct logger");
-        let target = env!("HOST");
+        let hosted_distribution = CPYTHON_STANDALONE_BY_TRIPLE
+            .get(env!("HOST"))
+            .expect("target triple not supported");
 
-        Arc::new(
-            default_distribution(&logger, target, path).expect("unable to obtain distribution"),
-        )
+        let logger = get_logger().expect("unable to construct logger");
+
+        let location = PythonDistributionLocation::Url {
+            url: hosted_distribution.url.clone(),
+            sha256: hosted_distribution.sha256.clone(),
+        };
+
+        let dist = StandaloneDistribution::from_location(&logger, &location, path)
+            .expect("unable to obtain distribution");
+
+        Arc::new(Box::new(dist))
     };
 }
 

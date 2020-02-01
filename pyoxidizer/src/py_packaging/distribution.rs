@@ -14,7 +14,10 @@ use {
     super::libpython::ImportlibBytecode,
     super::resource::{ResourceData, SourceModule},
     super::standalone_distribution::{ExtensionModule, StandaloneDistribution},
-    crate::python_distributions::CPYTHON_STANDALONE_BY_TRIPLE,
+    super::windows_embeddable_distribution::WindowsEmbeddableDistribution,
+    crate::python_distributions::{
+        CPYTHON_STANDALONE_BY_TRIPLE, CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE,
+    },
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
     sha2::{Digest, Sha256},
@@ -87,18 +90,6 @@ pub enum PythonDistributionLocation {
 
 /// Describes a generic Python distribution.
 pub trait PythonDistribution {
-    /// Obtain an instance from a source location and destination directory tree.
-    ///
-    /// The distribution will be obtained and extracted into a directory under
-    /// ``distributions_dir``. Those files will outlive the returned instance.
-    fn from_location(
-        logger: &slog::Logger,
-        location: &PythonDistributionLocation,
-        distributions_dir: &Path,
-    ) -> Result<Box<Self>>
-    where
-        Self: Sized;
-
     /// Obtain the filesystem path to a `python` executable for this distribution.
     fn python_exe_path(&self) -> &Path;
 
@@ -395,22 +386,54 @@ pub fn resolve_python_distribution_from_location(
     Ok((path, distribution_path))
 }
 
+/// Describes the flavor of a distribution.
+pub enum DistributionFlavor {
+    /// Distributions coming from the `python-build-standalone` project.
+    Standalone,
+
+    /// "Embeddable" zip-file based distributions that work on Windows.
+    WindowsEmbeddable,
+}
+
+impl Default for DistributionFlavor {
+    fn default() -> Self {
+        DistributionFlavor::Standalone
+    }
+}
+
 /// Resolve the default Python distribution for a build target.
+///
+/// `flavor` is the high-level type of distribution.
+/// `target` is a Rust target triple the distribution should target.
+/// `dest_dir` is a directory to extract the distribution to. The distribution will
+/// be extracted to a child directory of this path.
 pub fn default_distribution(
     logger: &slog::Logger,
+    flavor: DistributionFlavor,
     target: &str,
     dest_dir: &Path,
-) -> Result<Box<StandaloneDistribution>> {
-    let dist = CPYTHON_STANDALONE_BY_TRIPLE
-        .get(target)
-        .ok_or_else(|| anyhow!("could not find default Python distribution for {}", target))?;
+) -> Result<Box<dyn PythonDistribution>> {
+    let dist = match flavor {
+        DistributionFlavor::Standalone => CPYTHON_STANDALONE_BY_TRIPLE.get(target),
+        DistributionFlavor::WindowsEmbeddable => CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE.get(target),
+    }
+    .ok_or_else(|| anyhow!("could not find default Python distribution for {}", target))?;
 
     let location = PythonDistributionLocation::Url {
         url: dist.url.clone(),
         sha256: dist.sha256.clone(),
     };
 
-    StandaloneDistribution::from_location(logger, &location, dest_dir)
+    // TODO is there a way we can define PythonDistribution::from_location()
+    Ok(match flavor {
+        DistributionFlavor::Standalone => Box::new(StandaloneDistribution::from_location(
+            logger, &location, dest_dir,
+        )?) as Box<dyn PythonDistribution>,
+
+        DistributionFlavor::WindowsEmbeddable => Box::new(
+            WindowsEmbeddableDistribution::from_location(logger, &location, dest_dir)?,
+        ) as Box<dyn PythonDistribution>,
+    })
 }
 
 #[cfg(test)]
@@ -424,7 +447,12 @@ mod tests {
 
         let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
 
-        default_distribution(&logger, target, temp_dir.path())?;
+        default_distribution(
+            &logger,
+            DistributionFlavor::Standalone,
+            target,
+            temp_dir.path(),
+        )?;
 
         Ok(())
     }

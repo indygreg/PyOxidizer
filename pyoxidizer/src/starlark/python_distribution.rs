@@ -75,7 +75,7 @@ impl PythonDistribution {
             StandaloneDistribution::from_location(logger, &self.source, &self.dest_dir).unwrap();
         warn!(logger, "distribution info: {:#?}", dist.as_minimal_info());
 
-        self.distribution = Some(Arc::new(dist));
+        self.distribution = Some(Arc::new(Box::new(dist)));
     }
 
     /// Compile bytecode using this distribution.

@@ -445,6 +445,17 @@ pub struct StandaloneDistribution {
 }
 
 impl StandaloneDistribution {
+    pub fn from_location(
+        logger: &slog::Logger,
+        location: &PythonDistributionLocation,
+        distributions_dir: &Path,
+    ) -> Result<Self> {
+        let (archive_path, extract_path) =
+            resolve_python_distribution_from_location(logger, location, distributions_dir)?;
+
+        Self::from_tar_zst_file(logger, &archive_path, &extract_path)
+    }
+
     /// Create an instance from a .tar.zst file.
     ///
     /// The distribution will be extracted to ``extract_dir`` if necessary.
@@ -822,21 +833,6 @@ impl StandaloneDistribution {
 }
 
 impl PythonDistribution for StandaloneDistribution {
-    fn from_location(
-        logger: &slog::Logger,
-        location: &PythonDistributionLocation,
-        distributions_dir: &Path,
-    ) -> Result<Box<Self>> {
-        let (archive_path, extract_path) =
-            resolve_python_distribution_from_location(logger, location, distributions_dir)?;
-
-        Ok(Box::new(Self::from_tar_zst_file(
-            logger,
-            &archive_path,
-            &extract_path,
-        )?))
-    }
-
     fn python_exe_path(&self) -> &Path {
         &self.python_exe
     }

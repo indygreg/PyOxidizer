@@ -109,6 +109,17 @@ pub struct WindowsEmbeddableDistribution {
 }
 
 impl WindowsEmbeddableDistribution {
+    pub fn from_location(
+        logger: &slog::Logger,
+        location: &PythonDistributionLocation,
+        distributions_dir: &Path,
+    ) -> Result<Self> {
+        let (archive_path, extract_path) =
+            resolve_python_distribution_from_location(logger, location, distributions_dir)?;
+
+        Self::from_zip_file(&archive_path, &extract_path)
+    }
+
     /// Obtain an instance by extracting a zip file to a directory.
     pub fn from_zip_file(path: &Path, extract_dir: &Path) -> Result<Self> {
         let zip_data = std::fs::read(path)?;
@@ -253,17 +264,6 @@ impl WindowsEmbeddableDistribution {
 }
 
 impl PythonDistribution for WindowsEmbeddableDistribution {
-    fn from_location(
-        logger: &slog::Logger,
-        location: &PythonDistributionLocation,
-        distributions_dir: &Path,
-    ) -> Result<Box<Self>> {
-        let (archive_path, extract_path) =
-            resolve_python_distribution_from_location(logger, location, distributions_dir)?;
-
-        Ok(Box::new(Self::from_zip_file(&archive_path, &extract_path)?))
-    }
-
     fn python_exe_path(&self) -> &Path {
         &self.python_exe
     }
@@ -415,26 +415,28 @@ fn read_stdlib_zip(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::python_distributions::CPYTHON_EMBEDDABLE_BY_TRIPLE, crate::testutil::*};
+    use {
+        super::*, crate::python_distributions::CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE,
+        crate::testutil::*,
+    };
 
     #[test]
     fn test_windows_embeddable_distribution() -> Result<()> {
         let logger = get_logger()?;
         let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
 
-        let amd64_dist = CPYTHON_EMBEDDABLE_BY_TRIPLE
+        let amd64_dist = CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE
             .get("x86_64-pc-windows-msvc")
             .unwrap();
 
-        let dist: Box<WindowsEmbeddableDistribution> =
-            WindowsEmbeddableDistribution::from_location(
-                &logger,
-                &PythonDistributionLocation::Url {
-                    url: amd64_dist.url.clone(),
-                    sha256: amd64_dist.sha256.clone(),
-                },
-                temp_dir.path(),
-            )?;
+        let dist = WindowsEmbeddableDistribution::from_location(
+            &logger,
+            &PythonDistributionLocation::Url {
+                url: amd64_dist.url.clone(),
+                sha256: amd64_dist.sha256.clone(),
+            },
+            temp_dir.path(),
+        )?;
 
         let extract_dir = temp_dir
             .path()

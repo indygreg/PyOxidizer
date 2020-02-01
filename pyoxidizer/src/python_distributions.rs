@@ -63,7 +63,7 @@ lazy_static! {
 
         res
     };
-    pub static ref CPYTHON_EMBEDDABLE_BY_TRIPLE: BTreeMap<String, HostedDistribution> = {
+    pub static ref CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE: BTreeMap<String, HostedDistribution> = {
         let mut res: BTreeMap<String, HostedDistribution> = BTreeMap::new();
 
         res.insert(
