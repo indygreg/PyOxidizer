@@ -15,7 +15,7 @@ use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
 use super::distribution::PythonDistribution;
-use super::distutils::{prepare_hacked_distutils, read_built_extensions};
+use super::distutils::read_built_extensions;
 use super::fsscan::{find_python_resources, PythonFileResource};
 use super::resource::PythonResource;
 use super::standalone_distribution::{resolve_python_paths, StandaloneDistribution};
@@ -65,8 +65,7 @@ pub fn pip_install<S: BuildHasher>(
 
     dist.ensure_pip(logger);
 
-    let orig_distutils_path = dist.stdlib_path.join("distutils");
-    let mut env = prepare_hacked_distutils(logger, &orig_distutils_path, temp_dir.path(), &[])?;
+    let mut env = dist.resolve_distutils(logger, temp_dir.path(), &[])?;
 
     for (key, value) in extra_envs.iter() {
         env.insert(key.clone(), value.clone());
@@ -153,9 +152,8 @@ pub fn setup_py_install<S: BuildHasher>(
 
     std::fs::create_dir_all(&python_paths.site_packages)?;
 
-    let mut envs = prepare_hacked_distutils(
+    let mut envs = dist.resolve_distutils(
         &logger,
-        &dist.stdlib_path.join("distutils"),
         temp_dir.path(),
         &[&python_paths.site_packages, &python_paths.stdlib],
     )?;

@@ -1095,6 +1095,20 @@ impl PythonDistribution for StandaloneDistribution {
 
         Ok(embedded)
     }
+
+    fn resolve_distutils(
+        &self,
+        logger: &slog::Logger,
+        dest_dir: &Path,
+        extra_python_paths: &[&Path],
+    ) -> Result<HashMap<String, String>> {
+        prepare_hacked_distutils(
+            logger,
+            &self.stdlib_path.join("distutils"),
+            dest_dir,
+            extra_python_paths,
+        )
+    }
 }
 
 /// A self-contained Python executable before it is compiled.

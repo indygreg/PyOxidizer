@@ -155,6 +155,19 @@ pub trait PythonDistribution {
         include_resources: bool,
         include_test: bool,
     ) -> Result<EmbeddedPythonResourcesPrePackaged>;
+
+    /// Resolve a `distutils` installation used for building Python packages.
+    ///
+    /// Some distributions may need to use a modified `distutils` to coerce builds to work
+    /// as PyOxidizer desires. This method is used to realize such a `distutils` installation.
+    ///
+    /// The return is a map of environment variables to set in the build environment.
+    fn resolve_distutils(
+        &self,
+        logger: &slog::Logger,
+        dest_dir: &Path,
+        extra_python_paths: &[&Path],
+    ) -> Result<HashMap<String, String>>;
 }
 
 /// Multiple threads or processes could race to extract the archive.

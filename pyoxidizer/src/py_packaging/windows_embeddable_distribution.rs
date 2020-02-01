@@ -329,6 +329,15 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
     ) -> Result<EmbeddedPythonResourcesPrePackaged> {
         unimplemented!()
     }
+
+    fn resolve_distutils(
+        &self,
+        _logger: &slog::Logger,
+        _dest_dir: &Path,
+        _extra_python_paths: &[&Path],
+    ) -> Result<HashMap<String, String>> {
+        unimplemented!()
+    }
 }
 
 /// Looks for a DLL in a file names list without case sensitivity.
