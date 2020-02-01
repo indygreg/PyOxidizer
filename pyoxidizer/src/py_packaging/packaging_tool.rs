@@ -64,7 +64,8 @@ pub fn pip_install<S: BuildHasher>(
 
     dist.ensure_pip(logger);
 
-    let mut env = prepare_hacked_distutils(logger, dist, temp_dir.path(), &[])?;
+    let orig_distutils_path = dist.stdlib_path.join("distutils");
+    let mut env = prepare_hacked_distutils(logger, &orig_distutils_path, temp_dir.path(), &[])?;
 
     for (key, value) in extra_envs.iter() {
         env.insert(key.clone(), value.clone());
@@ -153,7 +154,7 @@ pub fn setup_py_install<S: BuildHasher>(
 
     let mut envs = prepare_hacked_distutils(
         &logger,
-        &dist,
+        &dist.stdlib_path.join("distutils"),
         temp_dir.path(),
         &[&python_paths.site_packages, &python_paths.stdlib],
     )?;

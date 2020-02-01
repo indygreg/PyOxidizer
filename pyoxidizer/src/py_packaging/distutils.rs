@@ -6,16 +6,16 @@
 Interacting with distutils.
 */
 
-use anyhow::{Context, Result};
-use lazy_static::lazy_static;
-use serde::Deserialize;
-use slog::warn;
-use std::collections::{BTreeMap, HashMap};
-use std::fs::{create_dir_all, read_dir, read_to_string};
-use std::path::{Path, PathBuf};
-
-use super::resource::ExtensionModuleData;
-use super::standalone_distribution::StandaloneDistribution;
+use {
+    super::resource::ExtensionModuleData,
+    anyhow::{Context, Result},
+    lazy_static::lazy_static,
+    serde::Deserialize,
+    slog::warn,
+    std::collections::{BTreeMap, HashMap},
+    std::fs::{create_dir_all, read_dir, read_to_string},
+    std::path::{Path, PathBuf},
+};
 
 lazy_static! {
     static ref MODIFIED_DISTUTILS_FILES: BTreeMap<&'static str, &'static [u8]> = {
@@ -53,7 +53,7 @@ lazy_static! {
 /// support as many as possible.
 pub fn prepare_hacked_distutils(
     logger: &slog::Logger,
-    dist: &StandaloneDistribution,
+    orig_distutils_path: &Path,
     dest_dir: &Path,
     extra_python_paths: &[&Path],
 ) -> Result<HashMap<String, String>> {
@@ -65,10 +65,9 @@ pub fn prepare_hacked_distutils(
         extra_sys_path.display()
     );
 
-    let orig_distutils_path = dist.stdlib_path.join("distutils");
     let dest_distutils_path = extra_sys_path.join("distutils");
 
-    for entry in walkdir::WalkDir::new(&orig_distutils_path) {
+    for entry in walkdir::WalkDir::new(orig_distutils_path) {
         let entry = entry?;
 
         if entry.path().is_dir() {
@@ -77,7 +76,7 @@ pub fn prepare_hacked_distutils(
 
         let source_path = entry.path();
         let rel_path = source_path
-            .strip_prefix(&orig_distutils_path)
+            .strip_prefix(orig_distutils_path)
             .with_context(|| format!("stripping prefix from {}", source_path.display()))?;
         let dest_path = dest_distutils_path.join(rel_path);
 

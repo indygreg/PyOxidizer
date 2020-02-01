@@ -773,7 +773,8 @@ impl StandaloneDistribution {
 
         invoke_python(&python_paths, &logger, &["-m", "ensurepip"]);
 
-        prepare_hacked_distutils(logger, self, &venv_base, &[]).unwrap();
+        prepare_hacked_distutils(logger, &self.stdlib_path.join("distutils"), &venv_base, &[])
+            .unwrap();
 
         python_paths
     }
