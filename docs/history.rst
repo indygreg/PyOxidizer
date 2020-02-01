@@ -63,6 +63,9 @@ New Features
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
 
+* Rust internals have been overhauled to use traits to represent various types,
+  namely Python distributions. The goal is to allow different Python
+  distribution flavors to implement different logic for building binaries.
 * The ``pyembed`` crate's ``build.rs`` has been tweaked so it can support
   calling out to ``pyoxidizer``. It also no longer has a build dependency
   on ``pyoxidizer``.

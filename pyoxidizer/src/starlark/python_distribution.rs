@@ -46,13 +46,12 @@ use {
     std::sync::Arc,
 };
 
-#[derive(Debug)]
 pub struct PythonDistribution {
     pub source: PythonDistributionLocation,
 
     dest_dir: PathBuf,
 
-    pub distribution: Option<Arc<Box<StandaloneDistribution>>>,
+    pub distribution: Option<Arc<Box<dyn PythonDistributionTrait>>>,
 
     compiler: Option<BytecodeCompiler>,
 }
