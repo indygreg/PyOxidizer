@@ -14,6 +14,7 @@ use std::hash::BuildHasher;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
+use super::distribution::PythonDistribution;
 use super::distutils::{prepare_hacked_distutils, read_built_extensions};
 use super::fsscan::{find_python_resources, PythonFileResource};
 use super::resource::PythonResource;
@@ -121,8 +122,8 @@ pub fn pip_install<S: BuildHasher>(
 }
 
 /// Discover Python resources from a populated virtualenv directory.
-pub fn read_virtualenv(dist: &StandaloneDistribution, path: &Path) -> Result<Vec<PythonResource>> {
-    let python_paths = resolve_python_paths(path, &dist.version);
+pub fn read_virtualenv(dist: &dyn PythonDistribution, path: &Path) -> Result<Vec<PythonResource>> {
+    let python_paths = resolve_python_paths(path, &dist.python_major_minor_version());
 
     find_resources(&python_paths.site_packages, None)
 }

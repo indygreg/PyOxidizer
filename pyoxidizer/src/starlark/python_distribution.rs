@@ -41,6 +41,7 @@ use {
     std::cmp::Ordering,
     std::collections::HashMap,
     std::convert::TryFrom,
+    std::ops::Deref,
     std::path::{Path, PathBuf},
     std::sync::Arc,
 };
@@ -463,14 +464,15 @@ impl PythonDistribution {
         self.ensure_distribution_resolved(&logger);
         let dist = self.distribution.as_ref().unwrap();
 
-        let resources = raw_read_virtualenv(&dist, &Path::new(&path)).or_else(|e| {
-            Err(RuntimeError {
-                code: "VIRTUALENV_ERROR",
-                message: format!("could not find resources: {}", e),
-                label: "read_virtualenv()".to_string(),
-            }
-            .into())
-        })?;
+        let resources =
+            raw_read_virtualenv(dist.deref().as_ref(), &Path::new(&path)).or_else(|e| {
+                Err(RuntimeError {
+                    code: "VIRTUALENV_ERROR",
+                    message: format!("could not find resources: {}", e),
+                    label: "read_virtualenv()".to_string(),
+                }
+                .into())
+            })?;
 
         Ok(Value::from(
             resources.iter().map(Value::from).collect::<Vec<Value>>(),
