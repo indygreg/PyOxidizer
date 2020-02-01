@@ -149,7 +149,7 @@ pub fn setup_py_install<S: BuildHasher>(
     let target_dir_path = temp_dir.path().join("install");
     let target_dir_s = target_dir_path.display().to_string();
 
-    let python_paths = resolve_python_paths(&target_dir_path, &dist.version);
+    let python_paths = resolve_python_paths(&target_dir_path, &dist.python_major_minor_version());
 
     std::fs::create_dir_all(&python_paths.site_packages)?;
 
@@ -184,7 +184,7 @@ pub fn setup_py_install<S: BuildHasher>(
     args.extend(&["install", "--prefix", &target_dir_s, "--no-compile"]);
 
     // TODO send stderr to stdout.
-    let mut cmd = std::process::Command::new(&dist.python_exe)
+    let mut cmd = std::process::Command::new(dist.python_exe_path())
         .current_dir(package_path)
         .args(&args)
         .envs(&envs)
