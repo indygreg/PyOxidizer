@@ -11,6 +11,7 @@ use {
     super::bytecode::BytecodeCompiler,
     super::config::EmbeddedPythonConfig,
     super::libpython::ImportlibBytecode,
+    super::resource::{ResourceData, SourceModule},
     super::standalone_distribution::{ExtensionModule, StandaloneDistribution},
     crate::python_distributions::CPYTHON_STANDALONE_BY_TRIPLE,
     anyhow::{anyhow, Context, Result},
@@ -130,6 +131,12 @@ pub trait PythonDistribution {
         filter: &ExtensionModuleFilter,
         preferred_variants: Option<HashMap<String, String>>,
     ) -> Result<Vec<ExtensionModule>>;
+
+    /// Obtain `SourceModule` instances present in this distribution.
+    fn source_modules(&self) -> Result<Vec<SourceModule>>;
+
+    /// Obtain `ResourceData` instances present in this distribution.
+    fn resource_datas(&self) -> Result<Vec<ResourceData>>;
 }
 
 /// Multiple threads or processes could race to extract the archive.

@@ -13,6 +13,7 @@ use {
         PythonDistribution, PythonDistributionLocation,
     },
     super::libpython::ImportlibBytecode,
+    super::resource::{ResourceData, SourceModule},
     super::standalone_distribution::ExtensionModule,
     crate::analyze::find_pe_dependencies_path,
     anyhow::{anyhow, Context, Result},
@@ -298,6 +299,14 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         _preferred_variants: Option<HashMap<String, String>>,
     ) -> Result<Vec<ExtensionModule>> {
         unimplemented!();
+    }
+
+    fn source_modules(&self) -> Result<Vec<SourceModule>> {
+        unimplemented!()
+    }
+
+    fn resource_datas(&self) -> Result<Vec<ResourceData>> {
+        unimplemented!()
     }
 }
 

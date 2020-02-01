@@ -100,7 +100,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         }
 
         if include_resources {
-            for resource in distribution.resources_data()? {
+            for resource in distribution.resource_datas()? {
                 if !include_test && is_stdlib_test_package(&resource.package) {
                     continue;
                 }

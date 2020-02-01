@@ -832,39 +832,6 @@ impl StandaloneDistribution {
 
         Ok((python_paths, extra_envs))
     }
-
-    /// Obtain `SourceModule` instances for this distribution.
-    pub fn source_modules(&self) -> Result<Vec<SourceModule>> {
-        self.py_modules
-            .iter()
-            .map(|(name, path)| {
-                let is_package = is_package_from_path(&path);
-
-                Ok(SourceModule {
-                    name: name.clone(),
-                    source: DataLocation::Path(path.clone()),
-                    is_package,
-                })
-            })
-            .collect()
-    }
-
-    /// Obtain `ResourceData` instances for this distribution.
-    pub fn resources_data(&self) -> Result<Vec<ResourceData>> {
-        let mut res = Vec::new();
-
-        for (package, inner) in self.resources.iter() {
-            for (name, path) in inner.iter() {
-                res.push(ResourceData {
-                    package: package.clone(),
-                    name: name.clone(),
-                    data: DataLocation::Path(path.clone()),
-                });
-            }
-        }
-
-        Ok(res)
-    }
 }
 
 impl PythonDistribution for StandaloneDistribution {
@@ -1038,6 +1005,38 @@ impl PythonDistribution for StandaloneDistribution {
 
             if required && !added.contains(name) {
                 return Err(anyhow!("required extension module {} missing", name));
+            }
+        }
+
+        Ok(res)
+    }
+
+    fn source_modules(&self) -> Result<Vec<SourceModule>> {
+        self.py_modules
+            .iter()
+            .map(|(name, path)| {
+                let is_package = is_package_from_path(&path);
+
+                Ok(SourceModule {
+                    name: name.clone(),
+                    source: DataLocation::Path(path.clone()),
+                    is_package,
+                })
+            })
+            .collect()
+    }
+
+    /// Obtain `ResourceData` instances for this distribution.
+    fn resource_datas(&self) -> Result<Vec<ResourceData>> {
+        let mut res = Vec::new();
+
+        for (package, inner) in self.resources.iter() {
+            for (name, path) in inner.iter() {
+                res.push(ResourceData {
+                    package: package.clone(),
+                    name: name.clone(),
+                    data: DataLocation::Path(path.clone()),
+                });
             }
         }
 

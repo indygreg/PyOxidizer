@@ -491,7 +491,7 @@ impl PythonDistribution {
             .distribution
             .as_ref()
             .unwrap()
-            .resources_data()
+            .resource_datas()
             .or_else(|e| {
                 Err(RuntimeError {
                     code: "PYTHON_DISTRIBUTION",
