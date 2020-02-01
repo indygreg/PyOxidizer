@@ -93,7 +93,9 @@ pub trait PythonDistribution {
         logger: &slog::Logger,
         location: &PythonDistributionLocation,
         distributions_dir: &Path,
-    ) -> Result<Box<Self>>;
+    ) -> Result<Box<Self>>
+    where
+        Self: Sized;
 
     /// Create a `BytecodeCompiler` from this instance.
     fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler>;
