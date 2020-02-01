@@ -330,6 +330,10 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         unimplemented!()
     }
 
+    fn ensure_pip(&self, _logger: &slog::Logger) -> Result<PathBuf> {
+        unimplemented!();
+    }
+
     fn resolve_distutils(
         &self,
         _logger: &slog::Logger,

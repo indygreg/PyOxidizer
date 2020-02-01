@@ -737,21 +737,6 @@ impl StandaloneDistribution {
         }
     }
 
-    /// Ensure pip is available to run in the distribution.
-    pub fn ensure_pip(&self, logger: &slog::Logger) -> PathBuf {
-        let dist_prefix = self.base_dir.join("python").join("install");
-        let python_paths = resolve_python_paths(&dist_prefix, &self.version);
-
-        let pip_path = python_paths.bin_dir.join(PIP_EXE_BASENAME);
-
-        if !pip_path.exists() {
-            warn!(logger, "{} doesnt exist", pip_path.display().to_string());
-            invoke_python(&python_paths, &logger, &["-m", "ensurepip"]);
-        }
-
-        pip_path
-    }
-
     /// Duplicate the python distribution, with distutils hacked
     pub fn create_hacked_base(&self, logger: &slog::Logger) -> PythonPaths {
         let venv_base = self.venv_base.clone();
@@ -1094,6 +1079,21 @@ impl PythonDistribution for StandaloneDistribution {
         }
 
         Ok(embedded)
+    }
+
+    /// Ensure pip is available to run in the distribution.
+    fn ensure_pip(&self, logger: &slog::Logger) -> Result<PathBuf> {
+        let dist_prefix = self.base_dir.join("python").join("install");
+        let python_paths = resolve_python_paths(&dist_prefix, &self.version);
+
+        let pip_path = python_paths.bin_dir.join(PIP_EXE_BASENAME);
+
+        if !pip_path.exists() {
+            warn!(logger, "{} doesnt exist", pip_path.display().to_string());
+            invoke_python(&python_paths, &logger, &["-m", "ensurepip"]);
+        }
+
+        Ok(pip_path)
     }
 
     fn resolve_distutils(

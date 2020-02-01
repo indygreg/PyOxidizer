@@ -156,6 +156,11 @@ pub trait PythonDistribution {
         include_test: bool,
     ) -> Result<EmbeddedPythonResourcesPrePackaged>;
 
+    /// Ensure pip is available to run in the distribution.
+    ///
+    /// Returns the path to a `pip` executable.
+    fn ensure_pip(&self, logger: &slog::Logger) -> Result<PathBuf>;
+
     /// Resolve a `distutils` installation used for building Python packages.
     ///
     /// Some distributions may need to use a modified `distutils` to coerce builds to work

@@ -63,7 +63,7 @@ pub fn pip_install<S: BuildHasher>(
 ) -> Result<Vec<PythonResource>> {
     let temp_dir = tempdir::TempDir::new("pyoxidizer-pip-install")?;
 
-    dist.ensure_pip(logger);
+    dist.ensure_pip(logger)?;
 
     let mut env = dist.resolve_distutils(logger, temp_dir.path(), &[])?;
 
