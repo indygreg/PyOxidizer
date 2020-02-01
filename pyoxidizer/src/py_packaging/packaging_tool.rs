@@ -18,7 +18,7 @@ use super::distribution::PythonDistribution;
 use super::distutils::read_built_extensions;
 use super::fsscan::{find_python_resources, PythonFileResource};
 use super::resource::PythonResource;
-use super::standalone_distribution::{resolve_python_paths, StandaloneDistribution};
+use super::standalone_distribution::resolve_python_paths;
 
 /// Find resources installed as part of a packaging operation.
 pub fn find_resources(path: &Path, state_dir: Option<&Path>) -> Result<Vec<PythonResource>> {
@@ -56,7 +56,7 @@ pub fn find_resources(path: &Path, state_dir: Option<&Path>) -> Result<Vec<Pytho
 /// Run `pip install` and return found resources.
 pub fn pip_install<S: BuildHasher>(
     logger: &slog::Logger,
-    dist: &StandaloneDistribution,
+    dist: &dyn PythonDistribution,
     verbose: bool,
     install_args: &[String],
     extra_envs: &HashMap<String, String, S>,
@@ -214,8 +214,7 @@ pub fn setup_py_install<S: BuildHasher>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::testutil::*;
+    use {super::*, crate::testutil::*, std::ops::Deref};
 
     #[test]
     fn test_install_black() -> Result<()> {
@@ -224,7 +223,7 @@ mod tests {
 
         let resources: Vec<PythonResource> = pip_install(
             &logger,
-            &distribution,
+            distribution.deref().as_ref(),
             false,
             &["black==19.10b0".to_string()],
             &HashMap::new(),

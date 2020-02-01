@@ -402,14 +402,16 @@ impl PythonDistribution {
         let dist = self.distribution.as_ref().unwrap();
 
         let resources =
-            raw_pip_install(&logger, &dist, verbose, &args, &extra_envs).or_else(|e| {
-                Err(RuntimeError {
-                    code: "PIP_INSTALL_ERROR",
-                    message: format!("error running pip install: {}", e),
-                    label: "pip_install()".to_string(),
-                }
-                .into())
-            })?;
+            raw_pip_install(&logger, dist.deref().as_ref(), verbose, &args, &extra_envs).or_else(
+                |e| {
+                    Err(RuntimeError {
+                        code: "PIP_INSTALL_ERROR",
+                        message: format!("error running pip install: {}", e),
+                        label: "pip_install()".to_string(),
+                    }
+                    .into())
+                },
+            )?;
 
         Ok(Value::from(
             resources.iter().map(Value::from).collect::<Vec<Value>>(),
