@@ -401,29 +401,15 @@ impl Default for DistributionFlavor {
     }
 }
 
-/// Resolve the default Python distribution for a build target.
+/// Obtain a `PythonDistribution` implementation of a flavor and from a location.
 ///
-/// `flavor` is the high-level type of distribution.
-/// `target` is a Rust target triple the distribution should target.
-/// `dest_dir` is a directory to extract the distribution to. The distribution will
-/// be extracted to a child directory of this path.
-pub fn default_distribution(
+/// The distribution will be written to `dest_dir`.
+pub fn resolve_distribution(
     logger: &slog::Logger,
-    flavor: DistributionFlavor,
-    target: &str,
+    flavor: &DistributionFlavor,
+    location: &PythonDistributionLocation,
     dest_dir: &Path,
 ) -> Result<Box<dyn PythonDistribution>> {
-    let dist = match flavor {
-        DistributionFlavor::Standalone => CPYTHON_STANDALONE_BY_TRIPLE.get(target),
-        DistributionFlavor::WindowsEmbeddable => CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE.get(target),
-    }
-    .ok_or_else(|| anyhow!("could not find default Python distribution for {}", target))?;
-
-    let location = PythonDistributionLocation::Url {
-        url: dist.url.clone(),
-        sha256: dist.sha256.clone(),
-    };
-
     // TODO is there a way we can define PythonDistribution::from_location()
     Ok(match flavor {
         DistributionFlavor::Standalone => Box::new(StandaloneDistribution::from_location(
@@ -434,6 +420,40 @@ pub fn default_distribution(
             WindowsEmbeddableDistribution::from_location(logger, &location, dest_dir)?,
         ) as Box<dyn PythonDistribution>,
     })
+}
+
+/// Resolve the location of the default Python distribution of a given flavor and build target.
+pub fn default_distribution_location(
+    flavor: &DistributionFlavor,
+    target: &str,
+) -> Result<PythonDistributionLocation> {
+    let dist = match flavor {
+        DistributionFlavor::Standalone => CPYTHON_STANDALONE_BY_TRIPLE.get(target),
+        DistributionFlavor::WindowsEmbeddable => CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE.get(target),
+    }
+    .ok_or_else(|| anyhow!("could not find default Python distribution for {}", target))?;
+
+    Ok(PythonDistributionLocation::Url {
+        url: dist.url.clone(),
+        sha256: dist.sha256.clone(),
+    })
+}
+
+/// Resolve the default Python distribution for a build target.
+///
+/// `flavor` is the high-level type of distribution.
+/// `target` is a Rust target triple the distribution should target.
+/// `dest_dir` is a directory to extract the distribution to. The distribution will
+/// be extracted to a child directory of this path.
+pub fn default_distribution(
+    logger: &slog::Logger,
+    flavor: &DistributionFlavor,
+    target: &str,
+    dest_dir: &Path,
+) -> Result<Box<dyn PythonDistribution>> {
+    let location = default_distribution_location(flavor, target)?;
+
+    resolve_distribution(logger, flavor, &location, dest_dir)
 }
 
 #[cfg(test)]
@@ -449,7 +469,7 @@ mod tests {
 
         default_distribution(
             &logger,
-            DistributionFlavor::Standalone,
+            &DistributionFlavor::Standalone,
             target,
             temp_dir.path(),
         )?;

@@ -6,7 +6,10 @@ use {
     crate::logging::PrintlnDrain,
     crate::py_packaging::distribution::PythonDistributionLocation,
     crate::py_packaging::standalone_distribution::StandaloneDistribution,
-    crate::python_distributions::CPYTHON_STANDALONE_BY_TRIPLE,
+    crate::py_packaging::windows_embeddable_distribution::WindowsEmbeddableDistribution,
+    crate::python_distributions::{
+        CPYTHON_STANDALONE_BY_TRIPLE, CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE,
+    },
     anyhow::Result,
     lazy_static::lazy_static,
     slog::{Drain, Logger},
@@ -45,8 +48,32 @@ lazy_static! {
 
         Arc::new(Box::new(dist))
     };
+    pub static ref DEFAULT_WINDOWS_EMBEDDABLE_DISTRIBUTION: WindowsEmbeddableDistribution = {
+        let path = DEFAULT_DISTRIBUTION_TEMP_DIR.path();
+
+        let hosted_distribution = CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE
+            .get(env!("HOST"))
+            .expect("target triple not supported");
+
+        let logger = get_logger().expect("unable to construct logger");
+
+        let location = PythonDistributionLocation::Url {
+            url: hosted_distribution.url.clone(),
+            sha256: hosted_distribution.sha256.clone(),
+        };
+
+        let dist = WindowsEmbeddableDistribution::from_location(&logger, &location, path)
+            .expect("unable to obtain distribution");
+
+        dist
+    };
 }
 
 pub fn get_default_distribution() -> Result<Arc<Box<StandaloneDistribution>>> {
     Ok(DEFAULT_DISTRIBUTION.clone())
+}
+
+#[allow(unused)]
+pub fn get_windows_embeddable_distribution() -> Result<WindowsEmbeddableDistribution> {
+    Ok(DEFAULT_WINDOWS_EMBEDDABLE_DISTRIBUTION.clone())
 }

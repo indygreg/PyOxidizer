@@ -28,6 +28,8 @@ Not yet released.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* The ``default_python_distribution()`` Starlark function now accepts a ``flavor``
+  argument denoting the distribution flavor.
 * The ``pyembed`` crate no longer includes the auto-generated default configuration
   file. Instead, it is consumed by the application that instantiates a Python
   interpreter.
@@ -46,6 +48,10 @@ Backwards Compatibility Notes
 New Features
 ^^^^^^^^^^^^
 
+* The ``default_python_distribution()`` Starlark function now accepts a
+  ``flavor`` argument which can be set to ``windows_embeddable`` to return a
+  distribution based on the zip file distributions published by the official
+  CPython project.
 * The ``pyembed`` crate and generated Rust projects now have various
   ``build-mode-*`` feature flags to control how build artifacts are built. See
   :ref:`rust_projects` for more.

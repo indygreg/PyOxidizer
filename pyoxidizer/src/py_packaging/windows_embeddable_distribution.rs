@@ -80,7 +80,7 @@ impl Debug for WindowsEmbeddableDistributionBytecodeModule {
 /// official Python project. The zip files contain a python.exe, pythonXY.dll,
 /// a pythonXY.zip containing the standard library, .pyd files for extension
 /// modules, and various .dll dependencies.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct WindowsEmbeddableDistribution {
     /// Path to python executable.
     pub python_exe: PathBuf,

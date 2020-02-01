@@ -15,16 +15,15 @@ use {
     crate::py_packaging::bytecode::{BytecodeCompiler, CompileMode},
     crate::py_packaging::config::EmbeddedPythonConfig,
     crate::py_packaging::distribution::{
-        is_stdlib_test_package, ExtensionModuleFilter,
-        PythonDistribution as PythonDistributionTrait, PythonDistributionLocation,
+        default_distribution_location, is_stdlib_test_package, resolve_distribution,
+        DistributionFlavor, ExtensionModuleFilter, PythonDistribution as PythonDistributionTrait,
+        PythonDistributionLocation,
     },
     crate::py_packaging::packaging_tool::{
         find_resources, pip_install as raw_pip_install, read_virtualenv as raw_read_virtualenv,
         setup_py_install as raw_setup_py_install,
     },
     crate::py_packaging::resource::BytecodeOptimizationLevel,
-    crate::py_packaging::standalone_distribution::StandaloneDistribution,
-    crate::python_distributions::CPYTHON_STANDALONE_BY_TRIPLE,
     anyhow::{anyhow, Result},
     itertools::Itertools,
     slog::warn,
@@ -47,6 +46,7 @@ use {
 };
 
 pub struct PythonDistribution {
+    flavor: DistributionFlavor,
     pub source: PythonDistributionLocation,
 
     dest_dir: PathBuf,
@@ -57,8 +57,13 @@ pub struct PythonDistribution {
 }
 
 impl PythonDistribution {
-    fn from_location(location: PythonDistributionLocation, dest_dir: &Path) -> PythonDistribution {
+    fn from_location(
+        flavor: DistributionFlavor,
+        location: PythonDistributionLocation,
+        dest_dir: &Path,
+    ) -> PythonDistribution {
         PythonDistribution {
+            flavor,
             source: location,
             dest_dir: dest_dir.to_path_buf(),
             distribution: None,
@@ -66,16 +71,17 @@ impl PythonDistribution {
         }
     }
 
-    pub fn ensure_distribution_resolved(&mut self, logger: &slog::Logger) {
+    pub fn ensure_distribution_resolved(&mut self, logger: &slog::Logger) -> Result<()> {
         if self.distribution.is_some() {
-            return;
+            return Ok(());
         }
 
-        let dist =
-            StandaloneDistribution::from_location(logger, &self.source, &self.dest_dir).unwrap();
-        warn!(logger, "distribution info: {:#?}", dist.as_minimal_info());
+        let dist = resolve_distribution(logger, &self.flavor, &self.source, &self.dest_dir)?;
+        //warn!(logger, "distribution info: {:#?}", dist.as_minimal_info());
 
-        self.distribution = Some(Arc::new(Box::new(dist)));
+        self.distribution = Some(Arc::new(dist));
+
+        Ok(())
     }
 
     /// Compile bytecode using this distribution.
@@ -91,7 +97,7 @@ impl PythonDistribution {
         optimize: BytecodeOptimizationLevel,
         output_mode: CompileMode,
     ) -> Result<Vec<u8>> {
-        self.ensure_distribution_resolved(logger);
+        self.ensure_distribution_resolved(logger)?;
 
         if let Some(dist) = &self.distribution {
             if self.compiler.is_none() {
@@ -140,19 +146,48 @@ impl TypedValue for PythonDistribution {
 // Starlark functions.
 impl PythonDistribution {
     /// default_python_distribution(build_target=None)
-    fn default_python_distribution(env: &Environment, build_target: &Value) -> ValueResult {
-        let build_target = match build_target.get_type() {
-            "NoneType" => env.get("BUILD_TARGET_TRIPLE").unwrap().to_string(),
-            "string" => build_target.to_string(),
-            t => {
-                return Err(ValueError::TypeNotX {
-                    object_type: t.to_string(),
-                    op: "str".to_string(),
-                })
+    fn default_python_distribution(
+        env: &Environment,
+        flavor: &Value,
+        build_target: &Value,
+    ) -> ValueResult {
+        let flavor = required_str_arg("flavor", flavor)?;
+        let build_target = optional_str_arg("build_target", build_target)?;
+
+        let build_target = match build_target {
+            Some(t) => t,
+            None => env.get("BUILD_TARGET_TRIPLE").unwrap().to_string(),
+        };
+
+        let flavor = match flavor.as_ref() {
+            "standalone" => DistributionFlavor::Standalone,
+            "windows_embeddable" => DistributionFlavor::WindowsEmbeddable,
+            v => {
+                return Err(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: format!("unknown distribution flavor {}", v),
+                    label: "default_python_distribution()".to_string(),
+                }
+                .into())
             }
         };
 
-        resolve_default_python_distribution(&env, &build_target)
+        let location = default_distribution_location(&flavor, &build_target).or_else(|e| {
+            Err(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "default_python_distribution()".to_string(),
+            }
+            .into())
+        })?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+        let dest_dir =
+            context.downcast_apply(|x: &EnvironmentContext| x.python_distributions_path.clone());
+
+        Ok(Value::new(PythonDistribution::from_location(
+            flavor, location, &dest_dir,
+        )))
     }
 
     /// PythonDistribution()
@@ -192,6 +227,8 @@ impl PythonDistribution {
             context.downcast_apply(|x: &EnvironmentContext| x.python_distributions_path.clone());
 
         Ok(Value::new(PythonDistribution::from_location(
+            // TODO allow distribution flavor to be customized.
+            DistributionFlavor::Standalone,
             distribution,
             &dest_dir,
         )))
@@ -264,7 +301,14 @@ impl PythonDistribution {
                 _ => panic!("type should have been validated above"),
             };
 
-        self.ensure_distribution_resolved(&logger);
+        self.ensure_distribution_resolved(&logger).or_else(|e| {
+            Err(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "resolve_distribution()".to_string(),
+            }
+            .into())
+        })?;
         let dist = self.distribution.as_ref().unwrap().clone();
 
         let config = if config.get_type() == "NoneType" {
@@ -343,7 +387,14 @@ impl PythonDistribution {
 
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
-        self.ensure_distribution_resolved(&logger);
+        self.ensure_distribution_resolved(&logger).or_else(|e| {
+            Err(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "resolve_distribution()".to_string(),
+            }
+            .into())
+        })?;
 
         Ok(Value::from(
             self.distribution
@@ -397,7 +448,14 @@ impl PythonDistribution {
         let (logger, verbose) =
             context.downcast_apply(|x: &EnvironmentContext| (x.logger.clone(), x.verbose));
 
-        self.ensure_distribution_resolved(&logger);
+        self.ensure_distribution_resolved(&logger).or_else(|e| {
+            Err(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "resolve_distribution()".to_string(),
+            }
+            .into())
+        })?;
         let dist = self.distribution.as_ref().unwrap();
 
         let resources =
@@ -435,7 +493,14 @@ impl PythonDistribution {
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
-        self.ensure_distribution_resolved(&logger);
+        self.ensure_distribution_resolved(&logger).or_else(|e| {
+            Err(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "resolve_distribution()".to_string(),
+            }
+            .into())
+        })?;
 
         let resources = find_resources(&Path::new(&path), None).or_else(|e| {
             Err(RuntimeError {
@@ -462,7 +527,14 @@ impl PythonDistribution {
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
-        self.ensure_distribution_resolved(&logger);
+        self.ensure_distribution_resolved(&logger).or_else(|e| {
+            Err(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "resolve_distribution()".to_string(),
+            }
+            .into())
+        })?;
         let dist = self.distribution.as_ref().unwrap();
 
         let resources =
@@ -488,7 +560,14 @@ impl PythonDistribution {
 
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
-        self.ensure_distribution_resolved(&logger);
+        self.ensure_distribution_resolved(&logger).or_else(|e| {
+            Err(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "resolve_distribution()".to_string(),
+            }
+            .into())
+        })?;
 
         let resources = self
             .distribution
@@ -564,7 +643,14 @@ impl PythonDistribution {
             PathBuf::from(cwd).join(package_path)
         };
 
-        self.ensure_distribution_resolved(&logger);
+        self.ensure_distribution_resolved(&logger).or_else(|e| {
+            Err(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "resolve_distribution()".to_string(),
+            }
+            .into())
+        })?;
         let dist = self.distribution.as_ref().unwrap();
 
         let resources = raw_setup_py_install(
@@ -601,7 +687,14 @@ impl PythonDistribution {
 
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
-        self.ensure_distribution_resolved(&logger);
+        self.ensure_distribution_resolved(&logger).or_else(|e| {
+            Err(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "resolve_distribution()".to_string(),
+            }
+            .into())
+        })?;
 
         let modules = self
             .distribution
@@ -627,34 +720,6 @@ impl PythonDistribution {
                 })
                 .collect_vec(),
         ))
-    }
-}
-
-pub fn resolve_default_python_distribution(env: &Environment, build_target: &str) -> ValueResult {
-    match CPYTHON_STANDALONE_BY_TRIPLE.get(build_target) {
-        Some(dist) => {
-            let distribution = PythonDistributionLocation::Url {
-                url: dist.url.clone(),
-                sha256: dist.sha256.clone(),
-            };
-
-            let context = env.get("CONTEXT").expect("CONTEXT not defined");
-            let dest_dir = context
-                .downcast_apply(|x: &EnvironmentContext| x.python_distributions_path.clone());
-
-            Ok(Value::new(PythonDistribution::from_location(
-                distribution,
-                &dest_dir,
-            )))
-        }
-        None => Err(ValueError::Runtime(RuntimeError {
-            code: "no_default_distribution",
-            message: format!(
-                "could not find default Python distribution for {}",
-                build_target
-            ),
-            label: "build_target".to_string(),
-        })),
     }
 }
 
@@ -757,15 +822,20 @@ starlark_module! { python_distribution_module =>
     }
 
     #[allow(clippy::ptr_arg)]
-    default_python_distribution(env env, build_target=None) {
-        PythonDistribution::default_python_distribution(&env, &build_target)
+    default_python_distribution(env env, flavor="standalone", build_target=None) {
+        PythonDistribution::default_python_distribution(&env, &flavor, &build_target)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::testutil::*;
-    use super::*;
+    use {
+        super::super::testutil::*,
+        super::*,
+        crate::python_distributions::{
+            CPYTHON_STANDALONE_BY_TRIPLE, CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE,
+        },
+    };
 
     #[test]
     fn test_default_python_distribution() {
@@ -787,7 +857,28 @@ mod tests {
     #[test]
     fn test_default_python_distribution_bad_arg() {
         let err = starlark_nok("default_python_distribution(False)");
-        assert_eq!(err.message, "The type 'bool' is not str");
+        assert_eq!(
+            err.message,
+            "function expects a string for flavor; got type bool"
+        );
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn test_default_python_distribution_windows() {
+        let dist = starlark_ok("default_python_distribution(flavor='windows_embeddable')");
+        assert_eq!(dist.get_type(), "PythonDistribution");
+
+        let host_distribution = CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE
+            .get(crate::project_building::HOST)
+            .unwrap();
+
+        let wanted = PythonDistributionLocation::Url {
+            url: host_distribution.url.clone(),
+            sha256: host_distribution.sha256.clone(),
+        };
+
+        dist.downcast_apply(|x: &PythonDistribution| assert_eq!(x.source, wanted));
     }
 
     #[test]
