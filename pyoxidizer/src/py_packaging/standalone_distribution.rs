@@ -11,8 +11,8 @@ use {
     super::bytecode::BytecodeCompiler,
     super::config::{EmbeddedPythonConfig, RawAllocator},
     super::distribution::{
-        resolve_python_distribution_from_location, DistributionExtractLock, ExtensionModuleFilter,
-        PythonDistribution, PythonDistributionLocation,
+        is_stdlib_test_package, resolve_python_distribution_from_location, DistributionExtractLock,
+        ExtensionModuleFilter, PythonDistribution, PythonDistributionLocation,
     },
     super::distutils::prepare_hacked_distutils,
     super::embedded_resource::EmbeddedPythonResourcesPrePackaged,
@@ -21,7 +21,8 @@ use {
     },
     super::libpython::{derive_importlib, link_libpython, ImportlibBytecode},
     super::resource::{
-        BytecodeModule, DataLocation, ExtensionModuleData, ResourceData, SourceModule,
+        BytecodeModule, BytecodeOptimizationLevel, DataLocation, ExtensionModuleData, ResourceData,
+        SourceModule,
     },
     crate::licensing::NON_GPL_LICENSES,
     anyhow::{anyhow, Context, Result},
@@ -878,9 +879,8 @@ impl PythonDistribution for StandaloneDistribution {
         include_resources: bool,
         include_test: bool,
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
-        let mut resources = EmbeddedPythonResourcesPrePackaged::from_distribution(
+        let mut resources = self.as_embedded_python_resources_pre_packaged(
             logger,
-            &self,
             extension_module_filter,
             preferred_extension_module_variants,
             include_sources,
@@ -1027,7 +1027,6 @@ impl PythonDistribution for StandaloneDistribution {
             .collect()
     }
 
-    /// Obtain `ResourceData` instances for this distribution.
     fn resource_datas(&self) -> Result<Vec<ResourceData>> {
         let mut res = Vec::new();
 
@@ -1042,6 +1041,51 @@ impl PythonDistribution for StandaloneDistribution {
         }
 
         Ok(res)
+    }
+
+    fn as_embedded_python_resources_pre_packaged(
+        &self,
+        logger: &slog::Logger,
+        extension_module_filter: &ExtensionModuleFilter,
+        preferred_extension_module_variants: Option<HashMap<String, String>>,
+        include_sources: bool,
+        include_resources: bool,
+        include_test: bool,
+    ) -> Result<EmbeddedPythonResourcesPrePackaged> {
+        let mut embedded = EmbeddedPythonResourcesPrePackaged::default();
+
+        for ext in self.filter_extension_modules(
+            logger,
+            extension_module_filter,
+            preferred_extension_module_variants,
+        )? {
+            embedded.add_extension_module(&ext);
+        }
+
+        for source in self.source_modules()? {
+            if !include_test && is_stdlib_test_package(&source.package()) {
+                continue;
+            }
+
+            if include_sources {
+                embedded.add_source_module(&source);
+            }
+
+            embedded
+                .add_bytecode_module(&source.as_bytecode_module(BytecodeOptimizationLevel::Zero));
+        }
+
+        if include_resources {
+            for resource in self.resource_datas()? {
+                if !include_test && is_stdlib_test_package(&resource.package) {
+                    continue;
+                }
+
+                embedded.add_resource(&resource);
+            }
+        }
+
+        Ok(embedded)
     }
 }
 

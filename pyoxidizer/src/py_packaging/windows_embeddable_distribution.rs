@@ -12,6 +12,7 @@ use {
         resolve_python_distribution_from_location, DistributionExtractLock, ExtensionModuleFilter,
         PythonDistribution, PythonDistributionLocation,
     },
+    super::embedded_resource::EmbeddedPythonResourcesPrePackaged,
     super::libpython::ImportlibBytecode,
     super::resource::{ResourceData, SourceModule},
     super::standalone_distribution::ExtensionModule,
@@ -306,6 +307,18 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
     }
 
     fn resource_datas(&self) -> Result<Vec<ResourceData>> {
+        unimplemented!()
+    }
+
+    fn as_embedded_python_resources_pre_packaged(
+        &self,
+        _logger: &slog::Logger,
+        _extension_module_filter: &ExtensionModuleFilter,
+        _preferred_extension_module_variants: Option<HashMap<String, String>>,
+        _include_sources: bool,
+        _include_resources: bool,
+        _include_test: bool,
+    ) -> Result<EmbeddedPythonResourcesPrePackaged> {
         unimplemented!()
     }
 }

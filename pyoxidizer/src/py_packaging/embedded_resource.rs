@@ -8,19 +8,18 @@ Embedded Python resources in a binary.
 
 use {
     super::bytecode::{BytecodeCompiler, CompileMode},
-    super::distribution::{is_stdlib_test_package, ExtensionModuleFilter, PythonDistribution},
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
     super::resource::{
         packages_from_module_name, packages_from_module_names, BytecodeModule,
         BytecodeOptimizationLevel, DataLocation, ExtensionModuleData, PackagedModuleBytecode,
         PackagedModuleSource, ResourceData, SourceModule,
     },
-    super::standalone_distribution::{ExtensionModule, StandaloneDistribution},
+    super::standalone_distribution::ExtensionModule,
     anyhow::Result,
     byteorder::{LittleEndian, WriteBytesExt},
     lazy_static::lazy_static,
     slog::warn,
-    std::collections::{BTreeMap, BTreeSet, HashMap},
+    std::collections::{BTreeMap, BTreeSet},
     std::io::Write,
     std::path::Path,
 };
@@ -67,51 +66,6 @@ pub struct EmbeddedPythonResourcesPrePackaged {
 }
 
 impl EmbeddedPythonResourcesPrePackaged {
-    pub fn from_distribution(
-        logger: &slog::Logger,
-        distribution: &StandaloneDistribution,
-        extension_module_filter: &ExtensionModuleFilter,
-        preferred_extension_module_variants: Option<HashMap<String, String>>,
-        include_sources: bool,
-        include_resources: bool,
-        include_test: bool,
-    ) -> Result<EmbeddedPythonResourcesPrePackaged> {
-        let mut embedded = EmbeddedPythonResourcesPrePackaged::default();
-
-        for ext in distribution.filter_extension_modules(
-            logger,
-            extension_module_filter,
-            preferred_extension_module_variants,
-        )? {
-            embedded.add_extension_module(&ext);
-        }
-
-        for source in distribution.source_modules()? {
-            if !include_test && is_stdlib_test_package(&source.package()) {
-                continue;
-            }
-
-            if include_sources {
-                embedded.add_source_module(&source);
-            }
-
-            embedded
-                .add_bytecode_module(&source.as_bytecode_module(BytecodeOptimizationLevel::Zero));
-        }
-
-        if include_resources {
-            for resource in distribution.resource_datas()? {
-                if !include_test && is_stdlib_test_package(&resource.package) {
-                    continue;
-                }
-
-                embedded.add_resource(&resource);
-            }
-        }
-
-        Ok(embedded)
-    }
-
     /// Add a source module to the collection of embedded source modules.
     pub fn add_source_module(&mut self, module: &SourceModule) {
         self.source_modules
