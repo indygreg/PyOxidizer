@@ -865,9 +865,84 @@ impl StandaloneDistribution {
 
         Ok(res)
     }
+}
+
+impl PythonDistribution for StandaloneDistribution {
+    fn from_location(
+        logger: &slog::Logger,
+        location: &PythonDistributionLocation,
+        distributions_dir: &Path,
+    ) -> Result<Box<Self>> {
+        let (archive_path, extract_path) =
+            resolve_python_distribution_from_location(logger, location, distributions_dir)?;
+
+        Ok(Box::new(Self::from_tar_zst_file(
+            logger,
+            &archive_path,
+            &extract_path,
+        )?))
+    }
+
+    fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler> {
+        BytecodeCompiler::new(&self.python_exe)
+    }
+
+    fn resolve_importlib_bytecode(&self) -> Result<ImportlibBytecode> {
+        let mod_bootstrap_path = &self.py_modules["importlib._bootstrap"];
+        let mod_bootstrap_external_path = &self.py_modules["importlib._bootstrap_external"];
+
+        let bootstrap_source = std::fs::read(&mod_bootstrap_path)?;
+        let bootstrap_external_source = std::fs::read(&mod_bootstrap_external_path)?;
+
+        let mut compiler = self.create_bytecode_compiler()?;
+
+        derive_importlib(&bootstrap_source, &bootstrap_external_source, &mut compiler)
+    }
+
+    fn as_python_executable_builder(
+        &self,
+        logger: &slog::Logger,
+        name: &str,
+        config: &EmbeddedPythonConfig,
+        extension_module_filter: &ExtensionModuleFilter,
+        preferred_extension_module_variants: Option<HashMap<String, String>>,
+        include_sources: bool,
+        include_resources: bool,
+        include_test: bool,
+    ) -> Result<Box<dyn PythonBinaryBuilder>> {
+        let mut resources = EmbeddedPythonResourcesPrePackaged::from_distribution(
+            logger,
+            &self,
+            extension_module_filter,
+            preferred_extension_module_variants,
+            include_sources,
+            include_resources,
+            include_test,
+        )?;
+
+        // Always ensure minimal extension modules are present, otherwise we get
+        // missing symbol errors at link time.
+        for ext in self.filter_extension_modules(&logger, &ExtensionModuleFilter::Minimal, None)? {
+            if !resources.extension_modules.contains_key(&ext.module) {
+                resources.add_extension_module(&ext);
+            }
+        }
+
+        let python_exe = self.python_exe.clone();
+        let importlib_bytecode = self.resolve_importlib_bytecode()?;
+
+        Ok(Box::new(StandalonePythonExecutableBuilder {
+            exe_name: name.to_string(),
+            distribution: self.clone(),
+            resources,
+            config: config.clone(),
+            python_exe,
+            importlib_bytecode,
+        }))
+    }
 
     #[allow(clippy::if_same_then_else)]
-    pub fn filter_extension_modules(
+    fn filter_extension_modules(
         &self,
         logger: &slog::Logger,
         filter: &ExtensionModuleFilter,
@@ -967,81 +1042,6 @@ impl StandaloneDistribution {
         }
 
         Ok(res)
-    }
-}
-
-impl PythonDistribution for StandaloneDistribution {
-    fn from_location(
-        logger: &slog::Logger,
-        location: &PythonDistributionLocation,
-        distributions_dir: &Path,
-    ) -> Result<Box<Self>> {
-        let (archive_path, extract_path) =
-            resolve_python_distribution_from_location(logger, location, distributions_dir)?;
-
-        Ok(Box::new(Self::from_tar_zst_file(
-            logger,
-            &archive_path,
-            &extract_path,
-        )?))
-    }
-
-    fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler> {
-        BytecodeCompiler::new(&self.python_exe)
-    }
-
-    fn resolve_importlib_bytecode(&self) -> Result<ImportlibBytecode> {
-        let mod_bootstrap_path = &self.py_modules["importlib._bootstrap"];
-        let mod_bootstrap_external_path = &self.py_modules["importlib._bootstrap_external"];
-
-        let bootstrap_source = std::fs::read(&mod_bootstrap_path)?;
-        let bootstrap_external_source = std::fs::read(&mod_bootstrap_external_path)?;
-
-        let mut compiler = self.create_bytecode_compiler()?;
-
-        derive_importlib(&bootstrap_source, &bootstrap_external_source, &mut compiler)
-    }
-
-    fn as_python_executable_builder(
-        &self,
-        logger: &slog::Logger,
-        name: &str,
-        config: &EmbeddedPythonConfig,
-        extension_module_filter: &ExtensionModuleFilter,
-        preferred_extension_module_variants: Option<HashMap<String, String>>,
-        include_sources: bool,
-        include_resources: bool,
-        include_test: bool,
-    ) -> Result<Box<dyn PythonBinaryBuilder>> {
-        let mut resources = EmbeddedPythonResourcesPrePackaged::from_distribution(
-            logger,
-            &self,
-            extension_module_filter,
-            preferred_extension_module_variants,
-            include_sources,
-            include_resources,
-            include_test,
-        )?;
-
-        // Always ensure minimal extension modules are present, otherwise we get
-        // missing symbol errors at link time.
-        for ext in self.filter_extension_modules(&logger, &ExtensionModuleFilter::Minimal, None)? {
-            if !resources.extension_modules.contains_key(&ext.module) {
-                resources.add_extension_module(&ext);
-            }
-        }
-
-        let python_exe = self.python_exe.clone();
-        let importlib_bytecode = self.resolve_importlib_bytecode()?;
-
-        Ok(Box::new(StandalonePythonExecutableBuilder {
-            exe_name: name.to_string(),
-            distribution: self.clone(),
-            resources,
-            config: config.clone(),
-            python_exe,
-            importlib_bytecode,
-        }))
     }
 }
 

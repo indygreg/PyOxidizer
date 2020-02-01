@@ -11,7 +11,7 @@ use {
     super::bytecode::BytecodeCompiler,
     super::config::EmbeddedPythonConfig,
     super::libpython::ImportlibBytecode,
-    super::standalone_distribution::StandaloneDistribution,
+    super::standalone_distribution::{ExtensionModule, StandaloneDistribution},
     crate::python_distributions::CPYTHON_STANDALONE_BY_TRIPLE,
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
@@ -122,6 +122,14 @@ pub trait PythonDistribution {
         include_resources: bool,
         include_test: bool,
     ) -> Result<Box<dyn PythonBinaryBuilder>>;
+
+    /// Obtain extension modules matching a specified filter and variant selection preferences.
+    fn filter_extension_modules(
+        &self,
+        logger: &slog::Logger,
+        filter: &ExtensionModuleFilter,
+        preferred_variants: Option<HashMap<String, String>>,
+    ) -> Result<Vec<ExtensionModule>>;
 }
 
 /// Multiple threads or processes could race to extract the archive.

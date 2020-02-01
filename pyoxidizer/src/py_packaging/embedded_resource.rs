@@ -8,7 +8,7 @@ Embedded Python resources in a binary.
 
 use {
     super::bytecode::{BytecodeCompiler, CompileMode},
-    super::distribution::{is_stdlib_test_package, ExtensionModuleFilter},
+    super::distribution::{is_stdlib_test_package, ExtensionModuleFilter, PythonDistribution},
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
     super::resource::{
         packages_from_module_name, packages_from_module_names, BytecodeModule,

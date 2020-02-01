@@ -13,6 +13,7 @@ use {
         PythonDistribution, PythonDistributionLocation,
     },
     super::libpython::ImportlibBytecode,
+    super::standalone_distribution::ExtensionModule,
     crate::analyze::find_pe_dependencies_path,
     anyhow::{anyhow, Context, Result},
     std::collections::{BTreeMap, HashMap},
@@ -287,6 +288,15 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         _include_resources: bool,
         _include_test: bool,
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
+        unimplemented!();
+    }
+
+    fn filter_extension_modules(
+        &self,
+        _logger: &slog::Logger,
+        _filter: &ExtensionModuleFilter,
+        _preferred_variants: Option<HashMap<String, String>>,
+    ) -> Result<Vec<ExtensionModule>> {
         unimplemented!();
     }
 }
