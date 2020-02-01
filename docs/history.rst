@@ -48,6 +48,9 @@ Backwards Compatibility Notes
 New Features
 ^^^^^^^^^^^^
 
+* The ``PythonDistribution()`` Starlark function now accepts a ``flavor`` argument
+  to denote the distribution type. This allows construction of alternate distribution
+  types.
 * The ``default_python_distribution()`` Starlark function now accepts a
   ``flavor`` argument which can be set to ``windows_embeddable`` to return a
   distribution based on the zip file distributions published by the official

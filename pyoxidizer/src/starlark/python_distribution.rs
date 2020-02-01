@@ -196,10 +196,12 @@ impl PythonDistribution {
         sha256: &Value,
         local_path: &Value,
         url: &Value,
+        flavor: &Value,
     ) -> ValueResult {
-        required_str_arg("sha256", &sha256)?;
-        optional_str_arg("local_path", &local_path)?;
-        optional_str_arg("url", &url)?;
+        required_str_arg("sha256", sha256)?;
+        optional_str_arg("local_path", local_path)?;
+        optional_str_arg("url", url)?;
+        let flavor = required_str_arg("flavor", flavor)?;
 
         if local_path.get_type() != "NoneType" && url.get_type() != "NoneType" {
             return Err(RuntimeError {
@@ -222,13 +224,25 @@ impl PythonDistribution {
             }
         };
 
+        let flavor = match flavor.as_ref() {
+            "standalone" => DistributionFlavor::Standalone,
+            "windows_embeddable" => DistributionFlavor::WindowsEmbeddable,
+            v => {
+                return Err(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: format!("invalid distribution flavor {}", v),
+                    label: "PythonDistribution()".to_string(),
+                }
+                .into())
+            }
+        };
+
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
         let dest_dir =
             context.downcast_apply(|x: &EnvironmentContext| x.python_distributions_path.clone());
 
         Ok(Value::new(PythonDistribution::from_location(
-            // TODO allow distribution flavor to be customized.
-            DistributionFlavor::Standalone,
+            flavor,
             distribution,
             &dest_dir,
         )))
@@ -725,8 +739,8 @@ impl PythonDistribution {
 
 starlark_module! { python_distribution_module =>
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonDistribution(env env, sha256, local_path=None, url=None) {
-        PythonDistribution::from_args(&env, &sha256, &local_path, &url)
+    PythonDistribution(env env, sha256, local_path=None, url=None, flavor="standalone") {
+        PythonDistribution::from_args(&env, &sha256, &local_path, &url, &flavor)
     }
 
     #[allow(clippy::ptr_arg)]
@@ -903,7 +917,10 @@ mod tests {
             sha256: "sha256".to_string(),
         };
 
-        dist.downcast_apply(|x: &PythonDistribution| assert_eq!(x.source, wanted));
+        dist.downcast_apply(|x: &PythonDistribution| {
+            assert_eq!(x.source, wanted);
+            assert_eq!(x.flavor, DistributionFlavor::Standalone);
+        });
     }
 
     #[test]
@@ -914,7 +931,21 @@ mod tests {
             sha256: "sha256".to_string(),
         };
 
-        dist.downcast_apply(|x: &PythonDistribution| assert_eq!(x.source, wanted));
+        dist.downcast_apply(|x: &PythonDistribution| {
+            assert_eq!(x.source, wanted);
+            assert_eq!(x.flavor, DistributionFlavor::Standalone);
+        });
+    }
+
+    #[test]
+    fn test_python_distribution_windows_embeddable() {
+        let dist = starlark_ok(
+            "PythonDistribution('sha256', local_path='some_path', flavor='windows_embeddable')",
+        );
+
+        dist.downcast_apply(|x: &PythonDistribution| {
+            assert_eq!(x.flavor, DistributionFlavor::WindowsEmbeddable);
+        });
     }
 
     #[test]

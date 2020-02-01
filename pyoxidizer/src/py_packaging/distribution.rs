@@ -387,6 +387,7 @@ pub fn resolve_python_distribution_from_location(
 }
 
 /// Describes the flavor of a distribution.
+#[derive(Debug, PartialEq)]
 pub enum DistributionFlavor {
     /// Distributions coming from the `python-build-standalone` project.
     Standalone,

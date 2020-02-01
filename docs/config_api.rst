@@ -210,8 +210,8 @@ type can be constructed from parameters or via
 
 .. _config_python_distribution:
 
-``PythonDistribution(sha256, local_path=None, url=None)``
----------------------------------------------------------
+``PythonDistribution(sha256, local_path=None, url=None, flavor="standalone")``
+------------------------------------------------------------------------------
 
 Defines a Python distribution that can be embedded into a binary.
 
@@ -235,6 +235,10 @@ One of ``local_path`` or ``url`` MUST be defined.
 ``url`` (string)
    URL from which a distribution archive can be obtained using an HTTP GET
    request.
+
+``flavor`` (string)
+   The distribution flavor. Can either by ``standalone`` (the default) or
+   ``windows_embeddable``.
 
 Examples:
 
