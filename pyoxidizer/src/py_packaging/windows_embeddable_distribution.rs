@@ -5,7 +5,9 @@
 /*! Functionality for Windows embeddable distributions. */
 
 use {
-    super::binary::{EmbeddedPythonBinaryData, PythonBinaryBuilder, PythonLibrary},
+    super::binary::{
+        EmbeddedPythonBinaryData, EmbeddedResourcesBlobs, PythonBinaryBuilder, PythonLibrary,
+    },
     super::bytecode::BytecodeCompiler,
     super::config::EmbeddedPythonConfig,
     super::distribution::{
@@ -262,7 +264,7 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         &self,
         _logger: &slog::Logger,
         name: &str,
-        _config: &EmbeddedPythonConfig,
+        config: &EmbeddedPythonConfig,
         _extension_module_filter: &ExtensionModuleFilter,
         _preferred_extension_module_variants: Option<HashMap<String, String>>,
         _include_sources: bool,
@@ -274,6 +276,8 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
             python_exe: self.python_exe.clone(),
             // TODO add distribution resources to this instance.
             resources: EmbeddedPythonResourcesPrePackaged::default(),
+            config: config.clone(),
+            importlib_bytecode: self.resolve_importlib_bytecode()?,
         }))
     }
 
@@ -424,6 +428,12 @@ pub struct WindowsEmbeddedablePythonExecutableBuilder {
 
     /// Python resources to be embedded in the binary.
     resources: EmbeddedPythonResourcesPrePackaged,
+
+    /// Configuration for embedded Python interpreter.
+    config: EmbeddedPythonConfig,
+
+    /// Compiled bytecode for importlib bootstrap modules.
+    importlib_bytecode: ImportlibBytecode,
 }
 
 impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
@@ -503,11 +513,30 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
     fn as_embedded_python_binary_data(
         &self,
         _logger: &slog::Logger,
-        _host: &str,
-        _target: &str,
+        host: &str,
+        target: &str,
         _opt_level: &str,
     ) -> Result<EmbeddedPythonBinaryData> {
-        unimplemented!()
+        Ok(EmbeddedPythonBinaryData {
+            config: self.config.clone(),
+            // TODO handle this correctly.
+            library: PythonLibrary {
+                libpython_filename: Default::default(),
+                libpython_data: vec![],
+                libpyembeddedconfig_filename: Default::default(),
+                libpyembeddedconfig_data: vec![],
+                cargo_metadata: vec![],
+            },
+            importlib: self.importlib_bytecode.clone(),
+            // TODO handle this correctly.
+            resources: EmbeddedResourcesBlobs {
+                module_names: vec![],
+                modules: vec![],
+                resources: vec![],
+            },
+            host: host.to_string(),
+            target: target.to_string(),
+        })
     }
 }
 
