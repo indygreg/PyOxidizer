@@ -292,7 +292,7 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
     fn as_python_executable_builder(
         &self,
         _logger: &slog::Logger,
-        _name: &str,
+        name: &str,
         _config: &EmbeddedPythonConfig,
         _extension_module_filter: &ExtensionModuleFilter,
         _preferred_extension_module_variants: Option<HashMap<String, String>>,
@@ -300,7 +300,9 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         _include_resources: bool,
         _include_test: bool,
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
-        Ok(Box::new(WindowsEmbeddedablePythonExecutableBuilder {}))
+        Ok(Box::new(WindowsEmbeddedablePythonExecutableBuilder {
+            exe_name: name.to_string(),
+        }))
     }
 
     fn filter_extension_modules(
@@ -420,11 +422,14 @@ fn read_stdlib_zip(
 /// Instances can derive artifacts needed to build executables using
 /// `WindowsEmbeddableDistribution` instances.
 #[derive(Debug)]
-pub struct WindowsEmbeddedablePythonExecutableBuilder {}
+pub struct WindowsEmbeddedablePythonExecutableBuilder {
+    /// The name of the executable to build.
+    exe_name: String,
+}
 
 impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
     fn name(&self) -> String {
-        unimplemented!()
+        self.exe_name.clone()
     }
 
     fn python_exe_path(&self) -> &Path {
@@ -583,6 +588,7 @@ mod tests {
             true,
         )?;
 
+        assert_eq!(builder.name(), "foo".to_string());
         assert!(!builder.requires_jemalloc());
 
         Ok(())
