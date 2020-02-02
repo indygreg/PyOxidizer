@@ -10,7 +10,6 @@ use {
     super::binary::PythonBinaryBuilder,
     super::bytecode::BytecodeCompiler,
     super::config::EmbeddedPythonConfig,
-    super::embedded_resource::EmbeddedPythonResourcesPrePackaged,
     super::libpython::ImportlibBytecode,
     super::resource::{ResourceData, SourceModule},
     super::standalone_distribution::{ExtensionModule, StandaloneDistribution},
@@ -135,17 +134,6 @@ pub trait PythonDistribution {
 
     /// Obtain `ResourceData` instances present in this distribution.
     fn resource_datas(&self) -> Result<Vec<ResourceData>>;
-
-    /// Obtain an `EmbeddedPythonResourcesPrePackaged` from this instance.
-    fn as_embedded_python_resources_pre_packaged(
-        &self,
-        logger: &slog::Logger,
-        extension_module_filter: &ExtensionModuleFilter,
-        preferred_extension_module_variants: Option<HashMap<String, String>>,
-        include_sources: bool,
-        include_resources: bool,
-        include_test: bool,
-    ) -> Result<EmbeddedPythonResourcesPrePackaged>;
 
     /// Ensure pip is available to run in the distribution.
     ///

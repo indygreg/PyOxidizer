@@ -324,18 +324,6 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         unimplemented!()
     }
 
-    fn as_embedded_python_resources_pre_packaged(
-        &self,
-        _logger: &slog::Logger,
-        _extension_module_filter: &ExtensionModuleFilter,
-        _preferred_extension_module_variants: Option<HashMap<String, String>>,
-        _include_sources: bool,
-        _include_resources: bool,
-        _include_test: bool,
-    ) -> Result<EmbeddedPythonResourcesPrePackaged> {
-        unimplemented!()
-    }
-
     fn ensure_pip(&self, _logger: &slog::Logger) -> Result<PathBuf> {
         unimplemented!();
     }

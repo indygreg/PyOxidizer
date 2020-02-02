@@ -748,6 +748,51 @@ impl StandaloneDistribution {
         }
     }
 
+    fn as_embedded_python_resources_pre_packaged(
+        &self,
+        logger: &slog::Logger,
+        extension_module_filter: &ExtensionModuleFilter,
+        preferred_extension_module_variants: Option<HashMap<String, String>>,
+        include_sources: bool,
+        include_resources: bool,
+        include_test: bool,
+    ) -> Result<EmbeddedPythonResourcesPrePackaged> {
+        let mut embedded = EmbeddedPythonResourcesPrePackaged::default();
+
+        for ext in self.filter_extension_modules(
+            logger,
+            extension_module_filter,
+            preferred_extension_module_variants,
+        )? {
+            embedded.add_extension_module(&ext);
+        }
+
+        for source in self.source_modules()? {
+            if !include_test && is_stdlib_test_package(&source.package()) {
+                continue;
+            }
+
+            if include_sources {
+                embedded.add_source_module(&source);
+            }
+
+            embedded
+                .add_bytecode_module(&source.as_bytecode_module(BytecodeOptimizationLevel::Zero));
+        }
+
+        if include_resources {
+            for resource in self.resource_datas()? {
+                if !include_test && is_stdlib_test_package(&resource.package) {
+                    continue;
+                }
+
+                embedded.add_resource(&resource);
+            }
+        }
+
+        Ok(embedded)
+    }
+
     /// Duplicate the python distribution, with distutils hacked
     pub fn create_hacked_base(&self, logger: &slog::Logger) -> PythonPaths {
         let venv_base = self.venv_base.clone();
@@ -1030,51 +1075,6 @@ impl PythonDistribution for StandaloneDistribution {
         }
 
         Ok(res)
-    }
-
-    fn as_embedded_python_resources_pre_packaged(
-        &self,
-        logger: &slog::Logger,
-        extension_module_filter: &ExtensionModuleFilter,
-        preferred_extension_module_variants: Option<HashMap<String, String>>,
-        include_sources: bool,
-        include_resources: bool,
-        include_test: bool,
-    ) -> Result<EmbeddedPythonResourcesPrePackaged> {
-        let mut embedded = EmbeddedPythonResourcesPrePackaged::default();
-
-        for ext in self.filter_extension_modules(
-            logger,
-            extension_module_filter,
-            preferred_extension_module_variants,
-        )? {
-            embedded.add_extension_module(&ext);
-        }
-
-        for source in self.source_modules()? {
-            if !include_test && is_stdlib_test_package(&source.package()) {
-                continue;
-            }
-
-            if include_sources {
-                embedded.add_source_module(&source);
-            }
-
-            embedded
-                .add_bytecode_module(&source.as_bytecode_module(BytecodeOptimizationLevel::Zero));
-        }
-
-        if include_resources {
-            for resource in self.resource_datas()? {
-                if !include_test && is_stdlib_test_package(&resource.package) {
-                    continue;
-                }
-
-                embedded.add_resource(&resource);
-            }
-        }
-
-        Ok(embedded)
     }
 
     /// Ensure pip is available to run in the distribution.
