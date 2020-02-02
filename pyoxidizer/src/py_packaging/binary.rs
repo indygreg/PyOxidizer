@@ -8,12 +8,14 @@ Defining and manipulating binaries embedding Python.
 
 use {
     super::config::EmbeddedPythonConfig,
+    super::embedded_resource::EmbeddedPythonResources,
     super::libpython::ImportlibBytecode,
     super::pyembed::{derive_python_config, write_default_python_config_rs},
     super::resource::{BytecodeModule, ExtensionModuleData, ResourceData, SourceModule},
     super::standalone_distribution::ExtensionModule,
     anyhow::Result,
     std::collections::BTreeMap,
+    std::convert::TryFrom,
     std::fs::File,
     std::io::Write,
     std::path::{Path, PathBuf},
@@ -115,6 +117,24 @@ pub struct EmbeddedResourcesBlobs {
     pub module_names: Vec<u8>,
     pub modules: Vec<u8>,
     pub resources: Vec<u8>,
+}
+
+impl TryFrom<EmbeddedPythonResources> for EmbeddedResourcesBlobs {
+    type Error = anyhow::Error;
+
+    fn try_from(value: EmbeddedPythonResources) -> Result<Self, Self::Error> {
+        let mut module_names = Vec::new();
+        let mut modules = Vec::new();
+        let mut resources = Vec::new();
+
+        value.write_blobs(&mut module_names, &mut modules, &mut resources);
+
+        Ok(Self {
+            module_names,
+            modules,
+            resources,
+        })
+    }
 }
 
 /// Holds filesystem paths to resources required to build a binary embedding Python.

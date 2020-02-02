@@ -30,6 +30,7 @@ use {
     serde::{Deserialize, Serialize},
     slog::{info, warn},
     std::collections::{BTreeMap, BTreeSet, HashMap},
+    std::convert::TryFrom,
     std::hash::BuildHasher,
     std::io::{BufRead, BufReader, Read},
     std::iter::FromIterator,
@@ -1132,27 +1133,6 @@ pub struct StandalonePythonExecutableBuilder {
     importlib_bytecode: ImportlibBytecode,
 }
 
-impl StandalonePythonExecutableBuilder {
-    fn resolve_embedded_resource_blobs(
-        &self,
-        logger: &slog::Logger,
-    ) -> Result<EmbeddedResourcesBlobs> {
-        let embedded_resources = self.resources.package(logger, &self.python_exe)?;
-
-        let mut module_names = Vec::new();
-        let mut modules = Vec::new();
-        let mut resources = Vec::new();
-
-        embedded_resources.write_blobs(&mut module_names, &mut modules, &mut resources);
-
-        Ok(EmbeddedResourcesBlobs {
-            module_names,
-            modules,
-            resources,
-        })
-    }
-}
-
 impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     fn name(&self) -> String {
         self.exe_name.clone()
@@ -1271,7 +1251,9 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         opt_level: &str,
     ) -> Result<EmbeddedPythonBinaryData> {
         let library = self.resolve_python_library(logger, host, target, opt_level)?;
-        let resources = self.resolve_embedded_resource_blobs(logger)?;
+
+        let resources =
+            EmbeddedResourcesBlobs::try_from(self.resources.package(logger, &self.python_exe)?)?;
         warn!(
             logger,
             "deriving custom importlib modules to support in-memory importing"
