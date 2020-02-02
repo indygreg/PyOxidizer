@@ -5,9 +5,7 @@
 /*! Functionality for Windows embeddable distributions. */
 
 use {
-    super::binary::{
-        EmbeddedPythonBinaryData, EmbeddedResourcesBlobs, PythonBinaryBuilder, PythonLibrary,
-    },
+    super::binary::{EmbeddedPythonBinaryData, PythonBinaryBuilder, PythonLibrary},
     super::bytecode::BytecodeCompiler,
     super::config::EmbeddedPythonConfig,
     super::distribution::{
@@ -486,13 +484,6 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
     fn requires_jemalloc(&self) -> bool {
         // jemalloc not supported on Windows.
         false
-    }
-
-    fn resolve_embedded_resource_blobs(
-        &self,
-        _logger: &slog::Logger,
-    ) -> Result<EmbeddedResourcesBlobs> {
-        unimplemented!()
     }
 
     fn resolve_python_library(

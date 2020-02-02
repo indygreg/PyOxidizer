@@ -82,12 +82,6 @@ pub trait PythonBinaryBuilder {
     /// Whether the binary requires the jemalloc library.
     fn requires_jemalloc(&self) -> bool;
 
-    /// Resolve blobs representing embedded resource data from the currently configured instance state.
-    fn resolve_embedded_resource_blobs(
-        &self,
-        logger: &slog::Logger,
-    ) -> Result<EmbeddedResourcesBlobs>;
-
     /// Resolve a Python library necessary for linking against.
     fn resolve_python_library(
         &self,
