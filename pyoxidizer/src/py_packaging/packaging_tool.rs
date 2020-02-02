@@ -169,7 +169,7 @@ pub fn bootstrap_packaging_tools(
 }
 
 /// Find resources installed as part of a packaging operation.
-pub fn find_resources(path: &Path, state_dir: Option<&Path>) -> Result<Vec<PythonResource>> {
+pub fn find_resources(path: &Path, state_dir: Option<PathBuf>) -> Result<Vec<PythonResource>> {
     let mut res = Vec::new();
 
     for r in find_python_resources(&path) {
@@ -264,8 +264,11 @@ pub fn pip_install<S: BuildHasher>(
         return Err(anyhow!("error running pip"));
     }
 
-    let state_dir = PathBuf::from(env.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap());
-    find_resources(&target_dir, Some(&state_dir))
+    let state_dir = match env.get("PYOXIDIZER_DISTUTILS_STATE_DIR") {
+        Some(p) => Some(PathBuf::from(p)),
+        None => None,
+    };
+    find_resources(&target_dir, state_dir)
 }
 
 /// Discover Python resources from a populated virtualenv directory.
@@ -351,13 +354,16 @@ pub fn setup_py_install<S: BuildHasher>(
         return Err(anyhow!("error running setup.py"));
     }
 
-    let state_dir = PathBuf::from(envs.get("PYOXIDIZER_DISTUTILS_STATE_DIR").unwrap());
+    let state_dir = match envs.get("PYOXIDIZER_DISTUTILS_STATE_DIR") {
+        Some(p) => Some(PathBuf::from(p)),
+        None => None,
+    };
     warn!(
         logger,
         "scanning {} for resources",
         python_paths.site_packages.display()
     );
-    find_resources(&python_paths.site_packages, Some(&state_dir))
+    find_resources(&python_paths.site_packages, state_dir)
 }
 
 #[cfg(test)]
