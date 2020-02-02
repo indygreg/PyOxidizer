@@ -481,7 +481,8 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
     }
 
     fn requires_jemalloc(&self) -> bool {
-        unimplemented!()
+        // jemalloc not supported on Windows.
+        false
     }
 
     fn resolve_embedded_resource_blobs(
@@ -571,7 +572,7 @@ mod tests {
         let config = EmbeddedPythonConfig::default();
         let extension_module_filter = ExtensionModuleFilter::All;
 
-        dist.as_python_executable_builder(
+        let builder = dist.as_python_executable_builder(
             &logger,
             "foo",
             &config,
@@ -581,6 +582,8 @@ mod tests {
             true,
             true,
         )?;
+
+        assert!(!builder.requires_jemalloc());
 
         Ok(())
     }
