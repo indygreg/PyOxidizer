@@ -316,11 +316,14 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
     }
 
     fn source_modules(&self) -> Result<Vec<SourceModule>> {
-        unimplemented!()
+        // Windows embeddable distributions don't have source modules.
+        Ok(Vec::new())
     }
 
     fn resource_datas(&self) -> Result<Vec<ResourceData>> {
-        unimplemented!()
+        // There are some resources in the zip file. But we haven't implemented
+        // parsing for them.
+        Ok(Vec::new())
     }
 
     fn ensure_pip(&self, _logger: &slog::Logger) -> Result<PathBuf> {
@@ -550,11 +553,13 @@ mod tests {
                 ],
             })
         );
+        assert_eq!(dist.source_modules()?, Vec::new());
         assert!(dist.bytecode_modules.contains_key("distutils"));
         let distutils = dist.bytecode_modules.get("distutils").unwrap();
         assert_eq!(distutils.name, "distutils".to_string());
         assert!(distutils.is_package);
         assert!(!distutils.code.is_empty());
+        assert_eq!(dist.resource_datas()?, Vec::new());
 
         Ok(())
     }
