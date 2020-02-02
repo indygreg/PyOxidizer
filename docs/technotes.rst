@@ -369,3 +369,19 @@ target nonetheless and it would be nice if Python officially supported
 it. (FWIW the performance concerns seem to stem from memory allocator
 performance and PyOxidizer supports using jemalloc as the allocator,
 bypassing this problem.)
+
+Windows Embeddable Distributions Missing Functionality
+------------------------------------------------------
+
+The Windows embeddable zip file distributions of CPython are missing
+certain functionality.
+
+The distributions do not contain source code for Python modules in the
+standard library. This means PyOxidizer can't easily bundle sources from
+these distributions.
+
+The ``ensurepip`` module is not present in the distribution. So there is
+no way to install ``pip`` using the distribution itself.
+
+The ``venv`` module is also not present in the distribution. So there's
+no way to create virtualenvs using the distribution itself.
