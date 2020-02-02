@@ -309,11 +309,20 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
             .parent()
             .ok_or(anyhow!("could not resolve parent directory"))?;
 
-        let pip_exe_path = dist_dir.join("Scripts").join("pip.exe");
+        let pip_exe_path = dist_dir.join("pip.exe");
 
         if !pip_exe_path.exists() {
             warn!(logger, "pip not present; installing");
-            bootstrap_packaging_tools(logger, &self.python_exe, dist_parent_dir)?;
+            bootstrap_packaging_tools(
+                logger,
+                &self.python_exe,
+                dist_parent_dir,
+                // Install executables and packages in the distribution itself because
+                // the default locations of `Scripts` and `Lib/site-packages` aren't picked
+                // up by the distribution by default.
+                dist_dir,
+                dist_dir,
+            )?;
         }
 
         Ok(pip_exe_path)
@@ -600,14 +609,8 @@ mod tests {
 
         let pip_path = dist.ensure_pip(&logger)?;
 
-        assert_eq!(
-            pip_path,
-            dist.python_exe
-                .parent()
-                .unwrap()
-                .join("Scripts")
-                .join("pip.exe")
-        );
+        assert_eq!(pip_path, dist.python_exe.parent().unwrap().join("pip.exe"));
+        assert!(pip_path.exists());
 
         Ok(())
     }

@@ -69,6 +69,8 @@ pub fn bootstrap_packaging_tools(
     logger: &slog::Logger,
     python_exe: &Path,
     cache_dir: &Path,
+    bin_dir: &Path,
+    lib_dir: &Path,
 ) -> Result<()> {
     let get_pip_py_path =
         download_distribution(&GET_PIP_PY_19.url, &GET_PIP_PY_19.sha256, cache_dir)?;
@@ -91,6 +93,11 @@ pub fn bootstrap_packaging_tools(
     let bootstrap_txt_path = temp_dir.path().join("pip-bootstrap.txt");
     std::fs::write(&bootstrap_txt_path, PIP_BOOTSTRAP_REQUIREMENTS)?;
 
+    // We install to a temp directory then copy files into the target directory.
+    // We do this because we may not want to modify the source Python distribution
+    // and the default install layout may not be appropriate.
+    let install_dir = temp_dir.path().join("pip-installed");
+
     warn!(logger, "running get-pip.py to bootstrap pip");
     let mut cmd = std::process::Command::new(python_exe)
         .args(vec![
@@ -98,6 +105,8 @@ pub fn bootstrap_packaging_tools(
             "--require-hashes".to_string(),
             "-r".to_string(),
             format!("{}", bootstrap_txt_path.display()),
+            "--prefix".to_string(),
+            format!("{}", install_dir.display()),
         ])
         .current_dir(temp_dir.path())
         .stdout(std::process::Stdio::piped())
@@ -116,6 +125,44 @@ pub fn bootstrap_packaging_tools(
     let result = cmd.wait()?;
     if !result.success() {
         return Err(anyhow!("error installing pip"));
+    }
+
+    // TODO support non-Windows install layouts.
+    let source_bin_dir = install_dir.join("Scripts");
+    let source_lib_dir = install_dir.join("Lib").join("site-packages");
+
+    for entry in walkdir::WalkDir::new(&source_bin_dir) {
+        let entry = entry?;
+
+        if entry.file_type().is_dir() {
+            continue;
+        }
+
+        let rel = entry.path().strip_prefix(&source_bin_dir)?;
+
+        let dest_path = bin_dir.join(rel);
+        let parent_dir = dest_path
+            .parent()
+            .ok_or(anyhow!("unable to determine parent directory"))?;
+        std::fs::create_dir_all(parent_dir)?;
+        std::fs::copy(entry.path(), &dest_path).context("copying bin file")?;
+    }
+
+    for entry in walkdir::WalkDir::new(&source_lib_dir) {
+        let entry = entry?;
+
+        if entry.file_type().is_dir() {
+            continue;
+        }
+
+        let rel = entry.path().strip_prefix(&source_lib_dir)?;
+
+        let dest_path = lib_dir.join(rel);
+        let parent_dir = dest_path
+            .parent()
+            .ok_or(anyhow!("unable to determine parent directory"))?;
+        std::fs::create_dir_all(parent_dir)?;
+        std::fs::copy(entry.path(), &dest_path).context("copying lib file")?;
     }
 
     return Ok(());
