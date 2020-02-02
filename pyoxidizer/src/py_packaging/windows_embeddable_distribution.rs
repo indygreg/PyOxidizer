@@ -187,6 +187,12 @@ impl WindowsEmbeddableDistribution {
 
         let xy_version = &zip_file[6..zip_file.find('.').unwrap()];
 
+        if xy_version != "37" {
+            return Err(anyhow!(
+                "Only Python 3.7 Windows embeddable distributions are currently supported"
+            ));
+        }
+
         let python_exe = path.join("python.exe");
         if !python_exe.exists() {
             return Err(anyhow!("{} does not exist", python_exe.display()));
