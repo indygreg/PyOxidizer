@@ -9,22 +9,21 @@ use {
     super::bytecode::BytecodeCompiler,
     super::config::EmbeddedPythonConfig,
     super::distribution::{
-        download_distribution, extract_zip, resolve_python_distribution_from_location,
-        DistributionExtractLock, ExtensionModuleFilter, PythonDistribution,
-        PythonDistributionLocation, IMPORTLIB_BOOTSTRAP_EXTERNAL_PY_37, IMPORTLIB_BOOTSTRAP_PY_37,
+        extract_zip, resolve_python_distribution_from_location, DistributionExtractLock,
+        ExtensionModuleFilter, PythonDistribution, PythonDistributionLocation,
+        IMPORTLIB_BOOTSTRAP_EXTERNAL_PY_37, IMPORTLIB_BOOTSTRAP_PY_37,
     },
     super::embedded_resource::EmbeddedPythonResourcesPrePackaged,
     super::libpython::{derive_importlib, ImportlibBytecode},
+    super::packaging_tool::bootstrap_packaging_tools,
     super::resource::{BytecodeModule, ExtensionModuleData, ResourceData, SourceModule},
     super::standalone_distribution::ExtensionModule,
     crate::analyze::find_pe_dependencies_path,
-    crate::python_distributions::GET_PIP_PY_19,
     anyhow::{anyhow, Result},
     slog::warn,
     std::collections::{BTreeMap, HashMap},
     std::convert::TryInto,
     std::fmt::{Debug, Formatter},
-    std::io::{BufRead, BufReader},
     std::iter::FromIterator,
     std::path::{Path, PathBuf},
 };
@@ -302,33 +301,19 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         // Windows embeddable distributions don't contain pip or ensurepip. So we
         // download a deterministic version of get-pip.py and run it to install pip.
 
-        let dest_dir = self
+        let dist_dir = self
             .python_exe
             .parent()
             .ok_or(anyhow!("could not resolve parent directory"))?;
+        let dist_parent_dir = dist_dir
+            .parent()
+            .ok_or(anyhow!("could not resolve parent directory"))?;
 
-        let pip_exe_path = dest_dir.join("Scripts").join("pip.exe");
+        let pip_exe_path = dist_dir.join("Scripts").join("pip.exe");
 
         if !pip_exe_path.exists() {
             warn!(logger, "pip not present; installing");
-            let get_pip_py =
-                download_distribution(&GET_PIP_PY_19.url, &GET_PIP_PY_19.sha256, dest_dir)?;
-
-            let mut cmd = std::process::Command::new(&self.python_exe)
-                .arg(format!("{}", get_pip_py.display()))
-                .current_dir(dest_dir)
-                .stdout(std::process::Stdio::piped())
-                .spawn()?;
-            {
-                let stdout = cmd
-                    .stdout
-                    .as_mut()
-                    .ok_or(anyhow!("could not read stdout"))?;
-                let reader = BufReader::new(stdout);
-                for line in reader.lines() {
-                    warn!(logger, "{}", line?);
-                }
-            }
+            bootstrap_packaging_tools(logger, &self.python_exe, dist_parent_dir)?;
         }
 
         Ok(pip_exe_path)

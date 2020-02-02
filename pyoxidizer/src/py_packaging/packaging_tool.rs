@@ -6,19 +6,120 @@
 Interaction with Python packaging tools (pip, setuptools, etc).
 */
 
-use anyhow::{anyhow, Context, Result};
-use slog::warn;
-use std::collections::HashMap;
-use std::convert::TryFrom;
-use std::hash::BuildHasher;
-use std::io::{BufRead, BufReader};
-use std::path::{Path, PathBuf};
+use {
+    super::distribution::{download_distribution, PythonDistribution},
+    super::distutils::read_built_extensions,
+    super::fsscan::{find_python_resources, PythonFileResource},
+    super::resource::PythonResource,
+    super::standalone_distribution::resolve_python_paths,
+    crate::python_distributions::GET_PIP_PY_19,
+    anyhow::{anyhow, Context, Result},
+    slog::warn,
+    std::collections::HashMap,
+    std::convert::TryFrom,
+    std::hash::BuildHasher,
+    std::io::{BufRead, BufReader},
+    std::path::{Path, PathBuf},
+};
 
-use super::distribution::PythonDistribution;
-use super::distutils::read_built_extensions;
-use super::fsscan::{find_python_resources, PythonFileResource};
-use super::resource::PythonResource;
-use super::standalone_distribution::resolve_python_paths;
+/// Pip requirements file for bootstrapping packaging tools.
+pub const PIP_BOOTSTRAP_REQUIREMENTS: &'static str = indoc::indoc!(
+    "wheel==0.34.2 \\
+        --hash=sha256:8788e9155fe14f54164c1b9eb0a319d98ef02c160725587ad60f14ddc57b6f96 \\
+        --hash=sha256:df277cb51e61359aba502208d680f90c0493adec6f0e848af94948778aed386e
+    pip==20.0.2 \\
+        --hash=sha256:4ae14a42d8adba3205ebeb38aa68cfc0b6c346e1ae2e699a0b3bad4da19cef5c \\\
+         --hash=sha256:7db0c8ea4c7ea51c8049640e8e6e7fde949de672bfa4949920675563a5a6967f
+    setuptools==45.1.0 \\
+        --hash=sha256:68e7fd3508687f94367f1aa090a3ed921cd045a60b73d8b0aa1f305199a0ca28 \\
+        --hash=sha256:91f72d83602a6e5e4a9e4fe296e27185854038d7cbda49dcd7006c4d3b3b89d5"
+);
+
+/// Bootstrap Python packaging tools given a Python executable.
+///
+/// Bootstrapping packaging tools in a secure and deterministic manner is
+/// quite difficult in practice! That's because `get-pip.py` doesn't
+/// work deterministically by default. See
+/// https://github.com/pypa/get-pip/issues/60.
+///
+/// Our solution to this is to download `get-pip.py` and then hack its source
+/// code to allow use of a requirements file for installing all dependencies.
+///
+/// We can't just run a vanilla `get-pip.py` with a requirements file because
+/// `get-pip` will internally always run the equivalent of
+/// `pip install --upgrade pip`. You can control the value of `pip` here. But
+/// if you define a `pip` entry in a requirements file (which is necessary to
+/// make the operation secure and deterministic), pip complains because the
+/// `pip` from the command line argument doesn't have a hash!
+///
+/// We also tried to install `setuptools`, `pip`, etc direct from their
+/// source distributions. However we couldn't get this to work either!
+/// Modern versions of setuptools can't self-bootstrap: setuptools depends
+/// on setuptools. The ancient way of bootstrapping setuptools was to use
+/// `ez_setup.py`. But this script (again) doesn't pin content hashes or
+/// versions, and isn't secure nor deterministic. We tried to download
+/// an old version of setuptools that didn't require itself to install. But
+/// we couldn't get this working either, possibly due to incompatibilities
+/// with modern Python versions.
+///
+/// Since modern versions of `get-pip.py` just work in their default
+/// non-deterministic mode, hacking `get-pip.py` to do what we want was
+/// the path of least resistance.
+pub fn bootstrap_packaging_tools(
+    logger: &slog::Logger,
+    python_exe: &Path,
+    cache_dir: &Path,
+) -> Result<()> {
+    let get_pip_py_path =
+        download_distribution(&GET_PIP_PY_19.url, &GET_PIP_PY_19.sha256, cache_dir)?;
+
+    let temp_dir = tempdir::TempDir::new("pyoxidizer-bootstrap-packaging")?;
+
+    // We need to hack `get-pip.py`'s source code to allow exclusive use of a
+    // requirements file for installing `pip`. The `implicit_*` variables control
+    // the packages installed via command line arguments. We force their value
+    // to false so all packages come from the requirements file.
+    let get_pip_py_data = std::fs::read_to_string(&get_pip_py_path)?;
+    let get_pip_py_data = get_pip_py_data
+        .replace("implicit_pip = True", "implicit_pip = False")
+        .replace("implicit_setuptools = True", "implicit_setuptools = False")
+        .replace("implicit_wheel = True", "implicit_wheel = False");
+
+    let get_pip_py_path = temp_dir.path().join("get-pip.py");
+    std::fs::write(&get_pip_py_path, get_pip_py_data)?;
+
+    let bootstrap_txt_path = temp_dir.path().join("pip-bootstrap.txt");
+    std::fs::write(&bootstrap_txt_path, PIP_BOOTSTRAP_REQUIREMENTS)?;
+
+    warn!(logger, "running get-pip.py to bootstrap pip");
+    let mut cmd = std::process::Command::new(python_exe)
+        .args(vec![
+            format!("{}", get_pip_py_path.display()),
+            "--require-hashes".to_string(),
+            "-r".to_string(),
+            format!("{}", bootstrap_txt_path.display()),
+        ])
+        .current_dir(temp_dir.path())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()?;
+    {
+        let stdout = cmd
+            .stdout
+            .as_mut()
+            .ok_or(anyhow!("could not read stdout"))?;
+        let reader = BufReader::new(stdout);
+        for line in reader.lines() {
+            warn!(logger, "{}", line?);
+        }
+    }
+    let result = cmd.wait()?;
+    if !result.success() {
+        return Err(anyhow!("error installing pip"));
+    }
+
+    return Ok(());
+}
 
 /// Find resources installed as part of a packaging operation.
 pub fn find_resources(path: &Path, state_dir: Option<&Path>) -> Result<Vec<PythonResource>> {
