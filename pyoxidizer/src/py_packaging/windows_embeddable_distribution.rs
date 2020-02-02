@@ -557,6 +557,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(windows)]
     fn test_as_python_executable_builder() -> Result<()> {
         let logger = get_logger()?;
         let dist = get_windows_embeddable_distribution()?;
