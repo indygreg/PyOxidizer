@@ -302,6 +302,8 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
         Ok(Box::new(WindowsEmbeddedablePythonExecutableBuilder {
             exe_name: name.to_string(),
+            // TODO add distribution resources to this instance.
+            resources: EmbeddedPythonResourcesPrePackaged::default(),
         }))
     }
 
@@ -425,6 +427,9 @@ fn read_stdlib_zip(
 pub struct WindowsEmbeddedablePythonExecutableBuilder {
     /// The name of the executable to build.
     exe_name: String,
+
+    /// Python resources to be embedded in the binary.
+    resources: EmbeddedPythonResourcesPrePackaged,
 }
 
 impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
@@ -437,35 +442,35 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
     }
 
     fn source_modules(&self) -> &BTreeMap<String, SourceModule> {
-        unimplemented!()
+        &self.resources.source_modules
     }
 
     fn bytecode_modules(&self) -> &BTreeMap<String, BytecodeModule> {
-        unimplemented!()
+        &self.resources.bytecode_modules
     }
 
     fn resources(&self) -> &BTreeMap<String, BTreeMap<String, Vec<u8>>> {
-        unimplemented!()
+        &self.resources.resources
     }
 
     fn extension_modules(&self) -> &BTreeMap<String, ExtensionModule> {
-        unimplemented!()
+        &self.resources.extension_modules
     }
 
     fn extension_module_datas(&self) -> &BTreeMap<String, ExtensionModuleData> {
-        unimplemented!()
+        &self.resources.extension_module_datas
     }
 
-    fn add_source_module(&mut self, _module: &SourceModule) {
-        unimplemented!()
+    fn add_source_module(&mut self, module: &SourceModule) {
+        self.resources.add_source_module(module)
     }
 
-    fn add_bytecode_module(&mut self, _module: &BytecodeModule) {
-        unimplemented!()
+    fn add_bytecode_module(&mut self, module: &BytecodeModule) {
+        self.resources.add_bytecode_module(module)
     }
 
-    fn add_resource(&mut self, _resource: &ResourceData) {
-        unimplemented!()
+    fn add_resource(&mut self, resource: &ResourceData) {
+        self.resources.add_resource(resource)
     }
 
     fn add_extension_module(&mut self, _extension_module: &ExtensionModule) {
@@ -478,11 +483,12 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
 
     fn filter_resources_from_files(
         &mut self,
-        _logger: &slog::Logger,
-        _files: &[&Path],
-        _glob_patterns: &[&str],
+        logger: &slog::Logger,
+        files: &[&Path],
+        glob_patterns: &[&str],
     ) -> Result<()> {
-        unimplemented!()
+        self.resources
+            .filter_from_files(logger, files, glob_patterns)
     }
 
     fn requires_jemalloc(&self) -> bool {
