@@ -9,20 +9,22 @@ use {
     super::bytecode::BytecodeCompiler,
     super::config::EmbeddedPythonConfig,
     super::distribution::{
-        resolve_python_distribution_from_location, DistributionExtractLock, ExtensionModuleFilter,
-        PythonDistribution, PythonDistributionLocation, IMPORTLIB_BOOTSTRAP_EXTERNAL_PY_37,
-        IMPORTLIB_BOOTSTRAP_PY_37,
+        download_distribution, resolve_python_distribution_from_location, DistributionExtractLock,
+        ExtensionModuleFilter, PythonDistribution, PythonDistributionLocation,
+        IMPORTLIB_BOOTSTRAP_EXTERNAL_PY_37, IMPORTLIB_BOOTSTRAP_PY_37,
     },
     super::embedded_resource::EmbeddedPythonResourcesPrePackaged,
     super::libpython::{derive_importlib, ImportlibBytecode},
     super::resource::{BytecodeModule, ExtensionModuleData, ResourceData, SourceModule},
     super::standalone_distribution::ExtensionModule,
     crate::analyze::find_pe_dependencies_path,
+    crate::python_distributions::GET_PIP_PY_19,
     anyhow::{anyhow, Context, Result},
+    slog::warn,
     std::collections::{BTreeMap, HashMap},
     std::convert::TryInto,
     std::fmt::{Debug, Formatter},
-    std::io::Read,
+    std::io::{BufRead, BufReader, Read},
     std::iter::FromIterator,
     std::path::{Path, PathBuf},
 };
@@ -332,8 +334,40 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         Ok(Vec::new())
     }
 
-    fn ensure_pip(&self, _logger: &slog::Logger) -> Result<PathBuf> {
-        unimplemented!();
+    fn ensure_pip(&self, logger: &slog::Logger) -> Result<PathBuf> {
+        // Windows embeddable distributions don't contain pip or ensurepip. So we
+        // download a deterministic version of get-pip.py and run it to install pip.
+
+        let dest_dir = self
+            .python_exe
+            .parent()
+            .ok_or(anyhow!("could not resolve parent directory"))?;
+
+        let pip_exe_path = dest_dir.join("Scripts").join("pip.exe");
+
+        if !pip_exe_path.exists() {
+            warn!(logger, "pip not present; installing");
+            let get_pip_py =
+                download_distribution(&GET_PIP_PY_19.url, &GET_PIP_PY_19.sha256, dest_dir)?;
+
+            let mut cmd = std::process::Command::new(&self.python_exe)
+                .arg(format!("{}", get_pip_py.display()))
+                .current_dir(dest_dir)
+                .stdout(std::process::Stdio::piped())
+                .spawn()?;
+            {
+                let stdout = cmd
+                    .stdout
+                    .as_mut()
+                    .ok_or(anyhow!("could not read stdout"))?;
+                let reader = BufReader::new(stdout);
+                for line in reader.lines() {
+                    warn!(logger, "{}", line?);
+                }
+            }
+        }
+
+        Ok(pip_exe_path)
     }
 
     fn resolve_distutils(
@@ -601,6 +635,26 @@ mod tests {
         let dist = get_windows_embeddable_distribution()?;
 
         dist.resolve_importlib_bytecode()?;
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn test_ensure_pip() -> Result<()> {
+        let logger = get_logger()?;
+        let dist = get_windows_embeddable_distribution()?;
+
+        let pip_path = dist.ensure_pip(&logger)?;
+
+        assert_eq!(
+            pip_path,
+            dist.python_exe
+                .parent()
+                .unwrap()
+                .join("Scripts")
+                .join("pip.exe")
+        );
 
         Ok(())
     }

@@ -88,4 +88,11 @@ lazy_static! {
 
         res
     };
+    /// Location of source code for get-pip.py, version 19.3.1.
+    pub static ref GET_PIP_PY_19: HostedDistribution = {
+        HostedDistribution {
+            url: "https://github.com/pypa/get-pip/raw/ffe826207a010164265d9cc807978e3604d18ca0/get-pip.py".to_string(),
+            sha256: "b86f36cc4345ae87bfd4f10ef6b2dbfa7a872fbff70608a1e43944d283fd0eee".to_string(),
+        }
+    };
 }
