@@ -302,6 +302,7 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
         Ok(Box::new(WindowsEmbeddedablePythonExecutableBuilder {
             exe_name: name.to_string(),
+            python_exe: self.python_exe.clone(),
             // TODO add distribution resources to this instance.
             resources: EmbeddedPythonResourcesPrePackaged::default(),
         }))
@@ -416,6 +417,9 @@ pub struct WindowsEmbeddedablePythonExecutableBuilder {
     /// The name of the executable to build.
     exe_name: String,
 
+    /// Path to Python executable that can be invoked at build time.
+    python_exe: PathBuf,
+
     /// Python resources to be embedded in the binary.
     resources: EmbeddedPythonResourcesPrePackaged,
 }
@@ -426,7 +430,7 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
     }
 
     fn python_exe_path(&self) -> &Path {
-        unimplemented!()
+        &self.python_exe
     }
 
     fn source_modules(&self) -> &BTreeMap<String, SourceModule> {
@@ -583,6 +587,7 @@ mod tests {
         )?;
 
         assert_eq!(builder.name(), "foo".to_string());
+        assert_eq!(builder.python_exe_path(), &dist.python_exe);
         assert!(!builder.requires_jemalloc());
 
         Ok(())
