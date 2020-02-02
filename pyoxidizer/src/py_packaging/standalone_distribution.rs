@@ -1133,6 +1133,55 @@ pub struct StandalonePythonExecutableBuilder {
     importlib_bytecode: ImportlibBytecode,
 }
 
+impl StandalonePythonExecutableBuilder {
+    /// Build a Python library suitable for linking.
+    ///
+    /// This will take the underlying distribution, resources, and
+    /// configuration and produce a new executable binary.
+    fn resolve_python_library(
+        &self,
+        logger: &slog::Logger,
+        host: &str,
+        target: &str,
+        opt_level: &str,
+    ) -> Result<PythonLibrary> {
+        let resources = self.resources.package(logger, &self.python_exe)?;
+
+        let temp_dir = TempDir::new("pyoxidizer-build-exe")?;
+        let temp_dir_path = temp_dir.path();
+
+        warn!(
+            logger,
+            "generating custom link library containing Python..."
+        );
+        let library_info = link_libpython(
+            logger,
+            &self.distribution,
+            &resources,
+            &temp_dir_path,
+            host,
+            target,
+            opt_level,
+        )?;
+
+        let mut cargo_metadata: Vec<String> = Vec::new();
+        cargo_metadata.extend(library_info.cargo_metadata);
+
+        let libpython_data = std::fs::read(&library_info.libpython_path)?;
+        let libpyembeddedconfig_data = std::fs::read(&library_info.libpyembeddedconfig_path)?;
+
+        Ok(PythonLibrary {
+            libpython_filename: PathBuf::from(library_info.libpython_path.file_name().unwrap()),
+            libpython_data,
+            libpyembeddedconfig_filename: PathBuf::from(
+                library_info.libpyembeddedconfig_path.file_name().unwrap(),
+            ),
+            libpyembeddedconfig_data,
+            cargo_metadata,
+        })
+    }
+}
+
 impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     fn name(&self) -> String {
         self.exe_name.clone()
@@ -1194,53 +1243,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn requires_jemalloc(&self) -> bool {
         self.config.raw_allocator == RawAllocator::Jemalloc
-    }
-
-    /// Build a Python library suitable for linking.
-    ///
-    /// This will take the underlying distribution, resources, and
-    /// configuration and produce a new executable binary.
-    fn resolve_python_library(
-        &self,
-        logger: &slog::Logger,
-        host: &str,
-        target: &str,
-        opt_level: &str,
-    ) -> Result<PythonLibrary> {
-        let resources = self.resources.package(logger, &self.python_exe)?;
-
-        let temp_dir = TempDir::new("pyoxidizer-build-exe")?;
-        let temp_dir_path = temp_dir.path();
-
-        warn!(
-            logger,
-            "generating custom link library containing Python..."
-        );
-        let library_info = link_libpython(
-            logger,
-            &self.distribution,
-            &resources,
-            &temp_dir_path,
-            host,
-            target,
-            opt_level,
-        )?;
-
-        let mut cargo_metadata: Vec<String> = Vec::new();
-        cargo_metadata.extend(library_info.cargo_metadata);
-
-        let libpython_data = std::fs::read(&library_info.libpython_path)?;
-        let libpyembeddedconfig_data = std::fs::read(&library_info.libpyembeddedconfig_path)?;
-
-        Ok(PythonLibrary {
-            libpython_filename: PathBuf::from(library_info.libpython_path.file_name().unwrap()),
-            libpython_data,
-            libpyembeddedconfig_filename: PathBuf::from(
-                library_info.libpyembeddedconfig_path.file_name().unwrap(),
-            ),
-            libpyembeddedconfig_data,
-            cargo_metadata,
-        })
     }
 
     fn as_embedded_python_binary_data(

@@ -498,16 +498,6 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
         false
     }
 
-    fn resolve_python_library(
-        &self,
-        _logger: &slog::Logger,
-        _host: &str,
-        _target: &str,
-        _opt_level: &str,
-    ) -> Result<PythonLibrary> {
-        unimplemented!()
-    }
-
     fn as_embedded_python_binary_data(
         &self,
         logger: &slog::Logger,
