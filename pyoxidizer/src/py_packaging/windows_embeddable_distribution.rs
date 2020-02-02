@@ -5,9 +5,7 @@
 /*! Functionality for Windows embeddable distributions. */
 
 use {
-    super::binary::{
-        EmbeddedPythonBinaryData, EmbeddedResourcesBlobs, PythonBinaryBuilder, PythonLibrary,
-    },
+    super::binary::{EmbeddedPythonBinaryData, PythonBinaryBuilder, PythonLibrary},
     super::bytecode::BytecodeCompiler,
     super::config::EmbeddedPythonConfig,
     super::distribution::{
@@ -512,11 +510,16 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
 
     fn as_embedded_python_binary_data(
         &self,
-        _logger: &slog::Logger,
+        logger: &slog::Logger,
         host: &str,
         target: &str,
         _opt_level: &str,
     ) -> Result<EmbeddedPythonBinaryData> {
+        let resources = self
+            .resources
+            .package(logger, &self.python_exe)?
+            .try_into()?;
+
         Ok(EmbeddedPythonBinaryData {
             config: self.config.clone(),
             // TODO handle this correctly.
@@ -528,12 +531,7 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
                 cargo_metadata: vec![],
             },
             importlib: self.importlib_bytecode.clone(),
-            // TODO handle this correctly.
-            resources: EmbeddedResourcesBlobs {
-                module_names: vec![],
-                modules: vec![],
-                resources: vec![],
-            },
+            resources,
             host: host.to_string(),
             target: target.to_string(),
         })
