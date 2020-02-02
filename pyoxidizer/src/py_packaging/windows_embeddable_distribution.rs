@@ -325,7 +325,10 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         _dest_dir: &Path,
         _extra_python_paths: &[&Path],
     ) -> Result<HashMap<String, String>> {
-        unimplemented!()
+        // This method is meant to install a custom version of distutils.
+        // Since we don't need to hack distutils to target the Windows embeddable
+        // distributions, no hacking is necessary.
+        Ok(HashMap::new())
     }
 }
 
