@@ -452,6 +452,48 @@ pub fn default_distribution(
     resolve_distribution(logger, flavor, &location, dest_dir)
 }
 
+/// Obtain the crc32 of a filesystem path.
+fn crc32_path(path: &Path) -> Result<u32> {
+    let data = std::fs::read(path)?;
+
+    Ok(crc::crc32::checksum_ieee(&data))
+}
+
+pub fn extract_zip<R>(dest_dir: &Path, zf: &mut zip::ZipArchive<R>) -> Result<()>
+where
+    R: Read + std::io::Seek,
+{
+    for i in 0..zf.len() {
+        let mut f = zf.by_index(i)?;
+
+        if !f.is_file() {
+            continue;
+        }
+
+        let dest_path = dest_dir.join(f.sanitized_name());
+
+        if dest_path.exists() && crc32_path(&dest_path)? != f.crc32() {
+            std::fs::remove_file(&dest_path)?;
+        }
+
+        if !dest_path.exists() {
+            let parent = dest_path
+                .parent()
+                .ok_or_else(|| anyhow!("could not resolve parent"))?;
+            std::fs::create_dir_all(parent)
+                .context(format!("creating parent directory {}", parent.display()))?;
+
+            let mut data = Vec::new();
+            f.read_to_end(&mut data)?;
+            std::fs::write(&dest_path, data).context(format!("writing {}", dest_path.display()))?;
+
+            // TODO set executable bit if necessary.
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use {super::*, crate::testutil::*};

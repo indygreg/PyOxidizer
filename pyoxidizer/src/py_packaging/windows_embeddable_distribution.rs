@@ -9,9 +9,9 @@ use {
     super::bytecode::BytecodeCompiler,
     super::config::EmbeddedPythonConfig,
     super::distribution::{
-        download_distribution, resolve_python_distribution_from_location, DistributionExtractLock,
-        ExtensionModuleFilter, PythonDistribution, PythonDistributionLocation,
-        IMPORTLIB_BOOTSTRAP_EXTERNAL_PY_37, IMPORTLIB_BOOTSTRAP_PY_37,
+        download_distribution, extract_zip, resolve_python_distribution_from_location,
+        DistributionExtractLock, ExtensionModuleFilter, PythonDistribution,
+        PythonDistributionLocation, IMPORTLIB_BOOTSTRAP_EXTERNAL_PY_37, IMPORTLIB_BOOTSTRAP_PY_37,
     },
     super::embedded_resource::EmbeddedPythonResourcesPrePackaged,
     super::libpython::{derive_importlib, ImportlibBytecode},
@@ -19,22 +19,15 @@ use {
     super::standalone_distribution::ExtensionModule,
     crate::analyze::find_pe_dependencies_path,
     crate::python_distributions::GET_PIP_PY_19,
-    anyhow::{anyhow, Context, Result},
+    anyhow::{anyhow, Result},
     slog::warn,
     std::collections::{BTreeMap, HashMap},
     std::convert::TryInto,
     std::fmt::{Debug, Formatter},
-    std::io::{BufRead, BufReader, Read},
+    std::io::{BufRead, BufReader},
     std::iter::FromIterator,
     std::path::{Path, PathBuf},
 };
-
-/// Obtain the crc32 of a filesystem path.
-fn crc32_path(path: &Path) -> Result<u32> {
-    let data = std::fs::read(path)?;
-
-    Ok(crc::crc32::checksum_ieee(&data))
-}
 
 /// Represents a Python extension module on Windows that is standalone.
 ///
@@ -132,36 +125,7 @@ impl WindowsEmbeddableDistribution {
 
         {
             let _lock = DistributionExtractLock::new(extract_dir)?;
-
-            for i in 0..zf.len() {
-                let mut f = zf.by_index(i)?;
-
-                if !f.is_file() {
-                    continue;
-                }
-
-                let dest_path = extract_dir.join(f.sanitized_name());
-
-                if dest_path.exists() && crc32_path(&dest_path)? != f.crc32() {
-                    std::fs::remove_file(&dest_path)?;
-                }
-
-                if !dest_path.exists() {
-                    let parent = dest_path
-                        .parent()
-                        .ok_or_else(|| anyhow!("could not resolve parent"))?;
-                    std::fs::create_dir_all(parent)
-                        .context(format!("creating parent directory {}", parent.display()))?;
-
-                    let mut data = Vec::new();
-                    f.read_to_end(&mut data)?;
-                    std::fs::write(&dest_path, data)
-                        .context(format!("writing {}", dest_path.display()))?;
-
-                    // Assertion: we only use zip files for Windows embeddable distributions
-                    // and don't need to care about the execute bit.
-                }
-            }
+            extract_zip(extract_dir, &mut zf)?;
         }
 
         Self::from_directory(extract_dir)
