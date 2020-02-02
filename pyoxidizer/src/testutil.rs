@@ -11,6 +11,7 @@ use {
         CPYTHON_STANDALONE_BY_TRIPLE, CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE,
     },
     anyhow::Result,
+    core::sync::atomic::{AtomicUsize, Ordering},
     lazy_static::lazy_static,
     slog::{Drain, Logger},
     std::sync::Arc,
@@ -69,11 +70,42 @@ lazy_static! {
     };
 }
 
+static DISTRIBUTION_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
 pub fn get_default_distribution() -> Result<Arc<Box<StandaloneDistribution>>> {
     Ok(DEFAULT_DISTRIBUTION.clone())
 }
 
 #[allow(unused)]
 pub fn get_windows_embeddable_distribution() -> Result<WindowsEmbeddableDistribution> {
-    Ok(DEFAULT_WINDOWS_EMBEDDABLE_DISTRIBUTION.clone())
+    // We need to use a separate distribution per occurrence, otherwise there are race
+    // conditions.
+    let instance = DISTRIBUTION_COUNTER.fetch_add(1, Ordering::Relaxed);
+
+    let dist_dir = DEFAULT_DISTRIBUTION_TEMP_DIR
+        .path()
+        .join(format!("windows_embeddable.{}", instance));
+
+    let default_dist_path = DEFAULT_WINDOWS_EMBEDDABLE_DISTRIBUTION
+        .python_exe
+        .parent()
+        .unwrap();
+
+    // Copy files.
+    std::fs::create_dir_all(&dist_dir)?;
+
+    for p in std::fs::read_dir(default_dist_path)? {
+        let p = p?;
+
+        if p.file_type()?.is_dir() {
+            continue;
+        }
+
+        let source = p.path();
+        let rel = source.strip_prefix(&default_dist_path)?;
+        let dest = dist_dir.join(rel);
+        std::fs::copy(&source, &dest)?;
+    }
+
+    WindowsEmbeddableDistribution::from_directory(&dist_dir)
 }
