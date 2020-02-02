@@ -73,6 +73,7 @@ pub fn get_default_distribution() -> Result<Arc<Box<StandaloneDistribution>>> {
     Ok(DEFAULT_DISTRIBUTION.clone())
 }
 
+#[allow(unused)]
 pub fn get_windows_embeddable_distribution() -> Result<WindowsEmbeddableDistribution> {
     Ok(DEFAULT_WINDOWS_EMBEDDABLE_DISTRIBUTION.clone())
 }
