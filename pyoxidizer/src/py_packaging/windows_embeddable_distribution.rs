@@ -514,8 +514,8 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::python_distributions::CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE,
-        crate::testutil::*,
+        super::*, crate::py_packaging::packaging_tool::pip_install,
+        crate::python_distributions::CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE, crate::testutil::*,
     };
 
     #[test]
@@ -611,6 +611,28 @@ mod tests {
 
         assert_eq!(pip_path, dist.python_exe.parent().unwrap().join("pip.exe"));
         assert!(pip_path.exists());
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn test_install_black() -> Result<()> {
+        let logger = get_logger()?;
+        let dist = get_windows_embeddable_distribution()?;
+
+        let pip_path = dist.ensure_pip(&logger)?;
+
+        let resources = pip_install(
+            &logger,
+            &dist,
+            false,
+            &["black==19.10b0".to_string()],
+            &HashMap::new(),
+        )?;
+
+        assert!(resources.iter().any(|r| r.full_name() == "appdirs"));
+        assert!(resources.iter().any(|r| r.full_name() == "black"));
 
         Ok(())
     }
