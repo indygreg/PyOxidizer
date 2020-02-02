@@ -31,6 +31,13 @@ use {
     uuid::Uuid,
 };
 
+/// importlib._bootstrap source code for Python 3.7.
+pub const IMPORTLIB_BOOTSTRAP_PY_37: &[u8] = include_bytes!("../importlib/_bootstrap-37.py");
+
+/// importlib._bootstrap_external source code for Python 3.7.
+pub const IMPORTLIB_BOOTSTRAP_EXTERNAL_PY_37: &[u8] =
+    include_bytes!("../importlib/_bootstrap_external-37.py");
+
 const STDLIB_TEST_PACKAGES: &[&str] = &[
     "bsddb.test",
     "ctypes.test",
