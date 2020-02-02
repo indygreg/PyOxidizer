@@ -5,7 +5,9 @@
 /*! Functionality for Windows embeddable distributions. */
 
 use {
-    super::binary::PythonBinaryBuilder,
+    super::binary::{
+        EmbeddedPythonBinaryData, EmbeddedResourcesBlobs, PythonBinaryBuilder, PythonLibrary,
+    },
     super::bytecode::BytecodeCompiler,
     super::config::EmbeddedPythonConfig,
     super::distribution::{
@@ -14,7 +16,7 @@ use {
     },
     super::embedded_resource::EmbeddedPythonResourcesPrePackaged,
     super::libpython::ImportlibBytecode,
-    super::resource::{ResourceData, SourceModule},
+    super::resource::{BytecodeModule, ExtensionModuleData, ResourceData, SourceModule},
     super::standalone_distribution::ExtensionModule,
     crate::analyze::find_pe_dependencies_path,
     anyhow::{anyhow, Context, Result},
@@ -298,7 +300,7 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         _include_resources: bool,
         _include_test: bool,
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
-        unimplemented!();
+        Ok(Box::new(WindowsEmbeddedablePythonExecutableBuilder {}))
     }
 
     fn filter_extension_modules(
@@ -413,6 +415,103 @@ fn read_stdlib_zip(
     Ok(res)
 }
 
+/// A `PythonBinaryBuilder` used by `WindowsEmbeddableDistribution`.
+///
+/// Instances can derive artifacts needed to build executables using
+/// `WindowsEmbeddableDistribution` instances.
+#[derive(Debug)]
+pub struct WindowsEmbeddedablePythonExecutableBuilder {}
+
+impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
+    fn name(&self) -> String {
+        unimplemented!()
+    }
+
+    fn python_exe_path(&self) -> &Path {
+        unimplemented!()
+    }
+
+    fn source_modules(&self) -> &BTreeMap<String, SourceModule> {
+        unimplemented!()
+    }
+
+    fn bytecode_modules(&self) -> &BTreeMap<String, BytecodeModule> {
+        unimplemented!()
+    }
+
+    fn resources(&self) -> &BTreeMap<String, BTreeMap<String, Vec<u8>>> {
+        unimplemented!()
+    }
+
+    fn extension_modules(&self) -> &BTreeMap<String, ExtensionModule> {
+        unimplemented!()
+    }
+
+    fn extension_module_datas(&self) -> &BTreeMap<String, ExtensionModuleData> {
+        unimplemented!()
+    }
+
+    fn add_source_module(&mut self, _module: &SourceModule) {
+        unimplemented!()
+    }
+
+    fn add_bytecode_module(&mut self, _module: &BytecodeModule) {
+        unimplemented!()
+    }
+
+    fn add_resource(&mut self, _resource: &ResourceData) {
+        unimplemented!()
+    }
+
+    fn add_extension_module(&mut self, _extension_module: &ExtensionModule) {
+        unimplemented!()
+    }
+
+    fn add_extension_module_data(&mut self, _extension_module_data: &ExtensionModuleData) {
+        unimplemented!()
+    }
+
+    fn filter_resources_from_files(
+        &mut self,
+        _logger: &slog::Logger,
+        _files: &[&Path],
+        _glob_patterns: &[&str],
+    ) -> Result<()> {
+        unimplemented!()
+    }
+
+    fn requires_jemalloc(&self) -> bool {
+        unimplemented!()
+    }
+
+    fn resolve_embedded_resource_blobs(
+        &self,
+        _logger: &slog::Logger,
+    ) -> Result<EmbeddedResourcesBlobs> {
+        unimplemented!()
+    }
+
+    fn resolve_python_library(
+        &self,
+        _logger: &slog::Logger,
+        _host: &str,
+        _target: &str,
+        _opt_level: &str,
+    ) -> Result<PythonLibrary> {
+        unimplemented!()
+    }
+
+    fn as_embedded_python_binary_data(
+        &self,
+        _logger: &slog::Logger,
+        _host: &str,
+        _target: &str,
+        _opt_level: &str,
+    ) -> Result<EmbeddedPythonBinaryData> {
+        unimplemented!()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -461,6 +560,27 @@ mod tests {
         assert_eq!(distutils.name, "distutils".to_string());
         assert!(distutils.is_package);
         assert!(!distutils.code.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_python_executable_builder() -> Result<()> {
+        let logger = get_logger()?;
+        let dist = get_windows_embeddable_distribution()?;
+        let config = EmbeddedPythonConfig::default();
+        let extension_module_filter = ExtensionModuleFilter::All;
+
+        dist.as_python_executable_builder(
+            &logger,
+            "foo",
+            &config,
+            &extension_module_filter,
+            None,
+            true,
+            true,
+            true,
+        )?;
 
         Ok(())
     }
