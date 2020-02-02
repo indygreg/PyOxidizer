@@ -10,10 +10,11 @@ use {
     super::config::EmbeddedPythonConfig,
     super::distribution::{
         resolve_python_distribution_from_location, DistributionExtractLock, ExtensionModuleFilter,
-        PythonDistribution, PythonDistributionLocation,
+        PythonDistribution, PythonDistributionLocation, IMPORTLIB_BOOTSTRAP_EXTERNAL_PY_37,
+        IMPORTLIB_BOOTSTRAP_PY_37,
     },
     super::embedded_resource::EmbeddedPythonResourcesPrePackaged,
-    super::libpython::ImportlibBytecode,
+    super::libpython::{derive_importlib, ImportlibBytecode},
     super::resource::{BytecodeModule, ExtensionModuleData, ResourceData, SourceModule},
     super::standalone_distribution::ExtensionModule,
     crate::analyze::find_pe_dependencies_path,
@@ -283,14 +284,13 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
     }
 
     fn resolve_importlib_bytecode(&self) -> Result<ImportlibBytecode> {
-        // TODO implement
-        //
-        // This will require obtaining the source code from somewhere, since it isn't
-        // present in the distribution. We could derive the Git tag and look in the
-        // Git repository. Or we could distribute the source with PyOxidizer. The
-        // source probably doesn't change that often and it would probably be safe to
-        // vendor the latest version from each Python major release.
-        unimplemented!()
+        let mut compiler = self.create_bytecode_compiler()?;
+
+        derive_importlib(
+            IMPORTLIB_BOOTSTRAP_PY_37,
+            IMPORTLIB_BOOTSTRAP_EXTERNAL_PY_37,
+            &mut compiler,
+        )
     }
 
     fn as_python_executable_builder(
@@ -591,6 +591,16 @@ mod tests {
         assert_eq!(builder.name(), "foo".to_string());
         assert_eq!(builder.python_exe_path(), &dist.python_exe);
         assert!(!builder.requires_jemalloc());
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn test_resolve_importlib_bytecode() -> Result<()> {
+        let dist = get_windows_embeddable_distribution()?;
+
+        dist.resolve_importlib_bytecode()?;
 
         Ok(())
     }
