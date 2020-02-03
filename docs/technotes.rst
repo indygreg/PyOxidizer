@@ -243,7 +243,7 @@ code. And when there are questions for clarification, it isn't clear whether
 code or a PEP is wrong because oftentimes there isn't a single PEP that
 is the canonical source of truth.
 
-It would be highly preferred to Python to publish clear specifications
+It would be highly preferred for Python to publish clear specifications
 for how various mechanisms work. A PEP would be a diff to a specification
 (possibly creating a new specification) and a discussion around it. That
 way there would be a clear specification that can be consulted as the
@@ -322,7 +322,7 @@ achieved by splitting up the interpreter initialization APIs to give embedding
 applications the opportunity to muck with ``sys.meta_path`` before any
 ``import`` is performed. It could also be achieved by introducing an
 initialization config option to somehow inject code at the right point
-during startup overhead to register the ``sys.meta_path`` importer. This
+during startup to register the ``sys.meta_path`` importer. This
 could be done by importing a named module (presumably serviced by the
 frozen or built-in importer) and having that module run code to modify
 ``sys.meta_path`` as a side-effect of module evaluation at import time.
@@ -385,3 +385,6 @@ no way to install ``pip`` using the distribution itself.
 
 The ``venv`` module is also not present in the distribution. So there's
 no way to create virtualenvs using the distribution itself.
+
+The Python C development headers are not part of the distribution, so
+even if you install packaging tools, you can't build C extensions.
