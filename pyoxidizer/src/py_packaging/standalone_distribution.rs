@@ -879,6 +879,10 @@ impl StandaloneDistribution {
 }
 
 impl PythonDistribution for StandaloneDistribution {
+    fn clone_box(&self) -> Box<dyn PythonDistribution> {
+        Box::new(self.clone())
+    }
+
     fn python_exe_path(&self) -> &Path {
         &self.python_exe
     }

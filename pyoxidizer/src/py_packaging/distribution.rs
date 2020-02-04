@@ -96,6 +96,9 @@ pub enum PythonDistributionLocation {
 
 /// Describes a generic Python distribution.
 pub trait PythonDistribution {
+    /// Clone self into a Box'ed trait object.
+    fn clone_box(&self) -> Box<dyn PythonDistribution>;
+
     /// Obtain the filesystem path to a `python` executable for this distribution.
     fn python_exe_path(&self) -> &Path;
 
