@@ -124,7 +124,10 @@ pub fn build_executable_with_rust_project(
     }
 
     args.push("--no-default-features");
-    let mut features = vec!["build-mode-prebuilt-artifacts"];
+    let mut features = vec![
+        "build-mode-prebuilt-artifacts",
+        "cpython-link-unresolved-static",
+    ];
 
     if exe.requires_jemalloc() {
         features.push("jemalloc");

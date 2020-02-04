@@ -258,6 +258,10 @@ pub fn update_new_cargo_toml(path: &Path, pyembed_location: &PyembedLocation) ->
     content.push_str("build-mode-pyoxidizer-exe = [\"pyembed/build-mode-pyoxidizer-exe\"]\n");
     content
         .push_str("build-mode-prebuilt-artifacts = [\"pyembed/build-mode-prebuilt-artifacts\"]\n");
+    content.push_str(
+        "cpython-link-unresolved-static = [\"pyembed/cpython-link-unresolved-static\"]\n",
+    );
+    content.push_str("cpython-link-default = [\"pyembed/cpython-link-default\"]\n");
 
     std::fs::write(path, content)?;
 

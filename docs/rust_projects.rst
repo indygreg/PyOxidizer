@@ -137,3 +137,28 @@ specified by ``PYOXIDIZER_ARTIFACT_DIR`` if set, falling back to ``OUT_DIR``.
 This directory **must** have a ``cargo_metadata.txt`` file, which will be
 printed to stdout by the build script to tell Cargo how to link a Python
 library.
+
+``cpython-link-unresolved-static``
+----------------------------------
+
+Configures the link mode of the ``cpython`` crate to use a static
+``pythonXY`` library without resolving the symbol at its own build
+time. The ``pyembed`` crate or a crate building it will need to emit
+``cargo:rustc-link-lib=static=pythonXY`` and any
+``cargo:rustc-link-search=native={}`` lines to specify an explicit
+``pythonXY`` library to link against.
+
+This is the link mode used to produce self-contained binaries containing
+``libpython`` and ``pyembed`` code.
+
+``cpython-link-default``
+------------------------
+
+Configures the link mode of the ``cpython`` crate to use default
+semantics. The crate's build script will find a pre-built Python
+library by querying the ``python`` defined by ``PYTHON_SYS_EXECUTABLE``
+or found on ``PATH``. See the ``cpython`` crate's documentation for
+more.
+
+This link mode should be used when linking against an existing ``libpython``
+that can be found by the ``cpython`` crate's build script.

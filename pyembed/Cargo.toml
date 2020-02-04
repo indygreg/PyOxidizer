@@ -13,7 +13,7 @@ links = "pythonXY"
 [dependencies]
 # Update documentation in lib.rs when new dependencies are added.
 byteorder = "1"
-cpython = { version = "0.4", features = ["py-link-mode-unresolved-static", "python3-sys", "no-auto-initialize"]}
+cpython = "0.4"
 jemalloc-sys = { version = "0.3", optional = true }
 lazy_static = "1.4"
 libc = "0.2"
@@ -21,7 +21,7 @@ python3-sys = "0.4"
 uuid = { version = "0.8", features = ["v4"] }
 
 [features]
-default = ["build-mode-standalone"]
+default = ["build-mode-standalone", "cpython-link-unresolved-static"]
 jemalloc = ["jemalloc-sys"]
 
 # Build this crate in isolation, without using PyOxidizer.
@@ -36,3 +36,19 @@ build-mode-pyoxidizer-exe = []
 # to the directory containing build artifacts produced by `pyoxidizer`. If not
 # set, OUT_DIR will be used.
 build-mode-prebuilt-artifacts = []
+
+# Build the cpython crate in unresolved static mode (we will provide a static
+# library to link against).
+cpython-link-unresolved-static = [
+    "cpython/py-link-mode-unresolved-static",
+    "cpython/python3-sys",
+    "cpython/no-auto-initialize",
+]
+
+# Build the cpython with default link mode control. It will pick up the prebuilt
+# libpython from PYTHON_SYS_EXECUTABLE or from PATH.
+cpython-link-default = [
+    "cpython/py-link-mode-default",
+    "cpython/python3-sys",
+    "cpython/no-auto-initialize",
+]
