@@ -99,10 +99,19 @@ pub trait PythonBinaryBuilder {
 
 /// A self-contained Python executable after it is built.
 pub struct PythonLibrary {
+    /// Path to a library containing the Python symbols.
     pub libpython_filename: PathBuf,
+
+    /// The contents of `libpython_filename`.
     pub libpython_data: Vec<u8>,
+
+    /// Path to a library containing an alternate `config.c`.
     pub libpyembeddedconfig_filename: PathBuf,
+
+    /// The contents of `libpyembeddedconfig_filename`.
     pub libpyembeddedconfig_data: Vec<u8>,
+
+    /// Lines that need to be emitted from a Cargo build script.
     pub cargo_metadata: Vec<String>,
 }
 
@@ -133,24 +142,52 @@ impl TryFrom<EmbeddedPythonResources> for EmbeddedResourcesBlobs {
 
 /// Holds filesystem paths to resources required to build a binary embedding Python.
 pub struct EmbeddedPythonBinaryPaths {
+    /// File containing bytecode for `importlib._bootstrap` module.
     pub importlib_bootstrap: PathBuf,
+
+    /// File containing bytecode for `importlib._bootstrap_external` module.
     pub importlib_bootstrap_external: PathBuf,
+
+    /// File containing a list of module names.
     pub module_names: PathBuf,
+
+    /// File containing Python module data.
     pub py_modules: PathBuf,
+
+    /// File containing Python resource data.
     pub resources: PathBuf,
+
+    /// Path to library containing libpython.
     pub libpython: PathBuf,
+
+    /// Path to a library containing an alternate compiled config.c file.
     pub libpyembeddedconfig: PathBuf,
+
+    /// Path to `config.rs` derived from a `EmbeddedPythonConfig`.
     pub config_rs: PathBuf,
+
+    /// Path to a file containing lines needed to be emitted by a Cargo build script.
     pub cargo_metadata: PathBuf,
 }
 
 /// Represents resources to embed Python in a binary.
 pub struct EmbeddedPythonBinaryData {
+    /// The configuration for the embedded interpreter.
     pub config: EmbeddedPythonConfig,
+
+    /// Information on library containing libpython.
     pub library: PythonLibrary,
+
+    /// Bytecode for importlib bootstrap modules.
     pub importlib: ImportlibBytecode,
+
+    /// Python resources to embed in the binary.
     pub resources: EmbeddedResourcesBlobs,
+
+    /// Rust target triple for the host we are running on.
     pub host: String,
+
+    /// Rust target triple for the target we are building for.
     pub target: String,
 }
 
