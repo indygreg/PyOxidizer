@@ -4,6 +4,7 @@
 
 use {
     super::env::EnvironmentContext,
+    super::python_embedded_resources::PythonEmbeddedData,
     super::python_resource::{
         PythonExtensionModule, PythonExtensionModuleFlavor, PythonResourceData, PythonSourceModule,
     },
@@ -266,30 +267,10 @@ impl PythonExecutable {
     }
 
     /// PythonExecutable.to_embedded_data()
-    pub fn starlark_to_embedded_data(&self, env: &Environment) -> ValueResult {
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-
-        let embedded = context
-            .downcast_apply(|context: &EnvironmentContext| {
-                self.exe.as_embedded_python_binary_data(
-                    &context.logger,
-                    &context.build_host_triple,
-                    &context.build_target_triple,
-                    &context.build_opt_level,
-                )
-            })
-            .or_else(|e| {
-                {
-                    Err(RuntimeError {
-                        code: "PYOXIDIZER_BUILD",
-                        message: e.to_string(),
-                        label: "to_embedded_data()".to_string(),
-                    }
-                    .into())
-                }
-            })?;
-
-        Ok(Value::new(embedded))
+    pub fn starlark_to_embedded_data(&self) -> ValueResult {
+        Ok(Value::new(PythonEmbeddedData {
+            exe: self.exe.clone_box(),
+        }))
     }
 
     /// PythonExecutable.filter_resources_from_files(files=None, glob_files=None)
@@ -423,9 +404,9 @@ starlark_module! { python_executable_env =>
     }
 
     #[allow(clippy::ptr_arg)]
-    PythonExecutable.to_embedded_data(env env, this) {
+    PythonExecutable.to_embedded_data(this) {
         this.downcast_apply(|exe: &PythonExecutable| {
-            exe.starlark_to_embedded_data(&env)
+            exe.starlark_to_embedded_data()
         })
     }
 }

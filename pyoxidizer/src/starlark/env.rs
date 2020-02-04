@@ -4,10 +4,10 @@
 
 use {
     super::file_resource::FileManifest,
+    super::python_embedded_resources::PythonEmbeddedData,
     super::python_executable::PythonExecutable,
     super::target::{BuildContext, BuildTarget, ResolvedTarget},
     super::util::{optional_list_arg, required_bool_arg, required_str_arg, required_type_arg},
-    crate::py_packaging::binary::EmbeddedPythonBinaryData,
     anyhow::{anyhow, Context, Result},
     path_dedot::ParseDot,
     slog::warn,
@@ -255,9 +255,9 @@ impl EnvironmentContext {
                 .downcast_mut::<PythonExecutable>()
                 .unwrap()
                 .build(&context)
-        } else if raw_any.is::<EmbeddedPythonBinaryData>() {
+        } else if raw_any.is::<PythonEmbeddedData>() {
             raw_any
-                .downcast_mut::<EmbeddedPythonBinaryData>()
+                .downcast_mut::<PythonEmbeddedData>()
                 .unwrap()
                 .build(&context)
         } else {

@@ -4,7 +4,7 @@
 
 use {
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
-    crate::py_packaging::binary::EmbeddedPythonBinaryData,
+    crate::py_packaging::binary::PythonBinaryBuilder,
     anyhow::Result,
     slog::warn,
     starlark::environment::Environment,
@@ -15,7 +15,11 @@ use {
     std::collections::HashMap,
 };
 
-impl TypedValue for EmbeddedPythonBinaryData {
+pub struct PythonEmbeddedData {
+    pub exe: Box<dyn PythonBinaryBuilder>,
+}
+
+impl TypedValue for PythonEmbeddedData {
     immutable!();
     any!();
     not_supported!(binop);
@@ -45,14 +49,22 @@ impl TypedValue for EmbeddedPythonBinaryData {
     }
 }
 
-impl BuildTarget for EmbeddedPythonBinaryData {
+impl BuildTarget for PythonEmbeddedData {
     fn build(&mut self, context: &BuildContext) -> Result<ResolvedTarget> {
         warn!(
             &context.logger,
             "writing Python embedded artifacts to {}",
             context.output_path.display()
         );
-        self.write_files(&context.output_path)?;
+
+        let embedded = self.exe.as_embedded_python_binary_data(
+            &context.logger,
+            &context.host_triple,
+            &context.target_triple,
+            &context.opt_level,
+        )?;
+
+        embedded.write_files(&context.output_path)?;
 
         Ok(ResolvedTarget {
             run_mode: RunMode::None,
