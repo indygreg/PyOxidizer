@@ -438,6 +438,20 @@ pub struct WindowsEmbeddedablePythonExecutableBuilder {
     importlib_bytecode: ImportlibBytecode,
 }
 
+impl WindowsEmbeddedablePythonExecutableBuilder {
+    /// Derive a `PythonLibrary` for the current builder.
+    pub fn as_python_library(&self) -> Result<PythonLibrary> {
+        // TODO do this properly.
+        Ok(PythonLibrary {
+            libpython_filename: Default::default(),
+            libpython_data: vec![],
+            libpyembeddedconfig_filename: None,
+            libpyembeddedconfig_data: None,
+            cargo_metadata: vec![],
+        })
+    }
+}
+
 impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
     fn clone_box(&self) -> Box<dyn PythonBinaryBuilder> {
         Box::new(self.clone())
@@ -518,16 +532,11 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
             .package(logger, &self.python_exe)?
             .try_into()?;
 
+        let library = self.as_python_library()?;
+
         Ok(EmbeddedPythonBinaryData {
             config: self.config.clone(),
-            // TODO handle this correctly.
-            library: PythonLibrary {
-                libpython_filename: Default::default(),
-                libpython_data: vec![],
-                libpyembeddedconfig_filename: None,
-                libpyembeddedconfig_data: None,
-                cargo_metadata: vec![],
-            },
+            library,
             importlib: self.importlib_bytecode.clone(),
             resources,
             host: host.to_string(),
