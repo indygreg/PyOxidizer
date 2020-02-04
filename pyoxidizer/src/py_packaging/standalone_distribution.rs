@@ -1172,14 +1172,14 @@ impl StandalonePythonExecutableBuilder {
         cargo_metadata.extend(library_info.cargo_metadata);
 
         let libpython_data = std::fs::read(&library_info.libpython_path)?;
-        let libpyembeddedconfig_data = std::fs::read(&library_info.libpyembeddedconfig_path)?;
+        let libpyembeddedconfig_data = Some(std::fs::read(&library_info.libpyembeddedconfig_path)?);
 
         Ok(PythonLibrary {
             libpython_filename: PathBuf::from(library_info.libpython_path.file_name().unwrap()),
             libpython_data,
-            libpyembeddedconfig_filename: PathBuf::from(
+            libpyembeddedconfig_filename: Some(PathBuf::from(
                 library_info.libpyembeddedconfig_path.file_name().unwrap(),
-            ),
+            )),
             libpyembeddedconfig_data,
             cargo_metadata,
         })

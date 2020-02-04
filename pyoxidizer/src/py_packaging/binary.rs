@@ -106,10 +106,10 @@ pub struct PythonLibrary {
     pub libpython_data: Vec<u8>,
 
     /// Path to a library containing an alternate `config.c`.
-    pub libpyembeddedconfig_filename: PathBuf,
+    pub libpyembeddedconfig_filename: Option<PathBuf>,
 
     /// The contents of `libpyembeddedconfig_filename`.
-    pub libpyembeddedconfig_data: Vec<u8>,
+    pub libpyembeddedconfig_data: Option<Vec<u8>>,
 
     /// Lines that need to be emitted from a Cargo build script.
     pub cargo_metadata: Vec<String>,
@@ -161,7 +161,7 @@ pub struct EmbeddedPythonBinaryPaths {
     pub libpython: PathBuf,
 
     /// Path to a library containing an alternate compiled config.c file.
-    pub libpyembeddedconfig: PathBuf,
+    pub libpyembeddedconfig: Option<PathBuf>,
 
     /// Path to `config.rs` derived from a `EmbeddedPythonConfig`.
     pub config_rs: PathBuf,
@@ -218,9 +218,14 @@ impl EmbeddedPythonBinaryData {
         let mut fh = File::create(&libpython)?;
         fh.write_all(&self.library.libpython_data)?;
 
-        let libpyembeddedconfig = dest_dir.join(&self.library.libpyembeddedconfig_filename);
-        let mut fh = File::create(&libpyembeddedconfig)?;
-        fh.write_all(&self.library.libpyembeddedconfig_data)?;
+        let libpyembeddedconfig = if let Some(data) = &self.library.libpyembeddedconfig_data {
+            let path = dest_dir.join(self.library.libpyembeddedconfig_filename.as_ref().unwrap());
+            let mut fh = File::create(&path)?;
+            fh.write_all(data)?;
+            Some(path)
+        } else {
+            None
+        };
 
         let config_rs_data = derive_python_config(
             &self.config,

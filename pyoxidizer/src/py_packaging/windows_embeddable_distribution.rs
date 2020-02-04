@@ -524,8 +524,8 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
             library: PythonLibrary {
                 libpython_filename: Default::default(),
                 libpython_data: vec![],
-                libpyembeddedconfig_filename: Default::default(),
-                libpyembeddedconfig_data: vec![],
+                libpyembeddedconfig_filename: None,
+                libpyembeddedconfig_data: None,
                 cargo_metadata: vec![],
             },
             importlib: self.importlib_bytecode.clone(),
