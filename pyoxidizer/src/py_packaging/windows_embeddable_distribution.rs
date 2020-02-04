@@ -420,7 +420,7 @@ fn read_stdlib_zip(
 ///
 /// Instances can derive artifacts needed to build executables using
 /// `WindowsEmbeddableDistribution` instances.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct WindowsEmbeddedablePythonExecutableBuilder {
     /// The name of the executable to build.
     exe_name: String,
@@ -439,6 +439,10 @@ pub struct WindowsEmbeddedablePythonExecutableBuilder {
 }
 
 impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
+    fn clone_box(&self) -> Box<dyn PythonBinaryBuilder> {
+        Box::new(self.clone())
+    }
+
     fn name(&self) -> String {
         self.exe_name.clone()
     }

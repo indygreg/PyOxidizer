@@ -30,6 +30,9 @@ use {
 /// Concrete implementations can be turned into build artifacts or binaries
 /// themselves.
 pub trait PythonBinaryBuilder {
+    /// Clone self into a Box'ed trait object.
+    fn clone_box(&self) -> Box<dyn PythonBinaryBuilder>;
+
     /// The name of the binary.
     fn name(&self) -> String;
 

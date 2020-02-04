@@ -1113,7 +1113,7 @@ impl PythonDistribution for StandaloneDistribution {
 }
 
 /// A self-contained Python executable before it is compiled.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct StandalonePythonExecutableBuilder {
     /// The name of the executable to build.
     exe_name: String,
@@ -1187,6 +1187,10 @@ impl StandalonePythonExecutableBuilder {
 }
 
 impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
+    fn clone_box(&self) -> Box<dyn PythonBinaryBuilder> {
+        Box::new(self.clone())
+    }
+
     fn name(&self) -> String {
         self.exe_name.clone()
     }
