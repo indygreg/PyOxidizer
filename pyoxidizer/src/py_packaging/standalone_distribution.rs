@@ -6,7 +6,7 @@
 
 use {
     super::binary::{
-        EmbeddedPythonBinaryData, EmbeddedResourcesBlobs, PythonBinaryBuilder, PythonLibrary,
+        EmbeddedPythonBinaryData, EmbeddedResourcesBlobs, PythonBinaryBuilder, PythonLinkingInfo,
     },
     super::bytecode::BytecodeCompiler,
     super::config::{EmbeddedPythonConfig, RawAllocator},
@@ -1142,13 +1142,13 @@ impl StandalonePythonExecutableBuilder {
     ///
     /// This will take the underlying distribution, resources, and
     /// configuration and produce a new executable binary.
-    fn resolve_python_library(
+    fn resolve_python_linking_info(
         &self,
         logger: &slog::Logger,
         host: &str,
         target: &str,
         opt_level: &str,
-    ) -> Result<PythonLibrary> {
+    ) -> Result<PythonLinkingInfo> {
         let resources = self.resources.package(logger, &self.python_exe)?;
 
         let temp_dir = TempDir::new("pyoxidizer-build-exe")?;
@@ -1174,7 +1174,7 @@ impl StandalonePythonExecutableBuilder {
         let libpython_data = std::fs::read(&library_info.libpython_path)?;
         let libpyembeddedconfig_data = Some(std::fs::read(&library_info.libpyembeddedconfig_path)?);
 
-        Ok(PythonLibrary {
+        Ok(PythonLinkingInfo {
             libpython_filename: PathBuf::from(library_info.libpython_path.file_name().unwrap()),
             libpython_data,
             libpyembeddedconfig_filename: Some(PathBuf::from(
@@ -1260,7 +1260,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         target: &str,
         opt_level: &str,
     ) -> Result<EmbeddedPythonBinaryData> {
-        let library = self.resolve_python_library(logger, host, target, opt_level)?;
+        let linking_info = self.resolve_python_linking_info(logger, host, target, opt_level)?;
 
         let resources =
             EmbeddedResourcesBlobs::try_from(self.resources.package(logger, &self.python_exe)?)?;
@@ -1272,7 +1272,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
         Ok(EmbeddedPythonBinaryData {
             config: self.config.clone(),
-            library,
+            linking_info,
             importlib,
             resources,
             host: host.to_string(),

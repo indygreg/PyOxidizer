@@ -5,7 +5,7 @@
 /*! Functionality for Windows embeddable distributions. */
 
 use {
-    super::binary::{EmbeddedPythonBinaryData, PythonBinaryBuilder, PythonLibrary},
+    super::binary::{EmbeddedPythonBinaryData, PythonBinaryBuilder, PythonLinkingInfo},
     super::bytecode::BytecodeCompiler,
     super::config::EmbeddedPythonConfig,
     super::distribution::{
@@ -439,10 +439,10 @@ pub struct WindowsEmbeddedablePythonExecutableBuilder {
 }
 
 impl WindowsEmbeddedablePythonExecutableBuilder {
-    /// Derive a `PythonLibrary` for the current builder.
-    pub fn as_python_library(&self) -> Result<PythonLibrary> {
+    /// Derive a `PythonLinkingInfo` for the current builder.
+    pub fn as_python_linking_info(&self) -> Result<PythonLinkingInfo> {
         // TODO do this properly.
-        Ok(PythonLibrary {
+        Ok(PythonLinkingInfo {
             libpython_filename: Default::default(),
             libpython_data: vec![],
             libpyembeddedconfig_filename: None,
@@ -532,11 +532,11 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
             .package(logger, &self.python_exe)?
             .try_into()?;
 
-        let library = self.as_python_library()?;
+        let linking_info = self.as_python_linking_info()?;
 
         Ok(EmbeddedPythonBinaryData {
             config: self.config.clone(),
-            library,
+            linking_info,
             importlib: self.importlib_bytecode.clone(),
             resources,
             host: host.to_string(),

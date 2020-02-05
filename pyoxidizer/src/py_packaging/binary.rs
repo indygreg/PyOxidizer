@@ -97,8 +97,8 @@ pub trait PythonBinaryBuilder {
     ) -> Result<EmbeddedPythonBinaryData>;
 }
 
-/// A self-contained Python executable after it is built.
-pub struct PythonLibrary {
+/// Describes how to link a binary against Python.
+pub struct PythonLinkingInfo {
     /// Path to a library containing the Python symbols.
     pub libpython_filename: PathBuf,
 
@@ -175,8 +175,8 @@ pub struct EmbeddedPythonBinaryData {
     /// The configuration for the embedded interpreter.
     pub config: EmbeddedPythonConfig,
 
-    /// Information on library containing libpython.
-    pub library: PythonLibrary,
+    /// Information on how to link against Python.
+    pub linking_info: PythonLinkingInfo,
 
     /// Bytecode for importlib bootstrap modules.
     pub importlib: ImportlibBytecode,
@@ -214,12 +214,17 @@ impl EmbeddedPythonBinaryData {
         let mut fh = File::create(&resources)?;
         fh.write_all(&self.resources.resources)?;
 
-        let libpython = dest_dir.join(&self.library.libpython_filename);
+        let libpython = dest_dir.join(&self.linking_info.libpython_filename);
         let mut fh = File::create(&libpython)?;
-        fh.write_all(&self.library.libpython_data)?;
+        fh.write_all(&self.linking_info.libpython_data)?;
 
-        let libpyembeddedconfig = if let Some(data) = &self.library.libpyembeddedconfig_data {
-            let path = dest_dir.join(self.library.libpyembeddedconfig_filename.as_ref().unwrap());
+        let libpyembeddedconfig = if let Some(data) = &self.linking_info.libpyembeddedconfig_data {
+            let path = dest_dir.join(
+                self.linking_info
+                    .libpyembeddedconfig_filename
+                    .as_ref()
+                    .unwrap(),
+            );
             let mut fh = File::create(&path)?;
             fh.write_all(data)?;
             Some(path)
@@ -238,7 +243,7 @@ impl EmbeddedPythonBinaryData {
         write_default_python_config_rs(&config_rs, &config_rs_data)?;
 
         let mut cargo_metadata_lines = Vec::new();
-        cargo_metadata_lines.extend(self.library.cargo_metadata.clone());
+        cargo_metadata_lines.extend(self.linking_info.cargo_metadata.clone());
 
         // Tell Cargo where libpythonXY is located.
         cargo_metadata_lines.push(format!(
