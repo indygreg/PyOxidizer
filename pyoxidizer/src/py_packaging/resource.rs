@@ -530,7 +530,11 @@ impl PythonResource {
         };
 
         for package in packages {
-            if packages_from_module_name(&name).contains(package) {
+            // Even though the entity may not be marked as a package, we allow exact
+            // name matches through the filter because this makes sense for filtering.
+            // The package annotation is really only useful to influence file layout,
+            // when __init__.py files need to be materialized.
+            if name == package || packages_from_module_name(&name).contains(package) {
                 return true;
             }
         }
@@ -572,7 +576,19 @@ impl AppRelativeResources {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, itertools::Itertools};
+    use {super::*, itertools::Itertools, std::iter::FromIterator};
+
+    #[test]
+    fn test_packages_from_module_name() {
+        assert_eq!(
+            packages_from_module_name("foo.bar"),
+            BTreeSet::from_iter(vec!["foo".to_string()])
+        );
+        assert_eq!(
+            packages_from_module_name("foo.bar.baz"),
+            BTreeSet::from_iter(vec!["foo".to_string(), "foo.bar".to_string()])
+        );
+    }
 
     #[test]
     fn test_resolve_path_for_module() {
@@ -711,5 +727,27 @@ mod tests {
         );
 
         Ok(())
+    }
+
+    #[test]
+    fn test_is_in_packages() {
+        let source = PythonResource::ModuleSource {
+            name: "foo".to_string(),
+            source: DataLocation::Memory(vec![]),
+            is_package: false,
+        };
+        assert!(source.is_in_packages(&["foo".to_string()]));
+        assert!(!source.is_in_packages(&[]));
+        assert!(!source.is_in_packages(&["bar".to_string()]));
+
+        let bytecode = PythonResource::ModuleBytecode {
+            name: "foo".to_string(),
+            bytecode: DataLocation::Memory(vec![]),
+            optimize_level: BytecodeOptimizationLevel::Zero,
+            is_package: false,
+        };
+        assert!(bytecode.is_in_packages(&["foo".to_string()]));
+        assert!(!bytecode.is_in_packages(&[]));
+        assert!(!bytecode.is_in_packages(&["bar".to_string()]));
     }
 }

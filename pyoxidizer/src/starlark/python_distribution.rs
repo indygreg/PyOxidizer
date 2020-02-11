@@ -984,4 +984,52 @@ mod tests {
             assert!(x.module.is_package);
         });
     }
+
+    #[test]
+    fn test_read_package_root_simple() -> Result<()> {
+        let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
+
+        let root = temp_dir.path();
+        std::fs::create_dir(root.join("bar"))?;
+        let bar_init = root.join("bar").join("__init__.py");
+        std::fs::write(&bar_init, "# bar")?;
+
+        let foo_path = root.join("foo.py");
+        std::fs::write(&foo_path, "# foo")?;
+
+        let baz_path = root.join("baz.py");
+        std::fs::write(&baz_path, "# baz")?;
+
+        std::fs::create_dir(root.join("extra"))?;
+        let extra_path = root.join("extra").join("__init__.py");
+        std::fs::write(&extra_path, "# extra")?;
+
+        let resources = starlark_ok(&format!(
+            "default_python_distribution().read_package_root(\"{}\", packages=['foo', 'bar'])",
+            root.display()
+        ));
+
+        assert_eq!(resources.get_type(), "list");
+        assert_eq!(resources.length().unwrap(), 2);
+
+        let mut it = resources.into_iter().unwrap();
+
+        let v = it.next().unwrap();
+        assert_eq!(v.get_type(), "PythonSourceModule");
+        v.downcast_apply(|x: &PythonSourceModule| {
+            assert_eq!(x.module.name, "bar");
+            assert!(x.module.is_package);
+            assert_eq!(x.module.source.resolve().unwrap(), b"# bar");
+        });
+
+        let v = it.next().unwrap();
+        assert_eq!(v.get_type(), "PythonSourceModule");
+        v.downcast_apply(|x: &PythonSourceModule| {
+            assert_eq!(x.module.name, "foo");
+            assert!(!x.module.is_package);
+            assert_eq!(x.module.source.resolve().unwrap(), b"# foo");
+        });
+
+        Ok(())
+    }
 }

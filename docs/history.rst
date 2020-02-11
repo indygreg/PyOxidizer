@@ -45,6 +45,15 @@ Backwards Compatibility Notes
   for the Starlark type in version 0.5. We have made similar changes to 0.6 so
   naming is consistent across the various types.
 
+Bug Fixes
+^^^^^^^^^
+
+* Module names without a ``.`` are now properly recognized when scanning the
+  filesystem for Python resources and a package allow list is used (#223).
+  Previously, if filtering scanned resources through an explicit list of allowed
+  packages, the top-level module/package without a dot in its full name would not
+  be passed through the filter.
+
 New Features
 ^^^^^^^^^^^^
 
