@@ -36,6 +36,12 @@ Backwards Compatibility Notes
 * The `pyembed` crate now has a *dev* dependency on the `pyoxidizer` crate in
   order to run tests.
 
+Bug Fixes
+^^^^^^^^^
+
+* Added a missing `)` for `add_python_resources()` in auto-generated
+  `pyoxidizer.bzl` files.
+
 New Features
 ^^^^^^^^^^^^
 

@@ -111,7 +111,7 @@ def make_exe(dist):
     #exe.add_python_resources(dist.read_package_root(
     #    path="/src/mypackage",
     #    packages=["foo", "bar"],
-    #)
+    #))
 
     # Discover Python files from a virtualenv and add them to our embedded
     # context.
