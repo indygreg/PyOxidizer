@@ -20,10 +20,12 @@ Blog Posts
 Version History
 ===============
 
-next
-----
+.. _version_0_6_0:
 
-Not yet released.
+0.6.0
+-----
+
+Released February 12, 2020.
 
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
