@@ -274,7 +274,9 @@ of the following:
 
 ``windows_embeddable``
    A Windows-only distribution format defined by a zip file. These distributions
-   are produced by the official Python project.
+   are produced by the official Python project. **Support for this distribution
+   flavor is experimental, doesn't fully work, and may be removed in a future
+   release because it may not be viable.**
 
 The ``pyoxidizer`` binary has a set of known distributions built-in
 which are automatically available and used by this function. Typically you don't
