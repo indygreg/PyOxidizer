@@ -368,6 +368,13 @@ pub struct PythonDistributionMinimalInfo {
     pub py_module_count: usize,
 }
 
+/// Describes how libpython is linked in a standalone distribution.
+#[derive(Clone, Debug)]
+pub enum StandaloneDistributionLinkMode {
+    Static,
+    Dynamic,
+}
+
 /// Represents a standalone Python distribution.
 ///
 /// This is a Python distributed produced by the `python-build-standalone`
@@ -396,6 +403,9 @@ pub struct StandaloneDistribution {
 
     /// Path to Python standard library.
     pub stdlib_path: PathBuf,
+
+    /// How libpython is linked in this distribution.
+    pub link_mode: StandaloneDistributionLinkMode,
 
     /// SPDX license shortnames that apply to this distribution.
     ///
@@ -713,6 +723,18 @@ impl StandaloneDistribution {
 
         let venv_base = dist_dir.parent().unwrap().join("hacked_base");
 
+        let link_mode = if let Some(ref v) = pi.link_mode {
+            if v == "static" {
+                StandaloneDistributionLinkMode::Static
+            } else if v == "shared" {
+                StandaloneDistributionLinkMode::Dynamic
+            } else {
+                return Err(anyhow!("unhandled link mode: {}", v));
+            }
+        } else {
+            StandaloneDistributionLinkMode::Static
+        };
+
         Ok(Self {
             flavor: pi.python_flavor.clone(),
             version: pi.python_version.clone(),
@@ -720,6 +742,7 @@ impl StandaloneDistribution {
             arch: pi.arch.clone(),
             python_exe: python_exe_path(dist_dir)?,
             stdlib_path,
+            link_mode,
             licenses: pi.licenses.clone(),
             license_path: match pi.license_path {
                 Some(ref path) => Some(PathBuf::from(path)),
