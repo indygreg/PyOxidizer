@@ -99,11 +99,16 @@ pub trait PythonBinaryBuilder {
 
 /// Describes how to link a binary against Python.
 pub struct PythonLinkingInfo {
-    /// Path to a library containing the Python symbols.
-    pub libpython_filename: PathBuf,
+    /// Path to a `pythonXY` library to link against.
+    pub libpythonxy_filename: PathBuf,
 
-    /// The contents of `libpython_filename`.
-    pub libpython_data: Vec<u8>,
+    /// The contents of `libpythonxy_filename`.
+    pub libpythonxy_data: Vec<u8>,
+
+    /// Path to an existing `libpython` to link against. If present, this is
+    /// the actual library containing Python symbols and `libpythonXY` is
+    /// a placeholder.
+    pub libpython_filename: Option<PathBuf>,
 
     /// Path to a library containing an alternate `config.c`.
     pub libpyembeddedconfig_filename: Option<PathBuf>,
@@ -214,9 +219,9 @@ impl EmbeddedPythonBinaryData {
         let mut fh = File::create(&resources)?;
         fh.write_all(&self.resources.resources)?;
 
-        let libpython = dest_dir.join(&self.linking_info.libpython_filename);
+        let libpython = dest_dir.join(&self.linking_info.libpythonxy_filename);
         let mut fh = File::create(&libpython)?;
-        fh.write_all(&self.linking_info.libpython_data)?;
+        fh.write_all(&self.linking_info.libpythonxy_data)?;
 
         let libpyembeddedconfig = if let Some(data) = &self.linking_info.libpyembeddedconfig_data {
             let path = dest_dir.join(

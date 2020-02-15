@@ -428,6 +428,11 @@ pub struct StandaloneDistribution {
     /// Linking information for the core Python implementation.
     pub links_core: Vec<LibraryDepends>,
 
+    /// Filesystem location of pythonXY shared library for this distribution.
+    ///
+    /// Only set if `link_mode` is `StandaloneDistributionLinkMode::Dynamic`.
+    pub libpython_shared_library: Option<PathBuf>,
+
     /// Extension modules available to this distribution.
     pub extension_modules: BTreeMap<String, Vec<ExtensionModule>>,
 
@@ -723,16 +728,19 @@ impl StandaloneDistribution {
 
         let venv_base = dist_dir.parent().unwrap().join("hacked_base");
 
-        let link_mode = if let Some(ref v) = pi.link_mode {
+        let (link_mode, libpython_shared_library) = if let Some(ref v) = pi.link_mode {
             if v == "static" {
-                StandaloneDistributionLinkMode::Static
+                (StandaloneDistributionLinkMode::Static, None)
             } else if v == "shared" {
-                StandaloneDistributionLinkMode::Dynamic
+                (
+                    StandaloneDistributionLinkMode::Dynamic,
+                    Some(PathBuf::from(pi.build_info.core.shared_lib.unwrap())),
+                )
             } else {
                 return Err(anyhow!("unhandled link mode: {}", v));
             }
         } else {
-            StandaloneDistributionLinkMode::Static
+            (StandaloneDistributionLinkMode::Static, None)
         };
 
         Ok(Self {
@@ -759,6 +767,7 @@ impl StandaloneDistribution {
             links_core,
             libraries,
             objs_core,
+            libpython_shared_library,
             py_modules,
             resources,
             license_infos,
@@ -1178,11 +1187,12 @@ impl StandalonePythonExecutableBuilder {
     ) -> Result<PythonLinkingInfo> {
         let resources = self.resources.package(logger, &self.python_exe)?;
 
-        let libpython_filename;
+        let libpythonxy_filename;
         let mut cargo_metadata: Vec<String> = Vec::new();
-        let mut libpython_data = Vec::new();
-        let mut libpyembeddedconfig_data: Option<Vec<u8>> = None;
-        let mut libpyembeddedconfig_filename: Option<PathBuf> = None;
+        let libpythonxy_data;
+        let libpython_filename: Option<PathBuf>;
+        let libpyembeddedconfig_data: Option<Vec<u8>>;
+        let libpyembeddedconfig_filename: Option<PathBuf>;
 
         match self.distribution.link_mode {
             StandaloneDistributionLinkMode::Static => {
@@ -1203,11 +1213,12 @@ impl StandalonePythonExecutableBuilder {
                     opt_level,
                 )?;
 
-                libpython_filename =
+                libpythonxy_filename =
                     PathBuf::from(library_info.libpython_path.file_name().unwrap());
                 cargo_metadata.extend(library_info.cargo_metadata);
 
-                libpython_data = std::fs::read(&library_info.libpython_path)?;
+                libpythonxy_data = std::fs::read(&library_info.libpython_path)?;
+                libpython_filename = None;
                 libpyembeddedconfig_filename = Some(PathBuf::from(
                     library_info.libpyembeddedconfig_path.file_name().unwrap(),
                 ));
@@ -1216,13 +1227,18 @@ impl StandalonePythonExecutableBuilder {
             }
 
             StandaloneDistributionLinkMode::Dynamic => {
-                panic!("support for dynamically linked distributions not yet implemented");
+                libpythonxy_filename = PathBuf::from("pythonXY.lib");
+                libpythonxy_data = Vec::new();
+                libpython_filename = self.distribution.libpython_shared_library.clone();
+                libpyembeddedconfig_filename = None;
+                libpyembeddedconfig_data = None;
             }
         }
 
         Ok(PythonLinkingInfo {
+            libpythonxy_filename,
+            libpythonxy_data,
             libpython_filename,
-            libpython_data,
             libpyembeddedconfig_filename,
             libpyembeddedconfig_data,
             cargo_metadata,

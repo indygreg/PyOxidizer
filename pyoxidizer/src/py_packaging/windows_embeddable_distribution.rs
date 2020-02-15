@@ -26,6 +26,7 @@ use {
     std::fmt::{Debug, Formatter},
     std::iter::FromIterator,
     std::path::{Path, PathBuf},
+    tempdir::TempDir,
 };
 
 /// Represents a Python extension module on Windows that is standalone.
@@ -276,6 +277,7 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         Ok(Box::new(WindowsEmbeddedablePythonExecutableBuilder {
             exe_name: name.to_string(),
             python_exe: self.python_exe.clone(),
+            python_dll: self.python_dll.clone(),
             // TODO add distribution resources to this instance.
             resources: EmbeddedPythonResourcesPrePackaged::default(),
             config: config.clone(),
@@ -428,6 +430,9 @@ pub struct WindowsEmbeddedablePythonExecutableBuilder {
     /// Path to Python executable that can be invoked at build time.
     python_exe: PathBuf,
 
+    /// Path to pythonXY dll.
+    python_dll: PathBuf,
+
     /// Python resources to be embedded in the binary.
     resources: EmbeddedPythonResourcesPrePackaged,
 
@@ -439,15 +444,67 @@ pub struct WindowsEmbeddedablePythonExecutableBuilder {
 }
 
 impl WindowsEmbeddedablePythonExecutableBuilder {
+    /// Resolve a `pythonXY.lib` suitable for linking against.
+    ///
+    /// Windows embeddable distributions link against an existing python DLL
+    /// when the cpython/python3-sys crates are built. But the `pyembed` crate
+    /// has a `links` entry against `pythonXY` (that's a literal `XY`, not a
+    /// placeholder for the actual version). That means we need to generate a
+    /// `pythonXY.lib` to placate the linker. The function generate content for
+    /// such a file.
+    pub fn resolve_pythonxy_lib(
+        &self,
+        logger: &slog::Logger,
+        host: &str,
+        target: &str,
+        opt_level: &str,
+    ) -> Result<Vec<u8>> {
+        warn!(logger, "compiling fake pythonXY.lib");
+
+        let temp_dir = TempDir::new("pyoxidizer-build-libpython")?;
+
+        let empty_source = temp_dir.path().join("empty.c");
+        std::fs::File::create(&empty_source)?;
+
+        cc::Build::new()
+            .out_dir(temp_dir.path())
+            .host(host)
+            .target(target)
+            .opt_level_str(opt_level)
+            .file(&empty_source)
+            .cargo_metadata(false)
+            .compile("pythonXY");
+
+        let output_path = temp_dir.path().join("pythonXY.lib");
+
+        Ok(std::fs::read(&output_path)?)
+    }
+
     /// Derive a `PythonLinkingInfo` for the current builder.
-    pub fn as_python_linking_info(&self) -> Result<PythonLinkingInfo> {
-        // TODO do this properly.
+    pub fn as_python_linking_info(
+        &self,
+        logger: &slog::Logger,
+        host: &str,
+        target: &str,
+        opt_level: &str,
+    ) -> Result<PythonLinkingInfo> {
+        let libpython_dir = self
+            .python_dll
+            .parent()
+            .ok_or_else(|| anyhow!("unable to resolve parent directory of Python DLL"))?;
+
+        let cargo_metadata = vec![
+            "cargo:rustc-link-lib=static=pythonXY".to_string(),
+            format!("cargo:rustc-link-search=native={}", libpython_dir.display()),
+        ];
+
         Ok(PythonLinkingInfo {
-            libpython_filename: Default::default(),
-            libpython_data: vec![],
+            libpythonxy_filename: PathBuf::from("pythonXY.lib"),
+            libpythonxy_data: self.resolve_pythonxy_lib(logger, host, target, opt_level)?,
+            libpython_filename: Some(self.python_dll.clone()),
             libpyembeddedconfig_filename: None,
             libpyembeddedconfig_data: None,
-            cargo_metadata: vec![],
+            cargo_metadata,
         })
     }
 }
@@ -525,14 +582,14 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
         logger: &slog::Logger,
         host: &str,
         target: &str,
-        _opt_level: &str,
+        opt_level: &str,
     ) -> Result<EmbeddedPythonBinaryData> {
         let resources = self
             .resources
             .package(logger, &self.python_exe)?
             .try_into()?;
 
-        let linking_info = self.as_python_linking_info()?;
+        let linking_info = self.as_python_linking_info(logger, host, target, opt_level)?;
 
         Ok(EmbeddedPythonBinaryData {
             config: self.config.clone(),

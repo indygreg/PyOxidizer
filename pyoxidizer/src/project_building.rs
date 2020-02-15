@@ -124,10 +124,15 @@ pub fn build_executable_with_rust_project(
     }
 
     args.push("--no-default-features");
-    let mut features = vec![
-        "build-mode-prebuilt-artifacts",
-        "cpython-link-unresolved-static",
-    ];
+    let mut features = vec!["build-mode-prebuilt-artifacts"];
+
+    // If we have a real libpython, let cpython crate link against it. Otherwise
+    // leave symbols unresolved, as we'll provide them.
+    features.push(if embedded_data.linking_info.libpython_filename.is_some() {
+        "cpython-link-default"
+    } else {
+        "cpython-link-unresolved-static"
+    });
 
     if exe.requires_jemalloc() {
         features.push("jemalloc");
@@ -154,6 +159,25 @@ pub fn build_executable_with_rust_project(
         "PYTHON_SYS_EXECUTABLE",
         python_exe_path.display().to_string(),
     ));
+
+    // If linking against an existing dynamic library on Windows, add the path to that
+    // library to an environment variable so link.exe can find it.
+    if let Some(libpython_filename) = embedded_data.linking_info.libpython_filename {
+        if cfg!(windows) {
+            let libpython_dir = libpython_filename
+                .parent()
+                .ok_or_else(|| anyhow!("unable to find parent directory of python DLL"))?;
+
+            envs.push((
+                "LIB",
+                if let Ok(lib) = std::env::var("LIB") {
+                    format!("{};{}", lib, libpython_dir.display())
+                } else {
+                    format!("{}", libpython_dir.display())
+                },
+            ));
+        }
+    }
 
     // static-nobundle link kind requires nightly Rust compiler until
     // https://github.com/rust-lang/rust/issues/37403 is resolved.
