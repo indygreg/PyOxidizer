@@ -98,6 +98,7 @@ struct PythonBuildExtensionInfo {
     objs: Vec<String>,
     required: bool,
     static_lib: Option<String>,
+    shared_lib: Option<String>,
     variant: String,
 }
 
@@ -105,6 +106,8 @@ struct PythonBuildExtensionInfo {
 struct PythonBuildCoreInfo {
     objs: Vec<String>,
     links: Vec<LinkEntry>,
+    shared_lib: Option<String>,
+    static_lib: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -123,6 +126,7 @@ struct PythonJsonMain {
     python_stdlib: String,
     python_version: String,
     version: String,
+    link_mode: Option<String>,
     build_info: PythonBuildInfo,
     licenses: Option<Vec<String>>,
     license_path: Option<String>,

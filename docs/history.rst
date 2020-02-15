@@ -25,6 +25,12 @@ next
 
 Not yet released.
 
+New Features
+^^^^^^^^^^^^
+
+* Support for parsing version 4 of the ``PYTHON.json`` distribution descriptor
+  present in standalone Python distribution archives.
+
 .. _version_0_6_0:
 
 0.6.0
