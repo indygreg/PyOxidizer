@@ -601,8 +601,8 @@ files represent these settings through the
 
 .. _config_python_interpreter_config:
 
-``PythonInterpreterConfig(...)```
----------------------------------
+``PythonInterpreterConfig(...)``
+--------------------------------
 
 This type configures the default behavior of the embedded Python interpreter.
 
