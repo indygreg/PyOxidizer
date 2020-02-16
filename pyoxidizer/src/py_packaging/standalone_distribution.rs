@@ -72,7 +72,7 @@ impl LinkEntry {
                 None => None,
             },
             dynamic_path: match &self.path_dynamic {
-                Some(_p) => panic!("dynamic_path not yet supported"),
+                Some(p) => Some(python_path.join(p)),
                 None => None,
             },
             framework: match &self.framework {
