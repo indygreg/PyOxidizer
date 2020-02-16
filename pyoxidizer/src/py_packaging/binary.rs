@@ -13,6 +13,7 @@ use {
     super::pyembed::{derive_python_config, write_default_python_config_rs},
     super::resource::{BytecodeModule, ExtensionModuleData, ResourceData, SourceModule},
     super::standalone_distribution::ExtensionModule,
+    crate::app_packaging::resource::FileManifest,
     anyhow::Result,
     std::collections::BTreeMap,
     std::convert::TryFrom,
@@ -95,6 +96,9 @@ pub trait PythonBinaryBuilder {
         target: &str,
         opt_level: &str,
     ) -> Result<EmbeddedPythonBinaryData>;
+
+    /// Extra files to install next to a built binary.
+    fn extra_install_files(&self) -> Result<FileManifest>;
 }
 
 /// Describes how to link a binary against Python.

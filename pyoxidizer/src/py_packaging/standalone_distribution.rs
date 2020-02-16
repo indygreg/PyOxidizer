@@ -24,6 +24,7 @@ use {
         BytecodeModule, BytecodeOptimizationLevel, DataLocation, ExtensionModuleData, ResourceData,
         SourceModule,
     },
+    crate::app_packaging::resource::{FileContent, FileManifest},
     crate::licensing::NON_GPL_LICENSES,
     anyhow::{anyhow, Context, Result},
     copy_dir::copy_dir,
@@ -734,7 +735,7 @@ impl StandaloneDistribution {
             } else if v == "shared" {
                 (
                     StandaloneDistributionLinkMode::Dynamic,
-                    Some(PathBuf::from(pi.build_info.core.shared_lib.unwrap())),
+                    Some(python_path.join(pi.build_info.core.shared_lib.unwrap())),
                 )
             } else {
                 return Err(anyhow!("unhandled link mode: {}", v));
@@ -1338,6 +1339,21 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             host: host.to_string(),
             target: target.to_string(),
         })
+    }
+
+    fn extra_install_files(&self) -> Result<FileManifest> {
+        let mut m = FileManifest::default();
+
+        if let Some(p) = &self.distribution.libpython_shared_library {
+            let content = FileContent {
+                data: std::fs::read(p)?,
+                executable: false,
+            };
+
+            m.add_file(&PathBuf::from(p.file_name().unwrap()), &content)?;
+        }
+
+        Ok(m)
     }
 }
 

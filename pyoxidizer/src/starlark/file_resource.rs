@@ -110,6 +110,10 @@ impl FileManifest {
 
         let path = Path::new(&prefix).join(filename);
         self.manifest.add_file(&path, &content)?;
+
+        // Add any additional files that the exe builder requires.
+        self.manifest.add_manifest(&exe.extra_install_files()?)?;
+
         Ok(())
     }
 }

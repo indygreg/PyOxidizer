@@ -19,6 +19,7 @@ use {
     super::resource::{BytecodeModule, ExtensionModuleData, ResourceData, SourceModule},
     super::standalone_distribution::ExtensionModule,
     crate::analyze::find_pe_dependencies_path,
+    crate::app_packaging::resource::FileManifest,
     anyhow::{anyhow, Result},
     slog::warn,
     std::collections::{BTreeMap, HashMap},
@@ -599,6 +600,10 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
             host: host.to_string(),
             target: target.to_string(),
         })
+    }
+
+    fn extra_install_files(&self) -> Result<FileManifest> {
+        unimplemented!()
     }
 }
 
