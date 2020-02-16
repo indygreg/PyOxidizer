@@ -370,7 +370,7 @@ pub struct PythonDistributionMinimalInfo {
 }
 
 /// Describes how libpython is linked in a standalone distribution.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum StandaloneDistributionLinkMode {
     Static,
     Dynamic,
@@ -797,12 +797,15 @@ impl StandaloneDistribution {
     ) -> Result<EmbeddedPythonResourcesPrePackaged> {
         let mut embedded = EmbeddedPythonResourcesPrePackaged::default();
 
-        for ext in self.filter_extension_modules(
-            logger,
-            extension_module_filter,
-            preferred_extension_module_variants,
-        )? {
-            embedded.add_extension_module(&ext);
+        // We can only embed extension modules on statically linked distributions.
+        if self.link_mode == StandaloneDistributionLinkMode::Static {
+            for ext in self.filter_extension_modules(
+                logger,
+                extension_module_filter,
+                preferred_extension_module_variants,
+            )? {
+                embedded.add_extension_module(&ext);
+            }
         }
 
         for source in self.source_modules()? {
@@ -966,9 +969,13 @@ impl PythonDistribution for StandaloneDistribution {
 
         // Always ensure minimal extension modules are present, otherwise we get
         // missing symbol errors at link time.
-        for ext in self.filter_extension_modules(&logger, &ExtensionModuleFilter::Minimal, None)? {
-            if !resources.extension_modules.contains_key(&ext.module) {
-                resources.add_extension_module(&ext);
+        if self.link_mode == StandaloneDistributionLinkMode::Static {
+            for ext in
+                self.filter_extension_modules(&logger, &ExtensionModuleFilter::Minimal, None)?
+            {
+                if !resources.extension_modules.contains_key(&ext.module) {
+                    resources.add_extension_module(&ext);
+                }
             }
         }
 
@@ -1372,10 +1379,14 @@ pub mod tests {
 
         // We need to add minimal extension modules so builds actually work. If they are missing,
         // we'll get missing symbol errors during linking.
-        for ext in
-            distribution.filter_extension_modules(logger, &ExtensionModuleFilter::Minimal, None)?
-        {
-            resources.add_extension_module(&ext);
+        if distribution.link_mode == StandaloneDistributionLinkMode::Static {
+            for ext in distribution.filter_extension_modules(
+                logger,
+                &ExtensionModuleFilter::Minimal,
+                None,
+            )? {
+                resources.add_extension_module(&ext);
+            }
         }
 
         let config = EmbeddedPythonConfig::default();
