@@ -112,7 +112,8 @@ impl FileManifest {
         self.manifest.add_file(&path, &content)?;
 
         // Add any additional files that the exe builder requires.
-        self.manifest.add_manifest(&exe.extra_install_files()?)?;
+        self.manifest
+            .add_manifest(&exe.extra_install_files(logger)?)?;
 
         Ok(())
     }

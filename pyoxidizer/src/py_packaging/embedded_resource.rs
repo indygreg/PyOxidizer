@@ -671,6 +671,7 @@ mod tests {
             disableable: false,
             object_paths: vec![],
             static_library: None,
+            shared_library: None,
             links: vec![],
             required: false,
             variant: "".to_string(),

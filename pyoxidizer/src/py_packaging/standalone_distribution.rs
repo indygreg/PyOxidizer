@@ -330,6 +330,9 @@ pub struct ExtensionModule {
     /// Path to static library providing this extension module.
     pub static_library: Option<PathBuf>,
 
+    /// Path to a shared library providing this extension module.
+    pub shared_library: Option<PathBuf>,
+
     /// Library linking metadata.
     pub links: Vec<LibraryDepends>,
 
@@ -683,6 +686,10 @@ impl StandaloneDistribution {
                         Some(p) => Some(python_path.join(p)),
                         None => None,
                     },
+                    shared_library: match &entry.shared_lib {
+                        Some(p) => Some(python_path.join(p)),
+                        None => None,
+                    },
                     links,
                     variant: entry.variant.clone(),
                 });
@@ -961,7 +968,7 @@ impl PythonDistribution for StandaloneDistribution {
         let mut resources = self.as_embedded_python_resources_pre_packaged(
             logger,
             extension_module_filter,
-            preferred_extension_module_variants,
+            preferred_extension_module_variants.clone(),
             include_sources,
             include_resources,
             include_test,
@@ -989,6 +996,8 @@ impl PythonDistribution for StandaloneDistribution {
             config: config.clone(),
             python_exe,
             importlib_bytecode,
+            extension_module_filter: extension_module_filter.clone(),
+            extension_module_variants: preferred_extension_module_variants.clone(),
         }))
     }
 
@@ -1179,6 +1188,12 @@ pub struct StandalonePythonExecutableBuilder {
 
     /// Bytecode for importlib bootstrap modules.
     importlib_bytecode: ImportlibBytecode,
+
+    /// Extension module filter to apply.
+    extension_module_filter: ExtensionModuleFilter,
+
+    /// Preferred extension module variants.
+    extension_module_variants: Option<HashMap<String, String>>,
 }
 
 impl StandalonePythonExecutableBuilder {
@@ -1348,16 +1363,35 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         })
     }
 
-    fn extra_install_files(&self) -> Result<FileManifest> {
+    fn extra_install_files(&self, logger: &slog::Logger) -> Result<FileManifest> {
         let mut m = FileManifest::default();
 
-        if let Some(p) = &self.distribution.libpython_shared_library {
-            let content = FileContent {
-                data: std::fs::read(p)?,
-                executable: false,
-            };
+        if self.distribution.link_mode == StandaloneDistributionLinkMode::Dynamic {
+            if let Some(p) = &self.distribution.libpython_shared_library {
+                let content = FileContent {
+                    data: std::fs::read(p)?,
+                    executable: false,
+                };
 
-            m.add_file(&PathBuf::from(p.file_name().unwrap()), &content)?;
+                m.add_file(&PathBuf::from(p.file_name().unwrap()), &content)?;
+            }
+
+            for em in self.distribution.filter_extension_modules(
+                logger,
+                &self.extension_module_filter,
+                self.extension_module_variants.clone(),
+            )? {
+                if let Some(p) = &em.shared_library {
+                    // TODO should the path prefix be configurable?
+                    m.add_file(
+                        Path::new(p.file_name().unwrap()),
+                        &FileContent {
+                            data: std::fs::read(p)?,
+                            executable: false,
+                        },
+                    )?;
+                }
+            }
         }
 
         Ok(m)
@@ -1401,6 +1435,8 @@ pub mod tests {
             config,
             python_exe,
             importlib_bytecode,
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            extension_module_variants: None,
         })
     }
 
