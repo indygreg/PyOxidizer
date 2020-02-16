@@ -1178,35 +1178,52 @@ impl StandalonePythonExecutableBuilder {
     ) -> Result<PythonLinkingInfo> {
         let resources = self.resources.package(logger, &self.python_exe)?;
 
-        let temp_dir = TempDir::new("pyoxidizer-build-exe")?;
-        let temp_dir_path = temp_dir.path();
-
-        warn!(
-            logger,
-            "generating custom link library containing Python..."
-        );
-        let library_info = link_libpython(
-            logger,
-            &self.distribution,
-            &resources,
-            &temp_dir_path,
-            host,
-            target,
-            opt_level,
-        )?;
-
+        let libpython_filename;
         let mut cargo_metadata: Vec<String> = Vec::new();
-        cargo_metadata.extend(library_info.cargo_metadata);
+        let mut libpython_data = Vec::new();
+        let mut libpyembeddedconfig_data: Option<Vec<u8>> = None;
+        let mut libpyembeddedconfig_filename: Option<PathBuf> = None;
 
-        let libpython_data = std::fs::read(&library_info.libpython_path)?;
-        let libpyembeddedconfig_data = Some(std::fs::read(&library_info.libpyembeddedconfig_path)?);
+        match self.distribution.link_mode {
+            StandaloneDistributionLinkMode::Static => {
+                let temp_dir = TempDir::new("pyoxidizer-build-exe")?;
+                let temp_dir_path = temp_dir.path();
+
+                warn!(
+                    logger,
+                    "generating custom link library containing Python..."
+                );
+                let library_info = link_libpython(
+                    logger,
+                    &self.distribution,
+                    &resources,
+                    &temp_dir_path,
+                    host,
+                    target,
+                    opt_level,
+                )?;
+
+                libpython_filename =
+                    PathBuf::from(library_info.libpython_path.file_name().unwrap());
+                cargo_metadata.extend(library_info.cargo_metadata);
+
+                libpython_data = std::fs::read(&library_info.libpython_path)?;
+                libpyembeddedconfig_filename = Some(PathBuf::from(
+                    library_info.libpyembeddedconfig_path.file_name().unwrap(),
+                ));
+                libpyembeddedconfig_data =
+                    Some(std::fs::read(&library_info.libpyembeddedconfig_path)?);
+            }
+
+            StandaloneDistributionLinkMode::Dynamic => {
+                panic!("support for dynamically linked distributions not yet implemented");
+            }
+        }
 
         Ok(PythonLinkingInfo {
-            libpython_filename: PathBuf::from(library_info.libpython_path.file_name().unwrap()),
+            libpython_filename,
             libpython_data,
-            libpyembeddedconfig_filename: Some(PathBuf::from(
-                library_info.libpyembeddedconfig_path.file_name().unwrap(),
-            )),
+            libpyembeddedconfig_filename,
             libpyembeddedconfig_data,
             cargo_metadata,
         })
