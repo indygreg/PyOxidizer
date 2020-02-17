@@ -1206,7 +1206,7 @@ impl PythonDistribution for StandaloneDistribution {
                 // Only look at the raw object files if the distribution produces
                 // them.
                 // TODO have PythonDistribution expose API to determine this.
-                PythonResource::BuiltExtensionModule(_) =>
+                PythonResource::ExtensionModuleStaticallyLinked(_) =>
                     self.link_mode == StandaloneDistributionLinkMode::Static,
 
                 PythonResource::ModuleSource { .. } => true,

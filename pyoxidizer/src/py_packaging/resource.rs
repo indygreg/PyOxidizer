@@ -409,7 +409,7 @@ pub enum PythonResource {
         is_package: bool,
     },
     /// An extension module that was built from source and can be statically linked.
-    BuiltExtensionModule(ExtensionModuleData),
+    ExtensionModuleStaticallyLinked(ExtensionModuleData),
 }
 
 impl TryFrom<&PythonFileResource> for PythonResource {
@@ -524,8 +524,8 @@ impl PythonResource {
             PythonResource::ModuleBytecode { name, .. } => name.clone(),
             PythonResource::ModuleBytecodeRequest { name, .. } => name.clone(),
             PythonResource::Resource { package, name, .. } => format!("{}.{}", package, name),
-            PythonResource::BuiltExtensionModule(em) => em.name.clone(),
             PythonResource::ExtensionModuleDynamicLibrary { name, .. } => name.clone(),
+            PythonResource::ExtensionModuleStaticallyLinked(em) => em.name.clone(),
         }
     }
 
@@ -535,8 +535,8 @@ impl PythonResource {
             PythonResource::ModuleBytecode { name, .. } => name,
             PythonResource::ModuleBytecodeRequest { name, .. } => name,
             PythonResource::Resource { package, .. } => package,
-            PythonResource::BuiltExtensionModule(em) => &em.name,
             PythonResource::ExtensionModuleDynamicLibrary { name, .. } => name,
+            PythonResource::ExtensionModuleStaticallyLinked(em) => &em.name,
         };
 
         for package in packages {

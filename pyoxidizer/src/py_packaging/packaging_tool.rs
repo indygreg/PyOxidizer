@@ -206,7 +206,7 @@ pub fn find_resources(
 
     if let Some(p) = state_dir {
         for ext in read_built_extensions(&p)? {
-            res.push(PythonResource::BuiltExtensionModule(ext));
+            res.push(PythonResource::ExtensionModuleStaticallyLinked(ext));
         }
     }
 
