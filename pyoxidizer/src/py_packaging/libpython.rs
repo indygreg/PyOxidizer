@@ -111,7 +111,9 @@ pub fn make_config_c(
     }
 
     for em in built_extension_modules.values() {
-        lines.push(format!("extern PyObject* {}(void);", em.init_fn));
+        if let Some(init_fn) = &em.init_fn {
+            lines.push(format!("extern PyObject* {}(void);", init_fn));
+        }
     }
 
     lines.push(String::from("struct _inittab _PyImport_Inittab[] = {"));
@@ -127,7 +129,9 @@ pub fn make_config_c(
     }
 
     for em in built_extension_modules.values() {
-        lines.push(format!("{{\"{}\", {}}},", em.name, em.init_fn));
+        if let Some(init_fn) = &em.init_fn {
+            lines.push(format!("{{\"{}\", {}}},", em.name, init_fn));
+        }
     }
 
     lines.push(String::from("{0, 0}"));

@@ -701,7 +701,7 @@ mod tests {
         let mut r = EmbeddedPythonResourcesPrePackaged::default();
         let em = ExtensionModuleData {
             name: "foo.bar".to_string(),
-            init_fn: "".to_string(),
+            init_fn: Some("".to_string()),
             extension_file_suffix: "".to_string(),
             extension_data: None,
             object_file_data: vec![],

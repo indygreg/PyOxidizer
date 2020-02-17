@@ -309,7 +309,7 @@ impl ResourceData {
     }
 }
 
-/// Represents an extension module built during packaging.
+/// Represents an extension module that can be packaged.
 ///
 /// This is like a light version of `ExtensionModule`.
 #[derive(Clone, Debug, PartialEq)]
@@ -317,7 +317,7 @@ pub struct ExtensionModuleData {
     /// The module name this extension module is providing.
     pub name: String,
     /// Name of the C function initializing this extension module.
-    pub init_fn: String,
+    pub init_fn: Option<String>,
     /// Filename suffix to use when writing extension module data.
     pub extension_file_suffix: String,
     /// File data for linked extension module.
@@ -498,8 +498,7 @@ impl TryFrom<&PythonFileResource> for PythonResource {
             } => Ok(PythonResource::ExtensionModuleDynamicLibrary(
                 ExtensionModuleData {
                     name: full_name.clone(),
-                    // TODO set init_fn properly.
-                    init_fn: "".to_string(),
+                    init_fn: None,
                     extension_file_suffix: extension_file_suffix.clone(),
                     extension_data: Some(std::fs::read(path)?),
                     object_file_data: vec![],

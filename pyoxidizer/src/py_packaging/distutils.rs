@@ -182,7 +182,7 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<ExtensionModuleData
 
         res.push(ExtensionModuleData {
             name: info.name.clone(),
-            init_fn,
+            init_fn: Some(init_fn),
             extension_file_suffix,
             extension_data,
             object_file_data,
