@@ -30,11 +30,7 @@ Dependencies
 
 Under the hood, ``pyembed`` makes direct use of the ``python-sys`` crate for
 low-level Python FFI bindings as well as the ``cpython`` crate for higher-level
-interfacing. Due to our special needs, **we currently require a fork of these
-crates**. These forks are maintained in the
-`canonical Git repository <https://github.com/indygreg/PyOxidizer.git>`_.
-Customizations to these crates are actively upstreamed and the requirement
-to use a fork should go away in time.
+interfacing.
 
 **It is an explicit goal of this crate to rely on as few external dependencies
 as possible.** This is because we want to minimize bloat in produced binaries.
