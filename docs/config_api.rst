@@ -268,9 +268,17 @@ the active build target as defined by ``BUILD_TARGET``, respectively.
 of the following:
 
 ``standalone``
-   A distribution produced by the ``python-build-standalone`` project. These
-   distributions allow producing a self-contained, statically linked binary
-   embedding Python.
+   A distribution produced by the ``python-build-standalone`` project. The
+   distribution may be statically or dynamically linked, depending on the
+   ``build_target`` and availability.
+
+``standalone_static``
+   This is like ``standalone`` but the distribution must have a statically
+   linked ``libpython``.
+
+``standalone_dynamic``
+   This is like ``standalone`` but the distribution must have a dynamically
+   linked ``libpython``.
 
 ``windows_embeddable``
    A Windows-only distribution format defined by a zip file. These distributions

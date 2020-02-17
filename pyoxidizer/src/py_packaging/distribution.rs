@@ -15,7 +15,8 @@ use {
     super::standalone_distribution::{ExtensionModule, StandaloneDistribution},
     super::windows_embeddable_distribution::WindowsEmbeddableDistribution,
     crate::python_distributions::{
-        CPYTHON_STANDALONE_STATIC_BY_TRIPLE, CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE,
+        CPYTHON_STANDALONE_DYNAMIC_BY_TRIPLE, CPYTHON_STANDALONE_STATIC_BY_TRIPLE,
+        CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE,
     },
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
@@ -390,6 +391,12 @@ pub enum DistributionFlavor {
     /// Distributions coming from the `python-build-standalone` project.
     Standalone,
 
+    /// Statically linked distributions coming from the `python-build-standalone` project.
+    StandaloneStatic,
+
+    /// Dynamically linked distributions coming from the `python-build-standalone` project.
+    StandaloneDynamic,
+
     /// "Embeddable" zip-file based distributions that work on Windows.
     WindowsEmbeddable,
 }
@@ -415,6 +422,14 @@ pub fn resolve_distribution(
             logger, &location, dest_dir,
         )?) as Box<dyn PythonDistribution>,
 
+        DistributionFlavor::StandaloneStatic => Box::new(StandaloneDistribution::from_location(
+            logger, &location, dest_dir,
+        )?) as Box<dyn PythonDistribution>,
+
+        DistributionFlavor::StandaloneDynamic => Box::new(StandaloneDistribution::from_location(
+            logger, &location, dest_dir,
+        )?) as Box<dyn PythonDistribution>,
+
         DistributionFlavor::WindowsEmbeddable => Box::new(
             WindowsEmbeddableDistribution::from_location(logger, &location, dest_dir)?,
         ) as Box<dyn PythonDistribution>,
@@ -427,7 +442,15 @@ pub fn default_distribution_location(
     target: &str,
 ) -> Result<PythonDistributionLocation> {
     let dist = match flavor {
-        DistributionFlavor::Standalone => CPYTHON_STANDALONE_STATIC_BY_TRIPLE.get(target),
+        DistributionFlavor::Standalone => {
+            if let Some(dist) = CPYTHON_STANDALONE_STATIC_BY_TRIPLE.get(target) {
+                Some(dist)
+            } else {
+                CPYTHON_STANDALONE_DYNAMIC_BY_TRIPLE.get(target)
+            }
+        }
+        DistributionFlavor::StandaloneStatic => CPYTHON_STANDALONE_STATIC_BY_TRIPLE.get(target),
+        DistributionFlavor::StandaloneDynamic => CPYTHON_STANDALONE_DYNAMIC_BY_TRIPLE.get(target),
         DistributionFlavor::WindowsEmbeddable => CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE.get(target),
     }
     .ok_or_else(|| anyhow!("could not find default Python distribution for {}", target))?;

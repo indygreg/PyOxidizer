@@ -63,6 +63,27 @@ lazy_static! {
 
         res
     };
+    pub static ref CPYTHON_STANDALONE_DYNAMIC_BY_TRIPLE: BTreeMap<String, HostedDistribution> = {
+        let mut res: BTreeMap<String, HostedDistribution> = BTreeMap::new();
+
+        res.insert(
+            "i686-pc-windows-msvc".to_string(),
+            HostedDistribution {
+                url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20200216/cpython-3.7.6-windows-x86-shared-pgo-20200217T0110.tar.zst"),
+                sha256: String::from("a77b2245f0109fa80cd46adeb40815a1e8892002fffa64293a9702f50d547bc2"),
+            },
+        );
+
+        res.insert(
+            "x86_64-pc-windows-msvc".to_string(),
+            HostedDistribution {
+                url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20200216/cpython-3.7.6-windows-amd64-shared-pgo-20200217T0022.tar.zst"),
+                sha256: String::from("35ccece4950147a9344e4843bc6148882b12b79806707726b15e846eb6cfed4e"),
+            },
+        );
+
+        res
+    };
     pub static ref CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE: BTreeMap<String, HostedDistribution> = {
         let mut res: BTreeMap<String, HostedDistribution> = BTreeMap::new();
 

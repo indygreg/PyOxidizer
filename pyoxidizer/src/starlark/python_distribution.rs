@@ -145,7 +145,7 @@ impl TypedValue for PythonDistribution {
 
 // Starlark functions.
 impl PythonDistribution {
-    /// default_python_distribution(build_target=None)
+    /// default_python_distribution(flavor, build_target=None)
     fn default_python_distribution(
         env: &Environment,
         flavor: &Value,
@@ -161,6 +161,8 @@ impl PythonDistribution {
 
         let flavor = match flavor.as_ref() {
             "standalone" => DistributionFlavor::Standalone,
+            "standalone_static" => DistributionFlavor::StandaloneStatic,
+            "standalone_dynamic" => DistributionFlavor::StandaloneDynamic,
             "windows_embeddable" => DistributionFlavor::WindowsEmbeddable,
             v => {
                 return Err(RuntimeError {
@@ -881,6 +883,24 @@ mod tests {
         assert_eq!(dist.get_type(), "PythonDistribution");
 
         let host_distribution = crate::python_distributions::CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE
+            .get(crate::project_building::HOST)
+            .unwrap();
+
+        let wanted = PythonDistributionLocation::Url {
+            url: host_distribution.url.clone(),
+            sha256: host_distribution.sha256.clone(),
+        };
+
+        dist.downcast_apply(|x: &PythonDistribution| assert_eq!(x.source, wanted));
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn test_default_python_distribution_dynamic_windows() {
+        let dist = starlark_ok("default_python_distribution(flavor='standalone_dynamic')");
+        assert_eq!(dist.get_type(), "PythonDistribution");
+
+        let host_distribution = crate::python_distributions::CPYTHON_STANDALONE_DYNAMIC_BY_TRIPLE
             .get(crate::project_building::HOST)
             .unwrap();
 

@@ -28,6 +28,9 @@ Not yet released.
 New Features
 ^^^^^^^^^^^^
 
+* The ``default_python_distribution()`` Starlark function now accepts values
+  ``standalone_static`` and ``standalone_dynamic`` to specify a *standalone*
+  distribution that is either statically or dynamically linked.
 * Support for parsing version 4 of the ``PYTHON.json`` distribution descriptor
   present in standalone Python distribution archives.
 * Default Python distributions upgraded to CPython 3.7.6.
