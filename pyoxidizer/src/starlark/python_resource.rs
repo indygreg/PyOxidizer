@@ -209,17 +209,21 @@ impl TypedValue for PythonResourceData {
     }
 }
 
+/// Represents an extension module flavor.
 #[derive(Debug, Clone)]
 pub enum PythonExtensionModuleFlavor {
-    Persisted(ExtensionModule),
-    Built(ExtensionModuleData),
+    /// An extension module from a Python distribution.
+    Distribution(ExtensionModule),
+
+    /// An extension module that can be statically linked.
+    StaticallyLinked(ExtensionModuleData),
 }
 
 impl PythonExtensionModuleFlavor {
     pub fn name(&self) -> String {
         match self {
-            PythonExtensionModuleFlavor::Persisted(m) => m.module.clone(),
-            PythonExtensionModuleFlavor::Built(m) => m.name.clone(),
+            PythonExtensionModuleFlavor::Distribution(m) => m.module.clone(),
+            PythonExtensionModuleFlavor::StaticallyLinked(m) => m.name.clone(),
         }
     }
 }
@@ -330,7 +334,7 @@ impl<'a> From<&'a PythonResource> for Value {
 
             PythonResource::ExtensionModuleStaticallyLinked(em) => {
                 Value::new(PythonExtensionModule {
-                    em: PythonExtensionModuleFlavor::Built(em.clone()),
+                    em: PythonExtensionModuleFlavor::StaticallyLinked(em.clone()),
                 })
             }
         }

@@ -264,15 +264,18 @@ impl FileManifest {
                 let m = resource.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
 
                 match m {
-                    PythonExtensionModuleFlavor::Persisted(m) => {
-                        warn!(logger, "adding extension module {} to {}", m.module, prefix);
+                    PythonExtensionModuleFlavor::Distribution(m) => {
+                        warn!(
+                            logger,
+                            "adding distribution module {} to {}", m.module, prefix
+                        );
                         self.add_extension_module(&prefix, &m);
                         Ok(())
                     }
-                    PythonExtensionModuleFlavor::Built(m) => {
+                    PythonExtensionModuleFlavor::StaticallyLinked(m) => {
                         warn!(
                             logger,
-                            "adding built extension module {} to {}", m.name, prefix
+                            "adding statically linked extension module {} to {}", m.name, prefix
                         );
                         m.add_to_file_manifest(&mut self.manifest, &prefix)
                             .or_else(|e| {

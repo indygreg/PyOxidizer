@@ -428,7 +428,7 @@ impl PythonDistribution {
                 .iter()
                 .map(|em| {
                     Value::new(PythonExtensionModule {
-                        em: PythonExtensionModuleFlavor::Persisted(em.clone()),
+                        em: PythonExtensionModuleFlavor::Distribution(em.clone()),
                     })
                 })
                 .collect_vec(),

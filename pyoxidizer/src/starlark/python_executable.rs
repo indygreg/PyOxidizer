@@ -191,10 +191,10 @@ impl PythonExecutable {
         info!(&logger, "adding embedded extension module {}", m.name());
 
         match m {
-            PythonExtensionModuleFlavor::Persisted(m) => {
+            PythonExtensionModuleFlavor::Distribution(m) => {
                 self.exe.add_extension_module(&m);
             }
-            PythonExtensionModuleFlavor::Built(m) => {
+            PythonExtensionModuleFlavor::StaticallyLinked(m) => {
                 self.exe.add_extension_module_data(&m);
             }
         }
