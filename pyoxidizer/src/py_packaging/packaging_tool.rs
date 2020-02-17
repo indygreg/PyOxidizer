@@ -169,7 +169,12 @@ pub fn bootstrap_packaging_tools(
 }
 
 /// Find resources installed as part of a packaging operation.
-pub fn find_resources(path: &Path, state_dir: Option<PathBuf>) -> Result<Vec<PythonResource>> {
+pub fn find_resources(
+    logger: &slog::Logger,
+    dist: &dyn PythonDistribution,
+    path: &Path,
+    state_dir: Option<PathBuf>,
+) -> Result<Vec<PythonResource>> {
     let mut res = Vec::new();
 
     for r in find_python_resources(&path) {
@@ -188,6 +193,13 @@ pub fn find_resources(path: &Path, state_dir: Option<PathBuf>) -> Result<Vec<Pyt
                 );
             }
 
+            PythonFileResource::ExtensionModule { .. } => {
+                res.push(
+                    PythonResource::try_from(&r)
+                        .context("converting extension module file to PythonResource")?,
+                );
+            }
+
             _ => {}
         }
     }
@@ -198,7 +210,7 @@ pub fn find_resources(path: &Path, state_dir: Option<PathBuf>) -> Result<Vec<Pyt
         }
     }
 
-    Ok(res)
+    dist.filter_compatible_python_resources(logger, &res)
 }
 
 /// Run `pip install` and return found resources.
@@ -268,14 +280,19 @@ pub fn pip_install<S: BuildHasher>(
         Some(p) => Some(PathBuf::from(p)),
         None => None,
     };
-    find_resources(&target_dir, state_dir)
+
+    find_resources(logger, dist, &target_dir, state_dir)
 }
 
 /// Discover Python resources from a populated virtualenv directory.
-pub fn read_virtualenv(dist: &dyn PythonDistribution, path: &Path) -> Result<Vec<PythonResource>> {
+pub fn read_virtualenv(
+    logger: &slog::Logger,
+    dist: &dyn PythonDistribution,
+    path: &Path,
+) -> Result<Vec<PythonResource>> {
     let python_paths = resolve_python_paths(path, &dist.python_major_minor_version());
 
-    find_resources(&python_paths.site_packages, None)
+    find_resources(logger, dist, &python_paths.site_packages, None)
 }
 
 /// Run `setup.py install` against a path and return found resources.
@@ -363,12 +380,12 @@ pub fn setup_py_install<S: BuildHasher>(
         "scanning {} for resources",
         python_paths.site_packages.display()
     );
-    find_resources(&python_paths.site_packages, state_dir)
+    find_resources(logger, dist, &python_paths.site_packages, state_dir)
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::testutil::*, std::ops::Deref};
+    use {super::*, crate::testutil::*, itertools::Itertools, std::ops::Deref};
 
     #[test]
     fn test_install_black() -> Result<()> {
@@ -385,6 +402,34 @@ mod tests {
 
         assert!(resources.iter().any(|r| r.full_name() == "appdirs"));
         assert!(resources.iter().any(|r| r.full_name() == "black"));
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn test_install_cffi() -> Result<()> {
+        let logger = get_logger()?;
+
+        let distribution = get_default_dynamic_distribution()?;
+
+        let resources: Vec<PythonResource> = pip_install(
+            &logger,
+            distribution.deref().as_ref(),
+            false,
+            &["cffi==1.14.0".to_string()],
+            &HashMap::new(),
+        )?;
+
+        let ems = resources
+            .iter()
+            .filter(|r| match r {
+                PythonResource::ExtensionModule { .. } => true,
+                _ => false,
+            })
+            .collect::<Vec<&PythonResource>>();
+
+        assert_eq!(ems.len(), 1);
 
         Ok(())
     }

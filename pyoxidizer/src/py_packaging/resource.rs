@@ -375,7 +375,7 @@ impl ExtensionModuleData {
 }
 
 /// Represents a resource to make available to the Python interpreter.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum PythonResource {
     ExtensionModule {
         name: String,
@@ -487,9 +487,28 @@ impl TryFrom<&PythonFileResource> for PythonResource {
                 })
             }
 
-            PythonFileResource::ExtensionModule { .. } => {
-                Err(anyhow!("converting ExtensionModule not yet supported"))
-            }
+            PythonFileResource::ExtensionModule {
+                full_name, path, ..
+            } => Ok(PythonResource::ExtensionModule {
+                name: full_name.clone(),
+                // TODO fill in remaining fields. Or use a better type to represent standalone
+                // extension module files.
+                module: ExtensionModule {
+                    module: full_name.clone(),
+                    init_fn: None,
+                    builtin_default: false,
+                    disableable: false,
+                    object_paths: vec![],
+                    static_library: None,
+                    shared_library: Some(path.clone()),
+                    links: vec![],
+                    required: false,
+                    variant: "default".to_string(),
+                    licenses: None,
+                    license_paths: None,
+                    license_public_domain: None,
+                },
+            }),
 
             PythonFileResource::EggFile { .. } => {
                 Err(anyhow!("converting egg files not yet supported"))

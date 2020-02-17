@@ -518,14 +518,17 @@ impl PythonDistribution {
             .into())
         })?;
 
-        let resources = find_resources(&Path::new(&path), None).or_else(|e| {
-            Err(RuntimeError {
-                code: "PACKAGE_ROOT_ERROR",
-                message: format!("could not find resources: {}", e),
-                label: "read_package_root()".to_string(),
-            }
-            .into())
-        })?;
+        let dist = self.distribution.as_ref().unwrap();
+
+        let resources = find_resources(&logger, dist.deref().as_ref(), Path::new(&path), None)
+            .or_else(|e| {
+                Err(RuntimeError {
+                    code: "PACKAGE_ROOT_ERROR",
+                    message: format!("could not find resources: {}", e),
+                    label: "read_package_root()".to_string(),
+                }
+                .into())
+            })?;
 
         Ok(Value::from(
             resources
@@ -553,8 +556,8 @@ impl PythonDistribution {
         })?;
         let dist = self.distribution.as_ref().unwrap();
 
-        let resources =
-            raw_read_virtualenv(dist.deref().as_ref(), &Path::new(&path)).or_else(|e| {
+        let resources = raw_read_virtualenv(&logger, dist.deref().as_ref(), &Path::new(&path))
+            .or_else(|e| {
                 Err(RuntimeError {
                     code: "VIRTUALENV_ERROR",
                     message: format!("could not find resources: {}", e),

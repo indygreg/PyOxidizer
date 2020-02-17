@@ -21,8 +21,8 @@ use {
     },
     super::libpython::{derive_importlib, link_libpython, ImportlibBytecode},
     super::resource::{
-        BytecodeModule, BytecodeOptimizationLevel, DataLocation, ExtensionModuleData, ResourceData,
-        SourceModule,
+        BytecodeModule, BytecodeOptimizationLevel, DataLocation, ExtensionModuleData,
+        PythonResource, ResourceData, SourceModule,
     },
     crate::app_packaging::resource::{FileContent, FileManifest},
     crate::licensing::NON_GPL_LICENSES,
@@ -1167,6 +1167,46 @@ impl PythonDistribution for StandaloneDistribution {
         } else {
             Ok(HashMap::new())
         }
+    }
+
+    fn filter_compatible_python_resources(
+        &self,
+        logger: &slog::Logger,
+        resources: &[PythonResource],
+    ) -> Result<Vec<PythonResource>> {
+        Ok(resources
+            .iter()
+            .filter(|resource| match resource {
+                // Standalone extension modules are only compatible with distributions
+                // that are dynamically linked.
+                // TODO we should be able to support dynamically linked extension
+                // modules outside of Windows.
+                PythonResource::ExtensionModule { .. } => {
+                    if self.link_mode == StandaloneDistributionLinkMode::Static {
+                        warn!(
+                            logger,
+                            "ignoring extension module {} because not compatible with statically linked distribution",
+                            resource.full_name()
+                        );
+                        false
+                    } else {
+                        true
+                    }
+                }
+
+                // Only look at the raw object files if the distribution produces
+                // them.
+                // TODO have PythonDistribution expose API to determine this.
+                PythonResource::BuiltExtensionModule(_) =>
+                    self.link_mode == StandaloneDistributionLinkMode::Static,
+
+                PythonResource::ModuleSource { .. } => true,
+                PythonResource::ModuleBytecodeRequest { .. } => true,
+                PythonResource::ModuleBytecode { .. } => true,
+                PythonResource::Resource { .. } => true,
+            })
+            .cloned()
+            .collect())
     }
 }
 

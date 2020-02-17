@@ -16,7 +16,9 @@ use {
     super::embedded_resource::EmbeddedPythonResourcesPrePackaged,
     super::libpython::{derive_importlib, ImportlibBytecode},
     super::packaging_tool::bootstrap_packaging_tools,
-    super::resource::{BytecodeModule, ExtensionModuleData, ResourceData, SourceModule},
+    super::resource::{
+        BytecodeModule, ExtensionModuleData, PythonResource, ResourceData, SourceModule,
+    },
     super::standalone_distribution::ExtensionModule,
     crate::analyze::find_pe_dependencies_path,
     crate::app_packaging::resource::FileManifest,
@@ -347,6 +349,14 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         // Since we don't need to hack distutils to target the Windows embeddable
         // distributions, no hacking is necessary.
         Ok(HashMap::new())
+    }
+
+    fn filter_compatible_python_resources(
+        &self,
+        _logger: &slog::Logger,
+        resources: &[PythonResource],
+    ) -> Result<Vec<PythonResource>> {
+        Ok(resources.to_vec())
     }
 }
 

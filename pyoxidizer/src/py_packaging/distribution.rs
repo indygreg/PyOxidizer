@@ -11,7 +11,7 @@ use {
     super::bytecode::BytecodeCompiler,
     super::config::EmbeddedPythonConfig,
     super::libpython::ImportlibBytecode,
-    super::resource::{ResourceData, SourceModule},
+    super::resource::{PythonResource, ResourceData, SourceModule},
     super::standalone_distribution::{ExtensionModule, StandaloneDistribution},
     super::windows_embeddable_distribution::WindowsEmbeddableDistribution,
     crate::python_distributions::{
@@ -163,6 +163,17 @@ pub trait PythonDistribution {
         dest_dir: &Path,
         extra_python_paths: &[&Path],
     ) -> Result<HashMap<String, String>>;
+
+    /// Filter a collection of `PythonResource` through this distribution.
+    ///
+    /// We will throw away resources that aren't compatible with us. For
+    /// example, on statically linked Windows distributions, dynamically linked
+    /// extension module files are ignored.
+    fn filter_compatible_python_resources(
+        &self,
+        logger: &slog::Logger,
+        resources: &[PythonResource],
+    ) -> Result<Vec<PythonResource>>;
 }
 
 /// Multiple threads or processes could race to extract the archive.
