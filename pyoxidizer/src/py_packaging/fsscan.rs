@@ -124,6 +124,7 @@ pub enum PythonFileResource {
         stem: String,
         full_name: String,
         path: PathBuf,
+        extension_file_suffix: String,
     },
 
     /// A non-module Python resource.
@@ -289,6 +290,7 @@ impl PythonResourceIterator {
                     stem,
                     full_name: full_module_name,
                     path: path.to_path_buf(),
+                    extension_file_suffix: ext_suffix.clone(),
                 });
             }
         }
@@ -727,6 +729,7 @@ mod tests {
                 stem: "_cffi_backend".to_string(),
                 full_name: "_cffi_backend".to_string(),
                 path: cffi_path,
+                extension_file_suffix: ".cp37-win_amd64.pyd".to_string(),
             }
         );
         assert_eq!(
@@ -736,6 +739,7 @@ mod tests {
                 stem: "bar".to_string(),
                 full_name: "bar".to_string(),
                 path: so_path,
+                extension_file_suffix: ".so".to_string(),
             }
         );
         assert_eq!(
@@ -745,6 +749,7 @@ mod tests {
                 stem: "foo".to_string(),
                 full_name: "foo".to_string(),
                 path: pyd_path,
+                extension_file_suffix: ".pyd".to_string(),
             }
         );
         assert_eq!(
@@ -754,6 +759,7 @@ mod tests {
                 stem: "_speedups".to_string(),
                 full_name: "markupsafe._speedups".to_string(),
                 path: markupsafe_speedups_path,
+                extension_file_suffix: ".cpython-37m-x86_64-linux-gnu.so".to_string(),
             }
         );
         assert_eq!(
@@ -763,6 +769,7 @@ mod tests {
                 stem: "zstd".to_string(),
                 full_name: "zstd".to_string(),
                 path: zstd_path,
+                extension_file_suffix: ".cpython-37m-x86_64-linux-gnu.so".to_string(),
             }
         );
 

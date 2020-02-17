@@ -491,13 +491,16 @@ impl TryFrom<&PythonFileResource> for PythonResource {
             }
 
             PythonFileResource::ExtensionModule {
-                full_name, path, ..
+                full_name,
+                path,
+                extension_file_suffix,
+                ..
             } => Ok(PythonResource::ExtensionModuleDynamicLibrary(
                 ExtensionModuleData {
                     name: full_name.clone(),
-                    // TODO set init_fn and extension_file_suffix properly.
+                    // TODO set init_fn properly.
                     init_fn: "".to_string(),
-                    extension_file_suffix: "".to_string(),
+                    extension_file_suffix: extension_file_suffix.clone(),
                     extension_data: Some(std::fs::read(path)?),
                     object_file_data: vec![],
                     is_package: is_package_from_path(path),
