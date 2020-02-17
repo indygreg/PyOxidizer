@@ -35,6 +35,14 @@ New Features
   present in standalone Python distribution archives.
 * Default Python distributions upgraded to CPython 3.7.6.
 
+Other Relevant Changes
+^^^^^^^^^^^^^^^^^^^^^^
+
+* The documentation for the ``pyembed`` crate has been moved out of the
+  Sphinx documentation and into the Rust crate itself. Rendered docs can be
+  seen by following the *Documentation* link at https://crates.io/crates/pyembed
+  or by running ``cargo doc`` from a source checkout.
+
 .. _version_0_6_0:
 
 0.6.0

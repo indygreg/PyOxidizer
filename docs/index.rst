@@ -37,5 +37,4 @@ The creator and maintainer of ``PyOxidizer`` is
    comparisons
    contributing
    history
-   pyembed
    technotes
