@@ -6,12 +6,14 @@
 Scanning the filesystem for Python resources.
 */
 
-use anyhow::{Context, Result};
-use itertools::Itertools;
-use std::collections::{BTreeMap, HashSet};
-use std::ffi::OsStr;
-use std::fs;
-use std::path::{Path, PathBuf};
+use {
+    anyhow::{Context, Result},
+    itertools::Itertools,
+    std::collections::{BTreeMap, HashSet},
+    std::ffi::OsStr,
+    std::fs,
+    std::path::{Path, PathBuf},
+};
 
 pub fn is_package_from_path(path: &Path) -> bool {
     let file_name = path.file_name().unwrap().to_str().unwrap();
@@ -555,8 +557,10 @@ pub fn find_python_modules(root_path: &Path) -> Result<BTreeMap<String, Vec<u8>>
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::fs::{create_dir_all, write};
+    use {
+        super::*,
+        std::fs::{create_dir_all, write},
+    };
 
     #[test]
     fn test_source_resolution() {
