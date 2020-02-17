@@ -338,9 +338,9 @@ impl ExtensionModuleData {
     pub fn file_name(&self) -> String {
         if let Some(idx) = self.name.rfind('.') {
             let name = &self.name[idx + 1..self.name.len()];
-            format!("{}.{}", name, self.extension_file_suffix)
+            format!("{}{}", name, self.extension_file_suffix)
         } else {
-            format!("{}.{}", self.name, self.extension_file_suffix)
+            format!("{}{}", self.name, self.extension_file_suffix)
         }
     }
 

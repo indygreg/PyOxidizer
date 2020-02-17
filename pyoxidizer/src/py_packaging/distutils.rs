@@ -159,7 +159,7 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<ExtensionModuleData
             .to_string();
 
         let extension_file_suffix = if let Some(idx) = extension_file_name.find('.') {
-            extension_file_name[idx + 1..extension_file_name.len()].to_string()
+            extension_file_name[idx..extension_file_name.len()].to_string()
         } else {
             extension_file_name
         };
