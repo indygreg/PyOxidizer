@@ -98,7 +98,7 @@ pub trait PythonBinaryBuilder {
     ) -> Result<EmbeddedPythonBinaryData>;
 
     /// Extra files to install next to a built binary.
-    fn extra_install_files(&self, logger: &slog::Logger) -> Result<FileManifest>;
+    fn extra_install_files(&self, logger: &slog::Logger, prefix: &str) -> Result<FileManifest>;
 }
 
 /// Describes how to link a binary against Python.

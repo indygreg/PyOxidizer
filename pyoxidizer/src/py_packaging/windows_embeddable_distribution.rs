@@ -602,7 +602,7 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
         })
     }
 
-    fn extra_install_files(&self, _logger: &slog::Logger) -> Result<FileManifest> {
+    fn extra_install_files(&self, _logger: &slog::Logger, _prefix: &str) -> Result<FileManifest> {
         unimplemented!()
     }
 }

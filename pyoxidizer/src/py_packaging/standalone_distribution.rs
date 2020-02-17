@@ -1363,17 +1363,18 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         })
     }
 
-    fn extra_install_files(&self, logger: &slog::Logger) -> Result<FileManifest> {
+    fn extra_install_files(&self, logger: &slog::Logger, prefix: &str) -> Result<FileManifest> {
         let mut m = FileManifest::default();
 
         if self.distribution.link_mode == StandaloneDistributionLinkMode::Dynamic {
             if let Some(p) = &self.distribution.libpython_shared_library {
+                let manifest_path = Path::new(prefix).join(p.file_name().unwrap());
                 let content = FileContent {
-                    data: std::fs::read(p)?,
+                    data: std::fs::read(&p)?,
                     executable: false,
                 };
 
-                m.add_file(&PathBuf::from(p.file_name().unwrap()), &content)?;
+                m.add_file(&manifest_path, &content)?;
             }
 
             for em in self.distribution.filter_extension_modules(
@@ -1382,9 +1383,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 self.extension_module_variants.clone(),
             )? {
                 if let Some(p) = &em.shared_library {
-                    // TODO should the path prefix be configurable?
                     m.add_file(
-                        Path::new(p.file_name().unwrap()),
+                        &Path::new(prefix).join(p.file_name().unwrap()),
                         &FileContent {
                             data: std::fs::read(p)?,
                             executable: false,
