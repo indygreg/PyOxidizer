@@ -845,7 +845,7 @@ starlark_module! { python_distribution_module =>
 mod tests {
     use {
         super::super::testutil::*, super::*,
-        crate::python_distributions::CPYTHON_STANDALONE_BY_TRIPLE,
+        crate::python_distributions::CPYTHON_STANDALONE_STATIC_BY_TRIPLE,
     };
 
     #[test]
@@ -853,7 +853,7 @@ mod tests {
         let dist = starlark_ok("default_python_distribution()");
         assert_eq!(dist.get_type(), "PythonDistribution");
 
-        let host_distribution = CPYTHON_STANDALONE_BY_TRIPLE
+        let host_distribution = CPYTHON_STANDALONE_STATIC_BY_TRIPLE
             .get(crate::project_building::HOST)
             .unwrap();
 

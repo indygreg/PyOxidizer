@@ -8,7 +8,7 @@ use {
     crate::py_packaging::standalone_distribution::StandaloneDistribution,
     crate::py_packaging::windows_embeddable_distribution::WindowsEmbeddableDistribution,
     crate::python_distributions::{
-        CPYTHON_STANDALONE_BY_TRIPLE, CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE,
+        CPYTHON_STANDALONE_STATIC_BY_TRIPLE, CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE,
     },
     anyhow::Result,
     core::sync::atomic::{AtomicUsize, Ordering},
@@ -33,7 +33,7 @@ lazy_static! {
     pub static ref DEFAULT_DISTRIBUTION: Arc<Box<StandaloneDistribution>> = {
         let path = DEFAULT_DISTRIBUTION_TEMP_DIR.path();
 
-        let hosted_distribution = CPYTHON_STANDALONE_BY_TRIPLE
+        let hosted_distribution = CPYTHON_STANDALONE_STATIC_BY_TRIPLE
             .get(env!("HOST"))
             .expect("target triple not supported");
 

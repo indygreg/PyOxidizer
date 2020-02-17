@@ -15,7 +15,7 @@ use {
     super::standalone_distribution::{ExtensionModule, StandaloneDistribution},
     super::windows_embeddable_distribution::WindowsEmbeddableDistribution,
     crate::python_distributions::{
-        CPYTHON_STANDALONE_BY_TRIPLE, CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE,
+        CPYTHON_STANDALONE_STATIC_BY_TRIPLE, CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE,
     },
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
@@ -427,7 +427,7 @@ pub fn default_distribution_location(
     target: &str,
 ) -> Result<PythonDistributionLocation> {
     let dist = match flavor {
-        DistributionFlavor::Standalone => CPYTHON_STANDALONE_BY_TRIPLE.get(target),
+        DistributionFlavor::Standalone => CPYTHON_STANDALONE_STATIC_BY_TRIPLE.get(target),
         DistributionFlavor::WindowsEmbeddable => CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE.get(target),
     }
     .ok_or_else(|| anyhow!("could not find default Python distribution for {}", target))?;
