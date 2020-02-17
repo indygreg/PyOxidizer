@@ -42,7 +42,7 @@ fn build_with_artifacts_in_dir(path: &Path) {
 /// Build by calling a `pyoxidizer` executable to generate build artifacts.
 fn build_with_pyoxidizer_exe(exe: Option<String>, resolve_target: Option<&str>) {
     let pyoxidizer_exe = if let Some(path) = exe {
-        path.clone()
+        path
     } else {
         "pyoxidizer".to_string()
     };
