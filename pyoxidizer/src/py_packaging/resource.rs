@@ -403,11 +403,8 @@ pub enum PythonResource {
         data: DataLocation,
     },
     /// An extension module that is represented by a dynamic library.
-    ExtensionModuleDynamicLibrary {
-        name: String,
-        data: DataLocation,
-        is_package: bool,
-    },
+    ExtensionModuleDynamicLibrary(ExtensionModuleData),
+
     /// An extension module that was built from source and can be statically linked.
     ExtensionModuleStaticallyLinked(ExtensionModuleData),
 }
@@ -495,11 +492,19 @@ impl TryFrom<&PythonFileResource> for PythonResource {
 
             PythonFileResource::ExtensionModule {
                 full_name, path, ..
-            } => Ok(PythonResource::ExtensionModuleDynamicLibrary {
-                name: full_name.clone(),
-                data: DataLocation::Memory(std::fs::read(path)?),
-                is_package: is_package_from_path(path),
-            }),
+            } => Ok(PythonResource::ExtensionModuleDynamicLibrary(
+                ExtensionModuleData {
+                    name: full_name.clone(),
+                    // TODO set init_fn and extension_file_suffix properly.
+                    init_fn: "".to_string(),
+                    extension_file_suffix: "".to_string(),
+                    extension_data: Some(std::fs::read(path)?),
+                    object_file_data: vec![],
+                    is_package: is_package_from_path(path),
+                    libraries: vec![],
+                    library_dirs: vec![],
+                },
+            )),
 
             PythonFileResource::EggFile { .. } => {
                 Err(anyhow!("converting egg files not yet supported"))
@@ -524,7 +529,7 @@ impl PythonResource {
             PythonResource::ModuleBytecode { name, .. } => name.clone(),
             PythonResource::ModuleBytecodeRequest { name, .. } => name.clone(),
             PythonResource::Resource { package, name, .. } => format!("{}.{}", package, name),
-            PythonResource::ExtensionModuleDynamicLibrary { name, .. } => name.clone(),
+            PythonResource::ExtensionModuleDynamicLibrary(em) => em.name.clone(),
             PythonResource::ExtensionModuleStaticallyLinked(em) => em.name.clone(),
         }
     }
@@ -535,7 +540,7 @@ impl PythonResource {
             PythonResource::ModuleBytecode { name, .. } => name,
             PythonResource::ModuleBytecodeRequest { name, .. } => name,
             PythonResource::Resource { package, .. } => package,
-            PythonResource::ExtensionModuleDynamicLibrary { name, .. } => name,
+            PythonResource::ExtensionModuleDynamicLibrary(em) => &em.name,
             PythonResource::ExtensionModuleStaticallyLinked(em) => &em.name,
         };
 
