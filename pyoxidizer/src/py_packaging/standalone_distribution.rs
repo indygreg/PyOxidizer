@@ -1156,12 +1156,17 @@ impl PythonDistribution for StandaloneDistribution {
         dest_dir: &Path,
         extra_python_paths: &[&Path],
     ) -> Result<HashMap<String, String>> {
-        prepare_hacked_distutils(
-            logger,
-            &self.stdlib_path.join("distutils"),
-            dest_dir,
-            extra_python_paths,
-        )
+        // We only need to patch distutils if the distribution is statically linked.
+        if self.link_mode == StandaloneDistributionLinkMode::Static {
+            prepare_hacked_distutils(
+                logger,
+                &self.stdlib_path.join("distutils"),
+                dest_dir,
+                extra_python_paths,
+            )
+        } else {
+            Ok(HashMap::new())
+        }
     }
 }
 
