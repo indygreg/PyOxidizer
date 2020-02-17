@@ -424,7 +424,7 @@ mod tests {
         let ems = resources
             .iter()
             .filter(|r| match r {
-                PythonResource::ExtensionModule { .. } => true,
+                PythonResource::ExtensionModuleDynamicLibrary { .. } => true,
                 _ => false,
             })
             .collect::<Vec<&PythonResource>>();

@@ -9,7 +9,6 @@ Defines primitives representing Python resources.
 use {
     super::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode},
     super::fsscan::{is_package_from_path, PythonFileResource},
-    super::standalone_distribution::ExtensionModule,
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Context, Error, Result},
     serde::{Deserialize, Serialize},
@@ -377,32 +376,39 @@ impl ExtensionModuleData {
 /// Represents a resource to make available to the Python interpreter.
 #[derive(Clone, Debug)]
 pub enum PythonResource {
-    ExtensionModule {
-        name: String,
-        module: ExtensionModule,
-    },
+    /// A module defined by source code.
     ModuleSource {
         name: String,
         source: DataLocation,
         is_package: bool,
     },
+    /// A module defined by a request to generate bytecode from source.
     ModuleBytecodeRequest {
         name: String,
         source: DataLocation,
         optimize_level: i32,
         is_package: bool,
     },
+    /// A module defined by existing bytecode.
     ModuleBytecode {
         name: String,
         bytecode: DataLocation,
         optimize_level: BytecodeOptimizationLevel,
         is_package: bool,
     },
+    /// A non-module resource file.
     Resource {
         package: String,
         name: String,
         data: DataLocation,
     },
+    /// An extension module that is represented by a dynamic library.
+    ExtensionModuleDynamicLibrary {
+        name: String,
+        data: DataLocation,
+        is_package: bool,
+    },
+    /// An extension module that was built from source and can be statically linked.
     BuiltExtensionModule(ExtensionModuleData),
 }
 
@@ -489,25 +495,10 @@ impl TryFrom<&PythonFileResource> for PythonResource {
 
             PythonFileResource::ExtensionModule {
                 full_name, path, ..
-            } => Ok(PythonResource::ExtensionModule {
+            } => Ok(PythonResource::ExtensionModuleDynamicLibrary {
                 name: full_name.clone(),
-                // TODO fill in remaining fields. Or use a better type to represent standalone
-                // extension module files.
-                module: ExtensionModule {
-                    module: full_name.clone(),
-                    init_fn: None,
-                    builtin_default: false,
-                    disableable: false,
-                    object_paths: vec![],
-                    static_library: None,
-                    shared_library: Some(path.clone()),
-                    links: vec![],
-                    required: false,
-                    variant: "default".to_string(),
-                    licenses: None,
-                    license_paths: None,
-                    license_public_domain: None,
-                },
+                data: DataLocation::Memory(std::fs::read(path)?),
+                is_package: is_package_from_path(path),
             }),
 
             PythonFileResource::EggFile { .. } => {
@@ -534,7 +525,7 @@ impl PythonResource {
             PythonResource::ModuleBytecodeRequest { name, .. } => name.clone(),
             PythonResource::Resource { package, name, .. } => format!("{}.{}", package, name),
             PythonResource::BuiltExtensionModule(em) => em.name.clone(),
-            PythonResource::ExtensionModule { name, .. } => name.clone(),
+            PythonResource::ExtensionModuleDynamicLibrary { name, .. } => name.clone(),
         }
     }
 
@@ -545,7 +536,7 @@ impl PythonResource {
             PythonResource::ModuleBytecodeRequest { name, .. } => name,
             PythonResource::Resource { package, .. } => package,
             PythonResource::BuiltExtensionModule(em) => &em.name,
-            PythonResource::ExtensionModule { name, .. } => name,
+            PythonResource::ExtensionModuleDynamicLibrary { name, .. } => name,
         };
 
         for package in packages {

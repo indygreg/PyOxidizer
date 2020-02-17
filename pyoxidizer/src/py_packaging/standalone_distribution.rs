@@ -1190,7 +1190,7 @@ impl PythonDistribution for StandaloneDistribution {
                 // that are dynamically linked.
                 // TODO we should be able to support dynamically linked extension
                 // modules outside of Windows.
-                PythonResource::ExtensionModule { .. } => {
+                PythonResource::ExtensionModuleDynamicLibrary { .. } => {
                     if self.link_mode == StandaloneDistributionLinkMode::Static {
                         warn!(
                             logger,

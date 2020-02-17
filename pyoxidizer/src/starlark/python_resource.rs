@@ -324,7 +324,7 @@ impl<'a> From<&'a PythonResource> for Value {
                 },
             }),
 
-            PythonResource::ExtensionModule { .. } => {
+            PythonResource::ExtensionModuleDynamicLibrary { .. } => {
                 panic!("not yet implemented");
             }
 
