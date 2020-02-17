@@ -287,6 +287,21 @@ impl FileManifest {
                                 .into())
                             })
                     }
+                    PythonExtensionModuleFlavor::DynamicLibrary(m) => {
+                        warn!(
+                            logger,
+                            "adding dynamic library extension module {} to {}", m.name, prefix
+                        );
+                        m.add_to_file_manifest(&mut self.manifest, &prefix)
+                            .or_else(|e| {
+                                Err(RuntimeError {
+                                    code: "PYOXIDIZER_BUILD",
+                                    message: e.to_string(),
+                                    label: "add_python_resource".to_string(),
+                                }
+                                .into())
+                            })
+                    }
                 }
             }
             "PythonExecutable" => {

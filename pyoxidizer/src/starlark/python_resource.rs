@@ -217,6 +217,9 @@ pub enum PythonExtensionModuleFlavor {
 
     /// An extension module that can be statically linked.
     StaticallyLinked(ExtensionModuleData),
+
+    /// An extension module that exists as a dynamic library.
+    DynamicLibrary(ExtensionModuleData),
 }
 
 impl PythonExtensionModuleFlavor {
@@ -224,6 +227,7 @@ impl PythonExtensionModuleFlavor {
         match self {
             PythonExtensionModuleFlavor::Distribution(m) => m.module.clone(),
             PythonExtensionModuleFlavor::StaticallyLinked(m) => m.name.clone(),
+            PythonExtensionModuleFlavor::DynamicLibrary(m) => m.name.clone(),
         }
     }
 }
