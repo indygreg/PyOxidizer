@@ -11,7 +11,7 @@ use {
     super::distribution::{
         extract_zip, resolve_python_distribution_from_location, DistributionExtractLock,
         ExtensionModuleFilter, PythonDistribution, PythonDistributionLocation,
-        IMPORTLIB_BOOTSTRAP_EXTERNAL_PY_37, IMPORTLIB_BOOTSTRAP_PY_37,
+        PythonModuleSuffixes, IMPORTLIB_BOOTSTRAP_EXTERNAL_PY_37, IMPORTLIB_BOOTSTRAP_PY_37,
     },
     super::embedded_resource::EmbeddedPythonResourcesPrePackaged,
     super::libpython::{derive_importlib, ImportlibBytecode},
@@ -250,6 +250,10 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
 
     fn python_major_minor_version(&self) -> String {
         unimplemented!()
+    }
+
+    fn python_module_suffixes(&self) -> Result<PythonModuleSuffixes> {
+        PythonModuleSuffixes::resolve_from_python_exe(&self.python_exe)
     }
 
     fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler> {

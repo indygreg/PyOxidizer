@@ -13,6 +13,7 @@ use {
     super::distribution::{
         is_stdlib_test_package, resolve_python_distribution_from_location, DistributionExtractLock,
         ExtensionModuleFilter, PythonDistribution, PythonDistributionLocation,
+        PythonModuleSuffixes,
     },
     super::distutils::prepare_hacked_distutils,
     super::embedded_resource::EmbeddedPythonResourcesPrePackaged,
@@ -936,6 +937,12 @@ impl PythonDistribution for StandaloneDistribution {
 
     fn python_major_minor_version(&self) -> String {
         self.version[0..3].to_string()
+    }
+
+    fn python_module_suffixes(&self) -> Result<PythonModuleSuffixes> {
+        // TODO convey the suffixes in the PYTHON.json file so we can avoid having
+        // to invoke the Python interpreter.
+        PythonModuleSuffixes::resolve_from_python_exe(&self.python_exe)
     }
 
     fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler> {
