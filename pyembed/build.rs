@@ -35,7 +35,7 @@ fn build_with_artifacts_in_dir(path: &Path) {
     // Emit the cargo metadata lines to register libraries for linking.
     let cargo_metadata_path = path.join("cargo_metadata.txt");
     let metadata = std::fs::read_to_string(&cargo_metadata_path)
-        .expect(format!("failed to read {}", cargo_metadata_path.display()).as_str());
+        .unwrap_or_else(|_| panic!("failed to read {}", cargo_metadata_path.display()));
     println!("{}", metadata);
 }
 
