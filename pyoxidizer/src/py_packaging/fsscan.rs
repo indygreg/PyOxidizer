@@ -654,23 +654,41 @@ mod tests {
     }
 
     #[test]
-    fn test_extension_module() {
-        let td = tempdir::TempDir::new("pyoxidizer-test").unwrap();
+    fn test_extension_module() -> Result<()> {
+        let td = tempdir::TempDir::new("pyoxidizer-test")?;
         let tp = td.path();
 
-        create_dir_all(&tp).unwrap();
+        create_dir_all(&tp.join("markupsafe"))?;
 
         let pyd_path = tp.join("foo.pyd");
         let so_path = tp.join("bar.so");
+        let cffi_path = tp.join("_cffi_backend.cp37-win_amd64.pyd");
+        let markupsafe_speedups_path = tp
+            .join("markupsafe")
+            .join("_speedups.cpython-37m-x86_64-linux-gnu.so");
+        let zstd_path = tp.join("zstd.cpython-37m-x86_64-linux-gnu.so");
 
-        write(&pyd_path, "").unwrap();
-        write(&so_path, "").unwrap();
+        write(&pyd_path, "")?;
+        write(&so_path, "")?;
+        write(&cffi_path, "")?;
+        write(&markupsafe_speedups_path, "")?;
+        write(&zstd_path, "")?;
 
         let resources = PythonResourceIterator::new(tp).collect_vec();
-        assert_eq!(resources.len(), 2);
+
+        assert_eq!(resources.len(), 5);
 
         assert_eq!(
             resources[0],
+            PythonFileResource::ExtensionModule {
+                package: "_cffi_backend.cp37-win_amd64".to_string(),
+                stem: "_cffi_backend.cp37-win_amd64".to_string(),
+                full_name: "_cffi_backend.cp37-win_amd64".to_string(),
+                path: cffi_path,
+            }
+        );
+        assert_eq!(
+            resources[1],
             PythonFileResource::ExtensionModule {
                 package: "bar".to_string(),
                 stem: "bar".to_string(),
@@ -678,9 +696,8 @@ mod tests {
                 path: so_path,
             }
         );
-
         assert_eq!(
-            resources[1],
+            resources[2],
             PythonFileResource::ExtensionModule {
                 package: "foo".to_string(),
                 stem: "foo".to_string(),
@@ -688,6 +705,26 @@ mod tests {
                 path: pyd_path,
             }
         );
+        assert_eq!(
+            resources[3],
+            PythonFileResource::ExtensionModule {
+                package: "markupsafe".to_string(),
+                stem: "_speedups.cpython-37m-x86_64-linux-gnu".to_string(),
+                full_name: "markupsafe._speedups.cpython-37m-x86_64-linux-gnu".to_string(),
+                path: markupsafe_speedups_path,
+            }
+        );
+        assert_eq!(
+            resources[4],
+            PythonFileResource::ExtensionModule {
+                package: "zstd.cpython-37m-x86_64-linux-gnu".to_string(),
+                stem: "zstd.cpython-37m-x86_64-linux-gnu".to_string(),
+                full_name: "zstd.cpython-37m-x86_64-linux-gnu".to_string(),
+                path: zstd_path,
+            }
+        );
+
+        Ok(())
     }
 
     #[test]
