@@ -430,6 +430,7 @@ mod tests {
             .collect::<Vec<&PythonResource>>();
 
         assert_eq!(ems.len(), 1);
+        assert_eq!(ems[0].full_name(), "_cffi_backend");
 
         Ok(())
     }

@@ -258,6 +258,42 @@ impl PythonResourceIterator {
             }
         }
 
+        let file_name = rel_path.file_name().unwrap().to_string_lossy();
+
+        for ext_suffix in &self.suffixes.extension {
+            if file_name.ends_with(ext_suffix) {
+                let package_parts = &components[0..components.len() - 1];
+                let mut package = itertools::join(package_parts, ".");
+
+                let module_name = &file_name[0..file_name.len() - ext_suffix.len()];
+
+                let mut full_module_name: Vec<&str> = package_parts.to_vec();
+
+                let stem = if module_name == "__init__" {
+                    "".to_string()
+                } else {
+                    full_module_name.push(module_name);
+                    module_name.to_string()
+                };
+
+                let full_module_name = itertools::join(full_module_name, ".");
+
+                if package.is_empty() {
+                    package = full_module_name.clone();
+                }
+
+                self.seen_packages.insert(package.clone());
+
+                return Some(PythonFileResource::ExtensionModule {
+                    package,
+                    stem,
+                    full_name: full_module_name,
+                    path: path.to_path_buf(),
+                });
+            }
+        }
+
+        // TODO use registered suffixes for source and bytecode detection.
         let resource = match rel_path.extension().and_then(OsStr::to_str) {
             Some("py") => {
                 let package_parts = &components[0..components.len() - 1];
@@ -365,43 +401,6 @@ impl PythonResourceIterator {
                         full_name: full_module_name,
                         path: path.to_path_buf(),
                     }
-                }
-            }
-            Some("pyd") | Some("so") => {
-                let package_parts = &components[0..components.len() - 1];
-                let mut package = itertools::join(package_parts, ".");
-
-                // TODO there can be a path component before the file extension that further
-                // identifies the extension module flavor. We need to look for and elide that.
-
-                let module_name = rel_path
-                    .file_stem()
-                    .expect("unable to get file stem")
-                    .to_str()
-                    .expect("unable to convert path to str");
-
-                let mut full_module_name: Vec<&str> = package_parts.to_vec();
-
-                let stem = if module_name == "__init__" {
-                    "".to_string()
-                } else {
-                    full_module_name.push(module_name);
-                    module_name.to_string()
-                };
-
-                let full_module_name = itertools::join(full_module_name, ".");
-
-                if package.is_empty() {
-                    package = full_module_name.clone();
-                }
-
-                self.seen_packages.insert(package.clone());
-
-                PythonFileResource::ExtensionModule {
-                    package,
-                    stem,
-                    full_name: full_module_name,
-                    path: path.to_path_buf(),
                 }
             }
             Some("egg") => PythonFileResource::EggFile {
@@ -708,7 +707,13 @@ mod tests {
             bytecode: vec![],
             debug_bytecode: vec![],
             optimized_bytecode: vec![],
-            extension: vec![],
+            extension: vec![
+                ".cp37-win_amd64.pyd".to_string(),
+                ".cp37-win32.pyd".to_string(),
+                ".cpython-37m-x86_64-linux-gnu.so".to_string(),
+                ".pyd".to_string(),
+                ".so".to_string(),
+            ],
         };
 
         let resources = PythonResourceIterator::new(tp, &suffixes).collect_vec();
@@ -718,9 +723,9 @@ mod tests {
         assert_eq!(
             resources[0],
             PythonFileResource::ExtensionModule {
-                package: "_cffi_backend.cp37-win_amd64".to_string(),
-                stem: "_cffi_backend.cp37-win_amd64".to_string(),
-                full_name: "_cffi_backend.cp37-win_amd64".to_string(),
+                package: "_cffi_backend".to_string(),
+                stem: "_cffi_backend".to_string(),
+                full_name: "_cffi_backend".to_string(),
                 path: cffi_path,
             }
         );
@@ -746,17 +751,17 @@ mod tests {
             resources[3],
             PythonFileResource::ExtensionModule {
                 package: "markupsafe".to_string(),
-                stem: "_speedups.cpython-37m-x86_64-linux-gnu".to_string(),
-                full_name: "markupsafe._speedups.cpython-37m-x86_64-linux-gnu".to_string(),
+                stem: "_speedups".to_string(),
+                full_name: "markupsafe._speedups".to_string(),
                 path: markupsafe_speedups_path,
             }
         );
         assert_eq!(
             resources[4],
             PythonFileResource::ExtensionModule {
-                package: "zstd.cpython-37m-x86_64-linux-gnu".to_string(),
-                stem: "zstd.cpython-37m-x86_64-linux-gnu".to_string(),
-                full_name: "zstd.cpython-37m-x86_64-linux-gnu".to_string(),
+                package: "zstd".to_string(),
+                stem: "zstd".to_string(),
+                full_name: "zstd".to_string(),
                 path: zstd_path,
             }
         );
