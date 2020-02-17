@@ -960,13 +960,7 @@ mod tests {
         let default_length = data_default.length().unwrap();
         let data_length = data_tests.length().unwrap();
 
-        // TODO there is likely a bug in the Windows distribution or resource
-        // detection logic.
-        if cfg!(windows) {
-            assert_eq!(default_length, data_length);
-        } else {
-            assert!(default_length < data_length);
-        }
+        assert!(default_length < data_length);
     }
 
     #[test]

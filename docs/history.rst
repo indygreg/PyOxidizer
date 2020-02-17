@@ -30,6 +30,7 @@ New Features
 
 * Support for parsing version 4 of the ``PYTHON.json`` distribution descriptor
   present in standalone Python distribution archives.
+* Default Python distributions upgraded to CPython 3.7.6.
 
 .. _version_0_6_0:
 
