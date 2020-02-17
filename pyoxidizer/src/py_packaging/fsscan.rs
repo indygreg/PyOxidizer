@@ -7,6 +7,7 @@ Scanning the filesystem for Python resources.
 */
 
 use {
+    super::distribution::PythonModuleSuffixes,
     anyhow::{Context, Result},
     itertools::Itertools,
     std::collections::{BTreeMap, HashSet},
@@ -149,13 +150,14 @@ pub enum PythonFileResource {
 
 pub struct PythonResourceIterator {
     root_path: PathBuf,
+    suffixes: PythonModuleSuffixes,
     walkdir_result: Box<dyn Iterator<Item = walkdir::DirEntry>>,
     seen_packages: HashSet<String>,
     resources: Vec<FileBasedResource>,
 }
 
 impl PythonResourceIterator {
-    fn new(path: &Path) -> PythonResourceIterator {
+    fn new(path: &Path, suffixes: &PythonModuleSuffixes) -> PythonResourceIterator {
         let res = walkdir::WalkDir::new(path).sort_by(|a, b| a.file_name().cmp(b.file_name()));
 
         let filtered = res.into_iter().filter_map(|entry| {
@@ -172,6 +174,7 @@ impl PythonResourceIterator {
 
         PythonResourceIterator {
             root_path: path.to_path_buf(),
+            suffixes: suffixes.clone(),
             walkdir_result: Box::new(filtered),
             seen_packages: HashSet::new(),
             resources: Vec::new(),
@@ -534,14 +537,20 @@ impl Iterator for PythonResourceIterator {
 /// can be addressed via the ``A.B.C`` naming convention.
 ///
 /// Returns an iterator of ``PythonResource`` instances.
-pub fn find_python_resources(root_path: &Path) -> PythonResourceIterator {
-    PythonResourceIterator::new(root_path)
+pub fn find_python_resources(
+    root_path: &Path,
+    suffixes: &PythonModuleSuffixes,
+) -> PythonResourceIterator {
+    PythonResourceIterator::new(root_path, suffixes)
 }
 
-pub fn find_python_modules(root_path: &Path) -> Result<BTreeMap<String, Vec<u8>>> {
+pub fn find_python_modules(
+    root_path: &Path,
+    suffixes: &PythonModuleSuffixes,
+) -> Result<BTreeMap<String, Vec<u8>>> {
     let mut mods = BTreeMap::new();
 
-    for resource in find_python_resources(root_path) {
+    for resource in find_python_resources(root_path, suffixes) {
         if let PythonFileResource::Source {
             full_name, path, ..
         } = resource
@@ -580,7 +589,15 @@ mod tests {
 
         write(acme_a_path.join("foo.py"), "# acme.foo").unwrap();
 
-        let resources = PythonResourceIterator::new(tp).collect_vec();
+        let suffixes = PythonModuleSuffixes {
+            source: vec![],
+            bytecode: vec![],
+            debug_bytecode: vec![],
+            optimized_bytecode: vec![],
+            extension: vec![],
+        };
+
+        let resources = PythonResourceIterator::new(tp, &suffixes).collect_vec();
         assert_eq!(resources.len(), 4);
 
         assert_eq!(
@@ -634,7 +651,15 @@ mod tests {
         write(acme_path.join("__init__.py"), "").unwrap();
         write(acme_path.join("bar.py"), "").unwrap();
 
-        let resources = PythonResourceIterator::new(tp).collect_vec();
+        let suffixes = PythonModuleSuffixes {
+            source: vec![],
+            bytecode: vec![],
+            debug_bytecode: vec![],
+            optimized_bytecode: vec![],
+            extension: vec![],
+        };
+
+        let resources = PythonResourceIterator::new(tp, &suffixes).collect_vec();
         assert_eq!(resources.len(), 2);
 
         assert_eq!(
@@ -678,7 +703,15 @@ mod tests {
         write(&markupsafe_speedups_path, "")?;
         write(&zstd_path, "")?;
 
-        let resources = PythonResourceIterator::new(tp).collect_vec();
+        let suffixes = PythonModuleSuffixes {
+            source: vec![],
+            bytecode: vec![],
+            debug_bytecode: vec![],
+            optimized_bytecode: vec![],
+            extension: vec![],
+        };
+
+        let resources = PythonResourceIterator::new(tp, &suffixes).collect_vec();
 
         assert_eq!(resources.len(), 5);
 
@@ -741,7 +774,15 @@ mod tests {
         let egg_path = tp.join("foo-1.0-py3.7.egg");
         write(&egg_path, "").unwrap();
 
-        let resources = PythonResourceIterator::new(tp).collect_vec();
+        let suffixes = PythonModuleSuffixes {
+            source: vec![],
+            bytecode: vec![],
+            debug_bytecode: vec![],
+            optimized_bytecode: vec![],
+            extension: vec![],
+        };
+
+        let resources = PythonResourceIterator::new(tp, &suffixes).collect_vec();
         assert_eq!(resources.len(), 1);
 
         assert_eq!(resources[0], PythonFileResource::EggFile { path: egg_path });
@@ -765,7 +806,15 @@ mod tests {
         write(package_path.join("__init__.py"), "").unwrap();
         write(package_path.join("bar.py"), "").unwrap();
 
-        let resources = PythonResourceIterator::new(tp).collect_vec();
+        let suffixes = PythonModuleSuffixes {
+            source: vec![],
+            bytecode: vec![],
+            debug_bytecode: vec![],
+            optimized_bytecode: vec![],
+            extension: vec![],
+        };
+
+        let resources = PythonResourceIterator::new(tp, &suffixes).collect_vec();
         assert_eq!(resources.len(), 2);
 
         assert_eq!(
@@ -798,7 +847,15 @@ mod tests {
         let pth_path = tp.join("foo.pth");
         write(&pth_path, "").unwrap();
 
-        let resources = PythonResourceIterator::new(tp).collect_vec();
+        let suffixes = PythonModuleSuffixes {
+            source: vec![],
+            bytecode: vec![],
+            debug_bytecode: vec![],
+            optimized_bytecode: vec![],
+            extension: vec![],
+        };
+
+        let resources = PythonResourceIterator::new(tp, &suffixes).collect_vec();
         assert_eq!(resources.len(), 1);
 
         assert_eq!(resources[0], PythonFileResource::PthFile { path: pth_path });

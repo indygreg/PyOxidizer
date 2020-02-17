@@ -714,7 +714,9 @@ impl StandaloneDistribution {
 
         let stdlib_path = python_path.join(pi.python_stdlib);
 
-        for entry in find_python_resources(&stdlib_path) {
+        let suffixes = PythonModuleSuffixes::resolve_from_python_exe(&python_exe_path(dist_dir)?)?;
+
+        for entry in find_python_resources(&stdlib_path, &suffixes) {
             match entry {
                 PythonFileResource::Resource(resource) => {
                     if !resources.contains_key(&resource.package) {
