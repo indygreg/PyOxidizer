@@ -47,6 +47,9 @@ pub struct FileBasedResource {
 /// Represents a Python resource backed by the filesystem.
 #[derive(Debug, PartialEq)]
 pub enum PythonFileResource {
+    /// Python module source code.
+    ///
+    /// i.e. a .py file.
     Source {
         /// Python package name of this resource.
         ///
@@ -80,6 +83,9 @@ pub enum PythonFileResource {
         path: PathBuf,
     },
 
+    /// A Python module bytecode file.
+    ///
+    /// i.e. a .pyc file.
     Bytecode {
         package: String,
         stem: String,
@@ -87,6 +93,9 @@ pub enum PythonFileResource {
         path: PathBuf,
     },
 
+    /// A Python module bytecode file, compiled at optimization level 1.
+    ///
+    /// i.e. a .opt-1.pyc file.
     BytecodeOpt1 {
         package: String,
         stem: String,
@@ -94,6 +103,9 @@ pub enum PythonFileResource {
         path: PathBuf,
     },
 
+    /// A Python module bytecode file, compiled at optimization level 2.
+    ///
+    /// i.e. a .opt-2.pyc file.
     BytecodeOpt2 {
         package: String,
         stem: String,
@@ -101,6 +113,9 @@ pub enum PythonFileResource {
         path: PathBuf,
     },
 
+    /// A compiled extension module.
+    ///
+    /// i.e. a .so or .pyd file.
     ExtensionModule {
         package: String,
         stem: String,
@@ -108,16 +123,20 @@ pub enum PythonFileResource {
         path: PathBuf,
     },
 
+    /// A non-module Python resource.
     Resource(FileBasedResource),
 
-    EggFile {
-        path: PathBuf,
-    },
+    /// A Python egg.
+    ///
+    /// i.e. a .egg file.
+    EggFile { path: PathBuf },
 
-    PthFile {
-        path: PathBuf,
-    },
+    /// A Python path extension file.
+    ///
+    /// i.e. a .pth file.
+    PthFile { path: PathBuf },
 
+    /// Any other file.
     Other {
         package: String,
         stem: String,
