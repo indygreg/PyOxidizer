@@ -9,22 +9,23 @@ This module defines a Python meta path importer and associated functionality
 for importing Python modules from memory.
 */
 
-use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
-use std::ffi::CStr;
-use std::io::Cursor;
-use std::sync::Arc;
-
-use byteorder::{LittleEndian, ReadBytesExt};
-use cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError};
-use cpython::{
-    py_class, py_class_impl, py_coerce_item, py_fn, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr,
-    PyList, PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
+use {
+    super::pyinterp::PYOXIDIZER_IMPORTER_NAME,
+    byteorder::{LittleEndian, ReadBytesExt},
+    cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError},
+    cpython::{
+        py_class, py_class_impl, py_coerce_item, py_fn, NoArgs, ObjectProtocol, PyClone, PyDict,
+        PyErr, PyList, PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject,
+        ToPyObject,
+    },
+    python3_sys as pyffi,
+    python3_sys::{PyBUF_READ, PyMemoryView_FromMemory},
+    std::cell::RefCell,
+    std::collections::{HashMap, HashSet},
+    std::ffi::CStr,
+    std::io::Cursor,
+    std::sync::Arc,
 };
-use python3_sys as pyffi;
-use python3_sys::{PyBUF_READ, PyMemoryView_FromMemory};
-
-use super::pyinterp::PYOXIDIZER_IMPORTER_NAME;
 
 /// Obtain a Python memoryview referencing a memory slice.
 ///

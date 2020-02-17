@@ -4,8 +4,6 @@
 
 //! Manage an embedded Python interpreter.
 
-#[cfg(feature = "jemalloc-sys")]
-use super::pyalloc::make_raw_jemalloc_allocator;
 use {
     super::config::{PythonConfig, PythonRawAllocator, PythonRunMode, TerminfoResolution},
     super::importer::PyInit__pyoxidizer_importer,
@@ -27,6 +25,9 @@ use {
     std::path::PathBuf,
     std::ptr::null,
 };
+
+#[cfg(feature = "jemalloc-sys")]
+use super::pyalloc::make_raw_jemalloc_allocator;
 
 pub const PYOXIDIZER_IMPORTER_NAME: &[u8] = b"_pyoxidizer_importer\0";
 

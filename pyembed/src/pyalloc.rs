@@ -4,14 +4,15 @@
 
 //! Custom Python memory allocators.
 
+use {
+    libc::{c_void, size_t},
+    python3_sys as pyffi,
+    std::alloc,
+    std::collections::HashMap,
+};
+
 #[cfg(feature = "jemalloc-sys")]
-use jemalloc_sys as jemallocffi;
-use libc::{c_void, size_t};
-use python3_sys as pyffi;
-use std::alloc;
-use std::collections::HashMap;
-#[cfg(feature = "jemalloc-sys")]
-use std::ptr::null_mut;
+use {jemalloc_sys as jemallocffi, std::ptr::null_mut};
 
 const MIN_ALIGN: usize = 16;
 

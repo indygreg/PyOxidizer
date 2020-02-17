@@ -4,17 +4,19 @@
 
 //! Bridge Rust and Python string types.
 
-use libc::{c_void, size_t, wchar_t};
-use python3_sys as pyffi;
-use std::ffi::{CString, OsString};
-use std::ptr::null_mut;
+use {
+    cpython::{PyObject, Python},
+    libc::{c_void, size_t, wchar_t},
+    python3_sys as pyffi,
+    std::ffi::{CString, OsString},
+    std::ptr::null_mut,
+};
 
 #[cfg(target_family = "unix")]
 use std::os::unix::ffi::OsStrExt;
+
 #[cfg(target_family = "windows")]
 use std::os::windows::prelude::OsStrExt;
-
-use cpython::{PyObject, Python};
 
 #[derive(Debug)]
 pub struct OwnedPyStr {
