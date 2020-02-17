@@ -332,8 +332,10 @@ impl<'a> From<&'a PythonResource> for Value {
                 },
             }),
 
-            PythonResource::ExtensionModuleDynamicLibrary { .. } => {
-                panic!("not yet implemented");
+            PythonResource::ExtensionModuleDynamicLibrary(em) => {
+                Value::new(PythonExtensionModule {
+                    em: PythonExtensionModuleFlavor::DynamicLibrary(em.clone()),
+                })
             }
 
             PythonResource::ExtensionModuleStaticallyLinked(em) => {
