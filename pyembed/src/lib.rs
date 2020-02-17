@@ -30,6 +30,7 @@ mod osutils;
 mod pyalloc;
 mod pyinterp;
 mod pystr;
+pub mod specifications;
 
 #[allow(unused_imports)]
 pub use crate::config::{
