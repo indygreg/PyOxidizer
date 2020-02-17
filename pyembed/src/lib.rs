@@ -49,12 +49,36 @@ must be named `pythonXY`.
 
 # Features
 
-The optional `jemalloc-sys` feature controls support for using
+The optional `jemalloc` feature controls support for using
 [jemalloc](http://jemalloc.net/) as Python's memory allocator. Use of Jemalloc
 from Python is a run-time configuration option controlled by the
 `PythonConfig` type and having `jemalloc` compiled into the binary does not
 mean it is being used!
 
+There exist mutually exclusive `build-mode-*` features to control how the
+`build.rs` build script works.
+
+`build-mode-standalone` (the default) builds the crate as a standalone crate
+and doesn't attempt to do anything special at build time.
+
+`build-mode-pyoxidizer-exe` attempts to invoke a `pyoxidizer` executable
+to build required artifacts.
+
+`build-mode-prebuilt-artifacts` will attempt to use artifacts produced by
+`PyOxidizer` out-of-band. In this mode, the `PYOXIDIZER_ARTIFACT_DIR`
+environment variable can refer to the directory containing build artifacts
+that this crate needs. If not set, `OUT_DIR` will be used.
+
+The exist mutually exclusive `cpython-link-*` features to control how
+the `cpython`/`python3-sys` crates are built.
+
+`cpython-link-unresolved-static` instructs to leave the Python symbols
+as unresolved. This crate will provide a static library providing the
+symbols.
+
+`cpython-link-default` builds `cpython` with default link mode control.
+That crate's build script will attempt to find a `libpython` from the
+`python` defined by `PYTHON_SYS_EXECUTABLE` or present on `PATH`.
 
 */
 
