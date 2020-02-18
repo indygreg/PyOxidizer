@@ -54,8 +54,24 @@ impl Default for PythonImporterState {
 }
 
 impl PythonImporterState {
+    /// Load state from the environment and by parsing data structures.
+    pub fn load(
+        &mut self,
+        modules_data: &'static [u8],
+        resources_data: &'static [u8],
+    ) -> Result<(), &'static str> {
+        // Last write wins. So start with core modules then move on to more
+        // local data.
+        self.load_interpreter_builtin_modules()?;
+        self.load_interpreter_frozen_modules()?;
+        self.load_modules_data(modules_data)?;
+        self.load_resources_data(resources_data)?;
+
+        Ok(())
+    }
+
     /// Load `builtin` modules from the Python interpreter.
-    pub fn load_interpreter_builtin_modules(&mut self) -> Result<(), &'static str> {
+    fn load_interpreter_builtin_modules(&mut self) -> Result<(), &'static str> {
         for i in 0.. {
             let record = unsafe { pyffi::PyImport_Inittab.offset(i) };
 
@@ -78,7 +94,7 @@ impl PythonImporterState {
     }
 
     /// Load `frozen` modules from the Python interpreter.
-    pub fn load_interpreter_frozen_modules(&mut self) -> Result<(), &'static str> {
+    fn load_interpreter_frozen_modules(&mut self) -> Result<(), &'static str> {
         for i in 0.. {
             let record = unsafe { pyffi::PyImport_FrozenModules.offset(i) };
 
@@ -101,7 +117,7 @@ impl PythonImporterState {
     }
 
     /// Parse binary modules data and update current data structure.
-    pub fn load_modules_data(&mut self, data: &'static [u8]) -> Result<(), &'static str> {
+    fn load_modules_data(&mut self, data: &'static [u8]) -> Result<(), &'static str> {
         let mut reader = Cursor::new(data);
 
         let count = reader
@@ -196,7 +212,7 @@ impl PythonImporterState {
         Ok(())
     }
 
-    pub fn load_resources_data(&mut self, data: &'static [u8]) -> Result<(), &'static str> {
+    fn load_resources_data(&mut self, data: &'static [u8]) -> Result<(), &'static str> {
         let mut reader = Cursor::new(data);
 
         let package_count = reader

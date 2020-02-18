@@ -475,22 +475,7 @@ fn module_setup(
 
     let mut importer_state = PythonImporterState::default();
 
-    // Populate our importer with entries from the interpreter then in-memory data
-    // structures. The last write wins. That's why we load builtins and frozens before
-    // data provided by us.
-    if let Err(e) = importer_state.load_interpreter_builtin_modules() {
-        return Err(PyErr::new::<ValueError, _>(py, e));
-    }
-
-    if let Err(e) = importer_state.load_interpreter_frozen_modules() {
-        return Err(PyErr::new::<ValueError, _>(py, e));
-    }
-
-    if let Err(e) = importer_state.load_modules_data(state.py_modules_data) {
-        return Err(PyErr::new::<ValueError, _>(py, e));
-    }
-
-    if let Err(e) = importer_state.load_resources_data(state.py_resources_data) {
+    if let Err(e) = importer_state.load(state.py_modules_data, state.py_resources_data) {
         return Err(PyErr::new::<ValueError, _>(py, e));
     }
 
