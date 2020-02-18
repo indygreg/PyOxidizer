@@ -30,9 +30,9 @@ lazy_static! {
         res.insert(
             "x86_64-unknown-linux-musl".to_string(),
             HostedDistribution {
-                url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20200216/cpython-3.7.6-linux64-musl-20200216T2355.tar.zst"),
+                url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20200217/cpython-3.7.6-linux64-musl-20200218T0557.tar.zst"),
                 sha256: String::from(
-                    "283ecac3fff2f907766b295750fcb4a04957d9cecebcd4da8c5c86c8780d8d2e",
+                    "d5e5d8681b0af13bc3e718a35d6237b3629908a669050cb8c8ab919a731c5718",
                 ),
             },
         );
