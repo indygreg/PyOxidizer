@@ -88,6 +88,7 @@ mod osutils;
 mod pyalloc;
 mod pyinterp;
 mod pystr;
+mod python_resources;
 pub mod specifications;
 pub mod technotes;
 

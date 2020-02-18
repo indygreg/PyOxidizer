@@ -11,7 +11,7 @@ for importing Python modules from memory.
 
 use {
     super::pyinterp::PYOXIDIZER_IMPORTER_NAME,
-    byteorder::{LittleEndian, ReadBytesExt},
+    super::python_resources::{PythonImporterState, PythonModuleLocation},
     cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError},
     cpython::{
         py_class, py_class_impl, py_coerce_item, py_fn, NoArgs, ObjectProtocol, PyClone, PyDict,
@@ -21,9 +21,7 @@ use {
     python3_sys as pyffi,
     python3_sys::{PyBUF_READ, PyMemoryView_FromMemory},
     std::cell::RefCell,
-    std::collections::{HashMap, HashSet},
-    std::ffi::CStr,
-    std::io::Cursor,
+    std::collections::HashMap,
     std::sync::Arc,
 };
 
@@ -32,223 +30,13 @@ use {
 /// New memoryview allows Python to access the underlying memory without
 /// copying it.
 #[inline]
-fn get_memory_view(py: Python, data: &'static [u8]) -> Option<PyObject> {
-    let ptr = unsafe { PyMemoryView_FromMemory(data.as_ptr() as _, data.len() as _, PyBUF_READ) };
-    unsafe { PyObject::from_owned_ptr_opt(py, ptr) }
-}
-
-/// Holds pointers to Python module data in memory.
-#[derive(Debug)]
-struct PythonModuleData {
-    source: Option<&'static [u8]>,
-    bytecode: Option<&'static [u8]>,
-}
-
-impl PythonModuleData {
-    /// Obtain a PyMemoryView instance for source data.
-    fn get_source_memory_view(&self, py: Python) -> Option<PyObject> {
-        match self.source {
-            Some(data) => get_memory_view(py, data),
-            None => None,
-        }
-    }
-
-    /// Obtain a PyMemoryView instance for bytecode data.
-    fn get_bytecode_memory_view(&self, py: Python) -> Option<PyObject> {
-        match self.bytecode {
-            Some(data) => get_memory_view(py, data),
-            None => None,
-        }
-    }
-}
-
-/// Represents Python modules data in memory.
-///
-/// This is essentially an index over a raw backing blob.
-struct PythonModulesData {
-    /// Packages in this set of modules.
-    packages: HashSet<&'static str>,
-
-    /// Maps module name to source/bytecode.
-    data: HashMap<&'static str, PythonModuleData>,
-}
-
-impl PythonModulesData {
-    /// Construct a new instance from a memory slice.
-    fn from(data: &'static [u8]) -> Result<PythonModulesData, &'static str> {
-        let mut reader = Cursor::new(data);
-
-        let count = reader
-            .read_u32::<LittleEndian>()
-            .or_else(|_| Err("failed reading count"))?;
-
-        let mut index = Vec::with_capacity(count as usize);
-        let mut total_names_length = 0;
-        let mut total_sources_length = 0;
-        let mut package_count = 0;
-
-        for _ in 0..count {
-            let name_length = reader
-                .read_u32::<LittleEndian>()
-                .or_else(|_| Err("failed reading name length"))?
-                as usize;
-            let source_length = reader
-                .read_u32::<LittleEndian>()
-                .or_else(|_| Err("failed reading source length"))?
-                as usize;
-            let bytecode_length = reader
-                .read_u32::<LittleEndian>()
-                .or_else(|_| Err("failed reading bytecode length"))?
-                as usize;
-            let flags = reader
-                .read_u32::<LittleEndian>()
-                .or_else(|_| Err("failed reading module flags"))?;
-
-            let is_package = flags & 0x01 != 0;
-
-            if is_package {
-                package_count += 1;
-            }
-
-            index.push((name_length, source_length, bytecode_length, is_package));
-            total_names_length += name_length;
-            total_sources_length += source_length;
-        }
-
-        let mut res = HashMap::with_capacity(count as usize);
-        let mut packages = HashSet::with_capacity(package_count);
-        let sources_start_offset = reader.position() as usize + total_names_length;
-        let bytecodes_start_offset = sources_start_offset + total_sources_length;
-
-        let mut sources_current_offset: usize = 0;
-        let mut bytecodes_current_offset: usize = 0;
-
-        for (name_length, source_length, bytecode_length, is_package) in index {
-            let offset = reader.position() as usize;
-
-            let name =
-                unsafe { std::str::from_utf8_unchecked(&data[offset..offset + name_length]) };
-
-            let source_offset = sources_start_offset + sources_current_offset;
-            let source = if source_length > 0 {
-                Some(&data[source_offset..source_offset + source_length])
-            } else {
-                None
-            };
-
-            let bytecode_offset = bytecodes_start_offset + bytecodes_current_offset;
-            let bytecode = if bytecode_length > 0 {
-                Some(&data[bytecode_offset..bytecode_offset + bytecode_length])
-            } else {
-                None
-            };
-
-            reader.set_position(offset as u64 + name_length as u64);
-
-            sources_current_offset += source_length;
-            bytecodes_current_offset += bytecode_length;
-
-            if is_package {
-                packages.insert(name);
-            }
-
-            // Extension modules will have their names present to populate the
-            // packages set. So only populate module data if we have data for it.
-            if source.is_some() || bytecode.is_some() {
-                res.insert(name, PythonModuleData { source, bytecode });
-            }
-        }
-
-        Ok(PythonModulesData {
-            packages,
-            data: res,
-        })
-    }
-}
-
-/// Represents Python resources data in memory.
-///
-/// This is essentially an index over a raw backing blob.
-struct PythonResourcesData {
-    packages: HashMap<&'static str, Arc<Box<HashMap<&'static str, &'static [u8]>>>>,
-}
-
-impl PythonResourcesData {
-    fn from(data: &'static [u8]) -> Result<PythonResourcesData, &'static str> {
-        let mut reader = Cursor::new(data);
-
-        let package_count = reader
-            .read_u32::<LittleEndian>()
-            .or_else(|_| Err("failed reading package count"))? as usize;
-
-        let mut index = Vec::with_capacity(package_count);
-        let mut total_names_length = 0;
-
-        for _ in 0..package_count {
-            let package_name_length = reader
-                .read_u32::<LittleEndian>()
-                .or_else(|_| Err("failed reading package name length"))?
-                as usize;
-            let resource_count = reader
-                .read_u32::<LittleEndian>()
-                .or_else(|_| Err("failed reading resource count"))?
-                as usize;
-
-            total_names_length += package_name_length;
-
-            let mut package_index = Vec::with_capacity(resource_count);
-
-            for _ in 0..resource_count {
-                let resource_name_length = reader
-                    .read_u32::<LittleEndian>()
-                    .or_else(|_| Err("failed reading resource name length"))?
-                    as usize;
-                let resource_data_length = reader
-                    .read_u32::<LittleEndian>()
-                    .or_else(|_| Err("failed reading resource data length"))?
-                    as usize;
-
-                total_names_length += resource_name_length;
-
-                package_index.push((resource_name_length, resource_data_length));
-            }
-
-            index.push((package_name_length, package_index));
-        }
-
-        let mut name_offset = reader.position() as usize;
-        let mut data_offset = name_offset + total_names_length;
-        let mut res = HashMap::new();
-
-        for (package_name_length, package_index) in index {
-            let package_name = unsafe {
-                std::str::from_utf8_unchecked(&data[name_offset..name_offset + package_name_length])
-            };
-
-            name_offset += package_name_length;
-
-            let mut package_data = Box::new(HashMap::new());
-
-            for (resource_name_length, resource_data_length) in package_index {
-                let resource_name = unsafe {
-                    std::str::from_utf8_unchecked(
-                        &data[name_offset..name_offset + resource_name_length],
-                    )
-                };
-
-                name_offset += resource_name_length;
-
-                let resource_data = &data[data_offset..data_offset + resource_data_length];
-
-                data_offset += resource_data_length;
-
-                package_data.insert(resource_name, resource_data);
-            }
-
-            res.insert(package_name, Arc::new(package_data));
-        }
-
-        Ok(PythonResourcesData { packages: res })
+fn get_memory_view(py: Python, data: &Option<&'static [u8]>) -> Option<PyObject> {
+    if let Some(data) = data {
+        let ptr =
+            unsafe { PyMemoryView_FromMemory(data.as_ptr() as _, data.len() as _, PyBUF_READ) };
+        unsafe { PyObject::from_owned_ptr_opt(py, ptr) }
+    } else {
+        None
     }
 }
 
@@ -267,9 +55,7 @@ py_class!(class PyOxidizerFinder |py| {
     data module_spec_type: PyObject;
     data decode_source: PyObject;
     data exec_fn: PyObject;
-    data packages: HashSet<&'static str>;
-    data known_modules: KnownModules;
-    data resources: HashMap<&'static str, Arc<Box<HashMap<&'static str, &'static [u8]>>>>;
+    data importer_state: PythonImporterState;
     data resource_readers: RefCell<Box<HashMap<String, PyObject>>>;
 
     // Start of importlib.abc.MetaPathFinder interface.
@@ -277,18 +63,18 @@ py_class!(class PyOxidizerFinder |py| {
     def find_spec(&self, fullname: &PyString, path: &PyObject, target: Option<PyObject> = None) -> PyResult<PyObject> {
         let key = fullname.to_string(py)?;
 
-        if let Some(flavor) = self.known_modules(py).get(&*key) {
-            match flavor {
-                KnownModuleFlavor::Builtin => {
+        if let Some(location) = self.importer_state(py).modules.get(&*key) {
+            match location {
+                PythonModuleLocation::Builtin => {
                     // BuiltinImporter.find_spec() always returns None if `path` is defined.
                     // And it doesn't use `target`. So don't proxy these values.
                     self.builtin_importer(py).call_method(py, "find_spec", (fullname,), None)
                 }
-                KnownModuleFlavor::Frozen => {
+                PythonModuleLocation::Frozen => {
                     self.frozen_importer(py).call_method(py, "find_spec", (fullname, path, target), None)
                 }
-                KnownModuleFlavor::InMemory { .. } => {
-                    let is_package = self.packages(py).contains(&*key);
+                PythonModuleLocation::InMemory { .. } => {
+                    let is_package = self.importer_state(py).packages.contains(&*key);
 
                     // TODO consider setting origin and has_location so __file__ will be
                     // populated.
@@ -332,16 +118,16 @@ py_class!(class PyOxidizerFinder |py| {
         let name = module.getattr(py, "__name__")?;
         let key = name.extract::<String>(py)?;
 
-        if let Some(flavor) = self.known_modules(py).get(&*key) {
-            match flavor {
-                KnownModuleFlavor::Builtin => {
+        if let Some(location) = self.importer_state(py).modules.get(&*key) {
+            match location {
+                PythonModuleLocation::Builtin => {
                     self.builtin_importer(py).call_method(py, "exec_module", (module,), None)
                 },
-                KnownModuleFlavor::Frozen => {
+                PythonModuleLocation::Frozen => {
                     self.frozen_importer(py).call_method(py, "exec_module", (module,), None)
                 },
-                KnownModuleFlavor::InMemory { module_data } => {
-                    match module_data.get_bytecode_memory_view(py) {
+                PythonModuleLocation::InMemory { bytecode, .. } => {
+                    match get_memory_view(py, bytecode) {
                         Some(value) => {
                             let code = self.marshal_loads(py).call(py, (value,), None)?;
                             let exec_fn = self.exec_fn(py);
@@ -369,15 +155,15 @@ py_class!(class PyOxidizerFinder |py| {
     def get_code(&self, fullname: &PyString) -> PyResult<PyObject> {
         let key = fullname.to_string(py)?;
 
-        if let Some(flavor) = self.known_modules(py).get(&*key) {
-            match flavor {
-                KnownModuleFlavor::Frozen => {
+        if let Some(location) = self.importer_state(py).modules.get(&*key) {
+            match location {
+                PythonModuleLocation::Frozen => {
                     let imp_module = self.imp_module(py);
 
                     imp_module.call(py, "get_frozen_object", (fullname,), None)
                 },
-                KnownModuleFlavor::InMemory { module_data } => {
-                    match module_data.get_bytecode_memory_view(py) {
+                PythonModuleLocation::InMemory { bytecode, .. } => {
+                    match get_memory_view(py, bytecode) {
                         Some(value) => {
                             self.marshal_loads(py).call(py, (value,), None)
                         }
@@ -386,7 +172,7 @@ py_class!(class PyOxidizerFinder |py| {
                         }
                     }
                 },
-                KnownModuleFlavor::Builtin => {
+                PythonModuleLocation::Builtin => {
                     Ok(py.None())
                 }
             }
@@ -398,9 +184,9 @@ py_class!(class PyOxidizerFinder |py| {
     def get_source(&self, fullname: &PyString) -> PyResult<PyObject> {
         let key = fullname.to_string(py)?;
 
-        if let Some(flavor) = self.known_modules(py).get(&*key) {
-            if let KnownModuleFlavor::InMemory { module_data } = flavor {
-                match module_data.get_source_memory_view(py) {
+        if let Some(location) = self.importer_state(py).modules.get(&*key) {
+            if let PythonModuleLocation::InMemory { source, .. } = location {
+                match get_memory_view(py, source) {
                     Some(value) => {
                         // decode_source (from importlib._bootstrap_external)
                         // can't handle memoryview. So we take the memory hit and
@@ -441,10 +227,10 @@ py_class!(class PyOxidizerFinder |py| {
         }
 
         // Only create a reader if the name is a package.
-        if self.packages(py).contains(&*key) {
+        if self.importer_state(py).packages.contains(&*key) {
 
             // Not all packages have known resources.
-            let resources = match self.resources(py).get(&*key) {
+            let resources = match self.importer_state(py).package_resources.get(&*key) {
                 Some(v) => v.clone(),
                 None => {
                     let h: Box<HashMap<&'static str, &'static [u8]>> = Box::new(HashMap::new());
@@ -476,7 +262,7 @@ py_class!(class PyOxidizerResourceReader |py| {
         let key = resource.to_string(py)?;
 
         if let Some(data) = self.resources(py).get(&*key) {
-            match get_memory_view(py, data) {
+            match get_memory_view(py, &Some(data)) {
                 Some(mv) => {
                     let io_module = py.import("io")?;
                     let bytes_io = io_module.get(py, "BytesIO")?;
@@ -557,16 +343,6 @@ pub struct InitModuleState {
 /// This module state will be copied into the module's state when the
 /// Python module is initialized.
 pub static mut NEXT_MODULE_STATE: *const InitModuleState = std::ptr::null();
-
-/// Represents which importer to use for known modules.
-#[derive(Debug)]
-enum KnownModuleFlavor {
-    Builtin,
-    Frozen,
-    InMemory { module_data: PythonModuleData },
-}
-
-type KnownModules = HashMap<&'static str, KnownModuleFlavor>;
 
 /// State associated with each importer module instance.
 ///
@@ -697,75 +473,26 @@ fn module_setup(
     let builtin_importer = meta_path.get_item(py, 0);
     let frozen_importer = meta_path.get_item(py, 1);
 
-    // It may seem inefficient to create a full HashMap of the parsed data instead of e.g.
-    // streaming it. But the overhead of iterators was measured to be more than building
-    // up a temporary HashMap.
-    let modules_data = match PythonModulesData::from(state.py_modules_data) {
-        Ok(v) => v,
-        Err(msg) => return Err(PyErr::new::<ValueError, _>(py, msg)),
-    };
+    let mut importer_state = PythonImporterState::default();
 
-    // Populate our known module lookup table with entries from builtins, frozens, and
-    // finally us. Last write wins and has the same effect as registering our
-    // meta path importer first. This should be safe. If nothing else, it allows
-    // some builtins to be overwritten by .py implemented modules.
-    let mut known_modules = KnownModules::with_capacity(modules_data.data.len() + 10);
-
-    for i in 0.. {
-        let record = unsafe { pyffi::PyImport_Inittab.offset(i) };
-
-        if unsafe { *record }.name.is_null() {
-            break;
-        }
-
-        let name = unsafe { CStr::from_ptr((*record).name as _) };
-        let name_str = match name.to_str() {
-            Ok(v) => v,
-            Err(_) => {
-                return Err(PyErr::new::<ValueError, _>(
-                    py,
-                    "unable to parse PyImport_Inittab",
-                ));
-            }
-        };
-
-        known_modules.insert(name_str, KnownModuleFlavor::Builtin);
+    // Populate our importer with entries from the interpreter then in-memory data
+    // structures. The last write wins. That's why we load builtins and frozens before
+    // data provided by us.
+    if let Err(e) = importer_state.load_interpreter_builtin_modules() {
+        return Err(PyErr::new::<ValueError, _>(py, e));
     }
 
-    for i in 0.. {
-        let record = unsafe { pyffi::PyImport_FrozenModules.offset(i) };
-
-        if unsafe { *record }.name.is_null() {
-            break;
-        }
-
-        let name = unsafe { CStr::from_ptr((*record).name as _) };
-        let name_str = match name.to_str() {
-            Ok(v) => v,
-            Err(_) => {
-                return Err(PyErr::new::<ValueError, _>(
-                    py,
-                    "unable to parse PyImport_FrozenModules",
-                ));
-            }
-        };
-
-        known_modules.insert(name_str, KnownModuleFlavor::Frozen);
+    if let Err(e) = importer_state.load_interpreter_frozen_modules() {
+        return Err(PyErr::new::<ValueError, _>(py, e));
     }
 
-    for (name, record) in modules_data.data {
-        known_modules.insert(
-            name,
-            KnownModuleFlavor::InMemory {
-                module_data: record,
-            },
-        );
+    if let Err(e) = importer_state.load_modules_data(state.py_modules_data) {
+        return Err(PyErr::new::<ValueError, _>(py, e));
     }
 
-    let resources_data = match PythonResourcesData::from(state.py_resources_data) {
-        Ok(v) => v,
-        Err(msg) => return Err(PyErr::new::<ValueError, _>(py, msg)),
-    };
+    if let Err(e) = importer_state.load_resources_data(state.py_resources_data) {
+        return Err(PyErr::new::<ValueError, _>(py, e));
+    }
 
     let marshal_loads = marshal_module.get(py, "loads")?;
     let call_with_frames_removed = bootstrap_module.get(py, "_call_with_frames_removed")?;
@@ -805,9 +532,7 @@ fn module_setup(
         module_spec_type,
         decode_source,
         exec_fn,
-        modules_data.packages,
-        known_modules,
-        resources_data.packages,
+        importer_state,
         resource_readers,
     )?;
     meta_path_object.call_method(py, "clear", NoArgs, None)?;
