@@ -18,10 +18,20 @@ use {
 /// Named resources in a single Python package.
 type PythonPackageResources = HashMap<&'static str, &'static [u8]>;
 
+/// Defines the location of an importable Python module.
 #[derive(Debug)]
 pub(crate) enum PythonModuleLocation {
+    /// A builtin extension module.
+    ///
+    /// The module will need to be imported by `BuiltinImporter`.
     Builtin,
+
+    /// A frozen bytecode module.
+    ///
+    /// The module will need to be imported by `FrozenImporter`.
     Frozen,
+
+    /// Module content provided by a memory address.
     InMemory {
         source: Option<&'static [u8]>,
         bytecode: Option<&'static [u8]>,
