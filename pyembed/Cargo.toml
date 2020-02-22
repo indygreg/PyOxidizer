@@ -21,6 +21,9 @@ libc = "0.2"
 python3-sys = "0.4"
 uuid = { version = "0.8", features = ["v4"] }
 
+[dev-dependencies]
+pyoxidizer = { version = "0.7.0-pre", path = "../pyoxidizer" }
+
 [features]
 default = ["build-mode-standalone", "cpython-link-unresolved-static"]
 jemalloc = ["jemalloc-sys"]

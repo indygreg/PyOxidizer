@@ -11,7 +11,7 @@ for importing Python modules from memory.
 
 use {
     super::pyinterp::PYOXIDIZER_IMPORTER_NAME,
-    super::python_resources::{PythonImporterState, PythonModuleLocation},
+    super::python_resources::PythonImporterState,
     cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError},
     cpython::{
         py_class, py_class_impl, py_coerce_item, py_fn, NoArgs, ObjectProtocol, PyClone, PyDict,
@@ -55,7 +55,7 @@ py_class!(class PyOxidizerFinder |py| {
     data module_spec_type: PyObject;
     data decode_source: PyObject;
     data exec_fn: PyObject;
-    data importer_state: PythonImporterState;
+    data importer_state: PythonImporterState<'static>;
     data resource_readers: RefCell<Box<HashMap<String, PyObject>>>;
 
     // Start of importlib.abc.MetaPathFinder interface.
@@ -63,27 +63,23 @@ py_class!(class PyOxidizerFinder |py| {
     def find_spec(&self, fullname: &PyString, path: &PyObject, target: Option<PyObject> = None) -> PyResult<PyObject> {
         let key = fullname.to_string(py)?;
 
-        if let Some(location) = self.importer_state(py).modules.get(&*key) {
-            match location {
-                PythonModuleLocation::Builtin => {
-                    // BuiltinImporter.find_spec() always returns None if `path` is defined.
-                    // And it doesn't use `target`. So don't proxy these values.
-                    self.builtin_importer(py).call_method(py, "find_spec", (fullname,), None)
-                }
-                PythonModuleLocation::Frozen => {
-                    self.frozen_importer(py).call_method(py, "find_spec", (fullname, path, target), None)
-                }
-                PythonModuleLocation::InMemory { .. } => {
-                    let is_package = self.importer_state(py).packages.contains(&*key);
+        if let Some(module) = self.importer_state(py).modules.get(&*key) {
+            if module.is_builtin {
+                // BuiltinImporter.find_spec() always returns None if `path` is defined.
+                // And it doesn't use `target`. So don't proxy these values.
+                self.builtin_importer(py).call_method(py, "find_spec", (fullname,), None)
+            } else if module.is_frozen {
+                self.frozen_importer(py).call_method(py, "find_spec", (fullname, path, target), None)
+            // TODO look in other locations?
+            } else if module.in_memory_bytecode.is_some() {
+                // TODO consider setting origin and has_location so __file__ will be
+                // populated.
+                let kwargs = PyDict::new(py);
+                kwargs.set_item(py, "is_package", module.is_package)?;
 
-                    // TODO consider setting origin and has_location so __file__ will be
-                    // populated.
-
-                    let kwargs = PyDict::new(py);
-                    kwargs.set_item(py, "is_package", is_package)?;
-
-                    self.module_spec_type(py).call(py, (fullname, self), Some(&kwargs))
-                }
+                self.module_spec_type(py).call(py, (fullname, self), Some(&kwargs))
+            } else {
+                Ok(py.None())
             }
         } else {
             Ok(py.None())
@@ -118,28 +114,26 @@ py_class!(class PyOxidizerFinder |py| {
         let name = module.getattr(py, "__name__")?;
         let key = name.extract::<String>(py)?;
 
-        if let Some(location) = self.importer_state(py).modules.get(&*key) {
-            match location {
-                PythonModuleLocation::Builtin => {
-                    self.builtin_importer(py).call_method(py, "exec_module", (module,), None)
-                },
-                PythonModuleLocation::Frozen => {
-                    self.frozen_importer(py).call_method(py, "exec_module", (module,), None)
-                },
-                PythonModuleLocation::InMemory { bytecode, .. } => {
-                    match get_memory_view(py, bytecode) {
-                        Some(value) => {
-                            let code = self.marshal_loads(py).call(py, (value,), None)?;
-                            let exec_fn = self.exec_fn(py);
-                            let dict = module.getattr(py, "__dict__")?;
+        if let Some(entry) = self.importer_state(py).modules.get(&*key) {
+            if entry.is_builtin {
+                self.builtin_importer(py).call_method(py, "exec_module", (module,), None)
+            } else if entry.is_frozen {
+                self.frozen_importer(py).call_method(py, "exec_module", (module,), None)
+            } else if entry.in_memory_bytecode.is_some() {
+                match get_memory_view(py, &entry.in_memory_bytecode) {
+                    Some(value) => {
+                        let code = self.marshal_loads(py).call(py, (value,), None)?;
+                        let exec_fn = self.exec_fn(py);
+                        let dict = module.getattr(py, "__dict__")?;
 
-                            self.call_with_frames_removed(py).call(py, (exec_fn, code, dict), None)
-                        },
-                        None => {
-                            Err(PyErr::new::<ImportError, _>(py, ("cannot find code in memory", name)))
-                        }
+                        self.call_with_frames_removed(py).call(py, (exec_fn, code, dict), None)
+                    },
+                    None => {
+                        Err(PyErr::new::<ImportError, _>(py, ("cannot find code in memory", name)))
                     }
-                },
+                }
+            } else {
+                Ok(py.None())
             }
         } else {
             // Raising here might make more sense, as exec_module() shouldn't
@@ -155,26 +149,25 @@ py_class!(class PyOxidizerFinder |py| {
     def get_code(&self, fullname: &PyString) -> PyResult<PyObject> {
         let key = fullname.to_string(py)?;
 
-        if let Some(location) = self.importer_state(py).modules.get(&*key) {
-            match location {
-                PythonModuleLocation::Frozen => {
-                    let imp_module = self.imp_module(py);
+        if let Some(module) = self.importer_state(py).modules.get(&*key) {
+            if module.is_frozen {
+                let imp_module = self.imp_module(py);
 
-                    imp_module.call(py, "get_frozen_object", (fullname,), None)
-                },
-                PythonModuleLocation::InMemory { bytecode, .. } => {
-                    match get_memory_view(py, bytecode) {
-                        Some(value) => {
-                            self.marshal_loads(py).call(py, (value,), None)
-                        }
-                        None => {
-                            Err(PyErr::new::<ImportError, _>(py, ("cannot find code in memory", fullname)))
-                        }
+                imp_module.call(py, "get_frozen_object", (fullname,), None)
+            } else if module.is_builtin {
+                Ok(py.None())
+            // TODO check opt bytecode depending on optimization level.
+            } else if module.in_memory_bytecode.is_some() {
+                 match get_memory_view(py, &module.in_memory_bytecode) {
+                    Some(value) => {
+                        self.marshal_loads(py).call(py, (value,), None)
                     }
-                },
-                PythonModuleLocation::Builtin => {
-                    Ok(py.None())
+                    None => {
+                        Err(PyErr::new::<ImportError, _>(py, ("cannot find code in memory", fullname)))
+                    }
                 }
+            } else {
+                Ok(py.None())
             }
         } else {
             Ok(py.None())
@@ -184,9 +177,9 @@ py_class!(class PyOxidizerFinder |py| {
     def get_source(&self, fullname: &PyString) -> PyResult<PyObject> {
         let key = fullname.to_string(py)?;
 
-        if let Some(location) = self.importer_state(py).modules.get(&*key) {
-            if let PythonModuleLocation::InMemory { source, .. } = location {
-                match get_memory_view(py, source) {
+        if let Some(module) = self.importer_state(py).modules.get(&*key) {
+            if module.in_memory_source.is_some() {
+                match get_memory_view(py, &module.in_memory_source) {
                     Some(value) => {
                         // decode_source (from importlib._bootstrap_external)
                         // can't handle memoryview. So we take the memory hit and
@@ -227,15 +220,17 @@ py_class!(class PyOxidizerFinder |py| {
         }
 
         // Only create a reader if the name is a package.
-        if self.importer_state(py).packages.contains(&*key) {
+        if let Some(module) = self.importer_state(py).modules.get(&*key) {
+            if !module.is_package {
+                return Ok(py.None())
+            }
 
             // Not all packages have known resources.
-            let resources = match self.importer_state(py).package_resources.get(&*key) {
-                Some(v) => v.clone(),
-                None => {
-                    let h: Box<HashMap<&'static str, &'static [u8]>> = Box::new(HashMap::new());
-                    Arc::new(h)
-                }
+            let resources = if let Some(resources) = &module.in_memory_resources {
+                resources.clone()
+            } else {
+                let h: Box<HashMap<&'static str, &'static [u8]>> = Box::new(HashMap::new());
+                Arc::new(h)
             };
 
             let reader = PyOxidizerResourceReader::create_instance(py, resources)?.into_object();
@@ -331,11 +326,8 @@ pub struct InitModuleState {
     /// Values to set on sys.path.
     pub sys_paths: Vec<String>,
 
-    /// Raw data constituting Python module source code.
-    pub py_modules_data: &'static [u8],
-
-    /// Raw data constituting Python resources data.
-    pub py_resources_data: &'static [u8],
+    /// Raw data describing embedded resources.
+    pub embedded_resources_data: &'static [u8],
 }
 
 /// Holds reference to next module state struct.
@@ -357,11 +349,8 @@ struct ModuleState {
     /// Values to set on sys.path.
     sys_paths: Vec<String>,
 
-    /// Raw data constituting Python module source code.
-    py_modules_data: &'static [u8],
-
-    /// Raw data constituting Python resources data.
-    py_resources_data: &'static [u8],
+    /// Raw data constituting embedded resources.
+    embedded_resources_data: &'static [u8],
 
     /// Whether setup() has been called.
     setup_called: bool,
@@ -402,8 +391,7 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
         state.register_filesystem_importer = (*NEXT_MODULE_STATE).register_filesystem_importer;
         // TODO we could move the value if we wanted to avoid the clone().
         state.sys_paths = (*NEXT_MODULE_STATE).sys_paths.clone();
-        state.py_modules_data = (*NEXT_MODULE_STATE).py_modules_data;
-        state.py_resources_data = (*NEXT_MODULE_STATE).py_resources_data;
+        state.embedded_resources_data = (*NEXT_MODULE_STATE).embedded_resources_data;
     }
 
     state.setup_called = false;
@@ -475,7 +463,7 @@ fn module_setup(
 
     let mut importer_state = PythonImporterState::default();
 
-    if let Err(e) = importer_state.load(state.py_modules_data, state.py_resources_data) {
+    if let Err(e) = importer_state.load(state.embedded_resources_data) {
         return Err(PyErr::new::<ValueError, _>(py, e));
     }
 

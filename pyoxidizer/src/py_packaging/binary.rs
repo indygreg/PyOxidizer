@@ -127,7 +127,6 @@ pub struct PythonLinkingInfo {
 /// Represents serialized data embedded in binaries for loading Python resources.
 pub struct EmbeddedResourcesBlobs {
     pub module_names: Vec<u8>,
-    pub modules: Vec<u8>,
     pub resources: Vec<u8>,
 }
 
@@ -136,14 +135,12 @@ impl TryFrom<EmbeddedPythonResources> for EmbeddedResourcesBlobs {
 
     fn try_from(value: EmbeddedPythonResources) -> Result<Self, Self::Error> {
         let mut module_names = Vec::new();
-        let mut modules = Vec::new();
         let mut resources = Vec::new();
 
-        value.write_blobs(&mut module_names, &mut modules, &mut resources);
+        value.write_blobs(&mut module_names, &mut resources);
 
         Ok(Self {
             module_names,
-            modules,
             resources,
         })
     }
@@ -160,11 +157,8 @@ pub struct EmbeddedPythonBinaryPaths {
     /// File containing a list of module names.
     pub module_names: PathBuf,
 
-    /// File containing Python module data.
-    pub py_modules: PathBuf,
-
-    /// File containing Python resource data.
-    pub resources: PathBuf,
+    /// File containing embedded resources data.
+    pub embedded_resources: PathBuf,
 
     /// Path to library containing libpython.
     pub libpython: PathBuf,
@@ -215,12 +209,8 @@ impl EmbeddedPythonBinaryData {
         let mut fh = File::create(&module_names)?;
         fh.write_all(&self.resources.module_names)?;
 
-        let py_modules = dest_dir.join("py-modules");
-        let mut fh = File::create(&py_modules)?;
-        fh.write_all(&self.resources.modules)?;
-
-        let resources = dest_dir.join("python-resources");
-        let mut fh = File::create(&resources)?;
+        let embedded_resources = dest_dir.join("pyembed-resources");
+        let mut fh = File::create(&embedded_resources)?;
         fh.write_all(&self.resources.resources)?;
 
         let libpython = dest_dir.join(&self.linking_info.libpythonxy_filename);
@@ -245,8 +235,7 @@ impl EmbeddedPythonBinaryData {
             &self.config,
             &importlib_bootstrap,
             &importlib_bootstrap_external,
-            &py_modules,
-            &resources,
+            &embedded_resources,
         );
         let config_rs = dest_dir.join("default_python_config.rs");
         write_default_python_config_rs(&config_rs, &config_rs_data)?;
@@ -274,8 +263,7 @@ impl EmbeddedPythonBinaryData {
             importlib_bootstrap,
             importlib_bootstrap_external,
             module_names,
-            py_modules,
-            resources,
+            embedded_resources,
             libpython,
             libpyembeddedconfig,
             config_rs,

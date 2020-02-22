@@ -274,8 +274,7 @@ impl<'a> MainPythonInterpreter<'a> {
         let module_state = super::importer::InitModuleState {
             register_filesystem_importer: self.config.filesystem_importer,
             sys_paths,
-            py_modules_data: config.py_modules_data,
-            py_resources_data: config.py_resources_data,
+            embedded_resources_data: config.embedded_resources_data,
         };
 
         if config.use_custom_importlib {

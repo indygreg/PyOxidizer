@@ -25,6 +25,17 @@ next
 
 Not yet released.
 
+Backwards Compatibility Notes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* The format of Python resource data embedded in binaries has been completely
+  rewritten. The separate modules and resource data structures have been merged
+  into a single data structure. Embedded resources data can now express more
+  primitives such as package distribution metadata and different bytecode
+  optimization levels.
+* The `pyembed` crate now has a *dev* dependency on the `pyoxidizer` crate in
+  order to run tests.
+
 New Features
 ^^^^^^^^^^^^
 
