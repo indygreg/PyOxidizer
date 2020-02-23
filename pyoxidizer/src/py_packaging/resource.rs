@@ -11,7 +11,6 @@ use {
     super::fsscan::{is_package_from_path, PythonFileResource},
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Context, Error, Result},
-    serde::{Deserialize, Serialize},
     std::collections::BTreeSet,
     std::convert::TryFrom,
     std::path::PathBuf,
@@ -558,18 +557,6 @@ impl PythonResource {
 
         false
     }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PackagedModuleSource {
-    pub source: Vec<u8>,
-    pub is_package: bool,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PackagedModuleBytecode {
-    pub bytecode: Vec<u8>,
-    pub is_package: bool,
 }
 
 #[cfg(test)]

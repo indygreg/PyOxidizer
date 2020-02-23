@@ -11,8 +11,7 @@ use {
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
     super::resource::{
         packages_from_module_name, packages_from_module_names, BytecodeModule,
-        BytecodeOptimizationLevel, DataLocation, ExtensionModuleData, PackagedModuleBytecode,
-        PackagedModuleSource, ResourceData, SourceModule,
+        BytecodeOptimizationLevel, DataLocation, ExtensionModuleData, ResourceData, SourceModule,
     },
     super::standalone_distribution::ExtensionModule,
     anyhow::{anyhow, Context, Result},
@@ -99,7 +98,7 @@ impl Into<u8> for EmbeddedPythonModuleField {
 ///
 /// This type holds data required for serializing a Python module to the
 /// embedded resources data structure. See the `pyembed` crate for more.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct EmbeddedResourcePythonModule {
     /// The module name.
     pub name: String,
@@ -766,27 +765,28 @@ impl EmbeddedPythonResourcesPrePackaged {
             );
         }
 
-        let mut all_modules = BTreeSet::new();
-        let mut all_packages = BTreeSet::new();
-
-        let mut module_sources = BTreeMap::new();
+        let mut modules = BTreeMap::new();
 
         for (name, module) in &self.source_modules {
-            all_modules.insert(name.clone());
-            if module.is_package {
-                all_packages.insert(name.clone());
+            if !modules.contains_key(name) {
+                modules.insert(
+                    name.clone(),
+                    EmbeddedResourcePythonModule {
+                        name: name.clone(),
+                        ..EmbeddedResourcePythonModule::default()
+                    },
+                );
             }
 
-            module_sources.insert(
-                name.clone(),
-                PackagedModuleSource {
-                    source: module.source.resolve()?,
-                    is_package: module.is_package,
-                },
-            );
+            let mut entry = modules.get_mut(name).unwrap();
+
+            if module.is_package {
+                entry.is_package = true;
+            }
+
+            entry.in_memory_source = Some(module.source.resolve()?);
         }
 
-        let mut module_bytecodes = BTreeMap::new();
         {
             let mut compiler = BytecodeCompiler::new(&python_exe)?;
 
@@ -798,18 +798,23 @@ impl EmbeddedPythonResourcesPrePackaged {
                     CompileMode::Bytecode,
                 )?;
 
-                all_modules.insert(name.clone());
-                if request.is_package {
-                    all_packages.insert(name.clone());
+                if !modules.contains_key(name) {
+                    modules.insert(
+                        name.clone(),
+                        EmbeddedResourcePythonModule {
+                            name: name.clone(),
+                            ..EmbeddedResourcePythonModule::default()
+                        },
+                    );
                 }
 
-                module_bytecodes.insert(
-                    name.clone(),
-                    PackagedModuleBytecode {
-                        bytecode,
-                        is_package: request.is_package,
-                    },
-                );
+                let mut entry = modules.get_mut(name).unwrap();
+                if request.is_package {
+                    entry.is_package = true;
+                }
+
+                // TODO assign to proper field depending on bytecode level.
+                entry.in_memory_bytecode = Some(bytecode);
             }
         }
 
@@ -824,7 +829,15 @@ impl EmbeddedPythonResourcesPrePackaged {
                 continue;
             }
 
-            all_modules.insert(name.clone());
+            if !modules.contains_key(name) {
+                modules.insert(
+                    name.clone(),
+                    EmbeddedResourcePythonModule {
+                        name: name.clone(),
+                        ..EmbeddedResourcePythonModule::default()
+                    },
+                );
+            }
 
             extension_modules.insert(name.clone(), em.clone());
         }
@@ -835,51 +848,71 @@ impl EmbeddedPythonResourcesPrePackaged {
                 continue;
             }
 
-            all_modules.insert(name.clone());
+            if !modules.contains_key(name) {
+                modules.insert(
+                    name.clone(),
+                    EmbeddedResourcePythonModule {
+                        name: name.clone(),
+                        ..EmbeddedResourcePythonModule::default()
+                    },
+                );
+            }
+
+            let mut entry = modules.get_mut(name).unwrap();
+
             if em.is_package {
-                all_packages.insert(em.name.clone());
+                entry.is_package = true;
             }
 
             built_extension_modules.insert(name.clone(), em.clone());
         }
 
-        let derived_package_names = packages_from_module_names(all_modules.iter().cloned());
+        for (package, resources) in &self.resources {
+            if !modules.contains_key(package) {
+                modules.insert(
+                    package.clone(),
+                    EmbeddedResourcePythonModule {
+                        name: package.clone(),
+                        ..EmbeddedResourcePythonModule::default()
+                    },
+                );
+            }
+
+            let mut entry = modules.get_mut(package).unwrap();
+
+            // For a module to contain resources, it must be a package.
+            entry.is_package = true;
+
+            entry.in_memory_resources = Some(resources.clone());
+        }
+
+        let derived_package_names = packages_from_module_names(modules.keys().cloned());
 
         for package in derived_package_names {
-            if !all_packages.contains(&package) {
+            if !modules.contains_key(&package) {
+                modules.insert(
+                    package.clone(),
+                    EmbeddedResourcePythonModule {
+                        name: package.clone(),
+                        ..EmbeddedResourcePythonModule::default()
+                    },
+                );
+            }
+
+            let mut entry = modules.get_mut(&package).unwrap();
+
+            if !entry.is_package {
                 warn!(
                     logger,
                     "package {} not initially detected as such; possible package detection bug",
                     package
                 );
-                all_packages.insert(package);
+                entry.is_package = true;
             }
         }
 
-        let resources = self
-            .resources
-            .iter()
-            .filter_map(|(package, values)| {
-                if !all_packages.contains(package) {
-                    warn!(
-                        logger,
-                        "package {} does not exist; excluding resources: {:?}",
-                        package,
-                        values.keys()
-                    );
-                    None
-                } else {
-                    Some((package.clone(), values.clone()))
-                }
-            })
-            .collect();
-
         Ok(EmbeddedPythonResources {
-            module_sources,
-            module_bytecodes,
-            all_modules,
-            all_packages,
-            resources,
+            modules,
             extension_modules,
             built_extension_modules,
         })
@@ -889,55 +922,32 @@ impl EmbeddedPythonResourcesPrePackaged {
 /// Represents Python resources to embed in a binary.
 #[derive(Debug, Default, Clone)]
 pub struct EmbeddedPythonResources {
-    module_sources: BTreeMap<String, PackagedModuleSource>,
-    module_bytecodes: BTreeMap<String, PackagedModuleBytecode>,
-    all_modules: BTreeSet<String>,
-    all_packages: BTreeSet<String>,
-    resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
+    /// Python modules described by an embeddable resource.
+    pub modules: BTreeMap<String, EmbeddedResourcePythonModule>,
+
     // TODO combine the extension module types.
     pub extension_modules: BTreeMap<String, ExtensionModule>,
     pub built_extension_modules: BTreeMap<String, ExtensionModuleData>,
 }
 
-/// Represents an ordered collection of module entries.
-pub type ModuleEntries = Vec<EmbeddedResourcePythonModule>;
-
 impl EmbeddedPythonResources {
-    /// Obtain records for all modules in this resources collection.
-    pub fn modules_records(&self) -> ModuleEntries {
-        let mut records = ModuleEntries::new();
-
-        for name in &self.all_modules {
-            let source = self.module_sources.get(name);
-            let bytecode = self.module_bytecodes.get(name);
-
-            records.push(EmbeddedResourcePythonModule {
-                name: name.clone(),
-                is_package: self.all_packages.contains(name),
-                in_memory_source: match source {
-                    Some(value) => Some(value.source.clone()),
-                    None => None,
-                },
-                in_memory_bytecode: match bytecode {
-                    Some(value) => Some(value.bytecode.clone()),
-                    None => None,
-                },
-                ..EmbeddedResourcePythonModule::default()
-            });
-        }
-
-        records
-    }
-
     pub fn write_blobs<W: Write>(&self, module_names: &mut W, resources: &mut W) {
-        for name in &self.all_modules {
+        for name in self.modules.keys() {
             module_names
                 .write_all(name.as_bytes())
                 .expect("failed to write");
             module_names.write_all(b"\n").expect("failed to write");
         }
 
-        write_embedded_resources_v1(&self.modules_records(), resources).unwrap();
+        write_embedded_resources_v1(
+            &self
+                .modules
+                .values()
+                .cloned()
+                .collect::<Vec<EmbeddedResourcePythonModule>>(),
+            resources,
+        )
+        .unwrap();
     }
 }
 
