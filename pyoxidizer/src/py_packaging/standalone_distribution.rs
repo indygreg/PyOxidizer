@@ -991,7 +991,7 @@ impl PythonDistribution for StandaloneDistribution {
             for ext in
                 self.filter_extension_modules(&logger, &ExtensionModuleFilter::Minimal, None)?
             {
-                if !resources.extension_modules.contains_key(&ext.module) {
+                if !resources.get_extension_modules().contains_key(&ext.module) {
                     resources.add_extension_module(&ext);
                 }
             }
@@ -1363,8 +1363,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.resources.get_resources()
     }
 
-    fn extension_modules(&self) -> &BTreeMap<String, ExtensionModule> {
-        &self.resources.extension_modules
+    fn extension_modules(&self) -> BTreeMap<String, ExtensionModule> {
+        self.resources.get_extension_modules()
     }
 
     fn extension_module_datas(&self) -> &BTreeMap<String, ExtensionModuleData> {

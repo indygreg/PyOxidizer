@@ -53,7 +53,7 @@ pub trait PythonBinaryBuilder {
     fn resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>>;
 
     /// Obtain extension modules to be embedded in this instance.
-    fn extension_modules(&self) -> &BTreeMap<String, ExtensionModule>;
+    fn extension_modules(&self) -> BTreeMap<String, ExtensionModule>;
 
     /// Obtain extension modules to be embedded in this instance.
     fn extension_module_datas(&self) -> &BTreeMap<String, ExtensionModuleData>;
