@@ -131,7 +131,7 @@ impl Default for EmbeddedPythonModule {
 }
 
 impl EmbeddedPythonModule {
-    /// Compute lengths of index and blob data.
+    /// Compute length of index entry for version 1 payload format.
     pub fn index_v1_length(&self) -> usize {
         // Start of index entry.
         let mut index = 1;
@@ -253,6 +253,7 @@ impl EmbeddedPythonModule {
         }
     }
 
+    /// Write the version 1 index entry for a module instance.
     pub fn write_index_v1<W: Write>(&self, dest: &mut W) -> Result<()> {
         let name_len =
             u16::try_from(self.name.as_bytes().len()).context("converting name to u16")?;
