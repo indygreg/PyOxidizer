@@ -100,7 +100,7 @@ impl Into<u8> for EmbeddedPythonModuleField {
 /// This type holds data required for serializing a Python module to the
 /// embedded resources data structure. See the `pyembed` crate for more.
 #[derive(Debug)]
-pub struct EmbeddedPythonModule {
+pub struct EmbeddedResourcePythonModule {
     /// The module name.
     pub name: String,
 
@@ -135,7 +135,7 @@ pub struct EmbeddedPythonModule {
     pub in_memory_package_distribution: Option<BTreeMap<String, Vec<u8>>>,
 }
 
-impl Default for EmbeddedPythonModule {
+impl Default for EmbeddedResourcePythonModule {
     fn default() -> Self {
         Self {
             name: "".to_string(),
@@ -152,7 +152,7 @@ impl Default for EmbeddedPythonModule {
     }
 }
 
-impl EmbeddedPythonModule {
+impl EmbeddedResourcePythonModule {
     /// Compute length of index entry for version 1 payload format.
     pub fn index_v1_length(&self) -> usize {
         // Start of index entry.
@@ -392,7 +392,7 @@ impl EmbeddedPythonModule {
 /// See the `pyembed` crate for the format of this data structure.
 #[allow(clippy::cognitive_complexity)]
 pub fn write_embedded_resources_v1<W: Write>(
-    modules: &[EmbeddedPythonModule],
+    modules: &[EmbeddedResourcePythonModule],
     dest: &mut W,
 ) -> Result<()> {
     let mut blob_section_count = 0;
@@ -900,7 +900,7 @@ pub struct EmbeddedPythonResources {
 }
 
 /// Represents an ordered collection of module entries.
-pub type ModuleEntries = Vec<EmbeddedPythonModule>;
+pub type ModuleEntries = Vec<EmbeddedResourcePythonModule>;
 
 impl EmbeddedPythonResources {
     /// Obtain records for all modules in this resources collection.
@@ -911,7 +911,7 @@ impl EmbeddedPythonResources {
             let source = self.module_sources.get(name);
             let bytecode = self.module_bytecodes.get(name);
 
-            records.push(EmbeddedPythonModule {
+            records.push(EmbeddedResourcePythonModule {
                 name: name.clone(),
                 is_package: self.all_packages.contains(name),
                 in_memory_source: match source {
@@ -922,7 +922,7 @@ impl EmbeddedPythonResources {
                     Some(value) => Some(value.bytecode.clone()),
                     None => None,
                 },
-                ..EmbeddedPythonModule::default()
+                ..EmbeddedResourcePythonModule::default()
             });
         }
 
@@ -1203,9 +1203,9 @@ mod tests {
     #[test]
     fn test_write_module_name() -> Result<()> {
         let mut data = Vec::new();
-        let module = EmbeddedPythonModule {
+        let module = EmbeddedResourcePythonModule {
             name: "foo".to_string(),
-            ..EmbeddedPythonModule::default()
+            ..EmbeddedResourcePythonModule::default()
         };
 
         write_embedded_resources_v1(&[module], &mut data)?;

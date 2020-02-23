@@ -521,7 +521,7 @@ mod tests {
     use {
         super::*,
         pyoxidizerlib::py_packaging::embedded_resource::{
-            write_embedded_resources_v1, EmbeddedPythonModule,
+            write_embedded_resources_v1, EmbeddedResourcePythonModule,
         },
         std::collections::BTreeMap,
     };
@@ -598,9 +598,9 @@ mod tests {
 
     #[test]
     fn test_just_module_name() {
-        let module = EmbeddedPythonModule {
+        let module = EmbeddedResourcePythonModule {
             name: "foo".to_string(),
-            ..EmbeddedPythonModule::default()
+            ..EmbeddedResourcePythonModule::default()
         };
 
         let mut data = Vec::new();
@@ -623,14 +623,14 @@ mod tests {
 
     #[test]
     fn test_multiple_modules_just_names() {
-        let module1 = EmbeddedPythonModule {
+        let module1 = EmbeddedResourcePythonModule {
             name: "foo".to_string(),
-            ..EmbeddedPythonModule::default()
+            ..EmbeddedResourcePythonModule::default()
         };
 
-        let module2 = EmbeddedPythonModule {
+        let module2 = EmbeddedResourcePythonModule {
             name: "module2".to_string(),
-            ..EmbeddedPythonModule::default()
+            ..EmbeddedResourcePythonModule::default()
         };
 
         let mut data = Vec::new();
@@ -662,10 +662,10 @@ mod tests {
 
     #[test]
     fn test_in_memory_source() {
-        let module = EmbeddedPythonModule {
+        let module = EmbeddedResourcePythonModule {
             name: "foo".to_string(),
             in_memory_source: Some(b"source".to_vec()),
-            ..EmbeddedPythonModule::default()
+            ..EmbeddedResourcePythonModule::default()
         };
 
         let mut data = Vec::new();
@@ -691,10 +691,10 @@ mod tests {
 
     #[test]
     fn test_in_memory_bytecode() {
-        let module = EmbeddedPythonModule {
+        let module = EmbeddedResourcePythonModule {
             name: "foo".to_string(),
             in_memory_bytecode: Some(b"bytecode".to_vec()),
-            ..EmbeddedPythonModule::default()
+            ..EmbeddedResourcePythonModule::default()
         };
 
         let mut data = Vec::new();
@@ -720,10 +720,10 @@ mod tests {
 
     #[test]
     fn test_in_memory_bytecode_opt1() {
-        let module = EmbeddedPythonModule {
+        let module = EmbeddedResourcePythonModule {
             name: "foo".to_string(),
             in_memory_bytecode_opt1: Some(b"bytecode".to_vec()),
-            ..EmbeddedPythonModule::default()
+            ..EmbeddedResourcePythonModule::default()
         };
 
         let mut data = Vec::new();
@@ -749,10 +749,10 @@ mod tests {
 
     #[test]
     fn test_in_memory_bytecode_opt2() {
-        let module = EmbeddedPythonModule {
+        let module = EmbeddedResourcePythonModule {
             name: "foo".to_string(),
             in_memory_bytecode_opt2: Some(b"bytecode".to_vec()),
-            ..EmbeddedPythonModule::default()
+            ..EmbeddedResourcePythonModule::default()
         };
 
         let mut data = Vec::new();
@@ -778,10 +778,10 @@ mod tests {
 
     #[test]
     fn test_in_memory_extension_module_shared_library() {
-        let module = EmbeddedPythonModule {
+        let module = EmbeddedResourcePythonModule {
             name: "foo".to_string(),
             in_memory_extension_module_shared_library: Some(b"em".to_vec()),
-            ..EmbeddedPythonModule::default()
+            ..EmbeddedResourcePythonModule::default()
         };
 
         let mut data = Vec::new();
@@ -811,10 +811,10 @@ mod tests {
         resources.insert("foo".to_string(), b"foovalue".to_vec());
         resources.insert("another".to_string(), b"value2".to_vec());
 
-        let module = EmbeddedPythonModule {
+        let module = EmbeddedResourcePythonModule {
             name: "foo".to_string(),
             in_memory_resources: Some(resources),
-            ..EmbeddedPythonModule::default()
+            ..EmbeddedResourcePythonModule::default()
         };
 
         let mut data = Vec::new();
@@ -838,10 +838,10 @@ mod tests {
         resources.insert("foo".to_string(), b"foovalue".to_vec());
         resources.insert("another".to_string(), b"value2".to_vec());
 
-        let module = EmbeddedPythonModule {
+        let module = EmbeddedResourcePythonModule {
             name: "foo".to_string(),
             in_memory_package_distribution: Some(resources),
-            ..EmbeddedPythonModule::default()
+            ..EmbeddedResourcePythonModule::default()
         };
 
         let mut data = Vec::new();
@@ -869,7 +869,7 @@ mod tests {
         distribution.insert("dist".to_string(), b"distvalue".to_vec());
         distribution.insert("dist2".to_string(), b"dist2value".to_vec());
 
-        let module = EmbeddedPythonModule {
+        let module = EmbeddedResourcePythonModule {
             name: "module".to_string(),
             is_package: true,
             is_namespace_package: true,
