@@ -1261,6 +1261,13 @@ pub struct StandalonePythonExecutableBuilder {
 }
 
 impl StandalonePythonExecutableBuilder {
+    /// Whether we're building for a target that supports loading extension modules
+    /// from memory.
+    fn supports_in_memory_dynamically_linked_extension_loading(&self) -> bool {
+        self.distribution.link_mode == StandaloneDistributionLinkMode::Dynamic
+            && self.target_triple.contains("pc-windows")
+    }
+
     /// Build a Python library suitable for linking.
     ///
     /// This will take the underlying distribution, resources, and
