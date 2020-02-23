@@ -1340,8 +1340,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.resources.get_source_modules()
     }
 
-    fn bytecode_modules(&self) -> &BTreeMap<String, BytecodeModule> {
-        &self.resources.bytecode_modules
+    fn bytecode_modules(&self) -> BTreeMap<String, BytecodeModule> {
+        self.resources.get_bytecode_modules()
     }
 
     fn resources(&self) -> &BTreeMap<String, BTreeMap<String, Vec<u8>>> {

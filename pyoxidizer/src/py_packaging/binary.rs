@@ -47,7 +47,7 @@ pub trait PythonBinaryBuilder {
     fn source_modules(&self) -> BTreeMap<String, SourceModule>;
 
     /// Obtain bytecode modules to be embedded in this instance.
-    fn bytecode_modules(&self) -> &BTreeMap<String, BytecodeModule>;
+    fn bytecode_modules(&self) -> BTreeMap<String, BytecodeModule>;
 
     /// Obtain resource data to be embedded in this instance.
     fn resources(&self) -> &BTreeMap<String, BTreeMap<String, Vec<u8>>>;
