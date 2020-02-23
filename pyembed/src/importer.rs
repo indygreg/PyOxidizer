@@ -71,8 +71,7 @@ py_class!(class PyOxidizerFinder |py| {
                 self.builtin_importer(py).call_method(py, "find_spec", (fullname,), None)
             } else if module.is_frozen {
                 self.frozen_importer(py).call_method(py, "find_spec", (fullname, path, target), None)
-            // TODO look in other locations?
-            } else if module.in_memory_bytecode.is_some() {
+            } else if module.uses_pyembed_importer() {
                 // TODO consider setting origin and has_location so __file__ will be
                 // populated.
                 let kwargs = PyDict::new(py);

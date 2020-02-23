@@ -95,6 +95,17 @@ impl<'a> Default for PythonModule<'a> {
     }
 }
 
+impl<'a> PythonModule<'a> {
+    /// Whether the module is imported by the importer provided by this crate.
+    ///
+    /// This excludes builtin and frozen modules, which are merely registered.
+    pub(crate) fn uses_pyembed_importer(&self) -> bool {
+        self.in_memory_bytecode.is_some()
+            || self.in_memory_bytecode_opt1.is_some()
+            || self.in_memory_bytecode_opt2.is_some()
+    }
+}
+
 /// Defines Python resources available for import.
 #[derive(Debug)]
 pub(crate) struct PythonImporterState<'a> {
