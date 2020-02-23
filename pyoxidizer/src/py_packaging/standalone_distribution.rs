@@ -1367,8 +1367,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.resources.get_extension_modules()
     }
 
-    fn extension_module_datas(&self) -> &BTreeMap<String, ExtensionModuleData> {
-        &self.resources.extension_module_datas
+    fn extension_module_datas(&self) -> BTreeMap<String, ExtensionModuleData> {
+        self.resources.get_extension_module_datas()
     }
 
     fn add_source_module(&mut self, module: &SourceModule) {

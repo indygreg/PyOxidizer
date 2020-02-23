@@ -56,7 +56,7 @@ pub trait PythonBinaryBuilder {
     fn extension_modules(&self) -> BTreeMap<String, ExtensionModule>;
 
     /// Obtain extension modules to be embedded in this instance.
-    fn extension_module_datas(&self) -> &BTreeMap<String, ExtensionModuleData>;
+    fn extension_module_datas(&self) -> BTreeMap<String, ExtensionModuleData>;
 
     /// Add a source module to the collection of embedded source modules.
     fn add_source_module(&mut self, module: &SourceModule);
