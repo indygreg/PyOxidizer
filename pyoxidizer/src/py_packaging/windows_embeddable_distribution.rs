@@ -545,8 +545,8 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
         self.resources.get_bytecode_modules()
     }
 
-    fn resources(&self) -> &BTreeMap<String, BTreeMap<String, Vec<u8>>> {
-        &self.resources.resources
+    fn resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
+        self.resources.get_resources()
     }
 
     fn extension_modules(&self) -> &BTreeMap<String, ExtensionModule> {

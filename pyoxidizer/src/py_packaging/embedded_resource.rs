@@ -605,7 +605,7 @@ pub fn write_embedded_resources_v1<W: Write>(
 pub struct EmbeddedPythonResourcesPrePackaged {
     source_modules: BTreeMap<String, SourceModule>,
     bytecode_modules: BTreeMap<String, BytecodeModule>,
-    pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
+    resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
     // TODO combine into single extension module type.
     pub extension_modules: BTreeMap<String, ExtensionModule>,
     pub extension_module_datas: BTreeMap<String, ExtensionModuleData>,
@@ -617,8 +617,14 @@ impl EmbeddedPythonResourcesPrePackaged {
         self.source_modules.clone()
     }
 
+    /// Obtain `BytecodeModule` in this instance.
     pub fn get_bytecode_modules(&self) -> BTreeMap<String, BytecodeModule> {
         self.bytecode_modules.clone()
+    }
+
+    /// Obtain resource files in this instance.
+    pub fn get_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
+        self.resources.clone()
     }
 
     /// Add a source module to the collection of embedded source modules.
