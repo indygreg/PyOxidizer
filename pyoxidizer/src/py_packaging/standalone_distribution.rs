@@ -966,6 +966,8 @@ impl PythonDistribution for StandaloneDistribution {
     fn as_python_executable_builder(
         &self,
         logger: &slog::Logger,
+        host_triple: &str,
+        target_triple: &str,
         name: &str,
         config: &EmbeddedPythonConfig,
         extension_module_filter: &ExtensionModuleFilter,
@@ -999,6 +1001,8 @@ impl PythonDistribution for StandaloneDistribution {
         let importlib_bytecode = self.resolve_importlib_bytecode()?;
 
         Ok(Box::new(StandalonePythonExecutableBuilder {
+            host_triple: host_triple.to_string(),
+            target_triple: target_triple.to_string(),
             exe_name: name.to_string(),
             distribution: self.clone(),
             resources,
@@ -1222,6 +1226,12 @@ impl PythonDistribution for StandaloneDistribution {
 /// A self-contained Python executable before it is compiled.
 #[derive(Clone, Debug)]
 pub struct StandalonePythonExecutableBuilder {
+    /// The target triple we are running on.
+    host_triple: String,
+
+    /// The target triple we are building for.
+    target_triple: String,
+
     /// The name of the executable to build.
     exe_name: String,
 
@@ -1258,8 +1268,6 @@ impl StandalonePythonExecutableBuilder {
     fn resolve_python_linking_info(
         &self,
         logger: &slog::Logger,
-        host: &str,
-        target: &str,
         opt_level: &str,
     ) -> Result<PythonLinkingInfo> {
         let resources = self.resources.package(logger, &self.python_exe)?;
@@ -1285,8 +1293,8 @@ impl StandalonePythonExecutableBuilder {
                     &self.distribution,
                     &resources,
                     &temp_dir_path,
-                    host,
-                    target,
+                    &self.host_triple,
+                    &self.target_triple,
                     opt_level,
                 )?;
 
@@ -1393,11 +1401,9 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     fn as_embedded_python_binary_data(
         &self,
         logger: &slog::Logger,
-        host: &str,
-        target: &str,
         opt_level: &str,
     ) -> Result<EmbeddedPythonBinaryData> {
-        let linking_info = self.resolve_python_linking_info(logger, host, target, opt_level)?;
+        let linking_info = self.resolve_python_linking_info(logger, opt_level)?;
 
         let resources =
             EmbeddedResourcesBlobs::try_from(self.resources.package(logger, &self.python_exe)?)?;
@@ -1412,8 +1418,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             linking_info,
             importlib,
             resources,
-            host: host.to_string(),
-            target: target.to_string(),
+            host: self.host_triple.clone(),
+            target: self.target_triple.clone(),
         })
     }
 
@@ -1483,6 +1489,8 @@ pub mod tests {
         let importlib_bytecode = distribution.resolve_importlib_bytecode()?;
 
         Ok(StandalonePythonExecutableBuilder {
+            host_triple: env!("HOST").to_string(),
+            target_triple: env!("HOST").to_string(),
             exe_name: "testapp".to_string(),
             distribution: distribution.deref().deref().clone(),
             resources,
@@ -1496,7 +1504,7 @@ pub mod tests {
 
     pub fn get_embedded(logger: &slog::Logger) -> Result<EmbeddedPythonBinaryData> {
         let exe = get_standalone_executable_builder(logger)?;
-        exe.as_embedded_python_binary_data(&get_logger()?, env!("HOST"), env!("HOST"), "0")
+        exe.as_embedded_python_binary_data(&get_logger()?, "0")
     }
 
     #[test]

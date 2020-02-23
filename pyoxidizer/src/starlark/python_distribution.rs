@@ -288,6 +288,9 @@ impl PythonDistribution {
 
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let (host_triple, target_triple) = context.downcast_apply(|x: &EnvironmentContext| {
+            (x.build_host_triple.clone(), x.build_target_triple.clone())
+        });
 
         let extension_module_filter =
             ExtensionModuleFilter::try_from(extension_module_filter.as_str()).or_else(|e| {
@@ -341,6 +344,8 @@ impl PythonDistribution {
             exe: dist
                 .as_python_executable_builder(
                     &logger,
+                    &host_triple,
+                    &target_triple,
                     &name,
                     &config,
                     &extension_module_filter,

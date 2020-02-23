@@ -79,7 +79,6 @@ pub fn build_executable_with_rust_project(
     exe: &dyn PythonBinaryBuilder,
     build_path: &Path,
     artifacts_path: &Path,
-    host: &str,
     target: &str,
     opt_level: &str,
     release: bool,
@@ -88,7 +87,7 @@ pub fn build_executable_with_rust_project(
         .with_context(|| "creating directory for PyOxidizer build artifacts")?;
 
     // Derive and write the artifacts needed to build a binary embedding Python.
-    let embedded_data = exe.as_embedded_python_binary_data(logger, host, target, opt_level)?;
+    let embedded_data = exe.as_embedded_python_binary_data(logger, opt_level)?;
     embedded_data.write_files(&artifacts_path)?;
 
     let rust_version = rustc_version::version()?;
@@ -217,7 +216,6 @@ pub fn build_python_executable(
     logger: &slog::Logger,
     bin_name: &str,
     exe: &dyn PythonBinaryBuilder,
-    host: &str,
     target: &str,
     opt_level: &str,
     release: bool,
@@ -241,7 +239,6 @@ pub fn build_python_executable(
         exe,
         &build_path,
         &artifacts_path,
-        host,
         target,
         opt_level,
         release,
@@ -504,15 +501,7 @@ mod tests {
         let logger = get_logger()?;
         let pre_built = get_standalone_executable_builder(&logger)?;
 
-        build_python_executable(
-            &logger,
-            "myapp",
-            &pre_built,
-            env!("HOST"),
-            env!("HOST"),
-            "0",
-            false,
-        )?;
+        build_python_executable(&logger, "myapp", &pre_built, env!("HOST"), "0", false)?;
 
         Ok(())
     }

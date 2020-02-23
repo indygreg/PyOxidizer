@@ -273,6 +273,8 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
     fn as_python_executable_builder(
         &self,
         _logger: &slog::Logger,
+        host_triple: &str,
+        target_triple: &str,
         name: &str,
         config: &EmbeddedPythonConfig,
         _extension_module_filter: &ExtensionModuleFilter,
@@ -282,6 +284,8 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         _include_test: bool,
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
         Ok(Box::new(WindowsEmbeddedablePythonExecutableBuilder {
+            host_triple: host_triple.to_string(),
+            target_triple: target_triple.to_string(),
             exe_name: name.to_string(),
             python_exe: self.python_exe.clone(),
             python_dll: self.python_dll.clone(),
@@ -439,6 +443,12 @@ fn read_stdlib_zip(
 /// `WindowsEmbeddableDistribution` instances.
 #[derive(Clone, Debug)]
 pub struct WindowsEmbeddedablePythonExecutableBuilder {
+    /// Rust target triple we are running from.
+    host_triple: String,
+
+    /// Rust target triple we are building for.
+    target_triple: String,
+
     /// The name of the executable to build.
     exe_name: String,
 
@@ -467,13 +477,7 @@ impl WindowsEmbeddedablePythonExecutableBuilder {
     /// placeholder for the actual version). That means we need to generate a
     /// `pythonXY.lib` to placate the linker. The function generate content for
     /// such a file.
-    pub fn resolve_pythonxy_lib(
-        &self,
-        logger: &slog::Logger,
-        host: &str,
-        target: &str,
-        opt_level: &str,
-    ) -> Result<Vec<u8>> {
+    pub fn resolve_pythonxy_lib(&self, logger: &slog::Logger, opt_level: &str) -> Result<Vec<u8>> {
         warn!(logger, "compiling fake pythonXY.lib");
 
         let temp_dir = TempDir::new("pyoxidizer-build-libpython")?;
@@ -483,8 +487,8 @@ impl WindowsEmbeddedablePythonExecutableBuilder {
 
         cc::Build::new()
             .out_dir(temp_dir.path())
-            .host(host)
-            .target(target)
+            .host(&self.host_triple)
+            .target(&self.target_triple)
             .opt_level_str(opt_level)
             .file(&empty_source)
             .cargo_metadata(false)
@@ -499,8 +503,6 @@ impl WindowsEmbeddedablePythonExecutableBuilder {
     pub fn as_python_linking_info(
         &self,
         logger: &slog::Logger,
-        host: &str,
-        target: &str,
         opt_level: &str,
     ) -> Result<PythonLinkingInfo> {
         let libpython_dir = self
@@ -515,7 +517,7 @@ impl WindowsEmbeddedablePythonExecutableBuilder {
 
         Ok(PythonLinkingInfo {
             libpythonxy_filename: PathBuf::from("pythonXY.lib"),
-            libpythonxy_data: self.resolve_pythonxy_lib(logger, host, target, opt_level)?,
+            libpythonxy_data: self.resolve_pythonxy_lib(logger, opt_level)?,
             libpython_filename: Some(self.python_dll.clone()),
             libpyembeddedconfig_filename: None,
             libpyembeddedconfig_data: None,
@@ -595,8 +597,6 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
     fn as_embedded_python_binary_data(
         &self,
         logger: &slog::Logger,
-        host: &str,
-        target: &str,
         opt_level: &str,
     ) -> Result<EmbeddedPythonBinaryData> {
         let resources = self
@@ -604,15 +604,15 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
             .package(logger, &self.python_exe)?
             .try_into()?;
 
-        let linking_info = self.as_python_linking_info(logger, host, target, opt_level)?;
+        let linking_info = self.as_python_linking_info(logger, opt_level)?;
 
         Ok(EmbeddedPythonBinaryData {
             config: self.config.clone(),
             linking_info,
             importlib: self.importlib_bytecode.clone(),
             resources,
-            host: host.to_string(),
-            target: target.to_string(),
+            host: self.host_triple.clone(),
+            target: self.target_triple.clone(),
         })
     }
 
@@ -687,6 +687,8 @@ mod tests {
 
         let builder = dist.as_python_executable_builder(
             &logger,
+            env!("HOST"),
+            env!("HOST"),
             "foo",
             &config,
             &extension_module_filter,

@@ -95,13 +95,12 @@ impl FileManifest {
         logger: &slog::Logger,
         prefix: &str,
         exe: &dyn PythonBinaryBuilder,
-        host: &str,
         target: &str,
         release: bool,
         opt_level: &str,
     ) -> Result<()> {
         let (filename, data) =
-            build_python_executable(logger, &exe.name(), exe, host, target, opt_level, release)?;
+            build_python_executable(logger, &exe.name(), exe, target, opt_level, release)?;
 
         let content = RawFileContent {
             data,
@@ -306,10 +305,9 @@ impl FileManifest {
             }
             "PythonExecutable" => {
                 let context = env.get("CONTEXT").expect("CONTEXT not defined");
-                let (host, target, release, opt_level) =
+                let (target, release, opt_level) =
                     context.downcast_apply(|x: &EnvironmentContext| {
                         (
-                            x.build_host_triple.clone(),
                             x.build_target_triple.clone(),
                             x.build_release,
                             x.build_opt_level.clone(),
@@ -328,7 +326,6 @@ impl FileManifest {
                     &logger,
                     &prefix,
                     exe.exe.deref(),
-                    &host,
                     &target,
                     release,
                     &opt_level,

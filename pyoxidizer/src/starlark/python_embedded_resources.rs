@@ -57,12 +57,9 @@ impl BuildTarget for PythonEmbeddedData {
             context.output_path.display()
         );
 
-        let embedded = self.exe.as_embedded_python_binary_data(
-            &context.logger,
-            &context.host_triple,
-            &context.target_triple,
-            &context.opt_level,
-        )?;
+        let embedded = self
+            .exe
+            .as_embedded_python_binary_data(&context.logger, &context.opt_level)?;
 
         embedded.write_files(&context.output_path)?;
 

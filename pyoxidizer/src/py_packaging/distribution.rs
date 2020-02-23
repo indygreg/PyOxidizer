@@ -190,6 +190,8 @@ pub trait PythonDistribution {
     fn as_python_executable_builder(
         &self,
         logger: &slog::Logger,
+        host_triple: &str,
+        target_triple: &str,
         name: &str,
         config: &EmbeddedPythonConfig,
         extension_module_filter: &ExtensionModuleFilter,

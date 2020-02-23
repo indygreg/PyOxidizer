@@ -92,8 +92,6 @@ pub trait PythonBinaryBuilder {
     fn as_embedded_python_binary_data(
         &self,
         logger: &slog::Logger,
-        host: &str,
-        target: &str,
         opt_level: &str,
     ) -> Result<EmbeddedPythonBinaryData>;
 

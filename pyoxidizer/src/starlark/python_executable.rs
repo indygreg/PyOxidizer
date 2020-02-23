@@ -71,7 +71,6 @@ impl BuildTarget for PythonExecutable {
             &context.logger,
             &self.exe.name(),
             self.exe.deref(),
-            &context.host_triple,
             &context.target_triple,
             &context.opt_level,
             context.release,
