@@ -96,6 +96,7 @@ pub fn get_default_distribution() -> Result<Arc<Box<StandaloneDistribution>>> {
     Ok(DEFAULT_DISTRIBUTION.clone())
 }
 
+#[cfg(windows)]
 pub fn get_default_dynamic_distribution() -> Result<Arc<Box<StandaloneDistribution>>> {
     Ok(DEFAULT_DYNAMIC_DISTRIBUTION.clone())
 }

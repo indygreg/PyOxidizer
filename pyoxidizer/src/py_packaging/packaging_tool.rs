@@ -385,7 +385,9 @@ pub fn setup_py_install<S: BuildHasher>(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::testutil::*, itertools::Itertools, std::ops::Deref};
+    #[cfg(windows)]
+    use itertools::Itertools;
+    use {super::*, crate::testutil::*, std::ops::Deref};
 
     #[test]
     fn test_install_black() -> Result<()> {

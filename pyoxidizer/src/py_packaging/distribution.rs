@@ -621,7 +621,6 @@ mod tests {
 
     #[test]
     fn test_resolve_suffixes() -> Result<()> {
-        let logger = get_logger()?;
         let distribution = get_default_distribution()?;
 
         let suffixes = PythonModuleSuffixes::resolve_from_python_exe(&distribution.python_exe)?;

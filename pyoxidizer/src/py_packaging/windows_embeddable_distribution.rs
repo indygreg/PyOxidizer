@@ -623,9 +623,11 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(windows)]
+    use crate::py_packaging::packaging_tool::pip_install;
     use {
-        super::*, crate::py_packaging::packaging_tool::pip_install,
-        crate::python_distributions::CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE, crate::testutil::*,
+        super::*, crate::python_distributions::CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE,
+        crate::testutil::*,
     };
 
     #[test]
