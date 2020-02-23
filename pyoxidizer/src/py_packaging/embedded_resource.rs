@@ -917,19 +917,6 @@ impl EmbeddedPythonResources {
 
         write_embedded_resources_v1(&self.modules_records(), resources).unwrap();
     }
-
-    pub fn embedded_extension_module_names(&self) -> BTreeSet<String> {
-        let mut res = BTreeSet::new();
-
-        for name in self.extension_modules.keys() {
-            res.insert(name.clone());
-        }
-        for name in self.built_extension_modules.keys() {
-            res.insert(name.clone());
-        }
-
-        res
-    }
 }
 
 #[cfg(test)]
