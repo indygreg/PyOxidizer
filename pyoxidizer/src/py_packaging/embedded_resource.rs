@@ -10,17 +10,18 @@ use {
     super::bytecode::{BytecodeCompiler, CompileMode},
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
     super::resource::{
-        packages_from_module_name, packages_from_module_names, BytecodeModule,
+        has_dunder_file, packages_from_module_name, packages_from_module_names, BytecodeModule,
         BytecodeOptimizationLevel, DataLocation, ExtensionModuleData, ResourceData, SourceModule,
     },
     super::standalone_distribution::ExtensionModule,
-    anyhow::{anyhow, Context, Result},
+    anyhow::{anyhow, Context, Error, Result},
     byteorder::{LittleEndian, WriteBytesExt},
     lazy_static::lazy_static,
     slog::warn,
     std::collections::{BTreeMap, BTreeSet},
     std::convert::{TryFrom, TryInto},
     std::io::Write,
+    std::iter::FromIterator,
     std::path::Path,
 };
 
@@ -98,7 +99,7 @@ impl Into<u8> for EmbeddedPythonModuleField {
 ///
 /// This type holds data required for serializing a Python module to the
 /// embedded resources data structure. See the `pyembed` crate for more.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct EmbeddedResourcePythonModule {
     /// The module name.
     pub name: String,
@@ -132,23 +133,6 @@ pub struct EmbeddedResourcePythonModule {
     /// Mapping of virtual filename to data for package distribution metadata
     /// to expose to Python's `importlib.metadata` API via in-memory data access.
     pub in_memory_package_distribution: Option<BTreeMap<String, Vec<u8>>>,
-}
-
-impl Default for EmbeddedResourcePythonModule {
-    fn default() -> Self {
-        Self {
-            name: "".to_string(),
-            is_package: false,
-            is_namespace_package: false,
-            in_memory_source: None,
-            in_memory_bytecode: None,
-            in_memory_bytecode_opt1: None,
-            in_memory_bytecode_opt2: None,
-            in_memory_extension_module_shared_library: None,
-            in_memory_resources: None,
-            in_memory_package_distribution: None,
-        }
-    }
 }
 
 impl EmbeddedResourcePythonModule {
@@ -597,13 +581,92 @@ pub fn write_embedded_resources_v1<W: Write>(
     Ok(())
 }
 
+/// Represents an embedded Python module resource entry before it is packaged.
+///
+/// Instances hold the same fields as `EmbeddedResourcePythonModule` except
+/// content backing fields is a `DataLocation` instead of `Vec<u8>`, since
+/// it may not be available yet.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct EmbeddedResourcePythonModulePrePackaged {
+    pub name: String,
+    pub is_package: bool,
+    pub is_namespace_package: bool,
+    pub in_memory_source: Option<DataLocation>,
+    pub in_memory_bytecode: Option<DataLocation>,
+    pub in_memory_bytecode_opt1: Option<DataLocation>,
+    pub in_memory_bytecode_opt2: Option<DataLocation>,
+    pub in_memory_extension_module_shared_library: Option<DataLocation>,
+    pub in_memory_resources: Option<BTreeMap<String, DataLocation>>,
+    pub in_memory_package_distribution: Option<BTreeMap<String, DataLocation>>,
+}
+
+impl TryFrom<&EmbeddedResourcePythonModulePrePackaged> for EmbeddedResourcePythonModule {
+    type Error = Error;
+
+    fn try_from(value: &EmbeddedResourcePythonModulePrePackaged) -> Result<Self, Self::Error> {
+        Ok(Self {
+            name: value.name.clone(),
+            is_package: value.is_package,
+            is_namespace_package: value.is_namespace_package,
+            in_memory_source: if let Some(location) = &value.in_memory_source {
+                Some(location.resolve()?)
+            } else {
+                None
+            },
+            in_memory_bytecode: if let Some(location) = &value.in_memory_bytecode {
+                Some(location.resolve()?)
+            } else {
+                None
+            },
+            in_memory_bytecode_opt1: if let Some(location) = &value.in_memory_bytecode_opt1 {
+                Some(location.resolve()?)
+            } else {
+                None
+            },
+            in_memory_bytecode_opt2: if let Some(location) = &value.in_memory_bytecode_opt2 {
+                Some(location.resolve()?)
+            } else {
+                None
+            },
+            in_memory_extension_module_shared_library: if let Some(location) =
+                &value.in_memory_extension_module_shared_library
+            {
+                Some(location.resolve()?)
+            } else {
+                None
+            },
+            in_memory_resources: if let Some(resources) = &value.in_memory_resources {
+                let mut res = BTreeMap::new();
+                for (key, location) in resources {
+                    res.insert(key.clone(), location.resolve()?);
+                }
+                Some(res)
+            } else {
+                None
+            },
+            in_memory_package_distribution: if let Some(resources) =
+                &value.in_memory_package_distribution
+            {
+                let mut res = BTreeMap::new();
+                for (key, location) in resources {
+                    res.insert(key.clone(), location.resolve()?);
+                }
+                Some(res)
+            } else {
+                None
+            },
+        })
+    }
+}
+
 /// Represents Python resources to embed in a binary.
 ///
 /// This collection holds resources before packaging. This type is
 /// transformed to `EmbeddedPythonResources` as part of packaging.
 #[derive(Debug, Default, Clone)]
 pub struct EmbeddedPythonResourcesPrePackaged {
-    source_modules: BTreeMap<String, SourceModule>,
+    modules: BTreeMap<String, EmbeddedResourcePythonModulePrePackaged>,
+
     bytecode_modules: BTreeMap<String, BytecodeModule>,
     resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
     // TODO combine into single extension module type.
@@ -614,7 +677,20 @@ pub struct EmbeddedPythonResourcesPrePackaged {
 impl EmbeddedPythonResourcesPrePackaged {
     /// Obtain `SourceModule` in this instance.
     pub fn get_source_modules(&self) -> BTreeMap<String, SourceModule> {
-        self.source_modules.clone()
+        BTreeMap::from_iter(self.modules.iter().filter_map(|(name, module)| {
+            if let Some(location) = &module.in_memory_source {
+                Some((
+                    name.clone(),
+                    SourceModule {
+                        name: name.clone(),
+                        is_package: module.is_package,
+                        source: location.clone(),
+                    },
+                ))
+            } else {
+                None
+            }
+        }))
     }
 
     /// Obtain `BytecodeModule` in this instance.
@@ -639,18 +715,31 @@ impl EmbeddedPythonResourcesPrePackaged {
 
     /// Add a source module to the collection of embedded source modules.
     pub fn add_source_module(&mut self, module: &SourceModule) {
-        self.source_modules
-            .insert(module.name.clone(), module.clone());
+        if !self.modules.contains_key(&module.name) {
+            self.modules.insert(
+                module.name.clone(),
+                EmbeddedResourcePythonModulePrePackaged {
+                    name: module.name.clone(),
+                    ..EmbeddedResourcePythonModulePrePackaged::default()
+                },
+            );
+        }
+
+        let mut entry = self.modules.get_mut(&module.name).unwrap();
+
+        entry.is_package = module.is_package;
+        entry.in_memory_source = Some(module.source.clone());
 
         // Automatically insert empty modules for missing parent packages.
         for package in packages_from_module_name(&module.name) {
-            if !self.source_modules.contains_key(&package) {
-                self.source_modules.insert(
+            if !self.modules.contains_key(&package) {
+                self.modules.insert(
                     package.clone(),
-                    SourceModule {
-                        name: package,
-                        source: DataLocation::Memory(vec![]),
+                    EmbeddedResourcePythonModulePrePackaged {
+                        name: package.clone(),
                         is_package: true,
+                        in_memory_source: Some(DataLocation::Memory(vec![])),
+                        ..EmbeddedResourcePythonModulePrePackaged::default()
                     },
                 );
             }
@@ -744,10 +833,10 @@ impl EmbeddedPythonResourcesPrePackaged {
     ) -> Result<()> {
         let resource_names = resolve_resource_names_from_files(files, glob_patterns)?;
 
+        warn!(logger, "filtering module entries");
+        filter_btreemap(logger, &mut self.modules, &resource_names);
         warn!(logger, "filtering embedded extension modules");
         filter_btreemap(logger, &mut self.extension_modules, &resource_names);
-        warn!(logger, "filtering embedded module sources");
-        filter_btreemap(logger, &mut self.source_modules, &resource_names);
         warn!(logger, "filtering embedded module bytecode");
         filter_btreemap(logger, &mut self.bytecode_modules, &resource_names);
         warn!(logger, "filtering embedded resources");
@@ -763,9 +852,11 @@ impl EmbeddedPythonResourcesPrePackaged {
     pub fn find_dunder_file(&self) -> Result<BTreeSet<String>> {
         let mut res = BTreeSet::new();
 
-        for (name, module) in &self.source_modules {
-            if module.has_dunder_file()? {
-                res.insert(name.clone());
+        for (name, module) in &self.modules {
+            if let Some(location) = &module.in_memory_source {
+                if has_dunder_file(&location.resolve()?)? {
+                    res.insert(name.clone());
+                }
             }
         }
 
@@ -807,24 +898,8 @@ impl EmbeddedPythonResourcesPrePackaged {
 
         let mut modules = BTreeMap::new();
 
-        for (name, module) in &self.source_modules {
-            if !modules.contains_key(name) {
-                modules.insert(
-                    name.clone(),
-                    EmbeddedResourcePythonModule {
-                        name: name.clone(),
-                        ..EmbeddedResourcePythonModule::default()
-                    },
-                );
-            }
-
-            let mut entry = modules.get_mut(name).unwrap();
-
-            if module.is_package {
-                entry.is_package = true;
-            }
-
-            entry.in_memory_source = Some(module.source.resolve()?);
+        for (name, module) in &self.modules {
+            modules.insert(name.clone(), module.try_into()?);
         }
 
         {
@@ -1004,13 +1079,14 @@ mod tests {
             is_package: false,
         });
 
-        assert!(r.source_modules.contains_key("foo"));
+        assert!(r.modules.contains_key("foo"));
         assert_eq!(
-            r.source_modules.get("foo"),
-            Some(&SourceModule {
+            r.modules.get("foo"),
+            Some(&EmbeddedResourcePythonModulePrePackaged {
                 name: "foo".to_string(),
-                source: DataLocation::Memory(vec![42]),
                 is_package: false,
+                in_memory_source: Some(DataLocation::Memory(vec![42])),
+                ..EmbeddedResourcePythonModulePrePackaged::default()
             })
         );
     }
@@ -1024,29 +1100,34 @@ mod tests {
             is_package: true,
         });
 
-        assert_eq!(r.source_modules.len(), 3);
+        assert_eq!(r.modules.len(), 3);
         assert_eq!(
-            r.source_modules.get("root.parent.child"),
-            Some(&SourceModule {
+            r.modules.get("root.parent.child"),
+            Some(&EmbeddedResourcePythonModulePrePackaged {
                 name: "root.parent.child".to_string(),
-                source: DataLocation::Memory(vec![42]),
                 is_package: true,
+                in_memory_source: Some(DataLocation::Memory(vec![42])),
+                ..EmbeddedResourcePythonModulePrePackaged::default()
             })
         );
+
         assert_eq!(
-            r.source_modules.get("root.parent"),
-            Some(&SourceModule {
+            r.modules.get("root.parent"),
+            Some(&EmbeddedResourcePythonModulePrePackaged {
                 name: "root.parent".to_string(),
-                source: DataLocation::Memory(vec![]),
                 is_package: true,
+                in_memory_source: Some(DataLocation::Memory(vec![])),
+                ..EmbeddedResourcePythonModulePrePackaged::default()
             })
         );
+
         assert_eq!(
-            r.source_modules.get("root"),
-            Some(&SourceModule {
+            r.modules.get("root"),
+            Some(&EmbeddedResourcePythonModulePrePackaged {
                 name: "root".to_string(),
-                source: DataLocation::Memory(vec![]),
                 is_package: true,
+                in_memory_source: Some(DataLocation::Memory(vec![])),
+                ..EmbeddedResourcePythonModulePrePackaged::default()
             })
         );
     }
