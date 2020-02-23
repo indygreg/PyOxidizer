@@ -152,6 +152,21 @@ impl Default for EmbeddedResourcePythonModule {
 }
 
 impl EmbeddedResourcePythonModule {
+    /// Whether the module is meaningful.
+    ///
+    /// The module is meaningful if it has data attached or is a package.
+    pub fn is_meaningful(&self) -> bool {
+        self.is_package
+            || self.is_namespace_package
+            || self.in_memory_source.is_some()
+            || self.in_memory_bytecode.is_some()
+            || self.in_memory_bytecode_opt1.is_some()
+            || self.in_memory_bytecode_opt2.is_some()
+            || self.in_memory_extension_module_shared_library.is_some()
+            || self.in_memory_resources.is_some()
+            || self.in_memory_package_distribution.is_some()
+    }
+
     /// Compute length of index entry for version 1 payload format.
     pub fn index_v1_length(&self) -> usize {
         // Start of index entry.
