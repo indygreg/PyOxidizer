@@ -889,11 +889,11 @@ impl EmbeddedPythonResourcesPrePackaged {
 /// Represents Python resources to embed in a binary.
 #[derive(Debug, Default, Clone)]
 pub struct EmbeddedPythonResources {
-    pub module_sources: BTreeMap<String, PackagedModuleSource>,
-    pub module_bytecodes: BTreeMap<String, PackagedModuleBytecode>,
-    pub all_modules: BTreeSet<String>,
-    pub all_packages: BTreeSet<String>,
-    pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
+    module_sources: BTreeMap<String, PackagedModuleSource>,
+    module_bytecodes: BTreeMap<String, PackagedModuleBytecode>,
+    all_modules: BTreeSet<String>,
+    all_packages: BTreeSet<String>,
+    resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
     // TODO combine the extension module types.
     pub extension_modules: BTreeMap<String, ExtensionModule>,
     pub built_extension_modules: BTreeMap<String, ExtensionModuleData>,
