@@ -1388,6 +1388,18 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     }
 
     fn add_extension_module_data(&mut self, extension_module: &ExtensionModuleData) {
+        if self.supports_in_memory_dynamically_linked_extension_loading() {
+            if let Some(data) = &extension_module.extension_data {
+                self.resources
+                    .add_in_memory_extension_module_shared_library(
+                        &extension_module.name,
+                        extension_module.is_package,
+                        data,
+                    );
+                return;
+            }
+        }
+
         self.resources.add_extension_module_data(extension_module);
     }
 

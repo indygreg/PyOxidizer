@@ -913,6 +913,48 @@ impl EmbeddedPythonResourcesPrePackaged {
         }
     }
 
+    /// Add an extension module shared library that should be imported from memory.
+    pub fn add_in_memory_extension_module_shared_library(
+        &mut self,
+        module: &str,
+        is_package: bool,
+        data: &[u8],
+    ) {
+        if !self.modules.contains_key(module) {
+            self.modules.insert(
+                module.to_string(),
+                EmbeddedResourcePythonModulePrePackaged {
+                    name: module.to_string(),
+                    ..EmbeddedResourcePythonModulePrePackaged::default()
+                },
+            );
+        }
+
+        let mut entry = self.modules.get_mut(module).unwrap();
+        if is_package {
+            entry.is_package = true;
+        }
+        entry.in_memory_extension_module_shared_library = Some(DataLocation::Memory(data.to_vec()));
+
+        // Add empty bytecode for missing parent packages.
+        for package in packages_from_module_name(module) {
+            if !self.modules.contains_key(&package) {
+                self.modules.insert(
+                    package.clone(),
+                    EmbeddedResourcePythonModulePrePackaged {
+                        name: package.clone(),
+                        ..EmbeddedResourcePythonModulePrePackaged::default()
+                    },
+                );
+            }
+
+            let mut entry = self.modules.get_mut(&package).unwrap();
+            entry.is_package = true;
+            // TODO should we populate opt1, opt2?
+            entry.in_memory_bytecode = Some(DataLocation::Memory(vec![]));
+        }
+    }
+
     /// Filter the entities in this instance against names in files.
     pub fn filter_from_files(
         &mut self,

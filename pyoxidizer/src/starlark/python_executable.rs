@@ -197,15 +197,7 @@ impl PythonExecutable {
                 self.exe.add_extension_module_data(&m);
             }
             PythonExtensionModuleFlavor::DynamicLibrary(m) => {
-                return Err(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: format!(
-                        "cannot add dynamic library extension module {} to executable",
-                        m.name
-                    ),
-                    label: "add_extension_module".to_string(),
-                }
-                .into());
+                self.exe.add_extension_module_data(&m);
             }
         }
 
