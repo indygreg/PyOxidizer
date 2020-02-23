@@ -658,7 +658,6 @@ impl TryFrom<&EmbeddedResourcePythonModulePrePackaged> for EmbeddedResourcePytho
 pub struct EmbeddedPythonResourcesPrePackaged {
     modules: BTreeMap<String, EmbeddedResourcePythonModulePrePackaged>,
 
-    resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
     // TODO combine into single extension module type.
     extension_modules: BTreeMap<String, ExtensionModule>,
     extension_module_datas: BTreeMap<String, ExtensionModuleData>,
@@ -724,7 +723,22 @@ impl EmbeddedPythonResourcesPrePackaged {
 
     /// Obtain resource files in this instance.
     pub fn get_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
-        self.resources.clone()
+        BTreeMap::from_iter(self.modules.iter().filter_map(|(name, module)| {
+            if let Some(resources) = &module.in_memory_resources {
+                Some((
+                    name.clone(),
+                    BTreeMap::from_iter(resources.iter().map(|(key, value)| {
+                        (
+                            key.clone(),
+                            // TODO should return a DataLocation or Result.
+                            value.resolve().expect("resolved resource location"),
+                        )
+                    })),
+                ))
+            } else {
+                None
+            }
+        }))
     }
 
     /// Obtain `ExtensionModule` in this instance.
@@ -827,13 +841,28 @@ impl EmbeddedPythonResourcesPrePackaged {
     ///
     /// Resource data belongs to a Python package and has a name and bytes data.
     pub fn add_resource(&mut self, resource: &ResourceData) {
-        if !self.resources.contains_key(&resource.package) {
-            self.resources
-                .insert(resource.package.clone(), BTreeMap::new());
+        if !self.modules.contains_key(&resource.package) {
+            self.modules.insert(
+                resource.package.clone(),
+                EmbeddedResourcePythonModulePrePackaged {
+                    name: resource.package.clone(),
+                    ..EmbeddedResourcePythonModulePrePackaged::default()
+                },
+            );
         }
 
-        let inner = self.resources.get_mut(&resource.package).unwrap();
-        inner.insert(resource.name.clone(), resource.data.resolve().unwrap());
+        let mut entry = self.modules.get_mut(&resource.package).unwrap();
+        entry.is_package = true;
+
+        if entry.in_memory_resources.is_none() {
+            entry.in_memory_resources = Some(BTreeMap::new());
+        }
+
+        entry
+            .in_memory_resources
+            .as_mut()
+            .unwrap()
+            .insert(resource.name.clone(), resource.data.clone());
     }
 
     /// Add an extension module.
@@ -897,8 +926,6 @@ impl EmbeddedPythonResourcesPrePackaged {
         filter_btreemap(logger, &mut self.modules, &resource_names);
         warn!(logger, "filtering embedded extension modules");
         filter_btreemap(logger, &mut self.extension_modules, &resource_names);
-        warn!(logger, "filtering embedded resources");
-        filter_btreemap(logger, &mut self.resources, &resource_names);
 
         Ok(())
     }
@@ -1051,25 +1078,6 @@ impl EmbeddedPythonResourcesPrePackaged {
             }
 
             built_extension_modules.insert(name.clone(), em.clone());
-        }
-
-        for (package, resources) in &self.resources {
-            if !modules.contains_key(package) {
-                modules.insert(
-                    package.clone(),
-                    EmbeddedResourcePythonModule {
-                        name: package.clone(),
-                        ..EmbeddedResourcePythonModule::default()
-                    },
-                );
-            }
-
-            let mut entry = modules.get_mut(package).unwrap();
-
-            // For a module to contain resources, it must be a package.
-            entry.is_package = true;
-
-            entry.in_memory_resources = Some(resources.clone());
         }
 
         let derived_package_names = packages_from_module_names(modules.keys().cloned());
@@ -1274,12 +1282,20 @@ mod tests {
             data: DataLocation::Memory(vec![42]),
         });
 
-        assert_eq!(r.resources.len(), 1);
-        assert!(r.resources.contains_key("foo"));
-
-        let foo = r.resources.get("foo").unwrap();
-        assert_eq!(foo.len(), 1);
-        assert_eq!(foo.get("resource.txt"), Some(&vec![42]));
+        assert_eq!(r.modules.len(), 1);
+        assert_eq!(
+            r.modules.get("foo"),
+            Some(&EmbeddedResourcePythonModulePrePackaged {
+                name: "foo".to_string(),
+                is_package: true,
+                in_memory_resources: Some(BTreeMap::from_iter(
+                    [("resource.txt".to_string(), DataLocation::Memory(vec![42]))]
+                        .iter()
+                        .cloned()
+                )),
+                ..EmbeddedResourcePythonModulePrePackaged::default()
+            })
+        );
     }
 
     #[test]
