@@ -101,15 +101,37 @@ impl Into<u8> for EmbeddedPythonModuleField {
 /// embedded resources data structure. See the `pyembed` crate for more.
 #[derive(Debug)]
 pub struct EmbeddedPythonModule {
+    /// The module name.
     pub name: String,
+
+    /// Whether the module is a package.
     pub is_package: bool,
+
+    /// Whether the module is a namespace package.
     pub is_namespace_package: bool,
+
+    /// Source code to use to import module from memory.
     pub in_memory_source: Option<Vec<u8>>,
+
+    /// Bytecode to use to import module from memory.
     pub in_memory_bytecode: Option<Vec<u8>>,
+
+    /// Bytecode at optimized level 1 to use to import from memory.
     pub in_memory_bytecode_opt1: Option<Vec<u8>>,
+
+    /// Bytecode at optimized level 2 to use to import from memory.
     pub in_memory_bytecode_opt2: Option<Vec<u8>>,
+
+    /// Native machine code constituting a shared library for an extension module
+    /// which can be imported from memory. (Not supported on all platforms.)
     pub in_memory_extension_module_shared_library: Option<Vec<u8>>,
+
+    /// Mapping of virtual filename to data for resources to expose to Python's
+    /// `importlib.resources` API via in-memory data access.
     pub in_memory_resources: Option<BTreeMap<String, Vec<u8>>>,
+
+    /// Mapping of virtual filename to data for package distribution metadata
+    /// to expose to Python's `importlib.metadata` API via in-memory data access.
     pub in_memory_package_distribution: Option<BTreeMap<String, Vec<u8>>>,
 }
 
