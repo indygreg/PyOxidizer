@@ -1336,8 +1336,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &self.python_exe
     }
 
-    fn source_modules(&self) -> &BTreeMap<String, SourceModule> {
-        &self.resources.source_modules
+    fn source_modules(&self) -> BTreeMap<String, SourceModule> {
+        self.resources.get_source_modules()
     }
 
     fn bytecode_modules(&self) -> &BTreeMap<String, BytecodeModule> {

@@ -603,7 +603,7 @@ pub fn write_embedded_resources_v1<W: Write>(
 /// transformed to `EmbeddedPythonResources` as part of packaging.
 #[derive(Debug, Default, Clone)]
 pub struct EmbeddedPythonResourcesPrePackaged {
-    pub source_modules: BTreeMap<String, SourceModule>,
+    source_modules: BTreeMap<String, SourceModule>,
     pub bytecode_modules: BTreeMap<String, BytecodeModule>,
     pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
     // TODO combine into single extension module type.
@@ -612,6 +612,11 @@ pub struct EmbeddedPythonResourcesPrePackaged {
 }
 
 impl EmbeddedPythonResourcesPrePackaged {
+    /// Obtain `SourceModule` in this instance.
+    pub fn get_source_modules(&self) -> BTreeMap<String, SourceModule> {
+        self.source_modules.clone()
+    }
+
     /// Add a source module to the collection of embedded source modules.
     pub fn add_source_module(&mut self, module: &SourceModule) {
         self.source_modules

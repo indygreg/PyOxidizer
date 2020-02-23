@@ -44,7 +44,7 @@ pub trait PythonBinaryBuilder {
     fn python_exe_path(&self) -> &Path;
 
     /// Obtain source modules to be embedded in this instance.
-    fn source_modules(&self) -> &BTreeMap<String, SourceModule>;
+    fn source_modules(&self) -> BTreeMap<String, SourceModule>;
 
     /// Obtain bytecode modules to be embedded in this instance.
     fn bytecode_modules(&self) -> &BTreeMap<String, BytecodeModule>;
