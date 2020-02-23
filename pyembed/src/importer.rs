@@ -48,6 +48,7 @@ fn get_memory_view(py: Python, data: &Option<&'static [u8]>) -> Option<PyObject>
 /// allowing it to be the only registered sys.meta_path importer.
 py_class!(class PyOxidizerFinder |py| {
     data imp_module: PyModule;
+    data sys_module: PyModule;
     data marshal_loads: PyObject;
     data builtin_importer: PyObject;
     data frozen_importer: PyObject;
@@ -156,18 +157,33 @@ py_class!(class PyOxidizerFinder |py| {
                 imp_module.call(py, "get_frozen_object", (fullname,), None)
             } else if module.is_builtin {
                 Ok(py.None())
-            // TODO check opt bytecode depending on optimization level.
-            } else if module.in_memory_bytecode.is_some() {
-                 match get_memory_view(py, &module.in_memory_bytecode) {
-                    Some(value) => {
-                        self.marshal_loads(py).call(py, (value,), None)
-                    }
-                    None => {
-                        Err(PyErr::new::<ImportError, _>(py, ("cannot find code in memory", fullname)))
-                    }
-                }
             } else {
-                Ok(py.None())
+                let sys_module = self.sys_module(py);
+                let flags = sys_module.get(py, "flags")?;
+                let flags: i64 = flags.extract(py)?;
+
+                let bytecode = if flags == 0 && module.in_memory_bytecode.is_some() {
+                    &module.in_memory_bytecode
+                } else if flags == 1 && module.in_memory_bytecode_opt1.is_some() {
+                    &module.in_memory_bytecode_opt1
+                } else if flags == 2 && module.in_memory_bytecode_opt2.is_some() {
+                    &module.in_memory_bytecode_opt2
+                } else {
+                    &None
+                };
+
+                if bytecode.is_some() {
+                    match get_memory_view(py, bytecode) {
+                        Some(value) => {
+                            self.marshal_loads(py).call(py, (value,), None)
+                        }
+                        None => {
+                            Err(PyErr::new::<ImportError, _>(py, ("cannot find code in memory", fullname)))
+                        }
+                    }
+                } else {
+                    Ok(py.None())
+                }
             }
         } else {
             Ok(py.None())
@@ -440,7 +456,8 @@ fn module_setup(
     let imp_module = bootstrap_module.get(py, "_imp")?;
     let imp_module = imp_module.cast_into::<PyModule>(py)?;
     let sys_module = bootstrap_module.get(py, "sys")?;
-    let sys_module = sys_module.cast_as::<PyModule>(py)?;
+    let sys_module = sys_module.cast_into::<PyModule>(py)?;
+    let sys_module_ref = sys_module.clone_ref(py);
     let meta_path_object = sys_module.get(py, "meta_path")?;
 
     // We should be executing as part of
@@ -498,6 +515,7 @@ fn module_setup(
     let unified_importer = PyOxidizerFinder::create_instance(
         py,
         imp_module,
+        sys_module,
         marshal_loads,
         builtin_importer,
         frozen_importer,
@@ -534,11 +552,11 @@ fn module_setup(
 
         let file_finder = frozen_importlib_external.get(py, "FileFinder")?;
         let path_hook = file_finder.call_method(py, "path_hook", loaders_tuple, None)?;
-        let path_hooks = sys_module.get(py, "path_hooks")?;
+        let path_hooks = sys_module_ref.get(py, "path_hooks")?;
         path_hooks.call_method(py, "append", (path_hook,), None)?;
 
         let path_finder = frozen_importlib_external.get(py, "PathFinder")?;
-        let meta_path = sys_module.get(py, "meta_path")?;
+        let meta_path = sys_module_ref.get(py, "meta_path")?;
         meta_path.call_method(py, "append", (path_finder,), None)?;
     }
 
@@ -548,7 +566,7 @@ fn module_setup(
     // (which was just registered above) should have the same effect.
 
     // Always clear out sys.path.
-    let sys_path = sys_module.get(py, "path")?;
+    let sys_path = sys_module_ref.get(py, "path")?;
     sys_path.call_method(py, "clear", NoArgs, None)?;
 
     // And repopulate it with entries from the config.

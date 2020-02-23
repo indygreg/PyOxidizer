@@ -45,6 +45,9 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* Multiple bytecode optimization levels can now be embedded in binaries.
+  Previously, it was only possible to embed bytecode for a given module
+  at a single optimization level.
 * The ``default_python_distribution()`` Starlark function now accepts values
   ``standalone_static`` and ``standalone_dynamic`` to specify a *standalone*
   distribution that is either statically or dynamically linked.
