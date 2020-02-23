@@ -12,7 +12,7 @@ use {
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Context, Error, Result},
     serde::{Deserialize, Serialize},
-    std::collections::{BTreeMap, BTreeSet},
+    std::collections::BTreeSet,
     std::convert::TryFrom,
     std::path::PathBuf,
 };
@@ -570,25 +570,6 @@ pub struct PackagedModuleSource {
 pub struct PackagedModuleBytecode {
     pub bytecode: Vec<u8>,
     pub is_package: bool,
-}
-
-/// Represents resources to install in an app-relative location.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-pub struct AppRelativeResources {
-    pub module_sources: BTreeMap<String, PackagedModuleSource>,
-    pub module_bytecodes: BTreeMap<String, PackagedModuleBytecode>,
-    pub resources: BTreeMap<String, BTreeMap<String, Vec<u8>>>,
-}
-
-impl AppRelativeResources {
-    pub fn package_names(&self) -> BTreeSet<String> {
-        let mut packages = packages_from_module_names(self.module_sources.keys().cloned());
-        packages.extend(packages_from_module_names(
-            self.module_bytecodes.keys().cloned(),
-        ));
-
-        packages
-    }
 }
 
 #[cfg(test)]
