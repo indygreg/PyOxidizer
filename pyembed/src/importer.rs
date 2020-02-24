@@ -119,6 +119,7 @@ py_class!(class PyOxidizerFinder |py| {
                 self.builtin_importer(py).call_method(py, "exec_module", (module,), None)
             } else if entry.is_frozen {
                 self.frozen_importer(py).call_method(py, "exec_module", (module,), None)
+            // TODO service other in-memory bytecode fields.
             } else if entry.in_memory_bytecode.is_some() {
                 match get_memory_view(py, &entry.in_memory_bytecode) {
                     Some(value) => {
