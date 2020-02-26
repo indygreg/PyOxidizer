@@ -14,15 +14,20 @@ use {
     super::python_resources::PythonImporterState,
     cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError},
     cpython::{
-        py_class, py_class_impl, py_coerce_item, py_fn, NoArgs, ObjectProtocol, PyClone, PyDict,
-        PyErr, PyList, PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject,
-        ToPyObject,
+        py_class, py_fn, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule,
+        PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
     },
     python3_sys as pyffi,
     python3_sys::{PyBUF_READ, PyMemoryView_FromMemory},
     std::cell::RefCell,
     std::collections::HashMap,
     std::sync::Arc,
+};
+#[cfg(windows)]
+use {
+    cpython::exc::SystemError,
+    memory_module_sys::{MemoryFreeLibrary, MemoryGetProcAddress, MemoryLoadLibrary},
+    std::ffi::{c_void, CString},
 };
 
 /// Obtain a Python memoryview referencing a memory slice.
@@ -37,6 +42,218 @@ fn get_memory_view(py: Python, data: &Option<&'static [u8]>) -> Option<PyObject>
         unsafe { PyObject::from_owned_ptr_opt(py, ptr) }
     } else {
         None
+    }
+}
+
+#[cfg(windows)]
+#[allow(non_camel_case_types)]
+type py_init_fn = extern "C" fn() -> *mut pyffi::PyObject;
+
+/// Implementation of `Loader.create_module()` for in-memory extension modules.
+///
+/// The equivalent CPython code for importing extension modules is to call
+/// `imp.create_dynamic()`. This will:
+///
+/// 1. Call `_PyImport_FindExtensionObject()`.
+/// 2. Call `_PyImport_LoadDynamicModuleWithSpec()` if #1 didn't return anything.
+///
+/// While `_PyImport_FindExtensionObject()` accepts a `filename` argument, this
+/// argument is only used as a key inside an internal dictionary indexing found
+/// extension modules. So we can call that function verbatim.
+///
+/// `_PyImport_LoadDynamicModuleWithSpec()` is more interesting. It takes a
+/// `FILE*` for the extension location, so we can't call it. So we need to
+/// reimplement it. Documentation of that is inline.
+#[cfg(windows)]
+fn extension_module_shared_library_create_module(
+    py: Python,
+    sys_modules: PyObject,
+    spec: &PyObject,
+    name_py: PyObject,
+    name: &str,
+    library_data: &[u8],
+) -> PyResult<PyObject> {
+    let origin = PyString::new(py, "memory");
+
+    let existing_module = unsafe {
+        pyffi::_PyImport_FindExtensionObjectEx(
+            name_py.as_ptr(),
+            origin.as_object().as_ptr(),
+            sys_modules.as_ptr(),
+        )
+    };
+
+    // We found an existing module object. Return it.
+    if !existing_module.is_null() {
+        return Ok(unsafe { PyObject::from_owned_ptr(py, existing_module) });
+    }
+
+    // An error occurred calling _PyImport_FindExtensionObjectEx(). Raise it.
+    if !unsafe { pyffi::PyErr_Occurred() }.is_null() {
+        return Err(PyErr::fetch(py));
+    }
+
+    // New module load request. Proceed to _PyImport_LoadDynamicModuleWithSpec()
+    // functionality.
+
+    let module =
+        unsafe { MemoryLoadLibrary(library_data.as_ptr() as *const c_void, library_data.len()) };
+
+    if module.is_null() {
+        return Err(PyErr::new::<ImportError, _>(
+            py,
+            ("unable to load extension module library from memory", name),
+        ));
+    }
+
+    // Any error past this point should call `MemoryFreeLibrary()` to unload the
+    // library.
+
+    load_dynamic_library(py, sys_modules, spec, name_py, name, module).or_else(|e| {
+        unsafe {
+            MemoryFreeLibrary(module);
+        }
+        Err(e)
+    })
+}
+
+#[cfg(unix)]
+fn extension_module_shared_library_create_module(
+    _py: Python,
+    _sys_modules: PyObject,
+    _spec: &PyObject,
+    _name_py: PyObject,
+    _name: &str,
+    _library_data: &[u8],
+) -> PyResult<PyObject> {
+    panic!("should only be called on Windows");
+}
+
+/// Reimplementation of `_PyImport_LoadDynamicModuleWithSpec()`.
+#[cfg(windows)]
+fn load_dynamic_library(
+    py: Python,
+    sys_modules: PyObject,
+    spec: &PyObject,
+    name_py: PyObject,
+    name: &str,
+    library_module: *const c_void,
+) -> PyResult<PyObject> {
+    // The init function is `PyInit_<stem>`.
+    let last_name_part = if name.contains('.') {
+        name.split('.').last().unwrap()
+    } else {
+        name
+    };
+
+    let name_cstring = CString::new(name).unwrap();
+    let init_fn_name = CString::new(format!("PyInit_{}", last_name_part)).unwrap();
+
+    let address = unsafe { MemoryGetProcAddress(library_module, init_fn_name.as_ptr()) };
+    if address.is_null() {
+        return Err(PyErr::new::<ImportError, _>(
+            py,
+            (
+                format!(
+                    "dynamic module does not define module export function ({})",
+                    init_fn_name.to_str().unwrap()
+                ),
+                name,
+            ),
+        ));
+    }
+
+    let init_fn: py_init_fn = unsafe { std::mem::transmute(address) };
+
+    // Package context is needed for single-phase init.
+    let py_module = unsafe {
+        let old_context = pyffi::_Py_PackageContext;
+        pyffi::_Py_PackageContext = name_cstring.as_ptr();
+        let py_module = init_fn();
+        pyffi::_Py_PackageContext = old_context;
+        py_module
+    };
+
+    if py_module.is_null() {
+        if unsafe { pyffi::PyErr_Occurred().is_null() } {
+            return Err(PyErr::new::<SystemError, _>(
+                py,
+                format!(
+                    "initialization of {} failed without raising an exception",
+                    name
+                ),
+            ));
+        }
+    }
+
+    // Cast to owned type to help prevent refcount/memory leaks.
+    let py_module = unsafe { PyObject::from_owned_ptr(py, py_module) };
+
+    if !unsafe { pyffi::PyErr_Occurred().is_null() } {
+        unsafe {
+            pyffi::PyErr_Clear();
+        }
+        return Err(PyErr::new::<SystemError, _>(
+            py,
+            format!("initialization of {} raised unreported exception", name),
+        ));
+    }
+
+    if unsafe { pyffi::Py_TYPE(py_module.as_ptr()) }.is_null() {
+        return Err(PyErr::new::<SystemError, _>(
+            py,
+            format!("init function of {} returned uninitialized object", name),
+        ));
+    }
+
+    // If initialization returned a `PyModuleDef`, construct a module from it.
+    if unsafe { pyffi::PyObject_TypeCheck(py_module.as_ptr(), &mut pyffi::PyModuleDef_Type) } != 0 {
+        let py_module = unsafe {
+            pyffi::PyModule_FromDefAndSpec(
+                py_module.as_ptr() as *mut pyffi::PyModuleDef,
+                spec.as_ptr(),
+            )
+        };
+
+        return if py_module.is_null() {
+            Err(PyErr::fetch(py))
+        } else {
+            Ok(unsafe { PyObject::from_owned_ptr(py, py_module) })
+        };
+    }
+
+    // Else fall back to single-phase init mechanism.
+
+    let mut module_def = unsafe { pyffi::PyModule_GetDef(py_module.as_ptr()) };
+    if module_def.is_null() {
+        return Err(PyErr::new::<SystemError, _>(
+            py,
+            format!(
+                "initialization of {} did not return an extension module",
+                name
+            ),
+        ));
+    }
+
+    unsafe {
+        (*module_def).m_base.m_init = Some(init_fn);
+    }
+
+    // If we wanted to assign __file__ we would do it here.
+
+    let fixup_result = unsafe {
+        pyffi::_PyImport_FixupExtensionObject(
+            py_module.as_ptr(),
+            name_py.as_ptr(),
+            name_py.as_ptr(),
+            sys_modules.as_ptr(),
+        )
+    };
+
+    if fixup_result < 0 {
+        Err(PyErr::fetch(py))
+    } else {
+        Ok(py_module)
     }
 }
 
@@ -106,7 +323,34 @@ py_class!(class PyOxidizerFinder |py| {
 
     // Start of importlib.abc.Loader interface.
 
-    def create_module(&self, _spec: &PyObject) -> PyResult<PyObject> {
+    def create_module(&self, spec: &PyObject) -> PyResult<PyObject> {
+        let name = spec.getattr(py, "name")?;
+        let key = name.extract::<String>(py)?;
+
+        if let Some(entry) = self.importer_state(py).modules.get(&*key) {
+            // We need a custom implementation of create_module() for in-memory shared
+            // library extensions because if we wait until `exec_module()` to
+            // initialize the module object, this can confuse some CPython
+            // internals. A side-effect of initializing extension modules is
+            // populating `sys.modules` and this made `LazyLoader` unhappy.
+            // If we ever implement our own lazy module importer, we could
+            // potentially work around this and move all extension module
+            // initialization into `exec_module()`.
+            if let Some(library_data) = &entry.in_memory_shared_library {
+                let sys_module = self.sys_module(py);
+                let sys_modules = sys_module.as_object().getattr(py, "modules")?;
+
+                return extension_module_shared_library_create_module(
+                    py,
+                    sys_modules,
+                    spec,
+                    name,
+                    &key,
+                    library_data
+                );
+            }
+        }
+
         Ok(py.None())
     }
 
@@ -119,6 +363,11 @@ py_class!(class PyOxidizerFinder |py| {
                 self.builtin_importer(py).call_method(py, "exec_module", (module,), None)
             } else if entry.is_frozen {
                 self.frozen_importer(py).call_method(py, "exec_module", (module,), None)
+            } else if entry.in_memory_shared_library.is_some() {
+                // `ExtensionFileLoader.exec_module()` simply calls `imp.exec_dynamic()`.
+                let imp_module = self.imp_module(py);
+
+                imp_module.as_object().call_method(py, "exec_dynamic", (module,), None)
             // TODO service other in-memory bytecode fields.
             } else if entry.in_memory_bytecode.is_some() {
                 match get_memory_view(py, &entry.in_memory_bytecode) {

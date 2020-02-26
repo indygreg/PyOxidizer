@@ -44,8 +44,8 @@ binaries.
 Native Extension Modules
 ------------------------
 
-Building and using compiled extension modules (e.g. C extensions) is
-partially supported.
+Using compiled extension modules (e.g. C extensions) is partially
+supported.
 
 Building C extensions to be embedded in the produced binary works
 for Windows, Linux, and macOS.

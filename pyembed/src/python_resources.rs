@@ -103,6 +103,7 @@ impl<'a> PythonModule<'a> {
         self.in_memory_bytecode.is_some()
             || self.in_memory_bytecode_opt1.is_some()
             || self.in_memory_bytecode_opt2.is_some()
+            || self.in_memory_shared_library.is_some()
     }
 }
 

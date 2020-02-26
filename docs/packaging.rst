@@ -387,7 +387,8 @@ Adding Extension Modules At Run-Time
 ====================================
 
 Normally, Python extension modules are compiled into the binary as part
-of the embedded Python interpreter.
+of the embedded Python interpreter or embedded Python resources data
+structure.
 
 ``PyOxidizer`` also supports providing additional extension modules at run-time.
 This can be useful for larger Rust applications providing extension modules

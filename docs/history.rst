@@ -45,6 +45,14 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* Windows binaries can now import extension modules defined as shared libraries
+  (e.g. `.pyd` files) from memory. PyOxidizer will detect `.pyd` files during
+  packaging and embed them into the binary as resources. When the module
+  is imported, the extension module/shared library is loaded from memory
+  and initialized. This feature enables PyOxidizer to package pre-built
+  extension modules (e.g. from Windows binary wheels published on PyPI)
+  while still maintaining the property of a (mostly) self-contained
+  executable.
 * Multiple bytecode optimization levels can now be embedded in binaries.
   Previously, it was only possible to embed bytecode for a given module
   at a single optimization level.

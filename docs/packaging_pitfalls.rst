@@ -224,13 +224,65 @@ C is used to implement extension modules.)
 The way this typically works is some build system (often ``distutils`` via a
 ``setup.py`` script) produces a shared library file containing the extension.
 On Linux and macOS, the file extension is typically ``.so``. On Windows, it
-is ``.pyd``. Python's importing mechanism looks for these files in addition
-to normal ``.py`` and ``.pyc`` files when an ``import`` is requested.
+is ``.pyd``. When an ``import`` is requested, Python's importing mechanism
+looks for these files in addition to normal ``.py`` and ``.pyc`` files. If
+an extension module is found, Python will ``dlopen()`` the file and load the
+shared library into the process. It will then call into an initialization
+function exported by that shared library to obtain a Python module instance.
 
-PyOxidizer currently has :ref:`limited support <status_extension_modules>` for
-extension modules. Under some circumstances, building extension modules as
-part of regular package build machinery *just works* and the resulting
-extension module can be embedded in the produced binary.
+Python packaging has defined various conventions for distributing pre-compiled
+extension modules in *wheels*. If you see an e.g.
+``<package>-<version>-cp38-cp38-win_amd64.whl``,
+``<package>-<version>-cp38-cp38-manylinux2014_x86_64.whl``, or
+``<package>-<version>-cp38-cp38-macosx_10_9_x86_64.whl`` file, you are
+installing a Python package with a pre-compiled extension module. Inside the
+*wheel* is a shared library providing the extension module. And that shared
+library is configured to work with a Python distribution (typically ``CPython``)
+built in a specific way. e.g. with a ``libpythonXY`` shared library exporting
+Python symbols.
+
+PyOxidizer currently has :ref:`some support <status_extension_modules>` for
+extension modules. The way this works depends on the platform and Python
+distribution.
+
+Dynamically Linked Python Distributions on Windows
+--------------------------------------------------
+
+When using a dynamically linked Python distribution on Windows (e.g.
+via the ``flavor="standalone_dynamic"`` argument to
+:ref:`config_default_python_distribution`, PyOxidizer:
+
+* Supports importing shared library extension modules (e.g. ``.pyd`` files)
+  from memory.
+* Automatically detects and uses ``.pyd`` files from pre-built binary
+  packages installed as part of packaging.
+* Automatically detects and uses ``.pyd`` files produced during package
+  building.
+
+However, there are caveats to this support!
+
+PyOxidizer doesn't currently support resolving additional library
+dependencies from ``.pyd`` extension modules / shared libraries when
+importing from memory. If an extension module depends on another shared
+library (almost certainly a ``.dll``) outside the normal set of libraries
+(namely the C Runtime and other common Windows system DLLs), you will
+need to manually package this library next to the application ``.exe``.
+Failure to do this could result in a failure at ``import`` time.
+
+PyOxidizer does support loading shared library extension modules from
+``.pyd`` files on the filesystem like a typical Python program. So
+if you cannot make in-memory extension module importing work, you
+can fall back to packaging a ``.pyd`` file in a directory registered
+on ``sys.path``, as set through the :ref:`config_python_interpreter_config`
+Starlark primitive.
+
+Extension Modules Everywhere Else
+---------------------------------
+
+If PyOxidizer is not able to easily reuse a Python extension module
+built or distributed in a traditional manner, it will attempt to
+compile the extension module from source in a way that is compatible
+with the PyOxidizer distribution and application configuration.
 
 The way PyOxidizer achieves this is a bit crude, but effective.
 
