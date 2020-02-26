@@ -878,14 +878,15 @@ impl EmbeddedPythonResourcesPrePackaged {
                     EmbeddedResourcePythonModulePrePackaged {
                         name: package.clone(),
                         is_package: true,
+                        // TODO should we populate opt1, opt2?
+                        in_memory_bytecode: Some(DataLocation::Memory(vec![])),
                         ..EmbeddedResourcePythonModulePrePackaged::default()
                     },
                 );
             }
 
             let mut entry = self.modules.get_mut(&package).unwrap();
-            // TODO should we populate opt1, opt2?
-            entry.in_memory_bytecode = Some(DataLocation::Memory(vec![]));
+            entry.is_package = true;
         }
     }
 
@@ -902,14 +903,15 @@ impl EmbeddedPythonResourcesPrePackaged {
                     EmbeddedResourcePythonModulePrePackaged {
                         name: package.clone(),
                         is_package: true,
+                        // TODO should we populate opt1, opt2?
+                        in_memory_bytecode: Some(DataLocation::Memory(vec![])),
                         ..EmbeddedResourcePythonModulePrePackaged::default()
                     },
                 );
             }
 
             let mut entry = self.modules.get_mut(&package).unwrap();
-            // TODO should we populate opt1, opt2?
-            entry.in_memory_bytecode = Some(DataLocation::Memory(vec![]));
+            entry.is_package = true;
         }
     }
 
@@ -943,6 +945,8 @@ impl EmbeddedPythonResourcesPrePackaged {
                     package.clone(),
                     EmbeddedResourcePythonModulePrePackaged {
                         name: package.clone(),
+                        // TODO should we populate opt1, opt2?
+                        in_memory_bytecode: Some(DataLocation::Memory(vec![])),
                         ..EmbeddedResourcePythonModulePrePackaged::default()
                     },
                 );
@@ -950,8 +954,6 @@ impl EmbeddedPythonResourcesPrePackaged {
 
             let mut entry = self.modules.get_mut(&package).unwrap();
             entry.is_package = true;
-            // TODO should we populate opt1, opt2?
-            entry.in_memory_bytecode = Some(DataLocation::Memory(vec![]));
         }
     }
 
