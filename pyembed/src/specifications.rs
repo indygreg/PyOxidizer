@@ -16,7 +16,7 @@ converting it into a Rust data structure.
 The format of this serialized data structure is as follows.
 
 The first 8 bytes is a magic header identifying the content as
-our data type and the version of it. The first 5 7 are `pyembed`
+our data type and the version of it. The first 7 bytes are `pyembed`
 and the following 1 byte denotes a version. The following sections
 denote the different magic headers/versions and their semantics.
 
