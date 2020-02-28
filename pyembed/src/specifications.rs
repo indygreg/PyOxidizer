@@ -135,6 +135,13 @@ binary's loader metadata to indicate a library dependency). A `u64`
 denoting the length in bytes of the shared library data follows. This
 shared library should be loaded from memory.
 
+`0x0e` - Shared library dependency names. This field indicates the names
+of shared libraries that this entity depends on. The number of library names
+is contained in a `u16` that immediately follows this byte. Following this
+`u16` is an array of `u16` denoting the length of the library name for
+each shared library dependency. Each described shared library dependency
+may or may not be described by other entries in this data structure.
+
 ## Design Considerations
 
 The design of the embedded resources data format was influenced by a handful

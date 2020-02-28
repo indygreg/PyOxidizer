@@ -72,6 +72,7 @@ pub enum EmbeddedPythonModuleField {
     InMemoryResourcesData,
     InMemoryPackageDistribution,
     InMemorySharedLibrary,
+    SharedLibraryDependencyNames,
 }
 
 impl Into<u8> for EmbeddedPythonModuleField {
@@ -91,6 +92,7 @@ impl Into<u8> for EmbeddedPythonModuleField {
             EmbeddedPythonModuleField::InMemoryResourcesData => 11,
             EmbeddedPythonModuleField::InMemoryPackageDistribution => 12,
             EmbeddedPythonModuleField::InMemorySharedLibrary => 13,
+            EmbeddedPythonModuleField::SharedLibraryDependencyNames => 14,
         }
     }
 }
@@ -140,6 +142,9 @@ pub struct EmbeddedResourcePythonModule {
     ///
     /// In-memory loading of shared libraries is not supported on all platforms.
     pub in_memory_shared_library: Option<Vec<u8>>,
+
+    /// Sequence of names of shared libraries this entity depends on.
+    pub shared_library_dependency_names: Option<Vec<String>>,
 }
 
 impl EmbeddedResourcePythonModule {
@@ -210,6 +215,10 @@ impl EmbeddedResourcePythonModule {
 
         if self.in_memory_shared_library.is_some() {
             index += 9;
+        }
+
+        if let Some(names) = &self.shared_library_dependency_names {
+            index += 3 + 2 * names.len();
         }
 
         // End of index entry.
@@ -285,6 +294,13 @@ impl EmbeddedResourcePythonModule {
             EmbeddedPythonModuleField::InMemorySharedLibrary => {
                 if let Some(library) = &self.in_memory_shared_library {
                     library.len()
+                } else {
+                    0
+                }
+            }
+            EmbeddedPythonModuleField::SharedLibraryDependencyNames => {
+                if let Some(names) = &self.shared_library_dependency_names {
+                    names.iter().map(|s| s.as_bytes().len()).sum()
                 } else {
                     0
                 }
@@ -406,6 +422,22 @@ impl EmbeddedResourcePythonModule {
                 .context("writing in-memory shared library length")?;
         }
 
+        if let Some(names) = &self.shared_library_dependency_names {
+            let l = u16::try_from(names.len())
+                .context("converting shared library dependency names to u16")?;
+            dest.write_u8(EmbeddedPythonModuleField::SharedLibraryDependencyNames.into())
+                .context("writing shared library dependency names field")?;
+            dest.write_u16::<LittleEndian>(l)
+                .context("writing shared library dependency names length")?;
+
+            for name in names {
+                let name_length = u16::try_from(name.as_bytes().len())
+                    .context("converting shared library dependency name length to u16")?;
+                dest.write_u16::<LittleEndian>(name_length)
+                    .context("writing shared library dependency name length")?;
+            }
+        }
+
         dest.write_u8(EmbeddedPythonModuleField::EndOfEntry.into())
             .or_else(|_| Err(anyhow!("error writing end of index entry")))?;
 
@@ -438,6 +470,7 @@ pub fn write_embedded_resources_v1<W: Write>(
     let mut in_memory_resources_data_length = 0;
     let mut in_memory_package_distribution_length = 0;
     let mut in_memory_shared_library_length = 0;
+    let mut shared_library_dependency_names_length = 0;
 
     for module in modules {
         module_index_length += module.index_v1_length();
@@ -459,6 +492,8 @@ pub fn write_embedded_resources_v1<W: Write>(
             module.field_blob_length(EmbeddedPythonModuleField::InMemoryPackageDistribution);
         in_memory_shared_library_length +=
             module.field_blob_length(EmbeddedPythonModuleField::InMemorySharedLibrary);
+        shared_library_dependency_names_length +=
+            module.field_blob_length(EmbeddedPythonModuleField::SharedLibraryDependencyNames);
     }
 
     const BLOB_INDEX_ENTRY_SIZE: usize = 9;
@@ -496,6 +531,10 @@ pub fn write_embedded_resources_v1<W: Write>(
         blob_section_count += 1;
     }
     if in_memory_shared_library_length > 0 {
+        blob_index_length += BLOB_INDEX_ENTRY_SIZE;
+        blob_section_count += 1;
+    }
+    if shared_library_dependency_names_length > 0 {
         blob_index_length += BLOB_INDEX_ENTRY_SIZE;
         blob_section_count += 1;
     }
@@ -554,6 +593,11 @@ pub fn write_embedded_resources_v1<W: Write>(
     if in_memory_shared_library_length > 0 {
         dest.write_u8(EmbeddedPythonModuleField::InMemorySharedLibrary.into())?;
         dest.write_u64::<LittleEndian>(in_memory_shared_library_length.try_into().unwrap())?;
+    }
+
+    if shared_library_dependency_names_length > 0 {
+        dest.write_u8(EmbeddedPythonModuleField::SharedLibraryDependencyNames.into())?;
+        dest.write_u64::<LittleEndian>(shared_library_dependency_names_length.try_into().unwrap())?;
     }
 
     dest.write_u8(EmbeddedPythonModuleField::EndOfIndex.into())?;
@@ -624,6 +668,14 @@ pub fn write_embedded_resources_v1<W: Write>(
         }
     }
 
+    for module in modules {
+        if let Some(names) = &module.shared_library_dependency_names {
+            for name in names {
+                dest.write_all(name.as_bytes())?;
+            }
+        }
+    }
+
     Ok(())
 }
 
@@ -646,6 +698,7 @@ pub struct EmbeddedResourcePythonModulePrePackaged {
     pub in_memory_resources: Option<BTreeMap<String, DataLocation>>,
     pub in_memory_package_distribution: Option<BTreeMap<String, DataLocation>>,
     pub in_memory_shared_library: Option<DataLocation>,
+    pub shared_library_dependency_names: Option<Vec<String>>,
 }
 
 impl TryFrom<&EmbeddedResourcePythonModulePrePackaged> for EmbeddedResourcePythonModule {
@@ -695,6 +748,13 @@ impl TryFrom<&EmbeddedResourcePythonModulePrePackaged> for EmbeddedResourcePytho
             },
             in_memory_shared_library: if let Some(location) = &value.in_memory_shared_library {
                 Some(location.resolve()?)
+            } else {
+                None
+            },
+            shared_library_dependency_names: if let Some(names) =
+                &value.shared_library_dependency_names
+            {
+                Some(names.clone())
             } else {
                 None
             },
@@ -1009,6 +1069,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         }
 
         // TODO add shared library dependencies to be packaged as well.
+        // TODO add shared library dependency names.
     }
 
     /// Filter the entities in this instance against names in files.
