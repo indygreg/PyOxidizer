@@ -128,6 +128,13 @@ described is contained in a `u32` that immediately follows this byte.
 Following this `u32` is an array of `(u16, u64)` denoting the distribution
 file name and payload size for each virtual file in this distribution.
 
+`0x0d` - In-memory shared library. If set, this _module_ is actually a shared
+library and not a Python module. The module name field is the name of
+this shared library, with file extension (as it would appear in a dynamic
+binary's loader metadata to indicate a library dependency). A `u64`
+denoting the length in bytes of the shared library data follows. This
+shared library should be loaded from memory.
+
 ## Design Considerations
 
 The design of the embedded resources data format was influenced by a handful

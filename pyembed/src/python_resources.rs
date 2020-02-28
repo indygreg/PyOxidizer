@@ -32,6 +32,7 @@ const FIELD_IN_MEMORY_BYTECODE_OPT2: u8 = 0x09;
 const FIELD_IN_MEMORY_EXTENSION_MODULE_SHARED_LIBRARY: u8 = 0x0a;
 const FIELD_IN_MEMORY_RESOURCES_DATA: u8 = 0x0b;
 const FIELD_IN_MEMORY_PACKAGE_DISTRIBUTION: u8 = 0x0c;
+const FIELD_IN_MEMORY_SHARED_LIBRARY: u8 = 0x0d;
 
 /// Represents a Python module and all its metadata.
 ///
@@ -67,13 +68,16 @@ pub(crate) struct PythonModule<'a> {
     pub in_memory_bytecode_opt2: Option<&'a [u8]>,
 
     /// In-memory content of shared library providing module.
-    pub in_memory_shared_library: Option<&'a [u8]>,
+    pub in_memory_shared_library_extension_module: Option<&'a [u8]>,
 
     /// Resource "files" in this package.
     pub in_memory_resources: Option<Arc<Box<HashMap<&'a str, &'a [u8]>>>>,
 
     /// Package distribution files.
     pub in_memory_package_distribution: Option<HashMap<&'a str, &'a [u8]>>,
+
+    /// In-memory content of shared library to be loaded from memory.
+    pub in_memory_shared_library: Option<&'a [u8]>,
 }
 
 impl<'a> Default for PythonModule<'a> {
@@ -88,9 +92,10 @@ impl<'a> Default for PythonModule<'a> {
             in_memory_bytecode: None,
             in_memory_bytecode_opt1: None,
             in_memory_bytecode_opt2: None,
-            in_memory_shared_library: None,
+            in_memory_shared_library_extension_module: None,
             in_memory_resources: None,
             in_memory_package_distribution: None,
+            in_memory_shared_library: None,
         }
     }
 }
@@ -103,7 +108,7 @@ impl<'a> PythonModule<'a> {
         self.in_memory_bytecode.is_some()
             || self.in_memory_bytecode_opt1.is_some()
             || self.in_memory_bytecode_opt2.is_some()
-            || self.in_memory_shared_library.is_some()
+            || self.in_memory_shared_library_extension_module.is_some()
     }
 }
 
@@ -256,6 +261,7 @@ impl<'a> PythonImporterState<'a> {
         let mut in_memory_extension_module_shared_library_start_offset: usize = 0;
         let mut in_memory_resources_start_offset: usize = 0;
         let mut in_memory_package_distribution_offset: usize = 0;
+        let mut in_memory_shared_library_start_offset: usize = 0;
 
         if blob_index_length > 0 {
             for _ in 0..blob_section_count {
@@ -289,6 +295,8 @@ impl<'a> PythonImporterState<'a> {
                     in_memory_resources_start_offset = total_blob_offset;
                 } else if field == FIELD_IN_MEMORY_PACKAGE_DISTRIBUTION {
                     in_memory_package_distribution_offset = total_blob_offset;
+                } else if field == FIELD_IN_MEMORY_SHARED_LIBRARY {
+                    in_memory_shared_library_start_offset = total_blob_offset;
                 } else {
                     return Err("unhandled field in blob length index");
                 }
@@ -328,6 +336,8 @@ impl<'a> PythonImporterState<'a> {
             blob_start_offset + in_memory_resources_start_offset;
         let mut current_in_memory_package_distribution_offset =
             blob_start_offset + in_memory_package_distribution_offset;
+        let mut current_in_memory_shared_library_offset =
+            blob_start_offset + in_memory_shared_library_start_offset;
 
         let mut current_module = PythonModule::default();
         let mut current_module_name = None;
@@ -436,7 +446,7 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading extension module length"))?
                         as usize;
 
-                    current_module.in_memory_shared_library = Some(
+                    current_module.in_memory_shared_library_extension_module = Some(
                         &data[current_in_memory_extension_module_shared_library_offset
                             ..current_in_memory_extension_module_shared_library_offset + l],
                     );
@@ -514,6 +524,19 @@ impl<'a> PythonImporterState<'a> {
                     }
 
                     current_module.in_memory_package_distribution = Some(resources);
+                }
+
+                FIELD_IN_MEMORY_SHARED_LIBRARY => {
+                    let l = reader
+                        .read_u64::<LittleEndian>()
+                        .or_else(|_| Err("failed reading in-memory shared library length"))?
+                        as usize;
+
+                    current_module.in_memory_shared_library = Some(
+                        &data[current_in_memory_shared_library_offset
+                            ..current_in_memory_shared_library_offset + l],
+                    );
+                    current_in_memory_shared_library_offset += l;
                 }
 
                 _ => return Err("invalid field type"),
@@ -805,13 +828,16 @@ mod tests {
 
         let entry = state.modules.get("foo").unwrap();
 
-        assert_eq!(entry.in_memory_shared_library.unwrap(), b"em");
+        assert_eq!(
+            entry.in_memory_shared_library_extension_module.unwrap(),
+            b"em"
+        );
 
         assert_eq!(
             entry,
             &PythonModule {
                 name: "foo",
-                in_memory_shared_library: Some(&data[data.len() - 2..data.len()]),
+                in_memory_shared_library_extension_module: Some(&data[data.len() - 2..data.len()]),
                 ..PythonModule::default()
             }
         );
@@ -872,6 +898,35 @@ mod tests {
     }
 
     #[test]
+    fn test_in_memory_shared_library() {
+        let module = EmbeddedResourcePythonModule {
+            name: "foo".to_string(),
+            in_memory_shared_library: Some(b"library".to_vec()),
+            ..EmbeddedResourcePythonModule::default()
+        };
+
+        let mut data = Vec::new();
+        write_embedded_resources_v1(&[module], &mut data).unwrap();
+        let mut state = PythonImporterState::default();
+        state.load_resources(&data).unwrap();
+
+        assert_eq!(state.modules.len(), 1);
+
+        let entry = state.modules.get("foo").unwrap();
+
+        assert_eq!(entry.in_memory_shared_library.unwrap(), b"library");
+
+        assert_eq!(
+            entry,
+            &PythonModule {
+                name: "foo",
+                in_memory_shared_library: Some(&data[data.len() - 7..data.len()]),
+                ..PythonModule::default()
+            }
+        );
+    }
+
+    #[test]
     fn test_all_fields() {
         let mut resources = BTreeMap::new();
         resources.insert("foo".to_string(), b"foovalue".to_vec());
@@ -892,6 +947,7 @@ mod tests {
             in_memory_extension_module_shared_library: Some(b"library".to_vec()),
             in_memory_resources: Some(resources),
             in_memory_package_distribution: Some(distribution),
+            in_memory_shared_library: Some(b"library".to_vec()),
         };
 
         let mut data = Vec::new();
@@ -909,7 +965,10 @@ mod tests {
         assert_eq!(entry.in_memory_bytecode.unwrap(), b"bytecode");
         assert_eq!(entry.in_memory_bytecode_opt1.unwrap(), b"bytecodeopt1");
         assert_eq!(entry.in_memory_bytecode_opt2.unwrap(), b"bytecodeopt2");
-        assert_eq!(entry.in_memory_shared_library.unwrap(), b"library");
+        assert_eq!(
+            entry.in_memory_shared_library_extension_module.unwrap(),
+            b"library"
+        );
 
         let resources = entry.in_memory_resources.as_ref().unwrap();
         assert_eq!(resources.len(), 2);
@@ -920,5 +979,7 @@ mod tests {
         assert_eq!(resources.len(), 2);
         assert_eq!(resources.get("dist").unwrap(), b"distvalue");
         assert_eq!(resources.get("dist2").unwrap(), b"dist2value");
+
+        assert_eq!(entry.in_memory_shared_library.unwrap(), b"library");
     }
 }

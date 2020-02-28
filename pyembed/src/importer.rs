@@ -336,7 +336,7 @@ py_class!(class PyOxidizerFinder |py| {
             // If we ever implement our own lazy module importer, we could
             // potentially work around this and move all extension module
             // initialization into `exec_module()`.
-            if let Some(library_data) = &entry.in_memory_shared_library {
+            if let Some(library_data) = &entry.in_memory_shared_library_extension_module {
                 let sys_module = self.sys_module(py);
                 let sys_modules = sys_module.as_object().getattr(py, "modules")?;
 
@@ -363,7 +363,7 @@ py_class!(class PyOxidizerFinder |py| {
                 self.builtin_importer(py).call_method(py, "exec_module", (module,), None)
             } else if entry.is_frozen {
                 self.frozen_importer(py).call_method(py, "exec_module", (module,), None)
-            } else if entry.in_memory_shared_library.is_some() {
+            } else if entry.in_memory_shared_library_extension_module.is_some() {
                 // `ExtensionFileLoader.exec_module()` simply calls `imp.exec_dynamic()`.
                 let imp_module = self.imp_module(py);
 
