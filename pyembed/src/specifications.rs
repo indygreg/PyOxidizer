@@ -34,6 +34,7 @@ Version 1 of the embedded resources data.
 From a high-level, the serialized format consists of:
 
 * A *global header* describing the overall payload.
+* An index describing the blob sections present in the payload.
 * An index describing each resource and its content.
 * A series of blob sections holding the data referenced by the resources
   index.
