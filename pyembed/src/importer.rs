@@ -281,7 +281,7 @@ py_class!(class PyOxidizerFinder |py| {
     def find_spec(&self, fullname: &PyString, path: &PyObject, target: Option<PyObject> = None) -> PyResult<PyObject> {
         let key = fullname.to_string(py)?;
 
-        if let Some(module) = self.importer_state(py).modules.get(&*key) {
+        if let Some(module) = self.importer_state(py).resources.get(&*key) {
             if module.is_builtin {
                 // BuiltinImporter.find_spec() always returns None if `path` is defined.
                 // And it doesn't use `target`. So don't proxy these values.
@@ -327,7 +327,7 @@ py_class!(class PyOxidizerFinder |py| {
         let name = spec.getattr(py, "name")?;
         let key = name.extract::<String>(py)?;
 
-        if let Some(entry) = self.importer_state(py).modules.get(&*key) {
+        if let Some(entry) = self.importer_state(py).resources.get(&*key) {
             // We need a custom implementation of create_module() for in-memory shared
             // library extensions because if we wait until `exec_module()` to
             // initialize the module object, this can confuse some CPython
@@ -358,7 +358,7 @@ py_class!(class PyOxidizerFinder |py| {
         let name = module.getattr(py, "__name__")?;
         let key = name.extract::<String>(py)?;
 
-        if let Some(entry) = self.importer_state(py).modules.get(&*key) {
+        if let Some(entry) = self.importer_state(py).resources.get(&*key) {
             if entry.is_builtin {
                 self.builtin_importer(py).call_method(py, "exec_module", (module,), None)
             } else if entry.is_frozen {
@@ -399,7 +399,7 @@ py_class!(class PyOxidizerFinder |py| {
     def get_code(&self, fullname: &PyString) -> PyResult<PyObject> {
         let key = fullname.to_string(py)?;
 
-        if let Some(module) = self.importer_state(py).modules.get(&*key) {
+        if let Some(module) = self.importer_state(py).resources.get(&*key) {
             if module.is_frozen {
                 let imp_module = self.imp_module(py);
 
@@ -442,7 +442,7 @@ py_class!(class PyOxidizerFinder |py| {
     def get_source(&self, fullname: &PyString) -> PyResult<PyObject> {
         let key = fullname.to_string(py)?;
 
-        if let Some(module) = self.importer_state(py).modules.get(&*key) {
+        if let Some(module) = self.importer_state(py).resources.get(&*key) {
             if module.in_memory_source.is_some() {
                 match get_memory_view(py, &module.in_memory_source) {
                     Some(value) => {
@@ -485,7 +485,7 @@ py_class!(class PyOxidizerFinder |py| {
         }
 
         // Only create a reader if the name is a package.
-        if let Some(module) = self.importer_state(py).modules.get(&*key) {
+        if let Some(module) = self.importer_state(py).resources.get(&*key) {
             if !module.is_package {
                 return Ok(py.None())
             }

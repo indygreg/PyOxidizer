@@ -57,7 +57,7 @@ const EMBEDDED_RESOURCES_HEADER_V1: &[u8] = b"pyembed\x01";
 
 /// Describes a data field type in the embedded resources payload.
 #[derive(Debug)]
-pub enum EmbeddedPythonModuleField {
+pub enum EmbeddedResourceField {
     EndOfIndex,
     StartOfEntry,
     EndOfEntry,
@@ -75,55 +75,55 @@ pub enum EmbeddedPythonModuleField {
     SharedLibraryDependencyNames,
 }
 
-impl Into<u8> for EmbeddedPythonModuleField {
+impl Into<u8> for EmbeddedResourceField {
     fn into(self) -> u8 {
         match self {
-            EmbeddedPythonModuleField::EndOfIndex => 0,
-            EmbeddedPythonModuleField::StartOfEntry => 1,
-            EmbeddedPythonModuleField::EndOfEntry => 2,
-            EmbeddedPythonModuleField::ModuleName => 3,
-            EmbeddedPythonModuleField::IsPackage => 4,
-            EmbeddedPythonModuleField::IsNamespacePackage => 5,
-            EmbeddedPythonModuleField::InMemorySource => 6,
-            EmbeddedPythonModuleField::InMemoryBytecode => 7,
-            EmbeddedPythonModuleField::InMemoryBytecodeOpt1 => 8,
-            EmbeddedPythonModuleField::InMemoryBytecodeOpt2 => 9,
-            EmbeddedPythonModuleField::InMemoryExtensionModuleSharedLibrary => 10,
-            EmbeddedPythonModuleField::InMemoryResourcesData => 11,
-            EmbeddedPythonModuleField::InMemoryPackageDistribution => 12,
-            EmbeddedPythonModuleField::InMemorySharedLibrary => 13,
-            EmbeddedPythonModuleField::SharedLibraryDependencyNames => 14,
+            EmbeddedResourceField::EndOfIndex => 0,
+            EmbeddedResourceField::StartOfEntry => 1,
+            EmbeddedResourceField::EndOfEntry => 2,
+            EmbeddedResourceField::ModuleName => 3,
+            EmbeddedResourceField::IsPackage => 4,
+            EmbeddedResourceField::IsNamespacePackage => 5,
+            EmbeddedResourceField::InMemorySource => 6,
+            EmbeddedResourceField::InMemoryBytecode => 7,
+            EmbeddedResourceField::InMemoryBytecodeOpt1 => 8,
+            EmbeddedResourceField::InMemoryBytecodeOpt2 => 9,
+            EmbeddedResourceField::InMemoryExtensionModuleSharedLibrary => 10,
+            EmbeddedResourceField::InMemoryResourcesData => 11,
+            EmbeddedResourceField::InMemoryPackageDistribution => 12,
+            EmbeddedResourceField::InMemorySharedLibrary => 13,
+            EmbeddedResourceField::SharedLibraryDependencyNames => 14,
         }
     }
 }
 
-/// Represents a Python module and all its metadata.
+/// Represents an embedded resource and all its metadata.
 ///
 /// All memory used by fields is held within each instance.
 ///
-/// This type holds data required for serializing a Python module to the
+/// This type holds data required for serializing a resource to the
 /// embedded resources data structure. See the `pyembed` crate for more.
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct EmbeddedResourcePythonModule {
-    /// The module name.
+pub struct EmbeddedResource {
+    /// The resource name.
     pub name: String,
 
-    /// Whether the module is a package.
+    /// Whether the Python module is a package.
     pub is_package: bool,
 
-    /// Whether the module is a namespace package.
+    /// Whether the Python module is a namespace package.
     pub is_namespace_package: bool,
 
-    /// Source code to use to import module from memory.
+    /// Python module source code to use to import module from memory.
     pub in_memory_source: Option<Vec<u8>>,
 
-    /// Bytecode to use to import module from memory.
+    /// Python module bytecode to use to import module from memory.
     pub in_memory_bytecode: Option<Vec<u8>>,
 
-    /// Bytecode at optimized level 1 to use to import from memory.
+    /// Python module bytecode at optimized level 1 to use to import from memory.
     pub in_memory_bytecode_opt1: Option<Vec<u8>>,
 
-    /// Bytecode at optimized level 2 to use to import from memory.
+    /// Python module bytecode at optimized level 2 to use to import from memory.
     pub in_memory_bytecode_opt2: Option<Vec<u8>>,
 
     /// Native machine code constituting a shared library for an extension module
@@ -143,11 +143,11 @@ pub struct EmbeddedResourcePythonModule {
     /// In-memory loading of shared libraries is not supported on all platforms.
     pub in_memory_shared_library: Option<Vec<u8>>,
 
-    /// Sequence of names of shared libraries this entity depends on.
+    /// Sequence of names of shared libraries this resource depends on.
     pub shared_library_dependency_names: Option<Vec<String>>,
 }
 
-impl EmbeddedResourcePythonModule {
+impl EmbeddedResource {
     /// Whether the module is meaningful.
     ///
     /// The module is meaningful if it has data attached or is a package.
@@ -228,50 +228,50 @@ impl EmbeddedResourcePythonModule {
     }
 
     /// Compute the length of a field.
-    pub fn field_blob_length(&self, field: EmbeddedPythonModuleField) -> usize {
+    pub fn field_blob_length(&self, field: EmbeddedResourceField) -> usize {
         match field {
-            EmbeddedPythonModuleField::EndOfIndex => 0,
-            EmbeddedPythonModuleField::StartOfEntry => 0,
-            EmbeddedPythonModuleField::EndOfEntry => 0,
-            EmbeddedPythonModuleField::ModuleName => self.name.as_bytes().len(),
-            EmbeddedPythonModuleField::IsPackage => 0,
-            EmbeddedPythonModuleField::IsNamespacePackage => 0,
-            EmbeddedPythonModuleField::InMemorySource => {
+            EmbeddedResourceField::EndOfIndex => 0,
+            EmbeddedResourceField::StartOfEntry => 0,
+            EmbeddedResourceField::EndOfEntry => 0,
+            EmbeddedResourceField::ModuleName => self.name.as_bytes().len(),
+            EmbeddedResourceField::IsPackage => 0,
+            EmbeddedResourceField::IsNamespacePackage => 0,
+            EmbeddedResourceField::InMemorySource => {
                 if let Some(source) = &self.in_memory_source {
                     source.len()
                 } else {
                     0
                 }
             }
-            EmbeddedPythonModuleField::InMemoryBytecode => {
+            EmbeddedResourceField::InMemoryBytecode => {
                 if let Some(bytecode) = &self.in_memory_bytecode {
                     bytecode.len()
                 } else {
                     0
                 }
             }
-            EmbeddedPythonModuleField::InMemoryBytecodeOpt1 => {
+            EmbeddedResourceField::InMemoryBytecodeOpt1 => {
                 if let Some(bytecode) = &self.in_memory_bytecode_opt1 {
                     bytecode.len()
                 } else {
                     0
                 }
             }
-            EmbeddedPythonModuleField::InMemoryBytecodeOpt2 => {
+            EmbeddedResourceField::InMemoryBytecodeOpt2 => {
                 if let Some(bytecode) = &self.in_memory_bytecode_opt2 {
                     bytecode.len()
                 } else {
                     0
                 }
             }
-            EmbeddedPythonModuleField::InMemoryExtensionModuleSharedLibrary => {
+            EmbeddedResourceField::InMemoryExtensionModuleSharedLibrary => {
                 if let Some(library) = &self.in_memory_extension_module_shared_library {
                     library.len()
                 } else {
                     0
                 }
             }
-            EmbeddedPythonModuleField::InMemoryResourcesData => {
+            EmbeddedResourceField::InMemoryResourcesData => {
                 if let Some(resources) = &self.in_memory_resources {
                     resources
                         .iter()
@@ -281,7 +281,7 @@ impl EmbeddedResourcePythonModule {
                     0
                 }
             }
-            EmbeddedPythonModuleField::InMemoryPackageDistribution => {
+            EmbeddedResourceField::InMemoryPackageDistribution => {
                 if let Some(metadata) = &self.in_memory_package_distribution {
                     metadata
                         .iter()
@@ -291,14 +291,14 @@ impl EmbeddedResourcePythonModule {
                     0
                 }
             }
-            EmbeddedPythonModuleField::InMemorySharedLibrary => {
+            EmbeddedResourceField::InMemorySharedLibrary => {
                 if let Some(library) = &self.in_memory_shared_library {
                     library.len()
                 } else {
                     0
                 }
             }
-            EmbeddedPythonModuleField::SharedLibraryDependencyNames => {
+            EmbeddedResourceField::SharedLibraryDependencyNames => {
                 if let Some(names) = &self.shared_library_dependency_names {
                     names.iter().map(|s| s.as_bytes().len()).sum()
                 } else {
@@ -313,29 +313,29 @@ impl EmbeddedResourcePythonModule {
         let name_len =
             u16::try_from(self.name.as_bytes().len()).context("converting name to u16")?;
 
-        dest.write_u8(EmbeddedPythonModuleField::StartOfEntry.into())
+        dest.write_u8(EmbeddedResourceField::StartOfEntry.into())
             .context("writing start of index entry")?;
 
-        dest.write_u8(EmbeddedPythonModuleField::ModuleName.into())
+        dest.write_u8(EmbeddedResourceField::ModuleName.into())
             .context("writing module name field")?;
 
         dest.write_u16::<LittleEndian>(name_len)
             .context("writing module name length")?;
 
         if self.is_package {
-            dest.write_u8(EmbeddedPythonModuleField::IsPackage.into())
+            dest.write_u8(EmbeddedResourceField::IsPackage.into())
                 .context("writing is_package field")?;
         }
 
         if self.is_namespace_package {
-            dest.write_u8(EmbeddedPythonModuleField::IsNamespacePackage.into())
+            dest.write_u8(EmbeddedResourceField::IsNamespacePackage.into())
                 .context("writing is_namespace field")?;
         }
 
         if let Some(source) = &self.in_memory_source {
             let l =
                 u32::try_from(source.len()).context("converting in-memory source length to u32")?;
-            dest.write_u8(EmbeddedPythonModuleField::InMemorySource.into())
+            dest.write_u8(EmbeddedResourceField::InMemorySource.into())
                 .context("writing in-memory source length field")?;
             dest.write_u32::<LittleEndian>(l)
                 .context("writing in-memory source length")?;
@@ -344,7 +344,7 @@ impl EmbeddedResourcePythonModule {
         if let Some(bytecode) = &self.in_memory_bytecode {
             let l = u32::try_from(bytecode.len())
                 .context("converting in-memory bytecode length to u32")?;
-            dest.write_u8(EmbeddedPythonModuleField::InMemoryBytecode.into())
+            dest.write_u8(EmbeddedResourceField::InMemoryBytecode.into())
                 .context("writing in-memory bytecode length field")?;
             dest.write_u32::<LittleEndian>(l)
                 .context("writing in-memory bytecode length")?;
@@ -353,7 +353,7 @@ impl EmbeddedResourcePythonModule {
         if let Some(bytecode) = &self.in_memory_bytecode_opt1 {
             let l = u32::try_from(bytecode.len())
                 .context("converting in-memory bytecode opt 1 length to u32")?;
-            dest.write_u8(EmbeddedPythonModuleField::InMemoryBytecodeOpt1.into())
+            dest.write_u8(EmbeddedResourceField::InMemoryBytecodeOpt1.into())
                 .context("writing in-memory bytecode opt 1 length field")?;
             dest.write_u32::<LittleEndian>(l)
                 .context("writing in-memory bytecode opt 1 length")?;
@@ -362,7 +362,7 @@ impl EmbeddedResourcePythonModule {
         if let Some(bytecode) = &self.in_memory_bytecode_opt2 {
             let l = u32::try_from(bytecode.len())
                 .context("converting in-memory bytecode opt 2 length to u32")?;
-            dest.write_u8(EmbeddedPythonModuleField::InMemoryBytecodeOpt2.into())
+            dest.write_u8(EmbeddedResourceField::InMemoryBytecodeOpt2.into())
                 .context("writing in-memory bytecode opt 2 field")?;
             dest.write_u32::<LittleEndian>(l)
                 .context("writing in-memory bytecode opt 2 length")?;
@@ -371,7 +371,7 @@ impl EmbeddedResourcePythonModule {
         if let Some(library) = &self.in_memory_extension_module_shared_library {
             let l = u32::try_from(library.len())
                 .context("converting in-memory library length to u32")?;
-            dest.write_u8(EmbeddedPythonModuleField::InMemoryExtensionModuleSharedLibrary.into())
+            dest.write_u8(EmbeddedResourceField::InMemoryExtensionModuleSharedLibrary.into())
                 .context("writing in-memory extension module shared library field")?;
             dest.write_u32::<LittleEndian>(l)
                 .context("writing in-memory extension module shared library length")?;
@@ -380,7 +380,7 @@ impl EmbeddedResourcePythonModule {
         if let Some(resources) = &self.in_memory_resources {
             let l = u32::try_from(resources.len())
                 .context("converting in-memory resources data length to u32")?;
-            dest.write_u8(EmbeddedPythonModuleField::InMemoryResourcesData.into())
+            dest.write_u8(EmbeddedResourceField::InMemoryResourcesData.into())
                 .context("writing in-memory resources field")?;
             dest.write_u32::<LittleEndian>(l)
                 .context("writing in-memory resources data length")?;
@@ -398,7 +398,7 @@ impl EmbeddedResourcePythonModule {
         if let Some(metadata) = &self.in_memory_package_distribution {
             let l = u32::try_from(metadata.len())
                 .context("converting in-memory distribution metadata length to u32")?;
-            dest.write_u8(EmbeddedPythonModuleField::InMemoryPackageDistribution.into())
+            dest.write_u8(EmbeddedResourceField::InMemoryPackageDistribution.into())
                 .context("writing in-memory package distribution field")?;
             dest.write_u32::<LittleEndian>(l)
                 .context("writing in-memory package distribution length")?;
@@ -416,7 +416,7 @@ impl EmbeddedResourcePythonModule {
         if let Some(library) = &self.in_memory_shared_library {
             let l = u64::try_from(library.len())
                 .context("converting in-memory shared library length to u64")?;
-            dest.write_u8(EmbeddedPythonModuleField::InMemorySharedLibrary.into())
+            dest.write_u8(EmbeddedResourceField::InMemorySharedLibrary.into())
                 .context("writing in-memory shared library field")?;
             dest.write_u64::<LittleEndian>(l)
                 .context("writing in-memory shared library length")?;
@@ -425,7 +425,7 @@ impl EmbeddedResourcePythonModule {
         if let Some(names) = &self.shared_library_dependency_names {
             let l = u16::try_from(names.len())
                 .context("converting shared library dependency names to u16")?;
-            dest.write_u8(EmbeddedPythonModuleField::SharedLibraryDependencyNames.into())
+            dest.write_u8(EmbeddedResourceField::SharedLibraryDependencyNames.into())
                 .context("writing shared library dependency names field")?;
             dest.write_u16::<LittleEndian>(l)
                 .context("writing shared library dependency names length")?;
@@ -438,7 +438,7 @@ impl EmbeddedResourcePythonModule {
             }
         }
 
-        dest.write_u8(EmbeddedPythonModuleField::EndOfEntry.into())
+        dest.write_u8(EmbeddedResourceField::EndOfEntry.into())
             .or_else(|_| Err(anyhow!("error writing end of index entry")))?;
 
         Ok(())
@@ -450,7 +450,7 @@ impl EmbeddedResourcePythonModule {
 /// See the `pyembed` crate for the format of this data structure.
 #[allow(clippy::cognitive_complexity)]
 pub fn write_embedded_resources_v1<W: Write>(
-    modules: &[EmbeddedResourcePythonModule],
+    modules: &[EmbeddedResource],
     dest: &mut W,
 ) -> Result<()> {
     let mut blob_section_count = 0;
@@ -475,25 +475,24 @@ pub fn write_embedded_resources_v1<W: Write>(
     for module in modules {
         module_index_length += module.index_v1_length();
 
-        module_name_length += module.field_blob_length(EmbeddedPythonModuleField::ModuleName);
-        in_memory_source_length +=
-            module.field_blob_length(EmbeddedPythonModuleField::InMemorySource);
+        module_name_length += module.field_blob_length(EmbeddedResourceField::ModuleName);
+        in_memory_source_length += module.field_blob_length(EmbeddedResourceField::InMemorySource);
         in_memory_bytecode_length +=
-            module.field_blob_length(EmbeddedPythonModuleField::InMemoryBytecode);
+            module.field_blob_length(EmbeddedResourceField::InMemoryBytecode);
         in_memory_bytecode_opt1_length +=
-            module.field_blob_length(EmbeddedPythonModuleField::InMemoryBytecodeOpt1);
+            module.field_blob_length(EmbeddedResourceField::InMemoryBytecodeOpt1);
         in_memory_bytecode_opt2_length +=
-            module.field_blob_length(EmbeddedPythonModuleField::InMemoryBytecodeOpt2);
-        in_memory_extension_module_shared_library_length += module
-            .field_blob_length(EmbeddedPythonModuleField::InMemoryExtensionModuleSharedLibrary);
+            module.field_blob_length(EmbeddedResourceField::InMemoryBytecodeOpt2);
+        in_memory_extension_module_shared_library_length +=
+            module.field_blob_length(EmbeddedResourceField::InMemoryExtensionModuleSharedLibrary);
         in_memory_resources_data_length +=
-            module.field_blob_length(EmbeddedPythonModuleField::InMemoryResourcesData);
+            module.field_blob_length(EmbeddedResourceField::InMemoryResourcesData);
         in_memory_package_distribution_length +=
-            module.field_blob_length(EmbeddedPythonModuleField::InMemoryPackageDistribution);
+            module.field_blob_length(EmbeddedResourceField::InMemoryPackageDistribution);
         in_memory_shared_library_length +=
-            module.field_blob_length(EmbeddedPythonModuleField::InMemorySharedLibrary);
+            module.field_blob_length(EmbeddedResourceField::InMemorySharedLibrary);
         shared_library_dependency_names_length +=
-            module.field_blob_length(EmbeddedPythonModuleField::SharedLibraryDependencyNames);
+            module.field_blob_length(EmbeddedResourceField::SharedLibraryDependencyNames);
     }
 
     const BLOB_INDEX_ENTRY_SIZE: usize = 9;
@@ -547,32 +546,32 @@ pub fn write_embedded_resources_v1<W: Write>(
     dest.write_u32::<LittleEndian>(module_index_length as u32)?;
 
     if module_name_length > 0 {
-        dest.write_u8(EmbeddedPythonModuleField::ModuleName.into())?;
+        dest.write_u8(EmbeddedResourceField::ModuleName.into())?;
         dest.write_u64::<LittleEndian>(module_name_length.try_into().unwrap())?;
     }
 
     if in_memory_source_length > 0 {
-        dest.write_u8(EmbeddedPythonModuleField::InMemorySource.into())?;
+        dest.write_u8(EmbeddedResourceField::InMemorySource.into())?;
         dest.write_u64::<LittleEndian>(in_memory_source_length.try_into().unwrap())?;
     }
 
     if in_memory_bytecode_length > 0 {
-        dest.write_u8(EmbeddedPythonModuleField::InMemoryBytecode.into())?;
+        dest.write_u8(EmbeddedResourceField::InMemoryBytecode.into())?;
         dest.write_u64::<LittleEndian>(in_memory_bytecode_length.try_into().unwrap())?;
     }
 
     if in_memory_bytecode_opt1_length > 0 {
-        dest.write_u8(EmbeddedPythonModuleField::InMemoryBytecodeOpt1.into())?;
+        dest.write_u8(EmbeddedResourceField::InMemoryBytecodeOpt1.into())?;
         dest.write_u64::<LittleEndian>(in_memory_bytecode_opt1_length.try_into().unwrap())?;
     }
 
     if in_memory_bytecode_opt2_length > 0 {
-        dest.write_u8(EmbeddedPythonModuleField::InMemoryBytecodeOpt2.into())?;
+        dest.write_u8(EmbeddedResourceField::InMemoryBytecodeOpt2.into())?;
         dest.write_u64::<LittleEndian>(in_memory_bytecode_opt2_length.try_into().unwrap())?;
     }
 
     if in_memory_extension_module_shared_library_length > 0 {
-        dest.write_u8(EmbeddedPythonModuleField::InMemoryExtensionModuleSharedLibrary.into())?;
+        dest.write_u8(EmbeddedResourceField::InMemoryExtensionModuleSharedLibrary.into())?;
         dest.write_u64::<LittleEndian>(
             in_memory_extension_module_shared_library_length
                 .try_into()
@@ -581,33 +580,33 @@ pub fn write_embedded_resources_v1<W: Write>(
     }
 
     if in_memory_resources_data_length > 0 {
-        dest.write_u8(EmbeddedPythonModuleField::InMemoryResourcesData.into())?;
+        dest.write_u8(EmbeddedResourceField::InMemoryResourcesData.into())?;
         dest.write_u64::<LittleEndian>(in_memory_resources_data_length.try_into().unwrap())?;
     }
 
     if in_memory_package_distribution_length > 0 {
-        dest.write_u8(EmbeddedPythonModuleField::InMemoryPackageDistribution.into())?;
+        dest.write_u8(EmbeddedResourceField::InMemoryPackageDistribution.into())?;
         dest.write_u64::<LittleEndian>(in_memory_package_distribution_length.try_into().unwrap())?;
     }
 
     if in_memory_shared_library_length > 0 {
-        dest.write_u8(EmbeddedPythonModuleField::InMemorySharedLibrary.into())?;
+        dest.write_u8(EmbeddedResourceField::InMemorySharedLibrary.into())?;
         dest.write_u64::<LittleEndian>(in_memory_shared_library_length.try_into().unwrap())?;
     }
 
     if shared_library_dependency_names_length > 0 {
-        dest.write_u8(EmbeddedPythonModuleField::SharedLibraryDependencyNames.into())?;
+        dest.write_u8(EmbeddedResourceField::SharedLibraryDependencyNames.into())?;
         dest.write_u64::<LittleEndian>(shared_library_dependency_names_length.try_into().unwrap())?;
     }
 
-    dest.write_u8(EmbeddedPythonModuleField::EndOfIndex.into())?;
+    dest.write_u8(EmbeddedResourceField::EndOfIndex.into())?;
 
     // Write the index entries.
     for module in modules {
         module.write_index_v1(dest)?;
     }
 
-    dest.write_u8(EmbeddedPythonModuleField::EndOfIndex.into())?;
+    dest.write_u8(EmbeddedResourceField::EndOfIndex.into())?;
 
     // Write blob data, one field at a time.
     for module in modules {
@@ -701,7 +700,7 @@ pub struct EmbeddedResourcePythonModulePrePackaged {
     pub shared_library_dependency_names: Option<Vec<String>>,
 }
 
-impl TryFrom<&EmbeddedResourcePythonModulePrePackaged> for EmbeddedResourcePythonModule {
+impl TryFrom<&EmbeddedResourcePythonModulePrePackaged> for EmbeddedResource {
     type Error = Error;
 
     fn try_from(value: &EmbeddedResourcePythonModulePrePackaged) -> Result<Self, Self::Error> {
@@ -1157,7 +1156,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         let mut compiler = BytecodeCompiler::new(&python_exe)?;
         {
             for (name, module) in &self.modules {
-                let mut entry = EmbeddedResourcePythonModule::try_from(module)?;
+                let mut entry = EmbeddedResource::try_from(module)?;
 
                 if let Some(location) = &module.in_memory_bytecode {
                     entry.in_memory_bytecode = Some(compiler.compile(
@@ -1204,9 +1203,9 @@ impl EmbeddedPythonResourcesPrePackaged {
             if !modules.contains_key(name) {
                 modules.insert(
                     name.clone(),
-                    EmbeddedResourcePythonModule {
+                    EmbeddedResource {
                         name: name.clone(),
-                        ..EmbeddedResourcePythonModule::default()
+                        ..EmbeddedResource::default()
                     },
                 );
             }
@@ -1223,9 +1222,9 @@ impl EmbeddedPythonResourcesPrePackaged {
             if !modules.contains_key(name) {
                 modules.insert(
                     name.clone(),
-                    EmbeddedResourcePythonModule {
+                    EmbeddedResource {
                         name: name.clone(),
-                        ..EmbeddedResourcePythonModule::default()
+                        ..EmbeddedResource::default()
                     },
                 );
             }
@@ -1245,9 +1244,9 @@ impl EmbeddedPythonResourcesPrePackaged {
             if !modules.contains_key(&package) {
                 modules.insert(
                     package.clone(),
-                    EmbeddedResourcePythonModule {
+                    EmbeddedResource {
                         name: package.clone(),
-                        ..EmbeddedResourcePythonModule::default()
+                        ..EmbeddedResource::default()
                     },
                 );
             }
@@ -1276,7 +1275,7 @@ impl EmbeddedPythonResourcesPrePackaged {
 #[derive(Debug, Default, Clone)]
 pub struct EmbeddedPythonResources {
     /// Python modules described by an embeddable resource.
-    pub modules: BTreeMap<String, EmbeddedResourcePythonModule>,
+    pub modules: BTreeMap<String, EmbeddedResource>,
 
     // TODO combine the extension module types.
     pub extension_modules: BTreeMap<String, ExtensionModule>,
@@ -1297,7 +1296,7 @@ impl EmbeddedPythonResources {
                 .modules
                 .values()
                 .cloned()
-                .collect::<Vec<EmbeddedResourcePythonModule>>(),
+                .collect::<Vec<EmbeddedResource>>(),
             resources,
         )
         .unwrap();
@@ -1580,9 +1579,9 @@ mod tests {
     #[test]
     fn test_write_module_name() -> Result<()> {
         let mut data = Vec::new();
-        let module = EmbeddedResourcePythonModule {
+        let module = EmbeddedResource {
             name: "foo".to_string(),
-            ..EmbeddedResourcePythonModule::default()
+            ..EmbeddedResource::default()
         };
 
         write_embedded_resources_v1(&[module], &mut data)?;
@@ -1598,15 +1597,15 @@ mod tests {
         // entry, end of index.
         expected.write_u32::<LittleEndian>(1 + 1 + 2 + 1 + 1)?;
         // Blobs index. Module names field, module names length, end of index.
-        expected.write_u8(EmbeddedPythonModuleField::ModuleName.into())?;
+        expected.write_u8(EmbeddedResourceField::ModuleName.into())?;
         expected.write_u64::<LittleEndian>(b"foo".len() as u64)?;
-        expected.write_u8(EmbeddedPythonModuleField::EndOfIndex.into())?;
+        expected.write_u8(EmbeddedResourceField::EndOfIndex.into())?;
         // Module index.
-        expected.write_u8(EmbeddedPythonModuleField::StartOfEntry.into())?;
-        expected.write_u8(EmbeddedPythonModuleField::ModuleName.into())?;
+        expected.write_u8(EmbeddedResourceField::StartOfEntry.into())?;
+        expected.write_u8(EmbeddedResourceField::ModuleName.into())?;
         expected.write_u16::<LittleEndian>(b"foo".len() as u16)?;
-        expected.write_u8(EmbeddedPythonModuleField::EndOfEntry.into())?;
-        expected.write_u8(EmbeddedPythonModuleField::EndOfIndex.into())?;
+        expected.write_u8(EmbeddedResourceField::EndOfEntry.into())?;
+        expected.write_u8(EmbeddedResourceField::EndOfIndex.into())?;
         expected.write_all(b"foo")?;
 
         assert_eq!(data, expected);

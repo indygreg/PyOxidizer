@@ -40,41 +40,41 @@ const FIELD_SHARED_LIBRARY_DEPENDENCY_NAMES: u8 = 0x0e;
 /// This holds the result of parsing an embedded resources data structure as well
 /// as extra state to support importing frozen and builtin modules.
 #[derive(Debug, PartialEq)]
-pub(crate) struct PythonModule<'a> {
-    /// The module name.
+pub(crate) struct EmbeddedResource<'a> {
+    /// The resource name.
     pub name: &'a str,
 
-    /// Whether the module is also a package.
+    /// Whether the resource is a Python package.
     pub is_package: bool,
 
-    /// Whether the module is a namespace package.
+    /// Whether the resource is a Python namespace package.
     pub is_namespace_package: bool,
 
-    /// Whether the module is a builtin extension module in the Python interpreter.
+    /// Whether the resource is a builtin extension module in the Python interpreter.
     pub is_builtin: bool,
 
-    /// Whether the module is frozen into the Python interpreter.
+    /// Whether the resource is frozen into the Python interpreter.
     pub is_frozen: bool,
 
-    /// In-memory source code for module.
+    /// In-memory source code for Python module.
     pub in_memory_source: Option<&'a [u8]>,
 
-    /// In-memory bytecode for module.
+    /// In-memory bytecode for Python module.
     pub in_memory_bytecode: Option<&'a [u8]>,
 
-    /// In-memory bytecode optimization level 1 for module.
+    /// In-memory bytecode optimization level 1 for Python module.
     pub in_memory_bytecode_opt1: Option<&'a [u8]>,
 
-    /// In-memory bytecode optimization level 2 for module.
+    /// In-memory bytecode optimization level 2 for Python module.
     pub in_memory_bytecode_opt2: Option<&'a [u8]>,
 
-    /// In-memory content of shared library providing module.
+    /// In-memory content of shared library providing Python module.
     pub in_memory_shared_library_extension_module: Option<&'a [u8]>,
 
-    /// Resource "files" in this package.
+    /// Resource "files" in this Python package.
     pub in_memory_resources: Option<Arc<Box<HashMap<&'a str, &'a [u8]>>>>,
 
-    /// Package distribution files.
+    /// Python package distribution files.
     pub in_memory_package_distribution: Option<HashMap<&'a str, &'a [u8]>>,
 
     /// In-memory content of shared library to be loaded from memory.
@@ -84,7 +84,7 @@ pub(crate) struct PythonModule<'a> {
     pub shared_library_dependency_names: Option<Vec<&'a str>>,
 }
 
-impl<'a> Default for PythonModule<'a> {
+impl<'a> Default for EmbeddedResource<'a> {
     fn default() -> Self {
         Self {
             name: "",
@@ -105,7 +105,7 @@ impl<'a> Default for PythonModule<'a> {
     }
 }
 
-impl<'a> PythonModule<'a> {
+impl<'a> EmbeddedResource<'a> {
     /// Whether the module is imported by the importer provided by this crate.
     ///
     /// This excludes builtin and frozen modules, which are merely registered.
@@ -123,14 +123,14 @@ pub(crate) struct PythonImporterState<'a> {
     /// Names of Python packages.
     pub packages: HashSet<&'static str>,
 
-    pub modules: HashMap<&'a str, PythonModule<'a>>,
+    pub resources: HashMap<&'a str, EmbeddedResource<'a>>,
 }
 
 impl<'a> Default for PythonImporterState<'a> {
     fn default() -> Self {
         Self {
             packages: HashSet::new(),
-            modules: HashMap::new(),
+            resources: HashMap::new(),
         }
     }
 }
@@ -166,15 +166,15 @@ impl<'a> PythonImporterState<'a> {
 
             // Module can be defined by embedded resources data. If exists, just
             // update the big.
-            if let Some(mut entry) = self.modules.get_mut(name_str) {
+            if let Some(mut entry) = self.resources.get_mut(name_str) {
                 entry.is_builtin = true;
             } else {
-                self.modules.insert(
+                self.resources.insert(
                     name_str,
-                    PythonModule {
+                    EmbeddedResource {
                         name: name_str,
                         is_builtin: true,
-                        ..PythonModule::default()
+                        ..EmbeddedResource::default()
                     },
                 );
             }
@@ -202,15 +202,15 @@ impl<'a> PythonImporterState<'a> {
 
             // Module can be defined by embedded resources data. If exists, just
             // update the big.
-            if let Some(mut entry) = self.modules.get_mut(name_str) {
+            if let Some(mut entry) = self.resources.get_mut(name_str) {
                 entry.is_frozen = true;
             } else {
-                self.modules.insert(
+                self.resources.insert(
                     name_str,
-                    PythonModule {
+                    EmbeddedResource {
                         name: name_str,
                         is_frozen: true,
-                        ..PythonModule::default()
+                        ..EmbeddedResource::default()
                     },
                 );
             }
@@ -247,18 +247,19 @@ impl<'a> PythonImporterState<'a> {
             .read_u32::<LittleEndian>()
             .or_else(|_| Err("failed reading blob index length"))?
             as usize;
-        let modules_count = reader
+        let resources_count = reader
             .read_u32::<LittleEndian>()
-            .or_else(|_| Err("failed reading modules count"))? as usize;
-        let module_index_length = reader
+            .or_else(|_| Err("failed reading resources count"))?
+            as usize;
+        let resources_index_length = reader
             .read_u32::<LittleEndian>()
-            .or_else(|_| Err("failed reading modules index length"))?
+            .or_else(|_| Err("failed reading resources index length"))?
             as usize;
 
         // Now we have a series of (u8, u64) denoting the lengths of blob fields.
         // It is terminated by an END_OF_INDEX field.
         let mut total_blob_offset: usize = 0;
-        let mut module_name_blob_start_offset: usize = 0;
+        let mut resource_name_blob_start_offset: usize = 0;
         let mut in_memory_source_blob_start_offset: usize = 0;
         let mut in_memory_bytecode_blob_start_offset: usize = 0;
         let mut in_memory_bytecode_opt1_blob_start_offset: usize = 0;
@@ -286,7 +287,7 @@ impl<'a> PythonImporterState<'a> {
                     .or_else(|_| Err("failed to convert blob size to usize"))?;
 
                 if field == FIELD_MODULE_NAME {
-                    module_name_blob_start_offset = total_blob_offset;
+                    resource_name_blob_start_offset = total_blob_offset;
                 } else if field == FIELD_IN_MEMORY_SOURCE {
                     in_memory_source_blob_start_offset = total_blob_offset;
                 } else if field == FIELD_IN_MEMORY_BYTECODE {
@@ -326,10 +327,10 @@ impl<'a> PythonImporterState<'a> {
             // Global header.
             + 1 + 4 + 4 + 4
             + blob_index_length
-            + module_index_length
+            + resources_index_length
         ;
 
-        let mut current_module_name_offset = blob_start_offset + module_name_blob_start_offset;
+        let mut current_resource_name_offset = blob_start_offset + resource_name_blob_start_offset;
         let mut current_in_memory_source_offset =
             blob_start_offset + in_memory_source_blob_start_offset;
         let mut current_in_memory_bytecode_offset =
@@ -349,11 +350,11 @@ impl<'a> PythonImporterState<'a> {
         let mut current_shared_library_dependency_names_offset =
             blob_start_offset + shared_library_dependency_names_start_offset;
 
-        let mut current_module = PythonModule::default();
-        let mut current_module_name = None;
+        let mut current_resource = EmbeddedResource::default();
+        let mut current_resource_name = None;
         let mut index_entry_count = 0;
 
-        if module_index_length == 0 || modules_count == 0 {
+        if resources_index_length == 0 || resources_count == 0 {
             return Ok(());
         }
 
@@ -366,42 +367,42 @@ impl<'a> PythonImporterState<'a> {
                 FIELD_END_OF_INDEX => break,
                 FIELD_START_OF_ENTRY => {
                     index_entry_count += 1;
-                    current_module = PythonModule::default();
-                    current_module_name = None;
+                    current_resource = EmbeddedResource::default();
+                    current_resource_name = None;
                 }
 
                 FIELD_END_OF_ENTRY => {
-                    if let Some(name) = current_module_name {
-                        self.modules.insert(name, current_module);
+                    if let Some(name) = current_resource_name {
+                        self.resources.insert(name, current_resource);
                     } else {
-                        return Err("module name field is required");
+                        return Err("resource name field is required");
                     }
 
-                    current_module = PythonModule::default();
-                    current_module_name = None;
+                    current_resource = EmbeddedResource::default();
+                    current_resource_name = None;
                 }
                 FIELD_MODULE_NAME => {
                     let l = reader
                         .read_u16::<LittleEndian>()
-                        .or_else(|_| Err("failed reading module name length"))?
+                        .or_else(|_| Err("failed reading resource name length"))?
                         as usize;
 
                     let name = unsafe {
                         std::str::from_utf8_unchecked(
-                            &data[current_module_name_offset..current_module_name_offset + l],
+                            &data[current_resource_name_offset..current_resource_name_offset + l],
                         )
                     };
 
-                    current_module_name = Some(name);
-                    current_module_name_offset += l;
+                    current_resource_name = Some(name);
+                    current_resource_name_offset += l;
 
-                    current_module.name = name;
+                    current_resource.name = name;
                 }
                 FIELD_IS_PACKAGE => {
-                    current_module.is_package = true;
+                    current_resource.is_package = true;
                 }
                 FIELD_IS_NAMESPACE_PACKAGE => {
-                    current_module.is_namespace_package = true;
+                    current_resource.is_namespace_package = true;
                 }
                 FIELD_IN_MEMORY_SOURCE => {
                     let l = reader
@@ -409,7 +410,7 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading source length"))?
                         as usize;
 
-                    current_module.in_memory_source = Some(
+                    current_resource.in_memory_source = Some(
                         &data[current_in_memory_source_offset..current_in_memory_source_offset + l],
                     );
                     current_in_memory_source_offset += l;
@@ -420,7 +421,7 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading bytecode length"))?
                         as usize;
 
-                    current_module.in_memory_bytecode = Some(
+                    current_resource.in_memory_bytecode = Some(
                         &data[current_in_memory_bytecode_offset
                             ..current_in_memory_bytecode_offset + l],
                     );
@@ -432,7 +433,7 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading bytecode length"))?
                         as usize;
 
-                    current_module.in_memory_bytecode_opt1 = Some(
+                    current_resource.in_memory_bytecode_opt1 = Some(
                         &data[current_in_memory_bytecode_opt1_offset
                             ..current_in_memory_bytecode_opt1_offset + l],
                     );
@@ -444,7 +445,7 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading bytecode length"))?
                         as usize;
 
-                    current_module.in_memory_bytecode_opt2 = Some(
+                    current_resource.in_memory_bytecode_opt2 = Some(
                         &data[current_in_memory_bytecode_opt2_offset
                             ..current_in_memory_bytecode_opt2_offset + l],
                     );
@@ -456,7 +457,7 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading extension module length"))?
                         as usize;
 
-                    current_module.in_memory_shared_library_extension_module = Some(
+                    current_resource.in_memory_shared_library_extension_module = Some(
                         &data[current_in_memory_extension_module_shared_library_offset
                             ..current_in_memory_extension_module_shared_library_offset + l],
                     );
@@ -497,7 +498,7 @@ impl<'a> PythonImporterState<'a> {
                         resources.insert(resource_name, resource_data);
                     }
 
-                    current_module.in_memory_resources = Some(Arc::new(resources));
+                    current_resource.in_memory_resources = Some(Arc::new(resources));
                 }
 
                 FIELD_IN_MEMORY_PACKAGE_DISTRIBUTION => {
@@ -533,7 +534,7 @@ impl<'a> PythonImporterState<'a> {
                         resources.insert(name, resource_data);
                     }
 
-                    current_module.in_memory_package_distribution = Some(resources);
+                    current_resource.in_memory_package_distribution = Some(resources);
                 }
 
                 FIELD_IN_MEMORY_SHARED_LIBRARY => {
@@ -542,7 +543,7 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading in-memory shared library length"))?
                         as usize;
 
-                    current_module.in_memory_shared_library = Some(
+                    current_resource.in_memory_shared_library = Some(
                         &data[current_in_memory_shared_library_offset
                             ..current_in_memory_shared_library_offset + l],
                     );
@@ -573,14 +574,14 @@ impl<'a> PythonImporterState<'a> {
                         names.push(name);
                     }
 
-                    current_module.shared_library_dependency_names = Some(names);
+                    current_resource.shared_library_dependency_names = Some(names);
                 }
 
                 _ => return Err("invalid field type"),
             }
         }
 
-        if index_entry_count != modules_count {
+        if index_entry_count != resources_count {
             return Err("mismatch between advertised index count and actual");
         }
 
@@ -593,7 +594,7 @@ mod tests {
     use {
         super::*,
         pyoxidizerlib::py_packaging::embedded_resource::{
-            write_embedded_resources_v1, EmbeddedResourcePythonModule,
+            write_embedded_resources_v1, EmbeddedResource as OwnedEmbeddedResource,
         },
         std::collections::BTreeMap,
     };
@@ -635,7 +636,7 @@ mod tests {
     }
 
     #[test]
-    fn test_no_module_index() {
+    fn test_no_resource_index() {
         let data = b"pyembed\x01\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
         let mut state = PythonImporterState::default();
         state.load_resources(data).unwrap();
@@ -660,210 +661,210 @@ mod tests {
     }
 
     #[test]
-    fn test_missing_module_name() {
+    fn test_missing_resource_name() {
         let data =
             b"pyembed\x01\x00\x01\x00\x00\x00\x01\x00\x00\x00\x03\x00\x00\x00\x00\x01\x02\x00";
         let mut state = PythonImporterState::default();
         let res = state.load_resources(data);
-        assert_eq!(res.err(), Some("module name field is required"));
+        assert_eq!(res.err(), Some("resource name field is required"));
     }
 
     #[test]
-    fn test_just_module_name() {
-        let module = EmbeddedResourcePythonModule {
+    fn test_just_resource_name() {
+        let resource = OwnedEmbeddedResource {
             name: "foo".to_string(),
-            ..EmbeddedResourcePythonModule::default()
+            ..OwnedEmbeddedResource::default()
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[module], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data).unwrap();
 
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
-        assert_eq!(state.modules.len(), 1);
+        assert_eq!(state.resources.len(), 1);
 
-        let entry = state.modules.get("foo").unwrap();
+        let entry = state.resources.get("foo").unwrap();
         assert_eq!(
             entry,
-            &PythonModule {
+            &EmbeddedResource {
                 name: "foo",
-                ..PythonModule::default()
+                ..EmbeddedResource::default()
             }
         );
     }
 
     #[test]
-    fn test_multiple_modules_just_names() {
-        let module1 = EmbeddedResourcePythonModule {
+    fn test_multiple_resources_just_names() {
+        let resource1 = OwnedEmbeddedResource {
             name: "foo".to_string(),
-            ..EmbeddedResourcePythonModule::default()
+            ..OwnedEmbeddedResource::default()
         };
 
-        let module2 = EmbeddedResourcePythonModule {
+        let resource2 = OwnedEmbeddedResource {
             name: "module2".to_string(),
-            ..EmbeddedResourcePythonModule::default()
+            ..OwnedEmbeddedResource::default()
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[module1, module2], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource1, resource2], &mut data).unwrap();
 
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
-        assert_eq!(state.modules.len(), 2);
+        assert_eq!(state.resources.len(), 2);
 
-        let entry = state.modules.get("foo").unwrap();
+        let entry = state.resources.get("foo").unwrap();
         assert_eq!(
             entry,
-            &PythonModule {
+            &EmbeddedResource {
                 name: "foo",
-                ..PythonModule::default()
+                ..EmbeddedResource::default()
             }
         );
 
-        let entry = state.modules.get("module2").unwrap();
+        let entry = state.resources.get("module2").unwrap();
         assert_eq!(
             entry,
-            &PythonModule {
+            &EmbeddedResource {
                 name: "module2",
-                ..PythonModule::default()
+                ..EmbeddedResource::default()
             }
         );
     }
 
     #[test]
     fn test_in_memory_source() {
-        let module = EmbeddedResourcePythonModule {
+        let resource = OwnedEmbeddedResource {
             name: "foo".to_string(),
             in_memory_source: Some(b"source".to_vec()),
-            ..EmbeddedResourcePythonModule::default()
+            ..OwnedEmbeddedResource::default()
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[module], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data).unwrap();
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
-        assert_eq!(state.modules.len(), 1);
+        assert_eq!(state.resources.len(), 1);
 
-        let entry = state.modules.get("foo").unwrap();
+        let entry = state.resources.get("foo").unwrap();
 
         assert_eq!(entry.in_memory_source.unwrap(), b"source");
 
         assert_eq!(
             entry,
-            &PythonModule {
+            &EmbeddedResource {
                 name: "foo",
                 in_memory_source: Some(&data[data.len() - 6..data.len()]),
-                ..PythonModule::default()
+                ..EmbeddedResource::default()
             }
         );
     }
 
     #[test]
     fn test_in_memory_bytecode() {
-        let module = EmbeddedResourcePythonModule {
+        let resource = OwnedEmbeddedResource {
             name: "foo".to_string(),
             in_memory_bytecode: Some(b"bytecode".to_vec()),
-            ..EmbeddedResourcePythonModule::default()
+            ..OwnedEmbeddedResource::default()
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[module], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data).unwrap();
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
-        assert_eq!(state.modules.len(), 1);
+        assert_eq!(state.resources.len(), 1);
 
-        let entry = state.modules.get("foo").unwrap();
+        let entry = state.resources.get("foo").unwrap();
 
         assert_eq!(entry.in_memory_bytecode.unwrap(), b"bytecode");
 
         assert_eq!(
             entry,
-            &PythonModule {
+            &EmbeddedResource {
                 name: "foo",
                 in_memory_bytecode: Some(&data[data.len() - 8..data.len()]),
-                ..PythonModule::default()
+                ..EmbeddedResource::default()
             }
         );
     }
 
     #[test]
     fn test_in_memory_bytecode_opt1() {
-        let module = EmbeddedResourcePythonModule {
+        let resource = OwnedEmbeddedResource {
             name: "foo".to_string(),
             in_memory_bytecode_opt1: Some(b"bytecode".to_vec()),
-            ..EmbeddedResourcePythonModule::default()
+            ..OwnedEmbeddedResource::default()
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[module], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data).unwrap();
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
-        assert_eq!(state.modules.len(), 1);
+        assert_eq!(state.resources.len(), 1);
 
-        let entry = state.modules.get("foo").unwrap();
+        let entry = state.resources.get("foo").unwrap();
 
         assert_eq!(entry.in_memory_bytecode_opt1.unwrap(), b"bytecode");
 
         assert_eq!(
             entry,
-            &PythonModule {
+            &EmbeddedResource {
                 name: "foo",
                 in_memory_bytecode_opt1: Some(&data[data.len() - 8..data.len()]),
-                ..PythonModule::default()
+                ..EmbeddedResource::default()
             }
         );
     }
 
     #[test]
     fn test_in_memory_bytecode_opt2() {
-        let module = EmbeddedResourcePythonModule {
+        let resource = OwnedEmbeddedResource {
             name: "foo".to_string(),
             in_memory_bytecode_opt2: Some(b"bytecode".to_vec()),
-            ..EmbeddedResourcePythonModule::default()
+            ..OwnedEmbeddedResource::default()
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[module], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data).unwrap();
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
-        assert_eq!(state.modules.len(), 1);
+        assert_eq!(state.resources.len(), 1);
 
-        let entry = state.modules.get("foo").unwrap();
+        let entry = state.resources.get("foo").unwrap();
 
         assert_eq!(entry.in_memory_bytecode_opt2.unwrap(), b"bytecode");
 
         assert_eq!(
             entry,
-            &PythonModule {
+            &EmbeddedResource {
                 name: "foo",
                 in_memory_bytecode_opt2: Some(&data[data.len() - 8..data.len()]),
-                ..PythonModule::default()
+                ..EmbeddedResource::default()
             }
         );
     }
 
     #[test]
     fn test_in_memory_extension_module_shared_library() {
-        let module = EmbeddedResourcePythonModule {
+        let resource = OwnedEmbeddedResource {
             name: "foo".to_string(),
             in_memory_extension_module_shared_library: Some(b"em".to_vec()),
-            ..EmbeddedResourcePythonModule::default()
+            ..OwnedEmbeddedResource::default()
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[module], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data).unwrap();
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
-        assert_eq!(state.modules.len(), 1);
+        assert_eq!(state.resources.len(), 1);
 
-        let entry = state.modules.get("foo").unwrap();
+        let entry = state.resources.get("foo").unwrap();
 
         assert_eq!(
             entry.in_memory_shared_library_extension_module.unwrap(),
@@ -872,10 +873,10 @@ mod tests {
 
         assert_eq!(
             entry,
-            &PythonModule {
+            &EmbeddedResource {
                 name: "foo",
                 in_memory_shared_library_extension_module: Some(&data[data.len() - 2..data.len()]),
-                ..PythonModule::default()
+                ..EmbeddedResource::default()
             }
         );
     }
@@ -886,20 +887,20 @@ mod tests {
         resources.insert("foo".to_string(), b"foovalue".to_vec());
         resources.insert("another".to_string(), b"value2".to_vec());
 
-        let module = EmbeddedResourcePythonModule {
+        let resource = OwnedEmbeddedResource {
             name: "foo".to_string(),
             in_memory_resources: Some(resources),
-            ..EmbeddedResourcePythonModule::default()
+            ..OwnedEmbeddedResource::default()
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[module], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data).unwrap();
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
-        assert_eq!(state.modules.len(), 1);
+        assert_eq!(state.resources.len(), 1);
 
-        let entry = state.modules.get("foo").unwrap();
+        let entry = state.resources.get("foo").unwrap();
 
         let resources = entry.in_memory_resources.as_ref().unwrap();
         assert_eq!(resources.len(), 2);
@@ -913,20 +914,20 @@ mod tests {
         resources.insert("foo".to_string(), b"foovalue".to_vec());
         resources.insert("another".to_string(), b"value2".to_vec());
 
-        let module = EmbeddedResourcePythonModule {
+        let resource = OwnedEmbeddedResource {
             name: "foo".to_string(),
             in_memory_package_distribution: Some(resources),
-            ..EmbeddedResourcePythonModule::default()
+            ..OwnedEmbeddedResource::default()
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[module], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data).unwrap();
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
-        assert_eq!(state.modules.len(), 1);
+        assert_eq!(state.resources.len(), 1);
 
-        let entry = state.modules.get("foo").unwrap();
+        let entry = state.resources.get("foo").unwrap();
 
         let resources = entry.in_memory_package_distribution.as_ref().unwrap();
         assert_eq!(resources.len(), 2);
@@ -936,29 +937,29 @@ mod tests {
 
     #[test]
     fn test_in_memory_shared_library() {
-        let module = EmbeddedResourcePythonModule {
+        let resource = OwnedEmbeddedResource {
             name: "foo".to_string(),
             in_memory_shared_library: Some(b"library".to_vec()),
-            ..EmbeddedResourcePythonModule::default()
+            ..OwnedEmbeddedResource::default()
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[module], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data).unwrap();
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
-        assert_eq!(state.modules.len(), 1);
+        assert_eq!(state.resources.len(), 1);
 
-        let entry = state.modules.get("foo").unwrap();
+        let entry = state.resources.get("foo").unwrap();
 
         assert_eq!(entry.in_memory_shared_library.unwrap(), b"library");
 
         assert_eq!(
             entry,
-            &PythonModule {
+            &EmbeddedResource {
                 name: "foo",
                 in_memory_shared_library: Some(&data[data.len() - 7..data.len()]),
-                ..PythonModule::default()
+                ..EmbeddedResource::default()
             }
         );
     }
@@ -967,20 +968,20 @@ mod tests {
     fn test_shared_library_dependency_names() {
         let names = vec!["depends".to_string(), "libfoo".to_string()];
 
-        let module = EmbeddedResourcePythonModule {
+        let resource = OwnedEmbeddedResource {
             name: "foo".to_string(),
             shared_library_dependency_names: Some(names),
-            ..EmbeddedResourcePythonModule::default()
+            ..OwnedEmbeddedResource::default()
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[module], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data).unwrap();
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
-        assert_eq!(state.modules.len(), 1);
+        assert_eq!(state.resources.len(), 1);
 
-        let entry = state.modules.get("foo").unwrap();
+        let entry = state.resources.get("foo").unwrap();
 
         assert_eq!(
             entry.shared_library_dependency_names,
@@ -998,7 +999,7 @@ mod tests {
         distribution.insert("dist".to_string(), b"distvalue".to_vec());
         distribution.insert("dist2".to_string(), b"dist2value".to_vec());
 
-        let module = EmbeddedResourcePythonModule {
+        let resource = OwnedEmbeddedResource {
             name: "module".to_string(),
             is_package: true,
             is_namespace_package: true,
@@ -1017,13 +1018,13 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[module], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data).unwrap();
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
-        assert_eq!(state.modules.len(), 1);
+        assert_eq!(state.resources.len(), 1);
 
-        let entry = state.modules.get("module").unwrap();
+        let entry = state.resources.get("module").unwrap();
 
         assert!(entry.is_package);
         assert!(entry.is_namespace_package);
