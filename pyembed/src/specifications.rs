@@ -62,12 +62,14 @@ The global header consists of:
   `resources_index_length`.
 
 Following the *global header* is the *blob index*. The blob index describes
-the lengths of various blob sections. Each record is a 2-tuple of `(u8, u64)`
-denoting the field ID and the total length of that field's data across all
-module entries. There are `blob_sections_count` entries in the index. The
-*blob index* ends with the special end of index field. The total number of
-bytes in the index included the end of index marker should be
-`blob_index_length`.
+the various blob sections present in the payload following the *resources
+index*.
+
+Each record in the *blob index* a 2-tuple of `(u8, u64)` denoting the field ID
+and the total length of that field's data across all module entries. There are
+`blob_sections_count` entries in the index. The *blob index* ends with the
+special *end of index* field. The total number of bytes in the index including
+the *end of index* marker should be `blob_index_length`.
 
 Following the *blob index* is the *resources index*. Each entry in this index
 defines a sparse set of metadata describing a single resource. Entries are
