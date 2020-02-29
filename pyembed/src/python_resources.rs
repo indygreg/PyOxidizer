@@ -382,13 +382,16 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading resource name length"))?
                         as usize;
 
-                    let offset = blob_offsets[field_type as usize].unwrap();
-
-                    let name = unsafe { std::str::from_utf8_unchecked(&data[offset..offset + l]) };
+                    let name = unsafe {
+                        std::str::from_utf8_unchecked(resolve_blob_data(
+                            data,
+                            &mut blob_offsets,
+                            field_type,
+                            l,
+                        ))
+                    };
 
                     current_resource_name = Some(name);
-                    blob_offsets[field_type as usize] = Some(offset + l);
-
                     current_resource.name = name;
                 }
                 FIELD_IS_PACKAGE => {
@@ -403,10 +406,8 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading source length"))?
                         as usize;
 
-                    let offset = blob_offsets[field_type as usize].unwrap();
-
-                    current_resource.in_memory_source = Some(&data[offset..offset + l]);
-                    blob_offsets[field_type as usize] = Some(offset + l);
+                    current_resource.in_memory_source =
+                        Some(resolve_blob_data(data, &mut blob_offsets, field_type, l));
                 }
                 FIELD_IN_MEMORY_BYTECODE => {
                     let l = reader
@@ -414,9 +415,8 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading bytecode length"))?
                         as usize;
 
-                    let offset = blob_offsets[field_type as usize].unwrap();
-                    current_resource.in_memory_bytecode = Some(&data[offset..offset + l]);
-                    blob_offsets[field_type as usize] = Some(offset + l);
+                    current_resource.in_memory_bytecode =
+                        Some(resolve_blob_data(data, &mut blob_offsets, field_type, l));
                 }
                 FIELD_IN_MEMORY_BYTECODE_OPT1 => {
                     let l = reader
@@ -424,9 +424,8 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading bytecode length"))?
                         as usize;
 
-                    let offset = blob_offsets[field_type as usize].unwrap();
-                    current_resource.in_memory_bytecode_opt1 = Some(&data[offset..offset + l]);
-                    blob_offsets[field_type as usize] = Some(offset + l);
+                    current_resource.in_memory_bytecode_opt1 =
+                        Some(resolve_blob_data(data, &mut blob_offsets, field_type, l));
                 }
                 FIELD_IN_MEMORY_BYTECODE_OPT2 => {
                     let l = reader
@@ -434,9 +433,8 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading bytecode length"))?
                         as usize;
 
-                    let offset = blob_offsets[field_type as usize].unwrap();
-                    current_resource.in_memory_bytecode_opt2 = Some(&data[offset..offset + l]);
-                    blob_offsets[field_type as usize] = Some(offset + l);
+                    current_resource.in_memory_bytecode_opt2 =
+                        Some(resolve_blob_data(data, &mut blob_offsets, field_type, l));
                 }
                 FIELD_IN_MEMORY_EXTENSION_MODULE_SHARED_LIBRARY => {
                     let l = reader
@@ -444,10 +442,8 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading extension module length"))?
                         as usize;
 
-                    let offset = blob_offsets[field_type as usize].unwrap();
                     current_resource.in_memory_shared_library_extension_module =
-                        Some(&data[offset..offset + l]);
-                    blob_offsets[field_type as usize] = Some(offset + l);
+                        Some(resolve_blob_data(data, &mut blob_offsets, field_type, l));
                 }
 
                 FIELD_IN_MEMORY_RESOURCES_DATA => {
@@ -464,22 +460,22 @@ impl<'a> PythonImporterState<'a> {
                             .or_else(|_| Err("failed reading resource name"))?
                             as usize;
 
-                        let mut offset = blob_offsets[field_type as usize].unwrap();
-
                         let resource_name = unsafe {
-                            std::str::from_utf8_unchecked(
-                                &data[offset..offset + resource_name_length],
-                            )
+                            std::str::from_utf8_unchecked(resolve_blob_data(
+                                data,
+                                &mut blob_offsets,
+                                field_type,
+                                resource_name_length,
+                            ))
                         };
-                        offset += resource_name_length;
 
                         let resource_length = reader
                             .read_u64::<LittleEndian>()
                             .or_else(|_| Err("failed reading resource length"))?
                             as usize;
 
-                        let resource_data = &data[offset..offset + resource_length];
-                        blob_offsets[field_type as usize] = Some(offset + resource_length);
+                        let resource_data =
+                            resolve_blob_data(data, &mut blob_offsets, field_type, resource_length);
 
                         resources.insert(resource_name, resource_data);
                     }
@@ -501,18 +497,21 @@ impl<'a> PythonImporterState<'a> {
                             .or_else(|_| Err("failed reading distribution metadata name"))?
                             as usize;
 
-                        let mut offset = blob_offsets[field_type as usize].unwrap();
                         let name = unsafe {
-                            std::str::from_utf8_unchecked(&data[offset..offset + name_length])
+                            std::str::from_utf8_unchecked(resolve_blob_data(
+                                data,
+                                &mut blob_offsets,
+                                field_type,
+                                name_length,
+                            ))
                         };
-                        offset += name_length;
 
                         let resource_length = reader.read_u64::<LittleEndian>().or_else(|_| {
                             Err("failed reading package distribution resource length")
                         })? as usize;
 
-                        let resource_data = &data[offset..offset + resource_length];
-                        blob_offsets[field_type as usize] = Some(offset + resource_length);
+                        let resource_data =
+                            resolve_blob_data(data, &mut blob_offsets, field_type, resource_length);
 
                         resources.insert(name, resource_data);
                     }
@@ -526,10 +525,8 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading in-memory shared library length"))?
                         as usize;
 
-                    let offset = blob_offsets[field_type as usize].unwrap();
-
-                    current_resource.in_memory_shared_library = Some(&data[offset..offset + l]);
-                    blob_offsets[field_type as usize] = Some(offset + l);
+                    current_resource.in_memory_shared_library =
+                        Some(&resolve_blob_data(data, &mut blob_offsets, field_type, l));
                 }
 
                 FIELD_SHARED_LIBRARY_DEPENDENCY_NAMES => {
@@ -545,12 +542,14 @@ impl<'a> PythonImporterState<'a> {
                             Err("failed reading shared library dependency name length")
                         })? as usize;
 
-                        let offset = blob_offsets[field_type as usize].unwrap();
                         let name = unsafe {
-                            std::str::from_utf8_unchecked(&data[offset..offset + name_length])
+                            std::str::from_utf8_unchecked(resolve_blob_data(
+                                data,
+                                &mut blob_offsets,
+                                field_type,
+                                name_length,
+                            ))
                         };
-
-                        blob_offsets[field_type as usize] = Some(offset + name_length);
 
                         names.push(name);
                     }
@@ -568,6 +567,26 @@ impl<'a> PythonImporterState<'a> {
 
         Ok(())
     }
+}
+
+/// Resolve a slice to an individual blob's data.
+///
+/// This accepts a reference to the original blobs payload, an array of
+/// current blob section offsets, the resource field being accessed, and the
+/// length of the blob and returns a slice to that blob.
+fn resolve_blob_data<'a>(
+    data: &'a [u8],
+    blob_sections: &mut [Option<usize>],
+    resource_field: u8,
+    length: usize,
+) -> &'a [u8] {
+    let offset = blob_sections[resource_field as usize].unwrap();
+
+    let blob = &data[offset..offset + length];
+
+    blob_sections[resource_field as usize] = Some(offset + length);
+
+    blob
 }
 
 #[cfg(test)]
