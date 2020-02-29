@@ -40,8 +40,8 @@ From a high-level, the serialized format consists of:
   index.
 
 A resource is composed of various *fields* that describe it. Examples
-of fields include the resource name, source code, and bytecode. The index
-describes which fields are present and where to find them in the payload.
+of fields include the resource name, source code, and bytecode. The resources
+index describes which fields are present and where to find them in the payload.
 
 The actual content of fields (e.g. the raw bytes containing source code)
 is stored in field-specific sections after the index. Each field has its
@@ -66,11 +66,13 @@ Following the *global header* is the *blob index*. The blob index describes
 the various blob sections present in the payload following the *resources
 index*.
 
-Each record in the *blob index* a 2-tuple of `(u8, u64)` denoting the field ID
-and the total length of that field's data across all module entries. There are
-`blob_sections_count` entries in the index. The *blob index* ends with the
-special *end of index* field. The total number of bytes in the index including
-the *end of index* marker should be `blob_index_length`.
+Each entry in the *blob index* logically consists of a set of fields defining
+metadata about each *blob section*. This is encoded by a *start of entry*
+`u8` marker followed by N `u8` field type values and their corresponding
+metadata, followed by an *end of entry* `u8` marker. The *blob index* is
+terminated by an *index of index* `u8` marker. The total number of bytes in
+the *blob index* including the *end of index* marker should be
+`blob_index_length`.
 
 Following the *blob index* is the *resources index*. Each entry in this index
 defines a sparse set of metadata describing a single resource. Entries are
@@ -84,6 +86,34 @@ Following the *resources index* is blob data. Blob data is logically consisted
 of different sections holding data for different fields for different resources.
 But there is no internal structure or separators: all the individual
 blobs are just laid out next to each other.
+
+## Blob Field Types
+
+The Blob Index allows attributing a sparse set of metadata with every blob
+section entry. The type of metadata being conveyed is defined by a `u8`.
+Some field types have additional metadata following that field.
+
+The various field types and their semantics follow.
+
+`0x00` - End of index. This field indicates that there are no more blob
+index entries and we've reached the end of the *blob index*.
+
+`0x01` - Start of blob section entry. Encountering this value signals the
+beginning of a new blob section. From a specification standpoint, this isn't
+strictly required. But it helps ensure parser state.
+
+`0xff` - End of blob section entry. Encountering this value signals the end
+of the current blob section definition. The next encountered `u8` in the
+index should be `0x01` to denote a new entry or `0x00` to denote end of
+index.
+
+`0x02` - Resource field type. This field defines which resource field this
+blob section is holding data for. A `u8` following this one will contain
+the resource field type value (see section below).
+
+`0x03` - Raw payload length. This field defines the raw length in bytes of
+the blob section in the payload. The `u64` containing that length will
+immediately follow this `u8`.
 
 ## Resource Field Types
 

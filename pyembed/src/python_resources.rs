@@ -10,7 +10,6 @@ use {
     byteorder::{LittleEndian, ReadBytesExt},
     python3_sys as pyffi,
     std::collections::{HashMap, HashSet},
-    std::convert::TryFrom,
     std::ffi::CStr,
     std::io::{Cursor, Read},
     std::sync::Arc,
@@ -18,6 +17,12 @@ use {
 
 /// Header value for version 1 of resources payload.
 const RESOURCES_HEADER_V1: &[u8] = b"pyembed\x01";
+
+const BLOB_FIELD_END_OF_INDEX: u8 = 0x00;
+const BLOB_FIELD_START_OF_ENTRY: u8 = 0x01;
+const BLOB_FIELD_RESOURCE_FIELD_TYPE: u8 = 0x02;
+const BLOB_FIELD_RAW_PAYLOAD_LENGTH: u8 = 0x03;
+const BLOB_FIELD_END_OF_ENTRY: u8 = 0xff;
 
 const FIELD_END_OF_INDEX: u8 = 0x00;
 const FIELD_START_OF_ENTRY: u8 = 0x01;
@@ -34,6 +39,13 @@ const FIELD_IN_MEMORY_RESOURCES_DATA: u8 = 0x0b;
 const FIELD_IN_MEMORY_PACKAGE_DISTRIBUTION: u8 = 0x0c;
 const FIELD_IN_MEMORY_SHARED_LIBRARY: u8 = 0x0d;
 const FIELD_SHARED_LIBRARY_DEPENDENCY_NAMES: u8 = 0x0e;
+
+/// Represents a blob section in the blob index.
+#[derive(Debug)]
+struct BlobSection {
+    resource_field: u8,
+    raw_payload_length: usize,
+}
 
 /// Represents a Python module and all its metadata.
 ///
@@ -256,71 +268,66 @@ impl<'a> PythonImporterState<'a> {
             .or_else(|_| Err("failed reading resources index length"))?
             as usize;
 
-        // Now we have a series of (u8, u64) denoting the lengths of blob fields.
-        // It is terminated by an END_OF_INDEX field.
-        let mut total_blob_offset: usize = 0;
-        let mut resource_name_blob_start_offset: usize = 0;
-        let mut in_memory_source_blob_start_offset: usize = 0;
-        let mut in_memory_bytecode_blob_start_offset: usize = 0;
-        let mut in_memory_bytecode_opt1_blob_start_offset: usize = 0;
-        let mut in_memory_bytecode_opt2_blob_start_offset: usize = 0;
-        let mut in_memory_extension_module_shared_library_start_offset: usize = 0;
-        let mut in_memory_resources_start_offset: usize = 0;
-        let mut in_memory_package_distribution_offset: usize = 0;
-        let mut in_memory_shared_library_start_offset: usize = 0;
-        let mut shared_library_dependency_names_start_offset: usize = 0;
+        let mut current_blob_field = None;
+        let mut current_blob_raw_payload_length = None;
+        let mut blob_entry_count = 0;
+        let mut blob_sections = Vec::with_capacity(blob_section_count as usize);
 
-        if blob_index_length > 0 {
-            for _ in 0..blob_section_count {
-                let field = reader
+        if blob_section_count != 0 || blob_index_length != 0 {
+            loop {
+                let field_type = reader
                     .read_u8()
-                    .or_else(|_| Err("failed reading blob length field type"))?;
+                    .or_else(|_| Err("failed reading blob section field type"))?;
 
-                if field == FIELD_END_OF_INDEX {
-                    return Err("unexpected end of blob index");
+                match field_type {
+                    BLOB_FIELD_END_OF_INDEX => break,
+                    BLOB_FIELD_START_OF_ENTRY => {
+                        blob_entry_count += 1;
+                        current_blob_field = None;
+                        current_blob_raw_payload_length = None;
+                    }
+                    BLOB_FIELD_END_OF_ENTRY => {
+                        if current_blob_field.is_none() {
+                            return Err("blob resource field is required");
+                        }
+                        if current_blob_raw_payload_length.is_none() {
+                            return Err("blob raw payload length is required");
+                        }
+
+                        blob_sections.push(BlobSection {
+                            resource_field: current_blob_field.unwrap(),
+                            raw_payload_length: current_blob_raw_payload_length.unwrap(),
+                        });
+
+                        current_blob_field = None;
+                        current_blob_raw_payload_length = None;
+                    }
+                    BLOB_FIELD_RESOURCE_FIELD_TYPE => {
+                        let field = reader
+                            .read_u8()
+                            .or_else(|_| Err("failed reading blob resource field value"))?;
+                        current_blob_field = Some(field);
+                    }
+                    BLOB_FIELD_RAW_PAYLOAD_LENGTH => {
+                        let l = reader
+                            .read_u64::<LittleEndian>()
+                            .or_else(|_| Err("failed reading raw payload length"))?;
+                        current_blob_raw_payload_length = Some(l as usize);
+                    }
+
+                    _ => return Err("invalid blob index field type"),
                 }
-
-                let blob_length = reader
-                    .read_u64::<LittleEndian>()
-                    .or_else(|_| Err("failed reading field blob length"))?;
-                let blob_length = usize::try_from(blob_length)
-                    .or_else(|_| Err("failed to convert blob size to usize"))?;
-
-                if field == FIELD_MODULE_NAME {
-                    resource_name_blob_start_offset = total_blob_offset;
-                } else if field == FIELD_IN_MEMORY_SOURCE {
-                    in_memory_source_blob_start_offset = total_blob_offset;
-                } else if field == FIELD_IN_MEMORY_BYTECODE {
-                    in_memory_bytecode_blob_start_offset = total_blob_offset;
-                } else if field == FIELD_IN_MEMORY_BYTECODE_OPT1 {
-                    in_memory_bytecode_opt1_blob_start_offset = total_blob_offset;
-                } else if field == FIELD_IN_MEMORY_BYTECODE_OPT2 {
-                    in_memory_bytecode_opt2_blob_start_offset = total_blob_offset;
-                } else if field == FIELD_IN_MEMORY_EXTENSION_MODULE_SHARED_LIBRARY {
-                    in_memory_extension_module_shared_library_start_offset = total_blob_offset;
-                } else if field == FIELD_IN_MEMORY_RESOURCES_DATA {
-                    in_memory_resources_start_offset = total_blob_offset;
-                } else if field == FIELD_IN_MEMORY_PACKAGE_DISTRIBUTION {
-                    in_memory_package_distribution_offset = total_blob_offset;
-                } else if field == FIELD_IN_MEMORY_SHARED_LIBRARY {
-                    in_memory_shared_library_start_offset = total_blob_offset;
-                } else if field == FIELD_SHARED_LIBRARY_DEPENDENCY_NAMES {
-                    shared_library_dependency_names_start_offset = total_blob_offset;
-                } else {
-                    return Err("unhandled field in blob length index");
-                }
-
-                total_blob_offset += blob_length;
-            }
-
-            let field = reader
-                .read_u8()
-                .or_else(|_| Err("failed to read end of blob index field"))?;
-            if field != FIELD_END_OF_INDEX {
-                return Err("unexpected value at end of blob index");
             }
         }
 
+        if blob_entry_count != blob_section_count {
+            return Err("mismatch between blob sections count");
+        }
+
+        // Array indexing resource field to current payload offset within that section.
+        let mut blob_offsets: [Option<usize>; 256] = [None; 256];
+
+        // Global payload offset where blobs data starts.
         let blob_start_offset: usize =
             // Magic.
             RESOURCES_HEADER_V1.len()
@@ -329,26 +336,14 @@ impl<'a> PythonImporterState<'a> {
             + blob_index_length
             + resources_index_length
         ;
+        // Current offset from start of blobs data.
+        let mut current_blob_offset = 0;
 
-        let mut current_resource_name_offset = blob_start_offset + resource_name_blob_start_offset;
-        let mut current_in_memory_source_offset =
-            blob_start_offset + in_memory_source_blob_start_offset;
-        let mut current_in_memory_bytecode_offset =
-            blob_start_offset + in_memory_bytecode_blob_start_offset;
-        let mut current_in_memory_bytecode_opt1_offset =
-            blob_start_offset + in_memory_bytecode_opt1_blob_start_offset;
-        let mut current_in_memory_bytecode_opt2_offset =
-            blob_start_offset + in_memory_bytecode_opt2_blob_start_offset;
-        let mut current_in_memory_extension_module_shared_library_offset =
-            blob_start_offset + in_memory_extension_module_shared_library_start_offset;
-        let mut current_in_memory_resources_offset =
-            blob_start_offset + in_memory_resources_start_offset;
-        let mut current_in_memory_package_distribution_offset =
-            blob_start_offset + in_memory_package_distribution_offset;
-        let mut current_in_memory_shared_library_offset =
-            blob_start_offset + in_memory_shared_library_start_offset;
-        let mut current_shared_library_dependency_names_offset =
-            blob_start_offset + shared_library_dependency_names_start_offset;
+        for section in &blob_sections {
+            let section_start_offset = blob_start_offset + current_blob_offset;
+            blob_offsets[section.resource_field as usize] = Some(section_start_offset);
+            current_blob_offset += section.raw_payload_length;
+        }
 
         let mut current_resource = EmbeddedResource::default();
         let mut current_resource_name = None;
@@ -387,14 +382,12 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading resource name length"))?
                         as usize;
 
-                    let name = unsafe {
-                        std::str::from_utf8_unchecked(
-                            &data[current_resource_name_offset..current_resource_name_offset + l],
-                        )
-                    };
+                    let offset = blob_offsets[field_type as usize].unwrap();
+
+                    let name = unsafe { std::str::from_utf8_unchecked(&data[offset..offset + l]) };
 
                     current_resource_name = Some(name);
-                    current_resource_name_offset += l;
+                    blob_offsets[field_type as usize] = Some(offset + l);
 
                     current_resource.name = name;
                 }
@@ -410,10 +403,10 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading source length"))?
                         as usize;
 
-                    current_resource.in_memory_source = Some(
-                        &data[current_in_memory_source_offset..current_in_memory_source_offset + l],
-                    );
-                    current_in_memory_source_offset += l;
+                    let offset = blob_offsets[field_type as usize].unwrap();
+
+                    current_resource.in_memory_source = Some(&data[offset..offset + l]);
+                    blob_offsets[field_type as usize] = Some(offset + l);
                 }
                 FIELD_IN_MEMORY_BYTECODE => {
                     let l = reader
@@ -421,11 +414,9 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading bytecode length"))?
                         as usize;
 
-                    current_resource.in_memory_bytecode = Some(
-                        &data[current_in_memory_bytecode_offset
-                            ..current_in_memory_bytecode_offset + l],
-                    );
-                    current_in_memory_bytecode_offset += l;
+                    let offset = blob_offsets[field_type as usize].unwrap();
+                    current_resource.in_memory_bytecode = Some(&data[offset..offset + l]);
+                    blob_offsets[field_type as usize] = Some(offset + l);
                 }
                 FIELD_IN_MEMORY_BYTECODE_OPT1 => {
                     let l = reader
@@ -433,11 +424,9 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading bytecode length"))?
                         as usize;
 
-                    current_resource.in_memory_bytecode_opt1 = Some(
-                        &data[current_in_memory_bytecode_opt1_offset
-                            ..current_in_memory_bytecode_opt1_offset + l],
-                    );
-                    current_in_memory_bytecode_opt1_offset += l;
+                    let offset = blob_offsets[field_type as usize].unwrap();
+                    current_resource.in_memory_bytecode_opt1 = Some(&data[offset..offset + l]);
+                    blob_offsets[field_type as usize] = Some(offset + l);
                 }
                 FIELD_IN_MEMORY_BYTECODE_OPT2 => {
                     let l = reader
@@ -445,11 +434,9 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading bytecode length"))?
                         as usize;
 
-                    current_resource.in_memory_bytecode_opt2 = Some(
-                        &data[current_in_memory_bytecode_opt2_offset
-                            ..current_in_memory_bytecode_opt2_offset + l],
-                    );
-                    current_in_memory_bytecode_opt2_offset += l;
+                    let offset = blob_offsets[field_type as usize].unwrap();
+                    current_resource.in_memory_bytecode_opt2 = Some(&data[offset..offset + l]);
+                    blob_offsets[field_type as usize] = Some(offset + l);
                 }
                 FIELD_IN_MEMORY_EXTENSION_MODULE_SHARED_LIBRARY => {
                     let l = reader
@@ -457,11 +444,10 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading extension module length"))?
                         as usize;
 
-                    current_resource.in_memory_shared_library_extension_module = Some(
-                        &data[current_in_memory_extension_module_shared_library_offset
-                            ..current_in_memory_extension_module_shared_library_offset + l],
-                    );
-                    current_in_memory_extension_module_shared_library_offset += l;
+                    let offset = blob_offsets[field_type as usize].unwrap();
+                    current_resource.in_memory_shared_library_extension_module =
+                        Some(&data[offset..offset + l]);
+                    blob_offsets[field_type as usize] = Some(offset + l);
                 }
 
                 FIELD_IN_MEMORY_RESOURCES_DATA => {
@@ -478,22 +464,22 @@ impl<'a> PythonImporterState<'a> {
                             .or_else(|_| Err("failed reading resource name"))?
                             as usize;
 
+                        let mut offset = blob_offsets[field_type as usize].unwrap();
+
                         let resource_name = unsafe {
                             std::str::from_utf8_unchecked(
-                                &data[current_in_memory_resources_offset
-                                    ..current_in_memory_resources_offset + resource_name_length],
+                                &data[offset..offset + resource_name_length],
                             )
                         };
-                        current_in_memory_resources_offset += resource_name_length;
+                        offset += resource_name_length;
 
                         let resource_length = reader
                             .read_u64::<LittleEndian>()
                             .or_else(|_| Err("failed reading resource length"))?
                             as usize;
 
-                        let resource_data = &data[current_in_memory_resources_offset
-                            ..current_in_memory_resources_offset + resource_length];
-                        current_in_memory_resources_offset += resource_length;
+                        let resource_data = &data[offset..offset + resource_length];
+                        blob_offsets[field_type as usize] = Some(offset + resource_length);
 
                         resources.insert(resource_name, resource_data);
                     }
@@ -515,21 +501,18 @@ impl<'a> PythonImporterState<'a> {
                             .or_else(|_| Err("failed reading distribution metadata name"))?
                             as usize;
 
+                        let mut offset = blob_offsets[field_type as usize].unwrap();
                         let name = unsafe {
-                            std::str::from_utf8_unchecked(
-                                &data[current_in_memory_package_distribution_offset
-                                    ..current_in_memory_package_distribution_offset + name_length],
-                            )
+                            std::str::from_utf8_unchecked(&data[offset..offset + name_length])
                         };
-                        current_in_memory_package_distribution_offset += name_length;
+                        offset += name_length;
 
                         let resource_length = reader.read_u64::<LittleEndian>().or_else(|_| {
                             Err("failed reading package distribution resource length")
                         })? as usize;
 
-                        let resource_data = &data[current_in_memory_package_distribution_offset
-                            ..current_in_memory_package_distribution_offset + resource_length];
-                        current_in_memory_package_distribution_offset += resource_length;
+                        let resource_data = &data[offset..offset + resource_length];
+                        blob_offsets[field_type as usize] = Some(offset + resource_length);
 
                         resources.insert(name, resource_data);
                     }
@@ -543,11 +526,10 @@ impl<'a> PythonImporterState<'a> {
                         .or_else(|_| Err("failed reading in-memory shared library length"))?
                         as usize;
 
-                    current_resource.in_memory_shared_library = Some(
-                        &data[current_in_memory_shared_library_offset
-                            ..current_in_memory_shared_library_offset + l],
-                    );
-                    current_in_memory_shared_library_offset += l;
+                    let offset = blob_offsets[field_type as usize].unwrap();
+
+                    current_resource.in_memory_shared_library = Some(&data[offset..offset + l]);
+                    blob_offsets[field_type as usize] = Some(offset + l);
                 }
 
                 FIELD_SHARED_LIBRARY_DEPENDENCY_NAMES => {
@@ -563,13 +545,12 @@ impl<'a> PythonImporterState<'a> {
                             Err("failed reading shared library dependency name length")
                         })? as usize;
 
+                        let offset = blob_offsets[field_type as usize].unwrap();
                         let name = unsafe {
-                            std::str::from_utf8_unchecked(
-                                &data[current_shared_library_dependency_names_offset
-                                    ..current_shared_library_dependency_names_offset + name_length],
-                            )
+                            std::str::from_utf8_unchecked(&data[offset..offset + name_length])
                         };
-                        current_shared_library_dependency_names_offset += name_length;
+
+                        blob_offsets[field_type as usize] = Some(offset + name_length);
 
                         names.push(name);
                     }

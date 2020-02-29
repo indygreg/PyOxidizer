@@ -19,7 +19,7 @@ use {
     lazy_static::lazy_static,
     slog::warn,
     std::collections::{BTreeMap, BTreeSet},
-    std::convert::{TryFrom, TryInto},
+    std::convert::TryFrom,
     std::io::Write,
     std::iter::FromIterator,
     std::path::Path,
@@ -55,8 +55,75 @@ lazy_static! {
 /// Header value for version 1 of resources payload.
 const EMBEDDED_RESOURCES_HEADER_V1: &[u8] = b"pyembed\x01";
 
-/// Describes a data field type in the embedded resources payload.
+/// Describes a blob section field type in the embedded resources payload.
+#[derive(Debug, PartialEq, PartialOrd)]
+pub enum EmbeddedBlobSectionField {
+    EndOfIndex,
+    StartOfEntry,
+    EndOfEntry,
+    ResourceFieldType,
+    RawPayloadLength,
+}
+
+impl Into<u8> for EmbeddedBlobSectionField {
+    fn into(self) -> u8 {
+        match self {
+            EmbeddedBlobSectionField::EndOfIndex => 0x00,
+            EmbeddedBlobSectionField::StartOfEntry => 0x01,
+            EmbeddedBlobSectionField::ResourceFieldType => 0x02,
+            EmbeddedBlobSectionField::RawPayloadLength => 0x03,
+            EmbeddedBlobSectionField::EndOfEntry => 0xff,
+        }
+    }
+}
+
 #[derive(Debug)]
+pub struct EmbeddedBlobSection {
+    resource_field: EmbeddedResourceField,
+    raw_payload_length: usize,
+}
+
+impl EmbeddedBlobSection {
+    /// Compute length of index entry for version 1 payload format.
+    pub fn index_v1_length(&self) -> usize {
+        // Start of index entry.
+        let mut index = 1;
+
+        // Resource type field + its value.
+        index += 2;
+
+        // Raw payload length field + its value.
+        index += 9;
+
+        // End of index entry.
+        index += 1;
+
+        index
+    }
+
+    pub fn write_index_v1<W: Write>(&self, dest: &mut W) -> Result<()> {
+        dest.write_u8(EmbeddedBlobSectionField::StartOfEntry.into())
+            .context("writing start of index entry")?;
+
+        dest.write_u8(EmbeddedBlobSectionField::ResourceFieldType.into())
+            .context("writing resource field type field")?;
+        dest.write_u8(self.resource_field.into())
+            .context("writing resource field type value")?;
+
+        dest.write_u8(EmbeddedBlobSectionField::RawPayloadLength.into())
+            .context("writing raw payload length field")?;
+        dest.write_u64::<LittleEndian>(self.raw_payload_length as u64)
+            .context("writing raw payload length")?;
+
+        dest.write_u8(EmbeddedBlobSectionField::EndOfEntry.into())
+            .context("writing end of index entry")?;
+
+        Ok(())
+    }
+}
+
+/// Describes a data field type in the embedded resources payload.
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord)]
 pub enum EmbeddedResourceField {
     EndOfIndex,
     StartOfEntry,
@@ -453,6 +520,8 @@ pub fn write_embedded_resources_v1<W: Write>(
     modules: &[EmbeddedResource],
     dest: &mut W,
 ) -> Result<()> {
+    let mut blob_sections = BTreeMap::new();
+
     let mut blob_section_count = 0;
     // 1 for end of index field.
     let mut blob_index_length = 1;
@@ -460,82 +529,81 @@ pub fn write_embedded_resources_v1<W: Write>(
     // 1 for end of index field.
     let mut module_index_length = 1;
 
-    // TODO surely there's a better way to use the enum here to avoid the copy pasta.
-    let mut module_name_length = 0;
-    let mut in_memory_source_length = 0;
-    let mut in_memory_bytecode_length = 0;
-    let mut in_memory_bytecode_opt1_length = 0;
-    let mut in_memory_bytecode_opt2_length = 0;
-    let mut in_memory_extension_module_shared_library_length = 0;
-    let mut in_memory_resources_data_length = 0;
-    let mut in_memory_package_distribution_length = 0;
-    let mut in_memory_shared_library_length = 0;
-    let mut shared_library_dependency_names_length = 0;
+    fn process_field(
+        blob_sections: &mut BTreeMap<EmbeddedResourceField, EmbeddedBlobSection>,
+        resource: &EmbeddedResource,
+        field: EmbeddedResourceField,
+    ) {
+        let l = resource.field_blob_length(field);
+        if l > 0 {
+            blob_sections
+                .entry(field)
+                .or_insert_with(|| EmbeddedBlobSection {
+                    resource_field: field,
+                    raw_payload_length: 0,
+                })
+                .raw_payload_length += l;
+        }
+    }
 
     for module in modules {
         module_index_length += module.index_v1_length();
 
-        module_name_length += module.field_blob_length(EmbeddedResourceField::ModuleName);
-        in_memory_source_length += module.field_blob_length(EmbeddedResourceField::InMemorySource);
-        in_memory_bytecode_length +=
-            module.field_blob_length(EmbeddedResourceField::InMemoryBytecode);
-        in_memory_bytecode_opt1_length +=
-            module.field_blob_length(EmbeddedResourceField::InMemoryBytecodeOpt1);
-        in_memory_bytecode_opt2_length +=
-            module.field_blob_length(EmbeddedResourceField::InMemoryBytecodeOpt2);
-        in_memory_extension_module_shared_library_length +=
-            module.field_blob_length(EmbeddedResourceField::InMemoryExtensionModuleSharedLibrary);
-        in_memory_resources_data_length +=
-            module.field_blob_length(EmbeddedResourceField::InMemoryResourcesData);
-        in_memory_package_distribution_length +=
-            module.field_blob_length(EmbeddedResourceField::InMemoryPackageDistribution);
-        in_memory_shared_library_length +=
-            module.field_blob_length(EmbeddedResourceField::InMemorySharedLibrary);
-        shared_library_dependency_names_length +=
-            module.field_blob_length(EmbeddedResourceField::SharedLibraryDependencyNames);
+        process_field(
+            &mut blob_sections,
+            module,
+            EmbeddedResourceField::ModuleName,
+        );
+        process_field(
+            &mut blob_sections,
+            module,
+            EmbeddedResourceField::InMemorySource,
+        );
+        process_field(
+            &mut blob_sections,
+            module,
+            EmbeddedResourceField::InMemoryBytecode,
+        );
+        process_field(
+            &mut blob_sections,
+            module,
+            EmbeddedResourceField::InMemoryBytecodeOpt1,
+        );
+        process_field(
+            &mut blob_sections,
+            module,
+            EmbeddedResourceField::InMemoryBytecodeOpt2,
+        );
+        process_field(
+            &mut blob_sections,
+            module,
+            EmbeddedResourceField::InMemoryExtensionModuleSharedLibrary,
+        );
+        process_field(
+            &mut blob_sections,
+            module,
+            EmbeddedResourceField::InMemoryResourcesData,
+        );
+        process_field(
+            &mut blob_sections,
+            module,
+            EmbeddedResourceField::InMemoryPackageDistribution,
+        );
+        process_field(
+            &mut blob_sections,
+            module,
+            EmbeddedResourceField::InMemorySharedLibrary,
+        );
+        process_field(
+            &mut blob_sections,
+            module,
+            EmbeddedResourceField::SharedLibraryDependencyNames,
+        );
     }
 
-    const BLOB_INDEX_ENTRY_SIZE: usize = 9;
-
-    if module_name_length > 0 {
-        blob_index_length += BLOB_INDEX_ENTRY_SIZE;
+    for section in blob_sections.values() {
         blob_section_count += 1;
-    }
-    if in_memory_source_length > 0 {
-        blob_index_length += BLOB_INDEX_ENTRY_SIZE;
-        blob_section_count += 1;
-    }
-    if in_memory_bytecode_length > 0 {
-        blob_index_length += BLOB_INDEX_ENTRY_SIZE;
-        blob_section_count += 1;
-    }
-    if in_memory_bytecode_opt1_length > 0 {
-        blob_index_length += BLOB_INDEX_ENTRY_SIZE;
-        blob_section_count += 1;
-    }
-    if in_memory_bytecode_opt2_length > 0 {
-        blob_index_length += BLOB_INDEX_ENTRY_SIZE;
-        blob_section_count += 1;
-    }
-    if in_memory_extension_module_shared_library_length > 0 {
-        blob_index_length += BLOB_INDEX_ENTRY_SIZE;
-        blob_section_count += 1;
-    }
-    if in_memory_resources_data_length > 0 {
-        blob_index_length += BLOB_INDEX_ENTRY_SIZE;
-        blob_section_count += 1;
-    }
-    if in_memory_package_distribution_length > 0 {
-        blob_index_length += BLOB_INDEX_ENTRY_SIZE;
-        blob_section_count += 1;
-    }
-    if in_memory_shared_library_length > 0 {
-        blob_index_length += BLOB_INDEX_ENTRY_SIZE;
-        blob_section_count += 1;
-    }
-    if shared_library_dependency_names_length > 0 {
-        blob_index_length += BLOB_INDEX_ENTRY_SIZE;
-        blob_section_count += 1;
+        blob_index_length += section.index_v1_length();
     }
 
     dest.write_all(EMBEDDED_RESOURCES_HEADER_V1)?;
@@ -545,67 +613,16 @@ pub fn write_embedded_resources_v1<W: Write>(
     dest.write_u32::<LittleEndian>(modules.len() as u32)?;
     dest.write_u32::<LittleEndian>(module_index_length as u32)?;
 
-    if module_name_length > 0 {
-        dest.write_u8(EmbeddedResourceField::ModuleName.into())?;
-        dest.write_u64::<LittleEndian>(module_name_length.try_into().unwrap())?;
+    // Write the blob index.
+    for section in blob_sections.values() {
+        section.write_index_v1(dest)?;
     }
-
-    if in_memory_source_length > 0 {
-        dest.write_u8(EmbeddedResourceField::InMemorySource.into())?;
-        dest.write_u64::<LittleEndian>(in_memory_source_length.try_into().unwrap())?;
-    }
-
-    if in_memory_bytecode_length > 0 {
-        dest.write_u8(EmbeddedResourceField::InMemoryBytecode.into())?;
-        dest.write_u64::<LittleEndian>(in_memory_bytecode_length.try_into().unwrap())?;
-    }
-
-    if in_memory_bytecode_opt1_length > 0 {
-        dest.write_u8(EmbeddedResourceField::InMemoryBytecodeOpt1.into())?;
-        dest.write_u64::<LittleEndian>(in_memory_bytecode_opt1_length.try_into().unwrap())?;
-    }
-
-    if in_memory_bytecode_opt2_length > 0 {
-        dest.write_u8(EmbeddedResourceField::InMemoryBytecodeOpt2.into())?;
-        dest.write_u64::<LittleEndian>(in_memory_bytecode_opt2_length.try_into().unwrap())?;
-    }
-
-    if in_memory_extension_module_shared_library_length > 0 {
-        dest.write_u8(EmbeddedResourceField::InMemoryExtensionModuleSharedLibrary.into())?;
-        dest.write_u64::<LittleEndian>(
-            in_memory_extension_module_shared_library_length
-                .try_into()
-                .unwrap(),
-        )?;
-    }
-
-    if in_memory_resources_data_length > 0 {
-        dest.write_u8(EmbeddedResourceField::InMemoryResourcesData.into())?;
-        dest.write_u64::<LittleEndian>(in_memory_resources_data_length.try_into().unwrap())?;
-    }
-
-    if in_memory_package_distribution_length > 0 {
-        dest.write_u8(EmbeddedResourceField::InMemoryPackageDistribution.into())?;
-        dest.write_u64::<LittleEndian>(in_memory_package_distribution_length.try_into().unwrap())?;
-    }
-
-    if in_memory_shared_library_length > 0 {
-        dest.write_u8(EmbeddedResourceField::InMemorySharedLibrary.into())?;
-        dest.write_u64::<LittleEndian>(in_memory_shared_library_length.try_into().unwrap())?;
-    }
-
-    if shared_library_dependency_names_length > 0 {
-        dest.write_u8(EmbeddedResourceField::SharedLibraryDependencyNames.into())?;
-        dest.write_u64::<LittleEndian>(shared_library_dependency_names_length.try_into().unwrap())?;
-    }
-
     dest.write_u8(EmbeddedResourceField::EndOfIndex.into())?;
 
-    // Write the index entries.
+    // Write the resources index.
     for module in modules {
         module.write_index_v1(dest)?;
     }
-
     dest.write_u8(EmbeddedResourceField::EndOfIndex.into())?;
 
     // Write blob data, one field at a time.
@@ -1589,17 +1606,21 @@ mod tests {
         let mut expected: Vec<u8> = b"pyembed\x01".to_vec();
         // Number of blob sections.
         expected.write_u8(1)?;
-        // Length of blob index. Field, length, end of index.
-        expected.write_u32::<LittleEndian>(1 + 8 + 1)?;
+        // Length of blob index. Start of entry, field type, field value, length field, length, end of entry, end of index.
+        expected.write_u32::<LittleEndian>(1 + 1 + 1 + 1 + 8 + 1 + 1)?;
         // Number of modules.
         expected.write_u32::<LittleEndian>(1)?;
         // Length of index. Start of entry, module name length field, module name length, end of
         // entry, end of index.
         expected.write_u32::<LittleEndian>(1 + 1 + 2 + 1 + 1)?;
-        // Blobs index. Module names field, module names length, end of index.
+        // Blobs index.
+        expected.write_u8(EmbeddedBlobSectionField::StartOfEntry.into())?;
+        expected.write_u8(EmbeddedBlobSectionField::ResourceFieldType.into())?;
         expected.write_u8(EmbeddedResourceField::ModuleName.into())?;
+        expected.write_u8(EmbeddedBlobSectionField::RawPayloadLength.into())?;
         expected.write_u64::<LittleEndian>(b"foo".len() as u64)?;
-        expected.write_u8(EmbeddedResourceField::EndOfIndex.into())?;
+        expected.write_u8(EmbeddedBlobSectionField::EndOfEntry.into())?;
+        expected.write_u8(EmbeddedBlobSectionField::EndOfIndex.into())?;
         // Module index.
         expected.write_u8(EmbeddedResourceField::StartOfEntry.into())?;
         expected.write_u8(EmbeddedResourceField::ModuleName.into())?;
