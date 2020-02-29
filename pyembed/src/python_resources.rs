@@ -47,6 +47,12 @@ struct BlobSection {
     raw_payload_length: usize,
 }
 
+/// Holds state used to read an individual blob section.
+#[derive(Clone, Copy)]
+struct BlobSectionReadState {
+    offset: usize,
+}
+
 /// Represents a Python module and all its metadata.
 ///
 /// This holds the result of parsing an embedded resources data structure as well
@@ -325,7 +331,7 @@ impl<'a> PythonImporterState<'a> {
         }
 
         // Array indexing resource field to current payload offset within that section.
-        let mut blob_offsets: [Option<usize>; 256] = [None; 256];
+        let mut blob_offsets: [Option<BlobSectionReadState>; 256] = [None; 256];
 
         // Global payload offset where blobs data starts.
         let blob_start_offset: usize =
@@ -341,7 +347,9 @@ impl<'a> PythonImporterState<'a> {
 
         for section in &blob_sections {
             let section_start_offset = blob_start_offset + current_blob_offset;
-            blob_offsets[section.resource_field as usize] = Some(section_start_offset);
+            blob_offsets[section.resource_field as usize] = Some(BlobSectionReadState {
+                offset: section_start_offset,
+            });
             current_blob_offset += section.raw_payload_length;
         }
 
@@ -576,15 +584,15 @@ impl<'a> PythonImporterState<'a> {
 /// length of the blob and returns a slice to that blob.
 fn resolve_blob_data<'a>(
     data: &'a [u8],
-    blob_sections: &mut [Option<usize>],
+    blob_sections: &mut [Option<BlobSectionReadState>],
     resource_field: u8,
     length: usize,
 ) -> &'a [u8] {
-    let offset = blob_sections[resource_field as usize].unwrap();
+    let mut state = blob_sections[resource_field as usize].as_mut().unwrap();
 
-    let blob = &data[offset..offset + length];
+    let blob = &data[state.offset..state.offset + length];
 
-    blob_sections[resource_field as usize] = Some(offset + length);
+    state.offset += length;
 
     blob
 }
