@@ -22,6 +22,7 @@ const BLOB_FIELD_END_OF_INDEX: u8 = 0x00;
 const BLOB_FIELD_START_OF_ENTRY: u8 = 0x01;
 const BLOB_FIELD_RESOURCE_FIELD_TYPE: u8 = 0x02;
 const BLOB_FIELD_RAW_PAYLOAD_LENGTH: u8 = 0x03;
+const BLOB_FIELD_INTERIOR_PADDING: u8 = 0x04;
 const BLOB_FIELD_END_OF_ENTRY: u8 = 0xff;
 
 const FIELD_END_OF_INDEX: u8 = 0x00;
@@ -40,17 +41,25 @@ const FIELD_IN_MEMORY_PACKAGE_DISTRIBUTION: u8 = 0x0c;
 const FIELD_IN_MEMORY_SHARED_LIBRARY: u8 = 0x0d;
 const FIELD_SHARED_LIBRARY_DEPENDENCY_NAMES: u8 = 0x0e;
 
+#[derive(Clone, Copy, Debug)]
+enum BlobInteriorPadding {
+    None,
+    Null,
+}
+
 /// Represents a blob section in the blob index.
 #[derive(Debug)]
 struct BlobSection {
     resource_field: u8,
     raw_payload_length: usize,
+    interior_padding: Option<BlobInteriorPadding>,
 }
 
 /// Holds state used to read an individual blob section.
 #[derive(Clone, Copy)]
 struct BlobSectionReadState {
     offset: usize,
+    interior_padding: BlobInteriorPadding,
 }
 
 /// Represents a Python module and all its metadata.
@@ -276,6 +285,7 @@ impl<'a> PythonImporterState<'a> {
 
         let mut current_blob_field = None;
         let mut current_blob_raw_payload_length = None;
+        let mut current_blob_interior_padding = None;
         let mut blob_entry_count = 0;
         let mut blob_sections = Vec::with_capacity(blob_section_count as usize);
 
@@ -291,6 +301,7 @@ impl<'a> PythonImporterState<'a> {
                         blob_entry_count += 1;
                         current_blob_field = None;
                         current_blob_raw_payload_length = None;
+                        current_blob_interior_padding = None;
                     }
                     BLOB_FIELD_END_OF_ENTRY => {
                         if current_blob_field.is_none() {
@@ -303,10 +314,12 @@ impl<'a> PythonImporterState<'a> {
                         blob_sections.push(BlobSection {
                             resource_field: current_blob_field.unwrap(),
                             raw_payload_length: current_blob_raw_payload_length.unwrap(),
+                            interior_padding: current_blob_interior_padding,
                         });
 
                         current_blob_field = None;
                         current_blob_raw_payload_length = None;
+                        current_blob_interior_padding = None;
                     }
                     BLOB_FIELD_RESOURCE_FIELD_TYPE => {
                         let field = reader
@@ -319,6 +332,17 @@ impl<'a> PythonImporterState<'a> {
                             .read_u64::<LittleEndian>()
                             .or_else(|_| Err("failed reading raw payload length"))?;
                         current_blob_raw_payload_length = Some(l as usize);
+                    }
+                    BLOB_FIELD_INTERIOR_PADDING => {
+                        let padding = reader
+                            .read_u8()
+                            .or_else(|_| Err("failed reading interior padding field value"))?;
+
+                        current_blob_interior_padding = Some(match padding {
+                            0x01 => BlobInteriorPadding::None,
+                            0x02 => BlobInteriorPadding::Null,
+                            _ => return Err("invalid value for interior padding field"),
+                        });
                     }
 
                     _ => return Err("invalid blob index field type"),
@@ -349,6 +373,10 @@ impl<'a> PythonImporterState<'a> {
             let section_start_offset = blob_start_offset + current_blob_offset;
             blob_offsets[section.resource_field as usize] = Some(BlobSectionReadState {
                 offset: section_start_offset,
+                interior_padding: match section.interior_padding {
+                    Some(padding) => padding,
+                    None => BlobInteriorPadding::None,
+                },
             });
             current_blob_offset += section.raw_payload_length;
         }
@@ -592,7 +620,12 @@ fn resolve_blob_data<'a>(
 
     let blob = &data[state.offset..state.offset + length];
 
-    state.offset += length;
+    let increment = match &state.interior_padding {
+        BlobInteriorPadding::None => length,
+        BlobInteriorPadding::Null => length + 1,
+    };
+
+    state.offset += increment;
 
     blob
 }
@@ -602,7 +635,8 @@ mod tests {
     use {
         super::*,
         pyoxidizerlib::py_packaging::embedded_resource::{
-            write_embedded_resources_v1, EmbeddedResource as OwnedEmbeddedResource,
+            write_embedded_resources_v1, EmbeddedBlobInteriorPadding,
+            EmbeddedResource as OwnedEmbeddedResource,
         },
         std::collections::BTreeMap,
     };
@@ -685,7 +719,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
 
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
@@ -715,7 +749,52 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource1, resource2], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource1, resource2], &mut data, None).unwrap();
+
+        let mut state = PythonImporterState::default();
+        state.load_resources(&data).unwrap();
+
+        assert_eq!(state.resources.len(), 2);
+
+        let entry = state.resources.get("foo").unwrap();
+        assert_eq!(
+            entry,
+            &EmbeddedResource {
+                name: "foo",
+                ..EmbeddedResource::default()
+            }
+        );
+
+        let entry = state.resources.get("module2").unwrap();
+        assert_eq!(
+            entry,
+            &EmbeddedResource {
+                name: "module2",
+                ..EmbeddedResource::default()
+            }
+        );
+    }
+
+    // Same as above just with null interior padding.
+    #[test]
+    fn test_multiple_resources_just_names_null_padding() {
+        let resource1 = OwnedEmbeddedResource {
+            name: "foo".to_string(),
+            ..OwnedEmbeddedResource::default()
+        };
+
+        let resource2 = OwnedEmbeddedResource {
+            name: "module2".to_string(),
+            ..OwnedEmbeddedResource::default()
+        };
+
+        let mut data = Vec::new();
+        write_embedded_resources_v1(
+            &[resource1, resource2],
+            &mut data,
+            Some(EmbeddedBlobInteriorPadding::Null),
+        )
+        .unwrap();
 
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
@@ -750,7 +829,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
@@ -779,7 +858,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
@@ -808,7 +887,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
@@ -837,7 +916,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
@@ -866,7 +945,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
@@ -902,7 +981,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
@@ -929,7 +1008,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
@@ -952,7 +1031,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
@@ -983,7 +1062,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 
@@ -1026,7 +1105,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data).unwrap();
+        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
         let mut state = PythonImporterState::default();
         state.load_resources(&data).unwrap();
 

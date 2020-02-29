@@ -115,6 +115,14 @@ the resource field type value (see section below).
 the blob section in the payload. The `u64` containing that length will
 immediately follow this `u8`.
 
+`0x04` - Interior padding mechanism. This field defines interior padding
+between elements in the blob section. Following this `u8` is another `u8`
+denoting the padding mechanism. `0x01` indicates no padding. `0x02` indicates
+NULL padding (a `0x00` between elements). If not present, *no padding*
+is assumed. If the payload data logically consists of discrete resources
+(e.g. Python package resource files), then padding applies to these
+sub-elements as well.
+
 ## Resource Field Types
 
 The Resources Index allows attributing a sparse set of metadata
@@ -218,10 +226,6 @@ Everything is designed to facilitate a reader leveraging 0-copy. If a
 reader has the data structure in memory, we don't want to require it
 to copy memory in order to reference entries. In Rust speak, we should
 be able to hold `&[u8]` references everywhere.
-
-Since Rust is the intended target, string data (notably resource names)
-are not NULL terminated / C strings because Rust's `str` are not NULL
-terminated.
 
 There is no checksumming of the data because we don't want to incur
 I/O overhead to read the entire blob. It could be added as an optional

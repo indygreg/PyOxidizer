@@ -55,6 +55,21 @@ lazy_static! {
 /// Header value for version 1 of resources payload.
 const EMBEDDED_RESOURCES_HEADER_V1: &[u8] = b"pyembed\x01";
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum EmbeddedBlobInteriorPadding {
+    None,
+    Null,
+}
+
+impl Into<u8> for &EmbeddedBlobInteriorPadding {
+    fn into(self) -> u8 {
+        match self {
+            EmbeddedBlobInteriorPadding::None => 0x01,
+            EmbeddedBlobInteriorPadding::Null => 0x02,
+        }
+    }
+}
+
 /// Describes a blob section field type in the embedded resources payload.
 #[derive(Debug, PartialEq, PartialOrd)]
 pub enum EmbeddedBlobSectionField {
@@ -63,6 +78,7 @@ pub enum EmbeddedBlobSectionField {
     EndOfEntry,
     ResourceFieldType,
     RawPayloadLength,
+    InteriorPadding,
 }
 
 impl Into<u8> for EmbeddedBlobSectionField {
@@ -72,6 +88,7 @@ impl Into<u8> for EmbeddedBlobSectionField {
             EmbeddedBlobSectionField::StartOfEntry => 0x01,
             EmbeddedBlobSectionField::ResourceFieldType => 0x02,
             EmbeddedBlobSectionField::RawPayloadLength => 0x03,
+            EmbeddedBlobSectionField::InteriorPadding => 0x04,
             EmbeddedBlobSectionField::EndOfEntry => 0xff,
         }
     }
@@ -81,6 +98,7 @@ impl Into<u8> for EmbeddedBlobSectionField {
 pub struct EmbeddedBlobSection {
     resource_field: EmbeddedResourceField,
     raw_payload_length: usize,
+    interior_padding: Option<EmbeddedBlobInteriorPadding>,
 }
 
 impl EmbeddedBlobSection {
@@ -94,6 +112,11 @@ impl EmbeddedBlobSection {
 
         // Raw payload length field + its value.
         index += 9;
+
+        if self.interior_padding.is_some() {
+            // Field + value.
+            index += 2;
+        }
 
         // End of index entry.
         index += 1;
@@ -114,6 +137,13 @@ impl EmbeddedBlobSection {
             .context("writing raw payload length field")?;
         dest.write_u64::<LittleEndian>(self.raw_payload_length as u64)
             .context("writing raw payload length")?;
+
+        if let Some(padding) = &self.interior_padding {
+            dest.write_u8(EmbeddedBlobSectionField::InteriorPadding.into())
+                .context("writing interior padding field")?;
+            dest.write_u8(padding.into())
+                .context("writing interior padding value")?;
+        }
 
         dest.write_u8(EmbeddedBlobSectionField::EndOfEntry.into())
             .context("writing end of index entry")?;
@@ -295,6 +325,8 @@ impl EmbeddedResource {
     }
 
     /// Compute the length of a field.
+    ///
+    /// Interior padding is not part of the returned length.
     pub fn field_blob_length(&self, field: EmbeddedResourceField) -> usize {
         match field {
             EmbeddedResourceField::EndOfIndex => 0,
@@ -373,6 +405,92 @@ impl EmbeddedResource {
                 }
             }
         }
+    }
+
+    /// Compute the size of interior padding for a specific field.
+    pub fn field_blob_interior_padding_length(
+        &self,
+        field: EmbeddedResourceField,
+        padding: EmbeddedBlobInteriorPadding,
+    ) -> usize {
+        let elements_count = match field {
+            EmbeddedResourceField::EndOfIndex => 0,
+            EmbeddedResourceField::StartOfEntry => 0,
+            EmbeddedResourceField::EndOfEntry => 0,
+            EmbeddedResourceField::ModuleName => 1,
+            EmbeddedResourceField::IsPackage => 0,
+            EmbeddedResourceField::IsNamespacePackage => 0,
+            EmbeddedResourceField::InMemorySource => {
+                if self.in_memory_source.is_some() {
+                    1
+                } else {
+                    0
+                }
+            }
+            EmbeddedResourceField::InMemoryBytecode => {
+                if self.in_memory_bytecode.is_some() {
+                    1
+                } else {
+                    0
+                }
+            }
+            EmbeddedResourceField::InMemoryBytecodeOpt1 => {
+                if self.in_memory_bytecode_opt1.is_some() {
+                    1
+                } else {
+                    0
+                }
+            }
+            EmbeddedResourceField::InMemoryBytecodeOpt2 => {
+                if self.in_memory_bytecode_opt2.is_some() {
+                    1
+                } else {
+                    0
+                }
+            }
+            EmbeddedResourceField::InMemoryExtensionModuleSharedLibrary => {
+                if self.in_memory_extension_module_shared_library.is_some() {
+                    1
+                } else {
+                    0
+                }
+            }
+            EmbeddedResourceField::InMemoryResourcesData => {
+                if let Some(resources) = &self.in_memory_resources {
+                    resources.len() * 2
+                } else {
+                    0
+                }
+            }
+            EmbeddedResourceField::InMemoryPackageDistribution => {
+                if let Some(metadata) = &self.in_memory_package_distribution {
+                    metadata.len() * 2
+                } else {
+                    0
+                }
+            }
+            EmbeddedResourceField::InMemorySharedLibrary => {
+                if self.in_memory_shared_library.is_some() {
+                    1
+                } else {
+                    0
+                }
+            }
+            EmbeddedResourceField::SharedLibraryDependencyNames => {
+                if let Some(names) = &self.shared_library_dependency_names {
+                    names.len()
+                } else {
+                    0
+                }
+            }
+        };
+
+        let overhead = match padding {
+            EmbeddedBlobInteriorPadding::None => 0,
+            EmbeddedBlobInteriorPadding::Null => 1,
+        };
+
+        elements_count * overhead
     }
 
     /// Write the version 1 index entry for a module instance.
@@ -519,6 +637,7 @@ impl EmbeddedResource {
 pub fn write_embedded_resources_v1<W: Write>(
     modules: &[EmbeddedResource],
     dest: &mut W,
+    interior_padding: Option<EmbeddedBlobInteriorPadding>,
 ) -> Result<()> {
     let mut blob_sections = BTreeMap::new();
 
@@ -529,22 +648,36 @@ pub fn write_embedded_resources_v1<W: Write>(
     // 1 for end of index field.
     let mut module_index_length = 1;
 
-    fn process_field(
-        blob_sections: &mut BTreeMap<EmbeddedResourceField, EmbeddedBlobSection>,
-        resource: &EmbeddedResource,
-        field: EmbeddedResourceField,
-    ) {
-        let l = resource.field_blob_length(field);
-        if l > 0 {
-            blob_sections
-                .entry(field)
-                .or_insert_with(|| EmbeddedBlobSection {
-                    resource_field: field,
-                    raw_payload_length: 0,
-                })
-                .raw_payload_length += l;
+    let process_field =
+        |blob_sections: &mut BTreeMap<EmbeddedResourceField, EmbeddedBlobSection>,
+         resource: &EmbeddedResource,
+         field: EmbeddedResourceField| {
+            let padding = match &interior_padding {
+                Some(padding) => padding.clone(),
+                None => EmbeddedBlobInteriorPadding::None,
+            };
+
+            let l = resource.field_blob_length(field)
+                + resource.field_blob_interior_padding_length(field, padding);
+            if l > 0 {
+                blob_sections
+                    .entry(field)
+                    .or_insert_with(|| EmbeddedBlobSection {
+                        resource_field: field,
+                        raw_payload_length: 0,
+                        interior_padding: interior_padding.clone(),
+                    })
+                    .raw_payload_length += l;
+            }
+        };
+
+    let add_interior_padding = |dest: &mut W| -> Result<()> {
+        if interior_padding == Some(EmbeddedBlobInteriorPadding::Null) {
+            dest.write_all(b"\0")?;
         }
-    }
+
+        Ok(())
+    };
 
     for module in modules {
         module_index_length += module.index_v1_length();
@@ -628,35 +761,41 @@ pub fn write_embedded_resources_v1<W: Write>(
     // Write blob data, one field at a time.
     for module in modules {
         dest.write_all(module.name.as_bytes())?;
+        add_interior_padding(dest)?;
     }
 
     for module in modules {
         if let Some(data) = &module.in_memory_source {
             dest.write_all(data)?;
+            add_interior_padding(dest)?;
         }
     }
 
     for module in modules {
         if let Some(data) = &module.in_memory_bytecode {
             dest.write_all(data)?;
+            add_interior_padding(dest)?;
         }
     }
 
     for module in modules {
         if let Some(data) = &module.in_memory_bytecode_opt1 {
             dest.write_all(data)?;
+            add_interior_padding(dest)?;
         }
     }
 
     for module in modules {
         if let Some(data) = &module.in_memory_bytecode_opt2 {
             dest.write_all(data)?;
+            add_interior_padding(dest)?;
         }
     }
 
     for module in modules {
         if let Some(data) = &module.in_memory_extension_module_shared_library {
             dest.write_all(data)?;
+            add_interior_padding(dest)?;
         }
     }
 
@@ -664,7 +803,9 @@ pub fn write_embedded_resources_v1<W: Write>(
         if let Some(resources) = &module.in_memory_resources {
             for (key, value) in resources {
                 dest.write_all(key.as_bytes())?;
+                add_interior_padding(dest)?;
                 dest.write_all(value)?;
+                add_interior_padding(dest)?;
             }
         }
     }
@@ -673,7 +814,9 @@ pub fn write_embedded_resources_v1<W: Write>(
         if let Some(resources) = &module.in_memory_package_distribution {
             for (key, value) in resources {
                 dest.write_all(key.as_bytes())?;
+                add_interior_padding(dest)?;
                 dest.write_all(value)?;
+                add_interior_padding(dest)?;
             }
         }
     }
@@ -681,6 +824,7 @@ pub fn write_embedded_resources_v1<W: Write>(
     for module in modules {
         if let Some(data) = &module.in_memory_shared_library {
             dest.write_all(data)?;
+            add_interior_padding(dest)?;
         }
     }
 
@@ -688,6 +832,7 @@ pub fn write_embedded_resources_v1<W: Write>(
         if let Some(names) = &module.shared_library_dependency_names {
             for name in names {
                 dest.write_all(name.as_bytes())?;
+                add_interior_padding(dest)?;
             }
         }
     }
@@ -1315,6 +1460,7 @@ impl EmbeddedPythonResources {
                 .cloned()
                 .collect::<Vec<EmbeddedResource>>(),
             resources,
+            None,
         )
         .unwrap();
     }
@@ -1573,7 +1719,7 @@ mod tests {
     #[test]
     fn test_write_empty() -> Result<()> {
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[], &mut data)?;
+        write_embedded_resources_v1(&[], &mut data, None)?;
 
         let mut expected: Vec<u8> = b"pyembed\x01".to_vec();
         // Number of blob sections.
@@ -1601,7 +1747,7 @@ mod tests {
             ..EmbeddedResource::default()
         };
 
-        write_embedded_resources_v1(&[module], &mut data)?;
+        write_embedded_resources_v1(&[module], &mut data, None)?;
 
         let mut expected: Vec<u8> = b"pyembed\x01".to_vec();
         // Number of blob sections.
