@@ -7,29 +7,13 @@ Management of Python resources.
 */
 
 use {
-    super::data::{EmbeddedBlobSectionField, EMBEDDED_RESOURCES_HEADER_V1},
+    super::data::{EmbeddedBlobSectionField, EmbeddedResourceField, EMBEDDED_RESOURCES_HEADER_V1},
     byteorder::{LittleEndian, ReadBytesExt},
     std::collections::{HashMap, HashSet},
     std::convert::TryFrom,
     std::io::{Cursor, Read},
     std::sync::Arc,
 };
-
-const FIELD_END_OF_INDEX: u8 = 0x00;
-const FIELD_START_OF_ENTRY: u8 = 0x01;
-const FIELD_END_OF_ENTRY: u8 = 0x02;
-const FIELD_MODULE_NAME: u8 = 0x03;
-const FIELD_IS_PACKAGE: u8 = 0x04;
-const FIELD_IS_NAMESPACE_PACKAGE: u8 = 0x05;
-const FIELD_IN_MEMORY_SOURCE: u8 = 0x06;
-const FIELD_IN_MEMORY_BYTECODE: u8 = 0x07;
-const FIELD_IN_MEMORY_BYTECODE_OPT1: u8 = 0x08;
-const FIELD_IN_MEMORY_BYTECODE_OPT2: u8 = 0x09;
-const FIELD_IN_MEMORY_EXTENSION_MODULE_SHARED_LIBRARY: u8 = 0x0a;
-const FIELD_IN_MEMORY_RESOURCES_DATA: u8 = 0x0b;
-const FIELD_IN_MEMORY_PACKAGE_DISTRIBUTION: u8 = 0x0c;
-const FIELD_IN_MEMORY_SHARED_LIBRARY: u8 = 0x0d;
-const FIELD_SHARED_LIBRARY_DEPENDENCY_NAMES: u8 = 0x0e;
 
 #[derive(Clone, Copy, Debug)]
 enum BlobInteriorPadding {
@@ -270,15 +254,17 @@ fn load_resources_v1<'a>(
             .read_u8()
             .or_else(|_| Err("failed reading field type"))?;
 
+        let field_type = EmbeddedResourceField::try_from(field_type)?;
+
         match field_type {
-            FIELD_END_OF_INDEX => break,
-            FIELD_START_OF_ENTRY => {
+            EmbeddedResourceField::EndOfIndex => break,
+            EmbeddedResourceField::StartOfEntry => {
                 index_entry_count += 1;
                 current_resource = EmbeddedResource::default();
                 current_resource_name = None;
             }
 
-            FIELD_END_OF_ENTRY => {
+            EmbeddedResourceField::EndOfEntry => {
                 if let Some(name) = current_resource_name {
                     resources.insert(name, current_resource);
                 } else {
@@ -288,7 +274,7 @@ fn load_resources_v1<'a>(
                 current_resource = EmbeddedResource::default();
                 current_resource_name = None;
             }
-            FIELD_MODULE_NAME => {
+            EmbeddedResourceField::ModuleName => {
                 let l = reader
                     .read_u16::<LittleEndian>()
                     .or_else(|_| Err("failed reading resource name length"))?
@@ -306,13 +292,13 @@ fn load_resources_v1<'a>(
                 current_resource_name = Some(name);
                 current_resource.name = name;
             }
-            FIELD_IS_PACKAGE => {
+            EmbeddedResourceField::IsPackage => {
                 current_resource.is_package = true;
             }
-            FIELD_IS_NAMESPACE_PACKAGE => {
+            EmbeddedResourceField::IsNamespacePackage => {
                 current_resource.is_namespace_package = true;
             }
-            FIELD_IN_MEMORY_SOURCE => {
+            EmbeddedResourceField::InMemorySource => {
                 let l = reader
                     .read_u32::<LittleEndian>()
                     .or_else(|_| Err("failed reading source length"))?
@@ -321,7 +307,7 @@ fn load_resources_v1<'a>(
                 current_resource.in_memory_source =
                     Some(resolve_blob_data(data, &mut blob_offsets, field_type, l));
             }
-            FIELD_IN_MEMORY_BYTECODE => {
+            EmbeddedResourceField::InMemoryBytecode => {
                 let l = reader
                     .read_u32::<LittleEndian>()
                     .or_else(|_| Err("failed reading bytecode length"))?
@@ -330,7 +316,7 @@ fn load_resources_v1<'a>(
                 current_resource.in_memory_bytecode =
                     Some(resolve_blob_data(data, &mut blob_offsets, field_type, l));
             }
-            FIELD_IN_MEMORY_BYTECODE_OPT1 => {
+            EmbeddedResourceField::InMemoryBytecodeOpt1 => {
                 let l = reader
                     .read_u32::<LittleEndian>()
                     .or_else(|_| Err("failed reading bytecode length"))?
@@ -339,7 +325,7 @@ fn load_resources_v1<'a>(
                 current_resource.in_memory_bytecode_opt1 =
                     Some(resolve_blob_data(data, &mut blob_offsets, field_type, l));
             }
-            FIELD_IN_MEMORY_BYTECODE_OPT2 => {
+            EmbeddedResourceField::InMemoryBytecodeOpt2 => {
                 let l = reader
                     .read_u32::<LittleEndian>()
                     .or_else(|_| Err("failed reading bytecode length"))?
@@ -348,7 +334,7 @@ fn load_resources_v1<'a>(
                 current_resource.in_memory_bytecode_opt2 =
                     Some(resolve_blob_data(data, &mut blob_offsets, field_type, l));
             }
-            FIELD_IN_MEMORY_EXTENSION_MODULE_SHARED_LIBRARY => {
+            EmbeddedResourceField::InMemoryExtensionModuleSharedLibrary => {
                 let l = reader
                     .read_u32::<LittleEndian>()
                     .or_else(|_| Err("failed reading extension module length"))?
@@ -358,7 +344,7 @@ fn load_resources_v1<'a>(
                     Some(resolve_blob_data(data, &mut blob_offsets, field_type, l));
             }
 
-            FIELD_IN_MEMORY_RESOURCES_DATA => {
+            EmbeddedResourceField::InMemoryResourcesData => {
                 let resource_count = reader
                     .read_u32::<LittleEndian>()
                     .or_else(|_| Err("failed reading resources length"))?
@@ -395,7 +381,7 @@ fn load_resources_v1<'a>(
                 current_resource.in_memory_resources = Some(Arc::new(resources));
             }
 
-            FIELD_IN_MEMORY_PACKAGE_DISTRIBUTION => {
+            EmbeddedResourceField::InMemoryPackageDistribution => {
                 let resource_count = reader
                     .read_u32::<LittleEndian>()
                     .or_else(|_| Err("failed reading package distribution length"))?
@@ -432,7 +418,7 @@ fn load_resources_v1<'a>(
                 current_resource.in_memory_package_distribution = Some(resources);
             }
 
-            FIELD_IN_MEMORY_SHARED_LIBRARY => {
+            EmbeddedResourceField::InMemorySharedLibrary => {
                 let l = reader
                     .read_u64::<LittleEndian>()
                     .or_else(|_| Err("failed reading in-memory shared library length"))?
@@ -442,7 +428,7 @@ fn load_resources_v1<'a>(
                     Some(&resolve_blob_data(data, &mut blob_offsets, field_type, l));
             }
 
-            FIELD_SHARED_LIBRARY_DEPENDENCY_NAMES => {
+            EmbeddedResourceField::SharedLibraryDependencyNames => {
                 let names_count = reader
                     .read_u16::<LittleEndian>()
                     .or_else(|_| Err("failed reading shared library dependency names length"))?
@@ -470,8 +456,6 @@ fn load_resources_v1<'a>(
 
                 current_resource.shared_library_dependency_names = Some(names);
             }
-
-            _ => return Err("invalid field type"),
         }
     }
 
@@ -490,7 +474,7 @@ fn load_resources_v1<'a>(
 fn resolve_blob_data<'a>(
     data: &'a [u8],
     blob_sections: &mut [Option<BlobSectionReadState>],
-    resource_field: u8,
+    resource_field: EmbeddedResourceField,
     length: usize,
 ) -> &'a [u8] {
     let mut state = blob_sections[resource_field as usize].as_mut().unwrap();

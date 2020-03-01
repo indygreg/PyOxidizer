@@ -103,3 +103,28 @@ impl Into<u8> for EmbeddedResourceField {
         }
     }
 }
+
+impl TryFrom<u8> for EmbeddedResourceField {
+    type Error = &'static str;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0x00 => Ok(EmbeddedResourceField::EndOfIndex),
+            0x01 => Ok(EmbeddedResourceField::StartOfEntry),
+            0x02 => Ok(EmbeddedResourceField::EndOfEntry),
+            0x03 => Ok(EmbeddedResourceField::ModuleName),
+            0x04 => Ok(EmbeddedResourceField::IsPackage),
+            0x05 => Ok(EmbeddedResourceField::IsNamespacePackage),
+            0x06 => Ok(EmbeddedResourceField::InMemorySource),
+            0x07 => Ok(EmbeddedResourceField::InMemoryBytecode),
+            0x08 => Ok(EmbeddedResourceField::InMemoryBytecodeOpt1),
+            0x09 => Ok(EmbeddedResourceField::InMemoryBytecodeOpt2),
+            0x0a => Ok(EmbeddedResourceField::InMemoryExtensionModuleSharedLibrary),
+            0x0b => Ok(EmbeddedResourceField::InMemoryResourcesData),
+            0x0c => Ok(EmbeddedResourceField::InMemoryPackageDistribution),
+            0x0d => Ok(EmbeddedResourceField::InMemorySharedLibrary),
+            0x0e => Ok(EmbeddedResourceField::SharedLibraryDependencyNames),
+            _ => Err("invalid field type"),
+        }
+    }
+}
