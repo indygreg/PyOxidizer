@@ -18,13 +18,13 @@ use {
 };
 
 #[derive(Debug)]
-pub struct EmbeddedBlobSection {
+struct BlobSection {
     resource_field: EmbeddedResourceField,
     raw_payload_length: usize,
     interior_padding: Option<BlobInteriorPadding>,
 }
 
-impl EmbeddedBlobSection {
+impl BlobSection {
     /// Compute length of index entry for version 1 payload format.
     pub fn index_v1_length(&self) -> usize {
         // Start of index entry.
@@ -529,28 +529,27 @@ pub fn write_embedded_resources_v1<W: Write>(
     // 1 for end of index field.
     let mut module_index_length = 1;
 
-    let process_field =
-        |blob_sections: &mut BTreeMap<EmbeddedResourceField, EmbeddedBlobSection>,
-         resource: &EmbeddedResource,
-         field: EmbeddedResourceField| {
-            let padding = match &interior_padding {
-                Some(padding) => *padding,
-                None => BlobInteriorPadding::None,
-            };
-
-            let l = resource.field_blob_length(field)
-                + resource.field_blob_interior_padding_length(field, padding);
-            if l > 0 {
-                blob_sections
-                    .entry(field)
-                    .or_insert_with(|| EmbeddedBlobSection {
-                        resource_field: field,
-                        raw_payload_length: 0,
-                        interior_padding,
-                    })
-                    .raw_payload_length += l;
-            }
+    let process_field = |blob_sections: &mut BTreeMap<EmbeddedResourceField, BlobSection>,
+                         resource: &EmbeddedResource,
+                         field: EmbeddedResourceField| {
+        let padding = match &interior_padding {
+            Some(padding) => *padding,
+            None => BlobInteriorPadding::None,
         };
+
+        let l = resource.field_blob_length(field)
+            + resource.field_blob_interior_padding_length(field, padding);
+        if l > 0 {
+            blob_sections
+                .entry(field)
+                .or_insert_with(|| BlobSection {
+                    resource_field: field,
+                    raw_payload_length: 0,
+                    interior_padding,
+                })
+                .raw_payload_length += l;
+        }
+    };
 
     let add_interior_padding = |dest: &mut W| -> Result<()> {
         if interior_padding == Some(BlobInteriorPadding::Null) {
