@@ -2,6 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use std::convert::TryFrom;
+
 /// Header value for version 1 of resources payload.
 pub const EMBEDDED_RESOURCES_HEADER_V1: &[u8] = b"pyembed\x01";
 
@@ -40,6 +42,22 @@ impl Into<u8> for EmbeddedBlobSectionField {
             EmbeddedBlobSectionField::RawPayloadLength => 0x03,
             EmbeddedBlobSectionField::InteriorPadding => 0x04,
             EmbeddedBlobSectionField::EndOfEntry => 0xff,
+        }
+    }
+}
+
+impl TryFrom<u8> for EmbeddedBlobSectionField {
+    type Error = &'static str;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0x00 => Ok(EmbeddedBlobSectionField::EndOfIndex),
+            0x01 => Ok(EmbeddedBlobSectionField::StartOfEntry),
+            0x02 => Ok(EmbeddedBlobSectionField::ResourceFieldType),
+            0x03 => Ok(EmbeddedBlobSectionField::RawPayloadLength),
+            0x04 => Ok(EmbeddedBlobSectionField::InteriorPadding),
+            0xff => Ok(EmbeddedBlobSectionField::EndOfEntry),
+            _ => Err("invalid blob index field type"),
         }
     }
 }

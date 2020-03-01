@@ -7,19 +7,13 @@ Management of Python resources.
 */
 
 use {
-    super::data::EMBEDDED_RESOURCES_HEADER_V1,
+    super::data::{EmbeddedBlobSectionField, EMBEDDED_RESOURCES_HEADER_V1},
     byteorder::{LittleEndian, ReadBytesExt},
     std::collections::{HashMap, HashSet},
+    std::convert::TryFrom,
     std::io::{Cursor, Read},
     std::sync::Arc,
 };
-
-const BLOB_FIELD_END_OF_INDEX: u8 = 0x00;
-const BLOB_FIELD_START_OF_ENTRY: u8 = 0x01;
-const BLOB_FIELD_RESOURCE_FIELD_TYPE: u8 = 0x02;
-const BLOB_FIELD_RAW_PAYLOAD_LENGTH: u8 = 0x03;
-const BLOB_FIELD_INTERIOR_PADDING: u8 = 0x04;
-const BLOB_FIELD_END_OF_ENTRY: u8 = 0xff;
 
 const FIELD_END_OF_INDEX: u8 = 0x00;
 const FIELD_START_OF_ENTRY: u8 = 0x01;
@@ -177,15 +171,17 @@ fn load_resources_v1<'a>(
                 .read_u8()
                 .or_else(|_| Err("failed reading blob section field type"))?;
 
+            let field_type = EmbeddedBlobSectionField::try_from(field_type)?;
+
             match field_type {
-                BLOB_FIELD_END_OF_INDEX => break,
-                BLOB_FIELD_START_OF_ENTRY => {
+                EmbeddedBlobSectionField::EndOfIndex => break,
+                EmbeddedBlobSectionField::StartOfEntry => {
                     blob_entry_count += 1;
                     current_blob_field = None;
                     current_blob_raw_payload_length = None;
                     current_blob_interior_padding = None;
                 }
-                BLOB_FIELD_END_OF_ENTRY => {
+                EmbeddedBlobSectionField::EndOfEntry => {
                     if current_blob_field.is_none() {
                         return Err("blob resource field is required");
                     }
@@ -203,19 +199,19 @@ fn load_resources_v1<'a>(
                     current_blob_raw_payload_length = None;
                     current_blob_interior_padding = None;
                 }
-                BLOB_FIELD_RESOURCE_FIELD_TYPE => {
+                EmbeddedBlobSectionField::ResourceFieldType => {
                     let field = reader
                         .read_u8()
                         .or_else(|_| Err("failed reading blob resource field value"))?;
                     current_blob_field = Some(field);
                 }
-                BLOB_FIELD_RAW_PAYLOAD_LENGTH => {
+                EmbeddedBlobSectionField::RawPayloadLength => {
                     let l = reader
                         .read_u64::<LittleEndian>()
                         .or_else(|_| Err("failed reading raw payload length"))?;
                     current_blob_raw_payload_length = Some(l as usize);
                 }
-                BLOB_FIELD_INTERIOR_PADDING => {
+                EmbeddedBlobSectionField::InteriorPadding => {
                     let padding = reader
                         .read_u8()
                         .or_else(|_| Err("failed reading interior padding field value"))?;
@@ -226,8 +222,6 @@ fn load_resources_v1<'a>(
                         _ => return Err("invalid value for interior padding field"),
                     });
                 }
-
-                _ => return Err("invalid blob index field type"),
             }
         }
     }
