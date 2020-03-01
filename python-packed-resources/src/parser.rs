@@ -519,10 +519,8 @@ fn resolve_blob_data<'a>(
 mod tests {
     use {
         super::*,
-        crate::writer::{
-            write_embedded_resources_v1, EmbeddedBlobInteriorPadding,
-            EmbeddedResource as OwnedEmbeddedResource,
-        },
+        crate::data::EmbeddedBlobInteriorPadding,
+        crate::writer::{write_embedded_resources_v1, EmbeddedResource as OwnedEmbeddedResource},
         std::collections::BTreeMap,
     };
 

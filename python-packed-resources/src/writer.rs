@@ -7,54 +7,16 @@ Embedded Python resources in a binary.
 */
 
 use {
+    super::data::{
+        EmbeddedBlobInteriorPadding, EmbeddedBlobSectionField, EmbeddedResourceField,
+        EMBEDDED_RESOURCES_HEADER_V1,
+    },
     anyhow::{anyhow, Context, Result},
     byteorder::{LittleEndian, WriteBytesExt},
     std::collections::BTreeMap,
     std::convert::TryFrom,
     std::io::Write,
 };
-
-/// Header value for version 1 of resources payload.
-const EMBEDDED_RESOURCES_HEADER_V1: &[u8] = b"pyembed\x01";
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum EmbeddedBlobInteriorPadding {
-    None,
-    Null,
-}
-
-impl Into<u8> for &EmbeddedBlobInteriorPadding {
-    fn into(self) -> u8 {
-        match self {
-            EmbeddedBlobInteriorPadding::None => 0x01,
-            EmbeddedBlobInteriorPadding::Null => 0x02,
-        }
-    }
-}
-
-/// Describes a blob section field type in the embedded resources payload.
-#[derive(Debug, PartialEq, PartialOrd)]
-pub enum EmbeddedBlobSectionField {
-    EndOfIndex,
-    StartOfEntry,
-    EndOfEntry,
-    ResourceFieldType,
-    RawPayloadLength,
-    InteriorPadding,
-}
-
-impl Into<u8> for EmbeddedBlobSectionField {
-    fn into(self) -> u8 {
-        match self {
-            EmbeddedBlobSectionField::EndOfIndex => 0x00,
-            EmbeddedBlobSectionField::StartOfEntry => 0x01,
-            EmbeddedBlobSectionField::ResourceFieldType => 0x02,
-            EmbeddedBlobSectionField::RawPayloadLength => 0x03,
-            EmbeddedBlobSectionField::InteriorPadding => 0x04,
-            EmbeddedBlobSectionField::EndOfEntry => 0xff,
-        }
-    }
-}
 
 #[derive(Debug)]
 pub struct EmbeddedBlobSection {
@@ -111,48 +73,6 @@ impl EmbeddedBlobSection {
             .context("writing end of index entry")?;
 
         Ok(())
-    }
-}
-
-/// Describes a data field type in the embedded resources payload.
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord)]
-pub enum EmbeddedResourceField {
-    EndOfIndex,
-    StartOfEntry,
-    EndOfEntry,
-    ModuleName,
-    IsPackage,
-    IsNamespacePackage,
-    InMemorySource,
-    InMemoryBytecode,
-    InMemoryBytecodeOpt1,
-    InMemoryBytecodeOpt2,
-    InMemoryExtensionModuleSharedLibrary,
-    InMemoryResourcesData,
-    InMemoryPackageDistribution,
-    InMemorySharedLibrary,
-    SharedLibraryDependencyNames,
-}
-
-impl Into<u8> for EmbeddedResourceField {
-    fn into(self) -> u8 {
-        match self {
-            EmbeddedResourceField::EndOfIndex => 0,
-            EmbeddedResourceField::StartOfEntry => 1,
-            EmbeddedResourceField::EndOfEntry => 2,
-            EmbeddedResourceField::ModuleName => 3,
-            EmbeddedResourceField::IsPackage => 4,
-            EmbeddedResourceField::IsNamespacePackage => 5,
-            EmbeddedResourceField::InMemorySource => 6,
-            EmbeddedResourceField::InMemoryBytecode => 7,
-            EmbeddedResourceField::InMemoryBytecodeOpt1 => 8,
-            EmbeddedResourceField::InMemoryBytecodeOpt2 => 9,
-            EmbeddedResourceField::InMemoryExtensionModuleSharedLibrary => 10,
-            EmbeddedResourceField::InMemoryResourcesData => 11,
-            EmbeddedResourceField::InMemoryPackageDistribution => 12,
-            EmbeddedResourceField::InMemorySharedLibrary => 13,
-            EmbeddedResourceField::SharedLibraryDependencyNames => 14,
-        }
     }
 }
 

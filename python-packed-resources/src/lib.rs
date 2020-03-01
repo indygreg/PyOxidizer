@@ -1,3 +1,7 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 /*! Python Packed Resources
 
 This crate defines and implements a data format for storing resources useful
@@ -16,6 +20,7 @@ data structure is then consulted by a Python interpreter to e.g. power
 the module `import` mechanism.
 */
 
+pub mod data;
 #[allow(unused)]
 pub mod parser;
 pub mod specifications;
