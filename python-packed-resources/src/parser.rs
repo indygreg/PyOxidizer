@@ -25,7 +25,7 @@ struct BlobSection {
 }
 
 /// Holds state used to read an individual blob section.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct BlobSectionReadState {
     offset: usize,
     interior_padding: BlobInteriorPadding,
