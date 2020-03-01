@@ -32,6 +32,8 @@ struct BlobSectionReadState {
     interior_padding: BlobInteriorPadding,
 }
 
+pub type PythonPackageResources<'a> = Arc<Box<HashMap<&'a str, &'a [u8]>>>;
+
 /// Represents a Python module and all its metadata.
 ///
 /// This holds the result of parsing an embedded resources data structure as well
@@ -69,7 +71,7 @@ pub struct EmbeddedResource<'a> {
     pub in_memory_shared_library_extension_module: Option<&'a [u8]>,
 
     /// Resource "files" in this Python package.
-    pub in_memory_resources: Option<Arc<Box<HashMap<&'a str, &'a [u8]>>>>,
+    pub in_memory_resources: Option<PythonPackageResources<'a>>,
 
     /// Python package distribution files.
     pub in_memory_package_distribution: Option<HashMap<&'a str, &'a [u8]>>,
