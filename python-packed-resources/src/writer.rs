@@ -534,7 +534,7 @@ pub fn write_embedded_resources_v1<W: Write>(
          resource: &EmbeddedResource,
          field: EmbeddedResourceField| {
             let padding = match &interior_padding {
-                Some(padding) => padding.clone(),
+                Some(padding) => *padding,
                 None => BlobInteriorPadding::None,
             };
 
@@ -546,7 +546,7 @@ pub fn write_embedded_resources_v1<W: Write>(
                     .or_insert_with(|| EmbeddedBlobSection {
                         resource_field: field,
                         raw_payload_length: 0,
-                        interior_padding: interior_padding.clone(),
+                        interior_padding,
                     })
                     .raw_payload_length += l;
             }
