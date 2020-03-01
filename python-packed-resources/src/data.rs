@@ -7,7 +7,7 @@ use std::convert::TryFrom;
 /// Header value for version 1 of resources payload.
 pub const HEADER_V1: &[u8] = b"pyembed\x01";
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BlobInteriorPadding {
     None,
     Null,

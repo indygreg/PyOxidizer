@@ -7,19 +7,15 @@ Management of Python resources.
 */
 
 use {
-    super::data::{EmbeddedBlobSectionField, EmbeddedResourceField, HEADER_V1},
+    super::data::{
+        BlobInteriorPadding, EmbeddedBlobSectionField, EmbeddedResourceField, HEADER_V1,
+    },
     byteorder::{LittleEndian, ReadBytesExt},
     std::collections::{HashMap, HashSet},
     std::convert::TryFrom,
     std::io::{Cursor, Read},
     std::sync::Arc,
 };
-
-#[derive(Clone, Copy, Debug)]
-enum BlobInteriorPadding {
-    None,
-    Null,
-}
 
 /// Represents a blob section in the blob index.
 #[derive(Debug)]
