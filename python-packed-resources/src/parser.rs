@@ -7,14 +7,12 @@ Management of Python resources.
 */
 
 use {
+    super::data::EMBEDDED_RESOURCES_HEADER_V1,
     byteorder::{LittleEndian, ReadBytesExt},
     std::collections::{HashMap, HashSet},
     std::io::{Cursor, Read},
     std::sync::Arc,
 };
-
-/// Header value for version 1 of resources payload.
-const RESOURCES_HEADER_V1: &[u8] = b"pyembed\x01";
 
 const BLOB_FIELD_END_OF_INDEX: u8 = 0x00;
 const BLOB_FIELD_START_OF_ENTRY: u8 = 0x01;
@@ -141,7 +139,7 @@ pub fn load_resources<'a>(
         .read_exact(&mut header)
         .or_else(|_| Err("error reading 8 byte header"))?;
 
-    if header == RESOURCES_HEADER_V1 {
+    if header == EMBEDDED_RESOURCES_HEADER_V1 {
         load_resources_v1(data, &mut reader, resources)
     } else {
         Err("unrecognized file format")
@@ -244,7 +242,7 @@ fn load_resources_v1<'a>(
     // Global payload offset where blobs data starts.
     let blob_start_offset: usize =
             // Magic.
-            RESOURCES_HEADER_V1.len()
+            EMBEDDED_RESOURCES_HEADER_V1.len()
             // Global header.
             + 1 + 4 + 4 + 4
             + blob_index_length
