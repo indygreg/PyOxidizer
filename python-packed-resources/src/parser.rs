@@ -102,9 +102,9 @@ impl<'a> Default for EmbeddedResource<'a> {
     }
 }
 
-pub fn load_resources<'a>(
+pub fn load_resources<'a, S: ::std::hash::BuildHasher>(
     data: &'a [u8],
-    resources: &mut HashMap<&'a str, EmbeddedResource<'a>>,
+    resources: &mut HashMap<&'a str, EmbeddedResource<'a>, S>,
 ) -> Result<(), &'static str> {
     let mut reader = Cursor::new(data);
 
@@ -120,10 +120,10 @@ pub fn load_resources<'a>(
     }
 }
 
-fn load_resources_v1<'a>(
+fn load_resources_v1<'a, S: ::std::hash::BuildHasher>(
     data: &'a [u8],
     reader: &mut Cursor<&[u8]>,
-    resources: &mut HashMap<&'a str, EmbeddedResource<'a>>,
+    resources: &mut HashMap<&'a str, EmbeddedResource<'a>, S>,
 ) -> Result<(), &'static str> {
     let blob_section_count = reader
         .read_u8()
