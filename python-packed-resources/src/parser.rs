@@ -7,8 +7,9 @@ Management of Python resources.
 */
 
 use {
-    super::data::{BlobInteriorPadding, BlobSectionField, ResourceField, HEADER_V1},
+    super::data::{BlobInteriorPadding, BlobSectionField, Resource, ResourceField, HEADER_V1},
     byteorder::{LittleEndian, ReadBytesExt},
+    std::borrow::Cow,
     std::collections::{HashMap, HashSet},
     std::convert::TryFrom,
     std::io::{Cursor, Read},
@@ -32,99 +33,296 @@ struct BlobSectionReadState {
 
 pub type PythonPackageResources<'a> = Arc<Box<HashMap<&'a str, &'a [u8]>>>;
 
-/// Represents a Python module and all its metadata.
-///
-/// This holds the result of parsing an embedded resources data structure as well
-/// as extra state to support importing frozen and builtin modules.
-#[derive(Debug, PartialEq)]
-pub struct EmbeddedResource<'a> {
-    /// The resource name.
-    pub name: &'a str,
-
-    /// Whether the resource is a Python package.
-    pub is_package: bool,
-
-    /// Whether the resource is a Python namespace package.
-    pub is_namespace_package: bool,
-
-    /// Whether the resource is a builtin extension module in the Python interpreter.
-    pub is_builtin: bool,
-
-    /// Whether the resource is frozen into the Python interpreter.
-    pub is_frozen: bool,
-
-    /// In-memory source code for Python module.
-    pub in_memory_source: Option<&'a [u8]>,
-
-    /// In-memory bytecode for Python module.
-    pub in_memory_bytecode: Option<&'a [u8]>,
-
-    /// In-memory bytecode optimization level 1 for Python module.
-    pub in_memory_bytecode_opt1: Option<&'a [u8]>,
-
-    /// In-memory bytecode optimization level 2 for Python module.
-    pub in_memory_bytecode_opt2: Option<&'a [u8]>,
-
-    /// In-memory content of shared library providing Python module.
-    pub in_memory_shared_library_extension_module: Option<&'a [u8]>,
-
-    /// Resource "files" in this Python package.
-    pub in_memory_resources: Option<PythonPackageResources<'a>>,
-
-    /// Python package distribution files.
-    pub in_memory_package_distribution: Option<HashMap<&'a str, &'a [u8]>>,
-
-    /// In-memory content of shared library to be loaded from memory.
-    pub in_memory_shared_library: Option<&'a [u8]>,
-
-    /// Names of shared libraries this entry depends on.
-    pub shared_library_dependency_names: Option<Vec<&'a str>>,
+pub struct ResourceParserIterator<'a> {
+    done: bool,
+    data: &'a [u8],
+    reader: Cursor<&'a [u8]>,
+    blob_sections: [Option<BlobSectionReadState>; 256],
+    claimed_resources_count: usize,
+    read_resources_count: usize,
 }
 
-impl<'a> Default for EmbeddedResource<'a> {
-    fn default() -> Self {
-        Self {
-            name: "",
-            is_package: false,
-            is_namespace_package: false,
-            is_builtin: false,
-            is_frozen: false,
-            in_memory_source: None,
-            in_memory_bytecode: None,
-            in_memory_bytecode_opt1: None,
-            in_memory_bytecode_opt2: None,
-            in_memory_shared_library_extension_module: None,
-            in_memory_resources: None,
-            in_memory_package_distribution: None,
-            in_memory_shared_library: None,
-            shared_library_dependency_names: None,
+impl<'a> ResourceParserIterator<'a> {
+    /// Resolve a slice to an individual blob's data.
+    ///
+    /// This accepts a reference to the original blobs payload, an array of
+    /// current blob section offsets, the resource field being accessed, and the
+    /// length of the blob and returns a slice to that blob.
+    fn resolve_blob_data(&mut self, resource_field: ResourceField, length: usize) -> &'a [u8] {
+        let mut state = self.blob_sections[resource_field as usize]
+            .as_mut()
+            .unwrap();
+
+        let blob = &self.data[state.offset..state.offset + length];
+
+        let increment = match &state.interior_padding {
+            BlobInteriorPadding::None => length,
+            BlobInteriorPadding::Null => length + 1,
+        };
+
+        state.offset += increment;
+
+        blob
+    }
+
+    fn parse_next(&mut self) -> Result<Option<Resource<'a, u8>>, &'static str> {
+        let mut current_resource = Resource::default();
+        let mut current_resource_name = None;
+
+        loop {
+            let field_type = self
+                .reader
+                .read_u8()
+                .or_else(|_| Err("failed reading field type"))?;
+
+            let field_type = ResourceField::try_from(field_type)?;
+
+            match field_type {
+                ResourceField::EndOfIndex => {
+                    self.done = true;
+
+                    if self.read_resources_count != self.claimed_resources_count {
+                        return Err("mismatch between advertised index count and actual");
+                    }
+
+                    return Ok(None);
+                }
+                ResourceField::StartOfEntry => {
+                    self.read_resources_count += 1;
+                    current_resource = Resource::default();
+                    current_resource_name = None;
+                }
+
+                ResourceField::EndOfEntry => {
+                    let res = if let Some(name) = current_resource_name {
+                        Ok(Some(current_resource))
+                    } else {
+                        Err("resource name field is required")
+                    };
+
+                    current_resource = Resource::default();
+                    current_resource_name = None;
+
+                    return res;
+                }
+                ResourceField::ModuleName => {
+                    let l = self
+                        .reader
+                        .read_u16::<LittleEndian>()
+                        .or_else(|_| Err("failed reading resource name length"))?
+                        as usize;
+
+                    let name = unsafe {
+                        std::str::from_utf8_unchecked(self.resolve_blob_data(field_type, l))
+                    };
+
+                    current_resource_name = Some(name);
+                    current_resource.name = Cow::Borrowed(name);
+                }
+                ResourceField::IsPackage => {
+                    current_resource.is_package = true;
+                }
+                ResourceField::IsNamespacePackage => {
+                    current_resource.is_namespace_package = true;
+                }
+                ResourceField::InMemorySource => {
+                    let l = self
+                        .reader
+                        .read_u32::<LittleEndian>()
+                        .or_else(|_| Err("failed reading source length"))?
+                        as usize;
+
+                    current_resource.in_memory_source =
+                        Some(Cow::Borrowed(self.resolve_blob_data(field_type, l)));
+                }
+                ResourceField::InMemoryBytecode => {
+                    let l = self
+                        .reader
+                        .read_u32::<LittleEndian>()
+                        .or_else(|_| Err("failed reading bytecode length"))?
+                        as usize;
+
+                    current_resource.in_memory_bytecode =
+                        Some(Cow::Borrowed(self.resolve_blob_data(field_type, l)));
+                }
+                ResourceField::InMemoryBytecodeOpt1 => {
+                    let l = self
+                        .reader
+                        .read_u32::<LittleEndian>()
+                        .or_else(|_| Err("failed reading bytecode length"))?
+                        as usize;
+
+                    current_resource.in_memory_bytecode_opt1 =
+                        Some(Cow::Borrowed(self.resolve_blob_data(field_type, l)));
+                }
+                ResourceField::InMemoryBytecodeOpt2 => {
+                    let l = self
+                        .reader
+                        .read_u32::<LittleEndian>()
+                        .or_else(|_| Err("failed reading bytecode length"))?
+                        as usize;
+
+                    current_resource.in_memory_bytecode_opt2 =
+                        Some(Cow::Borrowed(self.resolve_blob_data(field_type, l)));
+                }
+                ResourceField::InMemoryExtensionModuleSharedLibrary => {
+                    let l = self
+                        .reader
+                        .read_u32::<LittleEndian>()
+                        .or_else(|_| Err("failed reading extension module length"))?
+                        as usize;
+
+                    current_resource.in_memory_extension_module_shared_library =
+                        Some(Cow::Borrowed(self.resolve_blob_data(field_type, l)));
+                }
+
+                ResourceField::InMemoryResourcesData => {
+                    let resource_count = self
+                        .reader
+                        .read_u32::<LittleEndian>()
+                        .or_else(|_| Err("failed reading resources length"))?
+                        as usize;
+
+                    let mut resources = Box::new(HashMap::with_capacity(resource_count));
+
+                    for _ in 0..resource_count {
+                        let resource_name_length = self
+                            .reader
+                            .read_u16::<LittleEndian>()
+                            .or_else(|_| Err("failed reading resource name"))?
+                            as usize;
+
+                        let resource_name = unsafe {
+                            std::str::from_utf8_unchecked(
+                                self.resolve_blob_data(field_type, resource_name_length),
+                            )
+                        };
+
+                        let resource_length = self
+                            .reader
+                            .read_u64::<LittleEndian>()
+                            .or_else(|_| Err("failed reading resource length"))?
+                            as usize;
+
+                        let resource_data = self.resolve_blob_data(field_type, resource_length);
+
+                        resources
+                            .insert(Cow::Borrowed(resource_name), Cow::Borrowed(resource_data));
+                    }
+
+                    current_resource.in_memory_resources = Some(Arc::new(resources));
+                }
+
+                ResourceField::InMemoryPackageDistribution => {
+                    let resource_count = self
+                        .reader
+                        .read_u32::<LittleEndian>()
+                        .or_else(|_| Err("failed reading package distribution length"))?
+                        as usize;
+
+                    let mut resources = HashMap::with_capacity(resource_count);
+
+                    for _ in 0..resource_count {
+                        let name_length = self
+                            .reader
+                            .read_u16::<LittleEndian>()
+                            .or_else(|_| Err("failed reading distribution metadata name"))?
+                            as usize;
+
+                        let name = unsafe {
+                            std::str::from_utf8_unchecked(
+                                self.resolve_blob_data(field_type, name_length),
+                            )
+                        };
+
+                        let resource_length =
+                            self.reader.read_u64::<LittleEndian>().or_else(|_| {
+                                Err("failed reading package distribution resource length")
+                            })? as usize;
+
+                        let resource_data = self.resolve_blob_data(field_type, resource_length);
+
+                        resources.insert(Cow::Borrowed(name), Cow::Borrowed(resource_data));
+                    }
+
+                    current_resource.in_memory_package_distribution = Some(resources);
+                }
+
+                ResourceField::InMemorySharedLibrary => {
+                    let l = self
+                        .reader
+                        .read_u64::<LittleEndian>()
+                        .or_else(|_| Err("failed reading in-memory shared library length"))?
+                        as usize;
+
+                    current_resource.in_memory_shared_library =
+                        Some(Cow::Borrowed(self.resolve_blob_data(field_type, l)));
+                }
+
+                ResourceField::SharedLibraryDependencyNames => {
+                    let names_count =
+                        self.reader.read_u16::<LittleEndian>().or_else(|_| {
+                            Err("failed reading shared library dependency names length")
+                        })? as usize;
+
+                    let mut names = Vec::new();
+
+                    for _ in 0..names_count {
+                        let name_length = self.reader.read_u16::<LittleEndian>().or_else(|_| {
+                            Err("failed reading shared library dependency name length")
+                        })? as usize;
+
+                        let name = unsafe {
+                            std::str::from_utf8_unchecked(
+                                self.resolve_blob_data(field_type, name_length),
+                            )
+                        };
+
+                        names.push(Cow::Borrowed(name));
+                    }
+
+                    current_resource.shared_library_dependency_names = Some(names);
+                }
+            }
         }
     }
 }
 
-pub fn load_resources<'a, S: ::std::hash::BuildHasher>(
-    data: &'a [u8],
-    resources: &mut HashMap<&'a str, EmbeddedResource<'a>, S>,
-) -> Result<(), &'static str> {
-    let mut reader = Cursor::new(data);
+impl<'a> Iterator for ResourceParserIterator<'a> {
+    type Item = Result<Resource<'a, u8>, &'static str>;
 
-    let mut header = [0; 8];
-    reader
-        .read_exact(&mut header)
-        .or_else(|_| Err("error reading 8 byte header"))?;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.done {
+            return None;
+        }
+
+        match self.parse_next() {
+            Ok(res) => match res {
+                Some(entry) => Some(Ok(entry)),
+                None => None,
+            },
+            Err(e) => Some(Err(e)),
+        }
+    }
+}
+
+pub fn load_resources<'a>(data: &'a [u8]) -> Result<ResourceParserIterator<'a>, &'static str> {
+    if data.len() < HEADER_V1.len() {
+        return Err("error reading 8 byte header");
+    }
+
+    let header = &data[0..8];
 
     if header == HEADER_V1 {
-        load_resources_v1(data, &mut reader, resources)
+        load_resources_v1(&data[8..])
     } else {
         Err("unrecognized file format")
     }
 }
 
-fn load_resources_v1<'a, S: ::std::hash::BuildHasher>(
-    data: &'a [u8],
-    reader: &mut Cursor<&[u8]>,
-    resources: &mut HashMap<&'a str, EmbeddedResource<'a>, S>,
-) -> Result<(), &'static str> {
+fn load_resources_v1<'a>(data: &'a [u8]) -> Result<ResourceParserIterator<'a>, &'static str> {
+    let mut reader = Cursor::new(data);
+
     let blob_section_count = reader
         .read_u8()
         .or_else(|_| Err("failed reading blob section count"))?;
@@ -215,10 +413,8 @@ fn load_resources_v1<'a, S: ::std::hash::BuildHasher>(
 
     // Global payload offset where blobs data starts.
     let blob_start_offset: usize =
-            // Magic.
-            HEADER_V1.len()
             // Global header.
-            + 1 + 4 + 4 + 4
+            1 + 4 + 4 + 4
             + blob_index_length
             + resources_index_length
         ;
@@ -237,262 +433,22 @@ fn load_resources_v1<'a, S: ::std::hash::BuildHasher>(
         current_blob_offset += section.raw_payload_length;
     }
 
-    let mut current_resource = EmbeddedResource::default();
-    let mut current_resource_name = None;
-    let mut index_entry_count = 0;
-
-    if resources_index_length == 0 || resources_count == 0 {
-        return Ok(());
-    }
-
-    loop {
-        let field_type = reader
-            .read_u8()
-            .or_else(|_| Err("failed reading field type"))?;
-
-        let field_type = ResourceField::try_from(field_type)?;
-
-        match field_type {
-            ResourceField::EndOfIndex => break,
-            ResourceField::StartOfEntry => {
-                index_entry_count += 1;
-                current_resource = EmbeddedResource::default();
-                current_resource_name = None;
-            }
-
-            ResourceField::EndOfEntry => {
-                if let Some(name) = current_resource_name {
-                    resources.insert(name, current_resource);
-                } else {
-                    return Err("resource name field is required");
-                }
-
-                current_resource = EmbeddedResource::default();
-                current_resource_name = None;
-            }
-            ResourceField::ModuleName => {
-                let l = reader
-                    .read_u16::<LittleEndian>()
-                    .or_else(|_| Err("failed reading resource name length"))?
-                    as usize;
-
-                let name = unsafe {
-                    std::str::from_utf8_unchecked(resolve_blob_data(
-                        data,
-                        &mut blob_offsets,
-                        field_type,
-                        l,
-                    ))
-                };
-
-                current_resource_name = Some(name);
-                current_resource.name = name;
-            }
-            ResourceField::IsPackage => {
-                current_resource.is_package = true;
-            }
-            ResourceField::IsNamespacePackage => {
-                current_resource.is_namespace_package = true;
-            }
-            ResourceField::InMemorySource => {
-                let l = reader
-                    .read_u32::<LittleEndian>()
-                    .or_else(|_| Err("failed reading source length"))?
-                    as usize;
-
-                current_resource.in_memory_source =
-                    Some(resolve_blob_data(data, &mut blob_offsets, field_type, l));
-            }
-            ResourceField::InMemoryBytecode => {
-                let l = reader
-                    .read_u32::<LittleEndian>()
-                    .or_else(|_| Err("failed reading bytecode length"))?
-                    as usize;
-
-                current_resource.in_memory_bytecode =
-                    Some(resolve_blob_data(data, &mut blob_offsets, field_type, l));
-            }
-            ResourceField::InMemoryBytecodeOpt1 => {
-                let l = reader
-                    .read_u32::<LittleEndian>()
-                    .or_else(|_| Err("failed reading bytecode length"))?
-                    as usize;
-
-                current_resource.in_memory_bytecode_opt1 =
-                    Some(resolve_blob_data(data, &mut blob_offsets, field_type, l));
-            }
-            ResourceField::InMemoryBytecodeOpt2 => {
-                let l = reader
-                    .read_u32::<LittleEndian>()
-                    .or_else(|_| Err("failed reading bytecode length"))?
-                    as usize;
-
-                current_resource.in_memory_bytecode_opt2 =
-                    Some(resolve_blob_data(data, &mut blob_offsets, field_type, l));
-            }
-            ResourceField::InMemoryExtensionModuleSharedLibrary => {
-                let l = reader
-                    .read_u32::<LittleEndian>()
-                    .or_else(|_| Err("failed reading extension module length"))?
-                    as usize;
-
-                current_resource.in_memory_shared_library_extension_module =
-                    Some(resolve_blob_data(data, &mut blob_offsets, field_type, l));
-            }
-
-            ResourceField::InMemoryResourcesData => {
-                let resource_count = reader
-                    .read_u32::<LittleEndian>()
-                    .or_else(|_| Err("failed reading resources length"))?
-                    as usize;
-
-                let mut resources = Box::new(HashMap::with_capacity(resource_count));
-
-                for _ in 0..resource_count {
-                    let resource_name_length = reader
-                        .read_u16::<LittleEndian>()
-                        .or_else(|_| Err("failed reading resource name"))?
-                        as usize;
-
-                    let resource_name = unsafe {
-                        std::str::from_utf8_unchecked(resolve_blob_data(
-                            data,
-                            &mut blob_offsets,
-                            field_type,
-                            resource_name_length,
-                        ))
-                    };
-
-                    let resource_length = reader
-                        .read_u64::<LittleEndian>()
-                        .or_else(|_| Err("failed reading resource length"))?
-                        as usize;
-
-                    let resource_data =
-                        resolve_blob_data(data, &mut blob_offsets, field_type, resource_length);
-
-                    resources.insert(resource_name, resource_data);
-                }
-
-                current_resource.in_memory_resources = Some(Arc::new(resources));
-            }
-
-            ResourceField::InMemoryPackageDistribution => {
-                let resource_count = reader
-                    .read_u32::<LittleEndian>()
-                    .or_else(|_| Err("failed reading package distribution length"))?
-                    as usize;
-
-                let mut resources = HashMap::with_capacity(resource_count);
-
-                for _ in 0..resource_count {
-                    let name_length = reader
-                        .read_u16::<LittleEndian>()
-                        .or_else(|_| Err("failed reading distribution metadata name"))?
-                        as usize;
-
-                    let name = unsafe {
-                        std::str::from_utf8_unchecked(resolve_blob_data(
-                            data,
-                            &mut blob_offsets,
-                            field_type,
-                            name_length,
-                        ))
-                    };
-
-                    let resource_length = reader
-                        .read_u64::<LittleEndian>()
-                        .or_else(|_| Err("failed reading package distribution resource length"))?
-                        as usize;
-
-                    let resource_data =
-                        resolve_blob_data(data, &mut blob_offsets, field_type, resource_length);
-
-                    resources.insert(name, resource_data);
-                }
-
-                current_resource.in_memory_package_distribution = Some(resources);
-            }
-
-            ResourceField::InMemorySharedLibrary => {
-                let l = reader
-                    .read_u64::<LittleEndian>()
-                    .or_else(|_| Err("failed reading in-memory shared library length"))?
-                    as usize;
-
-                current_resource.in_memory_shared_library =
-                    Some(&resolve_blob_data(data, &mut blob_offsets, field_type, l));
-            }
-
-            ResourceField::SharedLibraryDependencyNames => {
-                let names_count = reader
-                    .read_u16::<LittleEndian>()
-                    .or_else(|_| Err("failed reading shared library dependency names length"))?
-                    as usize;
-
-                let mut names = Vec::new();
-
-                for _ in 0..names_count {
-                    let name_length = reader
-                        .read_u16::<LittleEndian>()
-                        .or_else(|_| Err("failed reading shared library dependency name length"))?
-                        as usize;
-
-                    let name = unsafe {
-                        std::str::from_utf8_unchecked(resolve_blob_data(
-                            data,
-                            &mut blob_offsets,
-                            field_type,
-                            name_length,
-                        ))
-                    };
-
-                    names.push(name);
-                }
-
-                current_resource.shared_library_dependency_names = Some(names);
-            }
-        }
-    }
-
-    if index_entry_count != resources_count {
-        return Err("mismatch between advertised index count and actual");
-    }
-
-    Ok(())
-}
-
-/// Resolve a slice to an individual blob's data.
-///
-/// This accepts a reference to the original blobs payload, an array of
-/// current blob section offsets, the resource field being accessed, and the
-/// length of the blob and returns a slice to that blob.
-fn resolve_blob_data<'a>(
-    data: &'a [u8],
-    blob_sections: &mut [Option<BlobSectionReadState>],
-    resource_field: ResourceField,
-    length: usize,
-) -> &'a [u8] {
-    let mut state = blob_sections[resource_field as usize].as_mut().unwrap();
-
-    let blob = &data[state.offset..state.offset + length];
-
-    let increment = match &state.interior_padding {
-        BlobInteriorPadding::None => length,
-        BlobInteriorPadding::Null => length + 1,
-    };
-
-    state.offset += increment;
-
-    blob
+    Ok(ResourceParserIterator {
+        done: resources_index_length == 0 || resources_count == 0,
+        data,
+        reader,
+        blob_sections: blob_offsets,
+        claimed_resources_count: resources_count,
+        read_resources_count: 0,
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use {
         super::*,
-        crate::data::BlobInteriorPadding,
-        crate::writer::{write_embedded_resources_v1, EmbeddedResource as OwnedEmbeddedResource},
+        crate::data::{BlobInteriorPadding, Resource},
+        crate::writer::write_embedded_resources_v1,
         std::collections::BTreeMap,
     };
 
@@ -500,132 +456,128 @@ mod tests {
     fn test_too_short_header() {
         let data = b"foo";
 
-        let mut resources = HashMap::new();
-        let res = load_resources(data, &mut resources);
+        let res = load_resources(data);
         assert_eq!(res.err(), Some("error reading 8 byte header"));
     }
 
     #[test]
     fn test_unrecognized_header() {
         let data = b"pyembed\x00";
-        let mut resources = HashMap::new();
-        let res = load_resources(data, &mut resources);
+        let res = load_resources(data);
         assert_eq!(res.err(), Some("unrecognized file format"));
 
         let data = b"pyembed\x02";
-        let mut resources = HashMap::new();
-        let res = load_resources(data, &mut resources);
+        let res = load_resources(data);
         assert_eq!(res.err(), Some("unrecognized file format"));
     }
 
     #[test]
     fn test_no_indices() {
         let data = b"pyembed\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-        let mut resources = HashMap::new();
-        load_resources(data, &mut resources).unwrap();
+        load_resources(data).unwrap();
     }
 
     #[test]
     fn test_no_blob_index() {
         let data = b"pyembed\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00";
-        let mut resources = HashMap::new();
-        load_resources(data, &mut resources).unwrap();
+        load_resources(data).unwrap();
     }
 
     #[test]
     fn test_no_resource_index() {
         let data = b"pyembed\x01\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
-        let mut resources = HashMap::new();
-        load_resources(data, &mut resources).unwrap();
+        load_resources(data).unwrap();
     }
 
     #[test]
     fn test_empty_indices() {
         let data = b"pyembed\x01\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00";
-        let mut resources = HashMap::new();
-        load_resources(data, &mut resources).unwrap();
+        load_resources(data).unwrap();
     }
 
     #[test]
     fn test_index_count_mismatch() {
         let data = b"pyembed\x01\x00\x00\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x00";
-        let mut resources = HashMap::new();
-        let res = load_resources(data, &mut resources);
+        let mut res = load_resources(data).unwrap();
         assert_eq!(
-            res.err(),
-            Some("mismatch between advertised index count and actual")
+            res.next(),
+            Some(Err("mismatch between advertised index count and actual"))
         );
+        assert_eq!(res.next(), None);
     }
 
     #[test]
     fn test_missing_resource_name() {
         let data =
             b"pyembed\x01\x00\x01\x00\x00\x00\x01\x00\x00\x00\x03\x00\x00\x00\x00\x01\x02\x00";
-        let mut resources = HashMap::new();
-        let res = load_resources(data, &mut resources);
-        assert_eq!(res.err(), Some("resource name field is required"));
+        let mut res = load_resources(data).unwrap();
+        assert_eq!(res.next(), Some(Err("resource name field is required")));
+        assert_eq!(res.next(), None);
     }
 
     #[test]
     fn test_just_resource_name() {
-        let resource = OwnedEmbeddedResource {
-            name: "foo".to_string(),
-            ..OwnedEmbeddedResource::default()
+        let resource = Resource {
+            name: Cow::from("foo"),
+            ..Resource::default()
         };
 
         let mut data = Vec::new();
         write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
 
-        let mut resources = HashMap::new();
-        load_resources(&data, &mut resources).unwrap();
+        let resources = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
 
         assert_eq!(resources.len(), 1);
 
-        let entry = resources.get("foo").unwrap();
+        let entry = &resources[0];
         assert_eq!(
             entry,
-            &EmbeddedResource {
-                name: "foo",
-                ..EmbeddedResource::default()
+            &Resource {
+                name: Cow::from("foo"),
+                ..Resource::default()
             }
         );
     }
 
     #[test]
     fn test_multiple_resources_just_names() {
-        let resource1 = OwnedEmbeddedResource {
-            name: "foo".to_string(),
-            ..OwnedEmbeddedResource::default()
+        let resource1 = Resource {
+            name: Cow::from("foo"),
+            ..Resource::default()
         };
 
-        let resource2 = OwnedEmbeddedResource {
-            name: "module2".to_string(),
-            ..OwnedEmbeddedResource::default()
+        let resource2 = Resource {
+            name: Cow::from("module2"),
+            ..Resource::default()
         };
 
         let mut data = Vec::new();
         write_embedded_resources_v1(&[resource1, resource2], &mut data, None).unwrap();
-
-        let mut resources = HashMap::new();
-        load_resources(&data, &mut resources).unwrap();
+        let resources = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
 
         assert_eq!(resources.len(), 2);
 
-        let entry = resources.get("foo").unwrap();
+        let entry = &resources[0];
         assert_eq!(
             entry,
-            &EmbeddedResource {
-                name: "foo",
-                ..EmbeddedResource::default()
+            &Resource {
+                name: Cow::Borrowed("foo"),
+                ..Resource::default()
             }
         );
 
-        let entry = resources.get("module2").unwrap();
+        let entry = &resources[1];
         assert_eq!(
             entry,
-            &EmbeddedResource {
-                name: "module2",
-                ..EmbeddedResource::default()
+            &Resource {
+                name: Cow::Borrowed("module2"),
+                ..Resource::default()
             }
         );
     }
@@ -633,14 +585,14 @@ mod tests {
     // Same as above just with null interior padding.
     #[test]
     fn test_multiple_resources_just_names_null_padding() {
-        let resource1 = OwnedEmbeddedResource {
-            name: "foo".to_string(),
-            ..OwnedEmbeddedResource::default()
+        let resource1 = Resource {
+            name: Cow::from("foo"),
+            ..Resource::default()
         };
 
-        let resource2 = OwnedEmbeddedResource {
-            name: "module2".to_string(),
-            ..OwnedEmbeddedResource::default()
+        let resource2 = Resource {
+            name: Cow::from("module2"),
+            ..Resource::default()
         };
 
         let mut data = Vec::new();
@@ -650,346 +602,401 @@ mod tests {
             Some(BlobInteriorPadding::Null),
         )
         .unwrap();
-
-        let mut resources = HashMap::new();
-        load_resources(&data, &mut resources).unwrap();
+        let resources = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
 
         assert_eq!(resources.len(), 2);
 
-        let entry = resources.get("foo").unwrap();
+        let entry = &resources[0];
         assert_eq!(
             entry,
-            &EmbeddedResource {
-                name: "foo",
-                ..EmbeddedResource::default()
+            &Resource {
+                name: Cow::Borrowed("foo"),
+                ..Resource::default()
             }
         );
 
-        let entry = resources.get("module2").unwrap();
+        let entry = &resources[1];
         assert_eq!(
             entry,
-            &EmbeddedResource {
-                name: "module2",
-                ..EmbeddedResource::default()
+            &Resource {
+                name: Cow::Borrowed("module2"),
+                ..Resource::default()
             }
         );
     }
 
     #[test]
     fn test_in_memory_source() {
-        let resource = OwnedEmbeddedResource {
-            name: "foo".to_string(),
-            in_memory_source: Some(b"source".to_vec()),
-            ..OwnedEmbeddedResource::default()
+        let resource = Resource {
+            name: Cow::from("foo"),
+            in_memory_source: Some(Cow::from(b"source".to_vec())),
+            ..Resource::default()
         };
 
         let mut data = Vec::new();
         write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
-        let mut resources = HashMap::new();
-        load_resources(&data, &mut resources).unwrap();
+        let resources = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
 
         assert_eq!(resources.len(), 1);
 
-        let entry = resources.get("foo").unwrap();
+        let entry = &resources[0];
 
-        assert_eq!(entry.in_memory_source.unwrap(), b"source");
+        assert_eq!(entry.in_memory_source.as_ref().unwrap().as_ref(), b"source");
 
         assert_eq!(
             entry,
-            &EmbeddedResource {
-                name: "foo",
-                in_memory_source: Some(&data[data.len() - 6..data.len()]),
-                ..EmbeddedResource::default()
+            &Resource {
+                name: Cow::Borrowed("foo"),
+                in_memory_source: Some(Cow::Borrowed(&data[data.len() - 6..data.len()])),
+                ..Resource::default()
             }
         );
     }
 
     #[test]
     fn test_in_memory_bytecode() {
-        let resource = OwnedEmbeddedResource {
-            name: "foo".to_string(),
-            in_memory_bytecode: Some(b"bytecode".to_vec()),
-            ..OwnedEmbeddedResource::default()
+        let resource = Resource {
+            name: Cow::from("foo"),
+            in_memory_bytecode: Some(Cow::from(b"bytecode".to_vec())),
+            ..Resource::default()
         };
 
         let mut data = Vec::new();
         write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
-        let mut resources = HashMap::new();
-        load_resources(&data, &mut resources).unwrap();
+        let resources = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
 
         assert_eq!(resources.len(), 1);
 
-        let entry = resources.get("foo").unwrap();
+        let entry = &resources[0];
 
-        assert_eq!(entry.in_memory_bytecode.unwrap(), b"bytecode");
+        assert_eq!(
+            entry.in_memory_bytecode.as_ref().unwrap().as_ref(),
+            b"bytecode"
+        );
 
         assert_eq!(
             entry,
-            &EmbeddedResource {
-                name: "foo",
-                in_memory_bytecode: Some(&data[data.len() - 8..data.len()]),
-                ..EmbeddedResource::default()
+            &Resource {
+                name: Cow::Borrowed("foo"),
+                in_memory_bytecode: Some(Cow::Borrowed(&data[data.len() - 8..data.len()])),
+                ..Resource::default()
             }
         );
     }
 
     #[test]
     fn test_in_memory_bytecode_opt1() {
-        let resource = OwnedEmbeddedResource {
-            name: "foo".to_string(),
-            in_memory_bytecode_opt1: Some(b"bytecode".to_vec()),
-            ..OwnedEmbeddedResource::default()
+        let resource = Resource {
+            name: Cow::from("foo"),
+            in_memory_bytecode_opt1: Some(Cow::from(b"bytecode".to_vec())),
+            ..Resource::default()
         };
 
         let mut data = Vec::new();
         write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
-        let mut resources = HashMap::new();
-        load_resources(&data, &mut resources).unwrap();
+        let resources = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
 
         assert_eq!(resources.len(), 1);
 
-        let entry = resources.get("foo").unwrap();
+        let entry = &resources[0];
 
-        assert_eq!(entry.in_memory_bytecode_opt1.unwrap(), b"bytecode");
+        assert_eq!(
+            entry.in_memory_bytecode_opt1.as_ref().unwrap().as_ref(),
+            b"bytecode"
+        );
 
         assert_eq!(
             entry,
-            &EmbeddedResource {
-                name: "foo",
-                in_memory_bytecode_opt1: Some(&data[data.len() - 8..data.len()]),
-                ..EmbeddedResource::default()
+            &Resource {
+                name: Cow::Borrowed("foo"),
+                in_memory_bytecode_opt1: Some(Cow::Borrowed(&data[data.len() - 8..data.len()])),
+                ..Resource::default()
             }
         );
     }
 
     #[test]
     fn test_in_memory_bytecode_opt2() {
-        let resource = OwnedEmbeddedResource {
-            name: "foo".to_string(),
-            in_memory_bytecode_opt2: Some(b"bytecode".to_vec()),
-            ..OwnedEmbeddedResource::default()
+        let resource = Resource {
+            name: Cow::from("foo"),
+            in_memory_bytecode_opt2: Some(Cow::from(b"bytecode".to_vec())),
+            ..Resource::default()
         };
 
         let mut data = Vec::new();
         write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
-        let mut resources = HashMap::new();
-        load_resources(&data, &mut resources).unwrap();
+        let resources = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
 
         assert_eq!(resources.len(), 1);
 
-        let entry = resources.get("foo").unwrap();
+        let entry = &resources[0];
 
-        assert_eq!(entry.in_memory_bytecode_opt2.unwrap(), b"bytecode");
+        assert_eq!(
+            entry.in_memory_bytecode_opt2.as_ref().unwrap().as_ref(),
+            b"bytecode"
+        );
 
         assert_eq!(
             entry,
-            &EmbeddedResource {
-                name: "foo",
-                in_memory_bytecode_opt2: Some(&data[data.len() - 8..data.len()]),
-                ..EmbeddedResource::default()
+            &Resource {
+                name: Cow::Borrowed("foo"),
+                in_memory_bytecode_opt2: Some(Cow::Borrowed(&data[data.len() - 8..data.len()])),
+                ..Resource::default()
             }
         );
     }
 
     #[test]
     fn test_in_memory_extension_module_shared_library() {
-        let resource = OwnedEmbeddedResource {
-            name: "foo".to_string(),
-            in_memory_extension_module_shared_library: Some(b"em".to_vec()),
-            ..OwnedEmbeddedResource::default()
+        let resource = Resource {
+            name: Cow::from("foo"),
+            in_memory_extension_module_shared_library: Some(Cow::from(b"em".to_vec())),
+            ..Resource::default()
         };
 
         let mut data = Vec::new();
         write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
-        let mut resources = HashMap::new();
-        load_resources(&data, &mut resources).unwrap();
+        let resources = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
 
         assert_eq!(resources.len(), 1);
 
-        let entry = resources.get("foo").unwrap();
+        let entry = &resources[0];
 
         assert_eq!(
-            entry.in_memory_shared_library_extension_module.unwrap(),
+            entry
+                .in_memory_extension_module_shared_library
+                .as_ref()
+                .unwrap()
+                .as_ref(),
             b"em"
         );
 
         assert_eq!(
             entry,
-            &EmbeddedResource {
-                name: "foo",
-                in_memory_shared_library_extension_module: Some(&data[data.len() - 2..data.len()]),
-                ..EmbeddedResource::default()
+            &Resource {
+                name: Cow::Borrowed("foo"),
+                in_memory_extension_module_shared_library: Some(Cow::Borrowed(
+                    &data[data.len() - 2..data.len()]
+                )),
+                ..Resource::default()
             }
         );
     }
 
     #[test]
     fn test_in_memory_resources_data() {
-        let mut resources = BTreeMap::new();
-        resources.insert("foo".to_string(), b"foovalue".to_vec());
-        resources.insert("another".to_string(), b"value2".to_vec());
+        let mut resources = Box::new(HashMap::new());
+        resources.insert(Cow::from("foo"), Cow::from(b"foovalue".to_vec()));
+        resources.insert(Cow::from("another"), Cow::from(b"value2".to_vec()));
 
-        let resource = OwnedEmbeddedResource {
-            name: "foo".to_string(),
-            in_memory_resources: Some(resources),
-            ..OwnedEmbeddedResource::default()
+        let resource = Resource {
+            name: Cow::from("foo"),
+            in_memory_resources: Some(Arc::new(resources)),
+            ..Resource::default()
         };
 
         let mut data = Vec::new();
         write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
-        let mut resources = HashMap::new();
-        load_resources(&data, &mut resources).unwrap();
+        let resources = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
 
         assert_eq!(resources.len(), 1);
 
-        let entry = resources.get("foo").unwrap();
+        let entry = &resources[0];
 
         let resources = entry.in_memory_resources.as_ref().unwrap();
         assert_eq!(resources.len(), 2);
-        assert_eq!(resources.get("foo").unwrap(), b"foovalue");
-        assert_eq!(resources.get("another").unwrap(), b"value2");
+        assert_eq!(resources.get("foo").unwrap().as_ref(), b"foovalue");
+        assert_eq!(resources.get("another").unwrap().as_ref(), b"value2");
     }
 
     #[test]
     fn test_in_memory_package_distribution() {
-        let mut resources = BTreeMap::new();
-        resources.insert("foo".to_string(), b"foovalue".to_vec());
-        resources.insert("another".to_string(), b"value2".to_vec());
+        let mut resources = HashMap::new();
+        resources.insert(Cow::from("foo"), Cow::from(b"foovalue".to_vec()));
+        resources.insert(Cow::from("another"), Cow::from(b"value2".to_vec()));
 
-        let resource = OwnedEmbeddedResource {
-            name: "foo".to_string(),
+        let resource = Resource {
+            name: Cow::from("foo"),
             in_memory_package_distribution: Some(resources),
-            ..OwnedEmbeddedResource::default()
+            ..Resource::default()
         };
 
         let mut data = Vec::new();
         write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
-        let mut resources = HashMap::new();
-        load_resources(&data, &mut resources).unwrap();
+        let resources = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
 
         assert_eq!(resources.len(), 1);
 
-        let entry = resources.get("foo").unwrap();
+        let entry = &resources[0];
 
         let resources = entry.in_memory_package_distribution.as_ref().unwrap();
         assert_eq!(resources.len(), 2);
-        assert_eq!(resources.get("foo").unwrap(), b"foovalue");
-        assert_eq!(resources.get("another").unwrap(), b"value2");
+        assert_eq!(resources.get("foo").unwrap().as_ref(), b"foovalue");
+        assert_eq!(resources.get("another").unwrap().as_ref(), b"value2");
     }
 
     #[test]
     fn test_in_memory_shared_library() {
-        let resource = OwnedEmbeddedResource {
-            name: "foo".to_string(),
-            in_memory_shared_library: Some(b"library".to_vec()),
-            ..OwnedEmbeddedResource::default()
+        let resource = Resource {
+            name: Cow::from("foo"),
+            in_memory_shared_library: Some(Cow::from(b"library".to_vec())),
+            ..Resource::default()
         };
 
         let mut data = Vec::new();
         write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
-        let mut resources = HashMap::new();
-        load_resources(&data, &mut resources).unwrap();
+        let resources = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
 
         assert_eq!(resources.len(), 1);
 
-        let entry = resources.get("foo").unwrap();
+        let entry = &resources[0];
 
-        assert_eq!(entry.in_memory_shared_library.unwrap(), b"library");
+        assert_eq!(
+            entry.in_memory_shared_library.as_ref().unwrap().as_ref(),
+            b"library"
+        );
 
         assert_eq!(
             entry,
-            &EmbeddedResource {
-                name: "foo",
-                in_memory_shared_library: Some(&data[data.len() - 7..data.len()]),
-                ..EmbeddedResource::default()
+            &Resource {
+                name: Cow::from("foo"),
+                in_memory_shared_library: Some(Cow::Borrowed(&data[data.len() - 7..data.len()])),
+                ..Resource::default()
             }
         );
     }
 
     #[test]
     fn test_shared_library_dependency_names() {
-        let names = vec!["depends".to_string(), "libfoo".to_string()];
+        let names = vec![Cow::from("depends"), Cow::from("libfoo")];
 
-        let resource = OwnedEmbeddedResource {
-            name: "foo".to_string(),
+        let resource = Resource {
+            name: Cow::from("foo"),
             shared_library_dependency_names: Some(names),
-            ..OwnedEmbeddedResource::default()
+            ..Resource::default()
         };
 
         let mut data = Vec::new();
         write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
-        let mut resources = HashMap::new();
-        load_resources(&data, &mut resources).unwrap();
+        let resources = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
 
         assert_eq!(resources.len(), 1);
 
-        let entry = resources.get("foo").unwrap();
+        let entry = &resources[0];
 
         assert_eq!(
             entry.shared_library_dependency_names,
-            Some(vec!["depends", "libfoo"])
+            Some(vec![Cow::Borrowed("depends"), Cow::Borrowed("libfoo")])
         );
     }
 
     #[test]
     fn test_all_fields() {
-        let mut resources = BTreeMap::new();
-        resources.insert("foo".to_string(), b"foovalue".to_vec());
-        resources.insert("resource2".to_string(), b"value2".to_vec());
+        let mut resources = Box::new(HashMap::new());
+        resources.insert(
+            Cow::from("foo".to_string()),
+            Cow::from(b"foovalue".to_vec()),
+        );
+        resources.insert(Cow::from("resource2"), Cow::from(b"value2".to_vec()));
 
-        let mut distribution = BTreeMap::new();
-        distribution.insert("dist".to_string(), b"distvalue".to_vec());
-        distribution.insert("dist2".to_string(), b"dist2value".to_vec());
+        let mut distribution = HashMap::new();
+        distribution.insert(Cow::from("dist"), Cow::from(b"distvalue".to_vec()));
+        distribution.insert(Cow::from("dist2"), Cow::from(b"dist2value".to_vec()));
 
-        let resource = OwnedEmbeddedResource {
-            name: "module".to_string(),
+        let resource = Resource {
+            name: Cow::from("module"),
             is_package: true,
             is_namespace_package: true,
-            in_memory_source: Some(b"source".to_vec()),
-            in_memory_bytecode: Some(b"bytecode".to_vec()),
-            in_memory_bytecode_opt1: Some(b"bytecodeopt1".to_vec()),
-            in_memory_bytecode_opt2: Some(b"bytecodeopt2".to_vec()),
-            in_memory_extension_module_shared_library: Some(b"library".to_vec()),
-            in_memory_resources: Some(resources),
+            in_memory_source: Some(Cow::from(b"source".to_vec())),
+            in_memory_bytecode: Some(Cow::from(b"bytecode".to_vec())),
+            in_memory_bytecode_opt1: Some(Cow::from(b"bytecodeopt1".to_vec())),
+            in_memory_bytecode_opt2: Some(Cow::from(b"bytecodeopt2".to_vec())),
+            in_memory_extension_module_shared_library: Some(Cow::from(b"library".to_vec())),
+            in_memory_resources: Some(Arc::new(resources)),
             in_memory_package_distribution: Some(distribution),
-            in_memory_shared_library: Some(b"library".to_vec()),
-            shared_library_dependency_names: Some(vec![
-                "libfoo".to_string(),
-                "depends".to_string(),
-            ]),
+            in_memory_shared_library: Some(Cow::from(b"library".to_vec())),
+            shared_library_dependency_names: Some(vec![Cow::from("libfoo"), Cow::from("depends")]),
         };
 
         let mut data = Vec::new();
         write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
-        let mut resources = HashMap::new();
-        load_resources(&data, &mut resources).unwrap();
+        let resources = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
 
         assert_eq!(resources.len(), 1);
 
-        let entry = resources.get("module").unwrap();
+        let entry = &resources[0];
 
         assert!(entry.is_package);
         assert!(entry.is_namespace_package);
-        assert_eq!(entry.in_memory_source.unwrap(), b"source");
-        assert_eq!(entry.in_memory_bytecode.unwrap(), b"bytecode");
-        assert_eq!(entry.in_memory_bytecode_opt1.unwrap(), b"bytecodeopt1");
-        assert_eq!(entry.in_memory_bytecode_opt2.unwrap(), b"bytecodeopt2");
+        assert_eq!(entry.in_memory_source.as_ref().unwrap().as_ref(), b"source");
         assert_eq!(
-            entry.in_memory_shared_library_extension_module.unwrap(),
+            entry.in_memory_bytecode.as_ref().unwrap().as_ref(),
+            b"bytecode"
+        );
+        assert_eq!(
+            entry.in_memory_bytecode_opt1.as_ref().unwrap().as_ref(),
+            b"bytecodeopt1"
+        );
+        assert_eq!(
+            entry.in_memory_bytecode_opt2.as_ref().unwrap().as_ref(),
+            b"bytecodeopt2"
+        );
+        assert_eq!(
+            entry
+                .in_memory_extension_module_shared_library
+                .as_ref()
+                .unwrap()
+                .as_ref(),
             b"library"
         );
 
         let resources = entry.in_memory_resources.as_ref().unwrap();
         assert_eq!(resources.len(), 2);
-        assert_eq!(resources.get("foo").unwrap(), b"foovalue");
-        assert_eq!(resources.get("resource2").unwrap(), b"value2");
+        assert_eq!(resources.get("foo").unwrap().as_ref(), b"foovalue");
+        assert_eq!(resources.get("resource2").unwrap().as_ref(), b"value2");
 
         let resources = entry.in_memory_package_distribution.as_ref().unwrap();
         assert_eq!(resources.len(), 2);
-        assert_eq!(resources.get("dist").unwrap(), b"distvalue");
-        assert_eq!(resources.get("dist2").unwrap(), b"dist2value");
+        assert_eq!(resources.get("dist").unwrap().as_ref(), b"distvalue");
+        assert_eq!(resources.get("dist2").unwrap().as_ref(), b"dist2value");
 
-        assert_eq!(entry.in_memory_shared_library.unwrap(), b"library");
+        assert_eq!(
+            entry.in_memory_shared_library.as_ref().unwrap().as_ref(),
+            b"library"
+        );
         assert_eq!(
             entry.shared_library_dependency_names.as_ref().unwrap(),
             &vec!["libfoo", "depends"]

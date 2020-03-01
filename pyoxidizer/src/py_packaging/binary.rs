@@ -128,7 +128,7 @@ pub struct EmbeddedResourcesBlobs {
     pub resources: Vec<u8>,
 }
 
-impl TryFrom<EmbeddedPythonResources> for EmbeddedResourcesBlobs {
+impl<'a> TryFrom<EmbeddedPythonResources<'a>> for EmbeddedResourcesBlobs {
     type Error = anyhow::Error;
 
     fn try_from(value: EmbeddedPythonResources) -> Result<Self, Self::Error> {

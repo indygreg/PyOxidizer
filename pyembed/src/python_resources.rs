@@ -8,31 +8,55 @@ Management of Python resources.
 
 use {
     python3_sys as pyffi,
-    python_packed_resources::parser::EmbeddedResource,
+    python_packed_resources::data::Resource,
+    std::borrow::Cow,
     std::collections::{HashMap, HashSet},
     std::ffi::CStr,
 };
 
+#[derive(Debug, PartialEq)]
+pub(crate) enum ResourceFlavor {
+    Builtin,
+    Frozen,
+    Packed,
+}
+
+#[derive(Debug)]
+pub(crate) struct ResourceEntry<'a, X>
+where
+    [X]: ToOwned<Owned = Vec<X>>,
+{
+    pub flavor: ResourceFlavor,
+    pub resource: Resource<'a, X>,
+}
+
 /// Whether the module is imported by the importer provided by this crate.
 ///
 /// This excludes builtin and frozen modules, which are merely registered.
-pub fn uses_pyembed_importer(resource: &EmbeddedResource) -> bool {
+pub(crate) fn uses_pyembed_importer<X>(entry: &ResourceEntry<X>) -> bool
+where
+    [X]: ToOwned<Owned = Vec<X>>,
+{
+    let resource = &entry.resource;
     resource.in_memory_bytecode.is_some()
         || resource.in_memory_bytecode_opt1.is_some()
         || resource.in_memory_bytecode_opt2.is_some()
-        || resource.in_memory_shared_library_extension_module.is_some()
+        || resource.in_memory_extension_module_shared_library.is_some()
 }
 
 /// Defines Python resources available for import.
 #[derive(Debug)]
-pub(crate) struct PythonImporterState<'a> {
+pub(crate) struct PythonImporterState<'a, X>
+where
+    [X]: ToOwned<Owned = Vec<X>>,
+{
     /// Names of Python packages.
     pub packages: HashSet<&'static str>,
 
-    pub resources: HashMap<&'a str, EmbeddedResource<'a>>,
+    pub resources: HashMap<Cow<'a, str>, ResourceEntry<'a, X>>,
 }
 
-impl<'a> Default for PythonImporterState<'a> {
+impl<'a> Default for PythonImporterState<'a, u8> {
     fn default() -> Self {
         Self {
             packages: HashSet::new(),
@@ -41,7 +65,7 @@ impl<'a> Default for PythonImporterState<'a> {
     }
 }
 
-impl<'a> PythonImporterState<'a> {
+impl<'a> PythonImporterState<'a, u8> {
     /// Load state from the environment and by parsing data structures.
     pub fn load(&mut self, resources_data: &'static [u8]) -> Result<(), &'static str> {
         // Loading of builtin and frozen knows to mutate existing entries rather
@@ -73,14 +97,17 @@ impl<'a> PythonImporterState<'a> {
             // Module can be defined by embedded resources data. If exists, just
             // update the big.
             if let Some(mut entry) = self.resources.get_mut(name_str) {
-                entry.is_builtin = true;
+                entry.flavor = ResourceFlavor::Builtin;
             } else {
                 self.resources.insert(
-                    name_str,
-                    EmbeddedResource {
-                        name: name_str,
-                        is_builtin: true,
-                        ..EmbeddedResource::default()
+                    // This is probably unsafe.
+                    Cow::from(name_str),
+                    ResourceEntry {
+                        flavor: ResourceFlavor::Builtin,
+                        resource: Resource {
+                            name: Cow::from(name_str),
+                            ..Resource::default()
+                        },
                     },
                 );
             }
@@ -109,14 +136,18 @@ impl<'a> PythonImporterState<'a> {
             // Module can be defined by embedded resources data. If exists, just
             // update the big.
             if let Some(mut entry) = self.resources.get_mut(name_str) {
-                entry.is_frozen = true;
+                entry.flavor = ResourceFlavor::Frozen;
             } else {
                 self.resources.insert(
-                    name_str,
-                    EmbeddedResource {
-                        name: name_str,
-                        is_frozen: true,
-                        ..EmbeddedResource::default()
+                    // This is probably unsafe.
+                    Cow::from(name_str),
+                    ResourceEntry {
+                        flavor: ResourceFlavor::Frozen,
+
+                        resource: Resource {
+                            name: Cow::from(name_str),
+                            ..Resource::default()
+                        },
                     },
                 );
             }
@@ -127,6 +158,20 @@ impl<'a> PythonImporterState<'a> {
 
     /// Load resources by parsing a blob.
     fn load_resources(&mut self, data: &'a [u8]) -> Result<(), &'static str> {
-        python_packed_resources::parser::load_resources(data, &mut self.resources)
+        let resources = python_packed_resources::parser::load_resources(data)?;
+
+        for resource in resources {
+            let resource = resource?;
+
+            self.resources.insert(
+                resource.name.clone(),
+                ResourceEntry {
+                    flavor: ResourceFlavor::Packed,
+                    resource,
+                },
+            );
+        }
+
+        Ok(())
     }
 }

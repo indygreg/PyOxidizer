@@ -11,7 +11,7 @@ for importing Python modules from memory.
 
 use {
     super::pyinterp::PYOXIDIZER_IMPORTER_NAME,
-    super::python_resources::{uses_pyembed_importer, PythonImporterState},
+    super::python_resources::{uses_pyembed_importer, PythonImporterState, ResourceFlavor},
     cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError},
     cpython::{
         py_class, py_fn, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule,
@@ -19,6 +19,7 @@ use {
     },
     python3_sys as pyffi,
     python3_sys::{PyBUF_READ, PyMemoryView_FromMemory},
+    std::borrow::Cow,
     std::cell::RefCell,
     std::collections::HashMap,
     std::sync::Arc,
@@ -35,7 +36,7 @@ use {
 /// New memoryview allows Python to access the underlying memory without
 /// copying it.
 #[inline]
-fn get_memory_view(py: Python, data: &Option<&'static [u8]>) -> Option<PyObject> {
+fn get_memory_view(py: Python, data: &Option<Cow<'static, [u8]>>) -> Option<PyObject> {
     if let Some(data) = data {
         let ptr =
             unsafe { PyMemoryView_FromMemory(data.as_ptr() as _, data.len() as _, PyBUF_READ) };
@@ -273,7 +274,7 @@ py_class!(class PyOxidizerFinder |py| {
     data module_spec_type: PyObject;
     data decode_source: PyObject;
     data exec_fn: PyObject;
-    data importer_state: PythonImporterState<'static>;
+    data importer_state: PythonImporterState<'static, u8>;
     data resource_readers: RefCell<Box<HashMap<String, PyObject>>>;
 
     // Start of importlib.abc.MetaPathFinder interface.
@@ -282,17 +283,17 @@ py_class!(class PyOxidizerFinder |py| {
         let key = fullname.to_string(py)?;
 
         if let Some(module) = self.importer_state(py).resources.get(&*key) {
-            if module.is_builtin {
+            if module.flavor == ResourceFlavor::Builtin {
                 // BuiltinImporter.find_spec() always returns None if `path` is defined.
                 // And it doesn't use `target`. So don't proxy these values.
                 self.builtin_importer(py).call_method(py, "find_spec", (fullname,), None)
-            } else if module.is_frozen {
+            } else if module.flavor == ResourceFlavor::Frozen {
                 self.frozen_importer(py).call_method(py, "find_spec", (fullname, path, target), None)
             } else if uses_pyembed_importer(module) {
                 // TODO consider setting origin and has_location so __file__ will be
                 // populated.
                 let kwargs = PyDict::new(py);
-                kwargs.set_item(py, "is_package", module.is_package)?;
+                kwargs.set_item(py, "is_package", module.resource.is_package)?;
 
                 self.module_spec_type(py).call(py, (fullname, self), Some(&kwargs))
             } else {
@@ -336,7 +337,7 @@ py_class!(class PyOxidizerFinder |py| {
             // If we ever implement our own lazy module importer, we could
             // potentially work around this and move all extension module
             // initialization into `exec_module()`.
-            if let Some(library_data) = &entry.in_memory_shared_library_extension_module {
+            if let Some(library_data) = &entry.resource.in_memory_extension_module_shared_library {
                 let sys_module = self.sys_module(py);
                 let sys_modules = sys_module.as_object().getattr(py, "modules")?;
 
@@ -359,18 +360,18 @@ py_class!(class PyOxidizerFinder |py| {
         let key = name.extract::<String>(py)?;
 
         if let Some(entry) = self.importer_state(py).resources.get(&*key) {
-            if entry.is_builtin {
+            if entry.flavor == ResourceFlavor::Builtin {
                 self.builtin_importer(py).call_method(py, "exec_module", (module,), None)
-            } else if entry.is_frozen {
+            } else if entry.flavor == ResourceFlavor::Frozen {
                 self.frozen_importer(py).call_method(py, "exec_module", (module,), None)
-            } else if entry.in_memory_shared_library_extension_module.is_some() {
+            } else if entry.resource.in_memory_extension_module_shared_library.is_some() {
                 // `ExtensionFileLoader.exec_module()` simply calls `imp.exec_dynamic()`.
                 let imp_module = self.imp_module(py);
 
                 imp_module.as_object().call_method(py, "exec_dynamic", (module,), None)
             // TODO service other in-memory bytecode fields.
-            } else if entry.in_memory_bytecode.is_some() {
-                match get_memory_view(py, &entry.in_memory_bytecode) {
+            } else if entry.resource.in_memory_bytecode.is_some() {
+                match get_memory_view(py, &entry.resource.in_memory_bytecode) {
                     Some(value) => {
                         let code = self.marshal_loads(py).call(py, (value,), None)?;
                         let exec_fn = self.exec_fn(py);
@@ -400,23 +401,24 @@ py_class!(class PyOxidizerFinder |py| {
         let key = fullname.to_string(py)?;
 
         if let Some(module) = self.importer_state(py).resources.get(&*key) {
-            if module.is_frozen {
+            if module.flavor == ResourceFlavor::Frozen {
                 let imp_module = self.imp_module(py);
 
                 imp_module.call(py, "get_frozen_object", (fullname,), None)
-            } else if module.is_builtin {
+            } else if module.flavor == ResourceFlavor::Builtin {
                 Ok(py.None())
             } else {
+                let resource = &module.resource;
                 let sys_module = self.sys_module(py);
                 let flags = sys_module.get(py, "flags")?;
                 let flags: i64 = flags.extract(py)?;
 
-                let bytecode = if flags == 0 && module.in_memory_bytecode.is_some() {
-                    &module.in_memory_bytecode
-                } else if flags == 1 && module.in_memory_bytecode_opt1.is_some() {
-                    &module.in_memory_bytecode_opt1
-                } else if flags == 2 && module.in_memory_bytecode_opt2.is_some() {
-                    &module.in_memory_bytecode_opt2
+                let bytecode = if flags == 0 && resource.in_memory_bytecode.is_some() {
+                    &resource.in_memory_bytecode
+                } else if flags == 1 && resource.in_memory_bytecode_opt1.is_some() {
+                    &resource.in_memory_bytecode_opt1
+                } else if flags == 2 && resource.in_memory_bytecode_opt2.is_some() {
+                    &resource.in_memory_bytecode_opt2
                 } else {
                     &None
                 };
@@ -443,8 +445,9 @@ py_class!(class PyOxidizerFinder |py| {
         let key = fullname.to_string(py)?;
 
         if let Some(module) = self.importer_state(py).resources.get(&*key) {
-            if module.in_memory_source.is_some() {
-                match get_memory_view(py, &module.in_memory_source) {
+            let resource = &module.resource;
+            if resource.in_memory_source.is_some() {
+                match get_memory_view(py, &resource.in_memory_source) {
                     Some(value) => {
                         // decode_source (from importlib._bootstrap_external)
                         // can't handle memoryview. So we take the memory hit and
@@ -486,15 +489,16 @@ py_class!(class PyOxidizerFinder |py| {
 
         // Only create a reader if the name is a package.
         if let Some(module) = self.importer_state(py).resources.get(&*key) {
-            if !module.is_package {
+            let resource = &module.resource;
+            if !resource.is_package {
                 return Ok(py.None())
             }
 
             // Not all packages have known resources.
-            let resources = if let Some(resources) = &module.in_memory_resources {
+            let resources = if let Some(resources) = &resource.in_memory_resources {
                 resources.clone()
             } else {
-                let h: Box<HashMap<&'static str, &'static [u8]>> = Box::new(HashMap::new());
+                let h = Box::new(HashMap::new());
                 Arc::new(h)
             };
 
@@ -513,7 +517,7 @@ py_class!(class PyOxidizerFinder |py| {
 ///
 /// Implements importlib.abc.ResourceReader.
 py_class!(class PyOxidizerResourceReader |py| {
-    data resources: Arc<Box<HashMap<&'static str, &'static [u8]>>>;
+    data resources: Arc<Box<HashMap<Cow<'static, str>, Cow<'static, [u8]>>>>;
 
     /// Returns an opened, file-like object for binary reading of the resource.
     ///
@@ -522,7 +526,7 @@ py_class!(class PyOxidizerResourceReader |py| {
         let key = resource.to_string(py)?;
 
         if let Some(data) = self.resources(py).get(&*key) {
-            match get_memory_view(py, &Some(data)) {
+            match get_memory_view(py, &Some(data.clone())) {
                 Some(mv) => {
                     let io_module = py.import("io")?;
                     let bytes_io = io_module.get(py, "BytesIO")?;

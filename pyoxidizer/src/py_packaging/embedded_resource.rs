@@ -16,13 +16,16 @@ use {
     super::standalone_distribution::ExtensionModule,
     anyhow::{Error, Result},
     lazy_static::lazy_static,
-    python_packed_resources::writer::{write_embedded_resources_v1, EmbeddedResource},
+    python_packed_resources::data::Resource as EmbeddedResource,
+    python_packed_resources::writer::write_embedded_resources_v1,
     slog::warn,
-    std::collections::{BTreeMap, BTreeSet},
+    std::borrow::Cow,
+    std::collections::{BTreeMap, BTreeSet, HashMap},
     std::convert::TryFrom,
     std::io::Write,
     std::iter::FromIterator,
     std::path::Path,
+    std::sync::Arc,
 };
 
 lazy_static! {
@@ -74,16 +77,16 @@ pub struct EmbeddedResourcePythonModulePrePackaged {
     pub shared_library_dependency_names: Option<Vec<String>>,
 }
 
-impl TryFrom<&EmbeddedResourcePythonModulePrePackaged> for EmbeddedResource {
+impl<'a> TryFrom<&EmbeddedResourcePythonModulePrePackaged> for EmbeddedResource<'a, u8> {
     type Error = Error;
 
     fn try_from(value: &EmbeddedResourcePythonModulePrePackaged) -> Result<Self, Self::Error> {
         Ok(Self {
-            name: value.name.clone(),
+            name: Cow::Owned(value.name.clone()),
             is_package: value.is_package,
             is_namespace_package: value.is_namespace_package,
             in_memory_source: if let Some(location) = &value.in_memory_source {
-                Some(location.resolve()?)
+                Some(Cow::Owned(location.resolve()?))
             } else {
                 None
             },
@@ -95,39 +98,39 @@ impl TryFrom<&EmbeddedResourcePythonModulePrePackaged> for EmbeddedResource {
             in_memory_extension_module_shared_library: if let Some(location) =
                 &value.in_memory_extension_module_shared_library
             {
-                Some(location.resolve()?)
+                Some(Cow::Owned(location.resolve()?))
             } else {
                 None
             },
             in_memory_resources: if let Some(resources) = &value.in_memory_resources {
-                let mut res = BTreeMap::new();
+                let mut res = Box::new(HashMap::new());
                 for (key, location) in resources {
-                    res.insert(key.clone(), location.resolve()?);
+                    res.insert(Cow::Owned(key.clone()), Cow::Owned(location.resolve()?));
                 }
-                Some(res)
+                Some(Arc::new(res))
             } else {
                 None
             },
             in_memory_package_distribution: if let Some(resources) =
                 &value.in_memory_package_distribution
             {
-                let mut res = BTreeMap::new();
+                let mut res = HashMap::new();
                 for (key, location) in resources {
-                    res.insert(key.clone(), location.resolve()?);
+                    res.insert(Cow::Owned(key.clone()), Cow::Owned(location.resolve()?));
                 }
                 Some(res)
             } else {
                 None
             },
             in_memory_shared_library: if let Some(location) = &value.in_memory_shared_library {
-                Some(location.resolve()?)
+                Some(Cow::Owned(location.resolve()?))
             } else {
                 None
             },
             shared_library_dependency_names: if let Some(names) =
                 &value.shared_library_dependency_names
             {
-                Some(names.clone())
+                Some(names.iter().map(|x| Cow::Owned(x.clone())).collect())
             } else {
                 None
             },
@@ -533,30 +536,30 @@ impl EmbeddedPythonResourcesPrePackaged {
                 let mut entry = EmbeddedResource::try_from(module)?;
 
                 if let Some(location) = &module.in_memory_bytecode {
-                    entry.in_memory_bytecode = Some(compiler.compile(
+                    entry.in_memory_bytecode = Some(Cow::Owned(compiler.compile(
                         &location.resolve()?,
                         &name,
                         BytecodeOptimizationLevel::Zero,
                         CompileMode::Bytecode,
-                    )?);
+                    )?));
                 }
 
                 if let Some(location) = &module.in_memory_bytecode_opt1 {
-                    entry.in_memory_bytecode_opt1 = Some(compiler.compile(
+                    entry.in_memory_bytecode_opt1 = Some(Cow::Owned(compiler.compile(
                         &location.resolve()?,
                         &name,
                         BytecodeOptimizationLevel::One,
                         CompileMode::Bytecode,
-                    )?);
+                    )?));
                 }
 
                 if let Some(location) = &module.in_memory_bytecode_opt2 {
-                    entry.in_memory_bytecode_opt2 = Some(compiler.compile(
+                    entry.in_memory_bytecode_opt2 = Some(Cow::Owned(compiler.compile(
                         &location.resolve()?,
                         &name,
                         BytecodeOptimizationLevel::Two,
                         CompileMode::Bytecode,
-                    )?);
+                    )?));
                 }
 
                 modules.insert(name.clone(), entry);
@@ -578,7 +581,7 @@ impl EmbeddedPythonResourcesPrePackaged {
                 modules.insert(
                     name.clone(),
                     EmbeddedResource {
-                        name: name.clone(),
+                        name: Cow::Owned(name.clone()),
                         ..EmbeddedResource::default()
                     },
                 );
@@ -597,7 +600,7 @@ impl EmbeddedPythonResourcesPrePackaged {
                 modules.insert(
                     name.clone(),
                     EmbeddedResource {
-                        name: name.clone(),
+                        name: Cow::Owned(name.clone()),
                         ..EmbeddedResource::default()
                     },
                 );
@@ -619,7 +622,7 @@ impl EmbeddedPythonResourcesPrePackaged {
                 modules.insert(
                     package.clone(),
                     EmbeddedResource {
-                        name: package.clone(),
+                        name: Cow::Owned(package.clone()),
                         ..EmbeddedResource::default()
                     },
                 );
@@ -647,16 +650,16 @@ impl EmbeddedPythonResourcesPrePackaged {
 
 /// Represents Python resources to embed in a binary.
 #[derive(Debug, Default, Clone)]
-pub struct EmbeddedPythonResources {
+pub struct EmbeddedPythonResources<'a> {
     /// Python modules described by an embeddable resource.
-    pub modules: BTreeMap<String, EmbeddedResource>,
+    pub modules: BTreeMap<String, EmbeddedResource<'a, u8>>,
 
     // TODO combine the extension module types.
     pub extension_modules: BTreeMap<String, ExtensionModule>,
     pub built_extension_modules: BTreeMap<String, ExtensionModuleData>,
 }
 
-impl EmbeddedPythonResources {
+impl<'a> EmbeddedPythonResources<'a> {
     pub fn write_blobs<W: Write>(&self, module_names: &mut W, resources: &mut W) {
         for name in self.modules.keys() {
             module_names
@@ -670,7 +673,7 @@ impl EmbeddedPythonResources {
                 .modules
                 .values()
                 .cloned()
-                .collect::<Vec<EmbeddedResource>>(),
+                .collect::<Vec<EmbeddedResource<'a, u8>>>(),
             resources,
             None,
         )

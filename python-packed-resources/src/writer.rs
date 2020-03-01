@@ -7,7 +7,7 @@ Embedded Python resources in a binary.
 */
 
 use {
-    super::data::{BlobInteriorPadding, BlobSectionField, ResourceField, HEADER_V1},
+    super::data::{BlobInteriorPadding, BlobSectionField, Resource, ResourceField, HEADER_V1},
     anyhow::{anyhow, Context, Result},
     byteorder::{LittleEndian, WriteBytesExt},
     std::collections::BTreeMap,
@@ -73,57 +73,10 @@ impl BlobSection {
     }
 }
 
-/// Represents an embedded resource and all its metadata.
-///
-/// All memory used by fields is held within each instance.
-///
-/// This type holds data required for serializing a resource to the
-/// embedded resources data structure. See the `pyembed` crate for more.
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct EmbeddedResource {
-    /// The resource name.
-    pub name: String,
-
-    /// Whether the Python module is a package.
-    pub is_package: bool,
-
-    /// Whether the Python module is a namespace package.
-    pub is_namespace_package: bool,
-
-    /// Python module source code to use to import module from memory.
-    pub in_memory_source: Option<Vec<u8>>,
-
-    /// Python module bytecode to use to import module from memory.
-    pub in_memory_bytecode: Option<Vec<u8>>,
-
-    /// Python module bytecode at optimized level 1 to use to import from memory.
-    pub in_memory_bytecode_opt1: Option<Vec<u8>>,
-
-    /// Python module bytecode at optimized level 2 to use to import from memory.
-    pub in_memory_bytecode_opt2: Option<Vec<u8>>,
-
-    /// Native machine code constituting a shared library for an extension module
-    /// which can be imported from memory. (Not supported on all platforms.)
-    pub in_memory_extension_module_shared_library: Option<Vec<u8>>,
-
-    /// Mapping of virtual filename to data for resources to expose to Python's
-    /// `importlib.resources` API via in-memory data access.
-    pub in_memory_resources: Option<BTreeMap<String, Vec<u8>>>,
-
-    /// Mapping of virtual filename to data for package distribution metadata
-    /// to expose to Python's `importlib.metadata` API via in-memory data access.
-    pub in_memory_package_distribution: Option<BTreeMap<String, Vec<u8>>>,
-
-    /// Native machine code constituting a shared library which can be imported from memory.
-    ///
-    /// In-memory loading of shared libraries is not supported on all platforms.
-    pub in_memory_shared_library: Option<Vec<u8>>,
-
-    /// Sequence of names of shared libraries this resource depends on.
-    pub shared_library_dependency_names: Option<Vec<String>>,
-}
-
-impl EmbeddedResource {
+impl<'a, X: Clone + 'a> Resource<'a, X>
+where
+    [X]: ToOwned<Owned = Vec<X>>,
+{
     /// Whether the module is meaningful.
     ///
     /// The module is meaningful if it has data attached or is a package.
@@ -449,7 +402,7 @@ impl EmbeddedResource {
             dest.write_u32::<LittleEndian>(l)
                 .context("writing in-memory resources data length")?;
 
-            for (name, value) in resources {
+            for (name, value) in resources.iter() {
                 let name_length = u16::try_from(name.as_bytes().len())
                     .context("converting resource name length to u16")?;
                 dest.write_u16::<LittleEndian>(name_length)
@@ -513,8 +466,8 @@ impl EmbeddedResource {
 ///
 /// See the `pyembed` crate for the format of this data structure.
 #[allow(clippy::cognitive_complexity)]
-pub fn write_embedded_resources_v1<W: Write>(
-    modules: &[EmbeddedResource],
+pub fn write_embedded_resources_v1<'a, W: Write>(
+    modules: &[Resource<u8>],
     dest: &mut W,
     interior_padding: Option<BlobInteriorPadding>,
 ) -> Result<()> {
@@ -528,7 +481,7 @@ pub fn write_embedded_resources_v1<W: Write>(
     let mut module_index_length = 1;
 
     let process_field = |blob_sections: &mut BTreeMap<ResourceField, BlobSection>,
-                         resource: &EmbeddedResource,
+                         resource: &Resource<u8>,
                          field: ResourceField| {
         let padding = match &interior_padding {
             Some(padding) => *padding,
@@ -667,7 +620,7 @@ pub fn write_embedded_resources_v1<W: Write>(
 
     for module in modules {
         if let Some(resources) = &module.in_memory_resources {
-            for (key, value) in resources {
+            for (key, value) in resources.iter() {
                 dest.write_all(key.as_bytes())?;
                 add_interior_padding(dest)?;
                 dest.write_all(value)?;
@@ -708,7 +661,7 @@ pub fn write_embedded_resources_v1<W: Write>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, std::borrow::Cow};
 
     #[test]
     fn test_write_empty() -> Result<()> {
@@ -736,9 +689,9 @@ mod tests {
     #[test]
     fn test_write_module_name() -> Result<()> {
         let mut data = Vec::new();
-        let module = EmbeddedResource {
-            name: "foo".to_string(),
-            ..EmbeddedResource::default()
+        let module = Resource {
+            name: Cow::Owned("foo".to_string()),
+            ..Resource::default()
         };
 
         write_embedded_resources_v1(&[module], &mut data, None)?;

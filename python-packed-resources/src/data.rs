@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use std::convert::TryFrom;
+use {std::borrow::Cow, std::collections::HashMap, std::convert::TryFrom, std::sync::Arc};
 
 /// Header value for version 1 of resources payload.
 pub const HEADER_V1: &[u8] = b"pyembed\x01";
@@ -133,6 +133,76 @@ impl TryFrom<u8> for ResourceField {
             0x0d => Ok(ResourceField::InMemorySharedLibrary),
             0x0e => Ok(ResourceField::SharedLibraryDependencyNames),
             _ => Err("invalid field type"),
+        }
+    }
+}
+
+/// Represents an embedded resource and all its metadata.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Resource<'a, X: 'a>
+where
+    [X]: ToOwned<Owned = Vec<X>>,
+{
+    /// The resource name.
+    pub name: Cow<'a, str>,
+
+    /// Whether the Python module is a package.
+    pub is_package: bool,
+
+    /// Whether the Python module is a namespace package.
+    pub is_namespace_package: bool,
+
+    /// Python module source code to use to import module from memory.
+    pub in_memory_source: Option<Cow<'a, [X]>>,
+
+    /// Python module bytecode to use to import module from memory.
+    pub in_memory_bytecode: Option<Cow<'a, [X]>>,
+
+    /// Python module bytecode at optimized level 1 to use to import from memory.
+    pub in_memory_bytecode_opt1: Option<Cow<'a, [X]>>,
+
+    /// Python module bytecode at optimized level 2 to use to import from memory.
+    pub in_memory_bytecode_opt2: Option<Cow<'a, [X]>>,
+
+    /// Native machine code constituting a shared library for an extension module
+    /// which can be imported from memory. (Not supported on all platforms.)
+    pub in_memory_extension_module_shared_library: Option<Cow<'a, [X]>>,
+
+    /// Mapping of virtual filename to data for resources to expose to Python's
+    /// `importlib.resources` API via in-memory data access.
+    pub in_memory_resources: Option<Arc<Box<HashMap<Cow<'a, str>, Cow<'a, [X]>>>>>,
+
+    /// Mapping of virtual filename to data for package distribution metadata
+    /// to expose to Python's `importlib.metadata` API via in-memory data access.
+    pub in_memory_package_distribution: Option<HashMap<Cow<'a, str>, Cow<'a, [X]>>>,
+
+    /// Native machine code constituting a shared library which can be imported from memory.
+    ///
+    /// In-memory loading of shared libraries is not supported on all platforms.
+    pub in_memory_shared_library: Option<Cow<'a, [X]>>,
+
+    /// Sequence of names of shared libraries this resource depends on.
+    pub shared_library_dependency_names: Option<Vec<Cow<'a, str>>>,
+}
+
+impl<'a, X> Default for Resource<'a, X>
+where
+    [X]: ToOwned<Owned = Vec<X>>,
+{
+    fn default() -> Self {
+        Resource {
+            name: Cow::Borrowed(""),
+            is_package: false,
+            is_namespace_package: false,
+            in_memory_source: None,
+            in_memory_bytecode: None,
+            in_memory_bytecode_opt1: None,
+            in_memory_bytecode_opt2: None,
+            in_memory_extension_module_shared_library: None,
+            in_memory_resources: None,
+            in_memory_package_distribution: None,
+            in_memory_shared_library: None,
+            shared_library_dependency_names: None,
         }
     }
 }
