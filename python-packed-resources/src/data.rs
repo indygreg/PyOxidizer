@@ -95,7 +95,6 @@ impl Into<u8> for ResourceField {
         match self {
             ResourceField::EndOfIndex => 0,
             ResourceField::StartOfEntry => 1,
-            ResourceField::EndOfEntry => 2,
             ResourceField::ModuleName => 3,
             ResourceField::IsPackage => 4,
             ResourceField::IsNamespacePackage => 5,
@@ -108,6 +107,7 @@ impl Into<u8> for ResourceField {
             ResourceField::InMemoryPackageDistribution => 12,
             ResourceField::InMemorySharedLibrary => 13,
             ResourceField::SharedLibraryDependencyNames => 14,
+            ResourceField::EndOfEntry => 0xff,
         }
     }
 }
@@ -119,7 +119,6 @@ impl TryFrom<u8> for ResourceField {
         match value {
             0x00 => Ok(ResourceField::EndOfIndex),
             0x01 => Ok(ResourceField::StartOfEntry),
-            0x02 => Ok(ResourceField::EndOfEntry),
             0x03 => Ok(ResourceField::ModuleName),
             0x04 => Ok(ResourceField::IsPackage),
             0x05 => Ok(ResourceField::IsNamespacePackage),
@@ -132,6 +131,7 @@ impl TryFrom<u8> for ResourceField {
             0x0c => Ok(ResourceField::InMemoryPackageDistribution),
             0x0d => Ok(ResourceField::InMemorySharedLibrary),
             0x0e => Ok(ResourceField::SharedLibraryDependencyNames),
+            0xff => Ok(ResourceField::EndOfEntry),
             _ => Err("invalid field type"),
         }
     }

@@ -136,7 +136,7 @@ the field. The values of each defined metadata type follow.
 a specification standpoint this isn't strictly required. But it helps ensure
 parser state.
 
-`0x02` - End of resource entry. The next encountered `u8` in the index should
+`0xff` - End of resource entry. The next encountered `u8` in the index should
 be an *end of index* or *start of resource* marker.
 
 `0x03` - Resource name. A `u16` denoting the length in bytes of the resource name

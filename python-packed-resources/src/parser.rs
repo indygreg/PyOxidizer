@@ -509,7 +509,7 @@ mod tests {
     #[test]
     fn test_missing_resource_name() {
         let data =
-            b"pyembed\x01\x00\x01\x00\x00\x00\x01\x00\x00\x00\x03\x00\x00\x00\x00\x01\x02\x00";
+            b"pyembed\x01\x00\x01\x00\x00\x00\x01\x00\x00\x00\x03\x00\x00\x00\x00\x01\xff\x00";
         let mut res = load_resources(data).unwrap();
         assert_eq!(res.next(), Some(Err("resource name field is required")));
         assert_eq!(res.next(), None);
