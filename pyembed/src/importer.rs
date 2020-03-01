@@ -11,7 +11,7 @@ for importing Python modules from memory.
 
 use {
     super::pyinterp::PYOXIDIZER_IMPORTER_NAME,
-    super::python_resources::PythonImporterState,
+    super::python_resources::{uses_pyembed_importer, PythonImporterState},
     cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError},
     cpython::{
         py_class, py_fn, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule,
@@ -288,7 +288,7 @@ py_class!(class PyOxidizerFinder |py| {
                 self.builtin_importer(py).call_method(py, "find_spec", (fullname,), None)
             } else if module.is_frozen {
                 self.frozen_importer(py).call_method(py, "find_spec", (fullname, path, target), None)
-            } else if module.uses_pyembed_importer() {
+            } else if uses_pyembed_importer(module) {
                 // TODO consider setting origin and has_location so __file__ will be
                 // populated.
                 let kwargs = PyDict::new(py);

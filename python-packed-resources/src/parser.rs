@@ -130,7 +130,7 @@ impl<'a> Default for EmbeddedResource<'a> {
     }
 }
 
-fn load_resources<'a>(
+pub fn load_resources<'a>(
     data: &'a [u8],
     resources: &mut HashMap<&'a str, EmbeddedResource<'a>>,
 ) -> Result<(), &'static str> {
