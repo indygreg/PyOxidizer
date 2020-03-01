@@ -7,9 +7,17 @@ use std::convert::TryFrom;
 /// Header value for version 1 of resources payload.
 pub const HEADER_V1: &[u8] = b"pyembed\x01";
 
+/// Defines interior padding mechanism between entries in blob sections.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BlobInteriorPadding {
+    /// No padding.
+    ///
+    /// Entries are packed next to each other. e.g. "foo" + "bar" = "foobar".
     None,
+
+    /// NULL byte padding.
+    ///
+    /// There exists a NULL byte between entries. e.g. "foo" + "bar" = "foo\0bar\0".
     Null,
 }
 
@@ -22,7 +30,7 @@ impl Into<u8> for &BlobInteriorPadding {
     }
 }
 
-/// Describes a blob section field type in the embedded resources payload.
+/// Describes a blob section field type in the blob index.
 #[derive(Debug, PartialEq, PartialOrd)]
 pub enum BlobSectionField {
     EndOfIndex,
@@ -62,7 +70,7 @@ impl TryFrom<u8> for BlobSectionField {
     }
 }
 
-/// Describes a data field type in the embedded resources payload.
+/// Describes a resource field type in the resource index.
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord)]
 pub enum ResourceField {
     EndOfIndex,
