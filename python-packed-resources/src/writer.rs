@@ -7,9 +7,7 @@ Embedded Python resources in a binary.
 */
 
 use {
-    super::data::{
-        BlobInteriorPadding, EmbeddedBlobSectionField, EmbeddedResourceField, HEADER_V1,
-    },
+    super::data::{BlobInteriorPadding, BlobSectionField, ResourceField, HEADER_V1},
     anyhow::{anyhow, Context, Result},
     byteorder::{LittleEndian, WriteBytesExt},
     std::collections::BTreeMap,
@@ -19,7 +17,7 @@ use {
 
 #[derive(Debug)]
 struct BlobSection {
-    resource_field: EmbeddedResourceField,
+    resource_field: ResourceField,
     raw_payload_length: usize,
     interior_padding: Option<BlobInteriorPadding>,
 }
@@ -48,27 +46,27 @@ impl BlobSection {
     }
 
     pub fn write_index_v1<W: Write>(&self, dest: &mut W) -> Result<()> {
-        dest.write_u8(EmbeddedBlobSectionField::StartOfEntry.into())
+        dest.write_u8(BlobSectionField::StartOfEntry.into())
             .context("writing start of index entry")?;
 
-        dest.write_u8(EmbeddedBlobSectionField::ResourceFieldType.into())
+        dest.write_u8(BlobSectionField::ResourceFieldType.into())
             .context("writing resource field type field")?;
         dest.write_u8(self.resource_field.into())
             .context("writing resource field type value")?;
 
-        dest.write_u8(EmbeddedBlobSectionField::RawPayloadLength.into())
+        dest.write_u8(BlobSectionField::RawPayloadLength.into())
             .context("writing raw payload length field")?;
         dest.write_u64::<LittleEndian>(self.raw_payload_length as u64)
             .context("writing raw payload length")?;
 
         if let Some(padding) = &self.interior_padding {
-            dest.write_u8(EmbeddedBlobSectionField::InteriorPadding.into())
+            dest.write_u8(BlobSectionField::InteriorPadding.into())
                 .context("writing interior padding field")?;
             dest.write_u8(padding.into())
                 .context("writing interior padding value")?;
         }
 
-        dest.write_u8(EmbeddedBlobSectionField::EndOfEntry.into())
+        dest.write_u8(BlobSectionField::EndOfEntry.into())
             .context("writing end of index entry")?;
 
         Ok(())
@@ -208,50 +206,50 @@ impl EmbeddedResource {
     /// Compute the length of a field.
     ///
     /// Interior padding is not part of the returned length.
-    pub fn field_blob_length(&self, field: EmbeddedResourceField) -> usize {
+    pub fn field_blob_length(&self, field: ResourceField) -> usize {
         match field {
-            EmbeddedResourceField::EndOfIndex => 0,
-            EmbeddedResourceField::StartOfEntry => 0,
-            EmbeddedResourceField::EndOfEntry => 0,
-            EmbeddedResourceField::ModuleName => self.name.as_bytes().len(),
-            EmbeddedResourceField::IsPackage => 0,
-            EmbeddedResourceField::IsNamespacePackage => 0,
-            EmbeddedResourceField::InMemorySource => {
+            ResourceField::EndOfIndex => 0,
+            ResourceField::StartOfEntry => 0,
+            ResourceField::EndOfEntry => 0,
+            ResourceField::ModuleName => self.name.as_bytes().len(),
+            ResourceField::IsPackage => 0,
+            ResourceField::IsNamespacePackage => 0,
+            ResourceField::InMemorySource => {
                 if let Some(source) = &self.in_memory_source {
                     source.len()
                 } else {
                     0
                 }
             }
-            EmbeddedResourceField::InMemoryBytecode => {
+            ResourceField::InMemoryBytecode => {
                 if let Some(bytecode) = &self.in_memory_bytecode {
                     bytecode.len()
                 } else {
                     0
                 }
             }
-            EmbeddedResourceField::InMemoryBytecodeOpt1 => {
+            ResourceField::InMemoryBytecodeOpt1 => {
                 if let Some(bytecode) = &self.in_memory_bytecode_opt1 {
                     bytecode.len()
                 } else {
                     0
                 }
             }
-            EmbeddedResourceField::InMemoryBytecodeOpt2 => {
+            ResourceField::InMemoryBytecodeOpt2 => {
                 if let Some(bytecode) = &self.in_memory_bytecode_opt2 {
                     bytecode.len()
                 } else {
                     0
                 }
             }
-            EmbeddedResourceField::InMemoryExtensionModuleSharedLibrary => {
+            ResourceField::InMemoryExtensionModuleSharedLibrary => {
                 if let Some(library) = &self.in_memory_extension_module_shared_library {
                     library.len()
                 } else {
                     0
                 }
             }
-            EmbeddedResourceField::InMemoryResourcesData => {
+            ResourceField::InMemoryResourcesData => {
                 if let Some(resources) = &self.in_memory_resources {
                     resources
                         .iter()
@@ -261,7 +259,7 @@ impl EmbeddedResource {
                     0
                 }
             }
-            EmbeddedResourceField::InMemoryPackageDistribution => {
+            ResourceField::InMemoryPackageDistribution => {
                 if let Some(metadata) = &self.in_memory_package_distribution {
                     metadata
                         .iter()
@@ -271,14 +269,14 @@ impl EmbeddedResource {
                     0
                 }
             }
-            EmbeddedResourceField::InMemorySharedLibrary => {
+            ResourceField::InMemorySharedLibrary => {
                 if let Some(library) = &self.in_memory_shared_library {
                     library.len()
                 } else {
                     0
                 }
             }
-            EmbeddedResourceField::SharedLibraryDependencyNames => {
+            ResourceField::SharedLibraryDependencyNames => {
                 if let Some(names) = &self.shared_library_dependency_names {
                     names.iter().map(|s| s.as_bytes().len()).sum()
                 } else {
@@ -291,73 +289,73 @@ impl EmbeddedResource {
     /// Compute the size of interior padding for a specific field.
     pub fn field_blob_interior_padding_length(
         &self,
-        field: EmbeddedResourceField,
+        field: ResourceField,
         padding: BlobInteriorPadding,
     ) -> usize {
         let elements_count = match field {
-            EmbeddedResourceField::EndOfIndex => 0,
-            EmbeddedResourceField::StartOfEntry => 0,
-            EmbeddedResourceField::EndOfEntry => 0,
-            EmbeddedResourceField::ModuleName => 1,
-            EmbeddedResourceField::IsPackage => 0,
-            EmbeddedResourceField::IsNamespacePackage => 0,
-            EmbeddedResourceField::InMemorySource => {
+            ResourceField::EndOfIndex => 0,
+            ResourceField::StartOfEntry => 0,
+            ResourceField::EndOfEntry => 0,
+            ResourceField::ModuleName => 1,
+            ResourceField::IsPackage => 0,
+            ResourceField::IsNamespacePackage => 0,
+            ResourceField::InMemorySource => {
                 if self.in_memory_source.is_some() {
                     1
                 } else {
                     0
                 }
             }
-            EmbeddedResourceField::InMemoryBytecode => {
+            ResourceField::InMemoryBytecode => {
                 if self.in_memory_bytecode.is_some() {
                     1
                 } else {
                     0
                 }
             }
-            EmbeddedResourceField::InMemoryBytecodeOpt1 => {
+            ResourceField::InMemoryBytecodeOpt1 => {
                 if self.in_memory_bytecode_opt1.is_some() {
                     1
                 } else {
                     0
                 }
             }
-            EmbeddedResourceField::InMemoryBytecodeOpt2 => {
+            ResourceField::InMemoryBytecodeOpt2 => {
                 if self.in_memory_bytecode_opt2.is_some() {
                     1
                 } else {
                     0
                 }
             }
-            EmbeddedResourceField::InMemoryExtensionModuleSharedLibrary => {
+            ResourceField::InMemoryExtensionModuleSharedLibrary => {
                 if self.in_memory_extension_module_shared_library.is_some() {
                     1
                 } else {
                     0
                 }
             }
-            EmbeddedResourceField::InMemoryResourcesData => {
+            ResourceField::InMemoryResourcesData => {
                 if let Some(resources) = &self.in_memory_resources {
                     resources.len() * 2
                 } else {
                     0
                 }
             }
-            EmbeddedResourceField::InMemoryPackageDistribution => {
+            ResourceField::InMemoryPackageDistribution => {
                 if let Some(metadata) = &self.in_memory_package_distribution {
                     metadata.len() * 2
                 } else {
                     0
                 }
             }
-            EmbeddedResourceField::InMemorySharedLibrary => {
+            ResourceField::InMemorySharedLibrary => {
                 if self.in_memory_shared_library.is_some() {
                     1
                 } else {
                     0
                 }
             }
-            EmbeddedResourceField::SharedLibraryDependencyNames => {
+            ResourceField::SharedLibraryDependencyNames => {
                 if let Some(names) = &self.shared_library_dependency_names {
                     names.len()
                 } else {
@@ -379,29 +377,29 @@ impl EmbeddedResource {
         let name_len =
             u16::try_from(self.name.as_bytes().len()).context("converting name to u16")?;
 
-        dest.write_u8(EmbeddedResourceField::StartOfEntry.into())
+        dest.write_u8(ResourceField::StartOfEntry.into())
             .context("writing start of index entry")?;
 
-        dest.write_u8(EmbeddedResourceField::ModuleName.into())
+        dest.write_u8(ResourceField::ModuleName.into())
             .context("writing module name field")?;
 
         dest.write_u16::<LittleEndian>(name_len)
             .context("writing module name length")?;
 
         if self.is_package {
-            dest.write_u8(EmbeddedResourceField::IsPackage.into())
+            dest.write_u8(ResourceField::IsPackage.into())
                 .context("writing is_package field")?;
         }
 
         if self.is_namespace_package {
-            dest.write_u8(EmbeddedResourceField::IsNamespacePackage.into())
+            dest.write_u8(ResourceField::IsNamespacePackage.into())
                 .context("writing is_namespace field")?;
         }
 
         if let Some(source) = &self.in_memory_source {
             let l =
                 u32::try_from(source.len()).context("converting in-memory source length to u32")?;
-            dest.write_u8(EmbeddedResourceField::InMemorySource.into())
+            dest.write_u8(ResourceField::InMemorySource.into())
                 .context("writing in-memory source length field")?;
             dest.write_u32::<LittleEndian>(l)
                 .context("writing in-memory source length")?;
@@ -410,7 +408,7 @@ impl EmbeddedResource {
         if let Some(bytecode) = &self.in_memory_bytecode {
             let l = u32::try_from(bytecode.len())
                 .context("converting in-memory bytecode length to u32")?;
-            dest.write_u8(EmbeddedResourceField::InMemoryBytecode.into())
+            dest.write_u8(ResourceField::InMemoryBytecode.into())
                 .context("writing in-memory bytecode length field")?;
             dest.write_u32::<LittleEndian>(l)
                 .context("writing in-memory bytecode length")?;
@@ -419,7 +417,7 @@ impl EmbeddedResource {
         if let Some(bytecode) = &self.in_memory_bytecode_opt1 {
             let l = u32::try_from(bytecode.len())
                 .context("converting in-memory bytecode opt 1 length to u32")?;
-            dest.write_u8(EmbeddedResourceField::InMemoryBytecodeOpt1.into())
+            dest.write_u8(ResourceField::InMemoryBytecodeOpt1.into())
                 .context("writing in-memory bytecode opt 1 length field")?;
             dest.write_u32::<LittleEndian>(l)
                 .context("writing in-memory bytecode opt 1 length")?;
@@ -428,7 +426,7 @@ impl EmbeddedResource {
         if let Some(bytecode) = &self.in_memory_bytecode_opt2 {
             let l = u32::try_from(bytecode.len())
                 .context("converting in-memory bytecode opt 2 length to u32")?;
-            dest.write_u8(EmbeddedResourceField::InMemoryBytecodeOpt2.into())
+            dest.write_u8(ResourceField::InMemoryBytecodeOpt2.into())
                 .context("writing in-memory bytecode opt 2 field")?;
             dest.write_u32::<LittleEndian>(l)
                 .context("writing in-memory bytecode opt 2 length")?;
@@ -437,7 +435,7 @@ impl EmbeddedResource {
         if let Some(library) = &self.in_memory_extension_module_shared_library {
             let l = u32::try_from(library.len())
                 .context("converting in-memory library length to u32")?;
-            dest.write_u8(EmbeddedResourceField::InMemoryExtensionModuleSharedLibrary.into())
+            dest.write_u8(ResourceField::InMemoryExtensionModuleSharedLibrary.into())
                 .context("writing in-memory extension module shared library field")?;
             dest.write_u32::<LittleEndian>(l)
                 .context("writing in-memory extension module shared library length")?;
@@ -446,7 +444,7 @@ impl EmbeddedResource {
         if let Some(resources) = &self.in_memory_resources {
             let l = u32::try_from(resources.len())
                 .context("converting in-memory resources data length to u32")?;
-            dest.write_u8(EmbeddedResourceField::InMemoryResourcesData.into())
+            dest.write_u8(ResourceField::InMemoryResourcesData.into())
                 .context("writing in-memory resources field")?;
             dest.write_u32::<LittleEndian>(l)
                 .context("writing in-memory resources data length")?;
@@ -464,7 +462,7 @@ impl EmbeddedResource {
         if let Some(metadata) = &self.in_memory_package_distribution {
             let l = u32::try_from(metadata.len())
                 .context("converting in-memory distribution metadata length to u32")?;
-            dest.write_u8(EmbeddedResourceField::InMemoryPackageDistribution.into())
+            dest.write_u8(ResourceField::InMemoryPackageDistribution.into())
                 .context("writing in-memory package distribution field")?;
             dest.write_u32::<LittleEndian>(l)
                 .context("writing in-memory package distribution length")?;
@@ -482,7 +480,7 @@ impl EmbeddedResource {
         if let Some(library) = &self.in_memory_shared_library {
             let l = u64::try_from(library.len())
                 .context("converting in-memory shared library length to u64")?;
-            dest.write_u8(EmbeddedResourceField::InMemorySharedLibrary.into())
+            dest.write_u8(ResourceField::InMemorySharedLibrary.into())
                 .context("writing in-memory shared library field")?;
             dest.write_u64::<LittleEndian>(l)
                 .context("writing in-memory shared library length")?;
@@ -491,7 +489,7 @@ impl EmbeddedResource {
         if let Some(names) = &self.shared_library_dependency_names {
             let l = u16::try_from(names.len())
                 .context("converting shared library dependency names to u16")?;
-            dest.write_u8(EmbeddedResourceField::SharedLibraryDependencyNames.into())
+            dest.write_u8(ResourceField::SharedLibraryDependencyNames.into())
                 .context("writing shared library dependency names field")?;
             dest.write_u16::<LittleEndian>(l)
                 .context("writing shared library dependency names length")?;
@@ -504,7 +502,7 @@ impl EmbeddedResource {
             }
         }
 
-        dest.write_u8(EmbeddedResourceField::EndOfEntry.into())
+        dest.write_u8(ResourceField::EndOfEntry.into())
             .or_else(|_| Err(anyhow!("error writing end of index entry")))?;
 
         Ok(())
@@ -529,9 +527,9 @@ pub fn write_embedded_resources_v1<W: Write>(
     // 1 for end of index field.
     let mut module_index_length = 1;
 
-    let process_field = |blob_sections: &mut BTreeMap<EmbeddedResourceField, BlobSection>,
+    let process_field = |blob_sections: &mut BTreeMap<ResourceField, BlobSection>,
                          resource: &EmbeddedResource,
-                         field: EmbeddedResourceField| {
+                         field: ResourceField| {
         let padding = match &interior_padding {
             Some(padding) => *padding,
             None => BlobInteriorPadding::None,
@@ -562,55 +560,43 @@ pub fn write_embedded_resources_v1<W: Write>(
     for module in modules {
         module_index_length += module.index_v1_length();
 
+        process_field(&mut blob_sections, module, ResourceField::ModuleName);
+        process_field(&mut blob_sections, module, ResourceField::InMemorySource);
+        process_field(&mut blob_sections, module, ResourceField::InMemoryBytecode);
         process_field(
             &mut blob_sections,
             module,
-            EmbeddedResourceField::ModuleName,
+            ResourceField::InMemoryBytecodeOpt1,
         );
         process_field(
             &mut blob_sections,
             module,
-            EmbeddedResourceField::InMemorySource,
+            ResourceField::InMemoryBytecodeOpt2,
         );
         process_field(
             &mut blob_sections,
             module,
-            EmbeddedResourceField::InMemoryBytecode,
+            ResourceField::InMemoryExtensionModuleSharedLibrary,
         );
         process_field(
             &mut blob_sections,
             module,
-            EmbeddedResourceField::InMemoryBytecodeOpt1,
+            ResourceField::InMemoryResourcesData,
         );
         process_field(
             &mut blob_sections,
             module,
-            EmbeddedResourceField::InMemoryBytecodeOpt2,
+            ResourceField::InMemoryPackageDistribution,
         );
         process_field(
             &mut blob_sections,
             module,
-            EmbeddedResourceField::InMemoryExtensionModuleSharedLibrary,
+            ResourceField::InMemorySharedLibrary,
         );
         process_field(
             &mut blob_sections,
             module,
-            EmbeddedResourceField::InMemoryResourcesData,
-        );
-        process_field(
-            &mut blob_sections,
-            module,
-            EmbeddedResourceField::InMemoryPackageDistribution,
-        );
-        process_field(
-            &mut blob_sections,
-            module,
-            EmbeddedResourceField::InMemorySharedLibrary,
-        );
-        process_field(
-            &mut blob_sections,
-            module,
-            EmbeddedResourceField::SharedLibraryDependencyNames,
+            ResourceField::SharedLibraryDependencyNames,
         );
     }
 
@@ -630,13 +616,13 @@ pub fn write_embedded_resources_v1<W: Write>(
     for section in blob_sections.values() {
         section.write_index_v1(dest)?;
     }
-    dest.write_u8(EmbeddedResourceField::EndOfIndex.into())?;
+    dest.write_u8(ResourceField::EndOfIndex.into())?;
 
     // Write the resources index.
     for module in modules {
         module.write_index_v1(dest)?;
     }
-    dest.write_u8(EmbeddedResourceField::EndOfIndex.into())?;
+    dest.write_u8(ResourceField::EndOfIndex.into())?;
 
     // Write blob data, one field at a time.
     for module in modules {
@@ -768,19 +754,19 @@ mod tests {
         // entry, end of index.
         expected.write_u32::<LittleEndian>(1 + 1 + 2 + 1 + 1)?;
         // Blobs index.
-        expected.write_u8(EmbeddedBlobSectionField::StartOfEntry.into())?;
-        expected.write_u8(EmbeddedBlobSectionField::ResourceFieldType.into())?;
-        expected.write_u8(EmbeddedResourceField::ModuleName.into())?;
-        expected.write_u8(EmbeddedBlobSectionField::RawPayloadLength.into())?;
+        expected.write_u8(BlobSectionField::StartOfEntry.into())?;
+        expected.write_u8(BlobSectionField::ResourceFieldType.into())?;
+        expected.write_u8(ResourceField::ModuleName.into())?;
+        expected.write_u8(BlobSectionField::RawPayloadLength.into())?;
         expected.write_u64::<LittleEndian>(b"foo".len() as u64)?;
-        expected.write_u8(EmbeddedBlobSectionField::EndOfEntry.into())?;
-        expected.write_u8(EmbeddedBlobSectionField::EndOfIndex.into())?;
+        expected.write_u8(BlobSectionField::EndOfEntry.into())?;
+        expected.write_u8(BlobSectionField::EndOfIndex.into())?;
         // Module index.
-        expected.write_u8(EmbeddedResourceField::StartOfEntry.into())?;
-        expected.write_u8(EmbeddedResourceField::ModuleName.into())?;
+        expected.write_u8(ResourceField::StartOfEntry.into())?;
+        expected.write_u8(ResourceField::ModuleName.into())?;
         expected.write_u16::<LittleEndian>(b"foo".len() as u16)?;
-        expected.write_u8(EmbeddedResourceField::EndOfEntry.into())?;
-        expected.write_u8(EmbeddedResourceField::EndOfIndex.into())?;
+        expected.write_u8(ResourceField::EndOfEntry.into())?;
+        expected.write_u8(ResourceField::EndOfIndex.into())?;
         expected.write_all(b"foo")?;
 
         assert_eq!(data, expected);

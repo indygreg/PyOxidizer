@@ -7,9 +7,7 @@ Management of Python resources.
 */
 
 use {
-    super::data::{
-        BlobInteriorPadding, EmbeddedBlobSectionField, EmbeddedResourceField, HEADER_V1,
-    },
+    super::data::{BlobInteriorPadding, BlobSectionField, ResourceField, HEADER_V1},
     byteorder::{LittleEndian, ReadBytesExt},
     std::collections::{HashMap, HashSet},
     std::convert::TryFrom,
@@ -153,17 +151,17 @@ fn load_resources_v1<'a, S: ::std::hash::BuildHasher>(
                 .read_u8()
                 .or_else(|_| Err("failed reading blob section field type"))?;
 
-            let field_type = EmbeddedBlobSectionField::try_from(field_type)?;
+            let field_type = BlobSectionField::try_from(field_type)?;
 
             match field_type {
-                EmbeddedBlobSectionField::EndOfIndex => break,
-                EmbeddedBlobSectionField::StartOfEntry => {
+                BlobSectionField::EndOfIndex => break,
+                BlobSectionField::StartOfEntry => {
                     blob_entry_count += 1;
                     current_blob_field = None;
                     current_blob_raw_payload_length = None;
                     current_blob_interior_padding = None;
                 }
-                EmbeddedBlobSectionField::EndOfEntry => {
+                BlobSectionField::EndOfEntry => {
                     if current_blob_field.is_none() {
                         return Err("blob resource field is required");
                     }
@@ -181,19 +179,19 @@ fn load_resources_v1<'a, S: ::std::hash::BuildHasher>(
                     current_blob_raw_payload_length = None;
                     current_blob_interior_padding = None;
                 }
-                EmbeddedBlobSectionField::ResourceFieldType => {
+                BlobSectionField::ResourceFieldType => {
                     let field = reader
                         .read_u8()
                         .or_else(|_| Err("failed reading blob resource field value"))?;
                     current_blob_field = Some(field);
                 }
-                EmbeddedBlobSectionField::RawPayloadLength => {
+                BlobSectionField::RawPayloadLength => {
                     let l = reader
                         .read_u64::<LittleEndian>()
                         .or_else(|_| Err("failed reading raw payload length"))?;
                     current_blob_raw_payload_length = Some(l as usize);
                 }
-                EmbeddedBlobSectionField::InteriorPadding => {
+                BlobSectionField::InteriorPadding => {
                     let padding = reader
                         .read_u8()
                         .or_else(|_| Err("failed reading interior padding field value"))?;
@@ -252,17 +250,17 @@ fn load_resources_v1<'a, S: ::std::hash::BuildHasher>(
             .read_u8()
             .or_else(|_| Err("failed reading field type"))?;
 
-        let field_type = EmbeddedResourceField::try_from(field_type)?;
+        let field_type = ResourceField::try_from(field_type)?;
 
         match field_type {
-            EmbeddedResourceField::EndOfIndex => break,
-            EmbeddedResourceField::StartOfEntry => {
+            ResourceField::EndOfIndex => break,
+            ResourceField::StartOfEntry => {
                 index_entry_count += 1;
                 current_resource = EmbeddedResource::default();
                 current_resource_name = None;
             }
 
-            EmbeddedResourceField::EndOfEntry => {
+            ResourceField::EndOfEntry => {
                 if let Some(name) = current_resource_name {
                     resources.insert(name, current_resource);
                 } else {
@@ -272,7 +270,7 @@ fn load_resources_v1<'a, S: ::std::hash::BuildHasher>(
                 current_resource = EmbeddedResource::default();
                 current_resource_name = None;
             }
-            EmbeddedResourceField::ModuleName => {
+            ResourceField::ModuleName => {
                 let l = reader
                     .read_u16::<LittleEndian>()
                     .or_else(|_| Err("failed reading resource name length"))?
@@ -290,13 +288,13 @@ fn load_resources_v1<'a, S: ::std::hash::BuildHasher>(
                 current_resource_name = Some(name);
                 current_resource.name = name;
             }
-            EmbeddedResourceField::IsPackage => {
+            ResourceField::IsPackage => {
                 current_resource.is_package = true;
             }
-            EmbeddedResourceField::IsNamespacePackage => {
+            ResourceField::IsNamespacePackage => {
                 current_resource.is_namespace_package = true;
             }
-            EmbeddedResourceField::InMemorySource => {
+            ResourceField::InMemorySource => {
                 let l = reader
                     .read_u32::<LittleEndian>()
                     .or_else(|_| Err("failed reading source length"))?
@@ -305,7 +303,7 @@ fn load_resources_v1<'a, S: ::std::hash::BuildHasher>(
                 current_resource.in_memory_source =
                     Some(resolve_blob_data(data, &mut blob_offsets, field_type, l));
             }
-            EmbeddedResourceField::InMemoryBytecode => {
+            ResourceField::InMemoryBytecode => {
                 let l = reader
                     .read_u32::<LittleEndian>()
                     .or_else(|_| Err("failed reading bytecode length"))?
@@ -314,7 +312,7 @@ fn load_resources_v1<'a, S: ::std::hash::BuildHasher>(
                 current_resource.in_memory_bytecode =
                     Some(resolve_blob_data(data, &mut blob_offsets, field_type, l));
             }
-            EmbeddedResourceField::InMemoryBytecodeOpt1 => {
+            ResourceField::InMemoryBytecodeOpt1 => {
                 let l = reader
                     .read_u32::<LittleEndian>()
                     .or_else(|_| Err("failed reading bytecode length"))?
@@ -323,7 +321,7 @@ fn load_resources_v1<'a, S: ::std::hash::BuildHasher>(
                 current_resource.in_memory_bytecode_opt1 =
                     Some(resolve_blob_data(data, &mut blob_offsets, field_type, l));
             }
-            EmbeddedResourceField::InMemoryBytecodeOpt2 => {
+            ResourceField::InMemoryBytecodeOpt2 => {
                 let l = reader
                     .read_u32::<LittleEndian>()
                     .or_else(|_| Err("failed reading bytecode length"))?
@@ -332,7 +330,7 @@ fn load_resources_v1<'a, S: ::std::hash::BuildHasher>(
                 current_resource.in_memory_bytecode_opt2 =
                     Some(resolve_blob_data(data, &mut blob_offsets, field_type, l));
             }
-            EmbeddedResourceField::InMemoryExtensionModuleSharedLibrary => {
+            ResourceField::InMemoryExtensionModuleSharedLibrary => {
                 let l = reader
                     .read_u32::<LittleEndian>()
                     .or_else(|_| Err("failed reading extension module length"))?
@@ -342,7 +340,7 @@ fn load_resources_v1<'a, S: ::std::hash::BuildHasher>(
                     Some(resolve_blob_data(data, &mut blob_offsets, field_type, l));
             }
 
-            EmbeddedResourceField::InMemoryResourcesData => {
+            ResourceField::InMemoryResourcesData => {
                 let resource_count = reader
                     .read_u32::<LittleEndian>()
                     .or_else(|_| Err("failed reading resources length"))?
@@ -379,7 +377,7 @@ fn load_resources_v1<'a, S: ::std::hash::BuildHasher>(
                 current_resource.in_memory_resources = Some(Arc::new(resources));
             }
 
-            EmbeddedResourceField::InMemoryPackageDistribution => {
+            ResourceField::InMemoryPackageDistribution => {
                 let resource_count = reader
                     .read_u32::<LittleEndian>()
                     .or_else(|_| Err("failed reading package distribution length"))?
@@ -416,7 +414,7 @@ fn load_resources_v1<'a, S: ::std::hash::BuildHasher>(
                 current_resource.in_memory_package_distribution = Some(resources);
             }
 
-            EmbeddedResourceField::InMemorySharedLibrary => {
+            ResourceField::InMemorySharedLibrary => {
                 let l = reader
                     .read_u64::<LittleEndian>()
                     .or_else(|_| Err("failed reading in-memory shared library length"))?
@@ -426,7 +424,7 @@ fn load_resources_v1<'a, S: ::std::hash::BuildHasher>(
                     Some(&resolve_blob_data(data, &mut blob_offsets, field_type, l));
             }
 
-            EmbeddedResourceField::SharedLibraryDependencyNames => {
+            ResourceField::SharedLibraryDependencyNames => {
                 let names_count = reader
                     .read_u16::<LittleEndian>()
                     .or_else(|_| Err("failed reading shared library dependency names length"))?
@@ -472,7 +470,7 @@ fn load_resources_v1<'a, S: ::std::hash::BuildHasher>(
 fn resolve_blob_data<'a>(
     data: &'a [u8],
     blob_sections: &mut [Option<BlobSectionReadState>],
-    resource_field: EmbeddedResourceField,
+    resource_field: ResourceField,
     length: usize,
 ) -> &'a [u8] {
     let mut state = blob_sections[resource_field as usize].as_mut().unwrap();

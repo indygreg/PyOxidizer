@@ -24,7 +24,7 @@ impl Into<u8> for &BlobInteriorPadding {
 
 /// Describes a blob section field type in the embedded resources payload.
 #[derive(Debug, PartialEq, PartialOrd)]
-pub enum EmbeddedBlobSectionField {
+pub enum BlobSectionField {
     EndOfIndex,
     StartOfEntry,
     EndOfEntry,
@@ -33,30 +33,30 @@ pub enum EmbeddedBlobSectionField {
     InteriorPadding,
 }
 
-impl Into<u8> for EmbeddedBlobSectionField {
+impl Into<u8> for BlobSectionField {
     fn into(self) -> u8 {
         match self {
-            EmbeddedBlobSectionField::EndOfIndex => 0x00,
-            EmbeddedBlobSectionField::StartOfEntry => 0x01,
-            EmbeddedBlobSectionField::ResourceFieldType => 0x02,
-            EmbeddedBlobSectionField::RawPayloadLength => 0x03,
-            EmbeddedBlobSectionField::InteriorPadding => 0x04,
-            EmbeddedBlobSectionField::EndOfEntry => 0xff,
+            BlobSectionField::EndOfIndex => 0x00,
+            BlobSectionField::StartOfEntry => 0x01,
+            BlobSectionField::ResourceFieldType => 0x02,
+            BlobSectionField::RawPayloadLength => 0x03,
+            BlobSectionField::InteriorPadding => 0x04,
+            BlobSectionField::EndOfEntry => 0xff,
         }
     }
 }
 
-impl TryFrom<u8> for EmbeddedBlobSectionField {
+impl TryFrom<u8> for BlobSectionField {
     type Error = &'static str;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
-            0x00 => Ok(EmbeddedBlobSectionField::EndOfIndex),
-            0x01 => Ok(EmbeddedBlobSectionField::StartOfEntry),
-            0x02 => Ok(EmbeddedBlobSectionField::ResourceFieldType),
-            0x03 => Ok(EmbeddedBlobSectionField::RawPayloadLength),
-            0x04 => Ok(EmbeddedBlobSectionField::InteriorPadding),
-            0xff => Ok(EmbeddedBlobSectionField::EndOfEntry),
+            0x00 => Ok(BlobSectionField::EndOfIndex),
+            0x01 => Ok(BlobSectionField::StartOfEntry),
+            0x02 => Ok(BlobSectionField::ResourceFieldType),
+            0x03 => Ok(BlobSectionField::RawPayloadLength),
+            0x04 => Ok(BlobSectionField::InteriorPadding),
+            0xff => Ok(BlobSectionField::EndOfEntry),
             _ => Err("invalid blob index field type"),
         }
     }
@@ -64,7 +64,7 @@ impl TryFrom<u8> for EmbeddedBlobSectionField {
 
 /// Describes a data field type in the embedded resources payload.
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord)]
-pub enum EmbeddedResourceField {
+pub enum ResourceField {
     EndOfIndex,
     StartOfEntry,
     EndOfEntry,
@@ -82,48 +82,48 @@ pub enum EmbeddedResourceField {
     SharedLibraryDependencyNames,
 }
 
-impl Into<u8> for EmbeddedResourceField {
+impl Into<u8> for ResourceField {
     fn into(self) -> u8 {
         match self {
-            EmbeddedResourceField::EndOfIndex => 0,
-            EmbeddedResourceField::StartOfEntry => 1,
-            EmbeddedResourceField::EndOfEntry => 2,
-            EmbeddedResourceField::ModuleName => 3,
-            EmbeddedResourceField::IsPackage => 4,
-            EmbeddedResourceField::IsNamespacePackage => 5,
-            EmbeddedResourceField::InMemorySource => 6,
-            EmbeddedResourceField::InMemoryBytecode => 7,
-            EmbeddedResourceField::InMemoryBytecodeOpt1 => 8,
-            EmbeddedResourceField::InMemoryBytecodeOpt2 => 9,
-            EmbeddedResourceField::InMemoryExtensionModuleSharedLibrary => 10,
-            EmbeddedResourceField::InMemoryResourcesData => 11,
-            EmbeddedResourceField::InMemoryPackageDistribution => 12,
-            EmbeddedResourceField::InMemorySharedLibrary => 13,
-            EmbeddedResourceField::SharedLibraryDependencyNames => 14,
+            ResourceField::EndOfIndex => 0,
+            ResourceField::StartOfEntry => 1,
+            ResourceField::EndOfEntry => 2,
+            ResourceField::ModuleName => 3,
+            ResourceField::IsPackage => 4,
+            ResourceField::IsNamespacePackage => 5,
+            ResourceField::InMemorySource => 6,
+            ResourceField::InMemoryBytecode => 7,
+            ResourceField::InMemoryBytecodeOpt1 => 8,
+            ResourceField::InMemoryBytecodeOpt2 => 9,
+            ResourceField::InMemoryExtensionModuleSharedLibrary => 10,
+            ResourceField::InMemoryResourcesData => 11,
+            ResourceField::InMemoryPackageDistribution => 12,
+            ResourceField::InMemorySharedLibrary => 13,
+            ResourceField::SharedLibraryDependencyNames => 14,
         }
     }
 }
 
-impl TryFrom<u8> for EmbeddedResourceField {
+impl TryFrom<u8> for ResourceField {
     type Error = &'static str;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
-            0x00 => Ok(EmbeddedResourceField::EndOfIndex),
-            0x01 => Ok(EmbeddedResourceField::StartOfEntry),
-            0x02 => Ok(EmbeddedResourceField::EndOfEntry),
-            0x03 => Ok(EmbeddedResourceField::ModuleName),
-            0x04 => Ok(EmbeddedResourceField::IsPackage),
-            0x05 => Ok(EmbeddedResourceField::IsNamespacePackage),
-            0x06 => Ok(EmbeddedResourceField::InMemorySource),
-            0x07 => Ok(EmbeddedResourceField::InMemoryBytecode),
-            0x08 => Ok(EmbeddedResourceField::InMemoryBytecodeOpt1),
-            0x09 => Ok(EmbeddedResourceField::InMemoryBytecodeOpt2),
-            0x0a => Ok(EmbeddedResourceField::InMemoryExtensionModuleSharedLibrary),
-            0x0b => Ok(EmbeddedResourceField::InMemoryResourcesData),
-            0x0c => Ok(EmbeddedResourceField::InMemoryPackageDistribution),
-            0x0d => Ok(EmbeddedResourceField::InMemorySharedLibrary),
-            0x0e => Ok(EmbeddedResourceField::SharedLibraryDependencyNames),
+            0x00 => Ok(ResourceField::EndOfIndex),
+            0x01 => Ok(ResourceField::StartOfEntry),
+            0x02 => Ok(ResourceField::EndOfEntry),
+            0x03 => Ok(ResourceField::ModuleName),
+            0x04 => Ok(ResourceField::IsPackage),
+            0x05 => Ok(ResourceField::IsNamespacePackage),
+            0x06 => Ok(ResourceField::InMemorySource),
+            0x07 => Ok(ResourceField::InMemoryBytecode),
+            0x08 => Ok(ResourceField::InMemoryBytecodeOpt1),
+            0x09 => Ok(ResourceField::InMemoryBytecodeOpt2),
+            0x0a => Ok(ResourceField::InMemoryExtensionModuleSharedLibrary),
+            0x0b => Ok(ResourceField::InMemoryResourcesData),
+            0x0c => Ok(ResourceField::InMemoryPackageDistribution),
+            0x0d => Ok(ResourceField::InMemorySharedLibrary),
+            0x0e => Ok(ResourceField::SharedLibraryDependencyNames),
             _ => Err("invalid field type"),
         }
     }
