@@ -7,7 +7,7 @@ Management of Python resources.
 */
 
 use {
-    super::data::{EmbeddedBlobSectionField, EmbeddedResourceField, EMBEDDED_RESOURCES_HEADER_V1},
+    super::data::{EmbeddedBlobSectionField, EmbeddedResourceField, HEADER_V1},
     byteorder::{LittleEndian, ReadBytesExt},
     std::collections::{HashMap, HashSet},
     std::convert::TryFrom,
@@ -117,7 +117,7 @@ pub fn load_resources<'a>(
         .read_exact(&mut header)
         .or_else(|_| Err("error reading 8 byte header"))?;
 
-    if header == EMBEDDED_RESOURCES_HEADER_V1 {
+    if header == HEADER_V1 {
         load_resources_v1(data, &mut reader, resources)
     } else {
         Err("unrecognized file format")
@@ -220,7 +220,7 @@ fn load_resources_v1<'a>(
     // Global payload offset where blobs data starts.
     let blob_start_offset: usize =
             // Magic.
-            EMBEDDED_RESOURCES_HEADER_V1.len()
+            HEADER_V1.len()
             // Global header.
             + 1 + 4 + 4 + 4
             + blob_index_length

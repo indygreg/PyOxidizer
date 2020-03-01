@@ -8,8 +8,7 @@ Embedded Python resources in a binary.
 
 use {
     super::data::{
-        EmbeddedBlobInteriorPadding, EmbeddedBlobSectionField, EmbeddedResourceField,
-        EMBEDDED_RESOURCES_HEADER_V1,
+        EmbeddedBlobInteriorPadding, EmbeddedBlobSectionField, EmbeddedResourceField, HEADER_V1,
     },
     anyhow::{anyhow, Context, Result},
     byteorder::{LittleEndian, WriteBytesExt},
@@ -621,7 +620,7 @@ pub fn write_embedded_resources_v1<W: Write>(
         blob_index_length += section.index_v1_length();
     }
 
-    dest.write_all(EMBEDDED_RESOURCES_HEADER_V1)?;
+    dest.write_all(HEADER_V1)?;
 
     dest.write_u8(blob_section_count)?;
     dest.write_u32::<LittleEndian>(blob_index_length as u32)?;
