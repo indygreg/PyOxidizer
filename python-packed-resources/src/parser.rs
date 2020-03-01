@@ -495,7 +495,7 @@ fn resolve_blob_data<'a>(
 mod tests {
     use {
         super::*,
-        crate::data::EmbeddedBlobInteriorPadding,
+        crate::data::BlobInteriorPadding,
         crate::writer::{write_embedded_resources_v1, EmbeddedResource as OwnedEmbeddedResource},
         std::collections::BTreeMap,
     };
@@ -651,7 +651,7 @@ mod tests {
         write_embedded_resources_v1(
             &[resource1, resource2],
             &mut data,
-            Some(EmbeddedBlobInteriorPadding::Null),
+            Some(BlobInteriorPadding::Null),
         )
         .unwrap();
 

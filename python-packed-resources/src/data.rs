@@ -8,16 +8,16 @@ use std::convert::TryFrom;
 pub const HEADER_V1: &[u8] = b"pyembed\x01";
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum EmbeddedBlobInteriorPadding {
+pub enum BlobInteriorPadding {
     None,
     Null,
 }
 
-impl Into<u8> for &EmbeddedBlobInteriorPadding {
+impl Into<u8> for &BlobInteriorPadding {
     fn into(self) -> u8 {
         match self {
-            EmbeddedBlobInteriorPadding::None => 0x01,
-            EmbeddedBlobInteriorPadding::Null => 0x02,
+            BlobInteriorPadding::None => 0x01,
+            BlobInteriorPadding::Null => 0x02,
         }
     }
 }

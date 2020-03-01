@@ -8,7 +8,7 @@ Embedded Python resources in a binary.
 
 use {
     super::data::{
-        EmbeddedBlobInteriorPadding, EmbeddedBlobSectionField, EmbeddedResourceField, HEADER_V1,
+        BlobInteriorPadding, EmbeddedBlobSectionField, EmbeddedResourceField, HEADER_V1,
     },
     anyhow::{anyhow, Context, Result},
     byteorder::{LittleEndian, WriteBytesExt},
@@ -21,7 +21,7 @@ use {
 pub struct EmbeddedBlobSection {
     resource_field: EmbeddedResourceField,
     raw_payload_length: usize,
-    interior_padding: Option<EmbeddedBlobInteriorPadding>,
+    interior_padding: Option<BlobInteriorPadding>,
 }
 
 impl EmbeddedBlobSection {
@@ -292,7 +292,7 @@ impl EmbeddedResource {
     pub fn field_blob_interior_padding_length(
         &self,
         field: EmbeddedResourceField,
-        padding: EmbeddedBlobInteriorPadding,
+        padding: BlobInteriorPadding,
     ) -> usize {
         let elements_count = match field {
             EmbeddedResourceField::EndOfIndex => 0,
@@ -367,8 +367,8 @@ impl EmbeddedResource {
         };
 
         let overhead = match padding {
-            EmbeddedBlobInteriorPadding::None => 0,
-            EmbeddedBlobInteriorPadding::Null => 1,
+            BlobInteriorPadding::None => 0,
+            BlobInteriorPadding::Null => 1,
         };
 
         elements_count * overhead
@@ -518,7 +518,7 @@ impl EmbeddedResource {
 pub fn write_embedded_resources_v1<W: Write>(
     modules: &[EmbeddedResource],
     dest: &mut W,
-    interior_padding: Option<EmbeddedBlobInteriorPadding>,
+    interior_padding: Option<BlobInteriorPadding>,
 ) -> Result<()> {
     let mut blob_sections = BTreeMap::new();
 
@@ -535,7 +535,7 @@ pub fn write_embedded_resources_v1<W: Write>(
          field: EmbeddedResourceField| {
             let padding = match &interior_padding {
                 Some(padding) => padding.clone(),
-                None => EmbeddedBlobInteriorPadding::None,
+                None => BlobInteriorPadding::None,
             };
 
             let l = resource.field_blob_length(field)
@@ -553,7 +553,7 @@ pub fn write_embedded_resources_v1<W: Write>(
         };
 
     let add_interior_padding = |dest: &mut W| -> Result<()> {
-        if interior_padding == Some(EmbeddedBlobInteriorPadding::Null) {
+        if interior_padding == Some(BlobInteriorPadding::Null) {
             dest.write_all(b"\0")?;
         }
 
