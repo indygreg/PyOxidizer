@@ -13,12 +13,12 @@ pub enum BlobInteriorPadding {
     /// No padding.
     ///
     /// Entries are packed next to each other. e.g. "foo" + "bar" = "foobar".
-    None,
+    None = 0x01,
 
     /// NULL byte padding.
     ///
     /// There exists a NULL byte between entries. e.g. "foo" + "bar" = "foo\0bar\0".
-    Null,
+    Null = 0x02,
 }
 
 impl Into<u8> for &BlobInteriorPadding {
@@ -33,12 +33,12 @@ impl Into<u8> for &BlobInteriorPadding {
 /// Describes a blob section field type in the blob index.
 #[derive(Debug, PartialEq, PartialOrd)]
 pub enum BlobSectionField {
-    EndOfIndex,
-    StartOfEntry,
-    EndOfEntry,
-    ResourceFieldType,
-    RawPayloadLength,
-    InteriorPadding,
+    EndOfIndex = 0x00,
+    StartOfEntry = 0x01,
+    EndOfEntry = 0xff,
+    ResourceFieldType = 0x03,
+    RawPayloadLength = 0x04,
+    InteriorPadding = 0x05,
 }
 
 impl Into<u8> for BlobSectionField {
@@ -73,21 +73,21 @@ impl TryFrom<u8> for BlobSectionField {
 /// Describes a resource field type in the resource index.
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord)]
 pub enum ResourceField {
-    EndOfIndex,
-    StartOfEntry,
-    EndOfEntry,
-    ModuleName,
-    IsPackage,
-    IsNamespacePackage,
-    InMemorySource,
-    InMemoryBytecode,
-    InMemoryBytecodeOpt1,
-    InMemoryBytecodeOpt2,
-    InMemoryExtensionModuleSharedLibrary,
-    InMemoryResourcesData,
-    InMemoryPackageDistribution,
-    InMemorySharedLibrary,
-    SharedLibraryDependencyNames,
+    EndOfIndex = 0x00,
+    StartOfEntry = 0x01,
+    EndOfEntry = 0xff,
+    ModuleName = 0x03,
+    IsPackage = 0x04,
+    IsNamespacePackage = 0x05,
+    InMemorySource = 0x06,
+    InMemoryBytecode = 0x07,
+    InMemoryBytecodeOpt1 = 0x08,
+    InMemoryBytecodeOpt2 = 0x09,
+    InMemoryExtensionModuleSharedLibrary = 0x0a,
+    InMemoryResourcesData = 0x0b,
+    InMemoryPackageDistribution = 0x0c,
+    InMemorySharedLibrary = 0x0d,
+    SharedLibraryDependencyNames = 0x0e,
 }
 
 impl Into<u8> for ResourceField {
