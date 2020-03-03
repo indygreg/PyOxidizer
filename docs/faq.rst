@@ -146,10 +146,16 @@ the in-memory import machinery works.
 Can Applications Import Python Modules from the Filesystem?
 ===========================================================
 
-Yes. While the default is to import all Python modules from in-memory
-data structures linked into the binary, it is possible to configure
-``sys.path`` to allow importing from additional filesystem paths.
+Yes. While the default configuration only allows importing
+all Python modules from in-memory data structures linked
+into the binary, it is possible to configure ``sys.path``
+to allow importing from additional filesystem paths.
 Support for importing compiled extension modules is also possible.
+
+To enable the filesystem importer, change the configuration for
+``PythonInterpreterConfig()`` to ``filesystem_importer=True`` or
+``sys_paths=None`` to not ``None`` (which implies
+``filesystem_importer=True``).
 
 What are the Implications of Static Linking?
 ============================================
