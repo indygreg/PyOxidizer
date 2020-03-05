@@ -8,40 +8,23 @@ Management of Python resources.
 
 use {
     python3_sys as pyffi,
-    python_packed_resources::data::Resource,
+    python_packed_resources::data::{Resource, ResourceFlavor},
     std::borrow::Cow,
     std::collections::{HashMap, HashSet},
     std::ffi::CStr,
 };
 
-#[derive(Debug, PartialEq)]
-pub(crate) enum ResourceFlavor {
-    Builtin,
-    Frozen,
-    Packed,
-}
-
-#[derive(Debug)]
-pub(crate) struct ResourceEntry<'a, X>
-where
-    [X]: ToOwned<Owned = Vec<X>>,
-{
-    pub flavor: ResourceFlavor,
-    pub resource: Resource<'a, X>,
-}
-
 /// Whether the module is imported by the importer provided by this crate.
 ///
 /// This excludes builtin and frozen modules, which are merely registered.
-pub(crate) fn uses_pyembed_importer<X>(entry: &ResourceEntry<X>) -> bool
+pub(crate) fn uses_pyembed_importer<X>(entry: &Resource<X>) -> bool
 where
     [X]: ToOwned<Owned = Vec<X>>,
 {
-    let resource = &entry.resource;
-    resource.in_memory_bytecode.is_some()
-        || resource.in_memory_bytecode_opt1.is_some()
-        || resource.in_memory_bytecode_opt2.is_some()
-        || resource.in_memory_extension_module_shared_library.is_some()
+    entry.in_memory_bytecode.is_some()
+        || entry.in_memory_bytecode_opt1.is_some()
+        || entry.in_memory_bytecode_opt2.is_some()
+        || entry.in_memory_extension_module_shared_library.is_some()
 }
 
 /// Defines Python resources available for import.
@@ -53,7 +36,7 @@ where
     /// Names of Python packages.
     pub packages: HashSet<&'static str>,
 
-    pub resources: HashMap<Cow<'a, str>, ResourceEntry<'a, X>>,
+    pub resources: HashMap<Cow<'a, str>, Resource<'a, X>>,
 }
 
 impl<'a> Default for PythonImporterState<'a, u8> {
@@ -97,17 +80,15 @@ impl<'a> PythonImporterState<'a, u8> {
             // Module can be defined by embedded resources data. If exists, just
             // update the big.
             if let Some(mut entry) = self.resources.get_mut(name_str) {
-                entry.flavor = ResourceFlavor::Builtin;
+                entry.flavor = ResourceFlavor::BuiltinExtensionModule;
             } else {
                 self.resources.insert(
                     // This is probably unsafe.
                     Cow::from(name_str),
-                    ResourceEntry {
-                        flavor: ResourceFlavor::Builtin,
-                        resource: Resource {
-                            name: Cow::from(name_str),
-                            ..Resource::default()
-                        },
+                    Resource {
+                        flavor: ResourceFlavor::BuiltinExtensionModule,
+                        name: Cow::from(name_str),
+                        ..Resource::default()
                     },
                 );
             }
@@ -136,18 +117,15 @@ impl<'a> PythonImporterState<'a, u8> {
             // Module can be defined by embedded resources data. If exists, just
             // update the big.
             if let Some(mut entry) = self.resources.get_mut(name_str) {
-                entry.flavor = ResourceFlavor::Frozen;
+                entry.flavor = ResourceFlavor::FrozenModule;
             } else {
                 self.resources.insert(
                     // This is probably unsafe.
                     Cow::from(name_str),
-                    ResourceEntry {
-                        flavor: ResourceFlavor::Frozen,
-
-                        resource: Resource {
-                            name: Cow::from(name_str),
-                            ..Resource::default()
-                        },
+                    Resource {
+                        flavor: ResourceFlavor::FrozenModule,
+                        name: Cow::from(name_str),
+                        ..Resource::default()
                     },
                 );
             }
@@ -163,13 +141,7 @@ impl<'a> PythonImporterState<'a, u8> {
         for resource in resources {
             let resource = resource?;
 
-            self.resources.insert(
-                resource.name.clone(),
-                ResourceEntry {
-                    flavor: ResourceFlavor::Packed,
-                    resource,
-                },
-            );
+            self.resources.insert(resource.name.clone(), resource);
         }
 
         Ok(())

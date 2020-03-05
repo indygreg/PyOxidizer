@@ -136,6 +136,10 @@ the field. The values of each defined metadata type follow.
 a specification standpoint this isn't strictly required. But it helps ensure
 parser state.
 
+`0x02` - Resource flavor. Declares the type of resource this entry represents.
+A `u8` defining the resource flavor immediately follows this byte. See the
+section below for valid resource flavors.
+
 `0xff` - End of resource entry. The next encountered `u8` in the index should
 be an *end of index* or *start of resource* marker.
 
@@ -191,6 +195,33 @@ is contained in a `u16` that immediately follows this byte. Following this
 `u16` is an array of `u16` denoting the length of the library name for
 each shared library dependency. Each described shared library dependency
 may or may not be described by other entries in this data structure.
+
+## Resource Flavors
+
+The data format allows defining different types/flavors of resources.
+This flavor of a resource is identified by a `u8`. The declared flavors are:
+
+`0x00` - No flavor. Should not be encountered.
+
+`0x01` - Python module/package. This type represents a normal Python
+module.
+
+`0x02` - Builtin Python extension module. This type represents a Python
+extension module that is built in (compiled into) the interpreter itself
+or is otherwise made available to the interpreter via `PyImport_Inittab`
+such that it should be imported with the *builtin* importer.
+
+`0x03` - Frozen Python module. This type represents a Python module whose
+bytecode is *frozen* and made available to the Python interpreter via the
+`PyImport_FrozenModules` array and should be imported with the *frozen*
+importer.
+
+`0x04` - Python extension. This type represents a compiled Python extension.
+Extensions have specific requirements around how they are to be loaded and
+are differentiated from regular Python modules.
+
+`0x05` - Shared library. This type represents a shared library that can be
+loaded into a process.
 
 ## Design Considerations
 

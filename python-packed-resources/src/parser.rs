@@ -7,7 +7,9 @@ Management of Python resources.
 */
 
 use {
-    super::data::{BlobInteriorPadding, BlobSectionField, Resource, ResourceField, HEADER_V1},
+    super::data::{
+        BlobInteriorPadding, BlobSectionField, Resource, ResourceField, ResourceFlavor, HEADER_V1,
+    },
     byteorder::{LittleEndian, ReadBytesExt},
     std::borrow::Cow,
     std::collections::{HashMap, HashSet},
@@ -51,7 +53,7 @@ impl<'a> ResourceParserIterator<'a> {
     fn resolve_blob_data(&mut self, resource_field: ResourceField, length: usize) -> &'a [u8] {
         let mut state = self.blob_sections[resource_field as usize]
             .as_mut()
-            .unwrap();
+            .expect("blob state not found");
 
         let blob = &self.data[state.offset..state.offset + length];
 
@@ -105,6 +107,15 @@ impl<'a> ResourceParserIterator<'a> {
 
                     return res;
                 }
+                ResourceField::Flavor => {
+                    let flavor = self
+                        .reader
+                        .read_u8()
+                        .or_else(|_| Err("failed reading flavor value"))?;
+
+                    current_resource.flavor = ResourceFlavor::try_from(flavor)?;
+                }
+
                 ResourceField::ModuleName => {
                     let l = self
                         .reader
@@ -934,6 +945,7 @@ mod tests {
         distribution.insert(Cow::from("dist2"), Cow::from(b"dist2value".to_vec()));
 
         let resource = Resource {
+            flavor: ResourceFlavor::Module,
             name: Cow::from("module"),
             is_package: true,
             is_namespace_package: true,
@@ -959,6 +971,7 @@ mod tests {
 
         let entry = &resources[0];
 
+        assert_eq!(entry.flavor, ResourceFlavor::Module);
         assert!(entry.is_package);
         assert!(entry.is_namespace_package);
         assert_eq!(entry.in_memory_source.as_ref().unwrap().as_ref(), b"source");

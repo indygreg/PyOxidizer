@@ -7,6 +7,46 @@ use {std::borrow::Cow, std::collections::HashMap, std::convert::TryFrom, std::sy
 /// Header value for version 1 of resources payload.
 pub const HEADER_V1: &[u8] = b"pyembed\x01";
 
+/// Defines the type of a resource.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ResourceFlavor {
+    None = 0x00,
+    Module = 0x01,
+    BuiltinExtensionModule = 0x02,
+    FrozenModule = 0x03,
+    Extension = 0x04,
+    SharedLibrary = 0x05,
+}
+
+impl Into<u8> for ResourceFlavor {
+    fn into(self) -> u8 {
+        match self {
+            ResourceFlavor::None => 0x00,
+            ResourceFlavor::Module => 0x01,
+            ResourceFlavor::BuiltinExtensionModule => 0x02,
+            ResourceFlavor::FrozenModule => 0x03,
+            ResourceFlavor::Extension => 0x04,
+            ResourceFlavor::SharedLibrary => 0x05,
+        }
+    }
+}
+
+impl TryFrom<u8> for ResourceFlavor {
+    type Error = &'static str;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0x00 => Ok(ResourceFlavor::None),
+            0x01 => Ok(ResourceFlavor::Module),
+            0x02 => Ok(ResourceFlavor::BuiltinExtensionModule),
+            0x03 => Ok(ResourceFlavor::FrozenModule),
+            0x04 => Ok(ResourceFlavor::Extension),
+            0x05 => Ok(ResourceFlavor::SharedLibrary),
+            _ => Err("unrecognized resource flavor"),
+        }
+    }
+}
+
 /// Defines interior padding mechanism between entries in blob sections.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BlobInteriorPadding {
@@ -76,6 +116,7 @@ pub enum ResourceField {
     EndOfIndex = 0x00,
     StartOfEntry = 0x01,
     EndOfEntry = 0xff,
+    Flavor = 0x02,
     ModuleName = 0x03,
     IsPackage = 0x04,
     IsNamespacePackage = 0x05,
@@ -95,6 +136,7 @@ impl Into<u8> for ResourceField {
         match self {
             ResourceField::EndOfIndex => 0x00,
             ResourceField::StartOfEntry => 0x01,
+            ResourceField::Flavor => 0x02,
             ResourceField::ModuleName => 0x03,
             ResourceField::IsPackage => 0x04,
             ResourceField::IsNamespacePackage => 0x05,
@@ -119,6 +161,7 @@ impl TryFrom<u8> for ResourceField {
         match value {
             0x00 => Ok(ResourceField::EndOfIndex),
             0x01 => Ok(ResourceField::StartOfEntry),
+            0x02 => Ok(ResourceField::Flavor),
             0x03 => Ok(ResourceField::ModuleName),
             0x04 => Ok(ResourceField::IsPackage),
             0x05 => Ok(ResourceField::IsNamespacePackage),
@@ -143,6 +186,9 @@ pub struct Resource<'a, X: 'a>
 where
     [X]: ToOwned<Owned = Vec<X>>,
 {
+    /// The flavor of the resource.
+    pub flavor: ResourceFlavor,
+
     /// The resource name.
     pub name: Cow<'a, str>,
 
@@ -191,6 +237,7 @@ where
 {
     fn default() -> Self {
         Resource {
+            flavor: ResourceFlavor::None,
             name: Cow::Borrowed(""),
             is_package: false,
             is_namespace_package: false,

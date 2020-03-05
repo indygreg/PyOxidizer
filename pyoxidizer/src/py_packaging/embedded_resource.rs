@@ -16,7 +16,7 @@ use {
     super::standalone_distribution::ExtensionModule,
     anyhow::{Error, Result},
     lazy_static::lazy_static,
-    python_packed_resources::data::Resource as EmbeddedResource,
+    python_packed_resources::data::{Resource as EmbeddedResource, ResourceFlavor},
     python_packed_resources::writer::write_embedded_resources_v1,
     slog::warn,
     std::borrow::Cow,
@@ -82,6 +82,13 @@ impl<'a> TryFrom<&EmbeddedResourcePythonModulePrePackaged> for EmbeddedResource<
 
     fn try_from(value: &EmbeddedResourcePythonModulePrePackaged) -> Result<Self, Self::Error> {
         Ok(Self {
+            flavor: if value.in_memory_extension_module_shared_library.is_some() {
+                ResourceFlavor::Extension
+            } else if value.in_memory_shared_library.is_some() {
+                ResourceFlavor::SharedLibrary
+            } else {
+                ResourceFlavor::Module
+            },
             name: Cow::Owned(value.name.clone()),
             is_package: value.is_package,
             is_namespace_package: value.is_namespace_package,

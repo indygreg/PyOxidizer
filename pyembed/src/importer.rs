@@ -11,7 +11,7 @@ for importing Python modules from memory.
 
 use {
     super::pyinterp::PYOXIDIZER_IMPORTER_NAME,
-    super::python_resources::{uses_pyembed_importer, PythonImporterState, ResourceFlavor},
+    super::python_resources::{uses_pyembed_importer, PythonImporterState},
     cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError},
     cpython::{
         py_class, py_fn, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule,
@@ -19,6 +19,7 @@ use {
     },
     python3_sys as pyffi,
     python3_sys::{PyBUF_READ, PyMemoryView_FromMemory},
+    python_packed_resources::data::ResourceFlavor,
     std::borrow::Cow,
     std::cell::RefCell,
     std::collections::HashMap,
@@ -283,17 +284,17 @@ py_class!(class PyOxidizerFinder |py| {
         let key = fullname.to_string(py)?;
 
         if let Some(module) = self.importer_state(py).resources.get(&*key) {
-            if module.flavor == ResourceFlavor::Builtin {
+            if module.flavor == ResourceFlavor::BuiltinExtensionModule {
                 // BuiltinImporter.find_spec() always returns None if `path` is defined.
                 // And it doesn't use `target`. So don't proxy these values.
                 self.builtin_importer(py).call_method(py, "find_spec", (fullname,), None)
-            } else if module.flavor == ResourceFlavor::Frozen {
+            } else if module.flavor == ResourceFlavor::FrozenModule {
                 self.frozen_importer(py).call_method(py, "find_spec", (fullname, path, target), None)
             } else if uses_pyembed_importer(module) {
                 // TODO consider setting origin and has_location so __file__ will be
                 // populated.
                 let kwargs = PyDict::new(py);
-                kwargs.set_item(py, "is_package", module.resource.is_package)?;
+                kwargs.set_item(py, "is_package", module.is_package)?;
 
                 self.module_spec_type(py).call(py, (fullname, self), Some(&kwargs))
             } else {
@@ -337,7 +338,7 @@ py_class!(class PyOxidizerFinder |py| {
             // If we ever implement our own lazy module importer, we could
             // potentially work around this and move all extension module
             // initialization into `exec_module()`.
-            if let Some(library_data) = &entry.resource.in_memory_extension_module_shared_library {
+            if let Some(library_data) = &entry.in_memory_extension_module_shared_library {
                 let sys_module = self.sys_module(py);
                 let sys_modules = sys_module.as_object().getattr(py, "modules")?;
 
@@ -360,18 +361,18 @@ py_class!(class PyOxidizerFinder |py| {
         let key = name.extract::<String>(py)?;
 
         if let Some(entry) = self.importer_state(py).resources.get(&*key) {
-            if entry.flavor == ResourceFlavor::Builtin {
+            if entry.flavor == ResourceFlavor::BuiltinExtensionModule {
                 self.builtin_importer(py).call_method(py, "exec_module", (module,), None)
-            } else if entry.flavor == ResourceFlavor::Frozen {
+            } else if entry.flavor == ResourceFlavor::FrozenModule {
                 self.frozen_importer(py).call_method(py, "exec_module", (module,), None)
-            } else if entry.resource.in_memory_extension_module_shared_library.is_some() {
+            } else if entry.in_memory_extension_module_shared_library.is_some() {
                 // `ExtensionFileLoader.exec_module()` simply calls `imp.exec_dynamic()`.
                 let imp_module = self.imp_module(py);
 
                 imp_module.as_object().call_method(py, "exec_dynamic", (module,), None)
             // TODO service other in-memory bytecode fields.
-            } else if entry.resource.in_memory_bytecode.is_some() {
-                match get_memory_view(py, &entry.resource.in_memory_bytecode) {
+            } else if entry.in_memory_bytecode.is_some() {
+                match get_memory_view(py, &entry.in_memory_bytecode) {
                     Some(value) => {
                         let code = self.marshal_loads(py).call(py, (value,), None)?;
                         let exec_fn = self.exec_fn(py);
@@ -400,15 +401,14 @@ py_class!(class PyOxidizerFinder |py| {
     def get_code(&self, fullname: &PyString) -> PyResult<PyObject> {
         let key = fullname.to_string(py)?;
 
-        if let Some(module) = self.importer_state(py).resources.get(&*key) {
-            if module.flavor == ResourceFlavor::Frozen {
+        if let Some(resource) = self.importer_state(py).resources.get(&*key) {
+            if resource.flavor == ResourceFlavor::FrozenModule {
                 let imp_module = self.imp_module(py);
 
                 imp_module.call(py, "get_frozen_object", (fullname,), None)
-            } else if module.flavor == ResourceFlavor::Builtin {
+            } else if resource.flavor == ResourceFlavor::BuiltinExtensionModule {
                 Ok(py.None())
             } else {
-                let resource = &module.resource;
                 let sys_module = self.sys_module(py);
                 let flags = sys_module.get(py, "flags")?;
                 let flags: i64 = flags.extract(py)?;
@@ -444,8 +444,7 @@ py_class!(class PyOxidizerFinder |py| {
     def get_source(&self, fullname: &PyString) -> PyResult<PyObject> {
         let key = fullname.to_string(py)?;
 
-        if let Some(module) = self.importer_state(py).resources.get(&*key) {
-            let resource = &module.resource;
+        if let Some(resource) = self.importer_state(py).resources.get(&*key) {
             if resource.in_memory_source.is_some() {
                 match get_memory_view(py, &resource.in_memory_source) {
                     Some(value) => {
@@ -488,8 +487,7 @@ py_class!(class PyOxidizerFinder |py| {
         }
 
         // Only create a reader if the name is a package.
-        if let Some(module) = self.importer_state(py).resources.get(&*key) {
-            let resource = &module.resource;
+        if let Some(resource) = self.importer_state(py).resources.get(&*key) {
             if !resource.is_package {
                 return Ok(py.None())
             }
