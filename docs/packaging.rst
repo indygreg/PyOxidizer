@@ -152,7 +152,7 @@ comments removed for brevity):
            include_test=False,
        )
 
-       exe.add_python_resources(dist.pip_intsall(["pyflakes==2.1.1"]))
+       exe.add_python_resources(dist.pip_install(["pyflakes==2.1.1"]))
 
        return exe
 
@@ -218,7 +218,7 @@ Then edit the ``pyoxidizer.bzl`` file to have the following:
            name="black",
        )
 
-       exe.add_python_resources(dist.pip_intsall(["black==19.3b0"]))
+       exe.add_python_resources(dist.pip_install(["black==19.3b0"]))
 
        return exe
 
