@@ -141,6 +141,13 @@ impl<'a> TryFrom<&EmbeddedResourcePythonModulePrePackaged> for EmbeddedResource<
             } else {
                 None
             },
+            relative_path_module_source: None,
+            relative_path_module_bytecode: None,
+            relative_path_module_bytecode_opt1: None,
+            relative_path_module_bytecode_opt2: None,
+            relative_path_extension_module_shared_library: None,
+            relative_path_package_resources: None,
+            relative_path_package_distribution: None,
         })
     }
 }

@@ -14,9 +14,16 @@ use {
     std::borrow::Cow,
     std::collections::{HashMap, HashSet},
     std::convert::TryFrom,
+    std::ffi::OsStr,
     std::io::{Cursor, Read},
+    std::path::Path,
     std::sync::Arc,
 };
+
+#[cfg(unix)]
+use std::os::unix::ffi::OsStrExt;
+#[cfg(windows)]
+use {std::ffi::OsString, std::os::windows::ffi::OsStringExt, std::path::PathBuf};
 
 /// Represents a blob section in the blob index.
 #[derive(Debug)]
@@ -65,6 +72,24 @@ impl<'a> ResourceParserIterator<'a> {
         state.offset += increment;
 
         blob
+    }
+
+    #[cfg(unix)]
+    fn resolve_path(&mut self, resource_field: ResourceField, length: usize) -> Cow<'a, Path> {
+        let path_str = OsStr::from_bytes(self.resolve_blob_data(resource_field, length));
+        Cow::Borrowed(Path::new(path_str))
+    }
+
+    #[cfg(windows)]
+    fn resolve_path(&mut self, resource_field: ResourceField, length: usize) -> Cow<'a, Path> {
+        let raw = self.resolve_blob_data(resource_field, length);
+        let raw = unsafe { std::slice::from_raw_parts(raw.as_ptr() as *const u16, raw.len() / 2) };
+
+        // There isn't an API that lets us get a OsStr from &[u16]. So we need to use
+        // owned types.
+        let path_string = OsString::from_wide(raw);
+
+        Cow::Owned(PathBuf::from(path_string))
     }
 
     fn parse_next(&mut self) -> Result<Option<Resource<'a, u8>>, &'static str> {
@@ -293,6 +318,124 @@ impl<'a> ResourceParserIterator<'a> {
                     }
 
                     current_resource.shared_library_dependency_names = Some(names);
+                }
+
+                ResourceField::RelativeFilesystemModuleSource => {
+                    let path_length = self
+                        .reader
+                        .read_u32::<LittleEndian>()
+                        .or_else(|_| Err("failed reading Python module relative path length"))?
+                        as usize;
+
+                    let path = self.resolve_path(field_type, path_length);
+
+                    current_resource.relative_path_module_source = Some(path);
+                }
+
+                ResourceField::RelativeFilesystemModuleBytecode => {
+                    let path_length = self.reader.read_u32::<LittleEndian>().or_else(|_| {
+                        Err("failed reading Python module bytecode relative path length")
+                    })? as usize;
+
+                    let path = self.resolve_path(field_type, path_length);
+
+                    current_resource.relative_path_module_bytecode = Some(path);
+                }
+
+                ResourceField::RelativeFilesystemModuleBytecodeOpt1 => {
+                    let path_length = self.reader.read_u32::<LittleEndian>().or_else(|_| {
+                        Err("failed reading Python module bytecode opt 1 relative path length")
+                    })? as usize;
+
+                    let path = self.resolve_path(field_type, path_length);
+
+                    current_resource.relative_path_module_bytecode_opt1 = Some(path);
+                }
+
+                ResourceField::RelativeFilesystemModuleBytecodeOpt2 => {
+                    let path_length = self.reader.read_u32::<LittleEndian>().or_else(|_| {
+                        Err("failed reading Python module bytecode opt 2 relative path length")
+                    })? as usize;
+
+                    let path = self.resolve_path(field_type, path_length);
+
+                    current_resource.relative_path_module_bytecode_opt2 = Some(path);
+                }
+
+                ResourceField::RelativeFilesystemExtensionModuleSharedLibrary => {
+                    let path_length = self.reader.read_u32::<LittleEndian>().or_else(|_| {
+                        Err("failed reading Python extension module shared library relative path length")
+                    })? as usize;
+
+                    let path = self.resolve_path(field_type, path_length);
+
+                    current_resource.relative_path_extension_module_shared_library = Some(path);
+                }
+
+                ResourceField::RelativeFilesystemPackageResources => {
+                    let resource_count = self.reader.read_u32::<LittleEndian>().or_else(|_| {
+                        Err("failed reading package resources relative path item count")
+                    })? as usize;
+
+                    let mut resources = Box::new(HashMap::with_capacity(resource_count));
+
+                    for _ in 0..resource_count {
+                        let resource_name_length = self
+                            .reader
+                            .read_u16::<LittleEndian>()
+                            .or_else(|_| Err("failed reading resource name"))?
+                            as usize;
+
+                        let resource_name = unsafe {
+                            std::str::from_utf8_unchecked(
+                                self.resolve_blob_data(field_type, resource_name_length),
+                            )
+                        };
+
+                        let path_length = self
+                            .reader
+                            .read_u32::<LittleEndian>()
+                            .or_else(|_| Err("failed reading resource path length"))?
+                            as usize;
+
+                        let path = self.resolve_path(field_type, path_length);
+
+                        resources.insert(Cow::Borrowed(resource_name), path);
+                    }
+
+                    current_resource.relative_path_package_resources = Some(Arc::new(resources));
+                }
+
+                ResourceField::RelativeFilesystemPackageDistribution => {
+                    let resource_count = self.reader.read_u32::<LittleEndian>().or_else(|_| {
+                        Err("failed reading package distribution relative path item count")
+                    })? as usize;
+
+                    let mut resources = HashMap::with_capacity(resource_count);
+
+                    for _ in 0..resource_count {
+                        let name_length =
+                            self.reader.read_u16::<LittleEndian>().or_else(|_| {
+                                Err("failed reading package distribution metadata name")
+                            })? as usize;
+
+                        let name = unsafe {
+                            std::str::from_utf8_unchecked(
+                                self.resolve_blob_data(field_type, name_length),
+                            )
+                        };
+
+                        let path_length =
+                            self.reader.read_u32::<LittleEndian>().or_else(|_| {
+                                Err("failed reading package distribution path length")
+                            })? as usize;
+
+                        let path = self.resolve_path(field_type, path_length);
+
+                        resources.insert(Cow::Borrowed(name), path);
+                    }
+
+                    current_resource.relative_path_package_distribution = Some(resources);
                 }
             }
         }
@@ -932,17 +1075,252 @@ mod tests {
     }
 
     #[test]
-    fn test_all_fields() {
+    fn test_relative_path_module_source() {
+        let resource = Resource {
+            name: Cow::from("foo"),
+            relative_path_module_source: Some(Cow::from(Path::new("foo.py"))),
+            ..Resource::default()
+        };
+
+        let mut data = Vec::new();
+        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        let resources = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
+
+        assert_eq!(resources.len(), 1);
+
+        let entry = &resources[0];
+
+        assert_eq!(
+            entry,
+            &Resource {
+                name: Cow::Borrowed("foo"),
+                relative_path_module_source: Some(Cow::Borrowed(Path::new("foo.py"))),
+                ..Resource::default()
+            }
+        );
+    }
+
+    #[test]
+    fn test_relative_path_module_bytecode() {
+        let resource = Resource {
+            name: Cow::from("foo"),
+            relative_path_module_bytecode: Some(Cow::from(Path::new("foo.pyc"))),
+            ..Resource::default()
+        };
+
+        let mut data = Vec::new();
+        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        let resources = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
+
+        assert_eq!(resources.len(), 1);
+
+        let entry = &resources[0];
+
+        assert_eq!(
+            entry,
+            &Resource {
+                name: Cow::Borrowed("foo"),
+                relative_path_module_bytecode: Some(Cow::Borrowed(Path::new("foo.pyc"))),
+                ..Resource::default()
+            }
+        );
+    }
+
+    #[test]
+    fn test_relative_path_module_bytecode_opt1() {
+        let resource = Resource {
+            name: Cow::from("foo"),
+            relative_path_module_bytecode_opt1: Some(Cow::from(Path::new("foo.O1.pyc"))),
+            ..Resource::default()
+        };
+
+        let mut data = Vec::new();
+        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        let resources = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
+
+        assert_eq!(resources.len(), 1);
+
+        let entry = &resources[0];
+
+        assert_eq!(
+            entry,
+            &Resource {
+                name: Cow::Borrowed("foo"),
+                relative_path_module_bytecode_opt1: Some(Cow::Borrowed(Path::new("foo.O1.pyc"))),
+                ..Resource::default()
+            }
+        );
+    }
+
+    #[test]
+    fn test_relative_path_module_bytecode_opt2() {
+        let resource = Resource {
+            name: Cow::from("foo"),
+            relative_path_module_bytecode_opt2: Some(Cow::from(Path::new("foo.O2.pyc"))),
+            ..Resource::default()
+        };
+
+        let mut data = Vec::new();
+        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        let resources = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
+
+        assert_eq!(resources.len(), 1);
+
+        let entry = &resources[0];
+
+        assert_eq!(
+            entry,
+            &Resource {
+                name: Cow::Borrowed("foo"),
+                relative_path_module_bytecode_opt2: Some(Cow::Borrowed(Path::new("foo.O2.pyc"))),
+                ..Resource::default()
+            }
+        );
+    }
+
+    #[test]
+    fn test_relative_path_extension_module_shared_library() {
+        let resource = Resource {
+            name: Cow::from("foo"),
+            relative_path_extension_module_shared_library: Some(Cow::from(Path::new("foo.so"))),
+            ..Resource::default()
+        };
+
+        let mut data = Vec::new();
+        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        let resources = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
+
+        assert_eq!(resources.len(), 1);
+
+        let entry = &resources[0];
+
+        assert_eq!(
+            entry,
+            &Resource {
+                name: Cow::Borrowed("foo"),
+                relative_path_extension_module_shared_library: Some(Cow::Borrowed(Path::new(
+                    "foo.so"
+                ))),
+                ..Resource::default()
+            }
+        );
+    }
+
+    #[test]
+    fn test_relative_path_package_resources() {
         let mut resources = Box::new(HashMap::new());
+        resources.insert(Cow::from("foo"), Cow::from(Path::new("foo")));
+        resources.insert(Cow::from("another"), Cow::from(Path::new("another")));
+
+        let resource = Resource {
+            name: Cow::from("foo"),
+            relative_path_package_resources: Some(Arc::new(resources)),
+            ..Resource::default()
+        };
+
+        let mut data = Vec::new();
+        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        let resources = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
+
+        assert_eq!(resources.len(), 1);
+
+        let entry = &resources[0];
+
+        let resources = entry.relative_path_package_resources.as_ref().unwrap();
+        assert_eq!(resources.len(), 2);
+        assert_eq!(resources.get("foo"), Some(&Cow::Borrowed(Path::new("foo"))));
+        assert_eq!(
+            resources.get("another"),
+            Some(&Cow::Borrowed(Path::new("another")))
+        );
+    }
+
+    #[test]
+    fn test_relative_path_package_distribution() {
+        let mut resources = HashMap::new();
+        resources.insert(Cow::from("foo"), Cow::from(Path::new("package/foo")));
         resources.insert(
+            Cow::from("another"),
+            Cow::from(Path::new("package/another")),
+        );
+
+        let resource = Resource {
+            name: Cow::from("foo"),
+            relative_path_package_distribution: Some(resources),
+            ..Resource::default()
+        };
+
+        let mut data = Vec::new();
+        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        let resources = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
+
+        assert_eq!(resources.len(), 1);
+
+        let entry = &resources[0];
+
+        let resources = entry.relative_path_package_distribution.as_ref().unwrap();
+        assert_eq!(resources.len(), 2);
+        assert_eq!(
+            resources.get("foo"),
+            Some(&Cow::Borrowed(Path::new("package/foo")))
+        );
+        assert_eq!(
+            resources.get("another"),
+            Some(&Cow::Borrowed(Path::new("package/another")))
+        );
+    }
+
+    #[allow(clippy::cognitive_complexity)]
+    #[test]
+    fn test_all_fields() {
+        let mut in_memory_resources = Box::new(HashMap::new());
+        in_memory_resources.insert(
             Cow::from("foo".to_string()),
             Cow::from(b"foovalue".to_vec()),
         );
-        resources.insert(Cow::from("resource2"), Cow::from(b"value2".to_vec()));
+        in_memory_resources.insert(Cow::from("resource2"), Cow::from(b"value2".to_vec()));
 
-        let mut distribution = HashMap::new();
-        distribution.insert(Cow::from("dist"), Cow::from(b"distvalue".to_vec()));
-        distribution.insert(Cow::from("dist2"), Cow::from(b"dist2value".to_vec()));
+        let mut in_memory_distribution = HashMap::new();
+        in_memory_distribution.insert(Cow::from("dist"), Cow::from(b"distvalue".to_vec()));
+        in_memory_distribution.insert(Cow::from("dist2"), Cow::from(b"dist2value".to_vec()));
+
+        let mut relative_path_resources = Box::new(HashMap::new());
+        relative_path_resources.insert(
+            Cow::from("resource.txt"),
+            Cow::from(Path::new("resource.txt")),
+        );
+        relative_path_resources.insert(Cow::from("foo.txt"), Cow::from(Path::new("foo.txt")));
+
+        let mut relative_path_distribution = HashMap::new();
+        relative_path_distribution.insert(
+            Cow::from("foo.txt"),
+            Cow::from(Path::new("package/foo.txt")),
+        );
+        relative_path_distribution.insert(
+            Cow::from("resource.txt"),
+            Cow::from(Path::new("package/resource.txt")),
+        );
 
         let resource = Resource {
             flavor: ResourceFlavor::Module,
@@ -954,10 +1332,17 @@ mod tests {
             in_memory_bytecode_opt1: Some(Cow::from(b"bytecodeopt1".to_vec())),
             in_memory_bytecode_opt2: Some(Cow::from(b"bytecodeopt2".to_vec())),
             in_memory_extension_module_shared_library: Some(Cow::from(b"library".to_vec())),
-            in_memory_resources: Some(Arc::new(resources)),
-            in_memory_package_distribution: Some(distribution),
+            in_memory_resources: Some(Arc::new(in_memory_resources)),
+            in_memory_package_distribution: Some(in_memory_distribution),
             in_memory_shared_library: Some(Cow::from(b"library".to_vec())),
             shared_library_dependency_names: Some(vec![Cow::from("libfoo"), Cow::from("depends")]),
+            relative_path_module_source: Some(Cow::from(Path::new("source_path"))),
+            relative_path_module_bytecode: Some(Cow::from(Path::new("bytecode_path"))),
+            relative_path_module_bytecode_opt1: Some(Cow::from(Path::new("bytecode_opt1_path"))),
+            relative_path_module_bytecode_opt2: Some(Cow::from(Path::new("bytecode_opt2_path"))),
+            relative_path_extension_module_shared_library: Some(Cow::from(Path::new("em_path"))),
+            relative_path_package_resources: Some(Arc::new(relative_path_resources)),
+            relative_path_package_distribution: Some(relative_path_distribution),
         };
 
         let mut data = Vec::new();
@@ -1013,6 +1398,50 @@ mod tests {
         assert_eq!(
             entry.shared_library_dependency_names.as_ref().unwrap(),
             &vec!["libfoo", "depends"]
+        );
+
+        assert_eq!(
+            entry.relative_path_module_source,
+            Some(Cow::Borrowed(Path::new("source_path")))
+        );
+
+        assert_eq!(
+            entry.relative_path_module_bytecode,
+            Some(Cow::Borrowed(Path::new("bytecode_path")))
+        );
+        assert_eq!(
+            entry.relative_path_module_bytecode_opt1,
+            Some(Cow::Borrowed(Path::new("bytecode_opt1_path")))
+        );
+        assert_eq!(
+            entry.relative_path_module_bytecode_opt2,
+            Some(Cow::Borrowed(Path::new("bytecode_opt2_path")))
+        );
+        assert_eq!(
+            entry.relative_path_extension_module_shared_library,
+            Some(Cow::Borrowed(Path::new("em_path")))
+        );
+
+        let resources = entry.relative_path_package_resources.as_ref().unwrap();
+        assert_eq!(resources.len(), 2);
+        assert_eq!(
+            resources.get("resource.txt"),
+            Some(&Cow::Borrowed(Path::new("resource.txt")))
+        );
+        assert_eq!(
+            resources.get("foo.txt"),
+            Some(&Cow::Borrowed(Path::new("foo.txt")))
+        );
+
+        let distribution = entry.relative_path_package_distribution.as_ref().unwrap();
+        assert_eq!(distribution.len(), 2);
+        assert_eq!(
+            distribution.get("foo.txt"),
+            Some(&Cow::Borrowed(Path::new("package/foo.txt")))
+        );
+        assert_eq!(
+            distribution.get("resource.txt"),
+            Some(&Cow::Borrowed(Path::new("package/resource.txt")))
         );
     }
 }

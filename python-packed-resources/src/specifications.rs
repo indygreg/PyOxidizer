@@ -196,6 +196,36 @@ is contained in a `u16` that immediately follows this byte. Following this
 each shared library dependency. Each described shared library dependency
 may or may not be described by other entries in this data structure.
 
+`0x0f` - Relative filesystem path to Python module source code. A `u32` holding
+the length in bytes of a filesystem path encoded in the platform-native file
+path encoding follows. The source code for a Python module will be read from
+a file at this path.
+
+`0x10` - Relative filesystem path to Python module bytecode. Similar to the
+previous except the filesystem path holds Python module bytecode.
+
+`0x11` - Relative filesystem path to Python module bytecode at optimization
+level 1. Similar to the previous except for what is being pointed to.
+
+`0x12` - Relative filesystem path to Python module bytecode at optimization
+level 2. Similar to the previous except for what is being pointed to.
+
+`0x13` - Relative filesystem path to Python extension module shared library.
+Similar to the previous except the file holds a Python extension module
+loadable as a shared library.
+
+`0x14` - Relative filesystem path to Python package resources. The number of
+resources is contained in a `u32` that immediately follows. Following this
+`u32` is an array of `(u16, u32)` denoting the resource name and filesystem
+path to each resource in this package.
+
+`0x15` - Relative filesystem path to Python package distribution metadata.
+Defines resources accessed from `importlib.metadata` APIs. If encountered,
+the module/package contains distribution metadata describing the package.
+The number of files being described is contained in a `u32` that immediately
+follows this byte. Following this `u32` is an array of `(u16, u32)` denoting
+the distribution file name and filesystem path to that distribution file.
+
 ## Resource Flavors
 
 The data format allows defining different types/flavors of resources.

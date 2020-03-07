@@ -2,7 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use {std::borrow::Cow, std::collections::HashMap, std::convert::TryFrom, std::sync::Arc};
+use {
+    std::borrow::Cow, std::collections::HashMap, std::convert::TryFrom, std::path::Path,
+    std::sync::Arc,
+};
 
 /// Header value for version 1 of resources payload.
 pub const HEADER_V1: &[u8] = b"pyembed\x01";
@@ -129,6 +132,13 @@ pub enum ResourceField {
     InMemoryPackageDistribution = 0x0c,
     InMemorySharedLibrary = 0x0d,
     SharedLibraryDependencyNames = 0x0e,
+    RelativeFilesystemModuleSource = 0x0f,
+    RelativeFilesystemModuleBytecode = 0x10,
+    RelativeFilesystemModuleBytecodeOpt1 = 0x11,
+    RelativeFilesystemModuleBytecodeOpt2 = 0x12,
+    RelativeFilesystemExtensionModuleSharedLibrary = 0x13,
+    RelativeFilesystemPackageResources = 0x14,
+    RelativeFilesystemPackageDistribution = 0x15,
 }
 
 impl Into<u8> for ResourceField {
@@ -149,6 +159,13 @@ impl Into<u8> for ResourceField {
             ResourceField::InMemoryPackageDistribution => 0x0c,
             ResourceField::InMemorySharedLibrary => 0x0d,
             ResourceField::SharedLibraryDependencyNames => 0x0e,
+            ResourceField::RelativeFilesystemModuleSource => 0x0f,
+            ResourceField::RelativeFilesystemModuleBytecode => 0x10,
+            ResourceField::RelativeFilesystemModuleBytecodeOpt1 => 0x11,
+            ResourceField::RelativeFilesystemModuleBytecodeOpt2 => 0x12,
+            ResourceField::RelativeFilesystemExtensionModuleSharedLibrary => 0x13,
+            ResourceField::RelativeFilesystemPackageResources => 0x14,
+            ResourceField::RelativeFilesystemPackageDistribution => 0x15,
             ResourceField::EndOfEntry => 0xff,
         }
     }
@@ -174,6 +191,13 @@ impl TryFrom<u8> for ResourceField {
             0x0c => Ok(ResourceField::InMemoryPackageDistribution),
             0x0d => Ok(ResourceField::InMemorySharedLibrary),
             0x0e => Ok(ResourceField::SharedLibraryDependencyNames),
+            0x0f => Ok(ResourceField::RelativeFilesystemModuleSource),
+            0x10 => Ok(ResourceField::RelativeFilesystemModuleBytecode),
+            0x11 => Ok(ResourceField::RelativeFilesystemModuleBytecodeOpt1),
+            0x12 => Ok(ResourceField::RelativeFilesystemModuleBytecodeOpt2),
+            0x13 => Ok(ResourceField::RelativeFilesystemExtensionModuleSharedLibrary),
+            0x14 => Ok(ResourceField::RelativeFilesystemPackageResources),
+            0x15 => Ok(ResourceField::RelativeFilesystemPackageDistribution),
             0xff => Ok(ResourceField::EndOfEntry),
             _ => Err("invalid field type"),
         }
@@ -229,6 +253,27 @@ where
 
     /// Sequence of names of shared libraries this resource depends on.
     pub shared_library_dependency_names: Option<Vec<Cow<'a, str>>>,
+
+    /// Relative path to file containing Python module source code.
+    pub relative_path_module_source: Option<Cow<'a, Path>>,
+
+    /// Relative path to file containing Python module bytecode.
+    pub relative_path_module_bytecode: Option<Cow<'a, Path>>,
+
+    /// Relative path to file containing Python module bytecode at optimization level 1.
+    pub relative_path_module_bytecode_opt1: Option<Cow<'a, Path>>,
+
+    /// Relative path to file containing Python module bytecode at optimization level 2.
+    pub relative_path_module_bytecode_opt2: Option<Cow<'a, Path>>,
+
+    /// Relative path to file containing Python extension module loadable as a shared library.
+    pub relative_path_extension_module_shared_library: Option<Cow<'a, Path>>,
+
+    /// Mapping of Python package resource names to relative filesystem paths for those resources.
+    pub relative_path_package_resources: Option<Arc<Box<HashMap<Cow<'a, str>, Cow<'a, Path>>>>>,
+
+    /// Mapping of Python package distribution files to relative filesystem paths for those resources.
+    pub relative_path_package_distribution: Option<HashMap<Cow<'a, str>, Cow<'a, Path>>>,
 }
 
 impl<'a, X> Default for Resource<'a, X>
@@ -250,6 +295,13 @@ where
             in_memory_package_distribution: None,
             in_memory_shared_library: None,
             shared_library_dependency_names: None,
+            relative_path_module_source: None,
+            relative_path_module_bytecode: None,
+            relative_path_module_bytecode_opt1: None,
+            relative_path_module_bytecode_opt2: None,
+            relative_path_extension_module_shared_library: None,
+            relative_path_package_resources: None,
+            relative_path_package_distribution: None,
         }
     }
 }

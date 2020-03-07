@@ -13,7 +13,41 @@ use {
     std::collections::BTreeMap,
     std::convert::TryFrom,
     std::io::Write,
+    std::path::Path,
 };
+
+#[cfg(unix)]
+use std::os::unix::ffi::OsStrExt;
+#[cfg(windows)]
+use std::os::windows::ffi::OsStrExt;
+
+#[cfg(unix)]
+fn path_bytes_length(p: &Path) -> usize {
+    p.as_os_str().as_bytes().len()
+}
+
+#[cfg(unix)]
+fn path_to_bytes(p: &Path) -> Vec<u8> {
+    p.as_os_str().as_bytes().to_vec()
+}
+
+#[cfg(windows)]
+fn path_bytes_length(p: &Path) -> usize {
+    p.as_os_str().encode_wide().collect::<Vec<u16>>().len() * 2
+}
+
+#[cfg(windows)]
+fn path_to_bytes(p: &Path) -> Vec<u8> {
+    let mut source = p.as_os_str().encode_wide().collect::<Vec<u16>>();
+
+    let ptr = source.as_mut_ptr() as *mut u8;
+    let len = source.len() * std::mem::size_of::<u16>();
+    let capacity = source.capacity() * std::mem::size_of::<u16>();
+    unsafe {
+        std::mem::forget(source);
+        Vec::from_raw_parts(ptr, len, capacity)
+    }
+}
 
 #[derive(Debug)]
 struct BlobSection {
@@ -91,6 +125,13 @@ where
             || self.in_memory_resources.is_some()
             || self.in_memory_package_distribution.is_some()
             || self.in_memory_shared_library.is_some()
+            || self.relative_path_module_source.is_some()
+            || self.relative_path_module_bytecode.is_some()
+            || self.relative_path_module_bytecode_opt1.is_some()
+            || self.relative_path_module_bytecode_opt2.is_some()
+            || self.relative_path_extension_module_shared_library.is_some()
+            || self.relative_path_package_resources.is_some()
+            || self.relative_path_package_distribution.is_some()
     }
 
     /// Compute length of index entry for version 1 payload format.
@@ -151,6 +192,39 @@ where
 
         if let Some(names) = &self.shared_library_dependency_names {
             index += 3 + 2 * names.len();
+        }
+
+        if self.relative_path_module_source.is_some() {
+            index += 5;
+        }
+
+        if self.relative_path_module_bytecode.is_some() {
+            index += 5;
+        }
+
+        if self.relative_path_module_bytecode_opt1.is_some() {
+            index += 5;
+        }
+
+        if self.relative_path_module_bytecode_opt2.is_some() {
+            index += 5;
+        }
+
+        if self.relative_path_extension_module_shared_library.is_some() {
+            index += 5;
+        }
+
+        if let Some(resources) = &self.relative_path_package_resources {
+            index += 5;
+
+            // u16 + u32 for resource name + path length.
+            index += 6 * resources.len();
+        }
+
+        if let Some(metadata) = &self.relative_path_package_distribution {
+            index += 5;
+
+            index += 6 * metadata.len();
         }
 
         // End of index entry.
@@ -240,6 +314,61 @@ where
                     0
                 }
             }
+            ResourceField::RelativeFilesystemModuleSource => {
+                if let Some(path) = &self.relative_path_module_source {
+                    path_bytes_length(path)
+                } else {
+                    0
+                }
+            }
+            ResourceField::RelativeFilesystemModuleBytecode => {
+                if let Some(path) = &self.relative_path_module_bytecode {
+                    path_bytes_length(path)
+                } else {
+                    0
+                }
+            }
+            ResourceField::RelativeFilesystemModuleBytecodeOpt1 => {
+                if let Some(path) = &self.relative_path_module_bytecode_opt1 {
+                    path_bytes_length(path)
+                } else {
+                    0
+                }
+            }
+            ResourceField::RelativeFilesystemModuleBytecodeOpt2 => {
+                if let Some(path) = &self.relative_path_module_bytecode_opt2 {
+                    path_bytes_length(path)
+                } else {
+                    0
+                }
+            }
+            ResourceField::RelativeFilesystemExtensionModuleSharedLibrary => {
+                if let Some(path) = &self.relative_path_extension_module_shared_library {
+                    path_bytes_length(path)
+                } else {
+                    0
+                }
+            }
+            ResourceField::RelativeFilesystemPackageResources => {
+                if let Some(resources) = &self.relative_path_package_resources {
+                    resources
+                        .iter()
+                        .map(|(key, value)| key.as_bytes().len() + path_bytes_length(value))
+                        .sum()
+                } else {
+                    0
+                }
+            }
+            ResourceField::RelativeFilesystemPackageDistribution => {
+                if let Some(metadata) = &self.relative_path_package_distribution {
+                    metadata
+                        .iter()
+                        .map(|(key, value)| key.as_bytes().len() + path_bytes_length(value))
+                        .sum()
+                } else {
+                    0
+                }
+            }
         }
     }
 
@@ -316,6 +445,55 @@ where
             ResourceField::SharedLibraryDependencyNames => {
                 if let Some(names) = &self.shared_library_dependency_names {
                     names.len()
+                } else {
+                    0
+                }
+            }
+            ResourceField::RelativeFilesystemModuleSource => {
+                if self.relative_path_module_source.is_some() {
+                    1
+                } else {
+                    0
+                }
+            }
+            ResourceField::RelativeFilesystemModuleBytecode => {
+                if self.relative_path_module_bytecode.is_some() {
+                    1
+                } else {
+                    0
+                }
+            }
+            ResourceField::RelativeFilesystemModuleBytecodeOpt1 => {
+                if self.relative_path_module_bytecode_opt1.is_some() {
+                    1
+                } else {
+                    0
+                }
+            }
+            ResourceField::RelativeFilesystemModuleBytecodeOpt2 => {
+                if self.relative_path_module_bytecode_opt2.is_some() {
+                    1
+                } else {
+                    0
+                }
+            }
+            ResourceField::RelativeFilesystemExtensionModuleSharedLibrary => {
+                if self.relative_path_extension_module_shared_library.is_some() {
+                    1
+                } else {
+                    0
+                }
+            }
+            ResourceField::RelativeFilesystemPackageResources => {
+                if let Some(resources) = &self.relative_path_package_resources {
+                    resources.len() * 2
+                } else {
+                    0
+                }
+            }
+            ResourceField::RelativeFilesystemPackageDistribution => {
+                if let Some(resources) = &self.relative_path_package_distribution {
+                    resources.len() * 2
                 } else {
                     0
                 }
@@ -465,6 +643,91 @@ where
             }
         }
 
+        if let Some(path) = &self.relative_path_module_source {
+            let l = u32::try_from(path_bytes_length(path))
+                .context("converting module source relative path length to u32")?;
+            dest.write_u8(ResourceField::RelativeFilesystemModuleSource.into())
+                .context("writing relative path module source field")?;
+            dest.write_u32::<LittleEndian>(l)
+                .context("writing relative path module source length")?;
+        }
+
+        if let Some(path) = &self.relative_path_module_bytecode {
+            let l = u32::try_from(path_bytes_length(path))
+                .context("converting module bytecode relative path to u32")?;
+            dest.write_u8(ResourceField::RelativeFilesystemModuleBytecode.into())
+                .context("writing relative path module bytecode field")?;
+            dest.write_u32::<LittleEndian>(l)
+                .context("writing relative path module bytecode length")?;
+        }
+
+        if let Some(path) = &self.relative_path_module_bytecode_opt1 {
+            let l = u32::try_from(path_bytes_length(path))
+                .context("converting module bytecode opt1 relative path to u32")?;
+            dest.write_u8(ResourceField::RelativeFilesystemModuleBytecodeOpt1.into())
+                .context("writing relative path module bytecode opt1 field")?;
+            dest.write_u32::<LittleEndian>(l)
+                .context("writing relative path module bytecode opt1 length")?;
+        }
+
+        if let Some(path) = &self.relative_path_module_bytecode_opt2 {
+            let l = u32::try_from(path_bytes_length(path))
+                .context("converting module bytecode opt2 relative path to u32")?;
+            dest.write_u8(ResourceField::RelativeFilesystemModuleBytecodeOpt2.into())
+                .context("writing relative path module bytecode opt2 field")?;
+            dest.write_u32::<LittleEndian>(l)
+                .context("writing relative path module bytecode opt2 length")?;
+        }
+
+        if let Some(path) = &self.relative_path_extension_module_shared_library {
+            let l = u32::try_from(path_bytes_length(path))
+                .context("converting extension module shared library relative path to u32")?;
+            dest.write_u8(ResourceField::RelativeFilesystemExtensionModuleSharedLibrary.into())
+                .context("writing relative path extension module shared library field")?;
+            dest.write_u32::<LittleEndian>(l)
+                .context("writing relative path extension module shared library length")?;
+        }
+
+        if let Some(resources) = &self.relative_path_package_resources {
+            let l = u32::try_from(resources.len())
+                .context("converting relative path resources data length to u32")?;
+            dest.write_u8(ResourceField::RelativeFilesystemPackageResources.into())
+                .context("writing relative path resources resources field")?;
+            dest.write_u32::<LittleEndian>(l)
+                .context("writing relative path resources resources data length")?;
+
+            for (name, path) in resources.iter() {
+                let name_length = u16::try_from(name.as_bytes().len())
+                    .context("converting resource name length to u16")?;
+                let path_length = u32::try_from(path_bytes_length(path))
+                    .context("converting resource path length to u32")?;
+                dest.write_u16::<LittleEndian>(name_length)
+                    .context("writing resource name length")?;
+                dest.write_u32::<LittleEndian>(path_length)
+                    .context("writing resource path length")?;
+            }
+        }
+
+        if let Some(metadata) = &self.relative_path_package_distribution {
+            let l = u32::try_from(metadata.len())
+                .context("converting relative path distribution length to u32")?;
+            dest.write_u8(ResourceField::RelativeFilesystemPackageDistribution.into())
+                .context("writing relative path resources resources field")?;
+            dest.write_u32::<LittleEndian>(l)
+                .context("writing relative path distribution data length")?;
+
+            for (name, path) in metadata.iter() {
+                let name_length = u16::try_from(name.as_bytes().len())
+                    .context("converting resource name length to u16")?;
+                let path_length = u32::try_from(path_bytes_length(path))
+                    .context("converting resource path length to u32")?;
+                dest.write_u16::<LittleEndian>(name_length)
+                    .context("writing resource name length")?;
+                dest.write_u32::<LittleEndian>(path_length)
+                    .context("writing resource path length")?;
+            }
+        }
+
         dest.write_u8(ResourceField::EndOfEntry.into())
             .or_else(|_| Err(anyhow!("error writing end of index entry")))?;
 
@@ -560,6 +823,41 @@ pub fn write_embedded_resources_v1<'a, W: Write>(
             &mut blob_sections,
             module,
             ResourceField::SharedLibraryDependencyNames,
+        );
+        process_field(
+            &mut blob_sections,
+            module,
+            ResourceField::RelativeFilesystemModuleSource,
+        );
+        process_field(
+            &mut blob_sections,
+            module,
+            ResourceField::RelativeFilesystemModuleBytecode,
+        );
+        process_field(
+            &mut blob_sections,
+            module,
+            ResourceField::RelativeFilesystemModuleBytecodeOpt1,
+        );
+        process_field(
+            &mut blob_sections,
+            module,
+            ResourceField::RelativeFilesystemModuleBytecodeOpt2,
+        );
+        process_field(
+            &mut blob_sections,
+            module,
+            ResourceField::RelativeFilesystemExtensionModuleSharedLibrary,
+        );
+        process_field(
+            &mut blob_sections,
+            module,
+            ResourceField::RelativeFilesystemPackageResources,
+        );
+        process_field(
+            &mut blob_sections,
+            module,
+            ResourceField::RelativeFilesystemPackageDistribution,
         );
     }
 
@@ -661,6 +959,63 @@ pub fn write_embedded_resources_v1<'a, W: Write>(
         if let Some(names) = &module.shared_library_dependency_names {
             for name in names {
                 dest.write_all(name.as_bytes())?;
+                add_interior_padding(dest)?;
+            }
+        }
+    }
+
+    for module in modules {
+        if let Some(path) = &module.relative_path_module_source {
+            dest.write_all(&path_to_bytes(path))?;
+            add_interior_padding(dest)?;
+        }
+    }
+
+    for module in modules {
+        if let Some(path) = &module.relative_path_module_bytecode {
+            dest.write_all(&path_to_bytes(path))?;
+            add_interior_padding(dest)?;
+        }
+    }
+
+    for module in modules {
+        if let Some(path) = &module.relative_path_module_bytecode_opt1 {
+            dest.write_all(&path_to_bytes(path))?;
+            add_interior_padding(dest)?;
+        }
+    }
+
+    for module in modules {
+        if let Some(path) = &module.relative_path_module_bytecode_opt2 {
+            dest.write_all(&path_to_bytes(path))?;
+            add_interior_padding(dest)?;
+        }
+    }
+
+    for module in modules {
+        if let Some(path) = &module.relative_path_extension_module_shared_library {
+            dest.write_all(&path_to_bytes(path))?;
+            add_interior_padding(dest)?;
+        }
+    }
+
+    for module in modules {
+        if let Some(resources) = &module.relative_path_package_resources {
+            for (key, path) in resources.iter() {
+                dest.write_all(key.as_bytes())?;
+                add_interior_padding(dest)?;
+                dest.write_all(&path_to_bytes(path))?;
+                add_interior_padding(dest)?;
+            }
+        }
+    }
+
+    for module in modules {
+        if let Some(resources) = &module.relative_path_package_distribution {
+            for (key, path) in resources {
+                dest.write_all(key.as_bytes())?;
+                add_interior_padding(dest)?;
+                dest.write_all(&path_to_bytes(path))?;
                 add_interior_padding(dest)?;
             }
         }
