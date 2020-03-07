@@ -37,7 +37,7 @@ memory using zero-copy. This makes ``PyOxidizer`` executables significantly
 faster to start.
 
 Currently a big difference is that ``PyOxidizer`` needs to build all the binary
-dependecies from stratch to facilitate linking into single file,
+dependencies from scratch to facilitate linking into single file,
 ``PyInstaller`` can work with normal Python packages with a complex system of
 hooks to find the runtime dependencies, this allow a lot of not easy to build
 packages like PyQt to work out of the box.
