@@ -30,7 +30,7 @@ a tiny executable and a custom directory structure to host dynamic libraries
 and Python code (zipped compiled bytecode).
 ``PyInstaller`` can produce a self-contained executable file containing your
 application, however, at run-time, PyInstaller will extract binary
-files and a custom _`ZlibArchive <https://pyinstaller.readthedocs.io/en/latest/advanced-topics.html#zlibarchive>`_
+files and a custom `ZlibArchive <https://pyinstaller.readthedocs.io/en/latest/advanced-topics.html#zlibarchive>`_
 to a temporary directory then import modules from the filesystem.
 ``PyOxidizer`` typically skips this step and loads modules directly from
 memory using zero-copy. This makes ``PyOxidizer`` executables significantly
