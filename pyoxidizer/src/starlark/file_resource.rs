@@ -31,7 +31,7 @@ use {
         INCORRECT_PARAMETER_TYPE_ERROR_CODE,
     },
     starlark::{
-        any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
+        any, immutable, starlark_fun, starlark_module, starlark_signature,
         starlark_signature_extraction, starlark_signatures,
     },
     std::cmp::Ordering,
@@ -49,22 +49,13 @@ pub struct FileContent {
 impl TypedValue for FileContent {
     immutable!();
     any!();
-    not_supported!(binop, container, function, get_hash, to_int);
-
-    fn to_str(&self) -> String {
-        "FileContent<>".to_string()
-    }
-
-    fn to_repr(&self) -> String {
-        self.to_str()
-    }
 
     fn get_type(&self) -> &'static str {
         "FileContent"
     }
 
-    fn to_bool(&self) -> bool {
-        true
+    fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
+        false
     }
 
     fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
@@ -152,22 +143,13 @@ impl BuildTarget for FileManifest {
 impl TypedValue for FileManifest {
     immutable!();
     any!();
-    not_supported!(binop, container, function, get_hash, to_int);
-
-    fn to_str(&self) -> String {
-        "FileManifest<>".to_string()
-    }
-
-    fn to_repr(&self) -> String {
-        self.to_str()
-    }
 
     fn get_type(&self) -> &'static str {
         "FileManifest"
     }
 
-    fn to_bool(&self) -> bool {
-        true
+    fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
+        false
     }
 
     fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {

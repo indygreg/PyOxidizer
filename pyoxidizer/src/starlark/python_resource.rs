@@ -13,7 +13,7 @@ use {
         default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
         INCORRECT_PARAMETER_TYPE_ERROR_CODE,
     },
-    starlark::{any, immutable, not_supported},
+    starlark::{any, immutable},
     std::cmp::Ordering,
     std::convert::{TryFrom, TryInto},
 };
@@ -84,7 +84,6 @@ impl PythonSourceModule {
 impl TypedValue for PythonSourceModule {
     immutable!();
     any!();
-    not_supported!(binop, dir_attr, function, get_hash, indexable, iterable, sequence, to_int);
 
     fn to_str(&self) -> String {
         format!("PythonSourceModule<name={}>", self.module.name)
@@ -98,8 +97,8 @@ impl TypedValue for PythonSourceModule {
         "PythonSourceModule"
     }
 
-    fn to_bool(&self) -> bool {
-        true
+    fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
+        false
     }
 
     fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
@@ -178,9 +177,6 @@ pub struct PythonBytecodeModule {
 impl TypedValue for PythonBytecodeModule {
     immutable!();
     any!();
-    not_supported!(
-        binop, dir_attr, function, get_hash, indexable, iterable, sequence, set_attr, to_int
-    );
 
     fn to_str(&self) -> String {
         format!(
@@ -197,8 +193,8 @@ impl TypedValue for PythonBytecodeModule {
         "PythonBytecodeModule"
     }
 
-    fn to_bool(&self) -> bool {
-        true
+    fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
+        false
     }
 
     fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
@@ -248,9 +244,6 @@ pub struct PythonPackageResource {
 impl TypedValue for PythonPackageResource {
     immutable!();
     any!();
-    not_supported!(
-        binop, dir_attr, function, get_hash, indexable, iterable, sequence, set_attr, to_int
-    );
 
     fn to_str(&self) -> String {
         format!(
@@ -267,8 +260,8 @@ impl TypedValue for PythonPackageResource {
         "PythonPackageResource"
     }
 
-    fn to_bool(&self) -> bool {
-        true
+    fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
+        false
     }
 
     fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
@@ -310,9 +303,6 @@ pub struct PythonPackageDistributionResource {
 impl TypedValue for PythonPackageDistributionResource {
     immutable!();
     any!();
-    not_supported!(
-        binop, dir_attr, function, get_hash, indexable, iterable, sequence, set_attr, to_int
-    );
 
     fn to_str(&self) -> String {
         format!(
@@ -327,6 +317,10 @@ impl TypedValue for PythonPackageDistributionResource {
 
     fn get_type(&self) -> &'static str {
         "PythonPackageDistributionResource"
+    }
+
+    fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
+        false
     }
 
     fn to_bool(&self) -> bool {
@@ -372,9 +366,6 @@ pub struct PythonExtensionModule {
 impl TypedValue for PythonExtensionModule {
     immutable!();
     any!();
-    not_supported!(
-        binop, dir_attr, function, get_hash, indexable, iterable, sequence, set_attr, to_int
-    );
 
     fn to_str(&self) -> String {
         format!("PythonExtensionModule<name={}>", self.em.name)
@@ -388,8 +379,8 @@ impl TypedValue for PythonExtensionModule {
         "PythonExtensionModule"
     }
 
-    fn to_bool(&self) -> bool {
-        true
+    fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
+        false
     }
 
     fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {

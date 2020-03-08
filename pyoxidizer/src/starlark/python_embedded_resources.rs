@@ -7,8 +7,8 @@ use {
     crate::py_packaging::binary::PythonBinaryBuilder,
     anyhow::Result,
     slog::warn,
-    starlark::values::{default_compare, TypedValue, Value, ValueError, ValueResult},
-    starlark::{any, immutable, not_supported},
+    starlark::values::{default_compare, TypedValue, ValueError},
+    starlark::{any, immutable},
     std::cmp::Ordering,
 };
 
@@ -19,26 +19,13 @@ pub struct PythonEmbeddedResources {
 impl TypedValue for PythonEmbeddedResources {
     immutable!();
     any!();
-    not_supported!(binop);
-    not_supported!(container);
-    not_supported!(function);
-    not_supported!(get_hash);
-    not_supported!(to_int);
-
-    fn to_str(&self) -> String {
-        "PythonEmbeddedResources".to_string()
-    }
-
-    fn to_repr(&self) -> String {
-        self.to_str()
-    }
 
     fn get_type(&self) -> &'static str {
         "PythonEmbeddedResources"
     }
 
-    fn to_bool(&self) -> bool {
-        true
+    fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
+        false
     }
 
     fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {

@@ -15,7 +15,7 @@ use {
     starlark::environment::{Environment, EnvironmentError},
     starlark::values::{default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult},
     starlark::{
-        any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
+        any, immutable, starlark_fun, starlark_module, starlark_signature,
         starlark_signature_extraction, starlark_signatures,
     },
     std::cmp::Ordering,
@@ -303,26 +303,13 @@ impl EnvironmentContext {
 impl TypedValue for EnvironmentContext {
     immutable!();
     any!();
-    not_supported!(binop);
-    not_supported!(container);
-    not_supported!(function);
-    not_supported!(get_hash);
-    not_supported!(to_int);
-
-    fn to_str(&self) -> String {
-        "EnvironmentContext".to_string()
-    }
-
-    fn to_repr(&self) -> String {
-        self.to_str()
-    }
 
     fn get_type(&self) -> &'static str {
         "EnvironmentContext"
     }
 
-    fn to_bool(&self) -> bool {
-        true
+    fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
+        false
     }
 
     fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
