@@ -8,6 +8,7 @@ use {
     codemap::CodeMap,
     codemap_diagnostic::{Diagnostic, Level},
     starlark::environment::Environment,
+    starlark::syntax::dialect::Dialect,
     std::path::Path,
     std::sync::{Arc, Mutex},
 };
@@ -56,19 +57,24 @@ pub fn evaluate_file(
     })?;
 
     let map = Arc::new(Mutex::new(CodeMap::new()));
-    starlark::eval::simple::eval_file(&map, &config_path.display().to_string(), false, &mut env)
-        .map_err(|e| {
-            let mut msg = Vec::new();
-            let raw_map = map.lock().unwrap();
-            {
-                let mut emitter = codemap_diagnostic::Emitter::vec(&mut msg, Some(&raw_map));
-                emitter.emit(&[e.clone()]);
-            }
+    starlark::eval::simple::eval_file(
+        &map,
+        &config_path.display().to_string(),
+        Dialect::Bzl,
+        &mut env,
+    )
+    .map_err(|e| {
+        let mut msg = Vec::new();
+        let raw_map = map.lock().unwrap();
+        {
+            let mut emitter = codemap_diagnostic::Emitter::vec(&mut msg, Some(&raw_map));
+            emitter.emit(&[e.clone()]);
+        }
 
-            slog::error!(logger, "{}", String::from_utf8_lossy(&msg));
+        slog::error!(logger, "{}", String::from_utf8_lossy(&msg));
 
-            e
-        })?;
+        e
+    })?;
 
     // The EnvironmentContext is cloned as part of evaluation, which is a bit wonky.
     // TODO avoid this clone.

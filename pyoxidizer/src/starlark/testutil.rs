@@ -10,6 +10,7 @@ use {
     slog::Drain,
     starlark::environment::Environment,
     starlark::eval,
+    starlark::syntax::dialect::Dialect,
     starlark::values::Value,
 };
 
@@ -45,7 +46,7 @@ pub fn starlark_env() -> Environment {
 
 pub fn starlark_eval_in_env(env: &mut Environment, snippet: &str) -> Result<Value, Diagnostic> {
     let map = std::sync::Arc::new(std::sync::Mutex::new(CodeMap::new()));
-    eval::simple::eval(&map, "<test>", snippet, false, env)
+    eval::simple::eval(&map, "<test>", snippet, Dialect::Bzl, env)
 }
 
 pub fn starlark_eval(snippet: &str) -> Result<Value, Diagnostic> {
