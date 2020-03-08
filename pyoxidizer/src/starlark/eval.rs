@@ -85,10 +85,16 @@ pub fn evaluate_file(
         spans: vec![],
     })?;
 
-    Ok(EvalResult {
-        env,
-        context: env_context.downcast_apply(|x: &EnvironmentContext| x.clone()),
-    })
+    let context = env_context
+        .downcast_apply(|x: &EnvironmentContext| x.clone())
+        .ok_or(Diagnostic {
+            level: Level::Error,
+            message: "CONTEXT is not EnvironmentContext".to_string(),
+            code: Some("environment".to_string()),
+            spans: vec![],
+        })?;
+
+    Ok(EvalResult { env, context })
 }
 
 /// Evaluate a Starlark configuration file and return its result.

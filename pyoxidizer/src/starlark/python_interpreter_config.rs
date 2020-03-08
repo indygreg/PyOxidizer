@@ -358,19 +358,22 @@ mod tests {
             write_modules_directory_env: None,
         };
 
-        c.downcast_apply(|x: &EmbeddedPythonConfig| assert_eq!(x, &wanted));
+        c.downcast_apply(|x: &EmbeddedPythonConfig| assert_eq!(x, &wanted))
+            .unwrap();
     }
 
     #[test]
     fn test_bytes_warning() {
         let c = starlark_ok("PythonInterpreterConfig(bytes_warning=2)");
-        c.downcast_apply(|x: &EmbeddedPythonConfig| assert_eq!(x.bytes_warning, 2));
+        c.downcast_apply(|x: &EmbeddedPythonConfig| assert_eq!(x.bytes_warning, 2))
+            .unwrap();
     }
 
     #[test]
     fn test_optimize_level() {
         let c = starlark_ok("PythonInterpreterConfig(optimize_level=1)");
-        c.downcast_apply(|x: &EmbeddedPythonConfig| assert_eq!(x.optimize_level, 1));
+        c.downcast_apply(|x: &EmbeddedPythonConfig| assert_eq!(x.optimize_level, 1))
+            .unwrap();
     }
 
     #[test]
@@ -380,7 +383,8 @@ mod tests {
             assert_eq!(x.sys_paths, ["foo", "bar"]);
             // Setting sys_paths enables filesystem importer.
             assert!(x.filesystem_importer);
-        });
+        })
+        .unwrap();
     }
 
     #[test]
@@ -390,6 +394,7 @@ mod tests {
             assert_eq!(x.stdio_encoding_name, Some("foo".to_string()));
             assert_eq!(x.stdio_encoding_errors, Some("strict".to_string()));
         })
+        .unwrap();
     }
 
     #[test]
@@ -397,15 +402,18 @@ mod tests {
         let c = starlark_ok("PythonInterpreterConfig(raw_allocator='system')");
         c.downcast_apply(|x: &EmbeddedPythonConfig| {
             assert_eq!(x.raw_allocator, RawAllocator::System);
-        });
+        })
+        .unwrap();
         let c = starlark_ok("PythonInterpreterConfig(raw_allocator='jemalloc')");
         c.downcast_apply(|x: &EmbeddedPythonConfig| {
             assert_eq!(x.raw_allocator, RawAllocator::Jemalloc);
-        });
+        })
+        .unwrap();
         let c = starlark_ok("PythonInterpreterConfig(raw_allocator='rust')");
         c.downcast_apply(|x: &EmbeddedPythonConfig| {
             assert_eq!(x.raw_allocator, RawAllocator::Rust);
-        });
+        })
+        .unwrap();
     }
 
     #[test]
@@ -418,7 +426,8 @@ mod tests {
                     code: "1".to_string()
                 }
             );
-        });
+        })
+        .unwrap();
     }
 
     #[test]
@@ -431,7 +440,8 @@ mod tests {
                     path: "hello.py".to_string(),
                 }
             );
-        });
+        })
+        .unwrap();
     }
 
     #[test]
@@ -444,7 +454,8 @@ mod tests {
                     module: "main".to_string()
                 }
             );
-        });
+        })
+        .unwrap();
     }
 
     #[test]
@@ -452,7 +463,8 @@ mod tests {
         let c = starlark_ok("PythonInterpreterConfig(run_noop=True)");
         c.downcast_apply(|x: &EmbeddedPythonConfig| {
             assert_eq!(x.run_mode, RunMode::Noop);
-        });
+        })
+        .unwrap();
     }
 
     #[test]
@@ -460,7 +472,8 @@ mod tests {
         let c = starlark_ok("PythonInterpreterConfig(run_repl=True)");
         c.downcast_apply(|x: &EmbeddedPythonConfig| {
             assert_eq!(x.run_mode, RunMode::Repl);
-        });
+        })
+        .unwrap();
     }
 
     #[test]
@@ -468,7 +481,8 @@ mod tests {
         let c = starlark_ok("PythonInterpreterConfig(terminfo_resolution=None)");
         c.downcast_apply(|x: &EmbeddedPythonConfig| {
             assert_eq!(x.terminfo_resolution, TerminfoResolution::None);
-        });
+        })
+        .unwrap();
 
         let c = starlark_ok(
             "PythonInterpreterConfig(terminfo_resolution='static', terminfo_dirs='foo')",
@@ -478,6 +492,7 @@ mod tests {
                 x.terminfo_resolution,
                 TerminfoResolution::Static("foo".to_string())
             );
-        });
+        })
+        .unwrap();
     }
 }

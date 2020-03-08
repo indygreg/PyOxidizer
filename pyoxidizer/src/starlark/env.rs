@@ -396,33 +396,38 @@ fn starlark_resolve_target(
     let mut context = env.get("CONTEXT").expect("CONTEXT not set");
 
     // If we have a resolved value for this target, return it.
-    if let Some(v) = context.downcast_apply(|x: &EnvironmentContext| {
-        if let Some(t) = x.targets.get(&target) {
-            if let Some(v) = &t.resolved_value {
-                Some(v.clone())
+    if let Some(v) = context
+        .downcast_apply(|x: &EnvironmentContext| {
+            if let Some(t) = x.targets.get(&target) {
+                if let Some(v) = &t.resolved_value {
+                    Some(v.clone())
+                } else {
+                    None
+                }
             } else {
                 None
             }
-        } else {
-            None
-        }
-    }) {
+        })
+        .ok_or(ValueError::IncorrectParameterType)?
+    {
         return Ok(v);
     }
 
-    let target_entry = context.downcast_apply(|x: &EnvironmentContext| {
-        warn!(&x.logger, "resolving target {}", target);
+    let target_entry = context
+        .downcast_apply(|x: &EnvironmentContext| {
+            warn!(&x.logger, "resolving target {}", target);
 
-        match &x.targets.get(&target) {
-            Some(v) => Ok((*v).clone()),
-            None => Err(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: format!("target {} does not exist", target),
-                label: "resolve_target()".to_string(),
+            match &x.targets.get(&target) {
+                Some(v) => Ok((*v).clone()),
+                None => Err(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: format!("target {} does not exist", target),
+                    label: "resolve_target()".to_string(),
+                }
+                .into()),
             }
-            .into()),
-        }
-    })?;
+        })
+        .ok_or(ValueError::IncorrectParameterType)??;
 
     // Resolve target dependencies.
     let mut args = Vec::new();
@@ -440,11 +445,13 @@ fn starlark_resolve_target(
     // TODO consider replacing the target's callable with a new function that returns the
     // resolved value. This will ensure a target function is only ever called once.
 
-    context.downcast_apply_mut(|x: &mut EnvironmentContext| {
-        if let Some(target_entry) = x.targets.get_mut(&target) {
-            target_entry.resolved_value = Some(res.clone());
-        }
-    });
+    context
+        .downcast_apply_mut(|x: &mut EnvironmentContext| {
+            if let Some(target_entry) = x.targets.get_mut(&target) {
+                target_entry.resolved_value = Some(res.clone());
+            }
+        })
+        .ok_or(ValueError::IncorrectParameterType)?;
 
     Ok(res)
 }
@@ -454,15 +461,16 @@ fn starlark_resolve_target(
 fn starlark_resolve_targets(env: &Environment, call_stack: &[(String, String)]) -> ValueResult {
     let context = env.get("CONTEXT").expect("CONTEXT not set");
 
-    let targets =
-        context.downcast_apply(|context: &EnvironmentContext| context.targets_to_resolve());
+    let targets = context
+        .downcast_apply(|context: &EnvironmentContext| context.targets_to_resolve())
+        .ok_or(ValueError::IncorrectParameterType)?;
 
     println!("resolving {} targets", targets.len());
     for target in targets {
         let resolve = env.get("resolve_target").unwrap();
 
         resolve.call(
-            call_stack,
+            &call_stack.to_vec(),
             env.clone(),
             vec![Value::new(target)],
             HashMap::new(),
@@ -481,6 +489,7 @@ fn starlark_set_build_path(env: &Environment, path: &Value) -> ValueResult {
 
     context
         .downcast_apply_mut(|x: &mut EnvironmentContext| x.set_build_path(&PathBuf::from(&path)))
+        .ok_or(ValueError::IncorrectParameterType)?
         .map_err(|e| {
             RuntimeError {
                 code: "PYOXIDIZER_BUILD",

@@ -153,8 +153,14 @@ impl PythonExecutable {
         };
 
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let (logger, verbose) =
-            context.downcast_apply(|x: &EnvironmentContext| (x.logger.clone(), x.verbose));
+
+        let logger = context
+            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        let verbose = context
+            .downcast_apply(|x: &EnvironmentContext| x.verbose)
+            .ok_or(ValueError::IncorrectParameterType)?;
 
         let resources = self
             .exe
@@ -192,7 +198,9 @@ impl PythonExecutable {
             .collect::<Vec<String>>();
 
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let logger = context
+            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
 
         let resources = self
             .exe
@@ -219,7 +227,9 @@ impl PythonExecutable {
         let path = required_str_arg("path", &path)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let logger = context
+            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
 
         let resources = self
             .exe
@@ -278,8 +288,13 @@ impl PythonExecutable {
 
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
         let cwd = env.get("CWD").expect("CWD not defined").to_string();
-        let (logger, verbose) =
-            context.downcast_apply(|x: &EnvironmentContext| (x.logger.clone(), x.verbose));
+        let logger = context
+            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        let verbose = context
+            .downcast_apply(|x: &EnvironmentContext| x.verbose)
+            .ok_or(ValueError::IncorrectParameterType)?;
 
         let package_path = if package_path.is_absolute() {
             package_path
@@ -328,9 +343,13 @@ impl PythonExecutable {
         required_type_arg("module", "PythonSourceModule", &module)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let logger = context
+            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
 
-        let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
+        let m = module
+            .downcast_apply(|m: &PythonSourceModule| m.module.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
         info!(&logger, "adding in-memory source module {}", m.name);
         self.exe
             .add_python_module_source(&m, Some(ConcreteResourceLocation::InMemory))
@@ -357,9 +376,13 @@ impl PythonExecutable {
         required_type_arg("module", "PythonSourceModule", &module)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let logger = context
+            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
 
-        let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
+        let m = module
+            .downcast_apply(|m: &PythonSourceModule| m.module.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
         info!(
             &logger,
             "adding executable relative source module {}", m.name
@@ -383,9 +406,13 @@ impl PythonExecutable {
         required_type_arg("module", "PythonSourceModule", &module)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let logger = context
+            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
 
-        let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
+        let m = module
+            .downcast_apply(|m: &PythonSourceModule| m.module.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
         info!(&logger, "adding source module {}", m.name);
         self.exe.add_python_module_source(&m, None).map_err(|e| {
             RuntimeError {
@@ -410,7 +437,9 @@ impl PythonExecutable {
         required_type_arg("optimize_level", "int", &optimize_level)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let logger = context
+            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
 
         let optimize_level = optimize_level.to_int().unwrap();
 
@@ -428,7 +457,9 @@ impl PythonExecutable {
             }
         };
 
-        let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
+        let m = module
+            .downcast_apply(|m: &PythonSourceModule| m.module.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
         info!(&logger, "adding in-memory bytecode module {}", m.name);
         self.exe
             .add_python_module_bytecode_from_source(
@@ -468,7 +499,9 @@ impl PythonExecutable {
         required_type_arg("optimize_level", "int", &optimize_level)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let logger = context
+            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
 
         let optimize_level = optimize_level.to_int().unwrap();
 
@@ -486,7 +519,9 @@ impl PythonExecutable {
             }
         };
 
-        let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
+        let m = module
+            .downcast_apply(|m: &PythonSourceModule| m.module.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
         info!(
             &logger,
             "adding executable relative bytecode module {}", m.name
@@ -527,7 +562,9 @@ impl PythonExecutable {
         required_type_arg("optimize_level", "int", &optimize_level)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let logger = context
+            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
 
         let optimize_level = optimize_level.to_int().unwrap();
 
@@ -545,7 +582,9 @@ impl PythonExecutable {
             }
         };
 
-        let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
+        let m = module
+            .downcast_apply(|m: &PythonSourceModule| m.module.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
         info!(&logger, "adding bytecode module {}", m.name);
         self.exe
             .add_python_module_bytecode_from_source(
@@ -581,9 +620,13 @@ impl PythonExecutable {
         required_type_arg("resource", "PythonPackageResource", &resource)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let logger = context
+            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
 
-        let r = resource.downcast_apply(|r: &PythonPackageResource| r.data.clone());
+        let r = resource
+            .downcast_apply(|r: &PythonPackageResource| r.data.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
         info!(
             &logger,
             "adding in-memory resource data {}",
@@ -612,9 +655,13 @@ impl PythonExecutable {
         required_type_arg("resource", "PythonPackageResource", &resource)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let logger = context
+            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
 
-        let r = resource.downcast_apply(|r: &PythonPackageResource| r.data.clone());
+        let r = resource
+            .downcast_apply(|r: &PythonPackageResource| r.data.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
         info!(&logger, "adding resource data {}", r.symbolic_name());
         self.exe
             .add_python_package_resource(&r, None)
@@ -641,9 +688,13 @@ impl PythonExecutable {
         required_type_arg("resource", "PythonPackageResource", &resource)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let logger = context
+            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
 
-        let r = resource.downcast_apply(|r: &PythonPackageResource| r.data.clone());
+        let r = resource
+            .downcast_apply(|r: &PythonPackageResource| r.data.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
         info!(
             &logger,
             "adding executable relative resource data {}",
@@ -672,9 +723,13 @@ impl PythonExecutable {
         required_type_arg("resource", "PythonPackageDistributionResource", &resource)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let logger = context
+            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
 
-        let r = resource.downcast_apply(|r: &PythonPackageDistributionResource| r.resource.clone());
+        let r = resource
+            .downcast_apply(|r: &PythonPackageDistributionResource| r.resource.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
         info!(
             &logger,
             "adding in-memory package distribution resource {}:{}", r.package, r.name
@@ -704,9 +759,13 @@ impl PythonExecutable {
         required_type_arg("resource", "PythonPackageDistributionResource", &resource)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let logger = context
+            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
 
-        let r = resource.downcast_apply(|r: &PythonPackageDistributionResource| r.resource.clone());
+        let r = resource
+            .downcast_apply(|r: &PythonPackageDistributionResource| r.resource.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
         info!(
             &logger,
             "adding executable relative package distribution resource {}:{}", r.package, r.name
@@ -737,9 +796,13 @@ impl PythonExecutable {
         required_type_arg("resource", "PythonPackageDistributionResource", &resource)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let logger = context
+            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
 
-        let r = resource.downcast_apply(|r: &PythonPackageDistributionResource| r.resource.clone());
+        let r = resource
+            .downcast_apply(|r: &PythonPackageDistributionResource| r.resource.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
         info!(
             &logger,
             "adding package distribution resource {}:{}", r.package, r.name
@@ -767,9 +830,13 @@ impl PythonExecutable {
         required_type_arg("module", "PythonExtensionModule", &module)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let logger = context
+            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
 
-        let m = module.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
+        let m = module
+            .downcast_apply(|m: &PythonExtensionModule| m.em.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
         info!(&logger, "adding in-memory extension module {}", m.name);
 
         self.exe
@@ -797,9 +864,13 @@ impl PythonExecutable {
         required_type_arg("module", "PythonExtensionModule", &module)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let logger = context
+            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
 
-        let m = module.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
+        let m = module
+            .downcast_apply(|m: &PythonExtensionModule| m.em.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
         info!(&logger, "adding in-extension module {}", m.name);
 
         self.exe
@@ -825,10 +896,13 @@ impl PythonExecutable {
         required_type_arg("module", "PythonExtensionModule", &module)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let logger = context
+            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
 
-        let m = module.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
-
+        let m = module
+            .downcast_apply(|m: &PythonExtensionModule| m.em.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
         info!(logger, "adding extension module {}", m.name);
         self.exe
             .add_python_extension_module(&m, None)
@@ -1097,7 +1171,9 @@ impl PythonExecutable {
         let glob_files_refs = glob_files.iter().map(|x| x.as_ref()).collect::<Vec<&str>>();
 
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let logger = context
+            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+            .ok_or(ValueError::IncorrectParameterType)?;
 
         self.exe
             .filter_resources_from_files(&logger, &files_refs, &glob_files_refs)
@@ -1119,14 +1195,14 @@ starlark_module! { python_executable_env =>
     PythonExecutable.make_python_source_module(this, name, source, is_package=false) {
         this.downcast_apply(|exe: &PythonExecutable| {
             exe.starlark_make_python_source_module(&name, &source, &is_package)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.pip_install(env env, this, args, extra_envs=None) {
         this.downcast_apply(|exe: &PythonExecutable| {
             exe.starlark_pip_install(&env, &args, &extra_envs)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -1138,7 +1214,7 @@ starlark_module! { python_executable_env =>
     ) {
         this.downcast_apply(|exe: &PythonExecutable| {
             exe.starlark_read_package_root(&env, &path, &packages)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -1149,7 +1225,7 @@ starlark_module! { python_executable_env =>
     ) {
         this.downcast_apply(|exe: &PythonExecutable| {
             exe.starlark_read_virtualenv(&env, &path)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -1162,28 +1238,28 @@ starlark_module! { python_executable_env =>
     ) {
         this.downcast_apply(|exe: &PythonExecutable| {
             exe.starlark_setup_py_install(&env, &package_path, &extra_envs, &extra_global_arguments)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_in_memory_module_source(env env, this, module) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_in_memory_module_source(&env, &module)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_filesystem_relative_module_source(env env, this, prefix, module) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_filesystem_relative_module_source(&env, &prefix, &module)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_module_source(env env, this, module) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_module_source(&env, &module)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     // TODO consider unifying with add_module_source() so there only needs to be
@@ -1192,84 +1268,84 @@ starlark_module! { python_executable_env =>
     PythonExecutable.add_in_memory_module_bytecode(env env, this, module, optimize_level=0) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_in_memory_module_bytecode(&env, &module, &optimize_level)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_filesystem_relative_module_bytecode(env env, this, prefix, module, optimize_level=0) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_filesystem_relative_module_bytecode(&env, &prefix, &module, &optimize_level)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_module_bytecode(env env, this, module, optimize_level=0) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_module_bytecode(&env, &module, &optimize_level)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_in_memory_package_resource(env env, this, resource) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_in_memory_package_resource(&env, &resource)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_filesystem_relative_package_resource(env env, this, prefix, resource) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_filesystem_relative_package_resource(&env, &prefix, &resource)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_package_resource(env env, this, resource) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_package_resource(&env, &resource)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_in_memory_package_distribution_resource(env env, this, resource) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_in_memory_package_distribution_resource(&env, &resource)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_filesystem_relative_package_distribution_resource(env env, this, prefix, resource) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_filesystem_relative_package_distribution_resource(&env, &prefix, &resource)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_package_distribution_resource(env env, this, resource) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_package_distribution_resource(&env, &resource)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_in_memory_extension_module(env env, this, module) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_in_memory_extension_module(&env, &module)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_filesystem_relative_extension_module(env env, this, prefix, module) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_filesystem_relative_extension_module(&env, &prefix, &module)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(clippy::ptr_arg)]
     PythonExecutable.add_extension_module(env env, this, module) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_extension_module(&env, &module)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(clippy::ptr_arg)]
@@ -1290,7 +1366,7 @@ starlark_module! { python_executable_env =>
                 &add_bytecode_module,
                 &optimize_level,
             )
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(clippy::ptr_arg)]
@@ -1313,7 +1389,7 @@ starlark_module! { python_executable_env =>
                 &add_bytecode_module,
                 &optimize_level,
             )
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -1333,7 +1409,7 @@ starlark_module! { python_executable_env =>
                 &add_bytecode_module,
                 &optimize_level
             )
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(clippy::ptr_arg)]
@@ -1353,7 +1429,7 @@ starlark_module! { python_executable_env =>
                 &add_bytecode_module,
                 &optimize_level,
             )
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(clippy::ptr_arg)]
@@ -1375,7 +1451,7 @@ starlark_module! { python_executable_env =>
                 &add_bytecode_module,
                 &optimize_level,
             )
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -1395,7 +1471,7 @@ starlark_module! { python_executable_env =>
                 &add_bytecode_module,
                 &optimize_level,
             )
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(clippy::ptr_arg)]
@@ -1407,14 +1483,14 @@ starlark_module! { python_executable_env =>
     {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_filter_resources_from_files(&env, &files, &glob_files)
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 
     #[allow(clippy::ptr_arg)]
     PythonExecutable.to_embedded_resources(this) {
         this.downcast_apply(|exe: &PythonExecutable| {
             exe.starlark_to_embedded_resources()
-        })
+        }).unwrap_or(Err(ValueError::IncorrectParameterType))
     }
 }
 
@@ -1442,7 +1518,8 @@ mod tests {
                 .exe
                 .iter_resources()
                 .all(|(_, r)| r.in_memory_resources.is_none()));
-        });
+        })
+        .unwrap();
     }
 
     #[test]
@@ -1464,7 +1541,8 @@ mod tests {
                 .exe
                 .iter_resources()
                 .all(|(_, r)| r.in_memory_source.is_none()));
-        });
+        })
+        .unwrap();
     }
 
     #[test]
@@ -1510,7 +1588,8 @@ mod tests {
         v.downcast_apply(|x: &PythonSourceModule| {
             assert_eq!(x.module.name, "pyflakes");
             assert!(x.module.is_package);
-        });
+        })
+        .unwrap();
     }
 
     #[test]
@@ -1560,7 +1639,8 @@ mod tests {
             assert_eq!(x.module.name, "bar");
             assert!(x.module.is_package);
             assert_eq!(x.module.source.resolve().unwrap(), b"# bar");
-        });
+        })
+        .unwrap();
 
         let v = it.next().unwrap();
         assert_eq!(v.get_type(), "PythonSourceModule");
@@ -1568,7 +1648,8 @@ mod tests {
             assert_eq!(x.module.name, "foo");
             assert!(!x.module.is_package);
             assert_eq!(x.module.source.resolve().unwrap(), b"# foo");
-        });
+        })
+        .unwrap();
 
         Ok(())
     }
