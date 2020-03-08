@@ -78,7 +78,7 @@ pub fn required_list_arg(
 ) -> Result<(), ValueError> {
     match value.get_type() {
         "list" => {
-            for v in value.into_iter()? {
+            for v in value.iter()? {
                 if v.get_type() == value_type {
                     Ok(())
                 } else {
@@ -126,7 +126,7 @@ pub fn required_dict_arg(
 ) -> Result<(), ValueError> {
     match value.get_type() {
         "dict" => {
-            for k in value.into_iter()? {
+            for k in value.iter()? {
                 if k.get_type() == key_type {
                     Ok(())
                 } else {

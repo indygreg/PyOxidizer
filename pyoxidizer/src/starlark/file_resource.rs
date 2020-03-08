@@ -350,7 +350,7 @@ impl FileManifest {
     ) -> ValueResult {
         required_str_arg("prefix", &prefix)?;
 
-        for resource in resources.into_iter()? {
+        for resource in resources.iter()? {
             self.add_python_resource(env, &prefix.clone(), &resource)?;
         }
 
@@ -397,12 +397,12 @@ fn starlark_glob(
     let strip_prefix = optional_str_arg("strip_prefix", strip_prefix)?;
 
     let include = include
-        .into_iter()?
+        .iter()?
         .map(|x| x.to_string())
         .collect::<Vec<String>>();
 
     let exclude = match exclude.get_type() {
-        "list" => exclude.into_iter()?.map(|x| x.to_string()).collect(),
+        "list" => exclude.iter()?.map(|x| x.to_string()).collect(),
         _ => Vec::new(),
     };
 

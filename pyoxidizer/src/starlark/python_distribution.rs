@@ -316,7 +316,7 @@ impl PythonDistribution {
                 "dict" => {
                     let mut m = HashMap::new();
 
-                    for k in preferred_extension_module_variants.into_iter()? {
+                    for k in preferred_extension_module_variants.iter()? {
                         let v = preferred_extension_module_variants
                             .at(k.clone())?
                             .to_string();
@@ -362,8 +362,15 @@ impl PythonDistribution {
             let v = env
                 .get("PythonInterpreterConfig")
                 .expect("PythonInterpreterConfig not defined");
-            v.call(call_stack, env, Vec::new(), HashMap::new(), None, None)?
-                .downcast_apply(|c: &EmbeddedPythonConfig| c.clone())
+            v.call(
+                &call_stack.to_vec(),
+                env,
+                Vec::new(),
+                HashMap::new(),
+                None,
+                None,
+            )?
+            .downcast_apply(|c: &EmbeddedPythonConfig| c.clone())
         } else {
             config.downcast_apply(|c: &EmbeddedPythonConfig| c.clone())
         };
@@ -391,7 +398,7 @@ impl PythonDistribution {
         }))
     }
 
-    /// PythonDistribution.extension_modules(filter="all", preferred_variants=None)
+    /// PythonDistribution.extension_modules()
     pub fn extension_modules(&mut self, env: &Environment) -> ValueResult {
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
 

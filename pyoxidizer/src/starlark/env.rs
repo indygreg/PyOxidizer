@@ -351,11 +351,7 @@ fn starlark_register_target(
     let default_build_script = required_bool_arg("default_build_script", &default_build_script)?;
 
     let depends = match depends.get_type() {
-        "list" => depends
-            .into_iter()
-            .unwrap()
-            .map(|x| x.to_string())
-            .collect(),
+        "list" => depends.iter().unwrap().map(|x| x.to_string()).collect(),
         _ => Vec::new(),
     };
 
