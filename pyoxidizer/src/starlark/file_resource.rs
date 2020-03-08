@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::env::EnvironmentContext,
+    super::env::{get_context, EnvironmentContext},
     super::python_executable::PythonExecutable,
     super::python_resource::{
         PythonBytecodeModule, PythonExtensionModule, PythonPackageDistributionResource,
@@ -168,9 +168,10 @@ impl FileManifest {
     pub fn add_manifest(&mut self, other: &Value) -> ValueResult {
         required_type_arg("other", "FileManifest", other)?;
 
-        let other = other
-            .downcast_apply(|other: &FileManifest| other.manifest.clone())
-            .ok_or(ValueError::IncorrectParameterType)?;
+        let other = match other.downcast_ref::<FileManifest>() {
+            Some(other) => Ok(other.manifest.clone()),
+            None => Err(ValueError::IncorrectParameterType),
+        }?;
 
         self.manifest.add_manifest(&other).map_err(|e| {
             RuntimeError {
@@ -193,17 +194,21 @@ impl FileManifest {
     ) -> ValueResult {
         let prefix = required_str_arg("prefix", &prefix)?;
 
-        let context = env.get("CONTEXT").expect("CONTEXT not set");
-        let logger = context
-            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+        let raw_context = get_context(env)?;
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         match resource.get_type() {
             "PythonSourceModule" => {
-                let m = resource
-                    .downcast_apply(|m: &PythonSourceModule| m.module.clone())
-                    .ok_or(ValueError::IncorrectParameterType)?;
-                warn!(logger, "adding source module {} to {}", m.name, prefix);
+                let m = match resource.downcast_ref::<PythonSourceModule>() {
+                    Some(m) => Ok(m.module.clone()),
+                    None => Err(ValueError::IncorrectParameterType),
+                }?;
+                warn!(
+                    &context.logger,
+                    "adding source module {} to {}", m.name, prefix
+                );
 
                 m.add_to_file_manifest(&mut self.manifest, &prefix)
                     .map_err(|e| {
@@ -216,21 +221,26 @@ impl FileManifest {
                     })
             }
             "PythonBytecodeModule" => {
-                let m = resource
-                    .downcast_apply(|m: &PythonBytecodeModule| m.module.clone())
-                    .ok_or(ValueError::IncorrectParameterType)?;
-                warn!(logger, "adding bytecode module {} to {}", m.name, prefix);
+                let m = match resource.downcast_ref::<PythonBytecodeModule>() {
+                    Some(m) => Ok(m.module.clone()),
+                    None => Err(ValueError::IncorrectParameterType),
+                }?;
+                warn!(
+                    &context.logger,
+                    "adding bytecode module {} to {}", m.name, prefix
+                );
                 self.add_bytecode_module(&prefix, &m);
 
                 Ok(())
             }
             "PythonPackageResource" => {
-                let m = resource
-                    .downcast_apply(|m: &PythonPackageResource| m.data.clone())
-                    .ok_or(ValueError::IncorrectParameterType)?;
+                let m = match resource.downcast_ref::<PythonPackageResource>() {
+                    Some(m) => Ok(m.data.clone()),
+                    None => Err(ValueError::IncorrectParameterType),
+                }?;
 
                 warn!(
-                    logger,
+                    &context.logger,
                     "adding resource file {} to {}",
                     m.symbolic_name(),
                     prefix
@@ -246,11 +256,12 @@ impl FileManifest {
                     })
             }
             "PythonPackageDistributionResource" => {
-                let m = resource
-                    .downcast_apply(|m: &PythonPackageDistributionResource| m.resource.clone())
-                    .ok_or(ValueError::IncorrectParameterType)?;
+                let m = match resource.downcast_ref::<PythonPackageDistributionResource>() {
+                    Some(m) => Ok(m.resource.clone()),
+                    None => Err(ValueError::IncorrectParameterType),
+                }?;
                 warn!(
-                    logger,
+                    &context.logger,
                     "adding package distribution resource file {}:{} to {}",
                     m.package,
                     m.name,
@@ -267,11 +278,13 @@ impl FileManifest {
                     })
             }
             "PythonExtensionModule" => {
-                let extension = resource
-                    .downcast_apply(|m: &PythonExtensionModule| m.em.clone())
-                    .ok_or(ValueError::IncorrectParameterType)?;
+                let extension = match resource.downcast_ref::<PythonExtensionModule>() {
+                    Some(e) => Ok(e.em.clone()),
+                    None => Err(ValueError::IncorrectParameterType),
+                }?;
+
                 warn!(
-                    logger,
+                    &context.logger,
                     "adding extension module {} to {}", extension.name, prefix
                 );
                 extension
@@ -287,32 +300,26 @@ impl FileManifest {
             }
 
             "PythonExecutable" => {
-                let context = env.get("CONTEXT").expect("CONTEXT not defined");
-                let (target, release, opt_level) = context
-                    .downcast_apply(|x: &EnvironmentContext| {
-                        (
-                            x.build_target_triple.clone(),
-                            x.build_release,
-                            x.build_opt_level.clone(),
-                        )
-                    })
+                let raw_context = get_context(env)?;
+                let context = raw_context
+                    .downcast_ref::<EnvironmentContext>()
                     .ok_or(ValueError::IncorrectParameterType)?;
 
-                resource
-                    .downcast_apply(|exe: &PythonExecutable| {
+                match resource.downcast_ref::<PythonExecutable>() {
+                    Some(exe) => {
                         warn!(
-                            logger,
+                            &context.logger,
                             "adding Python executable {} to {}",
                             exe.exe.name(),
                             prefix
                         );
                         self.add_python_executable(
-                            &logger,
+                            &context.logger,
                             &prefix,
                             exe.exe.deref(),
-                            &target,
-                            release,
-                            &opt_level,
+                            &context.build_target_triple,
+                            context.build_release,
+                            &context.build_opt_level,
                         )
                         .map_err(|e| {
                             RuntimeError {
@@ -322,8 +329,9 @@ impl FileManifest {
                             }
                             .into()
                         })
-                    })
-                    .ok_or(ValueError::IncorrectParameterType)?
+                    }
+                    None => Err(ValueError::IncorrectParameterType),
+                }
             }
 
             t => Err(RuntimeError {
@@ -359,12 +367,12 @@ impl FileManifest {
         let path = required_str_arg("path", &path)?;
         let replace = required_bool_arg("replace", &replace)?;
 
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let build_path = context
-            .downcast_apply(|x: &EnvironmentContext| x.build_path.clone())
+        let raw_context = get_context(env)?;
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let dest_path = build_path.join(path);
+        let dest_path = context.build_path.join(path);
 
         if replace {
             self.manifest.replace_path(&dest_path)
@@ -405,16 +413,16 @@ fn starlark_glob(
         _ => Vec::new(),
     };
 
-    let context = env.get("CONTEXT").expect("unable to get CONTEXT");
-    let cwd = context
-        .downcast_apply(|x: &EnvironmentContext| x.cwd.clone())
+    let raw_context = get_context(env)?;
+    let context = raw_context
+        .downcast_ref::<EnvironmentContext>()
         .ok_or(ValueError::IncorrectParameterType)?;
 
     let mut result = HashSet::new();
 
     // Evaluate all the includes first.
     for v in include {
-        for p in evaluate_glob(&cwd, &v).map_err(|e| {
+        for p in evaluate_glob(&context.cwd, &v).map_err(|e| {
             RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
@@ -428,7 +436,7 @@ fn starlark_glob(
 
     // Then apply excludes.
     for v in exclude {
-        for p in evaluate_glob(&cwd, &v).map_err(|e| {
+        for p in evaluate_glob(&context.cwd, &v).map_err(|e| {
             RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
@@ -493,30 +501,34 @@ starlark_module! { file_resource_env =>
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     FileManifest.add_manifest(this, other) {
-        this.downcast_apply_mut(|manifest: &mut FileManifest| {
-            manifest.add_manifest(&other)
-        }).unwrap_or(Err(ValueError::IncorrectParameterType))
+        match this.clone().downcast_mut::<FileManifest>() {
+            Some(mut manifest) => manifest.add_manifest(&other),
+            None => Err(ValueError::IncorrectParameterType),
+        }
     }
 
     #[allow(clippy::ptr_arg)]
     FileManifest.add_python_resource(env env, this, prefix, resource) {
-        this.downcast_apply_mut(|manifest: &mut FileManifest| {
-            manifest.add_python_resource(&env, &prefix, &resource)
-        }).unwrap_or(Err(ValueError::IncorrectParameterType))
+        match this.clone().downcast_mut::<FileManifest>() {
+            Some(mut manifest) => manifest.add_python_resource(&env, &prefix, &resource),
+            None => Err(ValueError::IncorrectParameterType),
+        }
     }
 
     #[allow(clippy::ptr_arg)]
     FileManifest.add_python_resources(env env, this, prefix, resources) {
-        this.downcast_apply_mut(|manifest: &mut FileManifest| {
-            manifest.add_python_resources(&env, &prefix, &resources)
-        }).unwrap_or(Err(ValueError::IncorrectParameterType))
+        match this.clone().downcast_mut::<FileManifest>() {
+            Some(mut manifest) => manifest.add_python_resources(&env, &prefix, &resources),
+            None => Err(ValueError::IncorrectParameterType),
+        }
     }
 
     #[allow(clippy::ptr_arg)]
     FileManifest.install(env env, this, path, replace=true) {
-        this.downcast_apply(|manifest: &FileManifest| {
-            manifest.install(&env, &path, &replace)
-        }).unwrap_or(Err(ValueError::IncorrectParameterType))
+        match this.clone().downcast_ref::<FileManifest>() {
+            Some(manifest) => manifest.install(&env, &path, &replace),
+            None => Err(ValueError::IncorrectParameterType),
+        }
     }
 }
 
@@ -538,10 +550,8 @@ mod tests {
         let m = starlark_ok("FileManifest()");
         assert_eq!(m.get_type(), "FileManifest");
 
-        m.downcast_apply(|m: &FileManifest| {
-            assert_eq!(m.manifest, RawFileManifest::default());
-        })
-        .unwrap();
+        let m = m.downcast_ref::<FileManifest>().unwrap();
+        assert_eq!(m.manifest, RawFileManifest::default());
     }
 
     #[test]
@@ -566,32 +576,31 @@ mod tests {
         starlark_eval_in_env(&mut env, "m.add_python_resource('lib', v)").unwrap();
 
         let m = env.get("m").unwrap();
-        m.downcast_apply(|m: &FileManifest| {
-            let mut entries = m.manifest.entries();
+        let m = m.downcast_ref::<FileManifest>().unwrap();
 
-            let (p, c) = entries.next().unwrap();
-            assert_eq!(p, &PathBuf::from("lib/foo/__init__.py"));
-            assert_eq!(
-                c,
-                &RawFileContent {
-                    data: vec![],
-                    executable: false,
-                }
-            );
+        let mut entries = m.manifest.entries();
 
-            let (p, c) = entries.next().unwrap();
-            assert_eq!(p, &PathBuf::from("lib/foo/bar.py"));
-            assert_eq!(
-                c,
-                &RawFileContent {
-                    data: vec![],
-                    executable: false,
-                }
-            );
+        let (p, c) = entries.next().unwrap();
+        assert_eq!(p, &PathBuf::from("lib/foo/__init__.py"));
+        assert_eq!(
+            c,
+            &RawFileContent {
+                data: vec![],
+                executable: false,
+            }
+        );
 
-            assert!(entries.next().is_none());
-        })
-        .unwrap();
+        let (p, c) = entries.next().unwrap();
+        assert_eq!(p, &PathBuf::from("lib/foo/bar.py"));
+        assert_eq!(
+            c,
+            &RawFileContent {
+                data: vec![],
+                executable: false,
+            }
+        );
+
+        assert!(entries.next().is_none());
     }
 
     #[test]
@@ -617,22 +626,21 @@ mod tests {
         starlark_eval_in_env(&mut env, "m.add_python_resource('lib', v)").unwrap();
 
         let m = env.get("m").unwrap();
-        m.downcast_apply(|m: &FileManifest| {
-            let mut entries = m.manifest.entries();
-            let (p, c) = entries.next().unwrap();
+        let m = m.downcast_ref::<FileManifest>().unwrap();
 
-            assert_eq!(p, &PathBuf::from("lib/foo/bar/resource.txt"));
-            assert_eq!(
-                c,
-                &RawFileContent {
-                    data: vec![],
-                    executable: false,
-                }
-            );
+        let mut entries = m.manifest.entries();
+        let (p, c) = entries.next().unwrap();
 
-            assert!(entries.next().is_none());
-        })
-        .unwrap();
+        assert_eq!(p, &PathBuf::from("lib/foo/bar/resource.txt"));
+        assert_eq!(
+            c,
+            &RawFileContent {
+                data: vec![],
+                executable: false,
+            }
+        );
+
+        assert!(entries.next().is_none());
     }
 
     #[test]
@@ -672,11 +680,8 @@ mod tests {
         starlark_eval_in_env(&mut env, "m.add_python_resource('bin', exe)").unwrap();
         starlark_eval_in_env(&mut env, "m.install('myapp')").unwrap();
 
-        let context = env
-            .get("CONTEXT")
-            .unwrap()
-            .downcast_apply(|x: &EnvironmentContext| x.clone())
-            .unwrap();
+        let raw_context = get_context(&env).unwrap();
+        let context = raw_context.downcast_ref::<EnvironmentContext>().unwrap();
 
         let dest_path = context.build_path.join("myapp");
         assert!(dest_path.exists());

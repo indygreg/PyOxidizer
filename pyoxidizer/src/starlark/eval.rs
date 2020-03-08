@@ -85,14 +85,15 @@ pub fn evaluate_file(
         spans: vec![],
     })?;
 
-    let context = env_context
-        .downcast_apply(|x: &EnvironmentContext| x.clone())
-        .ok_or(Diagnostic {
+    let context = match env_context.downcast_ref::<EnvironmentContext>() {
+        Some(x) => Ok(x.clone()),
+        None => Err(Diagnostic {
             level: Level::Error,
             message: "CONTEXT is not EnvironmentContext".to_string(),
             code: Some("environment".to_string()),
             spans: vec![],
-        })?;
+        }),
+    }?;
 
     Ok(EvalResult { env, context })
 }

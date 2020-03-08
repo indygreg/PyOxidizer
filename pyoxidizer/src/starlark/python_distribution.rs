@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::env::EnvironmentContext,
+    super::env::{get_context, EnvironmentContext},
     super::python_executable::PythonExecutable,
     super::python_resource::{PythonExtensionModule, PythonPackageResource, PythonSourceModule},
     super::util::{
@@ -164,13 +164,15 @@ impl PythonDistribution {
             .into()
         })?;
 
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let dest_dir = context
-            .downcast_apply(|x: &EnvironmentContext| x.python_distributions_path.clone())
+        let raw_context = get_context(env)?;
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         Ok(Value::new(PythonDistribution::from_location(
-            flavor, location, &dest_dir,
+            flavor,
+            location,
+            &context.python_distributions_path,
         )))
     }
 
@@ -220,15 +222,15 @@ impl PythonDistribution {
             }
         };
 
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let dest_dir = context
-            .downcast_apply(|x: &EnvironmentContext| x.python_distributions_path.clone())
+        let raw_context = get_context(env)?;
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         Ok(Value::new(PythonDistribution::from_location(
             flavor,
             distribution,
-            &dest_dir,
+            &context.python_distributions_path,
         )))
     }
 
@@ -249,7 +251,7 @@ impl PythonDistribution {
     )]
     fn to_python_executable_starlark(
         &mut self,
-        env: Environment,
+        env: &Environment,
         call_stack: &[(String, String)],
         name: &Value,
         resources_policy: &Value,
@@ -275,14 +277,9 @@ impl PythonDistribution {
         let include_resources = required_bool_arg("include_resources", &include_resources)?;
         let include_test = required_bool_arg("include_test", &include_test)?;
 
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let logger = context
-            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
-            .ok_or(ValueError::IncorrectParameterType)?;
-        let (host_triple, target_triple) = context
-            .downcast_apply(|x: &EnvironmentContext| {
-                (x.build_host_triple.clone(), x.build_target_triple.clone())
-            })
+        let raw_context = get_context(env)?;
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let resources_policy =
@@ -323,14 +320,15 @@ impl PythonDistribution {
                 _ => panic!("type should have been validated above"),
             };
 
-        self.ensure_distribution_resolved(&logger).map_err(|e| {
-            RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "resolve_distribution()".to_string(),
-            }
-            .into()
-        })?;
+        self.ensure_distribution_resolved(&context.logger)
+            .map_err(|e| {
+                RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "resolve_distribution()".to_string(),
+                }
+                .into()
+            })?;
         let dist = self.distribution.as_ref().unwrap().clone();
 
         let mut policy = dist.create_packaging_policy().map_err(|e| {
@@ -357,28 +355,33 @@ impl PythonDistribution {
             let v = env
                 .get("PythonInterpreterConfig")
                 .expect("PythonInterpreterConfig not defined");
-            v.call(
-                call_stack,
-                env,
-                Vec::new(),
-                LinkedHashMap::new(),
-                None,
-                None,
-            )?
-            .downcast_apply(|c: &EmbeddedPythonConfig| c.clone())
-            .ok_or(ValueError::IncorrectParameterType)
+            match v
+                .call(
+                    call_stack,
+                    env.clone(),
+                    Vec::new(),
+                    LinkedHashMap::new(),
+                    None,
+                    None,
+                )?
+                .downcast_ref::<EmbeddedPythonConfig>()
+            {
+                Some(c) => Ok(c.clone()),
+                None => Err(ValueError::IncorrectParameterType),
+            }
         } else {
-            config
-                .downcast_apply(|c: &EmbeddedPythonConfig| c.clone())
-                .ok_or(ValueError::IncorrectParameterType)
+            match config.downcast_ref::<EmbeddedPythonConfig>() {
+                Some(c) => Ok(c.clone()),
+                None => Err(ValueError::IncorrectParameterType),
+            }
         }?;
 
         Ok(Value::new(PythonExecutable {
             exe: dist
                 .as_python_executable_builder(
-                    &logger,
-                    &host_triple,
-                    &target_triple,
+                    &context.logger,
+                    &context.build_host_triple,
+                    &context.build_target_triple,
                     &name,
                     // TODO make configurable
                     BinaryLibpythonLinkMode::Default,
@@ -398,20 +401,20 @@ impl PythonDistribution {
 
     /// PythonDistribution.extension_modules()
     pub fn extension_modules(&mut self, env: &Environment) -> ValueResult {
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-
-        let logger = context
-            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+        let raw_context = get_context(env)?;
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        self.ensure_distribution_resolved(&logger).map_err(|e| {
-            RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "resolve_distribution()".to_string(),
-            }
-            .into()
-        })?;
+        self.ensure_distribution_resolved(&context.logger)
+            .map_err(|e| {
+                RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "resolve_distribution()".to_string(),
+                }
+                .into()
+            })?;
 
         Ok(Value::from(
             self.distribution
@@ -427,20 +430,20 @@ impl PythonDistribution {
     pub fn package_resources(&mut self, env: &Environment, include_test: &Value) -> ValueResult {
         let include_test = required_bool_arg("include_test", &include_test)?;
 
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-
-        let logger = context
-            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+        let raw_context = get_context(env)?;
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        self.ensure_distribution_resolved(&logger).map_err(|e| {
-            RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "resolve_distribution()".to_string(),
-            }
-            .into()
-        })?;
+        self.ensure_distribution_resolved(&context.logger)
+            .map_err(|e| {
+                RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "resolve_distribution()".to_string(),
+                }
+                .into()
+            })?;
 
         let resources = self
             .distribution
@@ -472,20 +475,20 @@ impl PythonDistribution {
 
     /// PythonDistribution.source_modules()
     pub fn source_modules(&mut self, env: &Environment) -> ValueResult {
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-
-        let logger = context
-            .downcast_apply(|x: &EnvironmentContext| x.logger.clone())
+        let raw_context = get_context(env)?;
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        self.ensure_distribution_resolved(&logger).map_err(|e| {
-            RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "resolve_distribution()".to_string(),
-            }
-            .into()
-        })?;
+        self.ensure_distribution_resolved(&context.logger)
+            .map_err(|e| {
+                RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "resolve_distribution()".to_string(),
+                }
+                .into()
+            })?;
 
         let modules = self
             .distribution
@@ -518,23 +521,26 @@ starlark_module! { python_distribution_module =>
 
     #[allow(clippy::ptr_arg)]
     PythonDistribution.extension_modules(env env, this) {
-        this.downcast_apply_mut(|dist: &mut PythonDistribution| {
-            dist.extension_modules(&env)
-        }).unwrap_or(Err(ValueError::IncorrectParameterType))
+        match this.clone().downcast_mut::<PythonDistribution>() {
+            Some(mut dist) => dist.extension_modules(&env),
+            None => Err(ValueError::IncorrectParameterType),
+        }
     }
 
     #[allow(clippy::ptr_arg)]
     PythonDistribution.source_modules(env env, this) {
-        this.downcast_apply_mut(|dist: &mut PythonDistribution| {
-            dist.source_modules(&env)
-        }).unwrap_or(Err(ValueError::IncorrectParameterType))
+        match this.clone().downcast_mut::<PythonDistribution>() {
+            Some(mut dist) => dist.source_modules(&env),
+            None => Err(ValueError::IncorrectParameterType),
+        }
     }
 
     #[allow(clippy::ptr_arg)]
     PythonDistribution.package_resources(env env, this, include_test=false) {
-        this.downcast_apply_mut(|dist: &mut PythonDistribution| {
-            dist.package_resources(&env, &include_test)
-        }).unwrap()
+        match this.clone().downcast_mut::<PythonDistribution>() {
+            Some(mut dist) => dist.package_resources(&env, &include_test),
+            None => Err(ValueError::IncorrectParameterType),
+        }
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
@@ -551,9 +557,9 @@ starlark_module! { python_distribution_module =>
         include_resources=false,
         include_test=false
     ) {
-        this.downcast_apply_mut(|dist: &mut PythonDistribution| {
-            dist.to_python_executable_starlark(
-                env.clone(),
+        match this.clone().downcast_mut::<PythonDistribution>() {
+            Some(mut dist) =>dist.to_python_executable_starlark(
+                &env,
                 call_stack,
                 &name,
                 &resources_policy,
@@ -563,8 +569,9 @@ starlark_module! { python_distribution_module =>
                 &include_sources,
                 &include_resources,
                 &include_test,
-            )
-        }).unwrap_or(Err(ValueError::IncorrectParameterType))
+            ),
+            None => Err(ValueError::IncorrectParameterType),
+        }
     }
 
     #[allow(clippy::ptr_arg)]
@@ -592,9 +599,8 @@ mod tests {
             )
             .unwrap();
 
-        dist.downcast_apply(|x: &PythonDistribution| {
-            assert_eq!(x.source, host_distribution.location)
-        });
+        let x = dist.downcast_ref::<PythonDistribution>().unwrap();
+        assert_eq!(x.source, host_distribution.location)
     }
 
     #[test]
@@ -619,9 +625,8 @@ mod tests {
             )
             .unwrap();
 
-        dist.downcast_apply(|x: &PythonDistribution| {
-            assert_eq!(x.source, host_distribution.location)
-        });
+        let x = dist.downcast_ref::<PythonDistribution>().unwrap();
+        assert_eq!(x.source, host_distribution.location)
     }
 
     #[test]
@@ -646,11 +651,9 @@ mod tests {
             sha256: "sha256".to_string(),
         };
 
-        dist.downcast_apply(|x: &PythonDistribution| {
-            assert_eq!(x.source, wanted);
-            assert_eq!(x.flavor, DistributionFlavor::Standalone);
-        })
-        .unwrap();
+        let x = dist.downcast_ref::<PythonDistribution>().unwrap();
+        assert_eq!(x.source, wanted);
+        assert_eq!(x.flavor, DistributionFlavor::Standalone);
     }
 
     #[test]
@@ -661,11 +664,9 @@ mod tests {
             sha256: "sha256".to_string(),
         };
 
-        dist.downcast_apply(|x: &PythonDistribution| {
-            assert_eq!(x.source, wanted);
-            assert_eq!(x.flavor, DistributionFlavor::Standalone);
-        })
-        .unwrap();
+        let x = dist.downcast_ref::<PythonDistribution>().unwrap();
+        assert_eq!(x.source, wanted);
+        assert_eq!(x.flavor, DistributionFlavor::Standalone);
     }
 
     #[test]

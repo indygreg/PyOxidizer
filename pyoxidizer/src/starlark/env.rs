@@ -209,7 +209,7 @@ impl EnvironmentContext {
 
     /// Build a resolved target.
     pub fn build_resolved_target(&mut self, target: &str) -> Result<ResolvedTarget> {
-        let mut resolved_value = if let Some(t) = self.targets.get(target) {
+        let resolved_value = if let Some(t) = self.targets.get(target) {
             if let Some(t) = &t.built_target {
                 return Ok(t.clone());
             }
@@ -245,20 +245,20 @@ impl EnvironmentContext {
         };
 
         // TODO surely this can use dynamic dispatch.
-        let resolved_target: ResolvedTarget = if resolved_value.get_type() == "FileManifest" {
-            resolved_value
-                .downcast_apply_mut(|m: &mut FileManifest| m.build(&context))
+        let resolved_target: ResolvedTarget = match resolved_value.get_type() {
+            "FileManifest" => resolved_value
+                .downcast_mut::<FileManifest>()
                 .ok_or(anyhow!("invalid cast"))?
-        } else if resolved_value.get_type() == "PythonExecutable" {
-            resolved_value
-                .downcast_apply_mut(|exe: &mut PythonExecutable| exe.build(&context))
+                .build(&context),
+            "PythonExecutable" => resolved_value
+                .downcast_mut::<PythonExecutable>()
                 .ok_or(anyhow!("invalid cast"))?
-        } else if resolved_value.get_type() == "PythonEmbeddedResources" {
-            resolved_value
-                .downcast_apply_mut(|data: &mut PythonEmbeddedResources| data.build(&context))
+                .build(&context),
+            "PythonEmbeddedResources" => resolved_value
+                .downcast_mut::<PythonEmbeddedResources>()
                 .ok_or(anyhow!("invalid cast"))?
-        } else {
-            Err(anyhow!("could not determine type of target"))
+                .build(&context),
+            _ => Err(anyhow!("could not determine type of target")),
         }?;
 
         self.targets.get_mut(target).unwrap().built_target = Some(resolved_target.clone());
@@ -318,6 +318,17 @@ impl TypedValue for EnvironmentContext {
     }
 }
 
+pub fn get_context(env: &Environment) -> ValueResult {
+    env.get("CONTEXT").or_else(|_| {
+        Err(RuntimeError {
+            code: "PYOXIDIZER",
+            message: "CONTEXT not set".to_string(),
+            label: "".to_string(),
+        }
+        .into())
+    })
+}
+
 /// register_target(target, callable, depends=None, default=false)
 fn starlark_register_target(
     env: &Environment,
@@ -338,17 +349,18 @@ fn starlark_register_target(
         _ => Vec::new(),
     };
 
-    let mut context = env.get("CONTEXT").expect("CONTEXT not set");
+    let raw_context = get_context(env)?;
+    let mut context = raw_context
+        .downcast_mut::<EnvironmentContext>()
+        .ok_or(ValueError::IncorrectParameterType)?;
 
-    context.downcast_apply_mut(|x: &mut EnvironmentContext| {
-        x.register_target(
-            target.clone(),
-            callable.clone(),
-            depends.clone(),
-            default,
-            default_build_script,
-        )
-    });
+    context.register_target(
+        target.clone(),
+        callable.clone(),
+        depends.clone(),
+        default,
+        default_build_script,
+    );
 
     Ok(Value::new(None))
 }
@@ -367,7 +379,7 @@ fn starlark_register_target(
 /// `Environment` and has wonky handling of `EnvironmentContext` instances in
 /// order to avoid nested mutable borrows. If we passed an
 /// `&mut EnvironmentContext` around then called a Starlark function that performed
-/// a `.downcast_apply_mut()` (which most of them do), we would have nested mutable
+/// a `.downcast_mut()` (which most of them do), we would have nested mutable
 /// borrows and Rust would panic at runtime.
 #[allow(clippy::ptr_arg)]
 fn starlark_resolve_target(
@@ -377,41 +389,35 @@ fn starlark_resolve_target(
 ) -> ValueResult {
     let target = required_str_arg("target", &target)?;
 
-    let mut context = env.get("CONTEXT").expect("CONTEXT not set");
+    let raw_context = get_context(env)?;
+    let mut context = raw_context
+        .downcast_mut::<EnvironmentContext>()
+        .ok_or(ValueError::IncorrectParameterType)?;
 
     // If we have a resolved value for this target, return it.
-    if let Some(v) = context
-        .downcast_apply(|x: &EnvironmentContext| {
-            if let Some(t) = x.targets.get(&target) {
-                if let Some(v) = &t.resolved_value {
-                    Some(v.clone())
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        })
-        .ok_or(ValueError::IncorrectParameterType)?
-    {
+    if let Some(v) = if let Some(t) = context.targets.get(&target) {
+        if let Some(v) = &t.resolved_value {
+            Some(v.clone())
+        } else {
+            None
+        }
+    } else {
+        None
+    } {
         return Ok(v);
     }
 
-    let target_entry = context
-        .downcast_apply(|x: &EnvironmentContext| {
-            warn!(&x.logger, "resolving target {}", target);
+    warn!(&context.logger, "resolving target {}", target);
 
-            match &x.targets.get(&target) {
-                Some(v) => Ok((*v).clone()),
-                None => Err(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: format!("target {} does not exist", target),
-                    label: "resolve_target()".to_string(),
-                }
-                .into()),
-            }
-        })
-        .ok_or(ValueError::IncorrectParameterType)??;
+    let target_entry = match &context.targets.get(&target) {
+        Some(v) => Ok((*v).clone()),
+        None => Err(RuntimeError {
+            code: "PYOXIDIZER_BUILD",
+            message: format!("target {} does not exist", target),
+            label: "resolve_target()".to_string(),
+        }
+        .into()),
+    }?;
 
     // Resolve target dependencies.
     let mut args = Vec::new();
@@ -433,13 +439,9 @@ fn starlark_resolve_target(
     // TODO consider replacing the target's callable with a new function that returns the
     // resolved value. This will ensure a target function is only ever called once.
 
-    context
-        .downcast_apply_mut(|x: &mut EnvironmentContext| {
-            if let Some(target_entry) = x.targets.get_mut(&target) {
-                target_entry.resolved_value = Some(res.clone());
-            }
-        })
-        .ok_or(ValueError::IncorrectParameterType)?;
+    if let Some(target_entry) = context.targets.get_mut(&target) {
+        target_entry.resolved_value = Some(res.clone());
+    }
 
     Ok(res)
 }
@@ -447,11 +449,12 @@ fn starlark_resolve_target(
 /// resolve_targets()
 #[allow(clippy::ptr_arg)]
 fn starlark_resolve_targets(env: &Environment, call_stack: &[(String, String)]) -> ValueResult {
-    let context = env.get("CONTEXT").expect("CONTEXT not set");
-
-    let targets = context
-        .downcast_apply(|context: &EnvironmentContext| context.targets_to_resolve())
+    let raw_context = get_context(env)?;
+    let context = raw_context
+        .downcast_ref::<EnvironmentContext>()
         .ok_or(ValueError::IncorrectParameterType)?;
+
+    let targets = context.targets_to_resolve();
 
     println!("resolving {} targets", targets.len());
     for target in targets {
@@ -473,19 +476,20 @@ fn starlark_resolve_targets(env: &Environment, call_stack: &[(String, String)]) 
 /// set_build_path(path)
 fn starlark_set_build_path(env: &Environment, path: &Value) -> ValueResult {
     let path = required_str_arg("path", &path)?;
-    let mut context = env.get("CONTEXT").expect("CONTEXT not set");
 
-    context
-        .downcast_apply_mut(|x: &mut EnvironmentContext| x.set_build_path(&PathBuf::from(&path)))
-        .ok_or(ValueError::IncorrectParameterType)?
-        .map_err(|e| {
-            RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "set_build_path()".to_string(),
-            }
-            .into()
-        })?;
+    let raw_context = get_context(env)?;
+    let mut context = raw_context
+        .downcast_mut::<EnvironmentContext>()
+        .ok_or(ValueError::IncorrectParameterType)?;
+
+    context.set_build_path(&PathBuf::from(&path)).map_err(|e| {
+        RuntimeError {
+            code: "PYOXIDIZER_BUILD",
+            message: e.to_string(),
+            label: "set_build_path()".to_string(),
+        }
+        .into()
+    })?;
 
     Ok(Value::new(None))
 }
@@ -574,18 +578,20 @@ pub mod tests {
         starlark_eval_in_env(&mut env, "def foo(): pass").unwrap();
         starlark_eval_in_env(&mut env, "register_target('default', foo)").unwrap();
 
-        let context = env.get("CONTEXT").unwrap();
+        let raw_context = get_context(&env).unwrap();
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)
+            .unwrap();
 
-        context.downcast_apply(|x: &EnvironmentContext| {
-            assert_eq!(x.targets.len(), 1);
-            assert!(x.targets.contains_key("default"));
-            assert_eq!(
-                x.targets.get("default").unwrap().callable.to_string(),
-                "foo()".to_string()
-            );
-            assert_eq!(x.targets_order, vec!["default".to_string()]);
-            assert_eq!(x.default_target, Some("default".to_string()));
-        });
+        assert_eq!(context.targets.len(), 1);
+        assert!(context.targets.contains_key("default"));
+        assert_eq!(
+            context.targets.get("default").unwrap().callable.to_string(),
+            "foo()".to_string()
+        );
+        assert_eq!(context.targets_order, vec!["default".to_string()]);
+        assert_eq!(context.default_target, Some("default".to_string()));
     }
 
     #[test]
@@ -600,15 +606,17 @@ pub mod tests {
         )
         .unwrap();
 
-        let context = env.get("CONTEXT").unwrap();
+        let raw_context = get_context(&env).unwrap();
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)
+            .unwrap();
 
-        context.downcast_apply(|x: &EnvironmentContext| {
-            assert_eq!(x.targets.len(), 2);
-            assert_eq!(x.default_target, Some("bar".to_string()));
-            assert_eq!(
-                &x.targets.get("bar").unwrap().depends,
-                &vec!["foo".to_string()],
-            );
-        });
+        assert_eq!(context.targets.len(), 2);
+        assert_eq!(context.default_target, Some("bar".to_string()));
+        assert_eq!(
+            &context.targets.get("bar").unwrap().depends,
+            &vec!["foo".to_string()],
+        );
     }
 }
