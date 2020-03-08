@@ -50,15 +50,14 @@ impl TryFrom<Value> for ResourceLocation {
             let prefix = s.split_at("filesystem-relative:".len()).1;
             Ok(ResourceLocation::RelativePath(prefix.to_string()))
         } else {
-            Err(RuntimeError {
+            Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                 message: format!("unable to convert value {} to a resource location", s),
                 label: format!(
                     "expected `default`, `in-memory`, or `filesystem-relative:*`; got {}",
                     s
                 ),
-            }
-            .into())
+            }))
         }
     }
 }
@@ -103,21 +102,19 @@ impl TypedValue for PythonSourceModule {
             "name" => Value::new(self.module.name.clone()),
             "source" => {
                 let source = self.module.source.resolve().map_err(|e| {
-                    RuntimeError {
+                    ValueError::from(RuntimeError {
                         code: "PYOXIDIZER_SOURCE_ERROR",
                         message: format!("error resolving source code: {}", e),
                         label: "source".to_string(),
-                    }
-                    .into()
+                    })
                 })?;
 
                 let source = String::from_utf8(source).map_err(|_| {
-                    RuntimeError {
+                    ValueError::from(RuntimeError {
                         code: "PYOXIDIZER_SOURCE_ERROR",
                         message: "error converting source code to UTF-8".to_string(),
                         label: "source".to_string(),
-                    }
-                    .into()
+                    })
                 })?;
 
                 Value::new(source)

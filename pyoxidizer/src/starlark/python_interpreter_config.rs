@@ -9,7 +9,7 @@ use {
         default_raw_allocator, EmbeddedPythonConfig, RawAllocator, TerminfoResolution,
     },
     starlark::environment::Environment,
-    starlark::values::error::{RuntimeError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
+    starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
     starlark::values::none::NoneType,
     starlark::values::{TypedValue, Value, ValueResult},
     starlark::{
@@ -130,12 +130,11 @@ impl EmbeddedPythonConfig {
         }
 
         if run_count > 1 {
-            return Err(RuntimeError {
+            return Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                 message: "multiple run_* arguments specified; use at most 1".to_string(),
                 label: "PythonInterpreterConfig()".to_string(),
-            }
-            .into());
+            }));
         }
 
         let run_mode = if let Some(code) = run_eval {
@@ -163,12 +162,11 @@ impl EmbeddedPythonConfig {
                 "rust" => RawAllocator::Rust,
                 "system" => RawAllocator::System,
                 _ => {
-                    return Err(RuntimeError {
+                    return Err(ValueError::from(RuntimeError {
                         code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                         message: "invalid value for raw_allocator".to_string(),
                         label: "invalid value for raw_allocator".to_string(),
-                    }
-                    .into());
+                    }));
                 }
             },
             None => default_raw_allocator(&build_target),
@@ -180,21 +178,19 @@ impl EmbeddedPythonConfig {
                 "static" => TerminfoResolution::Static(if let Some(dirs) = terminfo_dirs {
                     dirs
                 } else {
-                    return Err(RuntimeError {
+                    return Err(ValueError::from(RuntimeError {
                         code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                         message: "terminfo_dirs must be set when using static resolution"
                             .to_string(),
                         label: "terminfo_dirs must be set when using static resolution".to_string(),
-                    }
-                    .into());
+                    }));
                 }),
                 _ => {
-                    return Err(RuntimeError {
+                    return Err(ValueError::from(RuntimeError {
                         code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                         message: "terminfo_resolution must be 'dynamic' or 'static'".to_string(),
                         label: "terminfo_resolution must be 'dynamic' or 'static'".to_string(),
-                    }
-                    .into());
+                    }));
                 }
             },
             None => TerminfoResolution::None,

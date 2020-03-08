@@ -152,22 +152,20 @@ impl PythonDistribution {
             "standalone_static" => DistributionFlavor::StandaloneStatic,
             "standalone_dynamic" => DistributionFlavor::StandaloneDynamic,
             v => {
-                return Err(RuntimeError {
+                return Err(ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: format!("unknown distribution flavor {}", v),
                     label: "default_python_distribution()".to_string(),
-                }
-                .into())
+                }))
             }
         };
 
         let location = default_distribution_location(&flavor, &build_target).map_err(|e| {
-            RuntimeError {
+            ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "default_python_distribution()".to_string(),
-            }
-            .into()
+            })
         })?;
 
         let raw_context = get_context(env)?;
@@ -196,12 +194,11 @@ impl PythonDistribution {
         let flavor = required_str_arg("flavor", flavor)?;
 
         if local_path.get_type() != "NoneType" && url.get_type() != "NoneType" {
-            return Err(RuntimeError {
+            return Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                 message: "cannot define both local_path and url".to_string(),
                 label: "cannot define both local_path and url".to_string(),
-            }
-            .into());
+            }));
         }
 
         let distribution = if local_path.get_type() != "NoneType" {
@@ -219,12 +216,11 @@ impl PythonDistribution {
         let flavor = match flavor.as_ref() {
             "standalone" => DistributionFlavor::Standalone,
             v => {
-                return Err(RuntimeError {
+                return Err(ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: format!("invalid distribution flavor {}", v),
                     label: "PythonDistribution()".to_string(),
-                }
-                .into())
+                }))
             }
         };
 
@@ -290,22 +286,20 @@ impl PythonDistribution {
 
         let resources_policy =
             PythonResourcesPolicy::try_from(resources_policy.as_str()).map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "resources_policy".to_string(),
-                }
-                .into()
+                })
             })?;
 
         let extension_module_filter =
             ExtensionModuleFilter::try_from(extension_module_filter.as_str()).map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                     message: e,
                     label: "invalid policy value".to_string(),
-                }
-                .into()
+                })
             })?;
 
         let preferred_extension_module_variants =
@@ -328,22 +322,20 @@ impl PythonDistribution {
 
         self.ensure_distribution_resolved(&context.logger)
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "resolve_distribution()".to_string(),
-                }
-                .into()
+                })
             })?;
         let dist = self.distribution.as_ref().unwrap().clone();
 
         let mut policy = dist.create_packaging_policy().map_err(|e| {
-            RuntimeError {
+            ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "resolve_distribution()".to_string(),
-            }
-            .into()
+            })
         })?;
         policy.set_extension_module_filter(extension_module_filter);
         policy.set_resources_policy(resources_policy);
@@ -395,12 +387,11 @@ impl PythonDistribution {
                     &config,
                 )
                 .map_err(|e| {
-                    RuntimeError {
+                    ValueError::from(RuntimeError {
                         code: "PYOXIDIZER_BUILD",
                         message: e.to_string(),
                         label: "to_python_executable()".to_string(),
-                    }
-                    .into()
+                    })
                 })?,
         }))
     }
@@ -414,12 +405,11 @@ impl PythonDistribution {
 
         self.ensure_distribution_resolved(&context.logger)
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "resolve_distribution()".to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::from(
@@ -443,12 +433,11 @@ impl PythonDistribution {
 
         self.ensure_distribution_resolved(&context.logger)
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "resolve_distribution()".to_string(),
-                }
-                .into()
+                })
             })?;
 
         let resources = self
@@ -457,12 +446,11 @@ impl PythonDistribution {
             .unwrap()
             .resource_datas()
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYTHON_DISTRIBUTION",
                     message: e.to_string(),
                     label: e.to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::from(
@@ -488,12 +476,11 @@ impl PythonDistribution {
 
         self.ensure_distribution_resolved(&context.logger)
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "resolve_distribution()".to_string(),
-                }
-                .into()
+                })
             })?;
 
         let modules = self
@@ -502,12 +489,11 @@ impl PythonDistribution {
             .unwrap()
             .source_modules()
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYTHON_DISTRIBUTION",
                     message: e.to_string(),
                     label: e.to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::from(

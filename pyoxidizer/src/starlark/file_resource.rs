@@ -175,12 +175,11 @@ impl FileManifest {
         }?;
 
         self.manifest.add_manifest(&other).map_err(|e| {
-            RuntimeError {
+            ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "add_manifest()".to_string(),
-            }
-            .into()
+            })
         })?;
 
         Ok(Value::new(NoneType::None))
@@ -213,12 +212,11 @@ impl FileManifest {
 
                 m.add_to_file_manifest(&mut self.manifest, &prefix)
                     .map_err(|e| {
-                        RuntimeError {
+                        ValueError::from(RuntimeError {
                             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                             message: e.to_string(),
                             label: e.to_string(),
-                        }
-                        .into()
+                        })
                     })
             }
             "PythonBytecodeModule" => {
@@ -270,12 +268,11 @@ impl FileManifest {
                 );
                 m.add_to_file_manifest(&mut self.manifest, &prefix)
                     .map_err(|e| {
-                        RuntimeError {
+                        ValueError::from(RuntimeError {
                             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                             message: e.to_string(),
                             label: e.to_string(),
-                        }
-                        .into()
+                        })
                     })
             }
             "PythonExtensionModule" => {
@@ -291,12 +288,11 @@ impl FileManifest {
                 extension
                     .add_to_file_manifest(&mut self.manifest, &prefix)
                     .map_err(|e| {
-                        RuntimeError {
+                        ValueError::from(RuntimeError {
                             code: "PYOXIDIZER_BUILD",
                             message: e.to_string(),
                             label: "add_python_resource".to_string(),
-                        }
-                        .into()
+                        })
                     })
             }
 
@@ -323,24 +319,22 @@ impl FileManifest {
                             &context.build_opt_level,
                         )
                         .map_err(|e| {
-                            RuntimeError {
+                            ValueError::from(RuntimeError {
                                 code: "PYOXIDIZER_BUILD",
                                 message: e.to_string(),
                                 label: "add_python_resource".to_string(),
-                            }
-                            .into()
+                            })
                         })
                     }
                     None => Err(ValueError::IncorrectParameterType),
                 }
             }
 
-            t => Err(RuntimeError {
+            t => Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                 message: format!("resource should be a Python resource type; got {}", t),
                 label: "bad argument type".to_string(),
-            }
-            .into()),
+            })),
         }?;
 
         Ok(Value::new(NoneType::None))
@@ -381,12 +375,11 @@ impl FileManifest {
             self.manifest.write_to_path(&dest_path)
         }
         .map_err(|e| {
-            RuntimeError {
+            ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_INSTALL",
                 message: format!("error installing FileManifest: {}", e),
                 label: "FileManifest.install()".to_string(),
-            }
-            .into()
+            })
         })?;
 
         Ok(Value::new(NoneType::None))
@@ -424,12 +417,11 @@ fn starlark_glob(
     // Evaluate all the includes first.
     for v in include {
         for p in evaluate_glob(&context.cwd, &v).map_err(|e| {
-            RuntimeError {
+            ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "glob()".to_string(),
-            }
-            .into()
+            })
         })? {
             result.insert(p);
         }
@@ -438,12 +430,11 @@ fn starlark_glob(
     // Then apply excludes.
     for v in exclude {
         for p in evaluate_glob(&context.cwd, &v).map_err(|e| {
-            RuntimeError {
+            ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "glob()".to_string(),
-            }
-            .into()
+            })
         })? {
             result.remove(&p);
         }
@@ -453,23 +444,21 @@ fn starlark_glob(
 
     for path in result {
         let content = RawFileContent::try_from(path.as_path()).map_err(|e| {
-            RuntimeError {
+            ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "glob()".to_string(),
-            }
-            .into()
+            })
         })?;
 
         let path = if let Some(prefix) = &strip_prefix {
             path.strip_prefix(prefix)
                 .map_err(|e| {
-                    RuntimeError {
+                    ValueError::from(RuntimeError {
                         code: "PYOXIDIZER_BUILD",
                         message: e.to_string(),
                         label: "glob()".to_string(),
-                    }
-                    .into()
+                    })
                 })?
                 .to_path_buf()
         } else {
@@ -477,12 +466,11 @@ fn starlark_glob(
         };
 
         manifest.add_file(&path, &content).map_err(|e| {
-            RuntimeError {
+            ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "glob()".to_string(),
-            }
-            .into()
+            })
         })?;
     }
 

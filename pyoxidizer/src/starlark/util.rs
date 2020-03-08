@@ -12,15 +12,14 @@ pub fn required_type_arg(arg_name: &str, arg_type: &str, value: &Value) -> Resul
     if t == arg_type {
         Ok(())
     } else {
-        Err(RuntimeError {
+        Err(ValueError::from(RuntimeError {
             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
             message: format!(
                 "function expects a {} for {}; got type {}",
                 arg_type, arg_name, t
             ),
             label: format!("expect type {}; got {}", arg_type, t),
-        }
-        .into())
+        }))
     }
 }
 
@@ -34,12 +33,11 @@ pub fn optional_type_arg(arg_name: &str, arg_type: &str, value: &Value) -> Resul
 pub fn required_str_arg(name: &str, value: &Value) -> Result<String, ValueError> {
     match value.get_type() {
         "string" => Ok(value.to_str()),
-        t => Err(RuntimeError {
+        t => Err(ValueError::from(RuntimeError {
             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
             message: format!("function expects a string for {}; got type {}", name, t),
             label: format!("expected type string; got {}", t),
-        }
-        .into()),
+        })),
     }
 }
 
@@ -47,30 +45,28 @@ pub fn optional_str_arg(name: &str, value: &Value) -> Result<Option<String>, Val
     match value.get_type() {
         "NoneType" => Ok(None),
         "string" => Ok(Some(value.to_str())),
-        t => Err(RuntimeError {
+        t => Err(ValueError::from(RuntimeError {
             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
             message: format!(
                 "function expects an optional string for {}; got type {}",
                 name, t
             ),
             label: format!("expected type string; got {}", t),
-        }
-        .into()),
+        })),
     }
 }
 
 pub fn required_bool_arg(name: &str, value: &Value) -> Result<bool, ValueError> {
     match value.get_type() {
         "bool" => Ok(value.to_bool()),
-        t => Err(RuntimeError {
+        t => Err(ValueError::from(RuntimeError {
             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
             message: format!(
                 "function expects an optional bool for {}; got type {}",
                 name, t
             ),
             label: format!("expected type bool; got {}", t),
-        }
-        .into()),
+        })),
     }
 }
 
@@ -85,7 +81,7 @@ pub fn required_list_arg(
                 if v.get_type() == value_type {
                     Ok(())
                 } else {
-                    Err(RuntimeError {
+                    Err(ValueError::from(RuntimeError {
                         code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                         message: format!(
                             "list {} expects values of type {}; got {}",
@@ -94,18 +90,16 @@ pub fn required_list_arg(
                             v.get_type()
                         ),
                         label: format!("expected type {}; got {}", value_type, v.get_type()),
-                    }
-                    .into())
+                    }))
                 }?;
             }
             Ok(())
         }
-        t => Err(RuntimeError {
+        t => Err(ValueError::from(RuntimeError {
             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
             message: format!("function expects a list for {}; got type {}", arg_name, t),
             label: format!("expected type list; got {}", t),
-        }
-        .into()),
+        })),
     }
 }
 
@@ -133,7 +127,7 @@ pub fn required_dict_arg(
                 if k.get_type() == key_type {
                     Ok(())
                 } else {
-                    Err(RuntimeError {
+                    Err(ValueError::from(RuntimeError {
                         code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                         message: format!(
                             "dict {} expects keys of type {}; got {}",
@@ -142,8 +136,7 @@ pub fn required_dict_arg(
                             k.get_type()
                         ),
                         label: format!("expected type {}; got {}", key_type, k.get_type()),
-                    }
-                    .into())
+                    }))
                 }?;
 
                 let v = value.at(k.clone())?;
@@ -151,7 +144,7 @@ pub fn required_dict_arg(
                 if v.get_type() == value_type {
                     Ok(())
                 } else {
-                    Err(RuntimeError {
+                    Err(ValueError::from(RuntimeError {
                         code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                         message: format!(
                             "dict {} expects values of type {}; got {}",
@@ -160,18 +153,16 @@ pub fn required_dict_arg(
                             v.get_type(),
                         ),
                         label: format!("expected type {}; got {}", value_type, v.get_type()),
-                    }
-                    .into())
+                    }))
                 }?;
             }
             Ok(())
         }
-        t => Err(RuntimeError {
+        t => Err(ValueError::from(RuntimeError {
             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
             message: format!("function expects a dict for {}; got type {}", arg_name, t),
             label: format!("expected type dict; got {}", t),
-        }
-        .into()),
+        })),
     }
 }
 

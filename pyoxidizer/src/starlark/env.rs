@@ -329,12 +329,11 @@ impl TypedValue for EnvironmentContext {
 
 pub fn get_context(env: &Environment) -> ValueResult {
     env.get("CONTEXT").or_else(|_| {
-        Err(RuntimeError {
+        Err(ValueError::from(RuntimeError {
             code: "PYOXIDIZER",
             message: "CONTEXT not set".to_string(),
             label: "".to_string(),
-        }
-        .into())
+        }))
     })
 }
 
@@ -420,12 +419,11 @@ fn starlark_resolve_target(
 
     let target_entry = match &context.targets.get(&target) {
         Some(v) => Ok((*v).clone()),
-        None => Err(RuntimeError {
+        None => Err(ValueError::from(RuntimeError {
             code: "PYOXIDIZER_BUILD",
             message: format!("target {} does not exist", target),
             label: "resolve_target()".to_string(),
-        }
-        .into()),
+        })),
     }?;
 
     // Resolve target dependencies.
@@ -492,12 +490,11 @@ fn starlark_set_build_path(env: &Environment, path: &Value) -> ValueResult {
         .ok_or(ValueError::IncorrectParameterType)?;
 
     context.set_build_path(&PathBuf::from(&path)).map_err(|e| {
-        RuntimeError {
+        ValueError::from(RuntimeError {
             code: "PYOXIDIZER_BUILD",
             message: e.to_string(),
             label: "set_build_path()".to_string(),
-        }
-        .into()
+        })
     })?;
 
     Ok(Value::new(NoneType::None))

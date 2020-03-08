@@ -146,12 +146,11 @@ impl PythonExecutable {
             .exe
             .pip_install(&context.logger, context.verbose, &args, &extra_envs)
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PIP_INSTALL_ERROR",
                     message: format!("error running pip install: {}", e),
                     label: "pip_install()".to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::from(
@@ -186,12 +185,11 @@ impl PythonExecutable {
             .exe
             .read_package_root(&context.logger, Path::new(&path), &packages)
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PACKAGE_ROOT_ERROR",
                     message: format!("could not find resources: {}", e),
                     label: "read_package_root()".to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::from(
@@ -215,12 +213,11 @@ impl PythonExecutable {
             .exe
             .read_virtualenv(&context.logger, &Path::new(&path))
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "VIRTUALENV_ERROR",
                     message: format!("could not find resources: {}", e),
                     label: "read_virtualenv()".to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::from(
@@ -287,12 +284,11 @@ impl PythonExecutable {
                 &extra_global_arguments,
             )
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "SETUP_PY_ERROR",
                     message: e.to_string(),
                     label: "setup_py_install()".to_string(),
-                }
-                .into()
+                })
             })?;
 
         warn!(
@@ -330,12 +326,11 @@ impl PythonExecutable {
         self.exe
             .add_python_module_source(&m, Some(ConcreteResourceLocation::InMemory))
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "add_in_memory_module_source".to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::new(NoneType::None))
@@ -368,12 +363,11 @@ impl PythonExecutable {
         self.exe
             .add_python_module_source(&m, Some(ConcreteResourceLocation::RelativePath(prefix)))
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "add_filesystem_relative_module_source".to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::new(NoneType::None))
@@ -394,12 +388,11 @@ impl PythonExecutable {
         }?;
         info!(&context.logger, "adding source module {}", m.name);
         self.exe.add_python_module_source(&m, None).map_err(|e| {
-            RuntimeError {
+            ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "add_module_source".to_string(),
-            }
-            .into()
+            })
         })?;
 
         Ok(Value::new(NoneType::None))
@@ -427,12 +420,11 @@ impl PythonExecutable {
             1 => BytecodeOptimizationLevel::One,
             2 => BytecodeOptimizationLevel::Two,
             i => {
-                return Err(RuntimeError {
+                return Err(ValueError::from(RuntimeError {
                     code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                     message: format!("optimize_level must be 0, 1, or 2: got {}", i),
                     label: "invalid optimize_level value".to_string(),
-                }
-                .into());
+                }));
             }
         };
 
@@ -458,12 +450,11 @@ impl PythonExecutable {
                 Some(ConcreteResourceLocation::InMemory),
             )
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "add_in_memory_module_bytecode".to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::new(NoneType::None))
@@ -493,12 +484,11 @@ impl PythonExecutable {
             1 => BytecodeOptimizationLevel::One,
             2 => BytecodeOptimizationLevel::Two,
             i => {
-                return Err(RuntimeError {
+                return Err(ValueError::from(RuntimeError {
                     code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                     message: format!("optimize_level must be 0, 1, or 2: got {}", i),
                     label: "invalid optimize_level value".to_string(),
-                }
-                .into());
+                }));
             }
         };
 
@@ -524,12 +514,11 @@ impl PythonExecutable {
                 Some(ConcreteResourceLocation::RelativePath(prefix)),
             )
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "add_filesystem_relative_module_bytecode".to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::new(NoneType::None))
@@ -557,12 +546,11 @@ impl PythonExecutable {
             1 => BytecodeOptimizationLevel::One,
             2 => BytecodeOptimizationLevel::Two,
             i => {
-                return Err(RuntimeError {
+                return Err(ValueError::from(RuntimeError {
                     code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                     message: format!("optimize_level must be 0, 1, or 2: got {}", i),
                     label: "invalid optimize_level value".to_string(),
-                }
-                .into());
+                }));
             }
         };
 
@@ -585,12 +573,11 @@ impl PythonExecutable {
                 None,
             )
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "add_module_bytecode".to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::new(NoneType::None))
@@ -621,12 +608,11 @@ impl PythonExecutable {
         self.exe
             .add_python_package_resource(&r, Some(ConcreteResourceLocation::InMemory))
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "add_in_memory_package_resource".to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::new(NoneType::None))
@@ -657,12 +643,11 @@ impl PythonExecutable {
         self.exe
             .add_python_package_resource(&r, None)
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "add_package_resource".to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::new(NoneType::None))
@@ -695,12 +680,11 @@ impl PythonExecutable {
         self.exe
             .add_python_package_resource(&r, Some(ConcreteResourceLocation::RelativePath(prefix)))
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "add_filesystem_relative_package_resource".to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::new(NoneType::None))
@@ -730,12 +714,11 @@ impl PythonExecutable {
         self.exe
             .add_python_package_distribution_resource(&r, Some(ConcreteResourceLocation::InMemory))
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "add_in_memory_package_distribution_resource".to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::new(NoneType::None))
@@ -770,12 +753,11 @@ impl PythonExecutable {
                 Some(ConcreteResourceLocation::RelativePath(prefix)),
             )
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "add_filesystem_relative_package_distribution_resource".to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::new(NoneType::None))
@@ -805,12 +787,11 @@ impl PythonExecutable {
         self.exe
             .add_python_package_distribution_resource(&r, None)
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "add_package_distribution_resource".to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::new(NoneType::None))
@@ -841,12 +822,11 @@ impl PythonExecutable {
         self.exe
             .add_python_extension_module(&m, Some(ConcreteResourceLocation::InMemory))
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "add_in_memory_extension_module".to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::new(NoneType::None))
@@ -876,12 +856,11 @@ impl PythonExecutable {
         self.exe
             .add_python_extension_module(&m, Some(ConcreteResourceLocation::RelativePath(prefix)))
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "add_filesystem_relative_extension_module".to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::new(NoneType::None))
@@ -908,12 +887,11 @@ impl PythonExecutable {
         self.exe
             .add_python_extension_module(&m, None)
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "add_extension_module".to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::new(NoneType::None))
@@ -951,12 +929,11 @@ impl PythonExecutable {
                 self.starlark_add_package_distribution_resource(env, resource)
             }
             "PythonExtensionModule" => self.starlark_add_extension_module(env, resource),
-            _ => Err(RuntimeError {
+            _ => Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                 message: "resource argument must be a Python resource type".to_string(),
                 label: ".add_in_memory_python_resource()".to_string(),
-            }
-            .into()),
+            })),
         }
     }
 
@@ -1005,12 +982,11 @@ impl PythonExecutable {
                     env, prefix, resource,
                 ),
             "PythonExtensionModule" => self.starlark_add_extension_module(env, resource),
-            _ => Err(RuntimeError {
+            _ => Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                 message: "resource argument must be a Python resource type".to_string(),
                 label: ".add_in_memory_python_resource()".to_string(),
-            }
-            .into()),
+            })),
         }
     }
 
@@ -1046,12 +1022,11 @@ impl PythonExecutable {
                 self.starlark_add_package_distribution_resource(env, resource)
             }
             "PythonExtensionModule" => self.starlark_add_extension_module(env, resource),
-            _ => Err(RuntimeError {
+            _ => Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                 message: "resource argument must be a Python resource type".to_string(),
                 label: ".add_python_resource()".to_string(),
-            }
-            .into()),
+            })),
         }
     }
 
@@ -1179,12 +1154,11 @@ impl PythonExecutable {
         self.exe
             .filter_resources_from_files(&context.logger, &files_refs, &glob_files_refs)
             .map_err(|e| {
-                RuntimeError {
+                ValueError::from(RuntimeError {
                     code: "RUNTIME_ERROR",
                     message: e.to_string(),
                     label: "filter_from_files()".to_string(),
-                }
-                .into()
+                })
             })?;
 
         Ok(Value::new(NoneType::None))
