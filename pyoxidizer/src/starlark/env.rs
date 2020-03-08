@@ -16,9 +16,9 @@ use {
     starlark::eval::call_stack::CallStack,
     starlark::values::error::{RuntimeError, ValueError},
     starlark::values::none::NoneType,
-    starlark::values::{IterableMutability, TypedValue, Value, ValueResult},
+    starlark::values::{Mutable, TypedValue, Value, ValueResult},
     starlark::{
-        any, starlark_fun, starlark_module, starlark_param_name, starlark_parse_param_type,
+        starlark_fun, starlark_module, starlark_param_name, starlark_parse_param_type,
         starlark_signature, starlark_signature_extraction, starlark_signatures,
     },
     std::collections::BTreeMap,
@@ -306,24 +306,11 @@ impl EnvironmentContext {
 }
 
 impl TypedValue for EnvironmentContext {
-    fn mutability(&self) -> IterableMutability {
-        IterableMutability::Mutable
-    }
+    type Holder = Mutable<EnvironmentContext>;
+    const TYPE: &'static str = "EnvironmentContext";
 
-    any!();
-
-    fn freeze(&mut self) {}
-
-    fn freeze_for_iteration(&mut self) {}
-
-    fn unfreeze_for_iteration(&mut self) {}
-
-    fn get_type(&self) -> &'static str {
-        "EnvironmentContext"
-    }
-
-    fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
-        false
+    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
+        Box::new(std::iter::empty())
     }
 }
 

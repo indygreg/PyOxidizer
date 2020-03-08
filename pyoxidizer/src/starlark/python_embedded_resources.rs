@@ -2,13 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use starlark::values::Value;
 use {
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
     crate::py_packaging::binary::PythonBinaryBuilder,
     anyhow::Result,
     slog::warn,
-    starlark::values::TypedValue,
-    starlark::{any, immutable},
+    starlark::values::{Mutable, TypedValue},
 };
 
 pub struct PythonEmbeddedResources {
@@ -16,15 +16,11 @@ pub struct PythonEmbeddedResources {
 }
 
 impl TypedValue for PythonEmbeddedResources {
-    immutable!();
-    any!();
+    type Holder = Mutable<PythonEmbeddedResources>;
+    const TYPE: &'static str = "PythonEmbeddedResources";
 
-    fn get_type(&self) -> &'static str {
-        "PythonEmbeddedResources"
-    }
-
-    fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
-        false
+    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
+        Box::new(std::iter::empty())
     }
 }
 

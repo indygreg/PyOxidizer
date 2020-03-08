@@ -10,8 +10,7 @@ use {
         PythonPackageResource as RawPackageResource, PythonResource,
     },
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
-    starlark::values::{TypedValue, Value, ValueResult},
-    starlark::{any, immutable},
+    starlark::values::{Immutable, Mutable, TypedValue, Value, ValueResult},
     std::convert::{TryFrom, TryInto},
 };
 
@@ -78,8 +77,12 @@ impl PythonSourceModule {
 }
 
 impl TypedValue for PythonSourceModule {
-    immutable!();
-    any!();
+    type Holder = Mutable<PythonSourceModule>;
+    const TYPE: &'static str = "PythonSourceModule";
+
+    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
+        Box::new(std::iter::empty())
+    }
 
     fn to_str(&self) -> String {
         format!("PythonSourceModule<name={}>", self.module.name)
@@ -87,14 +90,6 @@ impl TypedValue for PythonSourceModule {
 
     fn to_repr(&self) -> String {
         self.to_str()
-    }
-
-    fn get_type(&self) -> &'static str {
-        "PythonSourceModule"
-    }
-
-    fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
-        false
     }
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
@@ -152,7 +147,7 @@ impl TypedValue for PythonSourceModule {
             }
             _ => Err(ValueError::OperationNotSupported {
                 op: format!(".{} =", attribute),
-                left: self.get_type().to_owned(),
+                left: Self::TYPE.to_owned(),
                 right: None,
             }),
         }
@@ -165,8 +160,12 @@ pub struct PythonBytecodeModule {
 }
 
 impl TypedValue for PythonBytecodeModule {
-    immutable!();
-    any!();
+    type Holder = Immutable<PythonBytecodeModule>;
+    const TYPE: &'static str = "PythonBytecodeModule";
+
+    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
+        Box::new(std::iter::empty())
+    }
 
     fn to_str(&self) -> String {
         format!(
@@ -177,14 +176,6 @@ impl TypedValue for PythonBytecodeModule {
 
     fn to_repr(&self) -> String {
         self.to_str()
-    }
-
-    fn get_type(&self) -> &'static str {
-        "PythonBytecodeModule"
-    }
-
-    fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
-        false
     }
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
@@ -228,8 +219,12 @@ pub struct PythonPackageResource {
 }
 
 impl TypedValue for PythonPackageResource {
-    immutable!();
-    any!();
+    type Holder = Immutable<PythonPackageResource>;
+    const TYPE: &'static str = "PythonPackageResource";
+
+    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
+        Box::new(std::iter::empty())
+    }
 
     fn to_str(&self) -> String {
         format!(
@@ -240,14 +235,6 @@ impl TypedValue for PythonPackageResource {
 
     fn to_repr(&self) -> String {
         self.to_str()
-    }
-
-    fn get_type(&self) -> &'static str {
-        "PythonPackageResource"
-    }
-
-    fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
-        false
     }
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
@@ -283,8 +270,12 @@ pub struct PythonPackageDistributionResource {
 }
 
 impl TypedValue for PythonPackageDistributionResource {
-    immutable!();
-    any!();
+    type Holder = Immutable<PythonPackageDistributionResource>;
+    const TYPE: &'static str = "PythonPackageDistributionResource";
+
+    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
+        Box::new(std::iter::empty())
+    }
 
     fn to_str(&self) -> String {
         format!(
@@ -295,14 +286,6 @@ impl TypedValue for PythonPackageDistributionResource {
 
     fn to_repr(&self) -> String {
         self.to_str()
-    }
-
-    fn get_type(&self) -> &'static str {
-        "PythonPackageDistributionResource"
-    }
-
-    fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
-        false
     }
 
     fn to_bool(&self) -> bool {
@@ -342,8 +325,12 @@ pub struct PythonExtensionModule {
 }
 
 impl TypedValue for PythonExtensionModule {
-    immutable!();
-    any!();
+    type Holder = Immutable<PythonExtensionModule>;
+    const TYPE: &'static str = "PythonExtensionModule";
+
+    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
+        Box::new(std::iter::empty())
+    }
 
     fn to_str(&self) -> String {
         format!("PythonExtensionModule<name={}>", self.em.name)
@@ -351,14 +338,6 @@ impl TypedValue for PythonExtensionModule {
 
     fn to_repr(&self) -> String {
         self.to_str()
-    }
-
-    fn get_type(&self) -> &'static str {
-        "PythonExtensionModule"
-    }
-
-    fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
-        false
     }
 
     fn get_attr(&self, attribute: &str) -> ValueResult {

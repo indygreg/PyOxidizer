@@ -11,17 +11,20 @@ use {
     starlark::environment::Environment,
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
     starlark::values::none::NoneType,
-    starlark::values::{TypedValue, Value, ValueResult},
+    starlark::values::{Immutable, TypedValue, Value, ValueResult},
     starlark::{
-        any, immutable, starlark_fun, starlark_module, starlark_param_name,
-        starlark_parse_param_type, starlark_signature, starlark_signature_extraction,
-        starlark_signatures,
+        starlark_fun, starlark_module, starlark_param_name, starlark_parse_param_type,
+        starlark_signature, starlark_signature_extraction, starlark_signatures,
     },
 };
 
 impl TypedValue for EmbeddedPythonConfig {
-    immutable!();
-    any!();
+    type Holder = Immutable<EmbeddedPythonConfig>;
+    const TYPE: &'static str = "PythonInterpreterConfig";
+
+    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
+        Box::new(std::iter::empty())
+    }
 
     fn to_str(&self) -> String {
         format!("PythonInterpreterConfig<{:#?}>", self)
@@ -29,14 +32,6 @@ impl TypedValue for EmbeddedPythonConfig {
 
     fn to_repr(&self) -> String {
         self.to_str()
-    }
-
-    fn get_type(&self) -> &'static str {
-        "PythonInterpreterConfig"
-    }
-
-    fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
-        false
     }
 }
 

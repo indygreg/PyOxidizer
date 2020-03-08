@@ -26,9 +26,9 @@ use {
     starlark::eval::call_stack::CallStack,
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
     starlark::values::none::NoneType,
-    starlark::values::{IterableMutability, TypedValue, Value, ValueResult},
+    starlark::values::{Mutable, TypedValue, Value, ValueResult},
     starlark::{
-        any, starlark_fun, starlark_module, starlark_param_name, starlark_parse_param_type,
+        starlark_fun, starlark_module, starlark_param_name, starlark_parse_param_type,
         starlark_signature, starlark_signature_extraction, starlark_signatures,
     },
     std::collections::HashMap,
@@ -106,28 +106,15 @@ impl PythonDistribution {
 }
 
 impl TypedValue for PythonDistribution {
-    fn mutability(&self) -> IterableMutability {
-        IterableMutability::Mutable
+    type Holder = Mutable<PythonDistribution>;
+    const TYPE: &'static str = "PythonDistribution";
+
+    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
+        Box::new(std::iter::empty())
     }
-
-    any!();
-
-    fn freeze(&mut self) {}
-
-    fn freeze_for_iteration(&mut self) {}
-
-    fn unfreeze_for_iteration(&mut self) {}
 
     fn to_str(&self) -> String {
         format!("PythonDistribution<{:#?}>", self.source)
-    }
-
-    fn get_type(&self) -> &'static str {
-        "PythonDistribution"
-    }
-
-    fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
-        false
     }
 }
 

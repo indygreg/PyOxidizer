@@ -26,11 +26,10 @@ use {
     starlark::environment::Environment,
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
     starlark::values::none::NoneType,
-    starlark::values::{TypedValue, Value, ValueResult},
+    starlark::values::{Mutable, TypedValue, Value, ValueResult},
     starlark::{
-        any, immutable, starlark_fun, starlark_module, starlark_param_name,
-        starlark_parse_param_type, starlark_signature, starlark_signature_extraction,
-        starlark_signatures,
+        starlark_fun, starlark_module, starlark_param_name, starlark_parse_param_type,
+        starlark_signature, starlark_signature_extraction, starlark_signatures,
     },
     std::collections::HashMap,
     std::io::Write,
@@ -44,15 +43,11 @@ pub struct PythonExecutable {
 }
 
 impl TypedValue for PythonExecutable {
-    immutable!();
-    any!();
+    type Holder = Mutable<PythonExecutable>;
+    const TYPE: &'static str = "PythonExecutable";
 
-    fn get_type(&self) -> &'static str {
-        "PythonExecutable"
-    }
-
-    fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
-        false
+    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
+        Box::new(std::iter::empty())
     }
 }
 
