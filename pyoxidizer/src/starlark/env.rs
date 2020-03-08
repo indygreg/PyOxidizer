@@ -15,12 +15,11 @@ use {
     starlark::environment::{Environment, EnvironmentError},
     starlark::values::error::{RuntimeError, ValueError},
     starlark::values::none::NoneType,
-    starlark::values::{default_compare, IterableMutability, TypedValue, Value, ValueResult},
+    starlark::values::{IterableMutability, TypedValue, Value, ValueResult},
     starlark::{
         any, starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
         starlark_signature_extraction, starlark_signatures,
     },
-    std::cmp::Ordering,
     std::collections::BTreeMap,
     std::path::{Path, PathBuf},
 };
@@ -324,10 +323,6 @@ impl TypedValue for EnvironmentContext {
 
     fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
         false
-    }
-
-    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
-        default_compare(self, other)
     }
 }
 

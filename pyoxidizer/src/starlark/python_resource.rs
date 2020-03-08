@@ -10,9 +10,8 @@ use {
         PythonPackageResource as RawPackageResource, PythonResource,
     },
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
-    starlark::values::{default_compare, TypedValue, Value, ValueResult},
+    starlark::values::{TypedValue, Value, ValueResult},
     starlark::{any, immutable},
-    std::cmp::Ordering,
     std::convert::{TryFrom, TryInto},
 };
 
@@ -97,10 +96,6 @@ impl TypedValue for PythonSourceModule {
 
     fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
         false
-    }
-
-    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
-        default_compare(self, other)
     }
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
@@ -195,10 +190,6 @@ impl TypedValue for PythonBytecodeModule {
         false
     }
 
-    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
-        default_compare(self, other)
-    }
-
     fn get_attr(&self, attribute: &str) -> ValueResult {
         let v = match attribute {
             "name" => Value::new(self.module.name.clone()),
@@ -262,10 +253,6 @@ impl TypedValue for PythonPackageResource {
         false
     }
 
-    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
-        default_compare(self, other)
-    }
-
     fn get_attr(&self, attribute: &str) -> ValueResult {
         let v = match attribute {
             "package" => Value::new(self.data.leaf_package.clone()),
@@ -325,10 +312,6 @@ impl TypedValue for PythonPackageDistributionResource {
         true
     }
 
-    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
-        default_compare(self, other)
-    }
-
     fn get_attr(&self, attribute: &str) -> ValueResult {
         let v = match attribute {
             "package" => Value::new(self.resource.package.clone()),
@@ -379,10 +362,6 @@ impl TypedValue for PythonExtensionModule {
 
     fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
         false
-    }
-
-    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
-        default_compare(self, other)
     }
 
     fn get_attr(&self, attribute: &str) -> ValueResult {

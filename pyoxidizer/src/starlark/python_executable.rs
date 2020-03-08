@@ -26,12 +26,11 @@ use {
     starlark::environment::Environment,
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
     starlark::values::none::NoneType,
-    starlark::values::{default_compare, TypedValue, Value, ValueResult},
+    starlark::values::{TypedValue, Value, ValueResult},
     starlark::{
         any, immutable, starlark_fun, starlark_module, starlark_parse_param_type,
         starlark_signature, starlark_signature_extraction, starlark_signatures,
     },
-    std::cmp::Ordering,
     std::collections::HashMap,
     std::io::Write,
     std::ops::Deref,
@@ -53,10 +52,6 @@ impl TypedValue for PythonExecutable {
 
     fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
         false
-    }
-
-    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
-        default_compare(self, other)
     }
 }
 

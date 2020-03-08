@@ -7,10 +7,8 @@ use {
     crate::py_packaging::binary::PythonBinaryBuilder,
     anyhow::Result,
     slog::warn,
-    starlark::values::error::ValueError,
-    starlark::values::{default_compare, TypedValue},
+    starlark::values::TypedValue,
     starlark::{any, immutable},
-    std::cmp::Ordering,
 };
 
 pub struct PythonEmbeddedResources {
@@ -27,10 +25,6 @@ impl TypedValue for PythonEmbeddedResources {
 
     fn is_descendant(&self, _other: &dyn TypedValue) -> bool {
         false
-    }
-
-    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
-        default_compare(self, other)
     }
 }
 
