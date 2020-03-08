@@ -50,7 +50,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.9"
 slog = "2.4"
-starlark = { git = "https://github.com/google/starlark-rust.git", "rev" = "936d1afda5ff3ec06522ffaa4b1f21a5c2fff088" }
+starlark = { git = "https://github.com/google/starlark-rust.git", "rev" = "c2dcd387256bf38344276f18e4a8e5ec389e828d" }
 tar = "0.4"
 tempdir = "0.3"
 url = "2.1"

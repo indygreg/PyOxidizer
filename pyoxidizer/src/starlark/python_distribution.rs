@@ -308,7 +308,7 @@ impl PythonDistribution {
                 "dict" => {
                     let mut m = HashMap::new();
 
-                    for k in preferred_extension_module_variants.iter()? {
+                    for k in &preferred_extension_module_variants.iter()? {
                         let v = preferred_extension_module_variants
                             .at(k.clone())?
                             .to_string();

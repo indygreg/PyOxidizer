@@ -123,11 +123,12 @@ impl PythonExecutable {
         required_list_arg("args", "string", &args)?;
         optional_dict_arg("extra_envs", "string", "string", &extra_envs)?;
 
-        let args: Vec<String> = args.iter()?.map(|x| x.to_string()).collect();
+        let args: Vec<String> = args.iter()?.iter().map(|x| x.to_string()).collect();
 
         let extra_envs = match extra_envs.get_type() {
             "dict" => extra_envs
                 .iter()?
+                .iter()
                 .map(|key| {
                     let k = key.to_string();
                     let v = extra_envs.at(key).unwrap().to_string();
@@ -174,6 +175,7 @@ impl PythonExecutable {
 
         let packages = packages
             .iter()?
+            .iter()
             .map(|x| x.to_string())
             .collect::<Vec<String>>();
 
@@ -244,6 +246,7 @@ impl PythonExecutable {
         let extra_envs = match extra_envs.get_type() {
             "dict" => extra_envs
                 .iter()?
+                .iter()
                 .map(|key| {
                     let k = key.to_string();
                     let v = extra_envs.at(key).unwrap().to_string();
@@ -256,6 +259,7 @@ impl PythonExecutable {
         let extra_global_arguments = match extra_global_arguments.get_type() {
             "list" => extra_global_arguments
                 .iter()?
+                .iter()
                 .map(|x| x.to_string())
                 .collect(),
             "NoneType" => Vec::new(),
@@ -1044,7 +1048,7 @@ impl PythonExecutable {
         required_bool_arg("add_bytecode_module", &add_bytecode_module)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
 
-        for resource in resources.iter()? {
+        for resource in &resources.iter()? {
             self.starlark_add_in_memory_python_resource(
                 env,
                 &resource,
@@ -1072,7 +1076,7 @@ impl PythonExecutable {
         required_bool_arg("add_bytecode_module", &add_bytecode_module)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
 
-        for resource in resources.iter()? {
+        for resource in &resources.iter()? {
             self.starlark_add_filesystem_relative_python_resource(
                 env,
                 prefix,
@@ -1099,7 +1103,7 @@ impl PythonExecutable {
         required_bool_arg("add_bytecode_module", &add_bytecode_module)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
 
-        for resource in resources.iter()? {
+        for resource in &resources.iter()? {
             self.starlark_add_python_resource(
                 env,
                 &resource,
@@ -1132,6 +1136,7 @@ impl PythonExecutable {
         let files = match files.get_type() {
             "list" => files
                 .iter()?
+                .iter()
                 .map(|x| PathBuf::from(x.to_string()))
                 .collect(),
             "NoneType" => Vec::new(),
@@ -1139,7 +1144,7 @@ impl PythonExecutable {
         };
 
         let glob_files = match glob_files.get_type() {
-            "list" => glob_files.iter()?.map(|x| x.to_string()).collect(),
+            "list" => glob_files.iter()?.iter().map(|x| x.to_string()).collect(),
             "NoneType" => Vec::new(),
             _ => panic!("type should have been validated above"),
         };
@@ -1581,7 +1586,8 @@ mod tests {
             starlark_eval_in_env(&mut env, "exe.pip_install(['pyflakes==2.1.1'])").unwrap();
         assert_eq!(resources.get_type(), "list");
 
-        let mut it = resources.iter().unwrap();
+        let raw_it = resources.iter().unwrap();
+        let mut it = raw_it.iter();
 
         let v = it.next().unwrap();
         assert_eq!(v.get_type(), "PythonSourceModule");
@@ -1629,7 +1635,8 @@ mod tests {
         assert_eq!(resources.get_type(), "list");
         assert_eq!(resources.length().unwrap(), 2);
 
-        let mut it = resources.iter().unwrap();
+        let raw_it = resources.iter().unwrap();
+        let mut it = raw_it.iter();
 
         let v = it.next().unwrap();
         assert_eq!(v.get_type(), "PythonSourceModule");

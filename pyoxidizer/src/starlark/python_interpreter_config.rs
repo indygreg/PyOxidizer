@@ -198,7 +198,7 @@ impl EmbeddedPythonConfig {
         };
 
         let sys_paths = match sys_paths.get_type() {
-            "list" => sys_paths.iter().unwrap().map(|x| x.to_string()).collect(),
+            "list" => sys_paths.iter()?.iter().map(|x| x.to_string()).collect(),
             _ => Vec::new(),
         };
 
