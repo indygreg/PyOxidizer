@@ -259,7 +259,7 @@ impl PythonDistribution {
     fn to_python_executable_starlark(
         &mut self,
         env: Environment,
-        call_stack: &Vec<(String, String)>,
+        call_stack: &[(String, String)],
         name: &Value,
         resources_policy: &Value,
         config: &Value,

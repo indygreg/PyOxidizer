@@ -393,7 +393,7 @@ fn starlark_register_target(
 #[allow(clippy::ptr_arg)]
 fn starlark_resolve_target(
     env: &Environment,
-    call_stack: &Vec<(String, String)>,
+    call_stack: &[(String, String)],
     target: &Value,
 ) -> ValueResult {
     let target = required_str_arg("target", &target)?;
@@ -456,7 +456,7 @@ fn starlark_resolve_target(
 
 /// resolve_targets()
 #[allow(clippy::ptr_arg)]
-fn starlark_resolve_targets(env: &Environment, call_stack: &Vec<(String, String)>) -> ValueResult {
+fn starlark_resolve_targets(env: &Environment, call_stack: &[(String, String)]) -> ValueResult {
     let context = env.get("CONTEXT").expect("CONTEXT not set");
 
     let targets =
