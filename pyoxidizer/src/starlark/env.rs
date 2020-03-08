@@ -208,7 +208,7 @@ impl EnvironmentContext {
 
     /// Build a resolved target.
     pub fn build_resolved_target(&mut self, target: &str) -> Result<ResolvedTarget> {
-        let resolved_value = if let Some(t) = self.targets.get(target) {
+        let mut resolved_value = if let Some(t) = self.targets.get(target) {
             if let Some(t) = &t.built_target {
                 return Ok(t.clone());
             }
@@ -221,9 +221,6 @@ impl EnvironmentContext {
         } else {
             return Err(anyhow!("target {} is not registered", target));
         };
-
-        let mut raw_value = resolved_value.0.borrow_mut();
-        let raw_any = raw_value.as_any_mut();
 
         let output_path = self
             .build_path
@@ -246,21 +243,19 @@ impl EnvironmentContext {
             output_path,
         };
 
-        let resolved_target: ResolvedTarget = if raw_any.is::<FileManifest>() {
-            raw_any
-                .downcast_mut::<FileManifest>()
-                .unwrap()
-                .build(&context)
-        } else if raw_any.is::<PythonExecutable>() {
-            raw_any
-                .downcast_mut::<PythonExecutable>()
-                .unwrap()
-                .build(&context)
-        } else if raw_any.is::<PythonEmbeddedResources>() {
-            raw_any
-                .downcast_mut::<PythonEmbeddedResources>()
-                .unwrap()
-                .build(&context)
+        // TODO surely this can use dynamic dispatch.
+        let resolved_target: ResolvedTarget = if resolved_value.get_type() == "FileManifest" {
+            resolved_value
+                .downcast_apply_mut(|m: &mut FileManifest| m.build(&context))
+                .ok_or(anyhow!("invalid cast"))?
+        } else if resolved_value.get_type() == "PythonExecutable" {
+            resolved_value
+                .downcast_apply_mut(|exe: &mut PythonExecutable| exe.build(&context))
+                .ok_or(anyhow!("invalid cast"))?
+        } else if resolved_value.get_type() == "PythonEmbeddedResources" {
+            resolved_value
+                .downcast_apply_mut(|data: &mut PythonEmbeddedResources| data.build(&context))
+                .ok_or(anyhow!("invalid cast"))?
         } else {
             Err(anyhow!("could not determine type of target"))
         }?;

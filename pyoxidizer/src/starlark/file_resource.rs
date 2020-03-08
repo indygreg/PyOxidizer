@@ -318,31 +318,34 @@ impl FileManifest {
                     })
                     .ok_or(ValueError::IncorrectParameterType)?;
 
-                let raw_exe = resource.0.borrow();
-                let exe = raw_exe.as_any().downcast_ref::<PythonExecutable>().unwrap();
-                warn!(
-                    logger,
-                    "adding Python executable {} to {}",
-                    exe.exe.name(),
-                    prefix
-                );
-                self.add_python_executable(
-                    &logger,
-                    &prefix,
-                    exe.exe.deref(),
-                    &target,
-                    release,
-                    &opt_level,
-                )
-                .map_err(|e| {
-                    RuntimeError {
-                        code: "PYOXIDIZER_BUILD",
-                        message: e.to_string(),
-                        label: "add_python_resource".to_string(),
-                    }
-                    .into()
-                })
+                resource
+                    .downcast_apply(|exe: &PythonExecutable| {
+                        warn!(
+                            logger,
+                            "adding Python executable {} to {}",
+                            exe.exe.name(),
+                            prefix
+                        );
+                        self.add_python_executable(
+                            &logger,
+                            &prefix,
+                            exe.exe.deref(),
+                            &target,
+                            release,
+                            &opt_level,
+                        )
+                        .map_err(|e| {
+                            RuntimeError {
+                                code: "PYOXIDIZER_BUILD",
+                                message: e.to_string(),
+                                label: "add_python_resource".to_string(),
+                            }
+                            .into()
+                        })
+                    })
+                    .ok_or(ValueError::IncorrectParameterType)?
             }
+
             t => Err(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                 message: format!("resource should be a Python resource type; got {}", t),
