@@ -23,10 +23,8 @@ use {
     python_packaging::policy::{ExtensionModuleFilter, PythonResourcesPolicy},
     python_packaging::resource::BytecodeOptimizationLevel,
     starlark::environment::Environment,
-    starlark::values::{
-        default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
-        INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-    },
+    starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
+    starlark::values::{default_compare, TypedValue, Value, ValueResult},
     starlark::{
         any, immutable, starlark_fun, starlark_module, starlark_signature,
         starlark_signature_extraction, starlark_signatures,

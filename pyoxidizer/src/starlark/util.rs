@@ -2,7 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use starlark::values::{RuntimeError, Value, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE};
+use {
+    starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
+    starlark::values::Value,
+};
 
 pub fn required_type_arg(arg_name: &str, arg_type: &str, value: &Value) -> Result<(), ValueError> {
     let t = value.get_type();

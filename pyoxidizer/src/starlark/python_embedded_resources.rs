@@ -7,7 +7,8 @@ use {
     crate::py_packaging::binary::PythonBinaryBuilder,
     anyhow::Result,
     slog::warn,
-    starlark::values::{default_compare, TypedValue, ValueError},
+    starlark::values::error::ValueError,
+    starlark::values::{default_compare, TypedValue},
     starlark::{any, immutable},
     std::cmp::Ordering,
 };

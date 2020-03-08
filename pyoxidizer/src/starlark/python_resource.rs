@@ -9,10 +9,8 @@ use {
         PythonPackageDistributionResource as RawDistributionResource,
         PythonPackageResource as RawPackageResource, PythonResource,
     },
-    starlark::values::{
-        default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
-        INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-    },
+    starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
+    starlark::values::{default_compare, TypedValue, Value, ValueResult},
     starlark::{any, immutable},
     std::cmp::Ordering,
     std::convert::{TryFrom, TryInto},

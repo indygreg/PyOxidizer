@@ -13,7 +13,8 @@ use {
     path_dedot::ParseDot,
     slog::warn,
     starlark::environment::{Environment, EnvironmentError},
-    starlark::values::{default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult},
+    starlark::values::error::{RuntimeError, ValueError},
+    starlark::values::{default_compare, TypedValue, Value, ValueResult},
     starlark::{
         any, immutable, starlark_fun, starlark_module, starlark_signature,
         starlark_signature_extraction, starlark_signatures,
