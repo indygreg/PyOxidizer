@@ -46,7 +46,8 @@ pub fn starlark_env() -> Environment {
 
 pub fn starlark_eval_in_env(env: &mut Environment, snippet: &str) -> Result<Value, Diagnostic> {
     let map = std::sync::Arc::new(std::sync::Mutex::new(CodeMap::new()));
-    eval::simple::eval(&map, "<test>", snippet, Dialect::Bzl, env)
+    let file_loader_env = env.clone();
+    eval::simple::eval(&map, "<test>", snippet, Dialect::Bzl, env, file_loader_env)
 }
 
 pub fn starlark_eval(snippet: &str) -> Result<Value, Diagnostic> {

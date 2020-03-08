@@ -57,11 +57,13 @@ pub fn evaluate_file(
     })?;
 
     let map = Arc::new(Mutex::new(CodeMap::new()));
+    let file_loader_env = env.clone();
     starlark::eval::simple::eval_file(
         &map,
         &config_path.display().to_string(),
         Dialect::Bzl,
         &mut env,
+        file_loader_env,
     )
     .map_err(|e| {
         let mut msg = Vec::new();
