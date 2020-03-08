@@ -23,6 +23,7 @@ use {
     python_packaging::policy::{ExtensionModuleFilter, PythonResourcesPolicy},
     python_packaging::resource::BytecodeOptimizationLevel,
     starlark::environment::Environment,
+    starlark::eval::call_stack::CallStack,
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
     starlark::values::none::NoneType,
     starlark::values::{IterableMutability, TypedValue, Value, ValueResult},
@@ -257,7 +258,7 @@ impl PythonDistribution {
     fn to_python_executable_starlark(
         &mut self,
         env: &Environment,
-        call_stack: &[(String, String)],
+        call_stack: &CallStack,
         name: &Value,
         resources_policy: &Value,
         config: &Value,

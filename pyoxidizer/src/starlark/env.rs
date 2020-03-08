@@ -13,6 +13,7 @@ use {
     path_dedot::ParseDot,
     slog::warn,
     starlark::environment::{Environment, EnvironmentError},
+    starlark::eval::call_stack::CallStack,
     starlark::values::error::{RuntimeError, ValueError},
     starlark::values::none::NoneType,
     starlark::values::{IterableMutability, TypedValue, Value, ValueResult},
@@ -392,7 +393,7 @@ fn starlark_register_target(
 #[allow(clippy::ptr_arg)]
 fn starlark_resolve_target(
     env: &Environment,
-    call_stack: &[(String, String)],
+    call_stack: &CallStack,
     target: &Value,
 ) -> ValueResult {
     let target = required_str_arg("target", &target)?;
@@ -456,7 +457,7 @@ fn starlark_resolve_target(
 
 /// resolve_targets()
 #[allow(clippy::ptr_arg)]
-fn starlark_resolve_targets(env: &Environment, call_stack: &[(String, String)]) -> ValueResult {
+fn starlark_resolve_targets(env: &Environment, call_stack: &CallStack) -> ValueResult {
     let raw_context = get_context(env)?;
     let context = raw_context
         .downcast_ref::<EnvironmentContext>()
