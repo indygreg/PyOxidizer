@@ -2,7 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use starlark::values::IterableMutability;
 use {
     super::env::{get_context, EnvironmentContext},
     super::python_executable::PythonExecutable,
@@ -28,7 +27,8 @@ use {
     slog::warn,
     starlark::environment::Environment,
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
-    starlark::values::{default_compare, TypedValue, Value, ValueResult},
+    starlark::values::none::NoneType,
+    starlark::values::{default_compare, IterableMutability, TypedValue, Value, ValueResult},
     starlark::{
         any, immutable, starlark_fun, starlark_module, starlark_parse_param_type,
         starlark_signature, starlark_signature_extraction, starlark_signatures,
@@ -192,7 +192,7 @@ impl FileManifest {
             .into()
         })?;
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// FileManifest.add_python_resource(prefix, resource)
@@ -352,7 +352,7 @@ impl FileManifest {
             .into()),
         }?;
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// FileManifest.add_python_resources(prefix, resources)
@@ -369,7 +369,7 @@ impl FileManifest {
             self.add_python_resource(env, &prefix.clone(), &resource)?;
         }
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// FileManifest.install(path, replace=true)
@@ -398,7 +398,7 @@ impl FileManifest {
             .into()
         })?;
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 }
 
@@ -500,7 +500,7 @@ fn starlark_glob(
 
 starlark_module! { file_resource_env =>
     #[allow(clippy::ptr_arg)]
-    glob(env env, include, exclude=None, strip_prefix=None) {
+    glob(env env, include, exclude=NoneType::None, strip_prefix=NoneType::None) {
         starlark_glob(&env, &include, &exclude, &strip_prefix)
     }
 

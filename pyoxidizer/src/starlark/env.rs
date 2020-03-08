@@ -2,7 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use starlark::values::IterableMutability;
 use {
     super::file_resource::FileManifest,
     super::python_embedded_resources::PythonEmbeddedResources,
@@ -15,7 +14,8 @@ use {
     slog::warn,
     starlark::environment::{Environment, EnvironmentError},
     starlark::values::error::{RuntimeError, ValueError},
-    starlark::values::{default_compare, TypedValue, Value, ValueResult},
+    starlark::values::none::NoneType,
+    starlark::values::{default_compare, IterableMutability, TypedValue, Value, ValueResult},
     starlark::{
         any, starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
         starlark_signature_extraction, starlark_signatures,
@@ -375,7 +375,7 @@ fn starlark_register_target(
         default_build_script,
     );
 
-    Ok(Value::new(None))
+    Ok(Value::new(NoneType::None))
 }
 
 /// resolve_target(target)
@@ -483,7 +483,7 @@ fn starlark_resolve_targets(env: &Environment, call_stack: &[(String, String)]) 
         )?;
     }
 
-    Ok(Value::new(None))
+    Ok(Value::new(NoneType::None))
 }
 
 /// set_build_path(path)
@@ -504,7 +504,7 @@ fn starlark_set_build_path(env: &Environment, path: &Value) -> ValueResult {
         .into()
     })?;
 
-    Ok(Value::new(None))
+    Ok(Value::new(NoneType::None))
 }
 
 starlark_module! { global_module =>
@@ -513,7 +513,7 @@ starlark_module! { global_module =>
         env env,
         target,
         callable,
-        depends=None,
+        depends=NoneType::None,
         default=false,
         default_build_script=false
     ) {

@@ -25,6 +25,7 @@ use {
     slog::{info, warn},
     starlark::environment::Environment,
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
+    starlark::values::none::NoneType,
     starlark::values::{default_compare, TypedValue, Value, ValueResult},
     starlark::{
         any, immutable, starlark_fun, starlark_module, starlark_parse_param_type,
@@ -342,7 +343,7 @@ impl PythonExecutable {
                 .into()
             })?;
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// PythonExecutable.add_filesystem_relative_module_source(module, prefix="")
@@ -380,7 +381,7 @@ impl PythonExecutable {
                 .into()
             })?;
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// PythonExecutable.add_module_source(module)
@@ -406,7 +407,7 @@ impl PythonExecutable {
             .into()
         })?;
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// PythonExecutable.add_in_memory_module_bytecode(module, optimize_level=0)
@@ -470,7 +471,7 @@ impl PythonExecutable {
                 .into()
             })?;
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// PythonExecutable.add_filesystem_relative_module_bytecode(prefix, module, optimize_level=0)
@@ -536,7 +537,7 @@ impl PythonExecutable {
                 .into()
             })?;
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// PythonExecutable.add_module_bytecode(module, optimize_level=0)
@@ -597,7 +598,7 @@ impl PythonExecutable {
                 .into()
             })?;
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// PythonExecutable.add_in_memory_package_resource(resource)
@@ -633,7 +634,7 @@ impl PythonExecutable {
                 .into()
             })?;
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// PythonExecutable.add_package_resource(resource)
@@ -669,7 +670,7 @@ impl PythonExecutable {
                 .into()
             })?;
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// PythonExecutable.add_filesystem_relative_package_resource(prefix, resource)
@@ -707,7 +708,7 @@ impl PythonExecutable {
                 .into()
             })?;
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// PythonExecutable.add_in_memory_package_distribution_resource(resource)
@@ -742,7 +743,7 @@ impl PythonExecutable {
                 .into()
             })?;
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// PythonExecutable.add_filesystem_relative_package_distribution_resource(prefix, resource)
@@ -782,7 +783,7 @@ impl PythonExecutable {
                 .into()
             })?;
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// PythonExecutable.add_package_distribution_resource(resource)
@@ -817,7 +818,7 @@ impl PythonExecutable {
                 .into()
             })?;
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// PythonExecutable.add_in_memory_extension_module(module)
@@ -853,7 +854,7 @@ impl PythonExecutable {
                 .into()
             })?;
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// PythonExecutable.add_filesystem_relative_extension_module(module)
@@ -888,7 +889,7 @@ impl PythonExecutable {
                 .into()
             })?;
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// PythonExecutable.add_extension_module(module)
@@ -920,7 +921,7 @@ impl PythonExecutable {
                 .into()
             })?;
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// PythonExecutable.add_in_memory_python_resource(resource, add_source_module=true, add_bytecode_module=true, optimize_level=0)
@@ -945,7 +946,7 @@ impl PythonExecutable {
                     self.starlark_add_in_memory_module_bytecode(env, resource, optimize_level)?;
                 }
 
-                Ok(Value::new(None))
+                Ok(Value::new(NoneType::None))
             }
             "PythonBytecodeModule" => {
                 self.starlark_add_in_memory_module_bytecode(env, resource, optimize_level)
@@ -993,7 +994,7 @@ impl PythonExecutable {
                     )?;
                 }
 
-                Ok(Value::new(None))
+                Ok(Value::new(NoneType::None))
             }
             "PythonBytecodeModule" => self.starlark_add_filesystem_relative_module_bytecode(
                 env,
@@ -1040,7 +1041,7 @@ impl PythonExecutable {
                     self.starlark_add_module_bytecode(env, resource, optimize_level)?;
                 }
 
-                Ok(Value::new(None))
+                Ok(Value::new(NoneType::None))
             }
             "PythonBytecodeModule" => {
                 self.starlark_add_module_bytecode(env, resource, optimize_level)
@@ -1082,7 +1083,7 @@ impl PythonExecutable {
             )?;
         }
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// PythonExecutable.add_filesystem_relative_python_resources(prefix, resources, add_source_module=true, add_bytecode_module=true, optimize_level=0)
@@ -1111,7 +1112,7 @@ impl PythonExecutable {
             )?;
         }
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// PythonExecutable.add_python_resources(resources, add_source_module=true, add_bytecode_module=true, optimize_level=0)
@@ -1137,7 +1138,7 @@ impl PythonExecutable {
             )?;
         }
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 
     /// PythonExecutable.to_embedded_resources()
@@ -1191,7 +1192,7 @@ impl PythonExecutable {
                 .into()
             })?;
 
-        Ok(Value::new(None))
+        Ok(Value::new(NoneType::None))
     }
 }
 
@@ -1205,7 +1206,7 @@ starlark_module! { python_executable_env =>
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.pip_install(env env, this, args, extra_envs=None) {
+    PythonExecutable.pip_install(env env, this, args, extra_envs=NoneType::None) {
         match this.clone().downcast_ref::<PythonExecutable>() {
             Some(exe) => exe.starlark_pip_install(&env, &args, &extra_envs),
             None => Err(ValueError::IncorrectParameterType),
@@ -1242,8 +1243,8 @@ starlark_module! { python_executable_env =>
         env env,
         this,
         package_path,
-        extra_envs=None,
-        extra_global_arguments=None
+        extra_envs=NoneType::None,
+        extra_global_arguments=NoneType::None
     ) {
         match this.clone().downcast_ref::<PythonExecutable>() {
             Some(exe) => exe.starlark_setup_py_install(&env, &package_path, &extra_envs, &extra_global_arguments),
@@ -1509,8 +1510,8 @@ starlark_module! { python_executable_env =>
     PythonExecutable.filter_resources_from_files(
         env env,
         this,
-        files=None,
-        glob_files=None)
+        files=NoneType::None,
+        glob_files=NoneType::None)
     {
         match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_filter_resources_from_files(&env, &files, &glob_files),

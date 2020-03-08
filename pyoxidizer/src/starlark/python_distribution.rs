@@ -2,7 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use starlark::values::IterableMutability;
 use {
     super::env::{get_context, EnvironmentContext},
     super::python_executable::PythonExecutable,
@@ -25,7 +24,8 @@ use {
     python_packaging::resource::BytecodeOptimizationLevel,
     starlark::environment::Environment,
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
-    starlark::values::{default_compare, TypedValue, Value, ValueResult},
+    starlark::values::none::NoneType,
+    starlark::values::{default_compare, IterableMutability, TypedValue, Value, ValueResult},
     starlark::{
         any, starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
         starlark_signature_extraction, starlark_signatures,
@@ -525,7 +525,7 @@ impl PythonDistribution {
 
 starlark_module! { python_distribution_module =>
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonDistribution(env env, sha256, local_path=None, url=None, flavor="standalone") {
+    PythonDistribution(env env, sha256, local_path=NoneType::None, url=NoneType::None, flavor="standalone") {
         PythonDistribution::from_args(&env, &sha256, &local_path, &url, &flavor)
     }
 
@@ -560,9 +560,9 @@ starlark_module! { python_distribution_module =>
         this,
         name,
         resources_policy="in-memory-only",
-        config=None,
+        config=NoneType::None,
         extension_module_filter="all",
-        preferred_extension_module_variants=None,
+        preferred_extension_module_variants=NoneType::None,
         include_sources=true,
         include_resources=false,
         include_test=false
@@ -585,7 +585,7 @@ starlark_module! { python_distribution_module =>
     }
 
     #[allow(clippy::ptr_arg)]
-    default_python_distribution(env env, flavor="standalone", build_target=None) {
+    default_python_distribution(env env, flavor="standalone", build_target=NoneType::None) {
         PythonDistribution::default_python_distribution(&env, &flavor, &build_target)
     }
 }
