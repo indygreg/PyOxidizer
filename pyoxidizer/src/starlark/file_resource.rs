@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use starlark::values::IterableMutability;
 use {
     super::env::{get_context, EnvironmentContext},
     super::python_executable::PythonExecutable,
@@ -139,8 +140,17 @@ impl BuildTarget for FileManifest {
 }
 
 impl TypedValue for FileManifest {
-    immutable!();
+    fn mutability(&self) -> IterableMutability {
+        IterableMutability::Mutable
+    }
+
     any!();
+
+    fn freeze(&mut self) {}
+
+    fn freeze_for_iteration(&mut self) {}
+
+    fn unfreeze_for_iteration(&mut self) {}
 
     fn get_type(&self) -> &'static str {
         "FileManifest"
@@ -501,7 +511,7 @@ starlark_module! { file_resource_env =>
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     FileManifest.add_manifest(this, other) {
-        match this.clone().downcast_mut::<FileManifest>() {
+        match this.clone().downcast_mut::<FileManifest>()? {
             Some(mut manifest) => manifest.add_manifest(&other),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -509,7 +519,7 @@ starlark_module! { file_resource_env =>
 
     #[allow(clippy::ptr_arg)]
     FileManifest.add_python_resource(env env, this, prefix, resource) {
-        match this.clone().downcast_mut::<FileManifest>() {
+        match this.clone().downcast_mut::<FileManifest>()? {
             Some(mut manifest) => manifest.add_python_resource(&env, &prefix, &resource),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -517,7 +527,7 @@ starlark_module! { file_resource_env =>
 
     #[allow(clippy::ptr_arg)]
     FileManifest.add_python_resources(env env, this, prefix, resources) {
-        match this.clone().downcast_mut::<FileManifest>() {
+        match this.clone().downcast_mut::<FileManifest>()? {
             Some(mut manifest) => manifest.add_python_resources(&env, &prefix, &resources),
             None => Err(ValueError::IncorrectParameterType),
         }

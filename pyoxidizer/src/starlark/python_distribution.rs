@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use starlark::values::IterableMutability;
 use {
     super::env::{get_context, EnvironmentContext},
     super::python_executable::PythonExecutable,
@@ -26,8 +27,8 @@ use {
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
     starlark::values::{default_compare, TypedValue, Value, ValueResult},
     starlark::{
-        any, immutable, starlark_fun, starlark_module, starlark_parse_param_type,
-        starlark_signature, starlark_signature_extraction, starlark_signatures,
+        any, starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
+        starlark_signature_extraction, starlark_signatures,
     },
     std::cmp::Ordering,
     std::collections::HashMap,
@@ -105,8 +106,17 @@ impl PythonDistribution {
 }
 
 impl TypedValue for PythonDistribution {
-    immutable!();
+    fn mutability(&self) -> IterableMutability {
+        IterableMutability::Mutable
+    }
+
     any!();
+
+    fn freeze(&mut self) {}
+
+    fn freeze_for_iteration(&mut self) {}
+
+    fn unfreeze_for_iteration(&mut self) {}
 
     fn to_str(&self) -> String {
         format!("PythonDistribution<{:#?}>", self.source)
@@ -521,7 +531,7 @@ starlark_module! { python_distribution_module =>
 
     #[allow(clippy::ptr_arg)]
     PythonDistribution.extension_modules(env env, this) {
-        match this.clone().downcast_mut::<PythonDistribution>() {
+        match this.clone().downcast_mut::<PythonDistribution>()? {
             Some(mut dist) => dist.extension_modules(&env),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -529,7 +539,7 @@ starlark_module! { python_distribution_module =>
 
     #[allow(clippy::ptr_arg)]
     PythonDistribution.source_modules(env env, this) {
-        match this.clone().downcast_mut::<PythonDistribution>() {
+        match this.clone().downcast_mut::<PythonDistribution>()? {
             Some(mut dist) => dist.source_modules(&env),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -537,7 +547,7 @@ starlark_module! { python_distribution_module =>
 
     #[allow(clippy::ptr_arg)]
     PythonDistribution.package_resources(env env, this, include_test=false) {
-        match this.clone().downcast_mut::<PythonDistribution>() {
+        match this.clone().downcast_mut::<PythonDistribution>()? {
             Some(mut dist) => dist.package_resources(&env, &include_test),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -557,7 +567,7 @@ starlark_module! { python_distribution_module =>
         include_resources=false,
         include_test=false
     ) {
-        match this.clone().downcast_mut::<PythonDistribution>() {
+        match this.clone().downcast_mut::<PythonDistribution>()? {
             Some(mut dist) =>dist.to_python_executable_starlark(
                 &env,
                 call_stack,

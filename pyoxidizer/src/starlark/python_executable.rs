@@ -1253,7 +1253,7 @@ starlark_module! { python_executable_env =>
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_in_memory_module_source(env env, this, module) {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_in_memory_module_source(&env, &module),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -1261,7 +1261,7 @@ starlark_module! { python_executable_env =>
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_filesystem_relative_module_source(env env, this, prefix, module) {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_filesystem_relative_module_source(&env, &prefix, &module),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -1269,7 +1269,7 @@ starlark_module! { python_executable_env =>
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_module_source(env env, this, module) {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_module_source(&env, &module),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -1279,7 +1279,7 @@ starlark_module! { python_executable_env =>
     // a single function call.
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_in_memory_module_bytecode(env env, this, module, optimize_level=0) {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_in_memory_module_bytecode(&env, &module, &optimize_level),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -1287,7 +1287,7 @@ starlark_module! { python_executable_env =>
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_filesystem_relative_module_bytecode(env env, this, prefix, module, optimize_level=0) {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_filesystem_relative_module_bytecode(&env, &prefix, &module, &optimize_level),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -1295,7 +1295,7 @@ starlark_module! { python_executable_env =>
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_module_bytecode(env env, this, module, optimize_level=0) {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_module_bytecode(&env, &module, &optimize_level),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -1303,7 +1303,7 @@ starlark_module! { python_executable_env =>
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_in_memory_package_resource(env env, this, resource) {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_in_memory_package_resource(&env, &resource),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -1311,7 +1311,7 @@ starlark_module! { python_executable_env =>
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_filesystem_relative_package_resource(env env, this, prefix, resource) {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_filesystem_relative_package_resource(&env, &prefix, &resource),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -1319,7 +1319,7 @@ starlark_module! { python_executable_env =>
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_package_resource(env env, this, resource) {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_package_resource(&env, &resource),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -1327,7 +1327,7 @@ starlark_module! { python_executable_env =>
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_in_memory_package_distribution_resource(env env, this, resource) {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_in_memory_package_distribution_resource(&env, &resource),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -1335,7 +1335,7 @@ starlark_module! { python_executable_env =>
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_filesystem_relative_package_distribution_resource(env env, this, prefix, resource) {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_filesystem_relative_package_distribution_resource(&env, &prefix, &resource),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -1343,7 +1343,7 @@ starlark_module! { python_executable_env =>
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_package_distribution_resource(env env, this, resource) {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_package_distribution_resource(&env, &resource),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -1351,7 +1351,7 @@ starlark_module! { python_executable_env =>
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_in_memory_extension_module(env env, this, module) {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_in_memory_extension_module(&env, &module),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -1359,7 +1359,7 @@ starlark_module! { python_executable_env =>
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_filesystem_relative_extension_module(env env, this, prefix, module) {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_filesystem_relative_extension_module(&env, &prefix, &module),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -1367,7 +1367,7 @@ starlark_module! { python_executable_env =>
 
     #[allow(clippy::ptr_arg)]
     PythonExecutable.add_extension_module(env env, this, module) {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_extension_module(&env, &module),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -1383,7 +1383,7 @@ starlark_module! { python_executable_env =>
         optimize_level=0
         )
     {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_in_memory_python_resource(
                 &env,
                 &resource,
@@ -1406,7 +1406,7 @@ starlark_module! { python_executable_env =>
         optimize_level=0
         )
     {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_filesystem_relative_python_resource(
                 &env,
                 &prefix,
@@ -1428,7 +1428,7 @@ starlark_module! { python_executable_env =>
         add_bytecode_module=true,
         optimize_level=0
     ) {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_python_resource(
                 &env,
                 &resource,
@@ -1449,7 +1449,7 @@ starlark_module! { python_executable_env =>
         add_bytecode_module=true,
         optimize_level=0
     ) {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_in_memory_python_resources(
                 &env,
                 &resources,
@@ -1471,7 +1471,7 @@ starlark_module! { python_executable_env =>
         add_bytecode_module=true,
         optimize_level=0
     ) {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_filesystem_relative_python_resources(
                 &env,
                 &prefix,
@@ -1493,7 +1493,7 @@ starlark_module! { python_executable_env =>
         add_bytecode_module=true,
         optimize_level=0
     ) {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_python_resources(
                 &env,
                 &resources,
@@ -1512,7 +1512,7 @@ starlark_module! { python_executable_env =>
         files=None,
         glob_files=None)
     {
-        match this.clone().downcast_mut::<PythonExecutable>() {
+        match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_filter_resources_from_files(&env, &files, &glob_files),
             None => Err(ValueError::IncorrectParameterType),
         }

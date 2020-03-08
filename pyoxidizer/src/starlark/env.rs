@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use starlark::values::IterableMutability;
 use {
     super::file_resource::FileManifest,
     super::python_embedded_resources::PythonEmbeddedResources,
@@ -16,8 +17,8 @@ use {
     starlark::values::error::{RuntimeError, ValueError},
     starlark::values::{default_compare, TypedValue, Value, ValueResult},
     starlark::{
-        any, immutable, starlark_fun, starlark_module, starlark_parse_param_type,
-        starlark_signature, starlark_signature_extraction, starlark_signatures,
+        any, starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
+        starlark_signature_extraction, starlark_signatures,
     },
     std::cmp::Ordering,
     std::collections::BTreeMap,
@@ -248,15 +249,18 @@ impl EnvironmentContext {
         let resolved_target: ResolvedTarget = match resolved_value.get_type() {
             "FileManifest" => resolved_value
                 .downcast_mut::<FileManifest>()
-                .ok_or(anyhow!("invalid cast"))?
+                .map_err(|_| anyhow!("object isn't mutable"))?
+                .ok_or_else(|| anyhow!("invalid cast"))?
                 .build(&context),
             "PythonExecutable" => resolved_value
                 .downcast_mut::<PythonExecutable>()
-                .ok_or(anyhow!("invalid cast"))?
+                .map_err(|_| anyhow!("object isn't mutable"))?
+                .ok_or_else(|| anyhow!("invalid cast"))?
                 .build(&context),
             "PythonEmbeddedResources" => resolved_value
                 .downcast_mut::<PythonEmbeddedResources>()
-                .ok_or(anyhow!("invalid cast"))?
+                .map_err(|_| anyhow!("object isn't mutable"))?
+                .ok_or_else(|| anyhow!("invalid cast"))?
                 .build(&context),
             _ => Err(anyhow!("could not determine type of target")),
         }?;
@@ -302,8 +306,17 @@ impl EnvironmentContext {
 }
 
 impl TypedValue for EnvironmentContext {
-    immutable!();
+    fn mutability(&self) -> IterableMutability {
+        IterableMutability::Mutable
+    }
+
     any!();
+
+    fn freeze(&mut self) {}
+
+    fn freeze_for_iteration(&mut self) {}
+
+    fn unfreeze_for_iteration(&mut self) {}
 
     fn get_type(&self) -> &'static str {
         "EnvironmentContext"
@@ -351,7 +364,7 @@ fn starlark_register_target(
 
     let raw_context = get_context(env)?;
     let mut context = raw_context
-        .downcast_mut::<EnvironmentContext>()
+        .downcast_mut::<EnvironmentContext>()?
         .ok_or(ValueError::IncorrectParameterType)?;
 
     context.register_target(
@@ -391,7 +404,7 @@ fn starlark_resolve_target(
 
     let raw_context = get_context(env)?;
     let mut context = raw_context
-        .downcast_mut::<EnvironmentContext>()
+        .downcast_mut::<EnvironmentContext>()?
         .ok_or(ValueError::IncorrectParameterType)?;
 
     // If we have a resolved value for this target, return it.
@@ -479,7 +492,7 @@ fn starlark_set_build_path(env: &Environment, path: &Value) -> ValueResult {
 
     let raw_context = get_context(env)?;
     let mut context = raw_context
-        .downcast_mut::<EnvironmentContext>()
+        .downcast_mut::<EnvironmentContext>()?
         .ok_or(ValueError::IncorrectParameterType)?;
 
     context.set_build_path(&PathBuf::from(&path)).map_err(|e| {
