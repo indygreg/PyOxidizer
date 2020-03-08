@@ -17,9 +17,7 @@ use {
         any, immutable, not_supported, starlark_fun, starlark_module, starlark_signature,
         starlark_signature_extraction, starlark_signatures,
     },
-    std::any::Any,
     std::cmp::Ordering,
-    std::collections::HashMap,
 };
 
 impl TypedValue for EmbeddedPythonConfig {

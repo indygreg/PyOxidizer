@@ -9,15 +9,12 @@ use {
         PythonPackageDistributionResource as RawDistributionResource,
         PythonPackageResource as RawPackageResource, PythonResource,
     },
-    starlark::environment::Environment,
     starlark::values::{
         default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
         INCORRECT_PARAMETER_TYPE_ERROR_CODE,
     },
     starlark::{any, immutable, not_supported},
-    std::any::Any,
     std::cmp::Ordering,
-    std::collections::HashMap,
     std::convert::{TryFrom, TryInto},
 };
 

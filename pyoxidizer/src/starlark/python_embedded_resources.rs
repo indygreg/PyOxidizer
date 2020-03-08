@@ -7,12 +7,9 @@ use {
     crate::py_packaging::binary::PythonBinaryBuilder,
     anyhow::Result,
     slog::warn,
-    starlark::environment::Environment,
     starlark::values::{default_compare, TypedValue, Value, ValueError, ValueResult},
     starlark::{any, immutable, not_supported},
-    std::any::Any,
     std::cmp::Ordering,
-    std::collections::HashMap,
 };
 
 pub struct PythonEmbeddedResources {
