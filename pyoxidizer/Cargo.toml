@@ -39,6 +39,7 @@ indoc = "0.3"
 itertools = "0.9"
 lazy_static = "1.4"
 libc = "0.2"
+linked-hash-map = "0.5"
 path-dedot = "3.0"
 python-packaging = { version = "0.1.0-pre", path = "../python-packaging" }
 python-packed-resources = { version = "0.2.0-pre", path = "../python-packed-resources" }
@@ -49,7 +50,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.9"
 slog = "2.4"
-starlark = { git = "https://github.com/google/starlark-rust.git", "rev" = "c6229a17df0d6de11ce38e7f8c1fb1347dd15096"}
+starlark = { git = "https://github.com/google/starlark-rust.git", "rev" = "1c5576fc07253d26a282e13d88f39745b48c70ac"}
 tar = "0.4"
 tempdir = "0.3"
 url = "2.1"

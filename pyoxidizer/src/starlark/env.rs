@@ -9,6 +9,7 @@ use {
     super::target::{BuildContext, BuildTarget, ResolvedTarget},
     super::util::{optional_list_arg, required_bool_arg, required_str_arg, required_type_arg},
     anyhow::{anyhow, Context, Result},
+    linked_hash_map::LinkedHashMap,
     path_dedot::ParseDot,
     slog::warn,
     starlark::environment::{Environment, EnvironmentError},
@@ -18,7 +19,7 @@ use {
         starlark_signature_extraction, starlark_signatures,
     },
     std::cmp::Ordering,
-    std::collections::{BTreeMap, HashMap},
+    std::collections::BTreeMap,
     std::path::{Path, PathBuf},
 };
 
@@ -437,10 +438,14 @@ fn starlark_resolve_target(
         args.push(starlark_resolve_target(env, call_stack, &depend_target)?);
     }
 
-    let res =
-        target_entry
-            .callable
-            .call(call_stack, env.clone(), args, HashMap::new(), None, None)?;
+    let res = target_entry.callable.call(
+        call_stack,
+        env.clone(),
+        args,
+        LinkedHashMap::new(),
+        None,
+        None,
+    )?;
 
     // TODO consider replacing the target's callable with a new function that returns the
     // resolved value. This will ensure a target function is only ever called once.
@@ -470,10 +475,10 @@ fn starlark_resolve_targets(env: &Environment, call_stack: &[(String, String)]) 
         let resolve = env.get("resolve_target").unwrap();
 
         resolve.call(
-            &call_stack.to_vec(),
+            call_stack,
             env.clone(),
             vec![Value::new(target)],
-            HashMap::new(),
+            LinkedHashMap::new(),
             None,
             None,
         )?;

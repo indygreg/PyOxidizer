@@ -18,6 +18,7 @@ use {
     },
     anyhow::{anyhow, Result},
     itertools::Itertools,
+    linked_hash_map::LinkedHashMap,
     python_packaging::bytecode::{CompileMode, PythonBytecodeCompiler},
     python_packaging::policy::{ExtensionModuleFilter, PythonResourcesPolicy},
     python_packaging::resource::BytecodeOptimizationLevel,
@@ -368,10 +369,10 @@ impl PythonDistribution {
                 .get("PythonInterpreterConfig")
                 .expect("PythonInterpreterConfig not defined");
             v.call(
-                &call_stack.to_vec(),
+                call_stack,
                 env,
                 Vec::new(),
-                HashMap::new(),
+                LinkedHashMap::new(),
                 None,
                 None,
             )?
