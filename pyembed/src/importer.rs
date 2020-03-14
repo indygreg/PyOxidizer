@@ -23,6 +23,7 @@ use {
     std::borrow::Cow,
     std::cell::RefCell,
     std::collections::HashMap,
+    std::path::PathBuf,
     std::sync::Arc,
 };
 #[cfg(windows)]
@@ -587,6 +588,9 @@ const DOC: &[u8] = b"Binary representation of Python modules\0";
 /// Represents global module state to be passed at interpreter initialization time.
 #[derive(Debug)]
 pub struct InitModuleState {
+    /// Directory where relative paths are relative to.
+    pub origin: PathBuf,
+
     /// Whether to register the filesystem importer on sys.meta_path.
     pub register_filesystem_importer: bool,
 
@@ -610,6 +614,9 @@ pub static mut NEXT_MODULE_STATE: *const InitModuleState = std::ptr::null();
 /// exist without issue.
 #[derive(Debug)]
 struct ModuleState {
+    /// Directory where relative paths are relative to.
+    origin: PathBuf,
+
     /// Whether to register PathFinder on sys.meta_path.
     register_filesystem_importer: bool,
 
@@ -655,6 +662,8 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
     let mut state = get_module_state(py, m)?;
 
     unsafe {
+        // TODO we could move the value if we wanted to avoid the clone().
+        state.origin = (*NEXT_MODULE_STATE).origin.clone();
         state.register_filesystem_importer = (*NEXT_MODULE_STATE).register_filesystem_importer;
         // TODO we could move the value if we wanted to avoid the clone().
         state.sys_paths = (*NEXT_MODULE_STATE).sys_paths.clone();

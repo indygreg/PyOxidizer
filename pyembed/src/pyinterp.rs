@@ -218,13 +218,13 @@ impl<'a> MainPythonInterpreter<'a> {
         let origin = exe
             .parent()
             .ok_or_else(|| "unable to get exe parent")?
-            .display()
-            .to_string();
+            .to_path_buf();
+        let origin_string = origin.display().to_string();
 
         let sys_paths: Vec<String> = config
             .sys_paths
             .iter()
-            .map(|path| path.replace("$ORIGIN", &origin))
+            .map(|path| path.replace("$ORIGIN", &origin_string))
             .collect();
 
         // TODO should we call PyMem::SetupDebugHooks() if enabled?
@@ -272,6 +272,7 @@ impl<'a> MainPythonInterpreter<'a> {
         // that of the interpreter.
         // TODO specify lifetimes so the compiler validates this for us.
         let module_state = super::importer::InitModuleState {
+            origin,
             register_filesystem_importer: self.config.filesystem_importer,
             sys_paths,
             embedded_resources_data: config.embedded_resources_data,
@@ -473,7 +474,7 @@ impl<'a> MainPythonInterpreter<'a> {
 
         if config.sys_meipass {
             let meipass = b"_MEIPASS\0";
-            let value = PyString::new(py, &origin);
+            let value = PyString::new(py, &origin_string);
 
             match value.with_borrowed_ptr(py, |py_value| unsafe {
                 pyffi::PySys_SetObject(meipass.as_ptr() as *const i8, py_value)
