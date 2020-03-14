@@ -546,7 +546,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         }
 
         Ok(EmbeddedPythonResources {
-            modules,
+            resources: modules,
             extension_modules,
             built_extension_modules,
         })
@@ -600,8 +600,8 @@ impl EmbeddedPythonResourcesPrePackaged {
 /// Represents Python resources to embed in a binary.
 #[derive(Debug, Default, Clone)]
 pub struct EmbeddedPythonResources<'a> {
-    /// Python modules described by an embeddable resource.
-    pub modules: BTreeMap<String, EmbeddedResource<'a, u8>>,
+    /// Resources to write to a packed resources data structure.
+    resources: BTreeMap<String, EmbeddedResource<'a, u8>>,
 
     // TODO combine the extension module types.
     pub extension_modules: BTreeMap<String, ExtensionModule>,
@@ -610,7 +610,7 @@ pub struct EmbeddedPythonResources<'a> {
 
 impl<'a> EmbeddedPythonResources<'a> {
     pub fn write_blobs<W: Write>(&self, module_names: &mut W, resources: &mut W) {
-        for name in self.modules.keys() {
+        for name in self.resources.keys() {
             module_names
                 .write_all(name.as_bytes())
                 .expect("failed to write");
@@ -619,7 +619,7 @@ impl<'a> EmbeddedPythonResources<'a> {
 
         write_embedded_resources_v1(
             &self
-                .modules
+                .resources
                 .values()
                 .cloned()
                 .collect::<Vec<EmbeddedResource<'a, u8>>>(),
