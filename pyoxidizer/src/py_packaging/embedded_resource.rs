@@ -167,7 +167,7 @@ pub struct EmbeddedPythonResourcesPrePackaged {
 
 impl EmbeddedPythonResourcesPrePackaged {
     /// Obtain `SourceModule` in this instance.
-    pub fn get_source_modules(&self) -> BTreeMap<String, SourceModule> {
+    pub fn get_in_memory_module_sources(&self) -> BTreeMap<String, SourceModule> {
         BTreeMap::from_iter(self.modules.iter().filter_map(|(name, module)| {
             if let Some(location) = &module.in_memory_source {
                 Some((
@@ -185,7 +185,7 @@ impl EmbeddedPythonResourcesPrePackaged {
     }
 
     /// Obtain `BytecodeModule` in this instance.
-    pub fn get_bytecode_modules(&self) -> BTreeMap<String, BytecodeModule> {
+    pub fn get_in_memory_module_bytecodes(&self) -> BTreeMap<String, BytecodeModule> {
         BTreeMap::from_iter(self.modules.iter().filter_map(|(name, module)| {
             if let Some(location) = &module.in_memory_bytecode {
                 Some((
@@ -224,7 +224,7 @@ impl EmbeddedPythonResourcesPrePackaged {
     }
 
     /// Obtain resource files in this instance.
-    pub fn get_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
+    pub fn get_in_memory_package_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
         BTreeMap::from_iter(self.modules.iter().filter_map(|(name, module)| {
             if let Some(resources) = &module.in_memory_resources {
                 Some((
@@ -254,7 +254,7 @@ impl EmbeddedPythonResourcesPrePackaged {
     }
 
     /// Add a source module to the collection of embedded source modules.
-    pub fn add_source_module(&mut self, module: &SourceModule) {
+    pub fn add_in_memory_module_source(&mut self, module: &SourceModule) {
         if !self.modules.contains_key(&module.name) {
             self.modules.insert(
                 module.name.clone(),
@@ -287,7 +287,7 @@ impl EmbeddedPythonResourcesPrePackaged {
     }
 
     /// Add a bytecode module to the collection of embedded bytecode modules.
-    pub fn add_bytecode_module(&mut self, module: &BytecodeModule) {
+    pub fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModule) {
         if !self.modules.contains_key(&module.name) {
             self.modules.insert(
                 module.name.clone(),
@@ -342,7 +342,7 @@ impl EmbeddedPythonResourcesPrePackaged {
     /// Add resource data.
     ///
     /// Resource data belongs to a Python package and has a name and bytes data.
-    pub fn add_resource(&mut self, resource: &ResourceData) {
+    pub fn add_in_memory_package_resource(&mut self, resource: &ResourceData) {
         if !self.modules.contains_key(&resource.package) {
             self.modules.insert(
                 resource.package.clone(),
@@ -702,7 +702,7 @@ mod tests {
     #[test]
     fn test_add_source_module() {
         let mut r = EmbeddedPythonResourcesPrePackaged::default();
-        r.add_source_module(&SourceModule {
+        r.add_in_memory_module_source(&SourceModule {
             name: "foo".to_string(),
             source: DataLocation::Memory(vec![42]),
             is_package: false,
@@ -723,7 +723,7 @@ mod tests {
     #[test]
     fn test_add_source_module_parents() {
         let mut r = EmbeddedPythonResourcesPrePackaged::default();
-        r.add_source_module(&SourceModule {
+        r.add_in_memory_module_source(&SourceModule {
             name: "root.parent.child".to_string(),
             source: DataLocation::Memory(vec![42]),
             is_package: true,
@@ -764,7 +764,7 @@ mod tests {
     #[test]
     fn test_add_bytecode_module() {
         let mut r = EmbeddedPythonResourcesPrePackaged::default();
-        r.add_bytecode_module(&BytecodeModule {
+        r.add_in_memory_module_bytecode(&BytecodeModule {
             name: "foo".to_string(),
             source: DataLocation::Memory(vec![42]),
             optimize_level: BytecodeOptimizationLevel::Zero,
@@ -786,7 +786,7 @@ mod tests {
     #[test]
     fn test_add_bytecode_module_parents() {
         let mut r = EmbeddedPythonResourcesPrePackaged::default();
-        r.add_bytecode_module(&BytecodeModule {
+        r.add_in_memory_module_bytecode(&BytecodeModule {
             name: "root.parent.child".to_string(),
             source: DataLocation::Memory(vec![42]),
             optimize_level: BytecodeOptimizationLevel::One,
@@ -826,7 +826,7 @@ mod tests {
     #[test]
     fn test_add_resource() {
         let mut r = EmbeddedPythonResourcesPrePackaged::default();
-        r.add_resource(&ResourceData {
+        r.add_in_memory_package_resource(&ResourceData {
             package: "foo".to_string(),
             name: "resource.txt".to_string(),
             data: DataLocation::Memory(vec![42]),
@@ -918,14 +918,14 @@ mod tests {
         let mut r = EmbeddedPythonResourcesPrePackaged::default();
         assert_eq!(r.find_dunder_file()?.len(), 0);
 
-        r.add_source_module(&SourceModule {
+        r.add_in_memory_module_source(&SourceModule {
             name: "foo.bar".to_string(),
             source: DataLocation::Memory(vec![]),
             is_package: false,
         });
         assert_eq!(r.find_dunder_file()?.len(), 0);
 
-        r.add_source_module(&SourceModule {
+        r.add_in_memory_module_source(&SourceModule {
             name: "baz".to_string(),
             source: DataLocation::Memory(Vec::from("import foo; if __file__ == 'ignored'")),
             is_package: false,
@@ -933,7 +933,7 @@ mod tests {
         assert_eq!(r.find_dunder_file()?.len(), 1);
         assert!(r.find_dunder_file()?.contains("baz"));
 
-        r.add_bytecode_module(&BytecodeModule {
+        r.add_in_memory_module_bytecode(&BytecodeModule {
             name: "bytecode".to_string(),
             source: DataLocation::Memory(Vec::from("import foo; if __file__")),
             optimize_level: BytecodeOptimizationLevel::Zero,

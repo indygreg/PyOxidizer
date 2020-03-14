@@ -43,14 +43,14 @@ pub trait PythonBinaryBuilder {
     /// returned executable.
     fn python_exe_path(&self) -> &Path;
 
-    /// Obtain source modules to be embedded in this instance.
-    fn source_modules(&self) -> BTreeMap<String, SourceModule>;
+    /// Obtain Python source modules imported from memory to be embedded in this instance.
+    fn in_memory_module_sources(&self) -> BTreeMap<String, SourceModule>;
 
-    /// Obtain bytecode modules to be embedded in this instance.
-    fn bytecode_modules(&self) -> BTreeMap<String, BytecodeModule>;
+    /// Obtain Python bytecode modules imported from memory to be embedded in this instance.
+    fn in_memory_module_bytecodes(&self) -> BTreeMap<String, BytecodeModule>;
 
-    /// Obtain resource data to be embedded in this instance.
-    fn resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>>;
+    /// Obtain Python package resources data loaded from memory to be embedded in this instance.
+    fn in_memory_package_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>>;
 
     /// Obtain extension modules to be embedded in this instance.
     fn extension_modules(&self) -> BTreeMap<String, ExtensionModule>;
@@ -58,14 +58,14 @@ pub trait PythonBinaryBuilder {
     /// Obtain extension modules to be embedded in this instance.
     fn extension_module_datas(&self) -> BTreeMap<String, ExtensionModuleData>;
 
-    /// Add a source module to the collection of embedded source modules.
-    fn add_source_module(&mut self, module: &SourceModule);
+    /// Add Python module source code to be imported from memory to the embedded resources.
+    fn add_in_memory_module_source(&mut self, module: &SourceModule);
 
-    /// Add a bytecode module to the collection of embedded bytecode modules.
-    fn add_bytecode_module(&mut self, module: &BytecodeModule);
+    /// Add a Python module bytecode to be imported from memory to the embedded resources.
+    fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModule);
 
     /// Add resource data to the collection of embedded resource data.
-    fn add_resource(&mut self, resource: &ResourceData);
+    fn add_in_memory_package_resource(&mut self, resource: &ResourceData);
 
     /// Add an extension module to be embedded in the binary.
     fn add_extension_module(&mut self, extension_module: &ExtensionModule);

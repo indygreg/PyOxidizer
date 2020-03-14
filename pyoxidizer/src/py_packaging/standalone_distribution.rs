@@ -824,11 +824,12 @@ impl StandaloneDistribution {
             }
 
             if include_sources {
-                embedded.add_source_module(&source);
+                embedded.add_in_memory_module_source(&source);
             }
 
-            embedded
-                .add_bytecode_module(&source.as_bytecode_module(BytecodeOptimizationLevel::Zero));
+            embedded.add_in_memory_module_bytecode(
+                &source.as_bytecode_module(BytecodeOptimizationLevel::Zero),
+            );
         }
 
         if include_resources {
@@ -837,7 +838,7 @@ impl StandaloneDistribution {
                     continue;
                 }
 
-                embedded.add_resource(&resource);
+                embedded.add_in_memory_package_resource(&resource);
             }
         }
 
@@ -1351,16 +1352,16 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &self.python_exe
     }
 
-    fn source_modules(&self) -> BTreeMap<String, SourceModule> {
-        self.resources.get_source_modules()
+    fn in_memory_module_sources(&self) -> BTreeMap<String, SourceModule> {
+        self.resources.get_in_memory_module_sources()
     }
 
-    fn bytecode_modules(&self) -> BTreeMap<String, BytecodeModule> {
-        self.resources.get_bytecode_modules()
+    fn in_memory_module_bytecodes(&self) -> BTreeMap<String, BytecodeModule> {
+        self.resources.get_in_memory_module_bytecodes()
     }
 
-    fn resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
-        self.resources.get_resources()
+    fn in_memory_package_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
+        self.resources.get_in_memory_package_resources()
     }
 
     fn extension_modules(&self) -> BTreeMap<String, ExtensionModule> {
@@ -1371,16 +1372,16 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.resources.get_extension_module_datas()
     }
 
-    fn add_source_module(&mut self, module: &SourceModule) {
-        self.resources.add_source_module(module);
+    fn add_in_memory_module_source(&mut self, module: &SourceModule) {
+        self.resources.add_in_memory_module_source(module);
     }
 
-    fn add_bytecode_module(&mut self, module: &BytecodeModule) {
-        self.resources.add_bytecode_module(module);
+    fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModule) {
+        self.resources.add_in_memory_module_bytecode(module);
     }
 
-    fn add_resource(&mut self, resource: &ResourceData) {
-        self.resources.add_resource(resource);
+    fn add_in_memory_package_resource(&mut self, resource: &ResourceData) {
+        self.resources.add_in_memory_package_resource(resource);
     }
 
     fn add_extension_module(&mut self, extension_module: &ExtensionModule) {

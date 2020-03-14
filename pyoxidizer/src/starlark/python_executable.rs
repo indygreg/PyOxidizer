@@ -108,7 +108,7 @@ impl PythonExecutable {
 
         let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
         info!(&logger, "adding embedded source module {}", m.name);
-        self.exe.add_source_module(&m);
+        self.exe.add_in_memory_module_source(&m);
 
         Ok(Value::new(None))
     }
@@ -144,7 +144,7 @@ impl PythonExecutable {
 
         let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
         info!(&logger, "adding embedded bytecode module {}", m.name);
-        self.exe.add_bytecode_module(&BytecodeModule {
+        self.exe.add_in_memory_module_bytecode(&BytecodeModule {
             name: m.name.clone(),
             source: m.source.clone(),
             optimize_level,
@@ -170,7 +170,7 @@ impl PythonExecutable {
             &logger,
             "adding embedded resource data {}:{}", r.package, r.name
         );
-        self.exe.add_resource(&r);
+        self.exe.add_in_memory_package_resource(&r);
 
         Ok(Value::new(None))
     }
@@ -430,9 +430,9 @@ mod tests {
 
         exe.downcast_apply(|exe: &PythonExecutable| {
             assert!(!exe.exe.extension_modules().is_empty());
-            assert!(!exe.exe.source_modules().is_empty());
-            assert!(!exe.exe.bytecode_modules().is_empty());
-            assert!(exe.exe.resources().is_empty());
+            assert!(!exe.exe.in_memory_module_sources().is_empty());
+            assert!(!exe.exe.in_memory_module_bytecodes().is_empty());
+            assert!(exe.exe.in_memory_package_resources().is_empty());
         });
     }
 
@@ -451,7 +451,7 @@ mod tests {
         assert_eq!(exe.get_type(), "PythonExecutable");
 
         exe.downcast_apply(|exe: &PythonExecutable| {
-            assert!(exe.exe.source_modules().is_empty());
+            assert!(exe.exe.in_memory_module_sources().is_empty());
         });
     }
 }

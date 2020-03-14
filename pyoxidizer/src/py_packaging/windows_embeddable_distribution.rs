@@ -539,16 +539,16 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
         &self.python_exe
     }
 
-    fn source_modules(&self) -> BTreeMap<String, SourceModule> {
-        self.resources.get_source_modules()
+    fn in_memory_module_sources(&self) -> BTreeMap<String, SourceModule> {
+        self.resources.get_in_memory_module_sources()
     }
 
-    fn bytecode_modules(&self) -> BTreeMap<String, BytecodeModule> {
-        self.resources.get_bytecode_modules()
+    fn in_memory_module_bytecodes(&self) -> BTreeMap<String, BytecodeModule> {
+        self.resources.get_in_memory_module_bytecodes()
     }
 
-    fn resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
-        self.resources.get_resources()
+    fn in_memory_package_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
+        self.resources.get_in_memory_package_resources()
     }
 
     fn extension_modules(&self) -> BTreeMap<String, ExtensionModule> {
@@ -559,16 +559,16 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
         self.resources.get_extension_module_datas()
     }
 
-    fn add_source_module(&mut self, module: &SourceModule) {
-        self.resources.add_source_module(module)
+    fn add_in_memory_module_source(&mut self, module: &SourceModule) {
+        self.resources.add_in_memory_module_source(module)
     }
 
-    fn add_bytecode_module(&mut self, module: &BytecodeModule) {
-        self.resources.add_bytecode_module(module)
+    fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModule) {
+        self.resources.add_in_memory_module_bytecode(module)
     }
 
-    fn add_resource(&mut self, resource: &ResourceData) {
-        self.resources.add_resource(resource)
+    fn add_in_memory_package_resource(&mut self, resource: &ResourceData) {
+        self.resources.add_in_memory_package_resource(resource)
     }
 
     fn add_extension_module(&mut self, _extension_module: &ExtensionModule) {
