@@ -175,7 +175,7 @@ below where ``embedded`` is assigned:
 
 .. code-block:: python
 
-   embedded.add_python_resources(dist.pip_install(["pyflakes==2.1.1"]))
+   embedded.add_in_memory_python_resources(dist.pip_install(["pyflakes==2.1.1"]))
 
 In addition, replace the ``run_*`` argument to execute ``pyflakes``:
 

@@ -94,28 +94,29 @@ def make_exe(dist):
 
     # Invoke `pip install` with our Python distribution to install a single package.
     # `pip_install()` returns objects representing installed files.
-    # `add_python_resources()` adds these objects to our embedded context.
-    #exe.add_python_resources(dist.pip_install(["appdirs"]))
+    # `add_in_memory_python_resources()` adds these objects to the binary,
+    # marking them for in-memory loading.
+    #exe.add_in_memory_python_resources(dist.pip_install(["appdirs"]))
 
-    # Invoke `pip install` using a requirements file and add the collected files
-    # to our embedded context.
-    #exe.add_python_resources(dist.pip_install(["-r", "requirements.txt"]))
+    # Invoke `pip install` using a requirements file and add the collected resources
+    # to our binary.
+    #exe.add_in_memory_python_resources(dist.pip_install(["-r", "requirements.txt"]))
 
     {{#each pip_install_simple}}
-    exe.add_python_resources(dist.pip_install("{{{ this }}}"))
+    exe.add_in_memory_python_resources(dist.pip_install("{{{ this }}}"))
     {{/each}}
 
     # Read Python files from a local directory and add them to our embedded
     # context, taking just the resources belonging to the `foo` and `bar`
     # Python packages.
-    #exe.add_python_resources(dist.read_package_root(
+    #exe.add_in_memory_python_resources(dist.read_package_root(
     #    path="/src/mypackage",
     #    packages=["foo", "bar"],
     #))
 
     # Discover Python files from a virtualenv and add them to our embedded
     # context.
-    #exe.add_python_resources(dist.read_virtualenv(path="/path/to/venv"))
+    #exe.add_in_memory_python_resources(dist.read_virtualenv(path="/path/to/venv"))
 
     # Filter all resources collected so far through a filter of names
     # in a file.

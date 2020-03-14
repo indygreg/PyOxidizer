@@ -99,8 +99,12 @@ impl BuildTarget for PythonExecutable {
 
 // Starlark functions.
 impl PythonExecutable {
-    /// PythonExecutable.add_module_source(module)
-    pub fn starlark_add_module_source(&mut self, env: &Environment, module: &Value) -> ValueResult {
+    /// PythonExecutable.add_in_memory_module_source(module)
+    pub fn starlark_add_in_memory_module_source(
+        &mut self,
+        env: &Environment,
+        module: &Value,
+    ) -> ValueResult {
         required_type_arg("module", "PythonSourceModule", &module)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
@@ -113,8 +117,8 @@ impl PythonExecutable {
         Ok(Value::new(None))
     }
 
-    /// PythonExecutable.add_module_bytecode(module, optimize_level=0)
-    pub fn starlark_add_module_bytecode(
+    /// PythonExecutable.add_in_memory_module_bytecode(module, optimize_level=0)
+    pub fn starlark_add_in_memory_module_bytecode(
         &mut self,
         env: &Environment,
         module: &Value,
@@ -154,8 +158,8 @@ impl PythonExecutable {
         Ok(Value::new(None))
     }
 
-    /// PythonExecutable.add_resource_data(resource)
-    pub fn starlark_add_resource_data(
+    /// PythonExecutable.add_in_memory_resource_data(resource)
+    pub fn starlark_add_in_memory_resource_data(
         &mut self,
         env: &Environment,
         resource: &Value,
@@ -204,8 +208,8 @@ impl PythonExecutable {
         Ok(Value::new(None))
     }
 
-    /// PythonExecutable.add_python_resource(resource, add_source_module=true, add_bytecode_module=true, optimize_level=0)
-    pub fn starlark_add_python_resource(
+    /// PythonExecutable.add_in_memory_python_resource(resource, add_source_module=true, add_bytecode_module=true, optimize_level=0)
+    pub fn starlark_add_in_memory_python_resource(
         &mut self,
         env: &Environment,
         resource: &Value,
@@ -220,30 +224,30 @@ impl PythonExecutable {
         match resource.get_type() {
             "PythonSourceModule" => {
                 if add_source_module {
-                    self.starlark_add_module_source(env, resource)?;
+                    self.starlark_add_in_memory_module_source(env, resource)?;
                 }
                 if add_bytecode_module {
-                    self.starlark_add_module_bytecode(env, resource, optimize_level)?;
+                    self.starlark_add_in_memory_module_bytecode(env, resource, optimize_level)?;
                 }
 
                 Ok(Value::new(None))
             }
             "PythonBytecodeModule" => {
-                self.starlark_add_module_bytecode(env, resource, optimize_level)
+                self.starlark_add_in_memory_module_bytecode(env, resource, optimize_level)
             }
-            "PythonResourceData" => self.starlark_add_resource_data(env, resource),
+            "PythonResourceData" => self.starlark_add_in_memory_resource_data(env, resource),
             "PythonExtensionModule" => self.starlark_add_extension_module(env, resource),
             _ => Err(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                 message: "resource argument must be a Python resource type".to_string(),
-                label: ".add_python_resource()".to_string(),
+                label: ".add_in_memory_python_resource()".to_string(),
             }
             .into()),
         }
     }
 
-    /// PythonExecutable.add_python_resources(resources, add_source_module=true, add_bytecode_module=true, optimize_level=0)
-    pub fn starlark_add_python_resources(
+    /// PythonExecutable.add_in_memory_python_resources(resources, add_source_module=true, add_bytecode_module=true, optimize_level=0)
+    pub fn starlark_add_in_memory_python_resources(
         &mut self,
         env: &Environment,
         resources: &Value,
@@ -256,7 +260,7 @@ impl PythonExecutable {
         required_type_arg("optimize_level", "int", &optimize_level)?;
 
         for resource in resources.into_iter()? {
-            self.starlark_add_python_resource(
+            self.starlark_add_in_memory_python_resource(
                 env,
                 &resource,
                 add_source_module,
@@ -323,25 +327,25 @@ impl PythonExecutable {
 
 starlark_module! { python_executable_env =>
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_module_source(env env, this, module) {
+    PythonExecutable.add_in_memory_module_source(env env, this, module) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
-            exe.starlark_add_module_source(&env, &module)
+            exe.starlark_add_in_memory_module_source(&env, &module)
         })
     }
 
     // TODO consider unifying with add_module_source() so there only needs to be
     // a single function call.
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_module_bytecode(env env, this, module, optimize_level=0) {
+    PythonExecutable.add_in_memory_module_bytecode(env env, this, module, optimize_level=0) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
-            exe.starlark_add_module_bytecode(&env, &module, &optimize_level)
+            exe.starlark_add_in_memory_module_bytecode(&env, &module, &optimize_level)
         })
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_resource_data(env env, this, resource) {
+    PythonExecutable.add_in_memory_resource_data(env env, this, resource) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
-            exe.starlark_add_resource_data(&env, &resource)
+            exe.starlark_add_in_memory_resource_data(&env, &resource)
         })
     }
 
@@ -353,7 +357,7 @@ starlark_module! { python_executable_env =>
     }
 
     #[allow(clippy::ptr_arg)]
-    PythonExecutable.add_python_resource(
+    PythonExecutable.add_in_memory_python_resource(
         env env,
         this,
         resource,
@@ -363,7 +367,7 @@ starlark_module! { python_executable_env =>
         )
     {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
-            exe.starlark_add_python_resource(
+            exe.starlark_add_in_memory_python_resource(
                 &env,
                 &resource,
                 &add_source_module,
@@ -374,7 +378,7 @@ starlark_module! { python_executable_env =>
     }
 
     #[allow(clippy::ptr_arg)]
-    PythonExecutable.add_python_resources(
+    PythonExecutable.add_in_memory_python_resources(
         env env,
         this,
         resources,
@@ -383,7 +387,7 @@ starlark_module! { python_executable_env =>
         optimize_level=0
     ) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
-            exe.starlark_add_python_resources(
+            exe.starlark_add_in_memory_python_resources(
                 &env,
                 &resources,
                 &add_source_module,

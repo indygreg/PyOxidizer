@@ -28,6 +28,16 @@ Not yet released.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* The ``PythonExecutable.add_module_source()`` Starlark method has been
+  renamed to ``PythonExecutable.add_in_memory_module_source()``.
+* The ``PythonExecutable.add_module_bytecode()`` Starlark method has been
+  renamed to ``PythonExecutable.add_in_memory_module_bytecode()``.
+* The ``PythonExecutable.add_resource_data()`` Starlark method has been
+  renamed to ``PythonExecutable.add_in_memory_resource_data()``.
+* The ``PythonExecutable.add_python_resource()`` Starlark method has been
+  renamed to ``PythonExecutable.add_in_memory_python_resource()``.
+* The ``PythonExecutable.add_python_resources()`` Starlark method has been
+  renamed to ``PythonExecutable.add_in_memory_python_resources()``.
 * The ``PythonExecutable.to_embedded_data()`` Starlark method has been
   renamed to ``PythonExecutable.to_embedded_resources()``.
 * The ``PythonEmbeddedData`` Starlark type has been renamed to

@@ -930,33 +930,33 @@ and a default run-time configuration for that interpreter.
 Instances are constructed from ``PythonDistribution`` instances using
 :ref:`config_python_distribution_to_python_executable`.
 
-.. _config_python_executable_add_module_source:
+.. _config_python_executable_add_in_memory_module_source:
 
-``PythonExecutable.add_module_source(module)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonExecutable.add_in_memory_module_source(module)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This method registers a Python source module with a ``PythonExecutable``
-instance. The argument must be a ``PythonSourceModule`` instance.
+instance. The module will be imported from memory at run-time. The
+argument must be a ``PythonSourceModule`` instance.
 
 If called multiple times for the same module, the last write wins.
 
-.. _config_python_executable_add_module_bytecode:
+.. _config_python_executable_add_in_memory_module_bytecode:
 
-``PythonExecutable.add_module_bytecode(module, optimize_level=0)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonExecutable.add_in_memory_module_bytecode(module, optimize_level=0)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This method registers a Python module bytecode with a
-``PythonExecutable`` instance. The first argument must be a
-``PythonSourceModule`` instance and the 2nd argument the value ``0``, ``1``,
-or ``2``.
+This method registers Python module bytecode with a
+``PythonExecutable`` instance. The module will be imported from memory at
+run-time.
 
-Only one level of bytecode can be registered per named module. If called
-multiple times for the same module, the last write wins.
+The first argument must be a ``PythonSourceModule`` instance. The 2nd
+argument the value ``0``, ``1``, or ``2``.
 
-.. _config_python_executable_add_resource_data:
+.. _config_python_executable_add_in_memory_resource_data:
 
-``PythonExecutable.add_resource_data(resource)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonExecutable.add_in_memory_resource_data(resource)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This method adds a ``PythonResourceData`` instance to the
 ``PythonExecutable`` instance, making that resource available
@@ -978,16 +978,16 @@ instance.
 If multiple extension modules with the same name are added, the last
 added one is used.
 
-.. _config_python_executable_add_python_resource:
+.. _config_python_executable_add_in_memory_python_resource:
 
-``PythonExecutable.add_python_resource(...)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonExecutable.add_in_memory_python_resource(...)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This method registers a Python resource of various types. It accepts a
-``resource`` argument which can be a ``PythonSourceModule``,
+This method registers a Python resource of various types for in-memory loading.
+It accepts a ``resource`` argument which can be a ``PythonSourceModule``,
 ``PythonBytecodeModule``, ``PythonResourceData``, or ``PythonExtensionModule``
 and registers that resource with this instance. This method is a glorified
-proxy to the appropriate ``add_*`` method.
+proxy to the appropriate ``add_in_memory_*`` method.
 
 The following arguments are accepted:
 
@@ -1009,13 +1009,13 @@ The following arguments are accepted:
 ``optimize_level`` (int)
    Bytecode optimization level when compiling bytecode.
 
-.. _config_python_executable_add_python_resources:
+.. _config_python_executable_add_in_memory_python_resources:
 
-``PythonExecutable.add_python_resources(...)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonExecutable.add_in_memory_python_resources(...)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This method registers an iterable of Python resources of various types.
-This method is identical to ``PythonExecutable.add_python_resource()``
+This method is identical to ``PythonExecutable.add_in_memory_python_resource()``
 except the first argument is an iterable of resources. All other arguments
 are identical.
 
