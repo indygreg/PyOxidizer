@@ -621,6 +621,27 @@ impl<'a> EmbeddedPythonResources<'a> {
             None,
         )
     }
+
+    /// Obtain a list of built-in extensions.
+    ///
+    /// The returned list will likely make its way to PyImport_Inittab.
+    pub fn builtin_extensions(&self) -> Vec<(String, String)> {
+        let mut res = Vec::new();
+
+        for (name, em) in &self.extension_modules {
+            if let Some(init_fn) = &em.init_fn {
+                res.push((name.clone(), init_fn.clone()));
+            }
+        }
+
+        for (name, em) in &self.built_extension_modules {
+            if let Some(init_fn) = &em.init_fn {
+                res.push((name.clone(), init_fn.clone()));
+            }
+        }
+
+        res
+    }
 }
 
 #[cfg(test)]

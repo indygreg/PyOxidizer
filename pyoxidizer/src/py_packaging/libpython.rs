@@ -17,8 +17,8 @@ use std::path::{Path, PathBuf};
 
 use super::bytecode::{BytecodeCompiler, CompileMode};
 use super::embedded_resource::EmbeddedPythonResources;
-use super::resource::{BytecodeOptimizationLevel, ExtensionModuleData};
-use super::standalone_distribution::{ExtensionModule, LicenseInfo, StandaloneDistribution};
+use super::resource::BytecodeOptimizationLevel;
+use super::standalone_distribution::{LicenseInfo, StandaloneDistribution};
 
 pub const PYTHON_IMPORTER: &[u8] = include_bytes!("memoryimporter.py");
 
@@ -89,10 +89,7 @@ pub fn derive_importlib(
 }
 
 /// Produce the content of the config.c file containing built-in extensions.
-pub fn make_config_c(
-    extension_modules: &BTreeMap<String, ExtensionModule>,
-    built_extension_modules: &BTreeMap<String, ExtensionModuleData>,
-) -> String {
+pub fn make_config_c(extensions: &[(String, String)]) -> String {
     // It is easier to construct the file from scratch than parse the template
     // and insert things in the right places.
     let mut lines: Vec<String> = Vec::new();
@@ -100,38 +97,16 @@ pub fn make_config_c(
     lines.push(String::from("#include \"Python.h\""));
 
     // Declare the initialization functions.
-    for em in extension_modules.values() {
-        if let Some(init_fn) = &em.init_fn {
-            if init_fn == "NULL" {
-                continue;
-            }
-
-            lines.push(format!("extern PyObject* {}(void);", init_fn));
-        }
-    }
-
-    for em in built_extension_modules.values() {
-        if let Some(init_fn) = &em.init_fn {
+    for (_name, init_fn) in extensions {
+        if init_fn != "NULL" {
             lines.push(format!("extern PyObject* {}(void);", init_fn));
         }
     }
 
     lines.push(String::from("struct _inittab _PyImport_Inittab[] = {"));
 
-    for em in extension_modules.values() {
-        if let Some(init_fn) = &em.init_fn {
-            if init_fn == "NULL" {
-                continue;
-            }
-
-            lines.push(format!("{{\"{}\", {}}},", em.module, init_fn));
-        }
-    }
-
-    for em in built_extension_modules.values() {
-        if let Some(init_fn) = &em.init_fn {
-            lines.push(format!("{{\"{}\", {}}},", em.name, init_fn));
-        }
+    for (name, init_fn) in extensions {
+        lines.push(format!("{{\"{}\", {}}},", name, init_fn));
     }
 
     lines.push(String::from("{0, 0}"));
@@ -189,7 +164,7 @@ pub fn link_libpython(
         "deriving custom config.c from {} extension modules",
         extension_modules.len() + built_extension_modules.len()
     );
-    let config_c_source = make_config_c(&extension_modules, &built_extension_modules);
+    let config_c_source = make_config_c(&resources.builtin_extensions());
     let config_c_path = out_dir.join("config.c");
     let config_c_temp_path = temp_dir_path.join("config.c");
 
