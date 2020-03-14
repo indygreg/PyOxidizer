@@ -9,7 +9,7 @@ use {
         PythonExtensionModule, PythonExtensionModuleFlavor, PythonResourceData, PythonSourceModule,
     },
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
-    super::util::{optional_list_arg, required_bool_arg, required_type_arg},
+    super::util::{optional_list_arg, required_bool_arg, required_str_arg, required_type_arg},
     crate::project_building::build_python_executable,
     crate::py_packaging::binary::PythonBinaryBuilder,
     crate::py_packaging::resource::{BytecodeModule, BytecodeOptimizationLevel},
@@ -126,6 +126,38 @@ impl PythonExecutable {
         Ok(Value::new(None))
     }
 
+    /// PythonExecutable.add_filesystem_relative_module_source(module, prefix="")
+    pub fn starlark_add_filesystem_relative_module_source(
+        &mut self,
+        env: &Environment,
+        prefix: &Value,
+        module: &Value,
+    ) -> ValueResult {
+        let prefix = required_str_arg("prefix", &prefix)?;
+        required_type_arg("module", "PythonSourceModule", &module)?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not set");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
+        info!(
+            &logger,
+            "adding executable relative source module {}", m.name
+        );
+        self.exe
+            .add_relative_path_module_source(&prefix, &m)
+            .or_else(|e| {
+                Err(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "add_filesystem_relative_module_source".to_string(),
+                }
+                .into())
+            })?;
+
+        Ok(Value::new(None))
+    }
+
     /// PythonExecutable.add_in_memory_module_bytecode(module, optimize_level=0)
     pub fn starlark_add_in_memory_module_bytecode(
         &mut self,
@@ -173,6 +205,64 @@ impl PythonExecutable {
                     }
                     .into())
                 }
+            })?;
+
+        Ok(Value::new(None))
+    }
+
+    /// PythonExecutable.add_filesystem_relative_module_bytecode(prefix, module, optimize_level=0)
+    pub fn starlark_add_filesystem_relative_module_bytecode(
+        &mut self,
+        env: &Environment,
+        prefix: &Value,
+        module: &Value,
+        optimize_level: &Value,
+    ) -> ValueResult {
+        let prefix = required_str_arg("prefix", &prefix)?;
+        required_type_arg("module", "PythonSourceModule", &module)?;
+        required_type_arg("optimize_level", "int", &optimize_level)?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not set");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        let optimize_level = optimize_level.to_int().unwrap();
+
+        let optimize_level = match optimize_level {
+            0 => BytecodeOptimizationLevel::Zero,
+            1 => BytecodeOptimizationLevel::One,
+            2 => BytecodeOptimizationLevel::Two,
+            i => {
+                return Err(RuntimeError {
+                    code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                    message: format!("optimize_level must be 0, 1, or 2: got {}", i),
+                    label: "invalid optimize_level value".to_string(),
+                }
+                .into());
+            }
+        };
+
+        let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
+        info!(
+            &logger,
+            "adding executable relative bytecode module {}", m.name
+        );
+        self.exe
+            .add_relative_path_module_bytecode(
+                &prefix,
+                &BytecodeModule {
+                    name: m.name.clone(),
+                    source: m.source.clone(),
+                    optimize_level,
+                    is_package: m.is_package,
+                },
+            )
+            .or_else(|e| {
+                Err(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "add_filesystem_relative_module_bytecode".to_string(),
+                }
+                .into())
             })?;
 
         Ok(Value::new(None))
@@ -372,12 +462,26 @@ starlark_module! { python_executable_env =>
         })
     }
 
+    #[allow(non_snake_case, clippy::ptr_arg)]
+    PythonExecutable.add_filesystem_relative_module_source(env env, this, prefix, module) {
+        this.downcast_apply_mut(|exe: &mut PythonExecutable| {
+            exe.starlark_add_filesystem_relative_module_source(&env, &prefix, &module)
+        })
+    }
+
     // TODO consider unifying with add_module_source() so there only needs to be
     // a single function call.
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_in_memory_module_bytecode(env env, this, module, optimize_level=0) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_in_memory_module_bytecode(&env, &module, &optimize_level)
+        })
+    }
+
+    #[allow(non_snake_case, clippy::ptr_arg)]
+    PythonExecutable.add_filesystem_relative_module_bytecode(env env, this, prefix, module, optimize_level=0) {
+        this.downcast_apply_mut(|exe: &mut PythonExecutable| {
+            exe.starlark_add_filesystem_relative_module_bytecode(&env, &prefix, &module, &optimize_level)
         })
     }
 

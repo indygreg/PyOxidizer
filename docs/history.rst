@@ -62,6 +62,13 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* Python resources can now be installed next to built binaries using the new
+  Starlark functions ``PythonExecutable.add_filesystem_relative_module_source()``
+  and ``PythonExecutable.add_filesystem_relative_module_bytecode()``. Unlike
+  adding Python resources to ``FileManifest`` instances, Python resources added
+  this way have their metadata serialized into the built executable. This allows
+  the special Python module importer present in built binaries to service the
+  import request without going through Python's default filesystem-based importer.
 * Windows binaries can now import extension modules defined as shared libraries
   (e.g. `.pyd` files) from memory. PyOxidizer will detect `.pyd` files during
   packaging and embed them into the binary as resources. When the module

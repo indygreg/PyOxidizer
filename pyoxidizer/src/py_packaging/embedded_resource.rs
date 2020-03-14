@@ -916,6 +916,15 @@ impl<'a> EmbeddedPythonResources<'a> {
         res
     }
 
+    /// Obtain a FileManifest of extra files to install relative to the produced binary.
+    pub fn extra_install_files(&self) -> Result<FileManifest> {
+        let mut res = FileManifest::default();
+
+        res.add_manifest(&self.extra_files)?;
+
+        Ok(res)
+    }
+
     /// Resolve state needed to link a libpython.
     pub fn resolve_libpython_linking_info(
         &self,

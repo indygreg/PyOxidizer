@@ -61,8 +61,22 @@ pub trait PythonBinaryBuilder {
     /// Add Python module source code to be imported from memory to the embedded resources.
     fn add_in_memory_module_source(&mut self, module: &SourceModule) -> Result<()>;
 
+    /// Add Python module source code to be imported from the filesystem relative to the produced binary.
+    fn add_relative_path_module_source(
+        &mut self,
+        prefix: &str,
+        module: &SourceModule,
+    ) -> Result<()>;
+
     /// Add a Python module bytecode to be imported from memory to the embedded resources.
     fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModule) -> Result<()>;
+
+    /// Add Python module bytecode to be imported from the filesystem relative to the produced binary.
+    fn add_relative_path_module_bytecode(
+        &mut self,
+        prefix: &str,
+        module: &BytecodeModule,
+    ) -> Result<()>;
 
     /// Add resource data to the collection of embedded resource data.
     fn add_in_memory_package_resource(&mut self, resource: &ResourceData) -> Result<()>;

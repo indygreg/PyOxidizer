@@ -25,7 +25,7 @@ use {
         BytecodeModule, BytecodeOptimizationLevel, DataLocation, ExtensionModuleData,
         PythonResource, ResourceData, SourceModule,
     },
-    crate::app_packaging::resource::{FileContent, FileManifest},
+    crate::app_packaging::resource::FileContent,
     crate::licensing::NON_GPL_LICENSES,
     anyhow::{anyhow, Context, Result},
     copy_dir::copy_dir,
@@ -1379,8 +1379,26 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.resources.add_in_memory_module_source(module)
     }
 
+    fn add_relative_path_module_source(
+        &mut self,
+        prefix: &str,
+        module: &SourceModule,
+    ) -> Result<()> {
+        self.resources
+            .add_relative_path_module_source(module, prefix)
+    }
+
     fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModule) -> Result<()> {
         self.resources.add_in_memory_module_bytecode(module)
+    }
+
+    fn add_relative_path_module_bytecode(
+        &mut self,
+        prefix: &str,
+        module: &BytecodeModule,
+    ) -> Result<()> {
+        self.resources
+            .add_relative_path_module_bytecode(module, prefix)
     }
 
     fn add_in_memory_package_resource(&mut self, resource: &ResourceData) -> Result<()> {
@@ -1431,7 +1449,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         opt_level: &str,
     ) -> Result<EmbeddedPythonBinaryData> {
         let resources = self.resources.package(logger, &self.python_exe)?;
-        let mut extra_files = FileManifest::default();
+        let mut extra_files = resources.extra_install_files()?;
         let linking_info = self.resolve_python_linking_info(logger, opt_level, &resources)?;
         let resources = EmbeddedResourcesBlobs::try_from(resources)?;
         warn!(
