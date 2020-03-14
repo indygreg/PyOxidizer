@@ -12,7 +12,7 @@ use {
     super::libpython::ImportlibBytecode,
     super::pyembed::{derive_python_config, write_default_python_config_rs},
     super::resource::{BytecodeModule, ExtensionModuleData, ResourceData, SourceModule},
-    super::standalone_distribution::ExtensionModule,
+    super::standalone_distribution::DistributionExtensionModule,
     crate::app_packaging::resource::FileManifest,
     anyhow::Result,
     std::collections::BTreeMap,
@@ -53,7 +53,7 @@ pub trait PythonBinaryBuilder {
     fn in_memory_package_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>>;
 
     /// Obtain extension modules to be embedded in this instance.
-    fn extension_modules(&self) -> BTreeMap<String, ExtensionModule>;
+    fn extension_modules(&self) -> BTreeMap<String, DistributionExtensionModule>;
 
     /// Obtain extension modules to be embedded in this instance.
     fn extension_module_datas(&self) -> BTreeMap<String, ExtensionModuleData>;
@@ -68,7 +68,7 @@ pub trait PythonBinaryBuilder {
     fn add_in_memory_package_resource(&mut self, resource: &ResourceData);
 
     /// Add an extension module to be embedded in the binary.
-    fn add_extension_module(&mut self, extension_module: &ExtensionModule);
+    fn add_distribution_extension_module(&mut self, extension_module: &DistributionExtensionModule);
 
     /// Add an extension module to be embedded in the binary.
     fn add_extension_module_data(&mut self, extension_module_data: &ExtensionModuleData);

@@ -21,7 +21,7 @@ use {
     crate::project_building::build_python_executable,
     crate::py_packaging::binary::PythonBinaryBuilder,
     crate::py_packaging::resource::BytecodeModule,
-    crate::py_packaging::standalone_distribution::ExtensionModule,
+    crate::py_packaging::standalone_distribution::DistributionExtensionModule,
     anyhow::Result,
     itertools::Itertools,
     slog::warn,
@@ -85,7 +85,7 @@ impl FileManifest {
     }
 
     // TODO implement.
-    fn add_extension_module(&self, _prefix: &str, _em: &ExtensionModule) {
+    fn add_extension_module(&self, _prefix: &str, _em: &DistributionExtensionModule) {
         println!("support for adding extension modules not yet implemented");
     }
 

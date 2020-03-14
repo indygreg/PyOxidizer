@@ -19,7 +19,7 @@ use {
     super::resource::{
         BytecodeModule, ExtensionModuleData, PythonResource, ResourceData, SourceModule,
     },
-    super::standalone_distribution::ExtensionModule,
+    super::standalone_distribution::DistributionExtensionModule,
     crate::analyze::find_pe_dependencies_path,
     crate::app_packaging::resource::FileManifest,
     anyhow::{anyhow, Result},
@@ -301,7 +301,7 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         _logger: &slog::Logger,
         _filter: &ExtensionModuleFilter,
         _preferred_variants: Option<HashMap<String, String>>,
-    ) -> Result<Vec<ExtensionModule>> {
+    ) -> Result<Vec<DistributionExtensionModule>> {
         unimplemented!();
     }
 
@@ -551,8 +551,8 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
         self.resources.get_in_memory_package_resources()
     }
 
-    fn extension_modules(&self) -> BTreeMap<String, ExtensionModule> {
-        self.resources.get_extension_modules()
+    fn extension_modules(&self) -> BTreeMap<String, DistributionExtensionModule> {
+        self.resources.get_distribution_extension_modules()
     }
 
     fn extension_module_datas(&self) -> BTreeMap<String, ExtensionModuleData> {
@@ -571,7 +571,10 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
         self.resources.add_in_memory_package_resource(resource)
     }
 
-    fn add_extension_module(&mut self, _extension_module: &ExtensionModule) {
+    fn add_distribution_extension_module(
+        &mut self,
+        _extension_module: &DistributionExtensionModule,
+    ) {
         unimplemented!()
     }
 

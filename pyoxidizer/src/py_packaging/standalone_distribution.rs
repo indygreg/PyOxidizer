@@ -255,9 +255,9 @@ pub fn invoke_python(python_paths: &PythonPaths, logger: &slog::Logger, args: &[
 }
 
 pub fn choose_variant<S: BuildHasher>(
-    extensions: &[ExtensionModule],
+    extensions: &[DistributionExtensionModule],
     variants: &Option<HashMap<String, String, S>>,
-) -> ExtensionModule {
+) -> DistributionExtensionModule {
     if let Some(variants) = variants {
         if let Some(preferred) = variants.get(&extensions[0].module) {
             let mut desired = extensions[0].clone();
@@ -303,7 +303,7 @@ pub struct LibraryDepends {
 
 /// Describes an extension module in a Python distribution.
 #[derive(Clone, Debug, PartialEq)]
-pub struct ExtensionModule {
+pub struct DistributionExtensionModule {
     /// Name of the Python module this extension module provides.
     pub module: String,
 
@@ -439,7 +439,7 @@ pub struct StandaloneDistribution {
     pub libpython_shared_library: Option<PathBuf>,
 
     /// Extension modules available to this distribution.
-    pub extension_modules: BTreeMap<String, Vec<ExtensionModule>>,
+    pub extension_modules: BTreeMap<String, Vec<DistributionExtensionModule>>,
 
     pub frozen_c: Vec<u8>,
 
@@ -558,7 +558,8 @@ impl StandaloneDistribution {
     pub fn from_directory(dist_dir: &Path) -> Result<Self> {
         let mut objs_core: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
         let mut links_core: Vec<LibraryDepends> = Vec::new();
-        let mut extension_modules: BTreeMap<String, Vec<ExtensionModule>> = BTreeMap::new();
+        let mut extension_modules: BTreeMap<String, Vec<DistributionExtensionModule>> =
+            BTreeMap::new();
         let mut includes: BTreeMap<String, PathBuf> = BTreeMap::new();
         let mut libraries: BTreeMap<String, PathBuf> = BTreeMap::new();
         let frozen_c: Vec<u8> = Vec::new();
@@ -631,7 +632,7 @@ impl StandaloneDistribution {
 
         // Collect extension modules.
         for (module, variants) in &pi.build_info.extensions {
-            let mut ems: Vec<ExtensionModule> = Vec::new();
+            let mut ems: Vec<DistributionExtensionModule> = Vec::new();
 
             for entry in variants.iter() {
                 let object_paths = entry.objs.iter().map(|p| python_path.join(p)).collect();
@@ -670,7 +671,7 @@ impl StandaloneDistribution {
                     license_infos.insert(module.clone(), licenses);
                 }
 
-                ems.push(ExtensionModule {
+                ems.push(DistributionExtensionModule {
                     module: module.clone(),
                     init_fn: Some(entry.init_fn.clone()),
                     builtin_default: entry.in_core,
@@ -814,7 +815,7 @@ impl StandaloneDistribution {
                 extension_module_filter,
                 preferred_extension_module_variants,
             )? {
-                embedded.add_extension_module(&ext);
+                embedded.add_distribution_extension_module(&ext);
             }
         }
 
@@ -992,8 +993,11 @@ impl PythonDistribution for StandaloneDistribution {
             for ext in
                 self.filter_extension_modules(&logger, &ExtensionModuleFilter::Minimal, None)?
             {
-                if !resources.get_extension_modules().contains_key(&ext.module) {
-                    resources.add_extension_module(&ext);
+                if !resources
+                    .get_distribution_extension_modules()
+                    .contains_key(&ext.module)
+                {
+                    resources.add_distribution_extension_module(&ext);
                 }
             }
         }
@@ -1021,7 +1025,7 @@ impl PythonDistribution for StandaloneDistribution {
         logger: &slog::Logger,
         filter: &ExtensionModuleFilter,
         variants: Option<HashMap<String, String>>,
-    ) -> Result<Vec<ExtensionModule>> {
+    ) -> Result<Vec<DistributionExtensionModule>> {
         let mut res = Vec::new();
 
         for (name, ext_variants) in &self.extension_modules {
@@ -1036,7 +1040,7 @@ impl PythonDistribution for StandaloneDistribution {
                                 None
                             }
                         })
-                        .collect::<Vec<ExtensionModule>>();
+                        .collect::<Vec<DistributionExtensionModule>>();
 
                     if !ext_variants.is_empty() {
                         res.push(choose_variant(&ext_variants, &variants));
@@ -1057,7 +1061,7 @@ impl PythonDistribution for StandaloneDistribution {
                                 None
                             }
                         })
-                        .collect::<Vec<ExtensionModule>>();
+                        .collect::<Vec<DistributionExtensionModule>>();
 
                     if !ext_variants.is_empty() {
                         res.push(choose_variant(&ext_variants, &variants));
@@ -1093,7 +1097,7 @@ impl PythonDistribution for StandaloneDistribution {
                                 None
                             }
                         })
-                        .collect::<Vec<ExtensionModule>>();
+                        .collect::<Vec<DistributionExtensionModule>>();
 
                     if !ext_variants.is_empty() {
                         res.push(choose_variant(&ext_variants, &variants));
@@ -1364,8 +1368,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.resources.get_in_memory_package_resources()
     }
 
-    fn extension_modules(&self) -> BTreeMap<String, ExtensionModule> {
-        self.resources.get_extension_modules()
+    fn extension_modules(&self) -> BTreeMap<String, DistributionExtensionModule> {
+        self.resources.get_distribution_extension_modules()
     }
 
     fn extension_module_datas(&self) -> BTreeMap<String, ExtensionModuleData> {
@@ -1384,8 +1388,12 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.resources.add_in_memory_package_resource(resource);
     }
 
-    fn add_extension_module(&mut self, extension_module: &ExtensionModule) {
-        self.resources.add_extension_module(extension_module);
+    fn add_distribution_extension_module(
+        &mut self,
+        extension_module: &DistributionExtensionModule,
+    ) {
+        self.resources
+            .add_distribution_extension_module(extension_module);
     }
 
     fn add_extension_module_data(&mut self, extension_module: &ExtensionModuleData) {
@@ -1499,7 +1507,7 @@ pub mod tests {
                 &ExtensionModuleFilter::Minimal,
                 None,
             )? {
-                resources.add_extension_module(&ext);
+                resources.add_distribution_extension_module(&ext);
             }
         }
 

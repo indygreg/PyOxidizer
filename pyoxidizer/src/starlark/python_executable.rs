@@ -191,7 +191,7 @@ impl PythonExecutable {
 
         match m {
             PythonExtensionModuleFlavor::Distribution(m) => {
-                self.exe.add_extension_module(&m);
+                self.exe.add_distribution_extension_module(&m);
             }
             PythonExtensionModuleFlavor::StaticallyLinked(m) => {
                 self.exe.add_extension_module_data(&m);

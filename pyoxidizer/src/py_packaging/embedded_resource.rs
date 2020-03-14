@@ -13,7 +13,7 @@ use {
         has_dunder_file, packages_from_module_name, packages_from_module_names, BytecodeModule,
         BytecodeOptimizationLevel, DataLocation, ExtensionModuleData, ResourceData, SourceModule,
     },
-    super::standalone_distribution::ExtensionModule,
+    super::standalone_distribution::DistributionExtensionModule,
     anyhow::{Error, Result},
     lazy_static::lazy_static,
     python_packed_resources::data::{Resource as EmbeddedResource, ResourceFlavor},
@@ -161,7 +161,7 @@ pub struct EmbeddedPythonResourcesPrePackaged {
     modules: BTreeMap<String, EmbeddedResourcePythonModulePrePackaged>,
 
     // TODO combine into single extension module type.
-    extension_modules: BTreeMap<String, ExtensionModule>,
+    distribution_extension_modules: BTreeMap<String, DistributionExtensionModule>,
     extension_module_datas: BTreeMap<String, ExtensionModuleData>,
 }
 
@@ -244,8 +244,10 @@ impl EmbeddedPythonResourcesPrePackaged {
     }
 
     /// Obtain `ExtensionModule` in this instance.
-    pub fn get_extension_modules(&self) -> BTreeMap<String, ExtensionModule> {
-        self.extension_modules.clone()
+    pub fn get_distribution_extension_modules(
+        &self,
+    ) -> BTreeMap<String, DistributionExtensionModule> {
+        self.distribution_extension_modules.clone()
     }
 
     /// Obtain `ExtensionModuleData` in this instance.
@@ -322,8 +324,8 @@ impl EmbeddedPythonResourcesPrePackaged {
     }
 
     /// Add an extension module.
-    pub fn add_extension_module(&mut self, module: &ExtensionModule) {
-        self.extension_modules
+    pub fn add_distribution_extension_module(&mut self, module: &DistributionExtensionModule) {
+        self.distribution_extension_modules
             .insert(module.module.clone(), module.clone());
 
         // TODO should we populate opt1, opt2, source?
@@ -378,7 +380,11 @@ impl EmbeddedPythonResourcesPrePackaged {
         warn!(logger, "filtering module entries");
         filter_btreemap(logger, &mut self.modules, &resource_names);
         warn!(logger, "filtering embedded extension modules");
-        filter_btreemap(logger, &mut self.extension_modules, &resource_names);
+        filter_btreemap(
+            logger,
+            &mut self.distribution_extension_modules,
+            &resource_names,
+        );
 
         Ok(())
     }
@@ -490,7 +496,7 @@ impl EmbeddedPythonResourcesPrePackaged {
             .collect::<Vec<String>>();
 
         let mut extension_modules = BTreeMap::new();
-        for (name, em) in &self.extension_modules {
+        for (name, em) in &self.distribution_extension_modules {
             if ignored.contains(name) {
                 continue;
             }
@@ -540,7 +546,7 @@ impl EmbeddedPythonResourcesPrePackaged {
 
         Ok(EmbeddedPythonResources {
             resources: modules,
-            extension_modules,
+            distribution_extension_modules: extension_modules,
             built_extension_modules,
         })
     }
@@ -608,7 +614,7 @@ pub struct EmbeddedPythonResources<'a> {
     resources: BTreeMap<String, EmbeddedResource<'a, u8>>,
 
     // TODO combine the extension module types.
-    extension_modules: BTreeMap<String, ExtensionModule>,
+    distribution_extension_modules: BTreeMap<String, DistributionExtensionModule>,
     built_extension_modules: BTreeMap<String, ExtensionModuleData>,
 }
 
@@ -639,7 +645,7 @@ impl<'a> EmbeddedPythonResources<'a> {
     pub fn builtin_extensions(&self) -> Vec<(String, String)> {
         let mut res = Vec::new();
 
-        for (name, em) in &self.extension_modules {
+        for (name, em) in &self.distribution_extension_modules {
             if let Some(init_fn) = &em.init_fn {
                 res.push((name.clone(), init_fn.clone()));
             }
@@ -668,10 +674,10 @@ impl<'a> EmbeddedPythonResources<'a> {
         warn!(
             logger,
             "resolving inputs for {} extension modules...",
-            self.extension_modules.len()
+            self.distribution_extension_modules.len()
         );
 
-        for (name, em) in &self.extension_modules {
+        for (name, em) in &self.distribution_extension_modules {
             if em.builtin_default {
                 continue;
             }
@@ -899,7 +905,7 @@ mod tests {
     #[test]
     fn test_add_extension_module() {
         let mut r = EmbeddedPythonResourcesPrePackaged::default();
-        let em = ExtensionModule {
+        let em = DistributionExtensionModule {
             module: "foo.bar".to_string(),
             init_fn: None,
             builtin_default: false,
@@ -915,9 +921,9 @@ mod tests {
             license_public_domain: None,
         };
 
-        r.add_extension_module(&em);
-        assert_eq!(r.extension_modules.len(), 1);
-        assert_eq!(r.extension_modules.get("foo.bar"), Some(&em));
+        r.add_distribution_extension_module(&em);
+        assert_eq!(r.distribution_extension_modules.len(), 1);
+        assert_eq!(r.distribution_extension_modules.get("foo.bar"), Some(&em));
 
         assert_eq!(r.modules.len(), 1);
         assert_eq!(

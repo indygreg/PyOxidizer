@@ -12,7 +12,7 @@ use {
     super::config::EmbeddedPythonConfig,
     super::libpython::ImportlibBytecode,
     super::resource::{PythonResource, ResourceData, SourceModule},
-    super::standalone_distribution::{ExtensionModule, StandaloneDistribution},
+    super::standalone_distribution::{DistributionExtensionModule, StandaloneDistribution},
     super::windows_embeddable_distribution::WindowsEmbeddableDistribution,
     crate::python_distributions::{
         CPYTHON_STANDALONE_DYNAMIC_BY_TRIPLE, CPYTHON_STANDALONE_STATIC_BY_TRIPLE,
@@ -207,7 +207,7 @@ pub trait PythonDistribution {
         logger: &slog::Logger,
         filter: &ExtensionModuleFilter,
         preferred_variants: Option<HashMap<String, String>>,
-    ) -> Result<Vec<ExtensionModule>>;
+    ) -> Result<Vec<DistributionExtensionModule>>;
 
     /// Obtain `SourceModule` instances present in this distribution.
     fn source_modules(&self) -> Result<Vec<SourceModule>>;

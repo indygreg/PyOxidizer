@@ -7,7 +7,7 @@ use {
         BytecodeModule, BytecodeOptimizationLevel, ExtensionModuleData, PythonResource,
         ResourceData, SourceModule,
     },
-    crate::py_packaging::standalone_distribution::ExtensionModule,
+    crate::py_packaging::standalone_distribution::DistributionExtensionModule,
     starlark::environment::Environment,
     starlark::values::{default_compare, TypedValue, Value, ValueError, ValueResult},
     starlark::{any, immutable, not_supported},
@@ -213,7 +213,7 @@ impl TypedValue for PythonResourceData {
 #[derive(Debug, Clone)]
 pub enum PythonExtensionModuleFlavor {
     /// An extension module from a Python distribution.
-    Distribution(ExtensionModule),
+    Distribution(DistributionExtensionModule),
 
     /// An extension module that can be statically linked.
     StaticallyLinked(ExtensionModuleData),
