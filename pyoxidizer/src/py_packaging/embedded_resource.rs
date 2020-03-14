@@ -495,15 +495,12 @@ impl EmbeddedPythonResourcesPrePackaged {
                 continue;
             }
 
-            if !modules.contains_key(name) {
-                modules.insert(
-                    name.clone(),
-                    EmbeddedResource {
-                        name: Cow::Owned(name.clone()),
-                        ..EmbeddedResource::default()
-                    },
-                );
-            }
+            modules
+                .entry(name.clone())
+                .or_insert_with(|| EmbeddedResource {
+                    name: Cow::Owned(name.clone()),
+                    ..EmbeddedResource::default()
+                });
 
             extension_modules.insert(name.clone(), em.clone());
         }
@@ -514,17 +511,12 @@ impl EmbeddedPythonResourcesPrePackaged {
                 continue;
             }
 
-            if !modules.contains_key(name) {
-                modules.insert(
-                    name.clone(),
-                    EmbeddedResource {
-                        name: Cow::Owned(name.clone()),
-                        ..EmbeddedResource::default()
-                    },
-                );
-            }
-
-            let mut entry = modules.get_mut(name).unwrap();
+            let entry = modules
+                .entry(name.clone())
+                .or_insert_with(|| EmbeddedResource {
+                    name: Cow::Owned(name.clone()),
+                    ..EmbeddedResource::default()
+                });
 
             if em.is_package {
                 entry.is_package = true;
@@ -536,17 +528,12 @@ impl EmbeddedPythonResourcesPrePackaged {
         let derived_package_names = packages_from_module_names(modules.keys().cloned());
 
         for package in derived_package_names {
-            if !modules.contains_key(&package) {
-                modules.insert(
-                    package.clone(),
-                    EmbeddedResource {
-                        name: Cow::Owned(package.clone()),
-                        ..EmbeddedResource::default()
-                    },
-                );
-            }
-
-            let mut entry = modules.get_mut(&package).unwrap();
+            let entry = modules
+                .entry(package.clone())
+                .or_insert_with(|| EmbeddedResource {
+                    name: Cow::Owned(package.clone()),
+                    ..EmbeddedResource::default()
+                });
 
             if !entry.is_package {
                 warn!(
