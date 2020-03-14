@@ -18,7 +18,7 @@ use {
     lazy_static::lazy_static,
     python_packed_resources::data::{Resource as EmbeddedResource, ResourceFlavor},
     python_packed_resources::writer::write_embedded_resources_v1,
-    slog::warn,
+    slog::{info, warn},
     std::borrow::Cow,
     std::collections::{BTreeMap, BTreeSet, HashMap},
     std::convert::TryFrom,
@@ -590,6 +590,17 @@ impl EmbeddedPythonResourcesPrePackaged {
     }
 }
 
+/// Holds state necessary to link libpython.
+pub struct LibpythonLinkingInfo {
+    /// Object files that need to be linked.
+    pub object_files: Vec<DataLocation>,
+
+    pub link_libraries: BTreeSet<String>,
+    pub link_frameworks: BTreeSet<String>,
+    pub link_system_libraries: BTreeSet<String>,
+    pub link_libraries_external: BTreeSet<String>,
+}
+
 /// Represents Python resources to embed in a binary.
 #[derive(Debug, Default, Clone)]
 pub struct EmbeddedPythonResources<'a> {
@@ -597,8 +608,8 @@ pub struct EmbeddedPythonResources<'a> {
     resources: BTreeMap<String, EmbeddedResource<'a, u8>>,
 
     // TODO combine the extension module types.
-    pub extension_modules: BTreeMap<String, ExtensionModule>,
-    pub built_extension_modules: BTreeMap<String, ExtensionModuleData>,
+    extension_modules: BTreeMap<String, ExtensionModule>,
+    built_extension_modules: BTreeMap<String, ExtensionModuleData>,
 }
 
 impl<'a> EmbeddedPythonResources<'a> {
@@ -641,6 +652,94 @@ impl<'a> EmbeddedPythonResources<'a> {
         }
 
         res
+    }
+
+    /// Resolve state needed to link a libpython.
+    pub fn resolve_libpython_linking_info(
+        &self,
+        logger: &slog::Logger,
+    ) -> Result<LibpythonLinkingInfo> {
+        let mut object_files = Vec::new();
+        let mut link_libraries = BTreeSet::new();
+        let mut link_frameworks = BTreeSet::new();
+        let mut link_system_libraries = BTreeSet::new();
+        let mut link_libraries_external = BTreeSet::new();
+
+        warn!(
+            logger,
+            "resolving inputs for {} extension modules...",
+            self.extension_modules.len()
+        );
+
+        for (name, em) in &self.extension_modules {
+            if em.builtin_default {
+                continue;
+            }
+
+            info!(
+                logger,
+                "adding {} object files for {} extension module",
+                em.object_paths.len(),
+                name
+            );
+
+            for path in &em.object_paths {
+                object_files.push(DataLocation::Path(path.clone()));
+            }
+
+            for entry in &em.links {
+                if entry.framework {
+                    warn!(logger, "framework {} required by {}", entry.name, name);
+                    link_frameworks.insert(entry.name.clone());
+                } else if entry.system {
+                    warn!(logger, "system library {} required by {}", entry.name, name);
+                    link_system_libraries.insert(entry.name.clone());
+                } else if let Some(_lib) = &entry.static_path {
+                    warn!(logger, "static library {} required by {}", entry.name, name);
+                    link_libraries.insert(entry.name.clone());
+                } else if let Some(_) = &entry.dynamic_path {
+                    warn!(
+                        logger,
+                        "dynamic library {} required by {}", entry.name, name
+                    );
+                    link_libraries.insert(entry.name.clone());
+                }
+            }
+        }
+
+        warn!(
+            logger,
+            "resolving inputs for {} built extension modules...",
+            self.built_extension_modules.len()
+        );
+
+        for (name, em) in &self.built_extension_modules {
+            info!(
+                logger,
+                "adding {} object files for {} built extension module",
+                em.object_file_data.len(),
+                name
+            );
+
+            for data in &em.object_file_data {
+                object_files.push(DataLocation::Memory(data.clone()));
+            }
+
+            for library in &em.libraries {
+                warn!(logger, "library {} required by {}", library, name);
+                link_libraries_external.insert(library.clone());
+            }
+
+            // TODO do something with library_dirs.
+        }
+
+        Ok(LibpythonLinkingInfo {
+            object_files,
+            link_libraries,
+            link_frameworks,
+            link_system_libraries,
+            link_libraries_external,
+        })
     }
 }
 

@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 
 use super::bytecode::{BytecodeCompiler, CompileMode};
 use super::embedded_resource::EmbeddedPythonResources;
-use super::resource::BytecodeOptimizationLevel;
+use super::resource::{BytecodeOptimizationLevel, DataLocation};
 use super::standalone_distribution::{LicenseInfo, StandaloneDistribution};
 
 pub const PYTHON_IMPORTER: &[u8] = include_bytes!("memoryimporter.py");
@@ -126,7 +126,6 @@ pub struct LibpythonInfo {
 /// Create a static libpython from a Python distribution.
 ///
 /// Returns a vector of cargo: lines that can be printed in build scripts.
-#[allow(clippy::cognitive_complexity)]
 pub fn link_libpython(
     logger: &slog::Logger,
     dist: &StandaloneDistribution,
@@ -239,10 +238,10 @@ pub fn link_libpython(
     // For each extension module, extract and use its object file. We also
     // use this pass to collect the set of libraries that we need to link
     // against.
-    let mut needed_libraries: BTreeSet<&str> = BTreeSet::new();
-    let mut needed_frameworks: BTreeSet<&str> = BTreeSet::new();
-    let mut needed_system_libraries: BTreeSet<&str> = BTreeSet::new();
-    let mut needed_libraries_external: BTreeSet<&str> = BTreeSet::new();
+    let mut needed_libraries: BTreeSet<String> = BTreeSet::new();
+    let mut needed_frameworks = BTreeSet::new();
+    let mut needed_system_libraries = BTreeSet::new();
+    let mut needed_libraries_external = BTreeSet::new();
 
     warn!(
         logger,
@@ -251,85 +250,33 @@ pub fn link_libpython(
     for entry in &dist.links_core {
         if entry.framework {
             warn!(logger, "framework {} required by core", entry.name);
-            needed_frameworks.insert(&entry.name);
+            needed_frameworks.insert(entry.name.clone());
         } else if entry.system {
             warn!(logger, "system library {} required by core", entry.name);
-            needed_system_libraries.insert(&entry.name);
+            needed_system_libraries.insert(entry.name.clone());
         }
         // TODO handle static/dynamic libraries.
     }
 
-    let extension_modules = &resources.extension_modules;
+    let linking_info = resources.resolve_libpython_linking_info(logger)?;
 
-    warn!(
-        logger,
-        "resolving inputs for {} extension modules...",
-        extension_modules.len()
-    );
-    for (name, em) in extension_modules {
-        if em.builtin_default {
-            continue;
-        }
+    needed_libraries.extend(linking_info.link_libraries);
+    needed_frameworks.extend(linking_info.link_frameworks);
+    needed_system_libraries.extend(linking_info.link_system_libraries);
+    needed_libraries_external.extend(linking_info.link_libraries_external);
 
-        info!(
-            logger,
-            "adding {} object files for {} extension module: {:#?}",
-            em.object_paths.len(),
-            name,
-            em.object_paths
-        );
-        for path in &em.object_paths {
-            build.object(path);
-        }
+    for (i, object_file) in linking_info.object_files.iter().enumerate() {
+        match object_file {
+            DataLocation::Memory(data) => {
+                let out_path = temp_dir_path.join(format!("libpython.{}.o", i));
 
-        for entry in &em.links {
-            if entry.framework {
-                needed_frameworks.insert(&entry.name);
-                warn!(logger, "framework {} required by {}", entry.name, name);
-            } else if entry.system {
-                warn!(logger, "system library {} required by {}", entry.name, name);
-                needed_system_libraries.insert(&entry.name);
-            } else if let Some(_lib) = &entry.static_path {
-                needed_libraries.insert(&entry.name);
-                warn!(logger, "static library {} required by {}", entry.name, name);
-            } else if let Some(_lib) = &entry.dynamic_path {
-                needed_libraries.insert(&entry.name);
-                warn!(
-                    logger,
-                    "dynamic library {} required by {}", entry.name, name
-                );
+                fs::write(&out_path, data)?;
+                build.object(&out_path);
+            }
+            DataLocation::Path(p) => {
+                build.object(&p);
             }
         }
-    }
-
-    let built_extension_modules = &resources.built_extension_modules;
-
-    warn!(
-        logger,
-        "resolving inputs for {} built extension modules...",
-        built_extension_modules.len()
-    );
-
-    for (name, em) in built_extension_modules {
-        info!(
-            logger,
-            "adding {} object files for {} built extension module",
-            em.object_file_data.len(),
-            name
-        );
-        for (i, object_data) in em.object_file_data.iter().enumerate() {
-            let out_path = temp_dir_path.join(format!("{}.{}.o", name, i));
-
-            fs::write(&out_path, object_data)?;
-            build.object(&out_path);
-        }
-
-        for library in &em.libraries {
-            warn!(logger, "library {} required by {}", library, name);
-            needed_libraries_external.insert(&library);
-        }
-
-        // TODO do something with library_dirs.
     }
 
     // Windows requires dynamic linking against msvcrt. Ensure that happens.
@@ -337,20 +284,20 @@ pub fn link_libpython(
     // advertising a dependency on the CRT linkage type. Consider adding this
     // to the distribution metadata.
     if windows {
-        needed_system_libraries.insert("msvcrt");
+        needed_system_libraries.insert("msvcrt".to_string());
     }
 
     let mut extra_library_paths = BTreeSet::new();
 
-    for library in needed_libraries.iter() {
-        if OS_IGNORE_LIBRARIES.contains(&library) {
+    for library in needed_libraries {
+        if OS_IGNORE_LIBRARIES.contains(&library.as_ref()) {
             continue;
         }
 
         // Find the library in the distribution and statically link against it.
         let fs_path = dist
             .libraries
-            .get(*library)
+            .get(&library)
             .unwrap_or_else(|| panic!("unable to find library {}", library));
 
         extra_library_paths.insert(fs_path.parent().unwrap().to_path_buf());
@@ -412,7 +359,8 @@ pub fn link_libpython(
         license_infos.insert("python".to_string(), li.clone());
     }
 
-    for name in extension_modules.keys() {
+    // TODO capture license info for extensions outside the distribution.
+    for (name, _) in &builtin_extensions {
         if let Some(li) = dist.license_infos.get(name) {
             license_infos.insert(name.clone(), li.clone());
         }
