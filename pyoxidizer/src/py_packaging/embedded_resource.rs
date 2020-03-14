@@ -495,13 +495,6 @@ impl EmbeddedPythonResourcesPrePackaged {
                 continue;
             }
 
-            modules
-                .entry(name.clone())
-                .or_insert_with(|| EmbeddedResource {
-                    name: Cow::Owned(name.clone()),
-                    ..EmbeddedResource::default()
-                });
-
             extension_modules.insert(name.clone(), em.clone());
         }
 
