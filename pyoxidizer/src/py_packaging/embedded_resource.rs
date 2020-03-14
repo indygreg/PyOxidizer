@@ -602,7 +602,8 @@ pub struct EmbeddedPythonResources<'a> {
 }
 
 impl<'a> EmbeddedPythonResources<'a> {
-    pub fn write_blobs<W: Write>(&self, module_names: &mut W, resources: &mut W) {
+    /// Write entities defining resources.
+    pub fn write_blobs<W: Write>(&self, module_names: &mut W, resources: &mut W) -> Result<()> {
         for name in self.resources.keys() {
             module_names
                 .write_all(name.as_bytes())
@@ -619,7 +620,6 @@ impl<'a> EmbeddedPythonResources<'a> {
             resources,
             None,
         )
-        .unwrap();
     }
 }
 

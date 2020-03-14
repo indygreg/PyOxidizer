@@ -135,7 +135,7 @@ impl<'a> TryFrom<EmbeddedPythonResources<'a>> for EmbeddedResourcesBlobs {
         let mut module_names = Vec::new();
         let mut resources = Vec::new();
 
-        value.write_blobs(&mut module_names, &mut resources);
+        value.write_blobs(&mut module_names, &mut resources)?;
 
         Ok(Self {
             module_names,
