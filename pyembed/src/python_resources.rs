@@ -25,6 +25,10 @@ where
         || entry.in_memory_bytecode_opt1.is_some()
         || entry.in_memory_bytecode_opt2.is_some()
         || entry.in_memory_extension_module_shared_library.is_some()
+        || entry.relative_path_module_source.is_some()
+        || entry.relative_path_module_bytecode.is_some()
+        || entry.relative_path_module_bytecode_opt1.is_some()
+        || entry.relative_path_module_bytecode_opt2.is_some()
 }
 
 /// Defines Python resources available for import.

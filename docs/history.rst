@@ -69,6 +69,9 @@ New Features
   this way have their metadata serialized into the built executable. This allows
   the special Python module importer present in built binaries to service the
   import request without going through Python's default filesystem-based importer.
+  Because metadata for the file-based Python resources is *frozen* into the
+  application, Python has to do far less work at run-time to load resources,
+  making operations faster.
 * Windows binaries can now import extension modules defined as shared libraries
   (e.g. `.pyd` files) from memory. PyOxidizer will detect `.pyd` files during
   packaging and embed them into the binary as resources. When the module

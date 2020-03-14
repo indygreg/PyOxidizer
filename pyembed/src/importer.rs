@@ -14,7 +14,7 @@ use {
     super::python_resources::{uses_pyembed_importer, PythonImporterState},
     cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError},
     cpython::{
-        py_class, py_fn, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule,
+        py_class, py_fn, NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyModule,
         PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
     },
     python3_sys as pyffi,
@@ -276,6 +276,7 @@ py_class!(class PyOxidizerFinder |py| {
     data module_spec_type: PyObject;
     data decode_source: PyObject;
     data exec_fn: PyObject;
+    data origin: PathBuf;
     data importer_state: PythonImporterState<'static, u8>;
     data resource_readers: RefCell<Box<HashMap<String, PyObject>>>;
 
@@ -385,6 +386,21 @@ py_class!(class PyOxidizerFinder |py| {
                         Err(PyErr::new::<ImportError, _>(py, ("cannot find code in memory", name)))
                     }
                 }
+            } else if let Some(relative_path) = &entry.relative_path_module_bytecode {
+                let path = self.origin(py).join(relative_path);
+
+                let bytecode = std::fs::read(&path).or_else(|_| Err(
+                    PyErr::new::<ImportError, _>(py, ("error reading bytecode from filesystem", name))
+                ))?;
+
+                // TODO avoid duplicate allocation.
+                let bytecode = PyBytes::new(py, &bytecode[16..]);
+
+                let code = self.marshal_loads(py).call(py, (bytecode,), None)?;
+                let exec_fn = self.exec_fn(py);
+                let dict = module.getattr(py, "__dict__")?;
+
+                self.call_with_frames_removed(py).call(py, (exec_fn, code, dict), None)
             } else {
                 Ok(py.None())
             }
@@ -459,6 +475,16 @@ py_class!(class PyOxidizerFinder |py| {
                         Err(PyErr::new::<ImportError, _>(py, ("source not available", fullname)))
                     }
                 }
+            } else if let Some(relative_path) = &resource.relative_path_module_source {
+                let path = self.origin(py).join(relative_path);
+
+                let source = std::fs::read(&path).or_else(|_| Err(
+                    PyErr::new::<ImportError, _>(py, ("error reading module source from filesystem", fullname))
+                ))?;
+
+                let source = PyBytes::new(py, &source);
+
+                self.decode_source(py).call(py, (source,), None)
             } else {
                 Ok(py.None())
             }
@@ -783,6 +809,7 @@ fn module_setup(
         module_spec_type,
         decode_source,
         exec_fn,
+        state.origin.clone(),
         importer_state,
         resource_readers,
     )?;
