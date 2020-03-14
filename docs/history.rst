@@ -53,6 +53,9 @@ Backwards Compatibility Notes
 Bug Fixes
 ^^^^^^^^^
 
+* Certain packaging actions are only performed once during building instead of
+  twice. The user-visible impact of this change is that some duplicate log
+  messages no longer appear.
 * Added a missing `)` for `add_python_resources()` in auto-generated
   `pyoxidizer.bzl` files.
 

@@ -16,7 +16,7 @@ use {
         PythonModuleSuffixes,
     },
     super::distutils::prepare_hacked_distutils,
-    super::embedded_resource::EmbeddedPythonResourcesPrePackaged,
+    super::embedded_resource::{EmbeddedPythonResources, EmbeddedPythonResourcesPrePackaged},
     super::fsscan::{
         find_python_resources, is_package_from_path, walk_tree_files, PythonFileResource,
     },
@@ -1281,9 +1281,8 @@ impl StandalonePythonExecutableBuilder {
         &self,
         logger: &slog::Logger,
         opt_level: &str,
+        resources: &EmbeddedPythonResources,
     ) -> Result<PythonLinkingInfo> {
-        let resources = self.resources.package(logger, &self.python_exe)?;
-
         let libpythonxy_filename;
         let mut cargo_metadata: Vec<String> = Vec::new();
         let libpythonxy_data;
@@ -1303,7 +1302,7 @@ impl StandalonePythonExecutableBuilder {
                 let library_info = link_libpython(
                     logger,
                     &self.distribution,
-                    &resources,
+                    resources,
                     &temp_dir_path,
                     &self.host_triple,
                     &self.target_triple,
@@ -1431,10 +1430,9 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         logger: &slog::Logger,
         opt_level: &str,
     ) -> Result<EmbeddedPythonBinaryData> {
-        let linking_info = self.resolve_python_linking_info(logger, opt_level)?;
-
-        let resources =
-            EmbeddedResourcesBlobs::try_from(self.resources.package(logger, &self.python_exe)?)?;
+        let resources = self.resources.package(logger, &self.python_exe)?;
+        let linking_info = self.resolve_python_linking_info(logger, opt_level, &resources)?;
+        let resources = EmbeddedResourcesBlobs::try_from(resources)?;
         warn!(
             logger,
             "deriving custom importlib modules to support in-memory importing"
