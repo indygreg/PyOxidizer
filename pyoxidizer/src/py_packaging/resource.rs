@@ -165,6 +165,11 @@ impl SourceModule {
         }
     }
 
+    /// Resolve the filesystem path for this source module.
+    pub fn resolve_path(&self, prefix: &str) -> PathBuf {
+        resolve_path_for_module(prefix, &self.name, self.is_package, None)
+    }
+
     /// Add this source module to a `FileManifest`.
     ///
     /// The reference added to `FileManifest` is a copy of this instance and won't
@@ -175,10 +180,7 @@ impl SourceModule {
             executable: false,
         };
 
-        manifest.add_file(
-            &resolve_path_for_module(prefix, &self.name, self.is_package, None),
-            &content,
-        )?;
+        manifest.add_file(&self.resolve_path(prefix), &content)?;
 
         for package in packages_from_module_name(&self.name) {
             let package_path = resolve_path_for_module(prefix, &package, true, None);
@@ -262,6 +264,21 @@ impl BytecodeModule {
             &self.name,
             self.optimize_level,
             mode,
+        )
+    }
+
+    /// Resolve filesystem path to this bytecode.
+    pub fn resolve_path(&self, prefix: &str) -> PathBuf {
+        resolve_path_for_module(
+            prefix,
+            &self.name,
+            self.is_package,
+            // TODO capture Python version properly
+            Some(match self.optimize_level {
+                BytecodeOptimizationLevel::Zero => "cpython-37",
+                BytecodeOptimizationLevel::One => "cpython-37.opt-1",
+                BytecodeOptimizationLevel::Two => "cpython-37.opt-2",
+            }),
         )
     }
 

@@ -112,7 +112,16 @@ impl PythonExecutable {
 
         let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
         info!(&logger, "adding embedded source module {}", m.name);
-        self.exe.add_in_memory_module_source(&m);
+        self.exe.add_in_memory_module_source(&m).or_else(|e| {
+            {
+                Err(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "add_in_memory_module_source".to_string(),
+                }
+                .into())
+            }
+        })?;
 
         Ok(Value::new(None))
     }
@@ -148,12 +157,23 @@ impl PythonExecutable {
 
         let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
         info!(&logger, "adding embedded bytecode module {}", m.name);
-        self.exe.add_in_memory_module_bytecode(&BytecodeModule {
-            name: m.name.clone(),
-            source: m.source.clone(),
-            optimize_level,
-            is_package: m.is_package,
-        });
+        self.exe
+            .add_in_memory_module_bytecode(&BytecodeModule {
+                name: m.name.clone(),
+                source: m.source.clone(),
+                optimize_level,
+                is_package: m.is_package,
+            })
+            .or_else(|e| {
+                {
+                    Err(RuntimeError {
+                        code: "PYOXIDIZER_BUILD",
+                        message: e.to_string(),
+                        label: "add_in_memory_module_bytecode".to_string(),
+                    }
+                    .into())
+                }
+            })?;
 
         Ok(Value::new(None))
     }
@@ -174,7 +194,16 @@ impl PythonExecutable {
             &logger,
             "adding embedded resource data {}:{}", r.package, r.name
         );
-        self.exe.add_in_memory_package_resource(&r);
+        self.exe.add_in_memory_package_resource(&r).or_else(|e| {
+            {
+                Err(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "add_in_memory_resource_data".to_string(),
+                }
+                .into())
+            }
+        })?;
 
         Ok(Value::new(None))
     }
@@ -195,15 +224,25 @@ impl PythonExecutable {
 
         match m {
             PythonExtensionModuleFlavor::Distribution(m) => {
-                self.exe.add_distribution_extension_module(&m);
+                self.exe.add_distribution_extension_module(&m)
             }
             PythonExtensionModuleFlavor::StaticallyLinked(m) => {
-                self.exe.add_extension_module_data(&m);
+                self.exe.add_extension_module_data(&m)
             }
             PythonExtensionModuleFlavor::DynamicLibrary(m) => {
-                self.exe.add_extension_module_data(&m);
+                self.exe.add_extension_module_data(&m)
             }
         }
+        .or_else(|e| {
+            {
+                Err(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "add_extension_module".to_string(),
+                }
+                .into())
+            }
+        })?;
 
         Ok(Value::new(None))
     }

@@ -559,26 +559,29 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
         self.resources.get_extension_module_datas()
     }
 
-    fn add_in_memory_module_source(&mut self, module: &SourceModule) {
+    fn add_in_memory_module_source(&mut self, module: &SourceModule) -> Result<()> {
         self.resources.add_in_memory_module_source(module)
     }
 
-    fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModule) {
+    fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModule) -> Result<()> {
         self.resources.add_in_memory_module_bytecode(module)
     }
 
-    fn add_in_memory_package_resource(&mut self, resource: &ResourceData) {
+    fn add_in_memory_package_resource(&mut self, resource: &ResourceData) -> Result<()> {
         self.resources.add_in_memory_package_resource(resource)
     }
 
     fn add_distribution_extension_module(
         &mut self,
         _extension_module: &DistributionExtensionModule,
-    ) {
+    ) -> Result<()> {
         unimplemented!()
     }
 
-    fn add_extension_module_data(&mut self, _extension_module_data: &ExtensionModuleData) {
+    fn add_extension_module_data(
+        &mut self,
+        _extension_module_data: &ExtensionModuleData,
+    ) -> Result<()> {
         unimplemented!()
     }
 

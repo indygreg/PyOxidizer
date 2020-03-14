@@ -59,19 +59,25 @@ pub trait PythonBinaryBuilder {
     fn extension_module_datas(&self) -> BTreeMap<String, ExtensionModuleData>;
 
     /// Add Python module source code to be imported from memory to the embedded resources.
-    fn add_in_memory_module_source(&mut self, module: &SourceModule);
+    fn add_in_memory_module_source(&mut self, module: &SourceModule) -> Result<()>;
 
     /// Add a Python module bytecode to be imported from memory to the embedded resources.
-    fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModule);
+    fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModule) -> Result<()>;
 
     /// Add resource data to the collection of embedded resource data.
-    fn add_in_memory_package_resource(&mut self, resource: &ResourceData);
+    fn add_in_memory_package_resource(&mut self, resource: &ResourceData) -> Result<()>;
 
     /// Add an extension module to be embedded in the binary.
-    fn add_distribution_extension_module(&mut self, extension_module: &DistributionExtensionModule);
+    fn add_distribution_extension_module(
+        &mut self,
+        extension_module: &DistributionExtensionModule,
+    ) -> Result<()>;
 
     /// Add an extension module to be embedded in the binary.
-    fn add_extension_module_data(&mut self, extension_module_data: &ExtensionModuleData);
+    fn add_extension_module_data(
+        &mut self,
+        extension_module_data: &ExtensionModuleData,
+    ) -> Result<()>;
 
     /// Filter embedded resources against names in files.
     ///

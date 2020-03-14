@@ -815,7 +815,7 @@ impl StandaloneDistribution {
                 extension_module_filter,
                 preferred_extension_module_variants,
             )? {
-                embedded.add_distribution_extension_module(&ext);
+                embedded.add_distribution_extension_module(&ext)?;
             }
         }
 
@@ -825,12 +825,12 @@ impl StandaloneDistribution {
             }
 
             if include_sources {
-                embedded.add_in_memory_module_source(&source);
+                embedded.add_in_memory_module_source(&source)?;
             }
 
             embedded.add_in_memory_module_bytecode(
                 &source.as_bytecode_module(BytecodeOptimizationLevel::Zero),
-            );
+            )?;
         }
 
         if include_resources {
@@ -839,7 +839,7 @@ impl StandaloneDistribution {
                     continue;
                 }
 
-                embedded.add_in_memory_package_resource(&resource);
+                embedded.add_in_memory_package_resource(&resource)?;
             }
         }
 
@@ -997,7 +997,7 @@ impl PythonDistribution for StandaloneDistribution {
                     .get_distribution_extension_modules()
                     .contains_key(&ext.module)
                 {
-                    resources.add_distribution_extension_module(&ext);
+                    resources.add_distribution_extension_module(&ext)?;
                 }
             }
         }
@@ -1376,40 +1376,40 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.resources.get_extension_module_datas()
     }
 
-    fn add_in_memory_module_source(&mut self, module: &SourceModule) {
-        self.resources.add_in_memory_module_source(module);
+    fn add_in_memory_module_source(&mut self, module: &SourceModule) -> Result<()> {
+        self.resources.add_in_memory_module_source(module)
     }
 
-    fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModule) {
-        self.resources.add_in_memory_module_bytecode(module);
+    fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModule) -> Result<()> {
+        self.resources.add_in_memory_module_bytecode(module)
     }
 
-    fn add_in_memory_package_resource(&mut self, resource: &ResourceData) {
-        self.resources.add_in_memory_package_resource(resource);
+    fn add_in_memory_package_resource(&mut self, resource: &ResourceData) -> Result<()> {
+        self.resources.add_in_memory_package_resource(resource)
     }
 
     fn add_distribution_extension_module(
         &mut self,
         extension_module: &DistributionExtensionModule,
-    ) {
+    ) -> Result<()> {
         self.resources
-            .add_distribution_extension_module(extension_module);
+            .add_distribution_extension_module(extension_module)
     }
 
-    fn add_extension_module_data(&mut self, extension_module: &ExtensionModuleData) {
+    fn add_extension_module_data(&mut self, extension_module: &ExtensionModuleData) -> Result<()> {
         if self.supports_in_memory_dynamically_linked_extension_loading() {
             if let Some(data) = &extension_module.extension_data {
-                self.resources
+                return self
+                    .resources
                     .add_in_memory_extension_module_shared_library(
                         &extension_module.name,
                         extension_module.is_package,
                         data,
                     );
-                return;
             }
         }
 
-        self.resources.add_extension_module_data(extension_module);
+        self.resources.add_extension_module_data(extension_module)
     }
 
     fn filter_resources_from_files(
