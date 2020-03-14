@@ -5,7 +5,7 @@
 use {
     crate::environment::{canonicalize_path, MINIMUM_RUST_VERSION},
     crate::project_layout::initialize_project,
-    crate::py_packaging::binary::PythonBinaryBuilder,
+    crate::py_packaging::binary::{EmbeddedPythonBinaryData, PythonBinaryBuilder},
     crate::starlark::eval::{eval_starlark_config_file, EvalResult},
     crate::starlark::target::ResolvedTarget,
     anyhow::{anyhow, Context, Result},
@@ -68,6 +68,21 @@ pub fn find_pyoxidizer_config_file_env(logger: &slog::Logger, start_dir: &Path) 
     find_pyoxidizer_config_file(start_dir)
 }
 
+/// Holds results from building an executable.
+pub struct BuiltExecutable {
+    /// Path to built executable file.
+    pub exe_path: Option<PathBuf>,
+
+    /// File name of executable.
+    pub exe_name: String,
+
+    /// Holds raw content of built executable.
+    pub exe_data: Vec<u8>,
+
+    /// Holds state generated from building.
+    pub binary_data: EmbeddedPythonBinaryData,
+}
+
 /// Build an executable embedding Python using an existing Rust project.
 ///
 /// The path to the produced executable is returned.
@@ -82,7 +97,7 @@ pub fn build_executable_with_rust_project(
     target: &str,
     opt_level: &str,
     release: bool,
-) -> Result<PathBuf> {
+) -> Result<BuiltExecutable> {
     create_dir_all(&artifacts_path)
         .with_context(|| "creating directory for PyOxidizer build artifacts")?;
 
@@ -161,7 +176,7 @@ pub fn build_executable_with_rust_project(
 
     // If linking against an existing dynamic library on Windows, add the path to that
     // library to an environment variable so link.exe can find it.
-    if let Some(libpython_filename) = embedded_data.linking_info.libpython_filename {
+    if let Some(libpython_filename) = &embedded_data.linking_info.libpython_filename {
         if cfg!(windows) {
             let libpython_dir = libpython_filename
                 .parent()
@@ -206,7 +221,15 @@ pub fn build_executable_with_rust_project(
         return Err(anyhow!("{} does not exist", exe_path.display()));
     }
 
-    Ok(exe_path)
+    let exe_data = std::fs::read(&exe_path)?;
+    let exe_name = exe_path.file_name().unwrap().to_string_lossy().to_string();
+
+    Ok(BuiltExecutable {
+        exe_path: Some(exe_path),
+        exe_name,
+        exe_data,
+        binary_data: embedded_data,
+    })
 }
 
 /// Build a Python executable using a temporary Rust project.
@@ -219,7 +242,7 @@ pub fn build_python_executable(
     target: &str,
     opt_level: &str,
     release: bool,
-) -> Result<(String, Vec<u8>)> {
+) -> Result<BuiltExecutable> {
     let env = crate::environment::resolve_environment()?;
     let pyembed_location = env.as_pyembed_location();
 
@@ -232,7 +255,7 @@ pub fn build_python_executable(
 
     initialize_project(&project_path, &pyembed_location, None, &[])?;
 
-    let exe_path = build_executable_with_rust_project(
+    let mut build = build_executable_with_rust_project(
         logger,
         &project_path,
         bin_name,
@@ -244,10 +267,10 @@ pub fn build_python_executable(
         release,
     )?;
 
-    let data = std::fs::read(&exe_path)?;
-    let filename = exe_path.file_name().unwrap().to_string_lossy().to_string();
+    // Blank out the path since it is in the temporary directory.
+    build.exe_path = None;
 
-    Ok((filename, data))
+    Ok(build)
 }
 
 /// Build artifacts needed by the pyembed crate.

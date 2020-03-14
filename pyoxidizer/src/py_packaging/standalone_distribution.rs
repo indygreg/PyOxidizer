@@ -1431,6 +1431,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         opt_level: &str,
     ) -> Result<EmbeddedPythonBinaryData> {
         let resources = self.resources.package(logger, &self.python_exe)?;
+        let mut extra_files = FileManifest::default();
         let linking_info = self.resolve_python_linking_info(logger, opt_level, &resources)?;
         let resources = EmbeddedResourcesBlobs::try_from(resources)?;
         warn!(
@@ -1439,28 +1440,15 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         );
         let importlib = self.importlib_bytecode.clone();
 
-        Ok(EmbeddedPythonBinaryData {
-            config: self.config.clone(),
-            linking_info,
-            importlib,
-            resources,
-            host: self.host_triple.clone(),
-            target: self.target_triple.clone(),
-        })
-    }
-
-    fn extra_install_files(&self, logger: &slog::Logger, prefix: &str) -> Result<FileManifest> {
-        let mut m = FileManifest::default();
-
         if self.distribution.link_mode == StandaloneDistributionLinkMode::Dynamic {
             if let Some(p) = &self.distribution.libpython_shared_library {
-                let manifest_path = Path::new(prefix).join(p.file_name().unwrap());
+                let manifest_path = Path::new(p.file_name().unwrap());
                 let content = FileContent {
                     data: std::fs::read(&p)?,
                     executable: false,
                 };
 
-                m.add_file(&manifest_path, &content)?;
+                extra_files.add_file(&manifest_path, &content)?;
             }
 
             for em in self.distribution.filter_extension_modules(
@@ -1469,8 +1457,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 self.extension_module_variants.clone(),
             )? {
                 if let Some(p) = &em.shared_library {
-                    m.add_file(
-                        &Path::new(prefix).join(p.file_name().unwrap()),
+                    extra_files.add_file(
+                        &Path::new(p.file_name().unwrap()),
                         &FileContent {
                             data: std::fs::read(p)?,
                             executable: false,
@@ -1480,7 +1468,15 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             }
         }
 
-        Ok(m)
+        Ok(EmbeddedPythonBinaryData {
+            config: self.config.clone(),
+            linking_info,
+            importlib,
+            resources,
+            extra_files,
+            host: self.host_triple.clone(),
+            target: self.target_triple.clone(),
+        })
     }
 }
 

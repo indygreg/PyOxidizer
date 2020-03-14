@@ -100,9 +100,6 @@ pub trait PythonBinaryBuilder {
         logger: &slog::Logger,
         opt_level: &str,
     ) -> Result<EmbeddedPythonBinaryData>;
-
-    /// Extra files to install next to a built binary.
-    fn extra_install_files(&self, logger: &slog::Logger, prefix: &str) -> Result<FileManifest>;
 }
 
 /// Describes how to link a binary against Python.
@@ -190,6 +187,9 @@ pub struct EmbeddedPythonBinaryData {
 
     /// Python resources to embed in the binary.
     pub resources: EmbeddedResourcesBlobs,
+
+    /// Extra files to install next to produced binary.
+    pub extra_files: FileManifest,
 
     /// Rust target triple for the host we are running on.
     pub host: String,

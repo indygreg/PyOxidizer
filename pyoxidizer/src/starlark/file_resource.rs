@@ -99,21 +99,22 @@ impl FileManifest {
         release: bool,
         opt_level: &str,
     ) -> Result<()> {
-        let (filename, data) =
-            build_python_executable(logger, &exe.name(), exe, target, opt_level, release)?;
+        let build = build_python_executable(logger, &exe.name(), exe, target, opt_level, release)?;
 
         let content = RawFileContent {
-            data,
+            data: build.exe_data.clone(),
             executable: true,
         };
 
-        let path = Path::new(&prefix).join(filename);
+        let path = Path::new(&prefix).join(build.exe_name);
         self.manifest.add_file(&path, &content)?;
 
         // Add any additional files that the exe builder requires.
-        let extra_files = exe.extra_install_files(logger, prefix)?;
-        for (path, _) in extra_files.entries() {
+        let mut extra_files = RawFileManifest::default();
+
+        for (path, content) in build.binary_data.extra_files.entries() {
             warn!(logger, "adding extra file {} to {}", path.display(), prefix);
+            extra_files.add_file(&Path::new(prefix).join(path), &content)?;
         }
 
         self.manifest.add_manifest(&extra_files)?;

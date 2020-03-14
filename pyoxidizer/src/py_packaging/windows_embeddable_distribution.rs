@@ -610,6 +610,8 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
             .package(logger, &self.python_exe)?
             .try_into()?;
 
+        let extra_files = FileManifest::default();
+
         let linking_info = self.as_python_linking_info(logger, opt_level)?;
 
         Ok(EmbeddedPythonBinaryData {
@@ -617,13 +619,10 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
             linking_info,
             importlib: self.importlib_bytecode.clone(),
             resources,
+            extra_files,
             host: self.host_triple.clone(),
             target: self.target_triple.clone(),
         })
-    }
-
-    fn extra_install_files(&self, _logger: &slog::Logger, _prefix: &str) -> Result<FileManifest> {
-        unimplemented!()
     }
 }
 

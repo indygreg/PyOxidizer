@@ -67,7 +67,7 @@ impl BuildTarget for PythonExecutable {
     fn build(&mut self, context: &BuildContext) -> Result<ResolvedTarget> {
         // Build an executable by writing out a temporary Rust project
         // and building it.
-        let (exe_name, exe_data) = build_python_executable(
+        let build = build_python_executable(
             &context.logger,
             &self.exe.name(),
             self.exe.deref(),
@@ -76,7 +76,7 @@ impl BuildTarget for PythonExecutable {
             context.release,
         )?;
 
-        let dest_path = context.output_path.join(exe_name);
+        let dest_path = context.output_path.join(build.exe_name);
         warn!(
             &context.logger,
             "writing executable to {}",
@@ -84,7 +84,7 @@ impl BuildTarget for PythonExecutable {
         );
         let mut fh = std::fs::File::create(&dest_path)
             .context(format!("creating {}", dest_path.display()))?;
-        fh.write_all(&exe_data)
+        fh.write_all(&build.exe_data)
             .context(format!("writing {}", dest_path.display()))?;
 
         crate::app_packaging::resource::set_executable(&mut fh)
