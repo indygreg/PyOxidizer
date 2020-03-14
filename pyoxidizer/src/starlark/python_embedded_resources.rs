@@ -15,11 +15,11 @@ use {
     std::collections::HashMap,
 };
 
-pub struct PythonEmbeddedData {
+pub struct PythonEmbeddedResources {
     pub exe: Box<dyn PythonBinaryBuilder>,
 }
 
-impl TypedValue for PythonEmbeddedData {
+impl TypedValue for PythonEmbeddedResources {
     immutable!();
     any!();
     not_supported!(binop);
@@ -29,7 +29,7 @@ impl TypedValue for PythonEmbeddedData {
     not_supported!(to_int);
 
     fn to_str(&self) -> String {
-        "PythonEmbeddedData".to_string()
+        "PythonEmbeddedResources".to_string()
     }
 
     fn to_repr(&self) -> String {
@@ -37,7 +37,7 @@ impl TypedValue for PythonEmbeddedData {
     }
 
     fn get_type(&self) -> &'static str {
-        "PythonEmbeddedData"
+        "PythonEmbeddedResources"
     }
 
     fn to_bool(&self) -> bool {
@@ -49,7 +49,7 @@ impl TypedValue for PythonEmbeddedData {
     }
 }
 
-impl BuildTarget for PythonEmbeddedData {
+impl BuildTarget for PythonEmbeddedResources {
     fn build(&mut self, context: &BuildContext) -> Result<ResolvedTarget> {
         warn!(
             &context.logger,

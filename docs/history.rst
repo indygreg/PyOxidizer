@@ -28,6 +28,10 @@ Not yet released.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* The ``PythonExecutable.to_embedded_data()`` Starlark method has been
+  renamed to ``PythonExecutable.to_embedded_resources()``.
+* The ``PythonEmbeddedData`` Starlark type has been renamed to
+  ``PythonEmbeddedResources``.
 * The format of Python resource data embedded in binaries has been completely
   rewritten. The separate modules and resource data structures have been merged
   into a single data structure. Embedded resources data can now express more

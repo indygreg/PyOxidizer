@@ -4,7 +4,7 @@
 
 use {
     super::env::EnvironmentContext,
-    super::python_embedded_resources::PythonEmbeddedData,
+    super::python_embedded_resources::PythonEmbeddedResources,
     super::python_resource::{
         PythonExtensionModule, PythonExtensionModuleFlavor, PythonResourceData, PythonSourceModule,
     },
@@ -268,9 +268,9 @@ impl PythonExecutable {
         Ok(Value::new(None))
     }
 
-    /// PythonExecutable.to_embedded_data()
-    pub fn starlark_to_embedded_data(&self) -> ValueResult {
-        Ok(Value::new(PythonEmbeddedData {
+    /// PythonExecutable.to_embedded_resources()
+    pub fn starlark_to_embedded_resources(&self) -> ValueResult {
+        Ok(Value::new(PythonEmbeddedResources {
             exe: self.exe.clone_box(),
         }))
     }
@@ -406,9 +406,9 @@ starlark_module! { python_executable_env =>
     }
 
     #[allow(clippy::ptr_arg)]
-    PythonExecutable.to_embedded_data(this) {
+    PythonExecutable.to_embedded_resources(this) {
         this.downcast_apply(|exe: &PythonExecutable| {
-            exe.starlark_to_embedded_data()
+            exe.starlark_to_embedded_resources()
         })
     }
 }

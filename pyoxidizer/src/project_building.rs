@@ -338,7 +338,7 @@ pub fn build_pyembed_artifacts(
 /// file to resolve.
 ///
 /// For this to work as expected, the target resolved in the config file must
-/// return a `PythonEmbeddedData` starlark type.
+/// return a `PythonEmbeddeResources` starlark type.
 pub fn run_from_build(
     logger: &slog::Logger,
     build_script: &str,

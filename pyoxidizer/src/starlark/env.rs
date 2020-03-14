@@ -4,7 +4,7 @@
 
 use {
     super::file_resource::FileManifest,
-    super::python_embedded_resources::PythonEmbeddedData,
+    super::python_embedded_resources::PythonEmbeddedResources,
     super::python_executable::PythonExecutable,
     super::target::{BuildContext, BuildTarget, ResolvedTarget},
     super::util::{optional_list_arg, required_bool_arg, required_str_arg, required_type_arg},
@@ -255,9 +255,9 @@ impl EnvironmentContext {
                 .downcast_mut::<PythonExecutable>()
                 .unwrap()
                 .build(&context)
-        } else if raw_any.is::<PythonEmbeddedData>() {
+        } else if raw_any.is::<PythonEmbeddedResources>() {
             raw_any
-                .downcast_mut::<PythonEmbeddedData>()
+                .downcast_mut::<PythonEmbeddedResources>()
                 .unwrap()
                 .build(&context)
         } else {
