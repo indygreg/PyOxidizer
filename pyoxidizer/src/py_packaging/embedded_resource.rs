@@ -57,7 +57,7 @@ lazy_static! {
 
 /// Represents an embedded Python module resource entry before it is packaged.
 ///
-/// Instances hold the same fields as `EmbeddedResourcePythonModule` except
+/// Instances hold the same fields as `EmbeddedResource` except
 /// content backing fields is a `DataLocation` instead of `Vec<u8>`, since
 /// it may not be available yet.
 #[derive(Clone, Debug, Default, PartialEq)]
