@@ -255,50 +255,27 @@ impl EmbeddedPythonResourcesPrePackaged {
 
     /// Add a source module to the collection of embedded source modules.
     pub fn add_in_memory_module_source(&mut self, module: &SourceModule) {
-        if !self.modules.contains_key(&module.name) {
-            self.modules.insert(
-                module.name.clone(),
-                EmbeddedResourcePythonModulePrePackaged {
-                    name: module.name.clone(),
-                    ..EmbeddedResourcePythonModulePrePackaged::default()
-                },
-            );
-        }
-
-        let mut entry = self.modules.get_mut(&module.name).unwrap();
-
+        let entry = self.modules.entry(module.name.clone()).or_insert_with(|| {
+            EmbeddedResourcePythonModulePrePackaged {
+                name: module.name.clone(),
+                ..EmbeddedResourcePythonModulePrePackaged::default()
+            }
+        });
         entry.is_package = module.is_package;
         entry.in_memory_source = Some(module.source.clone());
 
-        // Automatically insert empty modules for missing parent packages.
-        for package in packages_from_module_name(&module.name) {
-            if !self.modules.contains_key(&package) {
-                self.modules.insert(
-                    package.clone(),
-                    EmbeddedResourcePythonModulePrePackaged {
-                        name: package.clone(),
-                        is_package: true,
-                        in_memory_source: Some(DataLocation::Memory(vec![])),
-                        ..EmbeddedResourcePythonModulePrePackaged::default()
-                    },
-                );
-            }
-        }
+        self.add_parent_packages(&module.name, true, None);
     }
 
     /// Add a bytecode module to the collection of embedded bytecode modules.
     pub fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModule) {
-        if !self.modules.contains_key(&module.name) {
-            self.modules.insert(
-                module.name.clone(),
-                EmbeddedResourcePythonModulePrePackaged {
-                    name: module.name.clone(),
-                    ..EmbeddedResourcePythonModulePrePackaged::default()
-                },
-            );
-        }
+        let entry = self.modules.entry(module.name.clone()).or_insert_with(|| {
+            EmbeddedResourcePythonModulePrePackaged {
+                name: module.name.clone(),
+                ..EmbeddedResourcePythonModulePrePackaged::default()
+            }
+        });
 
-        let mut entry = self.modules.get_mut(&module.name).unwrap();
         entry.is_package = module.is_package;
 
         match module.optimize_level {
@@ -313,47 +290,22 @@ impl EmbeddedPythonResourcesPrePackaged {
             }
         }
 
-        // Automatically insert empty modules for missing parent packages.
-        for package in packages_from_module_name(&module.name) {
-            if !self.modules.contains_key(&package) {
-                let mut entry = EmbeddedResourcePythonModulePrePackaged {
-                    name: package.clone(),
-                    is_package: true,
-                    ..EmbeddedResourcePythonModulePrePackaged::default()
-                };
-
-                match module.optimize_level {
-                    BytecodeOptimizationLevel::Zero => {
-                        entry.in_memory_bytecode = Some(DataLocation::Memory(vec![]));
-                    }
-                    BytecodeOptimizationLevel::One => {
-                        entry.in_memory_bytecode_opt1 = Some(DataLocation::Memory(vec![]));
-                    }
-                    BytecodeOptimizationLevel::Two => {
-                        entry.in_memory_bytecode_opt2 = Some(DataLocation::Memory(vec![]));
-                    }
-                }
-
-                self.modules.insert(package.clone(), entry);
-            }
-        }
+        self.add_parent_packages(&module.name, false, Some(module.optimize_level));
     }
 
     /// Add resource data.
     ///
     /// Resource data belongs to a Python package and has a name and bytes data.
     pub fn add_in_memory_package_resource(&mut self, resource: &ResourceData) {
-        if !self.modules.contains_key(&resource.package) {
-            self.modules.insert(
-                resource.package.clone(),
-                EmbeddedResourcePythonModulePrePackaged {
-                    name: resource.package.clone(),
-                    ..EmbeddedResourcePythonModulePrePackaged::default()
-                },
-            );
-        }
+        let entry = self
+            .modules
+            .entry(resource.package.clone())
+            .or_insert_with(|| EmbeddedResourcePythonModulePrePackaged {
+                name: resource.package.clone(),
+                ..EmbeddedResourcePythonModulePrePackaged::default()
+            });
 
-        let mut entry = self.modules.get_mut(&resource.package).unwrap();
+        // Adding a resource automatically makes the module a package.
         entry.is_package = true;
 
         if entry.in_memory_resources.is_none() {
@@ -365,6 +317,8 @@ impl EmbeddedPythonResourcesPrePackaged {
             .as_mut()
             .unwrap()
             .insert(resource.name.clone(), resource.data.clone());
+
+        self.add_parent_packages(&resource.package, false, None);
     }
 
     /// Add an extension module.
@@ -372,24 +326,8 @@ impl EmbeddedPythonResourcesPrePackaged {
         self.extension_modules
             .insert(module.module.clone(), module.clone());
 
-        // Add empty bytecode for missing parent packages.
-        for package in packages_from_module_name(&module.module) {
-            if !self.modules.contains_key(&package) {
-                self.modules.insert(
-                    package.clone(),
-                    EmbeddedResourcePythonModulePrePackaged {
-                        name: package.clone(),
-                        is_package: true,
-                        // TODO should we populate opt1, opt2?
-                        in_memory_bytecode: Some(DataLocation::Memory(vec![])),
-                        ..EmbeddedResourcePythonModulePrePackaged::default()
-                    },
-                );
-            }
-
-            let mut entry = self.modules.get_mut(&package).unwrap();
-            entry.is_package = true;
-        }
+        // TODO should we populate opt1, opt2, source?
+        self.add_parent_packages(&module.module, false, Some(BytecodeOptimizationLevel::Zero));
     }
 
     /// Add an extension module.
@@ -398,23 +336,8 @@ impl EmbeddedPythonResourcesPrePackaged {
             .insert(module.name.clone(), module.clone());
 
         // Add empty bytecode for missing parent packages.
-        for package in packages_from_module_name(&module.name) {
-            if !self.modules.contains_key(&package) {
-                self.modules.insert(
-                    package.clone(),
-                    EmbeddedResourcePythonModulePrePackaged {
-                        name: package.clone(),
-                        is_package: true,
-                        // TODO should we populate opt1, opt2?
-                        in_memory_bytecode: Some(DataLocation::Memory(vec![])),
-                        ..EmbeddedResourcePythonModulePrePackaged::default()
-                    },
-                );
-            }
-
-            let mut entry = self.modules.get_mut(&package).unwrap();
-            entry.is_package = true;
-        }
+        // TODO should we populate opt1, opt2?
+        self.add_parent_packages(&module.name, false, Some(BytecodeOptimizationLevel::Zero));
     }
 
     /// Add an extension module shared library that should be imported from memory.
@@ -424,39 +347,20 @@ impl EmbeddedPythonResourcesPrePackaged {
         is_package: bool,
         data: &[u8],
     ) {
-        if !self.modules.contains_key(module) {
-            self.modules.insert(
-                module.to_string(),
-                EmbeddedResourcePythonModulePrePackaged {
-                    name: module.to_string(),
-                    ..EmbeddedResourcePythonModulePrePackaged::default()
-                },
-            );
-        }
+        let entry = self.modules.entry(module.to_string()).or_insert_with(|| {
+            EmbeddedResourcePythonModulePrePackaged {
+                name: module.to_string(),
+                ..EmbeddedResourcePythonModulePrePackaged::default()
+            }
+        });
 
-        let mut entry = self.modules.get_mut(module).unwrap();
         if is_package {
             entry.is_package = true;
         }
         entry.in_memory_extension_module_shared_library = Some(DataLocation::Memory(data.to_vec()));
 
         // Add empty bytecode for missing parent packages.
-        for package in packages_from_module_name(module) {
-            if !self.modules.contains_key(&package) {
-                self.modules.insert(
-                    package.clone(),
-                    EmbeddedResourcePythonModulePrePackaged {
-                        name: package.clone(),
-                        // TODO should we populate opt1, opt2?
-                        in_memory_bytecode: Some(DataLocation::Memory(vec![])),
-                        ..EmbeddedResourcePythonModulePrePackaged::default()
-                    },
-                );
-            }
-
-            let mut entry = self.modules.get_mut(&package).unwrap();
-            entry.is_package = true;
-        }
+        self.add_parent_packages(module, false, Some(BytecodeOptimizationLevel::Zero));
 
         // TODO add shared library dependencies to be packaged as well.
         // TODO add shared library dependency names.
@@ -659,6 +563,50 @@ impl EmbeddedPythonResourcesPrePackaged {
             extension_modules,
             built_extension_modules,
         })
+    }
+
+    fn add_parent_packages(
+        &mut self,
+        name: &str,
+        add_source: bool,
+        bytecode_level: Option<BytecodeOptimizationLevel>,
+    ) {
+        for package in packages_from_module_name(name) {
+            let m = self.modules.entry(package.clone()).or_insert_with(|| {
+                EmbeddedResourcePythonModulePrePackaged {
+                    name: package.clone(),
+                    ..EmbeddedResourcePythonModulePrePackaged::default()
+                }
+            });
+
+            // All parents are packages by definition.
+            m.is_package = true;
+
+            // Add empty source code if told to do so.
+            if add_source && m.in_memory_source.is_none() {
+                m.in_memory_source = Some(DataLocation::Memory(vec![]));
+            }
+
+            if let Some(level) = bytecode_level {
+                match level {
+                    BytecodeOptimizationLevel::Zero => {
+                        if m.in_memory_bytecode.is_none() {
+                            m.in_memory_bytecode = Some(DataLocation::Memory(vec![]));
+                        }
+                    }
+                    BytecodeOptimizationLevel::One => {
+                        if m.in_memory_bytecode_opt1.is_none() {
+                            m.in_memory_bytecode_opt1 = Some(DataLocation::Memory(vec![]));
+                        }
+                    }
+                    BytecodeOptimizationLevel::Two => {
+                        if m.in_memory_bytecode_opt2.is_none() {
+                            m.in_memory_bytecode_opt2 = Some(DataLocation::Memory(vec![]));
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
