@@ -730,10 +730,28 @@ impl PyOxidizerFinder {
 py_class!(class PyOxidizerResourceReader |py| {
     data resources: Arc<Box<HashMap<Cow<'static, str>, Cow<'static, [u8]>>>>;
 
+    def open_resource(&self, resource: &PyString) -> PyResult<PyObject> {
+        self.open_resource_impl(py, resource)
+    }
+
+    def resource_path(&self, resource: &PyString) -> PyResult<PyObject> {
+        self.resource_path_impl(py, resource)
+    }
+
+    def is_resource(&self, name: &PyString) -> PyResult<PyObject> {
+        self.is_resource_impl(py, name)
+    }
+
+    def contents(&self) -> PyResult<PyObject> {
+        self.contents_impl(py)
+    }
+});
+
+impl PyOxidizerResourceReader {
     /// Returns an opened, file-like object for binary reading of the resource.
     ///
     /// If the resource cannot be found, FileNotFoundError is raised.
-    def open_resource(&self, resource: &PyString) -> PyResult<PyObject> {
+    fn open_resource_impl(&self, py: Python, resource: &PyString) -> PyResult<PyObject> {
         let key = resource.to_string(py)?;
 
         if let Some(data) = self.resources(py).get(&*key) {
@@ -744,7 +762,7 @@ py_class!(class PyOxidizerResourceReader |py| {
 
                     bytes_io.call(py, (mv,), None)
                 }
-                None => Err(PyErr::fetch(py))
+                None => Err(PyErr::fetch(py)),
             }
         } else {
             Err(PyErr::new::<FileNotFoundError, _>(py, "resource not found"))
@@ -755,13 +773,16 @@ py_class!(class PyOxidizerResourceReader |py| {
     ///
     /// If the resource does not concretely exist on the file system, raise
     /// FileNotFoundError.
-    def resource_path(&self, _resource: &PyString) -> PyResult<PyObject> {
-        Err(PyErr::new::<FileNotFoundError, _>(py, "in-memory resources do not have filesystem paths"))
+    fn resource_path_impl(&self, py: Python, _resource: &PyString) -> PyResult<PyObject> {
+        Err(PyErr::new::<FileNotFoundError, _>(
+            py,
+            "in-memory resources do not have filesystem paths",
+        ))
     }
 
     /// Returns True if the named name is considered a resource. FileNotFoundError
     /// is raised if name does not exist.
-    def is_resource(&self, name: &PyString) -> PyResult<PyObject> {
+    fn is_resource_impl(&self, py: Python, name: &PyString) -> PyResult<PyObject> {
         let key = name.to_string(py)?;
 
         if self.resources(py).contains_key(&*key) {
@@ -781,7 +802,7 @@ py_class!(class PyOxidizerResourceReader |py| {
     /// For instance, returning subdirectory names is allowed so that when it is known that the
     /// package and resources are stored on the file system then those subdirectory names can be
     /// used directly.
-    def contents(&self) -> PyResult<PyObject> {
+    fn contents_impl(&self, py: Python) -> PyResult<PyObject> {
         let resources = self.resources(py);
         let mut names = Vec::with_capacity(resources.len());
 
@@ -793,7 +814,7 @@ py_class!(class PyOxidizerResourceReader |py| {
 
         Ok(names_list.as_object().clone_ref(py))
     }
-});
+}
 
 const DOC: &[u8] = b"Binary representation of Python modules\0";
 
