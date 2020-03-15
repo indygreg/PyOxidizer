@@ -1501,7 +1501,7 @@ pub mod tests {
                 &ExtensionModuleFilter::Minimal,
                 None,
             )? {
-                resources.add_distribution_extension_module(&ext);
+                resources.add_distribution_extension_module(&ext)?;
             }
         }
 
