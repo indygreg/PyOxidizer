@@ -11,7 +11,7 @@ for importing Python modules from memory.
 
 use {
     super::pyinterp::PYOXIDIZER_IMPORTER_NAME,
-    super::python_resources::{uses_pyembed_importer, PythonImporterState},
+    super::python_resources::{uses_pyembed_importer, PythonResourcesState},
     cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError},
     cpython::{
         py_class, py_fn, NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyModule,
@@ -277,7 +277,7 @@ py_class!(class PyOxidizerFinder |py| {
     data decode_source: PyObject;
     data exec_fn: PyObject;
     data origin: PathBuf;
-    data importer_state: PythonImporterState<'static, u8>;
+    data importer_state: PythonResourcesState<'static, u8>;
     data resource_readers: RefCell<Box<HashMap<String, PyObject>>>;
 
     // Start of importlib.abc.MetaPathFinder interface.
@@ -764,7 +764,7 @@ fn module_setup(
     let builtin_importer = meta_path.get_item(py, 0);
     let frozen_importer = meta_path.get_item(py, 1);
 
-    let mut importer_state = PythonImporterState::default();
+    let mut importer_state = PythonResourcesState::default();
 
     if let Err(e) = importer_state.load(state.embedded_resources_data) {
         return Err(PyErr::new::<ValueError, _>(py, e));

@@ -33,7 +33,7 @@ where
 
 /// Defines Python resources available for import.
 #[derive(Debug)]
-pub(crate) struct PythonImporterState<'a, X>
+pub(crate) struct PythonResourcesState<'a, X>
 where
     [X]: ToOwned<Owned = Vec<X>>,
 {
@@ -43,7 +43,7 @@ where
     pub resources: HashMap<Cow<'a, str>, Resource<'a, X>>,
 }
 
-impl<'a> Default for PythonImporterState<'a, u8> {
+impl<'a> Default for PythonResourcesState<'a, u8> {
     fn default() -> Self {
         Self {
             packages: HashSet::new(),
@@ -52,7 +52,7 @@ impl<'a> Default for PythonImporterState<'a, u8> {
     }
 }
 
-impl<'a> PythonImporterState<'a, u8> {
+impl<'a> PythonResourcesState<'a, u8> {
     /// Load state from the environment and by parsing data structures.
     pub fn load(&mut self, resources_data: &'static [u8]) -> Result<(), &'static str> {
         // Loading of builtin and frozen knows to mutate existing entries rather
