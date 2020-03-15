@@ -52,6 +52,11 @@ pub struct ResourceParserIterator<'a> {
 }
 
 impl<'a> ResourceParserIterator<'a> {
+    /// The expected number of resources we will emit.
+    pub fn expected_resources_count(&self) -> usize {
+        self.claimed_resources_count
+    }
+
     /// Resolve a slice to an individual blob's data.
     ///
     /// This accepts a reference to the original blobs payload, an array of

@@ -196,6 +196,10 @@ impl<'a> PythonResourcesState<'a, u8> {
     fn load_resources(&mut self, data: &'a [u8]) -> Result<(), &'static str> {
         let resources = python_packed_resources::parser::load_resources(data)?;
 
+        // Reserve space for expected number of incoming items so we can avoid extra
+        // allocations.
+        self.resources.reserve(resources.expected_resources_count());
+
         for resource in resources {
             let resource = resource?;
 
