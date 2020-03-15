@@ -18,7 +18,7 @@ jemalloc-sys = { version = "0.3", optional = true }
 lazy_static = "1.4"
 libc = "0.2"
 python3-sys = { git = "https://github.com/dgrunwald/rust-cpython", rev = "7fb4dd2e59ccf0fbf6bbe874b602e52b8aa4a8c1" }
-python-packed-resources = { version = "0.1", path = "../python-packed-resources" }
+python-packed-resources = { version = "0.1.0-pre", path = "../python-packed-resources" }
 uuid = { version = "0.8", features = ["v4"] }
 
 [target.'cfg(windows)'.dependencies]

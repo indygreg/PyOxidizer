@@ -43,7 +43,7 @@ lazy_static = "1.4"
 libc = "0.2"
 path-dedot = "1.1"
 podio = "0.1"
-python-packed-resources = { version = "0.1", path = "../python-packed-resources" }
+python-packed-resources = { version = "0.1.0-pre", path = "../python-packed-resources" }
 regex = "1"
 reqwest = "0.9"
 rustc_version = "0.2"
