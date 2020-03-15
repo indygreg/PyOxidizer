@@ -2,10 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use {
-    std::borrow::Cow, std::collections::HashMap, std::convert::TryFrom, std::path::Path,
-    std::sync::Arc,
-};
+use {std::borrow::Cow, std::collections::HashMap, std::convert::TryFrom, std::path::Path};
 
 /// Header value for version 1 of resources payload.
 pub const HEADER_V1: &[u8] = b"pyembed\x01";
@@ -240,7 +237,7 @@ where
 
     /// Mapping of virtual filename to data for resources to expose to Python's
     /// `importlib.resources` API via in-memory data access.
-    pub in_memory_resources: Option<Arc<Box<HashMap<Cow<'a, str>, Cow<'a, [X]>>>>>,
+    pub in_memory_resources: Option<HashMap<Cow<'a, str>, Cow<'a, [X]>>>,
 
     /// Mapping of virtual filename to data for package distribution metadata
     /// to expose to Python's `importlib.metadata` API via in-memory data access.
@@ -270,7 +267,7 @@ where
     pub relative_path_extension_module_shared_library: Option<Cow<'a, Path>>,
 
     /// Mapping of Python package resource names to relative filesystem paths for those resources.
-    pub relative_path_package_resources: Option<Arc<Box<HashMap<Cow<'a, str>, Cow<'a, Path>>>>>,
+    pub relative_path_package_resources: Option<HashMap<Cow<'a, str>, Cow<'a, Path>>>,
 
     /// Mapping of Python package distribution files to relative filesystem paths for those resources.
     pub relative_path_package_distribution: Option<HashMap<Cow<'a, str>, Cow<'a, Path>>>,

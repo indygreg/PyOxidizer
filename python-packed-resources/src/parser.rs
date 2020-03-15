@@ -17,7 +17,6 @@ use {
     std::ffi::OsStr,
     std::io::{Cursor, Read},
     std::path::Path,
-    std::sync::Arc,
 };
 
 #[cfg(unix)]
@@ -40,7 +39,7 @@ struct BlobSectionReadState {
     interior_padding: BlobInteriorPadding,
 }
 
-pub type PythonPackageResources<'a> = Arc<Box<HashMap<&'a str, &'a [u8]>>>;
+pub type PythonPackageResources<'a> = HashMap<&'a str, &'a [u8]>;
 
 pub struct ResourceParserIterator<'a> {
     done: bool,
@@ -224,7 +223,7 @@ impl<'a> ResourceParserIterator<'a> {
                         .or_else(|_| Err("failed reading resources length"))?
                         as usize;
 
-                    let mut resources = Box::new(HashMap::with_capacity(resource_count));
+                    let mut resources = HashMap::with_capacity(resource_count);
 
                     for _ in 0..resource_count {
                         let resource_name_length = self
@@ -251,7 +250,7 @@ impl<'a> ResourceParserIterator<'a> {
                             .insert(Cow::Borrowed(resource_name), Cow::Borrowed(resource_data));
                     }
 
-                    current_resource.in_memory_resources = Some(Arc::new(resources));
+                    current_resource.in_memory_resources = Some(resources);
                 }
 
                 ResourceField::InMemoryPackageDistribution => {
@@ -382,7 +381,7 @@ impl<'a> ResourceParserIterator<'a> {
                         Err("failed reading package resources relative path item count")
                     })? as usize;
 
-                    let mut resources = Box::new(HashMap::with_capacity(resource_count));
+                    let mut resources = HashMap::with_capacity(resource_count);
 
                     for _ in 0..resource_count {
                         let resource_name_length = self
@@ -408,7 +407,7 @@ impl<'a> ResourceParserIterator<'a> {
                         resources.insert(Cow::Borrowed(resource_name), path);
                     }
 
-                    current_resource.relative_path_package_resources = Some(Arc::new(resources));
+                    current_resource.relative_path_package_resources = Some(resources);
                 }
 
                 ResourceField::RelativeFilesystemPackageDistribution => {
@@ -962,13 +961,13 @@ mod tests {
 
     #[test]
     fn test_in_memory_resources_data() {
-        let mut resources = Box::new(HashMap::new());
+        let mut resources = HashMap::new();
         resources.insert(Cow::from("foo"), Cow::from(b"foovalue".to_vec()));
         resources.insert(Cow::from("another"), Cow::from(b"value2".to_vec()));
 
         let resource = Resource {
             name: Cow::from("foo"),
-            in_memory_resources: Some(Arc::new(resources)),
+            in_memory_resources: Some(resources),
             ..Resource::default()
         };
 
@@ -1228,13 +1227,13 @@ mod tests {
 
     #[test]
     fn test_relative_path_package_resources() {
-        let mut resources = Box::new(HashMap::new());
+        let mut resources = HashMap::new();
         resources.insert(Cow::from("foo"), Cow::from(Path::new("foo")));
         resources.insert(Cow::from("another"), Cow::from(Path::new("another")));
 
         let resource = Resource {
             name: Cow::from("foo"),
-            relative_path_package_resources: Some(Arc::new(resources)),
+            relative_path_package_resources: Some(resources),
             ..Resource::default()
         };
 
@@ -1299,7 +1298,7 @@ mod tests {
     #[allow(clippy::cognitive_complexity)]
     #[test]
     fn test_all_fields() {
-        let mut in_memory_resources = Box::new(HashMap::new());
+        let mut in_memory_resources = HashMap::new();
         in_memory_resources.insert(
             Cow::from("foo".to_string()),
             Cow::from(b"foovalue".to_vec()),
@@ -1310,7 +1309,7 @@ mod tests {
         in_memory_distribution.insert(Cow::from("dist"), Cow::from(b"distvalue".to_vec()));
         in_memory_distribution.insert(Cow::from("dist2"), Cow::from(b"dist2value".to_vec()));
 
-        let mut relative_path_resources = Box::new(HashMap::new());
+        let mut relative_path_resources = HashMap::new();
         relative_path_resources.insert(
             Cow::from("resource.txt"),
             Cow::from(Path::new("resource.txt")),
@@ -1337,7 +1336,7 @@ mod tests {
             in_memory_bytecode_opt1: Some(Cow::from(b"bytecodeopt1".to_vec())),
             in_memory_bytecode_opt2: Some(Cow::from(b"bytecodeopt2".to_vec())),
             in_memory_extension_module_shared_library: Some(Cow::from(b"library".to_vec())),
-            in_memory_resources: Some(Arc::new(in_memory_resources)),
+            in_memory_resources: Some(in_memory_resources),
             in_memory_package_distribution: Some(in_memory_distribution),
             in_memory_shared_library: Some(Cow::from(b"library".to_vec())),
             shared_library_dependency_names: Some(vec![Cow::from("libfoo"), Cow::from("depends")]),
@@ -1346,7 +1345,7 @@ mod tests {
             relative_path_module_bytecode_opt1: Some(Cow::from(Path::new("bytecode_opt1_path"))),
             relative_path_module_bytecode_opt2: Some(Cow::from(Path::new("bytecode_opt2_path"))),
             relative_path_extension_module_shared_library: Some(Cow::from(Path::new("em_path"))),
-            relative_path_package_resources: Some(Arc::new(relative_path_resources)),
+            relative_path_package_resources: Some(relative_path_resources),
             relative_path_package_distribution: Some(relative_path_distribution),
         };
 

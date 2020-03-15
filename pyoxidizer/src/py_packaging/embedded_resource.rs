@@ -26,7 +26,6 @@ use {
     std::io::Write,
     std::iter::FromIterator,
     std::path::{Path, PathBuf},
-    std::sync::Arc,
 };
 
 lazy_static! {
@@ -119,11 +118,11 @@ impl<'a> TryFrom<&EmbeddedResourcePythonModulePrePackaged> for EmbeddedResource<
                 None
             },
             in_memory_resources: if let Some(resources) = &value.in_memory_resources {
-                let mut res = Box::new(HashMap::new());
+                let mut res = HashMap::new();
                 for (key, location) in resources {
                     res.insert(Cow::Owned(key.clone()), Cow::Owned(location.resolve()?));
                 }
-                Some(Arc::new(res))
+                Some(res)
             } else {
                 None
             },
@@ -170,11 +169,11 @@ impl<'a> TryFrom<&EmbeddedResourcePythonModulePrePackaged> for EmbeddedResource<
             relative_path_package_resources: if let Some(resources) =
                 &value.relative_path_package_resources
             {
-                let mut res = Box::new(HashMap::new());
+                let mut res = HashMap::new();
                 for (key, path) in resources {
                     res.insert(Cow::Owned(key.clone()), Cow::Owned(path.clone()));
                 }
-                Some(Arc::new(res))
+                Some(res)
             } else {
                 None
             },
