@@ -288,6 +288,89 @@ struct ImporterState {
     resource_readers: RefCell<Box<HashMap<String, PyObject>>>,
 }
 
+impl ImporterState {
+    fn new(
+        py: Python,
+        bootstrap_module: &PyModule,
+        marshal_module: &PyModule,
+        decode_source: PyObject,
+        resources_data: &'static [u8],
+        origin: PathBuf,
+    ) -> Result<Self, PyErr> {
+        let imp_module = bootstrap_module.get(py, "_imp")?;
+        let imp_module = imp_module.cast_into::<PyModule>(py)?;
+        let sys_module = bootstrap_module.get(py, "sys")?;
+        let sys_module = sys_module.cast_into::<PyModule>(py)?;
+        let meta_path_object = sys_module.get(py, "meta_path")?;
+
+        // We should be executing as part of
+        // _frozen_importlib_external._install_external_importers().
+        // _frozen_importlib._install() should have already been called and set up
+        // sys.meta_path with [BuiltinImporter, FrozenImporter]. Those should be the
+        // only meta path importers present.
+
+        let meta_path = meta_path_object.cast_as::<PyList>(py)?;
+        if meta_path.len(py) != 2 {
+            return Err(PyErr::new::<ValueError, _>(
+                py,
+                "sys.meta_path does not contain 2 values",
+            ));
+        }
+
+        let builtin_importer = meta_path.get_item(py, 0);
+        let frozen_importer = meta_path.get_item(py, 1);
+
+        let mut resources_state = PythonResourcesState::default();
+
+        if let Err(e) = resources_state.load(resources_data) {
+            return Err(PyErr::new::<ValueError, _>(py, e));
+        }
+
+        let marshal_loads = marshal_module.get(py, "loads")?;
+        let call_with_frames_removed = bootstrap_module.get(py, "_call_with_frames_removed")?;
+        let module_spec_type = bootstrap_module.get(py, "ModuleSpec")?;
+
+        let builtins_module =
+            match unsafe { PyObject::from_borrowed_ptr_opt(py, pyffi::PyEval_GetBuiltins()) } {
+                Some(o) => o.cast_into::<PyDict>(py),
+                None => {
+                    return Err(PyErr::new::<ValueError, _>(
+                        py,
+                        "unable to obtain __builtins__",
+                    ));
+                }
+            }?;
+
+        let exec_fn = match builtins_module.get_item(py, "exec") {
+            Some(v) => v,
+            None => {
+                return Err(PyErr::new::<ValueError, _>(
+                    py,
+                    "could not obtain __builtins__.exec",
+                ));
+            }
+        };
+
+        let resource_readers: RefCell<Box<HashMap<String, PyObject>>> =
+            RefCell::new(Box::new(HashMap::new()));
+
+        Ok(ImporterState {
+            imp_module,
+            sys_module,
+            marshal_loads,
+            builtin_importer,
+            frozen_importer,
+            call_with_frames_removed,
+            module_spec_type,
+            decode_source,
+            exec_fn,
+            origin,
+            resources_state,
+            resource_readers,
+        })
+    }
+}
+
 #[allow(unused_doc_comments)]
 /// Python type to import modules.
 ///
@@ -842,87 +925,33 @@ fn module_setup(
 
     state.setup_called = true;
 
-    let imp_module = bootstrap_module.get(py, "_imp")?;
-    let imp_module = imp_module.cast_into::<PyModule>(py)?;
     let sys_module = bootstrap_module.get(py, "sys")?;
     let sys_module = sys_module.cast_into::<PyModule>(py)?;
     let sys_module_ref = sys_module.clone_ref(py);
-    let meta_path_object = sys_module.get(py, "meta_path")?;
 
-    // We should be executing as part of
-    // _frozen_importlib_external._install_external_importers().
-    // _frozen_importlib._install() should have already been called and set up
-    // sys.meta_path with [BuiltinImporter, FrozenImporter]. Those should be the
-    // only meta path importers present.
-
-    let meta_path = meta_path_object.cast_as::<PyList>(py)?;
-
-    if meta_path.len(py) != 2 {
-        return Err(PyErr::new::<ValueError, _>(
-            py,
-            "sys.meta_path does not contain 2 values",
-        ));
-    }
-
-    let builtin_importer = meta_path.get_item(py, 0);
-    let frozen_importer = meta_path.get_item(py, 1);
-
-    let mut resources_state = PythonResourcesState::default();
-
-    if let Err(e) = resources_state.load(state.embedded_resources_data) {
-        return Err(PyErr::new::<ValueError, _>(py, e));
-    }
-
-    let marshal_loads = marshal_module.get(py, "loads")?;
-    let call_with_frames_removed = bootstrap_module.get(py, "_call_with_frames_removed")?;
-    let module_spec_type = bootstrap_module.get(py, "ModuleSpec")?;
-
-    let builtins_module =
-        match unsafe { PyObject::from_borrowed_ptr_opt(py, pyffi::PyEval_GetBuiltins()) } {
-            Some(o) => o.cast_into::<PyDict>(py),
-            None => {
-                return Err(PyErr::new::<ValueError, _>(
-                    py,
-                    "unable to obtain __builtins__",
-                ));
-            }
-        }?;
-
-    let exec_fn = match builtins_module.get_item(py, "exec") {
-        Some(v) => v,
-        None => {
-            return Err(PyErr::new::<ValueError, _>(
-                py,
-                "could not obtain __builtins__.exec",
-            ));
-        }
-    };
-
-    let resource_readers: RefCell<Box<HashMap<String, PyObject>>> =
-        RefCell::new(Box::new(HashMap::new()));
-
+    // Construct and register our custom meta path importer. Because our meta path
+    // importer is able to handle builtin and frozen modules, the existing meta path
+    // importers are removed. The assumption here is that we're called very early
+    // during startup and the 2 default meta path importers are installed.
     let unified_importer = PyOxidizerFinder::create_instance(
         py,
-        ImporterState {
-            imp_module,
-            sys_module,
-            marshal_loads,
-            builtin_importer,
-            frozen_importer,
-            call_with_frames_removed,
-            module_spec_type,
+        ImporterState::new(
+            py,
+            &bootstrap_module,
+            &marshal_module,
             decode_source,
-            exec_fn,
-            origin: state.origin.clone(),
-            resources_state,
-            resource_readers,
-        },
+            &state.embedded_resources_data,
+            state.origin.clone(),
+        )?,
     )?;
+
+    let meta_path_object = sys_module.get(py, "meta_path")?;
+
     meta_path_object.call_method(py, "clear", NoArgs, None)?;
     meta_path_object.call_method(py, "append", (unified_importer,), None)?;
 
     // At this point the importing mechanism is fully initialized to use our
-    // unified importer, which handles built-in, frozen, and in-memory imports.
+    // unified importer, which handles built-in, frozen, and embedded resources.
 
     // Because we're probably running during Py_Initialize() and stdlib modules
     // may not be in-memory, we need to register and configure additional importers
