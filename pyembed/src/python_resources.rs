@@ -23,21 +23,26 @@ pub(crate) enum OptimizeLevel {
     Two,
 }
 
-/// Whether the module is imported by the importer provided by this crate.
+/// Determines whether an entry represents an importable Python module.
 ///
-/// This excludes builtin and frozen modules, which are merely registered.
-pub(crate) fn uses_pyembed_importer<X>(entry: &Resource<X>) -> bool
+/// Should only be called on module flavors.
+fn is_importable<X>(entry: &Resource<X>, optimize_level: OptimizeLevel) -> bool
 where
     [X]: ToOwned<Owned = Vec<X>>,
 {
-    entry.in_memory_bytecode.is_some()
-        || entry.in_memory_bytecode_opt1.is_some()
-        || entry.in_memory_bytecode_opt2.is_some()
-        || entry.in_memory_extension_module_shared_library.is_some()
-        || entry.relative_path_module_source.is_some()
-        || entry.relative_path_module_bytecode.is_some()
-        || entry.relative_path_module_bytecode_opt1.is_some()
-        || entry.relative_path_module_bytecode_opt2.is_some()
+    assert_eq!(entry.flavor, ResourceFlavor::Module);
+
+    match optimize_level {
+        OptimizeLevel::Zero => {
+            entry.in_memory_bytecode.is_some() || entry.relative_path_module_bytecode.is_some()
+        }
+        OptimizeLevel::One => {
+            entry.in_memory_bytecode_opt1.is_some() || entry.in_memory_bytecode_opt1.is_some()
+        }
+        OptimizeLevel::Two => {
+            entry.in_memory_bytecode_opt2.is_some() || entry.in_memory_bytecode_opt2.is_some()
+        }
+    }
 }
 
 /// Obtain a Python `memoryview` referencing in-memory source for an entry, if available.
@@ -84,6 +89,17 @@ where
     }
 }
 
+/// Holds state for an importable Python module.
+///
+/// This essentially is an abstraction over raw `Resource` entries that
+/// allows the importer code to be simpler.
+pub(crate) struct ImportablePythonModule<'a> {
+    /// The resource/module flavor.
+    pub flavor: &'a ResourceFlavor,
+    /// Whether this module is a package.
+    pub is_package: bool,
+}
+
 /// Defines Python resources available for import.
 #[derive(Debug)]
 pub(crate) struct PythonResourcesState<'a, X>
@@ -116,6 +132,44 @@ impl<'a> PythonResourcesState<'a, u8> {
         self.load_interpreter_frozen_modules()?;
 
         Ok(())
+    }
+
+    /// Attempt to resolve an importable Python module.
+    pub fn resolve_importable_module(
+        &self,
+        name: &str,
+        optimize_level: OptimizeLevel,
+    ) -> Option<ImportablePythonModule> {
+        let entry = match self.resources.get(name) {
+            Some(entry) => entry,
+            None => return None,
+        };
+
+        match entry.flavor {
+            ResourceFlavor::Module => {
+                if is_importable(entry, optimize_level) {
+                    Some(ImportablePythonModule {
+                        flavor: &entry.flavor,
+                        is_package: entry.is_package,
+                    })
+                } else {
+                    None
+                }
+            }
+            ResourceFlavor::Extension => Some(ImportablePythonModule {
+                flavor: &entry.flavor,
+                is_package: entry.is_package,
+            }),
+            ResourceFlavor::BuiltinExtensionModule => Some(ImportablePythonModule {
+                flavor: &entry.flavor,
+                is_package: entry.is_package,
+            }),
+            ResourceFlavor::FrozenModule => Some(ImportablePythonModule {
+                flavor: &entry.flavor,
+                is_package: entry.is_package,
+            }),
+            _ => None,
+        }
     }
 
     /// Load `builtin` modules from the Python interpreter.

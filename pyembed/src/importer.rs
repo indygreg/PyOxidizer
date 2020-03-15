@@ -12,8 +12,8 @@ for importing Python modules from memory.
 use {
     super::pyinterp::PYOXIDIZER_IMPORTER_NAME,
     super::python_resources::{
-        get_in_memory_bytecode_memory_view, get_in_memory_source_memory_view,
-        uses_pyembed_importer, OptimizeLevel, PythonResourcesState,
+        get_in_memory_bytecode_memory_view, get_in_memory_source_memory_view, OptimizeLevel,
+        PythonResourcesState,
     },
     cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError},
     cpython::{
@@ -462,18 +462,16 @@ impl PyOxidizerFinder {
         let state = self.state(py);
         let key = fullname.to_string(py)?;
 
-        if let Some(module) = state.resources_state.resources.get(&*key) {
-            if module.flavor == ResourceFlavor::BuiltinExtensionModule {
-                // BuiltinImporter.find_spec() always returns None if `path` is defined.
-                // And it doesn't use `target`. So don't proxy these values.
-                state
-                    .builtin_importer
-                    .call_method(py, "find_spec", (fullname,), None)
-            } else if module.flavor == ResourceFlavor::FrozenModule {
-                state
-                    .frozen_importer
-                    .call_method(py, "find_spec", (fullname, path, target), None)
-            } else if uses_pyembed_importer(module) {
+        let module = match state
+            .resources_state
+            .resolve_importable_module(&key, state.optimize_level)
+        {
+            Some(module) => module,
+            None => return Ok(py.None()),
+        };
+
+        match module.flavor {
+            ResourceFlavor::Extension | ResourceFlavor::Module => {
                 // TODO consider setting origin and has_location so __file__ will be
                 // populated.
                 let kwargs = PyDict::new(py);
@@ -482,11 +480,20 @@ impl PyOxidizerFinder {
                 state
                     .module_spec_type
                     .call(py, (fullname, self), Some(&kwargs))
-            } else {
-                Ok(py.None())
             }
-        } else {
-            Ok(py.None())
+            ResourceFlavor::BuiltinExtensionModule => {
+                // BuiltinImporter.find_spec() always returns None if `path` is defined.
+                // And it doesn't use `target`. So don't proxy these values.
+                state
+                    .builtin_importer
+                    .call_method(py, "find_spec", (fullname,), None)
+            }
+            ResourceFlavor::FrozenModule => {
+                state
+                    .frozen_importer
+                    .call_method(py, "find_spec", (fullname, path, target), None)
+            }
+            _ => Ok(py.None()),
         }
     }
 
