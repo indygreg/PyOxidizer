@@ -12,8 +12,8 @@ for importing Python modules from memory.
 use {
     super::pyinterp::PYOXIDIZER_IMPORTER_NAME,
     super::python_resources::{
-        get_in_memory_bytecode_memory_view, uses_pyembed_importer, OptimizeLevel,
-        PythonResourcesState,
+        get_in_memory_bytecode_memory_view, get_in_memory_source_memory_view,
+        uses_pyembed_importer, OptimizeLevel, PythonResourcesState,
     },
     cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError},
     cpython::{
@@ -634,20 +634,11 @@ impl PyOxidizerFinder {
         let key = fullname.to_string(py)?;
 
         if let Some(resource) = state.resources_state.resources.get(&*key) {
-            if resource.in_memory_source.is_some() {
-                match get_memory_view(py, &resource.in_memory_source) {
-                    Some(value) => {
-                        // decode_source (from importlib._bootstrap_external)
-                        // can't handle memoryview. So we take the memory hit and
-                        // cast to bytes.
-                        let b = value.call_method(py, "tobytes", NoArgs, None)?;
-                        state.decode_source.call(py, (b,), None)
-                    }
-                    None => Err(PyErr::new::<ImportError, _>(
-                        py,
-                        ("source not available", fullname),
-                    )),
-                }
+            if let Some(source) = get_in_memory_source_memory_view(py, resource) {
+                // importlib._bootstrap_external.decode_source() can't handle memoryview.
+                // So we take the memory hit and allocate a copy in a PyBytes.
+                let b = source.call_method(py, "tobytes", NoArgs, None)?;
+                state.decode_source.call(py, (b,), None)
             } else if let Some(relative_path) = &resource.relative_path_module_source {
                 let path = state.origin.join(relative_path);
 

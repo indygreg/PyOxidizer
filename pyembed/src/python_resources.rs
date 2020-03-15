@@ -40,6 +40,25 @@ where
         || entry.relative_path_module_bytecode_opt2.is_some()
 }
 
+/// Obtain a Python `memoryview` referencing in-memory source for an entry, if available.
+pub(crate) fn get_in_memory_source_memory_view<'a, X: 'a>(
+    py: Python,
+    entry: &'a Resource<X>,
+) -> Option<PyObject>
+where
+    [X]: ToOwned<Owned = Vec<X>>,
+{
+    if let Some(data) = &entry.in_memory_source {
+        let ptr = unsafe {
+            pyffi::PyMemoryView_FromMemory(data.as_ptr() as _, data.len() as _, pyffi::PyBUF_READ)
+        };
+
+        unsafe { PyObject::from_owned_ptr_opt(py, ptr) }
+    } else {
+        None
+    }
+}
+
 /// Obtain a Python `memoryview` referencing in-memory bytecode for an entry,
 /// if available.
 pub(crate) fn get_in_memory_bytecode_memory_view<'a, X: 'a>(
