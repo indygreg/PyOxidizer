@@ -7,12 +7,21 @@ Management of Python resources.
 */
 
 use {
+    cpython::{PyObject, Python},
     python3_sys as pyffi,
     python_packed_resources::data::{Resource, ResourceFlavor},
     std::borrow::Cow,
     std::collections::{HashMap, HashSet},
     std::ffi::CStr,
 };
+
+/// Python bytecode optimization level.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum OptimizeLevel {
+    Zero,
+    One,
+    Two,
+}
 
 /// Whether the module is imported by the importer provided by this crate.
 ///
@@ -29,6 +38,31 @@ where
         || entry.relative_path_module_bytecode.is_some()
         || entry.relative_path_module_bytecode_opt1.is_some()
         || entry.relative_path_module_bytecode_opt2.is_some()
+}
+
+/// Obtain a Python `memoryview` referencing in-memory bytecode for an entry,
+/// if available.
+pub(crate) fn get_in_memory_bytecode_memory_view<'a, X: 'a>(
+    py: Python,
+    entry: &'a Resource<X>,
+    optimize_level: OptimizeLevel,
+) -> Option<PyObject>
+where
+    [X]: ToOwned<Owned = Vec<X>>,
+{
+    if let Some(data) = match optimize_level {
+        OptimizeLevel::Zero => &entry.in_memory_bytecode,
+        OptimizeLevel::One => &entry.in_memory_bytecode_opt1,
+        OptimizeLevel::Two => &entry.in_memory_bytecode_opt2,
+    } {
+        let ptr = unsafe {
+            pyffi::PyMemoryView_FromMemory(data.as_ptr() as _, data.len() as _, pyffi::PyBUF_READ)
+        };
+
+        unsafe { PyObject::from_owned_ptr_opt(py, ptr) }
+    } else {
+        None
+    }
 }
 
 /// Defines Python resources available for import.

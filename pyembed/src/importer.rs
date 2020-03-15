@@ -11,7 +11,10 @@ for importing Python modules from memory.
 
 use {
     super::pyinterp::PYOXIDIZER_IMPORTER_NAME,
-    super::python_resources::{uses_pyembed_importer, PythonResourcesState},
+    super::python_resources::{
+        get_in_memory_bytecode_memory_view, uses_pyembed_importer, OptimizeLevel,
+        PythonResourcesState,
+    },
     cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError},
     cpython::{
         py_class, py_fn, NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyModule,
@@ -280,6 +283,8 @@ struct ImporterState {
     decode_source: PyObject,
     /// `builtins.exec` function.
     exec_fn: PyObject,
+    /// Bytecode optimization level currently in effect.
+    optimize_level: OptimizeLevel,
     /// Directory where relative paths should be resolved from.
     origin: PathBuf,
     /// Holds state about importable resources.
@@ -351,6 +356,20 @@ impl ImporterState {
             }
         };
 
+        let sys_flags = sys_module.get(py, "flags")?;
+        let optimize_value = sys_flags.getattr(py, "optimize")?;
+        let optimize_value = optimize_value.extract::<i64>(py)?;
+
+        let optimize_level = match optimize_value {
+            0 => Ok(OptimizeLevel::Zero),
+            1 => Ok(OptimizeLevel::One),
+            2 => Ok(OptimizeLevel::Two),
+            _ => Err(PyErr::new::<ValueError, _>(
+                py,
+                "unexpected value for sys.flags.optimize",
+            )),
+        }?;
+
         let resource_readers: RefCell<Box<HashMap<String, PyObject>>> =
             RefCell::new(Box::new(HashMap::new()));
 
@@ -364,6 +383,7 @@ impl ImporterState {
             module_spec_type,
             decode_source,
             exec_fn,
+            optimize_level,
             origin,
             resources_state,
             resource_readers,
@@ -545,22 +565,15 @@ impl PyOxidizerFinder {
                     .imp_module
                     .as_object()
                     .call_method(py, "exec_dynamic", (module,), None)
-            // TODO service other in-memory bytecode fields.
-            } else if entry.in_memory_bytecode.is_some() {
-                match get_memory_view(py, &entry.in_memory_bytecode) {
-                    Some(value) => {
-                        let code = state.marshal_loads.call(py, (value,), None)?;
-                        let dict = module.getattr(py, "__dict__")?;
+            } else if let Some(bytecode) =
+                get_in_memory_bytecode_memory_view(py, &entry, state.optimize_level)
+            {
+                let code = state.marshal_loads.call(py, (bytecode,), None)?;
+                let dict = module.getattr(py, "__dict__")?;
 
-                        state
-                            .call_with_frames_removed
-                            .call(py, (&state.exec_fn, code, dict), None)
-                    }
-                    None => Err(PyErr::new::<ImportError, _>(
-                        py,
-                        ("cannot find code in memory", name),
-                    )),
-                }
+                state
+                    .call_with_frames_removed
+                    .call(py, (&state.exec_fn, code, dict), None)
             } else if let Some(relative_path) = &entry.relative_path_module_bytecode {
                 let path = state.origin.join(relative_path);
 
@@ -604,31 +617,12 @@ impl PyOxidizerFinder {
                     .call(py, "get_frozen_object", (fullname,), None)
             } else if resource.flavor == ResourceFlavor::BuiltinExtensionModule {
                 Ok(py.None())
+            } else if let Some(bytecode) =
+                get_in_memory_bytecode_memory_view(py, &resource, state.optimize_level)
+            {
+                state.marshal_loads.call(py, (bytecode,), None)
             } else {
-                let flags = state.sys_module.get(py, "flags")?;
-                let flags: i64 = flags.extract(py)?;
-
-                let bytecode = if flags == 0 && resource.in_memory_bytecode.is_some() {
-                    &resource.in_memory_bytecode
-                } else if flags == 1 && resource.in_memory_bytecode_opt1.is_some() {
-                    &resource.in_memory_bytecode_opt1
-                } else if flags == 2 && resource.in_memory_bytecode_opt2.is_some() {
-                    &resource.in_memory_bytecode_opt2
-                } else {
-                    &None
-                };
-
-                if bytecode.is_some() {
-                    match get_memory_view(py, bytecode) {
-                        Some(value) => state.marshal_loads.call(py, (value,), None),
-                        None => Err(PyErr::new::<ImportError, _>(
-                            py,
-                            ("cannot find code in memory", fullname),
-                        )),
-                    }
-                } else {
-                    Ok(py.None())
-                }
+                Ok(py.None())
             }
         } else {
             Ok(py.None())
