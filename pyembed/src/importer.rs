@@ -282,12 +282,68 @@ struct ImporterState {
 /// This type implements the importlib.abc.MetaPathFinder interface for
 /// finding/loading modules. It supports loading various flavors of modules,
 /// allowing it to be the only registered sys.meta_path importer.
+///
+/// Because macro expansion confuses IDE type hinting and rustfmt, most
+/// methods call into non-macro implemented methods named <method>_impl which
+/// are defined below in separate `impl {}` blocks.
 py_class!(class PyOxidizerFinder |py| {
     data state: ImporterState;
 
     // Start of importlib.abc.MetaPathFinder interface.
 
     def find_spec(&self, fullname: &PyString, path: &PyObject, target: Option<PyObject> = None) -> PyResult<PyObject> {
+        self.find_spec_impl(py, fullname, path, target)
+    }
+
+    def find_module(&self, fullname: &PyObject, path: &PyObject) -> PyResult<PyObject> {
+        self.find_module_impl(py, fullname, path)
+    }
+
+    def invalidate_caches(&self) -> PyResult<PyObject> {
+        self.invalidate_caches_impl(py)
+    }
+
+    // End of importlib.abc.MetaPathFinder interface.
+
+    // Start of importlib.abc.Loader interface.
+
+    def create_module(&self, spec: &PyObject) -> PyResult<PyObject> {
+        self.create_module_impl(py, spec)
+    }
+
+    def exec_module(&self, module: &PyObject) -> PyResult<PyObject> {
+        self.exec_module_impl(py, module)
+    }
+
+    // End of importlib.abc.Loader interface.
+
+    // Start of importlib.abc.InspectLoader interface.
+
+    def get_code(&self, fullname: &PyString) -> PyResult<PyObject> {
+        self.get_code_impl(py, fullname)
+    }
+
+    def get_source(&self, fullname: &PyString) -> PyResult<PyObject> {
+        self.get_source_impl(py, fullname)
+    }
+
+    // End of importlib.abc.InspectLoader interface.
+
+    // Support obtaining ResourceReader instances.
+    def get_resource_reader(&self, fullname: &PyString) -> PyResult<PyObject> {
+        self.get_resource_reader_impl(py, fullname)
+    }
+});
+
+// importlib.abc.MetaPathFinder interface.
+impl PyOxidizerFinder {
+    fn find_spec_impl(
+        &self,
+        py: Python,
+        fullname: &PyString,
+        path: &PyObject,
+        target: Option<PyObject>,
+    ) -> PyResult<PyObject> {
         let state = self.state(py);
         let key = fullname.to_string(py)?;
 
@@ -295,16 +351,22 @@ py_class!(class PyOxidizerFinder |py| {
             if module.flavor == ResourceFlavor::BuiltinExtensionModule {
                 // BuiltinImporter.find_spec() always returns None if `path` is defined.
                 // And it doesn't use `target`. So don't proxy these values.
-                state.builtin_importer.call_method(py, "find_spec", (fullname,), None)
+                state
+                    .builtin_importer
+                    .call_method(py, "find_spec", (fullname,), None)
             } else if module.flavor == ResourceFlavor::FrozenModule {
-                state.frozen_importer.call_method(py, "find_spec", (fullname, path, target), None)
+                state
+                    .frozen_importer
+                    .call_method(py, "find_spec", (fullname, path, target), None)
             } else if uses_pyembed_importer(module) {
                 // TODO consider setting origin and has_location so __file__ will be
                 // populated.
                 let kwargs = PyDict::new(py);
                 kwargs.set_item(py, "is_package", module.is_package)?;
 
-                state.module_spec_type.call(py, (fullname, self), Some(&kwargs))
+                state
+                    .module_spec_type
+                    .call(py, (fullname, self), Some(&kwargs))
             } else {
                 Ok(py.None())
             }
@@ -313,7 +375,16 @@ py_class!(class PyOxidizerFinder |py| {
         }
     }
 
-    def find_module(&self, fullname: &PyObject, path: &PyObject) -> PyResult<PyObject> {
+    fn invalidate_caches_impl(&self, py: Python) -> PyResult<PyObject> {
+        Ok(py.None())
+    }
+
+    fn find_module_impl(
+        &self,
+        py: Python,
+        fullname: &PyObject,
+        path: &PyObject,
+    ) -> PyResult<PyObject> {
         let finder = self.as_object();
         let find_spec = finder.getattr(py, "find_spec")?;
         let spec = find_spec.call(py, (fullname, path), None)?;
@@ -324,16 +395,11 @@ py_class!(class PyOxidizerFinder |py| {
             spec.getattr(py, "loader")
         }
     }
+}
 
-    def invalidate_caches(&self) -> PyResult<PyObject> {
-        Ok(py.None())
-    }
-
-    // End of importlib.abc.MetaPathFinder interface.
-
-    // Start of importlib.abc.Loader interface.
-
-    def create_module(&self, spec: &PyObject) -> PyResult<PyObject> {
+// importlib.abc.MetaPathFinder interface.
+impl PyOxidizerFinder {
+    fn create_module_impl(&self, py: Python, spec: &PyObject) -> PyResult<PyObject> {
         let state = self.state(py);
         let name = spec.getattr(py, "name")?;
         let key = name.extract::<String>(py)?;
@@ -356,7 +422,7 @@ py_class!(class PyOxidizerFinder |py| {
                     spec,
                     name,
                     &key,
-                    library_data
+                    library_data,
                 );
             }
         }
@@ -364,19 +430,26 @@ py_class!(class PyOxidizerFinder |py| {
         Ok(py.None())
     }
 
-    def exec_module(&self, module: &PyObject) -> PyResult<PyObject> {
+    fn exec_module_impl(&self, py: Python, module: &PyObject) -> PyResult<PyObject> {
         let state = self.state(py);
         let name = module.getattr(py, "__name__")?;
         let key = name.extract::<String>(py)?;
 
         if let Some(entry) = state.resources_state.resources.get(&*key) {
             if entry.flavor == ResourceFlavor::BuiltinExtensionModule {
-                state.builtin_importer.call_method(py, "exec_module", (module,), None)
+                state
+                    .builtin_importer
+                    .call_method(py, "exec_module", (module,), None)
             } else if entry.flavor == ResourceFlavor::FrozenModule {
-                state.frozen_importer.call_method(py, "exec_module", (module,), None)
+                state
+                    .frozen_importer
+                    .call_method(py, "exec_module", (module,), None)
             } else if entry.in_memory_extension_module_shared_library.is_some() {
                 // `ExtensionFileLoader.exec_module()` simply calls `imp.exec_dynamic()`.
-                state.imp_module.as_object().call_method(py, "exec_dynamic", (module,), None)
+                state
+                    .imp_module
+                    .as_object()
+                    .call_method(py, "exec_dynamic", (module,), None)
             // TODO service other in-memory bytecode fields.
             } else if entry.in_memory_bytecode.is_some() {
                 match get_memory_view(py, &entry.in_memory_bytecode) {
@@ -384,18 +457,24 @@ py_class!(class PyOxidizerFinder |py| {
                         let code = state.marshal_loads.call(py, (value,), None)?;
                         let dict = module.getattr(py, "__dict__")?;
 
-                        state.call_with_frames_removed.call(py, (&state.exec_fn, code, dict), None)
-                    },
-                    None => {
-                        Err(PyErr::new::<ImportError, _>(py, ("cannot find code in memory", name)))
+                        state
+                            .call_with_frames_removed
+                            .call(py, (&state.exec_fn, code, dict), None)
                     }
+                    None => Err(PyErr::new::<ImportError, _>(
+                        py,
+                        ("cannot find code in memory", name),
+                    )),
                 }
             } else if let Some(relative_path) = &entry.relative_path_module_bytecode {
                 let path = state.origin.join(relative_path);
 
-                let bytecode = std::fs::read(&path).or_else(|_| Err(
-                    PyErr::new::<ImportError, _>(py, ("error reading bytecode from filesystem", name))
-                ))?;
+                let bytecode = std::fs::read(&path).or_else(|_| {
+                    Err(PyErr::new::<ImportError, _>(
+                        py,
+                        ("error reading bytecode from filesystem", name),
+                    ))
+                })?;
 
                 // TODO avoid duplicate allocation.
                 let bytecode = PyBytes::new(py, &bytecode[16..]);
@@ -403,7 +482,9 @@ py_class!(class PyOxidizerFinder |py| {
                 let code = state.marshal_loads.call(py, (bytecode,), None)?;
                 let dict = module.getattr(py, "__dict__")?;
 
-                state.call_with_frames_removed.call(py, (&state.exec_fn, code, dict), None)
+                state
+                    .call_with_frames_removed
+                    .call(py, (&state.exec_fn, code, dict), None)
             } else {
                 Ok(py.None())
             }
@@ -413,18 +494,19 @@ py_class!(class PyOxidizerFinder |py| {
             Ok(py.None())
         }
     }
+}
 
-    // End of importlib.abc.Loader interface.
-
-    // Start of importlib.abc.InspectLoader interface.
-
-    def get_code(&self, fullname: &PyString) -> PyResult<PyObject> {
+// importlib.abc.InspectLoader interface.
+impl PyOxidizerFinder {
+    fn get_code_impl(&self, py: Python, fullname: &PyString) -> PyResult<PyObject> {
         let state = self.state(py);
         let key = fullname.to_string(py)?;
 
         if let Some(resource) = state.resources_state.resources.get(&*key) {
             if resource.flavor == ResourceFlavor::FrozenModule {
-                state.imp_module.call(py, "get_frozen_object", (fullname,), None)
+                state
+                    .imp_module
+                    .call(py, "get_frozen_object", (fullname,), None)
             } else if resource.flavor == ResourceFlavor::BuiltinExtensionModule {
                 Ok(py.None())
             } else {
@@ -443,12 +525,11 @@ py_class!(class PyOxidizerFinder |py| {
 
                 if bytecode.is_some() {
                     match get_memory_view(py, bytecode) {
-                        Some(value) => {
-                            state.marshal_loads.call(py, (value,), None)
-                        }
-                        None => {
-                            Err(PyErr::new::<ImportError, _>(py, ("cannot find code in memory", fullname)))
-                        }
+                        Some(value) => state.marshal_loads.call(py, (value,), None),
+                        None => Err(PyErr::new::<ImportError, _>(
+                            py,
+                            ("cannot find code in memory", fullname),
+                        )),
                     }
                 } else {
                     Ok(py.None())
@@ -459,7 +540,7 @@ py_class!(class PyOxidizerFinder |py| {
         }
     }
 
-    def get_source(&self, fullname: &PyString) -> PyResult<PyObject> {
+    fn get_source_impl(&self, py: Python, fullname: &PyString) -> PyResult<PyObject> {
         let state = self.state(py);
         let key = fullname.to_string(py)?;
 
@@ -472,17 +553,21 @@ py_class!(class PyOxidizerFinder |py| {
                         // cast to bytes.
                         let b = value.call_method(py, "tobytes", NoArgs, None)?;
                         state.decode_source.call(py, (b,), None)
-                    },
-                    None => {
-                        Err(PyErr::new::<ImportError, _>(py, ("source not available", fullname)))
                     }
+                    None => Err(PyErr::new::<ImportError, _>(
+                        py,
+                        ("source not available", fullname),
+                    )),
                 }
             } else if let Some(relative_path) = &resource.relative_path_module_source {
                 let path = state.origin.join(relative_path);
 
-                let source = std::fs::read(&path).or_else(|_| Err(
-                    PyErr::new::<ImportError, _>(py, ("error reading module source from filesystem", fullname))
-                ))?;
+                let source = std::fs::read(&path).or_else(|_| {
+                    Err(PyErr::new::<ImportError, _>(
+                        py,
+                        ("error reading module source from filesystem", fullname),
+                    ))
+                })?;
 
                 let source = PyBytes::new(py, &source);
 
@@ -494,11 +579,11 @@ py_class!(class PyOxidizerFinder |py| {
             Ok(py.None())
         }
     }
+}
 
-    // End of importlib.abc.InspectLoader interface.
-
-    // Support obtaining ResourceReader instances.
-    def get_resource_reader(&self, fullname: &PyString) -> PyResult<PyObject> {
+// Resource loading interface.
+impl PyOxidizerFinder {
+    fn get_resource_reader_impl(&self, py: Python, fullname: &PyString) -> PyResult<PyObject> {
         let state = self.state(py);
         let key = fullname.to_string(py)?;
 
@@ -507,7 +592,10 @@ py_class!(class PyOxidizerFinder |py| {
         let mut resource_readers = match state.resource_readers.try_borrow_mut() {
             Ok(v) => v,
             Err(_) => {
-                return Err(PyErr::new::<RuntimeError, _>(py, "resource reader already borrowed"));
+                return Err(PyErr::new::<RuntimeError, _>(
+                    py,
+                    "resource reader already borrowed",
+                ));
             }
         };
 
@@ -519,7 +607,7 @@ py_class!(class PyOxidizerFinder |py| {
         // Only create a reader if the name is a package.
         if let Some(resource) = state.resources_state.resources.get(&*key) {
             if !resource.is_package {
-                return Ok(py.None())
+                return Ok(py.None());
             }
 
             // Not all packages have known resources.
@@ -538,7 +626,7 @@ py_class!(class PyOxidizerFinder |py| {
             Ok(py.None())
         }
     }
-});
+}
 
 #[allow(unused_doc_comments)]
 /// Implements in-memory reading of resource data.
