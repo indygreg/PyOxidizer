@@ -262,17 +262,29 @@ fn load_dynamic_library(
 
 /// Holds state for the custom MetaPathFinder.
 struct ImporterState {
+    /// `imp` Python module.
     imp_module: PyModule,
+    /// `sys` Python module.
     sys_module: PyModule,
+    /// `marshal.loads` Python callable.
     marshal_loads: PyObject,
+    /// `_frozen_importlib.BuiltinImporter` meta path importer for built-in extension modules.
     builtin_importer: PyObject,
+    /// `_frozen_importlib.FrozenImporter` meta path importer for frozen modules.
     frozen_importer: PyObject,
+    /// `importlib._bootstrap._call_with_frames_removed` function.
     call_with_frames_removed: PyObject,
+    /// `importlib._bootstrap.ModuleSpec` class.
     module_spec_type: PyObject,
+    /// `importlib._bootstrap_external.decode_source` function.
     decode_source: PyObject,
+    /// `builtins.exec` function.
     exec_fn: PyObject,
+    /// Directory where relative paths should be resolved from.
     origin: PathBuf,
+    /// Holds state about importable resources.
     resources_state: PythonResourcesState<'static, u8>,
+    /// Cache of package to objects implementing resource reader interface.
     resource_readers: RefCell<Box<HashMap<String, PyObject>>>,
 }
 
