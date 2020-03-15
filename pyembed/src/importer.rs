@@ -812,8 +812,24 @@ impl PyOxidizerTraversable {
         unimplemented!();
     }
 
-    fn is_dir_impl(&self, _py: Python) -> PyResult<PyObject> {
-        unimplemented!();
+    fn is_dir_impl(&self, py: Python) -> PyResult<PyObject> {
+        let state = self.state(py);
+        let path = self.path(py);
+
+        // We are a directory if the current path is a known package.
+        // TODO We may need to expand this definition in the future to cover
+        // virtual subdirectories in addressable resources. But this will require
+        // changes to the resources data format to capture said annotations.
+        if let Some(entry) = state
+            .resources_state
+            .resolve_importable_module(&path, state.optimize_level)
+        {
+            if entry.is_package {
+                return Ok(py.True().into_object());
+            }
+        }
+
+        Ok(py.False().into_object())
     }
 
     fn is_file_impl(&self, _py: Python) -> PyResult<PyObject> {
