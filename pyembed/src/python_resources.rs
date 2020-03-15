@@ -8,7 +8,10 @@ Management of Python resources.
 
 use {
     cpython::exc::ImportError,
-    cpython::{PyBytes, PyErr, PyObject, PyResult, Python},
+    cpython::{
+        ObjectProtocol, PyBytes, PyClone, PyErr, PyList, PyObject, PyResult, PyString, Python,
+        PythonObject, ToPyObject,
+    },
     python3_sys as pyffi,
     python_packed_resources::data::{Resource, ResourceFlavor},
     std::borrow::Cow,
@@ -261,6 +264,67 @@ impl<'a> PythonResourcesState<'a, u8> {
             }),
             _ => None,
         }
+    }
+
+    /// Obtain a single named resource in a package.
+    ///
+    /// Err occurs if loading the resource data fails. `Ok(None)` is returned
+    /// if the resource does not exist. Otherwise the returned `PyObject`
+    /// is a file-like object to read the resource data.
+    pub fn get_package_resource_file(
+        &self,
+        py: Python,
+        package: &str,
+        resource_name: &str,
+    ) -> PyResult<Option<PyObject>> {
+        let entry = match self.resources.get(package) {
+            Some(entry) => entry,
+            None => return Ok(None),
+        };
+
+        if let Some(resources) = &entry.in_memory_resources {
+            if let Some(data) = resources.get(resource_name) {
+                let io_module = py.import("io")?;
+                let bytes_io = io_module.get(py, "BytesIO")?;
+
+                let data = PyBytes::new(py, data);
+                return Ok(Some(bytes_io.call(py, (data,), None)?));
+            }
+        }
+
+        Ok(None)
+    }
+
+    /// Determines whether a specific package + name pair is a known Python package resource.
+    pub fn is_package_resource(&self, package: &str, resource_name: &str) -> bool {
+        if let Some(entry) = self.resources.get(package) {
+            if let Some(resources) = &entry.in_memory_resources {
+                if resources.contains_key(resource_name) {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+    /// Obtain the resources available in a Python package, as a Python list.
+    pub fn package_resource_names(&self, py: Python, package: &str) -> PyResult<PyObject> {
+        let entry = match self.resources.get(package) {
+            Some(entry) => entry,
+            None => return Ok(PyList::new(py, &[]).into_object()),
+        };
+
+        if let Some(resources) = &entry.in_memory_resources {
+            let names = resources
+                .keys()
+                .map(|name| name.to_py_object(py))
+                .collect::<Vec<PyString>>();
+
+            return Ok(names.to_py_object(py).as_object().clone_ref(py));
+        }
+
+        Ok(PyList::new(py, &[]).into_object())
     }
 
     /// Load `builtin` modules from the Python interpreter.

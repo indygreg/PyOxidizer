@@ -15,14 +15,10 @@ use {
     cpython::exc::{FileNotFoundError, RuntimeError, ValueError},
     cpython::{
         py_class, py_fn, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule,
-        PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
+        PyObject, PyResult, PyString, PyTuple, Python, PythonObject,
     },
     python3_sys as pyffi,
-    python3_sys::{PyBUF_READ, PyMemoryView_FromMemory},
     python_packed_resources::data::ResourceFlavor,
-    std::borrow::Cow,
-    std::cell::RefCell,
-    std::collections::HashMap,
     std::path::PathBuf,
     std::sync::Arc,
 };
@@ -32,21 +28,6 @@ use {
     memory_module_sys::{MemoryFreeLibrary, MemoryGetProcAddress, MemoryLoadLibrary},
     std::ffi::{c_void, CString},
 };
-
-/// Obtain a Python memoryview referencing a memory slice.
-///
-/// New memoryview allows Python to access the underlying memory without
-/// copying it.
-#[inline]
-fn get_memory_view(py: Python, data: &Option<Cow<'static, [u8]>>) -> Option<PyObject> {
-    if let Some(data) = data {
-        let ptr =
-            unsafe { PyMemoryView_FromMemory(data.as_ptr() as _, data.len() as _, PyBUF_READ) };
-        unsafe { PyObject::from_owned_ptr_opt(py, ptr) }
-    } else {
-        None
-    }
-}
 
 #[cfg(windows)]
 #[allow(non_camel_case_types)]
@@ -284,8 +265,6 @@ struct ImporterState {
     optimize_level: OptimizeLevel,
     /// Holds state about importable resources.
     resources_state: PythonResourcesState<'static, u8>,
-    /// Cache of package to objects implementing resource reader interface.
-    resource_readers: RefCell<Box<HashMap<String, PyObject>>>,
 }
 
 impl ImporterState {
@@ -368,9 +347,6 @@ impl ImporterState {
             )),
         }?;
 
-        let resource_readers: RefCell<Box<HashMap<String, PyObject>>> =
-            RefCell::new(Box::new(HashMap::new()));
-
         Ok(ImporterState {
             imp_module,
             sys_module,
@@ -383,7 +359,6 @@ impl ImporterState {
             exec_fn,
             optimize_level,
             resources_state,
-            resource_readers,
         })
     }
 }
@@ -399,7 +374,7 @@ impl ImporterState {
 /// methods call into non-macro implemented methods named <method>_impl which
 /// are defined below in separate `impl {}` blocks.
 py_class!(class PyOxidizerFinder |py| {
-    data state: ImporterState;
+    data state: Arc<Box<ImporterState>>;
 
     // Start of importlib.abc.MetaPathFinder interface.
 
@@ -644,40 +619,19 @@ impl PyOxidizerFinder {
         let state = self.state(py);
         let key = fullname.to_string(py)?;
 
-        // This should not happen since code below should not be recursive into this
-        // function.
-        let mut resource_readers = match state.resource_readers.try_borrow_mut() {
-            Ok(v) => v,
-            Err(_) => {
-                return Err(PyErr::new::<RuntimeError, _>(
-                    py,
-                    "resource reader already borrowed",
-                ));
-            }
+        let entry = match state
+            .resources_state
+            .resolve_importable_module(&key, state.optimize_level)
+        {
+            Some(entry) => entry,
+            None => return Ok(py.None()),
         };
 
-        // Return an existing instance if we have one.
-        if let Some(reader) = resource_readers.get(&*key) {
-            return Ok(reader.clone_ref(py));
-        }
-
-        // Only create a reader if the name is a package.
-        if let Some(resource) = state.resources_state.resources.get(&*key) {
-            if !resource.is_package {
-                return Ok(py.None());
-            }
-
-            // Not all packages have known resources.
-            let resources = if let Some(resources) = &resource.in_memory_resources {
-                resources.clone()
-            } else {
-                let h = Box::new(HashMap::new());
-                Arc::new(h)
-            };
-
-            let reader = PyOxidizerResourceReader::create_instance(py, resources)?.into_object();
-            resource_readers.insert(key.to_string(), reader.clone_ref(py));
-
+        // Resources are only available on packages.
+        if entry.is_package {
+            let reader =
+                PyOxidizerResourceReader::create_instance(py, state.clone(), key.to_string())?
+                    .into_object();
             Ok(reader)
         } else {
             Ok(py.None())
@@ -690,7 +644,8 @@ impl PyOxidizerFinder {
 ///
 /// Implements importlib.abc.ResourceReader.
 py_class!(class PyOxidizerResourceReader |py| {
-    data resources: Arc<Box<HashMap<Cow<'static, str>, Cow<'static, [u8]>>>>;
+    data state: Arc<Box<ImporterState>>;
+    data package: String;
 
     def open_resource(&self, resource: &PyString) -> PyResult<PyObject> {
         self.open_resource_impl(py, resource)
@@ -714,18 +669,15 @@ impl PyOxidizerResourceReader {
     ///
     /// If the resource cannot be found, FileNotFoundError is raised.
     fn open_resource_impl(&self, py: Python, resource: &PyString) -> PyResult<PyObject> {
-        let key = resource.to_string(py)?;
+        let state = self.state(py);
+        let package = self.package(py);
 
-        if let Some(data) = self.resources(py).get(&*key) {
-            match get_memory_view(py, &Some(data.clone())) {
-                Some(mv) => {
-                    let io_module = py.import("io")?;
-                    let bytes_io = io_module.get(py, "BytesIO")?;
-
-                    bytes_io.call(py, (mv,), None)
-                }
-                None => Err(PyErr::fetch(py)),
-            }
+        if let Some(file) = state.resources_state.get_package_resource_file(
+            py,
+            &package,
+            &resource.to_string(py)?,
+        )? {
+            Ok(file)
         } else {
             Err(PyErr::new::<FileNotFoundError, _>(py, "resource not found"))
         }
@@ -745,9 +697,13 @@ impl PyOxidizerResourceReader {
     /// Returns True if the named name is considered a resource. FileNotFoundError
     /// is raised if name does not exist.
     fn is_resource_impl(&self, py: Python, name: &PyString) -> PyResult<PyObject> {
-        let key = name.to_string(py)?;
+        let state = self.state(py);
+        let package = self.package(py);
 
-        if self.resources(py).contains_key(&*key) {
+        if state
+            .resources_state
+            .is_package_resource(&package, &name.to_string(py)?)
+        {
             Ok(py.True().as_object().clone_ref(py))
         } else {
             Err(PyErr::new::<FileNotFoundError, _>(py, "resource not found"))
@@ -765,16 +721,10 @@ impl PyOxidizerResourceReader {
     /// package and resources are stored on the file system then those subdirectory names can be
     /// used directly.
     fn contents_impl(&self, py: Python) -> PyResult<PyObject> {
-        let resources = self.resources(py);
-        let mut names = Vec::with_capacity(resources.len());
+        let state = self.state(py);
+        let package = self.package(py);
 
-        for name in resources.keys() {
-            names.push(name.to_py_object(py));
-        }
-
-        let names_list = names.to_py_object(py);
-
-        Ok(names_list.as_object().clone_ref(py))
+        state.resources_state.package_resource_names(py, &package)
     }
 }
 
@@ -918,14 +868,14 @@ fn module_setup(
     // during startup and the 2 default meta path importers are installed.
     let unified_importer = PyOxidizerFinder::create_instance(
         py,
-        ImporterState::new(
+        Arc::new(Box::new(ImporterState::new(
             py,
             &bootstrap_module,
             &marshal_module,
             decode_source,
             &state.embedded_resources_data,
             state.origin.clone(),
-        )?,
+        )?)),
     )?;
 
     let meta_path_object = sys_module.get(py, "meta_path")?;
