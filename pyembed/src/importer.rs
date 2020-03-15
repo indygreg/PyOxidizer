@@ -11,12 +11,10 @@ for importing Python modules from memory.
 
 use {
     super::pyinterp::PYOXIDIZER_IMPORTER_NAME,
-    super::python_resources::{
-        get_in_memory_bytecode_memory_view, OptimizeLevel, PythonResourcesState,
-    },
-    cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError},
+    super::python_resources::{OptimizeLevel, PythonResourcesState},
+    cpython::exc::{FileNotFoundError, RuntimeError, ValueError},
     cpython::{
-        py_class, py_fn, NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyModule,
+        py_class, py_fn, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule,
         PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
     },
     python3_sys as pyffi,
@@ -284,8 +282,6 @@ struct ImporterState {
     exec_fn: PyObject,
     /// Bytecode optimization level currently in effect.
     optimize_level: OptimizeLevel,
-    /// Directory where relative paths should be resolved from.
-    origin: PathBuf,
     /// Holds state about importable resources.
     resources_state: PythonResourcesState<'static, u8>,
     /// Cache of package to objects implementing resource reader interface.
@@ -386,7 +382,6 @@ impl ImporterState {
             decode_source,
             exec_fn,
             optimize_level,
-            origin,
             resources_state,
             resource_readers,
         })
@@ -559,55 +554,40 @@ impl PyOxidizerFinder {
         let name = module.getattr(py, "__name__")?;
         let key = name.extract::<String>(py)?;
 
-        if let Some(entry) = state.resources_state.resources.get(&*key) {
-            if entry.flavor == ResourceFlavor::BuiltinExtensionModule {
-                state
-                    .builtin_importer
-                    .call_method(py, "exec_module", (module,), None)
-            } else if entry.flavor == ResourceFlavor::FrozenModule {
-                state
-                    .frozen_importer
-                    .call_method(py, "exec_module", (module,), None)
-            } else if entry.in_memory_extension_module_shared_library.is_some() {
-                // `ExtensionFileLoader.exec_module()` simply calls `imp.exec_dynamic()`.
-                state
-                    .imp_module
-                    .as_object()
-                    .call_method(py, "exec_dynamic", (module,), None)
-            } else if let Some(bytecode) =
-                get_in_memory_bytecode_memory_view(py, &entry, state.optimize_level)
-            {
-                let code = state.marshal_loads.call(py, (bytecode,), None)?;
-                let dict = module.getattr(py, "__dict__")?;
-
-                state
-                    .call_with_frames_removed
-                    .call(py, (&state.exec_fn, code, dict), None)
-            } else if let Some(relative_path) = &entry.relative_path_module_bytecode {
-                let path = state.origin.join(relative_path);
-
-                let bytecode = std::fs::read(&path).or_else(|_| {
-                    Err(PyErr::new::<ImportError, _>(
-                        py,
-                        ("error reading bytecode from filesystem", name),
-                    ))
-                })?;
-
-                // TODO avoid duplicate allocation.
-                let bytecode = PyBytes::new(py, &bytecode[16..]);
-
-                let code = state.marshal_loads.call(py, (bytecode,), None)?;
-                let dict = module.getattr(py, "__dict__")?;
-
-                state
-                    .call_with_frames_removed
-                    .call(py, (&state.exec_fn, code, dict), None)
-            } else {
-                Ok(py.None())
+        let entry = match state
+            .resources_state
+            .resolve_importable_module(&key, state.optimize_level)
+        {
+            Some(entry) => entry,
+            None => {
+                // Raising here might make more sense, as `find_spec()` shouldn't have returned
+                // an entry for something that we don't know how to handle.
+                return Ok(py.None());
             }
+        };
+
+        if let Some(bytecode) = entry.resolve_bytecode(py, state.optimize_level)? {
+            let code = state.marshal_loads.call(py, (bytecode,), None)?;
+            let dict = module.getattr(py, "__dict__")?;
+
+            state
+                .call_with_frames_removed
+                .call(py, (&state.exec_fn, code, dict), None)
+        } else if entry.flavor == &ResourceFlavor::BuiltinExtensionModule {
+            state
+                .builtin_importer
+                .call_method(py, "exec_module", (module,), None)
+        } else if entry.flavor == &ResourceFlavor::FrozenModule {
+            state
+                .frozen_importer
+                .call_method(py, "exec_module", (module,), None)
+        } else if entry.flavor == &ResourceFlavor::Extension {
+            // `ExtensionFileLoader.exec_module()` simply calls `imp.exec_dynamic()`.
+            state
+                .imp_module
+                .as_object()
+                .call_method(py, "exec_dynamic", (module,), None)
         } else {
-            // Raising here might make more sense, as exec_module() shouldn't
-            // be called on the Loader that didn't create the module.
             Ok(py.None())
         }
     }
@@ -619,20 +599,20 @@ impl PyOxidizerFinder {
         let state = self.state(py);
         let key = fullname.to_string(py)?;
 
-        if let Some(resource) = state.resources_state.resources.get(&*key) {
-            if resource.flavor == ResourceFlavor::FrozenModule {
-                state
-                    .imp_module
-                    .call(py, "get_frozen_object", (fullname,), None)
-            } else if resource.flavor == ResourceFlavor::BuiltinExtensionModule {
-                Ok(py.None())
-            } else if let Some(bytecode) =
-                get_in_memory_bytecode_memory_view(py, &resource, state.optimize_level)
-            {
-                state.marshal_loads.call(py, (bytecode,), None)
-            } else {
-                Ok(py.None())
-            }
+        let module = match state
+            .resources_state
+            .resolve_importable_module(&key, state.optimize_level)
+        {
+            Some(module) => module,
+            None => return Ok(py.None()),
+        };
+
+        if let Some(bytecode) = module.resolve_bytecode(py, state.optimize_level)? {
+            state.marshal_loads.call(py, (bytecode,), None)
+        } else if module.flavor == &ResourceFlavor::FrozenModule {
+            state
+                .imp_module
+                .call(py, "get_frozen_object", (fullname,), None)
         } else {
             Ok(py.None())
         }

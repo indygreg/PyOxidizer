@@ -8,7 +8,7 @@ Management of Python resources.
 
 use {
     cpython::exc::ImportError,
-    cpython::{PyBytes, PyErr, PyObject, PyResult, Python},
+    cpython::{PyBytes, PyErr, PyObject, PyResult, Python, PythonObject},
     python3_sys as pyffi,
     python_packed_resources::data::{Resource, ResourceFlavor},
     std::borrow::Cow,
@@ -44,31 +44,6 @@ where
         OptimizeLevel::Two => {
             entry.in_memory_bytecode_opt2.is_some() || entry.in_memory_bytecode_opt2.is_some()
         }
-    }
-}
-
-/// Obtain a Python `memoryview` referencing in-memory bytecode for an entry,
-/// if available.
-pub(crate) fn get_in_memory_bytecode_memory_view<'a, X: 'a>(
-    py: Python,
-    entry: &'a Resource<X>,
-    optimize_level: OptimizeLevel,
-) -> Option<PyObject>
-where
-    [X]: ToOwned<Owned = Vec<X>>,
-{
-    if let Some(data) = match optimize_level {
-        OptimizeLevel::Zero => &entry.in_memory_bytecode,
-        OptimizeLevel::One => &entry.in_memory_bytecode_opt1,
-        OptimizeLevel::Two => &entry.in_memory_bytecode_opt2,
-    } {
-        let ptr = unsafe {
-            pyffi::PyMemoryView_FromMemory(data.as_ptr() as _, data.len() as _, pyffi::PyBUF_READ)
-        };
-
-        unsafe { PyObject::from_owned_ptr_opt(py, ptr) }
-    } else {
-        None
     }
 }
 
@@ -123,6 +98,60 @@ impl<'a> ImportablePythonModule<'a, u8> {
         } else {
             None
         })
+    }
+
+    /// Attempt to resolve bytecode for this module.
+    ///
+    /// Will return a `PyErr` if an error occurs resolving the bytecode. If there is
+    /// no bytecode, returns `Ok(None)`. Bytecode may still be available for this
+    /// module in this scenario, but it isn't known to the resources data structure
+    /// (e.g. the case of frozen modules).
+    ///
+    /// The returned `PyObject` may either be `bytes` or `memoryview`.
+    pub fn resolve_bytecode(
+        &self,
+        py: Python,
+        optimize_level: OptimizeLevel,
+    ) -> PyResult<Option<PyObject>> {
+        if let Some(data) = match optimize_level {
+            OptimizeLevel::Zero => &self.resource.in_memory_bytecode,
+            OptimizeLevel::One => &self.resource.in_memory_bytecode_opt1,
+            OptimizeLevel::Two => &self.resource.in_memory_bytecode_opt2,
+        } {
+            let ptr = unsafe {
+                pyffi::PyMemoryView_FromMemory(
+                    data.as_ptr() as _,
+                    data.len() as _,
+                    pyffi::PyBUF_READ,
+                )
+            };
+
+            Ok(unsafe { PyObject::from_owned_ptr_opt(py, ptr) })
+        } else if let Some(relative_path) = match optimize_level {
+            OptimizeLevel::Zero => &self.resource.relative_path_module_bytecode,
+            OptimizeLevel::One => &self.resource.relative_path_module_bytecode_opt1,
+            OptimizeLevel::Two => &self.resource.relative_path_module_bytecode_opt2,
+        } {
+            // TODO consider caching read bytecode on instance.
+            let path = self.origin.join(relative_path);
+
+            let bytecode = std::fs::read(&path).or_else(|e| {
+                Err(PyErr::new::<ImportError, _>(
+                    py,
+                    (
+                        format!("error reading bytecode from {}: {}", path.display(), e),
+                        self.resource.name.clone(),
+                    ),
+                ))
+            })?;
+
+            // TODO avoid duplicate allocation.
+            let bytecode = PyBytes::new(py, &bytecode[16..]);
+
+            Ok(Some(bytecode.into_object()))
+        } else {
+            Ok(None)
+        }
     }
 }
 
