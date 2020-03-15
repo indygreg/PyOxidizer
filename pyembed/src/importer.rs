@@ -647,6 +647,13 @@ py_class!(class PyOxidizerResourceReader |py| {
     data state: Arc<Box<ImporterState>>;
     data package: String;
 
+    // Comes from TraversableResources interface.
+    def files(&self) -> PyResult<PyObject> {
+        self.files_impl(py)
+    }
+
+    // Remaining methods are legacy ResourceReader members.
+
     def open_resource(&self, resource: &PyString) -> PyResult<PyObject> {
         self.open_resource_impl(py, resource)
     }
@@ -665,6 +672,17 @@ py_class!(class PyOxidizerResourceReader |py| {
 });
 
 impl PyOxidizerResourceReader {
+    /// Return a Traversable object for the current package. From that object, path manipulation
+    /// can be performed to access resources.
+    fn files_impl(&self, py: Python) -> PyResult<PyObject> {
+        Ok(PyOxidizerTraversable::create_instance(
+            py,
+            self.state(py).clone(),
+            self.package(py).clone(),
+        )?
+        .into_object())
+    }
+
     /// Returns an opened, file-like object for binary reading of the resource.
     ///
     /// If the resource cannot be found, FileNotFoundError is raised.
@@ -725,6 +743,94 @@ impl PyOxidizerResourceReader {
         let package = self.package(py);
 
         state.resources_state.package_resource_names(py, &package)
+    }
+}
+
+#[allow(unused_doc_comments)]
+/// Path-like object facilitating Python resource access.
+///
+/// This implements importlib.abc.Traversable.
+py_class!(class PyOxidizerTraversable |py| {
+    data state: Arc<Box<ImporterState>>;
+    data path: String;
+
+    /// Yield Traversable objects in self.
+    def iterdir(&self) -> PyResult<PyObject> {
+        self.iterdir_impl(py)
+    }
+
+    /// Read contents of self as bytes.
+    def read_bytes(&self) -> PyResult<PyObject> {
+        self.read_bytes_impl(py)
+    }
+
+    /// Read contents of self as text.
+    def read_text(&self) -> PyResult<PyObject> {
+        self.read_text_impl(py)
+    }
+
+    /// Return True if self is a dir.
+    def is_dir(&self) -> PyResult<PyObject> {
+        self.is_dir_impl(py)
+    }
+
+    /// Return True if self is a file.
+    def is_file(&self) -> PyResult<PyObject> {
+        self.is_file_impl(py)
+    }
+
+    /// Return Traversable child in self.
+    def joinpath(&self, child: &PyObject) -> PyResult<PyObject> {
+        self.joinpath_impl(py, child)
+    }
+
+    /// Return Traversable child in self.
+    def __truediv__(&self, child: &PyObject) -> PyResult<PyObject> {
+        self.joinpath_impl(py, child)
+    }
+
+    /// mode may be 'r' or 'rb' to open as text or binary. Return a handle
+    /// suitable for reading (same as pathlib.Path.open).
+    ///
+    /// When opening as text, accepts encoding parameters such as those
+    /// accepted by io.TextIOWrapper.
+    def open(&self, *args, **kwargs) -> PyResult<PyObject> {
+        self.open_impl(py, args, kwargs)
+    }
+});
+
+impl PyOxidizerTraversable {
+    fn iterdir_impl(&self, _py: Python) -> PyResult<PyObject> {
+        unimplemented!();
+    }
+
+    fn read_bytes_impl(&self, _py: Python) -> PyResult<PyObject> {
+        unimplemented!();
+    }
+
+    fn read_text_impl(&self, _py: Python) -> PyResult<PyObject> {
+        unimplemented!();
+    }
+
+    fn is_dir_impl(&self, _py: Python) -> PyResult<PyObject> {
+        unimplemented!();
+    }
+
+    fn is_file_impl(&self, _py: Python) -> PyResult<PyObject> {
+        unimplemented!();
+    }
+
+    fn joinpath_impl(&self, _py: Python, _child: &PyObject) -> PyResult<PyObject> {
+        unimplemented!();
+    }
+
+    fn open_impl(
+        &self,
+        _py: Python,
+        _args: &PyTuple,
+        _kwargs: Option<&PyDict>,
+    ) -> PyResult<PyObject> {
+        unimplemented!();
     }
 }
 
