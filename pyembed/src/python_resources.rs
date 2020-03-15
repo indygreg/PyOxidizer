@@ -7,12 +7,14 @@ Management of Python resources.
 */
 
 use {
-    cpython::{PyObject, Python},
+    cpython::exc::ImportError,
+    cpython::{PyBytes, PyErr, PyObject, PyResult, Python},
     python3_sys as pyffi,
     python_packed_resources::data::{Resource, ResourceFlavor},
     std::borrow::Cow,
     std::collections::{HashMap, HashSet},
     std::ffi::CStr,
+    std::path::{Path, PathBuf},
 };
 
 /// Python bytecode optimization level.
@@ -45,25 +47,6 @@ where
     }
 }
 
-/// Obtain a Python `memoryview` referencing in-memory source for an entry, if available.
-pub(crate) fn get_in_memory_source_memory_view<'a, X: 'a>(
-    py: Python,
-    entry: &'a Resource<X>,
-) -> Option<PyObject>
-where
-    [X]: ToOwned<Owned = Vec<X>>,
-{
-    if let Some(data) = &entry.in_memory_source {
-        let ptr = unsafe {
-            pyffi::PyMemoryView_FromMemory(data.as_ptr() as _, data.len() as _, pyffi::PyBUF_READ)
-        };
-
-        unsafe { PyObject::from_owned_ptr_opt(py, ptr) }
-    } else {
-        None
-    }
-}
-
 /// Obtain a Python `memoryview` referencing in-memory bytecode for an entry,
 /// if available.
 pub(crate) fn get_in_memory_bytecode_memory_view<'a, X: 'a>(
@@ -93,11 +76,54 @@ where
 ///
 /// This essentially is an abstraction over raw `Resource` entries that
 /// allows the importer code to be simpler.
-pub(crate) struct ImportablePythonModule<'a> {
+pub(crate) struct ImportablePythonModule<'a, X: 'a>
+where
+    [X]: ToOwned<Owned = Vec<X>>,
+{
+    /// The raw resource backing this importable module.
+    resource: &'a Resource<'a, X>,
+
+    /// Path from which relative paths should be interpreted.
+    origin: &'a Path,
+
     /// The resource/module flavor.
     pub flavor: &'a ResourceFlavor,
     /// Whether this module is a package.
     pub is_package: bool,
+}
+
+impl<'a> ImportablePythonModule<'a, u8> {
+    /// Attempt to resolve a Python `bytes` for the source code behind this module.
+    ///
+    /// Will return a PyErr if an error occurs resolving source. If there is no source,
+    /// returns `Ok(None)`. Otherwise an `Ok(PyBytes)` is returned.
+    ///
+    /// We could potentially return a `memoryview` to avoid the extra allocation required
+    /// by `PyBytes_FromStringAndSize()`. However, callers of this method typically
+    /// call `importlib._bootstrap_external.decode_source()` with the returned value
+    /// and this function can't handle `memoryview`. So until callers can support
+    /// 0-copy, let's not worry about it.
+    pub fn resolve_source(&self, py: Python) -> PyResult<Option<PyBytes>> {
+        Ok(if let Some(data) = &self.resource.in_memory_source {
+            Some(PyBytes::new(py, data))
+        } else if let Some(relative_path) = &self.resource.relative_path_module_source {
+            let path = self.origin.join(relative_path);
+
+            let source = std::fs::read(&path).or_else(|e| {
+                Err(PyErr::new::<ImportError, _>(
+                    py,
+                    (
+                        format!("error reading module source from {}: {}", path.display(), e),
+                        self.resource.name.clone(),
+                    ),
+                ))
+            })?;
+
+            Some(PyBytes::new(py, &source))
+        } else {
+            None
+        })
+    }
 }
 
 /// Defines Python resources available for import.
@@ -106,6 +132,8 @@ pub(crate) struct PythonResourcesState<'a, X>
 where
     [X]: ToOwned<Owned = Vec<X>>,
 {
+    pub origin: PathBuf,
+
     /// Names of Python packages.
     pub packages: HashSet<&'static str>,
 
@@ -116,6 +144,7 @@ where
 impl<'a> Default for PythonResourcesState<'a, u8> {
     fn default() -> Self {
         Self {
+            origin: PathBuf::new(),
             packages: HashSet::new(),
             resources: HashMap::new(),
         }
@@ -139,34 +168,42 @@ impl<'a> PythonResourcesState<'a, u8> {
         &self,
         name: &str,
         optimize_level: OptimizeLevel,
-    ) -> Option<ImportablePythonModule> {
-        let entry = match self.resources.get(name) {
+    ) -> Option<ImportablePythonModule<u8>> {
+        let resource = match self.resources.get(name) {
             Some(entry) => entry,
             None => return None,
         };
 
-        match entry.flavor {
+        match resource.flavor {
             ResourceFlavor::Module => {
-                if is_importable(entry, optimize_level) {
+                if is_importable(resource, optimize_level) {
                     Some(ImportablePythonModule {
-                        flavor: &entry.flavor,
-                        is_package: entry.is_package,
+                        resource,
+                        origin: &self.origin,
+                        flavor: &resource.flavor,
+                        is_package: resource.is_package,
                     })
                 } else {
                     None
                 }
             }
             ResourceFlavor::Extension => Some(ImportablePythonModule {
-                flavor: &entry.flavor,
-                is_package: entry.is_package,
+                resource,
+                origin: &self.origin,
+                flavor: &resource.flavor,
+                is_package: resource.is_package,
             }),
             ResourceFlavor::BuiltinExtensionModule => Some(ImportablePythonModule {
-                flavor: &entry.flavor,
-                is_package: entry.is_package,
+                resource,
+                origin: &self.origin,
+                flavor: &resource.flavor,
+                is_package: resource.is_package,
             }),
             ResourceFlavor::FrozenModule => Some(ImportablePythonModule {
-                flavor: &entry.flavor,
-                is_package: entry.is_package,
+                resource,
+                origin: &self.origin,
+                flavor: &resource.flavor,
+                is_package: resource.is_package,
             }),
             _ => None,
         }

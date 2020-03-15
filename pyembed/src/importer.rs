@@ -12,8 +12,7 @@ for importing Python modules from memory.
 use {
     super::pyinterp::PYOXIDIZER_IMPORTER_NAME,
     super::python_resources::{
-        get_in_memory_bytecode_memory_view, get_in_memory_source_memory_view, OptimizeLevel,
-        PythonResourcesState,
+        get_in_memory_bytecode_memory_view, OptimizeLevel, PythonResourcesState,
     },
     cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError},
     cpython::{
@@ -325,7 +324,10 @@ impl ImporterState {
         let builtin_importer = meta_path.get_item(py, 0);
         let frozen_importer = meta_path.get_item(py, 1);
 
-        let mut resources_state = PythonResourcesState::default();
+        let mut resources_state = PythonResourcesState {
+            origin: origin.clone(),
+            ..PythonResourcesState::default()
+        };
 
         if let Err(e) = resources_state.load(resources_data) {
             return Err(PyErr::new::<ValueError, _>(py, e));
@@ -640,28 +642,16 @@ impl PyOxidizerFinder {
         let state = self.state(py);
         let key = fullname.to_string(py)?;
 
-        if let Some(resource) = state.resources_state.resources.get(&*key) {
-            if let Some(source) = get_in_memory_source_memory_view(py, resource) {
-                // importlib._bootstrap_external.decode_source() can't handle memoryview.
-                // So we take the memory hit and allocate a copy in a PyBytes.
-                let b = source.call_method(py, "tobytes", NoArgs, None)?;
-                state.decode_source.call(py, (b,), None)
-            } else if let Some(relative_path) = &resource.relative_path_module_source {
-                let path = state.origin.join(relative_path);
+        let module = match state
+            .resources_state
+            .resolve_importable_module(&key, state.optimize_level)
+        {
+            Some(module) => module,
+            None => return Ok(py.None()),
+        };
 
-                let source = std::fs::read(&path).or_else(|_| {
-                    Err(PyErr::new::<ImportError, _>(
-                        py,
-                        ("error reading module source from filesystem", fullname),
-                    ))
-                })?;
-
-                let source = PyBytes::new(py, &source);
-
-                state.decode_source.call(py, (source,), None)
-            } else {
-                Ok(py.None())
-            }
+        if let Some(source) = module.resolve_source(py)? {
+            state.decode_source.call(py, (source,), None)
         } else {
             Ok(py.None())
         }
