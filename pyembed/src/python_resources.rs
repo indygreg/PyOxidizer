@@ -93,6 +93,7 @@ where
     /// Names of Python packages.
     pub packages: HashSet<&'static str>,
 
+    /// Named resources available for loading.
     pub resources: HashMap<Cow<'a, str>, Resource<'a, X>>,
 }
 
