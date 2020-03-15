@@ -554,7 +554,7 @@ impl PyOxidizerFinder {
         let name = module.getattr(py, "__name__")?;
         let key = name.extract::<String>(py)?;
 
-        let entry = match state
+        let mut entry = match state
             .resources_state
             .resolve_importable_module(&key, state.optimize_level)
         {
@@ -599,7 +599,7 @@ impl PyOxidizerFinder {
         let state = self.state(py);
         let key = fullname.to_string(py)?;
 
-        let module = match state
+        let mut module = match state
             .resources_state
             .resolve_importable_module(&key, state.optimize_level)
         {

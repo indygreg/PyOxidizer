@@ -8,7 +8,7 @@ Management of Python resources.
 
 use {
     cpython::exc::ImportError,
-    cpython::{PyBytes, PyErr, PyObject, PyResult, Python, PythonObject},
+    cpython::{PyBytes, PyErr, PyObject, PyResult, Python},
     python3_sys as pyffi,
     python_packed_resources::data::{Resource, ResourceFlavor},
     std::borrow::Cow,
@@ -61,6 +61,9 @@ where
     /// Path from which relative paths should be interpreted.
     origin: &'a Path,
 
+    /// Cached bytecode (when read from an external source such as the filesystem).
+    bytecode: Option<Vec<u8>>,
+
     /// The resource/module flavor.
     pub flavor: &'a ResourceFlavor,
     /// Whether this module is a package.
@@ -107,13 +110,23 @@ impl<'a> ImportablePythonModule<'a, u8> {
     /// module in this scenario, but it isn't known to the resources data structure
     /// (e.g. the case of frozen modules).
     ///
-    /// The returned `PyObject` may either be `bytes` or `memoryview`.
+    /// The returned `PyObject` will be an instance of `memoryview`.
     pub fn resolve_bytecode(
-        &self,
+        &mut self,
         py: Python,
         optimize_level: OptimizeLevel,
     ) -> PyResult<Option<PyObject>> {
-        if let Some(data) = match optimize_level {
+        if let Some(cached) = &self.bytecode {
+            let ptr = unsafe {
+                pyffi::PyMemoryView_FromMemory(
+                    cached.as_ptr() as _,
+                    cached.len() as _,
+                    pyffi::PyBUF_READ,
+                )
+            };
+
+            Ok(unsafe { PyObject::from_owned_ptr_opt(py, ptr) })
+        } else if let Some(data) = match optimize_level {
             OptimizeLevel::Zero => &self.resource.in_memory_bytecode,
             OptimizeLevel::One => &self.resource.in_memory_bytecode_opt1,
             OptimizeLevel::Two => &self.resource.in_memory_bytecode_opt2,
@@ -132,7 +145,6 @@ impl<'a> ImportablePythonModule<'a, u8> {
             OptimizeLevel::One => &self.resource.relative_path_module_bytecode_opt1,
             OptimizeLevel::Two => &self.resource.relative_path_module_bytecode_opt2,
         } {
-            // TODO consider caching read bytecode on instance.
             let path = self.origin.join(relative_path);
 
             let bytecode = std::fs::read(&path).or_else(|e| {
@@ -145,10 +157,19 @@ impl<'a> ImportablePythonModule<'a, u8> {
                 ))
             })?;
 
-            // TODO avoid duplicate allocation.
-            let bytecode = PyBytes::new(py, &bytecode[16..]);
+            // We could avoid a double allocation if we wanted...
+            self.bytecode = Some(Vec::from(&bytecode[16..]));
+            let bytecode = self.bytecode.as_ref().unwrap();
 
-            Ok(Some(bytecode.into_object()))
+            let ptr = unsafe {
+                pyffi::PyMemoryView_FromMemory(
+                    bytecode.as_ptr() as _,
+                    bytecode.len() as _,
+                    pyffi::PyBUF_READ,
+                )
+            };
+
+            Ok(unsafe { PyObject::from_owned_ptr_opt(py, ptr) })
         } else {
             Ok(None)
         }
@@ -209,6 +230,7 @@ impl<'a> PythonResourcesState<'a, u8> {
                     Some(ImportablePythonModule {
                         resource,
                         origin: &self.origin,
+                        bytecode: None,
                         flavor: &resource.flavor,
                         is_package: resource.is_package,
                     })
@@ -219,18 +241,21 @@ impl<'a> PythonResourcesState<'a, u8> {
             ResourceFlavor::Extension => Some(ImportablePythonModule {
                 resource,
                 origin: &self.origin,
+                bytecode: None,
                 flavor: &resource.flavor,
                 is_package: resource.is_package,
             }),
             ResourceFlavor::BuiltinExtensionModule => Some(ImportablePythonModule {
                 resource,
                 origin: &self.origin,
+                bytecode: None,
                 flavor: &resource.flavor,
                 is_package: resource.is_package,
             }),
             ResourceFlavor::FrozenModule => Some(ImportablePythonModule {
                 resource,
                 origin: &self.origin,
+                bytecode: None,
                 flavor: &resource.flavor,
                 is_package: resource.is_package,
             }),
