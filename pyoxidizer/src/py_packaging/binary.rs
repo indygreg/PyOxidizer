@@ -81,6 +81,13 @@ pub trait PythonBinaryBuilder {
     /// Add resource data to the collection of embedded resource data.
     fn add_in_memory_package_resource(&mut self, resource: &ResourceData) -> Result<()>;
 
+    /// Add resource data to be loaded from the filesystem relative to the produced binary.
+    fn add_relative_path_package_resource(
+        &mut self,
+        prefix: &str,
+        resource: &ResourceData,
+    ) -> Result<()>;
+
     /// Add an extension module to be embedded in the binary.
     fn add_distribution_extension_module(
         &mut self,

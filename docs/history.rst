@@ -63,8 +63,9 @@ New Features
 ^^^^^^^^^^^^
 
 * Python resources can now be installed next to built binaries using the new
-  Starlark functions ``PythonExecutable.add_filesystem_relative_module_source()``
-  and ``PythonExecutable.add_filesystem_relative_module_bytecode()``. Unlike
+  Starlark functions ``PythonExecutable.add_filesystem_relative_module_source()``,
+  ``PythonExecutable.add_filesystem_relative_module_bytecode()``, and
+  ``PythonExecutable.add_filesystem_relative_resource_data()``. Unlike
   adding Python resources to ``FileManifest`` instances, Python resources added
   this way have their metadata serialized into the built executable. This allows
   the special Python module importer present in built binaries to service the

@@ -589,6 +589,15 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
         self.resources.add_in_memory_package_resource(resource)
     }
 
+    fn add_relative_path_package_resource(
+        &mut self,
+        prefix: &str,
+        resource: &ResourceData,
+    ) -> Result<()> {
+        self.resources
+            .add_relative_path_package_resource(prefix, resource)
+    }
+
     fn add_distribution_extension_module(
         &mut self,
         _extension_module: &DistributionExtensionModule,

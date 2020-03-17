@@ -992,6 +992,19 @@ via in-memory access.
 If multiple resources sharing the same ``(package, name)`` pair are added,
 the last added one is used.
 
+.. _config_python_executable_add_filesystem_relative_resource_data(resource)``
+
+``PythonExecutable.add_filesystem_relative_resource_data(prefix, resource)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method adds a ``PythonResourceData`` instance to the ``PythonExecutable``
+instance. The resource will be materialized on the filesystem next to the
+produced executable at a path derived from the resource's attributes. The
+directory prefix for the generated file is defined by ``prefix``.
+
+If multiple resources sharing the same ``(prefix, package, name)`` tuple are
+added, the last added one is used.
+
 .. _config_python_executable_add_extension_module:
 
 ``PythonExecutable.add_extension_module(module)``

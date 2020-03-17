@@ -434,6 +434,43 @@ impl EmbeddedPythonResourcesPrePackaged {
         self.add_parent_packages(&resource.package, ModuleLocation::InMemory, false, None)
     }
 
+    /// Add resource data to be loaded from the filesystem.
+    pub fn add_relative_path_package_resource(
+        &mut self,
+        prefix: &str,
+        resource: &ResourceData,
+    ) -> Result<()> {
+        let entry = self
+            .modules
+            .entry(resource.package.clone())
+            .or_insert_with(|| EmbeddedResourcePythonModulePrePackaged {
+                name: resource.package.clone(),
+                ..EmbeddedResourcePythonModulePrePackaged::default()
+            });
+
+        // Adding a resource automatically makes the module a package.
+        entry.is_package = true;
+
+        if entry.relative_path_package_resources.is_some() {
+            entry.relative_path_package_resources = Some(BTreeMap::new());
+        }
+
+        entry
+            .relative_path_package_resources
+            .as_mut()
+            .unwrap()
+            .insert(resource.name.clone(), resource.resolve_path(prefix));
+
+        resource.add_to_file_manifest(&mut self.extra_files, prefix)?;
+
+        self.add_parent_packages(
+            &resource.package,
+            ModuleLocation::RelativePath(prefix.to_string()),
+            false,
+            None,
+        )
+    }
+
     /// Add an extension module.
     pub fn add_distribution_extension_module(
         &mut self,

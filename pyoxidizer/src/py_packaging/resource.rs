@@ -309,11 +309,18 @@ impl ResourceData {
         }
     }
 
-    pub fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
+    /// Resolve filesystem path to this bytecode.
+    pub fn resolve_path(&self, prefix: &str) -> PathBuf {
         // TODO this logic needs shoring up and testing.
         let mut dest_path = PathBuf::from(prefix);
         dest_path.extend(self.package.split('.'));
         dest_path.push(&self.name);
+
+        dest_path
+    }
+
+    pub fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
+        let dest_path = self.resolve_path(prefix);
 
         manifest.add_file(
             &dest_path,
