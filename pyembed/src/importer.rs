@@ -420,6 +420,11 @@ py_class!(class PyOxidizerFinder |py| {
     def get_resource_reader(&self, fullname: &PyString) -> PyResult<PyObject> {
         self.get_resource_reader_impl(py, fullname)
     }
+
+    // importlib.metadata interface.
+    def find_distributions(&self, context: Option<PyObject>) -> PyResult<PyObject> {
+        self.find_distributions_impl(py, context)
+    }
 });
 
 // importlib.abc.MetaPathFinder interface.
@@ -636,6 +641,39 @@ impl PyOxidizerFinder {
         } else {
             Ok(py.None())
         }
+    }
+}
+
+// importlib.metadata support.
+impl PyOxidizerFinder {
+    /// def find_distributions(context=DistributionFinder.Context()):
+    ///
+    /// Return an iterable of all Distribution instances capable of
+    /// loading the metadata for packages for the indicated `context`.
+    ///
+    /// The DistributionFinder.Context object provides .path and .name
+    /// properties indicating the path to search and names to match and
+    /// may supply other relevant context.
+    ///
+    /// What this means in practice is that to support finding distribution
+    /// package metadata in locations other than the file system, subclass
+    /// Distribution and implement the abstract methods. Then from a custom
+    /// finder, return instances of this derived Distribution in the
+    /// find_distributions() method.
+    fn find_distributions_impl(&self, py: Python, context: Option<PyObject>) -> PyResult<PyObject> {
+        let state = self.state(py);
+
+        let (path, name) = if let Some(context) = context {
+            // The passed object should have `path` and `name` attributes.
+            let path = context.getattr(py, "path")?;
+            let name = context.getattr(py, "name")?;
+            (Some(path), Some(name))
+        } else {
+            // No argument = default Context = find everything.
+            (None, None)
+        };
+
+        state.resources_state.find_distributions(py, path, name)
     }
 }
 
