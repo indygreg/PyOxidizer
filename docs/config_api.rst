@@ -746,6 +746,12 @@ behavior:
    The Python interpreter will load a Python module with this value's name
    as the ``__main__`` module and then execute that module.
 
+   This mode is similar to ``python -m <module>`` but isn't exactly the same.
+   ``python -m <module>`` has additional functionality, such as looking for
+   the existence of a ``<module>.__main__`` module. PyOxidizer does not do
+   this. The value of this argument will be the exact module name that is
+   imported and run as ``__main__``.
+
 ``run_noop`` (bool)
    Instructs the Python interpreter to do nothing after initialization.
 
