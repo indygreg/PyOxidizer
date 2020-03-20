@@ -9,8 +9,8 @@ Management of Python resources.
 use {
     cpython::exc::ImportError,
     cpython::{
-        ObjectProtocol, PyBytes, PyClone, PyErr, PyList, PyObject, PyResult, PyString, Python,
-        PythonObject, ToPyObject,
+        ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyObject, PyResult, PyString,
+        Python, PythonObject, ToPyObject,
     },
     python3_sys as pyffi,
     python_packed_resources::data::{Resource, ResourceFlavor},
@@ -176,6 +176,24 @@ impl<'a> ImportablePythonModule<'a, u8> {
         } else {
             Ok(None)
         }
+    }
+
+    /// Resolve the `importlib.machinery.ModuleSpec` for this module.
+    pub fn resolve_module_spec(
+        &self,
+        py: Python,
+        module_spec_type: &PyObject,
+        loader: &PyObject,
+    ) -> PyResult<PyObject> {
+        let name = PyString::new(py, &self.resource.name);
+
+        let kwargs = PyDict::new(py);
+        kwargs.set_item(py, "is_package", self.is_package)?;
+
+        // TODO consider setting origin and has_location so __file__ will be
+        // populated.
+
+        module_spec_type.call(py, (name, loader), Some(&kwargs))
     }
 }
 

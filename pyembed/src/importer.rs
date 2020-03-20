@@ -449,14 +449,7 @@ impl PyOxidizerFinder {
 
         match module.flavor {
             ResourceFlavor::Extension | ResourceFlavor::Module => {
-                // TODO consider setting origin and has_location so __file__ will be
-                // populated.
-                let kwargs = PyDict::new(py);
-                kwargs.set_item(py, "is_package", module.is_package)?;
-
-                state
-                    .module_spec_type
-                    .call(py, (fullname, self), Some(&kwargs))
+                module.resolve_module_spec(py, &state.module_spec_type, self.as_object())
             }
             ResourceFlavor::BuiltinExtensionModule => {
                 // BuiltinImporter.find_spec() always returns None if `path` is defined.
