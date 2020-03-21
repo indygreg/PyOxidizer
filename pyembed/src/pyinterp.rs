@@ -414,7 +414,7 @@ impl<'a> MainPythonInterpreter<'a> {
         // convert these to Python str instances using a platform-specific
         // mechanism.
         let args_objs = env::args_os()
-            .map(|os_arg| osstr_to_pyobject(py, &os_arg))
+            .map(|os_arg| osstr_to_pyobject(py, &os_arg, None))
             .collect::<Result<Vec<PyObject>, &'static str>>()?;
 
         // This will steal the pointer to the elements and mem::forget them.
