@@ -72,9 +72,11 @@ New Features
   import request without going through Python's default filesystem-based importer.
   Because metadata for the file-based Python resources is *frozen* into the
   application, Python has to do far less work at run-time to load resources,
-  making operations faster.
+  making operations faster. Resources loaded from the filesystem in this manner
+  have attributes like ``__file__`` set, emulating behavior of the default
+  Python importer.
 * Windows binaries can now import extension modules defined as shared libraries
-  (e.g. `.pyd` files) from memory. PyOxidizer will detect `.pyd` files during
+  (e.g. ``.pyd`` files) from memory. PyOxidizer will detect ``.pyd`` files during
   packaging and embed them into the binary as resources. When the module
   is imported, the extension module/shared library is loaded from memory
   and initialized. This feature enables PyOxidizer to package pre-built

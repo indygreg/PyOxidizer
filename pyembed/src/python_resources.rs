@@ -7,7 +7,8 @@ Management of Python resources.
 */
 
 use {
-    cpython::exc::ImportError,
+    super::pystr::osstr_to_pyobject,
+    cpython::exc::{ImportError, UnicodeDecodeError},
     cpython::{
         ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyObject, PyResult, PyString,
         Python, PythonObject, ToPyObject,
@@ -190,10 +191,65 @@ impl<'a> ImportablePythonModule<'a, u8> {
         let kwargs = PyDict::new(py);
         kwargs.set_item(py, "is_package", self.is_package)?;
 
-        // TODO consider setting origin and has_location so __file__ will be
-        // populated.
+        // If we pass `origin=` and set `spec.has_location = True`, `__file__`
+        // will be set on the module. This is appropriate for modules backed by
+        // the filesystem.
 
-        module_spec_type.call(py, (name, loader), Some(&kwargs))
+        let origin = self.resolve_origin(py)?;
+        if let Some(origin) = &origin {
+            kwargs.set_item(py, "origin", origin)?;
+        }
+
+        let spec = module_spec_type.call(py, (name, loader), Some(&kwargs))?;
+
+        if origin.is_some() {
+            spec.setattr(py, "has_location", py.True())?;
+        }
+
+        Ok(spec)
+    }
+
+    /// Resolve the value of a `ModuleSpec` origin.
+    ///
+    /// The value gets turned into `__file__`
+    fn resolve_origin(&self, py: Python) -> PyResult<Option<PyObject>> {
+        let path = match self.flavor {
+            ResourceFlavor::Module => {
+                if let Some(path) = &self.resource.relative_path_module_source {
+                    Some(self.origin.join(path))
+                } else {
+                    None
+                }
+            }
+            ResourceFlavor::Extension => {
+                if let Some(path) = &self.resource.relative_path_extension_module_shared_library {
+                    Some(self.origin.join(path))
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+
+        Ok(if let Some(path) = path {
+            let encoding_ptr = unsafe { pyffi::Py_FileSystemDefaultEncoding };
+
+            let encoding = if encoding_ptr.is_null() {
+                None
+            } else {
+                Some(
+                    unsafe { CStr::from_ptr(encoding_ptr).to_str() }
+                        .or_else(|e| Err(PyErr::new::<UnicodeDecodeError, _>(py, e.to_string())))?,
+                )
+            };
+
+            Some(
+                osstr_to_pyobject(py, path.as_os_str(), encoding)
+                    .or_else(|e| Err(PyErr::new::<UnicodeDecodeError, _>(py, e)))?,
+            )
+        } else {
+            None
+        })
     }
 }
 
