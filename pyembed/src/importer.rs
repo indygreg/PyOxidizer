@@ -507,30 +507,45 @@ impl PyOxidizerFinder {
         let name = spec.getattr(py, "name")?;
         let key = name.extract::<String>(py)?;
 
-        if let Some(entry) = state.resources_state.resources.get(&*key) {
-            // We need a custom implementation of create_module() for in-memory shared
-            // library extensions because if we wait until `exec_module()` to
-            // initialize the module object, this can confuse some CPython
-            // internals. A side-effect of initializing extension modules is
-            // populating `sys.modules` and this made `LazyLoader` unhappy.
-            // If we ever implement our own lazy module importer, we could
-            // potentially work around this and move all extension module
-            // initialization into `exec_module()`.
-            if let Some(library_data) = &entry.in_memory_extension_module_shared_library {
-                let sys_modules = state.sys_module.as_object().getattr(py, "modules")?;
+        let entry = match state.resources_state.resources.get(&*key) {
+            Some(entry) => entry,
+            None => return Ok(py.None()),
+        };
 
-                return extension_module_shared_library_create_module(
-                    py,
-                    sys_modules,
-                    spec,
-                    name,
-                    &key,
-                    library_data,
-                );
+        match entry.flavor {
+            // Extension modules need special module creation logic.
+            ResourceFlavor::Extension => {
+                // We need a custom implementation of create_module() for in-memory shared
+                // library extensions because if we wait until `exec_module()` to
+                // initialize the module object, this can confuse some CPython
+                // internals. A side-effect of initializing extension modules is
+                // populating `sys.modules` and this made `LazyLoader` unhappy.
+                // If we ever implement our own lazy module importer, we could
+                // potentially work around this and move all extension module
+                // initialization into `exec_module()`.
+                if let Some(library_data) = &entry.in_memory_extension_module_shared_library {
+                    let sys_modules = state.sys_module.as_object().getattr(py, "modules")?;
+
+                    extension_module_shared_library_create_module(
+                        py,
+                        sys_modules,
+                        spec,
+                        name,
+                        &key,
+                        library_data,
+                    )
+                } else {
+                    // Call `imp.create_dynamic()` for dynamic extension modules.
+                    let create_dynamic =
+                        state.imp_module.as_object().getattr(py, "create_dynamic")?;
+
+                    state
+                        .call_with_frames_removed
+                        .call(py, (&create_dynamic, spec), None)
+                }
             }
+            _ => Ok(py.None()),
         }
-
-        Ok(py.None())
     }
 
     fn exec_module_impl(&self, py: Python, module: &PyObject) -> PyResult<PyObject> {
