@@ -798,6 +798,7 @@ impl StandaloneDistribution {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn as_embedded_python_resources_pre_packaged(
         &self,
         logger: &slog::Logger,
@@ -827,12 +828,31 @@ impl StandaloneDistribution {
             }
 
             if include_sources {
-                embedded.add_in_memory_module_source(&source)?;
+                match resources_policy {
+                    PythonResourcesPolicy::InMemoryOnly
+                    | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
+                        embedded.add_in_memory_module_source(&source)?
+                    }
+                    PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
+                        embedded.add_relative_path_module_source(&source, prefix)?
+                    }
+                }
             }
 
-            embedded.add_in_memory_module_bytecode(
-                &source.as_bytecode_module(BytecodeOptimizationLevel::Zero),
-            )?;
+            match resources_policy {
+                PythonResourcesPolicy::InMemoryOnly
+                | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
+                    embedded.add_in_memory_module_bytecode(
+                        &source.as_bytecode_module(BytecodeOptimizationLevel::Zero),
+                    )?;
+                }
+                PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
+                    embedded.add_relative_path_module_bytecode(
+                        &source.as_bytecode_module(BytecodeOptimizationLevel::Zero),
+                        prefix,
+                    )?;
+                }
+            }
         }
 
         if include_resources {
@@ -841,7 +861,15 @@ impl StandaloneDistribution {
                     continue;
                 }
 
-                embedded.add_in_memory_package_resource(&resource)?;
+                match resources_policy {
+                    PythonResourcesPolicy::InMemoryOnly
+                    | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
+                        embedded.add_in_memory_package_resource(&resource)?;
+                    }
+                    PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
+                        embedded.add_relative_path_package_resource(prefix, &resource)?;
+                    }
+                }
             }
         }
 
@@ -1034,6 +1062,7 @@ impl PythonDistribution for StandaloneDistribution {
             target_triple: target_triple.to_string(),
             exe_name: name.to_string(),
             distribution: self.clone(),
+            resources_policy: resources_policy.clone(),
             resources,
             config: config.clone(),
             python_exe,
@@ -1266,6 +1295,9 @@ pub struct StandalonePythonExecutableBuilder {
     /// a .clone().
     distribution: StandaloneDistribution,
 
+    /// Policy to apply to added resources.
+    resources_policy: PythonResourcesPolicy,
+
     /// Python resources to be embedded in the binary.
     resources: EmbeddedPythonResourcesPrePackaged,
 
@@ -1444,9 +1476,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn add_dynamic_extension_module(
         &mut self,
-        prefix: &str,
         extension_module: &ExtensionModuleData,
-        require_memory_import: bool,
     ) -> Result<()> {
         if extension_module.extension_data.is_none() {
             return Err(anyhow!(
@@ -1454,22 +1484,48 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             ));
         }
 
-        if self.supports_in_memory_dynamically_linked_extension_loading() {
-            self.resources
-                .add_in_memory_extension_module_shared_library(
-                    &extension_module.name,
-                    extension_module.is_package,
-                    extension_module.extension_data.as_ref().unwrap(),
-                )
-        } else if self
-            .distribution
-            .is_extension_module_file_loadable(&self.target_triple)
-            && !require_memory_import
-        {
-            self.resources
-                .add_relative_path_extension_module(extension_module, prefix)
-        } else {
-            Err(anyhow!("cannot add extension module {}: build configuration does not support loading extension modules", extension_module.name))
+        match self.resources_policy {
+            PythonResourcesPolicy::InMemoryOnly => {
+                if self.supports_in_memory_dynamically_linked_extension_loading() {
+                    self.resources
+                        .add_in_memory_extension_module_shared_library(
+                            &extension_module.name,
+                            extension_module.is_package,
+                            extension_module.extension_data.as_ref().unwrap(),
+                        )
+                } else {
+                    Err(anyhow!("in-memory-only resources policy active but in-memory extension module importing not supported by this configuration"))
+                }
+            }
+            PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
+                if self
+                    .distribution
+                    .is_extension_module_file_loadable(&self.target_triple)
+                {
+                    self.resources
+                        .add_relative_path_extension_module(extension_module, prefix)
+                } else {
+                    Err(anyhow!("filesystem-relative-only policy active but file-based extension module loading not supported by this configuration"))
+                }
+            }
+            PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(ref prefix) => {
+                if self.supports_in_memory_dynamically_linked_extension_loading() {
+                    self.resources
+                        .add_in_memory_extension_module_shared_library(
+                            &extension_module.name,
+                            extension_module.is_package,
+                            extension_module.extension_data.as_ref().unwrap(),
+                        )
+                } else if self
+                    .distribution
+                    .is_extension_module_file_loadable(&self.target_triple)
+                {
+                    self.resources
+                        .add_relative_path_extension_module(extension_module, prefix)
+                } else {
+                    Err(anyhow!("prefer-in-memory-fallback-filesystem-relative policy active but could not find a mechanism to add an extension module"))
+                }
+            }
         }
     }
 
@@ -1594,6 +1650,7 @@ pub mod tests {
             target_triple: env!("HOST").to_string(),
             exe_name: "testapp".to_string(),
             distribution: distribution.deref().deref().clone(),
+            resources_policy: PythonResourcesPolicy::InMemoryOnly,
             resources,
             config,
             python_exe,

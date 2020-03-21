@@ -49,8 +49,6 @@ Backwards Compatibility Notes
   renamed to ``PythonExecutable.add_in_memory_python_resources()``.
 * The ``PythonExecutable.to_embedded_data()`` Starlark method has been
   renamed to ``PythonExecutable.to_embedded_resources()``.
-* The ``PythonExecutable.add_extension_module()`` Starlark method now
-  required 2 mandatory arguments instead of 1.
 * The ``PythonEmbeddedData`` Starlark type has been renamed to
   ``PythonEmbeddedResources``.
 * The format of Python resource data embedded in binaries has been completely
@@ -73,6 +71,13 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* The ``PythonDistribution.to_python_executable()`` Starlark method now accepts
+  a ``resources_policy`` argument to control a policy and default behavior for
+  resources on the produced executable. Using this argument, it is possible
+  to control how resources should be materialized. For example, you can specify
+  that resources should be loaded from memory if supported and from the filesystem
+  if not. The argument can also be used to materialize the Python standard library
+  on the filesystem, like how Python distributions typically work.
 * Python resources can now be installed next to built binaries using the new
   Starlark functions ``PythonExecutable.add_filesystem_relative_module_source()``,
   ``PythonExecutable.add_filesystem_relative_module_bytecode()``, and

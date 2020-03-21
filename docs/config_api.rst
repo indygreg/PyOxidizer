@@ -1052,25 +1052,25 @@ added, the last added one is used.
 
 .. _config_python_executable_add_extension_module:
 
-``PythonExecutable.add_extension_module(prefix, module)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonExecutable.add_extension_module(module)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This method registers a ``PythonExtensionModule`` instance with a
 ``PythonExecutable`` instance. The extension module will be made available
-to the executable using whatever means are possible.
+to the executable using whatever means are possible, constrained by the
+:ref:`config_python_resources_policy` set by this ``PythonExecutable``.
 
-If the object files for the extension module are available, the extension
-module will be statically linked into the produced binary.
+The extension module could be packaged in the following manner depending
+on the capabilities of the underlying Python distribution and resources
+policy:
 
-If the current build configuration supports loading extension modules from
-memory, the extension module data will be loaded from memory.
-
-Otherwise, the extension module will be materialized as a file next to
-the produced binary and will be loaded from the filesystem (this is
-has Python extension modules typically work).
-
-``prefix`` defines the relative path prefix next to the produced binary
-where the extension module should be materialized (if needed).
+* If the object files for the extension module are available, the extension
+  module may be statically linked into the produced binary.
+* If loading extension modules from in-memory import is supported, the
+  extension module will have its dynamic library embedded in the binary.
+* The extension module will be materialized as a file next to the produced
+  binary and will be loaded from the filesystem. (This is how Python
+  extension modules typically work.)
 
 If multiple extension modules with the same name are added, the last
 added one is used.

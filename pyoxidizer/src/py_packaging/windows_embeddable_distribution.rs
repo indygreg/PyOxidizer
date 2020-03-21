@@ -610,9 +610,7 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
 
     fn add_dynamic_extension_module(
         &mut self,
-        _prefix: &str,
         _extension_module: &ExtensionModuleData,
-        _require_memory_import: bool,
     ) -> Result<()> {
         unimplemented!()
     }
