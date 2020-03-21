@@ -9,7 +9,7 @@ use {
     super::importer::PyInit__pyoxidizer_importer,
     super::osutils::resolve_terminfo_dirs,
     super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
-    super::pystr::{osstring_to_bytes, osstring_to_str, OwnedPyStr},
+    super::pystr::{osstr_to_pyobject, osstring_to_bytes, OwnedPyStr},
     cpython::exc::{SystemExit, ValueError},
     cpython::{
         GILGuard, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule, PyObject,
@@ -414,7 +414,7 @@ impl<'a> MainPythonInterpreter<'a> {
         // convert these to Python str instances using a platform-specific
         // mechanism.
         let args_objs = env::args_os()
-            .map(|os_arg| osstring_to_str(py, os_arg))
+            .map(|os_arg| osstr_to_pyobject(py, &os_arg))
             .collect::<Result<Vec<PyObject>, &'static str>>()?;
 
         // This will steal the pointer to the elements and mem::forget them.

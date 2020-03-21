@@ -8,7 +8,7 @@ use {
     cpython::{PyObject, Python},
     libc::{c_void, size_t, wchar_t},
     python3_sys as pyffi,
-    std::ffi::{CString, OsString},
+    std::ffi::{CString, OsStr, OsString},
     std::ptr::null_mut,
 };
 
@@ -54,7 +54,7 @@ impl Drop for OwnedPyStr {
 const SURROGATEESCAPE: &[u8] = b"surrogateescape\0";
 
 #[cfg(target_family = "unix")]
-pub fn osstring_to_str(py: Python, s: OsString) -> Result<PyObject, &'static str> {
+pub fn osstr_to_pyobject(py: Python, s: &OsStr) -> Result<PyObject, &'static str> {
     // PyUnicode_DecodeLocaleAndSize says the input must have a trailing NULL.
     // So use a CString for that.
     let b = CString::new(s.as_bytes()).or_else(|_| Err("not a valid C string"))?;
@@ -70,7 +70,7 @@ pub fn osstring_to_str(py: Python, s: OsString) -> Result<PyObject, &'static str
 }
 
 #[cfg(target_family = "windows")]
-pub fn osstring_to_str(py: Python, s: OsString) -> Result<PyObject, &'static str> {
+pub fn osstr_to_pyobject(py: Python, s: &OsStr) -> Result<PyObject, &'static str> {
     // Windows OsString should be valid UTF-16.
     let w: Vec<u16> = s.encode_wide().collect();
     unsafe {
