@@ -94,6 +94,24 @@ pub trait PythonBinaryBuilder {
         extension_module: &DistributionExtensionModule,
     ) -> Result<()>;
 
+    /// Add an extension module as defined by a dynamic library.
+    ///
+    /// The extension module will be made available for import by whatever
+    /// means are possible for the build configuration if `require_memory_import`
+    /// is false. The extension module will either by loaded from memory or
+    /// will be manifested as a file next to the produced binary installed
+    /// in the specified path prefix.
+    ///
+    /// If `require_memory_import` is true, then the extension module will only
+    /// be made available for in-memory import and an error will occur if this is
+    /// not supported.
+    fn add_dynamic_extension_module(
+        &mut self,
+        prefix: &str,
+        extension_module: &ExtensionModuleData,
+        require_memory_import: bool,
+    ) -> Result<()>;
+
     /// Add an extension module to be embedded in the binary.
     fn add_extension_module_data(
         &mut self,

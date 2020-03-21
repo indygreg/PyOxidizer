@@ -334,8 +334,11 @@ impl PythonExecutable {
     pub fn starlark_add_extension_module(
         &mut self,
         env: &Environment,
+        prefix: &Value,
         module: &Value,
+        require_memory_import: bool,
     ) -> ValueResult {
+        let prefix = required_str_arg("prefix", &prefix)?;
         required_type_arg("resource", "PythonExtensionModule", &module)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
@@ -352,7 +355,12 @@ impl PythonExecutable {
                 self.exe.add_extension_module_data(&m)
             }
             PythonExtensionModuleFlavor::DynamicLibrary(m) => {
-                self.exe.add_extension_module_data(&m)
+                if m.object_file_data.is_empty() {
+                    self.exe
+                        .add_dynamic_extension_module(&prefix, &m, require_memory_import)
+                } else {
+                    self.exe.add_extension_module_data(&m)
+                }
             }
         }
         .or_else(|e| {
@@ -397,7 +405,10 @@ impl PythonExecutable {
                 self.starlark_add_in_memory_module_bytecode(env, resource, optimize_level)
             }
             "PythonResourceData" => self.starlark_add_in_memory_resource_data(env, resource),
-            "PythonExtensionModule" => self.starlark_add_extension_module(env, resource),
+            "PythonExtensionModule" => {
+                // Prefix should be ignored when `require_memory_import=true`.
+                self.starlark_add_extension_module(env, &Value::from(""), resource, true)
+            }
             _ => Err(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                 message: "resource argument must be a Python resource type".to_string(),
@@ -532,9 +543,9 @@ starlark_module! { python_executable_env =>
     }
 
     #[allow(clippy::ptr_arg)]
-    PythonExecutable.add_extension_module(env env, this, module) {
+    PythonExecutable.add_extension_module(env env, this, prefix, module) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
-            exe.starlark_add_extension_module(&env, &module)
+            exe.starlark_add_extension_module(&env, &prefix, &module, false)
         })
     }
 

@@ -1438,6 +1438,37 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             .add_distribution_extension_module(extension_module)
     }
 
+    fn add_dynamic_extension_module(
+        &mut self,
+        prefix: &str,
+        extension_module: &ExtensionModuleData,
+        require_memory_import: bool,
+    ) -> Result<()> {
+        if extension_module.extension_data.is_none() {
+            return Err(anyhow!(
+                "extension module instance has no shared library data"
+            ));
+        }
+
+        if self.supports_in_memory_dynamically_linked_extension_loading() {
+            self.resources
+                .add_in_memory_extension_module_shared_library(
+                    &extension_module.name,
+                    extension_module.is_package,
+                    extension_module.extension_data.as_ref().unwrap(),
+                )
+        } else if self
+            .distribution
+            .is_extension_module_file_loadable(&self.target_triple)
+            && !require_memory_import
+        {
+            self.resources
+                .add_relative_path_extension_module(extension_module, prefix)
+        } else {
+            Err(anyhow!("cannot add extension module {}: build configuration does not support loading extension modules", extension_module.name))
+        }
+    }
+
     fn add_extension_module_data(&mut self, extension_module: &ExtensionModuleData) -> Result<()> {
         if self.supports_in_memory_dynamically_linked_extension_loading() {
             if let Some(data) = &extension_module.extension_data {

@@ -45,6 +45,8 @@ Backwards Compatibility Notes
   renamed to ``PythonExecutable.add_in_memory_python_resources()``.
 * The ``PythonExecutable.to_embedded_data()`` Starlark method has been
   renamed to ``PythonExecutable.to_embedded_resources()``.
+* The ``PythonExecutable.add_extension_module()`` Starlark method now
+  required 2 mandatory arguments instead of 1.
 * The ``PythonEmbeddedData`` Starlark type has been renamed to
   ``PythonEmbeddedResources``.
 * The format of Python resource data embedded in binaries has been completely
