@@ -582,10 +582,11 @@ impl PyOxidizerFinder {
                 .call_method(py, "exec_module", (module,), None)
         } else if entry.flavor == &ResourceFlavor::Extension {
             // `ExtensionFileLoader.exec_module()` simply calls `imp.exec_dynamic()`.
+            let exec_dynamic = state.imp_module.as_object().getattr(py, "exec_dynamic")?;
+
             state
-                .imp_module
-                .as_object()
-                .call_method(py, "exec_dynamic", (module,), None)
+                .call_with_frames_removed
+                .call(py, (&exec_dynamic, module), None)
         } else {
             Ok(py.None())
         }
