@@ -5,10 +5,12 @@
 //! Bridge Rust and Python string types.
 
 use {
-    cpython::{PyObject, Python},
+    cpython::exc::UnicodeDecodeError,
+    cpython::{PyErr, PyObject, PyResult, Python},
     libc::{c_void, size_t, wchar_t},
     python3_sys as pyffi,
-    std::ffi::{CString, OsStr, OsString},
+    std::ffi::{CStr, CString, OsStr, OsString},
+    std::path::Path,
     std::ptr::null_mut,
 };
 
@@ -124,4 +126,20 @@ pub fn osstring_to_bytes(py: Python, s: OsString) -> PyObject {
         let o = pyffi::PyBytes_FromStringAndSize(w.as_ptr() as *const i8, w.len() as isize * 2);
         PyObject::from_owned_ptr(py, o)
     }
+}
+
+pub fn path_to_pyobject(py: Python, path: &Path) -> PyResult<PyObject> {
+    let encoding_ptr = unsafe { pyffi::Py_FileSystemDefaultEncoding };
+
+    let encoding = if encoding_ptr.is_null() {
+        None
+    } else {
+        Some(
+            unsafe { CStr::from_ptr(encoding_ptr).to_str() }
+                .or_else(|e| Err(PyErr::new::<UnicodeDecodeError, _>(py, e.to_string())))?,
+        )
+    };
+
+    osstr_to_pyobject(py, path.as_os_str(), encoding)
+        .or_else(|e| Err(PyErr::new::<UnicodeDecodeError, _>(py, e)))
 }

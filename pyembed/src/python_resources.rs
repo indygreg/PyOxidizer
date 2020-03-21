@@ -7,8 +7,8 @@ Management of Python resources.
 */
 
 use {
-    super::pystr::osstr_to_pyobject,
-    cpython::exc::{ImportError, UnicodeDecodeError},
+    super::pystr::path_to_pyobject,
+    cpython::exc::ImportError,
     cpython::{
         ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyObject, PyResult, PyString,
         Python, PythonObject, ToPyObject,
@@ -185,6 +185,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
         py: Python,
         module_spec_type: &PyObject,
         loader: &PyObject,
+        optimize_level: OptimizeLevel,
     ) -> PyResult<PyObject> {
         let name = PyString::new(py, &self.resource.name);
 
@@ -204,6 +205,11 @@ impl<'a> ImportablePythonModule<'a, u8> {
 
         if origin.is_some() {
             spec.setattr(py, "has_location", py.True())?;
+        }
+
+        // If set set `spec.cached`, it gets turned into `__cached__`.
+        if let Some(cached) = self.resolve_cached(py, optimize_level)? {
+            spec.setattr(py, "cached", cached)?;
         }
 
         Ok(spec)
@@ -232,21 +238,39 @@ impl<'a> ImportablePythonModule<'a, u8> {
         };
 
         Ok(if let Some(path) = path {
-            let encoding_ptr = unsafe { pyffi::Py_FileSystemDefaultEncoding };
+            Some(path_to_pyobject(py, &path)?)
+        } else {
+            None
+        })
+    }
 
-            let encoding = if encoding_ptr.is_null() {
-                None
-            } else {
-                Some(
-                    unsafe { CStr::from_ptr(encoding_ptr).to_str() }
-                        .or_else(|e| Err(PyErr::new::<UnicodeDecodeError, _>(py, e.to_string())))?,
-                )
-            };
+    /// Resolve the value of a `ModuleSpec` `cached` attribute.
+    ///
+    /// The value gets turned into `__cached__`.
+    fn resolve_cached(
+        &self,
+        py: Python,
+        optimize_level: OptimizeLevel,
+    ) -> PyResult<Option<PyObject>> {
+        let path = match self.flavor {
+            ResourceFlavor::Module => {
+                let bytecode_path = match optimize_level {
+                    OptimizeLevel::Zero => &self.resource.relative_path_module_bytecode,
+                    OptimizeLevel::One => &self.resource.relative_path_module_bytecode_opt1,
+                    OptimizeLevel::Two => &self.resource.relative_path_module_bytecode_opt2,
+                };
 
-            Some(
-                osstr_to_pyobject(py, path.as_os_str(), encoding)
-                    .or_else(|e| Err(PyErr::new::<UnicodeDecodeError, _>(py, e)))?,
-            )
+                if let Some(bytecode_path) = bytecode_path {
+                    Some(self.origin.join(bytecode_path))
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+
+        Ok(if let Some(path) = path {
+            Some(path_to_pyobject(py, &path)?)
         } else {
             None
         })

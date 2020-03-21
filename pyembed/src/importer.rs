@@ -448,9 +448,12 @@ impl PyOxidizerFinder {
         };
 
         match module.flavor {
-            ResourceFlavor::Extension | ResourceFlavor::Module => {
-                module.resolve_module_spec(py, &state.module_spec_type, self.as_object())
-            }
+            ResourceFlavor::Extension | ResourceFlavor::Module => module.resolve_module_spec(
+                py,
+                &state.module_spec_type,
+                self.as_object(),
+                state.optimize_level,
+            ),
             ResourceFlavor::BuiltinExtensionModule => {
                 // BuiltinImporter.find_spec() always returns None if `path` is defined.
                 // And it doesn't use `target`. So don't proxy these values.
