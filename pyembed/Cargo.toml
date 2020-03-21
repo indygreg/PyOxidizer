@@ -13,11 +13,11 @@ links = "pythonXY"
 
 [dependencies]
 # Update documentation in lib.rs when new dependencies are added.
-cpython = { git = "https://github.com/dgrunwald/rust-cpython", rev = "7fb4dd2e59ccf0fbf6bbe874b602e52b8aa4a8c1" }
+cpython = { git = "https://github.com/dgrunwald/rust-cpython", rev = "387e87d9deb6b678508888239f9f87dc36973d3f" }
 jemalloc-sys = { version = "0.3", optional = true }
 lazy_static = "1.4"
 libc = "0.2"
-python3-sys = { git = "https://github.com/dgrunwald/rust-cpython", rev = "7fb4dd2e59ccf0fbf6bbe874b602e52b8aa4a8c1" }
+python3-sys = { git = "https://github.com/dgrunwald/rust-cpython", rev = "387e87d9deb6b678508888239f9f87dc36973d3f" }
 python-packed-resources = { version = "0.1.0-pre", path = "../python-packed-resources" }
 uuid = { version = "0.8", features = ["v4"] }
 
