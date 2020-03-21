@@ -24,7 +24,7 @@ use {
 };
 #[cfg(windows)]
 use {
-    cpython::exc::SystemError,
+    cpython::exc::{ImportError, SystemError},
     memory_module_sys::{MemoryFreeLibrary, MemoryGetProcAddress, MemoryLoadLibrary},
     std::ffi::{c_void, CString},
 };
