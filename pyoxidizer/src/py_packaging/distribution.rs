@@ -185,7 +185,12 @@ pub trait PythonDistribution {
     /// corresponding Python modules.
     fn resolve_importlib_bytecode(&self) -> Result<ImportlibBytecode>;
 
-    /// Obtain a `PythonBinaryBuilder` for constructing an executable.
+    /// Obtain a `PythonBinaryBuilder` for constructing an executable embedding Python.
+    ///
+    /// This method is how you start the process of creating a new executable file
+    /// from a Python distribution. Using the returned `PythonBinaryBuilder` instance,
+    /// you can manipulate resources, etc and then eventually build a new executable
+    /// with it.
     #[allow(clippy::too_many_arguments)]
     fn as_python_executable_builder(
         &self,
