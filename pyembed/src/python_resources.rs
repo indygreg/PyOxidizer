@@ -144,13 +144,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
             };
 
             Ok(unsafe { PyObject::from_owned_ptr_opt(py, ptr) })
-        } else if let Some(relative_path) = match optimize_level {
-            OptimizeLevel::Zero => &self.resource.relative_path_module_bytecode,
-            OptimizeLevel::One => &self.resource.relative_path_module_bytecode_opt1,
-            OptimizeLevel::Two => &self.resource.relative_path_module_bytecode_opt2,
-        } {
-            let path = self.origin.join(relative_path);
-
+        } else if let Some(path) = self.bytecode_path(optimize_level) {
             let bytecode = std::fs::read(&path).or_else(|e| {
                 Err(PyErr::new::<ImportError, _>(
                     py,
@@ -253,19 +247,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
         optimize_level: OptimizeLevel,
     ) -> PyResult<Option<PyObject>> {
         let path = match self.flavor {
-            ResourceFlavor::Module => {
-                let bytecode_path = match optimize_level {
-                    OptimizeLevel::Zero => &self.resource.relative_path_module_bytecode,
-                    OptimizeLevel::One => &self.resource.relative_path_module_bytecode_opt1,
-                    OptimizeLevel::Two => &self.resource.relative_path_module_bytecode_opt2,
-                };
-
-                if let Some(bytecode_path) = bytecode_path {
-                    Some(self.origin.join(bytecode_path))
-                } else {
-                    None
-                }
-            }
+            ResourceFlavor::Module => self.bytecode_path(optimize_level),
             _ => None,
         };
 
@@ -274,6 +256,21 @@ impl<'a> ImportablePythonModule<'a, u8> {
         } else {
             None
         })
+    }
+
+    /// Obtain the filesystem path to bytecode for this module.
+    fn bytecode_path(&self, optimize_level: OptimizeLevel) -> Option<PathBuf> {
+        let bytecode_path = match optimize_level {
+            OptimizeLevel::Zero => &self.resource.relative_path_module_bytecode,
+            OptimizeLevel::One => &self.resource.relative_path_module_bytecode_opt1,
+            OptimizeLevel::Two => &self.resource.relative_path_module_bytecode_opt2,
+        };
+
+        if let Some(bytecode_path) = bytecode_path {
+            Some(self.origin.join(bytecode_path))
+        } else {
+            None
+        }
     }
 }
 
