@@ -74,7 +74,8 @@ New Features
   the application, Python has to do far less work at run-time to load resources,
   making operations faster. Resources loaded from the filesystem in this manner
   have attributes like ``__file__``, ``__cached__``, and ``__path__`` set,
-  emulating behavior of the default Python importer.
+  emulating behavior of the default Python importer. The custom import now also
+  implements the ``importlib.abc.ExecutionLoader`` interface.
 * Windows binaries can now import extension modules defined as shared libraries
   (e.g. ``.pyd`` files) from memory. PyOxidizer will detect ``.pyd`` files during
   packaging and embed them into the binary as resources. When the module

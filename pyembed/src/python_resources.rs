@@ -226,7 +226,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
     /// Resolve the value of a `ModuleSpec` origin.
     ///
     /// The value gets turned into `__file__`
-    fn resolve_origin(&self, py: Python) -> PyResult<Option<PyObject>> {
+    pub fn resolve_origin(&self, py: Python) -> PyResult<Option<PyObject>> {
         Ok(if let Some(path) = self.origin_path() {
             Some(path_to_pyobject(py, &path)?)
         } else {

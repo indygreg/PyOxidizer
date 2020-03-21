@@ -12,7 +12,7 @@ for importing Python modules from memory.
 use {
     super::pyinterp::PYOXIDIZER_IMPORTER_NAME,
     super::python_resources::{OptimizeLevel, PythonResourcesState},
-    cpython::exc::{FileNotFoundError, RuntimeError, ValueError},
+    cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError},
     cpython::{
         py_class, py_fn, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule,
         PyObject, PyResult, PyString, PyTuple, Python, PythonObject,
@@ -24,7 +24,7 @@ use {
 };
 #[cfg(windows)]
 use {
-    cpython::exc::{ImportError, SystemError},
+    cpython::exc::SystemError,
     memory_module_sys::{MemoryFreeLibrary, MemoryGetProcAddress, MemoryLoadLibrary},
     std::ffi::{c_void, CString},
 };
@@ -414,6 +414,14 @@ py_class!(class PyOxidizerFinder |py| {
         self.get_source_impl(py, fullname)
     }
 
+    // Start of importlib.abc.ExecutionLoader interface.
+
+    def get_filename(&self, fullname: &PyString) -> PyResult<PyObject> {
+        self.get_filename_impl(py, fullname)
+    }
+
+    // End of importlib.abc.ExecutionLoader interface.
+
     // End of importlib.abc.InspectLoader interface.
 
     // Support obtaining ResourceReader instances.
@@ -611,6 +619,32 @@ impl PyOxidizerFinder {
         } else {
             Ok(py.None())
         }
+    }
+}
+
+// importlib.abc.ExecutionLoader interface.
+impl PyOxidizerFinder {
+    /// An abstract method that is to return the value of __file__ for the specified module.
+    ///
+    /// If no path is available, ImportError is raised.
+    ///
+    /// If source code is available, then the method should return the path to the
+    /// source file, regardless of whether a bytecode was used to load the module.
+    fn get_filename_impl(&self, py: Python, fullname: &PyString) -> PyResult<PyObject> {
+        let state = self.state(py);
+        let key = fullname.to_string(py)?;
+
+        let make_error = |msg: &str| -> PyErr { PyErr::new::<ImportError, _>(py, (msg, &key)) };
+
+        let module = state
+            .resources_state
+            .resolve_importable_module(&key, state.optimize_level)
+            .ok_or_else(|| make_error("unknown module"))?;
+
+        module
+            .resolve_origin(py)
+            .or_else(|_| Err(make_error("unable to resolve origin")))?
+            .ok_or_else(|| make_error("no origin"))
     }
 }
 
