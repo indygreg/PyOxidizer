@@ -90,7 +90,11 @@ impl<'a> TryFrom<&EmbeddedResourcePythonModulePrePackaged> for EmbeddedResource<
 
     fn try_from(value: &EmbeddedResourcePythonModulePrePackaged) -> Result<Self, Self::Error> {
         Ok(Self {
-            flavor: if value.in_memory_extension_module_shared_library.is_some() {
+            flavor: if value.in_memory_extension_module_shared_library.is_some()
+                || value
+                    .relative_path_extension_module_shared_library
+                    .is_some()
+            {
                 ResourceFlavor::Extension
             } else if value.in_memory_shared_library.is_some() {
                 ResourceFlavor::SharedLibrary
