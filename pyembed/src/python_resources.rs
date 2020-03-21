@@ -201,9 +201,23 @@ impl<'a> ImportablePythonModule<'a, u8> {
             spec.setattr(py, "has_location", py.True())?;
         }
 
-        // If set set `spec.cached`, it gets turned into `__cached__`.
+        // If we set `spec.cached`, it gets turned into `__cached__`.
         if let Some(cached) = self.resolve_cached(py, optimize_level)? {
             spec.setattr(py, "cached", cached)?;
+        }
+
+        // If a package, `spec.submodule_search_locations` identifies where
+        // files are located. This should be the directory of the resource, or
+        // `dirname(origin)`. This will get turned into `__path__`.
+        if self.is_package {
+            if let Some(origin_path) = self.origin_path() {
+                if let Some(parent_path) = origin_path.parent() {
+                    let path = path_to_pyobject(py, parent_path)?;
+
+                    let locations = vec![path];
+                    spec.setattr(py, "submodule_search_locations", locations)?;
+                }
+            }
         }
 
         Ok(spec)
@@ -213,25 +227,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
     ///
     /// The value gets turned into `__file__`
     fn resolve_origin(&self, py: Python) -> PyResult<Option<PyObject>> {
-        let path = match self.flavor {
-            ResourceFlavor::Module => {
-                if let Some(path) = &self.resource.relative_path_module_source {
-                    Some(self.origin.join(path))
-                } else {
-                    None
-                }
-            }
-            ResourceFlavor::Extension => {
-                if let Some(path) = &self.resource.relative_path_extension_module_shared_library {
-                    Some(self.origin.join(path))
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        };
-
-        Ok(if let Some(path) = path {
+        Ok(if let Some(path) = self.origin_path() {
             Some(path_to_pyobject(py, &path)?)
         } else {
             None
@@ -256,6 +252,27 @@ impl<'a> ImportablePythonModule<'a, u8> {
         } else {
             None
         })
+    }
+
+    /// Obtain the filesystem path to this resource to be used for `ModuleSpec.origin`.
+    fn origin_path(&self) -> Option<PathBuf> {
+        match self.flavor {
+            ResourceFlavor::Module => {
+                if let Some(path) = &self.resource.relative_path_module_source {
+                    Some(self.origin.join(path))
+                } else {
+                    None
+                }
+            }
+            ResourceFlavor::Extension => {
+                if let Some(path) = &self.resource.relative_path_extension_module_shared_library {
+                    Some(self.origin.join(path))
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
     }
 
     /// Obtain the filesystem path to bytecode for this module.
