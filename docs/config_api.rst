@@ -998,6 +998,19 @@ file is defined by ``prefix``.
 
 If called multiple times for the same module, the last write wins.
 
+.. _config_python_executable.add_module_source:
+
+``PythonExecutable.add_module_source(module)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method registers a Python source module with a ``PythonExecutable``
+instance.
+
+This method is a glorified proxy to
+:ref:`config_python_executable_add_in_memory_module_source` or
+:ref:`config_python_executable_add_filesystem_relative_module_source`
+depending on the :ref:`config_python_resources_policy` in effect.
+
 .. _config_python_executable_add_in_memory_module_bytecode:
 
 ``PythonExecutable.add_in_memory_module_bytecode(module, optimize_level=0)``

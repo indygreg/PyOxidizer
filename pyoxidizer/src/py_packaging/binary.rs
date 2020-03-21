@@ -68,6 +68,9 @@ pub trait PythonBinaryBuilder {
         module: &SourceModule,
     ) -> Result<()>;
 
+    /// Add Python module source code to a location as determined by the builder's resource policy.
+    fn add_module_source(&mut self, module: &SourceModule) -> Result<()>;
+
     /// Add a Python module bytecode to be imported from memory to the embedded resources.
     fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModule) -> Result<()>;
 

@@ -158,6 +158,29 @@ impl PythonExecutable {
         Ok(Value::new(None))
     }
 
+    /// PythonExecutable.add_module_source(module)
+    pub fn starlark_add_module_source(&mut self, env: &Environment, module: &Value) -> ValueResult {
+        required_type_arg("module", "PythonSourceModule", &module)?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not set");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
+        info!(&logger, "adding source module {}", m.name);
+        self.exe.add_module_source(&m).or_else(|e| {
+            {
+                Err(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "add_module_source".to_string(),
+                }
+                .into())
+            }
+        })?;
+
+        Ok(Value::new(None))
+    }
+
     /// PythonExecutable.add_in_memory_module_bytecode(module, optimize_level=0)
     pub fn starlark_add_in_memory_module_bytecode(
         &mut self,
@@ -502,6 +525,13 @@ starlark_module! { python_executable_env =>
     PythonExecutable.add_filesystem_relative_module_source(env env, this, prefix, module) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_filesystem_relative_module_source(&env, &prefix, &module)
+        })
+    }
+
+    #[allow(non_snake_case, clippy::ptr_arg)]
+    PythonExecutable.add_module_source(env env, this, module) {
+        this.downcast_apply_mut(|exe: &mut PythonExecutable| {
+            exe.starlark_add_module_source(&env, &module)
         })
     }
 

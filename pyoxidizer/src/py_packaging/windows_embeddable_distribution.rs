@@ -575,6 +575,10 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
             .add_relative_path_module_source(module, prefix)
     }
 
+    fn add_module_source(&mut self, _module: &SourceModule) -> Result<()> {
+        unimplemented!()
+    }
+
     fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModule) -> Result<()> {
         self.resources.add_in_memory_module_bytecode(module)
     }
