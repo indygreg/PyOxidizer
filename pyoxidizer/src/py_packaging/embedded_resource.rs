@@ -13,9 +13,10 @@ use {
         has_dunder_file, packages_from_module_name, packages_from_module_names, BytecodeModule,
         BytecodeOptimizationLevel, DataLocation, ExtensionModuleData, ResourceData, SourceModule,
     },
+    super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::DistributionExtensionModule,
     crate::app_packaging::resource::{FileContent, FileManifest},
-    anyhow::{Error, Result},
+    anyhow::{anyhow, Error, Result},
     lazy_static::lazy_static,
     python_packed_resources::data::{Resource as EmbeddedResource, ResourceFlavor},
     python_packed_resources::writer::write_embedded_resources_v1,
@@ -201,12 +202,18 @@ enum ModuleLocation {
     RelativePath(String),
 }
 
+enum ResourceLocation {
+    InMemory,
+    RelativePath,
+}
+
 /// Represents Python resources to embed in a binary.
 ///
 /// This collection holds resources before packaging. This type is
 /// transformed to `EmbeddedPythonResources` as part of packaging.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct EmbeddedPythonResourcesPrePackaged {
+    policy: PythonResourcesPolicy,
     modules: BTreeMap<String, EmbeddedResourcePythonModulePrePackaged>,
 
     // TODO combine into single extension module type.
@@ -217,6 +224,16 @@ pub struct EmbeddedPythonResourcesPrePackaged {
 }
 
 impl EmbeddedPythonResourcesPrePackaged {
+    pub fn new(policy: &PythonResourcesPolicy) -> Self {
+        Self {
+            policy: policy.clone(),
+            modules: BTreeMap::new(),
+            distribution_extension_modules: BTreeMap::new(),
+            extension_module_datas: BTreeMap::new(),
+            extra_files: FileManifest::default(),
+        }
+    }
+
     /// Obtain `SourceModule` in this instance.
     pub fn get_in_memory_module_sources(&self) -> BTreeMap<String, SourceModule> {
         BTreeMap::from_iter(self.modules.iter().filter_map(|(name, module)| {
@@ -306,8 +323,29 @@ impl EmbeddedPythonResourcesPrePackaged {
         self.extension_module_datas.clone()
     }
 
+    /// Validate that a resource add in the specified location is allowed.
+    fn check_policy(&self, location: ResourceLocation) -> Result<()> {
+        match self.policy {
+            PythonResourcesPolicy::InMemoryOnly => match location {
+                ResourceLocation::InMemory => Ok(()),
+                ResourceLocation::RelativePath => Err(anyhow!(
+                    "in-memory-only policy does not allow relative path resources"
+                )),
+            },
+            PythonResourcesPolicy::FilesystemRelativeOnly(_) => match location {
+                ResourceLocation::InMemory => Err(anyhow!(
+                    "filesystem-relative-only policy does not allow in-memory resources"
+                )),
+                ResourceLocation::RelativePath => Ok(()),
+            },
+            PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => Ok(()),
+        }
+    }
+
     /// Add a source module to the collection of embedded source modules.
     pub fn add_in_memory_module_source(&mut self, module: &SourceModule) -> Result<()> {
+        self.check_policy(ResourceLocation::InMemory)?;
+
         let entry = self.modules.entry(module.name.clone()).or_insert_with(|| {
             EmbeddedResourcePythonModulePrePackaged {
                 name: module.name.clone(),
@@ -326,6 +364,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         module: &SourceModule,
         prefix: &str,
     ) -> Result<()> {
+        self.check_policy(ResourceLocation::RelativePath)?;
         let entry = self.modules.entry(module.name.clone()).or_insert_with(|| {
             EmbeddedResourcePythonModulePrePackaged {
                 name: module.name.clone(),
@@ -348,6 +387,7 @@ impl EmbeddedPythonResourcesPrePackaged {
 
     /// Add a bytecode module to the collection of embedded bytecode modules.
     pub fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModule) -> Result<()> {
+        self.check_policy(ResourceLocation::InMemory)?;
         let entry = self.modules.entry(module.name.clone()).or_insert_with(|| {
             EmbeddedResourcePythonModulePrePackaged {
                 name: module.name.clone(),
@@ -383,6 +423,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         module: &BytecodeModule,
         prefix: &str,
     ) -> Result<()> {
+        self.check_policy(ResourceLocation::RelativePath)?;
         let entry = self.modules.entry(module.name.clone()).or_insert_with(|| {
             EmbeddedResourcePythonModulePrePackaged {
                 name: module.name.clone(),
@@ -414,6 +455,7 @@ impl EmbeddedPythonResourcesPrePackaged {
     ///
     /// Resource data belongs to a Python package and has a name and bytes data.
     pub fn add_in_memory_package_resource(&mut self, resource: &ResourceData) -> Result<()> {
+        self.check_policy(ResourceLocation::InMemory)?;
         let entry = self
             .modules
             .entry(resource.package.clone())
@@ -444,6 +486,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         prefix: &str,
         resource: &ResourceData,
     ) -> Result<()> {
+        self.check_policy(ResourceLocation::RelativePath)?;
         let entry = self
             .modules
             .entry(resource.package.clone())
@@ -480,6 +523,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         &mut self,
         module: &DistributionExtensionModule,
     ) -> Result<()> {
+        // No policy check because distribution extension modules are special.
         self.distribution_extension_modules
             .insert(module.module.clone(), module.clone());
 
@@ -494,6 +538,8 @@ impl EmbeddedPythonResourcesPrePackaged {
 
     /// Add an extension module.
     pub fn add_extension_module_data(&mut self, module: &ExtensionModuleData) -> Result<()> {
+        self.check_policy(ResourceLocation::InMemory)?;
+
         self.extension_module_datas
             .insert(module.name.clone(), module.clone());
 
@@ -514,6 +560,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         is_package: bool,
         data: &[u8],
     ) -> Result<()> {
+        self.check_policy(ResourceLocation::InMemory)?;
         let entry = self.modules.entry(module.to_string()).or_insert_with(|| {
             EmbeddedResourcePythonModulePrePackaged {
                 name: module.to_string(),
@@ -544,6 +591,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         em: &ExtensionModuleData,
         prefix: &str,
     ) -> Result<()> {
+        self.check_policy(ResourceLocation::RelativePath)?;
         let entry = self.modules.entry(em.name.clone()).or_insert_with(|| {
             EmbeddedResourcePythonModulePrePackaged {
                 name: em.name.clone(),
@@ -1087,7 +1135,7 @@ mod tests {
 
     #[test]
     fn test_add_in_memory_source_module() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::default();
+        let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
         r.add_in_memory_module_source(&SourceModule {
             name: "foo".to_string(),
             source: DataLocation::Memory(vec![42]),
@@ -1110,7 +1158,9 @@ mod tests {
 
     #[test]
     fn test_add_relative_path_source_module() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::default();
+        let mut r = EmbeddedPythonResourcesPrePackaged::new(
+            &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
+        );
         r.add_relative_path_module_source(
             &SourceModule {
                 name: "foo".to_string(),
@@ -1149,7 +1199,7 @@ mod tests {
 
     #[test]
     fn test_add_in_memory_source_module_parents() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::default();
+        let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
         r.add_in_memory_module_source(&SourceModule {
             name: "root.parent.child".to_string(),
             source: DataLocation::Memory(vec![42]),
@@ -1192,7 +1242,7 @@ mod tests {
 
     #[test]
     fn test_add_in_memory_bytecode_module() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::default();
+        let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
         r.add_in_memory_module_bytecode(&BytecodeModule {
             name: "foo".to_string(),
             source: DataLocation::Memory(vec![42]),
@@ -1216,7 +1266,7 @@ mod tests {
 
     #[test]
     fn test_add_in_memory_bytecode_module_parents() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::default();
+        let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
         r.add_in_memory_module_bytecode(&BytecodeModule {
             name: "root.parent.child".to_string(),
             source: DataLocation::Memory(vec![42]),
@@ -1258,7 +1308,7 @@ mod tests {
 
     #[test]
     fn test_add_in_memory_resource() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::default();
+        let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
         r.add_in_memory_package_resource(&ResourceData {
             package: "foo".to_string(),
             name: "resource.txt".to_string(),
@@ -1285,7 +1335,7 @@ mod tests {
 
     #[test]
     fn test_add_distribution_extension_module() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::default();
+        let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
         let em = DistributionExtensionModule {
             module: "foo.bar".to_string(),
             init_fn: None,
@@ -1322,7 +1372,7 @@ mod tests {
 
     #[test]
     fn test_add_extension_module_data() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::default();
+        let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
         let em = ExtensionModuleData {
             name: "foo.bar".to_string(),
             init_fn: Some("".to_string()),
@@ -1354,7 +1404,9 @@ mod tests {
 
     #[test]
     fn test_add_relative_path_extension_module() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::default();
+        let mut r = EmbeddedPythonResourcesPrePackaged::new(
+            &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
+        );
         let em = ExtensionModuleData {
             name: "foo.bar".to_string(),
             init_fn: Some("PyInit_bar".to_string()),
@@ -1401,7 +1453,7 @@ mod tests {
 
     #[test]
     fn test_find_dunder_file() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::default();
+        let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
         assert_eq!(r.find_dunder_file()?.len(), 0);
 
         r.add_in_memory_module_source(&SourceModule {

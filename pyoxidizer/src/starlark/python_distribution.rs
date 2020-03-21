@@ -24,6 +24,7 @@ use {
         setup_py_install as raw_setup_py_install,
     },
     crate::py_packaging::resource::BytecodeOptimizationLevel,
+    crate::py_packaging::resources_policy::PythonResourcesPolicy,
     anyhow::{anyhow, Result},
     itertools::Itertools,
     slog::warn,
@@ -265,6 +266,7 @@ impl PythonDistribution {
         env: Environment,
         call_stack: &Vec<(String, String)>,
         name: &Value,
+        resources_policy: &Value,
         config: &Value,
         extension_module_filter: &Value,
         preferred_extension_module_variants: &Value,
@@ -273,6 +275,7 @@ impl PythonDistribution {
         include_test: &Value,
     ) -> ValueResult {
         let name = required_str_arg("name", &name)?;
+        let resources_policy = required_str_arg("resources_policy", &resources_policy)?;
         optional_type_arg("config", "PythonInterpreterConfig", &config)?;
         let extension_module_filter =
             required_str_arg("extension_module_filter", &extension_module_filter)?;
@@ -291,6 +294,16 @@ impl PythonDistribution {
         let (host_triple, target_triple) = context.downcast_apply(|x: &EnvironmentContext| {
             (x.build_host_triple.clone(), x.build_target_triple.clone())
         });
+
+        let resources_policy =
+            PythonResourcesPolicy::try_from(resources_policy.as_str()).or_else(|e| {
+                Err(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "resources_policy".to_string(),
+                }
+                .into())
+            })?;
 
         let extension_module_filter =
             ExtensionModuleFilter::try_from(extension_module_filter.as_str()).or_else(|e| {
@@ -347,6 +360,7 @@ impl PythonDistribution {
                     &host_triple,
                     &target_triple,
                     &name,
+                    &resources_policy,
                     &config,
                     &extension_module_filter,
                     preferred_extension_module_variants,
@@ -846,6 +860,7 @@ starlark_module! { python_distribution_module =>
         call_stack call_stack,
         this,
         name,
+        resources_policy="in-memory-only",
         config=None,
         extension_module_filter="all",
         preferred_extension_module_variants=None,
@@ -858,6 +873,7 @@ starlark_module! { python_distribution_module =>
                 env.clone(),
                 call_stack,
                 &name,
+                &resources_policy,
                 &config,
                 &extension_module_filter,
                 &preferred_extension_module_variants,

@@ -28,6 +28,10 @@ Not yet released.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* The ``PythonDistribution.to_python_executable()`` Starlark method has added
+  a ``resources_policy`` named argument as its 2nd argument / 1st named
+  argument. If you were affected by this, you should add argument names to all
+  arguments passed to this method.
 * The default Rust project for built executables now builds executables such
   that dynamic symbols are exported from the executable. This change is
   necessary in order to support executables loading Python extension modules,

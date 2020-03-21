@@ -25,6 +25,7 @@ use {
         BytecodeModule, BytecodeOptimizationLevel, DataLocation, ExtensionModuleData,
         PythonResource, ResourceData, SourceModule,
     },
+    super::resources_policy::PythonResourcesPolicy,
     crate::app_packaging::resource::FileContent,
     crate::licensing::NON_GPL_LICENSES,
     anyhow::{anyhow, Context, Result},
@@ -800,13 +801,14 @@ impl StandaloneDistribution {
     fn as_embedded_python_resources_pre_packaged(
         &self,
         logger: &slog::Logger,
+        resources_policy: &PythonResourcesPolicy,
         extension_module_filter: &ExtensionModuleFilter,
         preferred_extension_module_variants: Option<HashMap<String, String>>,
         include_sources: bool,
         include_resources: bool,
         include_test: bool,
     ) -> Result<EmbeddedPythonResourcesPrePackaged> {
-        let mut embedded = EmbeddedPythonResourcesPrePackaged::default();
+        let mut embedded = EmbeddedPythonResourcesPrePackaged::new(resources_policy);
 
         // We can only embed extension modules on statically linked distributions.
         if self.link_mode == StandaloneDistributionLinkMode::Static {
@@ -991,6 +993,7 @@ impl PythonDistribution for StandaloneDistribution {
         host_triple: &str,
         target_triple: &str,
         name: &str,
+        resources_policy: &PythonResourcesPolicy,
         config: &EmbeddedPythonConfig,
         extension_module_filter: &ExtensionModuleFilter,
         preferred_extension_module_variants: Option<HashMap<String, String>>,
@@ -1000,6 +1003,7 @@ impl PythonDistribution for StandaloneDistribution {
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
         let mut resources = self.as_embedded_python_resources_pre_packaged(
             logger,
+            resources_policy,
             extension_module_filter,
             preferred_extension_module_variants.clone(),
             include_sources,
@@ -1565,7 +1569,8 @@ pub mod tests {
         logger: &slog::Logger,
     ) -> Result<StandalonePythonExecutableBuilder> {
         let distribution = get_default_distribution()?;
-        let mut resources = EmbeddedPythonResourcesPrePackaged::default();
+        let mut resources =
+            EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
 
         // We need to add minimal extension modules so builds actually work. If they are missing,
         // we'll get missing symbol errors during linking.

@@ -12,6 +12,7 @@ use {
     super::config::EmbeddedPythonConfig,
     super::libpython::ImportlibBytecode,
     super::resource::{PythonResource, ResourceData, SourceModule},
+    super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::{DistributionExtensionModule, StandaloneDistribution},
     super::windows_embeddable_distribution::WindowsEmbeddableDistribution,
     crate::python_distributions::{
@@ -198,6 +199,7 @@ pub trait PythonDistribution {
         host_triple: &str,
         target_triple: &str,
         name: &str,
+        resources_policy: &PythonResourcesPolicy,
         config: &EmbeddedPythonConfig,
         extension_module_filter: &ExtensionModuleFilter,
         preferred_extension_module_variants: Option<HashMap<String, String>>,

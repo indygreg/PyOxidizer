@@ -19,6 +19,7 @@ use {
     super::resource::{
         BytecodeModule, ExtensionModuleData, PythonResource, ResourceData, SourceModule,
     },
+    super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::DistributionExtensionModule,
     crate::analyze::find_pe_dependencies_path,
     crate::app_packaging::resource::FileManifest,
@@ -276,6 +277,7 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         host_triple: &str,
         target_triple: &str,
         name: &str,
+        resources_policy: &PythonResourcesPolicy,
         config: &EmbeddedPythonConfig,
         _extension_module_filter: &ExtensionModuleFilter,
         _preferred_extension_module_variants: Option<HashMap<String, String>>,
@@ -290,7 +292,7 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
             python_exe: self.python_exe.clone(),
             python_dll: self.python_dll.clone(),
             // TODO add distribution resources to this instance.
-            resources: EmbeddedPythonResourcesPrePackaged::default(),
+            resources: EmbeddedPythonResourcesPrePackaged::new(resources_policy),
             config: config.clone(),
             importlib_bytecode: self.resolve_importlib_bytecode()?,
         }))
@@ -732,6 +734,7 @@ mod tests {
             env!("HOST"),
             env!("HOST"),
             "foo",
+            &PythonResourcesPolicy::InMemoryOnly,
             &config,
             &extension_module_filter,
             None,

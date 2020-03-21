@@ -483,6 +483,12 @@ The accepted arguments are:
    The name of the application being built. This will be used to construct the
    default filename of the executable.
 
+``resources_policy`` (``str``)
+   The policy to apply when adding resources to the produced instance.
+
+   See :ref:`config_python_resources_policy` for documentation on allowed
+   values. The default value is ``in-memory-only``.
+
 ``config`` (``PythonEmbeddedConfig``)
    The default configuration of the embedded Python interpreter.
 
@@ -598,6 +604,39 @@ Each instance has the following attributes:
 
 ``name`` (string)
    Unique name of the module being provided.
+
+.. _config_python_resources_policy:
+
+Python Resources Policy
+=======================
+
+There are various ways to add resources (typically Python resources) to
+a binary. For example, you can import modules from memory or the filesystem.
+Often, configuration files may wish to be explicit about what behavior is
+and is not allowed. A *Python Resources Policy* is used to apply said
+behavior.
+
+A *Python Resources Policy* is defined by a ``str``. The following
+values are recognized.
+
+``in-memory-only``
+   Resources are to be loaded from in-memory only. If a resource cannot be
+   loaded from memory (e.g. dynamically linked Python extension modules in
+   some configurations), an error will (likely) occur.
+
+``filesystem-relative-only:<prefix>``
+   Values starting with ``filesystem-relative-only:`` specify that resources are
+   to be loaded from the filesystem from paths relative to the produced
+   binary. Files will be installed at the path prefix denoted by the value after
+   the ``:``. e.g. ``filesystem-relative-only:lib`` will install resources in a
+   ``lib/`` directory.
+
+``prefer-in-memory-fallback-filesystem-relative:<prefix>``
+   Values starting with ``prefer-in-memory-fallback-filesystem-relative`` represent
+   a hybrid between ``in-memory-only`` and ``filesystem-relative-only:<prefix>``.
+   Essentially, if in-memory resource loading is supported, it is used. Otherwise
+   we fall back to loading from the filesystem from paths relative to the produced
+   binary.
 
 Python Interpreter Configuration
 ================================
