@@ -367,6 +367,15 @@ impl ExtensionModuleData {
         }
     }
 
+    /// Resolve the filesystem path for this extension module.
+    pub fn resolve_path(&self, prefix: &str) -> PathBuf {
+        let mut path = PathBuf::from(prefix);
+        path.extend(self.package_parts());
+        path.push(self.file_name());
+
+        path
+    }
+
     /// Returns the part strings constituting the package name.
     pub fn package_parts(&self) -> Vec<String> {
         if let Some(idx) = self.name.rfind('.') {
@@ -379,12 +388,8 @@ impl ExtensionModuleData {
 
     pub fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
         if let Some(data) = &self.extension_data {
-            let mut dest_path = PathBuf::from(prefix);
-            dest_path.extend(self.package_parts());
-            dest_path.push(self.file_name());
-
             manifest.add_file(
-                &dest_path,
+                &self.resolve_path(prefix),
                 &FileContent {
                     data: data.clone(),
                     executable: true,

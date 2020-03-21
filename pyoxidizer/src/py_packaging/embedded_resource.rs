@@ -534,6 +534,33 @@ impl EmbeddedPythonResourcesPrePackaged {
         // TODO add shared library dependency names.
     }
 
+    /// Add an extension module to be loaded from the filesystem.
+    pub fn add_relative_path_extension_module(
+        &mut self,
+        em: &ExtensionModuleData,
+        prefix: &str,
+    ) -> Result<()> {
+        let entry = self.modules.entry(em.name.clone()).or_insert_with(|| {
+            EmbeddedResourcePythonModulePrePackaged {
+                name: em.name.clone(),
+                ..EmbeddedResourcePythonModulePrePackaged::default()
+            }
+        });
+        entry.is_package = em.is_package;
+        entry.relative_path_extension_module_shared_library = Some(em.resolve_path(prefix));
+
+        em.add_to_file_manifest(&mut self.extra_files, prefix)?;
+
+        // TODO add shared library dependencies.
+
+        self.add_parent_packages(
+            &em.name,
+            ModuleLocation::RelativePath(prefix.to_string()),
+            false,
+            None,
+        )
+    }
+
     /// Filter the entities in this instance against names in files.
     pub fn filter_from_files(
         &mut self,
@@ -1316,6 +1343,53 @@ mod tests {
                 is_package: true,
                 ..EmbeddedResourcePythonModulePrePackaged::default()
             })
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_relative_path_extension_module() -> Result<()> {
+        let mut r = EmbeddedPythonResourcesPrePackaged::default();
+        let em = ExtensionModuleData {
+            name: "foo.bar".to_string(),
+            init_fn: Some("PyInit_bar".to_string()),
+            extension_file_suffix: ".so".to_string(),
+            extension_data: Some(vec![42]),
+            object_file_data: vec![],
+            is_package: false,
+            libraries: vec![],
+            library_dirs: vec![],
+        };
+
+        r.add_relative_path_extension_module(&em, "prefix")?;
+        assert_eq!(r.modules.len(), 2);
+        assert_eq!(
+            r.modules.get("foo.bar"),
+            Some(&EmbeddedResourcePythonModulePrePackaged {
+                name: "foo.bar".to_string(),
+                is_package: false,
+                relative_path_extension_module_shared_library: Some(PathBuf::from(
+                    "prefix/foo/bar.so"
+                )),
+                ..EmbeddedResourcePythonModulePrePackaged::default()
+            })
+        );
+
+        let extra_files = r
+            .extra_files
+            .entries()
+            .collect::<Vec<(&PathBuf, &FileContent)>>();
+        assert_eq!(extra_files.len(), 1);
+        assert_eq!(
+            extra_files[0],
+            (
+                &PathBuf::from("prefix/foo/bar.so"),
+                &FileContent {
+                    data: vec![42],
+                    executable: true
+                }
+            )
         );
 
         Ok(())
