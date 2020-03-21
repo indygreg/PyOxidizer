@@ -363,6 +363,7 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         &self,
         _logger: &slog::Logger,
         resources: &[PythonResource],
+        _target_triple: &str,
     ) -> Result<Vec<PythonResource>> {
         Ok(resources.to_vec())
     }
@@ -772,6 +773,7 @@ mod tests {
         let resources = pip_install(
             &logger,
             &dist,
+            env!("HOST"),
             false,
             &["black==19.10b0".to_string()],
             &HashMap::new(),

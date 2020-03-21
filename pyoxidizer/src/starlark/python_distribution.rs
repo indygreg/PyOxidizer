@@ -466,8 +466,9 @@ impl PythonDistribution {
         };
 
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let (logger, verbose) =
-            context.downcast_apply(|x: &EnvironmentContext| (x.logger.clone(), x.verbose));
+        let (logger, target_triple, verbose) = context.downcast_apply(|x: &EnvironmentContext| {
+            (x.logger.clone(), x.build_target_triple.clone(), x.verbose)
+        });
 
         self.ensure_distribution_resolved(&logger).or_else(|e| {
             Err(RuntimeError {
@@ -479,17 +480,22 @@ impl PythonDistribution {
         })?;
         let dist = self.distribution.as_ref().unwrap();
 
-        let resources =
-            raw_pip_install(&logger, dist.deref().as_ref(), verbose, &args, &extra_envs).or_else(
-                |e| {
-                    Err(RuntimeError {
-                        code: "PIP_INSTALL_ERROR",
-                        message: format!("error running pip install: {}", e),
-                        label: "pip_install()".to_string(),
-                    }
-                    .into())
-                },
-            )?;
+        let resources = raw_pip_install(
+            &logger,
+            dist.deref().as_ref(),
+            &target_triple,
+            verbose,
+            &args,
+            &extra_envs,
+        )
+        .or_else(|e| {
+            Err(RuntimeError {
+                code: "PIP_INSTALL_ERROR",
+                message: format!("error running pip install: {}", e),
+                label: "pip_install()".to_string(),
+            }
+            .into())
+        })?;
 
         Ok(Value::from(
             resources.iter().map(Value::from).collect::<Vec<Value>>(),
@@ -512,7 +518,9 @@ impl PythonDistribution {
             .collect::<Vec<String>>();
 
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let (logger, target_triple) = context.downcast_apply(|x: &EnvironmentContext| {
+            (x.logger.clone(), x.build_target_triple.clone())
+        });
 
         self.ensure_distribution_resolved(&logger).or_else(|e| {
             Err(RuntimeError {
@@ -525,15 +533,21 @@ impl PythonDistribution {
 
         let dist = self.distribution.as_ref().unwrap();
 
-        let resources = find_resources(&logger, dist.deref().as_ref(), Path::new(&path), None)
-            .or_else(|e| {
-                Err(RuntimeError {
-                    code: "PACKAGE_ROOT_ERROR",
-                    message: format!("could not find resources: {}", e),
-                    label: "read_package_root()".to_string(),
-                }
-                .into())
-            })?;
+        let resources = find_resources(
+            &logger,
+            dist.deref().as_ref(),
+            &target_triple,
+            Path::new(&path),
+            None,
+        )
+        .or_else(|e| {
+            Err(RuntimeError {
+                code: "PACKAGE_ROOT_ERROR",
+                message: format!("could not find resources: {}", e),
+                label: "read_package_root()".to_string(),
+            }
+            .into())
+        })?;
 
         Ok(Value::from(
             resources
@@ -549,7 +563,9 @@ impl PythonDistribution {
         let path = required_str_arg("path", &path)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+        let (logger, target_triple) = context.downcast_apply(|x: &EnvironmentContext| {
+            (x.logger.clone(), x.build_target_triple.clone())
+        });
 
         self.ensure_distribution_resolved(&logger).or_else(|e| {
             Err(RuntimeError {
@@ -561,15 +577,20 @@ impl PythonDistribution {
         })?;
         let dist = self.distribution.as_ref().unwrap();
 
-        let resources = raw_read_virtualenv(&logger, dist.deref().as_ref(), &Path::new(&path))
-            .or_else(|e| {
-                Err(RuntimeError {
-                    code: "VIRTUALENV_ERROR",
-                    message: format!("could not find resources: {}", e),
-                    label: "read_virtualenv()".to_string(),
-                }
-                .into())
-            })?;
+        let resources = raw_read_virtualenv(
+            &logger,
+            dist.deref().as_ref(),
+            &target_triple,
+            &Path::new(&path),
+        )
+        .or_else(|e| {
+            Err(RuntimeError {
+                code: "VIRTUALENV_ERROR",
+                message: format!("could not find resources: {}", e),
+                label: "read_virtualenv()".to_string(),
+            }
+            .into())
+        })?;
 
         Ok(Value::from(
             resources.iter().map(Value::from).collect::<Vec<Value>>(),
@@ -658,8 +679,9 @@ impl PythonDistribution {
 
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
         let cwd = env.get("CWD").expect("CWD not defined").to_string();
-        let (logger, verbose) =
-            context.downcast_apply(|x: &EnvironmentContext| (x.logger.clone(), x.verbose));
+        let (logger, target_triple, verbose) = context.downcast_apply(|x: &EnvironmentContext| {
+            (x.logger.clone(), x.build_target_triple.clone(), x.verbose)
+        });
 
         let package_path = if package_path.is_absolute() {
             package_path
@@ -680,6 +702,7 @@ impl PythonDistribution {
         let resources = raw_setup_py_install(
             &logger,
             dist.deref().as_ref(),
+            &target_triple,
             &package_path,
             verbose,
             &extra_envs,

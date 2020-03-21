@@ -172,6 +172,7 @@ pub fn bootstrap_packaging_tools(
 pub fn find_resources(
     logger: &slog::Logger,
     dist: &dyn PythonDistribution,
+    target_triple: &str,
     path: &Path,
     state_dir: Option<PathBuf>,
 ) -> Result<Vec<PythonResource>> {
@@ -210,13 +211,14 @@ pub fn find_resources(
         }
     }
 
-    dist.filter_compatible_python_resources(logger, &res)
+    dist.filter_compatible_python_resources(logger, &res, target_triple)
 }
 
 /// Run `pip install` and return found resources.
 pub fn pip_install<S: BuildHasher>(
     logger: &slog::Logger,
     dist: &dyn PythonDistribution,
+    target_triple: &str,
     verbose: bool,
     install_args: &[String],
     extra_envs: &HashMap<String, String, S>,
@@ -281,24 +283,32 @@ pub fn pip_install<S: BuildHasher>(
         None => None,
     };
 
-    find_resources(logger, dist, &target_dir, state_dir)
+    find_resources(logger, dist, target_triple, &target_dir, state_dir)
 }
 
 /// Discover Python resources from a populated virtualenv directory.
 pub fn read_virtualenv(
     logger: &slog::Logger,
     dist: &dyn PythonDistribution,
+    target_triple: &str,
     path: &Path,
 ) -> Result<Vec<PythonResource>> {
     let python_paths = resolve_python_paths(path, &dist.python_major_minor_version());
 
-    find_resources(logger, dist, &python_paths.site_packages, None)
+    find_resources(
+        logger,
+        dist,
+        target_triple,
+        &python_paths.site_packages,
+        None,
+    )
 }
 
 /// Run `setup.py install` against a path and return found resources.
 pub fn setup_py_install<S: BuildHasher>(
     logger: &slog::Logger,
     dist: &dyn PythonDistribution,
+    target_triple: &str,
     package_path: &Path,
     verbose: bool,
     extra_envs: &HashMap<String, String, S>,
@@ -380,7 +390,13 @@ pub fn setup_py_install<S: BuildHasher>(
         "scanning {} for resources",
         python_paths.site_packages.display()
     );
-    find_resources(logger, dist, &python_paths.site_packages, state_dir)
+    find_resources(
+        logger,
+        dist,
+        target_triple,
+        &python_paths.site_packages,
+        state_dir,
+    )
 }
 
 #[cfg(test)]
@@ -397,6 +413,7 @@ mod tests {
         let resources: Vec<PythonResource> = pip_install(
             &logger,
             distribution.deref().as_ref(),
+            &env!("HOST"),
             false,
             &["black==19.10b0".to_string()],
             &HashMap::new(),
@@ -418,6 +435,7 @@ mod tests {
         let resources: Vec<PythonResource> = pip_install(
             &logger,
             distribution.deref().as_ref(),
+            &env!("HOST"),
             false,
             &["cffi==1.14.0".to_string()],
             &HashMap::new(),

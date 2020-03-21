@@ -928,6 +928,26 @@ impl StandaloneDistribution {
 
         Ok((python_paths, extra_envs))
     }
+
+    /// Whether the distribution is capable of loading filed-based Python extension modules.
+    pub fn is_extension_module_file_loadable(&self, target_triple: &str) -> bool {
+        // We're capable of loading a file-based Python extension module (which is a
+        // shared library) if the following conditions hold:
+        //
+        // 1. The binary is dynamic and not completely statically linked.
+        //    (This is basically always true except on musl.)
+        // 2. Python symbols are exported from the binary.
+        if self.os == "windows" {
+            // On Windows, we can only load file-based extension modules
+            // if Python is dynamically linked.
+            self.link_mode == StandaloneDistributionLinkMode::Dynamic
+        } else {
+            // For POSIX, we assume symbols are exported from built binaries.
+            // So the check boils down to whether we are producing a statically
+            // linked binary.
+            !target_triple.contains("-musl")
+        }
+    }
 }
 
 impl PythonDistribution for StandaloneDistribution {
@@ -1191,24 +1211,20 @@ impl PythonDistribution for StandaloneDistribution {
         &self,
         logger: &slog::Logger,
         resources: &[PythonResource],
+        target_triple: &str,
     ) -> Result<Vec<PythonResource>> {
         Ok(resources
             .iter()
             .filter(|resource| match resource {
-                // Standalone extension modules are only compatible with distributions
-                // that are dynamically linked.
-                // TODO we should be able to support dynamically linked extension
-                // modules outside of Windows.
+                // Extension modules defined as shared libraries are only compatible
+                // with some configurations.
                 PythonResource::ExtensionModuleDynamicLibrary { .. } => {
-                    if self.link_mode == StandaloneDistributionLinkMode::Static {
-                        warn!(
-                            logger,
-                            "ignoring extension module {} because not compatible with statically linked distribution",
-                            resource.full_name()
-                        );
-                        false
-                    } else {
+                    if self.is_extension_module_file_loadable(target_triple) {
                         true
+                    } else {
+                        warn!(logger, "ignoring extension module {} because it isn't loadable for the target configuration",
+                            resource.full_name());
+                        false
                     }
                 }
 
