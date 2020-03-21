@@ -23,6 +23,12 @@ lazy_static! {
             .register_template_string("new-build.rs", include_str!("templates/new-build.rs"))
             .unwrap();
         handlebars
+            .register_template_string(
+                "new-cargo-config",
+                include_str!("templates/new-cargo-config"),
+            )
+            .unwrap();
+        handlebars
             .register_template_string("new-main.rs", include_str!("templates/new-main.rs"))
             .unwrap();
         handlebars
@@ -112,6 +118,24 @@ pub fn find_pyoxidizer_files(root: &Path) -> Vec<PathBuf> {
     }
 
     res
+}
+
+/// Write a new .cargo/config file for a project path.
+pub fn write_new_cargo_config(project_path: &Path) -> Result<()> {
+    let cargo_path = project_path.join(".cargo");
+
+    if !cargo_path.is_dir() {
+        std::fs::create_dir(&cargo_path)?;
+    }
+
+    let data: BTreeMap<String, String> = BTreeMap::new();
+    let t = HANDLEBARS.render("new-cargo-config", &data)?;
+
+    let config_path = cargo_path.join("config");
+    println!("writing {}", config_path.display());
+    std::fs::write(&config_path, t)?;
+
+    Ok(())
 }
 
 pub fn write_new_build_rs(path: &Path) -> Result<()> {
@@ -292,6 +316,7 @@ pub fn initialize_project(
     let name = path.iter().last().unwrap().to_str().unwrap();
     add_pyoxidizer(&path, true)?;
     update_new_cargo_toml(&path.join("Cargo.toml"), pyembed_location)?;
+    write_new_cargo_config(&path)?;
     write_new_build_rs(&path.join("build.rs"))?;
     write_new_main_rs(&path.join("src").join("main.rs"))?;
     write_new_pyoxidizer_config_file(&path, &name, code, pip_install)?;

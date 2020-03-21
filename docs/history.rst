@@ -28,6 +28,11 @@ Not yet released.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* The default Rust project for built executables now builds executables such
+  that dynamic symbols are exported from the executable. This change is
+  necessary in order to support executables loading Python extension modules,
+  which are shared libraries which need access to Python symbols defined
+  in executables.
 * The ``PythonExecutable.add_module_source()`` Starlark method has been
   renamed to ``PythonExecutable.add_in_memory_module_source()``.
 * The ``PythonExecutable.add_module_bytecode()`` Starlark method has been
