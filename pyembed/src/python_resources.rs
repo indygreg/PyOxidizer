@@ -32,7 +32,7 @@ pub(crate) enum OptimizeLevel {
 /// Determines whether an entry represents an importable Python module.
 ///
 /// Should only be called on module flavors.
-fn is_importable<X>(entry: &Resource<X>, optimize_level: OptimizeLevel) -> bool
+fn is_module_importable<X>(entry: &Resource<X>, optimize_level: OptimizeLevel) -> bool
 where
     [X]: ToOwned<Owned = Vec<X>>,
 {
@@ -341,7 +341,7 @@ impl<'a> PythonResourcesState<'a, u8> {
 
         match resource.flavor {
             ResourceFlavor::Module => {
-                if is_importable(resource, optimize_level) {
+                if is_module_importable(resource, optimize_level) {
                     Some(ImportablePythonModule {
                         resource,
                         origin: &self.origin,
