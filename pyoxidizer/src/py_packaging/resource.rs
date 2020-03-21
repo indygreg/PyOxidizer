@@ -518,18 +518,24 @@ impl TryFrom<&PythonFileResource> for PythonResource {
                 path,
                 extension_file_suffix,
                 ..
-            } => Ok(PythonResource::ExtensionModuleDynamicLibrary(
-                ExtensionModuleData {
-                    name: full_name.clone(),
-                    init_fn: None,
-                    extension_file_suffix: extension_file_suffix.clone(),
-                    extension_data: Some(std::fs::read(path)?),
-                    object_file_data: vec![],
-                    is_package: is_package_from_path(path),
-                    libraries: vec![],
-                    library_dirs: vec![],
-                },
-            )),
+            } => {
+                let module_components = full_name.split('.').collect::<Vec<&str>>();
+                let final_name = module_components[module_components.len() - 1];
+                let init_fn = Some(format!("PyInit_{}", final_name));
+
+                Ok(PythonResource::ExtensionModuleDynamicLibrary(
+                    ExtensionModuleData {
+                        name: full_name.clone(),
+                        init_fn,
+                        extension_file_suffix: extension_file_suffix.clone(),
+                        extension_data: Some(std::fs::read(path)?),
+                        object_file_data: vec![],
+                        is_package: is_package_from_path(path),
+                        libraries: vec![],
+                        library_dirs: vec![],
+                    },
+                ))
+            }
 
             PythonFileResource::EggFile { .. } => {
                 Err(anyhow!("converting egg files not yet supported"))
