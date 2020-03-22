@@ -498,7 +498,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         // Adding a resource automatically makes the module a package.
         entry.is_package = true;
 
-        if entry.relative_path_package_resources.is_some() {
+        if entry.relative_path_package_resources.is_none() {
             entry.relative_path_package_resources = Some(BTreeMap::new());
         }
 

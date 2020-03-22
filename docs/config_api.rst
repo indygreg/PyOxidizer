@@ -1147,6 +1147,16 @@ The following arguments are accepted:
 ``optimize_level`` (int)
    Bytecode optimization level when compiling bytecode.
 
+.. _config_python_executable_add_filesystem_relative_python_resource:
+
+``PythonExecutable.add_filesystem_relative_python_resource(prefix, ...)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method registers a Python resource of various types for filesystem loading
+in a path relative to the produced executable. The arguments for this method are
+the same as :ref:`config_python_executable_add_in_memory_python_resource` except
+the first argument is the ``str`` path ``prefix`` to install files into.
+
 .. _config_python_executable_add_in_memory_python_resources:
 
 ``PythonExecutable.add_in_memory_python_resources(...)``
