@@ -918,7 +918,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         Ok(EmbeddedPythonResources {
             resources: modules,
             extra_files,
-            extension_module_states: self.extension_module_states.clone(),
+            extension_modules: self.extension_module_states.clone(),
         })
     }
 
@@ -1030,7 +1030,7 @@ pub struct EmbeddedPythonResources<'a> {
 
     extra_files: FileManifest,
 
-    extension_module_states: BTreeMap<String, ExtensionModuleBuildState>,
+    extension_modules: BTreeMap<String, ExtensionModuleBuildState>,
 }
 
 impl<'a> EmbeddedPythonResources<'a> {
@@ -1058,7 +1058,7 @@ impl<'a> EmbeddedPythonResources<'a> {
     ///
     /// The returned list will likely make its way to PyImport_Inittab.
     pub fn builtin_extensions(&self) -> Vec<(String, String)> {
-        self.extension_module_states
+        self.extension_modules
             .iter()
             .filter_map(|(name, state)| {
                 if let Some(init_fn) = &state.init_fn {
@@ -1093,10 +1093,10 @@ impl<'a> EmbeddedPythonResources<'a> {
         warn!(
             logger,
             "resolving inputs for {} extension modules...",
-            self.extension_module_states.len()
+            self.extension_modules.len()
         );
 
-        for (name, state) in &self.extension_module_states {
+        for (name, state) in &self.extension_modules {
             if !state.link_object_files.is_empty() {
                 info!(
                     logger,
