@@ -655,13 +655,18 @@ impl EmbeddedPythonResourcesPrePackaged {
         // TODO add shared library dependency names.
     }
 
-    /// Add an extension module to be loaded from the filesystem.
+    /// Add an extension module to be loaded from the filesystem as a dynamic library.
     pub fn add_relative_path_extension_module(
         &mut self,
         em: &ExtensionModuleData,
         prefix: &str,
     ) -> Result<()> {
         self.check_policy(ResourceLocation::RelativePath)?;
+
+        if em.extension_data.is_none() {
+            return Err(anyhow!("extension module {} lacks shared library data and cannot be loaded from the filesystem", em.name));
+        }
+
         let entry = self.modules.entry(em.name.clone()).or_insert_with(|| {
             EmbeddedResourcePythonModulePrePackaged {
                 name: em.name.clone(),
