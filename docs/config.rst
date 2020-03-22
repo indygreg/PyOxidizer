@@ -43,7 +43,7 @@ available to the Starlark environment.
 Since Starlark is effectively a subset of Python, executing a ``PyOxidizer``
 configuration file is effectively running a sandboxed Python script. It is
 conceptually similar to running ``python setup.py`` to build a Python
-package. As functions withink the Starlark environment are called,
+package. As functions within the Starlark environment are called,
 ``PyOxidizer`` will perform actions as described by those functions.
 
 Targets
@@ -51,7 +51,7 @@ Targets
 
 ``PyOxidizer`` configuration files are composed of functions registered
 as named *targets*. You define a function that does something then
-register it was a target by calling the
+register it as a target by calling the
 :ref:`config_register_target` global function provided by our Starlark
 dialect. e.g.:
 
@@ -84,7 +84,8 @@ argument to the target function depending on it. See
 
 The value returned by a target function is special. If that value is one
 of the special types defined by our Starlark dialect (e.g.
-:ref:`config_python_distribution` or :ref:`config_python_executable`),
+:ref:`PythonDistribution <config_python_distribution>` or
+:ref:`PythonExecutable <config_python_executable>`),
 ``PyOxidizer`` will attempt to invoke special functionality depending
 on the run mode. For example, when running ``pyoxidizer build`` to
 *build* a target, ``PyOxidizer`` will invoke any *build* functionality
@@ -143,8 +144,8 @@ See :ref:`packaging` for more examples.
 Copying Files Next To Your Application
 --------------------------------------
 
-The `:ref:`config_file_manifest` type represents a collection of files
-and their content. When ``FileManifest`` instances are returned from a
+The :ref:`FileManifest <config_file_manifest>` type represents a collection of
+files and their content. When ``FileManifest`` instances are returned from a
 target function, their build action results in their contents being
 manifested in a directory having the name of the build target.
 
