@@ -1185,6 +1185,18 @@ in a path relative to the produced executable. The arguments for this method are
 the same as :ref:`config_python_executable_add_in_memory_python_resource` except
 the first argument is the ``str`` path ``prefix`` to install files into.
 
+.. _config_python_executable_add_python_resource:
+
+``PythonExecutable.add_python_resource(...)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method registers a Python resource of various types with the instance.
+The location the resource will be loaded from will be determined by the
+:ref:`config_python_resources_policy` in effect for the ``PythonExecutable``.
+
+The arguments are the same as for
+:ref:`config_python_executable_add_in_memory_python_resource`.
+
 .. _config_python_executable_add_in_memory_python_resources:
 
 ``PythonExecutable.add_in_memory_python_resources(...)``
@@ -1205,6 +1217,16 @@ This method is identical to
 :ref:`config_python_executable_add_filesystem_relative_python_resource`
 except the first argument is a path prefix to install files to and the
 second argument is an iterable of resources. All other arguments are identical.
+
+.. _config_python_executable_add_python_resources:
+
+``PythonExecutable.add_python_resources(...)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method registers an iterable of Python resources of various types.
+This method is identical to
+:ref:`config_python_executable_add_python_resource` except the argument is
+an iterable of resources. All other arguments are identical.
 
 .. _config_python_executable_filter_from_files:
 
