@@ -681,6 +681,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         warn!(logger, "filtering module entries");
         filter_btreemap(logger, &mut self.modules, &resource_names);
         warn!(logger, "filtering embedded extension modules");
+        filter_btreemap(logger, &mut self.extension_module_states, &resource_names);
         filter_btreemap(
             logger,
             &mut self.distribution_extension_modules,
