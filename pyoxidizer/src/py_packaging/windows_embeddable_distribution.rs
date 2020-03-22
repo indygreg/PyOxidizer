@@ -811,7 +811,7 @@ mod tests {
         let logger = get_logger()?;
         let dist = get_windows_embeddable_distribution()?;
 
-        let pip_path = dist.ensure_pip(&logger)?;
+        dist.ensure_pip(&logger)?;
 
         let resources = pip_install(
             &logger,

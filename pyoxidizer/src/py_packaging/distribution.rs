@@ -644,7 +644,6 @@ mod tests {
     #[test]
     #[cfg(windows)]
     fn test_resolve_suffixes_windows_dynamic() -> Result<()> {
-        let logger = get_logger()?;
         let distribution = get_default_dynamic_distribution()?;
 
         let suffixes = PythonModuleSuffixes::resolve_from_python_exe(&distribution.python_exe)?;
