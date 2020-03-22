@@ -1069,12 +1069,7 @@ impl PythonDistribution for StandaloneDistribution {
             for ext in
                 self.filter_extension_modules(&logger, &ExtensionModuleFilter::Minimal, None)?
             {
-                if !resources
-                    .get_distribution_extension_modules()
-                    .contains_key(&ext.module)
-                {
-                    resources.add_distribution_extension_module(&ext)?;
-                }
+                resources.add_distribution_extension_module(&ext)?;
             }
         }
 

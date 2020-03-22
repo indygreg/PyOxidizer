@@ -310,13 +310,6 @@ impl EmbeddedPythonResourcesPrePackaged {
         }))
     }
 
-    /// Obtain `ExtensionModule` in this instance.
-    pub fn get_distribution_extension_modules(
-        &self,
-    ) -> BTreeMap<String, DistributionExtensionModule> {
-        self.distribution_extension_modules.clone()
-    }
-
     /// Validate that a resource add in the specified location is allowed.
     fn check_policy(&self, location: ResourceLocation) -> Result<()> {
         match self.policy {
