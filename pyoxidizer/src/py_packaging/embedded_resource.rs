@@ -213,9 +213,7 @@ pub struct EmbeddedPythonResourcesPrePackaged {
     policy: PythonResourcesPolicy,
     modules: BTreeMap<String, EmbeddedResourcePythonModulePrePackaged>,
 
-    // TODO combine into single data structure.
     extension_module_states: BTreeMap<String, ExtensionModuleBuildState>,
-    extension_module_datas: BTreeMap<String, ExtensionModuleData>,
 
     extra_files: FileManifest,
 }
@@ -226,7 +224,6 @@ impl EmbeddedPythonResourcesPrePackaged {
             policy: policy.clone(),
             modules: BTreeMap::new(),
             extension_module_states: BTreeMap::new(),
-            extension_module_datas: BTreeMap::new(),
             extra_files: FileManifest::default(),
         }
     }
@@ -591,8 +588,14 @@ impl EmbeddedPythonResourcesPrePackaged {
             },
         );
 
-        self.extension_module_datas
-            .insert(module.name.clone(), module.clone());
+        let entry = self.modules.entry(module.name.clone()).or_insert_with(|| {
+            EmbeddedResourcePythonModulePrePackaged {
+                name: module.name.clone(),
+                ..EmbeddedResourcePythonModulePrePackaged::default()
+            }
+        });
+
+        entry.is_package = module.is_package;
 
         // Add empty bytecode for missing parent packages.
         // TODO should we populate opt1, opt2?
@@ -858,19 +861,6 @@ impl EmbeddedPythonResourcesPrePackaged {
                 }
 
                 modules.insert(name.clone(), entry);
-            }
-        }
-
-        for (name, em) in &self.extension_module_datas {
-            let entry = modules
-                .entry(name.clone())
-                .or_insert_with(|| EmbeddedResource {
-                    name: Cow::Owned(name.clone()),
-                    ..EmbeddedResource::default()
-                });
-
-            if em.is_package {
-                entry.is_package = true;
             }
         }
 
@@ -1408,7 +1398,7 @@ mod tests {
             })
         );
 
-        assert_eq!(r.modules.len(), 1);
+        assert_eq!(r.modules.len(), 2);
         assert_eq!(
             r.modules.get("foo"),
             Some(&EmbeddedResourcePythonModulePrePackaged {
