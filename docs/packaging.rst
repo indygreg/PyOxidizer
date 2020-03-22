@@ -21,3 +21,7 @@ instructions.
    packaging_trimming_resources
    packaging_pitfalls
    packaging_masquerading
+   packaging_binary_compatibility
+   packaging_static_linking
+   packaging_licensing
+   packaging_terminfo

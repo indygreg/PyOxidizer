@@ -158,61 +158,6 @@ by enabling Python's standard filesystem-based importer by
 enabling ``filesystem_importer=True`` (see
 :ref:`config_python_interpreter_config`).
 
-What are the Implications of Static Linking?
-============================================
-
-Most Python distributions rely heavily on dynamic linking. In addition to
-``python`` frequently loading a dynamic ``libpython``, many C extensions
-are compiled as standalone shared libraries. This includes the modules
-``_ctypes``, ``_json``, ``_sqlite3``, ``_ssl``, and ``_uuid``, which
-provide the native code interfaces for the respective non-``_`` prefixed
-modules which you may be familiar with.
-
-These C extensions frequently link to other libraries, such as ``libffi``,
-``libsqlite3``, ``libssl``, and ``libcrypto``. And more often than not,
-that linking is dynamic. And the libraries being linked to are provided
-by the system/environment Python runs in. As a concrete example, on
-Linux, the ``_ssl`` module can be provided by
-``_ssl.cpython-37m-x86_64-linux-gnu.so``, which can have a shared library
-dependency against ``libssl.so.1.1`` and ``libcrypto.so.1.1``, which
-can be located in ``/usr/lib/x86_64-linux-gnu`` or a similar location
-under ``/usr``.
-
-When Python extensions are statically linked into a binary, the Python
-extension code is part of the binary instead of in a standalone file.
-
-If the extension code is linked against a static library, then the code
-for that dependency library is part of the extension/binary instead of
-dynamically loaded from a standalone file.
-
-When ``PyOxidizer`` produces a fully statically linked binary, the code
-for these 3rd party libraries is part of the produced binary and not
-loaded from external files at load/import time.
-
-There are a few important implications to this.
-
-One is related to security and bug fixes. When 3rd party libraries are
-provided by an external source (typically the operating system) and are
-dynamically loaded, once the external library is updated, your binary
-can use the latest version of the code. When that external library is
-statically linked, you need to rebuild your binary to pick up the latest
-version of that 3rd party library. So if e.g. there is an important
-security update to OpenSSL, you would need to ship a new version of your
-application with the new OpenSSL in order for users of your application
-to be secure. This shifts the security onus from e.g. your operating
-system vendor to you. This is less than ideal because security updates
-are one of those problems that tend to benefit from greater centralization,
-not less.
-
-It's worth noting that PyOxidizer's library security story is the
-same as it is for e.g. Docker images. Docker images have the same
-security properties. If you are OK distributing Docker images, you
-should be OK with distributing executables built with PyOxidizer.
-
-Another implication of static linking is licensing considerations. Static
-linking can trigger stronger licensing protections and requirements.
-Read more at :ref:`licensing_considerations`.
-
 ``error while loading shared libraries: libcrypt.so.1: cannot open shared object file: No such file or directory`` When Building
 ================================================================================================================================
 
