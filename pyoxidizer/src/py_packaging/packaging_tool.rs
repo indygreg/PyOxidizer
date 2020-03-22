@@ -165,7 +165,7 @@ pub fn bootstrap_packaging_tools(
         std::fs::copy(entry.path(), &dest_path).context("copying lib file")?;
     }
 
-    return Ok(());
+    Ok(())
 }
 
 /// Find resources installed as part of a packaging operation.
