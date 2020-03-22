@@ -500,8 +500,13 @@ impl EmbeddedPythonResourcesPrePackaged {
         )
     }
 
-    /// Add an extension module.
-    pub fn add_distribution_extension_module(
+    /// Add an extension module from a Python distribution to be linked into the binary.
+    ///
+    /// The extension module will have its object files linked into the produced
+    /// `libpython` and the extension module will be registered in the list of
+    /// the set of extension modules available for import with Python's *builtin*
+    /// importer.
+    pub fn add_builtin_distribution_extension_module(
         &mut self,
         module: &DistributionExtensionModule,
     ) -> Result<()> {
@@ -1340,7 +1345,7 @@ mod tests {
             license_public_domain: None,
         };
 
-        r.add_distribution_extension_module(&em)?;
+        r.add_builtin_distribution_extension_module(&em)?;
         assert_eq!(r.extension_module_states.len(), 1);
         assert_eq!(
             r.extension_module_states.get("foo.bar"),

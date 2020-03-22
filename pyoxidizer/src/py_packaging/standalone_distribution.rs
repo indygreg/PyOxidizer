@@ -842,7 +842,7 @@ impl StandaloneDistribution {
                 extension_module_filter,
                 preferred_extension_module_variants,
             )? {
-                embedded.add_distribution_extension_module(&ext)?;
+                embedded.add_builtin_distribution_extension_module(&ext)?;
             }
         }
 
@@ -1069,7 +1069,7 @@ impl PythonDistribution for StandaloneDistribution {
             for ext in
                 self.filter_extension_modules(&logger, &ExtensionModuleFilter::Minimal, None)?
             {
-                resources.add_distribution_extension_module(&ext)?;
+                resources.add_builtin_distribution_extension_module(&ext)?;
             }
         }
 
@@ -1492,12 +1492,12 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             .add_relative_path_package_resource(prefix, resource)
     }
 
-    fn add_distribution_extension_module(
+    fn add_builtin_distribution_extension_module(
         &mut self,
         extension_module: &DistributionExtensionModule,
     ) -> Result<()> {
         self.resources
-            .add_distribution_extension_module(extension_module)
+            .add_builtin_distribution_extension_module(extension_module)
     }
 
     fn add_in_memory_dynamic_extension_module(
@@ -1712,7 +1712,7 @@ pub mod tests {
                 &ExtensionModuleFilter::Minimal,
                 None,
             )? {
-                resources.add_distribution_extension_module(&ext)?;
+                resources.add_builtin_distribution_extension_module(&ext)?;
             }
         }
 

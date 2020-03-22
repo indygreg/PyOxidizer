@@ -448,7 +448,8 @@ impl PythonExecutable {
 
         match m {
             PythonExtensionModuleFlavor::Distribution(m) => {
-                self.exe.add_distribution_extension_module(&m)
+                // TODO should we distinguish between builtin extension modules and in-memory import?
+                self.exe.add_builtin_distribution_extension_module(&m)
             }
             PythonExtensionModuleFlavor::StaticallyLinked(m) => {
                 self.exe.add_extension_module_data(&m)
@@ -487,7 +488,8 @@ impl PythonExecutable {
 
         match m {
             PythonExtensionModuleFlavor::Distribution(m) => {
-                self.exe.add_distribution_extension_module(&m)
+                // TODO adding a builtin extension module for filestem relative is wrong.
+                self.exe.add_builtin_distribution_extension_module(&m)
             }
             PythonExtensionModuleFlavor::StaticallyLinked(m) => {
                 self.exe.add_extension_module_data(&m)
@@ -524,7 +526,8 @@ impl PythonExecutable {
 
         match m {
             PythonExtensionModuleFlavor::Distribution(m) => {
-                self.exe.add_distribution_extension_module(&m)
+                // TODO we should route to proper location depending on policy.
+                self.exe.add_builtin_distribution_extension_module(&m)
             }
             PythonExtensionModuleFlavor::StaticallyLinked(m) => {
                 self.exe.add_extension_module_data(&m)

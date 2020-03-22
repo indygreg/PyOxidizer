@@ -125,8 +125,11 @@ pub trait PythonBinaryBuilder {
         }
     }
 
-    /// Add an extension module to be embedded in the binary.
-    fn add_distribution_extension_module(
+    /// Add an extension module from a Python distribution to be linked into `libpython`.
+    ///
+    /// The extension module will be available for import using Python's special
+    /// _builtin_ importer.
+    fn add_builtin_distribution_extension_module(
         &mut self,
         extension_module: &DistributionExtensionModule,
     ) -> Result<()>;
