@@ -835,14 +835,31 @@ impl StandaloneDistribution {
     ) -> Result<EmbeddedPythonResourcesPrePackaged> {
         let mut embedded = EmbeddedPythonResourcesPrePackaged::new(resources_policy);
 
-        // We can only embed extension modules on statically linked distributions.
-        if self.link_mode == StandaloneDistributionLinkMode::Static {
-            for ext in self.filter_extension_modules(
-                logger,
-                extension_module_filter,
-                preferred_extension_module_variants,
-            )? {
-                embedded.add_builtin_distribution_extension_module(&ext)?;
+        match self.link_mode {
+            StandaloneDistributionLinkMode::Static => {
+                for ext in self.filter_extension_modules(
+                    logger,
+                    extension_module_filter,
+                    preferred_extension_module_variants,
+                )? {
+                    embedded.add_builtin_distribution_extension_module(&ext)?;
+                }
+            }
+            StandaloneDistributionLinkMode::Dynamic => {
+                for ext in self.filter_extension_modules(
+                    logger,
+                    extension_module_filter,
+                    preferred_extension_module_variants,
+                )? {
+                    let prefix = match resources_policy {
+                        PythonResourcesPolicy::InMemoryOnly => "",
+                        PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => prefix.as_ref(),
+                        PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(prefix) => {
+                            prefix.as_ref()
+                        }
+                    };
+                    embedded.add_relative_path_distribution_extension_module(prefix, &ext)?;
+                }
             }
         }
 
@@ -1662,22 +1679,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 };
 
                 extra_files.add_file(&manifest_path, &content)?;
-            }
-
-            for em in self.distribution.filter_extension_modules(
-                logger,
-                &self.extension_module_filter,
-                self.extension_module_variants.clone(),
-            )? {
-                if let Some(p) = &em.shared_library {
-                    extra_files.add_file(
-                        &Path::new(p.file_name().unwrap()),
-                        &FileContent {
-                            data: std::fs::read(p)?,
-                            executable: false,
-                        },
-                    )?;
-                }
             }
         }
 

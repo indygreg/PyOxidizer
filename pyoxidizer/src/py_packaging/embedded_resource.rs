@@ -572,6 +572,54 @@ impl EmbeddedPythonResourcesPrePackaged {
         )
     }
 
+    /// Add an extension module from a Python distribution to be loaded from the filesystem as a dynamic library.
+    pub fn add_relative_path_distribution_extension_module(
+        &mut self,
+        prefix: &str,
+        module: &DistributionExtensionModule,
+    ) -> Result<()> {
+        self.check_policy(ResourceLocation::RelativePath)?;
+
+        if module.shared_library.is_none() {
+            return Err(anyhow!(
+                "cannot add extension module {} as path relative because it lacks a shared library",
+                module.module
+            ));
+        }
+
+        let entry = self
+            .modules
+            .entry(module.module.clone())
+            .or_insert_with(|| EmbeddedResourcePythonModulePrePackaged {
+                name: module.module.clone(),
+                ..EmbeddedResourcePythonModulePrePackaged::default()
+            });
+
+        let extension_path = module.shared_library.as_ref().unwrap();
+        let install_path = PathBuf::from(prefix).join(extension_path.file_name().unwrap());
+        let extension_data = std::fs::read(&extension_path)?;
+
+        entry.is_package = false;
+        entry.relative_path_extension_module_shared_library = Some(install_path.clone());
+
+        self.extra_files.add_file(
+            &install_path,
+            &FileContent {
+                data: extension_data,
+                executable: false,
+            },
+        )?;
+
+        // TODO add library dependencies.
+
+        self.add_parent_packages(
+            &module.module,
+            ModuleLocation::RelativePath(prefix.to_string()),
+            false,
+            None,
+        )
+    }
+
     /// Add an extension module to be linked into the binary.
     ///
     /// The object files for the extension module will be linked into the produced
