@@ -116,7 +116,7 @@ pub fn bootstrap_packaging_tools(
         let stdout = cmd
             .stdout
             .as_mut()
-            .ok_or(anyhow!("could not read stdout"))?;
+            .ok_or_else(|| anyhow!("could not read stdout"))?;
         let reader = BufReader::new(stdout);
         for line in reader.lines() {
             warn!(logger, "{}", line?);
@@ -143,7 +143,7 @@ pub fn bootstrap_packaging_tools(
         let dest_path = bin_dir.join(rel);
         let parent_dir = dest_path
             .parent()
-            .ok_or(anyhow!("unable to determine parent directory"))?;
+            .ok_or_else(|| anyhow!("unable to determine parent directory"))?;
         std::fs::create_dir_all(parent_dir)?;
         std::fs::copy(entry.path(), &dest_path).context("copying bin file")?;
     }
@@ -160,7 +160,7 @@ pub fn bootstrap_packaging_tools(
         let dest_path = lib_dir.join(rel);
         let parent_dir = dest_path
             .parent()
-            .ok_or(anyhow!("unable to determine parent directory"))?;
+            .ok_or_else(|| anyhow!("unable to determine parent directory"))?;
         std::fs::create_dir_all(parent_dir)?;
         std::fs::copy(entry.path(), &dest_path).context("copying lib file")?;
     }
