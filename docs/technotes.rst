@@ -268,8 +268,9 @@ See https://bugs.python.org/issue38594.
 ``importlib`` Resources Directory Ambiguity
 -------------------------------------------
 
-See https://bugs.python.org/issue36128 and
-https://gitlab.com/python-devs/importlib_resources/issues/58.
+See https://bugs.python.org/issue36128,
+https://gitlab.com/python-devs/importlib_resources/issues/58,
+and https://gitlab.com/python-devs/importlib_resources/-/issues/90.
 
 Standardizing a Python Distribution Format
 ------------------------------------------
