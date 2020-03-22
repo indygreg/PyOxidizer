@@ -1295,8 +1295,7 @@ impl StandalonePythonExecutableBuilder {
                     extension_module_filter,
                     self.extension_module_variants.clone(),
                 )? {
-                    self.resources
-                        .add_builtin_distribution_extension_module(&ext)?;
+                    self.add_builtin_distribution_extension_module(&ext)?;
                 }
             }
             StandaloneDistributionLinkMode::Dynamic => {
@@ -1325,31 +1324,10 @@ impl StandalonePythonExecutableBuilder {
             }
 
             if include_sources {
-                match self.resources_policy.clone() {
-                    PythonResourcesPolicy::InMemoryOnly
-                    | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
-                        self.resources.add_in_memory_module_source(&source)?
-                    }
-                    PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => self
-                        .resources
-                        .add_relative_path_module_source(&source, &prefix)?,
-                }
+                self.add_module_source(&source)?;
             }
 
-            match self.resources_policy.clone() {
-                PythonResourcesPolicy::InMemoryOnly
-                | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
-                    self.resources.add_in_memory_module_bytecode(
-                        &source.as_bytecode_module(BytecodeOptimizationLevel::Zero),
-                    )?;
-                }
-                PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
-                    self.resources.add_relative_path_module_bytecode(
-                        &source.as_bytecode_module(BytecodeOptimizationLevel::Zero),
-                        &prefix,
-                    )?;
-                }
-            }
+            self.add_module_bytecode(&source.as_bytecode_module(BytecodeOptimizationLevel::Zero))?;
         }
 
         if include_resources {
@@ -1358,16 +1336,7 @@ impl StandalonePythonExecutableBuilder {
                     continue;
                 }
 
-                match &self.resources_policy {
-                    PythonResourcesPolicy::InMemoryOnly
-                    | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
-                        self.resources.add_in_memory_package_resource(&resource)?;
-                    }
-                    PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
-                        self.resources
-                            .add_relative_path_package_resource(prefix, &resource)?;
-                    }
-                }
+                self.add_package_resource(&resource)?;
             }
         }
 
