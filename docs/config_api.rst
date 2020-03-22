@@ -1091,6 +1091,34 @@ This method is a glorified proxy to
 depending on the :ref:`config_python_resources_policy` in effect. See these
 other methods for documentation of behavior.
 
+.. _config_python_executable_add_in_memory_extension_module:
+
+``PythonExecutable.add_in_memory_extension_module(module)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method registers a ``PythonExtensionModule`` instance with a
+``PythonExecutable`` instance. The extension module will be loaded from
+memory via one of the following mechanisms:
+
+* Linking the extension module's symbols directly into the produced binary.
+* Embedded the extension module's shared library into the produced binary
+  and loading it from memory.
+
+If multiple extension modules with the same name are added, the last added
+one is used.
+
+.. _config_python_executable_add_filesystem_relative_extension_module:
+
+``PythonExecutable.add_filesystem_relative_extension_module(prefix, module)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method registers a ``PythonExtensionModule`` instance with a
+``PythonExecutable`` instance. The extension module will be loaded from the
+filesystem from a path relative to the produced executable.
+
+If multiple extension modules with the same name are added, the last added
+one is used.
+
 .. _config_python_executable_add_extension_module:
 
 ``PythonExecutable.add_extension_module(module)``

@@ -432,13 +432,89 @@ impl PythonExecutable {
         Ok(Value::new(None))
     }
 
+    /// PythonExecutable.add_in_memory_extension_module(module)
+    pub fn starlark_add_in_memory_extension_module(
+        &mut self,
+        env: &Environment,
+        module: &Value,
+    ) -> ValueResult {
+        required_type_arg("module", "PythonExtensionModule", &module)?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not set");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        let m = module.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
+        info!(&logger, "adding in-memory extension module {}", m.name());
+
+        match m {
+            PythonExtensionModuleFlavor::Distribution(m) => {
+                self.exe.add_distribution_extension_module(&m)
+            }
+            PythonExtensionModuleFlavor::StaticallyLinked(m) => {
+                self.exe.add_extension_module_data(&m)
+            }
+            PythonExtensionModuleFlavor::DynamicLibrary(m) => {
+                self.exe.add_in_memory_dynamic_extension_module(&m)
+            }
+        }
+        .or_else(|e| {
+            Err(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "add_in_memory_extension_module".to_string(),
+            }
+            .into())
+        })?;
+
+        Ok(Value::new(None))
+    }
+
+    /// PythonExecutable.add_filesystem_relative_extension_module(module)
+    pub fn starlark_add_filesystem_relative_extension_module(
+        &mut self,
+        env: &Environment,
+        prefix: &Value,
+        module: &Value,
+    ) -> ValueResult {
+        let prefix = required_str_arg("prefix", &prefix)?;
+        required_type_arg("module", "PythonExtensionModule", &module)?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not set");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        let m = module.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
+        info!(&logger, "adding in-extension module {}", m.name());
+
+        match m {
+            PythonExtensionModuleFlavor::Distribution(m) => {
+                self.exe.add_distribution_extension_module(&m)
+            }
+            PythonExtensionModuleFlavor::StaticallyLinked(m) => {
+                self.exe.add_extension_module_data(&m)
+            }
+            PythonExtensionModuleFlavor::DynamicLibrary(m) => self
+                .exe
+                .add_relative_path_dynamic_extension_module(&prefix, &m),
+        }
+        .or_else(|e| {
+            Err(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "add_filesystem_relative_extension_module".to_string(),
+            }
+            .into())
+        })?;
+
+        Ok(Value::new(None))
+    }
+
     /// PythonExecutable.add_extension_module(module)
     pub fn starlark_add_extension_module(
         &mut self,
         env: &Environment,
         module: &Value,
     ) -> ValueResult {
-        required_type_arg("resource", "PythonExtensionModule", &module)?;
+        required_type_arg("module", "PythonExtensionModule", &module)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
@@ -734,6 +810,20 @@ starlark_module! { python_executable_env =>
     PythonExecutable.add_resource_data(env env, this, resource) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_resource_data(&env, &resource)
+        })
+    }
+
+    #[allow(non_snake_case, clippy::ptr_arg)]
+    PythonExecutable.add_in_memory_extension_module(env env, this, module) {
+        this.downcast_apply_mut(|exe: &mut PythonExecutable| {
+            exe.starlark_add_in_memory_extension_module(&env, &module)
+        })
+    }
+
+    #[allow(non_snake_case, clippy::ptr_arg)]
+    PythonExecutable.add_filesystem_relative_extension_module(env env, this, prefix, module) {
+        this.downcast_apply_mut(|exe: &mut PythonExecutable| {
+            exe.starlark_add_filesystem_relative_extension_module(&env, &prefix, &module)
         })
     }
 

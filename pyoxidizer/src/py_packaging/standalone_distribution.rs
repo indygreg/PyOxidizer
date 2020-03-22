@@ -1478,6 +1478,56 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             .add_distribution_extension_module(extension_module)
     }
 
+    fn add_in_memory_dynamic_extension_module(
+        &mut self,
+        extension_module: &ExtensionModuleData,
+    ) -> Result<()> {
+        if self.supports_in_memory_dynamically_linked_extension_loading()
+            && extension_module.extension_data.is_some()
+        {
+            self.resources
+                .add_in_memory_extension_module_shared_library(
+                    &extension_module.name,
+                    extension_module.is_package,
+                    extension_module.extension_data.as_ref().unwrap(),
+                )
+        } else if !extension_module.object_file_data.is_empty() {
+            self.resources.add_extension_module_data(extension_module)
+        } else if extension_module.extension_data.is_some() {
+            Err(anyhow!(
+                "loading extension modules from memory not supported by this build configuration"
+            ))
+        } else {
+            Err(anyhow!(
+                "cannot load extension module from memory due to missing object files"
+            ))
+        }
+    }
+
+    fn add_relative_path_dynamic_extension_module(
+        &mut self,
+        prefix: &str,
+        extension_module: &ExtensionModuleData,
+    ) -> Result<()> {
+        if extension_module.extension_data.is_none() {
+            return Err(anyhow!(
+                "extension module instance has no shared library data"
+            ));
+        }
+
+        if self
+            .distribution
+            .is_extension_module_file_loadable(&self.target_triple)
+        {
+            self.resources
+                .add_relative_path_extension_module(extension_module, prefix)
+        } else {
+            Err(anyhow!(
+                "loading extension modules from files not supported by this build configuration"
+            ))
+        }
+    }
+
     fn add_dynamic_extension_module(
         &mut self,
         extension_module: &ExtensionModuleData,

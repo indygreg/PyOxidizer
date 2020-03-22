@@ -72,6 +72,7 @@ New Features
   Starlark functions ``PythonExecutable.add_filesystem_relative_module_source()``,
   ``PythonExecutable.add_filesystem_relative_module_bytecode()``,
   ``PythonExecutable.add_filesystem_relative_resource_data()``,
+  ``PythonExecutable.add_filesystem_relative_extension_module()``,
   ``PythonExecutable.add_filesystem_relative_python_resource()``, and
   ``PythonExecutable.add_filesystem_relative_python_resources()``. Unlike
   adding Python resources to ``FileManifest`` instances, Python resources added
