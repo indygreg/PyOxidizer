@@ -1288,34 +1288,12 @@ impl StandalonePythonExecutableBuilder {
         include_resources: bool,
         include_test: bool,
     ) -> Result<()> {
-        match self.distribution.link_mode {
-            StandaloneDistributionLinkMode::Static => {
-                for ext in self.distribution.filter_extension_modules(
-                    logger,
-                    extension_module_filter,
-                    self.extension_module_variants.clone(),
-                )? {
-                    self.add_builtin_distribution_extension_module(&ext)?;
-                }
-            }
-            StandaloneDistributionLinkMode::Dynamic => {
-                for ext in self.distribution.filter_extension_modules(
-                    logger,
-                    extension_module_filter,
-                    self.extension_module_variants.clone(),
-                )? {
-                    // TODO use in-memory import if supported.
-                    let prefix = match self.resources_policy.clone() {
-                        PythonResourcesPolicy::InMemoryOnly => "".to_string(),
-                        PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => prefix,
-                        PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(prefix) => {
-                            prefix
-                        }
-                    };
-                    self.resources
-                        .add_relative_path_distribution_extension_module(&prefix, &ext)?;
-                }
-            }
+        for ext in self.distribution.filter_extension_modules(
+            logger,
+            extension_module_filter,
+            self.extension_module_variants.clone(),
+        )? {
+            self.add_distribution_extension_module(&ext)?;
         }
 
         for source in self.distribution.source_modules()? {
@@ -1517,6 +1495,61 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             Err(anyhow!(
                 "loading extension modules from files not supported by this build configuration"
             ))
+        }
+    }
+
+    fn add_distribution_extension_module(
+        &mut self,
+        extension_module: &DistributionExtensionModule,
+    ) -> Result<()> {
+        // Distribution extensions are special in that we allow them to be
+        // builtin extensions, even if it violates the resources policy that prohibits
+        // memory loading.
+
+        // Builtins always get added as such.
+        if extension_module.builtin_default {
+            return self.add_builtin_distribution_extension_module(extension_module);
+        }
+
+        match self.resources_policy.clone() {
+            PythonResourcesPolicy::InMemoryOnly => match self.distribution.link_mode {
+                StandaloneDistributionLinkMode::Static => {
+                    self.add_builtin_distribution_extension_module(extension_module)
+                }
+                StandaloneDistributionLinkMode::Dynamic => {
+                    self.add_in_memory_distribution_extension_module(extension_module)
+                }
+            },
+            PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
+                match self.distribution.link_mode {
+                    StandaloneDistributionLinkMode::Static => {
+                        self.add_builtin_distribution_extension_module(extension_module)
+                    }
+                    StandaloneDistributionLinkMode::Dynamic => self
+                        .add_relative_path_distribution_extension_module(&prefix, extension_module),
+                }
+            }
+            PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(prefix) => {
+                match self.distribution.link_mode {
+                    StandaloneDistributionLinkMode::Static => {
+                        self.add_builtin_distribution_extension_module(extension_module)
+                    }
+                    StandaloneDistributionLinkMode::Dynamic => {
+                        // Try in-memory and fall back to file-based if that fails.
+                        let mut res =
+                            self.add_in_memory_distribution_extension_module(extension_module);
+
+                        if res.is_err() {
+                            res = self.add_relative_path_distribution_extension_module(
+                                &prefix,
+                                extension_module,
+                            )
+                        }
+
+                        res
+                    }
+                }
+            }
         }
     }
 

@@ -147,6 +147,12 @@ pub trait PythonBinaryBuilder {
         extension_module: &DistributionExtensionModule,
     ) -> Result<()>;
 
+    /// Add an extension module from a Python distribution to be imported via whatever means the policy allows.
+    fn add_distribution_extension_module(
+        &mut self,
+        extension_module: &DistributionExtensionModule,
+    ) -> Result<()>;
+
     /// Add an extension module as defined by a dynamic library to be loaded from memory.
     fn add_in_memory_dynamic_extension_module(
         &mut self,
