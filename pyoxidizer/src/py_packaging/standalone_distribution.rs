@@ -30,6 +30,7 @@ use {
     crate::licensing::NON_GPL_LICENSES,
     anyhow::{anyhow, Context, Result},
     copy_dir::copy_dir,
+    lazy_static::lazy_static,
     serde::{Deserialize, Serialize},
     slog::{info, warn},
     std::collections::{BTreeMap, BTreeSet, HashMap},
@@ -55,6 +56,28 @@ const PIP_EXE_BASENAME: &str = "pip3.exe";
 
 #[cfg(unix)]
 const PIP_EXE_BASENAME: &str = "pip3";
+
+lazy_static! {
+    /// Distribution extensions with known problems on Linux.
+    ///
+    /// These will never be packaged.
+    pub static ref BROKEN_EXTENSIONS_LINUX: Vec<String> = vec![
+        // Linking issues.
+        "_crypt".to_string(),
+        // Linking issues.
+        "nis".to_string(),
+    ];
+
+    /// Distribution extensions with known problems on macOS.
+    ///
+    /// These will never be packaged.
+    pub static ref BROKEN_EXTENSIONS_MACOS: Vec<String> = vec![
+        // curses and readline have linking issues.
+        "curses".to_string(),
+        "_curses_panel".to_string(),
+        "readline".to_string(),
+    ];
+}
 
 #[derive(Debug, Deserialize)]
 struct LinkEntry {
@@ -1083,6 +1106,17 @@ impl PythonDistribution for StandaloneDistribution {
         let mut res = Vec::new();
 
         for (name, ext_variants) in &self.extension_modules {
+            // TODO use target triple
+            if (cfg!(target_os = "linux") && BROKEN_EXTENSIONS_LINUX.contains(name))
+                || (cfg!(target_os = "macos") && BROKEN_EXTENSIONS_MACOS.contains(name))
+            {
+                info!(
+                    logger,
+                    "ignoring extension module {} because it is broken on this platform", name
+                );
+                continue;
+            }
+
             match filter {
                 ExtensionModuleFilter::Minimal => {
                     let ext_variants = ext_variants

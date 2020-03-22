@@ -17,7 +17,6 @@ use {
     super::standalone_distribution::DistributionExtensionModule,
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Error, Result},
-    lazy_static::lazy_static,
     python_packed_resources::data::{Resource as EmbeddedResource, ResourceFlavor},
     python_packed_resources::writer::write_embedded_resources_v1,
     slog::{info, warn},
@@ -28,33 +27,6 @@ use {
     std::iter::FromIterator,
     std::path::{Path, PathBuf},
 };
-
-lazy_static! {
-    /// Python extension modules that should never be included.
-    ///
-    /// Ideally this data structure doesn't exist. But there are some problems
-    /// with various extensions on various targets.
-    pub static ref OS_IGNORE_EXTENSIONS: Vec<&'static str> = {
-        let mut v = Vec::new();
-
-        if cfg!(target_os = "linux") {
-            // Linking issues.
-            v.push("_crypt");
-
-            // Linking issues.
-            v.push("nis");
-        }
-
-        else if cfg!(target_os = "macos") {
-            // curses and readline have linking issues.
-            v.push("_curses");
-            v.push("_curses_panel");
-            v.push("readline");
-        }
-
-        v
-    };
-}
 
 /// Represents an embedded Python module resource entry before it is packaged.
 ///
@@ -524,6 +496,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         module: &DistributionExtensionModule,
     ) -> Result<()> {
         // No policy check because distribution extension modules are special.
+
         self.distribution_extension_modules
             .insert(module.module.clone(), module.clone());
 
@@ -814,26 +787,13 @@ impl EmbeddedPythonResourcesPrePackaged {
             }
         }
 
-        let ignored = OS_IGNORE_EXTENSIONS
-            .iter()
-            .map(|k| (*k).to_string())
-            .collect::<Vec<String>>();
-
         let mut extension_modules = BTreeMap::new();
         for (name, em) in &self.distribution_extension_modules {
-            if ignored.contains(name) {
-                continue;
-            }
-
             extension_modules.insert(name.clone(), em.clone());
         }
 
         let mut built_extension_modules = BTreeMap::new();
         for (name, em) in &self.extension_module_datas {
-            if ignored.contains(name) {
-                continue;
-            }
-
             let entry = modules
                 .entry(name.clone())
                 .or_insert_with(|| EmbeddedResource {
