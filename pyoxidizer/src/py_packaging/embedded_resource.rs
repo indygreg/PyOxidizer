@@ -187,6 +187,21 @@ pub struct ExtensionModuleBuildState {
 
     /// Object files to link into produced binary.
     pub link_object_files: Vec<DataLocation>,
+
+    /// Frameworks this extension module needs to link against.
+    pub link_frameworks: BTreeSet<String>,
+
+    /// System libraries this extension module needs to link against.
+    pub link_system_libraries: BTreeSet<String>,
+
+    /// Static libraries this extension module needs to link against.
+    pub link_static_libraries: BTreeSet<String>,
+
+    /// Dynamic libraries this extension module needs to link against.
+    pub link_dynamic_libraries: BTreeSet<String>,
+
+    /// Dynamic libraries this extension module needs to link against.
+    pub link_external_libraries: BTreeSet<String>,
 }
 
 /// Represents Python resources to embed in a binary.
@@ -509,21 +524,54 @@ impl EmbeddedPythonResourcesPrePackaged {
     ) -> Result<()> {
         // No policy check because distribution extension modules are special.
 
-        let link_object_files = if module.builtin_default {
-            vec![]
-        } else {
-            module
-                .object_paths
-                .iter()
-                .map(|p| DataLocation::Path(p.clone()))
-                .collect()
-        };
-
         self.extension_module_states.insert(
             module.module.clone(),
             ExtensionModuleBuildState {
                 init_fn: module.init_fn.clone(),
-                link_object_files,
+                link_object_files: if module.builtin_default {
+                    vec![]
+                } else {
+                    module
+                        .object_paths
+                        .iter()
+                        .map(|p| DataLocation::Path(p.clone()))
+                        .collect()
+                },
+                link_frameworks: BTreeSet::from_iter(module.links.iter().filter_map(|link| {
+                    if link.framework {
+                        Some(link.name.clone())
+                    } else {
+                        None
+                    }
+                })),
+                link_system_libraries: BTreeSet::from_iter(module.links.iter().filter_map(
+                    |link| {
+                        if link.system {
+                            Some(link.name.clone())
+                        } else {
+                            None
+                        }
+                    },
+                )),
+                link_static_libraries: BTreeSet::from_iter(module.links.iter().filter_map(
+                    |link| {
+                        if link.static_path.is_some() {
+                            Some(link.name.clone())
+                        } else {
+                            None
+                        }
+                    },
+                )),
+                link_dynamic_libraries: BTreeSet::from_iter(module.links.iter().filter_map(
+                    |link| {
+                        if link.dynamic_path.is_some() {
+                            Some(link.name.clone())
+                        } else {
+                            None
+                        }
+                    },
+                )),
+                link_external_libraries: BTreeSet::new(),
             },
         );
 
@@ -543,17 +591,20 @@ impl EmbeddedPythonResourcesPrePackaged {
     pub fn add_extension_module_data(&mut self, module: &ExtensionModuleData) -> Result<()> {
         self.check_policy(ResourceLocation::InMemory)?;
 
-        let link_object_files = module
-            .object_file_data
-            .iter()
-            .map(|d| DataLocation::Memory(d.clone()))
-            .collect();
-
         self.extension_module_states.insert(
             module.name.clone(),
             ExtensionModuleBuildState {
                 init_fn: module.init_fn.clone(),
-                link_object_files,
+                link_object_files: module
+                    .object_file_data
+                    .iter()
+                    .map(|d| DataLocation::Memory(d.clone()))
+                    .collect(),
+                link_frameworks: BTreeSet::new(),
+                link_system_libraries: BTreeSet::new(),
+                link_static_libraries: BTreeSet::new(),
+                link_dynamic_libraries: BTreeSet::new(),
+                link_external_libraries: BTreeSet::from_iter(module.libraries.iter().cloned()),
             },
         );
 
@@ -831,12 +882,6 @@ impl EmbeddedPythonResourcesPrePackaged {
             }
         }
 
-        let mut extension_modules = BTreeMap::new();
-        for (name, em) in &self.distribution_extension_modules {
-            extension_modules.insert(name.clone(), em.clone());
-        }
-
-        let mut built_extension_modules = BTreeMap::new();
         for (name, em) in &self.extension_module_datas {
             let entry = modules
                 .entry(name.clone())
@@ -848,8 +893,6 @@ impl EmbeddedPythonResourcesPrePackaged {
             if em.is_package {
                 entry.is_package = true;
             }
-
-            built_extension_modules.insert(name.clone(), em.clone());
         }
 
         let derived_package_names = packages_from_module_names(modules.keys().cloned());
@@ -876,8 +919,6 @@ impl EmbeddedPythonResourcesPrePackaged {
             resources: modules,
             extra_files,
             extension_module_states: self.extension_module_states.clone(),
-            distribution_extension_modules: extension_modules,
-            built_extension_modules,
         })
     }
 
@@ -989,10 +1030,7 @@ pub struct EmbeddedPythonResources<'a> {
 
     extra_files: FileManifest,
 
-    // TODO combine the extension module types.
     extension_module_states: BTreeMap<String, ExtensionModuleBuildState>,
-    distribution_extension_modules: BTreeMap<String, DistributionExtensionModule>,
-    built_extension_modules: BTreeMap<String, ExtensionModuleData>,
 }
 
 impl<'a> EmbeddedPythonResources<'a> {
@@ -1068,52 +1106,31 @@ impl<'a> EmbeddedPythonResources<'a> {
                 );
                 object_files.extend(state.link_object_files.iter().cloned());
             }
-        }
 
-        warn!(
-            logger,
-            "resolving inputs for {} extension modules...",
-            self.distribution_extension_modules.len()
-        );
-
-        for (name, em) in &self.distribution_extension_modules {
-            if em.builtin_default {
-                continue;
+            for framework in &state.link_frameworks {
+                warn!(logger, "framework {} required by {}", framework, name);
+                link_frameworks.insert(framework.clone());
             }
 
-            for entry in &em.links {
-                if entry.framework {
-                    warn!(logger, "framework {} required by {}", entry.name, name);
-                    link_frameworks.insert(entry.name.clone());
-                } else if entry.system {
-                    warn!(logger, "system library {} required by {}", entry.name, name);
-                    link_system_libraries.insert(entry.name.clone());
-                } else if let Some(_lib) = &entry.static_path {
-                    warn!(logger, "static library {} required by {}", entry.name, name);
-                    link_libraries.insert(entry.name.clone());
-                } else if entry.dynamic_path.is_some() {
-                    warn!(
-                        logger,
-                        "dynamic library {} required by {}", entry.name, name
-                    );
-                    link_libraries.insert(entry.name.clone());
-                }
+            for library in &state.link_system_libraries {
+                warn!(logger, "system library {} required by {}", library, name);
+                link_system_libraries.insert(library.clone());
             }
-        }
 
-        warn!(
-            logger,
-            "resolving inputs for {} built extension modules...",
-            self.built_extension_modules.len()
-        );
+            for library in &state.link_static_libraries {
+                warn!(logger, "static library {} required by {}", library, name);
+                link_libraries.insert(library.clone());
+            }
 
-        for (name, em) in &self.built_extension_modules {
-            for library in &em.libraries {
-                warn!(logger, "library {} required by {}", library, name);
+            for library in &state.link_dynamic_libraries {
+                warn!(logger, "dynamic library {} required by {}", library, name);
+                link_libraries.insert(library.clone());
+            }
+
+            for library in &state.link_external_libraries {
+                warn!(logger, "dynamic library {} required by {}", library, name);
                 link_libraries_external.insert(library.clone());
             }
-
-            // TODO do something with library_dirs.
         }
 
         Ok(LibpythonLinkingInfo {
