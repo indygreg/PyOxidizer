@@ -822,102 +822,6 @@ impl StandaloneDistribution {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
-    fn as_embedded_python_resources_pre_packaged(
-        &self,
-        logger: &slog::Logger,
-        resources_policy: &PythonResourcesPolicy,
-        extension_module_filter: &ExtensionModuleFilter,
-        preferred_extension_module_variants: Option<HashMap<String, String>>,
-        include_sources: bool,
-        include_resources: bool,
-        include_test: bool,
-    ) -> Result<EmbeddedPythonResourcesPrePackaged> {
-        let mut resources = EmbeddedPythonResourcesPrePackaged::new(resources_policy);
-
-        match self.link_mode {
-            StandaloneDistributionLinkMode::Static => {
-                for ext in self.filter_extension_modules(
-                    logger,
-                    extension_module_filter,
-                    preferred_extension_module_variants,
-                )? {
-                    resources.add_builtin_distribution_extension_module(&ext)?;
-                }
-            }
-            StandaloneDistributionLinkMode::Dynamic => {
-                for ext in self.filter_extension_modules(
-                    logger,
-                    extension_module_filter,
-                    preferred_extension_module_variants,
-                )? {
-                    // TODO use in-memory import if supported.
-                    let prefix = match resources_policy {
-                        PythonResourcesPolicy::InMemoryOnly => "",
-                        PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => prefix.as_ref(),
-                        PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(prefix) => {
-                            prefix.as_ref()
-                        }
-                    };
-                    resources.add_relative_path_distribution_extension_module(prefix, &ext)?;
-                }
-            }
-        }
-
-        for source in self.source_modules()? {
-            if !include_test && is_stdlib_test_package(&source.package()) {
-                continue;
-            }
-
-            if include_sources {
-                match resources_policy {
-                    PythonResourcesPolicy::InMemoryOnly
-                    | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
-                        resources.add_in_memory_module_source(&source)?
-                    }
-                    PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
-                        resources.add_relative_path_module_source(&source, prefix)?
-                    }
-                }
-            }
-
-            match resources_policy {
-                PythonResourcesPolicy::InMemoryOnly
-                | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
-                    resources.add_in_memory_module_bytecode(
-                        &source.as_bytecode_module(BytecodeOptimizationLevel::Zero),
-                    )?;
-                }
-                PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
-                    resources.add_relative_path_module_bytecode(
-                        &source.as_bytecode_module(BytecodeOptimizationLevel::Zero),
-                        prefix,
-                    )?;
-                }
-            }
-        }
-
-        if include_resources {
-            for resource in self.resource_datas()? {
-                if !include_test && is_stdlib_test_package(&resource.package) {
-                    continue;
-                }
-
-                match resources_policy {
-                    PythonResourcesPolicy::InMemoryOnly
-                    | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
-                        resources.add_in_memory_package_resource(&resource)?;
-                    }
-                    PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
-                        resources.add_relative_path_package_resource(prefix, &resource)?;
-                    }
-                }
-            }
-        }
-
-        Ok(resources)
-    }
-
     /// Duplicate the python distribution, with distutils hacked
     pub fn create_hacked_base(&self, logger: &slog::Logger) -> PythonPaths {
         let venv_base = self.venv_base.clone();
@@ -1071,11 +975,26 @@ impl PythonDistribution for StandaloneDistribution {
         include_resources: bool,
         include_test: bool,
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
-        let mut resources = self.as_embedded_python_resources_pre_packaged(
+        let python_exe = self.python_exe.clone();
+        let importlib_bytecode = self.resolve_importlib_bytecode()?;
+
+        let mut builder = Box::new(StandalonePythonExecutableBuilder {
+            host_triple: host_triple.to_string(),
+            target_triple: target_triple.to_string(),
+            exe_name: name.to_string(),
+            distribution: self.clone(),
+            resources_policy: resources_policy.clone(),
+            resources: EmbeddedPythonResourcesPrePackaged::new(resources_policy),
+            config: config.clone(),
+            python_exe,
+            importlib_bytecode,
+            extension_module_filter: extension_module_filter.clone(),
+            extension_module_variants: preferred_extension_module_variants,
+        });
+
+        builder.add_distribution_resources(
             logger,
-            resources_policy,
             extension_module_filter,
-            preferred_extension_module_variants.clone(),
             include_sources,
             include_resources,
             include_test,
@@ -1087,26 +1006,13 @@ impl PythonDistribution for StandaloneDistribution {
             for ext in
                 self.filter_extension_modules(&logger, &ExtensionModuleFilter::Minimal, None)?
             {
-                resources.add_builtin_distribution_extension_module(&ext)?;
+                builder
+                    .resources
+                    .add_builtin_distribution_extension_module(&ext)?;
             }
         }
 
-        let python_exe = self.python_exe.clone();
-        let importlib_bytecode = self.resolve_importlib_bytecode()?;
-
-        Ok(Box::new(StandalonePythonExecutableBuilder {
-            host_triple: host_triple.to_string(),
-            target_triple: target_triple.to_string(),
-            exe_name: name.to_string(),
-            distribution: self.clone(),
-            resources_policy: resources_policy.clone(),
-            resources,
-            config: config.clone(),
-            python_exe,
-            importlib_bytecode,
-            extension_module_filter: extension_module_filter.clone(),
-            extension_module_variants: preferred_extension_module_variants,
-        }))
+        Ok(builder)
     }
 
     #[allow(clippy::if_same_then_else)]
@@ -1371,6 +1277,101 @@ impl StandalonePythonExecutableBuilder {
     fn supports_in_memory_dynamically_linked_extension_loading(&self) -> bool {
         self.distribution.link_mode == StandaloneDistributionLinkMode::Dynamic
             && self.target_triple.contains("pc-windows")
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn add_distribution_resources(
+        &mut self,
+        logger: &slog::Logger,
+        extension_module_filter: &ExtensionModuleFilter,
+        include_sources: bool,
+        include_resources: bool,
+        include_test: bool,
+    ) -> Result<()> {
+        match self.distribution.link_mode {
+            StandaloneDistributionLinkMode::Static => {
+                for ext in self.distribution.filter_extension_modules(
+                    logger,
+                    extension_module_filter,
+                    self.extension_module_variants.clone(),
+                )? {
+                    self.resources
+                        .add_builtin_distribution_extension_module(&ext)?;
+                }
+            }
+            StandaloneDistributionLinkMode::Dynamic => {
+                for ext in self.distribution.filter_extension_modules(
+                    logger,
+                    extension_module_filter,
+                    self.extension_module_variants.clone(),
+                )? {
+                    // TODO use in-memory import if supported.
+                    let prefix = match self.resources_policy.clone() {
+                        PythonResourcesPolicy::InMemoryOnly => "".to_string(),
+                        PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => prefix,
+                        PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(prefix) => {
+                            prefix
+                        }
+                    };
+                    self.resources
+                        .add_relative_path_distribution_extension_module(&prefix, &ext)?;
+                }
+            }
+        }
+
+        for source in self.distribution.source_modules()? {
+            if !include_test && is_stdlib_test_package(&source.package()) {
+                continue;
+            }
+
+            if include_sources {
+                match self.resources_policy.clone() {
+                    PythonResourcesPolicy::InMemoryOnly
+                    | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
+                        self.resources.add_in_memory_module_source(&source)?
+                    }
+                    PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => self
+                        .resources
+                        .add_relative_path_module_source(&source, &prefix)?,
+                }
+            }
+
+            match self.resources_policy.clone() {
+                PythonResourcesPolicy::InMemoryOnly
+                | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
+                    self.resources.add_in_memory_module_bytecode(
+                        &source.as_bytecode_module(BytecodeOptimizationLevel::Zero),
+                    )?;
+                }
+                PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
+                    self.resources.add_relative_path_module_bytecode(
+                        &source.as_bytecode_module(BytecodeOptimizationLevel::Zero),
+                        &prefix,
+                    )?;
+                }
+            }
+        }
+
+        if include_resources {
+            for resource in self.distribution.resource_datas()? {
+                if !include_test && is_stdlib_test_package(&resource.package) {
+                    continue;
+                }
+
+                match &self.resources_policy {
+                    PythonResourcesPolicy::InMemoryOnly
+                    | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
+                        self.resources.add_in_memory_package_resource(&resource)?;
+                    }
+                    PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
+                        self.resources
+                            .add_relative_path_package_resource(prefix, &resource)?;
+                    }
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Build a Python library suitable for linking.
