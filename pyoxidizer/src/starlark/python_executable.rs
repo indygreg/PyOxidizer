@@ -13,7 +13,7 @@ use {
     crate::project_building::build_python_executable,
     crate::py_packaging::binary::PythonBinaryBuilder,
     crate::py_packaging::resource::{BytecodeModule, BytecodeOptimizationLevel},
-    anyhow::{Context, Result},
+    anyhow::{anyhow, Context, Result},
     slog::{info, warn},
     starlark::environment::Environment,
     starlark::values::{
@@ -448,8 +448,7 @@ impl PythonExecutable {
 
         match m {
             PythonExtensionModuleFlavor::Distribution(m) => {
-                // TODO should we distinguish between builtin extension modules and in-memory import?
-                self.exe.add_builtin_distribution_extension_module(&m)
+                self.exe.add_in_memory_distribution_extension_module(&m)
             }
             PythonExtensionModuleFlavor::StaticallyLinked(m) => {
                 self.exe.add_static_extension_module(&m)
@@ -487,13 +486,12 @@ impl PythonExecutable {
         info!(&logger, "adding in-extension module {}", m.name());
 
         match m {
-            PythonExtensionModuleFlavor::Distribution(m) => {
-                // TODO adding a builtin extension module for filestem relative is wrong.
-                self.exe.add_builtin_distribution_extension_module(&m)
-            }
-            PythonExtensionModuleFlavor::StaticallyLinked(m) => {
-                self.exe.add_static_extension_module(&m)
-            }
+            PythonExtensionModuleFlavor::Distribution(m) => self
+                .exe
+                .add_relative_path_distribution_extension_module(&prefix, &m),
+            PythonExtensionModuleFlavor::StaticallyLinked(_) => Err(anyhow!(
+                "statically linked extension modules cannot be added as filesystem relative"
+            )),
             PythonExtensionModuleFlavor::DynamicLibrary(m) => self
                 .exe
                 .add_relative_path_dynamic_extension_module(&prefix, &m),
