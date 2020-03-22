@@ -1083,7 +1083,7 @@ impl<'a> EmbeddedPythonResources<'a> {
                 } else if let Some(_lib) = &entry.static_path {
                     warn!(logger, "static library {} required by {}", entry.name, name);
                     link_libraries.insert(entry.name.clone());
-                } else if let Some(_) = &entry.dynamic_path {
+                } else if entry.dynamic_path.is_some() {
                     warn!(
                         logger,
                         "dynamic library {} required by {}", entry.name, name
