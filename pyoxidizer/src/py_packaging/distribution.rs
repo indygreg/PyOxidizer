@@ -110,7 +110,7 @@ pub struct PythonModuleSuffixes {
     pub extension: Vec<String>,
 }
 
-const PRINT_SUFFIXES: &'static str = r#"
+const PRINT_SUFFIXES: &str = r#"
 import json
 import importlib.machinery as m
 
