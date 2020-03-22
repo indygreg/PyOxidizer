@@ -1,5 +1,6 @@
 .. _packaging_additional_files:
 
+==========================
 Packaging Additional Files
 ==========================
 

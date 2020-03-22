@@ -1,5 +1,6 @@
 .. _packaging_trimming_resources:
 
+=========================
 Trimming Unused Resources
 =========================
 

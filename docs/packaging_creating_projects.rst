@@ -1,5 +1,6 @@
 .. _packaging_creating_projects:
 
+=============================
 Creating a PyOxidizer Project
 =============================
 

@@ -15,6 +15,7 @@ instructions.
    :maxdepth: 2
 
    packaging_creating_projects
+   packaging_resources
    packaging_pypi
    packaging_extension_modules
    packaging_additional_files

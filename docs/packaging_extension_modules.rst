@@ -1,5 +1,6 @@
 .. _packaging_extension_modules:
 
+====================================
 Adding Extension Modules At Run-Time
 ====================================
 

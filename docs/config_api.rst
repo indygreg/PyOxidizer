@@ -40,6 +40,9 @@ Types
 
 The following custom data types are defined in the Starlark environment:
 
+``FileContent``
+   Represents the content of a file on the filesystem.
+
 ``FileManifest``
    Represents a mapping of filenames to file content.
 
@@ -998,7 +1001,7 @@ file is defined by ``prefix``.
 
 If called multiple times for the same module, the last write wins.
 
-.. _config_python_executable.add_module_source:
+.. _config_python_executable_add_module_source:
 
 ``PythonExecutable.add_module_source(module)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1038,7 +1041,7 @@ The ``module`` argument must be a ``PythonSourceModule`` instance. The
 
 If called multiple times for the same module, the last write wins.
 
-.. _config_python_executable.add_module_bytecode:
+.. _config_python_executable_add_module_bytecode:
 
 ``PythonExecutable.add_module_bytecode(module, optimize_level=0)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1327,6 +1330,13 @@ specified by ``BUILD_PATH``.
 If ``replace`` is True (the default), the destination directory will
 be deleted and the final state of the destination directory should
 exactly match the state of the ``FileManifest``.
+
+.. _config_file_content:
+
+``FileContent``
+---------------
+
+This type represents the content of a single file.
 
 .. _config_glob:
 

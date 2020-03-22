@@ -1,5 +1,6 @@
 .. _packaging_masquerading:
 
+=====================================
 Masquerading As Other Packaging Tools
 =====================================
 

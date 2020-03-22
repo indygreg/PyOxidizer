@@ -1,5 +1,6 @@
 .. _packaging_pypi:
 
+============================================
 Packaging an Application from a PyPI Package
 ============================================
 
