@@ -325,10 +325,10 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         let dist_dir = self
             .python_exe
             .parent()
-            .ok_or(anyhow!("could not resolve parent directory"))?;
+            .ok_or_else(|| anyhow!("could not resolve parent directory"))?;
         let dist_parent_dir = dist_dir
             .parent()
-            .ok_or(anyhow!("could not resolve parent directory"))?;
+            .ok_or_else(|| anyhow!("could not resolve parent directory"))?;
 
         let pip_exe_path = dist_dir.join("pip.exe");
 
