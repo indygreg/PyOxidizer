@@ -178,6 +178,8 @@ APIs include
 :ref:`config_python_executable_add_python_resource` and
 :ref:`config_python_executable_add_in_memory_python_resources`.
 
+.. _python_extension_module_location_compatibility:
+
 ``PythonExtensionModule`` Location Compatibility
 ================================================
 
