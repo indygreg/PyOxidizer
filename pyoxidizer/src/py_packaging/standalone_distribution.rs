@@ -1514,7 +1514,9 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                     extension_module.extension_data.as_ref().unwrap(),
                 )
         } else if !extension_module.object_file_data.is_empty() {
-            self.resources.add_extension_module_data(extension_module)
+            // TODO we shouldn't be adding a builtin extension module from this API.
+            self.resources
+                .add_builtin_extension_module(extension_module)
         } else if extension_module.extension_data.is_some() {
             Err(anyhow!(
                 "loading extension modules from memory not supported by this build configuration"
@@ -1618,7 +1620,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             }
         }
 
-        self.resources.add_extension_module_data(extension_module)
+        self.resources
+            .add_builtin_extension_module(extension_module)
     }
 
     fn filter_resources_from_files(

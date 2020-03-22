@@ -572,9 +572,20 @@ impl EmbeddedPythonResourcesPrePackaged {
         )
     }
 
-    /// Add an extension module.
-    pub fn add_extension_module_data(&mut self, module: &ExtensionModuleData) -> Result<()> {
+    /// Add an extension module to be linked into the binary.
+    ///
+    /// The object files for the extension module will be linked into the produced
+    /// binary and the extension module will be made available for import from
+    /// Python's _builtin_ importer.
+    pub fn add_builtin_extension_module(&mut self, module: &ExtensionModuleData) -> Result<()> {
         self.check_policy(ResourceLocation::InMemory)?;
+
+        if module.object_file_data.is_empty() {
+            return Err(anyhow!(
+                "cannot add extension module {} as builtin because it lacks object file data",
+                module.name
+            ));
+        }
 
         self.extension_module_states.insert(
             module.name.clone(),
@@ -1382,19 +1393,19 @@ mod tests {
             init_fn: Some("".to_string()),
             extension_file_suffix: "".to_string(),
             extension_data: None,
-            object_file_data: vec![],
+            object_file_data: vec![vec![42]],
             is_package: false,
             libraries: vec![],
             library_dirs: vec![],
         };
 
-        r.add_extension_module_data(&em)?;
+        r.add_builtin_extension_module(&em)?;
         assert_eq!(r.extension_module_states.len(), 1);
         assert_eq!(
             r.extension_module_states.get("foo.bar"),
             Some(&ExtensionModuleBuildState {
                 init_fn: Some("".to_string()),
-                link_object_files: vec![],
+                link_object_files: vec![DataLocation::Memory(vec![42])],
                 link_frameworks: BTreeSet::new(),
                 link_system_libraries: BTreeSet::new(),
                 link_static_libraries: BTreeSet::new(),
