@@ -1394,8 +1394,19 @@ mod tests {
         };
 
         r.add_extension_module_data(&em)?;
-        assert_eq!(r.extension_module_datas.len(), 1);
-        assert_eq!(r.extension_module_datas.get("foo.bar"), Some(&em));
+        assert_eq!(r.extension_module_states.len(), 1);
+        assert_eq!(
+            r.extension_module_states.get("foo.bar"),
+            Some(&ExtensionModuleBuildState {
+                init_fn: Some("".to_string()),
+                link_object_files: vec![],
+                link_frameworks: BTreeSet::new(),
+                link_system_libraries: BTreeSet::new(),
+                link_static_libraries: BTreeSet::new(),
+                link_dynamic_libraries: BTreeSet::new(),
+                link_external_libraries: BTreeSet::new()
+            })
+        );
 
         assert_eq!(r.modules.len(), 1);
         assert_eq!(
