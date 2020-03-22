@@ -1068,7 +1068,7 @@ impl PythonDistribution for StandaloneDistribution {
             python_exe,
             importlib_bytecode,
             extension_module_filter: extension_module_filter.clone(),
-            extension_module_variants: preferred_extension_module_variants.clone(),
+            extension_module_variants: preferred_extension_module_variants,
         }))
     }
 
