@@ -37,10 +37,6 @@ Backwards Compatibility Notes
   necessary in order to support executables loading Python extension modules,
   which are shared libraries which need access to Python symbols defined
   in executables.
-* The ``PythonExecutable.add_python_resource()`` Starlark method has been
-  renamed to ``PythonExecutable.add_in_memory_python_resource()``.
-* The ``PythonExecutable.add_python_resources()`` Starlark method has been
-  renamed to ``PythonExecutable.add_in_memory_python_resources()``.
 * The ``PythonExecutable.to_embedded_data()`` Starlark method has been
   renamed to ``PythonExecutable.to_embedded_resources()``.
 * The ``PythonEmbeddedData`` Starlark type has been renamed to
@@ -75,8 +71,9 @@ New Features
 * Python resources can now be installed next to built binaries using the new
   Starlark functions ``PythonExecutable.add_filesystem_relative_module_source()``,
   ``PythonExecutable.add_filesystem_relative_module_bytecode()``,
-  ``PythonExecutable.add_filesystem_relative_resource_data()``, and
-  ``PythonExecutable.add_filesystem_relative_python_resource()``. Unlike
+  ``PythonExecutable.add_filesystem_relative_resource_data()``,
+  ``PythonExecutable.add_filesystem_relative_python_resource()``, and
+  ``PythonExecutable.add_filesystem_relative_python_resources()``. Unlike
   adding Python resources to ``FileManifest`` instances, Python resources added
   this way have their metadata serialized into the built executable. This allows
   the special Python module importer present in built binaries to service the

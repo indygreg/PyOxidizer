@@ -523,6 +523,7 @@ impl PythonExecutable {
         add_bytecode_module: &Value,
         optimize_level: &Value,
     ) -> ValueResult {
+        required_str_arg("prefix", &prefix)?;
         let add_source_module = required_bool_arg("add_source_module", &add_source_module)?;
         let add_bytecode_module = required_bool_arg("add_bytecode_module", &add_bytecode_module)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
@@ -578,6 +579,35 @@ impl PythonExecutable {
         for resource in resources.into_iter()? {
             self.starlark_add_in_memory_python_resource(
                 env,
+                &resource,
+                add_source_module,
+                add_bytecode_module,
+                optimize_level,
+            )?;
+        }
+
+        Ok(Value::new(None))
+    }
+
+    /// PythonExecutable.add_filesystem_relative_python_resources(prefix, resources, add_source_module=true, add_bytecode_module=true, optimize_level=0)
+    pub fn starlark_add_filesystem_relative_python_resources(
+        &mut self,
+        env: &Environment,
+        prefix: &Value,
+        resources: &Value,
+        add_source_module: &Value,
+        add_bytecode_module: &Value,
+        optimize_level: &Value,
+    ) -> ValueResult {
+        required_str_arg("prefix", &prefix)?;
+        required_bool_arg("add_source_module", &add_source_module)?;
+        required_bool_arg("add_bytecode_module", &add_bytecode_module)?;
+        required_type_arg("optimize_level", "int", &optimize_level)?;
+
+        for resource in resources.into_iter()? {
+            self.starlark_add_filesystem_relative_python_resource(
+                env,
+                prefix,
                 &resource,
                 add_source_module,
                 add_bytecode_module,
@@ -770,6 +800,28 @@ starlark_module! { python_executable_env =>
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_in_memory_python_resources(
                 &env,
+                &resources,
+                &add_source_module,
+                &add_bytecode_module,
+                &optimize_level,
+            )
+        })
+    }
+
+    #[allow(clippy::ptr_arg)]
+    PythonExecutable.add_filesystem_relative_python_resources(
+        env env,
+        this,
+        prefix,
+        resources,
+        add_source_module=true,
+        add_bytecode_module=true,
+        optimize_level=0
+    ) {
+        this.downcast_apply_mut(|exe: &mut PythonExecutable| {
+            exe.starlark_add_filesystem_relative_python_resources(
+                &env,
+                &prefix,
                 &resources,
                 &add_source_module,
                 &add_bytecode_module,
