@@ -111,7 +111,7 @@ impl PythonExecutable {
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
         let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
-        info!(&logger, "adding embedded source module {}", m.name);
+        info!(&logger, "adding in-memory source module {}", m.name);
         self.exe.add_in_memory_module_source(&m).or_else(|e| {
             {
                 Err(RuntimeError {
@@ -211,7 +211,7 @@ impl PythonExecutable {
         };
 
         let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
-        info!(&logger, "adding embedded bytecode module {}", m.name);
+        info!(&logger, "adding in-memory bytecode module {}", m.name);
         self.exe
             .add_in_memory_module_bytecode(&BytecodeModule {
                 name: m.name.clone(),
@@ -357,7 +357,7 @@ impl PythonExecutable {
         let r = resource.downcast_apply(|r: &PythonResourceData| r.data.clone());
         info!(
             &logger,
-            "adding embedded resource data {}:{}", r.package, r.name
+            "adding in-memory resource data {}:{}", r.package, r.name
         );
         self.exe.add_in_memory_package_resource(&r).or_else(|e| {
             {
@@ -522,20 +522,35 @@ impl PythonExecutable {
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
         let m = module.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
-        info!(&logger, "adding embedded extension module {}", m.name());
 
         match m {
             PythonExtensionModuleFlavor::Distribution(m) => {
                 // TODO we should route to proper location depending on policy.
+                info!(
+                    logger,
+                    "adding builtin distribution extension module {}", m.module
+                );
                 self.exe.add_builtin_distribution_extension_module(&m)
             }
             PythonExtensionModuleFlavor::StaticallyLinked(m) => {
+                info!(
+                    logger,
+                    "adding statically linked extension module {}", m.name
+                );
                 self.exe.add_extension_module_data(&m)
             }
             PythonExtensionModuleFlavor::DynamicLibrary(m) => {
                 if m.object_file_data.is_empty() {
+                    info!(
+                        logger,
+                        "adding dynamically linked extension module {}", m.name
+                    );
                     self.exe.add_dynamic_extension_module(&m)
                 } else {
+                    info!(
+                        logger,
+                        "adding statically linked extension module {}", m.name
+                    );
                     self.exe.add_extension_module_data(&m)
                 }
             }
