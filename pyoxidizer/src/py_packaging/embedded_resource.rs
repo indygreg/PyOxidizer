@@ -1028,8 +1028,10 @@ pub struct EmbeddedPythonResources<'a> {
     /// Resources to write to a packed resources data structure.
     resources: BTreeMap<String, EmbeddedResource<'a, u8>>,
 
+    /// Additional files that need to be written out next to the produced binary.
     extra_files: FileManifest,
 
+    /// Holds state needed for adding extension modules to libpython.
     extension_modules: BTreeMap<String, ExtensionModuleBuildState>,
 }
 
