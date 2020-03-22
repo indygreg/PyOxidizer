@@ -874,7 +874,10 @@ impl EmbeddedPythonResourcesPrePackaged {
             }
         }
 
-        let derived_package_names = packages_from_module_names(modules.keys().cloned());
+        let mut derived_package_names = packages_from_module_names(modules.keys().cloned());
+        derived_package_names.extend(packages_from_module_names(
+            self.extension_module_states.keys().cloned(),
+        ));
 
         for package in derived_package_names {
             let entry = modules
