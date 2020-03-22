@@ -12,6 +12,7 @@ use {
     super::libpython::ImportlibBytecode,
     super::pyembed::{derive_python_config, write_default_python_config_rs},
     super::resource::{BytecodeModule, ExtensionModuleData, ResourceData, SourceModule},
+    super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::DistributionExtensionModule,
     crate::app_packaging::resource::FileManifest,
     anyhow::Result,
@@ -36,6 +37,9 @@ pub trait PythonBinaryBuilder {
 
     /// The name of the binary.
     fn name(&self) -> String;
+
+    /// Obtain the `PythonResourcesPolicy` for the builder.
+    fn python_resources_policy(&self) -> &PythonResourcesPolicy;
 
     /// Path to Python executable that can be used to derive info at build time.
     ///

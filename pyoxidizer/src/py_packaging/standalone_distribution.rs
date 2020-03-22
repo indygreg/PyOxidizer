@@ -1403,6 +1403,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.exe_name.clone()
     }
 
+    fn python_resources_policy(&self) -> &PythonResourcesPolicy {
+        &self.resources_policy
+    }
+
     fn python_exe_path(&self) -> &Path {
         &self.python_exe
     }
