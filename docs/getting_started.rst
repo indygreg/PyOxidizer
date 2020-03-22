@@ -88,6 +88,21 @@ Once the ``pyoxidizer`` executable is installed, try to run it::
 
 Congratulations, PyOxidizer is installed! Now let's move on to using it.
 
+High-Level Project Lifecycle
+============================
+
+``PyOxidizer`` exposes various functionality through the interaction
+of ``pyoxidizer`` commands and configuration files.
+
+The first step of any project is to create it. This is achieved
+with a ``pyoxidizer init-*`` command to create files required by
+``PyOxidizer``.
+
+After that, various ``pyoxidizer`` commands can be used to evaluate
+configuration files and perform actions from the evaluated file.
+``PyOxidizer`` provides functionality for building binaries, installing
+files into a directory tree, and running the results of build actions.
+
 Your First PyOxidizer Project
 =============================
 
@@ -129,6 +144,31 @@ It works!
 Continue reading :ref:`managing_projects` to learn more about the
 ``pyoxidizer`` tool. Or read on for a preview of how to customize your
 application's behavior.
+
+The ``pyoxidizer.bzl`` Configuration File
+=========================================
+
+The most important file for a ``PyOxidizer`` project is the ``pyoxidizer.bzl``
+configuration file. This is a Starlark file evaluated in a context that
+provides special functionality for ``PyOxidizer``.
+
+Starlark is a Python-like interpreted language and its syntax and semantics
+should be familiar to any Python programmer.
+
+From a high-level, ``PyOxidizer``'s configuration files define named
+``targets``, which are callable functions associated with a name - the
+*target* - that resolve to an entity. For example, a configuration file
+may define a ``build_exe()`` function which returns an object representing
+a standalone executable file embedding Python. The ``pyoxidizer build``
+command can be used to evaluate just that target/function.
+
+Target functions can call out to other target functions. For example, there
+may be an ``install`` target that creates a set of files composing a full
+application. Its function may evaluate the ``exe`` target to produce an
+executable file.
+
+See :ref:`config_files` for comprehensive documentation of ``pyoxidizer.bzl``
+files and their semantics.
 
 Customizing Python and Packaging Behavior
 =========================================
