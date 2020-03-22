@@ -180,7 +180,7 @@ enum ResourceLocation {
 }
 
 /// Holds state necessary to link an extension module into libpython.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ExtensionModuleBuildState {
     /// Extension C initialization function.
     pub init_fn: Option<String>,
@@ -215,7 +215,6 @@ pub struct EmbeddedPythonResourcesPrePackaged {
 
     // TODO combine into single data structure.
     extension_module_states: BTreeMap<String, ExtensionModuleBuildState>,
-    distribution_extension_modules: BTreeMap<String, DistributionExtensionModule>,
     extension_module_datas: BTreeMap<String, ExtensionModuleData>,
 
     extra_files: FileManifest,
@@ -227,7 +226,6 @@ impl EmbeddedPythonResourcesPrePackaged {
             policy: policy.clone(),
             modules: BTreeMap::new(),
             extension_module_states: BTreeMap::new(),
-            distribution_extension_modules: BTreeMap::new(),
             extension_module_datas: BTreeMap::new(),
             extra_files: FileManifest::default(),
         }
@@ -563,9 +561,6 @@ impl EmbeddedPythonResourcesPrePackaged {
             },
         );
 
-        self.distribution_extension_modules
-            .insert(module.module.clone(), module.clone());
-
         // TODO should we populate opt1, opt2, source?
         self.add_parent_packages(
             &module.module,
@@ -682,11 +677,6 @@ impl EmbeddedPythonResourcesPrePackaged {
         filter_btreemap(logger, &mut self.modules, &resource_names);
         warn!(logger, "filtering embedded extension modules");
         filter_btreemap(logger, &mut self.extension_module_states, &resource_names);
-        filter_btreemap(
-            logger,
-            &mut self.distribution_extension_modules,
-            &resource_names,
-        );
 
         Ok(())
     }
@@ -1358,8 +1348,19 @@ mod tests {
         };
 
         r.add_distribution_extension_module(&em)?;
-        assert_eq!(r.distribution_extension_modules.len(), 1);
-        assert_eq!(r.distribution_extension_modules.get("foo.bar"), Some(&em));
+        assert_eq!(r.extension_module_states.len(), 1);
+        assert_eq!(
+            r.extension_module_states.get("foo.bar"),
+            Some(&ExtensionModuleBuildState {
+                init_fn: None,
+                link_object_files: vec![],
+                link_frameworks: BTreeSet::new(),
+                link_system_libraries: BTreeSet::new(),
+                link_static_libraries: BTreeSet::new(),
+                link_dynamic_libraries: BTreeSet::new(),
+                link_external_libraries: BTreeSet::new()
+            })
+        );
 
         assert_eq!(r.modules.len(), 1);
         assert_eq!(
