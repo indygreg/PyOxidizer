@@ -452,7 +452,7 @@ impl PythonExecutable {
                 self.exe.add_builtin_distribution_extension_module(&m)
             }
             PythonExtensionModuleFlavor::StaticallyLinked(m) => {
-                self.exe.add_extension_module_data(&m)
+                self.exe.add_static_extension_module(&m)
             }
             PythonExtensionModuleFlavor::DynamicLibrary(m) => {
                 self.exe.add_in_memory_dynamic_extension_module(&m)
@@ -492,7 +492,7 @@ impl PythonExecutable {
                 self.exe.add_builtin_distribution_extension_module(&m)
             }
             PythonExtensionModuleFlavor::StaticallyLinked(m) => {
-                self.exe.add_extension_module_data(&m)
+                self.exe.add_static_extension_module(&m)
             }
             PythonExtensionModuleFlavor::DynamicLibrary(m) => self
                 .exe
@@ -533,22 +533,14 @@ impl PythonExecutable {
                     logger,
                     "adding statically linked extension module {}", m.name
                 );
-                self.exe.add_extension_module_data(&m)
+                self.exe.add_static_extension_module(&m)
             }
             PythonExtensionModuleFlavor::DynamicLibrary(m) => {
-                if m.object_file_data.is_empty() {
-                    info!(
-                        logger,
-                        "adding dynamically linked extension module {}", m.name
-                    );
-                    self.exe.add_dynamic_extension_module(&m)
-                } else {
-                    info!(
-                        logger,
-                        "adding statically linked extension module {}", m.name
-                    );
-                    self.exe.add_extension_module_data(&m)
-                }
+                info!(
+                    logger,
+                    "adding dynamically linked extension module {}", m.name
+                );
+                self.exe.add_dynamic_extension_module(&m)
             }
         }
         .or_else(|e| {

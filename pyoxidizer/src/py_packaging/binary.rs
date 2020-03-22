@@ -177,8 +177,8 @@ pub trait PythonBinaryBuilder {
         extension_module: &ExtensionModuleData,
     ) -> Result<()>;
 
-    /// Add an extension module to be embedded in the binary.
-    fn add_extension_module_data(
+    /// Add an extension module to be statically linked into the binary.
+    fn add_static_extension_module(
         &mut self,
         extension_module_data: &ExtensionModuleData,
     ) -> Result<()>;
