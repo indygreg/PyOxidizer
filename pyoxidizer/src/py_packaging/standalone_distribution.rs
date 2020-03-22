@@ -1488,6 +1488,38 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             .add_builtin_distribution_extension_module(extension_module)
     }
 
+    fn add_in_memory_distribution_extension_module(
+        &mut self,
+        extension_module: &DistributionExtensionModule,
+    ) -> Result<()> {
+        if !self.supports_in_memory_dynamically_linked_extension_loading() {
+            return Err(anyhow!(
+                "loading extension modules from memory not supported by this build configuration"
+            ));
+        }
+
+        self.resources
+            .add_in_memory_distribution_extension_module(extension_module)
+    }
+
+    fn add_relative_path_distribution_extension_module(
+        &mut self,
+        prefix: &str,
+        extension_module: &DistributionExtensionModule,
+    ) -> Result<()> {
+        if self
+            .distribution
+            .is_extension_module_file_loadable(&self.target_triple)
+        {
+            self.resources
+                .add_relative_path_distribution_extension_module(prefix, extension_module)
+        } else {
+            Err(anyhow!(
+                "loading extension modules from files not supported by this build configuration"
+            ))
+        }
+    }
+
     fn add_in_memory_dynamic_extension_module(
         &mut self,
         extension_module: &ExtensionModuleData,
