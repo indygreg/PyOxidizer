@@ -146,16 +146,17 @@ the in-memory import machinery works.
 Can Applications Import Python Modules from the Filesystem?
 ===========================================================
 
-Yes. While the default configuration only allows importing
-all Python modules from in-memory data structures linked
-into the binary, it is possible to configure ``sys.path``
-to allow importing from additional filesystem paths.
-Support for importing compiled extension modules is also possible.
+Yes!
 
-To enable the filesystem importer, change the configuration for
-``PythonInterpreterConfig()`` to ``filesystem_importer=True`` or
-``sys_paths=None`` to not ``None`` (which implies
-``filesystem_importer=True``).
+While PyOxidizer supports importing Python resources from
+in-memory, it also supports filesystem-based import like
+traditional Python applications.
+
+This can be achieved by adding Python resources to a non
+*in-memory* resource location (see :ref:`packaging_resources`) or
+by enabling Python's standard filesystem-based importer by
+enabling ``filesystem_importer=True`` (see
+:ref:`config_python_interpreter_config`).
 
 What are the Implications of Static Linking?
 ============================================
