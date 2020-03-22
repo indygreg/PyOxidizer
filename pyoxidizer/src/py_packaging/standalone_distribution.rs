@@ -851,6 +851,7 @@ impl StandaloneDistribution {
                     extension_module_filter,
                     preferred_extension_module_variants,
                 )? {
+                    // TODO use in-memory import if supported.
                     let prefix = match resources_policy {
                         PythonResourcesPolicy::InMemoryOnly => "",
                         PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => prefix.as_ref(),

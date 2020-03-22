@@ -572,6 +572,41 @@ impl EmbeddedPythonResourcesPrePackaged {
         )
     }
 
+    /// Add a distribution extension module to be loaded from in-memory import.
+    pub fn add_in_memory_distribution_extension_module(
+        &mut self,
+        module: &DistributionExtensionModule,
+    ) -> Result<()> {
+        self.check_policy(ResourceLocation::InMemory)?;
+
+        if module.shared_library.is_none() {
+            return Err(anyhow!("cannot add extension module {} for in-memory loading because it lacks shared library data", module.module));
+        }
+
+        let entry = self
+            .modules
+            .entry(module.module.clone())
+            .or_insert_with(|| EmbeddedResourcePythonModulePrePackaged {
+                name: module.module.clone(),
+                ..EmbeddedResourcePythonModulePrePackaged::default()
+            });
+
+        entry.is_package = false;
+        entry.in_memory_extension_module_shared_library = Some(DataLocation::Path(
+            module.shared_library.as_ref().unwrap().to_path_buf(),
+        ));
+
+        // TODO add shared library dependencies to be packaged as well.
+        // TODO add shared library dependency names.
+
+        self.add_parent_packages(
+            &module.module,
+            ModuleLocation::InMemory,
+            false,
+            Some(BytecodeOptimizationLevel::Zero),
+        )
+    }
+
     /// Add an extension module from a Python distribution to be loaded from the filesystem as a dynamic library.
     pub fn add_relative_path_distribution_extension_module(
         &mut self,
