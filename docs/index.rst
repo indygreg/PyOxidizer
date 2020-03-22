@@ -28,7 +28,6 @@ The creator and maintainer of ``PyOxidizer`` is
    managing_projects
    config
    packaging
-   packaging_pitfalls
    distributing
    config_api
    rust_projects
