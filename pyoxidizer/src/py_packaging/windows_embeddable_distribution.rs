@@ -579,10 +579,6 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
             .add_relative_path_module_source(module, prefix)
     }
 
-    fn add_module_source(&mut self, _module: &SourceModule) -> Result<()> {
-        unimplemented!()
-    }
-
     fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModule) -> Result<()> {
         self.resources.add_in_memory_module_bytecode(module)
     }
@@ -596,10 +592,6 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
             .add_relative_path_module_bytecode(module, prefix)
     }
 
-    fn add_module_bytecode(&mut self, _module: &BytecodeModule) -> Result<()> {
-        unimplemented!();
-    }
-
     fn add_in_memory_package_resource(&mut self, resource: &ResourceData) -> Result<()> {
         self.resources.add_in_memory_package_resource(resource)
     }
@@ -611,10 +603,6 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
     ) -> Result<()> {
         self.resources
             .add_relative_path_package_resource(prefix, resource)
-    }
-
-    fn add_package_resource(&mut self, _resource: &ResourceData) -> Result<()> {
-        unimplemented!();
     }
 
     fn add_distribution_extension_module(

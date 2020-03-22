@@ -73,7 +73,17 @@ pub trait PythonBinaryBuilder {
     ) -> Result<()>;
 
     /// Add Python module source code to a location as determined by the builder's resource policy.
-    fn add_module_source(&mut self, module: &SourceModule) -> Result<()>;
+    fn add_module_source(&mut self, module: &SourceModule) -> Result<()> {
+        match self.python_resources_policy().clone() {
+            PythonResourcesPolicy::InMemoryOnly
+            | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
+                self.add_in_memory_module_source(module)
+            }
+            PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
+                self.add_relative_path_module_source(prefix, module)
+            }
+        }
+    }
 
     /// Add a Python module bytecode to be imported from memory to the embedded resources.
     fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModule) -> Result<()>;
@@ -86,7 +96,17 @@ pub trait PythonBinaryBuilder {
     ) -> Result<()>;
 
     /// Add Python module bytecode to a location as determined by the builder's resource policy.
-    fn add_module_bytecode(&mut self, module: &BytecodeModule) -> Result<()>;
+    fn add_module_bytecode(&mut self, module: &BytecodeModule) -> Result<()> {
+        match self.python_resources_policy().clone() {
+            PythonResourcesPolicy::InMemoryOnly
+            | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
+                self.add_in_memory_module_bytecode(module)
+            }
+            PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
+                self.add_relative_path_module_bytecode(prefix, module)
+            }
+        }
+    }
 
     /// Add resource data to the collection of embedded resource data.
     fn add_in_memory_package_resource(&mut self, resource: &ResourceData) -> Result<()>;
@@ -99,7 +119,17 @@ pub trait PythonBinaryBuilder {
     ) -> Result<()>;
 
     /// Add resource data to the collection of embedded resource data to a location as determined by the builder's resource policy.
-    fn add_package_resource(&mut self, resource: &ResourceData) -> Result<()>;
+    fn add_package_resource(&mut self, resource: &ResourceData) -> Result<()> {
+        match self.python_resources_policy().clone() {
+            PythonResourcesPolicy::InMemoryOnly
+            | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
+                self.add_in_memory_package_resource(resource)
+            }
+            PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
+                self.add_relative_path_package_resource(prefix, resource)
+            }
+        }
+    }
 
     /// Add an extension module to be embedded in the binary.
     fn add_distribution_extension_module(

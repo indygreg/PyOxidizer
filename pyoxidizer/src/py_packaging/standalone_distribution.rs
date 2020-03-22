@@ -1444,18 +1444,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             .add_relative_path_module_source(module, prefix)
     }
 
-    fn add_module_source(&mut self, module: &SourceModule) -> Result<()> {
-        match self.resources_policy.clone() {
-            PythonResourcesPolicy::InMemoryOnly
-            | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
-                self.add_in_memory_module_source(module)
-            }
-            PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
-                self.add_relative_path_module_source(prefix, module)
-            }
-        }
-    }
-
     fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModule) -> Result<()> {
         self.resources.add_in_memory_module_bytecode(module)
     }
@@ -1469,18 +1457,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             .add_relative_path_module_bytecode(module, prefix)
     }
 
-    fn add_module_bytecode(&mut self, module: &BytecodeModule) -> Result<()> {
-        match self.resources_policy.clone() {
-            PythonResourcesPolicy::InMemoryOnly
-            | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
-                self.add_in_memory_module_bytecode(module)
-            }
-            PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
-                self.add_relative_path_module_bytecode(prefix, module)
-            }
-        }
-    }
-
     fn add_in_memory_package_resource(&mut self, resource: &ResourceData) -> Result<()> {
         self.resources.add_in_memory_package_resource(resource)
     }
@@ -1492,18 +1468,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<()> {
         self.resources
             .add_relative_path_package_resource(prefix, resource)
-    }
-
-    fn add_package_resource(&mut self, resource: &ResourceData) -> Result<()> {
-        match self.resources_policy.clone() {
-            PythonResourcesPolicy::InMemoryOnly
-            | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
-                self.add_in_memory_package_resource(resource)
-            }
-            PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
-                self.add_relative_path_package_resource(prefix, resource)
-            }
-        }
     }
 
     fn add_distribution_extension_module(
