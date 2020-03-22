@@ -184,6 +184,9 @@ enum ResourceLocation {
 pub struct ExtensionModuleBuildState {
     /// Extension C initialization function.
     pub init_fn: Option<String>,
+
+    /// Object files to link into produced binary.
+    pub link_object_files: Vec<DataLocation>,
 }
 
 /// Represents Python resources to embed in a binary.
@@ -506,10 +509,21 @@ impl EmbeddedPythonResourcesPrePackaged {
     ) -> Result<()> {
         // No policy check because distribution extension modules are special.
 
+        let link_object_files = if module.builtin_default {
+            vec![]
+        } else {
+            module
+                .object_paths
+                .iter()
+                .map(|p| DataLocation::Path(p.clone()))
+                .collect()
+        };
+
         self.extension_module_states.insert(
             module.module.clone(),
             ExtensionModuleBuildState {
                 init_fn: module.init_fn.clone(),
+                link_object_files,
             },
         );
 
@@ -529,10 +543,17 @@ impl EmbeddedPythonResourcesPrePackaged {
     pub fn add_extension_module_data(&mut self, module: &ExtensionModuleData) -> Result<()> {
         self.check_policy(ResourceLocation::InMemory)?;
 
+        let link_object_files = module
+            .object_file_data
+            .iter()
+            .map(|d| DataLocation::Memory(d.clone()))
+            .collect();
+
         self.extension_module_states.insert(
             module.name.clone(),
             ExtensionModuleBuildState {
                 init_fn: module.init_fn.clone(),
+                link_object_files,
             },
         );
 
@@ -1034,23 +1055,30 @@ impl<'a> EmbeddedPythonResources<'a> {
         warn!(
             logger,
             "resolving inputs for {} extension modules...",
+            self.extension_module_states.len()
+        );
+
+        for (name, state) in &self.extension_module_states {
+            if !state.link_object_files.is_empty() {
+                info!(
+                    logger,
+                    "adding {} object files for {} extension module",
+                    state.link_object_files.len(),
+                    name
+                );
+                object_files.extend(state.link_object_files.iter().cloned());
+            }
+        }
+
+        warn!(
+            logger,
+            "resolving inputs for {} extension modules...",
             self.distribution_extension_modules.len()
         );
 
         for (name, em) in &self.distribution_extension_modules {
             if em.builtin_default {
                 continue;
-            }
-
-            info!(
-                logger,
-                "adding {} object files for {} extension module",
-                em.object_paths.len(),
-                name
-            );
-
-            for path in &em.object_paths {
-                object_files.push(DataLocation::Path(path.clone()));
             }
 
             for entry in &em.links {
@@ -1080,17 +1108,6 @@ impl<'a> EmbeddedPythonResources<'a> {
         );
 
         for (name, em) in &self.built_extension_modules {
-            info!(
-                logger,
-                "adding {} object files for {} built extension module",
-                em.object_file_data.len(),
-                name
-            );
-
-            for data in &em.object_file_data {
-                object_files.push(DataLocation::Memory(data.clone()));
-            }
-
             for library in &em.libraries {
                 warn!(logger, "library {} required by {}", library, name);
                 link_libraries_external.insert(library.clone());
