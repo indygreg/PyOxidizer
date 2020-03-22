@@ -23,7 +23,7 @@ use {
 };
 
 /// Pip requirements file for bootstrapping packaging tools.
-pub const PIP_BOOTSTRAP_REQUIREMENTS: &'static str = indoc::indoc!(
+pub const PIP_BOOTSTRAP_REQUIREMENTS: &str = indoc::indoc!(
     "wheel==0.34.2 \\
         --hash=sha256:8788e9155fe14f54164c1b9eb0a319d98ef02c160725587ad60f14ddc57b6f96 \\
         --hash=sha256:df277cb51e61359aba502208d680f90c0493adec6f0e848af94948778aed386e
