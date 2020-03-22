@@ -556,6 +556,7 @@ impl StandaloneDistribution {
     }
 
     /// Obtain an instance by scanning a directory containing an extracted distribution.
+    #[allow(clippy::cognitive_complexity)]
     pub fn from_directory(dist_dir: &Path) -> Result<Self> {
         let mut objs_core: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
         let mut links_core: Vec<LibraryDepends> = Vec::new();
