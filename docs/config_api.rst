@@ -1064,7 +1064,7 @@ via in-memory access.
 If multiple resources sharing the same ``(package, name)`` pair are added,
 the last added one is used.
 
-.. _config_python_executable_add_filesystem_relative_resource_data(resource)``
+.. _config_python_executable_add_filesystem_relative_resource_data:
 
 ``PythonExecutable.add_filesystem_relative_resource_data(prefix, resource)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
