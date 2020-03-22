@@ -1060,7 +1060,6 @@ mod tests {
         assert_eq!(exe.get_type(), "PythonExecutable");
 
         exe.downcast_apply(|exe: &PythonExecutable| {
-            assert!(!exe.exe.extension_modules().is_empty());
             assert!(!exe.exe.in_memory_module_sources().is_empty());
             assert!(!exe.exe.in_memory_module_bytecodes().is_empty());
             assert!(exe.exe.in_memory_package_resources().is_empty());

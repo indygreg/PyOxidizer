@@ -56,12 +56,6 @@ pub trait PythonBinaryBuilder {
     /// Obtain Python package resources data loaded from memory to be embedded in this instance.
     fn in_memory_package_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>>;
 
-    /// Obtain extension modules to be embedded in this instance.
-    fn extension_modules(&self) -> BTreeMap<String, DistributionExtensionModule>;
-
-    /// Obtain extension modules to be embedded in this instance.
-    fn extension_module_datas(&self) -> BTreeMap<String, ExtensionModuleData>;
-
     /// Add Python module source code to be imported from memory to the embedded resources.
     fn add_in_memory_module_source(&mut self, module: &SourceModule) -> Result<()>;
 

@@ -1458,14 +1458,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.resources.get_in_memory_package_resources()
     }
 
-    fn extension_modules(&self) -> BTreeMap<String, DistributionExtensionModule> {
-        self.resources.get_distribution_extension_modules()
-    }
-
-    fn extension_module_datas(&self) -> BTreeMap<String, ExtensionModuleData> {
-        self.resources.get_extension_module_datas()
-    }
-
     fn add_in_memory_module_source(&mut self, module: &SourceModule) -> Result<()> {
         self.resources.add_in_memory_module_source(module)
     }
