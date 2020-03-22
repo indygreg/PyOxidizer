@@ -1038,6 +1038,20 @@ The ``module`` argument must be a ``PythonSourceModule`` instance. The
 
 If called multiple times for the same module, the last write wins.
 
+.. _config_python_executable.add_module_bytecode:
+
+``PythonExecutable.add_module_bytecode(module, optimize_level=0)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method registers a Python module bytecode with a ``PythonExecutable``
+instance.
+
+This method is a glorified proxy to
+:ref:`config_python_executable_add_in_memory_module_bytecode` or
+:ref:`config_python_executable_add_filesystem_relative_module_bytecode`
+depending on the :ref:`config_python_resources_policy` in effect. See these
+other methods for documentation of behavior.
+
 .. _config_python_executable_add_in_memory_resource_data:
 
 ``PythonExecutable.add_in_memory_resource_data(resource)``

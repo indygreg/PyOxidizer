@@ -81,6 +81,9 @@ pub trait PythonBinaryBuilder {
         module: &BytecodeModule,
     ) -> Result<()>;
 
+    /// Add Python module bytecode to a location as determined by the builder's resource policy.
+    fn add_module_bytecode(&mut self, module: &BytecodeModule) -> Result<()>;
+
     /// Add resource data to the collection of embedded resource data.
     fn add_in_memory_package_resource(&mut self, resource: &ResourceData) -> Result<()>;
 

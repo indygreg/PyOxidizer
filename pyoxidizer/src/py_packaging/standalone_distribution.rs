@@ -1465,6 +1465,18 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             .add_relative_path_module_bytecode(module, prefix)
     }
 
+    fn add_module_bytecode(&mut self, module: &BytecodeModule) -> Result<()> {
+        match self.resources_policy.clone() {
+            PythonResourcesPolicy::InMemoryOnly
+            | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
+                self.add_in_memory_module_bytecode(module)
+            }
+            PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
+                self.add_relative_path_module_bytecode(prefix, module)
+            }
+        }
+    }
+
     fn add_in_memory_package_resource(&mut self, resource: &ResourceData) -> Result<()> {
         self.resources.add_in_memory_package_resource(resource)
     }
