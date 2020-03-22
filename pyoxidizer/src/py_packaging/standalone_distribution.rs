@@ -833,7 +833,7 @@ impl StandaloneDistribution {
         include_resources: bool,
         include_test: bool,
     ) -> Result<EmbeddedPythonResourcesPrePackaged> {
-        let mut embedded = EmbeddedPythonResourcesPrePackaged::new(resources_policy);
+        let mut resources = EmbeddedPythonResourcesPrePackaged::new(resources_policy);
 
         match self.link_mode {
             StandaloneDistributionLinkMode::Static => {
@@ -842,7 +842,7 @@ impl StandaloneDistribution {
                     extension_module_filter,
                     preferred_extension_module_variants,
                 )? {
-                    embedded.add_builtin_distribution_extension_module(&ext)?;
+                    resources.add_builtin_distribution_extension_module(&ext)?;
                 }
             }
             StandaloneDistributionLinkMode::Dynamic => {
@@ -859,7 +859,7 @@ impl StandaloneDistribution {
                             prefix.as_ref()
                         }
                     };
-                    embedded.add_relative_path_distribution_extension_module(prefix, &ext)?;
+                    resources.add_relative_path_distribution_extension_module(prefix, &ext)?;
                 }
             }
         }
@@ -873,10 +873,10 @@ impl StandaloneDistribution {
                 match resources_policy {
                     PythonResourcesPolicy::InMemoryOnly
                     | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
-                        embedded.add_in_memory_module_source(&source)?
+                        resources.add_in_memory_module_source(&source)?
                     }
                     PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
-                        embedded.add_relative_path_module_source(&source, prefix)?
+                        resources.add_relative_path_module_source(&source, prefix)?
                     }
                 }
             }
@@ -884,12 +884,12 @@ impl StandaloneDistribution {
             match resources_policy {
                 PythonResourcesPolicy::InMemoryOnly
                 | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
-                    embedded.add_in_memory_module_bytecode(
+                    resources.add_in_memory_module_bytecode(
                         &source.as_bytecode_module(BytecodeOptimizationLevel::Zero),
                     )?;
                 }
                 PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
-                    embedded.add_relative_path_module_bytecode(
+                    resources.add_relative_path_module_bytecode(
                         &source.as_bytecode_module(BytecodeOptimizationLevel::Zero),
                         prefix,
                     )?;
@@ -906,16 +906,16 @@ impl StandaloneDistribution {
                 match resources_policy {
                     PythonResourcesPolicy::InMemoryOnly
                     | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
-                        embedded.add_in_memory_package_resource(&resource)?;
+                        resources.add_in_memory_package_resource(&resource)?;
                     }
                     PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
-                        embedded.add_relative_path_package_resource(prefix, &resource)?;
+                        resources.add_relative_path_package_resource(prefix, &resource)?;
                     }
                 }
             }
         }
 
-        Ok(embedded)
+        Ok(resources)
     }
 
     /// Duplicate the python distribution, with distutils hacked
