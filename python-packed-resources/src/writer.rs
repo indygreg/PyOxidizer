@@ -739,7 +739,7 @@ where
 ///
 /// See the `pyembed` crate for the format of this data structure.
 #[allow(clippy::cognitive_complexity)]
-pub fn write_embedded_resources_v1<'a, W: Write>(
+pub fn write_embedded_resources_v1<W: Write>(
     modules: &[Resource<u8>],
     dest: &mut W,
     interior_padding: Option<BlobInteriorPadding>,
