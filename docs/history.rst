@@ -37,8 +37,6 @@ Backwards Compatibility Notes
   necessary in order to support executables loading Python extension modules,
   which are shared libraries which need access to Python symbols defined
   in executables.
-* The ``PythonExecutable.add_resource_data()`` Starlark method has been
-  renamed to ``PythonExecutable.add_in_memory_resource_data()``.
 * The ``PythonExecutable.add_python_resource()`` Starlark method has been
   renamed to ``PythonExecutable.add_in_memory_python_resource()``.
 * The ``PythonExecutable.add_python_resources()`` Starlark method has been

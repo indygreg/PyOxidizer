@@ -609,6 +609,10 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
             .add_relative_path_package_resource(prefix, resource)
     }
 
+    fn add_package_resource(&mut self, _resource: &ResourceData) -> Result<()> {
+        unimplemented!();
+    }
+
     fn add_distribution_extension_module(
         &mut self,
         _extension_module: &DistributionExtensionModule,

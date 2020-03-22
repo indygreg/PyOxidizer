@@ -1490,6 +1490,18 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             .add_relative_path_package_resource(prefix, resource)
     }
 
+    fn add_package_resource(&mut self, resource: &ResourceData) -> Result<()> {
+        match self.resources_policy.clone() {
+            PythonResourcesPolicy::InMemoryOnly
+            | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
+                self.add_in_memory_package_resource(resource)
+            }
+            PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
+                self.add_relative_path_package_resource(prefix, resource)
+            }
+        }
+    }
+
     fn add_distribution_extension_module(
         &mut self,
         extension_module: &DistributionExtensionModule,

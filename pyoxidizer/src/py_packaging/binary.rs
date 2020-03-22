@@ -94,6 +94,9 @@ pub trait PythonBinaryBuilder {
         resource: &ResourceData,
     ) -> Result<()>;
 
+    /// Add resource data to the collection of embedded resource data to a location as determined by the builder's resource policy.
+    fn add_package_resource(&mut self, resource: &ResourceData) -> Result<()>;
+
     /// Add an extension module to be embedded in the binary.
     fn add_distribution_extension_module(
         &mut self,

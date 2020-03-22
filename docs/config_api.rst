@@ -1077,6 +1077,20 @@ directory prefix for the generated file is defined by ``prefix``.
 If multiple resources sharing the same ``(prefix, package, name)`` tuple are
 added, the last added one is used.
 
+.. _config_python_executable.add_resource_data:
+
+``PythonExecutable.add_resource_data(resource)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method adds a ``PythonResourceData`` instance to the ``PythonExecutable``
+instance.
+
+This method is a glorified proxy to
+:ref:`config_python_executable_add_in_memory_resource_data` or
+:ref:`config_python_executable_add_filesystem_relative_resource_data`
+depending on the :ref:`config_python_resources_policy` in effect. See these
+other methods for documentation of behavior.
+
 .. _config_python_executable_add_extension_module:
 
 ``PythonExecutable.add_extension_module(module)``
