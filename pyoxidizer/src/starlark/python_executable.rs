@@ -525,12 +525,8 @@ impl PythonExecutable {
 
         match m {
             PythonExtensionModuleFlavor::Distribution(m) => {
-                // TODO we should route to proper location depending on policy.
-                info!(
-                    logger,
-                    "adding builtin distribution extension module {}", m.module
-                );
-                self.exe.add_builtin_distribution_extension_module(&m)
+                info!(logger, "adding extension module {}", m.module);
+                self.exe.add_distribution_extension_module(&m)
             }
             PythonExtensionModuleFlavor::StaticallyLinked(m) => {
                 info!(
