@@ -179,6 +179,13 @@ enum ResourceLocation {
     RelativePath,
 }
 
+/// Holds state necessary to link an extension module into libpython.
+#[derive(Debug, Clone)]
+pub struct ExtensionModuleBuildState {
+    /// Extension C initialization function.
+    pub init_fn: Option<String>,
+}
+
 /// Represents Python resources to embed in a binary.
 ///
 /// This collection holds resources before packaging. This type is
@@ -188,7 +195,8 @@ pub struct EmbeddedPythonResourcesPrePackaged {
     policy: PythonResourcesPolicy,
     modules: BTreeMap<String, EmbeddedResourcePythonModulePrePackaged>,
 
-    // TODO combine into single extension module type.
+    // TODO combine into single data structure.
+    extension_module_states: BTreeMap<String, ExtensionModuleBuildState>,
     distribution_extension_modules: BTreeMap<String, DistributionExtensionModule>,
     extension_module_datas: BTreeMap<String, ExtensionModuleData>,
 
@@ -200,6 +208,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         Self {
             policy: policy.clone(),
             modules: BTreeMap::new(),
+            extension_module_states: BTreeMap::new(),
             distribution_extension_modules: BTreeMap::new(),
             extension_module_datas: BTreeMap::new(),
             extra_files: FileManifest::default(),
@@ -497,6 +506,13 @@ impl EmbeddedPythonResourcesPrePackaged {
     ) -> Result<()> {
         // No policy check because distribution extension modules are special.
 
+        self.extension_module_states.insert(
+            module.module.clone(),
+            ExtensionModuleBuildState {
+                init_fn: module.init_fn.clone(),
+            },
+        );
+
         self.distribution_extension_modules
             .insert(module.module.clone(), module.clone());
 
@@ -512,6 +528,13 @@ impl EmbeddedPythonResourcesPrePackaged {
     /// Add an extension module.
     pub fn add_extension_module_data(&mut self, module: &ExtensionModuleData) -> Result<()> {
         self.check_policy(ResourceLocation::InMemory)?;
+
+        self.extension_module_states.insert(
+            module.name.clone(),
+            ExtensionModuleBuildState {
+                init_fn: module.init_fn.clone(),
+            },
+        );
 
         self.extension_module_datas
             .insert(module.name.clone(), module.clone());
@@ -831,6 +854,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         Ok(EmbeddedPythonResources {
             resources: modules,
             extra_files,
+            extension_module_states: self.extension_module_states.clone(),
             distribution_extension_modules: extension_modules,
             built_extension_modules,
         })
@@ -945,6 +969,7 @@ pub struct EmbeddedPythonResources<'a> {
     extra_files: FileManifest,
 
     // TODO combine the extension module types.
+    extension_module_states: BTreeMap<String, ExtensionModuleBuildState>,
     distribution_extension_modules: BTreeMap<String, DistributionExtensionModule>,
     built_extension_modules: BTreeMap<String, ExtensionModuleData>,
 }
@@ -974,21 +999,16 @@ impl<'a> EmbeddedPythonResources<'a> {
     ///
     /// The returned list will likely make its way to PyImport_Inittab.
     pub fn builtin_extensions(&self) -> Vec<(String, String)> {
-        let mut res = Vec::new();
-
-        for (name, em) in &self.distribution_extension_modules {
-            if let Some(init_fn) = &em.init_fn {
-                res.push((name.clone(), init_fn.clone()));
-            }
-        }
-
-        for (name, em) in &self.built_extension_modules {
-            if let Some(init_fn) = &em.init_fn {
-                res.push((name.clone(), init_fn.clone()));
-            }
-        }
-
-        res
+        self.extension_module_states
+            .iter()
+            .filter_map(|(name, state)| {
+                if let Some(init_fn) = &state.init_fn {
+                    Some((name.clone(), init_fn.clone()))
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
     /// Obtain a FileManifest of extra files to install relative to the produced binary.
