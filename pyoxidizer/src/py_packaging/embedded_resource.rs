@@ -630,8 +630,9 @@ impl EmbeddedPythonResourcesPrePackaged {
                 ..EmbeddedResourcePythonModulePrePackaged::default()
             });
 
+        let prefix_path = PathBuf::from(prefix);
         let extension_path = module.shared_library.as_ref().unwrap();
-        let install_path = PathBuf::from(prefix).join(extension_path.file_name().unwrap());
+        let install_path = prefix_path.join(extension_path.file_name().unwrap());
         let extension_data = std::fs::read(&extension_path)?;
 
         entry.is_package = false;
@@ -645,7 +646,22 @@ impl EmbeddedPythonResourcesPrePackaged {
             },
         )?;
 
-        // TODO add library dependencies.
+        for link in &module.links {
+            // Install dynamic library dependencies next to extension module.
+            //
+            // On Windows, this should "just work" since the opening DLL's directory
+            // is searched for dependencies.
+            // TODO this logic likely needs to be expanded.
+            if let Some(shared_library) = &link.dynamic_path {
+                self.extra_files.add_file(
+                    &prefix_path.join(shared_library.file_name().unwrap()),
+                    &FileContent {
+                        data: std::fs::read(&shared_library)?,
+                        executable: false,
+                    },
+                )?;
+            }
+        }
 
         self.add_parent_packages(
             &module.module,
