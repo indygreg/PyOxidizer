@@ -596,8 +596,33 @@ impl EmbeddedPythonResourcesPrePackaged {
             module.shared_library.as_ref().unwrap().to_path_buf(),
         ));
 
-        // TODO add shared library dependencies to be packaged as well.
-        // TODO add shared library dependency names.
+        for link in &module.links {
+            if let Some(shared_library) = &link.dynamic_path {
+                // Add a resource holding the shared library data.
+                let name = shared_library
+                    .file_name()
+                    .expect("filename on shared library")
+                    .to_string_lossy();
+
+                let resource = self.modules.entry(name.to_string()).or_insert_with(|| {
+                    EmbeddedResourcePythonModulePrePackaged {
+                        name: name.to_string(),
+                        ..EmbeddedResourcePythonModulePrePackaged::default()
+                    }
+                });
+
+                resource.in_memory_shared_library =
+                    Some(DataLocation::Path(shared_library.clone()));
+
+                // And update the extension module entry to record a library dependency.
+                self.modules
+                    .get_mut(&module.module)
+                    .expect("entry for extension module")
+                    .shared_library_dependency_names
+                    .get_or_insert_with(|| Vec::new())
+                    .push(name.to_string());
+            }
+        }
 
         self.add_parent_packages(
             &module.module,
