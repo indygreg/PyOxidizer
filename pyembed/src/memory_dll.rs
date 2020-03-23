@@ -7,6 +7,7 @@
 use {
     memory_module_sys::{MemoryFreeLibrary, MemoryGetProcAddress, MemoryLoadLibrary},
     std::ffi::{c_void, CStr},
+    winapi::shared::minwindef::FARPROC,
 };
 
 pub(crate) unsafe fn load_library(data: &[u8]) -> *const c_void {
@@ -17,6 +18,6 @@ pub(crate) unsafe fn free_library(module: *const c_void) -> c_void {
     MemoryFreeLibrary(module)
 }
 
-pub(crate) unsafe fn get_proc_address(module: *const c_void, name: &CStr) -> *mut c_void {
-    MemoryGetProcAddress(module, name.as_ptr()) as *mut c_void
+pub(crate) unsafe fn get_proc_address(module: *const c_void, name: &CStr) -> FARPROC {
+    MemoryGetProcAddress(module, name.as_ptr())
 }

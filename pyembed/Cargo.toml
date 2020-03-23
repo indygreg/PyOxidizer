@@ -23,6 +23,7 @@ uuid = { version = "0.8", features = ["v4"] }
 
 [target.'cfg(windows)'.dependencies]
 memory-module-sys = "0.1"
+winapi = "0.3"
 
 [features]
 default = ["build-mode-standalone", "cpython-link-unresolved-static"]

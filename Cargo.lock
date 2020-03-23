@@ -1275,6 +1275,7 @@ dependencies = [
  "python-packed-resources 0.1.0-pre",
  "python3-sys 0.4.1 (git+https://github.com/dgrunwald/rust-cpython?rev=387e87d9deb6b678508888239f9f87dc36973d3f)",
  "uuid 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "winapi 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

@@ -39,11 +39,10 @@ interfacing.
 **It is an explicit goal of this crate to rely on as few external dependencies
 as possible.** This is because we want to minimize bloat in produced binaries.
 At this time, we have required direct dependencies on published versions of the
-`lazy_static`, `libc`, `python-packed-resources`, and `uuid` crates. We also have
-an optional direct dependency on the `jemalloc-sys` crate. Via the `cpython` crate,
-we also have an indirect dependency on the `num-traits` crate. Via the
-`python-packed-resources` crate, we have indirect dependencies on the `byteorder`
-and `anyhow` crates.
+`lazy_static`, `libc`, `python-packed-resources`, and `uuid` crates. On Windows,
+this list is extended by `memory-module-sys` and `winapi`, which are required to
+support loading DLLs from memory. We also have an optional direct dependency on
+the `jemalloc-sys` crate.
 
 This crate requires linking against a library providing CPython C symbols.
 (This dependency is via the `python3-sys` crate.) On Windows, this library
