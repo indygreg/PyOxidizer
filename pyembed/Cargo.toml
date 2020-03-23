@@ -22,8 +22,8 @@ python-packed-resources = { version = "0.1.0-pre", path = "../python-packed-reso
 uuid = { version = "0.8", features = ["v4"] }
 
 [target.'cfg(windows)'.dependencies]
-memory-module-sys = "0.1"
-winapi = "0.3"
+memory-module-sys = "0.3"
+winapi = { version = "0.3", features = ["libloaderapi", "memoryapi", "minwindef"] }
 
 [features]
 default = ["build-mode-standalone", "cpython-link-unresolved-static"]
