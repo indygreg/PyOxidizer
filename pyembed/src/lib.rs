@@ -86,6 +86,8 @@ That crate's build script will attempt to find a `libpython` from the
 
 mod config;
 mod importer;
+#[cfg(windows)]
+mod memory_dll;
 mod osutils;
 mod pyalloc;
 mod pyinterp;

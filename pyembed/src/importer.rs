@@ -9,6 +9,12 @@ This module defines a Python meta path importer and associated functionality
 for importing Python modules from memory.
 */
 
+#[cfg(windows)]
+use {
+    super::memory_dll::{free_library, get_proc_address, load_library},
+    cpython::exc::SystemError,
+    std::ffi::{c_void, CString},
+};
 use {
     super::pyinterp::PYOXIDIZER_IMPORTER_NAME,
     super::python_resources::{OptimizeLevel, PythonResourcesState},
@@ -21,12 +27,6 @@ use {
     python_packed_resources::data::ResourceFlavor,
     std::path::PathBuf,
     std::sync::Arc,
-};
-#[cfg(windows)]
-use {
-    cpython::exc::SystemError,
-    memory_module_sys::{MemoryFreeLibrary, MemoryGetProcAddress, MemoryLoadLibrary},
-    std::ffi::{c_void, CString},
 };
 
 #[cfg(windows)]
@@ -80,8 +80,7 @@ fn extension_module_shared_library_create_module(
     // New module load request. Proceed to _PyImport_LoadDynamicModuleWithSpec()
     // functionality.
 
-    let module =
-        unsafe { MemoryLoadLibrary(library_data.as_ptr() as *const c_void, library_data.len()) };
+    let module = unsafe { load_library(library_data) };
 
     if module.is_null() {
         return Err(PyErr::new::<ImportError, _>(
@@ -95,7 +94,7 @@ fn extension_module_shared_library_create_module(
 
     load_dynamic_library(py, sys_modules, spec, name_py, name, module).or_else(|e| {
         unsafe {
-            MemoryFreeLibrary(module);
+            free_library(module);
         }
         Err(e)
     })
@@ -133,7 +132,7 @@ fn load_dynamic_library(
     let name_cstring = CString::new(name).unwrap();
     let init_fn_name = CString::new(format!("PyInit_{}", last_name_part)).unwrap();
 
-    let address = unsafe { MemoryGetProcAddress(library_module, init_fn_name.as_ptr()) };
+    let address = unsafe { get_proc_address(library_module, &init_fn_name) };
     if address.is_null() {
         return Err(PyErr::new::<ImportError, _>(
             py,
