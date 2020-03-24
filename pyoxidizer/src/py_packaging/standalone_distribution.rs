@@ -1015,7 +1015,7 @@ impl PythonDistribution for StandaloneDistribution {
         Ok(builder)
     }
 
-    #[allow(clippy::if_same_then_else)]
+    #[allow(clippy::if_same_then_else, clippy::eq_op)]
     fn filter_extension_modules(
         &self,
         logger: &slog::Logger,
