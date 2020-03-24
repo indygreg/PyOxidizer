@@ -401,7 +401,6 @@ pub fn setup_py_install<S: BuildHasher>(
 
 #[cfg(test)]
 mod tests {
-    #[cfg(windows)]
     use {super::*, crate::testutil::*, std::ops::Deref};
 
     #[test]
