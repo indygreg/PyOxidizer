@@ -11,7 +11,7 @@ for importing Python modules from memory.
 
 #[cfg(windows)]
 use {
-    super::memory_dll::{free_library, get_proc_address, load_library},
+    super::memory_dll::{free_library_memory, get_proc_address_memory, load_library_memory},
     cpython::exc::SystemError,
     std::ffi::{c_void, CString},
 };
@@ -50,6 +50,7 @@ type py_init_fn = extern "C" fn() -> *mut pyffi::PyObject;
 /// reimplement it. Documentation of that is inline.
 #[cfg(windows)]
 fn extension_module_shared_library_create_module(
+    resources_state: &PythonResourcesState<u8>,
     py: Python,
     sys_modules: PyObject,
     spec: &PyObject,
@@ -80,7 +81,7 @@ fn extension_module_shared_library_create_module(
     // New module load request. Proceed to _PyImport_LoadDynamicModuleWithSpec()
     // functionality.
 
-    let module = unsafe { load_library(library_data) };
+    let module = unsafe { load_library_memory(resources_state, library_data) };
 
     if module.is_null() {
         return Err(PyErr::new::<ImportError, _>(
@@ -94,7 +95,7 @@ fn extension_module_shared_library_create_module(
 
     load_dynamic_library(py, sys_modules, spec, name_py, name, module).or_else(|e| {
         unsafe {
-            free_library(module);
+            free_library_memory(module);
         }
         Err(e)
     })
@@ -102,6 +103,7 @@ fn extension_module_shared_library_create_module(
 
 #[cfg(unix)]
 fn extension_module_shared_library_create_module(
+    _resources_state: &PythonResourcesState<u8>,
     _py: Python,
     _sys_modules: PyObject,
     _spec: &PyObject,
@@ -132,7 +134,7 @@ fn load_dynamic_library(
     let name_cstring = CString::new(name).unwrap();
     let init_fn_name = CString::new(format!("PyInit_{}", last_name_part)).unwrap();
 
-    let address = unsafe { get_proc_address(library_module, &init_fn_name) };
+    let address = unsafe { get_proc_address_memory(library_module, &init_fn_name) };
     if address.is_null() {
         return Err(PyErr::new::<ImportError, _>(
             py,
@@ -526,6 +528,7 @@ impl PyOxidizerFinder {
                     let sys_modules = state.sys_module.as_object().getattr(py, "modules")?;
 
                     extension_module_shared_library_create_module(
+                        &state.resources_state,
                         py,
                         sys_modules,
                         spec,
