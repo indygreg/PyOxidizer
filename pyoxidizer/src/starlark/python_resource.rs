@@ -294,19 +294,9 @@ impl<'a> From<&'a PythonResource> for Value {
                 Value::new(PythonSourceModule { module: sm.clone() })
             }
 
-            PythonResource::ModuleBytecodeRequest {
-                name,
-                source,
-                optimize_level,
-                is_package,
-            } => Value::new(PythonBytecodeModule {
-                module: BytecodeModuleSource {
-                    name: name.clone(),
-                    source: source.clone(),
-                    optimize_level: BytecodeOptimizationLevel::from(*optimize_level),
-                    is_package: *is_package,
-                },
-            }),
+            PythonResource::ModuleBytecodeRequest(m) => {
+                Value::new(PythonBytecodeModule { module: m.clone() })
+            }
 
             PythonResource::ModuleBytecode { .. } => {
                 panic!("not yet implemented");

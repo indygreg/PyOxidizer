@@ -255,12 +255,7 @@ pub struct BytecodeModuleSource {
 
 impl BytecodeModuleSource {
     pub fn as_python_resource(&self) -> PythonResource {
-        PythonResource::ModuleBytecodeRequest {
-            name: self.name.clone(),
-            source: self.source.clone(),
-            optimize_level: self.optimize_level.clone(),
-            is_package: self.is_package,
-        }
+        PythonResource::ModuleBytecodeRequest(self.clone())
     }
 
     /// Compile source to bytecode using a compiler.
@@ -413,12 +408,7 @@ pub enum PythonResource {
     /// A module defined by source code.
     ModuleSource(SourceModule),
     /// A module defined by a request to generate bytecode from source.
-    ModuleBytecodeRequest {
-        name: String,
-        source: DataLocation,
-        optimize_level: BytecodeOptimizationLevel,
-        is_package: bool,
-    },
+    ModuleBytecodeRequest(BytecodeModuleSource),
     /// A module defined by existing bytecode.
     ModuleBytecode {
         name: String,
@@ -565,7 +555,7 @@ impl PythonResource {
         match self {
             PythonResource::ModuleSource(m) => m.name.clone(),
             PythonResource::ModuleBytecode { name, .. } => name.clone(),
-            PythonResource::ModuleBytecodeRequest { name, .. } => name.clone(),
+            PythonResource::ModuleBytecodeRequest(m) => m.name.clone(),
             PythonResource::Resource { package, name, .. } => format!("{}.{}", package, name),
             PythonResource::ExtensionModuleDynamicLibrary(em) => em.name.clone(),
             PythonResource::ExtensionModuleStaticallyLinked(em) => em.name.clone(),
@@ -576,7 +566,7 @@ impl PythonResource {
         let name = match self {
             PythonResource::ModuleSource(m) => &m.name,
             PythonResource::ModuleBytecode { name, .. } => name,
-            PythonResource::ModuleBytecodeRequest { name, .. } => name,
+            PythonResource::ModuleBytecodeRequest(m) => &m.name,
             PythonResource::Resource { package, .. } => package,
             PythonResource::ExtensionModuleDynamicLibrary(em) => &em.name,
             PythonResource::ExtensionModuleStaticallyLinked(em) => &em.name,
