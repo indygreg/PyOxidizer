@@ -252,11 +252,7 @@ impl BytecodeModule {
         PythonResource::ModuleBytecodeRequest {
             name: self.name.clone(),
             source: self.source.clone(),
-            optimize_level: match self.optimize_level {
-                BytecodeOptimizationLevel::Zero => 0,
-                BytecodeOptimizationLevel::One => 1,
-                BytecodeOptimizationLevel::Two => 2,
-            },
+            optimize_level: self.optimize_level.clone(),
             is_package: self.is_package,
         }
     }
@@ -414,7 +410,7 @@ pub enum PythonResource {
     ModuleBytecodeRequest {
         name: String,
         source: DataLocation,
-        optimize_level: i32,
+        optimize_level: BytecodeOptimizationLevel,
         is_package: bool,
     },
     /// A module defined by existing bytecode.
