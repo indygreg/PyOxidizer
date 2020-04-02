@@ -302,17 +302,7 @@ impl<'a> From<&'a PythonResource> for Value {
                 panic!("not yet implemented");
             }
 
-            PythonResource::Resource {
-                package,
-                name,
-                data,
-            } => Value::new(PythonResourceData {
-                data: ResourceData {
-                    package: package.clone(),
-                    name: name.clone(),
-                    data: data.clone(),
-                },
-            }),
+            PythonResource::Resource(data) => Value::new(PythonResourceData { data: data.clone() }),
 
             PythonResource::ExtensionModuleDynamicLibrary(em) => {
                 Value::new(PythonExtensionModule {
