@@ -475,20 +475,12 @@ impl TryFrom<&PythonFileResource> for PythonResource {
                 is_package: m.is_package,
             })),
 
-            PythonFileResource::BytecodeOpt1 {
-                full_name, path, ..
-            } => {
-                let bytecode =
-                    std::fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
-
-                // First 16 bytes are a validation header.
-                let bytecode = bytecode[16..bytecode.len()].to_vec();
-
+            PythonFileResource::BytecodeOpt1(m) => {
                 Ok(PythonResource::ModuleBytecode(BytecodeModule {
-                    name: full_name.clone(),
-                    bytecode: DataLocation::Memory(bytecode),
-                    optimize_level: BytecodeOptimizationLevel::One,
-                    is_package: is_package_from_path(&path),
+                    name: m.name.clone(),
+                    bytecode: DataLocation::Memory(m.resolve_bytecode()?),
+                    optimize_level: m.optimize_level,
+                    is_package: m.is_package,
                 }))
             }
 
