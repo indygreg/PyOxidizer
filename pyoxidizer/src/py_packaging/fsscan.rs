@@ -8,7 +8,7 @@ Scanning the filesystem for Python resources.
 
 use {
     super::distribution::PythonModuleSuffixes,
-    super::resource::{DataLocation, SourceModule},
+    super::resource::{BytecodeModule, BytecodeOptimizationLevel, DataLocation, SourceModule},
     anyhow::Result,
     itertools::Itertools,
     std::collections::{BTreeMap, HashSet},
@@ -58,12 +58,7 @@ pub enum PythonFileResource {
     /// A Python module bytecode file.
     ///
     /// i.e. a .pyc file.
-    Bytecode {
-        package: String,
-        stem: String,
-        full_name: String,
-        path: PathBuf,
-    },
+    Bytecode(BytecodeModule),
 
     /// A Python module bytecode file, compiled at optimization level 1.
     ///
@@ -362,12 +357,11 @@ impl PythonResourceIterator {
                         path: path.to_path_buf(),
                     }
                 } else {
-                    PythonFileResource::Bytecode {
-                        package,
-                        stem: stem.to_string(),
-                        full_name: full_module_name,
-                        path: path.to_path_buf(),
-                    }
+                    PythonFileResource::Bytecode(BytecodeModule::from_path(
+                        &full_module_name,
+                        BytecodeOptimizationLevel::Zero,
+                        path,
+                    ))
                 }
             }
             Some("egg") => PythonFileResource::EggFile {

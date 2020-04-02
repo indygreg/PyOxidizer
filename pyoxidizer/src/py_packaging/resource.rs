@@ -13,7 +13,7 @@ use {
     anyhow::{anyhow, Context, Error, Result},
     std::collections::BTreeSet,
     std::convert::TryFrom,
-    std::path::PathBuf,
+    std::path::{Path, PathBuf},
 };
 
 /// Resolve the set of packages present in a fully qualified module name.
@@ -304,6 +304,15 @@ pub struct BytecodeModule {
 }
 
 impl BytecodeModule {
+    pub fn from_path(name: &str, optimize_level: BytecodeOptimizationLevel, path: &Path) -> Self {
+        Self {
+            name: name.to_string(),
+            bytecode: DataLocation::Path(path.to_path_buf()),
+            optimize_level,
+            is_package: is_package_from_path(path),
+        }
+    }
+
     pub fn as_python_resource(&self) -> PythonResource {
         PythonResource::ModuleBytecode(self.clone())
     }
@@ -459,22 +468,12 @@ impl TryFrom<&PythonFileResource> for PythonResource {
                 is_package: m.is_package,
             })),
 
-            PythonFileResource::Bytecode {
-                full_name, path, ..
-            } => {
-                let bytecode =
-                    std::fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
-
-                // First 16 bytes are a validation header.
-                let bytecode = bytecode[16..bytecode.len()].to_vec();
-
-                Ok(PythonResource::ModuleBytecode(BytecodeModule {
-                    name: full_name.clone(),
-                    bytecode: DataLocation::Memory(bytecode),
-                    optimize_level: BytecodeOptimizationLevel::Zero,
-                    is_package: is_package_from_path(&path),
-                }))
-            }
+            PythonFileResource::Bytecode(m) => Ok(PythonResource::ModuleBytecode(BytecodeModule {
+                name: m.name.clone(),
+                bytecode: DataLocation::Memory(m.resolve_bytecode()?),
+                optimize_level: m.optimize_level,
+                is_package: m.is_package,
+            })),
 
             PythonFileResource::BytecodeOpt1 {
                 full_name, path, ..
