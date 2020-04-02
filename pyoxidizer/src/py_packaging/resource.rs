@@ -133,12 +133,16 @@ impl DataLocation {
 /// A Python source module agnostic of location.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SourceModule {
+    /// The fully qualified Python module name.
     pub name: String,
+    /// Python source code.
     pub source: DataLocation,
+    /// Whether this module is also a package.
     pub is_package: bool,
 }
 
 impl SourceModule {
+    /// Resolve the package containing this module.
     pub fn package(&self) -> String {
         if let Some(idx) = self.name.rfind('.') {
             self.name[0..idx].to_string()
