@@ -60,16 +60,6 @@ pub enum PythonFileResource {
     /// i.e. a .pyc file.
     Bytecode(BytecodeModule),
 
-    /// A Python module bytecode file, compiled at optimization level 1.
-    ///
-    /// i.e. a .opt-1.pyc file.
-    BytecodeOpt1(BytecodeModule),
-
-    /// A Python module bytecode file, compiled at optimization level 2.
-    ///
-    /// i.e. a .opt-2.pyc file.
-    BytecodeOpt2(BytecodeModule),
-
     /// A compiled extension module.
     ///
     /// i.e. a .so or .pyd file.
@@ -330,13 +320,13 @@ impl PythonResourceIterator {
                 self.seen_packages.insert(package.clone());
 
                 if rel_str.ends_with(".opt-1.pyc") {
-                    PythonFileResource::BytecodeOpt1(BytecodeModule::from_path(
+                    PythonFileResource::Bytecode(BytecodeModule::from_path(
                         &full_module_name,
                         BytecodeOptimizationLevel::One,
                         path,
                     ))
                 } else if rel_str.ends_with(".opt-2.pyc") {
-                    PythonFileResource::BytecodeOpt2(BytecodeModule::from_path(
+                    PythonFileResource::Bytecode(BytecodeModule::from_path(
                         &full_module_name,
                         BytecodeOptimizationLevel::Two,
                         path,

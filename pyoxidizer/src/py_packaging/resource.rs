@@ -475,24 +475,6 @@ impl TryFrom<&PythonFileResource> for PythonResource {
                 is_package: m.is_package,
             })),
 
-            PythonFileResource::BytecodeOpt1(m) => {
-                Ok(PythonResource::ModuleBytecode(BytecodeModule {
-                    name: m.name.clone(),
-                    bytecode: DataLocation::Memory(m.resolve_bytecode()?),
-                    optimize_level: m.optimize_level,
-                    is_package: m.is_package,
-                }))
-            }
-
-            PythonFileResource::BytecodeOpt2(m) => {
-                Ok(PythonResource::ModuleBytecode(BytecodeModule {
-                    name: m.name.clone(),
-                    bytecode: DataLocation::Memory(m.resolve_bytecode()?),
-                    optimize_level: m.optimize_level,
-                    is_package: m.is_package,
-                }))
-            }
-
             PythonFileResource::Resource(resource) => {
                 let path = &(resource.path);
                 let data =
