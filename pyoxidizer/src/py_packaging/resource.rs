@@ -298,7 +298,7 @@ impl BytecodeModuleSource {
 #[derive(Clone, Debug, PartialEq)]
 pub struct BytecodeModule {
     pub name: String,
-    pub bytecode: DataLocation,
+    bytecode: DataLocation,
     pub optimize_level: BytecodeOptimizationLevel,
     pub is_package: bool,
 }
@@ -306,6 +306,18 @@ pub struct BytecodeModule {
 impl BytecodeModule {
     pub fn as_python_resource(&self) -> PythonResource {
         PythonResource::ModuleBytecode(self.clone())
+    }
+
+    /// Resolve the bytecode data for this module.
+    pub fn resolve_bytecode(&self) -> Result<Vec<u8>> {
+        match &self.bytecode {
+            DataLocation::Memory(data) => Ok(data.clone()),
+            DataLocation::Path(path) => {
+                let data = std::fs::read(path)?;
+
+                Ok(data[16..data.len()].to_vec())
+            }
+        }
     }
 }
 
