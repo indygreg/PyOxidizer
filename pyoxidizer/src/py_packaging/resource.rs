@@ -289,6 +289,21 @@ impl BytecodeModuleSource {
     }
 }
 
+/// Compiled Python module bytecode.
+#[derive(Clone, Debug, PartialEq)]
+pub struct BytecodeModule {
+    pub name: String,
+    pub bytecode: DataLocation,
+    pub optimize_level: BytecodeOptimizationLevel,
+    pub is_package: bool,
+}
+
+impl BytecodeModule {
+    pub fn as_python_resource(&self) -> PythonResource {
+        PythonResource::ModuleBytecode(self.clone())
+    }
+}
+
 /// Python package resource data, agnostic of storage location.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ResourceData {
@@ -410,12 +425,7 @@ pub enum PythonResource {
     /// A module defined by a request to generate bytecode from source.
     ModuleBytecodeRequest(BytecodeModuleSource),
     /// A module defined by existing bytecode.
-    ModuleBytecode {
-        name: String,
-        bytecode: DataLocation,
-        optimize_level: BytecodeOptimizationLevel,
-        is_package: bool,
-    },
+    ModuleBytecode(BytecodeModule),
     /// A non-module resource file.
     Resource {
         package: String,
@@ -456,12 +466,12 @@ impl TryFrom<&PythonFileResource> for PythonResource {
                 // First 16 bytes are a validation header.
                 let bytecode = bytecode[16..bytecode.len()].to_vec();
 
-                Ok(PythonResource::ModuleBytecode {
+                Ok(PythonResource::ModuleBytecode(BytecodeModule {
                     name: full_name.clone(),
                     bytecode: DataLocation::Memory(bytecode),
                     optimize_level: BytecodeOptimizationLevel::Zero,
                     is_package: is_package_from_path(&path),
-                })
+                }))
             }
 
             PythonFileResource::BytecodeOpt1 {
@@ -473,12 +483,12 @@ impl TryFrom<&PythonFileResource> for PythonResource {
                 // First 16 bytes are a validation header.
                 let bytecode = bytecode[16..bytecode.len()].to_vec();
 
-                Ok(PythonResource::ModuleBytecode {
+                Ok(PythonResource::ModuleBytecode(BytecodeModule {
                     name: full_name.clone(),
                     bytecode: DataLocation::Memory(bytecode),
                     optimize_level: BytecodeOptimizationLevel::One,
                     is_package: is_package_from_path(&path),
-                })
+                }))
             }
 
             PythonFileResource::BytecodeOpt2 {
@@ -490,12 +500,12 @@ impl TryFrom<&PythonFileResource> for PythonResource {
                 // First 16 bytes are a validation header.
                 let bytecode = bytecode[16..bytecode.len()].to_vec();
 
-                Ok(PythonResource::ModuleBytecode {
+                Ok(PythonResource::ModuleBytecode(BytecodeModule {
                     name: full_name.clone(),
                     bytecode: DataLocation::Memory(bytecode),
                     optimize_level: BytecodeOptimizationLevel::Two,
                     is_package: is_package_from_path(&path),
-                })
+                }))
             }
 
             PythonFileResource::Resource(resource) => {
@@ -554,7 +564,7 @@ impl PythonResource {
     pub fn full_name(&self) -> String {
         match self {
             PythonResource::ModuleSource(m) => m.name.clone(),
-            PythonResource::ModuleBytecode { name, .. } => name.clone(),
+            PythonResource::ModuleBytecode(m) => m.name.clone(),
             PythonResource::ModuleBytecodeRequest(m) => m.name.clone(),
             PythonResource::Resource { package, name, .. } => format!("{}.{}", package, name),
             PythonResource::ExtensionModuleDynamicLibrary(em) => em.name.clone(),
@@ -565,7 +575,7 @@ impl PythonResource {
     pub fn is_in_packages(&self, packages: &[String]) -> bool {
         let name = match self {
             PythonResource::ModuleSource(m) => &m.name,
-            PythonResource::ModuleBytecode { name, .. } => name,
+            PythonResource::ModuleBytecode(m) => &m.name,
             PythonResource::ModuleBytecodeRequest(m) => &m.name,
             PythonResource::Resource { package, .. } => package,
             PythonResource::ExtensionModuleDynamicLibrary(em) => &em.name,
@@ -752,12 +762,12 @@ mod tests {
         assert!(!source.is_in_packages(&[]));
         assert!(!source.is_in_packages(&["bar".to_string()]));
 
-        let bytecode = PythonResource::ModuleBytecode {
+        let bytecode = PythonResource::ModuleBytecode(BytecodeModule {
             name: "foo".to_string(),
             bytecode: DataLocation::Memory(vec![]),
             optimize_level: BytecodeOptimizationLevel::Zero,
             is_package: false,
-        };
+        });
         assert!(bytecode.is_in_packages(&["foo".to_string()]));
         assert!(!bytecode.is_in_packages(&[]));
         assert!(!bytecode.is_in_packages(&["bar".to_string()]));
