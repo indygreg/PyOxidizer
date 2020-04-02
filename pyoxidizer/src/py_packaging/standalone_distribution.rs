@@ -754,11 +754,14 @@ impl StandaloneDistribution {
                         .unwrap()
                         .insert(resource.stem.clone(), resource.path);
                 }
-                PythonFileResource::Source {
-                    full_name, path, ..
-                } => {
-                    py_modules.insert(full_name.clone(), path);
-                }
+                PythonFileResource::Source(source) => match source.source {
+                    DataLocation::Path(path) => {
+                        py_modules.insert(source.name.clone(), path);
+                    }
+                    DataLocation::Memory(_) => {
+                        panic!("should not have received in-memory source data")
+                    }
+                },
                 _ => {}
             };
         }

@@ -128,6 +128,11 @@ impl DataLocation {
             DataLocation::Memory(data) => Ok(data.clone()),
         }
     }
+
+    /// Resolve the instance to a Memory variant.
+    pub fn to_memory(&self) -> Result<DataLocation> {
+        Ok(DataLocation::Memory(self.resolve()?))
+    }
 }
 
 /// A Python source module agnostic of location.
@@ -436,18 +441,11 @@ impl TryFrom<&PythonFileResource> for PythonResource {
 
     fn try_from(resource: &PythonFileResource) -> Result<PythonResource> {
         match resource {
-            PythonFileResource::Source {
-                full_name, path, ..
-            } => {
-                let source =
-                    std::fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
-
-                Ok(PythonResource::ModuleSource(SourceModule {
-                    name: full_name.clone(),
-                    source: DataLocation::Memory(source),
-                    is_package: is_package_from_path(&path),
-                }))
-            }
+            PythonFileResource::Source(m) => Ok(PythonResource::ModuleSource(SourceModule {
+                name: m.name.clone(),
+                source: m.source.to_memory()?,
+                is_package: m.is_package,
+            })),
 
             PythonFileResource::Bytecode {
                 full_name, path, ..

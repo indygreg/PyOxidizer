@@ -8,11 +8,11 @@ Scanning the filesystem for Python resources.
 
 use {
     super::distribution::PythonModuleSuffixes,
-    anyhow::{Context, Result},
+    super::resource::{DataLocation, SourceModule},
+    anyhow::Result,
     itertools::Itertools,
     std::collections::{BTreeMap, HashSet},
     std::ffi::OsStr,
-    std::fs,
     std::path::{Path, PathBuf},
 };
 
@@ -53,38 +53,7 @@ pub enum PythonFileResource {
     /// Python module source code.
     ///
     /// i.e. a .py file.
-    Source {
-        /// Python package name of this resource.
-        ///
-        /// For resources in the root, this will likely be the resource name.
-        ///
-        /// For modules that are packages (e.g. `__init__.py` or `__init__.pyc`
-        /// files, this will be the same as `full_name`.
-        ///
-        /// For regular modules, this will be all but the final component in
-        /// `full_name`.
-        package: String,
-
-        /// Final "stem" name of this resource.
-        ///
-        /// This is derived from the file name's basename.
-        ///
-        /// For resources that define packages, this is an empty string.
-        stem: String,
-
-        /// Full resource name of this resource.
-        ///
-        /// This is typically how `importlib` refers to the resource.
-        ///
-        /// e.g. `foo.bar`.
-        ///
-        /// For resources that are packages, this is equivalent to `package`.
-        /// For non-package resources, this is `package.stem`.
-        full_name: String,
-
-        /// Filesystem path to this resource.
-        path: PathBuf,
-    },
+    Source(SourceModule),
 
     /// A Python module bytecode file.
     ///
@@ -309,12 +278,9 @@ impl PythonResourceIterator {
 
                 let mut full_module_name: Vec<&str> = package_parts.to_vec();
 
-                let stem = if module_name == "__init__" {
-                    "".to_string()
-                } else {
+                if module_name != "__init__" {
                     full_module_name.push(module_name);
-                    module_name.to_string()
-                };
+                }
 
                 let full_module_name = itertools::join(full_module_name, ".");
 
@@ -324,12 +290,11 @@ impl PythonResourceIterator {
 
                 self.seen_packages.insert(package.clone());
 
-                PythonFileResource::Source {
-                    package,
-                    stem,
-                    full_name: full_module_name,
-                    path: path.to_path_buf(),
-                }
+                PythonFileResource::Source(SourceModule {
+                    name: full_module_name,
+                    source: DataLocation::Path(path.to_path_buf()),
+                    is_package: is_package_from_path(&path),
+                })
             }
             Some("pyc") => {
                 // .pyc files should be in a __pycache__ directory.
@@ -552,13 +517,9 @@ pub fn find_python_modules(
     let mut mods = BTreeMap::new();
 
     for resource in find_python_resources(root_path, suffixes) {
-        if let PythonFileResource::Source {
-            full_name, path, ..
-        } = resource
-        {
-            let data = fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
-
-            mods.insert(full_name, data);
+        if let PythonFileResource::Source(module) = resource {
+            let data = module.source.resolve()?;
+            mods.insert(module.name, data);
         }
     }
 
@@ -603,39 +564,35 @@ mod tests {
 
         assert_eq!(
             resources[0],
-            PythonFileResource::Source {
-                package: "acme".to_string(),
-                stem: "".to_string(),
-                full_name: "acme".to_string(),
-                path: acme_path.join("__init__.py"),
-            }
+            PythonFileResource::Source(SourceModule {
+                name: "acme".to_string(),
+                source: DataLocation::Path(acme_path.join("__init__.py")),
+                is_package: true,
+            })
         );
         assert_eq!(
             resources[1],
-            PythonFileResource::Source {
-                package: "acme.a".to_string(),
-                stem: "".to_string(),
-                full_name: "acme.a".to_string(),
-                path: acme_a_path.join("__init__.py"),
-            }
+            PythonFileResource::Source(SourceModule {
+                name: "acme.a".to_string(),
+                source: DataLocation::Path(acme_a_path.join("__init__.py")),
+                is_package: true,
+            })
         );
         assert_eq!(
             resources[2],
-            PythonFileResource::Source {
-                package: "acme.a".to_string(),
-                stem: "foo".to_string(),
-                full_name: "acme.a.foo".to_string(),
-                path: acme_a_path.join("foo.py"),
-            }
+            PythonFileResource::Source(SourceModule {
+                name: "acme.a.foo".to_string(),
+                source: DataLocation::Path(acme_a_path.join("foo.py")),
+                is_package: false,
+            })
         );
         assert_eq!(
             resources[3],
-            PythonFileResource::Source {
-                package: "acme.bar".to_string(),
-                stem: "".to_string(),
-                full_name: "acme.bar".to_string(),
-                path: acme_bar_path.join("__init__.py"),
-            }
+            PythonFileResource::Source(SourceModule {
+                name: "acme.bar".to_string(),
+                source: DataLocation::Path(acme_bar_path.join("__init__.py")),
+                is_package: true,
+            })
         );
     }
 
@@ -665,21 +622,19 @@ mod tests {
 
         assert_eq!(
             resources[0],
-            PythonFileResource::Source {
-                package: "acme".to_string(),
-                stem: "".to_string(),
-                full_name: "acme".to_string(),
-                path: acme_path.join("__init__.py"),
-            }
+            PythonFileResource::Source(SourceModule {
+                name: "acme".to_string(),
+                source: DataLocation::Path(acme_path.join("__init__.py")),
+                is_package: true,
+            })
         );
         assert_eq!(
             resources[1],
-            PythonFileResource::Source {
-                package: "acme".to_string(),
-                stem: "bar".to_string(),
-                full_name: "acme.bar".to_string(),
-                path: acme_path.join("bar.py"),
-            }
+            PythonFileResource::Source(SourceModule {
+                name: "acme.bar".to_string(),
+                source: DataLocation::Path(acme_path.join("bar.py")),
+                is_package: false,
+            })
         );
     }
 
@@ -831,21 +786,19 @@ mod tests {
 
         assert_eq!(
             resources[0],
-            PythonFileResource::Source {
-                package: "foo".to_string(),
-                stem: "".to_string(),
-                full_name: "foo".to_string(),
-                path: package_path.join("__init__.py"),
-            }
+            PythonFileResource::Source(SourceModule {
+                name: "foo".to_string(),
+                source: DataLocation::Path(package_path.join("__init__.py")),
+                is_package: true,
+            })
         );
         assert_eq!(
             resources[1],
-            PythonFileResource::Source {
-                package: "foo".to_string(),
-                stem: "bar".to_string(),
-                full_name: "foo.bar".to_string(),
-                path: package_path.join("bar.py"),
-            }
+            PythonFileResource::Source(SourceModule {
+                name: "foo.bar".to_string(),
+                source: DataLocation::Path(package_path.join("bar.py")),
+                is_package: false,
+            })
         );
     }
 
