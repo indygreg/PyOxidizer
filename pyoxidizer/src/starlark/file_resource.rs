@@ -20,7 +20,7 @@ use {
     },
     crate::project_building::build_python_executable,
     crate::py_packaging::binary::PythonBinaryBuilder,
-    crate::py_packaging::resource::BytecodeModule,
+    crate::py_packaging::resource::BytecodeModuleSource,
     crate::py_packaging::standalone_distribution::DistributionExtensionModule,
     anyhow::Result,
     itertools::Itertools,
@@ -80,7 +80,7 @@ pub struct FileManifest {
 
 impl FileManifest {
     // TODO implement.
-    fn add_bytecode_module(&self, _prefix: &str, _module: &BytecodeModule) {
+    fn add_bytecode_module(&self, _prefix: &str, _module: &BytecodeModuleSource) {
         println!("support for adding bytecode modules not yet implemented");
     }
 

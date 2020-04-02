@@ -4,7 +4,7 @@
 
 use {
     crate::py_packaging::resource::{
-        BytecodeModule, BytecodeOptimizationLevel, ExtensionModuleData, PythonResource,
+        BytecodeModuleSource, BytecodeOptimizationLevel, ExtensionModuleData, PythonResource,
         ResourceData, SourceModule,
     },
     crate::py_packaging::standalone_distribution::DistributionExtensionModule,
@@ -79,7 +79,7 @@ impl TypedValue for PythonSourceModule {
 
 #[derive(Debug, Clone)]
 pub struct PythonBytecodeModule {
-    pub module: BytecodeModule,
+    pub module: BytecodeModuleSource,
 }
 
 impl TypedValue for PythonBytecodeModule {
@@ -300,7 +300,7 @@ impl<'a> From<&'a PythonResource> for Value {
                 optimize_level,
                 is_package,
             } => Value::new(PythonBytecodeModule {
-                module: BytecodeModule {
+                module: BytecodeModuleSource {
                     name: name.clone(),
                     source: source.clone(),
                     optimize_level: BytecodeOptimizationLevel::from(*optimize_level),

@@ -22,7 +22,7 @@ use {
     },
     super::libpython::{derive_importlib, link_libpython, ImportlibBytecode},
     super::resource::{
-        BytecodeModule, BytecodeOptimizationLevel, DataLocation, ExtensionModuleData,
+        BytecodeModuleSource, BytecodeOptimizationLevel, DataLocation, ExtensionModuleData,
         PythonResource, ResourceData, SourceModule,
     },
     super::resources_policy::PythonResourcesPolicy,
@@ -1411,7 +1411,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.resources.get_in_memory_module_sources()
     }
 
-    fn in_memory_module_bytecodes(&self) -> BTreeMap<String, BytecodeModule> {
+    fn in_memory_module_bytecodes(&self) -> BTreeMap<String, BytecodeModuleSource> {
         self.resources.get_in_memory_module_bytecodes()
     }
 
@@ -1432,14 +1432,14 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             .add_relative_path_module_source(module, prefix)
     }
 
-    fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModule) -> Result<()> {
+    fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModuleSource) -> Result<()> {
         self.resources.add_in_memory_module_bytecode(module)
     }
 
     fn add_relative_path_module_bytecode(
         &mut self,
         prefix: &str,
-        module: &BytecodeModule,
+        module: &BytecodeModuleSource,
     ) -> Result<()> {
         self.resources
             .add_relative_path_module_bytecode(module, prefix)
