@@ -106,6 +106,9 @@ New Features
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
 
+* The directory for downloaded Python distributions in the build directory
+  now uses a truncated SHA-256 hash instead of the full hash to help avoid
+  path length limit issues (#224).
 * The documentation for the ``pyembed`` crate has been moved out of the
   Sphinx documentation and into the Rust crate itself. Rendered docs can be
   seen by following the *Documentation* link at https://crates.io/crates/pyembed

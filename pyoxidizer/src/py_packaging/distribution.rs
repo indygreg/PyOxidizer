@@ -468,7 +468,7 @@ pub fn resolve_python_distribution_from_location(
         PythonDistributionLocation::Url { sha256, .. } => sha256,
     };
 
-    let distribution_path = distributions_dir.join(format!("python.{}", distribution_hash));
+    let distribution_path = distributions_dir.join(format!("python.{}", &distribution_hash[0..12]));
 
     Ok((path, distribution_path))
 }

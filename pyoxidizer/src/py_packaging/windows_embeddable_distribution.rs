@@ -725,7 +725,7 @@ mod tests {
 
         let extract_dir = temp_dir
             .path()
-            .join(format!("python.{}", amd64_dist.sha256));
+            .join(format!("python.{}", &amd64_dist.sha256[0..12]));
 
         assert_eq!(dist.python_exe, extract_dir.join("python.exe"));
         assert_eq!(
