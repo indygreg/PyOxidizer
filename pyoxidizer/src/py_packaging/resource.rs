@@ -143,8 +143,12 @@ pub struct SourceModule {
 
 impl SourceModule {
     /// Resolve the package containing this module.
+    ///
+    /// If this module is a package, returns the name of self.
     pub fn package(&self) -> String {
-        if let Some(idx) = self.name.rfind('.') {
+        if self.is_package {
+            self.name.clone()
+        } else if let Some(idx) = self.name.rfind('.') {
             self.name[0..idx].to_string()
         } else {
             self.name.clone()
