@@ -68,12 +68,7 @@ pub enum PythonFileResource {
     /// A Python module bytecode file, compiled at optimization level 2.
     ///
     /// i.e. a .opt-2.pyc file.
-    BytecodeOpt2 {
-        package: String,
-        stem: String,
-        full_name: String,
-        path: PathBuf,
-    },
+    BytecodeOpt2(BytecodeModule),
 
     /// A compiled extension module.
     ///
@@ -322,12 +317,9 @@ impl PythonResourceIterator {
 
                 let mut full_module_name: Vec<&str> = package_parts.to_vec();
 
-                let stem = if module_name == "__init__" {
-                    ""
-                } else {
+                if module_name != "__init__" {
                     full_module_name.push(&module_name);
-                    &module_name
-                };
+                }
 
                 let full_module_name = itertools::join(full_module_name, ".");
 
@@ -344,12 +336,11 @@ impl PythonResourceIterator {
                         path,
                     ))
                 } else if rel_str.ends_with(".opt-2.pyc") {
-                    PythonFileResource::BytecodeOpt2 {
-                        package,
-                        stem: stem.to_string(),
-                        full_name: full_module_name,
-                        path: path.to_path_buf(),
-                    }
+                    PythonFileResource::BytecodeOpt2(BytecodeModule::from_path(
+                        &full_module_name,
+                        BytecodeOptimizationLevel::Two,
+                        path,
+                    ))
                 } else {
                     PythonFileResource::Bytecode(BytecodeModule::from_path(
                         &full_module_name,
