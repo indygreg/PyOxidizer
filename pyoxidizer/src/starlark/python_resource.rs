@@ -290,17 +290,9 @@ impl TypedValue for PythonExtensionModule {
 impl<'a> From<&'a PythonResource> for Value {
     fn from(resource: &'a PythonResource) -> Value {
         match resource {
-            PythonResource::ModuleSource {
-                name,
-                source,
-                is_package,
-            } => Value::new(PythonSourceModule {
-                module: SourceModule {
-                    name: name.clone(),
-                    source: source.clone(),
-                    is_package: *is_package,
-                },
-            }),
+            PythonResource::ModuleSource(sm) => {
+                Value::new(PythonSourceModule { module: sm.clone() })
+            }
 
             PythonResource::ModuleBytecodeRequest {
                 name,

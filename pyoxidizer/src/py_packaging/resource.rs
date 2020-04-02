@@ -156,11 +156,7 @@ impl SourceModule {
     }
 
     pub fn as_python_resource(&self) -> PythonResource {
-        PythonResource::ModuleSource {
-            name: self.name.clone(),
-            source: self.source.clone(),
-            is_package: self.is_package,
-        }
+        PythonResource::ModuleSource(self.clone())
     }
 
     /// Convert the instance to a BytecodeModule.
@@ -413,11 +409,7 @@ impl ExtensionModuleData {
 #[derive(Clone, Debug)]
 pub enum PythonResource {
     /// A module defined by source code.
-    ModuleSource {
-        name: String,
-        source: DataLocation,
-        is_package: bool,
-    },
+    ModuleSource(SourceModule),
     /// A module defined by a request to generate bytecode from source.
     ModuleBytecodeRequest {
         name: String,
@@ -456,11 +448,11 @@ impl TryFrom<&PythonFileResource> for PythonResource {
                 let source =
                     std::fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
 
-                Ok(PythonResource::ModuleSource {
+                Ok(PythonResource::ModuleSource(SourceModule {
                     name: full_name.clone(),
                     source: DataLocation::Memory(source),
                     is_package: is_package_from_path(&path),
-                })
+                }))
             }
 
             PythonFileResource::Bytecode {
@@ -569,7 +561,7 @@ impl PythonResource {
     /// Resolves the fully qualified resource name.
     pub fn full_name(&self) -> String {
         match self {
-            PythonResource::ModuleSource { name, .. } => name.clone(),
+            PythonResource::ModuleSource(m) => m.name.clone(),
             PythonResource::ModuleBytecode { name, .. } => name.clone(),
             PythonResource::ModuleBytecodeRequest { name, .. } => name.clone(),
             PythonResource::Resource { package, name, .. } => format!("{}.{}", package, name),
@@ -580,7 +572,7 @@ impl PythonResource {
 
     pub fn is_in_packages(&self, packages: &[String]) -> bool {
         let name = match self {
-            PythonResource::ModuleSource { name, .. } => name,
+            PythonResource::ModuleSource(m) => &m.name,
             PythonResource::ModuleBytecode { name, .. } => name,
             PythonResource::ModuleBytecodeRequest { name, .. } => name,
             PythonResource::Resource { package, .. } => package,
@@ -759,11 +751,11 @@ mod tests {
 
     #[test]
     fn test_is_in_packages() {
-        let source = PythonResource::ModuleSource {
+        let source = PythonResource::ModuleSource(SourceModule {
             name: "foo".to_string(),
             source: DataLocation::Memory(vec![]),
             is_package: false,
-        };
+        });
         assert!(source.is_in_packages(&["foo".to_string()]));
         assert!(!source.is_in_packages(&[]));
         assert!(!source.is_in_packages(&["bar".to_string()]));
