@@ -34,17 +34,17 @@ impl TryFrom<&str> for PythonResourcesPolicy {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         if value == "in-memory-only" {
-            Ok(Self::InMemoryOnly)
+            Ok(PythonResourcesPolicy::InMemoryOnly)
         } else if value.starts_with("filesystem-relative-only:") {
             let prefix = &value["filesystem-relative-only:".len()..];
 
-            Ok(Self::FilesystemRelativeOnly(prefix.to_string()))
+            Ok(PythonResourcesPolicy::FilesystemRelativeOnly(
+                prefix.to_string(),
+            ))
         } else if value.starts_with("prefer-in-memory-fallback-filesystem-relative:") {
             let prefix = &value["prefer-in-memory-fallback-filesystem-relative:".len()..];
 
-            Ok(Self::PreferInMemoryFallbackFilesystemRelative(
-                prefix.to_string(),
-            ))
+            Ok(PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(prefix.to_string()))
         } else {
             Err(anyhow!(
                 "invalid value for Python Resources Policy: {}",
