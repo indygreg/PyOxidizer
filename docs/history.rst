@@ -28,6 +28,9 @@ Not yet released.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* Packages imported from memory using PyOxidizer now set ``__path__`` with
+  a value formed by joining the current executable's path with the package
+  name. This mimics the behavior of ``zipimport``.
 * Resolved Python resource names have changed behavior. See the note in the
   bug fixes section below.
 * The ``PythonDistribution.to_python_executable()`` Starlark method has added

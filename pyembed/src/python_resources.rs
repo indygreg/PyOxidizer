@@ -62,6 +62,9 @@ where
     /// The raw resource backing this importable module.
     resource: &'a Resource<'a, X>,
 
+    /// Path to current executable.
+    current_exe: &'a Path,
+
     /// Path from which relative paths should be interpreted.
     origin: &'a Path,
 
@@ -219,16 +222,43 @@ impl<'a> ImportablePythonModule<'a, u8> {
         if self.is_package {
             // If we are filesystem based, use the parent directory of the module
             // file, if available.
-            let locations = if let Some(origin_path) = self.origin_path() {
+            //
+            // Otherwise, we construct a filesystem path from the current executable
+            // and package name. e.g. `/path/to/myapp/foo/bar`. This path likely
+            // doesn't exist. So why expose it? Couldn't this lead to unexpected
+            // behavior by consumers who expect `__path__` to point to a valid
+            // directory? Perhaps.
+            //
+            // By setting `__path__` to a meaningful value, we leave the door
+            // open for our code later seeing this path and doing something
+            // special with it. For example, the documentation for the deprecated
+            // `importlib.abc.ResourceLoader.get_data()` says consumers could use
+            // `__path__` to construct the `path` to pass into that function
+            // (probably via `os.path.join()`). If we set `__path__` and our
+            // `get_data()` is called, we could recognize the special value and
+            // route to our importer accordingly. If we don't set `__path__` to
+            // any value, we can't do this.
+            //
+            // As a point of reference, the zip importer in the Python standard
+            // library sets `__path__` to the path to the zip file with the package
+            // names `os.path.join()`d to the end. e.g.
+            // `/path/to/myapp.zip/mypackage/subpackage`.
+            let mut locations = if let Some(origin_path) = self.origin_path() {
                 if let Some(parent_path) = origin_path.parent() {
                     vec![path_to_pyobject(py, parent_path)?]
                 } else {
-                    // Should this be an error?
                     vec![]
                 }
             } else {
                 vec![]
             };
+
+            if locations.is_empty() {
+                let mut path = self.current_exe.to_path_buf();
+                path.extend(self.resource.name.split('.'));
+
+                locations.push(path_to_pyobject(py, &path)?);
+            }
 
             spec.setattr(py, "submodule_search_locations", locations)?;
         }
@@ -364,6 +394,7 @@ impl<'a> PythonResourcesState<'a, u8> {
                 if is_module_importable(resource, optimize_level) {
                     Some(ImportablePythonModule {
                         resource,
+                        current_exe: &self.current_exe,
                         origin: &self.origin,
                         bytecode: None,
                         flavor: &resource.flavor,
@@ -375,6 +406,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             }
             ResourceFlavor::Extension => Some(ImportablePythonModule {
                 resource,
+                current_exe: &self.current_exe,
                 origin: &self.origin,
                 bytecode: None,
                 flavor: &resource.flavor,
@@ -382,6 +414,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             }),
             ResourceFlavor::BuiltinExtensionModule => Some(ImportablePythonModule {
                 resource,
+                current_exe: &self.current_exe,
                 origin: &self.origin,
                 bytecode: None,
                 flavor: &resource.flavor,
@@ -389,6 +422,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             }),
             ResourceFlavor::FrozenModule => Some(ImportablePythonModule {
                 resource,
+                current_exe: &self.current_exe,
                 origin: &self.origin,
                 bytecode: None,
                 flavor: &resource.flavor,
