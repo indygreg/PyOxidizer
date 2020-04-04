@@ -646,7 +646,7 @@ impl PythonDistribution {
             resources
                 .iter()
                 .filter_map(|data| {
-                    if !include_test && is_stdlib_test_package(&data.package) {
+                    if !include_test && is_stdlib_test_package(&data.leaf_package) {
                         None
                     } else {
                         Some(Value::new(PythonResourceData { data: data.clone() }))

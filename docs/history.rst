@@ -28,6 +28,8 @@ Not yet released.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* Resolved Python resource names have changed behavior. See the note in the
+  bug fixes section below.
 * The ``PythonDistribution.to_python_executable()`` Starlark method has added
   a ``resources_policy`` named argument as its 2nd argument / 1st named
   argument. If you were affected by this, you should add argument names to all
@@ -52,6 +54,14 @@ Backwards Compatibility Notes
 Bug Fixes
 ^^^^^^^^^
 
+* The mechanism for resolving Python resource files from the filesystem has
+  been rewritten. Before, it was possible for files like
+  ``package/resources/foo.txt`` to be normalized to a (package, resource_name)
+  tuple of `(package, resources.foo.txt)`, which was weird and not compatible
+  with Python's resource loading mechanism. Resources in sub-directories should
+  no longer encounter munging of directory separators to ``.``. In the above
+  example, the resource path will now be expressed as
+  ``(package, resources/foo.txt)``.
 * Certain packaging actions are only performed once during building instead of
   twice. The user-visible impact of this change is that some duplicate log
   messages no longer appear.

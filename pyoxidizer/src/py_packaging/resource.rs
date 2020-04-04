@@ -333,28 +333,28 @@ impl BytecodeModule {
 /// Python package resource data, agnostic of storage location.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ResourceData {
-    pub package: String,
-    pub name: String,
+    /// The full relative path to this resource from a library root.
+    pub full_name: String,
+    /// The leaf-most Python package this resource belongs to.
+    pub leaf_package: String,
+    /// The relative path within `leaf_package` to this resource.
+    pub relative_name: String,
+    /// Location of resource data.
     pub data: DataLocation,
 }
 
 impl ResourceData {
-    pub fn full_name(&self) -> String {
-        format!("{}:{}", self.package, self.name)
-    }
-
     pub fn as_python_resource(&self) -> PythonResource {
         PythonResource::Resource(self.clone())
     }
 
+    pub fn symbolic_name(&self) -> String {
+        format!("{}:{}", self.leaf_package, self.relative_name)
+    }
+
     /// Resolve filesystem path to this bytecode.
     pub fn resolve_path(&self, prefix: &str) -> PathBuf {
-        // TODO this logic needs shoring up and testing.
-        let mut dest_path = PathBuf::from(prefix);
-        dest_path.extend(self.package.split('.'));
-        dest_path.push(&self.name);
-
-        dest_path
+        PathBuf::from(prefix).join(&self.full_name)
     }
 
     pub fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
@@ -475,17 +475,14 @@ impl TryFrom<&PythonFileResource> for PythonResource {
                 is_package: m.is_package,
             })),
 
-            PythonFileResource::Resource(resource) => {
-                let path = &(resource.path);
-                let data =
-                    std::fs::read(path).with_context(|| format!("reading {}", path.display()))?;
+            PythonFileResource::Resource(resource) => Ok(PythonResource::Resource(ResourceData {
+                full_name: resource.full_name.clone(),
+                leaf_package: resource.leaf_package.clone(),
+                relative_name: resource.relative_name.clone(),
+                data: resource.data.to_memory()?,
+            })),
 
-                Ok(PythonResource::Resource(ResourceData {
-                    package: resource.package.clone(),
-                    name: resource.stem.clone(),
-                    data: DataLocation::Memory(data),
-                }))
-            }
+            PythonFileResource::ResourceFile(_) => panic!("ResourceFile variant unexpected"),
 
             PythonFileResource::ExtensionModule {
                 full_name,
@@ -533,7 +530,9 @@ impl PythonResource {
             PythonResource::ModuleSource(m) => m.name.clone(),
             PythonResource::ModuleBytecode(m) => m.name.clone(),
             PythonResource::ModuleBytecodeRequest(m) => m.name.clone(),
-            PythonResource::Resource(resource) => format!("{}.{}", resource.package, resource.name),
+            PythonResource::Resource(resource) => {
+                format!("{}.{}", resource.leaf_package, resource.relative_name)
+            }
             PythonResource::ExtensionModuleDynamicLibrary(em) => em.name.clone(),
             PythonResource::ExtensionModuleStaticallyLinked(em) => em.name.clone(),
         }
@@ -544,7 +543,7 @@ impl PythonResource {
             PythonResource::ModuleSource(m) => &m.name,
             PythonResource::ModuleBytecode(m) => &m.name,
             PythonResource::ModuleBytecodeRequest(m) => &m.name,
-            PythonResource::Resource(resource) => &resource.package,
+            PythonResource::Resource(resource) => &resource.leaf_package,
             PythonResource::ExtensionModuleDynamicLibrary(em) => &em.name,
             PythonResource::ExtensionModuleStaticallyLinked(em) => &em.name,
         };

@@ -441,9 +441,9 @@ impl EmbeddedPythonResourcesPrePackaged {
         self.check_policy(ResourceLocation::InMemory)?;
         let entry = self
             .modules
-            .entry(resource.package.clone())
+            .entry(resource.leaf_package.clone())
             .or_insert_with(|| EmbeddedResourcePythonModulePrePackaged {
-                name: resource.package.clone(),
+                name: resource.leaf_package.clone(),
                 ..EmbeddedResourcePythonModulePrePackaged::default()
             });
 
@@ -458,9 +458,14 @@ impl EmbeddedPythonResourcesPrePackaged {
             .in_memory_resources
             .as_mut()
             .unwrap()
-            .insert(resource.name.clone(), resource.data.clone());
+            .insert(resource.relative_name.clone(), resource.data.clone());
 
-        self.add_parent_packages(&resource.package, ModuleLocation::InMemory, false, None)
+        self.add_parent_packages(
+            &resource.leaf_package,
+            ModuleLocation::InMemory,
+            false,
+            None,
+        )
     }
 
     /// Add resource data to be loaded from the filesystem.
@@ -472,9 +477,9 @@ impl EmbeddedPythonResourcesPrePackaged {
         self.check_policy(ResourceLocation::RelativePath)?;
         let entry = self
             .modules
-            .entry(resource.package.clone())
+            .entry(resource.leaf_package.clone())
             .or_insert_with(|| EmbeddedResourcePythonModulePrePackaged {
-                name: resource.package.clone(),
+                name: resource.leaf_package.clone(),
                 ..EmbeddedResourcePythonModulePrePackaged::default()
             });
 
@@ -489,12 +494,15 @@ impl EmbeddedPythonResourcesPrePackaged {
             .relative_path_package_resources
             .as_mut()
             .unwrap()
-            .insert(resource.name.clone(), resource.resolve_path(prefix));
+            .insert(
+                resource.relative_name.clone(),
+                resource.resolve_path(prefix),
+            );
 
         resource.add_to_file_manifest(&mut self.extra_files, prefix)?;
 
         self.add_parent_packages(
-            &resource.package,
+            &resource.leaf_package,
             ModuleLocation::RelativePath(prefix.to_string()),
             false,
             None,
@@ -1444,8 +1452,9 @@ mod tests {
     fn test_add_in_memory_resource() -> Result<()> {
         let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
         r.add_in_memory_package_resource(&ResourceData {
-            package: "foo".to_string(),
-            name: "resource.txt".to_string(),
+            full_name: "foo/resource.txt".to_string(),
+            leaf_package: "foo".to_string(),
+            relative_name: "resource.txt".to_string(),
             data: DataLocation::Memory(vec![42]),
         })?;
 

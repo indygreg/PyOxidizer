@@ -745,14 +745,19 @@ impl StandaloneDistribution {
         for entry in find_python_resources(&stdlib_path, &suffixes) {
             match entry {
                 PythonFileResource::Resource(resource) => {
-                    if !resources.contains_key(&resource.package) {
-                        resources.insert(resource.package.clone(), BTreeMap::new());
+                    if !resources.contains_key(&resource.leaf_package) {
+                        resources.insert(resource.leaf_package.clone(), BTreeMap::new());
                     }
 
-                    resources
-                        .get_mut(&resource.package)
-                        .unwrap()
-                        .insert(resource.stem.clone(), resource.path);
+                    resources.get_mut(&resource.leaf_package).unwrap().insert(
+                        resource.relative_name.clone(),
+                        match resource.data {
+                            DataLocation::Path(path) => path,
+                            DataLocation::Memory(_) => {
+                                panic!("should not have received in-memory resource data")
+                            }
+                        },
+                    );
                 }
                 PythonFileResource::Source(source) => match source.source {
                     DataLocation::Path(path) => {
@@ -1153,8 +1158,9 @@ impl PythonDistribution for StandaloneDistribution {
         for (package, inner) in self.resources.iter() {
             for (name, path) in inner.iter() {
                 res.push(ResourceData {
-                    package: package.clone(),
-                    name: name.clone(),
+                    full_name: format!("{}/{}", package, name),
+                    leaf_package: package.clone(),
+                    relative_name: name.clone(),
                     data: DataLocation::Path(path.clone()),
                 });
             }
@@ -1313,7 +1319,7 @@ impl StandalonePythonExecutableBuilder {
 
         if include_resources {
             for resource in self.distribution.resource_datas()? {
-                if !include_test && is_stdlib_test_package(&resource.package) {
+                if !include_test && is_stdlib_test_package(&resource.leaf_package) {
                     continue;
                 }
 

@@ -8,7 +8,9 @@ Scanning the filesystem for Python resources.
 
 use {
     super::distribution::PythonModuleSuffixes,
-    super::resource::{BytecodeModule, BytecodeOptimizationLevel, DataLocation, SourceModule},
+    super::resource::{
+        BytecodeModule, BytecodeOptimizationLevel, DataLocation, ResourceData, SourceModule,
+    },
     anyhow::Result,
     itertools::Itertools,
     std::collections::{BTreeMap, HashSet},
@@ -40,14 +42,17 @@ pub fn walk_tree_files(path: &Path) -> Box<dyn Iterator<Item = walkdir::DirEntry
 }
 
 #[derive(Debug, PartialEq)]
-pub struct FileBasedResource {
-    pub package: String,
-    pub stem: String,
-    pub full_name: String,
-    pub path: PathBuf,
+pub struct ResourceFile {
+    /// Filesystem path of this resource.
+    pub full_path: PathBuf,
+
+    /// Relative path of this resource.
+    pub relative_path: PathBuf,
 }
 
 /// Represents a Python resource backed by the filesystem.
+///
+/// TODO unify with PythonResource.
 #[derive(Debug, PartialEq)]
 pub enum PythonFileResource {
     /// Python module source code.
@@ -72,7 +77,12 @@ pub enum PythonFileResource {
     },
 
     /// A non-module Python resource.
-    Resource(FileBasedResource),
+    Resource(ResourceData),
+
+    /// Internal variant to track resources.
+    ///
+    /// Should not be encountered outside this module.
+    ResourceFile(ResourceFile),
 
     /// A Python egg.
     ///
@@ -98,7 +108,7 @@ pub struct PythonResourceIterator {
     suffixes: PythonModuleSuffixes,
     walkdir_result: Box<dyn Iterator<Item = walkdir::DirEntry>>,
     seen_packages: HashSet<String>,
-    resources: Vec<FileBasedResource>,
+    resources: Vec<ResourceFile>,
 }
 
 impl PythonResourceIterator {
@@ -346,22 +356,12 @@ impl PythonResourceIterator {
                 path: path.to_path_buf(),
             },
             _ => {
-                // If it isn't a .py or a .pyc file, it is a resource file.
-                let package_parts = &components[0..components.len() - 1];
-                let mut package = itertools::join(package_parts, ".");
-
-                let name = itertools::join(&components, ".");
-                let stem = components[components.len() - 1].to_string();
-
-                if package.is_empty() {
-                    package = name.clone();
-                }
-
-                PythonFileResource::Resource(FileBasedResource {
-                    package,
-                    stem,
-                    full_name: name,
-                    path: path.to_path_buf(),
+                // If it is some other file type, we categorize it as a resource
+                // file. The package name and resource name are resolved later,
+                // by the iterator.
+                PythonFileResource::ResourceFile(ResourceFile {
+                    full_path: path.to_path_buf(),
+                    relative_path: rel_path.to_path_buf(),
                 })
             }
         };
@@ -396,7 +396,7 @@ impl Iterator for PythonResourceIterator {
             let python_resource = python_resource.unwrap();
 
             // Buffer Resource entries until later.
-            if let PythonFileResource::Resource(resource) = python_resource {
+            if let PythonFileResource::ResourceFile(resource) = python_resource {
                 self.resources.push(resource);
                 continue;
             }
@@ -412,53 +412,84 @@ impl Iterator for PythonResourceIterator {
             // This isn't efficient. But we shouldn't care.
             let resource = self.resources.remove(0);
 
-            // We initially resolve the package name from the relative filesystem path.
-            // But not all directories are Python packages! When we encountered Python
-            // modules during traversal, we added their package name to a set. Here, we
-            // ensure the resource's package is an actual package, munging values if needed.
-            if self.seen_packages.contains(&resource.package) {
-                return Some(PythonFileResource::Resource(resource));
-            } else {
-                // We need to shift components from the reported package name into the
-                // stem until we arrive at a known package.
+            // Resource addressing in Python is a bit wonky. This is because the resource
+            // reading APIs allow loading resources across package and directory boundaries.
+            // For example, let's say we have a resource defined at the relative path
+            // `foo/bar/resource.txt`. This resource could be accessed via the following
+            // mechanisms:
+            //
+            // * Via the `resource.txt` resource on package `bar`'s resource reader.
+            // * Via the `bar/resource.txt` resource on package `foo`'s resource reader.
+            // * Via the `foo/bar/resource.txt` resource on the root resource reader.
+            //
+            // Furthermore, there could be resources in subdirectories that don't have
+            // Python packages, forcing directory separators in resource names. e.g.
+            // `foo/bar/resources/baz.txt`, where there isn't a `foo.bar.resources` Python
+            // package.
+            //
+            // Our strategy for handling this is to initially resolve the relative path to
+            // the resource. Then when we get to this code, we have awareness of all Python
+            // packages and can supplement the relative path (which is the one true resource
+            // identifier) with annotations, such as the leaf-most Python package.
 
-                // Special case where there is no root package.
-                if resource.package.is_empty() {
-                    continue;
-                }
+            // Resources should always have a filename component. Otherwise how did we get here?
+            let basename = resource
+                .relative_path
+                .file_name()
+                .unwrap()
+                .to_string_lossy();
 
-                let mut components = resource.package.split('.').collect_vec();
-                let mut shift_parts = Vec::new();
+            // The full name of the resource is its relative path with path separators normalized to
+            // POSIX conventions.
+            let full_name = resource.relative_path.to_string_lossy().replace("\\", "/");
 
-                while !components.is_empty() {
-                    let part = components.pop().unwrap();
-                    shift_parts.push(part);
-                    let new_package = itertools::join(&components, ".");
+            // We also resolve the leaf-most Python package that this resource is within and
+            // the relative path within that package.
+            let (leaf_package, relative_name) =
+                if let Some(relative_directory) = resource.relative_path.parent() {
+                    // We walk relative directory components until we find a Python package.
+                    let mut components = relative_directory
+                        .iter()
+                        .map(|p| p.to_string_lossy())
+                        .collect::<Vec<_>>();
 
-                    if !self.seen_packages.contains(&new_package) {
-                        continue;
+                    let mut relative_components = vec![basename];
+                    let mut package = None;
+                    let mut relative_name = None;
+
+                    while !components.is_empty() {
+                        let candidate_package = itertools::join(&components, ".");
+
+                        if self.seen_packages.contains(&candidate_package) {
+                            package = Some(candidate_package);
+                            relative_components.reverse();
+                            relative_name = Some(itertools::join(&relative_components, "/"));
+                            break;
+                        }
+
+                        let popped = components.pop().unwrap();
+                        relative_components.push(popped);
                     }
 
-                    // We have arrived at a known package. Shift collected parts in names
-                    // accordingly.
-                    shift_parts.reverse();
-                    let prepend = itertools::join(shift_parts, ".");
+                    (package, relative_name)
+                } else {
+                    (None, None)
+                };
 
-                    // Use / instead of . because this emulates filesystem behavior.
-                    let stem = prepend + "/" + &resource.stem;
-
-                    return Some(PythonFileResource::Resource(FileBasedResource {
-                        package: new_package,
-                        stem,
-                        full_name: resource.full_name,
-                        path: resource.path,
-                    }));
-                }
-
-                // Hmmm. We couldn't resolve this resource to a known Python package. Let's
-                // just emit it and let downstream deal with it.
-                return Some(PythonFileResource::Resource(resource));
+            // Resources without a resolved package are not legal.
+            if leaf_package.is_none() {
+                continue;
             }
+
+            let leaf_package = leaf_package.unwrap();
+            let relative_name = relative_name.unwrap();
+
+            return Some(PythonFileResource::Resource(ResourceData {
+                full_name,
+                leaf_package,
+                relative_name,
+                data: DataLocation::Path(resource.full_path),
+            }));
         }
     }
 }
@@ -499,8 +530,19 @@ pub fn find_python_modules(
 mod tests {
     use {
         super::*,
+        lazy_static::lazy_static,
         std::fs::{create_dir_all, write},
     };
+
+    lazy_static! {
+        static ref EMPTY_SUFFIXES: PythonModuleSuffixes = PythonModuleSuffixes {
+            source: vec![],
+            bytecode: vec![],
+            debug_bytecode: vec![],
+            optimized_bytecode: vec![],
+            extension: vec![],
+        };
+    }
 
     #[test]
     fn test_source_resolution() {
@@ -520,15 +562,7 @@ mod tests {
 
         write(acme_a_path.join("foo.py"), "# acme.foo").unwrap();
 
-        let suffixes = PythonModuleSuffixes {
-            source: vec![],
-            bytecode: vec![],
-            debug_bytecode: vec![],
-            optimized_bytecode: vec![],
-            extension: vec![],
-        };
-
-        let resources = PythonResourceIterator::new(tp, &suffixes).collect_vec();
+        let resources = PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect_vec();
         assert_eq!(resources.len(), 4);
 
         assert_eq!(
@@ -578,15 +612,7 @@ mod tests {
         write(acme_path.join("__init__.py"), "").unwrap();
         write(acme_path.join("bar.py"), "").unwrap();
 
-        let suffixes = PythonModuleSuffixes {
-            source: vec![],
-            bytecode: vec![],
-            debug_bytecode: vec![],
-            optimized_bytecode: vec![],
-            extension: vec![],
-        };
-
-        let resources = PythonResourceIterator::new(tp, &suffixes).collect_vec();
+        let resources = PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect_vec();
         assert_eq!(resources.len(), 2);
 
         assert_eq!(
@@ -710,15 +736,7 @@ mod tests {
         let egg_path = tp.join("foo-1.0-py3.7.egg");
         write(&egg_path, "").unwrap();
 
-        let suffixes = PythonModuleSuffixes {
-            source: vec![],
-            bytecode: vec![],
-            debug_bytecode: vec![],
-            optimized_bytecode: vec![],
-            extension: vec![],
-        };
-
-        let resources = PythonResourceIterator::new(tp, &suffixes).collect_vec();
+        let resources = PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect_vec();
         assert_eq!(resources.len(), 1);
 
         assert_eq!(resources[0], PythonFileResource::EggFile { path: egg_path });
@@ -742,15 +760,7 @@ mod tests {
         write(package_path.join("__init__.py"), "").unwrap();
         write(package_path.join("bar.py"), "").unwrap();
 
-        let suffixes = PythonModuleSuffixes {
-            source: vec![],
-            bytecode: vec![],
-            debug_bytecode: vec![],
-            optimized_bytecode: vec![],
-            extension: vec![],
-        };
-
-        let resources = PythonResourceIterator::new(tp, &suffixes).collect_vec();
+        let resources = PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect_vec();
         assert_eq!(resources.len(), 2);
 
         assert_eq!(
@@ -781,17 +791,123 @@ mod tests {
         let pth_path = tp.join("foo.pth");
         write(&pth_path, "").unwrap();
 
-        let suffixes = PythonModuleSuffixes {
-            source: vec![],
-            bytecode: vec![],
-            debug_bytecode: vec![],
-            optimized_bytecode: vec![],
-            extension: vec![],
-        };
-
-        let resources = PythonResourceIterator::new(tp, &suffixes).collect_vec();
+        let resources = PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect_vec();
         assert_eq!(resources.len(), 1);
 
         assert_eq!(resources[0], PythonFileResource::PthFile { path: pth_path });
+    }
+
+    /// Resource files without a package are not valid.
+    #[test]
+    fn test_root_resource_file() -> Result<()> {
+        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let tp = td.path();
+
+        let resource_path = tp.join("resource.txt");
+        write(&resource_path, "content")?;
+
+        let resources = PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Vec<_>>();
+        assert!(resources.is_empty());
+
+        Ok(())
+    }
+
+    /// Resource files in a relative directory without a package are not valid.
+    #[test]
+    fn test_relative_resource_no_package() -> Result<()> {
+        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let tp = td.path();
+
+        write(&tp.join("foo.py"), "")?;
+        let resource_dir = tp.join("resources");
+        create_dir_all(&resource_dir)?;
+
+        let resource_path = resource_dir.join("resource.txt");
+        write(&resource_path, "content")?;
+
+        let resources = PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Vec<_>>();
+        assert_eq!(resources.len(), 1);
+
+        assert_eq!(
+            resources[0],
+            PythonFileResource::Source(SourceModule {
+                name: "foo".to_string(),
+                source: DataLocation::Path(tp.join("foo.py")),
+                is_package: false,
+            })
+        );
+
+        Ok(())
+    }
+
+    /// Resource files next to a package are detected.
+    #[test]
+    fn test_relative_package_resource() -> Result<()> {
+        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let tp = td.path();
+
+        let package_dir = tp.join("foo");
+        create_dir_all(&package_dir)?;
+
+        let module_path = package_dir.join("__init__.py");
+        write(&module_path, "")?;
+        let resource_path = package_dir.join("resource.txt");
+        write(&resource_path, "content")?;
+
+        let resources = PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Vec<_>>();
+        assert_eq!(
+            resources,
+            vec![
+                PythonFileResource::Source(SourceModule {
+                    name: "foo".to_string(),
+                    source: DataLocation::Path(module_path),
+                    is_package: true,
+                }),
+                PythonFileResource::Resource(ResourceData {
+                    full_name: "foo/resource.txt".to_string(),
+                    leaf_package: "foo".to_string(),
+                    relative_name: "resource.txt".to_string(),
+                    data: DataLocation::Path(resource_path),
+                })
+            ]
+        );
+
+        Ok(())
+    }
+
+    /// Resource files in sub-directory are detected.
+    #[test]
+    fn test_subdirectory_resource() -> Result<()> {
+        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let tp = td.path();
+
+        let package_dir = tp.join("foo");
+        let subdir = package_dir.join("resources");
+        create_dir_all(&subdir)?;
+
+        let module_path = package_dir.join("__init__.py");
+        write(&module_path, "")?;
+        let resource_path = subdir.join("resource.txt");
+        write(&resource_path, "content")?;
+
+        let resources = PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Vec<_>>();
+        assert_eq!(
+            resources,
+            vec![
+                PythonFileResource::Source(SourceModule {
+                    name: "foo".to_string(),
+                    source: DataLocation::Path(module_path),
+                    is_package: true,
+                }),
+                PythonFileResource::Resource(ResourceData {
+                    full_name: "foo/resources/resource.txt".to_string(),
+                    leaf_package: "foo".to_string(),
+                    relative_name: "resources/resource.txt".to_string(),
+                    data: DataLocation::Path(resource_path),
+                })
+            ]
+        );
+
+        Ok(())
     }
 }

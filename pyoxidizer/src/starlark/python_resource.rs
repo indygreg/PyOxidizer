@@ -162,7 +162,7 @@ impl TypedValue for PythonResourceData {
     fn to_str(&self) -> String {
         format!(
             "PythonResourceData<package={}, name={}>",
-            self.data.package, self.data.name
+            self.data.leaf_package, self.data.relative_name
         )
     }
 
@@ -184,8 +184,8 @@ impl TypedValue for PythonResourceData {
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
         let v = match attribute {
-            "package" => Value::new(self.data.package.clone()),
-            "name" => Value::new(self.data.name.clone()),
+            "package" => Value::new(self.data.leaf_package.clone()),
+            "name" => Value::new(self.data.relative_name.clone()),
             // TODO expose raw data
             attr => {
                 return Err(ValueError::OperationNotSupported {

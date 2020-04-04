@@ -357,7 +357,8 @@ impl PythonExecutable {
         let r = resource.downcast_apply(|r: &PythonResourceData| r.data.clone());
         info!(
             &logger,
-            "adding in-memory resource data {}:{}", r.package, r.name
+            "adding in-memory resource data {}",
+            r.symbolic_name()
         );
         self.exe.add_in_memory_package_resource(&r).or_else(|e| {
             {
@@ -385,7 +386,7 @@ impl PythonExecutable {
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
         let r = resource.downcast_apply(|r: &PythonResourceData| r.data.clone());
-        info!(&logger, "adding resource data {}:{}", r.package, r.name);
+        info!(&logger, "adding resource data {}", r.symbolic_name());
         self.exe.add_package_resource(&r).or_else(|e| {
             {
                 Err(RuntimeError {
@@ -416,7 +417,8 @@ impl PythonExecutable {
         let r = resource.downcast_apply(|r: &PythonResourceData| r.data.clone());
         info!(
             &logger,
-            "adding executable relative resource data {}:{}", r.package, r.name
+            "adding executable relative resource data {}",
+            r.symbolic_name()
         );
         self.exe
             .add_relative_path_package_resource(&prefix, &r)
