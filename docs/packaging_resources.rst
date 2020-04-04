@@ -51,6 +51,8 @@ resources:
    Holds a collection of Python resources of various types. (This type is often
    hidden away. e.g. inside a ``PythonExecutable`` instance.)
 
+.. _packaging_resource_locations:
+
 Python Resource Locations
 =========================
 
