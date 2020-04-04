@@ -310,6 +310,12 @@ pub(crate) struct PythonResourcesState<'a, X>
 where
     [X]: ToOwned<Owned = Vec<X>>,
 {
+    /// Path to currently running executable.
+    pub current_exe: PathBuf,
+
+    /// Directory from which relative paths should be evaluated.
+    ///
+    /// Probably the directory of `current_exe`.
     pub origin: PathBuf,
 
     /// Names of Python packages.
@@ -322,6 +328,7 @@ where
 impl<'a> Default for PythonResourcesState<'a, u8> {
     fn default() -> Self {
         Self {
+            current_exe: PathBuf::new(),
             origin: PathBuf::new(),
             packages: HashSet::new(),
             resources: HashMap::new(),

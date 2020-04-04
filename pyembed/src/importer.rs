@@ -275,6 +275,7 @@ impl ImporterState {
         marshal_module: &PyModule,
         decode_source: PyObject,
         resources_data: &'static [u8],
+        current_exe: PathBuf,
         origin: PathBuf,
     ) -> Result<Self, PyErr> {
         let imp_module = bootstrap_module.get(py, "_imp")?;
@@ -301,7 +302,8 @@ impl ImporterState {
         let frozen_importer = meta_path.get_item(py, 1);
 
         let mut resources_state = PythonResourcesState {
-            origin: origin.clone(),
+            current_exe,
+            origin,
             ..PythonResourcesState::default()
         };
 
@@ -1071,6 +1073,7 @@ fn module_setup(
             &marshal_module,
             decode_source,
             &state.embedded_resources_data,
+            state.current_exe.clone(),
             state.origin.clone(),
         )?)),
     )?;
