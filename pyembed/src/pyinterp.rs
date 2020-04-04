@@ -272,6 +272,7 @@ impl<'a> MainPythonInterpreter<'a> {
         // that of the interpreter.
         // TODO specify lifetimes so the compiler validates this for us.
         let module_state = super::importer::InitModuleState {
+            current_exe: exe.clone(),
             origin,
             register_filesystem_importer: self.config.filesystem_importer,
             sys_paths,

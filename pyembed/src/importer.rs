@@ -923,6 +923,9 @@ const DOC: &[u8] = b"Binary representation of Python modules\0";
 /// Represents global module state to be passed at interpreter initialization time.
 #[derive(Debug)]
 pub struct InitModuleState {
+    /// Path to currently running executable.
+    pub current_exe: PathBuf,
+
     /// Directory where relative paths are relative to.
     pub origin: PathBuf,
 
@@ -949,6 +952,9 @@ pub static mut NEXT_MODULE_STATE: *const InitModuleState = std::ptr::null();
 /// exist without issue.
 #[derive(Debug)]
 struct ModuleState {
+    /// Currently running executable.
+    current_exe: PathBuf,
+
     /// Directory where relative paths are relative to.
     origin: PathBuf,
 
@@ -998,6 +1004,7 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
 
     unsafe {
         // TODO we could move the value if we wanted to avoid the clone().
+        state.current_exe = (*NEXT_MODULE_STATE).current_exe.clone();
         state.origin = (*NEXT_MODULE_STATE).origin.clone();
         state.register_filesystem_importer = (*NEXT_MODULE_STATE).register_filesystem_importer;
         // TODO we could move the value if we wanted to avoid the clone().
