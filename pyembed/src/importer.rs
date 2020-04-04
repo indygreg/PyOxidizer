@@ -733,13 +733,6 @@ py_class!(class PyOxidizerResourceReader |py| {
     data state: Arc<Box<ImporterState>>;
     data package: String;
 
-    // Comes from TraversableResources interface.
-    def files(&self) -> PyResult<PyObject> {
-        self.files_impl(py)
-    }
-
-    // Remaining methods are legacy ResourceReader members.
-
     def open_resource(&self, resource: &PyString) -> PyResult<PyObject> {
         self.open_resource_impl(py, resource)
     }
@@ -758,17 +751,6 @@ py_class!(class PyOxidizerResourceReader |py| {
 });
 
 impl PyOxidizerResourceReader {
-    /// Return a Traversable object for the current package. From that object, path manipulation
-    /// can be performed to access resources.
-    fn files_impl(&self, py: Python) -> PyResult<PyObject> {
-        Ok(PyOxidizerTraversable::create_instance(
-            py,
-            self.state(py).clone(),
-            self.package(py).clone(),
-        )?
-        .into_object())
-    }
-
     /// Returns an opened, file-like object for binary reading of the resource.
     ///
     /// If the resource cannot be found, FileNotFoundError is raised.
