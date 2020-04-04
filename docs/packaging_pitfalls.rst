@@ -10,33 +10,6 @@ assumptions that don't hold inside PyOxidizer. This section talks about
 all the things that can go wrong when attempting to package a Python
 application.
 
-.. _no_file:
-
-Reliance on ``__file__``
-========================
-
-Python modules typically have a ``__file__`` attribute that defines the
-path of the file from which the module was loaded. (When a file is executed
-as a script, it masquerades as the ``__main__`` module, so non-module
-scripts can behave as modules too.)
-
-It is relatively common for Python modules in the wild to use ``__file__``.
-For example, modules may do something like
-``module_dir = os.path.abspath(os.path.dirname(__file__))`` to locate the
-directory that a module is in so they can load a non-Python file from that
-directory. Or they may use ``__file__`` to resolve paths to Python source
-files so that they can be loaded outside the typical ``import`` based
-mechanism (various plugin systems do this, for example).
-
-Strictly speaking, the ``__file__`` attribute on modules is not required.
-Therefore any Python code that requires the existence of ``__file__`` is either
-broken or has made an explicit choice to not support module loaders - like
-PyOxidizer - that don't store modules as files and may not set ``__file__``.
-**Therefore required use of __file__ is highly discouraged.** It is
-recommended to instead use a *resources* API for loading *resource* data
-relative to a Python module and to fall back to ``__file__`` if a suitable
-API is unavailable or doesn't work. See the next section for more.
-
 .. _pitfall_extension_modules:
 
 C and Other Native Extension Modules

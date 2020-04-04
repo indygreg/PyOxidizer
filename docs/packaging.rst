@@ -19,6 +19,7 @@ instructions.
    packaging_pypi
    packaging_additional_files
    packaging_trimming_resources
+   packaging_importer
    packaging_resource_files
    packaging_pitfalls
    packaging_masquerading

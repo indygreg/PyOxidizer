@@ -94,6 +94,8 @@ may be actively avoided.
    most robust mechanisms for loading resources and PyOxidizer recommends
    adopting these APIs if possible.
 
+.. _resource_reader_support:
+
 Support for ``ResourceReader``
 ==============================
 
@@ -144,11 +146,7 @@ Support for ``__file__``
 ========================
 
 PyOxidizer's custom importer may or may not set the ``__file__`` attribute
-on loaded modules.
-
-If a module is imported from memory, ``__file__`` will not be set.
-
-If a module is imported from the filesystem, ``__file`` will be set.
+on loaded modules. See :ref:`no_file` for details.
 
 Therefore, Python code relying on the presence of ``__file__`` to derive
 paths to resource files may or may not work with PyOxidizer.
