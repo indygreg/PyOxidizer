@@ -206,18 +206,31 @@ impl<'a> ImportablePythonModule<'a, u8> {
             spec.setattr(py, "cached", cached)?;
         }
 
-        // If a package, `spec.submodule_search_locations` identifies where
-        // files are located. This should be the directory of the resource, or
-        // `dirname(origin)`. This will get turned into `__path__`.
+        // `__path__` MUST be set on packages per
+        // https://docs.python.org/3/reference/import.html#__path__.
+        //
+        // `__path__` is an iterable of strings, which can be empty.
+        //
+        // The role of `__path__` is to influence import machinery when dealing
+        // with sub-packages.
+        //
+        // The default code for turning `ModuleSpec` into modules will copy
+        // `spec.submodule_search_locations` into `__path__`.
         if self.is_package {
-            if let Some(origin_path) = self.origin_path() {
+            // If we are filesystem based, use the parent directory of the module
+            // file, if available.
+            let locations = if let Some(origin_path) = self.origin_path() {
                 if let Some(parent_path) = origin_path.parent() {
-                    let path = path_to_pyobject(py, parent_path)?;
-
-                    let locations = vec![path];
-                    spec.setattr(py, "submodule_search_locations", locations)?;
+                    vec![path_to_pyobject(py, parent_path)?]
+                } else {
+                    // Should this be an error?
+                    vec![]
                 }
-            }
+            } else {
+                vec![]
+            };
+
+            spec.setattr(py, "submodule_search_locations", locations)?;
         }
 
         Ok(spec)

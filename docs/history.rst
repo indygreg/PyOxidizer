@@ -54,6 +54,8 @@ Backwards Compatibility Notes
 Bug Fixes
 ^^^^^^^^^
 
+* PyOxidizer's importer now always sets ``__path__`` on imported packages
+  in accordance with Python's stated behavior (#51).
 * The mechanism for resolving Python resource files from the filesystem has
   been rewritten. Before, it was possible for files like
   ``package/resources/foo.txt`` to be normalized to a (package, resource_name)
