@@ -41,6 +41,7 @@ indoc = "0.3"
 itertools = "0.8"
 lazy_static = "1.4"
 libc = "0.2"
+mailparse = "0.12"
 path-dedot = "1.1"
 podio = "0.1"
 python-packed-resources = { version = "0.1.0-pre", path = "../python-packed-resources" }
