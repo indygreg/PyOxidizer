@@ -189,6 +189,10 @@ pub fn find_resources(
                 res.push(r);
             }
 
+            PythonResource::DistributionResource(_) => {
+                res.push(r);
+            }
+
             PythonResource::ExtensionModuleDynamicLibrary(_) => {
                 res.push(r);
             }
