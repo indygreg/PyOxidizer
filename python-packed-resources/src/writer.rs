@@ -123,7 +123,7 @@ where
             || self.in_memory_bytecode_opt2.is_some()
             || self.in_memory_extension_module_shared_library.is_some()
             || self.in_memory_resources.is_some()
-            || self.in_memory_package_distribution.is_some()
+            || self.in_memory_distribution_resources.is_some()
             || self.in_memory_shared_library.is_some()
             || self.relative_path_module_source.is_some()
             || self.relative_path_module_bytecode.is_some()
@@ -131,7 +131,7 @@ where
             || self.relative_path_module_bytecode_opt2.is_some()
             || self.relative_path_extension_module_shared_library.is_some()
             || self.relative_path_package_resources.is_some()
-            || self.relative_path_package_distribution.is_some()
+            || self.relative_path_distribution_resources.is_some()
     }
 
     /// Compute length of index entry for version 1 payload format.
@@ -180,7 +180,7 @@ where
             index += 10 * resources.len();
         }
 
-        if let Some(metadata) = &self.in_memory_package_distribution {
+        if let Some(metadata) = &self.in_memory_distribution_resources {
             index += 5;
             // Same as resources.
             index += 10 * metadata.len();
@@ -221,7 +221,7 @@ where
             index += 6 * resources.len();
         }
 
-        if let Some(metadata) = &self.relative_path_package_distribution {
+        if let Some(metadata) = &self.relative_path_distribution_resources {
             index += 5;
 
             index += 6 * metadata.len();
@@ -290,8 +290,8 @@ where
                     0
                 }
             }
-            ResourceField::InMemoryPackageDistribution => {
-                if let Some(metadata) = &self.in_memory_package_distribution {
+            ResourceField::InMemoryDistributionResource => {
+                if let Some(metadata) = &self.in_memory_distribution_resources {
                     metadata
                         .iter()
                         .map(|(key, value)| key.as_bytes().len() + value.len())
@@ -359,8 +359,8 @@ where
                     0
                 }
             }
-            ResourceField::RelativeFilesystemPackageDistribution => {
-                if let Some(metadata) = &self.relative_path_package_distribution {
+            ResourceField::RelativeFilesystemDistributionResource => {
+                if let Some(metadata) = &self.relative_path_distribution_resources {
                     metadata
                         .iter()
                         .map(|(key, value)| key.as_bytes().len() + path_bytes_length(value))
@@ -428,8 +428,8 @@ where
                     0
                 }
             }
-            ResourceField::InMemoryPackageDistribution => {
-                if let Some(metadata) = &self.in_memory_package_distribution {
+            ResourceField::InMemoryDistributionResource => {
+                if let Some(metadata) = &self.in_memory_distribution_resources {
                     metadata.len() * 2
                 } else {
                     0
@@ -491,8 +491,8 @@ where
                     0
                 }
             }
-            ResourceField::RelativeFilesystemPackageDistribution => {
-                if let Some(resources) = &self.relative_path_package_distribution {
+            ResourceField::RelativeFilesystemDistributionResource => {
+                if let Some(resources) = &self.relative_path_distribution_resources {
                     resources.len() * 2
                 } else {
                     0
@@ -600,10 +600,10 @@ where
             }
         }
 
-        if let Some(metadata) = &self.in_memory_package_distribution {
+        if let Some(metadata) = &self.in_memory_distribution_resources {
             let l = u32::try_from(metadata.len())
                 .context("converting in-memory distribution metadata length to u32")?;
-            dest.write_u8(ResourceField::InMemoryPackageDistribution.into())
+            dest.write_u8(ResourceField::InMemoryDistributionResource.into())
                 .context("writing in-memory package distribution field")?;
             dest.write_u32::<LittleEndian>(l)
                 .context("writing in-memory package distribution length")?;
@@ -708,10 +708,10 @@ where
             }
         }
 
-        if let Some(metadata) = &self.relative_path_package_distribution {
+        if let Some(metadata) = &self.relative_path_distribution_resources {
             let l = u32::try_from(metadata.len())
                 .context("converting relative path distribution length to u32")?;
-            dest.write_u8(ResourceField::RelativeFilesystemPackageDistribution.into())
+            dest.write_u8(ResourceField::RelativeFilesystemDistributionResource.into())
                 .context("writing relative path resources resources field")?;
             dest.write_u32::<LittleEndian>(l)
                 .context("writing relative path distribution data length")?;
@@ -812,7 +812,7 @@ pub fn write_embedded_resources_v1<W: Write>(
         process_field(
             &mut blob_sections,
             module,
-            ResourceField::InMemoryPackageDistribution,
+            ResourceField::InMemoryDistributionResource,
         );
         process_field(
             &mut blob_sections,
@@ -857,7 +857,7 @@ pub fn write_embedded_resources_v1<W: Write>(
         process_field(
             &mut blob_sections,
             module,
-            ResourceField::RelativeFilesystemPackageDistribution,
+            ResourceField::RelativeFilesystemDistributionResource,
         );
     }
 
@@ -938,7 +938,7 @@ pub fn write_embedded_resources_v1<W: Write>(
     }
 
     for module in modules {
-        if let Some(resources) = &module.in_memory_package_distribution {
+        if let Some(resources) = &module.in_memory_distribution_resources {
             for (key, value) in resources {
                 dest.write_all(key.as_bytes())?;
                 add_interior_padding(dest)?;
@@ -1011,7 +1011,7 @@ pub fn write_embedded_resources_v1<W: Write>(
     }
 
     for module in modules {
-        if let Some(resources) = &module.relative_path_package_distribution {
+        if let Some(resources) = &module.relative_path_distribution_resources {
             for (key, path) in resources {
                 dest.write_all(key.as_bytes())?;
                 add_interior_padding(dest)?;

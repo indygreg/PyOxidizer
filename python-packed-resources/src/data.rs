@@ -126,7 +126,7 @@ pub enum ResourceField {
     InMemoryBytecodeOpt2 = 0x09,
     InMemoryExtensionModuleSharedLibrary = 0x0a,
     InMemoryResourcesData = 0x0b,
-    InMemoryPackageDistribution = 0x0c,
+    InMemoryDistributionResource = 0x0c,
     InMemorySharedLibrary = 0x0d,
     SharedLibraryDependencyNames = 0x0e,
     RelativeFilesystemModuleSource = 0x0f,
@@ -135,7 +135,7 @@ pub enum ResourceField {
     RelativeFilesystemModuleBytecodeOpt2 = 0x12,
     RelativeFilesystemExtensionModuleSharedLibrary = 0x13,
     RelativeFilesystemPackageResources = 0x14,
-    RelativeFilesystemPackageDistribution = 0x15,
+    RelativeFilesystemDistributionResource = 0x15,
 }
 
 impl Into<u8> for ResourceField {
@@ -153,7 +153,7 @@ impl Into<u8> for ResourceField {
             ResourceField::InMemoryBytecodeOpt2 => 0x09,
             ResourceField::InMemoryExtensionModuleSharedLibrary => 0x0a,
             ResourceField::InMemoryResourcesData => 0x0b,
-            ResourceField::InMemoryPackageDistribution => 0x0c,
+            ResourceField::InMemoryDistributionResource => 0x0c,
             ResourceField::InMemorySharedLibrary => 0x0d,
             ResourceField::SharedLibraryDependencyNames => 0x0e,
             ResourceField::RelativeFilesystemModuleSource => 0x0f,
@@ -162,7 +162,7 @@ impl Into<u8> for ResourceField {
             ResourceField::RelativeFilesystemModuleBytecodeOpt2 => 0x12,
             ResourceField::RelativeFilesystemExtensionModuleSharedLibrary => 0x13,
             ResourceField::RelativeFilesystemPackageResources => 0x14,
-            ResourceField::RelativeFilesystemPackageDistribution => 0x15,
+            ResourceField::RelativeFilesystemDistributionResource => 0x15,
             ResourceField::EndOfEntry => 0xff,
         }
     }
@@ -185,7 +185,7 @@ impl TryFrom<u8> for ResourceField {
             0x09 => Ok(ResourceField::InMemoryBytecodeOpt2),
             0x0a => Ok(ResourceField::InMemoryExtensionModuleSharedLibrary),
             0x0b => Ok(ResourceField::InMemoryResourcesData),
-            0x0c => Ok(ResourceField::InMemoryPackageDistribution),
+            0x0c => Ok(ResourceField::InMemoryDistributionResource),
             0x0d => Ok(ResourceField::InMemorySharedLibrary),
             0x0e => Ok(ResourceField::SharedLibraryDependencyNames),
             0x0f => Ok(ResourceField::RelativeFilesystemModuleSource),
@@ -194,7 +194,7 @@ impl TryFrom<u8> for ResourceField {
             0x12 => Ok(ResourceField::RelativeFilesystemModuleBytecodeOpt2),
             0x13 => Ok(ResourceField::RelativeFilesystemExtensionModuleSharedLibrary),
             0x14 => Ok(ResourceField::RelativeFilesystemPackageResources),
-            0x15 => Ok(ResourceField::RelativeFilesystemPackageDistribution),
+            0x15 => Ok(ResourceField::RelativeFilesystemDistributionResource),
             0xff => Ok(ResourceField::EndOfEntry),
             _ => Err("invalid field type"),
         }
@@ -241,7 +241,7 @@ where
 
     /// Mapping of virtual filename to data for package distribution metadata
     /// to expose to Python's `importlib.metadata` API via in-memory data access.
-    pub in_memory_package_distribution: Option<HashMap<Cow<'a, str>, Cow<'a, [X]>>>,
+    pub in_memory_distribution_resources: Option<HashMap<Cow<'a, str>, Cow<'a, [X]>>>,
 
     /// Native machine code constituting a shared library which can be imported from memory.
     ///
@@ -270,7 +270,7 @@ where
     pub relative_path_package_resources: Option<HashMap<Cow<'a, str>, Cow<'a, Path>>>,
 
     /// Mapping of Python package distribution files to relative filesystem paths for those resources.
-    pub relative_path_package_distribution: Option<HashMap<Cow<'a, str>, Cow<'a, Path>>>,
+    pub relative_path_distribution_resources: Option<HashMap<Cow<'a, str>, Cow<'a, Path>>>,
 }
 
 impl<'a, X> Default for Resource<'a, X>
@@ -289,7 +289,7 @@ where
             in_memory_bytecode_opt2: None,
             in_memory_extension_module_shared_library: None,
             in_memory_resources: None,
-            in_memory_package_distribution: None,
+            in_memory_distribution_resources: None,
             in_memory_shared_library: None,
             shared_library_dependency_names: None,
             relative_path_module_source: None,
@@ -298,7 +298,7 @@ where
             relative_path_module_bytecode_opt2: None,
             relative_path_extension_module_shared_library: None,
             relative_path_package_resources: None,
-            relative_path_package_distribution: None,
+            relative_path_distribution_resources: None,
         }
     }
 }

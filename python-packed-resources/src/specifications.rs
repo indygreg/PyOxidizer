@@ -175,7 +175,7 @@ a `u32` that immediately follows. Following this `u32` is an array of
 `(u16, u64)` denoting the resource name and payload size for each resource
 in this package.
 
-`0x0c` - In-memory Python package metadata. Defines resources accessed from
+`0x0c` - In-memory Python distribution resource. Defines resources accessed from
 `importlib.metadata` APIs. If encountered, the module/package contains
 distribution metadata describing the package. The number of files being
 described is contained in a `u32` that immediately follows this byte.
@@ -219,7 +219,7 @@ resources is contained in a `u32` that immediately follows. Following this
 `u32` is an array of `(u16, u32)` denoting the resource name and filesystem
 path to each resource in this package.
 
-`0x15` - Relative filesystem path to Python package distribution metadata.
+`0x15` - Relative filesystem path to Python distribution resources.
 Defines resources accessed from `importlib.metadata` APIs. If encountered,
 the module/package contains distribution metadata describing the package.
 The number of files being described is contained in a `u32` that immediately

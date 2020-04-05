@@ -46,7 +46,7 @@ pub struct EmbeddedResourcePythonModulePrePackaged {
     pub in_memory_bytecode_opt2: Option<DataLocation>,
     pub in_memory_extension_module_shared_library: Option<DataLocation>,
     pub in_memory_resources: Option<BTreeMap<String, DataLocation>>,
-    pub in_memory_package_distribution: Option<BTreeMap<String, DataLocation>>,
+    pub in_memory_distribution_resources: Option<BTreeMap<String, DataLocation>>,
     pub in_memory_shared_library: Option<DataLocation>,
     pub shared_library_dependency_names: Option<Vec<String>>,
     pub relative_path_module_source: Option<PathBuf>,
@@ -56,7 +56,7 @@ pub struct EmbeddedResourcePythonModulePrePackaged {
     pub relative_path_module_bytecode_opt2: Option<(String, DataLocation)>,
     pub relative_path_extension_module_shared_library: Option<PathBuf>,
     pub relative_path_package_resources: Option<BTreeMap<String, PathBuf>>,
-    pub relative_path_package_distribution: Option<BTreeMap<String, PathBuf>>,
+    pub relative_path_distribution_resources: Option<BTreeMap<String, PathBuf>>,
 }
 
 impl<'a> TryFrom<&EmbeddedResourcePythonModulePrePackaged> for EmbeddedResource<'a, u8> {
@@ -104,8 +104,8 @@ impl<'a> TryFrom<&EmbeddedResourcePythonModulePrePackaged> for EmbeddedResource<
             } else {
                 None
             },
-            in_memory_package_distribution: if let Some(resources) =
-                &value.in_memory_package_distribution
+            in_memory_distribution_resources: if let Some(resources) =
+                &value.in_memory_distribution_resources
             {
                 let mut res = HashMap::new();
                 for (key, location) in resources {
@@ -155,8 +155,8 @@ impl<'a> TryFrom<&EmbeddedResourcePythonModulePrePackaged> for EmbeddedResource<
             } else {
                 None
             },
-            relative_path_package_distribution: if let Some(resources) =
-                &value.relative_path_package_distribution
+            relative_path_distribution_resources: if let Some(resources) =
+                &value.relative_path_distribution_resources
             {
                 let mut res = HashMap::new();
                 for (key, path) in resources {

@@ -253,7 +253,7 @@ impl<'a> ResourceParserIterator<'a> {
                     current_resource.in_memory_resources = Some(resources);
                 }
 
-                ResourceField::InMemoryPackageDistribution => {
+                ResourceField::InMemoryDistributionResource => {
                     let resource_count = self
                         .reader
                         .read_u32::<LittleEndian>()
@@ -285,7 +285,7 @@ impl<'a> ResourceParserIterator<'a> {
                         resources.insert(Cow::Borrowed(name), Cow::Borrowed(resource_data));
                     }
 
-                    current_resource.in_memory_package_distribution = Some(resources);
+                    current_resource.in_memory_distribution_resources = Some(resources);
                 }
 
                 ResourceField::InMemorySharedLibrary => {
@@ -410,7 +410,7 @@ impl<'a> ResourceParserIterator<'a> {
                     current_resource.relative_path_package_resources = Some(resources);
                 }
 
-                ResourceField::RelativeFilesystemPackageDistribution => {
+                ResourceField::RelativeFilesystemDistributionResource => {
                     let resource_count = self.reader.read_u32::<LittleEndian>().or_else(|_| {
                         Err("failed reading package distribution relative path item count")
                     })? as usize;
@@ -439,7 +439,7 @@ impl<'a> ResourceParserIterator<'a> {
                         resources.insert(Cow::Borrowed(name), path);
                     }
 
-                    current_resource.relative_path_package_distribution = Some(resources);
+                    current_resource.relative_path_distribution_resources = Some(resources);
                 }
             }
         }
@@ -996,7 +996,7 @@ mod tests {
 
         let resource = Resource {
             name: Cow::from("foo"),
-            in_memory_package_distribution: Some(resources),
+            in_memory_distribution_resources: Some(resources),
             ..Resource::default()
         };
 
@@ -1011,7 +1011,7 @@ mod tests {
 
         let entry = &resources[0];
 
-        let resources = entry.in_memory_package_distribution.as_ref().unwrap();
+        let resources = entry.in_memory_distribution_resources.as_ref().unwrap();
         assert_eq!(resources.len(), 2);
         assert_eq!(resources.get("foo").unwrap().as_ref(), b"foovalue");
         assert_eq!(resources.get("another").unwrap().as_ref(), b"value2");
@@ -1268,7 +1268,7 @@ mod tests {
 
         let resource = Resource {
             name: Cow::from("foo"),
-            relative_path_package_distribution: Some(resources),
+            relative_path_distribution_resources: Some(resources),
             ..Resource::default()
         };
 
@@ -1283,7 +1283,7 @@ mod tests {
 
         let entry = &resources[0];
 
-        let resources = entry.relative_path_package_distribution.as_ref().unwrap();
+        let resources = entry.relative_path_distribution_resources.as_ref().unwrap();
         assert_eq!(resources.len(), 2);
         assert_eq!(
             resources.get("foo"),
@@ -1337,7 +1337,7 @@ mod tests {
             in_memory_bytecode_opt2: Some(Cow::from(b"bytecodeopt2".to_vec())),
             in_memory_extension_module_shared_library: Some(Cow::from(b"library".to_vec())),
             in_memory_resources: Some(in_memory_resources),
-            in_memory_package_distribution: Some(in_memory_distribution),
+            in_memory_distribution_resources: Some(in_memory_distribution),
             in_memory_shared_library: Some(Cow::from(b"library".to_vec())),
             shared_library_dependency_names: Some(vec![Cow::from("libfoo"), Cow::from("depends")]),
             relative_path_module_source: Some(Cow::from(Path::new("source_path"))),
@@ -1346,7 +1346,7 @@ mod tests {
             relative_path_module_bytecode_opt2: Some(Cow::from(Path::new("bytecode_opt2_path"))),
             relative_path_extension_module_shared_library: Some(Cow::from(Path::new("em_path"))),
             relative_path_package_resources: Some(relative_path_resources),
-            relative_path_package_distribution: Some(relative_path_distribution),
+            relative_path_distribution_resources: Some(relative_path_distribution),
         };
 
         let mut data = Vec::new();
@@ -1390,7 +1390,7 @@ mod tests {
         assert_eq!(resources.get("foo").unwrap().as_ref(), b"foovalue");
         assert_eq!(resources.get("resource2").unwrap().as_ref(), b"value2");
 
-        let resources = entry.in_memory_package_distribution.as_ref().unwrap();
+        let resources = entry.in_memory_distribution_resources.as_ref().unwrap();
         assert_eq!(resources.len(), 2);
         assert_eq!(resources.get("dist").unwrap().as_ref(), b"distvalue");
         assert_eq!(resources.get("dist2").unwrap().as_ref(), b"dist2value");
@@ -1437,7 +1437,7 @@ mod tests {
             Some(&Cow::Borrowed(Path::new("foo.txt")))
         );
 
-        let distribution = entry.relative_path_package_distribution.as_ref().unwrap();
+        let distribution = entry.relative_path_distribution_resources.as_ref().unwrap();
         assert_eq!(distribution.len(), 2);
         assert_eq!(
             distribution.get("foo.txt"),
