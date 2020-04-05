@@ -123,12 +123,6 @@ Please file issues at https://github.com/indygreg/PyOxidizer/issues reporting
 known problems with terminal interaction or to request new features for
 terminal interaction, ``terminfo`` database support, etc.
 
-Test Coverage
--------------
-
-The test coverage for ``PyOxidizer`` is pretty bad. We need to write a lot
-of tests.
-
 Lesser Missing Features
 =======================
 
