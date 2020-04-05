@@ -555,6 +555,7 @@ pub fn default_distribution_location(
 /// `target` is a Rust target triple the distribution should target.
 /// `dest_dir` is a directory to extract the distribution to. The distribution will
 /// be extracted to a child directory of this path.
+#[allow(unused)]
 pub fn default_distribution(
     logger: &slog::Logger,
     flavor: &DistributionFlavor,
