@@ -180,14 +180,6 @@ Configuration Files
 Naming and semantics in the configuration files can be significantly
 improved. There's also various missing packaging functionality.
 
-Poor Rust Error Handling
-------------------------
-
-Error handling in build-time Rust code isn't great. Expect to see the
-``pyoxidizer`` executable to crash from time to time. The code that runs in
-binaries built with PyOxidizer is held to a higher standard. Crashes should
-not occur and will be treated as serious bugs!
-
 Eventual Features
 =================
 
