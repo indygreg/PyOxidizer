@@ -316,6 +316,14 @@ impl<'a> From<&'a PythonResource> for Value {
                     em: PythonExtensionModuleFlavor::StaticallyLinked(em.clone()),
                 })
             }
+
+            PythonResource::EggFile(_) => {
+                panic!("egg files not supported");
+            }
+
+            PythonResource::PathExtension(_) => {
+                panic!("path extensions not supported");
+            }
         }
     }
 }

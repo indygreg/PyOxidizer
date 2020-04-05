@@ -1234,6 +1234,8 @@ impl PythonDistribution for StandaloneDistribution {
                 PythonResource::ModuleBytecodeRequest { .. } => true,
                 PythonResource::ModuleBytecode { .. } => true,
                 PythonResource::Resource { .. } => true,
+                PythonResource::EggFile(_) => false,
+                PythonResource::PathExtension(_) => false,
             })
             .cloned()
             .collect())

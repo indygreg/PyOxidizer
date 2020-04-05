@@ -455,7 +455,7 @@ pub struct PythonPathExtension {
     pub data: DataLocation,
 }
 
-/// Represents a resource to make available to the Python interpreter.
+/// Represents a resource that can be read by Python somehow.
 #[derive(Clone, Debug)]
 pub enum PythonResource {
     /// A module defined by source code.
@@ -468,9 +468,12 @@ pub enum PythonResource {
     Resource(PythonPackageResource),
     /// An extension module that is represented by a dynamic library.
     ExtensionModuleDynamicLibrary(PythonExtensionModule),
-
     /// An extension module that was built from source and can be statically linked.
     ExtensionModuleStaticallyLinked(PythonExtensionModule),
+    /// A self-contained Python egg.
+    EggFile(PythonEggFile),
+    /// A path extension.
+    PathExtension(PythonPathExtension),
 }
 
 impl TryFrom<&PythonFileResource> for PythonResource {
@@ -548,6 +551,8 @@ impl PythonResource {
             }
             PythonResource::ExtensionModuleDynamicLibrary(em) => em.name.clone(),
             PythonResource::ExtensionModuleStaticallyLinked(em) => em.name.clone(),
+            PythonResource::EggFile(_) => "".to_string(),
+            PythonResource::PathExtension(_) => "".to_string(),
         }
     }
 
@@ -559,6 +564,8 @@ impl PythonResource {
             PythonResource::Resource(resource) => &resource.leaf_package,
             PythonResource::ExtensionModuleDynamicLibrary(em) => &em.name,
             PythonResource::ExtensionModuleStaticallyLinked(em) => &em.name,
+            PythonResource::EggFile(_) => return false,
+            PythonResource::PathExtension(_) => return false,
         };
 
         for package in packages {
