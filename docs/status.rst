@@ -85,7 +85,6 @@ We want to add a myriad of features around packaging functionality to
 facilitate these things. This includes:
 
 * Support for ``__file__``.
-* A ``pyoxidizer`` command for turnkey building and assembling of all files.
 * A build mode that produces an instrumented binary, runs it a few times
   to dump loaded modules into files, then builds it again with a pruned
   set of resources.
