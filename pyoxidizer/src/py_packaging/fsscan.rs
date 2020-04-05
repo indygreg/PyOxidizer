@@ -9,8 +9,8 @@ Scanning the filesystem for Python resources.
 use {
     super::distribution::PythonModuleSuffixes,
     super::resource::{
-        BytecodeOptimizationLevel, DataLocation, PythonModuleBytecode, PythonModuleSource,
-        PythonPackageResource,
+        BytecodeOptimizationLevel, DataLocation, PythonExtensionModule, PythonModuleBytecode,
+        PythonModuleSource, PythonPackageResource,
     },
     anyhow::Result,
     itertools::Itertools,
@@ -69,13 +69,7 @@ pub enum PythonFileResource {
     /// A compiled extension module.
     ///
     /// i.e. a .so or .pyd file.
-    ExtensionModule {
-        package: String,
-        stem: String,
-        full_name: String,
-        path: PathBuf,
-        extension_file_suffix: String,
-    },
+    ExtensionModule(PythonExtensionModule),
 
     /// A non-module Python resource.
     Resource(PythonPackageResource),
@@ -225,12 +219,9 @@ impl PythonResourceIterator {
 
                 let mut full_module_name: Vec<&str> = package_parts.to_vec();
 
-                let stem = if module_name == "__init__" {
-                    "".to_string()
-                } else {
+                if module_name != "__init__" {
                     full_module_name.push(module_name);
-                    module_name.to_string()
-                };
+                }
 
                 let full_module_name = itertools::join(full_module_name, ".");
 
@@ -240,13 +231,20 @@ impl PythonResourceIterator {
 
                 self.seen_packages.insert(package.clone());
 
-                return Some(PythonFileResource::ExtensionModule {
-                    package,
-                    stem,
-                    full_name: full_module_name,
-                    path: path.to_path_buf(),
+                let module_components = full_module_name.split('.').collect::<Vec<_>>();
+                let final_name = module_components[module_components.len() - 1];
+                let init_fn = Some(format!("PyInit_{}", final_name));
+
+                return Some(PythonFileResource::ExtensionModule(PythonExtensionModule {
+                    name: full_module_name,
+                    init_fn,
                     extension_file_suffix: ext_suffix.clone(),
-                });
+                    extension_data: Some(DataLocation::Path(path.to_path_buf())),
+                    object_file_data: vec![],
+                    is_package: is_package_from_path(path),
+                    libraries: vec![],
+                    library_dirs: vec![],
+                }));
             }
         }
 
@@ -675,53 +673,68 @@ mod tests {
 
         assert_eq!(
             resources[0],
-            PythonFileResource::ExtensionModule {
-                package: "_cffi_backend".to_string(),
-                stem: "_cffi_backend".to_string(),
-                full_name: "_cffi_backend".to_string(),
-                path: cffi_path,
+            PythonFileResource::ExtensionModule(PythonExtensionModule {
+                name: "_cffi_backend".to_string(),
+                init_fn: Some("PyInit__cffi_backend".to_string()),
                 extension_file_suffix: ".cp37-win_amd64.pyd".to_string(),
-            }
+                extension_data: Some(DataLocation::Path(cffi_path)),
+                object_file_data: vec![],
+                is_package: false,
+                libraries: vec![],
+                library_dirs: vec![],
+            })
         );
         assert_eq!(
             resources[1],
-            PythonFileResource::ExtensionModule {
-                package: "bar".to_string(),
-                stem: "bar".to_string(),
-                full_name: "bar".to_string(),
-                path: so_path,
+            PythonFileResource::ExtensionModule(PythonExtensionModule {
+                name: "bar".to_string(),
+                init_fn: Some("PyInit_bar".to_string()),
                 extension_file_suffix: ".so".to_string(),
-            }
+                extension_data: Some(DataLocation::Path(so_path)),
+                object_file_data: vec![],
+                is_package: false,
+                libraries: vec![],
+                library_dirs: vec![],
+            }),
         );
         assert_eq!(
             resources[2],
-            PythonFileResource::ExtensionModule {
-                package: "foo".to_string(),
-                stem: "foo".to_string(),
-                full_name: "foo".to_string(),
-                path: pyd_path,
+            PythonFileResource::ExtensionModule(PythonExtensionModule {
+                name: "foo".to_string(),
+                init_fn: Some("PyInit_foo".to_string()),
                 extension_file_suffix: ".pyd".to_string(),
-            }
+                extension_data: Some(DataLocation::Path(pyd_path)),
+                object_file_data: vec![],
+                is_package: false,
+                libraries: vec![],
+                library_dirs: vec![],
+            }),
         );
         assert_eq!(
             resources[3],
-            PythonFileResource::ExtensionModule {
-                package: "markupsafe".to_string(),
-                stem: "_speedups".to_string(),
-                full_name: "markupsafe._speedups".to_string(),
-                path: markupsafe_speedups_path,
+            PythonFileResource::ExtensionModule(PythonExtensionModule {
+                name: "markupsafe._speedups".to_string(),
+                init_fn: Some("PyInit__speedups".to_string()),
                 extension_file_suffix: ".cpython-37m-x86_64-linux-gnu.so".to_string(),
-            }
+                extension_data: Some(DataLocation::Path(markupsafe_speedups_path)),
+                object_file_data: vec![],
+                is_package: false,
+                libraries: vec![],
+                library_dirs: vec![],
+            }),
         );
         assert_eq!(
             resources[4],
-            PythonFileResource::ExtensionModule {
-                package: "zstd".to_string(),
-                stem: "zstd".to_string(),
-                full_name: "zstd".to_string(),
-                path: zstd_path,
+            PythonFileResource::ExtensionModule(PythonExtensionModule {
+                name: "zstd".to_string(),
+                init_fn: Some("PyInit_zstd".to_string()),
                 extension_file_suffix: ".cpython-37m-x86_64-linux-gnu.so".to_string(),
-            }
+                extension_data: Some(DataLocation::Path(zstd_path)),
+                object_file_data: vec![],
+                is_package: false,
+                libraries: vec![],
+                library_dirs: vec![],
+            }),
         );
 
         Ok(())

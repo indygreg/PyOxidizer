@@ -1576,7 +1576,11 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 .add_in_memory_extension_module_shared_library(
                     &extension_module.name,
                     extension_module.is_package,
-                    extension_module.extension_data.as_ref().unwrap(),
+                    &extension_module
+                        .extension_data
+                        .as_ref()
+                        .unwrap()
+                        .resolve()?,
                 )
         } else if !extension_module.object_file_data.is_empty() {
             // TODO we shouldn't be adding a builtin extension module from this API.
@@ -1634,7 +1638,11 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                         .add_in_memory_extension_module_shared_library(
                             &extension_module.name,
                             extension_module.is_package,
-                            extension_module.extension_data.as_ref().unwrap(),
+                            &extension_module
+                                .extension_data
+                                .as_ref()
+                                .unwrap()
+                                .resolve()?,
                         )
                 } else {
                     Err(anyhow!("in-memory-only resources policy active but in-memory extension module importing not supported by this configuration"))
@@ -1657,7 +1665,11 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                         .add_in_memory_extension_module_shared_library(
                             &extension_module.name,
                             extension_module.is_package,
-                            extension_module.extension_data.as_ref().unwrap(),
+                            &extension_module
+                                .extension_data
+                                .as_ref()
+                                .unwrap()
+                                .resolve()?,
                         )
                 } else if self
                     .distribution

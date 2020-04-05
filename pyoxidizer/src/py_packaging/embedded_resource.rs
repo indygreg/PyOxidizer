@@ -1584,7 +1584,7 @@ mod tests {
             name: "foo.bar".to_string(),
             init_fn: Some("PyInit_bar".to_string()),
             extension_file_suffix: ".so".to_string(),
-            extension_data: Some(vec![42]),
+            extension_data: Some(DataLocation::Memory(vec![42])),
             object_file_data: vec![],
             is_package: false,
             libraries: vec![],

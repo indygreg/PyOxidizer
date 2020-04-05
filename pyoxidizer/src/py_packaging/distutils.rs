@@ -7,7 +7,7 @@ Interacting with distutils.
 */
 
 use {
-    super::resource::PythonExtensionModule,
+    super::resource::{DataLocation, PythonExtensionModule},
     anyhow::{Context, Result},
     lazy_static::lazy_static,
     serde::Deserialize,
@@ -165,7 +165,11 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<PythonExtensionModu
         };
 
         // Extension files may not always be written. So ignore errors on missing file.
-        let extension_data = std::fs::read(&extension_path).ok();
+        let extension_data = if let Ok(data) = std::fs::read(&extension_path) {
+            Some(DataLocation::Memory(data))
+        } else {
+            None
+        };
 
         let mut object_file_data = Vec::new();
 

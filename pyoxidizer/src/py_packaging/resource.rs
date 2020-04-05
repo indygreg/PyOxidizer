@@ -382,7 +382,7 @@ pub struct PythonExtensionModule {
     /// Filename suffix to use when writing extension module data.
     pub extension_file_suffix: String,
     /// File data for linked extension module.
-    pub extension_data: Option<Vec<u8>>,
+    pub extension_data: Option<DataLocation>,
     /// File data for object files linked together to produce this extension module.
     pub object_file_data: Vec<Vec<u8>>,
     /// Whether this extension module is a package.
@@ -429,7 +429,7 @@ impl PythonExtensionModule {
             manifest.add_file(
                 &self.resolve_path(prefix),
                 &FileContent {
-                    data: data.clone(),
+                    data: data.resolve()?,
                     executable: true,
                 },
             )
@@ -488,29 +488,22 @@ impl TryFrom<&PythonFileResource> for PythonResource {
 
             PythonFileResource::ResourceFile(_) => panic!("ResourceFile variant unexpected"),
 
-            PythonFileResource::ExtensionModule {
-                full_name,
-                path,
-                extension_file_suffix,
-                ..
-            } => {
-                let module_components = full_name.split('.').collect::<Vec<&str>>();
-                let final_name = module_components[module_components.len() - 1];
-                let init_fn = Some(format!("PyInit_{}", final_name));
-
-                Ok(PythonResource::ExtensionModuleDynamicLibrary(
-                    PythonExtensionModule {
-                        name: full_name.clone(),
-                        init_fn,
-                        extension_file_suffix: extension_file_suffix.clone(),
-                        extension_data: Some(std::fs::read(path)?),
-                        object_file_data: vec![],
-                        is_package: is_package_from_path(path),
-                        libraries: vec![],
-                        library_dirs: vec![],
+            PythonFileResource::ExtensionModule(em) => Ok(
+                PythonResource::ExtensionModuleDynamicLibrary(PythonExtensionModule {
+                    name: em.name.clone(),
+                    init_fn: em.init_fn.clone(),
+                    extension_file_suffix: em.extension_file_suffix.clone(),
+                    extension_data: if let Some(data) = &em.extension_data {
+                        Some(data.to_memory()?)
+                    } else {
+                        None
                     },
-                ))
-            }
+                    object_file_data: em.object_file_data.clone(),
+                    is_package: em.is_package,
+                    libraries: em.libraries.clone(),
+                    library_dirs: em.library_dirs.clone(),
+                }),
+            ),
 
             PythonFileResource::EggFile { .. } => {
                 Err(anyhow!("converting egg files not yet supported"))
