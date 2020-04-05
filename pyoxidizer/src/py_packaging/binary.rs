@@ -317,7 +317,7 @@ impl EmbeddedPythonBinaryData {
         let mut fh = File::create(&module_names)?;
         fh.write_all(&self.resources.module_names)?;
 
-        let embedded_resources = dest_dir.join("pyembed-resources");
+        let embedded_resources = dest_dir.join("packed-resources");
         let mut fh = File::create(&embedded_resources)?;
         fh.write_all(&self.resources.resources)?;
 
