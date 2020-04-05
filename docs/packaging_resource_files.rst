@@ -142,6 +142,82 @@ implementation in the following ways:
   importer - relying on ``os.listdir()`` - will expose all files in a
   directory as a resource. This includes ``.py`` files.
 
+.. _resource_loader_support:
+
+Support for ``ResourceLoader``
+==============================
+
+PyOxidizer's importer implements the deprecated ``ResourceLoader`` interface
+and ``get_data(path)`` will return ``bytes`` instances for registered
+resources or raise ``OSError`` on request of an unregistered resource.
+
+The path passed to ``get_data(path)`` MUST be an absolute path that has the
+prefix of either the currently running executable file or the directory
+containing it.
+
+If the resource path is prefixed with the current executable's path, the
+path components after the current executable path are interpreted as the
+path to a resource registered for in-memory loading.
+
+If the resource path is prefixed with the current executable's directory,
+the path components after this directory are interpreted as the path to a
+resource registered for application-relative loading.
+
+All other resource paths aren't recognized and an ``OSError`` will be
+raised. There is no fallback to loading from the filesystem, even if a
+valid filesystem path pointing to an existing file is passed in.
+
+.. note::
+
+   The behavior of not servicing paths that actually exist but aren't
+   registered with PyOxidizer as resources may be overly opinionated
+   and undesirable for some applications.
+
+   If this is a legitimate use case for your application, please create a
+   GitHub issue to request this feature.
+
+Once a path is recognized as having the prefix of the current executable
+or its directory, the remaining path components will be interpreted as the
+resource path. This resource path logically contains a package name component
+and a resource name component. PyOxidizer will traverse all potential package
+names starting from the longest/deepest up until the top-level package looking
+for a known Python package. Once a known package name is encountered, its
+resources will be consulted. At most 1 package will be consulted for resources.
+
+Here is a concrete example.
+
+If the ``path`` is ``/usr/bin/myapp/foo/bar/resource.txt`` and the current
+executable is ``/usr/bin/myapp``, the requested resource will be
+``foo/bar/resource.txt``. Since the path was prefixed with the executable
+path, only resources registered for in-memory loading will be consulted.
+
+Our candidate package names are ``foo.bar`` and ``foo``, in that order.
+
+If ``foo.bar`` is a known package and ``resource.txt`` is registered for
+in-memory loading, that resource's contents will be returned.
+
+If ``foo.bar`` is a known package and ``resource.txt`` is not registered
+in that package, ``OSError`` is raised.
+
+If ``foo.bar`` is not a known package, we proceed to check for package
+``foo``.
+
+If ``foo`` is a known package and ``bar/resource.txt`` is registered
+for in-memory loading, its contents will be returned.
+
+Otherwise, we're out of possible packages, so ``OSError`` is raised.
+
+Similar logic holds for resources registered for filesystem-relative loading.
+The difference here is the stripped path prefix and we are only looking
+for resources registered for filesystem-relative loading. Otherwise, the
+traversal logic is exactly the same.
+
+If ``OSError`` is raised due to a missing resource, its ``errno`` is ``ENOENT``
+and its ``filename`` is the passed in ``path``. Python should automatically
+translate this to a ``FileNotFoundError`` exception. But callers should
+catch ``OSError``, as other ``OSError`` variants can be raised (e.g. for
+file permission errors).
+
 Support for ``__file__``
 ========================
 
@@ -161,12 +237,6 @@ Support for ``pkg_resources``
 
 ``pkg_resources``'s APIs for loading resources likely do not work with
 PyOxidizer.
-
-Support for ``ResourceLoader``
-==============================
-
-PyOxidizer's importer does not implement the ``ResourceLoader`` interface
-and ``get_data()`` is not a method on PyOxidizer's ``Loader`` instances.
 
 Porting Code to Modern Resources APIs
 =====================================

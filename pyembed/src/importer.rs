@@ -407,6 +407,14 @@ py_class!(class PyOxidizerFinder |py| {
 
     // End of importlib.abc.Loader interface.
 
+    // Start of importlib.abc.ResourceLoader interface.
+
+    def get_data(&self, path: &PyString) -> PyResult<PyObject> {
+        self.get_data_impl(py, path)
+    }
+
+    // End of importlib.abs.ResourceLoader interface.
+
     // Start of importlib.abc.InspectLoader interface.
 
     def get_code(&self, fullname: &PyString) -> PyResult<PyObject> {
@@ -594,6 +602,22 @@ impl PyOxidizerFinder {
         } else {
             Ok(py.None())
         }
+    }
+}
+
+// importlib.abc.ResourceLoader interface.
+impl PyOxidizerFinder {
+    /// An abstract method to return the bytes for the data located at path.
+    ///
+    /// Loaders that have a file-like storage back-end that allows storing
+    /// arbitrary data can implement this abstract method to give direct access
+    /// to the data stored. OSError is to be raised if the path cannot be
+    /// found. The path is expected to be constructed using a module’s __file__
+    /// attribute or an item from a package’s __path__.
+    fn get_data_impl(&self, py: Python, path: &PyString) -> PyResult<PyObject> {
+        self.state(py)
+            .resources_state
+            .resolve_resource_data_from_path(py, path)
     }
 }
 

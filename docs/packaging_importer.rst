@@ -177,19 +177,18 @@ zip files, so there is precedence for PyOxidizer doing things this way.
 ``ResourceReader`` has known compatibility differences with Python's default
 filesystem-based importer. See :ref:`resource_reader_support` for details.
 
-``ResourceLoader`` and ``get_data(path)`` Method
-================================================
+``ResourceLoader`` Compatibility
+================================
 
-`importlib.abc.ResourceLoader <https://docs.python.org/3/library/importlib.html#importlib.abc.ResourceLoader>`_
-is a deprecated interface for loading resource files. The interface has a
-single method: ``get_data(path)``.
+The ``ResourceLoader`` interface is implemented but behavior of
+``get_data(path)`` has some variance with Python's filesystem-based importer.
 
-.. important::
+See :ref:`resource_loader_support` for details.
 
-   ``PyOxidizerFinder`` does not implement the ``ResourceLoader`` interface.
+.. note::
 
-See :ref:`resource_files` for alternate, more modern mechanisms for loading
-resource files.
+   ``ResourceLoader`` is deprecated as of Python 3.7. Code should be ported
+   to ``ResourceReader`` / ``importlib.resources`` if possible.
 
 ``importlib.metadata`` Compatibility
 ====================================

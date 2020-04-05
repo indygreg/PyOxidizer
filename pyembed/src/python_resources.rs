@@ -8,10 +8,10 @@ Management of Python resources.
 
 use {
     super::pystr::path_to_pyobject,
-    cpython::exc::ImportError,
+    cpython::exc::{ImportError, OSError},
     cpython::{
-        ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyObject, PyResult, PyString,
-        Python, PythonObject, ToPyObject,
+        NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyObject, PyResult,
+        PyString, Python, PythonObject, ToPyObject,
     },
     python3_sys as pyffi,
     python_packed_resources::data::{Resource, ResourceFlavor},
@@ -491,6 +491,154 @@ impl<'a> PythonResourcesState<'a, u8> {
         }
 
         Ok(PyList::new(py, &[]).into_object())
+    }
+
+    /// Attempt to resolve a PyBytes for resource data given a relative path.
+    ///
+    /// Raises OSerror on failure.
+    ///
+    /// This method is meant to be an implementation of `ResourceLoader.get_data()` and
+    /// should only be used for that purpose.
+    pub fn resolve_resource_data_from_path(
+        &self,
+        py: Python,
+        path: &PyString,
+    ) -> PyResult<PyObject> {
+        // Paths prefixed with the current executable path are recognized as
+        // in-memory resources. This emulates behavior of zipimporter, which
+        // does something similar.
+        //
+        // Paths prefixed with the current resources origin are recognized as
+        // path-relative resources. We need to service these paths because we
+        // hand out a __path__ that points to the package directory and someone
+        // could os.path.join() that with a resource name and call into get_data()
+        // with that full path.
+        //
+        // All other paths are ignored.
+        //
+        // Why do we ignore all other paths? Couldn't we try to read them?
+        // This is a very good question!
+        //
+        // We absolutely could try to load all other paths! However, doing so
+        // would introduce inconsistent behavior.
+        //
+        // Python's filesystem importer relies on directory scanning to find
+        // resources: resources are not registered ahead of time. This is all fine.
+        // Our resources, however, are registered. The resources data structure
+        // has awareness of all resources that should exist. In the case of memory
+        // resources, it MUST have awareness of the resource, as there is no other
+        // location to fall back to to find them.
+        //
+        // If we were to service arbitrary paths that happened to be files but
+        // weren't resources registered with our data structure, our behavior would
+        // be inconsistent. For in-memory resources, we'd require resources be
+        // registered. For filesystem resources, we wouldn't. This inconsistency
+        // feels wrong.
+        //
+        // Now, that inconsistency may be desirable by some users. So we may add
+        // this functionality some day. But it should likely never be the default
+        // because it goes against the spirit of requiring all resources to be
+        // known ahead-of-time.
+        let native_path = PathBuf::from(path.to_string_lossy(py).to_string());
+
+        let (relative_path, check_in_memory, check_relative_path) =
+            if let Ok(relative_path) = native_path.strip_prefix(&self.current_exe) {
+                (relative_path, true, false)
+            } else if let Ok(relative_path) = native_path.strip_prefix(&self.origin) {
+                (relative_path, false, true)
+            } else {
+                return Err(PyErr::new::<OSError, _>(
+                    py,
+                    (libc::ENOENT, "resource not known", path.clone()),
+                ));
+            };
+
+        // There is also an additional wrinkle with resolving resources from paths.
+        // And that is the boundary between the package name and the resource name.
+        // The relative path to the resource logically consists of a package name
+        // part and a resource name part and the division between them is unknown.
+        // Since resource names can have directory separators, a relative path of
+        // `foo/bar/resource.txt` could either be `(foo, bar/resource.txt)` or
+        // `(foo.bar, resource.txt)`. Our strategy then is to walk the path
+        // components and pop them from the package name to the resource name until
+        // we find a match.
+        //
+        // We stop as soon as we find a known Python package because this is the
+        // behavior of ResourceReader. If we ever teach one to cross package
+        // boundaries, we should extend this to the other.
+        let components = relative_path.components().collect::<Vec<_>>();
+
+        // Our indexed resources require the existence of a package. So there should be
+        // at least 2 components for the path to be valid.
+        if components.len() < 2 {
+            return Err(PyErr::new::<OSError, _>(
+                py,
+                (
+                    libc::ENOENT,
+                    "illegal resource name: missing package component",
+                    path.clone(),
+                ),
+            ));
+        }
+
+        let mut name_parts = vec![components[components.len() - 1]
+            .as_os_str()
+            .to_string_lossy()];
+        let mut package_parts = components[0..components.len() - 1]
+            .iter()
+            .map(|c| c.as_os_str().to_string_lossy())
+            .collect::<Vec<_>>();
+
+        while !package_parts.is_empty() {
+            let package_name = package_parts.join(".");
+            let package_name_ref: &str = &package_name;
+
+            // Internally resources are normalized to POSIX separators.
+            let resource_name = name_parts.join("/");
+            let resource_name_ref: &str = &resource_name;
+
+            if let Some(entry) = self.resources.get(package_name_ref) {
+                if check_in_memory {
+                    if let Some(resources) = &entry.in_memory_resources {
+                        if let Some(data) = resources.get(resource_name_ref) {
+                            return Ok(PyBytes::new(py, data).into_object());
+                        }
+                    }
+                }
+
+                if check_relative_path {
+                    if let Some(resources) = &entry.relative_path_package_resources {
+                        if let Some(resource_relative_path) = resources.get(resource_name_ref) {
+                            let resource_path = self.origin.join(resource_relative_path);
+
+                            let io_module = py.import("io")?;
+
+                            let fh = io_module.call(
+                                py,
+                                "FileIO",
+                                (path_to_pyobject(py, &resource_path)?, "r"),
+                                None,
+                            )?;
+
+                            return fh.call_method(py, "read", NoArgs, None);
+                        }
+                    }
+                }
+
+                // We found a package above. Stop the walk, as we don't want to allow crossing
+                // package boundaries.
+                break;
+            }
+
+            name_parts.insert(0, package_parts.pop().unwrap());
+        }
+
+        // If we got here, we couldn't find a resource in our data structure.
+
+        Err(PyErr::new::<OSError, _>(
+            py,
+            (libc::ENOENT, "resource not known", path.clone()),
+        ))
     }
 
     /// Find package metadata distributions given search criteria.

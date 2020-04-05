@@ -76,6 +76,8 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* The custom Python importer now implements ``get_data(path)``, allowing loading
+  of resources from filesystem paths (#139).
 * The ``PythonDistribution.to_python_executable()`` Starlark method now accepts
   a ``resources_policy`` argument to control a policy and default behavior for
   resources on the produced executable. Using this argument, it is possible
