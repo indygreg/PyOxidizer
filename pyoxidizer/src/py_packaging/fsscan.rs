@@ -8,10 +8,11 @@ Scanning the filesystem for Python resources.
 
 use {
     super::distribution::PythonModuleSuffixes,
+    super::package_metadata::PythonPackageMetadata,
     super::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonEggFile, PythonExtensionModule,
-        PythonModuleBytecode, PythonModuleSource, PythonPackageResource, PythonPathExtension,
-        PythonResource,
+        PythonModuleBytecode, PythonModuleSource, PythonPackageMetadataResource,
+        PythonPackageResource, PythonPathExtension, PythonResource,
     },
     anyhow::Result,
     itertools::Itertools,
@@ -103,15 +104,55 @@ impl PythonResourceIterator {
             .map(|p| p.to_str().expect("unable to get path as str"))
             .collect::<Vec<_>>();
 
-        // .dist-info directories contain packaging metadata. They aren't interesting to us.
-        // We /could/ emit these files if we wanted to. But until there is a need, exclude them.
-        if components[0].ends_with(".dist-info") {
-            return None;
-        }
+        // Files in .dist-info and .egg-info directories are distribution metadata files.
+        // Parsing the package name out of the directory name can be a bit wonky, as
+        // case sensitivity and other normalization can come into play. So our strategy
+        // is to parse the well-known metadata record inside the directory to extract
+        // the package info. If the file doesn't exist or can't be parsed, we ignore this
+        // distribution entirely.
 
-        // Ditto for .egg-info directories.
-        if components[0].ends_with(".egg-info") {
-            return None;
+        let metadata_path = if components[0].ends_with(".dist-info") {
+            Some(self.root_path.join(components[0]).join("METADATA"))
+        } else if components[0].ends_with(".egg-info") {
+            Some(self.root_path.join(components[0]).join("PKG-INFO"))
+        } else {
+            None
+        };
+
+        if let Some(metadata_path) = metadata_path {
+            let metadata = if let Ok(data) = std::fs::read(&metadata_path) {
+                if let Ok(metadata) = PythonPackageMetadata::from_metadata(&data) {
+                    metadata
+                } else {
+                    return None;
+                }
+            } else {
+                return None;
+            };
+
+            let package = if let Some(name) = metadata.name() {
+                name
+            } else {
+                return None;
+            };
+
+            let version = if let Some(version) = metadata.version() {
+                version
+            } else {
+                return None;
+            };
+
+            // Name of resource is file path after the initial directory.
+            let name = components[1..components.len()].join("/");
+
+            return Some(DirEntryItem::PythonResource(
+                PythonResource::DistributionResource(PythonPackageMetadataResource {
+                    package: package.to_string(),
+                    version: version.to_string(),
+                    name,
+                    data: DataLocation::Path(path.to_path_buf()),
+                }),
+            ));
         }
 
         // site-packages directories are package roots within package roots. Treat them as
@@ -893,6 +934,170 @@ mod tests {
                 leaf_package: "foo".to_string(),
                 relative_name: "resources/resource.txt".to_string(),
                 data: DataLocation::Path(resource_path),
+            })
+        );
+
+        Ok(())
+    }
+
+    /// .dist-info directory ignored if METADATA file not present.
+    #[test]
+    fn test_distinfo_missing_metadata() -> Result<()> {
+        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let tp = td.path();
+
+        let dist_path = tp.join("foo-1.2.dist-info");
+        create_dir_all(&dist_path)?;
+        let resource = dist_path.join("file.txt");
+        write(&resource, "content")?;
+
+        let resources =
+            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
+        assert!(resources.is_empty());
+
+        Ok(())
+    }
+
+    /// .dist-info with invalid METADATA file has no content emitted.
+    #[test]
+    fn test_distinfo_bad_metadata() -> Result<()> {
+        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let tp = td.path();
+
+        let dist_path = tp.join("foo-1.2.dist-info");
+        create_dir_all(&dist_path)?;
+        let metadata = dist_path.join("METADATA");
+        write(&metadata, "bad content")?;
+        let resource = dist_path.join("file.txt");
+        write(&resource, "content")?;
+
+        let resources =
+            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
+        assert!(resources.is_empty());
+
+        Ok(())
+    }
+
+    /// .dist-info with partial METADATA content has no content emitted.
+    #[test]
+    fn test_distinfo_partial_metadata() -> Result<()> {
+        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let tp = td.path();
+
+        let dist_path = tp.join("black-1.2.3.dist-info");
+        create_dir_all(&dist_path)?;
+        let metadata = dist_path.join("METADATA");
+        write(&metadata, "Name: black\n")?;
+        let resource = dist_path.join("file.txt");
+        write(&resource, "content")?;
+
+        let resources =
+            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
+        assert!(resources.is_empty());
+
+        Ok(())
+    }
+
+    /// .dist-info with partial METADATA content has no content emitted.
+    #[test]
+    fn test_distinfo_valid_metadata() -> Result<()> {
+        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let tp = td.path();
+
+        let dist_path = tp.join("black-1.2.3.dist-info");
+        create_dir_all(&dist_path)?;
+        let metadata_path = dist_path.join("METADATA");
+        write(&metadata_path, "Name: black\nVersion: 1.2.3\n")?;
+        let resource_path = dist_path.join("file.txt");
+        write(&resource_path, "content")?;
+
+        let subdir = dist_path.join("subdir");
+        create_dir_all(&subdir)?;
+        let subdir_resource_path = subdir.join("sub.txt");
+        write(&subdir_resource_path, "content")?;
+
+        let resources =
+            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
+        assert_eq!(resources.len(), 3);
+
+        assert_eq!(
+            resources[0],
+            PythonResource::DistributionResource(PythonPackageMetadataResource {
+                package: "black".to_string(),
+                version: "1.2.3".to_string(),
+                name: "METADATA".to_string(),
+                data: DataLocation::Path(metadata_path),
+            })
+        );
+        assert_eq!(
+            resources[1],
+            PythonResource::DistributionResource(PythonPackageMetadataResource {
+                package: "black".to_string(),
+                version: "1.2.3".to_string(),
+                name: "file.txt".to_string(),
+                data: DataLocation::Path(resource_path),
+            })
+        );
+        assert_eq!(
+            resources[2],
+            PythonResource::DistributionResource(PythonPackageMetadataResource {
+                package: "black".to_string(),
+                version: "1.2.3".to_string(),
+                name: "subdir/sub.txt".to_string(),
+                data: DataLocation::Path(subdir_resource_path),
+            })
+        );
+
+        Ok(())
+    }
+
+    /// .dist-info with partial METADATA content has no content emitted.
+    #[test]
+    fn test_egginfo_valid_metadata() -> Result<()> {
+        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let tp = td.path();
+
+        let egg_path = tp.join("black-1.2.3.egg-info");
+        create_dir_all(&egg_path)?;
+        let metadata_path = egg_path.join("PKG-INFO");
+        write(&metadata_path, "Name: black\nVersion: 1.2.3\n")?;
+        let resource_path = egg_path.join("file.txt");
+        write(&resource_path, "content")?;
+
+        let subdir = egg_path.join("subdir");
+        create_dir_all(&subdir)?;
+        let subdir_resource_path = subdir.join("sub.txt");
+        write(&subdir_resource_path, "content")?;
+
+        let resources =
+            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
+        assert_eq!(resources.len(), 3);
+
+        assert_eq!(
+            resources[0],
+            PythonResource::DistributionResource(PythonPackageMetadataResource {
+                package: "black".to_string(),
+                version: "1.2.3".to_string(),
+                name: "PKG-INFO".to_string(),
+                data: DataLocation::Path(metadata_path),
+            })
+        );
+        assert_eq!(
+            resources[1],
+            PythonResource::DistributionResource(PythonPackageMetadataResource {
+                package: "black".to_string(),
+                version: "1.2.3".to_string(),
+                name: "file.txt".to_string(),
+                data: DataLocation::Path(resource_path),
+            })
+        );
+        assert_eq!(
+            resources[2],
+            PythonResource::DistributionResource(PythonPackageMetadataResource {
+                package: "black".to_string(),
+                version: "1.2.3".to_string(),
+                name: "subdir/sub.txt".to_string(),
+                data: DataLocation::Path(subdir_resource_path),
             })
         );
 
