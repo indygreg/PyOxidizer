@@ -141,6 +141,10 @@ implementation in the following ways:
   to be exposed via the resources API. By contrast, the filesystem-based
   importer - relying on ``os.listdir()`` - will expose all files in a
   directory as a resource. This includes ``.py`` files.
+* ``ResourceReader.is_resource()`` will return ``True`` for resource names
+  containing a slash. Contrast with Python's, which returns ``False``
+  (even though you can open a resource with ``ResourceReader.open_resource()``
+  for the same path). PyOxidizer's behavior is more consistent.
 
 .. _resource_loader_support:
 
