@@ -9,7 +9,8 @@ Scanning the filesystem for Python resources.
 use {
     super::distribution::PythonModuleSuffixes,
     super::resource::{
-        BytecodeModule, BytecodeOptimizationLevel, DataLocation, PythonModuleSource, ResourceData,
+        BytecodeOptimizationLevel, DataLocation, PythonModuleBytecode, PythonModuleSource,
+        ResourceData,
     },
     anyhow::Result,
     itertools::Itertools,
@@ -63,7 +64,7 @@ pub enum PythonFileResource {
     /// A Python module bytecode file.
     ///
     /// i.e. a .pyc file.
-    Bytecode(BytecodeModule),
+    Bytecode(PythonModuleBytecode),
 
     /// A compiled extension module.
     ///
@@ -330,19 +331,19 @@ impl PythonResourceIterator {
                 self.seen_packages.insert(package.clone());
 
                 if rel_str.ends_with(".opt-1.pyc") {
-                    PythonFileResource::Bytecode(BytecodeModule::from_path(
+                    PythonFileResource::Bytecode(PythonModuleBytecode::from_path(
                         &full_module_name,
                         BytecodeOptimizationLevel::One,
                         path,
                     ))
                 } else if rel_str.ends_with(".opt-2.pyc") {
-                    PythonFileResource::Bytecode(BytecodeModule::from_path(
+                    PythonFileResource::Bytecode(PythonModuleBytecode::from_path(
                         &full_module_name,
                         BytecodeOptimizationLevel::Two,
                         path,
                     ))
                 } else {
-                    PythonFileResource::Bytecode(BytecodeModule::from_path(
+                    PythonFileResource::Bytecode(PythonModuleBytecode::from_path(
                         &full_module_name,
                         BytecodeOptimizationLevel::Zero,
                         path,

@@ -296,14 +296,14 @@ impl BytecodeModuleSource {
 
 /// Compiled Python module bytecode.
 #[derive(Clone, Debug, PartialEq)]
-pub struct BytecodeModule {
+pub struct PythonModuleBytecode {
     pub name: String,
     bytecode: DataLocation,
     pub optimize_level: BytecodeOptimizationLevel,
     pub is_package: bool,
 }
 
-impl BytecodeModule {
+impl PythonModuleBytecode {
     pub fn from_path(name: &str, optimize_level: BytecodeOptimizationLevel, path: &Path) -> Self {
         Self {
             name: name.to_string(),
@@ -447,7 +447,7 @@ pub enum PythonResource {
     /// A module defined by a request to generate bytecode from source.
     ModuleBytecodeRequest(BytecodeModuleSource),
     /// A module defined by existing bytecode.
-    ModuleBytecode(BytecodeModule),
+    ModuleBytecode(PythonModuleBytecode),
     /// A non-module resource file.
     Resource(ResourceData),
     /// An extension module that is represented by a dynamic library.
@@ -468,12 +468,14 @@ impl TryFrom<&PythonFileResource> for PythonResource {
                 is_package: m.is_package,
             })),
 
-            PythonFileResource::Bytecode(m) => Ok(PythonResource::ModuleBytecode(BytecodeModule {
-                name: m.name.clone(),
-                bytecode: DataLocation::Memory(m.resolve_bytecode()?),
-                optimize_level: m.optimize_level,
-                is_package: m.is_package,
-            })),
+            PythonFileResource::Bytecode(m) => {
+                Ok(PythonResource::ModuleBytecode(PythonModuleBytecode {
+                    name: m.name.clone(),
+                    bytecode: DataLocation::Memory(m.resolve_bytecode()?),
+                    optimize_level: m.optimize_level,
+                    is_package: m.is_package,
+                }))
+            }
 
             PythonFileResource::Resource(resource) => Ok(PythonResource::Resource(ResourceData {
                 full_name: resource.full_name.clone(),
@@ -728,7 +730,7 @@ mod tests {
         assert!(!source.is_in_packages(&[]));
         assert!(!source.is_in_packages(&["bar".to_string()]));
 
-        let bytecode = PythonResource::ModuleBytecode(BytecodeModule {
+        let bytecode = PythonResource::ModuleBytecode(PythonModuleBytecode {
             name: "foo".to_string(),
             bytecode: DataLocation::Memory(vec![]),
             optimize_level: BytecodeOptimizationLevel::Zero,
