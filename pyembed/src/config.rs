@@ -192,3 +192,48 @@ pub struct PythonConfig {
     ///
     pub run: PythonRunMode,
 }
+
+impl Default for PythonConfig {
+    /// Create a new instance using defaults.
+    #[allow(unused)]
+    fn default() -> Self {
+        PythonConfig {
+            standard_io_encoding: None,
+            standard_io_errors: None,
+            opt_level: 0,
+            use_custom_importlib: false,
+            filesystem_importer: false,
+            sys_paths: vec![],
+            bytes_warning: 0,
+            import_site: false,
+            import_user_site: false,
+            ignore_python_env: true,
+            inspect: false,
+            interactive: false,
+            isolated: false,
+            legacy_windows_fs_encoding: false,
+            legacy_windows_stdio: false,
+            write_bytecode: false,
+            unbuffered_stdio: false,
+            parser_debug: false,
+            quiet: false,
+            use_hash_seed: false,
+            verbose: 0,
+            frozen_importlib_data: &[],
+            frozen_importlib_external_data: &[],
+            embedded_resources_data: &[],
+            extra_extension_modules: vec![],
+            argvb: false,
+            sys_frozen: false,
+            sys_meipass: false,
+            raw_allocator: if cfg!(windows) {
+                PythonRawAllocator::System
+            } else {
+                PythonRawAllocator::Jemalloc
+            },
+            terminfo_resolution: TerminfoResolution::Dynamic,
+            write_modules_directory_env: None,
+            run: PythonRunMode::None,
+        }
+    }
+}
