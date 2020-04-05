@@ -1237,7 +1237,7 @@ impl PythonDistribution for StandaloneDistribution {
                 PythonResource::ModuleBytecodeRequest { .. } => true,
                 PythonResource::ModuleBytecode { .. } => true,
                 PythonResource::Resource { .. } => true,
-                PythonResource::DistributionResource(_) => false,
+                PythonResource::DistributionResource(_) => true,
                 PythonResource::EggFile(_) => false,
                 PythonResource::PathExtension(_) => false,
             })

@@ -33,9 +33,14 @@ The following Starlark types represent individual resources:
    A Python module defined through compiled, machine-native code. On Linux,
    these are typically encountered as ``.so`` files. On Windows, ``.pyd`` files.
 
-:ref:`PythonResourcesData <config_python_resources_data>`
+:ref:`PythonResourceData <config_python_resources_data>`
    A non-module *resource file* loadable by Python resources APIs, such as
    those in ``importlib.resources``.
+
+:ref:`PythonPackageDistributionResource <config_python_package_distribution_resource>`
+   A non-module *resource file* defining metadata for a Python package.
+   Typically accessed via ``importlib.metadata``. This is how files in
+   ``*.dist-info`` or ``*.egg-info`` directories are represented.
 
 :ref:`FileContent <config_file_content>`
    Represents the content of a filesystem file.

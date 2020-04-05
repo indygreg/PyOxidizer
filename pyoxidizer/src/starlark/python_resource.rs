@@ -6,7 +6,8 @@ use {
     crate::py_packaging::resource::{
         BytecodeOptimizationLevel, PythonExtensionModule as RawExtensionModule,
         PythonModuleBytecodeFromSource, PythonModuleSource as RawSourceModule,
-        PythonPackageResource, PythonResource,
+        PythonPackageDistributionResource as RawDistributionResource, PythonPackageResource,
+        PythonResource,
     },
     crate::py_packaging::standalone_distribution::DistributionExtensionModule,
     starlark::environment::Environment,
@@ -210,6 +211,68 @@ impl TypedValue for PythonResourceData {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct PythonPackageDistributionResource {
+    pub resource: RawDistributionResource,
+}
+
+impl TypedValue for PythonPackageDistributionResource {
+    immutable!();
+    any!();
+    not_supported!(
+        binop, dir_attr, function, get_hash, indexable, iterable, sequence, set_attr, to_int
+    );
+
+    fn to_str(&self) -> String {
+        format!(
+            "PythonPackageDistributionResource<package={}, name={}>",
+            self.resource.package, self.resource.name
+        )
+    }
+
+    fn to_repr(&self) -> String {
+        self.to_str()
+    }
+
+    fn get_type(&self) -> &'static str {
+        "PythonPackageDistributionResource"
+    }
+
+    fn to_bool(&self) -> bool {
+        true
+    }
+
+    fn compare(&self, other: &dyn TypedValue, _recursion: u32) -> Result<Ordering, ValueError> {
+        default_compare(self, other)
+    }
+
+    fn get_attr(&self, attribute: &str) -> ValueResult {
+        let v = match attribute {
+            "package" => Value::new(self.resource.package.clone()),
+            "name" => Value::new(self.resource.name.clone()),
+            // TODO expose raw data
+            attr => {
+                return Err(ValueError::OperationNotSupported {
+                    op: format!(".{}", attr),
+                    left: "PythonPackageDistributionResource".to_string(),
+                    right: None,
+                })
+            }
+        };
+
+        Ok(v)
+    }
+
+    fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
+        Ok(match attribute {
+            "package" => true,
+            "name" => true,
+            // TODO expose raw data
+            _ => false,
+        })
+    }
+}
+
 /// Represents an extension module flavor.
 #[derive(Debug, Clone)]
 pub enum PythonExtensionModuleFlavor {
@@ -305,8 +368,10 @@ impl<'a> From<&'a PythonResource> for Value {
 
             PythonResource::Resource(data) => Value::new(PythonResourceData { data: data.clone() }),
 
-            PythonResource::DistributionResource(_) => {
-                panic!("distribution resource files not yet supported");
+            PythonResource::DistributionResource(resource) => {
+                Value::new(PythonPackageDistributionResource {
+                    resource: resource.clone(),
+                })
             }
 
             PythonResource::ExtensionModuleDynamicLibrary(em) => {

@@ -7,7 +7,8 @@ use {
     super::python_executable::PythonExecutable,
     super::python_resource::PythonExtensionModuleFlavor,
     super::python_resource::{
-        PythonBytecodeModule, PythonExtensionModule, PythonResourceData, PythonSourceModule,
+        PythonBytecodeModule, PythonExtensionModule, PythonPackageDistributionResource,
+        PythonResourceData, PythonSourceModule,
     },
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
     super::util::{
@@ -245,6 +246,26 @@ impl FileManifest {
             "PythonResourceData" => {
                 let m = resource.downcast_apply(|m: &PythonResourceData| m.data.clone());
                 warn!(logger, "adding resource file {} to {}", m.full_name, prefix);
+                m.add_to_file_manifest(&mut self.manifest, &prefix)
+                    .or_else(|e| {
+                        Err(RuntimeError {
+                            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                            message: e.to_string(),
+                            label: e.to_string(),
+                        }
+                        .into())
+                    })
+            }
+            "PythonPackageDistributionResource" => {
+                let m = resource
+                    .downcast_apply(|m: &PythonPackageDistributionResource| m.resource.clone());
+                warn!(
+                    logger,
+                    "adding package distribution resource file {}:{} to {}",
+                    m.package,
+                    m.name,
+                    prefix
+                );
                 m.add_to_file_manifest(&mut self.manifest, &prefix)
                     .or_else(|e| {
                         Err(RuntimeError {
