@@ -458,6 +458,20 @@ impl<'a> PythonResourcesState<'a, u8> {
             }
         }
 
+        if let Some(resources) = &entry.relative_path_package_resources {
+            if let Some(path) = resources.get(resource_name) {
+                let path = self.origin.join(path);
+                let io_module = py.import("io")?;
+
+                return Ok(Some(io_module.call(
+                    py,
+                    "FileIO",
+                    (path_to_pyobject(py, &path)?, "r"),
+                    None,
+                )?));
+            }
+        }
+
         Ok(None)
     }
 
@@ -465,6 +479,12 @@ impl<'a> PythonResourcesState<'a, u8> {
     pub fn is_package_resource(&self, package: &str, resource_name: &str) -> bool {
         if let Some(entry) = self.resources.get(package) {
             if let Some(resources) = &entry.in_memory_resources {
+                if resources.contains_key(resource_name) {
+                    return true;
+                }
+            }
+
+            if let Some(resources) = &entry.relative_path_package_resources {
                 if resources.contains_key(resource_name) {
                     return true;
                 }
@@ -482,6 +502,15 @@ impl<'a> PythonResourcesState<'a, u8> {
         };
 
         if let Some(resources) = &entry.in_memory_resources {
+            let names = resources
+                .keys()
+                .map(|name| name.to_py_object(py))
+                .collect::<Vec<PyString>>();
+
+            return Ok(names.to_py_object(py).as_object().clone_ref(py));
+        }
+
+        if let Some(resources) = &entry.relative_path_package_resources {
             let names = resources
                 .keys()
                 .map(|name| name.to_py_object(py))
