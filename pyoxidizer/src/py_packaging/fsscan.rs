@@ -13,10 +13,9 @@ use {
         PythonModuleBytecode, PythonModuleSource, PythonPackageResource, PythonPathExtension,
         PythonResource,
     },
-    anyhow::{Error, Result},
+    anyhow::Result,
     itertools::Itertools,
     std::collections::{BTreeMap, HashSet},
-    std::convert::TryFrom,
     std::ffi::OsStr,
     std::path::{Path, PathBuf},
 };
@@ -53,62 +52,10 @@ struct ResourceFile {
     pub relative_path: PathBuf,
 }
 
-/// Represents a Python resource backed by the filesystem.
-///
-/// TODO unify with PythonResource.
 #[derive(Debug, PartialEq)]
-enum PythonFileResource {
-    /// Python module source code.
-    ///
-    /// i.e. a .py file.
-    Source(PythonModuleSource),
-
-    /// A Python module bytecode file.
-    ///
-    /// i.e. a .pyc file.
-    Bytecode(PythonModuleBytecode),
-
-    /// A compiled extension module.
-    ///
-    /// i.e. a .so or .pyd file.
-    ExtensionModule(PythonExtensionModule),
-
-    /// Internal variant to track resources.
-    ///
-    /// Should not be encountered outside this module.
+enum DirEntryItem {
+    PythonResource(PythonResource),
     ResourceFile(ResourceFile),
-
-    /// A Python egg.
-    ///
-    /// i.e. a .egg file.
-    EggFile(PythonEggFile),
-
-    /// A Python path extension file.
-    ///
-    /// i.e. a .pth file.
-    PthFile(PythonPathExtension),
-}
-
-impl TryFrom<&PythonFileResource> for PythonResource {
-    type Error = Error;
-
-    fn try_from(resource: &PythonFileResource) -> Result<PythonResource> {
-        match resource {
-            PythonFileResource::Source(m) => Ok(PythonResource::ModuleSource(m.clone())),
-
-            PythonFileResource::Bytecode(m) => Ok(PythonResource::ModuleBytecode(m.clone())),
-
-            PythonFileResource::ResourceFile(_) => panic!("ResourceFile variant unexpected"),
-
-            PythonFileResource::ExtensionModule(em) => {
-                Ok(PythonResource::ExtensionModuleDynamicLibrary(em.clone()))
-            }
-
-            PythonFileResource::EggFile(egg) => Ok(PythonResource::EggFile(egg.clone())),
-
-            PythonFileResource::PthFile(pth) => Ok(PythonResource::PathExtension(pth.clone())),
-        }
-    }
 }
 
 pub struct PythonResourceIterator {
@@ -144,7 +91,7 @@ impl PythonResourceIterator {
         }
     }
 
-    fn resolve_dir_entry(&mut self, entry: walkdir::DirEntry) -> Option<PythonFileResource> {
+    fn resolve_dir_entry(&mut self, entry: walkdir::DirEntry) -> Option<DirEntryItem> {
         let path = entry.path();
 
         let mut rel_path = path
@@ -248,16 +195,18 @@ impl PythonResourceIterator {
                 let final_name = module_components[module_components.len() - 1];
                 let init_fn = Some(format!("PyInit_{}", final_name));
 
-                return Some(PythonFileResource::ExtensionModule(PythonExtensionModule {
-                    name: full_module_name,
-                    init_fn,
-                    extension_file_suffix: ext_suffix.clone(),
-                    extension_data: Some(DataLocation::Path(path.to_path_buf())),
-                    object_file_data: vec![],
-                    is_package: is_package_from_path(path),
-                    libraries: vec![],
-                    library_dirs: vec![],
-                }));
+                return Some(DirEntryItem::PythonResource(
+                    PythonResource::ExtensionModuleDynamicLibrary(PythonExtensionModule {
+                        name: full_module_name,
+                        init_fn,
+                        extension_file_suffix: ext_suffix.clone(),
+                        extension_data: Some(DataLocation::Path(path.to_path_buf())),
+                        object_file_data: vec![],
+                        is_package: is_package_from_path(path),
+                        libraries: vec![],
+                        library_dirs: vec![],
+                    }),
+                ));
             }
         }
 
@@ -287,11 +236,11 @@ impl PythonResourceIterator {
 
                 self.seen_packages.insert(package.clone());
 
-                PythonFileResource::Source(PythonModuleSource {
+                DirEntryItem::PythonResource(PythonResource::ModuleSource(PythonModuleSource {
                     name: full_module_name,
                     source: DataLocation::Path(path.to_path_buf()),
                     is_package: is_package_from_path(&path),
-                })
+                }))
             }
             Some("pyc") => {
                 // .pyc files should be in a __pycache__ directory.
@@ -331,37 +280,39 @@ impl PythonResourceIterator {
 
                 self.seen_packages.insert(package.clone());
 
-                if rel_str.ends_with(".opt-1.pyc") {
-                    PythonFileResource::Bytecode(PythonModuleBytecode::from_path(
+                DirEntryItem::PythonResource(if rel_str.ends_with(".opt-1.pyc") {
+                    PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
                         &full_module_name,
                         BytecodeOptimizationLevel::One,
                         path,
                     ))
                 } else if rel_str.ends_with(".opt-2.pyc") {
-                    PythonFileResource::Bytecode(PythonModuleBytecode::from_path(
+                    PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
                         &full_module_name,
                         BytecodeOptimizationLevel::Two,
                         path,
                     ))
                 } else {
-                    PythonFileResource::Bytecode(PythonModuleBytecode::from_path(
+                    PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
                         &full_module_name,
                         BytecodeOptimizationLevel::Zero,
                         path,
                     ))
-                }
+                })
             }
-            Some("egg") => PythonFileResource::EggFile(PythonEggFile {
+            Some("egg") => DirEntryItem::PythonResource(PythonResource::EggFile(PythonEggFile {
                 data: DataLocation::Path(path.to_path_buf()),
-            }),
-            Some("pth") => PythonFileResource::PthFile(PythonPathExtension {
-                data: DataLocation::Path(path.to_path_buf()),
-            }),
+            })),
+            Some("pth") => {
+                DirEntryItem::PythonResource(PythonResource::PathExtension(PythonPathExtension {
+                    data: DataLocation::Path(path.to_path_buf()),
+                }))
+            }
             _ => {
                 // If it is some other file type, we categorize it as a resource
                 // file. The package name and resource name are resolved later,
                 // by the iterator.
-                PythonFileResource::ResourceFile(ResourceFile {
+                DirEntryItem::ResourceFile(ResourceFile {
                     full_path: path.to_path_buf(),
                     relative_path: rel_path.to_path_buf(),
                 })
@@ -388,22 +339,24 @@ impl Iterator for PythonResourceIterator {
             }
 
             let entry = res.unwrap();
-            let python_resource = self.resolve_dir_entry(entry);
+            let entry = self.resolve_dir_entry(entry);
 
             // Try the next directory entry.
-            if python_resource.is_none() {
+            if entry.is_none() {
                 continue;
             }
 
-            let python_resource = python_resource?;
+            let entry = entry?;
 
             // Buffer Resource entries until later.
-            if let PythonFileResource::ResourceFile(resource) = python_resource {
-                self.resources.push(resource);
-                continue;
+            match entry {
+                DirEntryItem::ResourceFile(resource) => {
+                    self.resources.push(resource);
+                }
+                DirEntryItem::PythonResource(resource) => {
+                    return Some(Ok(resource));
+                }
             }
-
-            return Some(PythonResource::try_from(&python_resource));
         }
 
         loop {
