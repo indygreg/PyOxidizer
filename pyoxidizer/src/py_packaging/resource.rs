@@ -146,6 +146,14 @@ pub struct PythonModuleSource {
 }
 
 impl PythonModuleSource {
+    pub fn to_memory(&self) -> Result<Self> {
+        Ok(Self {
+            name: self.name.clone(),
+            source: self.source.to_memory()?,
+            is_package: self.is_package,
+        })
+    }
+
     /// Resolve the package containing this module.
     ///
     /// If this module is a package, returns the name of self.
@@ -262,6 +270,15 @@ impl PythonModuleBytecodeFromSource {
         PythonResource::ModuleBytecodeRequest(self.clone())
     }
 
+    pub fn to_memory(&self) -> Result<Self> {
+        Ok(Self {
+            name: self.name.clone(),
+            source: self.source.to_memory()?,
+            optimize_level: self.optimize_level,
+            is_package: self.is_package,
+        })
+    }
+
     /// Compile source to bytecode using a compiler.
     pub fn compile(&self, compiler: &mut BytecodeCompiler, mode: CompileMode) -> Result<Vec<u8>> {
         compiler.compile(
@@ -316,6 +333,15 @@ impl PythonModuleBytecode {
         PythonResource::ModuleBytecode(self.clone())
     }
 
+    pub fn to_memory(&self) -> Result<Self> {
+        Ok(Self {
+            name: self.name.clone(),
+            bytecode: self.bytecode.to_memory()?,
+            optimize_level: self.optimize_level,
+            is_package: self.is_package,
+        })
+    }
+
     /// Resolve the bytecode data for this module.
     pub fn resolve_bytecode(&self) -> Result<Vec<u8>> {
         match &self.bytecode {
@@ -345,6 +371,15 @@ pub struct PythonPackageResource {
 impl PythonPackageResource {
     pub fn as_python_resource(&self) -> PythonResource {
         PythonResource::Resource(self.clone())
+    }
+
+    pub fn to_memory(&self) -> Result<Self> {
+        Ok(Self {
+            full_name: self.full_name.clone(),
+            leaf_package: self.leaf_package.clone(),
+            relative_name: self.relative_name.clone(),
+            data: self.data.to_memory()?,
+        })
     }
 
     pub fn symbolic_name(&self) -> String {
@@ -412,6 +447,16 @@ impl PythonPackageDistributionResource {
         PythonResource::DistributionResource(self.clone())
     }
 
+    pub fn to_memory(&self) -> Result<Self> {
+        Ok(Self {
+            location: self.location.clone(),
+            package: self.package.clone(),
+            version: self.version.clone(),
+            name: self.name.clone(),
+            data: self.data.to_memory()?,
+        })
+    }
+
     /// Resolve filesystem path to this resource file.
     pub fn resolve_path(&self, prefix: &str) -> PathBuf {
         let p = match self.location {
@@ -463,6 +508,23 @@ pub struct PythonExtensionModule {
 }
 
 impl PythonExtensionModule {
+    pub fn to_memory(&self) -> Result<Self> {
+        Ok(Self {
+            name: self.name.clone(),
+            init_fn: self.init_fn.clone(),
+            extension_file_suffix: self.extension_file_suffix.clone(),
+            extension_data: if let Some(data) = &self.extension_data {
+                Some(data.to_memory()?)
+            } else {
+                None
+            },
+            object_file_data: self.object_file_data.clone(),
+            is_package: self.is_package,
+            libraries: self.libraries.clone(),
+            library_dirs: self.library_dirs.clone(),
+        })
+    }
+
     /// The file name (without parent components) this extension module should be
     /// realized with.
     pub fn file_name(&self) -> String {
@@ -515,6 +577,14 @@ pub struct PythonEggFile {
     pub data: DataLocation,
 }
 
+impl PythonEggFile {
+    pub fn to_memory(&self) -> Result<Self> {
+        Ok(Self {
+            data: self.data.to_memory()?,
+        })
+    }
+}
+
 /// Represents a Python path extension.
 ///
 /// i.e. a .pth file.
@@ -522,6 +592,14 @@ pub struct PythonEggFile {
 pub struct PythonPathExtension {
     /// Content of the .pth file.
     pub data: DataLocation,
+}
+
+impl PythonPathExtension {
+    pub fn to_memory(&self) -> Result<Self> {
+        Ok(Self {
+            data: self.data.to_memory()?,
+        })
+    }
 }
 
 /// Represents a resource that can be read by Python somehow.
@@ -591,6 +669,29 @@ impl PythonResource {
         }
 
         false
+    }
+
+    /// Create a new instance that is guaranteed to be backed by memory.
+    pub fn to_memory(&self) -> Result<Self> {
+        Ok(match self {
+            PythonResource::ModuleSource(m) => PythonResource::ModuleSource(m.to_memory()?),
+            PythonResource::ModuleBytecode(m) => PythonResource::ModuleBytecode(m.to_memory()?),
+            PythonResource::ModuleBytecodeRequest(m) => {
+                PythonResource::ModuleBytecodeRequest(m.to_memory()?)
+            }
+            PythonResource::Resource(r) => PythonResource::Resource(r.to_memory()?),
+            PythonResource::DistributionResource(r) => {
+                PythonResource::DistributionResource(r.to_memory()?)
+            }
+            PythonResource::ExtensionModuleDynamicLibrary(m) => {
+                PythonResource::ExtensionModuleDynamicLibrary(m.to_memory()?)
+            }
+            PythonResource::ExtensionModuleStaticallyLinked(m) => {
+                PythonResource::ExtensionModuleStaticallyLinked(m.to_memory()?)
+            }
+            PythonResource::EggFile(e) => PythonResource::EggFile(e.to_memory()?),
+            PythonResource::PathExtension(e) => PythonResource::PathExtension(e.to_memory()?),
+        })
     }
 }
 

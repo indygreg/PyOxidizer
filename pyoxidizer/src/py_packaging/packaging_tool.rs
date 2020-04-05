@@ -182,19 +182,19 @@ pub fn find_resources(
 
         match r {
             PythonResource::ModuleSource(_) => {
-                res.push(r);
+                res.push(r.to_memory()?);
             }
 
             PythonResource::Resource(_) => {
-                res.push(r);
+                res.push(r.to_memory()?);
             }
 
             PythonResource::DistributionResource(_) => {
-                res.push(r);
+                res.push(r.to_memory()?);
             }
 
             PythonResource::ExtensionModuleDynamicLibrary(_) => {
-                res.push(r);
+                res.push(r.to_memory()?);
             }
 
             _ => {}
