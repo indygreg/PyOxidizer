@@ -374,7 +374,7 @@ impl PythonPackageResource {
 ///
 /// This is like a light version of `ExtensionModule`.
 #[derive(Clone, Debug, PartialEq)]
-pub struct ExtensionModuleData {
+pub struct PythonExtensionModule {
     /// The module name this extension module is providing.
     pub name: String,
     /// Name of the C function initializing this extension module.
@@ -393,7 +393,7 @@ pub struct ExtensionModuleData {
     pub library_dirs: Vec<PathBuf>,
 }
 
-impl ExtensionModuleData {
+impl PythonExtensionModule {
     /// The file name (without parent components) this extension module should be
     /// realized with.
     pub fn file_name(&self) -> String {
@@ -451,10 +451,10 @@ pub enum PythonResource {
     /// A non-module resource file.
     Resource(PythonPackageResource),
     /// An extension module that is represented by a dynamic library.
-    ExtensionModuleDynamicLibrary(ExtensionModuleData),
+    ExtensionModuleDynamicLibrary(PythonExtensionModule),
 
     /// An extension module that was built from source and can be statically linked.
-    ExtensionModuleStaticallyLinked(ExtensionModuleData),
+    ExtensionModuleStaticallyLinked(PythonExtensionModule),
 }
 
 impl TryFrom<&PythonFileResource> for PythonResource {
@@ -499,7 +499,7 @@ impl TryFrom<&PythonFileResource> for PythonResource {
                 let init_fn = Some(format!("PyInit_{}", final_name));
 
                 Ok(PythonResource::ExtensionModuleDynamicLibrary(
-                    ExtensionModuleData {
+                    PythonExtensionModule {
                         name: full_name.clone(),
                         init_fn,
                         extension_file_suffix: extension_file_suffix.clone(),

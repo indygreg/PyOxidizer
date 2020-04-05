@@ -7,7 +7,7 @@ Interacting with distutils.
 */
 
 use {
-    super::resource::ExtensionModuleData,
+    super::resource::PythonExtensionModule,
     anyhow::{Context, Result},
     lazy_static::lazy_static,
     serde::Deserialize,
@@ -124,7 +124,7 @@ struct DistutilsExtensionState {
     runtime_library_dirs: Vec<String>,
 }
 
-pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<ExtensionModuleData>> {
+pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<PythonExtensionModule>> {
     let mut res = Vec::new();
 
     let entries = read_dir(state_dir).context(format!(
@@ -180,7 +180,7 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<ExtensionModuleData
         // linking, annotating licenses of 3rd party libraries, disabling libraries
         // wholesale, etc.
 
-        res.push(ExtensionModuleData {
+        res.push(PythonExtensionModule {
             name: info.name.clone(),
             init_fn: Some(init_fn),
             extension_file_suffix,

@@ -22,7 +22,7 @@ use {
     },
     super::libpython::{derive_importlib, link_libpython, ImportlibBytecode},
     super::resource::{
-        BytecodeOptimizationLevel, DataLocation, ExtensionModuleData,
+        BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
         PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageResource, PythonResource,
     },
     super::resources_policy::PythonResourcesPolicy,
@@ -1567,7 +1567,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn add_in_memory_dynamic_extension_module(
         &mut self,
-        extension_module: &ExtensionModuleData,
+        extension_module: &PythonExtensionModule,
     ) -> Result<()> {
         if self.supports_in_memory_dynamically_linked_extension_loading()
             && extension_module.extension_data.is_some()
@@ -1596,7 +1596,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     fn add_relative_path_dynamic_extension_module(
         &mut self,
         prefix: &str,
-        extension_module: &ExtensionModuleData,
+        extension_module: &PythonExtensionModule,
     ) -> Result<()> {
         if extension_module.extension_data.is_none() {
             return Err(anyhow!(
@@ -1619,7 +1619,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn add_dynamic_extension_module(
         &mut self,
-        extension_module: &ExtensionModuleData,
+        extension_module: &PythonExtensionModule,
     ) -> Result<()> {
         if extension_module.extension_data.is_none() {
             return Err(anyhow!(
@@ -1674,7 +1674,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn add_static_extension_module(
         &mut self,
-        extension_module: &ExtensionModuleData,
+        extension_module: &PythonExtensionModule,
     ) -> Result<()> {
         self.resources
             .add_builtin_extension_module(extension_module)

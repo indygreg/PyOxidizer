@@ -11,7 +11,7 @@ use {
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
     super::resource::{
         has_dunder_file, packages_from_module_name, packages_from_module_names,
-        BytecodeOptimizationLevel, DataLocation, ExtensionModuleData,
+        BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
         PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageResource,
     },
     super::resources_policy::PythonResourcesPolicy,
@@ -718,7 +718,7 @@ impl EmbeddedPythonResourcesPrePackaged {
     /// The object files for the extension module will be linked into the produced
     /// binary and the extension module will be made available for import from
     /// Python's _builtin_ importer.
-    pub fn add_builtin_extension_module(&mut self, module: &ExtensionModuleData) -> Result<()> {
+    pub fn add_builtin_extension_module(&mut self, module: &PythonExtensionModule) -> Result<()> {
         self.check_policy(ResourceLocation::InMemory)?;
 
         if module.object_file_data.is_empty() {
@@ -799,7 +799,7 @@ impl EmbeddedPythonResourcesPrePackaged {
     /// Add an extension module to be loaded from the filesystem as a dynamic library.
     pub fn add_relative_path_extension_module(
         &mut self,
-        em: &ExtensionModuleData,
+        em: &PythonExtensionModule,
         prefix: &str,
     ) -> Result<()> {
         self.check_policy(ResourceLocation::RelativePath)?;
@@ -1535,7 +1535,7 @@ mod tests {
     #[test]
     fn test_add_extension_module_data() -> Result<()> {
         let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
-        let em = ExtensionModuleData {
+        let em = PythonExtensionModule {
             name: "foo.bar".to_string(),
             init_fn: Some("".to_string()),
             extension_file_suffix: "".to_string(),
@@ -1580,7 +1580,7 @@ mod tests {
         let mut r = EmbeddedPythonResourcesPrePackaged::new(
             &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
         );
-        let em = ExtensionModuleData {
+        let em = PythonExtensionModule {
             name: "foo.bar".to_string(),
             init_fn: Some("PyInit_bar".to_string()),
             extension_file_suffix: ".so".to_string(),

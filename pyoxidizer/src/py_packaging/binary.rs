@@ -12,7 +12,7 @@ use {
     super::libpython::ImportlibBytecode,
     super::pyembed::{derive_python_config, write_default_python_config_rs},
     super::resource::{
-        ExtensionModuleData, PythonModuleBytecodeFromSource, PythonModuleSource,
+        PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
         PythonPackageResource,
     },
     super::resources_policy::PythonResourcesPolicy,
@@ -162,14 +162,14 @@ pub trait PythonBinaryBuilder {
     /// Add an extension module as defined by a dynamic library to be loaded from memory.
     fn add_in_memory_dynamic_extension_module(
         &mut self,
-        extension_module: &ExtensionModuleData,
+        extension_module: &PythonExtensionModule,
     ) -> Result<()>;
 
     /// Add an extension module as defined by a dynamic library to be loaded from a relative filesystem path.
     fn add_relative_path_dynamic_extension_module(
         &mut self,
         prefix: &str,
-        extension_module: &ExtensionModuleData,
+        extension_module: &PythonExtensionModule,
     ) -> Result<()>;
 
     /// Add an extension module as defined by a dynamic library.
@@ -180,13 +180,13 @@ pub trait PythonBinaryBuilder {
     /// to the produced binary installed in the policy's path prefix.
     fn add_dynamic_extension_module(
         &mut self,
-        extension_module: &ExtensionModuleData,
+        extension_module: &PythonExtensionModule,
     ) -> Result<()>;
 
     /// Add an extension module to be statically linked into the binary.
     fn add_static_extension_module(
         &mut self,
-        extension_module_data: &ExtensionModuleData,
+        extension_module_data: &PythonExtensionModule,
     ) -> Result<()>;
 
     /// Filter embedded resources against names in files.

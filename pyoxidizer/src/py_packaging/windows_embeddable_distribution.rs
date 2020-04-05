@@ -17,7 +17,7 @@ use {
     super::libpython::{derive_importlib, ImportlibBytecode},
     super::packaging_tool::bootstrap_packaging_tools,
     super::resource::{
-        ExtensionModuleData, PythonModuleBytecodeFromSource, PythonModuleSource,
+        PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
         PythonPackageResource, PythonResource,
     },
     super::resources_policy::PythonResourcesPolicy,
@@ -632,7 +632,7 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
 
     fn add_in_memory_dynamic_extension_module(
         &mut self,
-        _extension_module: &ExtensionModuleData,
+        _extension_module: &PythonExtensionModule,
     ) -> Result<()> {
         unimplemented!();
     }
@@ -640,21 +640,21 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
     fn add_relative_path_dynamic_extension_module(
         &mut self,
         _prefix: &str,
-        _extension_module: &ExtensionModuleData,
+        _extension_module: &PythonExtensionModule,
     ) -> Result<()> {
         unimplemented!();
     }
 
     fn add_dynamic_extension_module(
         &mut self,
-        _extension_module: &ExtensionModuleData,
+        _extension_module: &PythonExtensionModule,
     ) -> Result<()> {
         unimplemented!()
     }
 
     fn add_static_extension_module(
         &mut self,
-        _extension_module_data: &ExtensionModuleData,
+        _extension_module_data: &PythonExtensionModule,
     ) -> Result<()> {
         unimplemented!()
     }

@@ -4,7 +4,7 @@
 
 use {
     crate::py_packaging::resource::{
-        BytecodeOptimizationLevel, ExtensionModuleData as RawExtensionModule,
+        BytecodeOptimizationLevel, PythonExtensionModule as RawExtensionModule,
         PythonModuleBytecodeFromSource, PythonModuleSource as RawSourceModule,
         PythonPackageResource, PythonResource,
     },
