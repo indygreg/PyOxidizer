@@ -446,6 +446,15 @@ pub struct PythonEggFile {
     pub data: DataLocation,
 }
 
+/// Represents a Python path extension.
+///
+/// i.e. a .pth file.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PythonPathExtension {
+    /// Content of the .pth file.
+    pub data: DataLocation,
+}
+
 /// Represents a resource to make available to the Python interpreter.
 #[derive(Clone, Debug)]
 pub enum PythonResource {
