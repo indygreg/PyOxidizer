@@ -201,7 +201,7 @@ frequently encounter.
 Lazy Module Loading
 -------------------
 
-When a Python module is ``import``ed, its code is evaluated. When applications
+When a Python module is imported, its code is evaluated. When applications
 consist of dozens or even hundreds of modules, the overhead of executing all
 this code at ``import`` time can be substantial and add up to dozens of
 milliseconds of overhead - all before your application runs a meaningful line
@@ -211,7 +211,7 @@ We would like ``PyOxidizer`` to provide lazy module importing so Python's
 ``import`` machinery can defer evaluating a module's code until it is actually
 needed. With features in modern versions of Python 3, this feature could likely
 be enabled by default. And since many ``PyOxidizer`` applications are
-*frozen* and have total knowledge of all ``import``able modules at build time,
+*frozen* and have total knowledge of all importable modules at build time,
 ``PyOxidizer`` could return a *lazy* module object after performing a simple
 Rust ``HashMap`` lookup. This would be extremely fast.
 
