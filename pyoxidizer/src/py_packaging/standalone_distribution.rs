@@ -818,6 +818,7 @@ impl StandaloneDistribution {
         })
     }
 
+    #[allow(unused)]
     pub fn as_minimal_info(&self) -> PythonDistributionMinimalInfo {
         PythonDistributionMinimalInfo {
             flavor: self.flavor.clone(),
@@ -829,6 +830,7 @@ impl StandaloneDistribution {
     }
 
     /// Duplicate the python distribution, with distutils hacked
+    #[allow(unused)]
     pub fn create_hacked_base(&self, logger: &slog::Logger) -> PythonPaths {
         let venv_base = self.venv_base.clone();
 
@@ -857,6 +859,7 @@ impl StandaloneDistribution {
     }
 
     /// Create a venv from the distribution at path.
+    #[allow(unused)]
     pub fn create_venv(&self, logger: &slog::Logger, path: &Path) -> PythonPaths {
         let venv_dir_s = path.display().to_string();
 
@@ -874,6 +877,7 @@ impl StandaloneDistribution {
     }
 
     /// Create or re-use an existing venv
+    #[allow(unused)]
     pub fn prepare_venv(
         &self,
         logger: &slog::Logger,
