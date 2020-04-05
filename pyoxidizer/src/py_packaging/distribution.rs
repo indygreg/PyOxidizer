@@ -11,7 +11,7 @@ use {
     super::bytecode::BytecodeCompiler,
     super::config::EmbeddedPythonConfig,
     super::libpython::ImportlibBytecode,
-    super::resource::{PythonModuleSource, PythonResource, ResourceData},
+    super::resource::{PythonModuleSource, PythonPackageResource, PythonResource},
     super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::{DistributionExtensionModule, StandaloneDistribution},
     super::windows_embeddable_distribution::WindowsEmbeddableDistribution,
@@ -220,7 +220,7 @@ pub trait PythonDistribution {
     fn source_modules(&self) -> Result<Vec<PythonModuleSource>>;
 
     /// Obtain `ResourceData` instances present in this distribution.
-    fn resource_datas(&self) -> Result<Vec<ResourceData>>;
+    fn resource_datas(&self) -> Result<Vec<PythonPackageResource>>;
 
     /// Ensure pip is available to run in the distribution.
     ///

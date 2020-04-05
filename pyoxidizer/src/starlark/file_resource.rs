@@ -531,7 +531,7 @@ mod tests {
         super::super::testutil::*,
         super::*,
         crate::py_packaging::resource::DataLocation,
-        crate::py_packaging::resource::{PythonModuleSource, ResourceData},
+        crate::py_packaging::resource::{PythonModuleSource, PythonPackageResource},
         std::path::PathBuf,
     };
 
@@ -600,7 +600,7 @@ mod tests {
         });
 
         let v = Value::new(PythonResourceData {
-            data: ResourceData {
+            data: PythonPackageResource {
                 full_name: "foo/bar/resource.txt".to_string(),
                 leaf_package: "foo.bar".to_string(),
                 relative_name: "resource.txt".to_string(),

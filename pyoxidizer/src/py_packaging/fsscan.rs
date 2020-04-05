@@ -10,7 +10,7 @@ use {
     super::distribution::PythonModuleSuffixes,
     super::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonModuleBytecode, PythonModuleSource,
-        ResourceData,
+        PythonPackageResource,
     },
     anyhow::Result,
     itertools::Itertools,
@@ -78,7 +78,7 @@ pub enum PythonFileResource {
     },
 
     /// A non-module Python resource.
-    Resource(ResourceData),
+    Resource(PythonPackageResource),
 
     /// Internal variant to track resources.
     ///
@@ -485,7 +485,7 @@ impl Iterator for PythonResourceIterator {
             let leaf_package = leaf_package.unwrap();
             let relative_name = relative_name.unwrap();
 
-            return Some(PythonFileResource::Resource(ResourceData {
+            return Some(PythonFileResource::Resource(PythonPackageResource {
                 full_name,
                 leaf_package,
                 relative_name,
@@ -864,7 +864,7 @@ mod tests {
                     source: DataLocation::Path(module_path),
                     is_package: true,
                 }),
-                PythonFileResource::Resource(ResourceData {
+                PythonFileResource::Resource(PythonPackageResource {
                     full_name: "foo/resource.txt".to_string(),
                     leaf_package: "foo".to_string(),
                     relative_name: "resource.txt".to_string(),
@@ -900,7 +900,7 @@ mod tests {
                     source: DataLocation::Path(module_path),
                     is_package: true,
                 }),
-                PythonFileResource::Resource(ResourceData {
+                PythonFileResource::Resource(PythonPackageResource {
                     full_name: "foo/resources/resource.txt".to_string(),
                     leaf_package: "foo".to_string(),
                     relative_name: "resources/resource.txt".to_string(),

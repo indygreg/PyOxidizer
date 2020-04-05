@@ -12,7 +12,7 @@ use {
     super::resource::{
         has_dunder_file, packages_from_module_name, packages_from_module_names,
         BytecodeOptimizationLevel, DataLocation, ExtensionModuleData,
-        PythonModuleBytecodeFromSource, PythonModuleSource, ResourceData,
+        PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageResource,
     },
     super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::DistributionExtensionModule,
@@ -442,7 +442,10 @@ impl EmbeddedPythonResourcesPrePackaged {
     /// Add resource data.
     ///
     /// Resource data belongs to a Python package and has a name and bytes data.
-    pub fn add_in_memory_package_resource(&mut self, resource: &ResourceData) -> Result<()> {
+    pub fn add_in_memory_package_resource(
+        &mut self,
+        resource: &PythonPackageResource,
+    ) -> Result<()> {
         self.check_policy(ResourceLocation::InMemory)?;
         let entry = self
             .modules
@@ -477,7 +480,7 @@ impl EmbeddedPythonResourcesPrePackaged {
     pub fn add_relative_path_package_resource(
         &mut self,
         prefix: &str,
-        resource: &ResourceData,
+        resource: &PythonPackageResource,
     ) -> Result<()> {
         self.check_policy(ResourceLocation::RelativePath)?;
         let entry = self
@@ -1456,7 +1459,7 @@ mod tests {
     #[test]
     fn test_add_in_memory_resource() -> Result<()> {
         let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
-        r.add_in_memory_package_resource(&ResourceData {
+        r.add_in_memory_package_resource(&PythonPackageResource {
             full_name: "foo/resource.txt".to_string(),
             leaf_package: "foo".to_string(),
             relative_name: "resource.txt".to_string(),

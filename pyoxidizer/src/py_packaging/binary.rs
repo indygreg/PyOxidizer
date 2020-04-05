@@ -12,7 +12,8 @@ use {
     super::libpython::ImportlibBytecode,
     super::pyembed::{derive_python_config, write_default_python_config_rs},
     super::resource::{
-        ExtensionModuleData, PythonModuleBytecodeFromSource, PythonModuleSource, ResourceData,
+        ExtensionModuleData, PythonModuleBytecodeFromSource, PythonModuleSource,
+        PythonPackageResource,
     },
     super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::DistributionExtensionModule,
@@ -108,17 +109,17 @@ pub trait PythonBinaryBuilder {
     }
 
     /// Add resource data to the collection of embedded resource data.
-    fn add_in_memory_package_resource(&mut self, resource: &ResourceData) -> Result<()>;
+    fn add_in_memory_package_resource(&mut self, resource: &PythonPackageResource) -> Result<()>;
 
     /// Add resource data to be loaded from the filesystem relative to the produced binary.
     fn add_relative_path_package_resource(
         &mut self,
         prefix: &str,
-        resource: &ResourceData,
+        resource: &PythonPackageResource,
     ) -> Result<()>;
 
     /// Add resource data to the collection of embedded resource data to a location as determined by the builder's resource policy.
-    fn add_package_resource(&mut self, resource: &ResourceData) -> Result<()> {
+    fn add_package_resource(&mut self, resource: &PythonPackageResource) -> Result<()> {
         match self.python_resources_policy().clone() {
             PythonResourcesPolicy::InMemoryOnly
             | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {

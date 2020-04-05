@@ -17,8 +17,8 @@ use {
     super::libpython::{derive_importlib, ImportlibBytecode},
     super::packaging_tool::bootstrap_packaging_tools,
     super::resource::{
-        ExtensionModuleData, PythonModuleBytecodeFromSource, PythonModuleSource, PythonResource,
-        ResourceData,
+        ExtensionModuleData, PythonModuleBytecodeFromSource, PythonModuleSource,
+        PythonPackageResource, PythonResource,
     },
     super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::DistributionExtensionModule,
@@ -313,7 +313,7 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         Ok(Vec::new())
     }
 
-    fn resource_datas(&self) -> Result<Vec<ResourceData>> {
+    fn resource_datas(&self) -> Result<Vec<PythonPackageResource>> {
         // There are some resources in the zip file. But we haven't implemented
         // parsing for them.
         Ok(Vec::new())
@@ -588,14 +588,14 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
             .add_relative_path_module_bytecode(module, prefix)
     }
 
-    fn add_in_memory_package_resource(&mut self, resource: &ResourceData) -> Result<()> {
+    fn add_in_memory_package_resource(&mut self, resource: &PythonPackageResource) -> Result<()> {
         self.resources.add_in_memory_package_resource(resource)
     }
 
     fn add_relative_path_package_resource(
         &mut self,
         prefix: &str,
-        resource: &ResourceData,
+        resource: &PythonPackageResource,
     ) -> Result<()> {
         self.resources
             .add_relative_path_package_resource(prefix, resource)

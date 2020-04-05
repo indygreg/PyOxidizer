@@ -5,7 +5,7 @@
 use {
     crate::py_packaging::resource::{
         BytecodeOptimizationLevel, ExtensionModuleData, PythonModuleBytecodeFromSource,
-        PythonModuleSource as RawSourceModule, PythonResource, ResourceData,
+        PythonModuleSource as RawSourceModule, PythonPackageResource, PythonResource,
     },
     crate::py_packaging::standalone_distribution::DistributionExtensionModule,
     starlark::environment::Environment,
@@ -149,7 +149,7 @@ impl TypedValue for PythonBytecodeModule {
 
 #[derive(Debug, Clone)]
 pub struct PythonResourceData {
-    pub data: ResourceData,
+    pub data: PythonPackageResource,
 }
 
 impl TypedValue for PythonResourceData {

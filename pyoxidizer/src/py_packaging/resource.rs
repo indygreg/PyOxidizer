@@ -332,7 +332,7 @@ impl PythonModuleBytecode {
 
 /// Python package resource data, agnostic of storage location.
 #[derive(Clone, Debug, PartialEq)]
-pub struct ResourceData {
+pub struct PythonPackageResource {
     /// The full relative path to this resource from a library root.
     pub full_name: String,
     /// The leaf-most Python package this resource belongs to.
@@ -343,7 +343,7 @@ pub struct ResourceData {
     pub data: DataLocation,
 }
 
-impl ResourceData {
+impl PythonPackageResource {
     pub fn as_python_resource(&self) -> PythonResource {
         PythonResource::Resource(self.clone())
     }
@@ -449,7 +449,7 @@ pub enum PythonResource {
     /// A module defined by existing bytecode.
     ModuleBytecode(PythonModuleBytecode),
     /// A non-module resource file.
-    Resource(ResourceData),
+    Resource(PythonPackageResource),
     /// An extension module that is represented by a dynamic library.
     ExtensionModuleDynamicLibrary(ExtensionModuleData),
 
@@ -477,12 +477,14 @@ impl TryFrom<&PythonFileResource> for PythonResource {
                 }))
             }
 
-            PythonFileResource::Resource(resource) => Ok(PythonResource::Resource(ResourceData {
-                full_name: resource.full_name.clone(),
-                leaf_package: resource.leaf_package.clone(),
-                relative_name: resource.relative_name.clone(),
-                data: resource.data.to_memory()?,
-            })),
+            PythonFileResource::Resource(resource) => {
+                Ok(PythonResource::Resource(PythonPackageResource {
+                    full_name: resource.full_name.clone(),
+                    leaf_package: resource.leaf_package.clone(),
+                    relative_name: resource.relative_name.clone(),
+                    data: resource.data.to_memory()?,
+                }))
+            }
 
             PythonFileResource::ResourceFile(_) => panic!("ResourceFile variant unexpected"),
 

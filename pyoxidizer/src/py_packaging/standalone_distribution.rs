@@ -23,7 +23,7 @@ use {
     super::libpython::{derive_importlib, link_libpython, ImportlibBytecode},
     super::resource::{
         BytecodeOptimizationLevel, DataLocation, ExtensionModuleData,
-        PythonModuleBytecodeFromSource, PythonModuleSource, PythonResource, ResourceData,
+        PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageResource, PythonResource,
     },
     super::resources_policy::PythonResourcesPolicy,
     crate::app_packaging::resource::FileContent,
@@ -1152,12 +1152,12 @@ impl PythonDistribution for StandaloneDistribution {
             .collect()
     }
 
-    fn resource_datas(&self) -> Result<Vec<ResourceData>> {
+    fn resource_datas(&self) -> Result<Vec<PythonPackageResource>> {
         let mut res = Vec::new();
 
         for (package, inner) in self.resources.iter() {
             for (name, path) in inner.iter() {
-                res.push(ResourceData {
+                res.push(PythonPackageResource {
                     full_name: format!("{}/{}", package, name),
                     leaf_package: package.clone(),
                     relative_name: name.clone(),
@@ -1457,14 +1457,14 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             .add_relative_path_module_bytecode(module, prefix)
     }
 
-    fn add_in_memory_package_resource(&mut self, resource: &ResourceData) -> Result<()> {
+    fn add_in_memory_package_resource(&mut self, resource: &PythonPackageResource) -> Result<()> {
         self.resources.add_in_memory_package_resource(resource)
     }
 
     fn add_relative_path_package_resource(
         &mut self,
         prefix: &str,
-        resource: &ResourceData,
+        resource: &PythonPackageResource,
     ) -> Result<()> {
         self.resources
             .add_relative_path_package_resource(prefix, resource)
