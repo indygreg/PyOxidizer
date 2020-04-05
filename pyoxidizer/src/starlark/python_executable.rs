@@ -12,7 +12,7 @@ use {
     super::util::{optional_list_arg, required_bool_arg, required_str_arg, required_type_arg},
     crate::project_building::build_python_executable,
     crate::py_packaging::binary::PythonBinaryBuilder,
-    crate::py_packaging::resource::{BytecodeModuleSource, BytecodeOptimizationLevel},
+    crate::py_packaging::resource::{BytecodeOptimizationLevel, PythonModuleBytecodeFromSource},
     anyhow::{anyhow, Context, Result},
     slog::{info, warn},
     starlark::environment::Environment,
@@ -213,7 +213,7 @@ impl PythonExecutable {
         let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
         info!(&logger, "adding in-memory bytecode module {}", m.name);
         self.exe
-            .add_in_memory_module_bytecode(&BytecodeModuleSource {
+            .add_in_memory_module_bytecode(&PythonModuleBytecodeFromSource {
                 name: m.name.clone(),
                 source: m.source.clone(),
                 optimize_level,
@@ -272,7 +272,7 @@ impl PythonExecutable {
         self.exe
             .add_relative_path_module_bytecode(
                 &prefix,
-                &BytecodeModuleSource {
+                &PythonModuleBytecodeFromSource {
                     name: m.name.clone(),
                     source: m.source.clone(),
                     optimize_level,
@@ -323,7 +323,7 @@ impl PythonExecutable {
         let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
         info!(&logger, "adding bytecode module {}", m.name);
         self.exe
-            .add_module_bytecode(&BytecodeModuleSource {
+            .add_module_bytecode(&PythonModuleBytecodeFromSource {
                 name: m.name.clone(),
                 source: m.source.clone(),
                 optimize_level,

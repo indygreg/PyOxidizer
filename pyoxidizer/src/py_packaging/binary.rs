@@ -12,7 +12,7 @@ use {
     super::libpython::ImportlibBytecode,
     super::pyembed::{derive_python_config, write_default_python_config_rs},
     super::resource::{
-        BytecodeModuleSource, ExtensionModuleData, PythonModuleSource, ResourceData,
+        ExtensionModuleData, PythonModuleBytecodeFromSource, PythonModuleSource, ResourceData,
     },
     super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::DistributionExtensionModule,
@@ -53,7 +53,7 @@ pub trait PythonBinaryBuilder {
     fn in_memory_module_sources(&self) -> BTreeMap<String, PythonModuleSource>;
 
     /// Obtain Python bytecode modules imported from memory to be embedded in this instance.
-    fn in_memory_module_bytecodes(&self) -> BTreeMap<String, BytecodeModuleSource>;
+    fn in_memory_module_bytecodes(&self) -> BTreeMap<String, PythonModuleBytecodeFromSource>;
 
     /// Obtain Python package resources data loaded from memory to be embedded in this instance.
     fn in_memory_package_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>>;
@@ -82,17 +82,20 @@ pub trait PythonBinaryBuilder {
     }
 
     /// Add a Python module bytecode to be imported from memory to the embedded resources.
-    fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModuleSource) -> Result<()>;
+    fn add_in_memory_module_bytecode(
+        &mut self,
+        module: &PythonModuleBytecodeFromSource,
+    ) -> Result<()>;
 
     /// Add Python module bytecode to be imported from the filesystem relative to the produced binary.
     fn add_relative_path_module_bytecode(
         &mut self,
         prefix: &str,
-        module: &BytecodeModuleSource,
+        module: &PythonModuleBytecodeFromSource,
     ) -> Result<()>;
 
     /// Add Python module bytecode to a location as determined by the builder's resource policy.
-    fn add_module_bytecode(&mut self, module: &BytecodeModuleSource) -> Result<()> {
+    fn add_module_bytecode(&mut self, module: &PythonModuleBytecodeFromSource) -> Result<()> {
         match self.python_resources_policy().clone() {
             PythonResourcesPolicy::InMemoryOnly
             | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {

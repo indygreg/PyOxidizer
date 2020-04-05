@@ -11,8 +11,8 @@ use {
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
     super::resource::{
         has_dunder_file, packages_from_module_name, packages_from_module_names,
-        BytecodeModuleSource, BytecodeOptimizationLevel, DataLocation, ExtensionModuleData,
-        PythonModuleSource, ResourceData,
+        BytecodeOptimizationLevel, DataLocation, ExtensionModuleData,
+        PythonModuleBytecodeFromSource, PythonModuleSource, ResourceData,
     },
     super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::DistributionExtensionModule,
@@ -248,12 +248,14 @@ impl EmbeddedPythonResourcesPrePackaged {
     }
 
     /// Obtain `BytecodeModule` in this instance.
-    pub fn get_in_memory_module_bytecodes(&self) -> BTreeMap<String, BytecodeModuleSource> {
+    pub fn get_in_memory_module_bytecodes(
+        &self,
+    ) -> BTreeMap<String, PythonModuleBytecodeFromSource> {
         BTreeMap::from_iter(self.modules.iter().filter_map(|(name, module)| {
             if let Some(location) = &module.in_memory_bytecode {
                 Some((
                     name.clone(),
-                    BytecodeModuleSource {
+                    PythonModuleBytecodeFromSource {
                         name: name.clone(),
                         is_package: module.is_package,
                         source: location.clone(),
@@ -263,7 +265,7 @@ impl EmbeddedPythonResourcesPrePackaged {
             } else if let Some(location) = &module.in_memory_bytecode_opt1 {
                 Some((
                     name.clone(),
-                    BytecodeModuleSource {
+                    PythonModuleBytecodeFromSource {
                         name: name.clone(),
                         is_package: module.is_package,
                         source: location.clone(),
@@ -273,7 +275,7 @@ impl EmbeddedPythonResourcesPrePackaged {
             } else if let Some(location) = &module.in_memory_bytecode_opt2 {
                 Some((
                     name.clone(),
-                    BytecodeModuleSource {
+                    PythonModuleBytecodeFromSource {
                         name: name.clone(),
                         is_package: module.is_package,
                         source: location.clone(),
@@ -369,7 +371,10 @@ impl EmbeddedPythonResourcesPrePackaged {
     }
 
     /// Add a bytecode module to the collection of embedded bytecode modules.
-    pub fn add_in_memory_module_bytecode(&mut self, module: &BytecodeModuleSource) -> Result<()> {
+    pub fn add_in_memory_module_bytecode(
+        &mut self,
+        module: &PythonModuleBytecodeFromSource,
+    ) -> Result<()> {
         self.check_policy(ResourceLocation::InMemory)?;
         let entry = self.modules.entry(module.name.clone()).or_insert_with(|| {
             EmbeddedResourcePythonModulePrePackaged {
@@ -403,7 +408,7 @@ impl EmbeddedPythonResourcesPrePackaged {
     /// Add a bytecode module to be loaded from the filesystem relative to some entity.
     pub fn add_relative_path_module_bytecode(
         &mut self,
-        module: &BytecodeModuleSource,
+        module: &PythonModuleBytecodeFromSource,
         prefix: &str,
     ) -> Result<()> {
         self.check_policy(ResourceLocation::RelativePath)?;
@@ -937,7 +942,7 @@ impl EmbeddedPythonResourcesPrePackaged {
                 }
 
                 if let Some((prefix, location)) = &module.relative_path_module_bytecode {
-                    let module = BytecodeModuleSource {
+                    let module = PythonModuleBytecodeFromSource {
                         name: name.clone(),
                         source: DataLocation::Memory(vec![]),
                         optimize_level: BytecodeOptimizationLevel::Zero,
@@ -963,7 +968,7 @@ impl EmbeddedPythonResourcesPrePackaged {
                 }
 
                 if let Some((prefix, location)) = &module.relative_path_module_bytecode_opt1 {
-                    let module = BytecodeModuleSource {
+                    let module = PythonModuleBytecodeFromSource {
                         name: name.clone(),
                         source: DataLocation::Memory(vec![]),
                         optimize_level: BytecodeOptimizationLevel::One,
@@ -989,7 +994,7 @@ impl EmbeddedPythonResourcesPrePackaged {
                 }
 
                 if let Some((prefix, location)) = &module.relative_path_module_bytecode_opt2 {
-                    let module = BytecodeModuleSource {
+                    let module = PythonModuleBytecodeFromSource {
                         name: name.clone(),
                         source: DataLocation::Memory(vec![]),
                         optimize_level: BytecodeOptimizationLevel::Two,
@@ -1385,7 +1390,7 @@ mod tests {
     #[test]
     fn test_add_in_memory_bytecode_module() -> Result<()> {
         let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
-        r.add_in_memory_module_bytecode(&BytecodeModuleSource {
+        r.add_in_memory_module_bytecode(&PythonModuleBytecodeFromSource {
             name: "foo".to_string(),
             source: DataLocation::Memory(vec![42]),
             optimize_level: BytecodeOptimizationLevel::Zero,
@@ -1409,7 +1414,7 @@ mod tests {
     #[test]
     fn test_add_in_memory_bytecode_module_parents() -> Result<()> {
         let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
-        r.add_in_memory_module_bytecode(&BytecodeModuleSource {
+        r.add_in_memory_module_bytecode(&PythonModuleBytecodeFromSource {
             name: "root.parent.child".to_string(),
             source: DataLocation::Memory(vec![42]),
             optimize_level: BytecodeOptimizationLevel::One,
@@ -1636,7 +1641,7 @@ mod tests {
         assert_eq!(r.find_dunder_file()?.len(), 1);
         assert!(r.find_dunder_file()?.contains("baz"));
 
-        r.add_in_memory_module_bytecode(&BytecodeModuleSource {
+        r.add_in_memory_module_bytecode(&PythonModuleBytecodeFromSource {
             name: "bytecode".to_string(),
             source: DataLocation::Memory(Vec::from("import foo; if __file__")),
             optimize_level: BytecodeOptimizationLevel::Zero,

@@ -168,8 +168,8 @@ impl PythonModuleSource {
     pub fn as_bytecode_module(
         &self,
         optimize_level: BytecodeOptimizationLevel,
-    ) -> BytecodeModuleSource {
-        BytecodeModuleSource {
+    ) -> PythonModuleBytecodeFromSource {
+        PythonModuleBytecodeFromSource {
             name: self.name.clone(),
             source: self.source.clone(),
             optimize_level,
@@ -251,14 +251,14 @@ impl From<BytecodeOptimizationLevel> for i32 {
 /// This is essentially a request to generate bytecode from Python module
 /// source code.
 #[derive(Clone, Debug, PartialEq)]
-pub struct BytecodeModuleSource {
+pub struct PythonModuleBytecodeFromSource {
     pub name: String,
     pub source: DataLocation,
     pub optimize_level: BytecodeOptimizationLevel,
     pub is_package: bool,
 }
 
-impl BytecodeModuleSource {
+impl PythonModuleBytecodeFromSource {
     pub fn as_python_resource(&self) -> PythonResource {
         PythonResource::ModuleBytecodeRequest(self.clone())
     }
@@ -445,7 +445,7 @@ pub enum PythonResource {
     /// A module defined by source code.
     ModuleSource(PythonModuleSource),
     /// A module defined by a request to generate bytecode from source.
-    ModuleBytecodeRequest(BytecodeModuleSource),
+    ModuleBytecodeRequest(PythonModuleBytecodeFromSource),
     /// A module defined by existing bytecode.
     ModuleBytecode(PythonModuleBytecode),
     /// A non-module resource file.
