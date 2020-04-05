@@ -743,7 +743,7 @@ impl StandaloneDistribution {
         let suffixes = PythonModuleSuffixes::resolve_from_python_exe(&python_exe_path(dist_dir)?)?;
 
         for entry in find_python_resources(&stdlib_path, &suffixes) {
-            match entry {
+            match entry? {
                 PythonFileResource::Resource(resource) => {
                     if !resources.contains_key(&resource.leaf_package) {
                         resources.insert(resource.leaf_package.clone(), BTreeMap::new());

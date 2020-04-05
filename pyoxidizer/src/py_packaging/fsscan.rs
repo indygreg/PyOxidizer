@@ -370,9 +370,9 @@ impl PythonResourceIterator {
 }
 
 impl Iterator for PythonResourceIterator {
-    type Item = PythonFileResource;
+    type Item = Result<PythonFileResource>;
 
-    fn next(&mut self) -> Option<PythonFileResource> {
+    fn next(&mut self) -> Option<Result<PythonFileResource>> {
         // Our strategy is to walk directory entries and buffer resource files locally.
         // We then emit those at the end, perhaps doing some post-processing along the
         // way.
@@ -400,7 +400,7 @@ impl Iterator for PythonResourceIterator {
                 continue;
             }
 
-            return Some(python_resource);
+            return Some(Ok(python_resource));
         }
 
         loop {
@@ -483,12 +483,12 @@ impl Iterator for PythonResourceIterator {
             let leaf_package = leaf_package.unwrap();
             let relative_name = relative_name.unwrap();
 
-            return Some(PythonFileResource::Resource(PythonPackageResource {
+            return Some(Ok(PythonFileResource::Resource(PythonPackageResource {
                 full_name,
                 leaf_package,
                 relative_name,
                 data: DataLocation::Path(resource.full_path),
-            }));
+            })));
         }
     }
 }
@@ -516,7 +516,7 @@ pub fn find_python_modules(
     let mut mods = BTreeMap::new();
 
     for resource in find_python_resources(root_path, suffixes) {
-        if let PythonFileResource::Source(module) = resource {
+        if let PythonFileResource::Source(module) = resource? {
             let data = module.source.resolve()?;
             mods.insert(module.name, data);
         }
@@ -544,8 +544,8 @@ mod tests {
     }
 
     #[test]
-    fn test_source_resolution() {
-        let td = tempdir::TempDir::new("pyoxidizer-test").unwrap();
+    fn test_source_resolution() -> Result<()> {
+        let td = tempdir::TempDir::new("pyoxidizer-test")?;
         let tp = td.path();
 
         let acme_path = tp.join("acme");
@@ -555,13 +555,14 @@ mod tests {
         create_dir_all(&acme_a_path).unwrap();
         create_dir_all(&acme_bar_path).unwrap();
 
-        write(acme_path.join("__init__.py"), "").unwrap();
-        write(acme_a_path.join("__init__.py"), "").unwrap();
-        write(acme_bar_path.join("__init__.py"), "").unwrap();
+        write(acme_path.join("__init__.py"), "")?;
+        write(acme_a_path.join("__init__.py"), "")?;
+        write(acme_bar_path.join("__init__.py"), "")?;
 
-        write(acme_a_path.join("foo.py"), "# acme.foo").unwrap();
+        write(acme_a_path.join("foo.py"), "# acme.foo")?;
 
-        let resources = PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect_vec();
+        let resources =
+            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 4);
 
         assert_eq!(
@@ -596,11 +597,13 @@ mod tests {
                 is_package: true,
             })
         );
+
+        Ok(())
     }
 
     #[test]
-    fn test_site_packages() {
-        let td = tempdir::TempDir::new("pyoxidizer-test").unwrap();
+    fn test_site_packages() -> Result<()> {
+        let td = tempdir::TempDir::new("pyoxidizer-test")?;
         let tp = td.path();
 
         let sp_path = tp.join("site-packages");
@@ -608,10 +611,11 @@ mod tests {
 
         create_dir_all(&acme_path).unwrap();
 
-        write(acme_path.join("__init__.py"), "").unwrap();
-        write(acme_path.join("bar.py"), "").unwrap();
+        write(acme_path.join("__init__.py"), "")?;
+        write(acme_path.join("bar.py"), "")?;
 
-        let resources = PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect_vec();
+        let resources =
+            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 2);
 
         assert_eq!(
@@ -630,6 +634,8 @@ mod tests {
                 is_package: false,
             })
         );
+
+        Ok(())
     }
 
     #[test]
@@ -667,7 +673,7 @@ mod tests {
             ],
         };
 
-        let resources = PythonResourceIterator::new(tp, &suffixes).collect_vec();
+        let resources = PythonResourceIterator::new(tp, &suffixes).collect::<Result<Vec<_>>>()?;
 
         assert_eq!(resources.len(), 5);
 
@@ -741,16 +747,17 @@ mod tests {
     }
 
     #[test]
-    fn test_egg_file() {
-        let td = tempdir::TempDir::new("pyoxidizer-test").unwrap();
+    fn test_egg_file() -> Result<()> {
+        let td = tempdir::TempDir::new("pyoxidizer-test")?;
         let tp = td.path();
 
-        create_dir_all(&tp).unwrap();
+        create_dir_all(&tp)?;
 
         let egg_path = tp.join("foo-1.0-py3.7.egg");
-        write(&egg_path, "").unwrap();
+        write(&egg_path, "")?;
 
-        let resources = PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect_vec();
+        let resources =
+            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 1);
 
         assert_eq!(
@@ -759,27 +766,30 @@ mod tests {
                 data: DataLocation::Path(egg_path)
             })
         );
+
+        Ok(())
     }
 
     #[test]
-    fn test_egg_dir() {
-        let td = tempdir::TempDir::new("pyoxidizer-test").unwrap();
+    fn test_egg_dir() -> Result<()> {
+        let td = tempdir::TempDir::new("pyoxidizer-test")?;
         let tp = td.path();
 
-        create_dir_all(&tp).unwrap();
+        create_dir_all(&tp)?;
 
         let egg_path = tp.join("site-packages").join("foo-1.0-py3.7.egg");
         let egg_info_path = egg_path.join("EGG-INFO");
         let package_path = egg_path.join("foo");
 
-        create_dir_all(&egg_info_path).unwrap();
-        create_dir_all(&package_path).unwrap();
+        create_dir_all(&egg_info_path)?;
+        create_dir_all(&package_path)?;
 
-        write(egg_info_path.join("PKG-INFO"), "").unwrap();
-        write(package_path.join("__init__.py"), "").unwrap();
-        write(package_path.join("bar.py"), "").unwrap();
+        write(egg_info_path.join("PKG-INFO"), "")?;
+        write(package_path.join("__init__.py"), "")?;
+        write(package_path.join("bar.py"), "")?;
 
-        let resources = PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect_vec();
+        let resources =
+            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 2);
 
         assert_eq!(
@@ -798,19 +808,22 @@ mod tests {
                 is_package: false,
             })
         );
+
+        Ok(())
     }
 
     #[test]
-    fn test_pth_file() {
-        let td = tempdir::TempDir::new("pyoxidizer-test").unwrap();
+    fn test_pth_file() -> Result<()> {
+        let td = tempdir::TempDir::new("pyoxidizer-test")?;
         let tp = td.path();
 
-        create_dir_all(&tp).unwrap();
+        create_dir_all(&tp)?;
 
         let pth_path = tp.join("foo.pth");
-        write(&pth_path, "").unwrap();
+        write(&pth_path, "")?;
 
-        let resources = PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect_vec();
+        let resources =
+            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 1);
 
         assert_eq!(
@@ -819,6 +832,8 @@ mod tests {
                 data: DataLocation::Path(pth_path)
             })
         );
+
+        Ok(())
     }
 
     /// Resource files without a package are not valid.
@@ -849,7 +864,8 @@ mod tests {
         let resource_path = resource_dir.join("resource.txt");
         write(&resource_path, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Vec<_>>();
+        let resources =
+            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 1);
 
         assert_eq!(
@@ -878,22 +894,26 @@ mod tests {
         let resource_path = package_dir.join("resource.txt");
         write(&resource_path, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Vec<_>>();
+        let resources =
+            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
+
+        assert_eq!(resources.len(), 2);
         assert_eq!(
-            resources,
-            vec![
-                PythonFileResource::Source(PythonModuleSource {
-                    name: "foo".to_string(),
-                    source: DataLocation::Path(module_path),
-                    is_package: true,
-                }),
-                PythonFileResource::Resource(PythonPackageResource {
-                    full_name: "foo/resource.txt".to_string(),
-                    leaf_package: "foo".to_string(),
-                    relative_name: "resource.txt".to_string(),
-                    data: DataLocation::Path(resource_path),
-                })
-            ]
+            resources[0],
+            PythonFileResource::Source(PythonModuleSource {
+                name: "foo".to_string(),
+                source: DataLocation::Path(module_path),
+                is_package: true,
+            })
+        );
+        assert_eq!(
+            resources[1],
+            PythonFileResource::Resource(PythonPackageResource {
+                full_name: "foo/resource.txt".to_string(),
+                leaf_package: "foo".to_string(),
+                relative_name: "resource.txt".to_string(),
+                data: DataLocation::Path(resource_path),
+            })
         );
 
         Ok(())
@@ -914,22 +934,26 @@ mod tests {
         let resource_path = subdir.join("resource.txt");
         write(&resource_path, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Vec<_>>();
+        let resources =
+            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
+
+        assert_eq!(resources.len(), 2);
         assert_eq!(
-            resources,
-            vec![
-                PythonFileResource::Source(PythonModuleSource {
-                    name: "foo".to_string(),
-                    source: DataLocation::Path(module_path),
-                    is_package: true,
-                }),
-                PythonFileResource::Resource(PythonPackageResource {
-                    full_name: "foo/resources/resource.txt".to_string(),
-                    leaf_package: "foo".to_string(),
-                    relative_name: "resources/resource.txt".to_string(),
-                    data: DataLocation::Path(resource_path),
-                })
-            ]
+            resources[0],
+            PythonFileResource::Source(PythonModuleSource {
+                name: "foo".to_string(),
+                source: DataLocation::Path(module_path),
+                is_package: true,
+            }),
+        );
+        assert_eq!(
+            resources[1],
+            PythonFileResource::Resource(PythonPackageResource {
+                full_name: "foo/resources/resource.txt".to_string(),
+                leaf_package: "foo".to_string(),
+                relative_name: "resources/resource.txt".to_string(),
+                data: DataLocation::Path(resource_path),
+            })
         );
 
         Ok(())
