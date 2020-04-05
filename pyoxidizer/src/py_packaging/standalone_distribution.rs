@@ -21,7 +21,8 @@ use {
     super::libpython::{derive_importlib, link_libpython, ImportlibBytecode},
     super::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
-        PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageResource, PythonResource,
+        PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
+        PythonPackageResource, PythonResource,
     },
     super::resources_policy::PythonResourcesPolicy,
     crate::app_packaging::resource::FileContent,
@@ -1473,6 +1474,23 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<()> {
         self.resources
             .add_relative_path_package_resource(prefix, resource)
+    }
+
+    fn add_in_memory_package_distribution_resource(
+        &mut self,
+        resource: &PythonPackageDistributionResource,
+    ) -> Result<()> {
+        self.resources
+            .add_in_memory_package_distribution_resource(resource)
+    }
+
+    fn add_relative_path_package_distribution_resource(
+        &mut self,
+        prefix: &str,
+        resource: &PythonPackageDistributionResource,
+    ) -> Result<()> {
+        self.resources
+            .add_relative_path_package_distribution_resource(prefix, resource)
     }
 
     fn add_builtin_distribution_extension_module(

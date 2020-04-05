@@ -13,7 +13,7 @@ use {
     super::pyembed::{derive_python_config, write_default_python_config_rs},
     super::resource::{
         PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
-        PythonPackageResource,
+        PythonPackageDistributionResource, PythonPackageResource,
     },
     super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::DistributionExtensionModule,
@@ -127,6 +127,35 @@ pub trait PythonBinaryBuilder {
             }
             PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
                 self.add_relative_path_package_resource(prefix, resource)
+            }
+        }
+    }
+
+    /// Add a package distribution resource to be loaded from memory.
+    fn add_in_memory_package_distribution_resource(
+        &mut self,
+        resource: &PythonPackageDistributionResource,
+    ) -> Result<()>;
+
+    /// Add a package distribution resource to be loaded from the filesystem relative to the produced binary.
+    fn add_relative_path_package_distribution_resource(
+        &mut self,
+        prefix: &str,
+        resource: &PythonPackageDistributionResource,
+    ) -> Result<()>;
+
+    /// Add a package distribution resource to a location determined by the builder's resource policy.
+    fn add_package_distribution_resource(
+        &mut self,
+        resource: &PythonPackageDistributionResource,
+    ) -> Result<()> {
+        match self.python_resources_policy().clone() {
+            PythonResourcesPolicy::InMemoryOnly
+            | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
+                self.add_in_memory_package_distribution_resource(resource)
+            }
+            PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
+                self.add_relative_path_package_distribution_resource(prefix, resource)
             }
         }
     }

@@ -11,8 +11,9 @@ use {
     super::package_metadata::PythonPackageMetadata,
     super::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonEggFile, PythonExtensionModule,
-        PythonModuleBytecode, PythonModuleSource, PythonPackageMetadataResource,
-        PythonPackageResource, PythonPathExtension, PythonResource,
+        PythonModuleBytecode, PythonModuleSource, PythonPackageDistributionResource,
+        PythonPackageDistributionResourceFlavor, PythonPackageResource, PythonPathExtension,
+        PythonResource,
     },
     anyhow::Result,
     itertools::Itertools,
@@ -111,15 +112,21 @@ impl PythonResourceIterator {
         // the package info. If the file doesn't exist or can't be parsed, we ignore this
         // distribution entirely.
 
-        let metadata_path = if components[0].ends_with(".dist-info") {
-            Some(self.root_path.join(components[0]).join("METADATA"))
+        let distribution_info = if components[0].ends_with(".dist-info") {
+            Some((
+                self.root_path.join(components[0]).join("METADATA"),
+                PythonPackageDistributionResourceFlavor::DistInfo,
+            ))
         } else if components[0].ends_with(".egg-info") {
-            Some(self.root_path.join(components[0]).join("PKG-INFO"))
+            Some((
+                self.root_path.join(components[0]).join("PKG-INFO"),
+                PythonPackageDistributionResourceFlavor::EggInfo,
+            ))
         } else {
             None
         };
 
-        if let Some(metadata_path) = metadata_path {
+        if let Some((metadata_path, location)) = distribution_info {
             let metadata = if let Ok(data) = std::fs::read(&metadata_path) {
                 if let Ok(metadata) = PythonPackageMetadata::from_metadata(&data) {
                     metadata
@@ -146,7 +153,8 @@ impl PythonResourceIterator {
             let name = components[1..components.len()].join("/");
 
             return Some(DirEntryItem::PythonResource(
-                PythonResource::DistributionResource(PythonPackageMetadataResource {
+                PythonResource::DistributionResource(PythonPackageDistributionResource {
+                    location,
                     package: package.to_string(),
                     version: version.to_string(),
                     name,
@@ -1022,7 +1030,8 @@ mod tests {
 
         assert_eq!(
             resources[0],
-            PythonResource::DistributionResource(PythonPackageMetadataResource {
+            PythonResource::DistributionResource(PythonPackageDistributionResource {
+                location: PythonPackageDistributionResourceFlavor::DistInfo,
                 package: "black".to_string(),
                 version: "1.2.3".to_string(),
                 name: "METADATA".to_string(),
@@ -1031,7 +1040,8 @@ mod tests {
         );
         assert_eq!(
             resources[1],
-            PythonResource::DistributionResource(PythonPackageMetadataResource {
+            PythonResource::DistributionResource(PythonPackageDistributionResource {
+                location: PythonPackageDistributionResourceFlavor::DistInfo,
                 package: "black".to_string(),
                 version: "1.2.3".to_string(),
                 name: "file.txt".to_string(),
@@ -1040,7 +1050,8 @@ mod tests {
         );
         assert_eq!(
             resources[2],
-            PythonResource::DistributionResource(PythonPackageMetadataResource {
+            PythonResource::DistributionResource(PythonPackageDistributionResource {
+                location: PythonPackageDistributionResourceFlavor::DistInfo,
                 package: "black".to_string(),
                 version: "1.2.3".to_string(),
                 name: "subdir/sub.txt".to_string(),
@@ -1075,7 +1086,8 @@ mod tests {
 
         assert_eq!(
             resources[0],
-            PythonResource::DistributionResource(PythonPackageMetadataResource {
+            PythonResource::DistributionResource(PythonPackageDistributionResource {
+                location: PythonPackageDistributionResourceFlavor::EggInfo,
                 package: "black".to_string(),
                 version: "1.2.3".to_string(),
                 name: "PKG-INFO".to_string(),
@@ -1084,7 +1096,8 @@ mod tests {
         );
         assert_eq!(
             resources[1],
-            PythonResource::DistributionResource(PythonPackageMetadataResource {
+            PythonResource::DistributionResource(PythonPackageDistributionResource {
+                location: PythonPackageDistributionResourceFlavor::EggInfo,
                 package: "black".to_string(),
                 version: "1.2.3".to_string(),
                 name: "file.txt".to_string(),
@@ -1093,7 +1106,8 @@ mod tests {
         );
         assert_eq!(
             resources[2],
-            PythonResource::DistributionResource(PythonPackageMetadataResource {
+            PythonResource::DistributionResource(PythonPackageDistributionResource {
+                location: PythonPackageDistributionResourceFlavor::EggInfo,
                 package: "black".to_string(),
                 version: "1.2.3".to_string(),
                 name: "subdir/sub.txt".to_string(),

@@ -369,6 +369,16 @@ impl PythonPackageResource {
     }
 }
 
+/// Represents where a Python package distribution resource is materialized.
+#[derive(Clone, Debug, PartialEq)]
+pub enum PythonPackageDistributionResourceFlavor {
+    /// In a .dist-info directory.
+    DistInfo,
+
+    /// In a .egg-info directory.
+    EggInfo,
+}
+
 /// Represents a file defining Python package metadata.
 ///
 /// Instances of this correspond to files in a `<package>-<version>.dist-info`
@@ -377,7 +387,10 @@ impl PythonPackageResource {
 /// In terms of `importlib.metadata` terminology, instances correspond to
 /// files in a `Distribution`.
 #[derive(Clone, Debug, PartialEq)]
-pub struct PythonPackageMetadataResource {
+pub struct PythonPackageDistributionResource {
+    /// Where the resource is materialized.
+    pub location: PythonPackageDistributionResourceFlavor,
+
     /// The name of the Python package this resource is associated with.
     pub package: String,
 
@@ -392,6 +405,38 @@ pub struct PythonPackageMetadataResource {
 
     /// The raw content of the distribution resource.
     pub data: DataLocation,
+}
+
+impl PythonPackageDistributionResource {
+    pub fn as_python_resource(&self) -> PythonResource {
+        PythonResource::DistributionResource(self.clone())
+    }
+
+    /// Resolve filesystem path to this resource file.
+    pub fn resolve_path(&self, prefix: &str) -> PathBuf {
+        let p = match self.location {
+            PythonPackageDistributionResourceFlavor::DistInfo => {
+                format!("{}-{}.dist-info", self.package, self.version)
+            }
+            PythonPackageDistributionResourceFlavor::EggInfo => {
+                format!("{}-{}.egg-info", self.package, self.version)
+            }
+        };
+
+        PathBuf::from(prefix).join(p).join(&self.name)
+    }
+
+    pub fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
+        let dest_path = self.resolve_path(prefix);
+
+        manifest.add_file(
+            &dest_path,
+            &FileContent {
+                data: self.data.resolve()?,
+                executable: false,
+            },
+        )
+    }
 }
 
 /// Represents an extension module that can be packaged.
@@ -491,7 +536,7 @@ pub enum PythonResource {
     /// A non-module resource file.
     Resource(PythonPackageResource),
     /// A file in a Python package distribution metadata collection.
-    DistributionResource(PythonPackageMetadataResource),
+    DistributionResource(PythonPackageDistributionResource),
     /// An extension module that is represented by a dynamic library.
     ExtensionModuleDynamicLibrary(PythonExtensionModule),
     /// An extension module that was built from source and can be statically linked.

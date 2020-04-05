@@ -12,7 +12,8 @@ use {
     super::resource::{
         has_dunder_file, packages_from_module_name, packages_from_module_names,
         BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
-        PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageResource,
+        PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
+        PythonPackageResource,
     },
     super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::DistributionExtensionModule,
@@ -515,6 +516,68 @@ impl EmbeddedPythonResourcesPrePackaged {
             false,
             None,
         )
+    }
+
+    /// Add a package distribution resource to be loaded from memory.
+    pub fn add_in_memory_package_distribution_resource(
+        &mut self,
+        resource: &PythonPackageDistributionResource,
+    ) -> Result<()> {
+        self.check_policy(ResourceLocation::InMemory)?;
+
+        let entry = self
+            .modules
+            .entry(resource.package.clone())
+            .or_insert_with(|| EmbeddedResourcePythonModulePrePackaged {
+                name: resource.package.clone(),
+                ..EmbeddedResourcePythonModulePrePackaged::default()
+            });
+
+        // A distribution resource makes the entity a package.
+        entry.is_package = true;
+
+        if entry.in_memory_distribution_resources.is_none() {
+            entry.in_memory_distribution_resources = Some(BTreeMap::new());
+        }
+
+        entry
+            .in_memory_distribution_resources
+            .as_mut()
+            .unwrap()
+            .insert(resource.name.clone(), resource.data.clone());
+
+        Ok(())
+    }
+
+    pub fn add_relative_path_package_distribution_resource(
+        &mut self,
+        prefix: &str,
+        resource: &PythonPackageDistributionResource,
+    ) -> Result<()> {
+        self.check_policy(ResourceLocation::RelativePath)?;
+        let entry = self
+            .modules
+            .entry(resource.package.clone())
+            .or_insert_with(|| EmbeddedResourcePythonModulePrePackaged {
+                name: resource.package.clone(),
+                ..EmbeddedResourcePythonModulePrePackaged::default()
+            });
+
+        entry.is_package = true;
+
+        if entry.relative_path_package_resources.is_none() {
+            entry.relative_path_distribution_resources = Some(BTreeMap::new());
+        }
+
+        entry
+            .relative_path_distribution_resources
+            .as_mut()
+            .unwrap()
+            .insert(resource.name.clone(), resource.resolve_path(prefix));
+
+        resource.add_to_file_manifest(&mut self.extra_files, prefix)?;
+
+        Ok(())
     }
 
     /// Add an extension module from a Python distribution to be linked into the binary.

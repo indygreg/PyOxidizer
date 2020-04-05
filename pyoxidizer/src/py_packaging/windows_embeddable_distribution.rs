@@ -18,7 +18,7 @@ use {
     super::packaging_tool::bootstrap_packaging_tools,
     super::resource::{
         PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
-        PythonPackageResource, PythonResource,
+        PythonPackageDistributionResource, PythonPackageResource, PythonResource,
     },
     super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::DistributionExtensionModule,
@@ -599,6 +599,23 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
     ) -> Result<()> {
         self.resources
             .add_relative_path_package_resource(prefix, resource)
+    }
+
+    fn add_in_memory_package_distribution_resource(
+        &mut self,
+        resource: &PythonPackageDistributionResource,
+    ) -> Result<()> {
+        self.resources
+            .add_in_memory_package_distribution_resource(resource)
+    }
+
+    fn add_relative_path_package_distribution_resource(
+        &mut self,
+        prefix: &str,
+        resource: &PythonPackageDistributionResource,
+    ) -> Result<()> {
+        self.resources
+            .add_relative_path_package_distribution_resource(prefix, resource)
     }
 
     fn add_builtin_distribution_extension_module(
