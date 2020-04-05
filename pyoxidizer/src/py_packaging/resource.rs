@@ -10,7 +10,7 @@ use {
     super::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode},
     super::fsscan::{is_package_from_path, PythonFileResource},
     crate::app_packaging::resource::{FileContent, FileManifest},
-    anyhow::{anyhow, Context, Error, Result},
+    anyhow::{Context, Error, Result},
     std::collections::BTreeSet,
     std::convert::TryFrom,
     std::path::{Path, PathBuf},
@@ -498,10 +498,6 @@ impl TryFrom<&PythonFileResource> for PythonResource {
             PythonFileResource::EggFile(egg) => Ok(PythonResource::EggFile(egg.clone())),
 
             PythonFileResource::PthFile(pth) => Ok(PythonResource::PathExtension(pth.clone())),
-
-            PythonFileResource::Other { .. } => {
-                Err(anyhow!("converting other files not yet supported"))
-            }
         }
     }
 }

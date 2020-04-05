@@ -90,14 +90,6 @@ pub enum PythonFileResource {
     ///
     /// i.e. a .pth file.
     PthFile(PythonPathExtension),
-
-    /// Any other file.
-    Other {
-        package: String,
-        stem: String,
-        full_name: String,
-        path: PathBuf,
-    },
 }
 
 pub struct PythonResourceIterator {
@@ -290,17 +282,7 @@ impl PythonResourceIterator {
 
                 // Possibly from Python 2?
                 if components[components.len() - 2] != "__pycache__" {
-                    let package_parts = &components[0..components.len() - 1];
-                    let package = itertools::join(package_parts, ".");
-                    let full_name = itertools::join(&components, ".");
-                    let stem = components[components.len() - 1].to_string();
-
-                    return Some(PythonFileResource::Other {
-                        package,
-                        stem,
-                        full_name,
-                        path: path.to_path_buf(),
-                    });
+                    return None;
                 }
 
                 let package_parts = &components[0..components.len() - 2];
