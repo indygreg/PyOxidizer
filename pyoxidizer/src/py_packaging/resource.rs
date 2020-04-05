@@ -456,7 +456,7 @@ pub struct PythonPathExtension {
 }
 
 /// Represents a resource that can be read by Python somehow.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum PythonResource {
     /// A module defined by source code.
     ModuleSource(PythonModuleSource),
@@ -481,56 +481,23 @@ impl TryFrom<&PythonFileResource> for PythonResource {
 
     fn try_from(resource: &PythonFileResource) -> Result<PythonResource> {
         match resource {
-            PythonFileResource::Source(m) => Ok(PythonResource::ModuleSource(PythonModuleSource {
-                name: m.name.clone(),
-                source: m.source.to_memory()?,
-                is_package: m.is_package,
-            })),
+            PythonFileResource::Source(m) => Ok(PythonResource::ModuleSource(m.clone())),
 
-            PythonFileResource::Bytecode(m) => {
-                Ok(PythonResource::ModuleBytecode(PythonModuleBytecode {
-                    name: m.name.clone(),
-                    bytecode: DataLocation::Memory(m.resolve_bytecode()?),
-                    optimize_level: m.optimize_level,
-                    is_package: m.is_package,
-                }))
-            }
+            PythonFileResource::Bytecode(m) => Ok(PythonResource::ModuleBytecode(m.clone())),
 
             PythonFileResource::Resource(resource) => {
-                Ok(PythonResource::Resource(PythonPackageResource {
-                    full_name: resource.full_name.clone(),
-                    leaf_package: resource.leaf_package.clone(),
-                    relative_name: resource.relative_name.clone(),
-                    data: resource.data.to_memory()?,
-                }))
+                Ok(PythonResource::Resource(resource.clone()))
             }
 
             PythonFileResource::ResourceFile(_) => panic!("ResourceFile variant unexpected"),
 
-            PythonFileResource::ExtensionModule(em) => Ok(
-                PythonResource::ExtensionModuleDynamicLibrary(PythonExtensionModule {
-                    name: em.name.clone(),
-                    init_fn: em.init_fn.clone(),
-                    extension_file_suffix: em.extension_file_suffix.clone(),
-                    extension_data: if let Some(data) = &em.extension_data {
-                        Some(data.to_memory()?)
-                    } else {
-                        None
-                    },
-                    object_file_data: em.object_file_data.clone(),
-                    is_package: em.is_package,
-                    libraries: em.libraries.clone(),
-                    library_dirs: em.library_dirs.clone(),
-                }),
-            ),
-
-            PythonFileResource::EggFile { .. } => {
-                Err(anyhow!("converting egg files not yet supported"))
+            PythonFileResource::ExtensionModule(em) => {
+                Ok(PythonResource::ExtensionModuleDynamicLibrary(em.clone()))
             }
 
-            PythonFileResource::PthFile { .. } => {
-                Err(anyhow!("converting pth files not yet supported"))
-            }
+            PythonFileResource::EggFile(egg) => Ok(PythonResource::EggFile(egg.clone())),
+
+            PythonFileResource::PthFile(pth) => Ok(PythonResource::PathExtension(pth.clone())),
 
             PythonFileResource::Other { .. } => {
                 Err(anyhow!("converting other files not yet supported"))

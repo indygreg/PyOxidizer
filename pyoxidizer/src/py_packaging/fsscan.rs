@@ -11,10 +11,12 @@ use {
     super::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonEggFile, PythonExtensionModule,
         PythonModuleBytecode, PythonModuleSource, PythonPackageResource, PythonPathExtension,
+        PythonResource,
     },
     anyhow::Result,
     itertools::Itertools,
     std::collections::{BTreeMap, HashSet},
+    std::convert::TryFrom,
     std::ffi::OsStr,
     std::path::{Path, PathBuf},
 };
@@ -370,9 +372,9 @@ impl PythonResourceIterator {
 }
 
 impl Iterator for PythonResourceIterator {
-    type Item = Result<PythonFileResource>;
+    type Item = Result<PythonResource>;
 
-    fn next(&mut self) -> Option<Result<PythonFileResource>> {
+    fn next(&mut self) -> Option<Result<PythonResource>> {
         // Our strategy is to walk directory entries and buffer resource files locally.
         // We then emit those at the end, perhaps doing some post-processing along the
         // way.
@@ -392,7 +394,7 @@ impl Iterator for PythonResourceIterator {
                 continue;
             }
 
-            let python_resource = python_resource.unwrap();
+            let python_resource = python_resource?;
 
             // Buffer Resource entries until later.
             if let PythonFileResource::ResourceFile(resource) = python_resource {
@@ -400,7 +402,7 @@ impl Iterator for PythonResourceIterator {
                 continue;
             }
 
-            return Some(Ok(python_resource));
+            return Some(PythonResource::try_from(&python_resource));
         }
 
         loop {
@@ -483,7 +485,7 @@ impl Iterator for PythonResourceIterator {
             let leaf_package = leaf_package.unwrap();
             let relative_name = relative_name.unwrap();
 
-            return Some(Ok(PythonFileResource::Resource(PythonPackageResource {
+            return Some(Ok(PythonResource::Resource(PythonPackageResource {
                 full_name,
                 leaf_package,
                 relative_name,
@@ -516,7 +518,7 @@ pub fn find_python_modules(
     let mut mods = BTreeMap::new();
 
     for resource in find_python_resources(root_path, suffixes) {
-        if let PythonFileResource::Source(module) = resource? {
+        if let PythonResource::ModuleSource(module) = resource? {
             let data = module.source.resolve()?;
             mods.insert(module.name, data);
         }
@@ -567,7 +569,7 @@ mod tests {
 
         assert_eq!(
             resources[0],
-            PythonFileResource::Source(PythonModuleSource {
+            PythonResource::ModuleSource(PythonModuleSource {
                 name: "acme".to_string(),
                 source: DataLocation::Path(acme_path.join("__init__.py")),
                 is_package: true,
@@ -575,7 +577,7 @@ mod tests {
         );
         assert_eq!(
             resources[1],
-            PythonFileResource::Source(PythonModuleSource {
+            PythonResource::ModuleSource(PythonModuleSource {
                 name: "acme.a".to_string(),
                 source: DataLocation::Path(acme_a_path.join("__init__.py")),
                 is_package: true,
@@ -583,7 +585,7 @@ mod tests {
         );
         assert_eq!(
             resources[2],
-            PythonFileResource::Source(PythonModuleSource {
+            PythonResource::ModuleSource(PythonModuleSource {
                 name: "acme.a.foo".to_string(),
                 source: DataLocation::Path(acme_a_path.join("foo.py")),
                 is_package: false,
@@ -591,7 +593,7 @@ mod tests {
         );
         assert_eq!(
             resources[3],
-            PythonFileResource::Source(PythonModuleSource {
+            PythonResource::ModuleSource(PythonModuleSource {
                 name: "acme.bar".to_string(),
                 source: DataLocation::Path(acme_bar_path.join("__init__.py")),
                 is_package: true,
@@ -620,7 +622,7 @@ mod tests {
 
         assert_eq!(
             resources[0],
-            PythonFileResource::Source(PythonModuleSource {
+            PythonResource::ModuleSource(PythonModuleSource {
                 name: "acme".to_string(),
                 source: DataLocation::Path(acme_path.join("__init__.py")),
                 is_package: true,
@@ -628,7 +630,7 @@ mod tests {
         );
         assert_eq!(
             resources[1],
-            PythonFileResource::Source(PythonModuleSource {
+            PythonResource::ModuleSource(PythonModuleSource {
                 name: "acme.bar".to_string(),
                 source: DataLocation::Path(acme_path.join("bar.py")),
                 is_package: false,
@@ -679,7 +681,7 @@ mod tests {
 
         assert_eq!(
             resources[0],
-            PythonFileResource::ExtensionModule(PythonExtensionModule {
+            PythonResource::ExtensionModuleDynamicLibrary(PythonExtensionModule {
                 name: "_cffi_backend".to_string(),
                 init_fn: Some("PyInit__cffi_backend".to_string()),
                 extension_file_suffix: ".cp37-win_amd64.pyd".to_string(),
@@ -692,7 +694,7 @@ mod tests {
         );
         assert_eq!(
             resources[1],
-            PythonFileResource::ExtensionModule(PythonExtensionModule {
+            PythonResource::ExtensionModuleDynamicLibrary(PythonExtensionModule {
                 name: "bar".to_string(),
                 init_fn: Some("PyInit_bar".to_string()),
                 extension_file_suffix: ".so".to_string(),
@@ -705,7 +707,7 @@ mod tests {
         );
         assert_eq!(
             resources[2],
-            PythonFileResource::ExtensionModule(PythonExtensionModule {
+            PythonResource::ExtensionModuleDynamicLibrary(PythonExtensionModule {
                 name: "foo".to_string(),
                 init_fn: Some("PyInit_foo".to_string()),
                 extension_file_suffix: ".pyd".to_string(),
@@ -718,7 +720,7 @@ mod tests {
         );
         assert_eq!(
             resources[3],
-            PythonFileResource::ExtensionModule(PythonExtensionModule {
+            PythonResource::ExtensionModuleDynamicLibrary(PythonExtensionModule {
                 name: "markupsafe._speedups".to_string(),
                 init_fn: Some("PyInit__speedups".to_string()),
                 extension_file_suffix: ".cpython-37m-x86_64-linux-gnu.so".to_string(),
@@ -731,7 +733,7 @@ mod tests {
         );
         assert_eq!(
             resources[4],
-            PythonFileResource::ExtensionModule(PythonExtensionModule {
+            PythonResource::ExtensionModuleDynamicLibrary(PythonExtensionModule {
                 name: "zstd".to_string(),
                 init_fn: Some("PyInit_zstd".to_string()),
                 extension_file_suffix: ".cpython-37m-x86_64-linux-gnu.so".to_string(),
@@ -762,7 +764,7 @@ mod tests {
 
         assert_eq!(
             resources[0],
-            PythonFileResource::EggFile(PythonEggFile {
+            PythonResource::EggFile(PythonEggFile {
                 data: DataLocation::Path(egg_path)
             })
         );
@@ -794,7 +796,7 @@ mod tests {
 
         assert_eq!(
             resources[0],
-            PythonFileResource::Source(PythonModuleSource {
+            PythonResource::ModuleSource(PythonModuleSource {
                 name: "foo".to_string(),
                 source: DataLocation::Path(package_path.join("__init__.py")),
                 is_package: true,
@@ -802,7 +804,7 @@ mod tests {
         );
         assert_eq!(
             resources[1],
-            PythonFileResource::Source(PythonModuleSource {
+            PythonResource::ModuleSource(PythonModuleSource {
                 name: "foo.bar".to_string(),
                 source: DataLocation::Path(package_path.join("bar.py")),
                 is_package: false,
@@ -828,7 +830,7 @@ mod tests {
 
         assert_eq!(
             resources[0],
-            PythonFileResource::PthFile(PythonPathExtension {
+            PythonResource::PathExtension(PythonPathExtension {
                 data: DataLocation::Path(pth_path)
             })
         );
@@ -870,7 +872,7 @@ mod tests {
 
         assert_eq!(
             resources[0],
-            PythonFileResource::Source(PythonModuleSource {
+            PythonResource::ModuleSource(PythonModuleSource {
                 name: "foo".to_string(),
                 source: DataLocation::Path(tp.join("foo.py")),
                 is_package: false,
@@ -900,7 +902,7 @@ mod tests {
         assert_eq!(resources.len(), 2);
         assert_eq!(
             resources[0],
-            PythonFileResource::Source(PythonModuleSource {
+            PythonResource::ModuleSource(PythonModuleSource {
                 name: "foo".to_string(),
                 source: DataLocation::Path(module_path),
                 is_package: true,
@@ -908,7 +910,7 @@ mod tests {
         );
         assert_eq!(
             resources[1],
-            PythonFileResource::Resource(PythonPackageResource {
+            PythonResource::Resource(PythonPackageResource {
                 full_name: "foo/resource.txt".to_string(),
                 leaf_package: "foo".to_string(),
                 relative_name: "resource.txt".to_string(),
@@ -940,7 +942,7 @@ mod tests {
         assert_eq!(resources.len(), 2);
         assert_eq!(
             resources[0],
-            PythonFileResource::Source(PythonModuleSource {
+            PythonResource::ModuleSource(PythonModuleSource {
                 name: "foo".to_string(),
                 source: DataLocation::Path(module_path),
                 is_package: true,
@@ -948,7 +950,7 @@ mod tests {
         );
         assert_eq!(
             resources[1],
-            PythonFileResource::Resource(PythonPackageResource {
+            PythonResource::Resource(PythonPackageResource {
                 full_name: "foo/resources/resource.txt".to_string(),
                 leaf_package: "foo".to_string(),
                 relative_name: "resources/resource.txt".to_string(),

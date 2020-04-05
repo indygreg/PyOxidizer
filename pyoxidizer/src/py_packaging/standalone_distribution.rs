@@ -17,9 +17,7 @@ use {
     },
     super::distutils::prepare_hacked_distutils,
     super::embedded_resource::{EmbeddedPythonResources, EmbeddedPythonResourcesPrePackaged},
-    super::fsscan::{
-        find_python_resources, is_package_from_path, walk_tree_files, PythonFileResource,
-    },
+    super::fsscan::{find_python_resources, is_package_from_path, walk_tree_files},
     super::libpython::{derive_importlib, link_libpython, ImportlibBytecode},
     super::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
@@ -744,7 +742,7 @@ impl StandaloneDistribution {
 
         for entry in find_python_resources(&stdlib_path, &suffixes) {
             match entry? {
-                PythonFileResource::Resource(resource) => {
+                PythonResource::Resource(resource) => {
                     if !resources.contains_key(&resource.leaf_package) {
                         resources.insert(resource.leaf_package.clone(), BTreeMap::new());
                     }
@@ -759,7 +757,7 @@ impl StandaloneDistribution {
                         },
                     );
                 }
-                PythonFileResource::Source(source) => match source.source {
+                PythonResource::ModuleSource(source) => match source.source {
                     DataLocation::Path(path) => {
                         py_modules.insert(source.name.clone(), path);
                     }

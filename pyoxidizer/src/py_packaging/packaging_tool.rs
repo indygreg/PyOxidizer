@@ -9,14 +9,13 @@ Interaction with Python packaging tools (pip, setuptools, etc).
 use {
     super::distribution::{download_distribution, PythonDistribution},
     super::distutils::read_built_extensions,
-    super::fsscan::{find_python_resources, PythonFileResource},
+    super::fsscan::find_python_resources,
     super::resource::PythonResource,
     super::standalone_distribution::resolve_python_paths,
     crate::python_distributions::GET_PIP_PY_19,
     anyhow::{anyhow, Context, Result},
     slog::warn,
     std::collections::HashMap,
-    std::convert::TryFrom,
     std::hash::BuildHasher,
     std::io::{BufRead, BufReader},
     std::path::{Path, PathBuf},
@@ -182,25 +181,16 @@ pub fn find_resources(
         let r = r?;
 
         match r {
-            PythonFileResource::Source { .. } => {
-                res.push(
-                    PythonResource::try_from(&r)
-                        .context("converting source module to PythonResource")?,
-                );
+            PythonResource::ModuleSource(_) => {
+                res.push(r);
             }
 
-            PythonFileResource::Resource(..) => {
-                res.push(
-                    PythonResource::try_from(&r)
-                        .context("converting resource file to PythonResource")?,
-                );
+            PythonResource::Resource(_) => {
+                res.push(r);
             }
 
-            PythonFileResource::ExtensionModule { .. } => {
-                res.push(
-                    PythonResource::try_from(&r)
-                        .context("converting extension module file to PythonResource")?,
-                );
+            PythonResource::ExtensionModuleDynamicLibrary(_) => {
+                res.push(r);
             }
 
             _ => {}
