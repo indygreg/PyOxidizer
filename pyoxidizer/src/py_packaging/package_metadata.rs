@@ -40,6 +40,7 @@ impl PythonPackageMetadata {
     }
 
     /// Find all values of a specified header.
+    #[allow(unused)]
     pub fn find_all_headers(&self, key: &str) -> Vec<&str> {
         self.headers
             .iter()
@@ -55,6 +56,7 @@ impl PythonPackageMetadata {
         self.find_first_header("Version")
     }
 
+    #[allow(unused)]
     pub fn license(&self) -> Option<&str> {
         self.find_first_header("License")
     }
