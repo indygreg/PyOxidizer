@@ -439,6 +439,13 @@ impl PythonExtensionModule {
     }
 }
 
+/// Represents a Python .egg file.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PythonEggFile {
+    /// Content of the .egg file.
+    pub data: DataLocation,
+}
+
 /// Represents a resource to make available to the Python interpreter.
 #[derive(Clone, Debug)]
 pub enum PythonResource {

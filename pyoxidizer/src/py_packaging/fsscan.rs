@@ -9,8 +9,8 @@ Scanning the filesystem for Python resources.
 use {
     super::distribution::PythonModuleSuffixes,
     super::resource::{
-        BytecodeOptimizationLevel, DataLocation, PythonExtensionModule, PythonModuleBytecode,
-        PythonModuleSource, PythonPackageResource,
+        BytecodeOptimizationLevel, DataLocation, PythonEggFile, PythonExtensionModule,
+        PythonModuleBytecode, PythonModuleSource, PythonPackageResource,
     },
     anyhow::Result,
     itertools::Itertools,
@@ -82,7 +82,7 @@ pub enum PythonFileResource {
     /// A Python egg.
     ///
     /// i.e. a .egg file.
-    EggFile { path: PathBuf },
+    EggFile(PythonEggFile),
 
     /// A Python path extension file.
     ///
@@ -348,9 +348,9 @@ impl PythonResourceIterator {
                     ))
                 }
             }
-            Some("egg") => PythonFileResource::EggFile {
-                path: path.to_path_buf(),
-            },
+            Some("egg") => PythonFileResource::EggFile(PythonEggFile {
+                data: DataLocation::Path(path.to_path_buf()),
+            }),
             Some("pth") => PythonFileResource::PthFile {
                 path: path.to_path_buf(),
             },
@@ -753,7 +753,12 @@ mod tests {
         let resources = PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect_vec();
         assert_eq!(resources.len(), 1);
 
-        assert_eq!(resources[0], PythonFileResource::EggFile { path: egg_path });
+        assert_eq!(
+            resources[0],
+            PythonFileResource::EggFile(PythonEggFile {
+                data: DataLocation::Path(egg_path)
+            })
+        );
     }
 
     #[test]
