@@ -305,6 +305,10 @@ impl<'a> From<&'a PythonResource> for Value {
 
             PythonResource::Resource(data) => Value::new(PythonResourceData { data: data.clone() }),
 
+            PythonResource::DistributionResource(_) => {
+                panic!("distribution resource files not yet supported");
+            }
+
             PythonResource::ExtensionModuleDynamicLibrary(em) => {
                 Value::new(PythonExtensionModule {
                     em: PythonExtensionModuleFlavor::DynamicLibrary(em.clone()),

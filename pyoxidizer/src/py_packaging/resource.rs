@@ -369,6 +369,31 @@ impl PythonPackageResource {
     }
 }
 
+/// Represents a file defining Python package metadata.
+///
+/// Instances of this correspond to files in a `<package>-<version>.dist-info`
+/// or `.egg-info` directory.
+///
+/// In terms of `importlib.metadata` terminology, instances correspond to
+/// files in a `Distribution`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PythonPackageMetadataResource {
+    /// The name of the Python package this resource is associated with.
+    pub package: String,
+
+    /// Version string of Python package.
+    pub version: String,
+
+    /// Name of this resource within the distribution.
+    ///
+    /// Corresponds to the file name in the `.dist-info` directory for this
+    /// package distribution.
+    pub name: String,
+
+    /// The raw content of the distribution resource.
+    pub data: DataLocation,
+}
+
 /// Represents an extension module that can be packaged.
 ///
 /// This is like a light version of `ExtensionModule`.
@@ -465,6 +490,8 @@ pub enum PythonResource {
     ModuleBytecode(PythonModuleBytecode),
     /// A non-module resource file.
     Resource(PythonPackageResource),
+    /// A file in a Python package distribution metadata collection.
+    DistributionResource(PythonPackageMetadataResource),
     /// An extension module that is represented by a dynamic library.
     ExtensionModuleDynamicLibrary(PythonExtensionModule),
     /// An extension module that was built from source and can be statically linked.
@@ -485,6 +512,9 @@ impl PythonResource {
             PythonResource::Resource(resource) => {
                 format!("{}.{}", resource.leaf_package, resource.relative_name)
             }
+            PythonResource::DistributionResource(resource) => {
+                format!("{}:{}", resource.package, resource.name)
+            }
             PythonResource::ExtensionModuleDynamicLibrary(em) => em.name.clone(),
             PythonResource::ExtensionModuleStaticallyLinked(em) => em.name.clone(),
             PythonResource::EggFile(_) => "".to_string(),
@@ -498,6 +528,7 @@ impl PythonResource {
             PythonResource::ModuleBytecode(m) => &m.name,
             PythonResource::ModuleBytecodeRequest(m) => &m.name,
             PythonResource::Resource(resource) => &resource.leaf_package,
+            PythonResource::DistributionResource(resource) => &resource.package,
             PythonResource::ExtensionModuleDynamicLibrary(em) => &em.name,
             PythonResource::ExtensionModuleStaticallyLinked(em) => &em.name,
             PythonResource::EggFile(_) => return false,
