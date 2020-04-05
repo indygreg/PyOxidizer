@@ -38,7 +38,6 @@ mod logging;
 mod project_building;
 mod project_layout;
 mod projectmgmt;
-#[allow(unused)]
 mod py_packaging;
 mod python_distributions;
 pub mod starlark;
