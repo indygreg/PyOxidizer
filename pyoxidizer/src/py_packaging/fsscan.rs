@@ -13,7 +13,7 @@ use {
         PythonModuleBytecode, PythonModuleSource, PythonPackageResource, PythonPathExtension,
         PythonResource,
     },
-    anyhow::Result,
+    anyhow::{Error, Result},
     itertools::Itertools,
     std::collections::{BTreeMap, HashSet},
     std::convert::TryFrom,
@@ -45,7 +45,7 @@ pub fn walk_tree_files(path: &Path) -> Box<dyn Iterator<Item = walkdir::DirEntry
 }
 
 #[derive(Debug, PartialEq)]
-pub struct ResourceFile {
+struct ResourceFile {
     /// Filesystem path of this resource.
     pub full_path: PathBuf,
 
@@ -57,7 +57,7 @@ pub struct ResourceFile {
 ///
 /// TODO unify with PythonResource.
 #[derive(Debug, PartialEq)]
-pub enum PythonFileResource {
+enum PythonFileResource {
     /// Python module source code.
     ///
     /// i.e. a .py file.
@@ -73,9 +73,6 @@ pub enum PythonFileResource {
     /// i.e. a .so or .pyd file.
     ExtensionModule(PythonExtensionModule),
 
-    /// A non-module Python resource.
-    Resource(PythonPackageResource),
-
     /// Internal variant to track resources.
     ///
     /// Should not be encountered outside this module.
@@ -90,6 +87,28 @@ pub enum PythonFileResource {
     ///
     /// i.e. a .pth file.
     PthFile(PythonPathExtension),
+}
+
+impl TryFrom<&PythonFileResource> for PythonResource {
+    type Error = Error;
+
+    fn try_from(resource: &PythonFileResource) -> Result<PythonResource> {
+        match resource {
+            PythonFileResource::Source(m) => Ok(PythonResource::ModuleSource(m.clone())),
+
+            PythonFileResource::Bytecode(m) => Ok(PythonResource::ModuleBytecode(m.clone())),
+
+            PythonFileResource::ResourceFile(_) => panic!("ResourceFile variant unexpected"),
+
+            PythonFileResource::ExtensionModule(em) => {
+                Ok(PythonResource::ExtensionModuleDynamicLibrary(em.clone()))
+            }
+
+            PythonFileResource::EggFile(egg) => Ok(PythonResource::EggFile(egg.clone())),
+
+            PythonFileResource::PthFile(pth) => Ok(PythonResource::PathExtension(pth.clone())),
+        }
+    }
 }
 
 pub struct PythonResourceIterator {

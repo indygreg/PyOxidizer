@@ -8,11 +8,10 @@ Defines primitives representing Python resources.
 
 use {
     super::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode},
-    super::fsscan::{is_package_from_path, PythonFileResource},
+    super::fsscan::is_package_from_path,
     crate::app_packaging::resource::{FileContent, FileManifest},
-    anyhow::{Context, Error, Result},
+    anyhow::{Context, Result},
     std::collections::BTreeSet,
-    std::convert::TryFrom,
     std::path::{Path, PathBuf},
 };
 
@@ -474,32 +473,6 @@ pub enum PythonResource {
     EggFile(PythonEggFile),
     /// A path extension.
     PathExtension(PythonPathExtension),
-}
-
-impl TryFrom<&PythonFileResource> for PythonResource {
-    type Error = Error;
-
-    fn try_from(resource: &PythonFileResource) -> Result<PythonResource> {
-        match resource {
-            PythonFileResource::Source(m) => Ok(PythonResource::ModuleSource(m.clone())),
-
-            PythonFileResource::Bytecode(m) => Ok(PythonResource::ModuleBytecode(m.clone())),
-
-            PythonFileResource::Resource(resource) => {
-                Ok(PythonResource::Resource(resource.clone()))
-            }
-
-            PythonFileResource::ResourceFile(_) => panic!("ResourceFile variant unexpected"),
-
-            PythonFileResource::ExtensionModule(em) => {
-                Ok(PythonResource::ExtensionModuleDynamicLibrary(em.clone()))
-            }
-
-            PythonFileResource::EggFile(egg) => Ok(PythonResource::EggFile(egg.clone())),
-
-            PythonFileResource::PthFile(pth) => Ok(PythonResource::PathExtension(pth.clone())),
-        }
-    }
 }
 
 impl PythonResource {
