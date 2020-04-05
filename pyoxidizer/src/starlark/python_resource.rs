@@ -4,8 +4,8 @@
 
 use {
     crate::py_packaging::resource::{
-        BytecodeModuleSource, BytecodeOptimizationLevel, ExtensionModuleData, PythonResource,
-        ResourceData, SourceModule as RawSourceModule,
+        BytecodeModuleSource, BytecodeOptimizationLevel, ExtensionModuleData,
+        PythonModuleSource as RawSourceModule, PythonResource, ResourceData,
     },
     crate::py_packaging::standalone_distribution::DistributionExtensionModule,
     starlark::environment::Environment,

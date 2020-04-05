@@ -9,7 +9,7 @@ Scanning the filesystem for Python resources.
 use {
     super::distribution::PythonModuleSuffixes,
     super::resource::{
-        BytecodeModule, BytecodeOptimizationLevel, DataLocation, ResourceData, SourceModule,
+        BytecodeModule, BytecodeOptimizationLevel, DataLocation, PythonModuleSource, ResourceData,
     },
     anyhow::Result,
     itertools::Itertools,
@@ -58,7 +58,7 @@ pub enum PythonFileResource {
     /// Python module source code.
     ///
     /// i.e. a .py file.
-    Source(SourceModule),
+    Source(PythonModuleSource),
 
     /// A Python module bytecode file.
     ///
@@ -275,7 +275,7 @@ impl PythonResourceIterator {
 
                 self.seen_packages.insert(package.clone());
 
-                PythonFileResource::Source(SourceModule {
+                PythonFileResource::Source(PythonModuleSource {
                     name: full_module_name,
                     source: DataLocation::Path(path.to_path_buf()),
                     is_package: is_package_from_path(&path),
@@ -567,7 +567,7 @@ mod tests {
 
         assert_eq!(
             resources[0],
-            PythonFileResource::Source(SourceModule {
+            PythonFileResource::Source(PythonModuleSource {
                 name: "acme".to_string(),
                 source: DataLocation::Path(acme_path.join("__init__.py")),
                 is_package: true,
@@ -575,7 +575,7 @@ mod tests {
         );
         assert_eq!(
             resources[1],
-            PythonFileResource::Source(SourceModule {
+            PythonFileResource::Source(PythonModuleSource {
                 name: "acme.a".to_string(),
                 source: DataLocation::Path(acme_a_path.join("__init__.py")),
                 is_package: true,
@@ -583,7 +583,7 @@ mod tests {
         );
         assert_eq!(
             resources[2],
-            PythonFileResource::Source(SourceModule {
+            PythonFileResource::Source(PythonModuleSource {
                 name: "acme.a.foo".to_string(),
                 source: DataLocation::Path(acme_a_path.join("foo.py")),
                 is_package: false,
@@ -591,7 +591,7 @@ mod tests {
         );
         assert_eq!(
             resources[3],
-            PythonFileResource::Source(SourceModule {
+            PythonFileResource::Source(PythonModuleSource {
                 name: "acme.bar".to_string(),
                 source: DataLocation::Path(acme_bar_path.join("__init__.py")),
                 is_package: true,
@@ -617,7 +617,7 @@ mod tests {
 
         assert_eq!(
             resources[0],
-            PythonFileResource::Source(SourceModule {
+            PythonFileResource::Source(PythonModuleSource {
                 name: "acme".to_string(),
                 source: DataLocation::Path(acme_path.join("__init__.py")),
                 is_package: true,
@@ -625,7 +625,7 @@ mod tests {
         );
         assert_eq!(
             resources[1],
-            PythonFileResource::Source(SourceModule {
+            PythonFileResource::Source(PythonModuleSource {
                 name: "acme.bar".to_string(),
                 source: DataLocation::Path(acme_path.join("bar.py")),
                 is_package: false,
@@ -765,7 +765,7 @@ mod tests {
 
         assert_eq!(
             resources[0],
-            PythonFileResource::Source(SourceModule {
+            PythonFileResource::Source(PythonModuleSource {
                 name: "foo".to_string(),
                 source: DataLocation::Path(package_path.join("__init__.py")),
                 is_package: true,
@@ -773,7 +773,7 @@ mod tests {
         );
         assert_eq!(
             resources[1],
-            PythonFileResource::Source(SourceModule {
+            PythonFileResource::Source(PythonModuleSource {
                 name: "foo.bar".to_string(),
                 source: DataLocation::Path(package_path.join("bar.py")),
                 is_package: false,
@@ -830,7 +830,7 @@ mod tests {
 
         assert_eq!(
             resources[0],
-            PythonFileResource::Source(SourceModule {
+            PythonFileResource::Source(PythonModuleSource {
                 name: "foo".to_string(),
                 source: DataLocation::Path(tp.join("foo.py")),
                 is_package: false,
@@ -858,7 +858,7 @@ mod tests {
         assert_eq!(
             resources,
             vec![
-                PythonFileResource::Source(SourceModule {
+                PythonFileResource::Source(PythonModuleSource {
                     name: "foo".to_string(),
                     source: DataLocation::Path(module_path),
                     is_package: true,
@@ -894,7 +894,7 @@ mod tests {
         assert_eq!(
             resources,
             vec![
-                PythonFileResource::Source(SourceModule {
+                PythonFileResource::Source(PythonModuleSource {
                     name: "foo".to_string(),
                     source: DataLocation::Path(module_path),
                     is_package: true,

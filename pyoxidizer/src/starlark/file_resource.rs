@@ -531,7 +531,7 @@ mod tests {
         super::super::testutil::*,
         super::*,
         crate::py_packaging::resource::DataLocation,
-        crate::py_packaging::resource::{ResourceData, SourceModule},
+        crate::py_packaging::resource::{PythonModuleSource, ResourceData},
         std::path::PathBuf,
     };
 
@@ -552,7 +552,7 @@ mod tests {
         });
 
         let v = Value::new(PythonSourceModule {
-            module: SourceModule {
+            module: PythonModuleSource {
                 name: "foo.bar".to_string(),
                 source: DataLocation::Memory(vec![]),
                 is_package: false,

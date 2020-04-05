@@ -135,9 +135,9 @@ impl DataLocation {
     }
 }
 
-/// A Python source module agnostic of location.
+/// A Python module defined via source code.
 #[derive(Clone, Debug, PartialEq)]
-pub struct SourceModule {
+pub struct PythonModuleSource {
     /// The fully qualified Python module name.
     pub name: String,
     /// Python source code.
@@ -146,7 +146,7 @@ pub struct SourceModule {
     pub is_package: bool,
 }
 
-impl SourceModule {
+impl PythonModuleSource {
     /// Resolve the package containing this module.
     ///
     /// If this module is a package, returns the name of self.
@@ -443,7 +443,7 @@ impl ExtensionModuleData {
 #[derive(Clone, Debug)]
 pub enum PythonResource {
     /// A module defined by source code.
-    ModuleSource(SourceModule),
+    ModuleSource(PythonModuleSource),
     /// A module defined by a request to generate bytecode from source.
     ModuleBytecodeRequest(BytecodeModuleSource),
     /// A module defined by existing bytecode.
@@ -462,7 +462,7 @@ impl TryFrom<&PythonFileResource> for PythonResource {
 
     fn try_from(resource: &PythonFileResource) -> Result<PythonResource> {
         match resource {
-            PythonFileResource::Source(m) => Ok(PythonResource::ModuleSource(SourceModule {
+            PythonFileResource::Source(m) => Ok(PythonResource::ModuleSource(PythonModuleSource {
                 name: m.name.clone(),
                 source: m.source.to_memory()?,
                 is_package: m.is_package,
@@ -634,14 +634,14 @@ mod tests {
     fn test_source_module_add_to_manifest_top_level() -> Result<()> {
         let mut m = FileManifest::default();
 
-        SourceModule {
+        PythonModuleSource {
             name: "foo".to_string(),
             source: DataLocation::Memory(vec![]),
             is_package: false,
         }
         .add_to_file_manifest(&mut m, ".")?;
 
-        SourceModule {
+        PythonModuleSource {
             name: "bar".to_string(),
             source: DataLocation::Memory(vec![]),
             is_package: false,
@@ -660,7 +660,7 @@ mod tests {
     fn test_source_module_add_to_manifest_top_level_package() -> Result<()> {
         let mut m = FileManifest::default();
 
-        SourceModule {
+        PythonModuleSource {
             name: "foo".to_string(),
             source: DataLocation::Memory(vec![]),
             is_package: true,
@@ -678,7 +678,7 @@ mod tests {
     fn test_source_module_add_to_manifest_missing_parent() -> Result<()> {
         let mut m = FileManifest::default();
 
-        SourceModule {
+        PythonModuleSource {
             name: "root.parent.child".to_string(),
             source: DataLocation::Memory(vec![]),
             is_package: false,
@@ -698,7 +698,7 @@ mod tests {
     fn test_source_module_add_to_manifest_missing_parent_package() -> Result<()> {
         let mut m = FileManifest::default();
 
-        SourceModule {
+        PythonModuleSource {
             name: "root.parent.child".to_string(),
             source: DataLocation::Memory(vec![]),
             is_package: true,
@@ -719,7 +719,7 @@ mod tests {
 
     #[test]
     fn test_is_in_packages() {
-        let source = PythonResource::ModuleSource(SourceModule {
+        let source = PythonResource::ModuleSource(PythonModuleSource {
             name: "foo".to_string(),
             source: DataLocation::Memory(vec![]),
             is_package: false,

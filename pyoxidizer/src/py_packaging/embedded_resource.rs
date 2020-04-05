@@ -12,7 +12,7 @@ use {
     super::resource::{
         has_dunder_file, packages_from_module_name, packages_from_module_names,
         BytecodeModuleSource, BytecodeOptimizationLevel, DataLocation, ExtensionModuleData,
-        ResourceData, SourceModule,
+        PythonModuleSource, ResourceData,
     },
     super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::DistributionExtensionModule,
@@ -230,12 +230,12 @@ impl EmbeddedPythonResourcesPrePackaged {
     }
 
     /// Obtain `SourceModule` in this instance.
-    pub fn get_in_memory_module_sources(&self) -> BTreeMap<String, SourceModule> {
+    pub fn get_in_memory_module_sources(&self) -> BTreeMap<String, PythonModuleSource> {
         BTreeMap::from_iter(self.modules.iter().filter_map(|(name, module)| {
             if let Some(location) = &module.in_memory_source {
                 Some((
                     name.clone(),
-                    SourceModule {
+                    PythonModuleSource {
                         name: name.clone(),
                         is_package: module.is_package,
                         source: location.clone(),
@@ -326,7 +326,7 @@ impl EmbeddedPythonResourcesPrePackaged {
     }
 
     /// Add a source module to the collection of embedded source modules.
-    pub fn add_in_memory_module_source(&mut self, module: &SourceModule) -> Result<()> {
+    pub fn add_in_memory_module_source(&mut self, module: &PythonModuleSource) -> Result<()> {
         self.check_policy(ResourceLocation::InMemory)?;
 
         let entry = self.modules.entry(module.name.clone()).or_insert_with(|| {
@@ -344,7 +344,7 @@ impl EmbeddedPythonResourcesPrePackaged {
     /// Add module source to be loaded from a file on the filesystem relative to the resources.
     pub fn add_relative_path_module_source(
         &mut self,
-        module: &SourceModule,
+        module: &PythonModuleSource,
         prefix: &str,
     ) -> Result<()> {
         self.check_policy(ResourceLocation::RelativePath)?;
@@ -1076,7 +1076,7 @@ impl EmbeddedPythonResourcesPrePackaged {
                     }
                     ModuleLocation::RelativePath(ref prefix) => {
                         if m.relative_path_module_source.is_none() {
-                            let module = SourceModule {
+                            let module = PythonModuleSource {
                                 name: package.clone(),
                                 source: DataLocation::Memory(vec![]),
                                 is_package: true,
@@ -1278,7 +1278,7 @@ mod tests {
     #[test]
     fn test_add_in_memory_source_module() -> Result<()> {
         let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
-        r.add_in_memory_module_source(&SourceModule {
+        r.add_in_memory_module_source(&PythonModuleSource {
             name: "foo".to_string(),
             source: DataLocation::Memory(vec![42]),
             is_package: false,
@@ -1304,7 +1304,7 @@ mod tests {
             &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
         );
         r.add_relative_path_module_source(
-            &SourceModule {
+            &PythonModuleSource {
                 name: "foo".to_string(),
                 source: DataLocation::Memory(vec![42]),
                 is_package: false,
@@ -1342,7 +1342,7 @@ mod tests {
     #[test]
     fn test_add_in_memory_source_module_parents() -> Result<()> {
         let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
-        r.add_in_memory_module_source(&SourceModule {
+        r.add_in_memory_module_source(&PythonModuleSource {
             name: "root.parent.child".to_string(),
             source: DataLocation::Memory(vec![42]),
             is_package: true,
@@ -1621,14 +1621,14 @@ mod tests {
         let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
         assert_eq!(r.find_dunder_file()?.len(), 0);
 
-        r.add_in_memory_module_source(&SourceModule {
+        r.add_in_memory_module_source(&PythonModuleSource {
             name: "foo.bar".to_string(),
             source: DataLocation::Memory(vec![]),
             is_package: false,
         })?;
         assert_eq!(r.find_dunder_file()?.len(), 0);
 
-        r.add_in_memory_module_source(&SourceModule {
+        r.add_in_memory_module_source(&PythonModuleSource {
             name: "baz".to_string(),
             source: DataLocation::Memory(Vec::from("import foo; if __file__ == 'ignored'")),
             is_package: false,

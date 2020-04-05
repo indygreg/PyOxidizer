@@ -17,7 +17,7 @@ use {
     super::libpython::{derive_importlib, ImportlibBytecode},
     super::packaging_tool::bootstrap_packaging_tools,
     super::resource::{
-        BytecodeModuleSource, ExtensionModuleData, PythonResource, ResourceData, SourceModule,
+        BytecodeModuleSource, ExtensionModuleData, PythonModuleSource, PythonResource, ResourceData,
     },
     super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::DistributionExtensionModule,
@@ -307,7 +307,7 @@ impl PythonDistribution for WindowsEmbeddableDistribution {
         unimplemented!();
     }
 
-    fn source_modules(&self) -> Result<Vec<SourceModule>> {
+    fn source_modules(&self) -> Result<Vec<PythonModuleSource>> {
         // Windows embeddable distributions don't have source modules.
         Ok(Vec::new())
     }
@@ -546,7 +546,7 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
         &self.python_exe
     }
 
-    fn in_memory_module_sources(&self) -> BTreeMap<String, SourceModule> {
+    fn in_memory_module_sources(&self) -> BTreeMap<String, PythonModuleSource> {
         self.resources.get_in_memory_module_sources()
     }
 
@@ -558,14 +558,14 @@ impl PythonBinaryBuilder for WindowsEmbeddedablePythonExecutableBuilder {
         self.resources.get_in_memory_package_resources()
     }
 
-    fn add_in_memory_module_source(&mut self, module: &SourceModule) -> Result<()> {
+    fn add_in_memory_module_source(&mut self, module: &PythonModuleSource) -> Result<()> {
         self.resources.add_in_memory_module_source(module)
     }
 
     fn add_relative_path_module_source(
         &mut self,
         prefix: &str,
-        module: &SourceModule,
+        module: &PythonModuleSource,
     ) -> Result<()> {
         self.resources
             .add_relative_path_module_source(module, prefix)

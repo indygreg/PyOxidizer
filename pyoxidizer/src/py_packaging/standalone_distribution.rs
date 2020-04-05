@@ -23,7 +23,7 @@ use {
     super::libpython::{derive_importlib, link_libpython, ImportlibBytecode},
     super::resource::{
         BytecodeModuleSource, BytecodeOptimizationLevel, DataLocation, ExtensionModuleData,
-        PythonResource, ResourceData, SourceModule,
+        PythonModuleSource, PythonResource, ResourceData,
     },
     super::resources_policy::PythonResourcesPolicy,
     crate::app_packaging::resource::FileContent,
@@ -1137,13 +1137,13 @@ impl PythonDistribution for StandaloneDistribution {
         Ok(res)
     }
 
-    fn source_modules(&self) -> Result<Vec<SourceModule>> {
+    fn source_modules(&self) -> Result<Vec<PythonModuleSource>> {
         self.py_modules
             .iter()
             .map(|(name, path)| {
                 let is_package = is_package_from_path(&path);
 
-                Ok(SourceModule {
+                Ok(PythonModuleSource {
                     name: name.clone(),
                     source: DataLocation::Path(path.clone()),
                     is_package,
@@ -1416,7 +1416,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &self.python_exe
     }
 
-    fn in_memory_module_sources(&self) -> BTreeMap<String, SourceModule> {
+    fn in_memory_module_sources(&self) -> BTreeMap<String, PythonModuleSource> {
         self.resources.get_in_memory_module_sources()
     }
 
@@ -1428,14 +1428,14 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.resources.get_in_memory_package_resources()
     }
 
-    fn add_in_memory_module_source(&mut self, module: &SourceModule) -> Result<()> {
+    fn add_in_memory_module_source(&mut self, module: &PythonModuleSource) -> Result<()> {
         self.resources.add_in_memory_module_source(module)
     }
 
     fn add_relative_path_module_source(
         &mut self,
         prefix: &str,
-        module: &SourceModule,
+        module: &PythonModuleSource,
     ) -> Result<()> {
         self.resources
             .add_relative_path_module_source(module, prefix)
