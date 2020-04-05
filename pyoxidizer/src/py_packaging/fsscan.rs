@@ -15,7 +15,7 @@ use {
     },
     anyhow::Result,
     itertools::Itertools,
-    std::collections::{BTreeMap, HashSet},
+    std::collections::HashSet,
     std::ffi::OsStr,
     std::path::{Path, PathBuf},
 };
@@ -463,22 +463,6 @@ pub fn find_python_resources(
     suffixes: &PythonModuleSuffixes,
 ) -> PythonResourceIterator {
     PythonResourceIterator::new(root_path, suffixes)
-}
-
-pub fn find_python_modules(
-    root_path: &Path,
-    suffixes: &PythonModuleSuffixes,
-) -> Result<BTreeMap<String, Vec<u8>>> {
-    let mut mods = BTreeMap::new();
-
-    for resource in find_python_resources(root_path, suffixes) {
-        if let PythonResource::ModuleSource(module) = resource? {
-            let data = module.source.resolve()?;
-            mods.insert(module.name, data);
-        }
-    }
-
-    Ok(mods)
 }
 
 #[cfg(test)]
