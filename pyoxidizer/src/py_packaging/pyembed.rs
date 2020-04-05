@@ -44,9 +44,9 @@ pub fn derive_python_config(
          quiet: {},\n    \
          use_hash_seed: {},\n    \
          verbose: {},\n    \
-         frozen_importlib_data: include_bytes!(r#\"{}\"#),\n    \
-         frozen_importlib_external_data: include_bytes!(r#\"{}\"#),\n    \
-         embedded_resources_data: include_bytes!(r#\"{}\"#),\n    \
+         frozen_importlib_bytecode: include_bytes!(r#\"{}\"#),\n    \
+         frozen_importlib_external_bytecode: include_bytes!(r#\"{}\"#),\n    \
+         packed_resources: include_bytes!(r#\"{}\"#),\n    \
          extra_extension_modules: vec![],\n    \
          argvb: false,\n    \
          sys_frozen: {},\n    \

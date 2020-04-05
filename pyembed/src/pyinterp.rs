@@ -49,13 +49,13 @@ fn make_custom_frozen_modules(config: &PythonConfig) -> [pyffi::_frozen; 3] {
     [
         pyffi::_frozen {
             name: FROZEN_IMPORTLIB_NAME.as_ptr() as *const i8,
-            code: config.frozen_importlib_data.as_ptr(),
-            size: config.frozen_importlib_data.len() as i32,
+            code: config.frozen_importlib_bytecode.as_ptr(),
+            size: config.frozen_importlib_bytecode.len() as i32,
         },
         pyffi::_frozen {
             name: FROZEN_IMPORTLIB_EXTERNAL_NAME.as_ptr() as *const i8,
-            code: config.frozen_importlib_external_data.as_ptr(),
-            size: config.frozen_importlib_external_data.len() as i32,
+            code: config.frozen_importlib_external_bytecode.as_ptr(),
+            size: config.frozen_importlib_external_bytecode.len() as i32,
         },
         pyffi::_frozen {
             name: null(),
@@ -276,7 +276,7 @@ impl<'a> MainPythonInterpreter<'a> {
             origin,
             register_filesystem_importer: self.config.filesystem_importer,
             sys_paths,
-            embedded_resources_data: config.embedded_resources_data,
+            packed_resources: config.packed_resources,
         };
 
         if config.use_custom_importlib {

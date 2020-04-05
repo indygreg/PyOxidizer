@@ -962,7 +962,7 @@ pub struct InitModuleState {
     pub sys_paths: Vec<String>,
 
     /// Raw data describing embedded resources.
-    pub embedded_resources_data: &'static [u8],
+    pub packed_resources: &'static [u8],
 }
 
 /// Holds reference to next module state struct.
@@ -991,7 +991,7 @@ struct ModuleState {
     sys_paths: Vec<String>,
 
     /// Raw data constituting embedded resources.
-    embedded_resources_data: &'static [u8],
+    packed_resources: &'static [u8],
 
     /// Whether setup() has been called.
     setup_called: bool,
@@ -1035,7 +1035,7 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
         state.register_filesystem_importer = (*NEXT_MODULE_STATE).register_filesystem_importer;
         // TODO we could move the value if we wanted to avoid the clone().
         state.sys_paths = (*NEXT_MODULE_STATE).sys_paths.clone();
-        state.embedded_resources_data = (*NEXT_MODULE_STATE).embedded_resources_data;
+        state.packed_resources = (*NEXT_MODULE_STATE).packed_resources;
     }
 
     state.setup_called = false;
@@ -1096,7 +1096,7 @@ fn module_setup(
             &bootstrap_module,
             &marshal_module,
             decode_source,
-            &state.embedded_resources_data,
+            &state.packed_resources,
             state.current_exe.clone(),
             state.origin.clone(),
         )?)),
