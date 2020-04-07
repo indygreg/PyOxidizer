@@ -21,6 +21,7 @@ instructions.
    packaging_trimming_resources
    packaging_importer
    packaging_resource_files
+   packaging_performance
    packaging_pitfalls
    packaging_masquerading
    packaging_binary_compatibility

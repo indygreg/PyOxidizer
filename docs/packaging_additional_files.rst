@@ -8,7 +8,7 @@ By default PyOxidizer will embed Python resources such as modules into
 the compiled executable. This is the ideal method to produce distributable
 Python applications because it can keep the entire application self-contained
 to a single executable and can result in
-:ref:`performance wins <better_performance>`.
+:ref:`performance wins <packaging_performance>`.
 
 But sometimes embedded resources into the binary isn't desired or doesn't
 work. Fear not: PyOxidizer has you covered!
