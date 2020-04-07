@@ -190,17 +190,38 @@ See :ref:`resource_loader_support` for details.
    ``ResourceLoader`` is deprecated as of Python 3.7. Code should be ported
    to ``ResourceReader`` / ``importlib.resources`` if possible.
 
+.. _packaging_importlib_metadata_compatibility:
+
 ``importlib.metadata`` Compatibility
 ====================================
 
-While ``PyOxidizerFinder`` implements ``find_distributions()`` and provides
-the required hook for ``importlib.metadata`` to resolve data, the
-implementation is not yet complete.
+``PyOxidizerFinder`` implements ``find_distributions()`` and therefore provides
+the required hook for ``importlib.metadata`` to resolve ``Distribution``
+instances. However, the returned objects do not implement the full
+``Distribution`` interface.
 
-.. important::
+This is because there is no available ``Distribution`` base class in Python
+3.7 for PyOxidizer to extend with its custom functionality. We could
+implement all of this functionality, but it would be a lot of work: it
+would be easier to wait until PyOxidizer requires Python 3.8 and then we
+can use the types in ``importlib.metadata`` directly.
 
-   ``find_distributions()`` will almost certainly return ``[]`` instead of
-   something meaningful.
+The ``PyOxidizerDistribution`` instances returned by
+``PyOxidizerFinder.find_distributions()`` have the following behavior:
 
-We have plans to implement support for ``find_distributions()`` in a future
-release - likely after PyOxidizer switches to requiring Python 3.8+.
+* ``read_text(filename)`` will return a ``str`` on success or raise
+  ``IOError`` on failure.
+* The ``metadata`` property will return an ``email.message.Message`` instance
+  from the parsed ``METADATA`` or ``PKG-INFO`` file, just like the standard
+  library. ``IOError`` will be raised if these metadata files cannot be found.
+* The ``version`` property will resolve to a ``str`` on success or raise
+  ``IOError`` on failure to resolve ``metadata``.
+* The ``entry_points``, ``files``, and ``requires`` properties/attributes
+  will raise ``NotImplementedError`` on access.
+
+In addition, ``PyOxidizerFinder.find_distributions()`` ignores the ``path``
+attribute of the passed ``Context`` instance. Only the ``name`` attribute
+is consulted. If ``name`` is ``None``, all packages with registered
+distribution files will be returned. Otherwise the returned ``list``
+contains at most 1 ``PyOxidizerDistribution`` corresponding to the
+requested package ``name``.

@@ -13,6 +13,7 @@ links = "pythonXY"
 
 [dependencies]
 # Update documentation in lib.rs when new dependencies are added.
+anyhow = "1.0"
 cpython = { git = "https://github.com/dgrunwald/rust-cpython", rev = "387e87d9deb6b678508888239f9f87dc36973d3f" }
 jemalloc-sys = { version = "0.3", optional = true }
 lazy_static = "1.4"

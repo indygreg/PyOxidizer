@@ -243,7 +243,7 @@ fn load_dynamic_library(
 }
 
 /// Holds state for the custom MetaPathFinder.
-struct ImporterState {
+pub(crate) struct ImporterState {
     /// `imp` Python module.
     imp_module: PyModule,
     /// `sys` Python module.
@@ -265,7 +265,7 @@ struct ImporterState {
     /// Bytecode optimization level currently in effect.
     optimize_level: OptimizeLevel,
     /// Holds state about importable resources.
-    resources_state: PythonResourcesState<'static, u8>,
+    pub resources_state: PythonResourcesState<'static, u8>,
 }
 
 impl ImporterState {
@@ -441,7 +441,7 @@ py_class!(class PyOxidizerFinder |py| {
     }
 
     // importlib.metadata interface.
-    def find_distributions(&self, context: Option<PyObject>) -> PyResult<PyObject> {
+    def find_distributions(&self, context: Option<PyObject> = None) -> PyResult<PyObject> {
         self.find_distributions_impl(py, context)
     }
 });
@@ -747,7 +747,7 @@ impl PyOxidizerFinder {
             (None, None)
         };
 
-        state.resources_state.find_distributions(py, path, name)
+        super::package_metadata::find_distributions(py, state.clone(), path, name)
     }
 }
 

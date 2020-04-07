@@ -76,6 +76,15 @@ Bug Fixes
 New Features
 ^^^^^^^^^^^^
 
+* Python resource scanning now recognizes ``*.dist-info`` and ``*.egg-info``
+  directories as package distribution metadata. Files within these directories
+  are exposed to Starlark as :ref:`config_python_package_distribution_resource`
+  instances. These resources can be added to the embedded resources payload
+  and made available for loading from memory or the filesystem, just like
+  any other resource. The custom Python importer implements ``get_distributions()``
+  and returns objects that expose package distribution files. However,
+  functionality of the returned *distribution* objects is not yet complete.
+  See :ref:`packaging_importlib_metadata_compatibility` for details.
 * The custom Python importer now implements ``get_data(path)``, allowing loading
   of resources from filesystem paths (#139).
 * The ``PythonDistribution.to_python_executable()`` Starlark method now accepts
@@ -90,8 +99,9 @@ New Features
   ``PythonExecutable.add_filesystem_relative_module_bytecode()``,
   ``PythonExecutable.add_filesystem_relative_resource_data()``,
   ``PythonExecutable.add_filesystem_relative_extension_module()``,
-  ``PythonExecutable.add_filesystem_relative_python_resource()``, and
-  ``PythonExecutable.add_filesystem_relative_python_resources()``. Unlike
+  ``PythonExecutable.add_filesystem_relative_python_resource()``,
+  ``PythonExecutable.add_filesystem_relative_package_distribution_resource()``,
+  and ``PythonExecutable.add_filesystem_relative_python_resources()``. Unlike
   adding Python resources to ``FileManifest`` instances, Python resources added
   this way have their metadata serialized into the built executable. This allows
   the special Python module importer present in built binaries to service the

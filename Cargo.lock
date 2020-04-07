@@ -1286,6 +1286,7 @@ dependencies = [
 name = "pyembed"
 version = "0.7.0-pre"
 dependencies = [
+ "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "cpython 0.4.1 (git+https://github.com/dgrunwald/rust-cpython?rev=387e87d9deb6b678508888239f9f87dc36973d3f)",
  "jemalloc-sys 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",

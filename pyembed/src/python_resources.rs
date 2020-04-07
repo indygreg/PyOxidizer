@@ -670,16 +670,6 @@ impl<'a> PythonResourcesState<'a, u8> {
         ))
     }
 
-    /// Find package metadata distributions given search criteria.
-    pub fn find_distributions(
-        &self,
-        py: Python,
-        _name: Option<PyObject>,
-        _path: Option<PyObject>,
-    ) -> PyResult<PyObject> {
-        Ok(PyList::new(py, &[]).into_object())
-    }
-
     /// Load `builtin` modules from the Python interpreter.
     fn load_interpreter_builtin_modules(&mut self) -> Result<(), &'static str> {
         for i in 0.. {
