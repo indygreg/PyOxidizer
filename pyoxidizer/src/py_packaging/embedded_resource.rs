@@ -565,7 +565,7 @@ impl EmbeddedPythonResourcesPrePackaged {
 
         entry.is_package = true;
 
-        if entry.relative_path_package_resources.is_none() {
+        if entry.relative_path_distribution_resources.is_none() {
             entry.relative_path_distribution_resources = Some(BTreeMap::new());
         }
 
