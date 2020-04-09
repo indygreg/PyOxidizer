@@ -18,6 +18,10 @@ Later, this data structure is parsed back into composite parts. e.g.
 to a mapping of Python module names and their respective data. This
 data structure is then consulted by a Python interpreter to e.g. power
 the module `import` mechanism.
+
+This crate is developed primarily for
+[PyOxidizer](https://pyoxidizer.readthedocs.io/en/stable/). But it can
+be used outside the PyOxidizer project.
 */
 
 pub mod data;

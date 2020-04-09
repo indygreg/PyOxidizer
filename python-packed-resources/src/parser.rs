@@ -2,9 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-/*!
-Management of Python resources.
-*/
+/*! Parsing of packed resources data blobs. */
 
 use {
     super::data::{
