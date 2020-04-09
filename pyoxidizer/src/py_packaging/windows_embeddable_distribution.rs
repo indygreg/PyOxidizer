@@ -755,7 +755,6 @@ mod tests {
                 name: "_ssl".to_string(),
                 path: extract_dir.join("_ssl.pyd"),
                 distribution_dll_dependencies: vec![
-                    extract_dir.join("vcruntime140.dll"),
                     extract_dir.join("libcrypto-1_1.dll"),
                     extract_dir.join("libssl-1_1.dll"),
                     extract_dir.join("python37.dll")

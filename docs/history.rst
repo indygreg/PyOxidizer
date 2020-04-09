@@ -128,7 +128,7 @@ New Features
   distribution that is either statically or dynamically linked.
 * Support for parsing version 4 of the ``PYTHON.json`` distribution descriptor
   present in standalone Python distribution archives.
-* Default Python distributions upgraded to CPython 3.7.6.
+* Default Python distributions upgraded to CPython 3.7.7.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
