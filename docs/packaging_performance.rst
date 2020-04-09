@@ -90,6 +90,7 @@ We run the full Mercurial test harness on Linux on a Ryzen 3950X CPU using the
 following variants:
 
 * ``hg`` script with a ``#!/path/to/python3.7`` line (traditional)
+* ``hg`` PyOxidizer executable using Python's standard filesystem import (oxidized)
 * ``hg`` PyOxidizer executable using *filesystem-relative* resource loading (filesystem)
 * ``hg`` PyOxidizer executable using *in-memory* resource loading (in-memory)
 
@@ -100,15 +101,38 @@ The results are quite clear:
 +=============+==============+===========+========+
 | traditional |       11,287 |         0 |    100 |
 +-------------+--------------+-----------+--------+
+| oxidized    |       10,735 |      -552 |   95.1 |
++-------------+--------------+-----------+--------+
 | filesystem  |       10,186 |    -1,101 |   90.2 |
 +-------------+--------------+-----------+--------+
 | in-memory   |        9,883 |    -1,404 |   87.6 |
 +-------------+--------------+-----------+--------+
 
-PyOxidizer's custom importer with a full index of available resources
-that is still going to the filesystem is utilizing ~90% of the resources
-of a traditional Python process. And moving the resource data to memory
-makes PyOxidizer binaries faster yet.
+These results help us isolate specific areas of speedups:
+
+* *oxidized* over *traditional* is a rough proxy for the benefits of
+  ``python -S`` over ``python``. Although there are other factors at
+  play that may be influencing the numbers.
+* *filesystem* over *oxidized* isolates the benefits of using PyOxidizer's
+  importer instead of Python's default importer. The performance wins here
+  are due to a) avoiding excessive I/O system calls to locate the paths
+  to resources and b) functionality being implemented in Rust instead
+  of Python.
+* *in-memory* over *filesystem* isolates the benefits of avoiding
+  explicit filesystem I/O to load Python resources. The Rust code
+  backing these 2 variants is very similar. The only meaningful
+  difference is that *in-memory* constructs a Python object from
+  a memory address and *filesystem* must open and read a file using
+  standard OS mechanisms before doing so.
+
+From this data, one could draw a few conclusions:
+
+* Processing of the ``site`` module during Python interpreter
+  initialization can add substantial overhead.
+* Maintaining an index of Python resources such that you can avoid
+  discovery via filesystem I/O provides a meaningful speedup.
+* Loading Python resources from an in-memory data structure is
+  faster than incurring explicit filesystem I/O to do so.
 
 Ignoring ``site``
 =================
