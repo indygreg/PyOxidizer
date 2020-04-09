@@ -9,5 +9,11 @@
 # script. But custom compiler flags via build scripts apparently only
 # support limited options.
 
+[target.i686-unknown-linux-gnu]
+rustflags = ["-C", "link-args=-Wl,-export-dynamic"]
+
 [target.x86_64-unknown-linux-gnu]
 rustflags = ["-C", "link-args=-Wl,-export-dynamic"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-args=-rdynamic"]
