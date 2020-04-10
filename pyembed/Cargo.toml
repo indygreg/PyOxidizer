@@ -19,7 +19,7 @@ jemalloc-sys = { version = "0.3", optional = true }
 lazy_static = "1.4"
 libc = "0.2"
 python3-sys = "0.5"
-python-packed-resources = { version = "0.1.0-pre", path = "../python-packed-resources" }
+python-packed-resources = { version = "0.1.0", path = "../python-packed-resources" }
 uuid = { version = "0.8", features = ["v4"] }
 
 [target.'cfg(windows)'.dependencies]
