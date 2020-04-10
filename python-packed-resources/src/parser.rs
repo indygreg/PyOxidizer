@@ -248,7 +248,7 @@ impl<'a> ResourceParserIterator<'a> {
                             .insert(Cow::Borrowed(resource_name), Cow::Borrowed(resource_data));
                     }
 
-                    current_resource.in_memory_resources = Some(resources);
+                    current_resource.in_memory_package_resources = Some(resources);
                 }
 
                 ResourceField::InMemoryDistributionResource => {
@@ -958,14 +958,14 @@ mod tests {
     }
 
     #[test]
-    fn test_in_memory_resources_data() {
+    fn test_in_memory_package_resources() {
         let mut resources = HashMap::new();
         resources.insert(Cow::from("foo"), Cow::from(b"foovalue".to_vec()));
         resources.insert(Cow::from("another"), Cow::from(b"value2".to_vec()));
 
         let resource = Resource {
             name: Cow::from("foo"),
-            in_memory_resources: Some(resources),
+            in_memory_package_resources: Some(resources),
             ..Resource::default()
         };
 
@@ -980,7 +980,7 @@ mod tests {
 
         let entry = &resources[0];
 
-        let resources = entry.in_memory_resources.as_ref().unwrap();
+        let resources = entry.in_memory_package_resources.as_ref().unwrap();
         assert_eq!(resources.len(), 2);
         assert_eq!(resources.get("foo").unwrap().as_ref(), b"foovalue");
         assert_eq!(resources.get("another").unwrap().as_ref(), b"value2");
@@ -1334,7 +1334,7 @@ mod tests {
             in_memory_bytecode_opt1: Some(Cow::from(b"bytecodeopt1".to_vec())),
             in_memory_bytecode_opt2: Some(Cow::from(b"bytecodeopt2".to_vec())),
             in_memory_extension_module_shared_library: Some(Cow::from(b"library".to_vec())),
-            in_memory_resources: Some(in_memory_resources),
+            in_memory_package_resources: Some(in_memory_resources),
             in_memory_distribution_resources: Some(in_memory_distribution),
             in_memory_shared_library: Some(Cow::from(b"library".to_vec())),
             shared_library_dependency_names: Some(vec![Cow::from("libfoo"), Cow::from("depends")]),
@@ -1383,7 +1383,7 @@ mod tests {
             b"library"
         );
 
-        let resources = entry.in_memory_resources.as_ref().unwrap();
+        let resources = entry.in_memory_package_resources.as_ref().unwrap();
         assert_eq!(resources.len(), 2);
         assert_eq!(resources.get("foo").unwrap().as_ref(), b"foovalue");
         assert_eq!(resources.get("resource2").unwrap().as_ref(), b"value2");

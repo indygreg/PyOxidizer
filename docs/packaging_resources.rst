@@ -33,7 +33,7 @@ The following Starlark types represent individual resources:
    A Python module defined through compiled, machine-native code. On Linux,
    these are typically encountered as ``.so`` files. On Windows, ``.pyd`` files.
 
-:ref:`PythonResourceData <config_python_resources_data>`
+:ref:`PythonPackageResource <config_python_package_resource>`
    A non-module *resource file* loadable by Python resources APIs, such as
    those in ``importlib.resources``.
 
@@ -177,7 +177,7 @@ these APIs include
 *Type-aware* APIs require that the resource being passed in be a specific
 type or an error occurs. Examples of *type-aware* APIs include
 :ref:`config_python_executable_add_filesystem_relative_module_source` and
-:ref:`config_python_executable_add_in_memory_resource_data`.
+:ref:`config_python_executable_add_in_memory_package_resource`.
 
 *Type-agnostic* APIs operate on any instance of an allowed type. It is
 safe to call these APIs with any accepted type. Examples of *type-agnostic*

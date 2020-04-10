@@ -29,7 +29,7 @@ Starlark environment:
 * :ref:`config_python_extension_module`
 * :ref:`config_python_interpreter_config`
 * :ref:`config_python_package_distribution_resource`
-* :ref:`config_python_resources_data`
+* :ref:`config_python_package_resource`
 * :ref:`config_python_source_module`
 * :ref:`config_register_target`
 * :ref:`config_resolve_target`
@@ -70,7 +70,7 @@ The following custom data types are defined in the Starlark environment:
 ``PythonPackageDistributionResource``
    Represents a file containing Python package distribution metadata.
 
-``PythonResourcesData``
+``PythonPackageResource``
    Represents a non-module *resource* data file.
 
 ``PythonSourceModule``
@@ -305,10 +305,10 @@ need to build your own distribution or change the distribution manually.
 Returns a ``list`` of ``PythonSourceModule`` representing Python
 source modules present in this distribution.
 
-``PythonDistribution.resources_data(include_test=False)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonDistribution.package_resources(include_test=False)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Returns a ``list`` of ``PythonResourceData`` representing resource files
+Returns a ``list`` of ``PythonPackageResource`` representing resource files
 present in this distribution.
 
 The ``include_test`` boolean argument controls whether resources associated
@@ -379,7 +379,7 @@ This method runs ``pip install <args>`` with the specified distribution.
 
 Returns a ``list`` of objects representing Python resources installed as
 part of the operation. The types of these objects can be ``PythonSourceModule``,
-``PythonBytecodeModule``, ``PythonResourceData``, etc.
+``PythonBytecodeModule``, ``PythonPackageResource``, etc.
 
 The returned resources are typically added to a ``FileManifest`` or
 ``PythonExecutable`` to make them available to a packaged
@@ -414,7 +414,7 @@ This rule has the following arguments:
 
 Returns a ``list`` of objects representing Python resources found in the virtualenv.
 The types of these objects can be ``PythonSourceModule``, ``PythonBytecodeModule``,
-``PythonResourceData``, etc.
+``PythonPackageResource``, etc.
 
 The returned resources are typically added to a ``FileManifest`` or
 ``PythonExecutable`` to make them available to a packaged application.
@@ -442,7 +442,7 @@ It accepts the following arguments:
 
 Returns a ``list`` of objects representing Python resources found in the virtualenv.
 The types of these objects can be ``PythonSourceModule``, ``PythonBytecodeModule``,
-``PythonResourceData``, etc.
+``PythonPackageResource``, etc.
 
 The returned resources are typically added to a ``FileManifest`` or
 ``PythonExecutable`` to make them available to a packaged application.
@@ -469,7 +469,7 @@ It accepts the following arguments:
 
 Returns a ``list`` of objects representing Python resources installed
 as part of the operation. The types of these objects can be
-``PythonSourceModule``, ``PythonBytecodeModule``, ``PythonResourceData``,
+``PythonSourceModule``, ``PythonBytecodeModule``, ``PythonPackageResource``,
 etc.
 
 The returned resources are typically added to a ``FileManifest`` or
@@ -543,7 +543,9 @@ of these as *Python Resources*.
 
 Configuration files represent *Python Resources* via the types
 :ref:`config_python_source_module`, :ref:`config_python_bytecode_module`,
-:ref:`config_python_resources_data`, and :ref:`config_python_extension_module`.
+:ref:`config_python_package_resource`,
+:ref:`config_python_package_distribution_resource`,
+and :ref:`config_python_extension_module`.
 
 These are described in detail in the following sections.
 
@@ -583,14 +585,14 @@ Each instance has the following attributes:
 ``is_package`` (bool)
    Whether the module is also a Python package (or sub-package).
 
-.. _config_python_resources_data:
+.. _config_python_package_resource:
 
-``PythonResourcesData``
------------------------
+``PythonPackageResource``
+-------------------------
 
-This type represents Python resource data. Resource data is a named
-blob associated with a Python package. It is typically accessed using
-the ``importlib.resources`` API.
+This type represents a resource _file_ in a Python package. It is
+effectively a named blob associated with a Python package. It is
+typically accessed using the ``importlib.resources`` API.
 
 Each instance has the following attributes:
 
@@ -1081,42 +1083,43 @@ This method is a glorified proxy to
 depending on the :ref:`config_python_resources_policy` in effect. See these
 other methods for documentation of behavior.
 
-.. _config_python_executable_add_in_memory_resource_data:
+.. _config_python_executable_add_in_memory_package_resource:
 
-``PythonExecutable.add_in_memory_resource_data(resource)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonExecutable.add_in_memory_package_resource(resource)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This method adds a ``PythonResourceData`` instance to the
+This method adds a ``PythonPackageResource`` instance to the
 ``PythonExecutable`` instance, making that resource available
 via in-memory access.
 
 If multiple resources sharing the same ``(package, name)`` pair are added,
 the last added one is used.
 
-.. _config_python_executable_add_filesystem_relative_resource_data:
+.. _config_python_executable_add_filesystem_relative_package_resource:
 
-``PythonExecutable.add_filesystem_relative_resource_data(prefix, resource)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonExecutable.add_filesystem_relative_package_resource(prefix, resource)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This method adds a ``PythonResourceData`` instance to the ``PythonExecutable``
-instance. The resource will be materialized on the filesystem next to the
-produced executable at a path derived from the resource's attributes. The
-directory prefix for the generated file is defined by ``prefix``.
+This method adds a ``PythonPackageResource`` instance to the
+``PythonExecutable`` instance. The resource will be materialized on the
+filesystem next to the produced executable at a path derived from the
+resource's attributes. The directory prefix for the generated file is
+defined by ``prefix``.
 
 If multiple resources sharing the same ``(prefix, package, name)`` tuple are
 added, the last added one is used.
 
-.. _config_python_executable.add_resource_data:
+.. _config_python_executable.add_package_resource:
 
-``PythonExecutable.add_resource_data(resource)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonExecutable.add_package_resource(resource)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This method adds a ``PythonResourceData`` instance to the ``PythonExecutable``
-instance.
+This method adds a ``PythonPackageResource`` instance to the
+``PythonExecutable`` instance.
 
 This method is a glorified proxy to
-:ref:`config_python_executable_add_in_memory_resource_data` or
-:ref:`config_python_executable_add_filesystem_relative_resource_data`
+:ref:`config_python_executable_add_in_memory_package_resource` or
+:ref:`config_python_executable_add_filesystem_relative_package_resource`
 depending on the :ref:`config_python_resources_policy` in effect. See these
 other methods for documentation of behavior.
 
@@ -1220,7 +1223,7 @@ added one is used.
 
 This method registers a Python resource of various types for in-memory loading.
 It accepts a ``resource`` argument which can be a ``PythonSourceModule``,
-``PythonBytecodeModule``, ``PythonResourceData``, or ``PythonExtensionModule``
+``PythonBytecodeModule``, ``PythonPackageResource``, or ``PythonExtensionModule``
 and registers that resource with this instance. This method is a glorified
 proxy to the appropriate ``add_in_memory_*`` method.
 
@@ -1366,7 +1369,7 @@ replaced by what is in the other manifest.
 
 This method adds a Python resource to a ``FileManifest`` instance in
 a specified directory prefix. A *Python resource* here can be a
-``PythonSourceModule``, ``PythonBytecodeModule``, ``PythonResourceData``,
+``PythonSourceModule``, ``PythonBytecodeModule``, ``PythonPackageResource``,
 ``PythonPackageDistributionResource``,  or ``PythonExtensionModule``.
 
 This method can be used to place the Python resources derived from another

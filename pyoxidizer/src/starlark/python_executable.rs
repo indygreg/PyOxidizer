@@ -7,7 +7,7 @@ use {
     super::python_embedded_resources::PythonEmbeddedResources,
     super::python_resource::{
         PythonExtensionModule, PythonExtensionModuleFlavor, PythonPackageDistributionResource,
-        PythonResourceData, PythonSourceModule,
+        PythonPackageResource, PythonSourceModule,
     },
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
     super::util::{optional_list_arg, required_bool_arg, required_str_arg, required_type_arg},
@@ -344,18 +344,18 @@ impl PythonExecutable {
         Ok(Value::new(None))
     }
 
-    /// PythonExecutable.add_in_memory_resource_data(resource)
-    pub fn starlark_add_in_memory_resource_data(
+    /// PythonExecutable.add_in_memory_package_resource(resource)
+    pub fn starlark_add_in_memory_package_resource(
         &mut self,
         env: &Environment,
         resource: &Value,
     ) -> ValueResult {
-        required_type_arg("resource", "PythonResourceData", &resource)?;
+        required_type_arg("resource", "PythonPackageResource", &resource)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
-        let r = resource.downcast_apply(|r: &PythonResourceData| r.data.clone());
+        let r = resource.downcast_apply(|r: &PythonPackageResource| r.data.clone());
         info!(
             &logger,
             "adding in-memory resource data {}",
@@ -366,7 +366,7 @@ impl PythonExecutable {
                 Err(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
-                    label: "add_in_memory_resource_data".to_string(),
+                    label: "add_in_memory_package_resource".to_string(),
                 }
                 .into())
             }
@@ -375,25 +375,25 @@ impl PythonExecutable {
         Ok(Value::new(None))
     }
 
-    /// PythonExecutable.add_resource_data(resource)
-    pub fn starlark_add_resource_data(
+    /// PythonExecutable.add_package_resource(resource)
+    pub fn starlark_add_package_resource(
         &mut self,
         env: &Environment,
         resource: &Value,
     ) -> ValueResult {
-        required_type_arg("resource", "PythonResourceData", &resource)?;
+        required_type_arg("resource", "PythonPackageResource", &resource)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
-        let r = resource.downcast_apply(|r: &PythonResourceData| r.data.clone());
+        let r = resource.downcast_apply(|r: &PythonPackageResource| r.data.clone());
         info!(&logger, "adding resource data {}", r.symbolic_name());
         self.exe.add_package_resource(&r).or_else(|e| {
             {
                 Err(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
-                    label: "add_resource_data".to_string(),
+                    label: "add_package_resource".to_string(),
                 }
                 .into())
             }
@@ -402,20 +402,20 @@ impl PythonExecutable {
         Ok(Value::new(None))
     }
 
-    /// PythonExecutable.add_filesystem_relative_resource_data(prefix, resource)
-    pub fn starlark_add_filesystem_relative_resource_data(
+    /// PythonExecutable.add_filesystem_relative_package_resource(prefix, resource)
+    pub fn starlark_add_filesystem_relative_package_resource(
         &mut self,
         env: &Environment,
         prefix: &Value,
         resource: &Value,
     ) -> ValueResult {
         let prefix = required_str_arg("prefix", &prefix)?;
-        required_type_arg("resource", "PythonResourceData", &resource)?;
+        required_type_arg("resource", "PythonPackageResource", &resource)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not set");
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
-        let r = resource.downcast_apply(|r: &PythonResourceData| r.data.clone());
+        let r = resource.downcast_apply(|r: &PythonPackageResource| r.data.clone());
         info!(
             &logger,
             "adding executable relative resource data {}",
@@ -427,7 +427,7 @@ impl PythonExecutable {
                 Err(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
-                    label: "add_filesystem_relative_resource_data".to_string(),
+                    label: "add_filesystem_relative_package_resource".to_string(),
                 }
                 .into())
             })?;
@@ -681,7 +681,7 @@ impl PythonExecutable {
             "PythonBytecodeModule" => {
                 self.starlark_add_in_memory_module_bytecode(env, resource, optimize_level)
             }
-            "PythonResourceData" => self.starlark_add_in_memory_resource_data(env, resource),
+            "PythonPackageResource" => self.starlark_add_in_memory_package_resource(env, resource),
             "PythonPackageDistributionResource" => {
                 self.starlark_add_package_distribution_resource(env, resource)
             }
@@ -732,8 +732,8 @@ impl PythonExecutable {
                 resource,
                 optimize_level,
             ),
-            "PythonResourceData" => {
-                self.starlark_add_filesystem_relative_resource_data(env, prefix, resource)
+            "PythonPackageResource" => {
+                self.starlark_add_filesystem_relative_package_resource(env, prefix, resource)
             }
             "PythonPackageDistributionResource" => self
                 .starlark_add_filesystem_relative_package_distribution_resource(
@@ -776,7 +776,7 @@ impl PythonExecutable {
             "PythonBytecodeModule" => {
                 self.starlark_add_module_bytecode(env, resource, optimize_level)
             }
-            "PythonResourceData" => self.starlark_add_resource_data(env, resource),
+            "PythonPackageResource" => self.starlark_add_package_resource(env, resource),
             "PythonPackageDistributionResource" => {
                 self.starlark_add_package_distribution_resource(env, resource)
             }
@@ -970,23 +970,23 @@ starlark_module! { python_executable_env =>
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_in_memory_resource_data(env env, this, resource) {
+    PythonExecutable.add_in_memory_package_resource(env env, this, resource) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
-            exe.starlark_add_in_memory_resource_data(&env, &resource)
+            exe.starlark_add_in_memory_package_resource(&env, &resource)
         })
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_filesystem_relative_resource_data(env env, this, prefix, resource) {
+    PythonExecutable.add_filesystem_relative_package_resource(env env, this, prefix, resource) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
-            exe.starlark_add_filesystem_relative_resource_data(&env, &prefix, &resource)
+            exe.starlark_add_filesystem_relative_package_resource(&env, &prefix, &resource)
         })
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_resource_data(env env, this, resource) {
+    PythonExecutable.add_package_resource(env env, this, resource) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
-            exe.starlark_add_resource_data(&env, &resource)
+            exe.starlark_add_package_resource(&env, &resource)
         })
     }
 

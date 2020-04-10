@@ -96,7 +96,7 @@ impl<'a> TryFrom<&EmbeddedResourcePythonModulePrePackaged> for EmbeddedResource<
             } else {
                 None
             },
-            in_memory_resources: if let Some(resources) = &value.in_memory_resources {
+            in_memory_package_resources: if let Some(resources) = &value.in_memory_resources {
                 let mut res = HashMap::new();
                 for (key, location) in resources {
                     res.insert(Cow::Owned(key.clone()), Cow::Owned(location.resolve()?));

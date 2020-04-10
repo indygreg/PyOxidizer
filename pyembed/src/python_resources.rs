@@ -448,7 +448,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             None => return Ok(None),
         };
 
-        if let Some(resources) = &entry.in_memory_resources {
+        if let Some(resources) = &entry.in_memory_package_resources {
             if let Some(data) = resources.get(resource_name) {
                 let io_module = py.import("io")?;
                 let bytes_io = io_module.get(py, "BytesIO")?;
@@ -478,7 +478,7 @@ impl<'a> PythonResourcesState<'a, u8> {
     /// Determines whether a specific package + name pair is a known Python package resource.
     pub fn is_package_resource(&self, package: &str, resource_name: &str) -> bool {
         if let Some(entry) = self.resources.get(package) {
-            if let Some(resources) = &entry.in_memory_resources {
+            if let Some(resources) = &entry.in_memory_package_resources {
                 if resources.contains_key(resource_name) {
                     return true;
                 }
@@ -501,7 +501,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             None => return Ok(PyList::new(py, &[]).into_object()),
         };
 
-        if let Some(resources) = &entry.in_memory_resources {
+        if let Some(resources) = &entry.in_memory_package_resources {
             let names = resources
                 .keys()
                 .map(|name| name.to_py_object(py))
@@ -628,7 +628,7 @@ impl<'a> PythonResourcesState<'a, u8> {
 
             if let Some(entry) = self.resources.get(package_name_ref) {
                 if check_in_memory {
-                    if let Some(resources) = &entry.in_memory_resources {
+                    if let Some(resources) = &entry.in_memory_package_resources {
                         if let Some(data) = resources.get(resource_name_ref) {
                             return Ok(PyBytes::new(py, data).into_object());
                         }

@@ -239,7 +239,7 @@ where
 
     /// Mapping of virtual filename to data for resources to expose to Python's
     /// `importlib.resources` API via in-memory data access.
-    pub in_memory_resources: Option<HashMap<Cow<'a, str>, Cow<'a, [X]>>>,
+    pub in_memory_package_resources: Option<HashMap<Cow<'a, str>, Cow<'a, [X]>>>,
 
     /// Mapping of virtual filename to data for package distribution metadata
     /// to expose to Python's `importlib.metadata` API via in-memory data access.
@@ -290,7 +290,7 @@ where
             in_memory_bytecode_opt1: None,
             in_memory_bytecode_opt2: None,
             in_memory_extension_module_shared_library: None,
-            in_memory_resources: None,
+            in_memory_package_resources: None,
             in_memory_distribution_resources: None,
             in_memory_shared_library: None,
             shared_library_dependency_names: None,

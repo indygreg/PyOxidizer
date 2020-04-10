@@ -6,7 +6,8 @@ use {
     super::env::EnvironmentContext,
     super::python_executable::PythonExecutable,
     super::python_resource::{
-        PythonExtensionModule, PythonExtensionModuleFlavor, PythonResourceData, PythonSourceModule,
+        PythonExtensionModule, PythonExtensionModuleFlavor, PythonPackageResource,
+        PythonSourceModule,
     },
     super::util::{
         optional_dict_arg, optional_list_arg, optional_str_arg, optional_type_arg,
@@ -611,8 +612,8 @@ impl PythonDistribution {
         ))
     }
 
-    /// PythonDistribution.resources_data(include_test=false)
-    pub fn resources_data(&mut self, env: &Environment, include_test: &Value) -> ValueResult {
+    /// PythonDistribution.package_resources(include_test=false)
+    pub fn package_resources(&mut self, env: &Environment, include_test: &Value) -> ValueResult {
         let include_test = required_bool_arg("include_test", &include_test)?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
@@ -649,7 +650,7 @@ impl PythonDistribution {
                     if !include_test && is_stdlib_test_package(&data.leaf_package) {
                         None
                     } else {
-                        Some(Value::new(PythonResourceData { data: data.clone() }))
+                        Some(Value::new(PythonPackageResource { data: data.clone() }))
                     }
                 })
                 .collect_vec(),
@@ -805,9 +806,9 @@ starlark_module! { python_distribution_module =>
     }
 
     #[allow(clippy::ptr_arg)]
-    PythonDistribution.resources_data(env env, this, include_test=false) {
+    PythonDistribution.package_resources(env env, this, include_test=false) {
         this.downcast_apply_mut(|dist: &mut PythonDistribution| {
-            dist.resources_data(&env, &include_test)
+            dist.package_resources(&env, &include_test)
         })
     }
 
@@ -1019,10 +1020,10 @@ mod tests {
     }
 
     #[test]
-    fn test_resources_data() {
-        let data_default = starlark_ok("default_python_distribution().resources_data()");
+    fn test_package_resources() {
+        let data_default = starlark_ok("default_python_distribution().package_resources()");
         let data_tests =
-            starlark_ok("default_python_distribution().resources_data(include_test=True)");
+            starlark_ok("default_python_distribution().package_resources(include_test=True)");
 
         let default_length = data_default.length().unwrap();
         let data_length = data_tests.length().unwrap();

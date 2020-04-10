@@ -42,6 +42,10 @@ Backwards Compatibility Notes
   necessary in order to support executables loading Python extension modules,
   which are shared libraries which need access to Python symbols defined
   in executables.
+* The ``PythonResourceData`` Starlark type has been renamed to
+  ``PythonPackageResource``.
+* The ``PythonDistribution.resources_data()`` Starlark method has been
+  renamed to ``PythonDistribution.package_resources()``.
 * The ``PythonExecutable.to_embedded_data()`` Starlark method has been
   renamed to ``PythonExecutable.to_embedded_resources()``.
 * The ``PythonEmbeddedData`` Starlark type has been renamed to
@@ -97,7 +101,7 @@ New Features
 * Python resources can now be installed next to built binaries using the new
   Starlark functions ``PythonExecutable.add_filesystem_relative_module_source()``,
   ``PythonExecutable.add_filesystem_relative_module_bytecode()``,
-  ``PythonExecutable.add_filesystem_relative_resource_data()``,
+  ``PythonExecutable.add_filesystem_relative_package_resource()``,
   ``PythonExecutable.add_filesystem_relative_extension_module()``,
   ``PythonExecutable.add_filesystem_relative_python_resource()``,
   ``PythonExecutable.add_filesystem_relative_package_distribution_resource()``,

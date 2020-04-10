@@ -6,8 +6,8 @@ use {
     crate::py_packaging::resource::{
         BytecodeOptimizationLevel, PythonExtensionModule as RawExtensionModule,
         PythonModuleBytecodeFromSource, PythonModuleSource as RawSourceModule,
-        PythonPackageDistributionResource as RawDistributionResource, PythonPackageResource,
-        PythonResource,
+        PythonPackageDistributionResource as RawDistributionResource,
+        PythonPackageResource as RawPackageResource, PythonResource,
     },
     crate::py_packaging::standalone_distribution::DistributionExtensionModule,
     starlark::environment::Environment,
@@ -150,11 +150,11 @@ impl TypedValue for PythonBytecodeModule {
 }
 
 #[derive(Debug, Clone)]
-pub struct PythonResourceData {
-    pub data: PythonPackageResource,
+pub struct PythonPackageResource {
+    pub data: RawPackageResource,
 }
 
-impl TypedValue for PythonResourceData {
+impl TypedValue for PythonPackageResource {
     immutable!();
     any!();
     not_supported!(
@@ -163,7 +163,7 @@ impl TypedValue for PythonResourceData {
 
     fn to_str(&self) -> String {
         format!(
-            "PythonResourceData<package={}, name={}>",
+            "PythonPackageResource<package={}, name={}>",
             self.data.leaf_package, self.data.relative_name
         )
     }
@@ -173,7 +173,7 @@ impl TypedValue for PythonResourceData {
     }
 
     fn get_type(&self) -> &'static str {
-        "PythonResourceData"
+        "PythonPackageResource"
     }
 
     fn to_bool(&self) -> bool {
@@ -192,7 +192,7 @@ impl TypedValue for PythonResourceData {
             attr => {
                 return Err(ValueError::OperationNotSupported {
                     op: format!(".{}", attr),
-                    left: "PythonResourceData".to_string(),
+                    left: "PythonPackageResource".to_string(),
                     right: None,
                 })
             }
@@ -366,7 +366,9 @@ impl<'a> From<&'a PythonResource> for Value {
                 panic!("not yet implemented");
             }
 
-            PythonResource::Resource(data) => Value::new(PythonResourceData { data: data.clone() }),
+            PythonResource::Resource(data) => {
+                Value::new(PythonPackageResource { data: data.clone() })
+            }
 
             PythonResource::DistributionResource(resource) => {
                 Value::new(PythonPackageDistributionResource {

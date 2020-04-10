@@ -120,7 +120,7 @@ where
             || self.in_memory_bytecode_opt1.is_some()
             || self.in_memory_bytecode_opt2.is_some()
             || self.in_memory_extension_module_shared_library.is_some()
-            || self.in_memory_resources.is_some()
+            || self.in_memory_package_resources.is_some()
             || self.in_memory_distribution_resources.is_some()
             || self.in_memory_shared_library.is_some()
             || self.relative_path_module_source.is_some()
@@ -171,7 +171,7 @@ where
             index += 5;
         }
 
-        if let Some(resources) = &self.in_memory_resources {
+        if let Some(resources) = &self.in_memory_package_resources {
             index += 5;
 
             // u16 + u64 for resource name and data.
@@ -279,7 +279,7 @@ where
                 }
             }
             ResourceField::InMemoryResourcesData => {
-                if let Some(resources) = &self.in_memory_resources {
+                if let Some(resources) = &self.in_memory_package_resources {
                     resources
                         .iter()
                         .map(|(key, value)| key.as_bytes().len() + value.len())
@@ -420,7 +420,7 @@ where
                 }
             }
             ResourceField::InMemoryResourcesData => {
-                if let Some(resources) = &self.in_memory_resources {
+                if let Some(resources) = &self.in_memory_package_resources {
                     resources.len() * 2
                 } else {
                     0
@@ -580,7 +580,7 @@ where
                 .context("writing in-memory extension module shared library length")?;
         }
 
-        if let Some(resources) = &self.in_memory_resources {
+        if let Some(resources) = &self.in_memory_package_resources {
             let l = u32::try_from(resources.len())
                 .context("converting in-memory resources data length to u32")?;
             dest.write_u8(ResourceField::InMemoryResourcesData.into())
@@ -925,7 +925,7 @@ pub fn write_embedded_resources_v1<W: Write>(
     }
 
     for module in modules {
-        if let Some(resources) = &module.in_memory_resources {
+        if let Some(resources) = &module.in_memory_package_resources {
             for (key, value) in resources.iter() {
                 dest.write_all(key.as_bytes())?;
                 add_interior_padding(dest)?;
