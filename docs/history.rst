@@ -21,6 +21,11 @@ Blog Posts
 Version History
 ===============
 
+0.8.0-pre
+---------
+
+Not yet released.
+
 0.7.0
 -----
 

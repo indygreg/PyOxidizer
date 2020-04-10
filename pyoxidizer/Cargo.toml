@@ -1,6 +1,6 @@
 [package]
 name = "pyoxidizer"
-version = "0.7.0"
+version = "0.8.0-pre"
 authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
 license = "MPL-2.0"
 description = "Package self-contained Python applications"
@@ -44,7 +44,7 @@ libc = "0.2"
 mailparse = "0.12"
 path-dedot = "1.1"
 podio = "0.1"
-python-packed-resources = "0.1"
+python-packed-resources = { version = "0.2.0-pre", path = "../python-packed-resources" }
 regex = "1"
 reqwest = "0.9"
 rustc_version = "0.2"
