@@ -1292,7 +1292,7 @@ dependencies = [
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.67 (registry+https://github.com/rust-lang/crates.io-index)",
  "memory-module-sys 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "python-packed-resources 0.1.0",
+ "python-packed-resources 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "python3-sys 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "uuid 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1325,7 +1325,7 @@ dependencies = [
  "mailparse 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "path-dedot 1.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "podio 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "python-packed-resources 0.1.0",
+ "python-packed-resources 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest 0.9.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc_version 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1349,6 +1349,15 @@ dependencies = [
 [[package]]
 name = "python-packed-resources"
 version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "byteorder 1.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "python-packed-resources"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "byteorder 1.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2488,6 +2497,7 @@ dependencies = [
 "checksum proc-macro-hack 0.5.11 (registry+https://github.com/rust-lang/crates.io-index)" = "ecd45702f76d6d3c75a80564378ae228a85f0b59d2f3ed43c91b4a69eb2ebfc5"
 "checksum proc-macro2 1.0.9 (registry+https://github.com/rust-lang/crates.io-index)" = "6c09721c6781493a2a492a96b5a5bf19b65917fe6728884e7c44dd0c60ca3435"
 "checksum publicsuffix 1.5.4 (registry+https://github.com/rust-lang/crates.io-index)" = "3bbaa49075179162b49acac1c6aa45fb4dafb5f13cf6794276d77bc7fd95757b"
+"checksum python-packed-resources 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2fff351d727c9d63425600300500897cc64a7359cd22027ff46bc1e8d5ed86ca"
 "checksum python3-sys 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "968ddca15e0fa74da3207aeb7b9fbbe94864dd13a17eaa95f75b5b836abf3007"
 "checksum quick-error 1.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "a1d01941d82fa2ab50be1e79e6714289dd7cde78eba4c074bc5a4374f650dfe0"
 "checksum quote 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "053a8c8bcc71fcce321828dc897a98ab9760bef03a4fc36693c231e5b3216cfe"

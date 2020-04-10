@@ -44,7 +44,7 @@ libc = "0.2"
 mailparse = "0.12"
 path-dedot = "1.1"
 podio = "0.1"
-python-packed-resources = { version = "0.1.0", path = "../python-packed-resources" }
+python-packed-resources = "0.1"
 regex = "1"
 reqwest = "0.9"
 rustc_version = "0.2"
