@@ -209,13 +209,13 @@ is used to influence the behavior of built executables.
 Let's do something a little bit more complicated, like package an existing
 Python application!
 
-Find the ``embedded = dist.to_embedded_resources(`` line in the
+Find the ``exe = dist.to_python_executable(`` line in the
 ``pyoxidizer.bzl`` file. Let's add a new line to ``make_exe()`` just
-below where ``embedded`` is assigned:
+below where ``exe`` is assigned:
 
 .. code-block:: python
 
-   embedded.add_in_memory_python_resources(dist.pip_install(["pyflakes==2.1.1"]))
+   exe.add_in_memory_python_resources(dist.pip_install(["pyflakes==2.1.1"]))
 
 In addition, replace the ``run_*`` argument to execute ``pyflakes``:
 
