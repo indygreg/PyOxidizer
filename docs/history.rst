@@ -410,7 +410,7 @@ All Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * Built extension modules marked as app-relative are now embedded in the
-  finaly binary rather than being ignored.
+  final binary rather than being ignored.
 
 .. _version_0_3_0:
 

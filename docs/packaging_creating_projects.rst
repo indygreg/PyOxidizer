@@ -20,7 +20,7 @@ Rust project to embed a Python interpreter and customize from there::
    # Create a new Rust project for your application in ~/src/myapp.
    $ pyoxidizer init-rust-project ~/src/myapp
 
-The auto-generated configuration file and Rust project will alunch a Python
+The auto-generated configuration file and Rust project will launch a Python
 REPL by default. And the ``pyoxidizer`` executable will look in the current
 directory for a ``pyoxidizer.bzl`` configuration file. Let's test that the
 new configuration file or project works::
