@@ -31,7 +31,7 @@ interpreter.
 Initializing a Python Interpreter
 =================================
 
-Initialing an embedded Python interpreter in your Rust process is as simple
+Initializing an embedded Python interpreter in your Rust process is as simple
 as calling ``pyembed::MainPythonInterpreter::new(config: PythonConfig)``.
 
 The hardest part about this is constructing the ``pyembed::PythonConfig``
