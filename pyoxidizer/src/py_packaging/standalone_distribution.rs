@@ -534,6 +534,9 @@ pub struct StandaloneDistribution {
     ///
     /// e.g. `cpython-37`.
     pub cache_tag: String,
+
+    /// Suffixes for Python module types.
+    module_suffixes: PythonModuleSuffixes,
 }
 
 impl StandaloneDistribution {
@@ -709,6 +712,34 @@ impl StandaloneDistribution {
             links_core.push(depends);
         }
 
+        let module_suffixes = PythonModuleSuffixes {
+            source: pi
+                .python_suffixes
+                .get("source")
+                .ok_or_else(|| anyhow!("distribution does not define source suffixes"))?
+                .clone(),
+            bytecode: pi
+                .python_suffixes
+                .get("bytecode")
+                .ok_or_else(|| anyhow!("distribution does not define bytecode suffixes"))?
+                .clone(),
+            debug_bytecode: pi
+                .python_suffixes
+                .get("debug_bytecode")
+                .ok_or_else(|| anyhow!("distribution does not define debug bytecode suffixes"))?
+                .clone(),
+            optimized_bytecode: pi
+                .python_suffixes
+                .get("optimized_bytecode")
+                .ok_or_else(|| anyhow!("distribution does not define optimized bytecode suffixes"))?
+                .clone(),
+            extension: pi
+                .python_suffixes
+                .get("extension")
+                .ok_or_else(|| anyhow!("distribution does not define extension suffixes"))?
+                .clone(),
+        };
+
         // Collect extension modules.
         for (module, variants) in &pi.build_info.extensions {
             let mut ems: Vec<DistributionExtensionModule> = Vec::new();
@@ -802,11 +833,11 @@ impl StandaloneDistribution {
             return Err(anyhow!("stdlib path not defined in distribution"));
         };
 
-        let suffixes = PythonModuleSuffixes::resolve_from_python_exe(&python_exe_path(dist_dir)?)?;
-
-        for entry in
-            find_python_resources(&stdlib_path, &pi.python_implementation_cache_tag, &suffixes)
-        {
+        for entry in find_python_resources(
+            &stdlib_path,
+            &pi.python_implementation_cache_tag,
+            &module_suffixes,
+        ) {
             match entry? {
                 PythonResource::Resource(resource) => {
                     if !resources.contains_key(&resource.leaf_package) {
@@ -884,6 +915,7 @@ impl StandaloneDistribution {
             venv_base,
             inittab_cflags: pi.build_info.inittab_cflags,
             cache_tag: pi.python_implementation_cache_tag,
+            module_suffixes,
         })
     }
 
@@ -998,9 +1030,7 @@ impl PythonDistribution for StandaloneDistribution {
     }
 
     fn python_module_suffixes(&self) -> Result<PythonModuleSuffixes> {
-        // TODO convey the suffixes in the PYTHON.json file so we can avoid having
-        // to invoke the Python interpreter.
-        PythonModuleSuffixes::resolve_from_python_exe(&self.python_exe)
+        Ok(self.module_suffixes.clone())
     }
 
     fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler> {

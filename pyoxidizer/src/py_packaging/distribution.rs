@@ -26,7 +26,7 @@ use {
     std::convert::TryFrom,
     std::fs,
     std::fs::{create_dir_all, File},
-    std::io::{BufReader, Read},
+    std::io::Read,
     std::path::{Path, PathBuf},
     url::Url,
     uuid::Uuid,
@@ -99,50 +99,6 @@ pub struct PythonModuleSuffixes {
 
     /// Suffixes for Python extension modules.
     pub extension: Vec<String>,
-}
-
-const PRINT_SUFFIXES: &str = r#"
-import json
-import importlib.machinery as m
-
-print(json.dumps({
-    'source': m.SOURCE_SUFFIXES,
-    'bytecode': m.BYTECODE_SUFFIXES,
-    'debug_bytecode': m.DEBUG_BYTECODE_SUFFIXES,
-    'optimized_bytecode': m.OPTIMIZED_BYTECODE_SUFFIXES,
-    'extension': m.EXTENSION_SUFFIXES,
-}))
-"#;
-
-impl PythonModuleSuffixes {
-    /// Resolve an instance by invoking a Python executable.
-    pub fn resolve_from_python_exe(python_exe: &Path) -> Result<Self> {
-        let temp_dir = tempdir::TempDir::new("python-suffixes")?;
-        let script = temp_dir.path().join("resolve.py");
-        std::fs::write(&script, PRINT_SUFFIXES)?;
-
-        let mut cmd = std::process::Command::new(python_exe)
-            .arg(format!("{}", script.display()))
-            .stdout(std::process::Stdio::piped())
-            .spawn()?;
-
-        let suffixes;
-        {
-            let stdout = cmd
-                .stdout
-                .as_mut()
-                .ok_or_else(|| anyhow!("unable to get stdout"))?;
-            let reader = BufReader::new(stdout);
-            suffixes = serde_json::from_reader(reader)?;
-        }
-
-        let status = cmd.wait()?;
-        if !status.success() {
-            return Err(anyhow!("error running Python"));
-        }
-
-        Ok(suffixes)
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -613,46 +569,6 @@ mod tests {
             target,
             temp_dir.path(),
         )?;
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_resolve_suffixes() -> Result<()> {
-        let distribution = get_default_distribution()?;
-
-        let suffixes = PythonModuleSuffixes::resolve_from_python_exe(&distribution.python_exe)?;
-
-        // We can't compare all fields because of variances among distributions.
-        assert_eq!(suffixes.bytecode, vec![".pyc".to_string()]);
-
-        Ok(())
-    }
-
-    #[test]
-    #[cfg(windows)]
-    fn test_resolve_suffixes_windows_dynamic() -> Result<()> {
-        let distribution = get_default_dynamic_distribution()?;
-
-        let suffixes = PythonModuleSuffixes::resolve_from_python_exe(&distribution.python_exe)?;
-
-        let ext_suffix = if cfg!(target_pointer_width = "32") {
-            ".cp37-win32.pyd"
-        } else {
-            ".cp37-win_amd64.pyd"
-        }
-        .to_string();
-
-        assert_eq!(
-            suffixes,
-            PythonModuleSuffixes {
-                source: vec![".py".to_string(), ".pyw".to_string()],
-                bytecode: vec![".pyc".to_string()],
-                debug_bytecode: vec![".pyc".to_string()],
-                optimized_bytecode: vec![".pyc".to_string()],
-                extension: vec![ext_suffix, ".pyd".to_string()],
-            }
-        );
 
         Ok(())
     }
