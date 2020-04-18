@@ -64,6 +64,7 @@ pub const PIP_BOOTSTRAP_REQUIREMENTS: &str = indoc::indoc!(
 /// Since modern versions of `get-pip.py` just work in their default
 /// non-deterministic mode, hacking `get-pip.py` to do what we want was
 /// the path of least resistance.
+#[allow(unused)]
 pub fn bootstrap_packaging_tools(
     logger: &slog::Logger,
     python_exe: &Path,

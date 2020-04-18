@@ -165,7 +165,6 @@ impl PythonDistribution {
             "standalone" => DistributionFlavor::Standalone,
             "standalone_static" => DistributionFlavor::StandaloneStatic,
             "standalone_dynamic" => DistributionFlavor::StandaloneDynamic,
-            "windows_embeddable" => DistributionFlavor::WindowsEmbeddable,
             v => {
                 return Err(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
@@ -230,7 +229,6 @@ impl PythonDistribution {
 
         let flavor = match flavor.as_ref() {
             "standalone" => DistributionFlavor::Standalone,
-            "windows_embeddable" => DistributionFlavor::WindowsEmbeddable,
             v => {
                 return Err(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
@@ -926,24 +924,6 @@ mod tests {
 
     #[test]
     #[cfg(windows)]
-    fn test_default_python_distribution_windows() {
-        let dist = starlark_ok("default_python_distribution(flavor='windows_embeddable')");
-        assert_eq!(dist.get_type(), "PythonDistribution");
-
-        let host_distribution = crate::python_distributions::CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE
-            .get(crate::project_building::HOST)
-            .unwrap();
-
-        let wanted = PythonDistributionLocation::Url {
-            url: host_distribution.url.clone(),
-            sha256: host_distribution.sha256.clone(),
-        };
-
-        dist.downcast_apply(|x: &PythonDistribution| assert_eq!(x.source, wanted));
-    }
-
-    #[test]
-    #[cfg(windows)]
     fn test_default_python_distribution_dynamic_windows() {
         let dist = starlark_ok("default_python_distribution(flavor='standalone_dynamic')");
         assert_eq!(dist.get_type(), "PythonDistribution");
@@ -999,17 +979,6 @@ mod tests {
         dist.downcast_apply(|x: &PythonDistribution| {
             assert_eq!(x.source, wanted);
             assert_eq!(x.flavor, DistributionFlavor::Standalone);
-        });
-    }
-
-    #[test]
-    fn test_python_distribution_windows_embeddable() {
-        let dist = starlark_ok(
-            "PythonDistribution('sha256', local_path='some_path', flavor='windows_embeddable')",
-        );
-
-        dist.downcast_apply(|x: &PythonDistribution| {
-            assert_eq!(x.flavor, DistributionFlavor::WindowsEmbeddable);
         });
     }
 

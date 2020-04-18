@@ -29,6 +29,10 @@ Not yet released.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* Support for packaging the official Windows embeddable Python
+  distributions has been removed. This support was experimental.
+  The official Windows embeddable distributions are missing critical
+  support files that make them difficult to integrate with PyOxidizer.
 * The *standalone* Python distributions are now validated to be at
   least version 5 of the distribution format. If you are using the
   default Python distributions, this change should not effect you.

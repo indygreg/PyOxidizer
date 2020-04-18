@@ -23,4 +23,3 @@ pub mod pyembed;
 pub mod resource;
 pub mod resources_policy;
 pub mod standalone_distribution;
-pub mod windows_embeddable_distribution;

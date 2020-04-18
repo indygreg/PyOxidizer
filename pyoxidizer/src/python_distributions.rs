@@ -92,31 +92,6 @@ lazy_static! {
 
         res
     };
-    pub static ref CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE: BTreeMap<String, HostedDistribution> = {
-        let mut res: BTreeMap<String, HostedDistribution> = BTreeMap::new();
-
-        res.insert(
-            "i686-pc-windows-msvc".to_string(),
-            HostedDistribution {
-                url: "https://www.python.org/ftp/python/3.7.7/python-3.7.7-embed-win32.zip"
-                    .to_string(),
-                sha256: "0f3742ec2eeefa426f818997df9aff578a73e424e836b6fb38cb1bb243d63d31"
-                    .to_string(),
-            },
-        );
-
-        res.insert(
-            "x86_64-pc-windows-msvc".to_string(),
-            HostedDistribution {
-                url: "https://www.python.org/ftp/python/3.7.7/python-3.7.7-embed-amd64.zip"
-                    .to_string(),
-                sha256: "705c03140cfd3372f27ee911db5f4eb1fc9b980c9e27544adbd1a6adf942a1b0"
-                    .to_string(),
-            },
-        );
-
-        res
-    };
     /// Location of source code for get-pip.py, version 19.3.1.
     pub static ref GET_PIP_PY_19: HostedDistribution = {
         HostedDistribution {

@@ -243,8 +243,7 @@ One of ``local_path`` or ``url`` MUST be defined.
    request.
 
 ``flavor`` (string)
-   The distribution flavor. Can either by ``standalone`` (the default) or
-   ``windows_embeddable``.
+   The distribution flavor. Must be ``standalone``.
 
 Examples:
 
@@ -285,12 +284,6 @@ of the following:
 ``standalone_dynamic``
    This is like ``standalone`` but the distribution must have a dynamically
    linked ``libpython``.
-
-``windows_embeddable``
-   A Windows-only distribution format defined by a zip file. These distributions
-   are produced by the official Python project. **Support for this distribution
-   flavor is experimental, doesn't fully work, and may be removed in a future
-   release because it may not be viable.**
 
 The ``pyoxidizer`` binary has a set of known distributions built-in
 which are automatically available and used by this function. Typically you don't

@@ -464,6 +464,7 @@ pub fn find_pe_dependencies(data: &[u8]) -> Result<Vec<String>> {
     Ok(pe.libraries.iter().map(|l| (*l).to_string()).collect())
 }
 
+#[allow(unused)]
 pub fn find_pe_dependencies_path(path: &Path) -> Result<Vec<String>> {
     let data = std::fs::read(path)?;
     find_pe_dependencies(&data)

@@ -14,10 +14,8 @@ use {
     super::resource::{PythonModuleSource, PythonPackageResource, PythonResource},
     super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::{DistributionExtensionModule, StandaloneDistribution},
-    super::windows_embeddable_distribution::WindowsEmbeddableDistribution,
     crate::python_distributions::{
         CPYTHON_STANDALONE_DYNAMIC_BY_TRIPLE, CPYTHON_STANDALONE_STATIC_BY_TRIPLE,
-        CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE,
     },
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
@@ -33,13 +31,6 @@ use {
     url::Url,
     uuid::Uuid,
 };
-
-/// importlib._bootstrap source code for Python 3.7.
-pub const IMPORTLIB_BOOTSTRAP_PY_37: &[u8] = include_bytes!("../importlib/_bootstrap-37.py");
-
-/// importlib._bootstrap_external source code for Python 3.7.
-pub const IMPORTLIB_BOOTSTRAP_EXTERNAL_PY_37: &[u8] =
-    include_bytes!("../importlib/_bootstrap_external-37.py");
 
 const STDLIB_TEST_PACKAGES: &[&str] = &[
     "bsddb.test",
@@ -484,9 +475,6 @@ pub enum DistributionFlavor {
 
     /// Dynamically linked distributions coming from the `python-build-standalone` project.
     StandaloneDynamic,
-
-    /// "Embeddable" zip-file based distributions that work on Windows.
-    WindowsEmbeddable,
 }
 
 impl Default for DistributionFlavor {
@@ -517,10 +505,6 @@ pub fn resolve_distribution(
         DistributionFlavor::StandaloneDynamic => Box::new(StandaloneDistribution::from_location(
             logger, &location, dest_dir,
         )?) as Box<dyn PythonDistribution>,
-
-        DistributionFlavor::WindowsEmbeddable => Box::new(
-            WindowsEmbeddableDistribution::from_location(logger, &location, dest_dir)?,
-        ) as Box<dyn PythonDistribution>,
     })
 }
 
@@ -539,7 +523,6 @@ pub fn default_distribution_location(
         }
         DistributionFlavor::StandaloneStatic => CPYTHON_STANDALONE_STATIC_BY_TRIPLE.get(target),
         DistributionFlavor::StandaloneDynamic => CPYTHON_STANDALONE_DYNAMIC_BY_TRIPLE.get(target),
-        DistributionFlavor::WindowsEmbeddable => CPYTHON_WINDOWS_EMBEDDABLE_BY_TRIPLE.get(target),
     }
     .ok_or_else(|| anyhow!("could not find default Python distribution for {}", target))?;
 
@@ -574,6 +557,7 @@ fn crc32_path(path: &Path) -> Result<u32> {
     Ok(crc::crc32::checksum_ieee(&data))
 }
 
+#[allow(unused)]
 pub fn extract_zip<R>(dest_dir: &Path, zf: &mut zip::ZipArchive<R>) -> Result<()>
 where
     R: Read + std::io::Seek,
