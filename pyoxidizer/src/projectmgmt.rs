@@ -235,10 +235,10 @@ pub fn python_distribution_info(dist_path: &str) -> Result<()> {
     println!("High-Level Metadata");
     println!("===================");
     println!();
-    println!("Flavor:       {}", dist.flavor);
-    println!("Version:      {}", dist.version);
-    println!("OS:           {}", dist.os);
-    println!("Architecture: {}", dist.arch);
+    println!("Target triple: {}", dist.target_triple);
+    println!("Tag:           {}", dist.python_tag);
+    println!("Platform tag:  {}", dist.python_platform_tag);
+    println!("Version:       {}", dist.version);
     println!();
 
     println!("Extension Modules");

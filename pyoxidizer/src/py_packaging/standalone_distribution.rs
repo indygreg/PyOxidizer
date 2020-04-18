@@ -139,23 +139,41 @@ struct PythonBuildCoreInfo {
 struct PythonBuildInfo {
     core: PythonBuildCoreInfo,
     extensions: BTreeMap<String, Vec<PythonBuildExtensionInfo>>,
+    inittab_object: String,
+    inittab_source: String,
+    inittab_cflags: Vec<String>,
+    object_file_format: String,
 }
 
 #[derive(Debug, Deserialize)]
 struct PythonJsonMain {
-    arch: String,
-    os: String,
-    python_exe: String,
-    python_flavor: String,
-    python_include: String,
-    python_stdlib: String,
-    python_version: String,
     version: String,
-    link_mode: Option<String>,
+    target_triple: String,
+    optimizations: String,
+    python_tag: String,
+    python_abi_tag: Option<String>,
+    python_platform_tag: String,
+    python_implementation_cache_tag: String,
+    python_implementation_hex_version: u64,
+    python_implementation_name: String,
+    python_implementation_version: Vec<String>,
+    python_version: String,
+    python_major_minor_version: String,
+    python_paths: HashMap<String, String>,
+    python_exe: String,
+    python_stdlib_test_packages: Vec<String>,
+    python_suffixes: HashMap<String, Vec<String>>,
+    python_bytecode_magic_number: String,
+    python_symbol_visibility: String,
+    python_extension_module_loading: Vec<String>,
+    libpython_link_mode: String,
+    crt_features: Vec<String>,
+    run_tests: String,
     build_info: PythonBuildInfo,
     licenses: Option<Vec<String>>,
     license_path: Option<String>,
     tcl_library_path: Option<String>,
+    tcl_library_paths: Option<Vec<String>>,
 }
 
 fn parse_python_json(path: &Path) -> Result<PythonJsonMain> {
@@ -176,9 +194,9 @@ fn parse_python_json(path: &Path) -> Result<PythonJsonMain> {
                 .as_str()
                 .ok_or_else(|| anyhow!("unable to parse version as a string"))?;
 
-            if version != "4" {
+            if version != "5" {
                 return Err(anyhow!(
-                    "expected version 4 standalone distribution; found version {}",
+                    "expected version 5 standalone distribution; found version {}",
                     version
                 ));
             }
@@ -408,15 +426,6 @@ pub struct LicenseInfo {
     pub license_text: String,
 }
 
-#[derive(Debug)]
-pub struct PythonDistributionMinimalInfo {
-    pub flavor: String,
-    pub version: String,
-    pub os: String,
-    pub arch: String,
-    pub py_module_count: usize,
-}
-
 /// Describes how libpython is linked in a standalone distribution.
 #[derive(Clone, Debug, PartialEq)]
 pub enum StandaloneDistributionLinkMode {
@@ -435,17 +444,20 @@ pub struct StandaloneDistribution {
     /// Directory where distribution lives in the filesystem.
     pub base_dir: PathBuf,
 
-    /// Python distribution flavor.
-    pub flavor: String,
+    /// Rust target triple that this distribution runs on.
+    pub target_triple: String,
+
+    /// PEP 425 Python tag value.
+    pub python_tag: String,
+
+    /// PEP 425 Python ABI tag.
+    pub python_abi_tag: Option<String>,
+
+    /// PEP 425 Python platform tag.
+    pub python_platform_tag: String,
 
     /// Python version string.
     pub version: String,
-
-    /// Operating system this Python runs on.
-    pub os: String,
-
-    /// Architecture this Python runs on.
-    pub arch: String,
 
     /// Path to Python interpreter executable.
     pub python_exe: PathBuf,
@@ -455,6 +467,9 @@ pub struct StandaloneDistribution {
 
     /// How libpython is linked in this distribution.
     pub link_mode: StandaloneDistributionLinkMode,
+
+    /// Capabilities of distribution to load extension modules.
+    extension_module_loading: Vec<String>,
 
     /// SPDX license shortnames that apply to this distribution.
     ///
@@ -756,7 +771,11 @@ impl StandaloneDistribution {
             extension_modules.insert(module.clone(), ems);
         }
 
-        let include_path = python_path.join(pi.python_include);
+        let include_path = if let Some(p) = pi.python_paths.get("include") {
+            python_path.join(p)
+        } else {
+            return Err(anyhow!("include path not defined in distribution"));
+        };
 
         for entry in walk_tree_files(&include_path) {
             let full_path = entry.path();
@@ -769,7 +788,11 @@ impl StandaloneDistribution {
             );
         }
 
-        let stdlib_path = python_path.join(pi.python_stdlib);
+        let stdlib_path = if let Some(p) = pi.python_paths.get("stdlib") {
+            python_path.join(p)
+        } else {
+            return Err(anyhow!("stdlib path not defined in distribution"));
+        };
 
         let suffixes = PythonModuleSuffixes::resolve_from_python_exe(&python_exe_path(dist_dir)?)?;
 
@@ -806,29 +829,28 @@ impl StandaloneDistribution {
 
         let venv_base = dist_dir.parent().unwrap().join("hacked_base");
 
-        let (link_mode, libpython_shared_library) = if let Some(ref v) = pi.link_mode {
-            if v == "static" {
-                (StandaloneDistributionLinkMode::Static, None)
-            } else if v == "shared" {
-                (
-                    StandaloneDistributionLinkMode::Dynamic,
-                    Some(python_path.join(pi.build_info.core.shared_lib.unwrap())),
-                )
-            } else {
-                return Err(anyhow!("unhandled link mode: {}", v));
-            }
-        } else {
+        let (link_mode, libpython_shared_library) = if pi.libpython_link_mode == "static" {
             (StandaloneDistributionLinkMode::Static, None)
+        } else if pi.libpython_link_mode == "shared" {
+            (
+                StandaloneDistributionLinkMode::Dynamic,
+                Some(python_path.join(pi.build_info.core.shared_lib.unwrap())),
+            )
+        } else {
+            return Err(anyhow!("unhandled link mode: {}", pi.libpython_link_mode));
         };
 
         Ok(Self {
-            flavor: pi.python_flavor.clone(),
+            base_dir: dist_dir.to_path_buf(),
+            target_triple: pi.target_triple,
+            python_tag: pi.python_tag,
+            python_abi_tag: pi.python_abi_tag,
+            python_platform_tag: pi.python_platform_tag,
             version: pi.python_version.clone(),
-            os: pi.os.clone(),
-            arch: pi.arch.clone(),
             python_exe: python_exe_path(dist_dir)?,
             stdlib_path,
             link_mode,
+            extension_module_loading: pi.python_extension_module_loading,
             licenses: pi.licenses.clone(),
             license_path: match pi.license_path {
                 Some(ref path) => Some(PathBuf::from(path)),
@@ -838,7 +860,7 @@ impl StandaloneDistribution {
                 Some(ref path) => Some(PathBuf::from(path)),
                 None => None,
             },
-            base_dir: dist_dir.to_path_buf(),
+
             extension_modules,
             frozen_c,
             includes,
@@ -851,17 +873,6 @@ impl StandaloneDistribution {
             license_infos,
             venv_base,
         })
-    }
-
-    #[allow(unused)]
-    pub fn as_minimal_info(&self) -> PythonDistributionMinimalInfo {
-        PythonDistributionMinimalInfo {
-            flavor: self.flavor.clone(),
-            version: self.version.clone(),
-            os: self.os.clone(),
-            arch: self.arch.clone(),
-            py_module_count: self.py_modules.len(),
-        }
     }
 
     /// Duplicate the python distribution, with distutils hacked
@@ -951,23 +962,9 @@ impl StandaloneDistribution {
     }
 
     /// Whether the distribution is capable of loading filed-based Python extension modules.
-    pub fn is_extension_module_file_loadable(&self, target_triple: &str) -> bool {
-        // We're capable of loading a file-based Python extension module (which is a
-        // shared library) if the following conditions hold:
-        //
-        // 1. The binary is dynamic and not completely statically linked.
-        //    (This is basically always true except on musl.)
-        // 2. Python symbols are exported from the binary.
-        if self.os == "windows" {
-            // On Windows, we can only load file-based extension modules
-            // if Python is dynamically linked.
-            self.link_mode == StandaloneDistributionLinkMode::Dynamic
-        } else {
-            // For POSIX, we assume symbols are exported from built binaries.
-            // So the check boils down to whether we are producing a statically
-            // linked binary.
-            !target_triple.contains("-musl")
-        }
+    pub fn is_extension_module_file_loadable(&self) -> bool {
+        self.extension_module_loading
+            .contains(&"shared-library".to_string())
     }
 }
 
@@ -1244,7 +1241,7 @@ impl PythonDistribution for StandaloneDistribution {
         &self,
         logger: &slog::Logger,
         resources: &[PythonResource],
-        target_triple: &str,
+        _target_triple: &str,
     ) -> Result<Vec<PythonResource>> {
         Ok(resources
             .iter()
@@ -1252,7 +1249,7 @@ impl PythonDistribution for StandaloneDistribution {
                 // Extension modules defined as shared libraries are only compatible
                 // with some configurations.
                 PythonResource::ExtensionModuleDynamicLibrary { .. } => {
-                    if self.is_extension_module_file_loadable(target_triple) {
+                    if self.is_extension_module_file_loadable() {
                         true
                     } else {
                         warn!(logger, "ignoring extension module {} because it isn't loadable for the target configuration",
@@ -1554,10 +1551,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         prefix: &str,
         extension_module: &DistributionExtensionModule,
     ) -> Result<()> {
-        if self
-            .distribution
-            .is_extension_module_file_loadable(&self.target_triple)
-        {
+        if self.distribution.is_extension_module_file_loadable() {
             self.resources
                 .add_relative_path_distribution_extension_module(prefix, extension_module)
         } else {
@@ -1665,10 +1659,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             ));
         }
 
-        if self
-            .distribution
-            .is_extension_module_file_loadable(&self.target_triple)
-        {
+        if self.distribution.is_extension_module_file_loadable() {
             self.resources
                 .add_relative_path_extension_module(extension_module, prefix)
         } else {
@@ -1706,10 +1697,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 }
             }
             PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
-                if self
-                    .distribution
-                    .is_extension_module_file_loadable(&self.target_triple)
-                {
+                if self.distribution.is_extension_module_file_loadable() {
                     self.resources
                         .add_relative_path_extension_module(extension_module, prefix)
                 } else {
@@ -1728,10 +1716,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                                 .unwrap()
                                 .resolve()?,
                         )
-                } else if self
-                    .distribution
-                    .is_extension_module_file_loadable(&self.target_triple)
-                {
+                } else if self.distribution.is_extension_module_file_loadable() {
                     self.resources
                         .add_relative_path_extension_module(extension_module, prefix)
                 } else {

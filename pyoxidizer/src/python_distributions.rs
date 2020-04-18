@@ -28,6 +28,14 @@ lazy_static! {
         );
 
         res.insert(
+            "x86_64-unknown-linux-gnu".to_string(),
+            HostedDistribution {
+                url: "https://gregoryszorc.com/cpython-3.7.7-x86_64-unknown-linux-gnu-noopt-20200418T1831.tar.zst".to_string(),
+                sha256: "79e514bd5e0edef7f031b1d309c53c3e56068390e3d547975b5df077634b23e6".to_string(),
+            },
+        );
+
+        res.insert(
             "x86_64-unknown-linux-musl".to_string(),
             HostedDistribution {
                 url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20200408/cpython-3.7.7-linux64-musl-20200409T0047.tar.zst"),

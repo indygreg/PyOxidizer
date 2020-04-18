@@ -30,7 +30,7 @@ Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * The *standalone* Python distributions are now validated to be at
-  least version 4 of the distribution format. If you are using the
+  least version 5 of the distribution format. If you are using the
   default Python distributions, this change should not effect you.
 
 0.7.0
