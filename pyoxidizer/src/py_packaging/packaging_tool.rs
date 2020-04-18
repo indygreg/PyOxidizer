@@ -178,7 +178,7 @@ pub fn find_resources(
 ) -> Result<Vec<PythonResource>> {
     let mut res = Vec::new();
 
-    for r in find_python_resources(&path, &dist.python_module_suffixes()?) {
+    for r in find_python_resources(&path, dist.cache_tag(), &dist.python_module_suffixes()?) {
         let r = r?;
 
         match r {

@@ -214,6 +214,7 @@ pub struct ExtensionModuleBuildState {
 pub struct EmbeddedPythonResourcesPrePackaged {
     policy: PythonResourcesPolicy,
     modules: BTreeMap<String, EmbeddedResourcePythonModulePrePackaged>,
+    cache_tag: String,
 
     extension_module_states: BTreeMap<String, ExtensionModuleBuildState>,
 
@@ -221,10 +222,11 @@ pub struct EmbeddedPythonResourcesPrePackaged {
 }
 
 impl EmbeddedPythonResourcesPrePackaged {
-    pub fn new(policy: &PythonResourcesPolicy) -> Self {
+    pub fn new(policy: &PythonResourcesPolicy, cache_tag: &str) -> Self {
         Self {
             policy: policy.clone(),
             modules: BTreeMap::new(),
+            cache_tag: cache_tag.to_string(),
             extension_module_states: BTreeMap::new(),
             extra_files: FileManifest::default(),
         }
@@ -240,6 +242,7 @@ impl EmbeddedPythonResourcesPrePackaged {
                         name: name.clone(),
                         is_package: module.is_package,
                         source: location.clone(),
+                        cache_tag: self.cache_tag.clone(),
                     },
                 ))
             } else {
@@ -261,6 +264,7 @@ impl EmbeddedPythonResourcesPrePackaged {
                         is_package: module.is_package,
                         source: location.clone(),
                         optimize_level: BytecodeOptimizationLevel::Zero,
+                        cache_tag: self.cache_tag.clone(),
                     },
                 ))
             } else if let Some(location) = &module.in_memory_bytecode_opt1 {
@@ -271,6 +275,7 @@ impl EmbeddedPythonResourcesPrePackaged {
                         is_package: module.is_package,
                         source: location.clone(),
                         optimize_level: BytecodeOptimizationLevel::One,
+                        cache_tag: self.cache_tag.clone(),
                     },
                 ))
             } else if let Some(location) = &module.in_memory_bytecode_opt2 {
@@ -281,6 +286,7 @@ impl EmbeddedPythonResourcesPrePackaged {
                         is_package: module.is_package,
                         source: location.clone(),
                         optimize_level: BytecodeOptimizationLevel::Two,
+                        cache_tag: self.cache_tag.clone(),
                     },
                 ))
             } else {
@@ -1013,6 +1019,7 @@ impl EmbeddedPythonResourcesPrePackaged {
                         source: DataLocation::Memory(vec![]),
                         optimize_level: BytecodeOptimizationLevel::Zero,
                         is_package: entry.is_package,
+                        cache_tag: self.cache_tag.clone(),
                     };
 
                     let path = module.resolve_path(prefix);
@@ -1039,6 +1046,7 @@ impl EmbeddedPythonResourcesPrePackaged {
                         source: DataLocation::Memory(vec![]),
                         optimize_level: BytecodeOptimizationLevel::One,
                         is_package: entry.is_package,
+                        cache_tag: self.cache_tag.clone(),
                     };
 
                     let path = module.resolve_path(prefix);
@@ -1065,6 +1073,7 @@ impl EmbeddedPythonResourcesPrePackaged {
                         source: DataLocation::Memory(vec![]),
                         optimize_level: BytecodeOptimizationLevel::Two,
                         is_package: entry.is_package,
+                        cache_tag: self.cache_tag.clone(),
                     };
 
                     let path = module.resolve_path(prefix);
@@ -1151,6 +1160,7 @@ impl EmbeddedPythonResourcesPrePackaged {
                                 name: package.clone(),
                                 source: DataLocation::Memory(vec![]),
                                 is_package: true,
+                                cache_tag: self.cache_tag.clone(),
                             };
                             module.add_to_file_manifest(&mut self.extra_files, prefix)?;
                             m.relative_path_module_source = Some(module.resolve_path(prefix));
@@ -1346,13 +1356,19 @@ impl<'a> EmbeddedPythonResources<'a> {
 mod tests {
     use super::*;
 
+    const DEFAULT_CACHE_TAG: &str = "cpython-37";
+
     #[test]
     fn test_add_in_memory_source_module() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
+        let mut r = EmbeddedPythonResourcesPrePackaged::new(
+            &PythonResourcesPolicy::InMemoryOnly,
+            DEFAULT_CACHE_TAG,
+        );
         r.add_in_memory_module_source(&PythonModuleSource {
             name: "foo".to_string(),
             source: DataLocation::Memory(vec![42]),
             is_package: false,
+            cache_tag: DEFAULT_CACHE_TAG.to_string(),
         })?;
 
         assert!(r.modules.contains_key("foo"));
@@ -1373,12 +1389,14 @@ mod tests {
     fn test_add_relative_path_source_module() -> Result<()> {
         let mut r = EmbeddedPythonResourcesPrePackaged::new(
             &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
+            DEFAULT_CACHE_TAG,
         );
         r.add_relative_path_module_source(
             &PythonModuleSource {
                 name: "foo".to_string(),
                 source: DataLocation::Memory(vec![42]),
                 is_package: false,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
             },
             "",
         )?;
@@ -1412,11 +1430,15 @@ mod tests {
 
     #[test]
     fn test_add_in_memory_source_module_parents() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
+        let mut r = EmbeddedPythonResourcesPrePackaged::new(
+            &PythonResourcesPolicy::InMemoryOnly,
+            DEFAULT_CACHE_TAG,
+        );
         r.add_in_memory_module_source(&PythonModuleSource {
             name: "root.parent.child".to_string(),
             source: DataLocation::Memory(vec![42]),
             is_package: true,
+            cache_tag: DEFAULT_CACHE_TAG.to_string(),
         })?;
 
         assert_eq!(r.modules.len(), 3);
@@ -1455,12 +1477,16 @@ mod tests {
 
     #[test]
     fn test_add_in_memory_bytecode_module() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
+        let mut r = EmbeddedPythonResourcesPrePackaged::new(
+            &PythonResourcesPolicy::InMemoryOnly,
+            DEFAULT_CACHE_TAG,
+        );
         r.add_in_memory_module_bytecode(&PythonModuleBytecodeFromSource {
             name: "foo".to_string(),
             source: DataLocation::Memory(vec![42]),
             optimize_level: BytecodeOptimizationLevel::Zero,
             is_package: false,
+            cache_tag: DEFAULT_CACHE_TAG.to_string(),
         })?;
 
         assert!(r.modules.contains_key("foo"));
@@ -1479,12 +1505,16 @@ mod tests {
 
     #[test]
     fn test_add_in_memory_bytecode_module_parents() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
+        let mut r = EmbeddedPythonResourcesPrePackaged::new(
+            &PythonResourcesPolicy::InMemoryOnly,
+            DEFAULT_CACHE_TAG,
+        );
         r.add_in_memory_module_bytecode(&PythonModuleBytecodeFromSource {
             name: "root.parent.child".to_string(),
             source: DataLocation::Memory(vec![42]),
             optimize_level: BytecodeOptimizationLevel::One,
             is_package: true,
+            cache_tag: DEFAULT_CACHE_TAG.to_string(),
         })?;
 
         assert_eq!(r.modules.len(), 3);
@@ -1521,7 +1551,10 @@ mod tests {
 
     #[test]
     fn test_add_in_memory_resource() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
+        let mut r = EmbeddedPythonResourcesPrePackaged::new(
+            &PythonResourcesPolicy::InMemoryOnly,
+            DEFAULT_CACHE_TAG,
+        );
         r.add_in_memory_package_resource(&PythonPackageResource {
             full_name: "foo/resource.txt".to_string(),
             leaf_package: "foo".to_string(),
@@ -1549,7 +1582,10 @@ mod tests {
 
     #[test]
     fn test_add_distribution_extension_module() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
+        let mut r = EmbeddedPythonResourcesPrePackaged::new(
+            &PythonResourcesPolicy::InMemoryOnly,
+            DEFAULT_CACHE_TAG,
+        );
         let em = DistributionExtensionModule {
             module: "foo.bar".to_string(),
             init_fn: None,
@@ -1597,7 +1633,10 @@ mod tests {
 
     #[test]
     fn test_add_extension_module_data() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
+        let mut r = EmbeddedPythonResourcesPrePackaged::new(
+            &PythonResourcesPolicy::InMemoryOnly,
+            DEFAULT_CACHE_TAG,
+        );
         let em = PythonExtensionModule {
             name: "foo.bar".to_string(),
             init_fn: Some("".to_string()),
@@ -1642,6 +1681,7 @@ mod tests {
     fn test_add_relative_path_extension_module() -> Result<()> {
         let mut r = EmbeddedPythonResourcesPrePackaged::new(
             &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
+            DEFAULT_CACHE_TAG,
         );
         let em = PythonExtensionModule {
             name: "foo.bar".to_string(),
@@ -1689,13 +1729,17 @@ mod tests {
 
     #[test]
     fn test_find_dunder_file() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
+        let mut r = EmbeddedPythonResourcesPrePackaged::new(
+            &PythonResourcesPolicy::InMemoryOnly,
+            DEFAULT_CACHE_TAG,
+        );
         assert_eq!(r.find_dunder_file()?.len(), 0);
 
         r.add_in_memory_module_source(&PythonModuleSource {
             name: "foo.bar".to_string(),
             source: DataLocation::Memory(vec![]),
             is_package: false,
+            cache_tag: DEFAULT_CACHE_TAG.to_string(),
         })?;
         assert_eq!(r.find_dunder_file()?.len(), 0);
 
@@ -1703,6 +1747,7 @@ mod tests {
             name: "baz".to_string(),
             source: DataLocation::Memory(Vec::from("import foo; if __file__ == 'ignored'")),
             is_package: false,
+            cache_tag: DEFAULT_CACHE_TAG.to_string(),
         })?;
         assert_eq!(r.find_dunder_file()?.len(), 1);
         assert!(r.find_dunder_file()?.contains("baz"));
@@ -1712,6 +1757,7 @@ mod tests {
             source: DataLocation::Memory(Vec::from("import foo; if __file__")),
             optimize_level: BytecodeOptimizationLevel::Zero,
             is_package: false,
+            cache_tag: DEFAULT_CACHE_TAG.to_string(),
         })?;
         assert_eq!(r.find_dunder_file()?.len(), 2);
         assert!(r.find_dunder_file()?.contains("bytecode"));

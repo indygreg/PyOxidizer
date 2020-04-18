@@ -143,6 +143,10 @@ pub struct PythonModuleSource {
     pub source: DataLocation,
     /// Whether this module is also a package.
     pub is_package: bool,
+    /// Tag to apply to bytecode files.
+    ///
+    /// e.g. `cpython-37`.
+    pub cache_tag: String,
 }
 
 impl PythonModuleSource {
@@ -151,6 +155,7 @@ impl PythonModuleSource {
             name: self.name.clone(),
             source: self.source.to_memory()?,
             is_package: self.is_package,
+            cache_tag: self.cache_tag.clone(),
         })
     }
 
@@ -181,6 +186,7 @@ impl PythonModuleSource {
             source: self.source.clone(),
             optimize_level,
             is_package: self.is_package,
+            cache_tag: self.cache_tag.clone(),
         }
     }
 
@@ -263,6 +269,10 @@ pub struct PythonModuleBytecodeFromSource {
     pub source: DataLocation,
     pub optimize_level: BytecodeOptimizationLevel,
     pub is_package: bool,
+    /// Tag to apply to bytecode files.
+    ///
+    /// e.g. `cpython-37`.
+    pub cache_tag: String,
 }
 
 impl PythonModuleBytecodeFromSource {
@@ -276,6 +286,7 @@ impl PythonModuleBytecodeFromSource {
             source: self.source.to_memory()?,
             optimize_level: self.optimize_level,
             is_package: self.is_package,
+            cache_tag: self.cache_tag.clone(),
         })
     }
 
@@ -291,17 +302,13 @@ impl PythonModuleBytecodeFromSource {
 
     /// Resolve filesystem path to this bytecode.
     pub fn resolve_path(&self, prefix: &str) -> PathBuf {
-        resolve_path_for_module(
-            prefix,
-            &self.name,
-            self.is_package,
-            // TODO capture Python version properly
-            Some(match self.optimize_level {
-                BytecodeOptimizationLevel::Zero => "cpython-37",
-                BytecodeOptimizationLevel::One => "cpython-37.opt-1",
-                BytecodeOptimizationLevel::Two => "cpython-37.opt-2",
-            }),
-        )
+        let bytecode_tag = match self.optimize_level {
+            BytecodeOptimizationLevel::Zero => self.cache_tag.clone(),
+            BytecodeOptimizationLevel::One => format!("{}.opt-1", self.cache_tag),
+            BytecodeOptimizationLevel::Two => format!("{}.opt-2", self.cache_tag),
+        };
+
+        resolve_path_for_module(prefix, &self.name, self.is_package, Some(&bytecode_tag))
     }
 
     /// Whether the source for this module has __file__.
@@ -699,6 +706,8 @@ impl PythonResource {
 mod tests {
     use {super::*, itertools::Itertools, std::iter::FromIterator};
 
+    const DEFAULT_CACHE_TAG: &str = "cpython-37";
+
     #[test]
     fn test_packages_from_module_name() {
         assert_eq!(
@@ -771,6 +780,7 @@ mod tests {
             name: "foo".to_string(),
             source: DataLocation::Memory(vec![]),
             is_package: false,
+            cache_tag: DEFAULT_CACHE_TAG.to_string(),
         }
         .add_to_file_manifest(&mut m, ".")?;
 
@@ -778,6 +788,7 @@ mod tests {
             name: "bar".to_string(),
             source: DataLocation::Memory(vec![]),
             is_package: false,
+            cache_tag: DEFAULT_CACHE_TAG.to_string(),
         }
         .add_to_file_manifest(&mut m, ".")?;
 
@@ -797,6 +808,7 @@ mod tests {
             name: "foo".to_string(),
             source: DataLocation::Memory(vec![]),
             is_package: true,
+            cache_tag: DEFAULT_CACHE_TAG.to_string(),
         }
         .add_to_file_manifest(&mut m, ".")?;
 
@@ -815,6 +827,7 @@ mod tests {
             name: "root.parent.child".to_string(),
             source: DataLocation::Memory(vec![]),
             is_package: false,
+            cache_tag: DEFAULT_CACHE_TAG.to_string(),
         }
         .add_to_file_manifest(&mut m, ".")?;
 
@@ -835,6 +848,7 @@ mod tests {
             name: "root.parent.child".to_string(),
             source: DataLocation::Memory(vec![]),
             is_package: true,
+            cache_tag: DEFAULT_CACHE_TAG.to_string(),
         }
         .add_to_file_manifest(&mut m, ".")?;
 
@@ -856,6 +870,7 @@ mod tests {
             name: "foo".to_string(),
             source: DataLocation::Memory(vec![]),
             is_package: false,
+            cache_tag: DEFAULT_CACHE_TAG.to_string(),
         });
         assert!(source.is_in_packages(&["foo".to_string()]));
         assert!(!source.is_in_packages(&[]));

@@ -62,6 +62,7 @@ enum DirEntryItem {
 
 pub struct PythonResourceIterator {
     root_path: PathBuf,
+    cache_tag: String,
     suffixes: PythonModuleSuffixes,
     walkdir_result: Box<dyn Iterator<Item = walkdir::DirEntry>>,
     seen_packages: HashSet<String>,
@@ -69,7 +70,11 @@ pub struct PythonResourceIterator {
 }
 
 impl PythonResourceIterator {
-    fn new(path: &Path, suffixes: &PythonModuleSuffixes) -> PythonResourceIterator {
+    fn new(
+        path: &Path,
+        cache_tag: &str,
+        suffixes: &PythonModuleSuffixes,
+    ) -> PythonResourceIterator {
         let res = walkdir::WalkDir::new(path).sort_by(|a, b| a.file_name().cmp(b.file_name()));
 
         let filtered = res.into_iter().filter_map(|entry| {
@@ -86,6 +91,7 @@ impl PythonResourceIterator {
 
         PythonResourceIterator {
             root_path: path.to_path_buf(),
+            cache_tag: cache_tag.to_string(),
             suffixes: suffixes.clone(),
             walkdir_result: Box::new(filtered),
             seen_packages: HashSet::new(),
@@ -289,6 +295,7 @@ impl PythonResourceIterator {
                     name: full_module_name,
                     source: DataLocation::Path(path.to_path_buf()),
                     is_package: is_package_from_path(&path),
+                    cache_tag: self.cache_tag.clone(),
                 }))
             }
             Some("pyc") => {
@@ -305,7 +312,7 @@ impl PythonResourceIterator {
                 let package_parts = &components[0..components.len() - 2];
                 let mut package = itertools::join(package_parts, ".");
 
-                // Files have format <package>/__pycache__/<module>.cpython-37.opt-1.pyc
+                // Files have format <package>/__pycache__/<module>.<cache_tag>.opt-1.pyc
                 let module_name = rel_path
                     .file_stem()
                     .expect("unable to get file stem")
@@ -509,9 +516,10 @@ impl Iterator for PythonResourceIterator {
 /// Returns an iterator of ``PythonResource`` instances.
 pub fn find_python_resources(
     root_path: &Path,
+    cache_tag: &str,
     suffixes: &PythonModuleSuffixes,
 ) -> PythonResourceIterator {
-    PythonResourceIterator::new(root_path, suffixes)
+    PythonResourceIterator::new(root_path, cache_tag, suffixes)
 }
 
 #[cfg(test)]
@@ -521,6 +529,8 @@ mod tests {
         lazy_static::lazy_static,
         std::fs::{create_dir_all, write},
     };
+
+    const DEFAULT_CACHE_TAG: &str = "cpython-37";
 
     lazy_static! {
         static ref EMPTY_SUFFIXES: PythonModuleSuffixes = PythonModuleSuffixes {
@@ -550,8 +560,8 @@ mod tests {
 
         write(acme_a_path.join("foo.py"), "# acme.foo")?;
 
-        let resources =
-            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+            .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 4);
 
         assert_eq!(
@@ -560,6 +570,7 @@ mod tests {
                 name: "acme".to_string(),
                 source: DataLocation::Path(acme_path.join("__init__.py")),
                 is_package: true,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
             })
         );
         assert_eq!(
@@ -568,6 +579,7 @@ mod tests {
                 name: "acme.a".to_string(),
                 source: DataLocation::Path(acme_a_path.join("__init__.py")),
                 is_package: true,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
             })
         );
         assert_eq!(
@@ -576,6 +588,7 @@ mod tests {
                 name: "acme.a.foo".to_string(),
                 source: DataLocation::Path(acme_a_path.join("foo.py")),
                 is_package: false,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
             })
         );
         assert_eq!(
@@ -584,6 +597,7 @@ mod tests {
                 name: "acme.bar".to_string(),
                 source: DataLocation::Path(acme_bar_path.join("__init__.py")),
                 is_package: true,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
             })
         );
 
@@ -603,8 +617,8 @@ mod tests {
         write(acme_path.join("__init__.py"), "")?;
         write(acme_path.join("bar.py"), "")?;
 
-        let resources =
-            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+            .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 2);
 
         assert_eq!(
@@ -613,6 +627,7 @@ mod tests {
                 name: "acme".to_string(),
                 source: DataLocation::Path(acme_path.join("__init__.py")),
                 is_package: true,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
             })
         );
         assert_eq!(
@@ -621,6 +636,7 @@ mod tests {
                 name: "acme.bar".to_string(),
                 source: DataLocation::Path(acme_path.join("bar.py")),
                 is_package: false,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
             })
         );
 
@@ -662,7 +678,8 @@ mod tests {
             ],
         };
 
-        let resources = PythonResourceIterator::new(tp, &suffixes).collect::<Result<Vec<_>>>()?;
+        let resources =
+            PythonResourceIterator::new(tp, "cpython-37", &suffixes).collect::<Result<Vec<_>>>()?;
 
         assert_eq!(resources.len(), 5);
 
@@ -745,8 +762,8 @@ mod tests {
         let egg_path = tp.join("foo-1.0-py3.7.egg");
         write(&egg_path, "")?;
 
-        let resources =
-            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+            .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 1);
 
         assert_eq!(
@@ -777,8 +794,8 @@ mod tests {
         write(package_path.join("__init__.py"), "")?;
         write(package_path.join("bar.py"), "")?;
 
-        let resources =
-            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+            .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 2);
 
         assert_eq!(
@@ -787,6 +804,7 @@ mod tests {
                 name: "foo".to_string(),
                 source: DataLocation::Path(package_path.join("__init__.py")),
                 is_package: true,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
             })
         );
         assert_eq!(
@@ -795,6 +813,7 @@ mod tests {
                 name: "foo.bar".to_string(),
                 source: DataLocation::Path(package_path.join("bar.py")),
                 is_package: false,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
             })
         );
 
@@ -811,8 +830,8 @@ mod tests {
         let pth_path = tp.join("foo.pth");
         write(&pth_path, "")?;
 
-        let resources =
-            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+            .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 1);
 
         assert_eq!(
@@ -834,7 +853,8 @@ mod tests {
         let resource_path = tp.join("resource.txt");
         write(&resource_path, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Vec<_>>();
+        let resources =
+            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES).collect::<Vec<_>>();
         assert!(resources.is_empty());
 
         Ok(())
@@ -853,8 +873,8 @@ mod tests {
         let resource_path = resource_dir.join("resource.txt");
         write(&resource_path, "content")?;
 
-        let resources =
-            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+            .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 1);
 
         assert_eq!(
@@ -863,6 +883,7 @@ mod tests {
                 name: "foo".to_string(),
                 source: DataLocation::Path(tp.join("foo.py")),
                 is_package: false,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
             })
         );
 
@@ -883,8 +904,8 @@ mod tests {
         let resource_path = package_dir.join("resource.txt");
         write(&resource_path, "content")?;
 
-        let resources =
-            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+            .collect::<Result<Vec<_>>>()?;
 
         assert_eq!(resources.len(), 2);
         assert_eq!(
@@ -893,6 +914,7 @@ mod tests {
                 name: "foo".to_string(),
                 source: DataLocation::Path(module_path),
                 is_package: true,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
             })
         );
         assert_eq!(
@@ -923,8 +945,8 @@ mod tests {
         let resource_path = subdir.join("resource.txt");
         write(&resource_path, "content")?;
 
-        let resources =
-            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+            .collect::<Result<Vec<_>>>()?;
 
         assert_eq!(resources.len(), 2);
         assert_eq!(
@@ -933,6 +955,7 @@ mod tests {
                 name: "foo".to_string(),
                 source: DataLocation::Path(module_path),
                 is_package: true,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
             }),
         );
         assert_eq!(
@@ -959,8 +982,8 @@ mod tests {
         let resource = dist_path.join("file.txt");
         write(&resource, "content")?;
 
-        let resources =
-            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+            .collect::<Result<Vec<_>>>()?;
         assert!(resources.is_empty());
 
         Ok(())
@@ -979,8 +1002,8 @@ mod tests {
         let resource = dist_path.join("file.txt");
         write(&resource, "content")?;
 
-        let resources =
-            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+            .collect::<Result<Vec<_>>>()?;
         assert!(resources.is_empty());
 
         Ok(())
@@ -999,8 +1022,8 @@ mod tests {
         let resource = dist_path.join("file.txt");
         write(&resource, "content")?;
 
-        let resources =
-            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+            .collect::<Result<Vec<_>>>()?;
         assert!(resources.is_empty());
 
         Ok(())
@@ -1024,8 +1047,8 @@ mod tests {
         let subdir_resource_path = subdir.join("sub.txt");
         write(&subdir_resource_path, "content")?;
 
-        let resources =
-            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+            .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 3);
 
         assert_eq!(
@@ -1080,8 +1103,8 @@ mod tests {
         let subdir_resource_path = subdir.join("sub.txt");
         write(&subdir_resource_path, "content")?;
 
-        let resources =
-            PythonResourceIterator::new(tp, &EMPTY_SUFFIXES).collect::<Result<Vec<_>>>()?;
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+            .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 3);
 
         assert_eq!(

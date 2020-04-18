@@ -219,6 +219,7 @@ impl PythonExecutable {
                 source: m.source.clone(),
                 optimize_level,
                 is_package: m.is_package,
+                cache_tag: m.cache_tag.clone(),
             })
             .or_else(|e| {
                 {
@@ -278,6 +279,7 @@ impl PythonExecutable {
                     source: m.source.clone(),
                     optimize_level,
                     is_package: m.is_package,
+                    cache_tag: m.cache_tag.clone(),
                 },
             )
             .or_else(|e| {
@@ -329,6 +331,7 @@ impl PythonExecutable {
                 source: m.source.clone(),
                 optimize_level,
                 is_package: m.is_package,
+                cache_tag: m.cache_tag.clone(),
             })
             .or_else(|e| {
                 {

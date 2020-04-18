@@ -529,6 +529,11 @@ pub struct StandaloneDistribution {
 
     /// Compiler flags to use to build object containing _PyImport_Inittab.
     pub inittab_cflags: Vec<String>,
+
+    /// Tag to apply to bytecode files.
+    ///
+    /// e.g. `cpython-37`.
+    pub cache_tag: String,
 }
 
 impl StandaloneDistribution {
@@ -799,7 +804,9 @@ impl StandaloneDistribution {
 
         let suffixes = PythonModuleSuffixes::resolve_from_python_exe(&python_exe_path(dist_dir)?)?;
 
-        for entry in find_python_resources(&stdlib_path, &suffixes) {
+        for entry in
+            find_python_resources(&stdlib_path, &pi.python_implementation_cache_tag, &suffixes)
+        {
             match entry? {
                 PythonResource::Resource(resource) => {
                     if !resources.contains_key(&resource.leaf_package) {
@@ -876,6 +883,7 @@ impl StandaloneDistribution {
             license_infos,
             venv_base,
             inittab_cflags: pi.build_info.inittab_cflags,
+            cache_tag: pi.python_implementation_cache_tag,
         })
     }
 
@@ -985,6 +993,10 @@ impl PythonDistribution for StandaloneDistribution {
         self.version[0..3].to_string()
     }
 
+    fn cache_tag(&self) -> &str {
+        &self.cache_tag
+    }
+
     fn python_module_suffixes(&self) -> Result<PythonModuleSuffixes> {
         // TODO convey the suffixes in the PYTHON.json file so we can avoid having
         // to invoke the Python interpreter.
@@ -1030,7 +1042,7 @@ impl PythonDistribution for StandaloneDistribution {
             exe_name: name.to_string(),
             distribution: self.clone(),
             resources_policy: resources_policy.clone(),
-            resources: EmbeddedPythonResourcesPrePackaged::new(resources_policy),
+            resources: EmbeddedPythonResourcesPrePackaged::new(resources_policy, &self.cache_tag),
             config: config.clone(),
             python_exe,
             importlib_bytecode,
@@ -1185,6 +1197,7 @@ impl PythonDistribution for StandaloneDistribution {
                     name: name.clone(),
                     source: DataLocation::Path(path.clone()),
                     is_package,
+                    cache_tag: self.cache_tag.clone(),
                 })
             })
             .collect()
@@ -1802,8 +1815,10 @@ pub mod tests {
         logger: &slog::Logger,
     ) -> Result<StandalonePythonExecutableBuilder> {
         let distribution = get_default_distribution()?;
-        let mut resources =
-            EmbeddedPythonResourcesPrePackaged::new(&PythonResourcesPolicy::InMemoryOnly);
+        let mut resources = EmbeddedPythonResourcesPrePackaged::new(
+            &PythonResourcesPolicy::InMemoryOnly,
+            &distribution.cache_tag,
+        );
 
         // We need to add minimal extension modules so builds actually work. If they are missing,
         // we'll get missing symbol errors during linking.

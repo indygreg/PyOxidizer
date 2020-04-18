@@ -558,6 +558,8 @@ mod tests {
         std::path::PathBuf,
     };
 
+    const DEFAULT_CACHE_TAG: &str = "cpython-37";
+
     #[test]
     fn test_new_file_manifest() {
         let m = starlark_ok("FileManifest()");
@@ -579,6 +581,7 @@ mod tests {
                 name: "foo.bar".to_string(),
                 source: DataLocation::Memory(vec![]),
                 is_package: false,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
             },
         });
 

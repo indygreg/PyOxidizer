@@ -162,6 +162,9 @@ pub trait PythonDistribution {
     /// Obtain the X.Y Python version component. e.g. `3.7`.
     fn python_major_minor_version(&self) -> String;
 
+    /// Obtain the cache tag to apply to Python bytecode modules.
+    fn cache_tag(&self) -> &str;
+
     /// Obtain file suffixes for various Python module flavors.
     fn python_module_suffixes(&self) -> Result<PythonModuleSuffixes>;
 
