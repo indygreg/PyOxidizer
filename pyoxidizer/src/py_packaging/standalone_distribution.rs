@@ -160,10 +160,31 @@ struct PythonJsonMain {
 
 fn parse_python_json(path: &Path) -> Result<PythonJsonMain> {
     if !path.exists() {
-        panic!("PYTHON.json does not exist; are you using an up-to-date Python distribution that conforms with our requirements?");
+        return Err(anyhow!("PYTHON.json does not exist; are you using an up-to-date Python distribution that conforms with our requirements?"));
     }
 
     let buf = std::fs::read(path)?;
+
+    let value: serde_json::Value = serde_json::from_slice(&buf)?;
+    let o = value
+        .as_object()
+        .ok_or_else(|| anyhow!("PYTHON.json does not parse to an object"))?;
+
+    match o.get("version") {
+        Some(version) => {
+            let version = version
+                .as_str()
+                .ok_or_else(|| anyhow!("unable to parse version as a string"))?;
+
+            if version != "4" {
+                return Err(anyhow!(
+                    "expected version 4 standalone distribution; found version {}",
+                    version
+                ));
+            }
+        }
+        None => return Err(anyhow!("version key not present in PYTHON.json")),
+    }
 
     let v: PythonJsonMain = serde_json::from_slice(&buf)?;
 
