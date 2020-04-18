@@ -265,78 +265,91 @@ impl PythonResourceIterator {
             }
         }
 
-        // TODO use registered suffixes for source and bytecode detection.
-        let resource = match rel_path.extension().and_then(OsStr::to_str) {
-            Some("py") => {
-                let package_parts = &components[0..components.len() - 1];
-                let mut package = itertools::join(package_parts, ".");
+        // File extension matches a registered source suffix.
+        if self
+            .suffixes
+            .source
+            .iter()
+            .any(|ext| rel_str.ends_with(ext))
+        {
+            let package_parts = &components[0..components.len() - 1];
+            let mut package = itertools::join(package_parts, ".");
 
-                let module_name = rel_path
-                    .file_stem()
-                    .expect("unable to get file stem")
-                    .to_str()
-                    .expect("unable to convert path to str");
+            let module_name = rel_path
+                .file_stem()
+                .expect("unable to get file stem")
+                .to_str()
+                .expect("unable to convert path to str");
 
-                let mut full_module_name: Vec<&str> = package_parts.to_vec();
+            let mut full_module_name: Vec<&str> = package_parts.to_vec();
 
-                if module_name != "__init__" {
-                    full_module_name.push(module_name);
-                }
+            if module_name != "__init__" {
+                full_module_name.push(module_name);
+            }
 
-                let full_module_name = itertools::join(full_module_name, ".");
+            let full_module_name = itertools::join(full_module_name, ".");
 
-                if package.is_empty() {
-                    package = full_module_name.clone();
-                }
+            if package.is_empty() {
+                package = full_module_name.clone();
+            }
 
-                self.seen_packages.insert(package.clone());
+            self.seen_packages.insert(package.clone());
 
-                DirEntryItem::PythonResource(PythonResource::ModuleSource(PythonModuleSource {
+            return Some(DirEntryItem::PythonResource(PythonResource::ModuleSource(
+                PythonModuleSource {
                     name: full_module_name,
                     source: DataLocation::Path(path.to_path_buf()),
                     is_package: is_package_from_path(&path),
                     cache_tag: self.cache_tag.clone(),
-                }))
+                },
+            )));
+        }
+
+        if self
+            .suffixes
+            .bytecode
+            .iter()
+            .any(|ext| rel_str.ends_with(ext))
+        {
+            // .pyc files should be in a __pycache__ directory.
+            if components.len() < 2 {
+                panic!("encountered .pyc file with invalid path: {}", rel_str);
             }
-            Some("pyc") => {
-                // .pyc files should be in a __pycache__ directory.
-                if components.len() < 2 {
-                    panic!("encountered .pyc file with invalid path: {}", rel_str);
-                }
 
-                // Possibly from Python 2?
-                if components[components.len() - 2] != "__pycache__" {
-                    return None;
-                }
+            // Possibly from Python 2?
+            if components[components.len() - 2] != "__pycache__" {
+                return None;
+            }
 
-                let package_parts = &components[0..components.len() - 2];
-                let mut package = itertools::join(package_parts, ".");
+            let package_parts = &components[0..components.len() - 2];
+            let mut package = itertools::join(package_parts, ".");
 
-                // Files have format <package>/__pycache__/<module>.<cache_tag>.opt-1.pyc
-                let module_name = rel_path
-                    .file_stem()
-                    .expect("unable to get file stem")
-                    .to_str()
-                    .expect("unable to convert file stem to str");
-                let module_name_parts = module_name.split('.').collect_vec();
-                let module_name =
-                    itertools::join(&module_name_parts[0..module_name_parts.len() - 1], ".");
+            // Files have format <package>/__pycache__/<module>.<cache_tag>.opt-1.pyc
+            let module_name = rel_path
+                .file_stem()
+                .expect("unable to get file stem")
+                .to_str()
+                .expect("unable to convert file stem to str");
+            let module_name_parts = module_name.split('.').collect_vec();
+            let module_name =
+                itertools::join(&module_name_parts[0..module_name_parts.len() - 1], ".");
 
-                let mut full_module_name: Vec<&str> = package_parts.to_vec();
+            let mut full_module_name: Vec<&str> = package_parts.to_vec();
 
-                if module_name != "__init__" {
-                    full_module_name.push(&module_name);
-                }
+            if module_name != "__init__" {
+                full_module_name.push(&module_name);
+            }
 
-                let full_module_name = itertools::join(full_module_name, ".");
+            let full_module_name = itertools::join(full_module_name, ".");
 
-                if package.is_empty() {
-                    package = full_module_name.clone();
-                }
+            if package.is_empty() {
+                package = full_module_name.clone();
+            }
 
-                self.seen_packages.insert(package.clone());
+            self.seen_packages.insert(package.clone());
 
-                DirEntryItem::PythonResource(if rel_str.ends_with(".opt-1.pyc") {
+            return Some(DirEntryItem::PythonResource(
+                if rel_str.ends_with(".opt-1.pyc") {
                     PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
                         &full_module_name,
                         BytecodeOptimizationLevel::One,
@@ -354,8 +367,11 @@ impl PythonResourceIterator {
                         BytecodeOptimizationLevel::Zero,
                         path,
                     ))
-                })
-            }
+                },
+            ));
+        }
+
+        let resource = match rel_path.extension().and_then(OsStr::to_str) {
             Some("egg") => DirEntryItem::PythonResource(PythonResource::EggFile(PythonEggFile {
                 data: DataLocation::Path(path.to_path_buf()),
             })),
@@ -533,9 +549,9 @@ mod tests {
     const DEFAULT_CACHE_TAG: &str = "cpython-37";
 
     lazy_static! {
-        static ref EMPTY_SUFFIXES: PythonModuleSuffixes = PythonModuleSuffixes {
-            source: vec![],
-            bytecode: vec![],
+        static ref DEFAULT_SUFFIXES: PythonModuleSuffixes = PythonModuleSuffixes {
+            source: vec![".py".to_string()],
+            bytecode: vec![".pyc".to_string()],
             debug_bytecode: vec![],
             optimized_bytecode: vec![],
             extension: vec![],
@@ -560,7 +576,7 @@ mod tests {
 
         write(acme_a_path.join("foo.py"), "# acme.foo")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
             .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 4);
 
@@ -617,7 +633,7 @@ mod tests {
         write(acme_path.join("__init__.py"), "")?;
         write(acme_path.join("bar.py"), "")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
             .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 2);
 
@@ -762,7 +778,7 @@ mod tests {
         let egg_path = tp.join("foo-1.0-py3.7.egg");
         write(&egg_path, "")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
             .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 1);
 
@@ -794,7 +810,7 @@ mod tests {
         write(package_path.join("__init__.py"), "")?;
         write(package_path.join("bar.py"), "")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
             .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 2);
 
@@ -830,7 +846,7 @@ mod tests {
         let pth_path = tp.join("foo.pth");
         write(&pth_path, "")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
             .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 1);
 
@@ -853,8 +869,8 @@ mod tests {
         let resource_path = tp.join("resource.txt");
         write(&resource_path, "content")?;
 
-        let resources =
-            PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES).collect::<Vec<_>>();
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
+            .collect::<Vec<_>>();
         assert!(resources.is_empty());
 
         Ok(())
@@ -873,7 +889,7 @@ mod tests {
         let resource_path = resource_dir.join("resource.txt");
         write(&resource_path, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
             .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 1);
 
@@ -904,7 +920,7 @@ mod tests {
         let resource_path = package_dir.join("resource.txt");
         write(&resource_path, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
             .collect::<Result<Vec<_>>>()?;
 
         assert_eq!(resources.len(), 2);
@@ -945,7 +961,7 @@ mod tests {
         let resource_path = subdir.join("resource.txt");
         write(&resource_path, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
             .collect::<Result<Vec<_>>>()?;
 
         assert_eq!(resources.len(), 2);
@@ -982,7 +998,7 @@ mod tests {
         let resource = dist_path.join("file.txt");
         write(&resource, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
             .collect::<Result<Vec<_>>>()?;
         assert!(resources.is_empty());
 
@@ -1002,7 +1018,7 @@ mod tests {
         let resource = dist_path.join("file.txt");
         write(&resource, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
             .collect::<Result<Vec<_>>>()?;
         assert!(resources.is_empty());
 
@@ -1022,7 +1038,7 @@ mod tests {
         let resource = dist_path.join("file.txt");
         write(&resource, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
             .collect::<Result<Vec<_>>>()?;
         assert!(resources.is_empty());
 
@@ -1047,7 +1063,7 @@ mod tests {
         let subdir_resource_path = subdir.join("sub.txt");
         write(&subdir_resource_path, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
             .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 3);
 
@@ -1103,7 +1119,7 @@ mod tests {
         let subdir_resource_path = subdir.join("sub.txt");
         write(&subdir_resource_path, "content")?;
 
-        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &EMPTY_SUFFIXES)
+        let resources = PythonResourceIterator::new(tp, DEFAULT_CACHE_TAG, &DEFAULT_SUFFIXES)
             .collect::<Result<Vec<_>>>()?;
         assert_eq!(resources.len(), 3);
 
