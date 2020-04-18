@@ -596,8 +596,17 @@ impl StandaloneDistribution {
 
             match entry.file_name().to_str() {
                 Some("python") => continue,
-                Some(value) => panic!("unexpected entry in distribution root directory: {}", value),
-                _ => panic!("error listing root directory of Python distribution"),
+                Some(value) => {
+                    return Err(anyhow!(
+                        "unexpected entry in distribution root directory: {}",
+                        value
+                    ))
+                }
+                _ => {
+                    return Err(anyhow!(
+                        "error listing root directory of Python distribution"
+                    ))
+                }
             };
         }
 
@@ -613,8 +622,10 @@ impl StandaloneDistribution {
                 Some("licenses") => continue,
                 Some("LICENSE.rst") => continue,
                 Some("PYTHON.json") => continue,
-                Some(value) => panic!("unexpected entry in python/ directory: {}", value),
-                _ => panic!("error listing python/ directory"),
+                Some(value) => {
+                    return Err(anyhow!("unexpected entry in python/ directory: {}", value))
+                }
+                _ => return Err(anyhow!("error listing python/ directory")),
             };
         }
 
@@ -753,7 +764,9 @@ impl StandaloneDistribution {
                         match resource.data {
                             DataLocation::Path(path) => path,
                             DataLocation::Memory(_) => {
-                                panic!("should not have received in-memory resource data")
+                                return Err(anyhow!(
+                                    "should not have received in-memory resource data"
+                                ))
                             }
                         },
                     );
@@ -763,7 +776,7 @@ impl StandaloneDistribution {
                         py_modules.insert(source.name.clone(), path);
                     }
                     DataLocation::Memory(_) => {
-                        panic!("should not have received in-memory source data")
+                        return Err(anyhow!("should not have received in-memory source data"))
                     }
                 },
                 _ => {}
