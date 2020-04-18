@@ -526,6 +526,9 @@ pub struct StandaloneDistribution {
 
     /// Path to copy of hacked dist to use for packaging rules venvs
     pub venv_base: PathBuf,
+
+    /// Compiler flags to use to build object containing _PyImport_Inittab.
+    pub inittab_cflags: Vec<String>,
 }
 
 impl StandaloneDistribution {
@@ -872,6 +875,7 @@ impl StandaloneDistribution {
             resources,
             license_infos,
             venv_base,
+            inittab_cflags: pi.build_info.inittab_cflags,
         })
     }
 

@@ -176,18 +176,20 @@ pub fn link_libpython(
         fs::copy(fs_path, full)?;
     }
 
-    // TODO flags should come from parsed distribution config.
     warn!(logger, "compiling custom config.c to object file");
-    cc::Build::new()
+    let mut build = cc::Build::new();
+
+    for flag in &dist.inittab_cflags {
+        build.flag(flag);
+    }
+
+    build
         .out_dir(out_dir)
         .host(host)
         .target(target)
         .opt_level_str(opt_level)
         .file(config_c_temp_path)
         .include(temp_dir_path)
-        .define("NDEBUG", None)
-        .define("Py_BUILD_CORE", None)
-        .flag("-std=c99")
         .cargo_metadata(false)
         .compile("pyembeddedconfig");
 
