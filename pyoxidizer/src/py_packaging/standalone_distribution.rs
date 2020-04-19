@@ -527,6 +527,9 @@ pub struct StandaloneDistribution {
     /// Path to copy of hacked dist to use for packaging rules venvs
     pub venv_base: PathBuf,
 
+    /// Path to object file defining _PyImport_Inittab.
+    pub inittab_object: PathBuf,
+
     /// Compiler flags to use to build object containing _PyImport_Inittab.
     pub inittab_cflags: Vec<String>,
 
@@ -881,6 +884,8 @@ impl StandaloneDistribution {
             return Err(anyhow!("unhandled link mode: {}", pi.libpython_link_mode));
         };
 
+        let inittab_object = python_path.join(pi.build_info.inittab_object);
+
         Ok(Self {
             base_dir: dist_dir.to_path_buf(),
             target_triple: pi.target_triple,
@@ -913,6 +918,7 @@ impl StandaloneDistribution {
             resources,
             license_infos,
             venv_base,
+            inittab_object,
             inittab_cflags: pi.build_info.inittab_cflags,
             cache_tag: pi.python_implementation_cache_tag,
             module_suffixes,

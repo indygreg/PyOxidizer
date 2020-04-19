@@ -218,13 +218,13 @@ pub fn link_libpython(
         dist.objs_core.keys().map(|k| k.display()).collect_vec()
     );
     for (rel_path, fs_path) in &dist.objs_core {
-        // TODO this is a bit hacky. Perhaps the distribution should advertise
-        // which object file contains _PyImport_Inittab. Or perhaps we could
-        // scan all the object files for this symbol and ignore it automatically?
-        if rel_path.ends_with("Modules/config.o") {
+        // We're deriving our own _PyImport_Inittab. So ignore the object
+        // file containing it.
+        if fs_path == &dist.inittab_object {
             warn!(
                 logger,
-                "ignoring config.o since it may conflict with our version"
+                "ignoring {} since it may conflict with our version",
+                rel_path.display()
             );
             continue;
         }
