@@ -29,17 +29,22 @@ Not yet released.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* Windows static distributions have been removed (temporary
+  regression which should be corrected before a release).
+* The default Python distributions have been upgraded to CPython
+  3.8.2 (from 3.7.7) and support for Python 3.7 has been removed.
 * Support for packaging the official Windows embeddable Python
   distributions has been removed. This support was experimental.
   The official Windows embeddable distributions are missing critical
   support files that make them difficult to integrate with PyOxidizer.
 * The *standalone* Python distributions are now validated to be at
   least version 5 of the distribution format. If you are using the
-  default Python distributions, this change should not effect you.
+  default Python distributions, this change should not affect you.
 
 New Features
 ^^^^^^^^^^^^
 
+* Python distributions upgraded to CPython 3.8.2.
 * Default Python distributions upgraded to version 5 of the
   standalone distribution format. This new format advertises much more
   metadata about the distribution, enabling PyOxidizer to take fewer

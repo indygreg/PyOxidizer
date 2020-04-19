@@ -734,7 +734,10 @@ impl<'a> MainPythonInterpreter<'a> {
         let stdin_filename = "<stdin>";
         let filename = CString::new(stdin_filename)
             .or_else(|_| Err(PyErr::new::<ValueError, _>(py, "could not create CString")))?;
-        let mut cf = pyffi::PyCompilerFlags { cf_flags: 0 };
+        let mut cf = pyffi::PyCompilerFlags {
+            cf_flags: 0,
+            cf_feature_version: 0,
+        };
 
         unsafe {
             let stdin = stdin_to_file();
@@ -795,7 +798,10 @@ impl<'a> MainPythonInterpreter<'a> {
 
         let res = unsafe {
             let fp = libc::fopen(filename.as_ptr(), "rb\0".as_ptr() as *const _);
-            let mut cf = pyffi::PyCompilerFlags { cf_flags: 0 };
+            let mut cf = pyffi::PyCompilerFlags {
+                cf_flags: 0,
+                cf_feature_version: 0,
+            };
 
             pyffi::PyRun_AnyFileExFlags(fp, filename.as_ptr(), 1, &mut cf)
         };

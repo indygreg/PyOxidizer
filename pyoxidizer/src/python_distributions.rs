@@ -59,8 +59,8 @@ lazy_static! {
             // Linux glibc linked.
             PythonDistributionRecord {
                 location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200418/cpython-3.7.7-x86_64-unknown-linux-gnu-pgo-20200418T2226.tar.zst".to_string(),
-                    sha256: "987ea3f77e168fc71b9c28d7845f76ac61ca804c235caf98c6a674176e7e4dfa".to_string(),
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200418/cpython-3.8.2-x86_64-unknown-linux-gnu-pgo-20200418T2243.tar.zst".to_string(),
+                    sha256: "c7aa51b5deb220e2254a7e32ae7106748d5854b978762f8eb83468c8946dcdbb".to_string(),
                 },
                 target_triple: "x86_64-unknown-linux-gnu".to_string(),
                 supports_prebuilt_extension_modules: true,
@@ -69,8 +69,8 @@ lazy_static! {
             // Linux musl.
             PythonDistributionRecord {
                 location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200418/cpython-3.7.7-x86_64-unknown-linux-musl-noopt-20200418T2251.tar.zst".to_string(),
-                    sha256: "f0479ce0b6f8e2c752f059673fb15dc07932b836e11926ca6a3cb9ce656b508e".to_string(),
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200418/cpython-3.8.2-x86_64-unknown-linux-musl-noopt-20200418T2309.tar.zst".to_string(),
+                    sha256: "44d6864e5caafb029f94d6d92e5d33f0d1cbc3cb6b14736b4f526609e3a700da".to_string(),
                 },
                 target_triple: "x86_64-unknown-linux-musl".to_string(),
                 supports_prebuilt_extension_modules: false,
@@ -80,36 +80,21 @@ lazy_static! {
             // first one.
 
             // Windows static.
-            PythonDistributionRecord {
-                location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200418/cpython-3.7.7-i686-pc-windows-msvc-static-noopt-20200418T2317.tar.zst".to_string(),
-                    sha256: "7c4a4102677f398c7c39c31141c99f2b3dcaa85651f6f698d379fee372a8a64c".to_string(),
-                },
-                target_triple: "i686-pc-windows-msvc".to_string(),
-                supports_prebuilt_extension_modules: false,
-            },
-            PythonDistributionRecord {
-                location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200418/cpython-3.7.7-x86_64-pc-windows-msvc-static-noopt-20200418T2311.tar.zst".to_string(),
-                    sha256: "820c1eef04eacdba84a1fc1db7ea15fa01791ac6e3ece75546418ef8ac1b1cf3".to_string(),
-                },
-                target_triple: "x86_64-pc-windows-msvc".to_string(),
-                supports_prebuilt_extension_modules: false,
-            },
+            // TODO re-add these once python-build-standalone produces them.
 
             // Windows shared.
             PythonDistributionRecord {
                 location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200418/cpython-3.7.7-i686-pc-windows-msvc-shared-pgo-20200418T2311.tar.zst".to_string(),
-                    sha256: "d78ea86fef04d5ab1e08fa968f24e7e61c8644a1668af592af145bd603deec53".to_string(),
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200418/cpython-3.8.2-i686-pc-windows-msvc-shared-pgo-20200418T2315.tar.zst".to_string(),
+                    sha256: "9b449b079cce7837cd60f1d0d4d0bcbf421018f972555e02f5bd4e219a059220".to_string(),
                 },
                 target_triple: "i686-pc-windows-msvc".to_string(),
                 supports_prebuilt_extension_modules: true,
             },
             PythonDistributionRecord {
                 location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200418/cpython-3.7.7-x86_64-pc-windows-msvc-shared-pgo-20200418T2225.tar.zst".to_string(),
-                    sha256: "d4ef9027e294fa019e835d23d8e4c6747af043704ec2a0fbb05556179a2b6000".to_string(),
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200418/cpython-3.8.2-x86_64-pc-windows-msvc-shared-pgo-20200418T2315.tar.zst".to_string(),
+                    sha256: "022b3630265a05475d554ca97d1d85c2d7270cc0c95fb4af1b2155bec7e5bd5d".to_string(),
                 },
                 target_triple: "x86_64-pc-windows-msvc".to_string(),
                 supports_prebuilt_extension_modules: true,
@@ -118,8 +103,8 @@ lazy_static! {
             // macOS.
             PythonDistributionRecord {
                 location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200418/cpython-3.7.7-x86_64-apple-darwin-pgo-20200418T2238.tar.zst".to_string(),
-                    sha256: "39a936ae7948a4e4237823158633541a23cea66b5fe9c523955de06a45f4f8d6".to_string(),
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200418/cpython-3.8.2-x86_64-apple-darwin-pgo-20200418T2238.tar.zst".to_string(),
+                    sha256: "f6e11a18c3fe841a1a45fc3a786ef54c1540c48aa75b6d47ad8d6ae74b44ce1d".to_string(),
                 },
                 target_triple: "x86_64-apple-darwin".to_string(),
                 supports_prebuilt_extension_modules: true,
