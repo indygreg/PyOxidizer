@@ -132,8 +132,8 @@ pub fn link_libpython(
     dist: &StandaloneDistribution,
     resources: &EmbeddedPythonResources,
     out_dir: &Path,
-    host: &str,
-    target: &str,
+    host_triple: &str,
+    target_triple: &str,
     opt_level: &str,
 ) -> Result<LibpythonInfo> {
     let mut cargo_metadata: Vec<String> = Vec::new();
@@ -141,7 +141,7 @@ pub fn link_libpython(
     let temp_dir = tempdir::TempDir::new("libpython")?;
     let temp_dir_path = temp_dir.path();
 
-    let windows = match target {
+    let windows = match target_triple {
         "i686-pc-windows-msvc" => true,
         "x86_64-pc-windows-msvc" => true,
         _ => false,
@@ -185,8 +185,8 @@ pub fn link_libpython(
 
     build
         .out_dir(out_dir)
-        .host(host)
-        .target(target)
+        .host(host_triple)
+        .target(target_triple)
         .opt_level_str(opt_level)
         .file(config_c_temp_path)
         .include(temp_dir_path)
@@ -205,8 +205,8 @@ pub fn link_libpython(
     warn!(logger, "resolving inputs for custom Python library...");
     let mut build = cc::Build::new();
     build.out_dir(out_dir);
-    build.host(host);
-    build.target(target);
+    build.host(host_triple);
+    build.target(target_triple);
     build.opt_level_str(opt_level);
     // We handle this ourselves.
     build.cargo_metadata(false);
