@@ -9,22 +9,28 @@ use {
     super::importer::PyInit__pyoxidizer_importer,
     super::osutils::resolve_terminfo_dirs,
     super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
-    super::pystr::{osstr_to_pyobject, osstring_to_bytes, OwnedPyStr},
+    super::pystr::{osstr_to_pyobject, osstring_to_bytes},
     cpython::exc::{SystemExit, ValueError},
     cpython::{
         GILGuard, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule, PyObject,
         PyResult, PyString, Python, PythonObject, ToPyObject,
     },
-    libc::c_char,
+    libc::{c_char, wchar_t},
     python3_sys as pyffi,
     std::collections::BTreeSet,
     std::env,
     std::ffi::{CStr, CString},
     std::fs,
     std::io::Write,
-    std::path::PathBuf,
+    std::path::{Path, PathBuf},
     std::ptr::null,
 };
+
+#[cfg(unix)]
+use std::os::unix::ffi::OsStrExt;
+
+#[cfg(target_family = "windows")]
+use std::os::windows::prelude::OsStrExt;
 
 #[cfg(feature = "jemalloc-sys")]
 use super::pyalloc::make_raw_jemalloc_allocator;
@@ -106,6 +112,18 @@ fn stderr_to_file() -> *mut libc::FILE {
     unsafe { libc::fdopen(libc::STDERR_FILENO, &('w' as libc::c_char)) }
 }
 
+#[cfg(unix)]
+fn set_windows_fs_encoding(_config: &PythonConfig, _pre_config: &mut pyffi::PyPreConfig) {}
+
+#[cfg(windows)]
+fn set_windows_fs_encoding(config: &PythonConfig, pre_config: &mut pyffi::PyPreConfig) {
+    pre_config.legacy_windows_fs_encoding = if config.legacy_windows_fs_encoding {
+        1
+    } else {
+        0
+    };
+}
+
 #[cfg(feature = "jemalloc-sys")]
 fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
     make_raw_jemalloc_allocator()
@@ -117,18 +135,43 @@ fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
 }
 
 #[cfg(unix)]
-fn set_windows_flags(_config: &PythonConfig) {}
+fn set_config_string_from_path(
+    config: &pyffi::PyConfig,
+    dest: &*mut wchar_t,
+    path: &Path,
+) -> pyffi::PyStatus {
+    unsafe {
+        pyffi::PyConfig_SetBytesString(
+            config as *const _ as *mut _,
+            dest as *const *mut _ as *mut *mut _,
+            path.as_os_str().as_bytes().as_ptr() as *const _,
+        )
+    }
+}
 
 #[cfg(windows)]
-fn set_windows_flags(config: &PythonConfig) {
+fn set_config_string_from_path(
+    config: &pyffi::PyConfig,
+    dest: &*mut wchar_t,
+    path: &Path,
+) -> pyffi::PyStatus {
     unsafe {
-        pyffi::Py_LegacyWindowsFSEncodingFlag = if config.legacy_windows_fs_encoding {
-            1
-        } else {
-            0
-        };
-        pyffi::Py_LegacyWindowsStdioFlag = if config.legacy_windows_stdio { 1 } else { 0 };
+        let value: Vec<wchar_t> = path.as_os_str().encode_wide().collect();
+
+        pyffi::PyConfig_SetString(
+            config as *const _ as *mut _,
+            dest as *const *mut _ as *mut *mut _,
+            value.as_ptr() as *const _,
+        )
     }
+}
+
+#[cfg(unix)]
+fn set_windows_flags(_config: &PythonConfig, _py_config: &mut pyffi::PyConfig) {}
+
+#[cfg(windows)]
+fn set_windows_flags(config: &PythonConfig, py_config: &mut pyffi::PyConfig) {
+    py_config.legacy_windows_stdio = if config.legacy_windows_stdio { 1 } else { 0 };
 }
 
 /// Manages an embedded Python interpreter.
@@ -151,7 +194,6 @@ pub struct MainPythonInterpreter<'a> {
     raw_rust_allocator: Option<RawAllocator>,
     gil: Option<GILGuard>,
     py: Option<Python<'a>>,
-    program_name: Option<OwnedPyStr>,
 }
 
 impl<'a> MainPythonInterpreter<'a> {
@@ -187,7 +229,6 @@ impl<'a> MainPythonInterpreter<'a> {
             raw_rust_allocator,
             gil: None,
             py: None,
-            program_name: None,
         };
 
         res.init()?;
@@ -227,6 +268,39 @@ impl<'a> MainPythonInterpreter<'a> {
             .map(|path| path.replace("$ORIGIN", &origin_string))
             .collect();
 
+        // Pre-configure Python.
+
+        let mut pre_config = pyffi::PyPreConfig::default();
+        unsafe {
+            pyffi::PyPreConfig_InitIsolatedConfig(&mut pre_config);
+        }
+
+        // TODO add dedicated config field for argument parsing.
+        pre_config.parse_argv = if config.ignore_python_env { 0 } else { 1 };
+        // Side-effects:
+        //
+        // * Disables sys.path magic
+        // * Python REPL doesn’t import readline nor enable default readline configuration
+        //   on interactive prompts.
+        // * Set use_environment and user_site_directory to 0.
+        pre_config.isolated = 1;
+        pre_config.use_environment = if config.ignore_python_env { 0 } else { 1 };
+        // TODO handle configure_locale, coerce_c_locale.
+        set_windows_fs_encoding(config, &mut pre_config);
+        // TODO set utf8_mode
+        // TODO set dev_mode
+
+        // Default.
+        pre_config.allocator = 0;
+
+        unsafe {
+            let status = pyffi::Py_PreInitialize(&pre_config);
+
+            if pyffi::PyStatus_Exception(status) != 0 {
+                return Err("Python pre-initialization failed");
+            }
+        };
+
         // TODO should we call PyMem::SetupDebugHooks() if enabled?
         if let Some(raw_allocator) = &self.raw_allocator {
             unsafe {
@@ -245,6 +319,129 @@ impl<'a> MainPythonInterpreter<'a> {
                 );
             }
         }
+
+        let mut py_config = pyffi::PyConfig::default();
+        unsafe {
+            pyffi::PyConfig_InitIsolatedConfig(&mut py_config);
+        }
+
+        py_config.bytes_warning = config.bytes_warning;
+        py_config.parser_debug = if config.parser_debug { 1 } else { 0 };
+        py_config.write_bytecode = if config.write_bytecode { 1 } else { 0 };
+        py_config.use_environment = if config.ignore_python_env { 0 } else { 1 };
+        py_config.interactive = if config.interactive { 1 } else { 0 };
+        py_config.inspect = if config.inspect { 1 } else { 0 };
+        py_config.isolated = if config.isolated { 1 } else { 0 };
+        py_config.site_import = if config.import_site { 1 } else { 0 };
+        py_config.user_site_directory = if config.import_user_site { 1 } else { 0 };
+        py_config.optimization_level = config.opt_level;
+        py_config.quiet = if config.quiet { 1 } else { 0 };
+        py_config.buffered_stdio = if config.unbuffered_stdio { 0 } else { 1 };
+        py_config.verbose = config.verbose;
+
+        // We control the paths. Don't let Python initialize it.
+        py_config.module_search_paths_set = 1;
+
+        // Set PYTHONHOME to directory of current executable.
+        let status = set_config_string_from_path(&py_config, &py_config.home, &origin);
+        if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
+            return Err("setting Python home directory failed");
+        }
+
+        // Set program name to path of current executable.
+        let status = set_config_string_from_path(&py_config, &py_config.program_name, &exe);
+        if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
+            return Err("setting program named failed");
+        }
+
+        // Set stdio encoding and error handling.
+        if let (Some(ref encoding), Some(ref errors)) =
+            (&config.standard_io_encoding, &config.standard_io_errors)
+        {
+            let cencoding = CString::new(encoding.clone())
+                .or_else(|_| Err("unable to convert encoding to C string"))?;
+            let cerrors = CString::new(errors.clone())
+                .or_else(|_| Err("unable to convert encoding error mode to C string"))?;
+
+            unsafe {
+                let status = pyffi::PyConfig_SetBytesString(
+                    &mut py_config,
+                    &mut py_config.stdio_encoding,
+                    cencoding.as_ptr(),
+                );
+                if pyffi::PyStatus_Exception(status) != 0 {
+                    return Err("setting stdio encoding failed");
+                }
+
+                let status = pyffi::PyConfig_SetBytesString(
+                    &mut py_config,
+                    &mut py_config.stdio_errors,
+                    cerrors.as_ptr(),
+                );
+                if pyffi::PyStatus_Exception(status) != 0 {
+                    return Err("setting stdio error handler failed");
+                }
+            }
+        }
+
+        unsafe {
+            let encoding = CString::new("utf-8").unwrap();
+            pyffi::PyConfig_SetBytesString(
+                &mut py_config,
+                &mut py_config.filesystem_encoding,
+                encoding.as_ptr(),
+            );
+            let errors = CString::new("strict").unwrap();
+            pyffi::PyConfig_SetBytesString(
+                &mut py_config,
+                &mut py_config.filesystem_errors,
+                errors.as_ptr(),
+            );
+        }
+
+        set_windows_flags(config, &mut py_config);
+
+        // Enable multi-phase initialization. This allows us to initialize
+        // our custom importer before Python attempts any imports.
+        py_config._init_main = 0;
+
+        if config.use_custom_importlib {
+            // Replace the frozen modules in the interpreter with our custom set
+            // that knows how to import from memory.
+            unsafe {
+                pyffi::PyImport_FrozenModules = self.frozen_modules.as_ptr();
+            }
+
+            // Register our _pyoxidizer_importer extension which provides importing functionality.
+            unsafe {
+                // name char* needs to live as long as the interpreter is active.
+                pyffi::PyImport_AppendInittab(
+                    PYOXIDIZER_IMPORTER_NAME.as_ptr() as *const i8,
+                    Some(PyInit__pyoxidizer_importer),
+                );
+            }
+        }
+
+        // TODO call PyImport_ExtendInitTab to avoid O(n) overhead.
+        for e in &config.extra_extension_modules {
+            let res = unsafe {
+                pyffi::PyImport_AppendInittab(e.name.as_ptr() as *const i8, Some(e.init_func))
+            };
+
+            if res != 0 {
+                return Err("unable to register extension module");
+            }
+        }
+
+        let status = unsafe { pyffi::Py_InitializeFromConfig(&py_config) };
+        if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
+            return Err("error initializing Python core");
+        }
+
+        // At this point, the core of Python is initialized.
+        // importlib._bootstrap has been loaded. But not
+        // importlib._bootstrap_external. This is where we work our magic to
+        // inject our custom importer.
 
         // Module state is a bit wonky.
         //
@@ -279,109 +476,37 @@ impl<'a> MainPythonInterpreter<'a> {
             packed_resources: config.packed_resources,
         };
 
-        if config.use_custom_importlib {
-            // Replace the frozen modules in the interpreter with our custom set
-            // that knows how to import from memory.
-            unsafe {
-                pyffi::PyImport_FrozenModules = self.frozen_modules.as_ptr();
-            }
-
-            // Register our _pyoxidizer_importer extension which provides importing functionality.
-            unsafe {
-                // name char* needs to live as long as the interpreter is active.
-                pyffi::PyImport_AppendInittab(
-                    PYOXIDIZER_IMPORTER_NAME.as_ptr() as *const i8,
-                    Some(PyInit__pyoxidizer_importer),
-                );
-
-                // Move pointer to our stack allocated instance. This pointer will be
-                // accessed when creating the Python module object, which should be
-                // done automatically as part of low-level interpreter initialization
-                // when calling Py_Initialize() below.
-                super::importer::NEXT_MODULE_STATE = &module_state;
-            }
-        }
-
-        // TODO call PyImport_ExtendInitTab to avoid O(n) overhead.
-        for e in &config.extra_extension_modules {
-            let res = unsafe {
-                pyffi::PyImport_AppendInittab(e.name.as_ptr() as *const i8, Some(e.init_func))
-            };
-
-            if res != 0 {
-                return Err("unable to register extension module");
-            }
-        }
-
-        let exe_str = exe.to_str().ok_or_else(|| "unable to convert exe to str")?;
-
-        let home = OwnedPyStr::from_str(exe_str)?;
-
+        // Move pointer to our stack allocated instance. This pointer will be
+        // accessed when creating the Python module object, which should be
+        // done automatically as part of low-level interpreter initialization
+        // when calling Py_Initialize() below.
         unsafe {
-            // Pointer needs to live for lifetime of interpreter.
-            pyffi::Py_SetPythonHome(home.as_wchar_ptr());
+            super::importer::NEXT_MODULE_STATE = &module_state;
         }
 
-        let program_name = OwnedPyStr::from_str(exe_str)?;
+        // Now proceed with the Python main initialization. This will initialize
+        // importlib. And if the custom importlib bytecode was registered above,
+        // our extension module will get imported and initialized.
+        let status = unsafe { pyffi::_Py_InitializeMain() };
 
+        // We shouldn't be accessing this pointer after Py_Initialize(). And the
+        // memory is stack allocated and doesn't outlive this frame. We don't want
+        // to leave a stack pointer sitting around!
         unsafe {
-            pyffi::Py_SetProgramName(program_name.as_wchar_ptr());
+            super::importer::NEXT_MODULE_STATE = std::ptr::null();
         }
 
-        // Value needs to live for lifetime of interpreter.
-        self.program_name = Some(program_name);
-
-        // If we don't call Py_SetPath(), Python has its own logic for initializing it.
-        // We set it to an empty string because we don't want any paths by default. If
-        // we do have defined paths, they will be set after Py_Initialize().
-        unsafe {
-            // Value is copied internally. So short lifetime is OK.
-            let value = OwnedPyStr::from_str("")?;
-            pyffi::Py_SetPath(value.as_wchar_ptr());
-        }
-
-        if let (Some(ref encoding), Some(ref errors)) =
-            (&config.standard_io_encoding, &config.standard_io_errors)
-        {
-            let cencoding = CString::new(encoding.clone())
-                .or_else(|_| Err("unable to convert encoding to C string"))?;
-            let cerrors = CString::new(errors.clone())
-                .or_else(|_| Err("unable to convert encoding error mode to C string"))?;
-
-            let res = unsafe {
-                pyffi::Py_SetStandardStreamEncoding(
-                    cencoding.as_ptr() as *const i8,
-                    cerrors.as_ptr() as *const i8,
-                )
-            };
-
-            if res != 0 {
-                return Err("unable to set standard stream encoding");
-            }
+        if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
+            return Err("error initializing Python main");
         }
 
         unsafe {
-            pyffi::Py_BytesWarningFlag = config.bytes_warning;
-            pyffi::Py_DebugFlag = if config.parser_debug { 1 } else { 0 };
-            pyffi::Py_DontWriteBytecodeFlag = if config.write_bytecode { 0 } else { 1 };
             // TODO we could potentially have the config be an Option<i32> so we can control
             // the hash seed explicitly. But the APIs in Python 3.7 aren't great here, as we'd
             // need to set an environment variable. Once we support the new initialization
             // API in Python 3.8, things will be easier to implement.
             pyffi::Py_HashRandomizationFlag = if config.use_hash_seed { 1 } else { 0 };
-            pyffi::Py_IgnoreEnvironmentFlag = if config.ignore_python_env { 1 } else { 0 };
-            pyffi::Py_InteractiveFlag = if config.interactive { 1 } else { 0 };
-            pyffi::Py_InspectFlag = if config.inspect { 1 } else { 0 };
-            pyffi::Py_IsolatedFlag = if config.isolated { 1 } else { 0 };
-            pyffi::Py_NoSiteFlag = if config.import_site { 0 } else { 1 };
-            pyffi::Py_NoUserSiteDirectory = if config.import_user_site { 0 } else { 1 };
-            pyffi::Py_OptimizeFlag = config.opt_level;
-            pyffi::Py_QuietFlag = if config.quiet { 1 } else { 0 };
-            pyffi::Py_UnbufferedStdioFlag = if config.unbuffered_stdio { 1 } else { 0 };
-            pyffi::Py_VerboseFlag = config.verbose;
         }
-
-        set_windows_flags(config);
 
         /* Pre-initialization functions we could support:
          *
@@ -390,17 +515,6 @@ impl<'a> MainPythonInterpreter<'a> {
          * PySys_AddXOption()
          * PySys_ResetWarnOptions()
          */
-
-        unsafe {
-            pyffi::Py_Initialize();
-        }
-
-        // We shouldn't be accessing this pointer after Py_Initialize(). And the
-        // memory is stack allocated and doesn't outlive this frame. We don't want
-        // to leave a stack pointer sitting around!
-        unsafe {
-            super::importer::NEXT_MODULE_STATE = std::ptr::null();
-        }
 
         let py = unsafe { Python::assume_gil_acquired() };
         self.py = Some(py);

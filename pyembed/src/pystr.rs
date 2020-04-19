@@ -7,50 +7,19 @@
 use {
     cpython::exc::UnicodeDecodeError,
     cpython::{PyErr, PyObject, PyResult, Python},
-    libc::{c_void, size_t, wchar_t},
     python3_sys as pyffi,
-    std::ffi::{CStr, CString, OsStr, OsString},
+    std::ffi::{CStr, OsStr, OsString},
     std::path::Path,
-    std::ptr::null_mut,
 };
+
+#[cfg(target_family = "unix")]
+use std::ffi::CString;
 
 #[cfg(target_family = "unix")]
 use std::os::unix::ffi::OsStrExt;
 
 #[cfg(target_family = "windows")]
 use std::os::windows::prelude::OsStrExt;
-
-#[derive(Debug)]
-pub struct OwnedPyStr {
-    data: *const wchar_t,
-}
-
-impl OwnedPyStr {
-    pub fn as_wchar_ptr(&self) -> *const wchar_t {
-        self.data
-    }
-
-    pub fn from_str(s: &str) -> Result<Self, &'static str> {
-        // We need to convert to a C string so there is a terminal NULL
-        // otherwise Py_DecodeLocale() can get confused.
-        let cs = CString::new(s).or_else(|_| Err("source string has NULL bytes"))?;
-
-        let size: *mut size_t = null_mut();
-        let ptr = unsafe { pyffi::Py_DecodeLocale(cs.as_ptr(), size) };
-
-        if ptr.is_null() {
-            Err("could not convert str to Python string")
-        } else {
-            Ok(OwnedPyStr { data: ptr })
-        }
-    }
-}
-
-impl Drop for OwnedPyStr {
-    fn drop(&mut self) {
-        unsafe { pyffi::PyMem_RawFree(self.data as *mut c_void) }
-    }
-}
 
 #[cfg(target_family = "unix")]
 const SURROGATEESCAPE: &[u8] = b"surrogateescape\0";

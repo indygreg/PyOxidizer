@@ -44,6 +44,10 @@ Backwards Compatibility Notes
 New Features
 ^^^^^^^^^^^^
 
+* Embedded Python interpreters are now managed via the
+  `new apis <https://docs.python.org/3/c-api/init_config.htm>`_ defined
+  by PEP-587. This gives us much more control over the configuration
+  of interpreters.
 * Python distributions upgraded to CPython 3.8.2.
 * Default Python distributions upgraded to version 5 of the
   standalone distribution format. This new format advertises much more
