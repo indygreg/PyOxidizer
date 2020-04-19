@@ -37,6 +37,15 @@ Backwards Compatibility Notes
   least version 5 of the distribution format. If you are using the
   default Python distributions, this change should not effect you.
 
+New Features
+^^^^^^^^^^^^
+
+* Default Python distributions upgraded to version 5 of the
+  standalone distribution format. This new format advertises much more
+  metadata about the distribution, enabling PyOxidizer to take fewer
+  guesses about how the distribution works and will help enable
+  more features over time.
+
 0.7.0
 -----
 

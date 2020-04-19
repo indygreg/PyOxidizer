@@ -892,8 +892,8 @@ starlark_module! { python_distribution_module =>
 #[cfg(test)]
 mod tests {
     use {
-        super::super::testutil::*, super::*,
-        crate::python_distributions::CPYTHON_STANDALONE_STATIC_BY_TRIPLE,
+        super::super::testutil::*, super::*, crate::py_packaging::distribution::DistributionFlavor,
+        crate::python_distributions::PYTHON_DISTRIBUTIONS,
     };
 
     #[test]
@@ -901,16 +901,16 @@ mod tests {
         let dist = starlark_ok("default_python_distribution()");
         assert_eq!(dist.get_type(), "PythonDistribution");
 
-        let host_distribution = CPYTHON_STANDALONE_STATIC_BY_TRIPLE
-            .get(crate::project_building::HOST)
+        let host_distribution = PYTHON_DISTRIBUTIONS
+            .find_distribution(
+                crate::project_building::HOST,
+                &DistributionFlavor::Standalone,
+            )
             .unwrap();
 
-        let wanted = PythonDistributionLocation::Url {
-            url: host_distribution.url.clone(),
-            sha256: host_distribution.sha256.clone(),
-        };
-
-        dist.downcast_apply(|x: &PythonDistribution| assert_eq!(x.source, wanted));
+        dist.downcast_apply(|x: &PythonDistribution| {
+            assert_eq!(x.source, host_distribution.location)
+        });
     }
 
     #[test]
@@ -928,16 +928,16 @@ mod tests {
         let dist = starlark_ok("default_python_distribution(flavor='standalone_dynamic')");
         assert_eq!(dist.get_type(), "PythonDistribution");
 
-        let host_distribution = crate::python_distributions::CPYTHON_STANDALONE_DYNAMIC_BY_TRIPLE
-            .get(crate::project_building::HOST)
+        let host_distribution = PYTHON_DISTRIBUTIONS
+            .find_distribution(
+                crate::project_building::HOST,
+                &DistributionFlavor::StandaloneDynamic,
+            )
             .unwrap();
 
-        let wanted = PythonDistributionLocation::Url {
-            url: host_distribution.url.clone(),
-            sha256: host_distribution.sha256.clone(),
-        };
-
-        dist.downcast_apply(|x: &PythonDistribution| assert_eq!(x.source, wanted));
+        dist.downcast_apply(|x: &PythonDistribution| {
+            assert_eq!(x.source, host_distribution.location)
+        });
     }
 
     #[test]

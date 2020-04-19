@@ -4,8 +4,12 @@
 
 //! Defines known Python distributions.
 
-use lazy_static::lazy_static;
-use std::collections::BTreeMap;
+use {
+    crate::py_packaging::distribution::{
+        DistributionFlavor, PythonDistributionLocation, PythonDistributionRecord,
+    },
+    lazy_static::lazy_static,
+};
 
 /// Describes a Python distribution available at a URL.
 pub struct HostedDistribution {
@@ -13,85 +17,120 @@ pub struct HostedDistribution {
     pub sha256: String,
 }
 
+pub struct PythonDistributionCollection {
+    dists: Vec<PythonDistributionRecord>,
+}
+
+impl PythonDistributionCollection {
+    pub fn find_distribution(
+        &self,
+        target_triple: &str,
+        flavor: &DistributionFlavor,
+    ) -> Option<PythonDistributionRecord> {
+        for dist in &self.dists {
+            if dist.target_triple != target_triple {
+                continue;
+            }
+
+            match flavor {
+                DistributionFlavor::Standalone => {
+                    return Some(dist.clone());
+                }
+                DistributionFlavor::StandaloneStatic => {
+                    if !dist.supports_prebuilt_extension_modules {
+                        return Some(dist.clone());
+                    }
+                }
+                DistributionFlavor::StandaloneDynamic => {
+                    if dist.supports_prebuilt_extension_modules {
+                        return Some(dist.clone());
+                    }
+                }
+            }
+        }
+
+        None
+    }
+}
+
 lazy_static! {
-    pub static ref CPYTHON_STANDALONE_STATIC_BY_TRIPLE: BTreeMap<String, HostedDistribution> = {
-        let mut res: BTreeMap<String, HostedDistribution> = BTreeMap::new();
-
-        res.insert(
-            "x86_64-unknown-linux-gnu".to_string(),
-            HostedDistribution {
-                url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20200408/cpython-3.7.7-linux64-20200409T0045.tar.zst"),
-                sha256: String::from(
-                    "74799ae3b7f3ddc2d118516d65d46356fb3ef3ff3c4c4591a0dde073c413aff0",
-                ),
+    pub static ref PYTHON_DISTRIBUTIONS: PythonDistributionCollection = {
+        let dists = vec![
+            // Linux glibc linked.
+            PythonDistributionRecord {
+                location: PythonDistributionLocation::Url {
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200418/cpython-3.7.7-x86_64-unknown-linux-gnu-pgo-20200418T2226.tar.zst".to_string(),
+                    sha256: "987ea3f77e168fc71b9c28d7845f76ac61ca804c235caf98c6a674176e7e4dfa".to_string(),
+                },
+                target_triple: "x86_64-unknown-linux-gnu".to_string(),
+                supports_prebuilt_extension_modules: true,
             },
-        );
 
-        res.insert(
-            "x86_64-unknown-linux-gnu".to_string(),
-            HostedDistribution {
-                url: "https://gregoryszorc.com/cpython-3.7.7-x86_64-unknown-linux-gnu-noopt-20200418T1831.tar.zst".to_string(),
-                sha256: "79e514bd5e0edef7f031b1d309c53c3e56068390e3d547975b5df077634b23e6".to_string(),
+            // Linux musl.
+            PythonDistributionRecord {
+                location: PythonDistributionLocation::Url {
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200418/cpython-3.7.7-x86_64-unknown-linux-musl-noopt-20200418T2251.tar.zst".to_string(),
+                    sha256: "f0479ce0b6f8e2c752f059673fb15dc07932b836e11926ca6a3cb9ce656b508e".to_string(),
+                },
+                target_triple: "x86_64-unknown-linux-musl".to_string(),
+                supports_prebuilt_extension_modules: false,
             },
-        );
 
-        res.insert(
-            "x86_64-unknown-linux-musl".to_string(),
-            HostedDistribution {
-                url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20200408/cpython-3.7.7-linux64-musl-20200409T0047.tar.zst"),
-                sha256: String::from(
-                    "c1ffa330c7305f46886b7cd2b77edf0e43463113cef426d388476337c3e5cfa9",
-                ),
+            // The order here is important because we will choose the
+            // first one.
+
+            // Windows static.
+            PythonDistributionRecord {
+                location: PythonDistributionLocation::Url {
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200418/cpython-3.7.7-i686-pc-windows-msvc-static-noopt-20200418T2317.tar.zst".to_string(),
+                    sha256: "7c4a4102677f398c7c39c31141c99f2b3dcaa85651f6f698d379fee372a8a64c".to_string(),
+                },
+                target_triple: "i686-pc-windows-msvc".to_string(),
+                supports_prebuilt_extension_modules: false,
             },
-        );
-
-        res.insert(
-            "i686-pc-windows-msvc".to_string(),
-            HostedDistribution {
-                url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20200408/cpython-3.7.7-windows-x86-static-20200409T0107.tar.zst"),
-                sha256: String::from("978e863fd39f8758c2af18dd750f64eb4b57bd8bfea86cae5fcdde305c56dca7"),
+            PythonDistributionRecord {
+                location: PythonDistributionLocation::Url {
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200418/cpython-3.7.7-x86_64-pc-windows-msvc-static-noopt-20200418T2311.tar.zst".to_string(),
+                    sha256: "820c1eef04eacdba84a1fc1db7ea15fa01791ac6e3ece75546418ef8ac1b1cf3".to_string(),
+                },
+                target_triple: "x86_64-pc-windows-msvc".to_string(),
+                supports_prebuilt_extension_modules: false,
             },
-        );
 
-        res.insert(
-            "x86_64-pc-windows-msvc".to_string(),
-            HostedDistribution {
-                url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20200408/cpython-3.7.7-windows-amd64-static-20200409T0105.tar.zst"),
-                sha256: String::from("fe8d95bc2d7d911ba23c318b786ea7d17c3e2aadbedf47b1d53962bf42e418fe"),
+            // Windows shared.
+            PythonDistributionRecord {
+                location: PythonDistributionLocation::Url {
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200418/cpython-3.7.7-i686-pc-windows-msvc-shared-pgo-20200418T2311.tar.zst".to_string(),
+                    sha256: "d78ea86fef04d5ab1e08fa968f24e7e61c8644a1668af592af145bd603deec53".to_string(),
+                },
+                target_triple: "i686-pc-windows-msvc".to_string(),
+                supports_prebuilt_extension_modules: true,
             },
-        );
-
-        res.insert(
-            "x86_64-apple-darwin".to_string(),
-            HostedDistribution {
-                url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20200408/cpython-3.7.7-macos-20200409T0412.tar.zst"),
-                sha256: String::from("f312bea46a7d8efecd4df6b22c03f83016775e6bb5944a5701d697e0a52c63b2"),
+            PythonDistributionRecord {
+                location: PythonDistributionLocation::Url {
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200418/cpython-3.7.7-x86_64-pc-windows-msvc-shared-pgo-20200418T2225.tar.zst".to_string(),
+                    sha256: "d4ef9027e294fa019e835d23d8e4c6747af043704ec2a0fbb05556179a2b6000".to_string(),
+                },
+                target_triple: "x86_64-pc-windows-msvc".to_string(),
+                supports_prebuilt_extension_modules: true,
             },
-        );
 
-        res
+            // macOS.
+            PythonDistributionRecord {
+                location: PythonDistributionLocation::Url {
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200418/cpython-3.7.7-x86_64-apple-darwin-pgo-20200418T2238.tar.zst".to_string(),
+                    sha256: "39a936ae7948a4e4237823158633541a23cea66b5fe9c523955de06a45f4f8d6".to_string(),
+                },
+                target_triple: "x86_64-apple-darwin".to_string(),
+                supports_prebuilt_extension_modules: true,
+            },
+        ];
+
+        PythonDistributionCollection {
+            dists,
+        }
     };
-    pub static ref CPYTHON_STANDALONE_DYNAMIC_BY_TRIPLE: BTreeMap<String, HostedDistribution> = {
-        let mut res: BTreeMap<String, HostedDistribution> = BTreeMap::new();
 
-        res.insert(
-            "i686-pc-windows-msvc".to_string(),
-            HostedDistribution {
-                url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20200408/cpython-3.7.7-windows-x86-shared-pgo-20200409T0157.tar.zst"),
-                sha256: String::from("69813ae54e691e244e02b25099f7af90a0bac1b63eae80dfe039b7f26010072e"),
-            },
-        );
-
-        res.insert(
-            "x86_64-pc-windows-msvc".to_string(),
-            HostedDistribution {
-                url: String::from("https://github.com/indygreg/python-build-standalone/releases/download/20200408/cpython-3.7.7-windows-amd64-shared-pgo-20200409T0115.tar.zst"),
-                sha256: String::from("c43c44ebfe9b9f9c59c12481a6233b17bc9a4ad965f8f0dc0063abff4dc59875"),
-            },
-        );
-
-        res
-    };
     /// Location of source code for get-pip.py, version 19.3.1.
     pub static ref GET_PIP_PY_19: HostedDistribution = {
         HostedDistribution {

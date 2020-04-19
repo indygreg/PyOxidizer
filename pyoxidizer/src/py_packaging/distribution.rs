@@ -14,9 +14,7 @@ use {
     super::resource::{PythonModuleSource, PythonPackageResource, PythonResource},
     super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::{DistributionExtensionModule, StandaloneDistribution},
-    crate::python_distributions::{
-        CPYTHON_STANDALONE_DYNAMIC_BY_TRIPLE, CPYTHON_STANDALONE_STATIC_BY_TRIPLE,
-    },
+    crate::python_distributions::PYTHON_DISTRIBUTIONS,
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
     serde::Deserialize,
@@ -105,6 +103,19 @@ pub struct PythonModuleSuffixes {
 pub enum PythonDistributionLocation {
     Local { local_path: String, sha256: String },
     Url { url: String, sha256: String },
+}
+
+/// Describes an obtainable Python distribution.
+#[derive(Clone, Debug)]
+pub struct PythonDistributionRecord {
+    /// Where the distribution can be obtained from.
+    pub location: PythonDistributionLocation,
+
+    /// Rust target triple this distribution runs on.
+    pub target_triple: String,
+
+    /// Whether the distribution can load prebuilt extension modules.
+    pub supports_prebuilt_extension_modules: bool,
 }
 
 /// Describes a generic Python distribution.
@@ -472,23 +483,11 @@ pub fn default_distribution_location(
     flavor: &DistributionFlavor,
     target: &str,
 ) -> Result<PythonDistributionLocation> {
-    let dist = match flavor {
-        DistributionFlavor::Standalone => {
-            if let Some(dist) = CPYTHON_STANDALONE_STATIC_BY_TRIPLE.get(target) {
-                Some(dist)
-            } else {
-                CPYTHON_STANDALONE_DYNAMIC_BY_TRIPLE.get(target)
-            }
-        }
-        DistributionFlavor::StandaloneStatic => CPYTHON_STANDALONE_STATIC_BY_TRIPLE.get(target),
-        DistributionFlavor::StandaloneDynamic => CPYTHON_STANDALONE_DYNAMIC_BY_TRIPLE.get(target),
-    }
-    .ok_or_else(|| anyhow!("could not find default Python distribution for {}", target))?;
+    let dist = PYTHON_DISTRIBUTIONS
+        .find_distribution(target, flavor)
+        .ok_or_else(|| anyhow!("could not find default Python distribution for {}", target))?;
 
-    Ok(PythonDistributionLocation::Url {
-        url: dist.url.clone(),
-        sha256: dist.sha256.clone(),
-    })
+    Ok(dist.location)
 }
 
 /// Resolve the default Python distribution for a build target.

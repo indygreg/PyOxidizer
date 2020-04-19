@@ -4,11 +4,9 @@
 
 use {
     crate::logging::PrintlnDrain,
-    crate::py_packaging::distribution::PythonDistributionLocation,
+    crate::py_packaging::distribution::DistributionFlavor,
     crate::py_packaging::standalone_distribution::StandaloneDistribution,
-    crate::python_distributions::{
-        CPYTHON_STANDALONE_DYNAMIC_BY_TRIPLE, CPYTHON_STANDALONE_STATIC_BY_TRIPLE,
-    },
+    crate::python_distributions::PYTHON_DISTRIBUTIONS,
     anyhow::Result,
     lazy_static::lazy_static,
     slog::{Drain, Logger},
@@ -31,18 +29,13 @@ lazy_static! {
     pub static ref DEFAULT_DISTRIBUTION: Arc<Box<StandaloneDistribution>> = {
         let path = DEFAULT_DISTRIBUTION_TEMP_DIR.path();
 
-        let hosted_distribution = CPYTHON_STANDALONE_STATIC_BY_TRIPLE
-            .get(env!("HOST"))
+        let dist = PYTHON_DISTRIBUTIONS
+            .find_distribution(env!("HOST"), &DistributionFlavor::Standalone)
             .expect("target triple not supported");
 
         let logger = get_logger().expect("unable to construct logger");
 
-        let location = PythonDistributionLocation::Url {
-            url: hosted_distribution.url.clone(),
-            sha256: hosted_distribution.sha256.clone(),
-        };
-
-        let dist = StandaloneDistribution::from_location(&logger, &location, path)
+        let dist = StandaloneDistribution::from_location(&logger, &dist.location, path)
             .expect("unable to obtain distribution");
 
         Arc::new(Box::new(dist))
@@ -50,18 +43,13 @@ lazy_static! {
     pub static ref DEFAULT_DYNAMIC_DISTRIBUTION: Arc<Box<StandaloneDistribution>> = {
         let path = DEFAULT_DISTRIBUTION_TEMP_DIR.path();
 
-        let hosted_distribution = CPYTHON_STANDALONE_DYNAMIC_BY_TRIPLE
-            .get(env!("HOST"))
+        let dist = PYTHON_DISTRIBUTIONS
+            .find_distribution(env!("HOST"), &DistributionFlavor::StandaloneDynamic)
             .expect("target triple not supported");
 
         let logger = get_logger().expect("unable to construct logger");
 
-        let location = PythonDistributionLocation::Url {
-            url: hosted_distribution.url.clone(),
-            sha256: hosted_distribution.sha256.clone(),
-        };
-
-        let dist = StandaloneDistribution::from_location(&logger, &location, path)
+        let dist = StandaloneDistribution::from_location(&logger, &dist.location, path)
             .expect("unable to obtain distribution");
 
         Arc::new(Box::new(dist))
