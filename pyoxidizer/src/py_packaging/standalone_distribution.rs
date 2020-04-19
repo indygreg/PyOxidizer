@@ -1294,7 +1294,6 @@ impl PythonDistribution for StandaloneDistribution {
         &self,
         logger: &slog::Logger,
         resources: &[PythonResource],
-        _target_triple: &str,
     ) -> Result<Vec<PythonResource>> {
         Ok(resources
             .iter()

@@ -210,7 +210,6 @@ pub trait PythonDistribution {
         &self,
         logger: &slog::Logger,
         resources: &[PythonResource],
-        target_triple: &str,
     ) -> Result<Vec<PythonResource>>;
 }
 
