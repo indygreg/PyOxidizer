@@ -85,12 +85,12 @@ That crate's build script will attempt to find a `libpython` from the
 
 mod config;
 mod importer;
+mod interpreter;
 #[cfg(windows)]
 mod memory_dll;
 mod osutils;
 mod package_metadata;
 mod pyalloc;
-mod pyinterp;
 mod pystr;
 mod python_resources;
 pub mod technotes;
@@ -101,4 +101,4 @@ pub use crate::config::{
 };
 
 #[allow(unused_imports)]
-pub use crate::pyinterp::MainPythonInterpreter;
+pub use crate::interpreter::MainPythonInterpreter;
