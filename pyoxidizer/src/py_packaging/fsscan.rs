@@ -143,17 +143,8 @@ impl PythonResourceIterator {
                 return None;
             };
 
-            let package = if let Some(name) = metadata.name() {
-                name
-            } else {
-                return None;
-            };
-
-            let version = if let Some(version) = metadata.version() {
-                version
-            } else {
-                return None;
-            };
+            let package = metadata.name()?;
+            let version = metadata.version()?;
 
             // Name of resource is file path after the initial directory.
             let name = components[1..components.len()].join("/");
