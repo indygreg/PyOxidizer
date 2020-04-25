@@ -16,8 +16,7 @@ use {
     std::sync::Arc,
 };
 
-#[allow(unused_doc_comments)]
-/// A importlib.metadata.Distribution allowing access to package distribution data.
+// A importlib.metadata.Distribution allowing access to package distribution data.
 py_class!(class PyOxidizerDistribution |py| {
     data state: Arc<Box<ImporterState>>;
     data package: String;
