@@ -244,7 +244,7 @@ impl PythonResourceIterator {
                     package = full_module_name.clone();
                 }
 
-                self.seen_packages.insert(package.clone());
+                self.seen_packages.insert(package);
 
                 let module_components = full_module_name.split('.').collect::<Vec<_>>();
                 let final_name = module_components[module_components.len() - 1];
@@ -293,7 +293,7 @@ impl PythonResourceIterator {
                 package = full_module_name.clone();
             }
 
-            self.seen_packages.insert(package.clone());
+            self.seen_packages.insert(package);
 
             return Some(DirEntryItem::PythonResource(PythonResource::ModuleSource(
                 PythonModuleSource {
@@ -346,7 +346,7 @@ impl PythonResourceIterator {
                 package = full_module_name.clone();
             }
 
-            self.seen_packages.insert(package.clone());
+            self.seen_packages.insert(package);
 
             return Some(DirEntryItem::PythonResource(
                 if rel_str.ends_with(".opt-1.pyc") {
