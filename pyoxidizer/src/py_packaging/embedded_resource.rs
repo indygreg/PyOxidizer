@@ -705,7 +705,7 @@ impl EmbeddedPythonResourcesPrePackaged {
                     .get_mut(&module.module)
                     .expect("entry for extension module")
                     .shared_library_dependency_names
-                    .get_or_insert_with(|| Vec::new())
+                    .get_or_insert_with(Vec::new)
                     .push(name.to_string());
             }
         }
