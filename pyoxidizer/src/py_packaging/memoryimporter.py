@@ -11,4 +11,4 @@ def _install(_bootstrap_module):
 
     # These lines magically register the PyOxidizer importer.
     import _pyoxidizer_importer
-    _pyoxidizer_importer._setup(_pyoxidizer_importer, _bootstrap_module)
+    _pyoxidizer_importer._setup(_pyoxidizer_importer)

@@ -1055,11 +1055,7 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
         ),
     )?;
 
-    m.add(
-        py,
-        "_setup",
-        py_fn!(py, module_setup(m: PyModule, bootstrap_module: PyModule)),
-    )?;
+    m.add(py, "_setup", py_fn!(py, module_setup(m: PyModule)))?;
 
     Ok(())
 }
@@ -1070,7 +1066,7 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
 ///
 /// This function should only be called once as part of
 /// _frozen_importlib_external._install_external_importers().
-fn module_setup(py: Python, m: PyModule, bootstrap_module: PyModule) -> PyResult<PyObject> {
+fn module_setup(py: Python, m: PyModule) -> PyResult<PyObject> {
     let state = get_module_state(py, &m)?;
 
     if state.setup_called {
@@ -1082,6 +1078,7 @@ fn module_setup(py: Python, m: PyModule, bootstrap_module: PyModule) -> PyResult
 
     state.setup_called = true;
 
+    let bootstrap_module = py.import("_frozen_importlib")?;
     let sys_module = bootstrap_module.get(py, "sys")?;
     let sys_module = sys_module.cast_into::<PyModule>(py)?;
     let sys_module_ref = sys_module.clone_ref(py);
