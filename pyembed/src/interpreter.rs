@@ -226,15 +226,15 @@ pub enum NewInterpreterError {
 
 impl From<&'static str> for NewInterpreterError {
     fn from(v: &'static str) -> Self {
-        Self::Simple(v)
+        NewInterpreterError::Simple(v)
     }
 }
 
 impl Display for NewInterpreterError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self {
-            Self::Simple(value) => value.fmt(f),
-            Self::Dynamic(value) => value.fmt(f),
+            NewInterpreterError::Simple(value) => value.fmt(f),
+            NewInterpreterError::Dynamic(value) => value.fmt(f),
         }
     }
 }
@@ -242,8 +242,8 @@ impl Display for NewInterpreterError {
 impl NewInterpreterError {
     pub fn new_from_pyerr(py: Python, err: PyErr, context: &str) -> Self {
         match format_pyerr(py, err) {
-            Ok(value) => Self::Dynamic(format!("during {}: {}", context, value)),
-            Err(msg) => Self::Dynamic(format!("during {}: {}", context, msg)),
+            Ok(value) => NewInterpreterError::Dynamic(format!("during {}: {}", context, value)),
+            Err(msg) => NewInterpreterError::Dynamic(format!("during {}: {}", context, msg)),
         }
     }
 
@@ -252,7 +252,7 @@ impl NewInterpreterError {
             let func = unsafe { CStr::from_ptr(status.func) };
             let msg = unsafe { CStr::from_ptr(status.err_msg) };
 
-            Self::Dynamic(format!(
+            NewInterpreterError::Dynamic(format!(
                 "during {}: {}: {}",
                 context,
                 func.to_string_lossy(),
@@ -261,9 +261,9 @@ impl NewInterpreterError {
         } else if !status.err_msg.is_null() {
             let msg = unsafe { CStr::from_ptr(status.err_msg) };
 
-            Self::Dynamic(format!("during {}: {}", context, msg.to_string_lossy()))
+            NewInterpreterError::Dynamic(format!("during {}: {}", context, msg.to_string_lossy()))
         } else {
-            Self::Dynamic(format!("during {}: could not format PyStatus", context))
+            NewInterpreterError::Dynamic(format!("during {}: could not format PyStatus", context))
         }
     }
 }
