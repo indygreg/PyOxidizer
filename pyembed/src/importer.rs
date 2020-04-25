@@ -952,25 +952,6 @@ impl PyOxidizerTraversable {
 
 const DOC: &[u8] = b"Binary representation of Python modules\0";
 
-/// Represents global module state to be passed at interpreter initialization time.
-#[derive(Debug)]
-pub struct InitModuleState {
-    /// Path to currently running executable.
-    pub current_exe: PathBuf,
-
-    /// Directory where relative paths are relative to.
-    pub origin: PathBuf,
-
-    /// Raw data describing embedded resources.
-    pub packed_resources: &'static [u8],
-}
-
-/// Holds reference to next module state struct.
-///
-/// This module state will be copied into the module's state when the
-/// Python module is initialized.
-pub static mut NEXT_MODULE_STATE: *const InitModuleState = std::ptr::null();
-
 /// State associated with each importer module instance.
 ///
 /// We write per-module state to per-module instances of this struct so
@@ -978,6 +959,12 @@ pub static mut NEXT_MODULE_STATE: *const InitModuleState = std::ptr::null();
 /// exist without issue.
 #[derive(Debug)]
 struct ModuleState {
+    /// Whether this struct has been filled in.
+    state_populated: bool,
+
+    /// Whether setup() has been called.
+    setup_called: bool,
+
     /// Currently running executable.
     current_exe: PathBuf,
 
@@ -986,9 +973,6 @@ struct ModuleState {
 
     /// Raw data constituting embedded resources.
     packed_resources: &'static [u8],
-
-    /// Whether setup() has been called.
-    setup_called: bool,
 }
 
 /// Obtain the module state for an instance of our importer module.
@@ -1008,43 +992,6 @@ fn get_module_state<'a>(py: Python, m: &'a PyModule) -> Result<&'a mut ModuleSta
     Ok(unsafe { &mut *state })
 }
 
-/// Initialize the Python module object.
-///
-/// This is called as part of the PyInit_* function to create the internal
-/// module object for the interpreter.
-///
-/// This receives a handle to the current Python interpreter and just-created
-/// Python module instance. It populates the internal module state and registers
-/// a _setup() on the module object for usage by Python.
-///
-/// Because this function accesses NEXT_MODULE_STATE, it should only be
-/// called during interpreter initialization.
-fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
-    let mut state = get_module_state(py, m)?;
-
-    unsafe {
-        // TODO we could move the value if we wanted to avoid the clone().
-        state.current_exe = (*NEXT_MODULE_STATE).current_exe.clone();
-        state.origin = (*NEXT_MODULE_STATE).origin.clone();
-        state.packed_resources = (*NEXT_MODULE_STATE).packed_resources;
-    }
-
-    state.setup_called = false;
-
-    m.add(
-        py,
-        "decode_source",
-        py_fn!(
-            py,
-            decode_source(io_module: &PyModule, source_bytes: PyObject)
-        ),
-    )?;
-
-    m.add(py, "_setup", py_fn!(py, module_setup(m: PyModule)))?;
-
-    Ok(())
-}
-
 /// Called after module import/initialization to configure the importing mechanism.
 ///
 /// This does the heavy work of configuring the importing mechanism.
@@ -1053,6 +1000,13 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
 /// _frozen_importlib_external._install_external_importers().
 fn module_setup(py: Python, m: PyModule) -> PyResult<PyObject> {
     let state = get_module_state(py, &m)?;
+
+    if !state.state_populated {
+        return Err(PyErr::new::<RuntimeError, _>(
+            py,
+            "oxidizer importer state not populated",
+        ));
+    }
 
     if state.setup_called {
         return Err(PyErr::new::<RuntimeError, _>(
@@ -1168,4 +1122,54 @@ pub extern "C" fn PyInit__pyoxidizer_importer() -> *mut pyffi::PyObject {
             std::ptr::null_mut()
         }
     }
+}
+
+/// Initialize the Python module object.
+///
+/// This is called as part of the PyInit_* function to create the internal
+/// module object for the interpreter.
+///
+/// This receives a handle to the current Python interpreter and just-created
+/// Python module instance. It populates the internal module state and registers
+/// functions on the module object for usage by Python.
+fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
+    let mut state = get_module_state(py, m)?;
+
+    state.state_populated = false;
+    state.setup_called = false;
+
+    m.add(
+        py,
+        "decode_source",
+        py_fn!(
+            py,
+            decode_source(io_module: &PyModule, source_bytes: PyObject)
+        ),
+    )?;
+
+    m.add(py, "_setup", py_fn!(py, module_setup(m: PyModule)))?;
+
+    Ok(())
+}
+
+/// Populate the module state for this module.
+///
+/// This must be called after PyInit_* but before any meaningful
+/// code in the module runs.
+pub fn populate_module_state(
+    py: Python,
+    m: &PyModule,
+    current_exe: PathBuf,
+    origin: PathBuf,
+    packed_resources: &'static [u8],
+) -> PyResult<()> {
+    let mut state = get_module_state(py, m)?;
+
+    state.current_exe = current_exe;
+    state.origin = origin;
+    state.packed_resources = packed_resources;
+
+    state.state_populated = true;
+
+    Ok(())
 }
