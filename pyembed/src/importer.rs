@@ -937,7 +937,7 @@ impl PyOxidizerTraversable {
     }
 }
 
-const DOC: &[u8] = b"Binary representation of Python modules\0";
+const DOC: &[u8] = b"A highly-performant importer implemented in Rust\0";
 
 /// State associated with each importer module instance.
 ///
