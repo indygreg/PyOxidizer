@@ -10,6 +10,7 @@ use {
     super::osutils::resolve_terminfo_dirs,
     super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
     super::pystr::{osstr_to_pyobject, osstring_to_bytes},
+    super::python_resources::PythonResourcesState,
     cpython::exc::{SystemExit, ValueError},
     cpython::{
         GILGuard, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule, PyObject,
@@ -562,6 +563,16 @@ impl<'a> MainPythonInterpreter<'a> {
         let py = unsafe { Python::assume_gil_acquired() };
 
         if config.use_custom_importlib {
+            let mut resources_state = PythonResourcesState {
+                current_exe: exe,
+                origin,
+                ..PythonResourcesState::default()
+            };
+
+            resources_state
+                .load(config.packed_resources)
+                .or_else(|err| Err(NewInterpreterError::Simple(err)))?;
+
             let oxidized_importer = py.import(PYOXIDIZER_IMPORTER_NAME_STR).or_else(|err| {
                 Err(NewInterpreterError::new_from_pyerr(
                     py,
@@ -570,14 +581,13 @@ impl<'a> MainPythonInterpreter<'a> {
                 ))
             })?;
 
-            initialize_importer(py, &oxidized_importer, exe, origin, config.packed_resources)
-                .or_else(|err| {
-                    Err(NewInterpreterError::new_from_pyerr(
-                        py,
-                        err,
-                        "initialization of oxidized importer",
-                    ))
-                })?;
+            initialize_importer(py, &oxidized_importer, resources_state).or_else(|err| {
+                Err(NewInterpreterError::new_from_pyerr(
+                    py,
+                    err,
+                    "initialization of oxidized importer",
+                ))
+            })?;
         }
 
         // Now proceed with the Python main initialization. This will initialize

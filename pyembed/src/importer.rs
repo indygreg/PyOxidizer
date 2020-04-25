@@ -19,7 +19,6 @@ use {
     },
     python3_sys as pyffi,
     python_packed_resources::data::ResourceFlavor,
-    std::path::PathBuf,
     std::sync::Arc,
 };
 #[cfg(windows)]
@@ -275,9 +274,7 @@ impl ImporterState {
         py: Python,
         importer_module: &PyModule,
         bootstrap_module: &PyModule,
-        resources_data: &'static [u8],
-        current_exe: PathBuf,
-        origin: PathBuf,
+        resources_state: PythonResourcesState<'static, u8>,
     ) -> Result<Self, PyErr> {
         let decode_source = importer_module.get(py, "decode_source")?;
 
@@ -306,16 +303,6 @@ impl ImporterState {
 
         let builtin_importer = meta_path.get_item(py, 0);
         let frozen_importer = meta_path.get_item(py, 1);
-
-        let mut resources_state = PythonResourcesState {
-            current_exe,
-            origin,
-            ..PythonResourcesState::default()
-        };
-
-        if let Err(e) = resources_state.load(resources_data) {
-            return Err(PyErr::new::<ValueError, _>(py, e));
-        }
 
         let marshal_loads = marshal_module.get(py, "loads")?;
         let call_with_frames_removed = bootstrap_module.get(py, "_call_with_frames_removed")?;
@@ -961,15 +948,6 @@ const DOC: &[u8] = b"Binary representation of Python modules\0";
 struct ModuleState {
     /// Whether the module has been initialized.
     initialized: bool,
-
-    /// Currently running executable.
-    current_exe: PathBuf,
-
-    /// Directory where relative paths are relative to.
-    origin: PathBuf,
-
-    /// Raw data constituting embedded resources.
-    packed_resources: &'static [u8],
 }
 
 /// Obtain the module state for an instance of our importer module.
@@ -1095,18 +1073,12 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
 /// This is called after PyInit_* to finish the initialization of the
 /// module. Its state struct is updated. A new instance of the meta path
 /// importer is constructed and registered on sys.meta_path.
-pub fn initialize_importer(
+pub(crate) fn initialize_importer(
     py: Python,
     m: &PyModule,
-    current_exe: PathBuf,
-    origin: PathBuf,
-    packed_resources: &'static [u8],
+    resources_state: PythonResourcesState<'static, u8>,
 ) -> PyResult<()> {
     let mut state = get_module_state(py, m)?;
-
-    state.current_exe = current_exe;
-    state.origin = origin;
-    state.packed_resources = packed_resources;
 
     let bootstrap_module = py.import("_frozen_importlib")?;
     let sys_module = bootstrap_module.get(py, "sys")?;
@@ -1122,9 +1094,7 @@ pub fn initialize_importer(
             py,
             &m,
             &bootstrap_module,
-            &state.packed_resources,
-            state.current_exe.clone(),
-            state.origin.clone(),
+            resources_state,
         )?)),
     )?;
 
