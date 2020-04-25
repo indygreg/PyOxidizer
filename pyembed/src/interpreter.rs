@@ -381,8 +381,9 @@ impl<'a> MainPythonInterpreter<'a> {
             let status = pyffi::Py_PreInitialize(&pre_config);
 
             if pyffi::PyStatus_Exception(status) != 0 {
-                return Err(NewInterpreterError::Simple(
-                    "Python pre-initialization failed",
+                return Err(NewInterpreterError::new_from_pystatus(
+                    &status,
+                    "Python pre-initialization",
                 ));
             }
         };
@@ -433,8 +434,9 @@ impl<'a> MainPythonInterpreter<'a> {
             let status =
                 append_wide_string_list_from_path(&mut py_config.module_search_paths, &path);
             if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
-                return Err(NewInterpreterError::Simple(
-                    "setting module search paths failed",
+                return Err(NewInterpreterError::new_from_pystatus(
+                    &status,
+                    "setting module search path",
                 ));
             }
         }
@@ -442,15 +444,19 @@ impl<'a> MainPythonInterpreter<'a> {
         // Set PYTHONHOME to directory of current executable.
         let status = set_config_string_from_path(&py_config, &py_config.home, &origin);
         if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
-            return Err(NewInterpreterError::Simple(
-                "setting Python home directory failed",
+            return Err(NewInterpreterError::new_from_pystatus(
+                &status,
+                "setting Python home directory",
             ));
         }
 
         // Set program name to path of current executable.
         let status = set_config_string_from_path(&py_config, &py_config.program_name, &exe);
         if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
-            return Err(NewInterpreterError::Simple("setting program named failed"));
+            return Err(NewInterpreterError::new_from_pystatus(
+                &status,
+                "setting program name",
+            ));
         }
 
         // Set stdio encoding and error handling.
@@ -475,7 +481,10 @@ impl<'a> MainPythonInterpreter<'a> {
                     cencoding.as_ptr(),
                 );
                 if pyffi::PyStatus_Exception(status) != 0 {
-                    return Err(NewInterpreterError::Simple("setting stdio encoding failed"));
+                    return Err(NewInterpreterError::new_from_pystatus(
+                        &status,
+                        "setting stdio encoding",
+                    ));
                 }
 
                 let status = pyffi::PyConfig_SetBytesString(
@@ -484,8 +493,9 @@ impl<'a> MainPythonInterpreter<'a> {
                     cerrors.as_ptr(),
                 );
                 if pyffi::PyStatus_Exception(status) != 0 {
-                    return Err(NewInterpreterError::Simple(
-                        "setting stdio error handler failed",
+                    return Err(NewInterpreterError::new_from_pystatus(
+                        &status,
+                        "setting stdio error handler",
                     ));
                 }
             }
@@ -538,8 +548,9 @@ impl<'a> MainPythonInterpreter<'a> {
 
         let status = unsafe { pyffi::Py_InitializeFromConfig(&py_config) };
         if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
-            return Err(NewInterpreterError::Simple(
-                "error initializing Python core",
+            return Err(NewInterpreterError::new_from_pystatus(
+                &status,
+                "initializing Python core",
             ));
         }
 
