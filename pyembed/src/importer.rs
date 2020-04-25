@@ -248,6 +248,8 @@ pub(crate) struct ImporterState {
     imp_module: PyModule,
     /// `sys` Python module.
     sys_module: PyModule,
+    /// `_io` Python module.
+    io_module: PyModule,
     /// `marshal.loads` Python callable.
     marshal_loads: PyObject,
     /// `_frozen_importlib.BuiltinImporter` meta path importer for built-in extension modules.
@@ -258,7 +260,7 @@ pub(crate) struct ImporterState {
     call_with_frames_removed: PyObject,
     /// `importlib._bootstrap.ModuleSpec` class.
     module_spec_type: PyObject,
-    /// `importlib._bootstrap_external.decode_source` function.
+    /// Our `decode_source()` function.
     decode_source: PyObject,
     /// `builtins.exec` function.
     exec_fn: PyObject,
@@ -271,13 +273,17 @@ pub(crate) struct ImporterState {
 impl ImporterState {
     fn new(
         py: Python,
+        importer_module: &PyModule,
         bootstrap_module: &PyModule,
-        marshal_module: &PyModule,
-        decode_source: PyObject,
         resources_data: &'static [u8],
         current_exe: PathBuf,
         origin: PathBuf,
     ) -> Result<Self, PyErr> {
+        let decode_source = importer_module.get(py, "decode_source")?;
+
+        let io_module = py.import("_io")?;
+        let marshal_module = py.import("marshal")?;
+
         let imp_module = bootstrap_module.get(py, "_imp")?;
         let imp_module = imp_module.cast_into::<PyModule>(py)?;
         let sys_module = bootstrap_module.get(py, "sys")?;
@@ -353,6 +359,7 @@ impl ImporterState {
         Ok(ImporterState {
             imp_module,
             sys_module,
+            io_module,
             marshal_loads,
             builtin_importer,
             frozen_importer,
@@ -658,7 +665,9 @@ impl PyOxidizerFinder {
         };
 
         if let Some(source) = module.resolve_source(py)? {
-            state.decode_source.call(py, (source,), None)
+            state
+                .decode_source
+                .call(py, (&state.io_module, source), None)
         } else {
             Ok(py.None())
         }
@@ -1039,16 +1048,17 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
 
     m.add(
         py,
-        "_setup",
+        "decode_source",
         py_fn!(
             py,
-            module_setup(
-                m: PyModule,
-                bootstrap_module: PyModule,
-                marshal_module: PyModule,
-                decode_source: PyObject
-            )
+            decode_source(io_module: &PyModule, source_bytes: PyObject)
         ),
+    )?;
+
+    m.add(
+        py,
+        "_setup",
+        py_fn!(py, module_setup(m: PyModule, bootstrap_module: PyModule)),
     )?;
 
     Ok(())
@@ -1060,13 +1070,7 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
 ///
 /// This function should only be called once as part of
 /// _frozen_importlib_external._install_external_importers().
-fn module_setup(
-    py: Python,
-    m: PyModule,
-    bootstrap_module: PyModule,
-    marshal_module: PyModule,
-    decode_source: PyObject,
-) -> PyResult<PyObject> {
+fn module_setup(py: Python, m: PyModule, bootstrap_module: PyModule) -> PyResult<PyObject> {
     let state = get_module_state(py, &m)?;
 
     if state.setup_called {
@@ -1090,9 +1094,8 @@ fn module_setup(
         py,
         Arc::new(Box::new(ImporterState::new(
             py,
+            &m,
             &bootstrap_module,
-            &marshal_module,
-            decode_source,
             &state.packed_resources,
             state.current_exe.clone(),
             state.origin.clone(),
@@ -1152,6 +1155,28 @@ fn module_setup(
     }
 
     Ok(py.None())
+}
+
+/// Decodes source bytes into a str.
+///
+/// This is effectively a reimplementation of
+/// importlib._bootstrap_external.decode_source().
+fn decode_source(py: Python, io_module: &PyModule, source_bytes: PyObject) -> PyResult<PyObject> {
+    // .py based module, so can't be instantiated until importing mechanism
+    // is bootstrapped.
+    let tokenize_module = py.import("tokenize")?;
+
+    let buffer = io_module.call(py, "BytesIO", (&source_bytes,), None)?;
+    let readline = buffer.getattr(py, "readline")?;
+    let encoding = tokenize_module.call(py, "detect_encoding", (readline,), None)?;
+    let newline_decoder = io_module.call(
+        py,
+        "IncrementalNewlineDecoder",
+        (py.None(), py.True()),
+        None,
+    )?;
+    let data = source_bytes.call_method(py, "decode", (encoding.get_item(py, 0)?,), None)?;
+    newline_decoder.call_method(py, "decode", (data,), None)
 }
 
 static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
