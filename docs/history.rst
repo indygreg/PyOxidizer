@@ -55,6 +55,14 @@ New Features
   guesses about how the distribution works and will help enable
   more features over time.
 
+Other Relevant Changes
+^^^^^^^^^^^^^^^^^^^^^^
+
+* The registration of the custom Python importer during interpreter
+  initialization no longer relies on running custom frozen bytecode
+  for the ``importlib._bootstrap_external`` Python module. This
+  simplifies packaging and interpreter configuration a bit.
+
 0.7.0
 -----
 

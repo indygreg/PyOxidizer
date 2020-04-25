@@ -140,25 +140,8 @@ to import Python resources, you will need to update a handful of fields:
 .. code-block:: rust
 
    let mut config = pyembed::PythonConfig::default();
-   config.frozen_importlib_bytecode = ...;
-   config.frozen_importlib_external_bytecode = ...;
-   config_packed_resources = ...;
+   config.packed_resources = ...;
    config.use_custom_importlib = true;
-
-The ``*_bytecode`` fields define pre-compiled Python bytecode for the
-``importlib._bootstrap`` and ``importlib._bootstrap_external`` modules.
-This bytecode is needed to *bootstrap* Python's import machinery during
-interpreter initialization. And there's an additional twist: the bytecode
-isn't merely the bytecode produced from compiling these modules from the
-Python standard library: the bytecode must be produced from modified source
-code so that PyOxidizer's custom *meta path importer* can be registered
-when it executes.
-
-The easiest way to obtain this Python bytecode data is by using the
-build artifacts from PyOxidizer. Run ``pyoxidizer build-artifacts``
-to process and PyOxidizer configuration file and then consume the
-``importlib_bootstrap`` and ``importlib_bootstrap_external`` files
-which it produces. The ``include_bytes!`` macro can be useful here.
 
 The ``packed_resources`` field defines a reference to *packed resources
 data* (a ``&[u8]``. This is a custom serialization format for expressing

@@ -162,31 +162,24 @@ process.
 This extension module provides the `_pyoxidizer_importer` Python module,
 which provides a global `_setup()` function to be called from Python.
 
-The `PythonConfig` instance used to construct the Python interpreter
-contains a `&[u8]` referencing bytecode to be loaded
-as the `_frozen_importlib` and `_frozen_importlib_external` modules. The
-bytecode for `_frozen_importlib_external` is compiled from a **modified**
-version of the original `importlib._bootstrap_external` module provided by
-the Python interpreter. This custom module version defines a *new*
-`_install()` function which effectively runs
-`import _pyoxidizer_importer; _pyoxidizer_importer._setup(...)`.
-
 When we initialize the Python interpreter, the `_pyoxidizer_importer`
 extension module is appended to the global `PyImport_Inittab` array,
 allowing it to be recognized as a *built-in* extension module and
-imported as such. In addition, the global `PyImport_FrozenModules` array
-is modified so the `_frozen_importlib` and `_frozen_importlib_external`
-modules point at our modified bytecode provided by `PythonConfig`.
+imported as such.
 
-When `Py_Initialize()` is called, the initialization proceeds as before.
-`_frozen_importlib._install()` is called to register `BuiltinImporter`
-and `FrozenImporter` on `sys.meta_path`. This is no different from
-vanilla Python. When `_frozen_importlib_external._install()` is called,
-our custom version/bytecode runs. It performs an
-`import _pyoxidizer_importer`, which is serviced by `BuiltinImporter`.
-Our Rust-implemented module initialization function runs and creates
-a module object. We then call `_setup()` on this module to complete
-the logical initialization.
+We use the PEP-587
+[Python Initialization Configuration](https://docs.python.org/3/c-api/init_config.html)
+API to have granular control over Python initialization. Our most
+notable departure is we force a multi-phase initialization so
+initialization pauses between _core_ and _main_ initialization.
+
+When _core_ is initialized, `_frozen_importlib._install()` is called to
+register `BuiltinImporter` and `FrozenImporter` on `sys.meta_path`.
+At our break point after _core_ initialization, we import our
+`_pyoxidizer_importer` module using the Python C APIs. This import
+is serviced by `BuiltinImporter`. Our Rust-implemented module initialization
+function runs and creates a module object. We then call `_setup()` on this
+module to complete the logical initialization.
 
 The role of the `_setup()` function in our extension module is to add
 a new *meta path importer* to `sys.meta_path`. The chief goal of our
@@ -205,24 +198,23 @@ implements the requisite `importlib.abc.*` interfaces for providing a
 parsed data structure containing known Python modules. That instance is
 registered as the first entry on `sys.meta_path`.
 
-When our module's `_setup()` completes, control is returned to
-`_frozen_importlib_external._install()`, which finishes and returns
-control to whatever called it.
+When our module's `_setup()` completes, we trigger the *main*
+initialization. This will *always* register the traditional filesystem
+importer (`PathFinder`) on `sys.meta_path`. But, since our finder is
+registered first, it should always be used.
 
-As `Py_Initialize()` and later user code runs its course, requests are
-made to import non-built-in, non-frozen modules. (These requests are
-usually serviced by `PathFinder` via the filesystem.) The standard
-`sys.meta_path` traversal is performed. The Rust-implemented
-`PyOxidizerFinder` converts the requested Python module name to a Rust
-`&str` and does a lookup in a `HashMap<&str, ...>` to see if it knows
-about the module. Assuming the module is found, a `&[u8]` handle on
-that module's source or bytecode is obtained. That pointer is used to
-construct a Python `memoryview` object, which allows Python to access
-the raw bytes without a memory copy. Depending on the type, the source
-code is decoded to a Python `str` or the bytecode is sent to
-`marshal.loads()`, converted into a Python `code` object, which is then
-executed via the equivalent of `exec(code, module.__dict__)` to populate
-an empty Python module object.
+As part of _main_ interpreter initialization, Python attempts various
+imports of `.py` based modules. The standard `sys.meta_path` traversal
+is performed. The Rust-implemented `PyOxidizerFinder` converts the
+requested Python module name to a Rust `&str` and does a lookup in a
+`HashMap<&str, ...>` to see if it knows about the module. Assuming the
+module is found, a `&[u8]` handle on that module's source or bytecode is
+obtained. That pointer is used to construct a Python `memoryview` object,
+which allows Python to access the raw bytes without a memory copy.
+Depending on the type, the source code is decoded to a Python `str` or
+the bytecode is sent to `marshal.loads()`, converted into a Python `code`
+object, which is then executed via the equivalent of
+`exec(code, module.__dict__)` to populate an empty Python module object.
 
 In addition, `PyOxidizerFinder` indexes the built-in extension modules
 and frozen modules. It removes `BuiltinImporter` and `FrozenImporter`
@@ -239,20 +231,17 @@ was not that much effort to also index built-in and frozen modules
 so there's a fixed, low cost for finding modules (a Rust `HashMap` key
 lookup).
 
-It's worth explicitly noting that it is important for our custom code
-to run *before* `_frozen_importlib_external._install()` completes. This
+It's worth explicitly noting that it is important for our custom importer
+to run *before* the _main_ initialization phase completes. This
 is because Python interpreter initialization relies on the fact that
 `.py` implemented standard library modules are available for import
 during initialization. For example, initializing the filesystem encoding
 needs to import the `encodings` module, which is provided by a `.py` file
 on the filesystem in standard installations.
 
-**It is impossible to provide in-memory importing of the entirety of the
-Python standard library without injecting custom code while
-`Py_Initialize()` is running.** This is because `Py_Initialize()` imports
-modules from the filesystem. And, a subset of these standard library
-modules don't work as *frozen* modules. (The `FrozenImporter` doesn't
-set all required module attributes, leading to failures relying on
-missing attributes.)
+After the _main_ initialization phase completes, we remove `PathFinder`
+from `sys.meta_path` if the configuration says to disable filesystem
+based imports. The overhead of registering then unregistering it should
+be trivial and no I/O should have been performed.
 
 */

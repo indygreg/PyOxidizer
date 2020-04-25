@@ -18,7 +18,7 @@ use {
     super::distutils::prepare_hacked_distutils,
     super::embedded_resource::{EmbeddedPythonResources, EmbeddedPythonResourcesPrePackaged},
     super::fsscan::{find_python_resources, is_package_from_path, walk_tree_files},
-    super::libpython::{derive_importlib, link_libpython, ImportlibBytecode},
+    super::libpython::link_libpython,
     super::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
         PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
@@ -1043,18 +1043,6 @@ impl PythonDistribution for StandaloneDistribution {
         BytecodeCompiler::new(&self.python_exe)
     }
 
-    fn resolve_importlib_bytecode(&self) -> Result<ImportlibBytecode> {
-        let mod_bootstrap_path = &self.py_modules["importlib._bootstrap"];
-        let mod_bootstrap_external_path = &self.py_modules["importlib._bootstrap_external"];
-
-        let bootstrap_source = std::fs::read(&mod_bootstrap_path)?;
-        let bootstrap_external_source = std::fs::read(&mod_bootstrap_external_path)?;
-
-        let mut compiler = self.create_bytecode_compiler()?;
-
-        derive_importlib(&bootstrap_source, &bootstrap_external_source, &mut compiler)
-    }
-
     fn as_python_executable_builder(
         &self,
         logger: &slog::Logger,
@@ -1070,7 +1058,6 @@ impl PythonDistribution for StandaloneDistribution {
         include_test: bool,
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
         let python_exe = self.python_exe.clone();
-        let importlib_bytecode = self.resolve_importlib_bytecode()?;
 
         let mut builder = Box::new(StandalonePythonExecutableBuilder {
             host_triple: host_triple.to_string(),
@@ -1081,7 +1068,6 @@ impl PythonDistribution for StandaloneDistribution {
             resources: EmbeddedPythonResourcesPrePackaged::new(resources_policy, &self.cache_tag),
             config: config.clone(),
             python_exe,
-            importlib_bytecode,
             extension_module_filter: extension_module_filter.clone(),
             extension_module_variants: preferred_extension_module_variants,
         });
@@ -1358,9 +1344,6 @@ pub struct StandalonePythonExecutableBuilder {
 
     /// Path to python executable that can be invoked at build time.
     python_exe: PathBuf,
-
-    /// Bytecode for importlib bootstrap modules.
-    importlib_bytecode: ImportlibBytecode,
 
     /// Extension module filter to apply.
     extension_module_filter: ExtensionModuleFilter,
@@ -1809,11 +1792,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         let mut extra_files = resources.extra_install_files()?;
         let linking_info = self.resolve_python_linking_info(logger, opt_level, &resources)?;
         let resources = EmbeddedResourcesBlobs::try_from(resources)?;
-        warn!(
-            logger,
-            "deriving custom importlib modules to support in-memory importing"
-        );
-        let importlib = self.importlib_bytecode.clone();
 
         if self.distribution.link_mode == StandaloneDistributionLinkMode::Dynamic {
             if let Some(p) = &self.distribution.libpython_shared_library {
@@ -1830,7 +1808,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         Ok(EmbeddedPythonBinaryData {
             config: self.config.clone(),
             linking_info,
-            importlib,
             resources,
             extra_files,
             host: self.host_triple.clone(),
@@ -1870,7 +1847,6 @@ pub mod tests {
         let config = EmbeddedPythonConfig::default();
 
         let python_exe = distribution.python_exe.clone();
-        let importlib_bytecode = distribution.resolve_importlib_bytecode()?;
 
         Ok(StandalonePythonExecutableBuilder {
             host_triple: env!("HOST").to_string(),
@@ -1881,7 +1857,6 @@ pub mod tests {
             resources,
             config,
             python_exe,
-            importlib_bytecode,
             extension_module_filter: ExtensionModuleFilter::Minimal,
             extension_module_variants: None,
         })

@@ -24,7 +24,6 @@ use {
     std::fs,
     std::io::Write,
     std::path::{Path, PathBuf},
-    std::ptr::null,
 };
 
 #[cfg(unix)]
@@ -39,9 +38,6 @@ use super::pyalloc::make_raw_jemalloc_allocator;
 const PYOXIDIZER_IMPORTER_NAME_STR: &str = "_pyoxidizer_importer";
 pub const PYOXIDIZER_IMPORTER_NAME: &[u8] = b"_pyoxidizer_importer\0";
 
-const FROZEN_IMPORTLIB_NAME: &[u8] = b"_frozen_importlib\0";
-const FROZEN_IMPORTLIB_EXTERNAL_NAME: &[u8] = b"_frozen_importlib_external\0";
-
 /// Represents the results of executing Python code with exception handling.
 #[derive(Debug)]
 pub enum PythonRunResult {
@@ -51,26 +47,6 @@ pub enum PythonRunResult {
     Err {},
     /// Code executed and raised SystemExit with the specified exit code.
     Exit { code: i32 },
-}
-
-fn make_custom_frozen_modules(config: &PythonConfig) -> [pyffi::_frozen; 3] {
-    [
-        pyffi::_frozen {
-            name: FROZEN_IMPORTLIB_NAME.as_ptr() as *const i8,
-            code: config.frozen_importlib_bytecode.as_ptr(),
-            size: config.frozen_importlib_bytecode.len() as i32,
-        },
-        pyffi::_frozen {
-            name: FROZEN_IMPORTLIB_EXTERNAL_NAME.as_ptr() as *const i8,
-            code: config.frozen_importlib_external_bytecode.as_ptr(),
-            size: config.frozen_importlib_external_bytecode.len() as i32,
-        },
-        pyffi::_frozen {
-            name: null(),
-            code: null(),
-            size: 0,
-        },
-    ]
 }
 
 #[cfg(windows)]
@@ -305,7 +281,6 @@ impl NewInterpreterError {
 /// Both the low-level `python3-sys` and higher-level `cpython` crates are used.
 pub struct MainPythonInterpreter<'a> {
     pub config: PythonConfig,
-    frozen_modules: [pyffi::_frozen; 3],
     init_run: bool,
     raw_allocator: Option<pyffi::PyMemAllocatorEx>,
     raw_rust_allocator: Option<RawAllocator>,
@@ -336,11 +311,8 @@ impl<'a> MainPythonInterpreter<'a> {
             PythonRawAllocator::System => (None, None),
         };
 
-        let frozen_modules = make_custom_frozen_modules(&config);
-
         let mut res = MainPythonInterpreter {
             config,
-            frozen_modules,
             init_run: false,
             raw_allocator,
             raw_rust_allocator,
@@ -541,12 +513,6 @@ impl<'a> MainPythonInterpreter<'a> {
         py_config._init_main = 0;
 
         if config.use_custom_importlib {
-            // Replace the frozen modules in the interpreter with our custom set
-            // that knows how to import from memory.
-            unsafe {
-                pyffi::PyImport_FrozenModules = self.frozen_modules.as_ptr();
-            }
-
             // Register our _pyoxidizer_importer extension which provides importing functionality.
             unsafe {
                 // name char* needs to live as long as the interpreter is active.

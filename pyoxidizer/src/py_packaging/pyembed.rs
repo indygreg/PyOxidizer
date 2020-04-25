@@ -17,8 +17,6 @@ use super::config::{EmbeddedPythonConfig, RawAllocator, RunMode, TerminfoResolut
 /// Obtain the Rust source code to construct a PythonConfig instance.
 pub fn derive_python_config(
     embedded: &EmbeddedPythonConfig,
-    importlib_bootstrap_path: &PathBuf,
-    importlib_bootstrap_external_path: &PathBuf,
     embedded_resources_path: &PathBuf,
 ) -> String {
     format!(
@@ -44,8 +42,6 @@ pub fn derive_python_config(
          quiet: {},\n    \
          use_hash_seed: {},\n    \
          verbose: {},\n    \
-         frozen_importlib_bytecode: include_bytes!(r#\"{}\"#),\n    \
-         frozen_importlib_external_bytecode: include_bytes!(r#\"{}\"#),\n    \
          packed_resources: include_bytes!(r#\"{}\"#),\n    \
          extra_extension_modules: vec![],\n    \
          argvb: false,\n    \
@@ -87,8 +83,6 @@ pub fn derive_python_config(
         embedded.quiet,
         embedded.use_hash_seed,
         embedded.verbose,
-        importlib_bootstrap_path.display(),
-        importlib_bootstrap_external_path.display(),
         embedded_resources_path.display(),
         embedded.sys_frozen,
         embedded.sys_meipass,

@@ -9,7 +9,6 @@ Defining and manipulating binaries embedding Python.
 use {
     super::config::EmbeddedPythonConfig,
     super::embedded_resource::EmbeddedPythonResources,
-    super::libpython::ImportlibBytecode,
     super::pyembed::{derive_python_config, write_default_python_config_rs},
     super::resource::{
         PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
@@ -288,12 +287,6 @@ impl<'a> TryFrom<EmbeddedPythonResources<'a>> for EmbeddedResourcesBlobs {
 
 /// Holds filesystem paths to resources required to build a binary embedding Python.
 pub struct EmbeddedPythonBinaryPaths {
-    /// File containing bytecode for `importlib._bootstrap` module.
-    pub importlib_bootstrap: PathBuf,
-
-    /// File containing bytecode for `importlib._bootstrap_external` module.
-    pub importlib_bootstrap_external: PathBuf,
-
     /// File containing a list of module names.
     pub module_names: PathBuf,
 
@@ -321,9 +314,6 @@ pub struct EmbeddedPythonBinaryData {
     /// Information on how to link against Python.
     pub linking_info: PythonLinkingInfo,
 
-    /// Bytecode for importlib bootstrap modules.
-    pub importlib: ImportlibBytecode,
-
     /// Python resources to embed in the binary.
     pub resources: EmbeddedResourcesBlobs,
 
@@ -340,14 +330,6 @@ pub struct EmbeddedPythonBinaryData {
 impl EmbeddedPythonBinaryData {
     /// Write out files needed to link a binary.
     pub fn write_files(&self, dest_dir: &Path) -> Result<EmbeddedPythonBinaryPaths> {
-        let importlib_bootstrap = dest_dir.join("importlib_bootstrap");
-        let mut fh = File::create(&importlib_bootstrap)?;
-        fh.write_all(&self.importlib.bootstrap)?;
-
-        let importlib_bootstrap_external = dest_dir.join("importlib_bootstrap_external");
-        let mut fh = File::create(&importlib_bootstrap_external)?;
-        fh.write_all(&self.importlib.bootstrap_external)?;
-
         let module_names = dest_dir.join("py-module-names");
         let mut fh = File::create(&module_names)?;
         fh.write_all(&self.resources.module_names)?;
@@ -374,12 +356,7 @@ impl EmbeddedPythonBinaryData {
             None
         };
 
-        let config_rs_data = derive_python_config(
-            &self.config,
-            &importlib_bootstrap,
-            &importlib_bootstrap_external,
-            &embedded_resources,
-        );
+        let config_rs_data = derive_python_config(&self.config, &embedded_resources);
         let config_rs = dest_dir.join("default_python_config.rs");
         write_default_python_config_rs(&config_rs, &config_rs_data)?;
 
@@ -403,8 +380,6 @@ impl EmbeddedPythonBinaryData {
         fh.write_all(cargo_metadata_lines.join("\n").as_bytes())?;
 
         Ok(EmbeddedPythonBinaryPaths {
-            importlib_bootstrap,
-            importlib_bootstrap_external,
             module_names,
             embedded_resources,
             libpython,

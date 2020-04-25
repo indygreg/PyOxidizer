@@ -15,9 +15,8 @@ use std::fs;
 use std::fs::create_dir_all;
 use std::path::{Path, PathBuf};
 
-use super::bytecode::{BytecodeCompiler, CompileMode};
 use super::embedded_resource::EmbeddedPythonResources;
-use super::resource::{BytecodeOptimizationLevel, DataLocation};
+use super::resource::DataLocation;
 use super::standalone_distribution::{LicenseInfo, StandaloneDistribution};
 
 lazy_static! {
@@ -37,50 +36,6 @@ lazy_static! {
 
         v
     };
-}
-
-/// Holds bytecode for importlib bootstrap modules.
-///
-/// These are made available as frozen modules to the Python interpreter to bootstrap
-/// the importlib module import system.
-#[derive(Clone, Debug)]
-pub struct ImportlibBytecode {
-    pub bootstrap: Vec<u8>,
-    pub bootstrap_external: Vec<u8>,
-}
-
-/// Produce frozen importlib bytecode data.
-///
-/// importlib._bootstrap isn't modified.
-///
-/// importlib._bootstrap_external is modified. We take the original Python
-/// source and concatenate with code that provides the memory importer.
-/// Bytecode is then derived from it.
-pub fn derive_importlib(
-    bootstrap_source: &[u8],
-    bootstrap_external_source: &[u8],
-    compiler: &mut BytecodeCompiler,
-) -> Result<ImportlibBytecode> {
-    let module_name = "<frozen importlib._bootstrap>";
-    let bootstrap_bytecode = compiler.compile(
-        &bootstrap_source,
-        module_name,
-        BytecodeOptimizationLevel::Zero,
-        CompileMode::Bytecode,
-    )?;
-
-    let module_name = "<frozen importlib._bootstrap_external>";
-    let bootstrap_external_bytecode = compiler.compile(
-        &bootstrap_external_source,
-        module_name,
-        BytecodeOptimizationLevel::Zero,
-        CompileMode::Bytecode,
-    )?;
-
-    Ok(ImportlibBytecode {
-        bootstrap: bootstrap_bytecode,
-        bootstrap_external: bootstrap_external_bytecode,
-    })
 }
 
 /// Produce the content of the config.c file containing built-in extensions.

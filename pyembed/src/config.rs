@@ -139,12 +139,6 @@ pub struct PythonConfig {
     /// Controls the level of the verbose mode for the interpreter.
     pub verbose: i32,
 
-    /// Bytecode for the importlib._bootstrap / _frozen_importlib module.
-    pub frozen_importlib_bytecode: &'static [u8],
-
-    /// Bytecode for the importlib._bootstrap_external / _frozen_importlib_external module.
-    pub frozen_importlib_external_bytecode: &'static [u8],
-
     /// Reference to packed resources data.
     ///
     /// The referenced data contains Python module data. It likely comes from an
@@ -223,8 +217,6 @@ impl Default for PythonConfig {
             quiet: false,
             use_hash_seed: false,
             verbose: 0,
-            frozen_importlib_bytecode: &[],
-            frozen_importlib_external_bytecode: &[],
             packed_resources: &[],
             extra_extension_modules: vec![],
             argvb: false,

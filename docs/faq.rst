@@ -129,17 +129,13 @@ or do work at run-time to extract the standard library to a filesystem
 (typically a temporary directory or a FUSE filesystem like SquashFS). What
 ``PyOxidizer`` does is expose the ``.py``/``.pyc`` modules data to the
 Python interpreter via a Python extension module built-in to the binary.
-In addition, the ``importlib._bootstrap_external`` module (which is
-*frozen* into ``libpython``) is replaced by a modified version that
-defines a custom module importer capable of loading Python modules
-from the in-memory data structures exposed from the built-in extension
-module.
 
-The custom ``importlib_bootstrap_external`` frozen module trick is
-probably the most novel technical achievement of ``PyOxidizer``. Other
-Python distribution tools are encouraged to steal this idea!
+During Python interpreter initialization, a custom Rust-implemented
+Python importer is registered and takes over all imports. Requests for
+modules are serviced from the parsed data structure defining known
+modules.
 
-Following the *Documentation* link for the
+Follow the *Documentation* link for the
 `pyembed <https://crates.io/crates/pyembed>`_ crate for an overview of how
 the in-memory import machinery works.
 
