@@ -20,6 +20,7 @@ use {
     std::collections::BTreeSet,
     std::env,
     std::ffi::{CStr, CString},
+    std::fmt::{Display, Formatter},
     std::fs,
     std::io::Write,
     std::path::{Path, PathBuf},
@@ -174,6 +175,25 @@ fn set_windows_flags(config: &PythonConfig, py_config: &mut pyffi::PyConfig) {
     py_config.legacy_windows_stdio = if config.legacy_windows_stdio { 1 } else { 0 };
 }
 
+/// Represents an error encountered when creating an embedded Python interpreter.
+pub enum NewInterpreterError {
+    Simple(&'static str),
+}
+
+impl From<&'static str> for NewInterpreterError {
+    fn from(v: &'static str) -> Self {
+        Self::Simple(v)
+    }
+}
+
+impl Display for NewInterpreterError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Simple(value) => value.fmt(f),
+        }
+    }
+}
+
 /// Manages an embedded Python interpreter.
 ///
 /// **Warning: Python interpreters have global state. There should only be a
@@ -200,7 +220,7 @@ impl<'a> MainPythonInterpreter<'a> {
     /// Construct a Python interpreter from a configuration.
     ///
     /// The Python interpreter is initialized as a side-effect. The GIL is held.
-    pub fn new(config: PythonConfig) -> Result<MainPythonInterpreter<'a>, &'static str> {
+    pub fn new(config: PythonConfig) -> Result<MainPythonInterpreter<'a>, NewInterpreterError> {
         match config.terminfo_resolution {
             TerminfoResolution::Dynamic => {
                 if let Some(v) = resolve_terminfo_dirs() {
@@ -248,17 +268,18 @@ impl<'a> MainPythonInterpreter<'a> {
     /// of interpreter initialization.
     ///
     /// Returns a Python instance which has the GIL acquired.
-    fn init(&mut self) -> Result<Python, &'static str> {
+    fn init(&mut self) -> Result<Python, NewInterpreterError> {
         if self.init_run {
             return Ok(self.acquire_gil());
         }
 
         let config = &self.config;
 
-        let exe = env::current_exe().or_else(|_| Err("could not obtain current exe"))?;
+        let exe = env::current_exe()
+            .or_else(|_| Err(NewInterpreterError::Simple("could not obtain current exe")))?;
         let origin = exe
             .parent()
-            .ok_or_else(|| "unable to get exe parent")?
+            .ok_or_else(|| NewInterpreterError::Simple("unable to get exe parent"))?
             .to_path_buf();
         let origin_string = origin.display().to_string();
 
@@ -297,7 +318,9 @@ impl<'a> MainPythonInterpreter<'a> {
             let status = pyffi::Py_PreInitialize(&pre_config);
 
             if pyffi::PyStatus_Exception(status) != 0 {
-                return Err("Python pre-initialization failed");
+                return Err(NewInterpreterError::Simple(
+                    "Python pre-initialization failed",
+                ));
             }
         };
 
@@ -345,23 +368,31 @@ impl<'a> MainPythonInterpreter<'a> {
         // Set PYTHONHOME to directory of current executable.
         let status = set_config_string_from_path(&py_config, &py_config.home, &origin);
         if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
-            return Err("setting Python home directory failed");
+            return Err(NewInterpreterError::Simple(
+                "setting Python home directory failed",
+            ));
         }
 
         // Set program name to path of current executable.
         let status = set_config_string_from_path(&py_config, &py_config.program_name, &exe);
         if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
-            return Err("setting program named failed");
+            return Err(NewInterpreterError::Simple("setting program named failed"));
         }
 
         // Set stdio encoding and error handling.
         if let (Some(ref encoding), Some(ref errors)) =
             (&config.standard_io_encoding, &config.standard_io_errors)
         {
-            let cencoding = CString::new(encoding.clone())
-                .or_else(|_| Err("unable to convert encoding to C string"))?;
-            let cerrors = CString::new(errors.clone())
-                .or_else(|_| Err("unable to convert encoding error mode to C string"))?;
+            let cencoding = CString::new(encoding.clone()).or_else(|_| {
+                Err(NewInterpreterError::Simple(
+                    "unable to convert encoding to C string",
+                ))
+            })?;
+            let cerrors = CString::new(errors.clone()).or_else(|_| {
+                Err(NewInterpreterError::Simple(
+                    "unable to convert encoding error mode to C string",
+                ))
+            })?;
 
             unsafe {
                 let status = pyffi::PyConfig_SetBytesString(
@@ -370,7 +401,7 @@ impl<'a> MainPythonInterpreter<'a> {
                     cencoding.as_ptr(),
                 );
                 if pyffi::PyStatus_Exception(status) != 0 {
-                    return Err("setting stdio encoding failed");
+                    return Err(NewInterpreterError::Simple("setting stdio encoding failed"));
                 }
 
                 let status = pyffi::PyConfig_SetBytesString(
@@ -379,7 +410,9 @@ impl<'a> MainPythonInterpreter<'a> {
                     cerrors.as_ptr(),
                 );
                 if pyffi::PyStatus_Exception(status) != 0 {
-                    return Err("setting stdio error handler failed");
+                    return Err(NewInterpreterError::Simple(
+                        "setting stdio error handler failed",
+                    ));
                 }
             }
         }
@@ -429,13 +462,17 @@ impl<'a> MainPythonInterpreter<'a> {
             };
 
             if res != 0 {
-                return Err("unable to register extension module");
+                return Err(NewInterpreterError::Simple(
+                    "unable to register extension module",
+                ));
             }
         }
 
         let status = unsafe { pyffi::Py_InitializeFromConfig(&py_config) };
         if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
-            return Err("error initializing Python core");
+            return Err(NewInterpreterError::Simple(
+                "error initializing Python core",
+            ));
         }
 
         // At this point, the core of Python is initialized.
@@ -497,7 +534,9 @@ impl<'a> MainPythonInterpreter<'a> {
         }
 
         if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
-            return Err("error initializing Python main");
+            return Err(NewInterpreterError::Simple(
+                "error initializing Python main",
+            ));
         }
 
         unsafe {
@@ -542,7 +581,7 @@ impl<'a> MainPythonInterpreter<'a> {
 
         match res {
             0 => (),
-            _ => return Err("unable to set sys.argv"),
+            _ => return Err(NewInterpreterError::Simple("unable to set sys.argv")),
         }
 
         if config.argvb {
@@ -559,7 +598,7 @@ impl<'a> MainPythonInterpreter<'a> {
 
             match res {
                 0 => (),
-                _ => return Err("unable to set sys.argvb"),
+                _ => return Err(NewInterpreterError::Simple("unable to set sys.argvb")),
             }
         }
 
@@ -573,7 +612,7 @@ impl<'a> MainPythonInterpreter<'a> {
 
         match res {
             0 => (),
-            _ => return Err("unable to set sys.oxidized"),
+            _ => return Err(NewInterpreterError::Simple("unable to set sys.oxidized")),
         }
 
         if config.sys_frozen {
@@ -583,7 +622,7 @@ impl<'a> MainPythonInterpreter<'a> {
                 pyffi::PySys_SetObject(frozen.as_ptr() as *const i8, py_true)
             }) {
                 0 => (),
-                _ => return Err("unable to set sys.frozen"),
+                _ => return Err(NewInterpreterError::Simple("unable to set sys.frozen")),
             }
         }
 
@@ -595,7 +634,7 @@ impl<'a> MainPythonInterpreter<'a> {
                 pyffi::PySys_SetObject(meipass.as_ptr() as *const i8, py_value)
             }) {
                 0 => (),
-                _ => return Err("unable to set sys._MEIPASS"),
+                _ => return Err(NewInterpreterError::Simple("unable to set sys._MEIPASS")),
             }
         }
 

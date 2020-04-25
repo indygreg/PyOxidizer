@@ -101,4 +101,4 @@ pub use crate::config::{
 };
 
 #[allow(unused_imports)]
-pub use crate::interpreter::MainPythonInterpreter;
+pub use crate::interpreter::{MainPythonInterpreter, NewInterpreterError};
