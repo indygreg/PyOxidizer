@@ -12,7 +12,7 @@ for importing Python modules from memory.
 use {
     super::interpreter::PYOXIDIZER_IMPORTER_NAME,
     super::python_resources::{OptimizeLevel, PythonResourcesState},
-    cpython::exc::{FileNotFoundError, ImportError, RuntimeError, ValueError},
+    cpython::exc::{FileNotFoundError, ImportError, ValueError},
     cpython::{
         py_class, py_fn, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule,
         PyObject, PyResult, PyString, PyTuple, Python, PythonObject,
@@ -959,11 +959,8 @@ const DOC: &[u8] = b"Binary representation of Python modules\0";
 /// exist without issue.
 #[derive(Debug)]
 struct ModuleState {
-    /// Whether this struct has been filled in.
-    state_populated: bool,
-
-    /// Whether setup() has been called.
-    setup_called: bool,
+    /// Whether the module has been initialized.
+    initialized: bool,
 
     /// Currently running executable.
     current_exe: PathBuf,
@@ -990,62 +987,6 @@ fn get_module_state<'a>(py: Python, m: &'a PyModule) -> Result<&'a mut ModuleSta
     }
 
     Ok(unsafe { &mut *state })
-}
-
-/// Called after module import/initialization to configure the importing mechanism.
-///
-/// This does the heavy work of configuring the importing mechanism.
-///
-/// This function should only be called once as part of
-/// _frozen_importlib_external._install_external_importers().
-fn module_setup(py: Python, m: PyModule) -> PyResult<PyObject> {
-    let state = get_module_state(py, &m)?;
-
-    if !state.state_populated {
-        return Err(PyErr::new::<RuntimeError, _>(
-            py,
-            "oxidizer importer state not populated",
-        ));
-    }
-
-    if state.setup_called {
-        return Err(PyErr::new::<RuntimeError, _>(
-            py,
-            "PyOxidizer _setup() already called",
-        ));
-    }
-
-    state.setup_called = true;
-
-    let bootstrap_module = py.import("_frozen_importlib")?;
-    let sys_module = bootstrap_module.get(py, "sys")?;
-    let sys_module = sys_module.cast_into::<PyModule>(py)?;
-
-    // Construct and register our custom meta path importer. Because our meta path
-    // importer is able to handle builtin and frozen modules, the existing meta path
-    // importers are removed. The assumption here is that we're called very early
-    // during startup and the 2 default meta path importers are installed.
-    let unified_importer = PyOxidizerFinder::create_instance(
-        py,
-        Arc::new(Box::new(ImporterState::new(
-            py,
-            &m,
-            &bootstrap_module,
-            &state.packed_resources,
-            state.current_exe.clone(),
-            state.origin.clone(),
-        )?)),
-    )?;
-
-    let meta_path_object = sys_module.get(py, "meta_path")?;
-
-    meta_path_object.call_method(py, "clear", NoArgs, None)?;
-    meta_path_object.call_method(py, "append", (unified_importer,), None)?;
-
-    // At this point the importing mechanism is fully initialized to use our
-    // unified importer, which handles built-in, frozen, and embedded resources.
-
-    Ok(py.None())
 }
 
 /// Decodes source bytes into a str.
@@ -1135,8 +1076,7 @@ pub extern "C" fn PyInit__pyoxidizer_importer() -> *mut pyffi::PyObject {
 fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
     let mut state = get_module_state(py, m)?;
 
-    state.state_populated = false;
-    state.setup_called = false;
+    state.initialized = false;
 
     m.add(
         py,
@@ -1147,16 +1087,15 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
         ),
     )?;
 
-    m.add(py, "_setup", py_fn!(py, module_setup(m: PyModule)))?;
-
     Ok(())
 }
 
-/// Populate the module state for this module.
+/// Initialize the module/importer.
 ///
-/// This must be called after PyInit_* but before any meaningful
-/// code in the module runs.
-pub fn populate_module_state(
+/// This is called after PyInit_* to finish the initialization of the
+/// module. Its state struct is updated. A new instance of the meta path
+/// importer is constructed and registered on sys.meta_path.
+pub fn initialize_importer(
     py: Python,
     m: &PyModule,
     current_exe: PathBuf,
@@ -1169,7 +1108,32 @@ pub fn populate_module_state(
     state.origin = origin;
     state.packed_resources = packed_resources;
 
-    state.state_populated = true;
+    let bootstrap_module = py.import("_frozen_importlib")?;
+    let sys_module = bootstrap_module.get(py, "sys")?;
+    let sys_module = sys_module.cast_into::<PyModule>(py)?;
+
+    // Construct and register our custom meta path importer. Because our meta path
+    // importer is able to handle builtin and frozen modules, the existing meta path
+    // importers are removed. The assumption here is that we're called very early
+    // during startup and the 2 default meta path importers are installed.
+    let unified_importer = PyOxidizerFinder::create_instance(
+        py,
+        Arc::new(Box::new(ImporterState::new(
+            py,
+            &m,
+            &bootstrap_module,
+            &state.packed_resources,
+            state.current_exe.clone(),
+            state.origin.clone(),
+        )?)),
+    )?;
+
+    let meta_path_object = sys_module.get(py, "meta_path")?;
+
+    meta_path_object.call_method(py, "clear", NoArgs, None)?;
+    meta_path_object.call_method(py, "append", (unified_importer,), None)?;
+
+    state.initialized = true;
 
     Ok(())
 }

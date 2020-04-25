@@ -160,7 +160,7 @@ as opposed to being a standalone shared library that is loaded into the Python
 process.
 
 This extension module provides the `_pyoxidizer_importer` Python module,
-which provides a global `_setup()` function to be called from Python.
+which defines a meta path importer.
 
 When we initialize the Python interpreter, the `_pyoxidizer_importer`
 extension module is appended to the global `PyImport_Inittab` array,
@@ -178,12 +178,11 @@ register `BuiltinImporter` and `FrozenImporter` on `sys.meta_path`.
 At our break point after _core_ initialization, we import our
 `_pyoxidizer_importer` module using the Python C APIs. This import
 is serviced by `BuiltinImporter`. Our Rust-implemented module initialization
-function runs and creates a module object. We then call `_setup()` on this
-module to complete the logical initialization.
-
-The role of the `_setup()` function in our extension module is to add
-a new *meta path importer* to `sys.meta_path`. The chief goal of our
-importer is to support importing Python modules from memory using 0-copy.
+function runs and creates a module object. We then call another Rust
+function to complete the module initialization given the current
+configuration. This will create a new *meta path importer* and register
+it on `sys.meta_path`. The chief goal of our importer is to support
+importing Python resources using an efficient binary data structure.
 
 Our extension module grabs a handle on the `&[u8]` containing modules
 data embedded into the binary. (See

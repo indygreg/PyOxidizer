@@ -6,7 +6,7 @@
 
 use {
     super::config::{PythonConfig, PythonRawAllocator, PythonRunMode, TerminfoResolution},
-    super::importer::{populate_module_state, PyInit__pyoxidizer_importer},
+    super::importer::{initialize_importer, PyInit__pyoxidizer_importer},
     super::osutils::resolve_terminfo_dirs,
     super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
     super::pystr::{osstr_to_pyobject, osstring_to_bytes},
@@ -570,22 +570,12 @@ impl<'a> MainPythonInterpreter<'a> {
                 ))
             })?;
 
-            populate_module_state(py, &oxidized_importer, exe, origin, config.packed_resources)
+            initialize_importer(py, &oxidized_importer, exe, origin, config.packed_resources)
                 .or_else(|err| {
                     Err(NewInterpreterError::new_from_pyerr(
                         py,
                         err,
-                        "import of oxidized importer module",
-                    ))
-                })?;
-
-            oxidized_importer
-                .call(py, "_setup", (&oxidized_importer,), None)
-                .or_else(|err| {
-                    Err(NewInterpreterError::new_from_pyerr(
-                        py,
-                        err,
-                        "setup of oxidized importer",
+                        "initialization of oxidized importer",
                     ))
                 })?;
         }
