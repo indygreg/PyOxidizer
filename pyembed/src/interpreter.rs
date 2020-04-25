@@ -28,7 +28,7 @@ use {
 };
 
 #[cfg(unix)]
-use std::os::unix::ffi::OsStrExt;
+use {libc::size_t, std::os::unix::ffi::OsStrExt};
 
 #[cfg(target_family = "windows")]
 use std::os::windows::prelude::OsStrExt;
@@ -36,6 +36,7 @@ use std::os::windows::prelude::OsStrExt;
 #[cfg(feature = "jemalloc-sys")]
 use super::pyalloc::make_raw_jemalloc_allocator;
 
+const PYOXIDIZER_IMPORTER_NAME_STR: &str = "_pyoxidizer_importer";
 pub const PYOXIDIZER_IMPORTER_NAME: &[u8] = b"_pyoxidizer_importer\0";
 
 const FROZEN_IMPORTLIB_NAME: &[u8] = b"_frozen_importlib\0";
@@ -168,6 +169,44 @@ fn set_config_string_from_path(
 }
 
 #[cfg(unix)]
+fn append_wide_string_list_from_path(
+    dest: &mut pyffi::PyWideStringList,
+    path: &Path,
+) -> pyffi::PyStatus {
+    let mut len: size_t = 0;
+
+    let decoded = unsafe {
+        pyffi::Py_DecodeLocale(path.as_os_str().as_bytes().as_ptr() as *const _, &mut len)
+    };
+
+    if decoded.is_null() {
+        unsafe {
+            pyffi::PyStatus_Error(
+                CStr::from_bytes_with_nul_unchecked(b"unable to decode path\0").as_ptr(),
+            )
+        }
+    } else {
+        let res = unsafe { pyffi::PyWideStringList_Append(dest as *mut _, decoded) };
+        unsafe {
+            pyffi::PyMem_RawFree(decoded as *mut _);
+        }
+        res
+    }
+}
+
+#[cfg(windows)]
+fn append_wide_string_list_from_path(
+    dest: &mut pyffi::PyWideStringList,
+    path: &Path,
+) -> pyffi::PyStatus {
+    unsafe {
+        let value: Vec<wchar_t> = path.as_os_str().encode_wide().collect();
+
+        pyffi::PyWideStringList_Append(dest as *mut _, value.as_ptr() as *const _)
+    }
+}
+
+#[cfg(unix)]
 fn set_windows_flags(_config: &PythonConfig, _py_config: &mut pyffi::PyConfig) {}
 
 #[cfg(windows)]
@@ -175,9 +214,37 @@ fn set_windows_flags(config: &PythonConfig, py_config: &mut pyffi::PyConfig) {
     py_config.legacy_windows_stdio = if config.legacy_windows_stdio { 1 } else { 0 };
 }
 
+/// Format a PyErr in a crude manner.
+///
+/// This is meant to be called during interpreter initialization. We can't
+/// call PyErr_Print() because sys.stdout may not be available yet.
+fn format_pyerr(py: Python, err: PyErr) -> Result<String, &'static str> {
+    let type_repr = err
+        .ptype
+        .repr(py)
+        .or_else(|_| Err("unable to get repr of error type"))?;
+
+    if let Some(value) = &err.pvalue {
+        let value_repr = value
+            .repr(py)
+            .or_else(|_| Err("unable to get repr of error value"))?;
+
+        let value = format!(
+            "{}: {}",
+            type_repr.to_string_lossy(py),
+            value_repr.to_string_lossy(py)
+        );
+
+        Ok(value)
+    } else {
+        Ok(type_repr.to_string_lossy(py).to_string())
+    }
+}
+
 /// Represents an error encountered when creating an embedded Python interpreter.
 pub enum NewInterpreterError {
     Simple(&'static str),
+    Dynamic(String),
 }
 
 impl From<&'static str> for NewInterpreterError {
@@ -188,8 +255,38 @@ impl From<&'static str> for NewInterpreterError {
 
 impl Display for NewInterpreterError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
+        match &self {
             Self::Simple(value) => value.fmt(f),
+            Self::Dynamic(value) => value.fmt(f),
+        }
+    }
+}
+
+impl NewInterpreterError {
+    pub fn new_from_pyerr(py: Python, err: PyErr, context: &str) -> Self {
+        match format_pyerr(py, err) {
+            Ok(value) => Self::Dynamic(format!("during {}: {}", context, value)),
+            Err(msg) => Self::Dynamic(format!("during {}: {}", context, msg)),
+        }
+    }
+
+    pub fn new_from_pystatus(status: &pyffi::PyStatus, context: &str) -> Self {
+        if !status.func.is_null() && !status.err_msg.is_null() {
+            let func = unsafe { CStr::from_ptr(status.func) };
+            let msg = unsafe { CStr::from_ptr(status.err_msg) };
+
+            Self::Dynamic(format!(
+                "during {}: {}: {}",
+                context,
+                func.to_string_lossy(),
+                msg.to_string_lossy()
+            ))
+        } else if !status.err_msg.is_null() {
+            let msg = unsafe { CStr::from_ptr(status.err_msg) };
+
+            Self::Dynamic(format!("during {}: {}", context, msg.to_string_lossy()))
+        } else {
+            Self::Dynamic(format!("during {}: could not format PyStatus", context))
         }
     }
 }
@@ -283,12 +380,6 @@ impl<'a> MainPythonInterpreter<'a> {
             .to_path_buf();
         let origin_string = origin.display().to_string();
 
-        let sys_paths: Vec<String> = config
-            .sys_paths
-            .iter()
-            .map(|path| path.replace("$ORIGIN", &origin_string))
-            .collect();
-
         // Pre-configure Python.
 
         let mut pre_config = pyffi::PyPreConfig::default();
@@ -364,6 +455,17 @@ impl<'a> MainPythonInterpreter<'a> {
 
         // We control the paths. Don't let Python initialize it.
         py_config.module_search_paths_set = 1;
+
+        for path in &config.sys_paths {
+            let path = PathBuf::from(path.replace("$ORIGIN", &origin_string));
+            let status =
+                append_wide_string_list_from_path(&mut py_config.module_search_paths, &path);
+            if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
+                return Err(NewInterpreterError::Simple(
+                    "setting module search paths failed",
+                ));
+            }
+        }
 
         // Set PYTHONHOME to directory of current executable.
         let status = set_config_string_from_path(&py_config, &py_config.home, &origin);
@@ -508,8 +610,6 @@ impl<'a> MainPythonInterpreter<'a> {
         let module_state = super::importer::InitModuleState {
             current_exe: exe.clone(),
             origin,
-            register_filesystem_importer: self.config.filesystem_importer,
-            sys_paths,
             packed_resources: config.packed_resources,
         };
 
@@ -519,6 +619,28 @@ impl<'a> MainPythonInterpreter<'a> {
         // when calling Py_Initialize() below.
         unsafe {
             super::importer::NEXT_MODULE_STATE = &module_state;
+        }
+
+        let py = unsafe { Python::assume_gil_acquired() };
+
+        if config.use_custom_importlib {
+            let oxidized_importer = py.import(PYOXIDIZER_IMPORTER_NAME_STR).or_else(|err| {
+                Err(NewInterpreterError::new_from_pyerr(
+                    py,
+                    err,
+                    "import of oxidized importer module",
+                ))
+            })?;
+
+            oxidized_importer
+                .call(py, "_setup", (&oxidized_importer,), None)
+                .or_else(|err| {
+                    Err(NewInterpreterError::new_from_pyerr(
+                        py,
+                        err,
+                        "setup of oxidized importer",
+                    ))
+                })?;
         }
 
         // Now proceed with the Python main initialization. This will initialize
@@ -534,9 +656,46 @@ impl<'a> MainPythonInterpreter<'a> {
         }
 
         if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
-            return Err(NewInterpreterError::Simple(
-                "error initializing Python main",
+            return Err(NewInterpreterError::new_from_pystatus(
+                &status,
+                "initializing Python main",
             ));
+        }
+
+        // When the main initialization ran, it initialized the "external"
+        // importer (importlib._bootstrap_external). Our meta path importer
+        // should have been registered first and would have been used for
+        // all imports, if configured for such.
+        //
+        // Here, we remove the filesystem importer if we aren't configured
+        // to use it. Ideally there would be a field on PyConfig to disable
+        // just the external importer. But there isn't. The only field
+        // controls both internal and external bootstrap modules and when
+        // set it will disable a lot of "main" initialization.
+        if !config.filesystem_importer {
+            let sys_module = py.import("sys").or_else(|err| {
+                Err(NewInterpreterError::new_from_pyerr(
+                    py,
+                    err,
+                    "obtaining sys module",
+                ))
+            })?;
+            let meta_path = sys_module.get(py, "meta_path").or_else(|err| {
+                Err(NewInterpreterError::new_from_pyerr(
+                    py,
+                    err,
+                    "obtaining sys.meta_path",
+                ))
+            })?;
+            meta_path
+                .call_method(py, "pop", NoArgs, None)
+                .or_else(|err| {
+                    Err(NewInterpreterError::new_from_pyerr(
+                        py,
+                        err,
+                        "sys.meta_path.pop()",
+                    ))
+                })?;
         }
 
         unsafe {
@@ -555,7 +714,6 @@ impl<'a> MainPythonInterpreter<'a> {
          * PySys_ResetWarnOptions()
          */
 
-        let py = unsafe { Python::assume_gil_acquired() };
         self.py = Some(py);
         self.init_run = true;
 

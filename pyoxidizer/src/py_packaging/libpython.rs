@@ -20,8 +20,6 @@ use super::embedded_resource::EmbeddedPythonResources;
 use super::resource::{BytecodeOptimizationLevel, DataLocation};
 use super::standalone_distribution::{LicenseInfo, StandaloneDistribution};
 
-pub const PYTHON_IMPORTER: &[u8] = include_bytes!("memoryimporter.py");
-
 lazy_static! {
     /// Libraries provided by the host that we can ignore in Python module library dependencies.
     ///
@@ -71,9 +69,6 @@ pub fn derive_importlib(
         CompileMode::Bytecode,
     )?;
 
-    let mut bootstrap_external_source = Vec::from(bootstrap_external_source);
-    bootstrap_external_source.extend("\n# END OF importlib/_bootstrap_external.py\n\n".bytes());
-    bootstrap_external_source.extend(PYTHON_IMPORTER);
     let module_name = "<frozen importlib._bootstrap_external>";
     let bootstrap_external_bytecode = compiler.compile(
         &bootstrap_external_source,

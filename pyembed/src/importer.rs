@@ -961,12 +961,6 @@ pub struct InitModuleState {
     /// Directory where relative paths are relative to.
     pub origin: PathBuf,
 
-    /// Whether to register the filesystem importer on sys.meta_path.
-    pub register_filesystem_importer: bool,
-
-    /// Values to set on sys.path.
-    pub sys_paths: Vec<String>,
-
     /// Raw data describing embedded resources.
     pub packed_resources: &'static [u8],
 }
@@ -989,12 +983,6 @@ struct ModuleState {
 
     /// Directory where relative paths are relative to.
     origin: PathBuf,
-
-    /// Whether to register PathFinder on sys.meta_path.
-    register_filesystem_importer: bool,
-
-    /// Values to set on sys.path.
-    sys_paths: Vec<String>,
 
     /// Raw data constituting embedded resources.
     packed_resources: &'static [u8],
@@ -1038,9 +1026,6 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
         // TODO we could move the value if we wanted to avoid the clone().
         state.current_exe = (*NEXT_MODULE_STATE).current_exe.clone();
         state.origin = (*NEXT_MODULE_STATE).origin.clone();
-        state.register_filesystem_importer = (*NEXT_MODULE_STATE).register_filesystem_importer;
-        // TODO we could move the value if we wanted to avoid the clone().
-        state.sys_paths = (*NEXT_MODULE_STATE).sys_paths.clone();
         state.packed_resources = (*NEXT_MODULE_STATE).packed_resources;
     }
 
@@ -1081,7 +1066,6 @@ fn module_setup(py: Python, m: PyModule) -> PyResult<PyObject> {
     let bootstrap_module = py.import("_frozen_importlib")?;
     let sys_module = bootstrap_module.get(py, "sys")?;
     let sys_module = sys_module.cast_into::<PyModule>(py)?;
-    let sys_module_ref = sys_module.clone_ref(py);
 
     // Construct and register our custom meta path importer. Because our meta path
     // importer is able to handle builtin and frozen modules, the existing meta path
@@ -1106,50 +1090,6 @@ fn module_setup(py: Python, m: PyModule) -> PyResult<PyObject> {
 
     // At this point the importing mechanism is fully initialized to use our
     // unified importer, which handles built-in, frozen, and embedded resources.
-
-    // Because we're probably running during Py_Initialize() and stdlib modules
-    // may not be in-memory, we need to register and configure additional importers
-    // here, before continuing with Py_Initialize(), otherwise we may not find
-    // the standard library!
-
-    if state.register_filesystem_importer {
-        // This is what importlib._bootstrap_external usually does:
-        // supported_loaders = _get_supported_file_loaders()
-        // sys.path_hooks.extend([FileFinder.path_hook(*supported_loaders)])
-        // sys.meta_path.append(PathFinder)
-        let frozen_importlib_external = py.import("_frozen_importlib_external")?;
-
-        let loaders =
-            frozen_importlib_external.call(py, "_get_supported_file_loaders", NoArgs, None)?;
-        let loaders_list = loaders.cast_as::<PyList>(py)?;
-        let loaders_vec: Vec<PyObject> = loaders_list.iter(py).collect();
-        let loaders_tuple = PyTuple::new(py, loaders_vec.as_slice());
-
-        let file_finder = frozen_importlib_external.get(py, "FileFinder")?;
-        let path_hook = file_finder.call_method(py, "path_hook", loaders_tuple, None)?;
-        let path_hooks = sys_module_ref.get(py, "path_hooks")?;
-        path_hooks.call_method(py, "append", (path_hook,), None)?;
-
-        let path_finder = frozen_importlib_external.get(py, "PathFinder")?;
-        let meta_path = sys_module_ref.get(py, "meta_path")?;
-        meta_path.call_method(py, "append", (path_finder,), None)?;
-    }
-
-    // Ideally we should be calling Py_SetPath() before Py_Initialize() to set sys.path.
-    // But we tried to do this and only ran into problems due to string conversions,
-    // unwanted side-effects. Updating sys.path directly before it is used by PathFinder
-    // (which was just registered above) should have the same effect.
-
-    // Always clear out sys.path.
-    let sys_path = sys_module_ref.get(py, "path")?;
-    sys_path.call_method(py, "clear", NoArgs, None)?;
-
-    // And repopulate it with entries from the config.
-    for path in &state.sys_paths {
-        let py_path = PyString::new(py, path.as_str());
-
-        sys_path.call_method(py, "append", (py_path,), None)?;
-    }
 
     Ok(py.None())
 }
