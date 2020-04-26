@@ -345,3 +345,58 @@ pub(crate) fn handle_system_exit(py: Python, err: PyErr) -> Result<i32, &'static
 
     Ok(1)
 }
+
+/// Represents the results of executing Python code with exception handling.
+#[derive(Debug)]
+pub enum PythonRunResult {
+    /// Code executed without raising an exception.
+    Ok {},
+    /// Code executed and raised an exception.
+    Err {},
+    /// Code executed and raised SystemExit with the specified exit code.
+    Exit { code: i32 },
+}
+
+/// Runs the interpreter and handles any exception that was raised.
+pub fn run_and_handle_error(py: Python, run_mode: &PythonRunMode) -> PythonRunResult {
+    // There are underdefined lifetime bugs at play here. There is no
+    // explicit lifetime for the PyObject's returned. If we don't have
+    // the local variable in scope, we can get into a situation where
+    // drop() on self is called before the PyObject's drop(). This is
+    // problematic because PyObject's drop() attempts to acquire the GIL.
+    // If the interpreter is shut down, there is no GIL to acquire, and
+    // we may segfault.
+    // TODO look into setting lifetimes properly so the compiler can
+    // prevent some issues.
+    let res = super::python_eval::run(py, run_mode);
+
+    match res {
+        Ok(_) => PythonRunResult::Ok {},
+        Err(err) => {
+            // SystemExit is special in that PyErr_PrintEx() will call
+            // exit() if it is seen. So, we handle it manually so we can
+            // return an exit code instead of exiting.
+
+            // TODO surely the cpython crate offers a better way to do this...
+            err.restore(py);
+            let matches = unsafe { pyffi::PyErr_ExceptionMatches(pyffi::PyExc_SystemExit) } != 0;
+            let err = cpython::PyErr::fetch(py);
+
+            if matches {
+                return PythonRunResult::Exit {
+                    code: match super::python_eval::handle_system_exit(py, err) {
+                        Ok(code) => code,
+                        Err(msg) => {
+                            eprintln!("{}", msg);
+                            1
+                        }
+                    },
+                };
+            }
+
+            err.print(py);
+
+            PythonRunResult::Err {}
+        }
+    }
+}

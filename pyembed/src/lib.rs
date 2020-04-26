@@ -108,4 +108,6 @@ pub use crate::config::{
 pub use crate::interpreter::{MainPythonInterpreter, NewInterpreterError};
 
 #[allow(unused_imports)]
-pub use crate::python_eval::{run, run_code, run_file, run_module_as_main, run_repl};
+pub use crate::python_eval::{
+    run, run_and_handle_error, run_code, run_file, run_module_as_main, run_repl,
+};

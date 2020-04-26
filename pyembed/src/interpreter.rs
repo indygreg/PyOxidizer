@@ -33,17 +33,6 @@ use python3_sys::PyMemAllocatorEx;
 const PYOXIDIZER_IMPORTER_NAME_STR: &str = "_pyoxidizer_importer";
 pub const PYOXIDIZER_IMPORTER_NAME: &[u8] = b"_pyoxidizer_importer\0";
 
-/// Represents the results of executing Python code with exception handling.
-#[derive(Debug)]
-pub enum PythonRunResult {
-    /// Code executed without raising an exception.
-    Ok {},
-    /// Code executed and raised an exception.
-    Err {},
-    /// Code executed and raised SystemExit with the specified exit code.
-    Exit { code: i32 },
-}
-
 #[cfg(feature = "jemalloc-sys")]
 fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
     make_raw_jemalloc_allocator()
@@ -592,67 +581,14 @@ impl<'a> MainPythonInterpreter<'a> {
 
             res
         } else {
-            match self.run_and_handle_error() {
-                PythonRunResult::Ok {} => 0,
-                PythonRunResult::Err {} => 1,
-                PythonRunResult::Exit { code } => code,
+            let py = self.acquire_gil().unwrap();
+
+            match super::python_eval::run_and_handle_error(py, &self.config.run) {
+                super::python_eval::PythonRunResult::Ok {} => 0,
+                super::python_eval::PythonRunResult::Err {} => 1,
+                super::python_eval::PythonRunResult::Exit { code } => code,
             }
         }
-    }
-
-    /// Runs the interpreter and handles any exception that was raised.
-    pub fn run_and_handle_error(&mut self) -> PythonRunResult {
-        // There are underdefined lifetime bugs at play here. There is no
-        // explicit lifetime for the PyObject's returned. If we don't have
-        // the local variable in scope, we can get into a situation where
-        // drop() on self is called before the PyObject's drop(). This is
-        // problematic because PyObject's drop() attempts to acquire the GIL.
-        // If the interpreter is shut down, there is no GIL to acquire, and
-        // we may segfault.
-        // TODO look into setting lifetimes properly so the compiler can
-        // prevent some issues.
-        let py = self.acquire_gil().unwrap();
-        let res = super::python_eval::run(py, &self.config.run);
-
-        match res {
-            Ok(_) => PythonRunResult::Ok {},
-            Err(err) => {
-                // SystemExit is special in that PyErr_PrintEx() will call
-                // exit() if it is seen. So, we handle it manually so we can
-                // return an exit code instead of exiting.
-
-                // TODO surely the cpython crate offers a better way to do this...
-                err.restore(py);
-                let matches =
-                    unsafe { pyffi::PyErr_ExceptionMatches(pyffi::PyExc_SystemExit) } != 0;
-                let err = cpython::PyErr::fetch(py);
-
-                if matches {
-                    return PythonRunResult::Exit {
-                        code: match super::python_eval::handle_system_exit(py, err) {
-                            Ok(code) => code,
-                            Err(msg) => {
-                                eprintln!("{}", msg);
-                                1
-                            }
-                        },
-                    };
-                }
-
-                self.print_err(err);
-
-                PythonRunResult::Err {}
-            }
-        }
-    }
-
-    /// Print a Python error.
-    ///
-    /// Under the hood this calls ``PyErr_PrintEx()``, which may call
-    /// ``Py_Exit()`` and may write to stderr.
-    pub fn print_err(&mut self, err: PyErr) {
-        let py = self.acquire_gil().unwrap();
-        err.print(py);
     }
 }
 
