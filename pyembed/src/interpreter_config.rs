@@ -76,11 +76,14 @@ fn set_config_string_from_path(
     path: &Path,
     context: &str,
 ) -> Result<(), String> {
+    let value = CString::new(path.as_os_str().as_bytes())
+        .or_else(|_| Err("cannot convert path to C string".to_string()))?;
+
     let status = unsafe {
         pyffi::PyConfig_SetBytesString(
             config as *const _ as *mut _,
             dest as *const *mut _ as *mut *mut _,
-            path.as_os_str().as_bytes().as_ptr() as *const _,
+            value.as_ptr() as *const _,
         )
     };
 
