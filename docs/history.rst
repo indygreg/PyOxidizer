@@ -29,6 +29,11 @@ Not yet released.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* Various ``run_*`` functions on ``pyembed::MainPythonInterpreter`` have
+  been moved to standalone functions in the ``pyembed`` crate. The
+  ``run_as_main()`` function (which is called by the default Rust
+  program that is generated) will always call ``Py_RunMain()`` and
+  finalize the interpreter. See the extensive crate docs for move.
 * The ``pyembed`` crate now defines a new ``OxidizedPythonInterpreterConfig``
   type to configure Python interpreters. ``PythonConfig`` still exists
   and can be converted into a ``OxidizedPythonInterpreterConfig`` using

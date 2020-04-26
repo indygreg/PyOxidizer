@@ -158,25 +158,23 @@ Using a Python Interpreter
 ==========================
 
 Once you've constructed a ``pyembed::MainPythonInterpreter`` instance, you
-can call various methods on it to run Python code and perform
-other actions. e.g.
+can obtain a ``cpython::Python`` instance via ``.acquire_gil()`` and then
+use it::
 
 .. code-block:: rust
 
    fn do_it(interpreter: &MainPythonInterpreter) -> {
-       match interpreter.run_code("print('hello, world')") {
+       let py = interpreter.acquire_gil().unwrap();
+
+       match pyembed::run_code(py, "print('hello, world')") {
            Ok(_) => print("python code executed successfully"),
            Err(e) => print("python error: {:?}", e),
        }
    }
 
-See the ``pyembed`` crate's documentation for more.
-
-If the methods available on ``MainPythonInterpreter`` aren't sufficient for
-your needs, you can call ``acquire_gil()`` to obtain a ``cpython::Python``
-instance, which is the ``cpython`` crate's representation of a Python
-interpreter. With that, you can do a lot more than you can with
-``MainPythonInterpreter``!
+The ``pyembed`` crate exports various ``run_*`` functions for
+performing high-level evaluation of various primitives (files, modules,
+code strings, etc). See the ``pyembed`` crate's documentation for more.
 
 Since CPython's API relies on static variables (sadly), if you really wanted
 to, you could call out to CPython C APIs directly (probably via the
