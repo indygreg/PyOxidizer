@@ -7,7 +7,8 @@
 use {
     super::pystr::path_to_cstring,
     cpython::exc::{RuntimeError, SystemExit, ValueError},
-    cpython::{PyErr, PyObject, PyResult, Python},
+    cpython::{ObjectProtocol, PyErr, PyModule, PyObject, PyResult, Python, PythonObject},
+    libc::c_char,
     python3_sys as pyffi,
     std::ffi::CString,
     std::path::Path,
@@ -98,5 +99,59 @@ pub fn run_file(py: Python, path: &Path) -> PyResult<PyObject> {
         Ok(py.None())
     } else {
         Err(PyErr::new::<SystemExit, _>(py, 1))
+    }
+}
+
+/// Runs a Python module as the __main__ module.
+///
+/// This is similar to what `python -m <module>` would do.
+///
+/// A more robust mechanism to run a Python file is by calling
+/// `MainPythonInterpreter.run_as_main()` with
+/// `OxidizedPythonInterpreterConfig.run = PythonRunMode::File`,
+/// as this mode will run the actual code that `python` does,
+/// not a reimplementation of it. See `run_as_main()`'s documentation
+/// for more.
+///
+/// Returns the execution result of the module code.
+pub fn run_module_as_main(py: Python, name: &str) -> PyResult<PyObject> {
+    // This is modeled after runpy.py:_run_module_as_main().
+    let main: PyModule = unsafe {
+        PyObject::from_borrowed_ptr(
+            py,
+            pyffi::PyImport_AddModule("__main__\0".as_ptr() as *const c_char),
+        )
+        .cast_into(py)?
+    };
+
+    let main_dict = main.dict(py);
+
+    let importlib_util = py.import("importlib.util")?;
+    let spec = importlib_util.call(py, "find_spec", (name,), None)?;
+    let loader = spec.getattr(py, "loader")?;
+    let code = loader.call_method(py, "get_code", (name,), None)?;
+
+    let origin = spec.getattr(py, "origin")?;
+    let cached = spec.getattr(py, "cached")?;
+
+    // TODO handle __package__.
+    main_dict.set_item(py, "__name__", "__main__")?;
+    main_dict.set_item(py, "__file__", origin)?;
+    main_dict.set_item(py, "__cached__", cached)?;
+    main_dict.set_item(py, "__doc__", py.None())?;
+    main_dict.set_item(py, "__loader__", loader)?;
+    main_dict.set_item(py, "__spec__", spec)?;
+
+    unsafe {
+        let globals = main_dict.as_object().as_ptr();
+        let res = pyffi::PyEval_EvalCode(code.as_ptr(), globals, globals);
+
+        if res.is_null() {
+            let err = PyErr::fetch(py);
+            err.print(py);
+            Err(PyErr::fetch(py))
+        } else {
+            Ok(PyObject::from_owned_ptr(py, res))
+        }
     }
 }
