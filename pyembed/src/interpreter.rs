@@ -552,25 +552,22 @@ impl<'a> MainPythonInterpreter<'a> {
     ///
     /// The `PythonRunMode::Eval`, `PythonRunMode::File`, and
     /// `PythonRunMode::Module`, and `PythonRunMode::Repl` run modes are
-    /// evaluated via `Py_RunMain()`.
+    /// evaluated via `Py_RunMain()`. `PythonRunMode::None` simply returns 0.
     ///
     /// `Py_RunMain` is the most robust mechanism to run code, files, or
     /// modules, as `Py_RunMain()` invokes the same APIs that `python` would.
     /// By contrast, the `run()`, `run_module_as_main()`, `run_code()`,
-    /// `run_file()`, and `run_repl()` functions reimplement this
-    /// functionality and may behave subtly different from what `python`
-    /// would do. If you want the  evaluation to behave like `python`, you
-    /// should call this function.
+    /// `run_file()`, and `run_repl()` functions in the `python_eval` module
+    /// reimplement functionality and may behave subtly different from what
+    /// `python` would do. If you want the evaluation to behave like `python`,
+    /// you should call this function.
     ///
-    /// A downside to calling this function with the aforementioned run modes
-    /// is that `Py_RunMain()` will finalize the interpreter and only gives
-    /// you an exit code: there is no opportunity to inspect the return value
-    /// or handle an uncaught exception. If you want to keep the interpreter
-    /// alive or inspect the evaluation result, consider calling `run()` or
-    /// one of the `run_*` functions instead.
+    /// A downside to calling this function is that `Py_RunMain()` will finalize
+    /// the interpreter and only gives you an exit code: there is no opportunity
+    /// to inspect the return value or handle an uncaught exception. If you want
+    /// to keep the interpreter alive or inspect the evaluation result, consider
+    /// calling a function in the `python_eval` module.
     pub fn run_as_main(&mut self) -> i32 {
-        // If we support using Py_RunMain(), use it, as it is the least
-        // buggy.
         if self.config.uses_py_runmain() {
             let res = unsafe { pyffi::Py_RunMain() };
 
@@ -581,13 +578,7 @@ impl<'a> MainPythonInterpreter<'a> {
 
             res
         } else {
-            let py = self.acquire_gil().unwrap();
-
-            match super::python_eval::run_and_handle_error(py, &self.config.run) {
-                super::python_eval::PythonRunResult::Ok {} => 0,
-                super::python_eval::PythonRunResult::Err {} => 1,
-                super::python_eval::PythonRunResult::Exit { code } => code,
-            }
+            0
         }
     }
 }
