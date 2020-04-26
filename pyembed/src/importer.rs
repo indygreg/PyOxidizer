@@ -266,7 +266,7 @@ pub(crate) struct ImporterState {
     /// Bytecode optimization level currently in effect.
     optimize_level: OptimizeLevel,
     /// Holds state about importable resources.
-    pub resources_state: PythonResourcesState<'static, u8>,
+    resources_state: PythonResourcesState<'static, u8>,
 }
 
 impl ImporterState {
@@ -357,6 +357,12 @@ impl ImporterState {
             optimize_level,
             resources_state,
         })
+    }
+
+    /// Obtain the `PythonResourcesState` associated with this instance.
+    #[inline]
+    pub fn get_resources_state<'a>(&self) -> &PythonResourcesState<'a, u8> {
+        &self.resources_state
     }
 }
 
@@ -452,7 +458,7 @@ impl PyOxidizerFinder {
         let key = fullname.to_string(py)?;
 
         let module = match state
-            .resources_state
+            .get_resources_state()
             .resolve_importable_module(&key, state.optimize_level)
         {
             Some(module) => module,
@@ -511,7 +517,7 @@ impl PyOxidizerFinder {
         let name = spec.getattr(py, "name")?;
         let key = name.extract::<String>(py)?;
 
-        let entry = match state.resources_state.resources.get(&*key) {
+        let entry = match state.get_resources_state().resources.get(&*key) {
             Some(entry) => entry,
             None => return Ok(py.None()),
         };
@@ -531,7 +537,7 @@ impl PyOxidizerFinder {
                     let sys_modules = state.sys_module.as_object().getattr(py, "modules")?;
 
                     extension_module_shared_library_create_module(
-                        &state.resources_state,
+                        state.get_resources_state(),
                         py,
                         sys_modules,
                         spec,
@@ -559,7 +565,7 @@ impl PyOxidizerFinder {
         let key = name.extract::<String>(py)?;
 
         let mut entry = match state
-            .resources_state
+            .get_resources_state()
             .resolve_importable_module(&key, state.optimize_level)
         {
             Some(entry) => entry,
@@ -609,7 +615,7 @@ impl PyOxidizerFinder {
     /// attribute or an item from a package’s __path__.
     fn get_data_impl(&self, py: Python, path: &PyString) -> PyResult<PyObject> {
         self.state(py)
-            .resources_state
+            .get_resources_state()
             .resolve_resource_data_from_path(py, path)
     }
 }
@@ -621,7 +627,7 @@ impl PyOxidizerFinder {
         let key = fullname.to_string(py)?;
 
         let mut module = match state
-            .resources_state
+            .get_resources_state()
             .resolve_importable_module(&key, state.optimize_level)
         {
             Some(module) => module,
@@ -644,7 +650,7 @@ impl PyOxidizerFinder {
         let key = fullname.to_string(py)?;
 
         let module = match state
-            .resources_state
+            .get_resources_state()
             .resolve_importable_module(&key, state.optimize_level)
         {
             Some(module) => module,
@@ -676,7 +682,7 @@ impl PyOxidizerFinder {
         let make_error = |msg: &str| -> PyErr { PyErr::new::<ImportError, _>(py, (msg, &key)) };
 
         let module = state
-            .resources_state
+            .get_resources_state()
             .resolve_importable_module(&key, state.optimize_level)
             .ok_or_else(|| make_error("unknown module"))?;
 
@@ -694,7 +700,7 @@ impl PyOxidizerFinder {
         let key = fullname.to_string(py)?;
 
         let entry = match state
-            .resources_state
+            .get_resources_state()
             .resolve_importable_module(&key, state.optimize_level)
         {
             Some(entry) => entry,
@@ -778,7 +784,7 @@ impl PyOxidizerResourceReader {
         let state = self.state(py);
         let package = self.package(py);
 
-        if let Some(file) = state.resources_state.get_package_resource_file(
+        if let Some(file) = state.get_resources_state().get_package_resource_file(
             py,
             &package,
             &resource.to_string(py)?,
@@ -807,7 +813,7 @@ impl PyOxidizerResourceReader {
         let package = self.package(py);
 
         if state
-            .resources_state
+            .get_resources_state()
             .is_package_resource(&package, &name.to_string(py)?)
         {
             Ok(py.True().as_object().clone_ref(py))
@@ -830,7 +836,9 @@ impl PyOxidizerResourceReader {
         let state = self.state(py);
         let package = self.package(py);
 
-        state.resources_state.package_resource_names(py, &package)
+        state
+            .get_resources_state()
+            .package_resource_names(py, &package)
     }
 }
 
@@ -908,7 +916,7 @@ impl PyOxidizerTraversable {
         // virtual subdirectories in addressable resources. But this will require
         // changes to the resources data format to capture said annotations.
         if let Some(entry) = state
-            .resources_state
+            .get_resources_state()
             .resolve_importable_module(&path, state.optimize_level)
         {
             if entry.is_package {

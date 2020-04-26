@@ -50,7 +50,7 @@ impl PyOxidizerDistribution {
     fn read_text_impl(&self, py: Python, filename: &PyString) -> PyResult<PyObject> {
         let state: &Arc<Box<ImporterState>> = self.state(py);
         let package: &str = self.package(py);
-        let resources_state = &state.resources_state;
+        let resources_state = state.get_resources_state();
 
         let filename = filename.to_string_lossy(py);
 
@@ -85,7 +85,7 @@ impl PyOxidizerDistribution {
     fn metadata_impl(&self, py: Python) -> PyResult<PyObject> {
         let state: &Arc<Box<ImporterState>> = self.state(py);
         let package: &str = self.package(py);
-        let resources_state = &state.resources_state;
+        let resources_state = state.get_resources_state();
 
         let data = resolve_package_distribution_resource(
             &resources_state.resources,
@@ -152,7 +152,7 @@ pub(crate) fn find_distributions<'a>(
     name: Option<PyObject>,
     _path: Option<PyObject>,
 ) -> PyResult<PyObject> {
-    let resources = &state.resources_state.resources;
+    let resources = &state.get_resources_state().resources;
 
     let distributions = if let Some(name) = name {
         // Python normalizes the name. We do the same.
