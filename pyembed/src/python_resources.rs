@@ -349,7 +349,7 @@ where
     pub origin: PathBuf,
 
     /// Names of Python packages.
-    pub packages: HashSet<&'static str>,
+    pub packages: HashSet<&'a str>,
 
     /// Named resources available for loading.
     pub resources: HashMap<Cow<'a, str>, Resource<'a, X>>,
