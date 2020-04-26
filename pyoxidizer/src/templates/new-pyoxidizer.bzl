@@ -20,7 +20,7 @@ def make_exe(dist):
     #     ignore_environment=True,
     #     inspect=False,
     #     interactive=False,
-    #     isolated=False,
+    #     isolated=True,
     #     legacy_windows_fs_encoding=False,
     #     legacy_windows_stdio=False,
     #     no_site=True,

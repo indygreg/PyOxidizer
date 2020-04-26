@@ -29,6 +29,10 @@ Not yet released.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* The ``pyembed`` crate now defines a new ``OxidizedPythonInterpreterConfig``
+  type to configure Python interpreters. ``PythonConfig`` still exists
+  and can be converted into a ``OxidizedPythonInterpreterConfig`` using
+  ``.into()``.
 * Windows static distributions have been removed (temporary
   regression which should be corrected before a release).
 * The default Python distributions have been upgraded to CPython
@@ -44,6 +48,9 @@ Backwards Compatibility Notes
 New Features
 ^^^^^^^^^^^^
 
+* The ``pyembed`` crate now exposes a new ``OxidizedPythonInterpreterConfig``
+  type (and associated types) allowing configuration of every field
+  supported by Python's interpreter configuration API.
 * Embedded Python interpreters are now managed via the
   `new apis <https://docs.python.org/3/c-api/init_config.htm>`_ defined
   by PEP-587. This gives us much more control over the configuration

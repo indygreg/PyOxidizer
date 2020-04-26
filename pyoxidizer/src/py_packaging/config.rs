@@ -80,7 +80,7 @@ impl Default for EmbeddedPythonConfig {
             ignore_environment: true,
             inspect: false,
             interactive: false,
-            isolated: false,
+            isolated: true,
             legacy_windows_fs_encoding: false,
             legacy_windows_stdio: false,
             optimize_level: 0,

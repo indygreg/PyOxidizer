@@ -24,11 +24,11 @@ import modules from memory using 0-copy, you probably want to use this crate
 with `PyOxidizer`.
 
 The most important types in this crate are
-[`PythonConfig`](struct.PythonConfig.html) and
-[`MainPythonInterpreter`](struct.MainPythonInterpreter.html). A `PythonConfig`
-defines how a Python interpreter is to behave. A `MainPythonInterpreter`
-creates and manages that interpreter and serves as a high-level interface for
-running code in the interpreter.
+[`OxidizedPythonInterpreterConfig`](struct.OxidizedPythonInterpreterConfig.html)
+and [`MainPythonInterpreter`](struct.MainPythonInterpreter.html). An
+`OxidizedPythonInterpreterConfig` defines how a Python interpreter is to
+behave. A `MainPythonInterpreter` creates and manages that interpreter and
+serves as a high-level interface for running code in the interpreter.
 
 # Dependencies
 
@@ -86,6 +86,7 @@ That crate's build script will attempt to find a `libpython` from the
 mod config;
 mod importer;
 mod interpreter;
+mod interpreter_config;
 #[cfg(windows)]
 mod memory_dll;
 mod osutils;
@@ -97,7 +98,9 @@ pub mod technotes;
 
 #[allow(unused_imports)]
 pub use crate::config::{
-    ExtensionModule, PythonConfig, PythonRawAllocator, PythonRunMode, TerminfoResolution,
+    Allocator, CheckHashPYCsMode, CoerceCLocale, ExtensionModule, OptimizationLevel,
+    OxidizedPythonInterpreterConfig, PythonConfig, PythonInterpreterConfig,
+    PythonInterpreterProfile, PythonRawAllocator, PythonRunMode, TerminfoResolution,
 };
 
 #[allow(unused_imports)]
