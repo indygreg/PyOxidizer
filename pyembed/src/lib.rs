@@ -93,6 +93,7 @@ mod osutils;
 mod package_metadata;
 mod pyalloc;
 mod pystr;
+mod python_eval;
 mod python_resources;
 pub mod technotes;
 
@@ -105,3 +106,6 @@ pub use crate::config::{
 
 #[allow(unused_imports)]
 pub use crate::interpreter::{MainPythonInterpreter, NewInterpreterError};
+
+#[allow(unused_imports)]
+pub use crate::python_eval::run_file;

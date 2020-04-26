@@ -11,9 +11,9 @@ use {
     super::importer::{initialize_importer, PyInit__pyoxidizer_importer},
     super::osutils::resolve_terminfo_dirs,
     super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
-    super::pystr::{osstr_to_pyobject, osstring_to_bytes, path_to_cstring},
+    super::pystr::{osstr_to_pyobject, osstring_to_bytes},
     super::python_resources::PythonResourcesState,
-    cpython::exc::{RuntimeError, SystemExit, ValueError},
+    cpython::exc::{SystemExit, ValueError},
     cpython::{
         GILGuard, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule, PyObject,
         PyResult, PyString, Python, PythonObject, ToPyObject,
@@ -27,7 +27,7 @@ use {
     std::fmt::{Display, Formatter},
     std::fs,
     std::io::Write,
-    std::path::{Path, PathBuf},
+    std::path::PathBuf,
 };
 
 #[cfg(feature = "jemalloc-sys")]
@@ -666,7 +666,7 @@ impl<'a> MainPythonInterpreter<'a> {
             PythonRunMode::Repl => self.run_repl(),
             PythonRunMode::Module { module } => self.run_module_as_main(&module),
             PythonRunMode::Eval { code } => self.run_code(&code),
-            PythonRunMode::File { path } => self.run_file(&path),
+            PythonRunMode::File { path } => super::python_eval::run_file(py, &path),
         }
     }
 
@@ -938,46 +938,6 @@ impl<'a> MainPythonInterpreter<'a> {
             } else {
                 Ok(PyObject::from_owned_ptr(py, res))
             }
-        }
-    }
-
-    /// Runs Python code in a filesystem path.
-    ///
-    /// This is similar to what `python <path>` would do.
-    ///
-    /// A more robust mechanism to run a Python file is by calling
-    /// `run_as_main()` with
-    /// `OxidizedPythonInterpreterConfig.run = PythonRunMode::File`,
-    /// as this mode will run the actual code that `python` does,
-    /// not a reimplementation of it. See `run_as_main()`'s documentation
-    /// for more.
-    pub fn run_file(&mut self, path: &Path) -> PyResult<PyObject> {
-        let py = self.acquire_gil().unwrap();
-
-        let res = unsafe {
-            // Python's APIs operate on a FILE*. So we need to coerce the
-            // filename to a char*. Is there a better way to get a FILE* from
-            // a HANDLE on Windows?
-            let filename = path_to_cstring(path).or_else(|_| {
-                Err(PyErr::new::<RuntimeError, _>(
-                    py,
-                    "cannot convert path to C string",
-                ))
-            })?;
-
-            let fp = libc::fopen(filename.as_ptr(), "rb\0".as_ptr() as *const _);
-            let mut cf = pyffi::PyCompilerFlags {
-                cf_flags: 0,
-                cf_feature_version: 0,
-            };
-
-            pyffi::PyRun_AnyFileExFlags(fp, filename.as_ptr(), 1, &mut cf)
-        };
-
-        if res == 0 {
-            Ok(py.None())
-        } else {
-            Err(PyErr::new::<SystemExit, _>(py, 1))
         }
     }
 
