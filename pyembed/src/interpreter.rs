@@ -13,17 +13,15 @@ use {
     super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
     super::pystr::{osstr_to_pyobject, osstring_to_bytes},
     super::python_resources::PythonResourcesState,
-    cpython::exc::{SystemExit, ValueError},
     cpython::{
         GILGuard, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyObject, PyResult,
         PyString, Python, ToPyObject,
     },
-    libc::c_char,
     python3_sys as pyffi,
     std::collections::BTreeSet,
     std::convert::TryInto,
     std::env,
-    std::ffi::{CStr, CString},
+    std::ffi::CStr,
     std::fmt::{Display, Formatter},
     std::fs,
     std::io::Write,
@@ -46,37 +44,6 @@ pub enum PythonRunResult {
     Err {},
     /// Code executed and raised SystemExit with the specified exit code.
     Exit { code: i32 },
-}
-
-#[cfg(windows)]
-extern "C" {
-    pub fn __acrt_iob_func(x: u32) -> *mut libc::FILE;
-}
-
-#[cfg(windows)]
-fn stdin_to_file() -> *mut libc::FILE {
-    // The stdin symbol is made available by importing <stdio.h>. On Windows,
-    // stdin is defined in corecrt_wstdio.h as a `#define` that calls this
-    // internal CRT function. There's no exported symbol to use. So we
-    // emulate the behavior of the C code.
-    //
-    // Relying on an internal CRT symbol is probably wrong. But Microsoft
-    // typically keeps backwards compatibility for undocumented functions
-    // like this because people use them in the wild.
-    //
-    // An attempt was made to use fdopen(0) like we do on POSIX. However,
-    // this causes a crash. The Microsoft C Runtime is already bending over
-    // backwards to coerce its native HANDLEs into POSIX file descriptors.
-    // Even if there are other ways to coerce a FILE* from a HANDLE
-    // (_open_osfhandle() + _fdopen() might work), using the same function
-    // that <stdio.h> uses to obtain a FILE* seems like the least risky thing
-    // to do.
-    unsafe { __acrt_iob_func(0) }
-}
-
-#[cfg(unix)]
-fn stdin_to_file() -> *mut libc::FILE {
-    unsafe { libc::fdopen(libc::STDIN_FILENO, &('r' as libc::c_char)) }
 }
 
 #[cfg(windows)]
@@ -663,7 +630,7 @@ impl<'a> MainPythonInterpreter<'a> {
         // an immutable reference to &self.
         match self.config.run.clone() {
             PythonRunMode::None => Ok(py.None()),
-            PythonRunMode::Repl => self.run_repl(),
+            PythonRunMode::Repl => super::python_eval::run_repl(py),
             PythonRunMode::Module { module } => super::python_eval::run_module_as_main(py, &module),
             PythonRunMode::Eval { code } => super::python_eval::run_code(py, &code),
             PythonRunMode::File { path } => super::python_eval::run_file(py, &path),
@@ -787,55 +754,6 @@ impl<'a> MainPythonInterpreter<'a> {
                 self.print_err(err);
 
                 PythonRunResult::Err {}
-            }
-        }
-    }
-
-    /// Start and run a Python REPL.
-    ///
-    /// This emulates what CPython's main.c does.
-    ///
-    /// The interpreter is automatically initialized if needed.
-    ///
-    /// A more robust mechanism to run a Python REPL is by calling
-    /// `run_as_main()` with
-    /// `OxidizedPythonInterpreterConfig.run = PythonRunMode::Repl`,
-    /// as this mode will run the actual code that `python` does,
-    /// not a reimplementation of it. See `run_as_main()`'s documentation
-    /// for more.
-    pub fn run_repl(&mut self) -> PyResult<PyObject> {
-        let py = self.acquire_gil().unwrap();
-
-        unsafe {
-            pyffi::Py_InspectFlag = 0;
-        }
-
-        // readline is optional. We don't care if it fails.
-        if py.import("readline").is_ok() {}
-
-        let sys = py.import("sys")?;
-
-        if let Ok(hook) = sys.get(py, "__interactivehook__") {
-            hook.call(py, NoArgs, None)?;
-        }
-
-        let stdin_filename = "<stdin>";
-        let filename = CString::new(stdin_filename)
-            .or_else(|_| Err(PyErr::new::<ValueError, _>(py, "could not create CString")))?;
-        let mut cf = pyffi::PyCompilerFlags {
-            cf_flags: 0,
-            cf_feature_version: 0,
-        };
-
-        unsafe {
-            let stdin = stdin_to_file();
-            let res =
-                pyffi::PyRun_AnyFileExFlags(stdin, filename.as_ptr() as *const c_char, 0, &mut cf);
-
-            if res == 0 {
-                Ok(py.None())
-            } else {
-                Err(PyErr::new::<SystemExit, _>(py, 1))
             }
         }
     }

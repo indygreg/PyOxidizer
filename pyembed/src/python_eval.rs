@@ -7,7 +7,7 @@
 use {
     super::pystr::path_to_cstring,
     cpython::exc::{RuntimeError, SystemExit, ValueError},
-    cpython::{ObjectProtocol, PyErr, PyModule, PyObject, PyResult, Python, PythonObject},
+    cpython::{NoArgs, ObjectProtocol, PyErr, PyModule, PyObject, PyResult, Python, PythonObject},
     libc::c_char,
     python3_sys as pyffi,
     std::ffi::CString,
@@ -152,6 +152,84 @@ pub fn run_module_as_main(py: Python, name: &str) -> PyResult<PyObject> {
             Err(PyErr::fetch(py))
         } else {
             Ok(PyObject::from_owned_ptr(py, res))
+        }
+    }
+}
+
+#[cfg(windows)]
+extern "C" {
+    pub fn __acrt_iob_func(x: u32) -> *mut libc::FILE;
+}
+
+#[cfg(windows)]
+fn stdin_to_file() -> *mut libc::FILE {
+    // The stdin symbol is made available by importing <stdio.h>. On Windows,
+    // stdin is defined in corecrt_wstdio.h as a `#define` that calls this
+    // internal CRT function. There's no exported symbol to use. So we
+    // emulate the behavior of the C code.
+    //
+    // Relying on an internal CRT symbol is probably wrong. But Microsoft
+    // typically keeps backwards compatibility for undocumented functions
+    // like this because people use them in the wild.
+    //
+    // An attempt was made to use fdopen(0) like we do on POSIX. However,
+    // this causes a crash. The Microsoft C Runtime is already bending over
+    // backwards to coerce its native HANDLEs into POSIX file descriptors.
+    // Even if there are other ways to coerce a FILE* from a HANDLE
+    // (_open_osfhandle() + _fdopen() might work), using the same function
+    // that <stdio.h> uses to obtain a FILE* seems like the least risky thing
+    // to do.
+    unsafe { __acrt_iob_func(0) }
+}
+
+#[cfg(unix)]
+fn stdin_to_file() -> *mut libc::FILE {
+    unsafe { libc::fdopen(libc::STDIN_FILENO, &('r' as libc::c_char)) }
+}
+
+/// Start and run a Python REPL.
+///
+/// This emulates what CPython's main.c does.
+///
+/// The interpreter is automatically initialized if needed.
+///
+/// A more robust mechanism to run a Python REPL is by calling
+/// `MainPythonInterpreter.run_as_main()` with
+/// `OxidizedPythonInterpreterConfig.run = PythonRunMode::Repl`,
+/// as this mode will run the actual code that `python` does,
+/// not a reimplementation of it. See `run_as_main()`'s documentation
+/// for more.
+pub fn run_repl(py: Python) -> PyResult<PyObject> {
+    unsafe {
+        pyffi::Py_InspectFlag = 0;
+    }
+
+    // readline is optional. We don't care if it fails.
+    if py.import("readline").is_ok() {}
+
+    let sys = py.import("sys")?;
+
+    if let Ok(hook) = sys.get(py, "__interactivehook__") {
+        hook.call(py, NoArgs, None)?;
+    }
+
+    let stdin_filename = "<stdin>";
+    let filename = CString::new(stdin_filename)
+        .or_else(|_| Err(PyErr::new::<ValueError, _>(py, "could not create CString")))?;
+    let mut cf = pyffi::PyCompilerFlags {
+        cf_flags: 0,
+        cf_feature_version: 0,
+    };
+
+    unsafe {
+        let stdin = stdin_to_file();
+        let res =
+            pyffi::PyRun_AnyFileExFlags(stdin, filename.as_ptr() as *const c_char, 0, &mut cf);
+
+        if res == 0 {
+            Ok(py.None())
+        } else {
+            Err(PyErr::new::<SystemExit, _>(py, 1))
         }
     }
 }
