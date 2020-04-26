@@ -11,17 +11,6 @@ use {
     std::path::PathBuf,
 };
 
-/// Defines which allocator to use for the raw domain.
-#[derive(Clone, Debug)]
-pub enum PythonRawAllocator {
-    /// Use jemalloc.
-    Jemalloc,
-    /// Use the Rust global allocator.
-    Rust,
-    /// Use the system allocator.
-    System,
-}
-
 /// Defines Python code to run.
 #[derive(Clone, Debug)]
 pub enum PythonRunMode {
@@ -227,11 +216,7 @@ impl Default for PythonConfig {
             argvb: false,
             sys_frozen: false,
             sys_meipass: false,
-            raw_allocator: if cfg!(windows) {
-                PythonRawAllocator::System
-            } else {
-                PythonRawAllocator::Jemalloc
-            },
+            raw_allocator: PythonRawAllocator::default(),
             terminfo_resolution: TerminfoResolution::Dynamic,
             write_modules_directory_env: None,
             run: PythonRunMode::None,
@@ -491,6 +476,66 @@ pub struct PythonInterpreterConfig {
     pub x_options: Option<Vec<String>>,
 }
 
+/// Defines a backend for a memory allocator.
+#[derive(Clone, Copy, Debug)]
+pub enum MemoryAllocatorBackend {
+    /// The default system allocator.
+    System,
+    /// Use jemalloc.
+    Jemalloc,
+    /// Use Rust's global allocator.
+    Rust,
+}
+
+/// Defines configuration for Python's raw allocator.
+///
+/// This allocator is what Python uses for all memory allocations.
+///
+/// See https://docs.python.org/3/c-api/memory.html for more.
+#[derive(Clone, Copy, Debug)]
+pub struct PythonRawAllocator {
+    /// Which allocator backend to use.
+    pub backend: MemoryAllocatorBackend,
+    /// Whether memory debugging should be enabled.
+    pub debug: bool,
+}
+
+impl PythonRawAllocator {
+    pub fn system() -> Self {
+        Self {
+            backend: MemoryAllocatorBackend::System,
+            ..PythonRawAllocator::default()
+        }
+    }
+
+    pub fn jemalloc() -> Self {
+        Self {
+            backend: MemoryAllocatorBackend::Jemalloc,
+            ..PythonRawAllocator::default()
+        }
+    }
+
+    pub fn rust() -> Self {
+        Self {
+            backend: MemoryAllocatorBackend::Rust,
+            ..PythonRawAllocator::default()
+        }
+    }
+}
+
+impl Default for PythonRawAllocator {
+    fn default() -> Self {
+        Self {
+            backend: if cfg!(windows) {
+                MemoryAllocatorBackend::System
+            } else {
+                MemoryAllocatorBackend::Jemalloc
+            },
+            debug: false,
+        }
+    }
+}
+
 /// Configure a Python interpreter.
 ///
 /// This type defines the configuration of a Python interpreter. It is used
@@ -526,7 +571,7 @@ pub struct OxidizedPythonInterpreterConfig {
     pub interpreter_config: PythonInterpreterConfig,
 
     /// Allocator to use for Python's raw allocator.
-    pub raw_allocator: PythonRawAllocator,
+    pub raw_allocator: Option<PythonRawAllocator>,
 
     /// Whether to install our custom meta path importer on interpreter init.
     pub oxidized_importer: bool,
@@ -625,7 +670,7 @@ impl From<PythonConfig> for OxidizedPythonInterpreterConfig {
                 verbose: Some(config.verbose != 0),
                 ..PythonInterpreterConfig::default()
             },
-            raw_allocator: config.raw_allocator,
+            raw_allocator: Some(config.raw_allocator),
             oxidized_importer: config.use_custom_importlib,
             filesystem_importer: config.filesystem_importer,
             packed_resources: Some(config.packed_resources),

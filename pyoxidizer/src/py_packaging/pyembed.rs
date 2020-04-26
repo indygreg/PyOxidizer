@@ -87,9 +87,9 @@ pub fn derive_python_config(
         embedded.sys_frozen,
         embedded.sys_meipass,
         match embedded.raw_allocator {
-            RawAllocator::Jemalloc => "pyembed::PythonRawAllocator::Jemalloc",
-            RawAllocator::Rust => "pyembed::PythonRawAllocator::Rust",
-            RawAllocator::System => "pyembed::PythonRawAllocator::System",
+            RawAllocator::Jemalloc => "pyembed::PythonRawAllocator::jemalloc()",
+            RawAllocator::Rust => "pyembed::PythonRawAllocator::rust()",
+            RawAllocator::System => "pyembed::PythonRawAllocator::system()",
         },
         match embedded.terminfo_resolution {
             TerminfoResolution::Dynamic => "pyembed::TerminfoResolution::Dynamic".to_string(),

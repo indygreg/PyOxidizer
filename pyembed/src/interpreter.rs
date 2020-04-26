@@ -6,7 +6,7 @@
 
 use {
     super::config::{
-        OxidizedPythonInterpreterConfig, PythonRawAllocator, PythonRunMode, TerminfoResolution,
+        MemoryAllocatorBackend, OxidizedPythonInterpreterConfig, PythonRunMode, TerminfoResolution,
     },
     super::importer::{initialize_importer, PyInit__pyoxidizer_importer},
     super::osutils::resolve_terminfo_dirs,
@@ -32,6 +32,7 @@ use {
 
 #[cfg(feature = "jemalloc-sys")]
 use super::pyalloc::make_raw_jemalloc_allocator;
+use python3_sys::PyMemAllocatorEx;
 
 const PYOXIDIZER_IMPORTER_NAME_STR: &str = "_pyoxidizer_importer";
 pub const PYOXIDIZER_IMPORTER_NAME: &[u8] = b"_pyoxidizer_importer\0";
@@ -175,6 +176,32 @@ impl NewInterpreterError {
     }
 }
 
+enum InterpreterRawAllocator {
+    Python(pyffi::PyMemAllocatorEx),
+    Raw(RawAllocator),
+}
+
+impl InterpreterRawAllocator {
+    fn as_ptr(&self) -> *const pyffi::PyMemAllocatorEx {
+        match self {
+            InterpreterRawAllocator::Python(alloc) => alloc as *const _,
+            InterpreterRawAllocator::Raw(alloc) => &alloc.allocator as *const _,
+        }
+    }
+}
+
+impl From<pyffi::PyMemAllocatorEx> for InterpreterRawAllocator {
+    fn from(allocator: PyMemAllocatorEx) -> Self {
+        InterpreterRawAllocator::Python(allocator)
+    }
+}
+
+impl From<RawAllocator> for InterpreterRawAllocator {
+    fn from(allocator: RawAllocator) -> Self {
+        InterpreterRawAllocator::Raw(allocator)
+    }
+}
+
 /// Manages an embedded Python interpreter.
 ///
 /// **Warning: Python interpreters have global state. There should only be a
@@ -190,8 +217,7 @@ impl NewInterpreterError {
 pub struct MainPythonInterpreter<'a> {
     pub config: OxidizedPythonInterpreterConfig,
     init_run: bool,
-    raw_allocator: Option<pyffi::PyMemAllocatorEx>,
-    raw_rust_allocator: Option<RawAllocator>,
+    raw_allocator: Option<InterpreterRawAllocator>,
     gil: Option<GILGuard>,
     py: Option<Python<'a>>,
 }
@@ -215,17 +241,10 @@ impl<'a> MainPythonInterpreter<'a> {
             TerminfoResolution::None => {}
         }
 
-        let (raw_allocator, raw_rust_allocator) = match config.raw_allocator {
-            PythonRawAllocator::Jemalloc => (Some(raw_jemallocator()), None),
-            PythonRawAllocator::Rust => (None, Some(make_raw_rust_memory_allocator())),
-            PythonRawAllocator::System => (None, None),
-        };
-
         let mut res = MainPythonInterpreter {
             config,
             init_run: false,
-            raw_allocator,
-            raw_rust_allocator,
+            raw_allocator: None,
             gil: None,
             py: None,
         };
@@ -278,22 +297,33 @@ impl<'a> MainPythonInterpreter<'a> {
             }
         };
 
-        // TODO should we call PyMem::SetupDebugHooks() if enabled?
-        if let Some(raw_allocator) = &self.raw_allocator {
-            unsafe {
-                let ptr = raw_allocator as *const _;
-                pyffi::PyMem_SetAllocator(
-                    pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_RAW,
-                    ptr as *mut _,
-                );
+        // Override the raw allocator if one is configured.
+        if let Some(raw_allocator) = &config.raw_allocator {
+            match raw_allocator.backend {
+                MemoryAllocatorBackend::System => {}
+                MemoryAllocatorBackend::Jemalloc => {
+                    self.raw_allocator = Some(InterpreterRawAllocator::from(raw_jemallocator()));
+                }
+                MemoryAllocatorBackend::Rust => {
+                    self.raw_allocator = Some(InterpreterRawAllocator::from(
+                        make_raw_rust_memory_allocator(),
+                    ));
+                }
             }
-        } else if let Some(raw_rust_allocator) = &self.raw_rust_allocator {
-            unsafe {
-                let ptr = &raw_rust_allocator.allocator as *const _;
-                pyffi::PyMem_SetAllocator(
-                    pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_RAW,
-                    ptr as *mut _,
-                );
+
+            if let Some(allocator) = &self.raw_allocator {
+                unsafe {
+                    pyffi::PyMem_SetAllocator(
+                        pyffi::PyMemAllocatorDomain::PYMEM_DOMAIN_RAW,
+                        allocator.as_ptr() as *mut _,
+                    );
+                }
+            }
+
+            if raw_allocator.debug {
+                unsafe {
+                    pyffi::PyMem_SetupDebugHooks();
+                }
             }
         }
 
