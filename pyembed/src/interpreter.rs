@@ -5,17 +5,15 @@
 //! Manage an embedded Python interpreter.
 
 use {
-    super::config::{
-        MemoryAllocatorBackend, OxidizedPythonInterpreterConfig, PythonRunMode, TerminfoResolution,
-    },
+    super::config::{MemoryAllocatorBackend, OxidizedPythonInterpreterConfig, TerminfoResolution},
     super::importer::{initialize_importer, PyInit__pyoxidizer_importer},
     super::osutils::resolve_terminfo_dirs,
     super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
     super::pystr::{osstr_to_pyobject, osstring_to_bytes},
     super::python_resources::PythonResourcesState,
     cpython::{
-        GILGuard, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyObject, PyResult,
-        PyString, Python, ToPyObject,
+        GILGuard, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyObject, PyString,
+        Python, ToPyObject,
     },
     python3_sys as pyffi,
     std::collections::BTreeSet,
@@ -612,31 +610,6 @@ impl<'a> MainPythonInterpreter<'a> {
         }
     }
 
-    /// Runs the interpreter with the configured code execution settings.
-    ///
-    /// This will execute whatever is configured by
-    /// `OxidizedPythonInterpreterConfig.run` and return `PyObject` representing
-    /// the value returned by Python.
-    ///
-    /// This function will use other `run_*` functions on this type to run
-    /// Python. Our functions may vary slightly from how `python -c`, `python -m`,
-    /// etc would do things. If you would like exact conformance with these
-    /// run modes, use `run_as_main()` instead, as that will evaluate using
-    /// a Python API that does what `python` would do.
-    pub fn run(&mut self) -> PyResult<PyObject> {
-        let py = self.acquire_gil().unwrap();
-
-        // Clone here because we call into &mut self functions and can't have
-        // an immutable reference to &self.
-        match self.config.run.clone() {
-            PythonRunMode::None => Ok(py.None()),
-            PythonRunMode::Repl => super::python_eval::run_repl(py),
-            PythonRunMode::Module { module } => super::python_eval::run_module_as_main(py, &module),
-            PythonRunMode::Eval { code } => super::python_eval::run_code(py, &code),
-            PythonRunMode::File { path } => super::python_eval::run_file(py, &path),
-        }
-    }
-
     /// Handle a raised SystemExit exception.
     ///
     /// This emulates the behavior in pythonrun.c:handle_system_exit() and
@@ -723,8 +696,8 @@ impl<'a> MainPythonInterpreter<'a> {
         // we may segfault.
         // TODO look into setting lifetimes properly so the compiler can
         // prevent some issues.
-        let res = self.run();
         let py = self.acquire_gil().unwrap();
+        let res = super::python_eval::run(py, &self.config.run);
 
         match res {
             Ok(_) => PythonRunResult::Ok {},

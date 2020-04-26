@@ -5,6 +5,7 @@
 //! Functionality for evaluating Python code.
 
 use {
+    super::config::PythonRunMode,
     super::pystr::path_to_cstring,
     cpython::exc::{RuntimeError, SystemExit, ValueError},
     cpython::{NoArgs, ObjectProtocol, PyErr, PyModule, PyObject, PyResult, Python, PythonObject},
@@ -231,5 +232,28 @@ pub fn run_repl(py: Python) -> PyResult<PyObject> {
         } else {
             Err(PyErr::new::<SystemExit, _>(py, 1))
         }
+    }
+}
+
+/// Runs Python code with the specified code execution settings.
+///
+/// This will execute whatever is configured by the passed
+/// `PythonRunMode` and return a `PyObject` representing the value
+/// returned by Python.
+///
+/// This function will use other `run_*` functions on this module to run
+/// Python. Our functions may vary slightly from how `python -c`, `python -m`,
+/// etc would do things. If you would like exact conformance with these
+/// run modes, use `OxidizedPythonInterpreterConfig.run_as_main()` instead,
+/// as that will evaluate using a Python API that does what `python` would do.
+pub fn run(py: Python, run_mode: &PythonRunMode) -> PyResult<PyObject> {
+    // Clone here because we call into &mut self functions and can't have
+    // an immutable reference to &self.
+    match run_mode {
+        PythonRunMode::None => Ok(py.None()),
+        PythonRunMode::Repl => run_repl(py),
+        PythonRunMode::Module { module } => run_module_as_main(py, module),
+        PythonRunMode::Eval { code } => run_code(py, code),
+        PythonRunMode::File { path } => run_file(py, path),
     }
 }
