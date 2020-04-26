@@ -173,7 +173,7 @@ fn append_wide_string_list_from_path(
 }
 
 #[cfg(unix)]
-fn append_wide_string_from_osstr(
+fn append_wide_string_list_from_osstr(
     dest: &mut pyffi::PyWideStringList,
     value: &OsStr,
     context: &str,
@@ -182,7 +182,7 @@ fn append_wide_string_from_osstr(
 }
 
 #[cfg(windows)]
-fn append_wide_string_from_osstr(
+fn append_wide_string_list_from_osstr(
     dest: &mut pyffi::PyWideStringList,
     value: &OsStr,
     context: &str,
@@ -367,7 +367,7 @@ impl TryInto<pyffi::PyConfig> for &PythonInterpreterConfig {
         }
         if let Some(argv) = &self.argv {
             for value in argv {
-                append_wide_string_from_osstr(&mut config.argv, value, "setting argv")?;
+                append_wide_string_list_from_osstr(&mut config.argv, value, "setting argv")?;
             }
         }
         if let Some(program_name) = &self.program_name {
