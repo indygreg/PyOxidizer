@@ -119,11 +119,14 @@ fn set_config_string_from_path(
 }
 
 /// Appends a value to a PyWideStringList from an 8-bit char* like source.
-fn append_wide_string_list_from_8bit_str(
+fn append_wide_string_list_from_str(
     dest: &mut pyffi::PyWideStringList,
-    value: &[u8],
+    value: &str,
     context: &str,
 ) -> Result<(), String> {
+    let value =
+        CString::new(value).or_else(|_| Err("unable to convert value to C string".to_string()))?;
+
     let mut len: size_t = 0;
 
     let decoded = unsafe { pyffi::Py_DecodeLocale(value.as_ptr() as *const _, &mut len) };
@@ -150,7 +153,12 @@ fn append_wide_string_list_from_path(
     path: &Path,
     context: &str,
 ) -> Result<(), String> {
-    append_wide_string_list_from_8bit_str(dest, path.as_os_str().as_bytes(), context)
+    let value = path
+        .as_os_str()
+        .to_str()
+        .ok_or_else(|| "unable to convert value to str".to_string())?;
+
+    append_wide_string_list_from_str(dest, value, context)
 }
 
 #[cfg(windows)]
@@ -178,7 +186,9 @@ fn append_wide_string_list_from_osstr(
     value: &OsStr,
     context: &str,
 ) -> Result<(), String> {
-    append_wide_string_list_from_8bit_str(dest, value.as_bytes(), context)
+    let value = String::from_utf8(value.as_bytes().into())
+        .or_else(|_| Err("unable to convert value to str".to_string()))?;
+    append_wide_string_list_from_str(dest, &value, context)
 }
 
 #[cfg(windows)]
@@ -380,18 +390,14 @@ impl TryInto<pyffi::PyConfig> for &PythonInterpreterConfig {
         }
         if let Some(x_options) = &self.x_options {
             for value in x_options {
-                append_wide_string_list_from_8bit_str(
-                    &mut config.xoptions,
-                    value.as_bytes(),
-                    "setting xoption",
-                )?;
+                append_wide_string_list_from_str(&mut config.xoptions, value, "setting xoption")?;
             }
         }
         if let Some(warn_options) = &self.warn_options {
             for value in warn_options {
-                append_wide_string_list_from_8bit_str(
+                append_wide_string_list_from_str(
                     &mut config.warnoptions,
-                    value.as_bytes(),
+                    value,
                     "setting warn_option",
                 )?;
             }
