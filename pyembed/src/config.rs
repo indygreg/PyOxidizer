@@ -628,6 +628,28 @@ pub struct OxidizedPythonInterpreterConfig {
     pub run: PythonRunMode,
 }
 
+impl Default for OxidizedPythonInterpreterConfig {
+    fn default() -> Self {
+        Self {
+            interpreter_config: PythonInterpreterConfig {
+                profile: PythonInterpreterProfile::Python,
+                ..PythonInterpreterConfig::default()
+            },
+            raw_allocator: None,
+            oxidized_importer: false,
+            filesystem_importer: true,
+            packed_resources: None,
+            extra_extension_modules: None,
+            argvb: false,
+            sys_frozen: false,
+            sys_meipass: false,
+            terminfo_resolution: TerminfoResolution::Dynamic,
+            write_modules_directory_env: None,
+            run: PythonRunMode::Repl,
+        }
+    }
+}
+
 impl From<PythonConfig> for OxidizedPythonInterpreterConfig {
     fn from(config: PythonConfig) -> Self {
         Self {
