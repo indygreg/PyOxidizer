@@ -12,7 +12,7 @@ use {
 };
 
 /// Defines Python code to run.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum PythonRunMode {
     /// No-op.
     None,
@@ -27,7 +27,7 @@ pub enum PythonRunMode {
     /// We define this as a CString because the underlying API wants
     /// a char* and we want the constructor of this type to worry about
     /// the type coercion.
-    File { path: CString },
+    File { path: PathBuf },
 }
 
 /// Defines `terminfo`` database resolution semantics.

@@ -11,9 +11,9 @@ use {
     super::importer::{initialize_importer, PyInit__pyoxidizer_importer},
     super::osutils::resolve_terminfo_dirs,
     super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
-    super::pystr::{osstr_to_pyobject, osstring_to_bytes},
+    super::pystr::{osstr_to_pyobject, osstring_to_bytes, path_to_cstring},
     super::python_resources::PythonResourcesState,
-    cpython::exc::{SystemExit, ValueError},
+    cpython::exc::{RuntimeError, SystemExit, ValueError},
     cpython::{
         GILGuard, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule, PyObject,
         PyResult, PyString, Python, PythonObject, ToPyObject,
@@ -27,7 +27,7 @@ use {
     std::fmt::{Display, Formatter},
     std::fs,
     std::io::Write,
-    std::path::PathBuf,
+    std::path::{Path, PathBuf},
 };
 
 #[cfg(feature = "jemalloc-sys")]
@@ -202,6 +202,14 @@ impl From<RawAllocator> for InterpreterRawAllocator {
     }
 }
 
+#[derive(Debug, PartialEq)]
+enum InterpreterState {
+    NotStarted,
+    Initializing,
+    Initialized,
+    Finalized,
+}
+
 /// Manages an embedded Python interpreter.
 ///
 /// **Warning: Python interpreters have global state. There should only be a
@@ -216,7 +224,7 @@ impl From<RawAllocator> for InterpreterRawAllocator {
 /// Both the low-level `python3-sys` and higher-level `cpython` crates are used.
 pub struct MainPythonInterpreter<'a> {
     pub config: OxidizedPythonInterpreterConfig,
-    init_run: bool,
+    interpreter_state: InterpreterState,
     raw_allocator: Option<InterpreterRawAllocator>,
     gil: Option<GILGuard>,
     py: Option<Python<'a>>,
@@ -243,7 +251,7 @@ impl<'a> MainPythonInterpreter<'a> {
 
         let mut res = MainPythonInterpreter {
             config,
-            init_run: false,
+            interpreter_state: InterpreterState::NotStarted,
             raw_allocator: None,
             gil: None,
             py: None,
@@ -267,9 +275,20 @@ impl<'a> MainPythonInterpreter<'a> {
     ///
     /// Returns a Python instance which has the GIL acquired.
     fn init(&mut self) -> Result<Python, NewInterpreterError> {
-        if self.init_run {
-            return Ok(self.acquire_gil());
+        match &self.interpreter_state {
+            InterpreterState::Initializing => {
+                return Err(NewInterpreterError::Simple(
+                    "interpreter in initializing state",
+                ))
+            }
+            InterpreterState::Initialized => {
+                return Ok(self.acquire_gil().unwrap());
+            }
+            InterpreterState::NotStarted => {}
+            InterpreterState::Finalized => {}
         }
+
+        self.interpreter_state = InterpreterState::Initializing;
 
         let config = &self.config;
 
@@ -460,7 +479,7 @@ impl<'a> MainPythonInterpreter<'a> {
          */
 
         self.py = Some(py);
-        self.init_run = true;
+        self.interpreter_state = InterpreterState::Initialized;
 
         // env::args() panics if arguments aren't valid Unicode. But invalid
         // Unicode arguments are possible and some applications may want to
@@ -553,8 +572,21 @@ impl<'a> MainPythonInterpreter<'a> {
     }
 
     /// Ensure the Python GIL is acquired, returning a handle on the interpreter.
-    pub fn acquire_gil(&mut self) -> Python<'a> {
-        match self.py {
+    pub fn acquire_gil(&mut self) -> Result<Python<'a>, &'static str> {
+        match self.interpreter_state {
+            InterpreterState::NotStarted => {
+                return Err("interpreter not initialized");
+            }
+            InterpreterState::Initializing => {
+                return Err("interpreter not fully initialized");
+            }
+            InterpreterState::Initialized => {}
+            InterpreterState::Finalized => {
+                return Err("interpreter is finalized");
+            }
+        }
+
+        Ok(match self.py {
             Some(py) => py,
             None => {
                 let gil = GILGuard::acquire();
@@ -565,20 +597,71 @@ impl<'a> MainPythonInterpreter<'a> {
 
                 py
             }
+        })
+    }
+
+    /// Runs the Python interpreter in the context of a main() function.
+    ///
+    /// This will execute whatever is configured by
+    /// `OxidizedPythonInterpreterConfig.run` and return an integer suitable
+    /// for use as a process exit code.
+    ///
+    /// The `PythonRunMode::Eval`, `PythonRunMode::File`, and
+    /// `PythonRunMode::Module`, and `PythonRunMode::Repl` run modes are
+    /// evaluated via `Py_RunMain()`.
+    ///
+    /// `Py_RunMain` is the most robust mechanism to run code, files, or
+    /// modules, as `Py_RunMain()` invokes the same APIs that `python` would.
+    /// By contrast, the `run()`, `run_module_as_main()`, `run_code()`,
+    /// `run_file()`, and `run_repl()` functions reimplement this
+    /// functionality and may behave subtly different from what `python`
+    /// would do. If you want the  evaluation to behave like `python`, you
+    /// should call this function.
+    ///
+    /// A downside to calling this function with the aforementioned run modes
+    /// is that `Py_RunMain()` will finalize the interpreter and only gives
+    /// you an exit code: there is no opportunity to inspect the return value
+    /// or handle an uncaught exception. If you want to keep the interpreter
+    /// alive or inspect the evaluation result, consider calling `run()` or
+    /// one of the `run_*` functions instead.
+    pub fn run_as_main(&mut self) -> i32 {
+        // If we support using Py_RunMain(), use it, as it is the least
+        // buggy.
+        if self.config.uses_py_runmain() {
+            let res = unsafe { pyffi::Py_RunMain() };
+
+            // Py_RunMain() finalizes the interpreter. So drop our refs and state.
+            self.interpreter_state = InterpreterState::Finalized;
+            self.py = None;
+            self.gil = None;
+
+            res
+        } else {
+            match self.run_and_handle_error() {
+                PythonRunResult::Ok {} => 0,
+                PythonRunResult::Err {} => 1,
+                PythonRunResult::Exit { code } => code,
+            }
         }
     }
 
-    /// Runs the interpreter with the default code execution settings.
+    /// Runs the interpreter with the configured code execution settings.
     ///
-    /// The crate was built with settings that configure what should be
-    /// executed by default. Those settings will be loaded and executed.
+    /// This will execute whatever is configured by
+    /// `OxidizedPythonInterpreterConfig.run` and return `PyObject` representing
+    /// the value returned by Python.
+    ///
+    /// This function will use other `run_*` functions on this type to run
+    /// Python. Our functions may vary slightly from how `python -c`, `python -m`,
+    /// etc would do things. If you would like exact conformance with these
+    /// run modes, use `run_as_main()` instead, as that will evaluate using
+    /// a Python API that does what `python` would do.
     pub fn run(&mut self) -> PyResult<PyObject> {
-        // clone() to avoid issues mixing mutable and immutable borrows of self.
-        let run = self.config.run.clone();
+        let py = self.acquire_gil().unwrap();
 
-        let py = self.acquire_gil();
-
-        match run {
+        // Clone here because we call into &mut self functions and can't have
+        // an immutable reference to &self.
+        match self.config.run.clone() {
             PythonRunMode::None => Ok(py.None()),
             PythonRunMode::Repl => self.run_repl(),
             PythonRunMode::Module { module } => self.run_module_as_main(&module),
@@ -674,7 +757,7 @@ impl<'a> MainPythonInterpreter<'a> {
         // TODO look into setting lifetimes properly so the compiler can
         // prevent some issues.
         let res = self.run();
-        let py = self.acquire_gil();
+        let py = self.acquire_gil().unwrap();
 
         match res {
             Ok(_) => PythonRunResult::Ok {},
@@ -708,22 +791,13 @@ impl<'a> MainPythonInterpreter<'a> {
         }
     }
 
-    /// Calls run() and resolves a suitable exit code.
-    pub fn run_as_main(&mut self) -> i32 {
-        match self.run_and_handle_error() {
-            PythonRunResult::Ok {} => 0,
-            PythonRunResult::Err {} => 1,
-            PythonRunResult::Exit { code } => code,
-        }
-    }
-
     /// Runs a Python module as the __main__ module.
     ///
     /// Returns the execution result of the module code.
     ///
     /// The interpreter is automatically initialized if needed.
     pub fn run_module_as_main(&mut self, name: &str) -> PyResult<PyObject> {
-        let py = self.acquire_gil();
+        let py = self.acquire_gil().unwrap();
 
         // This is modeled after runpy.py:_run_module_as_main().
         let main: PyModule = unsafe {
@@ -771,8 +845,15 @@ impl<'a> MainPythonInterpreter<'a> {
     /// This emulates what CPython's main.c does.
     ///
     /// The interpreter is automatically initialized if needed.
+    ///
+    /// A more robust mechanism to run a Python REPL is by calling
+    /// `run_as_main()` with
+    /// `OxidizedPythonInterpreterConfig.run = PythonRunMode::Repl`,
+    /// as this mode will run the actual code that `python` does,
+    /// not a reimplementation of it. See `run_as_main()`'s documentation
+    /// for more.
     pub fn run_repl(&mut self) -> PyResult<PyObject> {
-        let py = self.acquire_gil();
+        let py = self.acquire_gil().unwrap();
 
         unsafe {
             pyffi::Py_InspectFlag = 0;
@@ -810,11 +891,23 @@ impl<'a> MainPythonInterpreter<'a> {
 
     /// Runs Python code provided by a string.
     ///
-    /// This is similar to what ``python -c <code>`` would do.
+    /// This is similar to what `python -c <code>` would do.
     ///
     /// The interpreter is automatically initialized if needed.
+    ///
+    /// A more robust mechanism to run Python code is by calling
+    /// `run_as_main()` with
+    /// `OxidizedPythonInterpreterConfig.run = PythonRunMode::Eval`,
+    /// as this mode will run the actual code that `python -c` does,
+    /// not a reimplementation of it. See `run_as_main()`'s documentation
+    /// for more.
+    ///
+    /// This function is geared towards running code similarly to
+    /// how `python -c` would. If all you want to do is evaluate
+    /// code, consider using `Python.eval()`. e.g.
+    /// `interpreter.acquire_gil().eval(...)`.
     pub fn run_code(&mut self, code: &str) -> PyResult<PyObject> {
-        let py = self.acquire_gil();
+        let py = self.acquire_gil().unwrap();
 
         let code = CString::new(code).or_else(|_| {
             Err(PyErr::new::<ValueError, _>(
@@ -849,10 +942,29 @@ impl<'a> MainPythonInterpreter<'a> {
     }
 
     /// Runs Python code in a filesystem path.
-    pub fn run_file(&mut self, filename: &CStr) -> PyResult<PyObject> {
-        let py = self.acquire_gil();
+    ///
+    /// This is similar to what `python <path>` would do.
+    ///
+    /// A more robust mechanism to run a Python file is by calling
+    /// `run_as_main()` with
+    /// `OxidizedPythonInterpreterConfig.run = PythonRunMode::File`,
+    /// as this mode will run the actual code that `python` does,
+    /// not a reimplementation of it. See `run_as_main()`'s documentation
+    /// for more.
+    pub fn run_file(&mut self, path: &Path) -> PyResult<PyObject> {
+        let py = self.acquire_gil().unwrap();
 
         let res = unsafe {
+            // Python's APIs operate on a FILE*. So we need to coerce the
+            // filename to a char*. Is there a better way to get a FILE* from
+            // a HANDLE on Windows?
+            let filename = path_to_cstring(path).or_else(|_| {
+                Err(PyErr::new::<RuntimeError, _>(
+                    py,
+                    "cannot convert path to C string",
+                ))
+            })?;
+
             let fp = libc::fopen(filename.as_ptr(), "rb\0".as_ptr() as *const _);
             let mut cf = pyffi::PyCompilerFlags {
                 cf_flags: 0,
@@ -874,7 +986,7 @@ impl<'a> MainPythonInterpreter<'a> {
     /// Under the hood this calls ``PyErr_PrintEx()``, which may call
     /// ``Py_Exit()`` and may write to stderr.
     pub fn print_err(&mut self, err: PyErr) {
-        let py = self.acquire_gil();
+        let py = self.acquire_gil().unwrap();
         err.print(py);
     }
 }
@@ -927,7 +1039,7 @@ impl<'a> Drop for MainPythonInterpreter<'a> {
         if let Some(key) = &self.config.write_modules_directory_env {
             if let Ok(path) = env::var(key) {
                 let path = PathBuf::from(path);
-                let py = self.acquire_gil();
+                let py = self.acquire_gil().unwrap();
 
                 if let Err(msg) = write_modules_to_directory(py, &path) {
                     eprintln!("error writing modules file: {}", msg);

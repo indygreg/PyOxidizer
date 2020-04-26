@@ -7,7 +7,7 @@
 use {
     super::config::{
         CheckHashPYCsMode, OxidizedPythonInterpreterConfig, PythonInterpreterConfig,
-        PythonInterpreterProfile,
+        PythonInterpreterProfile, PythonRunMode,
     },
     libc::{c_int, size_t, wchar_t},
     python3_sys as pyffi,
@@ -211,6 +211,26 @@ fn set_legacy_windows_stdio(_config: &mut pyffi::PyConfig, _value: bool) {}
 #[cfg(windows)]
 fn set_legacy_windows_stdio(config: &mut pyffi::PyConfig, value: bool) {
     config.legacy_windows_stdio = if value { 1 } else { 0 };
+}
+
+impl OxidizedPythonInterpreterConfig {
+    /// Whether the run configuration should execute via Py_RunMain().
+    pub(crate) fn uses_py_runmain(&self) -> bool {
+        if self.interpreter_config.run_command.is_some()
+            || self.interpreter_config.run_filename.is_some()
+            || self.interpreter_config.run_module.is_some()
+        {
+            true
+        } else {
+            match &self.run {
+                PythonRunMode::Eval { .. } => true,
+                PythonRunMode::File { .. } => true,
+                PythonRunMode::Module { .. } => true,
+                PythonRunMode::Repl => true,
+                PythonRunMode::None => false,
+            }
+        }
+    }
 }
 
 impl TryInto<pyffi::PyPreConfig> for &PythonInterpreterConfig {
@@ -580,6 +600,41 @@ impl TryInto<pyffi::PyConfig> for &OxidizedPythonInterpreterConfig {
             // PYTHONHOME is set to directory of current executable.
             if self.interpreter_config.home.is_none() {
                 set_config_string_from_path(&config, &config.home, origin, "setting home")?;
+            }
+        }
+
+        match &self.run {
+            PythonRunMode::None => {}
+            PythonRunMode::Repl => {}
+            PythonRunMode::Eval { code } => {
+                if self.interpreter_config.run_command.is_none() {
+                    set_config_string_from_str(
+                        &config,
+                        &config.run_command,
+                        code,
+                        "setting run_command",
+                    )?;
+                }
+            }
+            PythonRunMode::File { path } => {
+                if self.interpreter_config.run_filename.is_none() {
+                    set_config_string_from_path(
+                        &config,
+                        &config.run_filename,
+                        path,
+                        "setting run_filename",
+                    )?;
+                }
+            }
+            PythonRunMode::Module { module } => {
+                if self.interpreter_config.run_module.is_none() {
+                    set_config_string_from_str(
+                        &config,
+                        &config.run_module,
+                        module,
+                        "setting run_module",
+                    )?;
+                }
             }
         }
 

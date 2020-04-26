@@ -116,9 +116,9 @@ pub fn derive_python_config(
                     + "\"###.to_string() }"
             }
             RunMode::File { ref path } => {
-                "pyembed::PythonRunMode::File { path: std::ffi::CString::new(r###\"".to_owned()
+                "pyembed::PythonRunMode::File { path: std::path::PathBuf::new(r###\"".to_owned()
                     + path
-                    + "\"###).expect(\"converting filename path to CString\") }"
+                    + "\"###) }"
             }
         },
     )
