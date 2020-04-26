@@ -12,8 +12,8 @@ use {
     super::pystr::{osstr_to_pyobject, osstring_to_bytes},
     super::python_resources::PythonResourcesState,
     cpython::{
-        GILGuard, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyObject, PyString,
-        Python, ToPyObject,
+        GILGuard, NoArgs, ObjectProtocol, PyDict, PyErr, PyList, PyObject, PyString, Python,
+        ToPyObject,
     },
     python3_sys as pyffi,
     std::collections::BTreeSet,
@@ -42,16 +42,6 @@ pub enum PythonRunResult {
     Err {},
     /// Code executed and raised SystemExit with the specified exit code.
     Exit { code: i32 },
-}
-
-#[cfg(windows)]
-fn stderr_to_file() -> *mut libc::FILE {
-    unsafe { __acrt_iob_func(2) }
-}
-
-#[cfg(unix)]
-fn stderr_to_file() -> *mut libc::FILE {
-    unsafe { libc::fdopen(libc::STDERR_FILENO, &('w' as libc::c_char)) }
 }
 
 #[cfg(feature = "jemalloc-sys")]
@@ -610,81 +600,6 @@ impl<'a> MainPythonInterpreter<'a> {
         }
     }
 
-    /// Handle a raised SystemExit exception.
-    ///
-    /// This emulates the behavior in pythonrun.c:handle_system_exit() and
-    /// _Py_HandleSystemExit() but without the call to exit(), which we don't want.
-    fn handle_system_exit(&mut self, py: Python, err: PyErr) -> Result<i32, &'static str> {
-        std::io::stdout()
-            .flush()
-            .or_else(|_| Err("failed to flush stdout"))?;
-
-        let mut value = match err.pvalue {
-            Some(ref instance) => {
-                if instance.as_ptr() == py.None().as_ptr() {
-                    return Ok(0);
-                }
-
-                instance.clone_ref(py)
-            }
-            None => {
-                return Ok(0);
-            }
-        };
-
-        if unsafe { pyffi::PyExceptionInstance_Check(value.as_ptr()) } != 0 {
-            // The error code should be in the "code" attribute.
-            if let Ok(code) = value.getattr(py, "code") {
-                if code == py.None() {
-                    return Ok(0);
-                }
-
-                // Else pretend exc_value.code is the new exception value to use
-                // and fall through to below.
-                value = code;
-            }
-        }
-
-        if unsafe { pyffi::PyLong_Check(value.as_ptr()) } != 0 {
-            return Ok(unsafe { pyffi::PyLong_AsLong(value.as_ptr()) as i32 });
-        }
-
-        let sys_module = py
-            .import("sys")
-            .or_else(|_| Err("unable to obtain sys module"))?;
-        let stderr = sys_module.get(py, "stderr");
-
-        // This is a cargo cult from the canonical implementation.
-        unsafe { pyffi::PyErr_Clear() }
-
-        match stderr {
-            Ok(o) => unsafe {
-                pyffi::PyFile_WriteObject(value.as_ptr(), o.as_ptr(), pyffi::Py_PRINT_RAW);
-            },
-            Err(_) => {
-                unsafe {
-                    pyffi::PyObject_Print(value.as_ptr(), stderr_to_file(), pyffi::Py_PRINT_RAW);
-                }
-                std::io::stderr()
-                    .flush()
-                    .or_else(|_| Err("failure to flush stderr"))?;
-            }
-        }
-
-        unsafe {
-            pyffi::PySys_WriteStderr(b"\n\0".as_ptr() as *const i8);
-        }
-
-        // This frees references to this exception, which may be necessary to avoid
-        // badness.
-        err.restore(py);
-        unsafe {
-            pyffi::PyErr_Clear();
-        }
-
-        Ok(1)
-    }
-
     /// Runs the interpreter and handles any exception that was raised.
     pub fn run_and_handle_error(&mut self) -> PythonRunResult {
         // There are underdefined lifetime bugs at play here. There is no
@@ -714,7 +629,7 @@ impl<'a> MainPythonInterpreter<'a> {
 
                 if matches {
                     return PythonRunResult::Exit {
-                        code: match self.handle_system_exit(py, err) {
+                        code: match super::python_eval::handle_system_exit(py, err) {
                             Ok(code) => code,
                             Err(msg) => {
                                 eprintln!("{}", msg);

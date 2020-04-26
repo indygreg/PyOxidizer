@@ -8,10 +8,13 @@ use {
     super::config::PythonRunMode,
     super::pystr::path_to_cstring,
     cpython::exc::{RuntimeError, SystemExit, ValueError},
-    cpython::{NoArgs, ObjectProtocol, PyErr, PyModule, PyObject, PyResult, Python, PythonObject},
+    cpython::{
+        NoArgs, ObjectProtocol, PyClone, PyErr, PyModule, PyObject, PyResult, Python, PythonObject,
+    },
     libc::c_char,
     python3_sys as pyffi,
     std::ffi::CString,
+    std::io::Write,
     std::path::Path,
 };
 
@@ -256,4 +259,89 @@ pub fn run(py: Python, run_mode: &PythonRunMode) -> PyResult<PyObject> {
         PythonRunMode::Eval { code } => run_code(py, code),
         PythonRunMode::File { path } => run_file(py, path),
     }
+}
+
+#[cfg(windows)]
+fn stderr_to_file() -> *mut libc::FILE {
+    unsafe { __acrt_iob_func(2) }
+}
+
+#[cfg(unix)]
+fn stderr_to_file() -> *mut libc::FILE {
+    unsafe { libc::fdopen(libc::STDERR_FILENO, &('w' as libc::c_char)) }
+}
+
+/// Handle a raised SystemExit exception.
+///
+/// This emulates the behavior in pythonrun.c:handle_system_exit() and
+/// _Py_HandleSystemExit() but without the call to exit(), which we don't want.
+pub(crate) fn handle_system_exit(py: Python, err: PyErr) -> Result<i32, &'static str> {
+    std::io::stdout()
+        .flush()
+        .or_else(|_| Err("failed to flush stdout"))?;
+
+    let mut value = match err.pvalue {
+        Some(ref instance) => {
+            if instance.as_ptr() == py.None().as_ptr() {
+                return Ok(0);
+            }
+
+            instance.clone_ref(py)
+        }
+        None => {
+            return Ok(0);
+        }
+    };
+
+    if unsafe { pyffi::PyExceptionInstance_Check(value.as_ptr()) } != 0 {
+        // The error code should be in the "code" attribute.
+        if let Ok(code) = value.getattr(py, "code") {
+            if code == py.None() {
+                return Ok(0);
+            }
+
+            // Else pretend exc_value.code is the new exception value to use
+            // and fall through to below.
+            value = code;
+        }
+    }
+
+    if unsafe { pyffi::PyLong_Check(value.as_ptr()) } != 0 {
+        return Ok(unsafe { pyffi::PyLong_AsLong(value.as_ptr()) as i32 });
+    }
+
+    let sys_module = py
+        .import("sys")
+        .or_else(|_| Err("unable to obtain sys module"))?;
+    let stderr = sys_module.get(py, "stderr");
+
+    // This is a cargo cult from the canonical implementation.
+    unsafe { pyffi::PyErr_Clear() }
+
+    match stderr {
+        Ok(o) => unsafe {
+            pyffi::PyFile_WriteObject(value.as_ptr(), o.as_ptr(), pyffi::Py_PRINT_RAW);
+        },
+        Err(_) => {
+            unsafe {
+                pyffi::PyObject_Print(value.as_ptr(), stderr_to_file(), pyffi::Py_PRINT_RAW);
+            }
+            std::io::stderr()
+                .flush()
+                .or_else(|_| Err("failure to flush stderr"))?;
+        }
+    }
+
+    unsafe {
+        pyffi::PySys_WriteStderr(b"\n\0".as_ptr() as *const i8);
+    }
+
+    // This frees references to this exception, which may be necessary to avoid
+    // badness.
+    err.restore(py);
+    unsafe {
+        pyffi::PyErr_Clear();
+    }
+
+    Ok(1)
 }
