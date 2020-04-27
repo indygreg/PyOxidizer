@@ -176,7 +176,7 @@ enum InterpreterState {
 /// API provides.
 ///
 /// Both the low-level `python3-sys` and higher-level `cpython` crates are used.
-pub struct MainPythonInterpreter<'interpreter, 'python, 'resources: 'interpreter> {
+pub struct MainPythonInterpreter<'python, 'interpreter, 'resources: 'interpreter> {
     config: OxidizedPythonInterpreterConfig<'resources>,
     interpreter_state: InterpreterState,
     interpreter_guard: Option<std::sync::MutexGuard<'interpreter, ()>>,
@@ -204,13 +204,13 @@ pub struct MainPythonInterpreter<'interpreter, 'python, 'resources: 'interpreter
     resources_state: Option<Box<PythonResourcesState<'resources, u8>>>,
 }
 
-impl<'interpreter, 'python, 'resources> MainPythonInterpreter<'interpreter, 'python, 'resources> {
+impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpreter, 'resources> {
     /// Construct a Python interpreter from a configuration.
     ///
     /// The Python interpreter is initialized as a side-effect. The GIL is held.
     pub fn new(
         config: OxidizedPythonInterpreterConfig<'resources>,
-    ) -> Result<MainPythonInterpreter<'interpreter, 'python, 'resources>, NewInterpreterError> {
+    ) -> Result<MainPythonInterpreter<'python, 'interpreter, 'resources>, NewInterpreterError> {
         match config.terminfo_resolution {
             TerminfoResolution::Dynamic => {
                 if let Some(v) = resolve_terminfo_dirs() {
@@ -663,8 +663,8 @@ fn write_modules_to_directory(py: Python, path: &PathBuf) -> Result<(), &'static
     Ok(())
 }
 
-impl<'interpreter, 'python, 'resources> Drop
-    for MainPythonInterpreter<'interpreter, 'python, 'resources>
+impl<'python, 'interpreter, 'resources> Drop
+    for MainPythonInterpreter<'python, 'interpreter, 'resources>
 {
     fn drop(&mut self) {
         if let Some(key) = &self.config.write_modules_directory_env {
