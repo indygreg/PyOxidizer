@@ -133,3 +133,53 @@ fn find_module_builtin() -> Result<()> {
 
     Ok(())
 }
+
+/// get_code() returns None for a built-in.
+#[test]
+fn get_code_builtin() -> Result<()> {
+    let mut interp = new_interpreter()?;
+    let importer = get_importer(&mut interp)?;
+    let py = interp.acquire_gil().unwrap();
+
+    assert_eq!(
+        importer
+            .call_method(py, "get_code", ("_io",), None)
+            .unwrap(),
+        py.None()
+    );
+
+    Ok(())
+}
+
+/// get_source() returns None for a built-in.
+#[test]
+fn get_source_builtin() -> Result<()> {
+    let mut interp = new_interpreter()?;
+    let importer = get_importer(&mut interp)?;
+    let py = interp.acquire_gil().unwrap();
+
+    assert_eq!(
+        importer
+            .call_method(py, "get_source", ("_io",), None)
+            .unwrap(),
+        py.None()
+    );
+
+    Ok(())
+}
+
+/// get_filename() raises ImportError for a built-in.
+#[test]
+fn get_filename_builtin() -> Result<()> {
+    let mut interp = new_interpreter()?;
+    let importer = get_importer(&mut interp)?;
+    let py = interp.acquire_gil().unwrap();
+
+    let res = importer.call_method(py, "get_filename", ("_io",), None);
+
+    assert!(res.is_err());
+    let err = res.unwrap_err();
+    assert!(err.ptype.to_string().contains("ImportError"));
+
+    Ok(())
+}
