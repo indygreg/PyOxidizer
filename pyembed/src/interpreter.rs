@@ -176,10 +176,10 @@ enum InterpreterState {
 /// API provides.
 ///
 /// Both the low-level `python3-sys` and higher-level `cpython` crates are used.
-pub struct MainPythonInterpreter<'instance, 'python, 'resources: 'instance> {
+pub struct MainPythonInterpreter<'interpreter, 'python, 'resources: 'interpreter> {
     config: OxidizedPythonInterpreterConfig<'resources>,
     interpreter_state: InterpreterState,
-    interpreter_guard: Option<std::sync::MutexGuard<'instance, ()>>,
+    interpreter_guard: Option<std::sync::MutexGuard<'interpreter, ()>>,
     raw_allocator: Option<InterpreterRawAllocator>,
     gil: Option<GILGuard>,
     py: Option<Python<'python>>,
@@ -204,13 +204,13 @@ pub struct MainPythonInterpreter<'instance, 'python, 'resources: 'instance> {
     resources_state: Option<Box<PythonResourcesState<'resources, u8>>>,
 }
 
-impl<'instance, 'python, 'resources> MainPythonInterpreter<'instance, 'python, 'resources> {
+impl<'interpreter, 'python, 'resources> MainPythonInterpreter<'interpreter, 'python, 'resources> {
     /// Construct a Python interpreter from a configuration.
     ///
     /// The Python interpreter is initialized as a side-effect. The GIL is held.
     pub fn new(
         config: OxidizedPythonInterpreterConfig<'resources>,
-    ) -> Result<MainPythonInterpreter<'instance, 'python, 'resources>, NewInterpreterError> {
+    ) -> Result<MainPythonInterpreter<'interpreter, 'python, 'resources>, NewInterpreterError> {
         match config.terminfo_resolution {
             TerminfoResolution::Dynamic => {
                 if let Some(v) = resolve_terminfo_dirs() {
@@ -663,8 +663,8 @@ fn write_modules_to_directory(py: Python, path: &PathBuf) -> Result<(), &'static
     Ok(())
 }
 
-impl<'instance, 'python, 'resources> Drop
-    for MainPythonInterpreter<'instance, 'python, 'resources>
+impl<'interpreter, 'python, 'resources> Drop
+    for MainPythonInterpreter<'interpreter, 'python, 'resources>
 {
     fn drop(&mut self) {
         if let Some(key) = &self.config.write_modules_directory_env {
