@@ -250,7 +250,7 @@ impl<'instance, 'python, 'resources> MainPythonInterpreter<'instance, 'python, '
     /// of interpreter initialization.
     ///
     /// Returns a Python instance which has the GIL acquired.
-    fn init(&mut self) -> Result<Python, NewInterpreterError> {
+    fn init(&mut self) -> Result<(), NewInterpreterError> {
         match &self.interpreter_state {
             InterpreterState::Initializing => {
                 return Err(NewInterpreterError::Simple(
@@ -258,7 +258,7 @@ impl<'instance, 'python, 'resources> MainPythonInterpreter<'instance, 'python, '
                 ))
             }
             InterpreterState::Initialized => {
-                return Ok(self.acquire_gil().unwrap());
+                return Ok(());
             }
             InterpreterState::NotStarted => {}
             InterpreterState::Finalized => {}
@@ -539,7 +539,7 @@ impl<'instance, 'python, 'resources> MainPythonInterpreter<'instance, 'python, '
             }
         }
 
-        Ok(py)
+        Ok(())
     }
 
     /// Ensure the Python GIL is released.
