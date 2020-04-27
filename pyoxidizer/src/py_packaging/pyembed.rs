@@ -142,7 +142,7 @@ pub fn write_default_python_config_rs(path: &Path, python_config_rs: &str) -> Re
          /// The crate is compiled with a default Python configuration embedded\n\
          /// in the crate. This function will return an instance of that\n\
          /// configuration.\n\
-         pub fn default_python_config() -> pyembed::PythonConfig {{\n{}\n}}\n",
+         pub fn default_python_config<'a>() -> pyembed::PythonConfig<'a> {{\n{}\n}}\n",
         indented
     ))?;
 

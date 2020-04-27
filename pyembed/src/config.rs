@@ -58,7 +58,7 @@ pub struct ExtensionModule {
 /// Each instance contains the total state to define the run-time behavior of
 /// a Python interpreter.
 #[derive(Clone, Debug)]
-pub struct PythonConfig {
+pub struct PythonConfig<'a> {
     /// Name of encoding for stdio handles.
     pub standard_io_encoding: Option<String>,
 
@@ -141,7 +141,7 @@ pub struct PythonConfig {
     /// The format of the data is defined by the ``python-packed-resources``
     /// crate. The data will be parsed as part of initializing the custom
     /// meta path importer during interpreter initialization.
-    pub packed_resources: &'static [u8],
+    pub packed_resources: &'a [u8],
 
     /// Extra extension modules to make available to the interpreter.
     ///
@@ -185,7 +185,7 @@ pub struct PythonConfig {
     pub run: PythonRunMode,
 }
 
-impl Default for PythonConfig {
+impl<'a> Default for PythonConfig<'a> {
     /// Create a new instance using defaults.
     #[allow(unused)]
     fn default() -> Self {
@@ -566,7 +566,7 @@ impl Default for PythonRawAllocator {
 /// configuration API and `OxidizedPythonInterpreterConfig` exists to
 /// hold higher-level configuration for features specific to this crate.
 #[derive(Clone, Debug)]
-pub struct OxidizedPythonInterpreterConfig {
+pub struct OxidizedPythonInterpreterConfig<'a> {
     /// Low-level configuration of Python interpreter.
     pub interpreter_config: PythonInterpreterConfig,
 
@@ -587,7 +587,7 @@ pub struct OxidizedPythonInterpreterConfig {
     /// The format of the data is defined by the ``python-packed-resources``
     /// crate. The data will be parsed as part of initializing the custom
     /// meta path importer during interpreter initialization.
-    pub packed_resources: Option<&'static [u8]>,
+    pub packed_resources: Option<&'a [u8]>,
 
     /// Extra extension modules to make available to the interpreter.
     ///
@@ -628,7 +628,7 @@ pub struct OxidizedPythonInterpreterConfig {
     pub run: PythonRunMode,
 }
 
-impl Default for OxidizedPythonInterpreterConfig {
+impl<'a> Default for OxidizedPythonInterpreterConfig<'a> {
     fn default() -> Self {
         Self {
             interpreter_config: PythonInterpreterConfig {
@@ -650,8 +650,8 @@ impl Default for OxidizedPythonInterpreterConfig {
     }
 }
 
-impl From<PythonConfig> for OxidizedPythonInterpreterConfig {
-    fn from(config: PythonConfig) -> Self {
+impl<'a> From<PythonConfig<'a>> for OxidizedPythonInterpreterConfig<'a> {
+    fn from(config: PythonConfig<'a>) -> Self {
         Self {
             interpreter_config: PythonInterpreterConfig {
                 profile: if config.isolated {

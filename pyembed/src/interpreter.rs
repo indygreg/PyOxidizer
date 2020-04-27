@@ -167,7 +167,7 @@ enum InterpreterState {
 ///
 /// Both the low-level `python3-sys` and higher-level `cpython` crates are used.
 pub struct MainPythonInterpreter<'a, 'resources> {
-    pub config: OxidizedPythonInterpreterConfig,
+    pub config: OxidizedPythonInterpreterConfig<'resources>,
     interpreter_state: InterpreterState,
     raw_allocator: Option<InterpreterRawAllocator>,
     gil: Option<GILGuard>,
@@ -197,7 +197,7 @@ impl<'a, 'resources> MainPythonInterpreter<'a, 'resources> {
     ///
     /// The Python interpreter is initialized as a side-effect. The GIL is held.
     pub fn new(
-        config: OxidizedPythonInterpreterConfig,
+        config: OxidizedPythonInterpreterConfig<'resources>,
     ) -> Result<MainPythonInterpreter<'a, 'resources>, NewInterpreterError> {
         match config.terminfo_resolution {
             TerminfoResolution::Dynamic => {
@@ -253,8 +253,6 @@ impl<'a, 'resources> MainPythonInterpreter<'a, 'resources> {
 
         self.interpreter_state = InterpreterState::Initializing;
 
-        let config = &self.config;
-
         let exe = env::current_exe()
             .or_else(|_| Err(NewInterpreterError::Simple("could not obtain current exe")))?;
         let origin = exe
@@ -264,7 +262,7 @@ impl<'a, 'resources> MainPythonInterpreter<'a, 'resources> {
         let origin_string = origin.display().to_string();
 
         // Pre-configure Python.
-        let pre_config: pyffi::PyPreConfig = (&config.interpreter_config)
+        let pre_config: pyffi::PyPreConfig = (&self.config.interpreter_config)
             .try_into()
             .or_else(|err| Err(NewInterpreterError::Dynamic(err)))?;
 
@@ -280,7 +278,7 @@ impl<'a, 'resources> MainPythonInterpreter<'a, 'resources> {
         };
 
         // Override the raw allocator if one is configured.
-        if let Some(raw_allocator) = &config.raw_allocator {
+        if let Some(raw_allocator) = &self.config.raw_allocator {
             match raw_allocator.backend {
                 MemoryAllocatorBackend::System => {}
                 MemoryAllocatorBackend::Jemalloc => {
@@ -309,7 +307,7 @@ impl<'a, 'resources> MainPythonInterpreter<'a, 'resources> {
             }
         }
 
-        let mut py_config: pyffi::PyConfig = config
+        let mut py_config: pyffi::PyConfig = (&self.config)
             .try_into()
             .or_else(|err| Err(NewInterpreterError::Dynamic(err)))?;
 
@@ -317,7 +315,7 @@ impl<'a, 'resources> MainPythonInterpreter<'a, 'resources> {
         // our custom importer before Python attempts any imports.
         py_config._init_main = 0;
 
-        if config.oxidized_importer {
+        if self.config.oxidized_importer {
             // Register our _pyoxidizer_importer extension which provides importing functionality.
             unsafe {
                 // name char* needs to live as long as the interpreter is active.
@@ -329,7 +327,7 @@ impl<'a, 'resources> MainPythonInterpreter<'a, 'resources> {
         }
 
         // TODO call PyImport_ExtendInitTab to avoid O(n) overhead.
-        if let Some(extra_extension_modules) = &config.extra_extension_modules {
+        if let Some(extra_extension_modules) = &self.config.extra_extension_modules {
             for e in extra_extension_modules {
                 let res = unsafe {
                     pyffi::PyImport_AppendInittab(e.name.as_ptr() as *const i8, Some(e.init_func))
@@ -358,14 +356,14 @@ impl<'a, 'resources> MainPythonInterpreter<'a, 'resources> {
 
         let py = unsafe { Python::assume_gil_acquired() };
 
-        if config.oxidized_importer {
+        if self.config.oxidized_importer {
             let mut resources_state = PythonResourcesState {
                 current_exe: exe,
                 origin,
                 ..PythonResourcesState::default()
             };
 
-            if let Some(resources) = config.packed_resources {
+            if let Some(resources) = self.config.packed_resources {
                 resources_state
                     .load(resources)
                     .or_else(|err| Err(NewInterpreterError::Simple(err)))?;
@@ -417,7 +415,7 @@ impl<'a, 'resources> MainPythonInterpreter<'a, 'resources> {
         // just the external importer. But there isn't. The only field
         // controls both internal and external bootstrap modules and when
         // set it will disable a lot of "main" initialization.
-        if !config.filesystem_importer {
+        if !self.config.filesystem_importer {
             let sys_module = py.import("sys").or_else(|err| {
                 Err(NewInterpreterError::new_from_pyerr(
                     py,
@@ -476,7 +474,7 @@ impl<'a, 'resources> MainPythonInterpreter<'a, 'resources> {
             _ => return Err(NewInterpreterError::Simple("unable to set sys.argv")),
         }
 
-        if config.argvb {
+        if self.config.argvb {
             let args_objs: Vec<PyObject> = env::args_os()
                 .map(|os_arg| osstring_to_bytes(py, os_arg))
                 .collect();
@@ -507,7 +505,7 @@ impl<'a, 'resources> MainPythonInterpreter<'a, 'resources> {
             _ => return Err(NewInterpreterError::Simple("unable to set sys.oxidized")),
         }
 
-        if config.sys_frozen {
+        if self.config.sys_frozen {
             let frozen = b"frozen\0";
 
             match py.True().with_borrowed_ptr(py, |py_true| unsafe {
@@ -518,7 +516,7 @@ impl<'a, 'resources> MainPythonInterpreter<'a, 'resources> {
             }
         }
 
-        if config.sys_meipass {
+        if self.config.sys_meipass {
             let meipass = b"_MEIPASS\0";
             let value = PyString::new(py, &origin_string);
 

@@ -49,6 +49,11 @@ Backwards Compatibility Notes
   ``run_as_main()`` function (which is called by the default Rust
   program that is generated) will always call ``Py_RunMain()`` and
   finalize the interpreter. See the extensive crate docs for move.
+* Python resources data in the ``pyembed`` crate is no longer
+  annotated with the ``'static`` lifetime. Instances of ``PythonConfig``
+  and ``OxidizedPythonInterpreterConfig`` must now be annotated with
+  a lifetime for the resources data they hold such that Rust lifetimes
+  can be enforced.
 
 New Features
 ^^^^^^^^^^^^
@@ -66,6 +71,10 @@ New Features
 * The ``pyembed`` crate now exposes a new ``OxidizedPythonInterpreterConfig``
   type (and associated types) allowing configuration of every field
   supported by Python's interpreter configuration API.
+* Resources data loaded by the ``pyembed`` crate can now have a
+  non-``'static`` lifetime. This means that resources data can be
+  more dynamically obtained (e.g. by reading a file). PyOxidizer does
+  not yet support such mechanisms, however.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

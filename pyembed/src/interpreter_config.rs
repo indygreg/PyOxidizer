@@ -226,7 +226,7 @@ fn set_legacy_windows_stdio(config: &mut pyffi::PyConfig, value: bool) {
     config.legacy_windows_stdio = if value { 1 } else { 0 };
 }
 
-impl OxidizedPythonInterpreterConfig {
+impl<'a> OxidizedPythonInterpreterConfig<'a> {
     /// Whether the run configuration should execute via Py_RunMain().
     pub(crate) fn uses_py_runmain(&self) -> bool {
         if self.interpreter_config.run_command.is_some()
@@ -571,7 +571,7 @@ impl TryInto<pyffi::PyConfig> for &PythonInterpreterConfig {
     }
 }
 
-impl TryInto<pyffi::PyConfig> for &OxidizedPythonInterpreterConfig {
+impl<'a> TryInto<pyffi::PyConfig> for &'a OxidizedPythonInterpreterConfig<'a> {
     type Error = String;
 
     fn try_into(self) -> Result<pyffi::PyConfig, Self::Error> {
