@@ -376,38 +376,33 @@ impl<'instance, 'python, 'resources> MainPythonInterpreter<'instance, 'python, '
         let py = unsafe { Python::assume_gil_acquired() };
 
         if self.config.oxidized_importer {
-            let mut resources_state = PythonResourcesState {
+            self.resources_state = Some(PythonResourcesState {
                 current_exe: exe,
                 origin,
                 ..PythonResourcesState::default()
-            };
+            });
 
-            resources_state
-                .load(self.config.packed_resources)
-                .or_else(|err| Err(NewInterpreterError::Simple(err)))?;
+            if let Some(ref mut resources_state) = self.resources_state {
+                resources_state
+                    .load(self.config.packed_resources)
+                    .or_else(|err| Err(NewInterpreterError::Simple(err)))?;
 
-            let oxidized_importer = py.import(PYOXIDIZER_IMPORTER_NAME_STR).or_else(|err| {
-                Err(NewInterpreterError::new_from_pyerr(
-                    py,
-                    err,
-                    "import of oxidized importer module",
-                ))
-            })?;
+                let oxidized_importer = py.import(PYOXIDIZER_IMPORTER_NAME_STR).or_else(|err| {
+                    Err(NewInterpreterError::new_from_pyerr(
+                        py,
+                        err,
+                        "import of oxidized importer module",
+                    ))
+                })?;
 
-            self.resources_state = Some(resources_state);
-
-            initialize_importer(
-                py,
-                &oxidized_importer,
-                self.resources_state.as_ref().unwrap(),
-            )
-            .or_else(|err| {
-                Err(NewInterpreterError::new_from_pyerr(
-                    py,
-                    err,
-                    "initialization of oxidized importer",
-                ))
-            })?;
+                initialize_importer(py, &oxidized_importer, resources_state).or_else(|err| {
+                    Err(NewInterpreterError::new_from_pyerr(
+                        py,
+                        err,
+                        "initialization of oxidized importer",
+                    ))
+                })?;
+            }
         }
 
         // Now proceed with the Python main initialization. This will initialize
