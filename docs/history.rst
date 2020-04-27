@@ -29,43 +29,43 @@ Not yet released.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* The *standalone* Python distributions are now validated to be at
+  least version 5 of the distribution format. If you are using the
+  default Python distributions, this change should not affect you.
+* Support for packaging the official Windows embeddable Python
+  distributions has been removed. This support was experimental.
+  The official Windows embeddable distributions are missing critical
+  support files that make them difficult to integrate with PyOxidizer.
+* The default Python distributions have been upgraded to CPython
+  3.8.2 (from 3.7.7) and support for Python 3.7 has been removed.
+* Windows static distributions have been removed (temporary
+  regression which should be corrected before a release).
+* The ``pyembed`` crate now defines a new ``OxidizedPythonInterpreterConfig``
+  type to configure Python interpreters. ``PythonConfig`` still exists
+  and can be converted into a ``OxidizedPythonInterpreterConfig`` using
+  ``.into()``.
 * Various ``run_*`` functions on ``pyembed::MainPythonInterpreter`` have
   been moved to standalone functions in the ``pyembed`` crate. The
   ``run_as_main()`` function (which is called by the default Rust
   program that is generated) will always call ``Py_RunMain()`` and
   finalize the interpreter. See the extensive crate docs for move.
-* The ``pyembed`` crate now defines a new ``OxidizedPythonInterpreterConfig``
-  type to configure Python interpreters. ``PythonConfig`` still exists
-  and can be converted into a ``OxidizedPythonInterpreterConfig`` using
-  ``.into()``.
-* Windows static distributions have been removed (temporary
-  regression which should be corrected before a release).
-* The default Python distributions have been upgraded to CPython
-  3.8.2 (from 3.7.7) and support for Python 3.7 has been removed.
-* Support for packaging the official Windows embeddable Python
-  distributions has been removed. This support was experimental.
-  The official Windows embeddable distributions are missing critical
-  support files that make them difficult to integrate with PyOxidizer.
-* The *standalone* Python distributions are now validated to be at
-  least version 5 of the distribution format. If you are using the
-  default Python distributions, this change should not affect you.
 
 New Features
 ^^^^^^^^^^^^
 
-* The ``pyembed`` crate now exposes a new ``OxidizedPythonInterpreterConfig``
-  type (and associated types) allowing configuration of every field
-  supported by Python's interpreter configuration API.
-* Embedded Python interpreters are now managed via the
-  `new apis <https://docs.python.org/3/c-api/init_config.htm>`_ defined
-  by PEP-587. This gives us much more control over the configuration
-  of interpreters.
-* Python distributions upgraded to CPython 3.8.2.
 * Default Python distributions upgraded to version 5 of the
   standalone distribution format. This new format advertises much more
   metadata about the distribution, enabling PyOxidizer to take fewer
   guesses about how the distribution works and will help enable
   more features over time.
+* Python distributions upgraded to CPython 3.8.2.
+* Embedded Python interpreters are now managed via the
+  `new apis <https://docs.python.org/3/c-api/init_config.htm>`_ defined
+  by PEP-587. This gives us much more control over the configuration
+  of interpreters.
+* The ``pyembed`` crate now exposes a new ``OxidizedPythonInterpreterConfig``
+  type (and associated types) allowing configuration of every field
+  supported by Python's interpreter configuration API.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
