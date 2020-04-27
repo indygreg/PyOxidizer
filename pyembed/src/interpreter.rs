@@ -177,7 +177,7 @@ enum InterpreterState {
 ///
 /// Both the low-level `python3-sys` and higher-level `cpython` crates are used.
 pub struct MainPythonInterpreter<'instance, 'python, 'resources> {
-    pub config: OxidizedPythonInterpreterConfig<'resources>,
+    config: OxidizedPythonInterpreterConfig<'resources>,
     interpreter_state: InterpreterState,
     interpreter_guard: Option<std::sync::MutexGuard<'instance, ()>>,
     raw_allocator: Option<InterpreterRawAllocator>,
