@@ -693,11 +693,10 @@ impl<'a> PythonResourcesState<'a, u8> {
                 entry.flavor = ResourceFlavor::BuiltinExtensionModule;
             } else {
                 self.resources.insert(
-                    // This is probably unsafe.
-                    Cow::from(name_str),
+                    Cow::Owned(name_str.to_string()),
                     Resource {
                         flavor: ResourceFlavor::BuiltinExtensionModule,
-                        name: Cow::from(name_str),
+                        name: Cow::Owned(name_str.to_string()),
                         ..Resource::default()
                     },
                 );
@@ -730,11 +729,10 @@ impl<'a> PythonResourcesState<'a, u8> {
                 entry.flavor = ResourceFlavor::FrozenModule;
             } else {
                 self.resources.insert(
-                    // This is probably unsafe.
-                    Cow::from(name_str),
+                    Cow::Owned(name_str.to_string()),
                     Resource {
                         flavor: ResourceFlavor::FrozenModule,
-                        name: Cow::from(name_str),
+                        name: Cow::Owned(name_str.to_string()),
                         ..Resource::default()
                     },
                 );
