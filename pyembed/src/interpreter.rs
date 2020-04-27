@@ -15,6 +15,7 @@ use {
         GILGuard, NoArgs, ObjectProtocol, PyDict, PyErr, PyList, PyObject, PyString, Python,
         ToPyObject,
     },
+    lazy_static::lazy_static,
     python3_sys as pyffi,
     std::collections::BTreeSet,
     std::convert::TryInto,
@@ -32,6 +33,10 @@ use python3_sys::PyMemAllocatorEx;
 
 const PYOXIDIZER_IMPORTER_NAME_STR: &str = "_pyoxidizer_importer";
 pub const PYOXIDIZER_IMPORTER_NAME: &[u8] = b"_pyoxidizer_importer\0";
+
+lazy_static! {
+    static ref GLOBAL_INTERPRETER_GUARD: std::sync::Mutex<()> = { std::sync::Mutex::new(()) };
+}
 
 #[cfg(feature = "jemalloc-sys")]
 fn raw_jemallocator() -> pyffi::PyMemAllocatorEx {
@@ -159,8 +164,10 @@ enum InterpreterState {
 
 /// Manages an embedded Python interpreter.
 ///
-/// **Warning: Python interpreters have global state. There should only be a
-/// single instance of this type per process.**
+/// Python interpreters have global state and there can only be a single
+/// instance of this type per process. There exists a global lock enforcing
+/// this. Calling `new()` will block waiting for this lock. The lock is
+/// released when the instance is dropped.
 ///
 /// Instances must only be constructed through [`MainPythonInterpreter::new()`](#method.new).
 ///
@@ -169,12 +176,13 @@ enum InterpreterState {
 /// API provides.
 ///
 /// Both the low-level `python3-sys` and higher-level `cpython` crates are used.
-pub struct MainPythonInterpreter<'a, 'resources> {
+pub struct MainPythonInterpreter<'instance, 'python, 'resources> {
     pub config: OxidizedPythonInterpreterConfig<'resources>,
     interpreter_state: InterpreterState,
+    interpreter_guard: Option<std::sync::MutexGuard<'instance, ()>>,
     raw_allocator: Option<InterpreterRawAllocator>,
     gil: Option<GILGuard>,
-    py: Option<Python<'a>>,
+    py: Option<Python<'python>>,
     /// Holds parsed resources state.
     ///
     /// The underling data backing this data structure is given an
@@ -195,13 +203,13 @@ pub struct MainPythonInterpreter<'a, 'resources> {
     resources_state: Option<PythonResourcesState<'resources, u8>>,
 }
 
-impl<'a, 'resources> MainPythonInterpreter<'a, 'resources> {
+impl<'instance, 'python, 'resources> MainPythonInterpreter<'instance, 'python, 'resources> {
     /// Construct a Python interpreter from a configuration.
     ///
     /// The Python interpreter is initialized as a side-effect. The GIL is held.
     pub fn new(
         config: OxidizedPythonInterpreterConfig<'resources>,
-    ) -> Result<MainPythonInterpreter<'a, 'resources>, NewInterpreterError> {
+    ) -> Result<MainPythonInterpreter<'instance, 'python, 'resources>, NewInterpreterError> {
         match config.terminfo_resolution {
             TerminfoResolution::Dynamic => {
                 if let Some(v) = resolve_terminfo_dirs() {
@@ -216,6 +224,7 @@ impl<'a, 'resources> MainPythonInterpreter<'a, 'resources> {
 
         let mut res = MainPythonInterpreter {
             config,
+            interpreter_guard: None,
             interpreter_state: InterpreterState::NotStarted,
             raw_allocator: None,
             gil: None,
@@ -253,6 +262,13 @@ impl<'a, 'resources> MainPythonInterpreter<'a, 'resources> {
             InterpreterState::NotStarted => {}
             InterpreterState::Finalized => {}
         }
+
+        assert!(self.interpreter_guard.is_none());
+        self.interpreter_guard = Some(GLOBAL_INTERPRETER_GUARD.lock().or_else(|_| {
+            Err(NewInterpreterError::Simple(
+                "unable to acquire global interpreter guard",
+            ))
+        })?);
 
         self.interpreter_state = InterpreterState::Initializing;
 
@@ -543,7 +559,7 @@ impl<'a, 'resources> MainPythonInterpreter<'a, 'resources> {
     }
 
     /// Ensure the Python GIL is acquired, returning a handle on the interpreter.
-    pub fn acquire_gil(&mut self) -> Result<Python<'a>, &'static str> {
+    pub fn acquire_gil(&mut self) -> Result<Python<'python>, &'static str> {
         match self.interpreter_state {
             InterpreterState::NotStarted => {
                 return Err("interpreter not initialized");
@@ -599,6 +615,7 @@ impl<'a, 'resources> MainPythonInterpreter<'a, 'resources> {
             let res = unsafe { pyffi::Py_RunMain() };
 
             // Py_RunMain() finalizes the interpreter. So drop our refs and state.
+            self.interpreter_guard = None;
             self.interpreter_state = InterpreterState::Finalized;
             self.resources_state = None;
             self.py = None;
@@ -654,7 +671,9 @@ fn write_modules_to_directory(py: Python, path: &PathBuf) -> Result<(), &'static
     Ok(())
 }
 
-impl<'a, 'resources> Drop for MainPythonInterpreter<'a, 'resources> {
+impl<'instance, 'python, 'resources> Drop
+    for MainPythonInterpreter<'instance, 'python, 'resources>
+{
     fn drop(&mut self) {
         if let Some(key) = &self.config.write_modules_directory_env {
             if let Ok(path) = env::var(key) {
