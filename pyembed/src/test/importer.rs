@@ -77,3 +77,59 @@ fn find_spec_missing() -> Result<()> {
 
     Ok(())
 }
+
+/// find_spec() returns something reasonable for built-in extensions.
+#[test]
+fn find_spec_builtin() -> Result<()> {
+    let mut interp = new_interpreter()?;
+    let importer = get_importer(&mut interp)?;
+    let py = interp.acquire_gil().unwrap();
+
+    let spec = importer
+        .call_method(py, "find_spec", ("_io", py.None()), None)
+        .unwrap();
+
+    assert_eq!(spec.get_type(py).name(py), "ModuleSpec");
+    assert_eq!(
+        spec.getattr(py, "name")
+            .unwrap()
+            .extract::<String>(py)
+            .unwrap(),
+        "_io"
+    );
+    assert!(spec
+        .getattr(py, "loader")
+        .unwrap()
+        .to_string()
+        .contains("BuiltinImporter"));
+    assert_eq!(
+        spec.getattr(py, "origin")
+            .unwrap()
+            .extract::<String>(py)
+            .unwrap(),
+        "built-in"
+    );
+    assert_eq!(spec.getattr(py, "loader_state").unwrap(), py.None());
+    assert_eq!(
+        spec.getattr(py, "submodule_search_locations").unwrap(),
+        py.None()
+    );
+
+    Ok(())
+}
+
+/// find_module() returns something reasonable for built-in extensions.
+#[test]
+fn find_module_builtin() -> Result<()> {
+    let mut interp = new_interpreter()?;
+    let importer = get_importer(&mut interp)?;
+    let py = interp.acquire_gil().unwrap();
+
+    let loader = importer
+        .call_method(py, "find_module", ("_io", py.None()), None)
+        .unwrap();
+
+    assert!(loader.to_string().contains("BuiltinImporter"));
+
+    Ok(())
+}
