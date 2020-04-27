@@ -199,8 +199,9 @@ pub struct MainPythonInterpreter<'instance, 'python, 'resources: 'instance> {
     /// need to live for the lifetime of the interpreter instance, which
     /// is shorter than 'static. So we cheat and store a pointer. And to
     /// ensure the memory behind that pointer isn't freed, we track it
-    /// in this field.
-    resources_state: Option<PythonResourcesState<'resources, u8>>,
+    /// in this field. We also store the object in a box so it is on the
+    /// heap and not dynamic.
+    resources_state: Option<Box<PythonResourcesState<'resources, u8>>>,
 }
 
 impl<'instance, 'python, 'resources> MainPythonInterpreter<'instance, 'python, 'resources> {
@@ -376,7 +377,7 @@ impl<'instance, 'python, 'resources> MainPythonInterpreter<'instance, 'python, '
         let py = unsafe { Python::assume_gil_acquired() };
 
         if self.config.oxidized_importer {
-            self.resources_state = Some(PythonResourcesState::default());
+            self.resources_state = Some(Box::new(PythonResourcesState::default()));
 
             if let Some(ref mut resources_state) = self.resources_state {
                 resources_state.current_exe = exe;
