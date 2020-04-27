@@ -14,8 +14,8 @@ use {
     super::python_resources::{OptimizeLevel, PythonResourcesState},
     cpython::exc::{FileNotFoundError, ImportError, ValueError},
     cpython::{
-        py_class, py_fn, NoArgs, ObjectProtocol, PyClone, PyDict, PyErr, PyList, PyModule,
-        PyObject, PyResult, PyString, PyTuple, Python, PythonObject,
+        py_class, py_fn, NoArgs, ObjectProtocol, PyCapsule, PyClone, PyDict, PyErr, PyList,
+        PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject,
     },
     python3_sys as pyffi,
     python_packed_resources::data::ResourceFlavor,
@@ -266,15 +266,25 @@ pub(crate) struct ImporterState {
     /// Bytecode optimization level currently in effect.
     optimize_level: OptimizeLevel,
     /// Holds state about importable resources.
-    resources_state: PythonResourcesState<'static, u8>,
+    ///
+    /// This field is a PyCapsule and is a glorified wrapper around
+    /// a pointer. That pointer refers to memory backed outside our module,
+    /// by the `MainPythonInterpreter` instance that spawned us.
+    ///
+    /// Storing a pointer this way avoids Rust lifetime checks and allows
+    /// us to side-step the requirement that all lifetimes in Python
+    /// objects be 'static. This allows us to use proper lifetimes for
+    /// the backing memory instead of forcing all resource data to be backed
+    /// by 'static.
+    resources_state: PyCapsule,
 }
 
 impl ImporterState {
-    fn new(
+    fn new<'a>(
         py: Python,
         importer_module: &PyModule,
         bootstrap_module: &PyModule,
-        resources_state: PythonResourcesState<'static, u8>,
+        resources_state: &'a PythonResourcesState<'a, u8>,
     ) -> Result<Self, PyErr> {
         let decode_source = importer_module.get(py, "decode_source")?;
 
@@ -343,6 +353,23 @@ impl ImporterState {
             )),
         }?;
 
+        let capsule = unsafe {
+            let ptr = pyffi::PyCapsule_New(
+                resources_state as *const PythonResourcesState<u8> as *mut _,
+                std::ptr::null(),
+                None,
+            );
+
+            if ptr.is_null() {
+                return Err(PyErr::new::<ValueError, _>(
+                    py,
+                    "unable to convert PythonResourcesState to capsule",
+                ))?;
+            }
+
+            PyObject::from_owned_ptr(py, ptr).unchecked_cast_into()
+        };
+
         Ok(ImporterState {
             imp_module,
             sys_module,
@@ -355,14 +382,22 @@ impl ImporterState {
             decode_source,
             exec_fn,
             optimize_level,
-            resources_state,
+            resources_state: capsule,
         })
     }
 
     /// Obtain the `PythonResourcesState` associated with this instance.
     #[inline]
     pub fn get_resources_state<'a>(&self) -> &PythonResourcesState<'a, u8> {
-        &self.resources_state
+        let ptr = unsafe {
+            pyffi::PyCapsule_GetPointer(self.resources_state.as_object().as_ptr(), std::ptr::null())
+        };
+
+        if ptr.is_null() {
+            panic!("null pointer in resources state capsule");
+        }
+
+        unsafe { &*(ptr as *const PythonResourcesState<u8>) }
     }
 }
 
@@ -1081,10 +1116,10 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
 /// This is called after PyInit_* to finish the initialization of the
 /// module. Its state struct is updated. A new instance of the meta path
 /// importer is constructed and registered on sys.meta_path.
-pub(crate) fn initialize_importer(
+pub(crate) fn initialize_importer<'a>(
     py: Python,
     m: &PyModule,
-    resources_state: PythonResourcesState<'static, u8>,
+    resources_state: &PythonResourcesState<'a, u8>,
 ) -> PyResult<()> {
     let mut state = get_module_state(py, m)?;
 

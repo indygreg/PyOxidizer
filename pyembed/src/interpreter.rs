@@ -166,21 +166,39 @@ enum InterpreterState {
 /// API provides.
 ///
 /// Both the low-level `python3-sys` and higher-level `cpython` crates are used.
-pub struct MainPythonInterpreter<'a> {
+pub struct MainPythonInterpreter<'a, 'resources> {
     pub config: OxidizedPythonInterpreterConfig,
     interpreter_state: InterpreterState,
     raw_allocator: Option<InterpreterRawAllocator>,
     gil: Option<GILGuard>,
     py: Option<Python<'a>>,
+    /// Holds parsed resources state.
+    ///
+    /// The underling data backing this data structure is given an
+    /// explicit lifetime, independent of the GIL. The lifetime should be
+    /// that of this instance and no shorter.
+    ///
+    /// While this type doesn't access this field for any meaningful
+    /// work, we need to hold on to a reference to the parsed resources
+    /// data/state because the importer is storing a pointer to it. The
+    /// reason it is storing a pointer and not a normal &ref is because
+    /// the cpython bindings require that all class data elements be
+    /// 'static. If we stored the PythonResourcesState as a normal Rust
+    /// ref, we would require it be 'static. In reality, resources only
+    /// need to live for the lifetime of the interpreter instance, which
+    /// is shorter than 'static. So we cheat and store a pointer. And to
+    /// ensure the memory behind that pointer isn't freed, we track it
+    /// in this field.
+    resources_state: Option<PythonResourcesState<'resources, u8>>,
 }
 
-impl<'a> MainPythonInterpreter<'a> {
+impl<'a, 'resources> MainPythonInterpreter<'a, 'resources> {
     /// Construct a Python interpreter from a configuration.
     ///
     /// The Python interpreter is initialized as a side-effect. The GIL is held.
     pub fn new(
         config: OxidizedPythonInterpreterConfig,
-    ) -> Result<MainPythonInterpreter<'a>, NewInterpreterError> {
+    ) -> Result<MainPythonInterpreter<'a, 'resources>, NewInterpreterError> {
         match config.terminfo_resolution {
             TerminfoResolution::Dynamic => {
                 if let Some(v) = resolve_terminfo_dirs() {
@@ -199,6 +217,7 @@ impl<'a> MainPythonInterpreter<'a> {
             raw_allocator: None,
             gil: None,
             py: None,
+            resources_state: None,
         };
 
         res.init()?;
@@ -360,7 +379,14 @@ impl<'a> MainPythonInterpreter<'a> {
                 ))
             })?;
 
-            initialize_importer(py, &oxidized_importer, resources_state).or_else(|err| {
+            self.resources_state = Some(resources_state);
+
+            initialize_importer(
+                py,
+                &oxidized_importer,
+                self.resources_state.as_ref().unwrap(),
+            )
+            .or_else(|err| {
                 Err(NewInterpreterError::new_from_pyerr(
                     py,
                     err,
@@ -573,6 +599,7 @@ impl<'a> MainPythonInterpreter<'a> {
 
             // Py_RunMain() finalizes the interpreter. So drop our refs and state.
             self.interpreter_state = InterpreterState::Finalized;
+            self.resources_state = None;
             self.py = None;
             self.gil = None;
 
@@ -626,7 +653,7 @@ fn write_modules_to_directory(py: Python, path: &PathBuf) -> Result<(), &'static
     Ok(())
 }
 
-impl<'a> Drop for MainPythonInterpreter<'a> {
+impl<'a, 'resources> Drop for MainPythonInterpreter<'a, 'resources> {
     fn drop(&mut self) {
         if let Some(key) = &self.config.write_modules_directory_env {
             if let Ok(path) = env::var(key) {
