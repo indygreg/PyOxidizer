@@ -71,6 +71,7 @@ fn format_pyerr(py: Python, err: PyErr) -> Result<String, &'static str> {
 }
 
 /// Represents an error encountered when creating an embedded Python interpreter.
+#[derive(Debug)]
 pub enum NewInterpreterError {
     Simple(&'static str),
     Dynamic(String),
