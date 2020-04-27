@@ -43,6 +43,11 @@ build-mode-pyoxidizer-exe = []
 # set, OUT_DIR will be used.
 build-mode-prebuilt-artifacts = []
 
+# Build mode for running tests.
+build-mode-test = [
+    "cpython-link-default",
+]
+
 # Build the cpython crate in unresolved static mode (we will provide a static
 # library to link against).
 cpython-link-unresolved-static = [

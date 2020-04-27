@@ -1,0 +1,16 @@
+# These are needed so symbols are exported from binaries.
+# See the comment in PyOxidizer's .cargo/config template file for
+# more.
+#
+# Ideally we would only do this for certain build configurations
+# (like tests). But can't due to
+# https://github.com/rust-lang/cargo/issues/8170.
+
+[target.i686-unknown-linux-gnu]
+rustflags = ["-C", "link-args=-Wl,-export-dynamic"]
+
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "link-args=-Wl,-export-dynamic"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-args=-rdynamic"]

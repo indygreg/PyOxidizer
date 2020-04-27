@@ -115,6 +115,7 @@ fn main() {
 
         println!("cargo:rerun-if-env-changed=PYOXIDIZER_ARTIFACT_DIR");
         build_with_artifacts_in_dir(&artifact_dir_path);
+    } else if env::var("CARGO_FEATURE_BUILD_MODE_TEST").is_ok() {
     } else {
         panic!("build-mode-* feature not set");
     }
