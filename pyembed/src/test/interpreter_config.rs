@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{MainPythonInterpreter, OxidizedPythonInterpreterConfig},
+    crate::{MainPythonInterpreter, OxidizedPythonInterpreterConfig, PythonInterpreterProfile},
     anyhow::Result,
     cpython::ObjectProtocol,
 };
@@ -30,6 +30,29 @@ fn test_default_interpreter() -> Result<()> {
     assert!(importer
         .to_string()
         .contains("_frozen_importlib_external.PathFinder"));
+
+    Ok(())
+}
+
+#[test]
+fn test_isolated_interpreter() -> Result<()> {
+    let mut config = OxidizedPythonInterpreterConfig::default();
+    config.interpreter_config.profile = PythonInterpreterProfile::Isolated;
+
+    let mut interp = MainPythonInterpreter::new(config)?;
+
+    let py = interp.acquire_gil().unwrap();
+    let sys = py.import("sys").unwrap();
+    let flags = sys.get(py, "flags").unwrap();
+
+    assert_eq!(
+        flags
+            .getattr(py, "isolated")
+            .unwrap()
+            .extract::<i32>(py)
+            .unwrap(),
+        1
+    );
 
     Ok(())
 }
