@@ -364,7 +364,7 @@ impl ImporterState {
                 return Err(PyErr::new::<ValueError, _>(
                     py,
                     "unable to convert PythonResourcesState to capsule",
-                ))?;
+                ));
             }
 
             PyObject::from_owned_ptr(py, ptr).unchecked_cast_into()
