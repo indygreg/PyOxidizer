@@ -382,11 +382,9 @@ impl<'instance, 'python, 'resources> MainPythonInterpreter<'instance, 'python, '
                 ..PythonResourcesState::default()
             };
 
-            if let Some(resources) = self.config.packed_resources {
-                resources_state
-                    .load(resources)
-                    .or_else(|err| Err(NewInterpreterError::Simple(err)))?;
-            }
+            resources_state
+                .load(self.config.packed_resources)
+                .or_else(|err| Err(NewInterpreterError::Simple(err)))?;
 
             let oxidized_importer = py.import(PYOXIDIZER_IMPORTER_NAME_STR).or_else(|err| {
                 Err(NewInterpreterError::new_from_pyerr(

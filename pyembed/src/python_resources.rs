@@ -368,10 +368,12 @@ impl<'a> Default for PythonResourcesState<'a, u8> {
 
 impl<'a> PythonResourcesState<'a, u8> {
     /// Load state from the environment and by parsing data structures.
-    pub fn load(&mut self, resources_data: &'a [u8]) -> Result<(), &'static str> {
+    pub fn load(&mut self, resources_data: Option<&'a [u8]>) -> Result<(), &'static str> {
         // Loading of builtin and frozen knows to mutate existing entries rather
         // than replace. So do these last.
-        self.load_resources(resources_data)?;
+        if let Some(data) = resources_data {
+            self.load_resources(data)?;
+        }
         self.load_interpreter_builtin_modules()?;
         self.load_interpreter_frozen_modules()?;
 
