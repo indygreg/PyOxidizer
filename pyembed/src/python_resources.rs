@@ -368,7 +368,7 @@ impl<'a> Default for PythonResourcesState<'a, u8> {
 
 impl<'a> PythonResourcesState<'a, u8> {
     /// Load state from the environment and by parsing data structures.
-    pub fn load(&mut self, resources_data: &'a [u8]) -> Result<(), &'a str> {
+    pub fn load(&mut self, resources_data: &'a [u8]) -> Result<(), &'static str> {
         // Loading of builtin and frozen knows to mutate existing entries rather
         // than replace. So do these last.
         self.load_resources(resources_data)?;
@@ -671,7 +671,7 @@ impl<'a> PythonResourcesState<'a, u8> {
     }
 
     /// Load `builtin` modules from the Python interpreter.
-    fn load_interpreter_builtin_modules(&mut self) -> Result<(), &'a str> {
+    fn load_interpreter_builtin_modules(&mut self) -> Result<(), &'static str> {
         for i in 0.. {
             let record = unsafe { pyffi::PyImport_Inittab.offset(i) };
 
@@ -708,7 +708,7 @@ impl<'a> PythonResourcesState<'a, u8> {
     }
 
     /// Load `frozen` modules from the Python interpreter.
-    fn load_interpreter_frozen_modules(&mut self) -> Result<(), &'a str> {
+    fn load_interpreter_frozen_modules(&mut self) -> Result<(), &'static str> {
         for i in 0.. {
             let record = unsafe { pyffi::PyImport_FrozenModules.offset(i) };
 
@@ -745,7 +745,7 @@ impl<'a> PythonResourcesState<'a, u8> {
     }
 
     /// Load resources by parsing a blob.
-    fn load_resources(&mut self, data: &'a [u8]) -> Result<(), &'a str> {
+    fn load_resources(&mut self, data: &'a [u8]) -> Result<(), &'static str> {
         let resources = python_packed_resources::parser::load_resources(data)?;
 
         // Reserve space for expected number of incoming items so we can avoid extra
