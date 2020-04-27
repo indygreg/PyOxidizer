@@ -92,6 +92,8 @@ impl Display for NewInterpreterError {
     }
 }
 
+impl std::error::Error for NewInterpreterError {}
+
 impl NewInterpreterError {
     pub fn new_from_pyerr(py: Python, err: PyErr, context: &str) -> Self {
         match format_pyerr(py, err) {
