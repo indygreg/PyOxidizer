@@ -4,8 +4,9 @@
 
 use {
     crate::{MainPythonInterpreter, OxidizedPythonInterpreterConfig},
-    anyhow::Result,
+    anyhow::{anyhow, Result},
     cpython::{ObjectProtocol, PyObject},
+    std::path::PathBuf,
 };
 
 fn new_interpreter<'python, 'interpreter, 'resources>(
@@ -15,6 +16,23 @@ fn new_interpreter<'python, 'interpreter, 'resources>(
     let interp = MainPythonInterpreter::new(config)?;
 
     Ok(interp)
+}
+
+fn run_py_test(test_filename: &str) -> Result<()> {
+    let test_dir = env!("PYEMBED_TESTS_DIR");
+    let test_path = PathBuf::from(test_dir).join(test_filename);
+
+    let mut config = OxidizedPythonInterpreterConfig::default();
+    config.oxidized_importer = true;
+    config.interpreter_config.run_filename = Some(test_path);
+    let mut interp = MainPythonInterpreter::new(config)?;
+
+    let exit_code = interp.run_as_main();
+    if exit_code != 0 {
+        Err(anyhow!("Python code did not exit successfully"))
+    } else {
+        Ok(())
+    }
 }
 
 fn get_importer(interp: &mut MainPythonInterpreter) -> Result<PyObject> {
@@ -78,108 +96,8 @@ fn find_spec_missing() -> Result<()> {
     Ok(())
 }
 
-/// find_spec() returns something reasonable for built-in extensions.
+/// Run test_importer_builtins.py.
 #[test]
-fn find_spec_builtin() -> Result<()> {
-    let mut interp = new_interpreter()?;
-    let importer = get_importer(&mut interp)?;
-    let py = interp.acquire_gil().unwrap();
-
-    let spec = importer
-        .call_method(py, "find_spec", ("_io", py.None()), None)
-        .unwrap();
-
-    assert_eq!(spec.get_type(py).name(py), "ModuleSpec");
-    assert_eq!(
-        spec.getattr(py, "name")
-            .unwrap()
-            .extract::<String>(py)
-            .unwrap(),
-        "_io"
-    );
-    assert!(spec
-        .getattr(py, "loader")
-        .unwrap()
-        .to_string()
-        .contains("BuiltinImporter"));
-    assert_eq!(
-        spec.getattr(py, "origin")
-            .unwrap()
-            .extract::<String>(py)
-            .unwrap(),
-        "built-in"
-    );
-    assert_eq!(spec.getattr(py, "loader_state").unwrap(), py.None());
-    assert_eq!(
-        spec.getattr(py, "submodule_search_locations").unwrap(),
-        py.None()
-    );
-
-    Ok(())
-}
-
-/// find_module() returns something reasonable for built-in extensions.
-#[test]
-fn find_module_builtin() -> Result<()> {
-    let mut interp = new_interpreter()?;
-    let importer = get_importer(&mut interp)?;
-    let py = interp.acquire_gil().unwrap();
-
-    let loader = importer
-        .call_method(py, "find_module", ("_io", py.None()), None)
-        .unwrap();
-
-    assert!(loader.to_string().contains("BuiltinImporter"));
-
-    Ok(())
-}
-
-/// get_code() returns None for a built-in.
-#[test]
-fn get_code_builtin() -> Result<()> {
-    let mut interp = new_interpreter()?;
-    let importer = get_importer(&mut interp)?;
-    let py = interp.acquire_gil().unwrap();
-
-    assert_eq!(
-        importer
-            .call_method(py, "get_code", ("_io",), None)
-            .unwrap(),
-        py.None()
-    );
-
-    Ok(())
-}
-
-/// get_source() returns None for a built-in.
-#[test]
-fn get_source_builtin() -> Result<()> {
-    let mut interp = new_interpreter()?;
-    let importer = get_importer(&mut interp)?;
-    let py = interp.acquire_gil().unwrap();
-
-    assert_eq!(
-        importer
-            .call_method(py, "get_source", ("_io",), None)
-            .unwrap(),
-        py.None()
-    );
-
-    Ok(())
-}
-
-/// get_filename() raises ImportError for a built-in.
-#[test]
-fn get_filename_builtin() -> Result<()> {
-    let mut interp = new_interpreter()?;
-    let importer = get_importer(&mut interp)?;
-    let py = interp.acquire_gil().unwrap();
-
-    let res = importer.call_method(py, "get_filename", ("_io",), None);
-
-    assert!(res.is_err());
-    let err = res.unwrap_err();
-    assert!(err.ptype.to_string().contains("ImportError"));
-
-    Ok(())
+fn builtins_py() -> Result<()> {
+    run_py_test("test_importer_builtins.py")
 }
