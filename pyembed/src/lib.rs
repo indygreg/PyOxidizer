@@ -96,6 +96,8 @@ mod pystr;
 mod python_eval;
 mod python_resources;
 pub mod technotes;
+#[cfg(test)]
+mod test;
 
 #[allow(unused_imports)]
 pub use crate::config::{
