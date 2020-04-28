@@ -102,3 +102,9 @@ fn find_spec_missing() -> Result<()> {
 fn builtins_py() -> Result<()> {
     run_py_test("test_importer_builtins.py")
 }
+
+/// Run test_importer_module.py.
+#[test]
+fn importer_module_py() -> Result<()> {
+    run_py_test("test_importer_module.py")
+}
