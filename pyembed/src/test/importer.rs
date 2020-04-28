@@ -25,6 +25,7 @@ fn run_py_test(test_filename: &str) -> Result<()> {
     let mut config = OxidizedPythonInterpreterConfig::default();
     config.oxidized_importer = true;
     config.interpreter_config.run_filename = Some(test_path);
+    config.interpreter_config.buffered_stdio = Some(false);
     let mut interp = MainPythonInterpreter::new(config)?;
 
     let exit_code = interp.run_as_main();
