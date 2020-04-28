@@ -789,6 +789,29 @@ impl PyOxidizerFinder {
     }
 }
 
+impl PyOxidizerFinder {
+    /// Construct an instance from a module and resources state.
+    fn new_from_module_and_resources<'a>(
+        py: Python,
+        m: &PyModule,
+        resources_state: &PythonResourcesState<'a, u8>,
+    ) -> PyResult<PyOxidizerFinder> {
+        let bootstrap_module = py.import("_frozen_importlib")?;
+
+        let importer = PyOxidizerFinder::create_instance(
+            py,
+            Arc::new(Box::new(ImporterState::new(
+                py,
+                &m,
+                &bootstrap_module,
+                resources_state,
+            )?)),
+        )?;
+
+        Ok(importer)
+    }
+}
+
 // Implements in-memory reading of resource data.
 //
 // Implements importlib.abc.ResourceReader.
@@ -1125,23 +1148,13 @@ pub(crate) fn initialize_importer<'a>(
 ) -> PyResult<()> {
     let mut state = get_module_state(py, m)?;
 
-    let bootstrap_module = py.import("_frozen_importlib")?;
-    let sys_module = bootstrap_module.get(py, "sys")?;
-    let sys_module = sys_module.cast_into::<PyModule>(py)?;
+    let sys_module = py.import("sys")?;
 
     // Construct and register our custom meta path importer. Because our meta path
     // importer is able to handle builtin and frozen modules, the existing meta path
     // importers are removed. The assumption here is that we're called very early
     // during startup and the 2 default meta path importers are installed.
-    let unified_importer = PyOxidizerFinder::create_instance(
-        py,
-        Arc::new(Box::new(ImporterState::new(
-            py,
-            &m,
-            &bootstrap_module,
-            resources_state,
-        )?)),
-    )?;
+    let unified_importer = PyOxidizerFinder::new_from_module_and_resources(py, m, resources_state)?;
 
     let meta_path_object = sys_module.get(py, "meta_path")?;
 
