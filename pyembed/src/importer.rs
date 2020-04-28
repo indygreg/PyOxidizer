@@ -1144,7 +1144,15 @@ pub(crate) fn initialize_importer<'a>(
     let meta_path_object = sys_module.get(py, "meta_path")?;
 
     meta_path_object.call_method(py, "clear", NoArgs, None)?;
-    meta_path_object.call_method(py, "append", (unified_importer,), None)?;
+    meta_path_object.call_method(py, "append", (unified_importer.clone_ref(py),), None)?;
+
+    // We also expose the type of PyOxidizerFinder on the module so Python
+    // can more easily get a handle on it.
+    m.add(
+        py,
+        "PyOxidizerFinder",
+        unified_importer.as_object().get_type(py),
+    )?;
 
     state.initialized = true;
 
