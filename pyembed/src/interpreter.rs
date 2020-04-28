@@ -6,7 +6,10 @@
 
 use {
     super::config::{MemoryAllocatorBackend, OxidizedPythonInterpreterConfig, TerminfoResolution},
-    super::importer::{initialize_importer, PyInit__pyoxidizer_importer},
+    super::importer::{
+        initialize_importer, PyInit__pyoxidizer_importer, PYOXIDIZER_IMPORTER_NAME,
+        PYOXIDIZER_IMPORTER_NAME_STR,
+    },
     super::osutils::resolve_terminfo_dirs,
     super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
     super::pystr::{osstr_to_pyobject, osstring_to_bytes},
@@ -30,9 +33,6 @@ use {
 #[cfg(feature = "jemalloc-sys")]
 use super::pyalloc::make_raw_jemalloc_allocator;
 use python3_sys::PyMemAllocatorEx;
-
-const PYOXIDIZER_IMPORTER_NAME_STR: &str = "_pyoxidizer_importer";
-pub const PYOXIDIZER_IMPORTER_NAME: &[u8] = b"_pyoxidizer_importer\0";
 
 lazy_static! {
     static ref GLOBAL_INTERPRETER_GUARD: std::sync::Mutex<()> = { std::sync::Mutex::new(()) };

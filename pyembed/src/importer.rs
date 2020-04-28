@@ -9,8 +9,13 @@ This module defines a Python meta path importer and associated functionality
 for importing Python modules from memory.
 */
 
+#[cfg(windows)]
 use {
-    super::interpreter::PYOXIDIZER_IMPORTER_NAME,
+    super::memory_dll::{free_library_memory, get_proc_address_memory, load_library_memory},
+    cpython::exc::SystemError,
+    std::ffi::{c_void, CString},
+};
+use {
     super::python_resources::{OptimizeLevel, PythonResourcesState},
     cpython::exc::{FileNotFoundError, ImportError, ValueError},
     cpython::{
@@ -21,12 +26,9 @@ use {
     python_packed_resources::data::ResourceFlavor,
     std::sync::Arc,
 };
-#[cfg(windows)]
-use {
-    super::memory_dll::{free_library_memory, get_proc_address_memory, load_library_memory},
-    cpython::exc::SystemError,
-    std::ffi::{c_void, CString},
-};
+
+pub const PYOXIDIZER_IMPORTER_NAME_STR: &str = "_pyoxidizer_importer";
+pub const PYOXIDIZER_IMPORTER_NAME: &[u8] = b"_pyoxidizer_importer\0";
 
 #[cfg(windows)]
 #[allow(non_camel_case_types)]
