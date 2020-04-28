@@ -281,6 +281,8 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             .to_path_buf();
         let origin_string = origin.display().to_string();
 
+        set_pyimport_inittab(&self.config);
+
         // Pre-configure Python.
         let pre_config: pyffi::PyPreConfig = (&self.config.interpreter_config)
             .try_into()
@@ -334,32 +336,6 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         // Enable multi-phase initialization. This allows us to initialize
         // our custom importer before Python attempts any imports.
         py_config._init_main = 0;
-
-        if self.config.oxidized_importer {
-            // Register our _pyoxidizer_importer extension which provides importing functionality.
-            unsafe {
-                // name char* needs to live as long as the interpreter is active.
-                pyffi::PyImport_AppendInittab(
-                    PYOXIDIZER_IMPORTER_NAME.as_ptr() as *const i8,
-                    Some(PyInit__pyoxidizer_importer),
-                );
-            }
-        }
-
-        // TODO call PyImport_ExtendInitTab to avoid O(n) overhead.
-        if let Some(extra_extension_modules) = &self.config.extra_extension_modules {
-            for e in extra_extension_modules {
-                let res = unsafe {
-                    pyffi::PyImport_AppendInittab(e.name.as_ptr() as *const i8, Some(e.init_func))
-                };
-
-                if res != 0 {
-                    return Err(NewInterpreterError::Simple(
-                        "unable to register extension module",
-                    ));
-                }
-            }
-        }
 
         let status = unsafe { pyffi::Py_InitializeFromConfig(&py_config) };
         if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
@@ -617,6 +593,75 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         } else {
             0
         }
+    }
+}
+
+static mut ORIGINAL_BUILTIN_EXTENSIONS: Option<Vec<pyffi::_inittab>> = None;
+static mut REPLACED_BUILTIN_EXTENSIONS: Option<Box<Vec<pyffi::_inittab>>> = None;
+
+/// Set PyImport_Inittab from config options.
+///
+/// CPython has buggy code around memory handling for PyImport_Inittab.
+/// See https://github.com/python/cpython/pull/19746. So, we can't trust
+/// the official APIs to do the correct thing if there are multiple
+/// interpreters per process.
+///
+/// We maintain our own shadow copy of this array and synchronize it
+/// to PyImport_Inittab during interpreter initialization so we don't
+/// call the broken APIs.
+fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig) {
+    // If this is our first time, copy the canonical source to our shadow
+    // copy.
+    unsafe {
+        if ORIGINAL_BUILTIN_EXTENSIONS.is_none() {
+            let mut entries: Vec<pyffi::_inittab> = Vec::new();
+
+            for i in 0.. {
+                let record = pyffi::PyImport_Inittab.offset(i);
+
+                if (*record).name.is_null() {
+                    break;
+                }
+
+                entries.push(*record);
+            }
+
+            ORIGINAL_BUILTIN_EXTENSIONS = Some(entries);
+        }
+    }
+
+    // Now make a copy and add in new extensions.
+    let mut extensions = Box::new(unsafe { ORIGINAL_BUILTIN_EXTENSIONS.as_ref().unwrap().clone() });
+
+    if config.oxidized_importer {
+        let ptr = PyInit__pyoxidizer_importer as *const ();
+        extensions.push(pyffi::_inittab {
+            name: PYOXIDIZER_IMPORTER_NAME.as_ptr() as *mut _,
+            initfunc: Some(unsafe { std::mem::transmute::<*const (), extern "C" fn()>(ptr) }),
+        });
+    }
+
+    // Add additional extension modules from the config.
+    if let Some(extra_extension_modules) = &config.extra_extension_modules {
+        for extension in extra_extension_modules {
+            let ptr = extension.init_func as *const ();
+            extensions.push(pyffi::_inittab {
+                name: extension.name.as_ptr() as *mut _,
+                initfunc: Some(unsafe { std::mem::transmute::<*const (), extern "C" fn()>(ptr) }),
+            });
+        }
+    }
+
+    // Add sentinel record with NULLs.
+    extensions.push(pyffi::_inittab {
+        name: std::ptr::null_mut(),
+        initfunc: None,
+    });
+
+    // And finally replace the static in Python's code with our instance.
+    unsafe {
+        REPLACED_BUILTIN_EXTENSIONS = Some(extensions);
+        pyffi::PyImport_Inittab = REPLACED_BUILTIN_EXTENSIONS.as_mut().unwrap().as_mut_ptr();
     }
 }
 
