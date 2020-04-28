@@ -367,6 +367,23 @@ impl<'a> Default for PythonResourcesState<'a, u8> {
 }
 
 impl<'a> PythonResourcesState<'a, u8> {
+    /// Construct an instance from environment state.
+    pub fn new_from_env() -> Result<Self, &'static str> {
+        let exe =
+            std::env::current_exe().or_else(|_| Err("unable to obtain current executable"))?;
+        let origin = exe
+            .parent()
+            .ok_or_else(|| "unable to get executable parent")?
+            .to_path_buf();
+
+        Ok(Self {
+            current_exe: exe,
+            origin,
+            packages: Default::default(),
+            resources: Default::default(),
+        })
+    }
+
     /// Load state from the environment and by parsing data structures.
     pub fn load(&mut self, resources_data: Option<&'a [u8]>) -> Result<(), &'static str> {
         // Loading of builtin and frozen knows to mutate existing entries rather

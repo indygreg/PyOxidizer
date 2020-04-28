@@ -353,11 +353,12 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         let py = unsafe { Python::assume_gil_acquired() };
 
         if self.config.oxidized_importer {
-            self.resources_state = Some(Box::new(PythonResourcesState::default()));
+            self.resources_state = Some(Box::new(
+                PythonResourcesState::new_from_env()
+                    .or_else(|err| Err(NewInterpreterError::Simple(err)))?,
+            ));
 
             if let Some(ref mut resources_state) = self.resources_state {
-                resources_state.current_exe = exe;
-                resources_state.origin = origin;
                 resources_state
                     .load(self.config.packed_resources)
                     .or_else(|err| Err(NewInterpreterError::Simple(err)))?;
