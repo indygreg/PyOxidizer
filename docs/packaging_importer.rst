@@ -86,7 +86,7 @@ See the `importlib.abc documentation <https://docs.python.org/3/library/importli
 for more on these interfaces.
 
 In addition to the methods on the above interfaces, the following methods
-are exposed:
+defined by ``importlib`` are exposed:
 
 * ``get_resource_reader(fullname: str) -> importlib.abc.ResourceReader``
 * ``find_distributions(context: Optional[DistributionFinder.Context]) -> [Distribution]``
@@ -94,6 +94,33 @@ are exposed:
 ``ResourceReader`` is documented alongside other ``importlib.abc`` interfaces.
 ``find_distribution()`` is documented in
 `importlib.metadata <https://docs.python.org/3/library/importlib.metadata.html>`_.
+
+Non-``importlib`` API
+---------------------
+
+``PyOxidizerFinder`` instances have additional functionality over what
+is defined by ``importlib``. This functionality allows you to construct,
+inspect, and manipulate instances.
+
+.. _pyoxidizer_finder__new__:
+
+``__new__(cls, resources=None)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+New instances of ``PyOxidizerFinder`` can be constructed like normal
+Python types::
+
+    finder = PyOxidizerFinder()
+
+The constructor takes an optional ``resources`` argument, which defines
+*packed resources data* to parse. The argument must be a bytes-like type.
+A reference to the passed in value will be stored internally in the
+constructed instance, as the memory needs to live for the lifetime of
+the ``PyOxidizerFinder`` instance.
+
+See the `python_packed_resources <https://docs.rs/python-packed-resources/0.1.0/python_packed_resources/>`_
+Rust crate for the specification of the binary data blob accepted by this
+function.
 
 Behavior and Compliance
 =======================

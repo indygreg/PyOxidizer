@@ -75,6 +75,10 @@ New Features
   non-``'static`` lifetime. This means that resources data can be
   more dynamically obtained (e.g. by reading a file). PyOxidizer does
   not yet support such mechanisms, however.
+* ``PyOxidizerFinder`` instances can now be
+  :ref:`constructed from Python code <pyoxidizer_finder__new__>`.
+  This means that a Python application can instantiate and install its
+  own oxidized module importer.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

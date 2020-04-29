@@ -17,6 +17,7 @@ use {
 };
 use {
     super::python_resources::{OptimizeLevel, PythonResourcesState},
+    cpython::buffer::PyBuffer,
     cpython::exc::{FileNotFoundError, ImportError, ValueError},
     cpython::{
         py_class, py_fn, NoArgs, ObjectProtocol, PyCapsule, PyClone, PyDict, PyErr, PyList,
@@ -270,8 +271,11 @@ pub(crate) struct ImporterState {
     /// Holds state about importable resources.
     ///
     /// This field is a PyCapsule and is a glorified wrapper around
-    /// a pointer. That pointer refers to memory backed outside our module,
-    /// by the `MainPythonInterpreter` instance that spawned us.
+    /// a pointer. That pointer refers to heap backed memory.
+    ///
+    /// The memory behind the pointer can either by owned by us or owned
+    /// externally. If owned externally, the memory is likely backed by
+    /// the `MainPythonInterpreter` instance that spawned us.
     ///
     /// Storing a pointer this way avoids Rust lifetime checks and allows
     /// us to side-step the requirement that all lifetimes in Python
@@ -279,6 +283,10 @@ pub(crate) struct ImporterState {
     /// the backing memory instead of forcing all resource data to be backed
     /// by 'static.
     resources_state: PyCapsule,
+    resources_state_owned: bool,
+
+    /// Python object that was used to supply resources data.
+    _resources_py_object: Option<PyObject>,
 }
 
 impl ImporterState {
@@ -287,6 +295,8 @@ impl ImporterState {
         importer_module: &PyModule,
         bootstrap_module: &PyModule,
         resources_state: &'a PythonResourcesState<'a, u8>,
+        resources_state_owned: bool,
+        resources_py_object: Option<PyObject>,
     ) -> Result<Self, PyErr> {
         let decode_source = importer_module.get(py, "decode_source")?;
 
@@ -385,6 +395,8 @@ impl ImporterState {
             exec_fn,
             optimize_level,
             resources_state: capsule,
+            resources_state_owned,
+            _resources_py_object: resources_py_object,
         })
     }
 
@@ -400,6 +412,27 @@ impl ImporterState {
         }
 
         unsafe { &*(ptr as *const PythonResourcesState<u8>) }
+    }
+}
+
+impl Drop for ImporterState {
+    fn drop(&mut self) {
+        // If we own the PythonResourcesState<u8> encapsulated in a PyCapsule,
+        // cast it back to a Box so it can be dropped.
+        if self.resources_state_owned {
+            let ptr = unsafe {
+                pyffi::PyCapsule_GetPointer(
+                    self.resources_state.as_object().as_ptr(),
+                    std::ptr::null(),
+                )
+            };
+
+            if !ptr.is_null() {
+                unsafe {
+                    Box::from_raw(ptr as *mut PythonResourcesState<u8>);
+                }
+            }
+        }
     }
 }
 
@@ -479,6 +512,11 @@ py_class!(class PyOxidizerFinder |py| {
     // importlib.metadata interface.
     def find_distributions(&self, context: Option<PyObject> = None) -> PyResult<PyObject> {
         self.find_distributions_impl(py, context)
+    }
+
+    // Additional methods provided for convenience.
+    def __new__(_cls, resources: Option<PyObject> = None) -> PyResult<PyOxidizerFinder> {
+        pyoxidizer_finder_new(py, resources)
     }
 });
 
@@ -805,11 +843,79 @@ impl PyOxidizerFinder {
                 &m,
                 &bootstrap_module,
                 resources_state,
+                false,
+                None,
             )?)),
         )?;
 
         Ok(importer)
     }
+}
+/// PyOxidizerFinder.__new__(resources=None)
+fn pyoxidizer_finder_new(py: Python, resources: Option<PyObject>) -> PyResult<PyOxidizerFinder> {
+    // We need to obtain an ImporterState instance. This requires handles on a
+    // few items...
+
+    // The module references are easy to obtain.
+    let m = py.import(PYOXIDIZER_IMPORTER_NAME_STR)?;
+    let bootstrap_module = py.import("_frozen_importlib")?;
+
+    // The PythonResourcesState is a bit more complex.
+    //
+    // It loads resources data from a memory location and stores references
+    // to that memory address. That means resources data passed in must live
+    // for at least as long as the PythonResourcesState / ImporterState /
+    // PyOxidizerFinder instances or else we could have an unsafety issue.
+    //
+    // To make matters more complex, ImporterState stores the reference to
+    // PythonResourcesState as a PyCapsule to avoid 'static lifetime restrictions.
+    //
+    // Our solution to this predicament is to stash a reference to the
+    // PyObject holding the resources data and an opaque object holding
+    // our PythonResourcesState on the returned instance. This ensures that
+    // the memory backing this finder instance lives at least as long as the
+    // finder itself.
+
+    // It needs to live on the heap to ensure that the memory address is constant.
+    let mut resources_state = Box::new(
+        PythonResourcesState::new_from_env()
+            .or_else(|err| Err(PyErr::new::<ValueError, _>(py, err)))?,
+    );
+
+    // If we received a PyObject defining resources data, try to resolve it.
+    let resources_data = if let Some(resources) = &resources {
+        let buffer = PyBuffer::get(py, resources)?;
+
+        let data = unsafe {
+            std::slice::from_raw_parts::<u8>(buffer.buf_ptr() as *const _, buffer.len_bytes())
+        };
+
+        Some(data)
+    } else {
+        None
+    };
+
+    resources_state
+        .load(resources_data)
+        .or_else(|err| Err(PyErr::new::<ValueError, _>(py, err)))?;
+
+    let importer = PyOxidizerFinder::create_instance(
+        py,
+        Arc::new(Box::new(ImporterState::new(
+            py,
+            &m,
+            &bootstrap_module,
+            &resources_state,
+            true,
+            resources,
+        )?)),
+    )?;
+
+    // We effectively transferred ownership of resources_state just above.
+    // So forget about it here.
+    Box::leak(resources_state);
+
+    Ok(importer)
 }
 
 // Implements in-memory reading of resource data.

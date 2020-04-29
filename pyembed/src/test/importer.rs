@@ -108,3 +108,9 @@ fn builtins_py() -> Result<()> {
 fn importer_module_py() -> Result<()> {
     run_py_test("test_importer_module.py")
 }
+
+/// Run test_importer_construction.py.
+#[test]
+fn importer_construction_py() -> Result<()> {
+    run_py_test("test_importer_construction.py")
+}
