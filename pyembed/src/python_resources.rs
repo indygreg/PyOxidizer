@@ -22,7 +22,7 @@ use {
     python_packed_resources::data::{Resource, ResourceFlavor},
     std::borrow::Cow,
     std::cell::RefCell,
-    std::collections::{HashMap, HashSet},
+    std::collections::HashMap,
     std::ffi::CStr,
     std::iter::FromIterator,
     std::path::{Path, PathBuf},
@@ -355,9 +355,6 @@ where
     /// Probably the directory of `current_exe`.
     pub origin: PathBuf,
 
-    /// Names of Python packages.
-    pub packages: HashSet<&'a str>,
-
     /// Named resources available for loading.
     pub resources: HashMap<Cow<'a, str>, Resource<'a, X>>,
 }
@@ -367,7 +364,6 @@ impl<'a> Default for PythonResourcesState<'a, u8> {
         Self {
             current_exe: PathBuf::new(),
             origin: PathBuf::new(),
-            packages: HashSet::new(),
             resources: HashMap::new(),
         }
     }
@@ -386,7 +382,6 @@ impl<'a> PythonResourcesState<'a, u8> {
         Ok(Self {
             current_exe: exe,
             origin,
-            packages: Default::default(),
             resources: Default::default(),
         })
     }
@@ -786,7 +781,7 @@ impl<'a> PythonResourcesState<'a, u8> {
     }
 }
 
-py_class!(class OxidizedResource |py| {
+py_class!(pub class OxidizedResource |py| {
     data resource: RefCell<Resource<'static, u8>>;
 
     def __new__(_cls) -> PyResult<OxidizedResource> {
