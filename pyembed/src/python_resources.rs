@@ -797,6 +797,30 @@ py_class!(class OxidizedResource |py| {
     @property def is_namespace_package(&self) -> PyResult<bool> {
         Ok(self.resource(py).is_namespace_package)
     }
+
+    @property def in_memory_source(&self) -> PyResult<Option<Vec<u8>>> {
+        Ok(self.resource(py).in_memory_source.as_ref().map(|x| x.to_vec()))
+    }
+
+    @property def in_memory_bytecode(&self) -> PyResult<Option<Vec<u8>>> {
+        Ok(self.resource(py).in_memory_bytecode.as_ref().map(|x| x.to_vec()))
+    }
+
+    @property def in_memory_bytecode_opt1(&self) -> PyResult<Option<Vec<u8>>> {
+        Ok(self.resource(py).in_memory_bytecode_opt1.as_ref().map(|x| x.to_vec()))
+    }
+
+    @property def in_memory_bytecode_opt2(&self) -> PyResult<Option<Vec<u8>>> {
+        Ok(self.resource(py).in_memory_bytecode_opt2.as_ref().map(|x| x.to_vec()))
+    }
+
+    @property def in_memory_extension_module_shared_library(&self) -> PyResult<Option<Vec<u8>>> {
+        Ok(self.resource(py).in_memory_extension_module_shared_library.as_ref().map(|x| x.to_vec()))
+    }
+
+    @property def in_memory_shared_library(&self) -> PyResult<Option<Vec<u8>>> {
+        Ok(self.resource(py).in_memory_shared_library.as_ref().map(|x| x.to_vec()))
+    }
 });
 
 /// Convert a Resource to an OxidizedResource.

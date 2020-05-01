@@ -31,6 +31,12 @@ class TestImporterConstruction(unittest.TestCase):
 
         self.assertFalse(resource.is_package)
         self.assertFalse(resource.is_namespace_package)
+        self.assertIsNone(resource.in_memory_source)
+        self.assertIsNone(resource.in_memory_bytecode)
+        self.assertIsNone(resource.in_memory_bytecode_opt1)
+        self.assertIsNone(resource.in_memory_bytecode_opt2)
+        self.assertIsNone(resource.in_memory_extension_module_shared_library)
+        self.assertIsNone(resource.in_memory_shared_library)
 
 
 if __name__ == "__main__":

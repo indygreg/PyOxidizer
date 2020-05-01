@@ -295,3 +295,27 @@ The following properties/attributes exist on ``OxidizedResource`` instances:
 
 ``is_namespace_package``
    A ``bool`` indicating if this resource is a Python namespace package.
+
+``in_memory_source``
+   ``bytes`` or ``None`` holding Python module source code that should be
+   imported from memory.
+
+``in_memory_bytecode``
+   ``bytes`` or ``None`` holding Python module bytecode that should be
+   imported from memory.
+
+``in_memory_bytecode_opt1``
+   ``bytes`` or ``None`` holding Python module bytecode at optimization level 1
+   that should be imported from memory.
+
+``in_memory_bytecode_opt2``
+   ``bytes`` or ``None`` holding Python module bytecode at optimization level 2
+   that should be imported from memory.
+
+``in_memory_extension_module_shared_library``
+   ``bytes`` or ``None`` holding native machine code defining a Python extension
+   module shared library that should be imported from memory.
+
+``in_memory_shared_library``
+   ``bytes`` or ``None`` holding a shared library that should be imported from
+   memory.
