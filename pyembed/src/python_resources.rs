@@ -8,14 +8,16 @@ Management of Python resources.
 
 use {
     super::pystr::{path_to_pathlib_path, path_to_pyobject},
-    cpython::exc::{ImportError, OSError},
+    cpython::exc::{ImportError, OSError, TypeError},
     cpython::{
-        py_class, py_class_prop_getter, NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr,
-        PyList, PyObject, PyResult, PyString, Python, PythonObject, ToPyObject,
+        py_class, py_class_call_slot_impl_with_ref, py_class_prop_getter, py_class_prop_setter,
+        NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyObject, PyResult,
+        PyString, Python, PythonObject, ToPyObject,
     },
     python3_sys as pyffi,
     python_packed_resources::data::{Resource, ResourceFlavor},
     std::borrow::Cow,
+    std::cell::RefCell,
     std::collections::{HashMap, HashSet},
     std::ffi::CStr,
     std::iter::FromIterator,
@@ -781,14 +783,14 @@ impl<'a> PythonResourcesState<'a, u8> {
 }
 
 py_class!(class OxidizedResource |py| {
-    data resource: Resource<'static, u8>;
+    data resource: RefCell<Resource<'static, u8>>;
 
     def __repr__(&self) -> PyResult<String> {
-        Ok(format!("<OxidizedResource name=\"{}\">", self.resource(py).name.to_string()))
+        Ok(format!("<OxidizedResource name=\"{}\">", self.resource(py).borrow().name.to_string()))
     }
 
     @property def flavor(&self) -> PyResult<&'static str> {
-        Ok(match self.resource(py).flavor {
+        Ok(match self.resource(py).borrow().flavor {
             ResourceFlavor::None => "none",
             ResourceFlavor::Module => "module",
             ResourceFlavor::BuiltinExtensionModule => "builtin",
@@ -799,96 +801,106 @@ py_class!(class OxidizedResource |py| {
     }
 
     @property def name(&self) -> PyResult<String> {
-        Ok(self.resource(py).name.to_string())
+        Ok(self.resource(py).borrow().name.to_string())
+    }
+
+    @name.setter def set_name(&self, value: Option<String>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().name = Cow::Owned(value);
+
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete name"))
+        }
     }
 
     @property def is_package(&self) -> PyResult<bool> {
-        Ok(self.resource(py).is_package)
+        Ok(self.resource(py).borrow().is_package)
     }
 
     @property def is_namespace_package(&self) -> PyResult<bool> {
-        Ok(self.resource(py).is_namespace_package)
+        Ok(self.resource(py).borrow().is_namespace_package)
     }
 
     @property def in_memory_source(&self) -> PyResult<Option<Vec<u8>>> {
-        Ok(self.resource(py).in_memory_source.as_ref().map(|x| x.to_vec()))
+        Ok(self.resource(py).borrow().in_memory_source.as_ref().map(|x| x.to_vec()))
     }
 
     @property def in_memory_bytecode(&self) -> PyResult<Option<Vec<u8>>> {
-        Ok(self.resource(py).in_memory_bytecode.as_ref().map(|x| x.to_vec()))
+        Ok(self.resource(py).borrow().in_memory_bytecode.as_ref().map(|x| x.to_vec()))
     }
 
     @property def in_memory_bytecode_opt1(&self) -> PyResult<Option<Vec<u8>>> {
-        Ok(self.resource(py).in_memory_bytecode_opt1.as_ref().map(|x| x.to_vec()))
+        Ok(self.resource(py).borrow().in_memory_bytecode_opt1.as_ref().map(|x| x.to_vec()))
     }
 
     @property def in_memory_bytecode_opt2(&self) -> PyResult<Option<Vec<u8>>> {
-        Ok(self.resource(py).in_memory_bytecode_opt2.as_ref().map(|x| x.to_vec()))
+        Ok(self.resource(py).borrow().in_memory_bytecode_opt2.as_ref().map(|x| x.to_vec()))
     }
 
     @property def in_memory_extension_module_shared_library(&self) -> PyResult<Option<Vec<u8>>> {
-        Ok(self.resource(py).in_memory_extension_module_shared_library.as_ref().map(|x| x.to_vec()))
+        Ok(self.resource(py).borrow().in_memory_extension_module_shared_library.as_ref().map(|x| x.to_vec()))
     }
 
     @property def in_memory_package_resources(&self) -> PyResult<Option<HashMap<String, Vec<u8>>>> {
-        Ok(self.resource(py).in_memory_package_resources.as_ref().map(|x| {
+        Ok(self.resource(py).borrow().in_memory_package_resources.as_ref().map(|x| {
             HashMap::from_iter(x.iter().map(|(k, v)| (k.to_string(), v.to_vec())))
         }))
     }
 
     @property def in_memory_distribution_resources(&self) -> PyResult<Option<HashMap<String, Vec<u8>>>> {
-        Ok(self.resource(py).in_memory_distribution_resources.as_ref().map(|x| {
+        Ok(self.resource(py).borrow().in_memory_distribution_resources.as_ref().map(|x| {
             HashMap::from_iter(x.iter().map(|(k, v)| (k.to_string(), v.to_vec())))
         }))
     }
 
     @property def in_memory_shared_library(&self) -> PyResult<Option<Vec<u8>>> {
-        Ok(self.resource(py).in_memory_shared_library.as_ref().map(|x| x.to_vec()))
+        Ok(self.resource(py).borrow().in_memory_shared_library.as_ref().map(|x| x.to_vec()))
     }
 
     @property def shared_library_dependency_names(&self) -> PyResult<Option<Vec<String>>> {
-        Ok(self.resource(py).shared_library_dependency_names.as_ref().map(|x| {
+        Ok(self.resource(py).borrow().shared_library_dependency_names.as_ref().map(|x| {
             Vec::from_iter(x.iter().map(|v| v.to_string()))
         }))
     }
 
     @property def relative_path_module_source(&self) -> PyResult<PyObject> {
-        Ok(self.resource(py).relative_path_module_source.as_ref().map_or_else(
+        Ok(self.resource(py).borrow().relative_path_module_source.as_ref().map_or_else(
             || Ok(py.None()),
             |x| path_to_pathlib_path(py, x)
         )?)
     }
 
     @property def relative_path_module_bytecode(&self) -> PyResult<PyObject> {
-        Ok(self.resource(py).relative_path_module_bytecode.as_ref().map_or_else(
+        Ok(self.resource(py).borrow().relative_path_module_bytecode.as_ref().map_or_else(
             || Ok(py.None()),
             |x| path_to_pathlib_path(py, x)
         )?)
     }
 
     @property def relative_path_module_bytecode_opt1(&self) -> PyResult<PyObject> {
-        Ok(self.resource(py).relative_path_module_bytecode_opt1.as_ref().map_or_else(
+        Ok(self.resource(py).borrow().relative_path_module_bytecode_opt1.as_ref().map_or_else(
             || Ok(py.None()),
             |x| path_to_pathlib_path(py, x)
         )?)
     }
 
     @property def relative_path_module_bytecode_opt2(&self) -> PyResult<PyObject> {
-        Ok(self.resource(py).relative_path_module_bytecode_opt2.as_ref().map_or_else(
+        Ok(self.resource(py).borrow().relative_path_module_bytecode_opt2.as_ref().map_or_else(
             || Ok(py.None()),
             |x| path_to_pathlib_path(py, x)
         )?)
     }
 
     @property def relative_path_extension_module_shared_library(&self) -> PyResult<PyObject> {
-        Ok(self.resource(py).relative_path_extension_module_shared_library.as_ref().map_or_else(
+        Ok(self.resource(py).borrow().relative_path_extension_module_shared_library.as_ref().map_or_else(
             || Ok(py.None()),
             |x| path_to_pathlib_path(py, x)
         )?)
     }
 
     @property def relative_path_package_resources(&self) -> PyResult<PyObject> {
-        Ok(self.resource(py).relative_path_package_resources.as_ref().map_or_else(
+        Ok(self.resource(py).borrow().relative_path_package_resources.as_ref().map_or_else(
             || Ok(py.None()),
             |x| -> PyResult<PyObject> {
                 let res = PyDict::new(py);
@@ -903,7 +915,7 @@ py_class!(class OxidizedResource |py| {
     }
 
     @property def relative_path_distribution_resources(&self) -> PyResult<PyObject> {
-        Ok(self.resource(py).relative_path_distribution_resources.as_ref().map_or_else(
+        Ok(self.resource(py).borrow().relative_path_distribution_resources.as_ref().map_or_else(
             || Ok(py.None()),
             |x| -> PyResult<PyObject> {
                 let res = PyDict::new(py);
@@ -920,7 +932,7 @@ py_class!(class OxidizedResource |py| {
 
 /// Convert a Resource to an OxidizedResource.
 pub fn resource_to_pyobject(py: Python, resource: &Resource<u8>) -> PyResult<PyObject> {
-    let resource = OxidizedResource::create_instance(py, resource.to_owned())?;
+    let resource = OxidizedResource::create_instance(py, RefCell::new(resource.to_owned()))?;
 
     Ok(resource.into_object())
 }

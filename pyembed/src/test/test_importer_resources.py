@@ -57,6 +57,21 @@ class TestImporterConstruction(unittest.TestCase):
         resource = [x for x in resources if x.name == "_frozen_importlib"][0]
         self.assertEqual(resource.flavor, "frozen")
 
+    def test_resource_mutate(self):
+        f = Finder()
+        resources = f.indexed_resources()
+
+        resource = resources[0]
+
+        resource.name = "foobar"
+        self.assertEqual(resource.name, "foobar")
+
+        with self.assertRaises(TypeError):
+            del resource.name
+
+        with self.assertRaises(TypeError):
+            resource.name = None
+
 
 if __name__ == "__main__":
     # Reset command arguments so test runner isn't confused.
