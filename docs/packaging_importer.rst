@@ -139,6 +139,51 @@ the finder knows about.
 
 See :ref:`oxidized_resource` for more on the returned type.
 
+.. _pyoxidizer_finder_add_resource:
+
+``add_resource(self, resource: OxidizedResource)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method registers an :ref:`oxidized_resource` instance with the finder,
+enabling the finder to use it to service lookups.
+
+When an ``OxidizedResource`` is registered, its data is copied into the
+finder instance. So changes to the original object are not reflected on the
+finder.
+
+Resources are stored in an invisible hash map where they are indexed by
+the ``name`` attribute. When a resource is added, any existing resource
+under the same name has its data replaced by the incoming ``OxidizedResource``
+instance.
+
+For a Python module to be made available for import, it must have
+bytecode registered: it isn't enough to register source code. If you have
+source code and want to produce bytecode, you can do something like the
+following:
+
+.. code-block:: python
+
+   def register_module(finder, module_name, source):
+       code = compile(source, module_name, "exec")
+       bytecode = marshal.dumps(code)
+
+       resource = OxidizedResource()
+       resource.name = module_name
+       resource.flavor = "module"
+       resource.in_memory_bytecode = bytecode
+       resource.in_memory_source = source
+
+       finder.add_resource(resource)
+
+``add_resources(self, resources: List[OxidizedResource])``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method is syntactic sugar for calling ``add_resource()`` for every
+item in an iterable. It is exposed because function call overhead in Python
+can be non-trivial and it can be quicker to pass in an iterable of
+``OxidizedResource`` than to call ``add_resource()`` potentially hundreds
+of times.
+
 Behavior and Compliance
 =======================
 
@@ -429,3 +474,30 @@ The following flavors are defined:
 
 ``shared_library``
    A shared library. e.g. a ``.so`` or ``.dll``.
+
+Security Implications of Loading Resources
+==========================================
+
+``PyOxidizerFinder`` allows Python code to define its own ``OxidizedResource``
+instances to be made available for loading. This means Python code can define
+its own Python module source or bytecode that could later be executed. It also
+allows registration of extension modules and shared libraries, which give
+a vector for allowing execution of native machine code.
+
+This feature has security implications, as it provides a vector for arbitrary
+code execution.
+
+While it might be possible to restrict this feature to provide stronger
+security protections, we have not done so yet. Our thinking here is that
+it is extremely difficult to sandbox Python code. Security sandboxing at the
+Python layer is effectively impossible: the only effective mechanism to
+sandbox Python is to add protections at the process level. e.g. by restricting
+what system calls can be performed. We feel that the capability to inject
+new Python modules and even shared libraries via ``PyOxidizerFinder`` doesn't
+provide any new or novel vector that doesn't already exist in Python's standard
+library and can't already be exploited by well-crafted Python code. Therefore,
+this feature isn't a net regression in security protection.
+
+If you have a use case that requires limiting the features of
+``PyOxidizerFinder`` so security isn't sacrificed, please
+`file an issue <https://github.com/indygreg/PyOxidizer/issues>`.

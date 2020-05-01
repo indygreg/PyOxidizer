@@ -79,6 +79,14 @@ New Features
   :ref:`constructed from Python code <pyoxidizer_finder__new__>`.
   This means that a Python application can instantiate and install its
   own oxidized module importer.
+* The resources indexed by ``PyOxidizerFinder`` instances are now
+  representable to Python code as ``OxidizedResource`` instances. These
+  types can be created, queried, and mutated by Python code. See
+  :ref:`oxidized_resource` for the API.
+* ``PyOxidizerFinder`` instances can now have custom ``OxidizedResource``
+  instances registered against them. This means Python code can collect
+  its own Python modules and register them with the importer. See
+  :ref:`pyoxidizer_finder_add_resource` for more.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

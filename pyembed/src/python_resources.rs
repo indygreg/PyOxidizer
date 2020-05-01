@@ -399,6 +399,19 @@ impl<'a> PythonResourcesState<'a, u8> {
         Ok(())
     }
 
+    /// Add a resource to the instance.
+    ///
+    /// Memory in the resource must live for at least as long as the lifetime of
+    /// the resources this instance was created with.
+    pub fn add_resource<'resource: 'a>(
+        &mut self,
+        resource: Resource<'resource, u8>,
+    ) -> Result<(), &'static str> {
+        self.resources.insert(resource.name.clone(), resource);
+
+        Ok(())
+    }
+
     /// Attempt to resolve an importable Python module.
     pub fn resolve_importable_module(
         &self,
@@ -1170,4 +1183,9 @@ pub fn resource_to_pyobject(py: Python, resource: &Resource<u8>) -> PyResult<PyO
     let resource = OxidizedResource::create_instance(py, RefCell::new(resource.to_owned()))?;
 
     Ok(resource.into_object())
+}
+
+#[inline]
+pub fn pyobject_to_resource(py: Python, resource: OxidizedResource) -> Resource<u8> {
+    resource.resource(py).borrow().clone()
 }

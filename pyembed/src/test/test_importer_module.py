@@ -22,6 +22,8 @@ class TestImporterModule(unittest.TestCase):
         self.assertEqual(
             attrs,
             {
+                "add_resource",
+                "add_resources",
                 "create_module",
                 "exec_module",
                 "find_distributions",

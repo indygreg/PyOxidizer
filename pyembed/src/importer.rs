@@ -11,7 +11,10 @@ for importing Python modules from memory.
 
 use {
     super::conversion::pyobject_to_pathbuf,
-    super::python_resources::{resource_to_pyobject, OptimizeLevel, PythonResourcesState},
+    super::python_resources::{
+        pyobject_to_resource, resource_to_pyobject, OptimizeLevel, OxidizedResource,
+        PythonResourcesState,
+    },
     cpython::buffer::PyBuffer,
     cpython::exc::{FileNotFoundError, ImportError, ValueError},
     cpython::{
@@ -414,6 +417,23 @@ impl ImporterState {
 
         unsafe { &*(ptr as *const PythonResourcesState<u8>) }
     }
+
+    /// Obtain a mutable `PythonResourcesState` associated with this instance.
+    ///
+    /// There is no run-time checking for mutation exclusion. So don't like this
+    /// leak outside of a single call site that needs to access it!
+    #[allow(clippy::mut_from_ref)]
+    pub fn get_resources_state_mut<'a>(&self) -> &mut PythonResourcesState<'a, u8> {
+        let ptr = unsafe {
+            pyffi::PyCapsule_GetPointer(self.resources_state.as_object().as_ptr(), std::ptr::null())
+        };
+
+        if ptr.is_null() {
+            panic!("null pointer in resources state capsule");
+        }
+
+        unsafe { &mut *(ptr as *mut PythonResourcesState<u8>) }
+    }
 }
 
 impl Drop for ImporterState {
@@ -522,6 +542,14 @@ py_class!(class PyOxidizerFinder |py| {
 
     def indexed_resources(&self) -> PyResult<PyObject> {
         self.indexed_resources_impl(py)
+    }
+
+    def add_resource(&self, resource: OxidizedResource) -> PyResult<PyObject> {
+        self.add_resource_impl(py, resource)
+    }
+
+    def add_resources(&self, resources: Vec<OxidizedResource>) -> PyResult<PyObject> {
+        self.add_resources_impl(py, resources)
     }
 });
 
@@ -944,6 +972,44 @@ impl PyOxidizerFinder {
             .collect();
 
         Ok(objects?.to_py_object(py).into_object())
+    }
+
+    fn add_resource_impl(&self, py: Python, resource: OxidizedResource) -> PyResult<PyObject> {
+        let resources_state: &mut PythonResourcesState<u8> =
+            self.state(py).get_resources_state_mut();
+
+        resources_state
+            .add_resource(pyobject_to_resource(py, resource))
+            .or_else(|_| {
+                Err(PyErr::new::<ValueError, _>(
+                    py,
+                    "unable to add resource to finder",
+                ))
+            })?;
+
+        Ok(py.None())
+    }
+
+    fn add_resources_impl(
+        &self,
+        py: Python,
+        resources: Vec<OxidizedResource>,
+    ) -> PyResult<PyObject> {
+        let resources_state: &mut PythonResourcesState<u8> =
+            self.state(py).get_resources_state_mut();
+
+        for resource in resources {
+            resources_state
+                .add_resource(pyobject_to_resource(py, resource))
+                .or_else(|_| {
+                    Err(PyErr::new::<ValueError, _>(
+                        py,
+                        "unable to add resource to finder",
+                    ))
+                })?;
+        }
+
+        Ok(py.None())
     }
 }
 

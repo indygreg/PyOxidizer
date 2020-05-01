@@ -2,6 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import importlib.machinery
+import marshal
 import pathlib
 import sys
 import unittest
@@ -535,6 +537,54 @@ class TestImporterResources(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             resource.relative_path_distribution_resources = {"foo": None}
+
+    def test_add_resource_bad_type(self):
+        f = Finder()
+
+        with self.assertRaises(TypeError):
+            f.add_resource(None)
+
+    def test_add_resource_module(self):
+        f = Finder()
+        resource = OxidizedResource()
+        resource.name = "my_module"
+        resource.flavor = "module"
+
+        source = b"print('hello from my_module')"
+        code = compile(source, "my_module.py", "exec")
+        bytecode = marshal.dumps(code)
+
+        resource.in_memory_source = source
+        resource.in_memory_bytecode = bytecode
+
+        f.add_resource(resource)
+
+        resources = [r for r in f.indexed_resources() if r.name == "my_module"]
+        self.assertEqual(len(resources), 1)
+
+        spec = f.find_spec("my_module", None)
+        self.assertIsInstance(spec, importlib.machinery.ModuleSpec)
+        self.assertEqual(spec.name, "my_module")
+        self.assertIsNone(spec.loader_state)
+        self.assertIsNone(spec.submodule_search_locations)
+
+        self.assertEqual(f.get_source("my_module"), source.decode("utf-8"))
+        self.assertEqual(f.get_code("my_module"), code)
+
+    def test_add_resources(self):
+        f = Finder()
+        a = OxidizedResource()
+        a.name = "foo_a"
+        a.flavor = "module"
+
+        b = OxidizedResource()
+        b.name = "foo_b"
+        b.flavor = "module"
+
+        f.add_resources([a, b])
+
+        resources = [r for r in f.indexed_resources() if r.name in ("foo_a", "foo_b")]
+        self.assertEqual(len(resources), 2)
 
 
 if __name__ == "__main__":
