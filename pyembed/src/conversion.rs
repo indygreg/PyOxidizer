@@ -5,6 +5,7 @@
 //! Bridge Rust and Python string types.
 
 use {
+    cpython::buffer::PyBuffer,
     cpython::exc::UnicodeDecodeError,
     cpython::{PyErr, PyObject, PyResult, Python},
     python3_sys as pyffi,
@@ -163,4 +164,15 @@ pub fn pyobject_to_pathbuf(py: Python, value: PyObject) -> PyResult<PathBuf> {
     let rust_normalized = normalized.extract::<String>(py)?;
 
     Ok(PathBuf::from(rust_normalized))
+}
+
+/// Attempt to convert a PyObject to an owned Vec<u8>.
+pub fn pyobject_to_owned_bytes(py: Python, value: &PyObject) -> PyResult<Vec<u8>> {
+    let buffer = PyBuffer::get(py, value)?;
+
+    let data = unsafe {
+        std::slice::from_raw_parts::<u8>(buffer.buf_ptr() as *const _, buffer.len_bytes())
+    };
+
+    Ok(data.to_owned())
 }

@@ -126,6 +126,30 @@ class TestImporterResources(unittest.TestCase):
         with self.assertRaises(TypeError):
             resource.is_namespace_package = "foo"
 
+    def test_resource_set_in_memory_source(self):
+        resource = OxidizedResource()
+
+        # bytes works.
+        resource.in_memory_source = b"import os"
+        self.assertEqual(resource.in_memory_source, b"import os")
+
+        # memoryview works.
+        resource.in_memory_source = memoryview(b"import io")
+        self.assertEqual(resource.in_memory_source, b"import io")
+
+        # bytearray works.
+        resource.in_memory_source = bytearray(b"foo bar")
+        self.assertEqual(resource.in_memory_source, b"foo bar")
+
+        with self.assertRaises(TypeError):
+            del resource.in_memory_source
+
+        with self.assertRaises(TypeError):
+            resource.in_memory_source = True
+
+        with self.assertRaises(TypeError):
+            resource.in_memory_source = "import foo"
+
 
 if __name__ == "__main__":
     # Reset command arguments so test runner isn't confused.

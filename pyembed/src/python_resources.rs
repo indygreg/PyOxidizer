@@ -7,7 +7,7 @@ Management of Python resources.
 */
 
 use {
-    super::conversion::{path_to_pathlib_path, path_to_pyobject},
+    super::conversion::{path_to_pathlib_path, path_to_pyobject, pyobject_to_owned_bytes},
     cpython::exc::{ImportError, OSError, TypeError, ValueError},
     cpython::{
         py_class, py_class_call_slot_impl_with_ref, py_class_prop_getter, py_class_prop_setter,
@@ -864,8 +864,18 @@ py_class!(class OxidizedResource |py| {
         }
     }
 
-    @property def in_memory_source(&self) -> PyResult<Option<Vec<u8>>> {
-        Ok(self.resource(py).borrow().in_memory_source.as_ref().map(|x| x.to_vec()))
+    @property def in_memory_source(&self) -> PyResult<Option<PyBytes>> {
+        Ok(self.resource(py).borrow().in_memory_source.as_ref().map(|x| PyBytes::new(py, x)))
+    }
+
+    @in_memory_source.setter def set_in_memory_source(&self, value: Option<PyObject>) -> PyResult<()> {
+        if let Some(value) = value {
+            let data = pyobject_to_owned_bytes(py, &value)?;
+            self.resource(py).borrow_mut().in_memory_source = Some(Cow::Owned(data));
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete in_memory_source"))
+        }
     }
 
     @property def in_memory_bytecode(&self) -> PyResult<Option<Vec<u8>>> {
