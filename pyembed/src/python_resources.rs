@@ -875,6 +875,36 @@ py_class!(class OxidizedResource |py| {
             |x| path_to_pathlib_path(py, x)
         )?)
     }
+
+    @property def relative_path_package_resources(&self) -> PyResult<PyObject> {
+        Ok(self.resource(py).relative_path_package_resources.as_ref().map_or_else(
+            || Ok(py.None()),
+            |x| -> PyResult<PyObject> {
+                let res = PyDict::new(py);
+
+                for (k, v) in x.iter() {
+                    res.set_item(py, k, path_to_pathlib_path(py, v)?)?;
+                }
+
+                Ok(res.into_object())
+            }
+        )?)
+    }
+
+    @property def relative_path_distribution_resources(&self) -> PyResult<PyObject> {
+        Ok(self.resource(py).relative_path_distribution_resources.as_ref().map_or_else(
+            || Ok(py.None()),
+            |x| -> PyResult<PyObject> {
+                let res = PyDict::new(py);
+
+                for (k, v) in x.iter() {
+                    res.set_item(py, k, path_to_pathlib_path(py, v)?)?;
+                }
+
+                Ok(res.into_object())
+            }
+        )?)
+    }
 });
 
 /// Convert a Resource to an OxidizedResource.

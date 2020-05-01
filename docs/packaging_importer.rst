@@ -356,3 +356,17 @@ The following properties/attributes exist on ``OxidizedResource`` instances:
 ``relative_path_extension_module_shared_library``
    ``pathlib.Path`` or ``None`` holding the relative path to a Python extension
    module that should be imported from the filesystem.
+
+``relative_path_package_resources``
+   ``dict[str, pathlib.Path]`` or ``None`` holding resource files to make
+   available to the ``importlib.resources`` APIs via filesystem access. The
+   ``name`` of this object will be a Python package name. Keys in this dict are
+   filenames under that package. Values are relative paths to files from which
+   to read data.
+
+``relative_path_distribution_resources``
+   ``dict[str, pathlib.Path]`` or ``None`` holding resource files to make
+   available to the ``importlib.metadata`` APIs via filesystem access. The
+   ``name`` of this object will be a Python package name. Keys in this dict are
+   filenames under that package. Values are relative paths to files from which
+   to read data.

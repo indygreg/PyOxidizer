@@ -45,6 +45,8 @@ class TestImporterConstruction(unittest.TestCase):
         self.assertIsNone(resource.relative_path_module_bytecode_opt1)
         self.assertIsNone(resource.relative_path_module_bytecode_opt2)
         self.assertIsNone(resource.relative_path_extension_module_shared_library)
+        self.assertIsNone(resource.relative_path_package_resources)
+        self.assertIsNone(resource.relative_path_distribution_resources)
 
 
 if __name__ == "__main__":
