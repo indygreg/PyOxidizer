@@ -176,3 +176,14 @@ pub fn pyobject_to_owned_bytes(py: Python, value: &PyObject) -> PyResult<Vec<u8>
 
     Ok(data.to_owned())
 }
+
+/// Attempt to convert a PyObject to owned Vec<u8>.
+///
+/// Returns Ok(None) if PyObject is None.
+pub fn pyobject_to_owned_bytes_optional(py: Python, value: &PyObject) -> PyResult<Option<Vec<u8>>> {
+    if value == &py.None() {
+        Ok(None)
+    } else {
+        Ok(Some(pyobject_to_owned_bytes(py, value)?))
+    }
+}

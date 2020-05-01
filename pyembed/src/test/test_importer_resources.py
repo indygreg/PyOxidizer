@@ -141,6 +141,9 @@ class TestImporterResources(unittest.TestCase):
         resource.in_memory_source = bytearray(b"foo bar")
         self.assertEqual(resource.in_memory_source, b"foo bar")
 
+        resource.in_memory_source = None
+        self.assertIsNone(resource.in_memory_source)
+
         with self.assertRaises(TypeError):
             del resource.in_memory_source
 
@@ -160,6 +163,13 @@ class TestImporterResources(unittest.TestCase):
         self.assertEqual(resource.in_memory_bytecode, b"b0")
         self.assertEqual(resource.in_memory_bytecode_opt1, b"b1")
         self.assertEqual(resource.in_memory_bytecode_opt2, b"b2")
+
+        resource.in_memory_bytecode = None
+        self.assertIsNone(resource.in_memory_bytecode)
+        resource.in_memory_bytecode_opt1 = None
+        self.assertIsNone(resource.in_memory_bytecode_opt1)
+        resource.in_memory_bytecode_opt2 = None
+        self.assertIsNone(resource.in_memory_bytecode_opt2)
 
         with self.assertRaises(TypeError):
             del resource.in_memory_bytecode

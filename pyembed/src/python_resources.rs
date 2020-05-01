@@ -7,7 +7,7 @@ Management of Python resources.
 */
 
 use {
-    super::conversion::{path_to_pathlib_path, path_to_pyobject, pyobject_to_owned_bytes},
+    super::conversion::{path_to_pathlib_path, path_to_pyobject, pyobject_to_owned_bytes_optional},
     cpython::exc::{ImportError, OSError, TypeError, ValueError},
     cpython::{
         py_class, py_class_call_slot_impl_with_ref, py_class_prop_getter, py_class_prop_setter,
@@ -870,8 +870,9 @@ py_class!(class OxidizedResource |py| {
 
     @in_memory_source.setter def set_in_memory_source(&self, value: Option<PyObject>) -> PyResult<()> {
         if let Some(value) = value {
-            let data = pyobject_to_owned_bytes(py, &value)?;
-            self.resource(py).borrow_mut().in_memory_source = Some(Cow::Owned(data));
+            self.resource(py).borrow_mut().in_memory_source =
+                pyobject_to_owned_bytes_optional(py, &value)?
+                    .map(|x| Cow::Owned(x));
             Ok(())
         } else {
             Err(PyErr::new::<TypeError, _>(py, "cannot delete in_memory_source"))
@@ -884,8 +885,9 @@ py_class!(class OxidizedResource |py| {
 
     @in_memory_bytecode.setter def set_in_memory_bytecode(&self, value: Option<PyObject>) -> PyResult<()> {
         if let Some(value) = value {
-            let data = pyobject_to_owned_bytes(py, &value)?;
-            self.resource(py).borrow_mut().in_memory_bytecode = Some(Cow::Owned(data));
+            self.resource(py).borrow_mut().in_memory_bytecode =
+                pyobject_to_owned_bytes_optional(py, &value)?
+                    .map(|x| Cow::Owned(x));
             Ok(())
         } else {
             Err(PyErr::new::<TypeError, _>(py, "cannot delete in_memory_bytecode"))
@@ -898,8 +900,9 @@ py_class!(class OxidizedResource |py| {
 
     @in_memory_bytecode_opt1.setter def set_in_memory_bytecode_opt1(&self, value: Option<PyObject>) -> PyResult<()> {
         if let Some(value) = value {
-            let data = pyobject_to_owned_bytes(py, &value)?;
-            self.resource(py).borrow_mut().in_memory_bytecode_opt1 = Some(Cow::Owned(data));
+            self.resource(py).borrow_mut().in_memory_bytecode_opt1 =
+                pyobject_to_owned_bytes_optional(py, &value)?
+                    .map(|x| Cow::Owned(x));
             Ok(())
         } else {
             Err(PyErr::new::<TypeError, _>(py, "cannot delete in_memory_bytecode_opt1"))
@@ -912,8 +915,9 @@ py_class!(class OxidizedResource |py| {
 
     @in_memory_bytecode_opt2.setter def set_in_memory_bytecode_opt2(&self, value: Option<PyObject>) -> PyResult<()> {
         if let Some(value) = value {
-            let data = pyobject_to_owned_bytes(py, &value)?;
-            self.resource(py).borrow_mut().in_memory_bytecode_opt2 = Some(Cow::Owned(data));
+            self.resource(py).borrow_mut().in_memory_bytecode_opt2 =
+                pyobject_to_owned_bytes_optional(py, &value)?
+                    .map(|x| Cow::Owned(x));
             Ok(())
         } else {
             Err(PyErr::new::<TypeError, _>(py, "cannot delete in_memory_bytecode_opt2"))
