@@ -9,7 +9,7 @@ Management of Python resources.
 use {
     super::conversion::{
         path_to_pathlib_path, path_to_pyobject, pyobject_optional_resources_map_to_owned_bytes,
-        pyobject_to_owned_bytes_optional,
+        pyobject_to_owned_bytes_optional, pyobject_to_pathbuf_optional,
     },
     cpython::exc::{ImportError, OSError, TypeError, ValueError},
     cpython::{
@@ -1021,11 +1021,35 @@ py_class!(class OxidizedResource |py| {
         )?)
     }
 
+    @relative_path_module_source.setter def set_relative_path_module_source(&self, value: Option<PyObject>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().relative_path_module_source =
+                pyobject_to_pathbuf_optional(py, value)?
+                    .map(|x| Cow::Owned(x));
+
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete relative_path_module_source"))
+        }
+    }
+
     @property def relative_path_module_bytecode(&self) -> PyResult<PyObject> {
         Ok(self.resource(py).borrow().relative_path_module_bytecode.as_ref().map_or_else(
             || Ok(py.None()),
             |x| path_to_pathlib_path(py, x)
         )?)
+    }
+
+    @relative_path_module_bytecode.setter def set_relative_path_module_bytecode(&self, value: Option<PyObject>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().relative_path_module_bytecode =
+                pyobject_to_pathbuf_optional(py, value)?
+                    .map(|x| Cow::Owned(x));
+
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete relative_path_module_bytecode"))
+        }
     }
 
     @property def relative_path_module_bytecode_opt1(&self) -> PyResult<PyObject> {
@@ -1035,6 +1059,18 @@ py_class!(class OxidizedResource |py| {
         )?)
     }
 
+    @relative_path_module_bytecode_opt1.setter def set_relative_path_module_bytecode_opt1(&self, value: Option<PyObject>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().relative_path_module_bytecode_opt1 =
+                pyobject_to_pathbuf_optional(py, value)?
+                    .map(|x| Cow::Owned(x));
+
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete relative_path_module_bytecode_opt1"))
+        }
+    }
+
     @property def relative_path_module_bytecode_opt2(&self) -> PyResult<PyObject> {
         Ok(self.resource(py).borrow().relative_path_module_bytecode_opt2.as_ref().map_or_else(
             || Ok(py.None()),
@@ -1042,11 +1078,35 @@ py_class!(class OxidizedResource |py| {
         )?)
     }
 
+    @relative_path_module_bytecode_opt2.setter def set_relative_path_module_bytecode_opt2(&self, value: Option<PyObject>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().relative_path_module_bytecode_opt2 =
+                pyobject_to_pathbuf_optional(py, value)?
+                    .map(|x| Cow::Owned(x));
+
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete relative_path_module_bytecode_opt2"))
+        }
+    }
+
     @property def relative_path_extension_module_shared_library(&self) -> PyResult<PyObject> {
         Ok(self.resource(py).borrow().relative_path_extension_module_shared_library.as_ref().map_or_else(
             || Ok(py.None()),
             |x| path_to_pathlib_path(py, x)
         )?)
+    }
+
+    @relative_path_extension_module_shared_library.setter def set_relative_path_extension_module_shared_library(&self, value: Option<PyObject>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().relative_path_extension_module_shared_library =
+                pyobject_to_pathbuf_optional(py, value)?
+                    .map(|x| Cow::Owned(x));
+
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete relative_path_extension_module_shared_library"))
+        }
     }
 
     @property def relative_path_package_resources(&self) -> PyResult<PyObject> {

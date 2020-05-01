@@ -2,6 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import pathlib
 import sys
 import unittest
 
@@ -308,6 +309,140 @@ class TestImporterResources(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             resource.shared_library_dependency_names = [b"foo"]
+
+    def test_resource_relative_path_module_source(self):
+        resource = OxidizedResource()
+
+        resource.relative_path_module_source = "lib/foo.py"
+        self.assertEqual(
+            resource.relative_path_module_source, pathlib.Path("lib/foo.py")
+        )
+
+        resource.relative_path_module_source = pathlib.Path("bar.py")
+        self.assertEqual(resource.relative_path_module_source, pathlib.Path("bar.py"))
+
+        resource.relative_path_module_source = b"foo.py"
+        self.assertEqual(resource.relative_path_module_source, pathlib.Path("foo.py"))
+
+        resource.relative_path_module_source = None
+        self.assertIsNone(resource.relative_path_module_source)
+
+        with self.assertRaises(TypeError):
+            del resource.relative_path_module_source
+
+        with self.assertRaises(TypeError):
+            resource.relative_path_module_source = True
+
+    def test_resource_relative_path_module_bytecode(self):
+        resource = OxidizedResource()
+
+        resource.relative_path_module_bytecode = "lib/foo.pyc"
+        self.assertEqual(
+            resource.relative_path_module_bytecode, pathlib.Path("lib/foo.pyc")
+        )
+
+        resource.relative_path_module_bytecode = pathlib.Path("bar.pyc")
+        self.assertEqual(
+            resource.relative_path_module_bytecode, pathlib.Path("bar.pyc")
+        )
+
+        resource.relative_path_module_bytecode = b"foo.pyc"
+        self.assertEqual(
+            resource.relative_path_module_bytecode, pathlib.Path("foo.pyc")
+        )
+
+        resource.relative_path_module_bytecode = None
+        self.assertIsNone(resource.relative_path_module_bytecode)
+
+        with self.assertRaises(TypeError):
+            del resource.relative_path_module_bytecode
+
+        with self.assertRaises(TypeError):
+            resource.relative_path_module_bytecode = True
+
+    def test_resource_relative_path_module_bytecode_opt1(self):
+        resource = OxidizedResource()
+
+        resource.relative_path_module_bytecode_opt1 = "lib/foo.pyc"
+        self.assertEqual(
+            resource.relative_path_module_bytecode_opt1, pathlib.Path("lib/foo.pyc")
+        )
+
+        resource.relative_path_module_bytecode_opt1 = pathlib.Path("bar.pyc")
+        self.assertEqual(
+            resource.relative_path_module_bytecode_opt1, pathlib.Path("bar.pyc")
+        )
+
+        resource.relative_path_module_bytecode_opt1 = b"foo.pyc"
+        self.assertEqual(
+            resource.relative_path_module_bytecode_opt1, pathlib.Path("foo.pyc")
+        )
+
+        resource.relative_path_module_bytecode_opt1 = None
+        self.assertIsNone(resource.relative_path_module_bytecode_opt1)
+
+        with self.assertRaises(TypeError):
+            del resource.relative_path_module_bytecode_opt1
+
+        with self.assertRaises(TypeError):
+            resource.relative_path_module_bytecode_opt1 = True
+
+    def test_resource_relative_path_module_bytecode_opt2(self):
+        resource = OxidizedResource()
+
+        resource.relative_path_module_bytecode_opt2 = "lib/foo.pyc"
+        self.assertEqual(
+            resource.relative_path_module_bytecode_opt2, pathlib.Path("lib/foo.pyc")
+        )
+
+        resource.relative_path_module_bytecode_opt2 = pathlib.Path("bar.pyc")
+        self.assertEqual(
+            resource.relative_path_module_bytecode_opt2, pathlib.Path("bar.pyc")
+        )
+
+        resource.relative_path_module_bytecode_opt2 = b"foo.pyc"
+        self.assertEqual(
+            resource.relative_path_module_bytecode_opt2, pathlib.Path("foo.pyc")
+        )
+
+        resource.relative_path_module_bytecode_opt2 = None
+        self.assertIsNone(resource.relative_path_module_bytecode_opt2)
+
+        with self.assertRaises(TypeError):
+            del resource.relative_path_module_bytecode_opt2
+
+        with self.assertRaises(TypeError):
+            resource.relative_path_module_bytecode_opt2 = True
+
+    def test_relative_path_extension_module_shared_library(self):
+        resource = OxidizedResource()
+
+        resource.relative_path_extension_module_shared_library = "lib/foo.so"
+        self.assertEqual(
+            resource.relative_path_extension_module_shared_library,
+            pathlib.Path("lib/foo.so"),
+        )
+
+        resource.relative_path_extension_module_shared_library = pathlib.Path("bar.so")
+        self.assertEqual(
+            resource.relative_path_extension_module_shared_library,
+            pathlib.Path("bar.so"),
+        )
+
+        resource.relative_path_extension_module_shared_library = b"foo.so"
+        self.assertEqual(
+            resource.relative_path_extension_module_shared_library,
+            pathlib.Path("foo.so"),
+        )
+
+        resource.relative_path_extension_module_shared_library = None
+        self.assertIsNone(resource.relative_path_extension_module_shared_library)
+
+        with self.assertRaises(TypeError):
+            del resource.relative_path_extension_module_shared_library
+
+        with self.assertRaises(TypeError):
+            resource.relative_path_extension_module_shared_library = True
 
 
 if __name__ == "__main__":

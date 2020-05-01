@@ -167,6 +167,14 @@ pub fn pyobject_to_pathbuf(py: Python, value: PyObject) -> PyResult<PathBuf> {
     Ok(PathBuf::from(rust_normalized))
 }
 
+pub fn pyobject_to_pathbuf_optional(py: Python, value: PyObject) -> PyResult<Option<PathBuf>> {
+    if value == py.None() {
+        Ok(None)
+    } else {
+        Ok(Some(pyobject_to_pathbuf(py, value)?))
+    }
+}
+
 /// Attempt to convert a PyObject to an owned Vec<u8>.
 pub fn pyobject_to_owned_bytes(py: Python, value: &PyObject) -> PyResult<Vec<u8>> {
     let buffer = PyBuffer::get(py, value)?;
