@@ -11,7 +11,7 @@ from _pyoxidizer_importer import (
 )
 
 
-class TestImporterConstruction(unittest.TestCase):
+class TestImporterResources(unittest.TestCase):
     def test_resources_builtins(self):
         f = Finder()
         resources = f.indexed_resources()
@@ -97,6 +97,34 @@ class TestImporterConstruction(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "unknown resource flavor"):
             resource.flavor = "foo"
+
+    def test_resource_set_package(self):
+        resource = OxidizedResource()
+
+        resource.is_package = True
+        self.assertTrue(resource.is_package)
+        resource.is_package = False
+        self.assertFalse(resource.is_package)
+
+        with self.assertRaises(TypeError):
+            del resource.is_package
+
+        with self.assertRaises(TypeError):
+            resource.is_package = "foo"
+
+    def test_resource_set_namespace_package(self):
+        resource = OxidizedResource()
+
+        resource.is_namespace_package = True
+        self.assertTrue(resource.is_namespace_package)
+        resource.is_namespace_package = False
+        self.assertFalse(resource.is_namespace_package)
+
+        with self.assertRaises(TypeError):
+            del resource.is_namespace_package
+
+        with self.assertRaises(TypeError):
+            resource.is_namespace_package = "foo"
 
 
 if __name__ == "__main__":

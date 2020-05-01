@@ -842,8 +842,26 @@ py_class!(class OxidizedResource |py| {
         Ok(self.resource(py).borrow().is_package)
     }
 
+    @is_package.setter def set_is_package(&self, value: Option<bool>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().is_package = value;
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete is_package"))
+        }
+    }
+
     @property def is_namespace_package(&self) -> PyResult<bool> {
         Ok(self.resource(py).borrow().is_namespace_package)
+    }
+
+    @is_namespace_package.setter def set_is_namespace_package(&self, value: Option<bool>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().is_namespace_package = value;
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete is_namespace_package"))
+        }
     }
 
     @property def in_memory_source(&self) -> PyResult<Option<Vec<u8>>> {
