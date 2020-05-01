@@ -26,6 +26,8 @@ class TestImporterConstruction(unittest.TestCase):
 
         self.assertEqual(repr(resource), '<OxidizedResource name="_io">')
 
+        self.assertIsInstance(resource.flavor, str)
+        self.assertEqual(resource.flavor, "builtin")
         self.assertIsInstance(resource.name, str)
         self.assertEqual(resource.name, "_io")
 
@@ -47,6 +49,13 @@ class TestImporterConstruction(unittest.TestCase):
         self.assertIsNone(resource.relative_path_extension_module_shared_library)
         self.assertIsNone(resource.relative_path_package_resources)
         self.assertIsNone(resource.relative_path_distribution_resources)
+
+    def test_resources_frozen(self):
+        f = Finder()
+        resources = f.indexed_resources()
+
+        resource = [x for x in resources if x.name == "_frozen_importlib"][0]
+        self.assertEqual(resource.flavor, "frozen")
 
 
 if __name__ == "__main__":

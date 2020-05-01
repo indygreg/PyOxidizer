@@ -787,6 +787,17 @@ py_class!(class OxidizedResource |py| {
         Ok(format!("<OxidizedResource name=\"{}\">", self.resource(py).name.to_string()))
     }
 
+    @property def flavor(&self) -> PyResult<&'static str> {
+        Ok(match self.resource(py).flavor {
+            ResourceFlavor::None => "none",
+            ResourceFlavor::Module => "module",
+            ResourceFlavor::BuiltinExtensionModule => "builtin",
+            ResourceFlavor::FrozenModule => "frozen",
+            ResourceFlavor::Extension => "extension",
+            ResourceFlavor::SharedLibrary => "shared_library",
+        })
+    }
+
     @property def name(&self) -> PyResult<String> {
         Ok(self.resource(py).name.to_string())
     }

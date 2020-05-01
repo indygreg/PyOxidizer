@@ -287,6 +287,10 @@ Properties
 
 The following properties/attributes exist on ``OxidizedResource`` instances:
 
+``flavor``
+   A ``str`` describing the *flavor* of this resource.
+   See :ref:`oxidized_resource_flavors` for more.
+
 ``name``
    The ``str`` name of the resource.
 
@@ -370,3 +374,38 @@ The following properties/attributes exist on ``OxidizedResource`` instances:
    ``name`` of this object will be a Python package name. Keys in this dict are
    filenames under that package. Values are relative paths to files from which
    to read data.
+
+.. _oxidized_resource_flavors:
+
+``OxidizedResource`` Flavors
+----------------------------
+
+Each ``OxidizedResource`` instance describes a particular type of resource.
+The type is indicated by a ``flavor`` property on the instance.
+
+The following flavors are defined:
+
+``none``
+   There is no resource flavor (you shouldn't see this).
+
+``module``
+   A Python module. These typically have source or bytecode attached.
+
+   Modules can also be packages. In this case, they can hold additional
+   data, such as a mapping of resource files.
+
+``built-in``
+   A built-in extension module. These represent Python extension modules
+   that are compiled into the application and don't exist as separate
+   shared libraries.
+
+``frozen``
+   A frozen Python module. These are Python modules whose bytecode is
+   compiled into the application.
+
+``extension``
+   A Python extension module. These are shared libraries that can be loaded
+   to provide additional modules to Python.
+
+``shared_library``
+   A shared library. e.g. a ``.so`` or ``.dll``.
