@@ -282,6 +282,10 @@ Each instance represents a named entity with associated metadata and data.
 e.g. an instance can represent a Python module with associated source and
 bytecode.
 
+New instances can be constructed via ``OxidizedResource()``. This will return
+an instance whose ``flavor = "none"`` and ``name = ""``. All properties will
+be ``None`` or ``false``.
+
 Properties
 ----------
 

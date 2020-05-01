@@ -785,6 +785,12 @@ impl<'a> PythonResourcesState<'a, u8> {
 py_class!(class OxidizedResource |py| {
     data resource: RefCell<Resource<'static, u8>>;
 
+    def __new__(_cls) -> PyResult<OxidizedResource> {
+        let resource = OxidizedResource::create_instance(py, RefCell::new(Resource::<u8>::default()))?;
+
+        Ok(resource)
+    }
+
     def __repr__(&self) -> PyResult<String> {
         Ok(format!("<OxidizedResource name=\"{}\">", self.resource(py).borrow().name.to_string()))
     }

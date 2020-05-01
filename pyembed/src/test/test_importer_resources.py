@@ -57,11 +57,14 @@ class TestImporterConstruction(unittest.TestCase):
         resource = [x for x in resources if x.name == "_frozen_importlib"][0]
         self.assertEqual(resource.flavor, "frozen")
 
-    def test_resource_mutate(self):
-        f = Finder()
-        resources = f.indexed_resources()
+    def test_resource_constructor(self):
+        resource = OxidizedResource()
+        self.assertIsInstance(resource, OxidizedResource)
+        self.assertEqual(resource.flavor, "none")
+        self.assertEqual(resource.name, "")
 
-        resource = resources[0]
+    def test_resource_mutate(self):
+        resource = OxidizedResource()
 
         resource.name = "foobar"
         self.assertEqual(resource.name, "foobar")
