@@ -924,8 +924,19 @@ py_class!(class OxidizedResource |py| {
         }
     }
 
-    @property def in_memory_extension_module_shared_library(&self) -> PyResult<Option<Vec<u8>>> {
-        Ok(self.resource(py).borrow().in_memory_extension_module_shared_library.as_ref().map(|x| x.to_vec()))
+    @property def in_memory_extension_module_shared_library(&self) -> PyResult<Option<PyBytes>> {
+        Ok(self.resource(py).borrow().in_memory_extension_module_shared_library.as_ref().map(|x| PyBytes::new(py, x)))
+    }
+
+    @in_memory_extension_module_shared_library.setter def set_in_memory_extension_module_shared_library(&self, value: Option<PyObject>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().in_memory_extension_module_shared_library =
+                pyobject_to_owned_bytes_optional(py, &value)?
+                    .map(|x| Cow::Owned(x));
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete in_memory_extension_module_shared_library"))
+        }
     }
 
     @property def in_memory_package_resources(&self) -> PyResult<Option<HashMap<String, Vec<u8>>>> {
@@ -940,8 +951,19 @@ py_class!(class OxidizedResource |py| {
         }))
     }
 
-    @property def in_memory_shared_library(&self) -> PyResult<Option<Vec<u8>>> {
-        Ok(self.resource(py).borrow().in_memory_shared_library.as_ref().map(|x| x.to_vec()))
+    @property def in_memory_shared_library(&self) -> PyResult<Option<PyBytes>> {
+        Ok(self.resource(py).borrow().in_memory_shared_library.as_ref().map(|x| PyBytes::new(py, x)))
+    }
+
+    @in_memory_shared_library.setter def set_in_memory_shared_library(&self, value: Option<PyObject>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().in_memory_shared_library =
+                pyobject_to_owned_bytes_optional(py, &value)?
+                    .map(|x| Cow::Owned(x));
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete in_memory_shared_library"))
+        }
     }
 
     @property def shared_library_dependency_names(&self) -> PyResult<Option<Vec<String>>> {
