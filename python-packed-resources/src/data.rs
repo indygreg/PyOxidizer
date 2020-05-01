@@ -312,11 +312,7 @@ impl<'a, X> Resource<'a, X>
 where
     [X]: ToOwned<Owned = Vec<X>>,
 {
-    /// Produces a fully owned variation of the instance.
-    ///
-    /// This is ugly and an ugly workaround to Cow::to_owned() effectively
-    /// being .clone(), which would preserve Cow::Borrowed variants.
-    pub fn to_owned_clone(&self) -> Resource<'static, X> {
+    pub fn to_owned(&self) -> Resource<'static, X> {
         Resource {
             flavor: self.flavor,
             name: Cow::Owned(self.name.clone().into_owned()),
