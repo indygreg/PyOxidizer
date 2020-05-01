@@ -214,3 +214,21 @@ pub fn pyobject_optional_resources_map_to_owned_bytes(
         Ok(Some(res))
     }
 }
+
+pub fn pyobject_optional_resources_map_to_pathbuf(
+    py: Python,
+    value: &PyObject,
+) -> PyResult<Option<HashMap<String, PathBuf>>> {
+    if value == &py.None() {
+        Ok(None)
+    } else {
+        let source = value.cast_as::<PyDict>(py)?;
+        let mut res = HashMap::with_capacity(source.len(py));
+
+        for (k, v) in source.items(py) {
+            res.insert(k.extract::<String>(py)?, pyobject_to_pathbuf(py, v)?);
+        }
+
+        Ok(Some(res))
+    }
+}

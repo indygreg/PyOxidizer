@@ -9,7 +9,8 @@ Management of Python resources.
 use {
     super::conversion::{
         path_to_pathlib_path, path_to_pyobject, pyobject_optional_resources_map_to_owned_bytes,
-        pyobject_to_owned_bytes_optional, pyobject_to_pathbuf_optional,
+        pyobject_optional_resources_map_to_pathbuf, pyobject_to_owned_bytes_optional,
+        pyobject_to_pathbuf_optional,
     },
     cpython::exc::{ImportError, OSError, TypeError, ValueError},
     cpython::{
@@ -1124,6 +1125,20 @@ py_class!(class OxidizedResource |py| {
         )?)
     }
 
+    @relative_path_package_resources.setter def set_relative_path_package_resources(&self, value: Option<PyObject>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().relative_path_package_resources =
+                pyobject_optional_resources_map_to_pathbuf(py, &value)?
+                    .map(|x| HashMap::from_iter(
+                        x.iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned())))
+                     ));
+
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete relative_path_package_resources"))
+        }
+    }
+
     @property def relative_path_distribution_resources(&self) -> PyResult<PyObject> {
         Ok(self.resource(py).borrow().relative_path_distribution_resources.as_ref().map_or_else(
             || Ok(py.None()),
@@ -1138,6 +1153,21 @@ py_class!(class OxidizedResource |py| {
             }
         )?)
     }
+
+    @relative_path_distribution_resources.setter def set_relative_path_distribution_resources(&self, value: Option<PyObject>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().relative_path_distribution_resources =
+                pyobject_optional_resources_map_to_pathbuf(py, &value)?
+                    .map(|x| HashMap::from_iter(
+                        x.iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned())))
+                     ));
+
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete relative_path_distribution_resources"))
+        }
+    }
+
 });
 
 /// Convert a Resource to an OxidizedResource.

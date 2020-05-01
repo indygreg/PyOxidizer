@@ -444,6 +444,98 @@ class TestImporterResources(unittest.TestCase):
         with self.assertRaises(TypeError):
             resource.relative_path_extension_module_shared_library = True
 
+    def test_relative_path_package_resources(self):
+        resource = OxidizedResource()
+
+        resource.relative_path_package_resources = {}
+        self.assertEqual(resource.relative_path_package_resources, {})
+
+        resource.relative_path_package_resources = None
+        self.assertIsNone(resource.relative_path_package_resources)
+
+        resource.relative_path_package_resources = {"foo": "resource.txt"}
+        self.assertEqual(
+            resource.relative_path_package_resources,
+            {"foo": pathlib.Path("resource.txt")},
+        )
+
+        resource.relative_path_package_resources = {
+            "resource.txt": pathlib.Path("path/to/resource")
+        }
+        self.assertEqual(
+            resource.relative_path_package_resources,
+            {"resource.txt": pathlib.Path("path/to/resource")},
+        )
+
+        # Updating the dict does *not* work.
+        resource.relative_path_package_resources["foo"] = "ignored"
+        resource.relative_path_package_resources["ignored"] = None
+        self.assertEqual(
+            resource.relative_path_package_resources,
+            {"resource.txt": pathlib.Path("path/to/resource")},
+        )
+
+        with self.assertRaises(TypeError):
+            del resource.relative_path_package_resources
+
+        with self.assertRaises(TypeError):
+            resource.relative_path_package_resources = True
+
+        with self.assertRaises(TypeError):
+            resource.relative_path_package_resources = []
+
+        with self.assertRaises(TypeError):
+            resource.relative_path_package_resources = {b"foo": b"bar"}
+
+        with self.assertRaises(TypeError):
+            resource.relative_path_package_resources = {"foo": None}
+
+    def test_relative_path_distribution_resources(self):
+        resource = OxidizedResource()
+
+        resource.relative_path_distribution_resources = {}
+        self.assertEqual(resource.relative_path_distribution_resources, {})
+
+        resource.relative_path_distribution_resources = None
+        self.assertIsNone(resource.relative_path_distribution_resources)
+
+        resource.relative_path_distribution_resources = {"foo": "resource.txt"}
+        self.assertEqual(
+            resource.relative_path_distribution_resources,
+            {"foo": pathlib.Path("resource.txt")},
+        )
+
+        resource.relative_path_distribution_resources = {
+            "resource.txt": pathlib.Path("path/to/resource")
+        }
+        self.assertEqual(
+            resource.relative_path_distribution_resources,
+            {"resource.txt": pathlib.Path("path/to/resource")},
+        )
+
+        # Updating the dict does *not* work.
+        resource.relative_path_distribution_resources["foo"] = "ignored"
+        resource.relative_path_distribution_resources["ignored"] = None
+        self.assertEqual(
+            resource.relative_path_distribution_resources,
+            {"resource.txt": pathlib.Path("path/to/resource")},
+        )
+
+        with self.assertRaises(TypeError):
+            del resource.relative_path_distribution_resources
+
+        with self.assertRaises(TypeError):
+            resource.relative_path_distribution_resources = True
+
+        with self.assertRaises(TypeError):
+            resource.relative_path_distribution_resources = []
+
+        with self.assertRaises(TypeError):
+            resource.relative_path_distribution_resources = {b"foo": b"bar"}
+
+        with self.assertRaises(TypeError):
+            resource.relative_path_distribution_resources = {"foo": None}
+
 
 if __name__ == "__main__":
     # Reset command arguments so test runner isn't confused.
