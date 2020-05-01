@@ -121,6 +121,15 @@ pub fn path_to_pyobject(py: Python, path: &Path) -> PyResult<PyObject> {
         .or_else(|e| Err(PyErr::new::<UnicodeDecodeError, _>(py, e)))
 }
 
+/// Convert a Rust Path to a pathlib.Path.
+pub fn path_to_pathlib_path(py: Python, path: &Path) -> PyResult<PyObject> {
+    let py_str = path_to_pyobject(py, path)?;
+
+    let pathlib = py.import("pathlib")?;
+
+    pathlib.call(py, "Path", (py_str,), None)
+}
+
 #[cfg(unix)]
 pub fn pyobject_to_pathbuf(py: Python, value: PyObject) -> PyResult<PathBuf> {
     let os = py.import("os")?;

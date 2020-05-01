@@ -7,7 +7,7 @@ Management of Python resources.
 */
 
 use {
-    super::pystr::path_to_pyobject,
+    super::pystr::{path_to_pathlib_path, path_to_pyobject},
     cpython::exc::{ImportError, OSError},
     cpython::{
         py_class, py_class_prop_getter, NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr,
@@ -839,6 +839,41 @@ py_class!(class OxidizedResource |py| {
         Ok(self.resource(py).shared_library_dependency_names.as_ref().map(|x| {
             Vec::from_iter(x.iter().map(|v| v.to_string()))
         }))
+    }
+
+    @property def relative_path_module_source(&self) -> PyResult<PyObject> {
+        Ok(self.resource(py).relative_path_module_source.as_ref().map_or_else(
+            || Ok(py.None()),
+            |x| path_to_pathlib_path(py, x)
+        )?)
+    }
+
+    @property def relative_path_module_bytecode(&self) -> PyResult<PyObject> {
+        Ok(self.resource(py).relative_path_module_bytecode.as_ref().map_or_else(
+            || Ok(py.None()),
+            |x| path_to_pathlib_path(py, x)
+        )?)
+    }
+
+    @property def relative_path_module_bytecode_opt1(&self) -> PyResult<PyObject> {
+        Ok(self.resource(py).relative_path_module_bytecode_opt1.as_ref().map_or_else(
+            || Ok(py.None()),
+            |x| path_to_pathlib_path(py, x)
+        )?)
+    }
+
+    @property def relative_path_module_bytecode_opt2(&self) -> PyResult<PyObject> {
+        Ok(self.resource(py).relative_path_module_bytecode_opt2.as_ref().map_or_else(
+            || Ok(py.None()),
+            |x| path_to_pathlib_path(py, x)
+        )?)
+    }
+
+    @property def relative_path_extension_module_shared_library(&self) -> PyResult<PyObject> {
+        Ok(self.resource(py).relative_path_extension_module_shared_library.as_ref().map_or_else(
+            || Ok(py.None()),
+            |x| path_to_pathlib_path(py, x)
+        )?)
     }
 });
 

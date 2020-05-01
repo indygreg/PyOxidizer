@@ -336,3 +336,23 @@ The following properties/attributes exist on ``OxidizedResource`` instances:
    ``list[str]`` or ``None`` holding the names of shared libraries that this
    resource depends on. If this resource defines a loadable shared library,
    this list can be used to express what other shared libraries it depends on.
+
+``relative_path_module_source``
+   ``pathlib.Path`` or ``None`` holding the relative path to Python module
+   source that should be imported from the filesystem.
+
+``relative_path_module_bytecode``
+   ``pathlib.Path`` or ``None`` holding the relative path to Python module
+   bytecode that should be imported from the filesystem.
+
+``relative_path_module_bytecode_opt1``
+   ``pathlib.Path`` or ``None`` holding the relative path to Python module
+   bytecode at optimization level 1 that should be imported from the filesystem.
+
+``relative_path_module_bytecode_opt1``
+   ``pathlib.Path`` or ``None`` holding the relative path to Python module
+   bytecode at optimization level 2 that should be imported from the filesystem.
+
+``relative_path_extension_module_shared_library``
+   ``pathlib.Path`` or ``None`` holding the relative path to a Python extension
+   module that should be imported from the filesystem.
