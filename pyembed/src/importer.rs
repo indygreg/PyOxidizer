@@ -9,25 +9,24 @@ This module defines a Python meta path importer and associated functionality
 for importing Python modules from memory.
 */
 
-use cpython::ToPyObject;
-#[cfg(windows)]
 use {
-    super::memory_dll::{free_library_memory, get_proc_address_memory, load_library_memory},
-    cpython::exc::SystemError,
-    std::ffi::{c_void, CString},
-};
-use {
-    super::pystr::pyobject_to_pathbuf,
+    super::conversion::pyobject_to_pathbuf,
     super::python_resources::{resource_to_pyobject, OptimizeLevel, PythonResourcesState},
     cpython::buffer::PyBuffer,
     cpython::exc::{FileNotFoundError, ImportError, ValueError},
     cpython::{
         py_class, py_fn, NoArgs, ObjectProtocol, PyCapsule, PyClone, PyDict, PyErr, PyList,
-        PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject,
+        PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
     },
     python3_sys as pyffi,
     python_packed_resources::data::{Resource, ResourceFlavor},
     std::sync::Arc,
+};
+#[cfg(windows)]
+use {
+    super::memory_dll::{free_library_memory, get_proc_address_memory, load_library_memory},
+    cpython::exc::SystemError,
+    std::ffi::{c_void, CString},
 };
 
 pub const PYOXIDIZER_IMPORTER_NAME_STR: &str = "_pyoxidizer_importer";

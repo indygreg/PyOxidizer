@@ -6,13 +6,13 @@
 
 use {
     super::config::{MemoryAllocatorBackend, OxidizedPythonInterpreterConfig, TerminfoResolution},
+    super::conversion::{osstr_to_pyobject, osstring_to_bytes},
     super::importer::{
         initialize_importer, PyInit__pyoxidizer_importer, PYOXIDIZER_IMPORTER_NAME,
         PYOXIDIZER_IMPORTER_NAME_STR,
     },
     super::osutils::resolve_terminfo_dirs,
     super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
-    super::pystr::{osstr_to_pyobject, osstring_to_bytes},
     super::python_resources::PythonResourcesState,
     cpython::{
         GILGuard, NoArgs, ObjectProtocol, PyDict, PyErr, PyList, PyObject, PyString, Python,

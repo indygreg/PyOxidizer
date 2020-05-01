@@ -6,7 +6,7 @@
 
 use {
     super::config::PythonRunMode,
-    super::pystr::path_to_cstring,
+    super::conversion::path_to_cstring,
     cpython::exc::{RuntimeError, SystemExit, ValueError},
     cpython::{
         NoArgs, ObjectProtocol, PyClone, PyErr, PyModule, PyObject, PyResult, Python, PythonObject,

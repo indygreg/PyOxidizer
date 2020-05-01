@@ -7,7 +7,7 @@ Management of Python resources.
 */
 
 use {
-    super::pystr::{path_to_pathlib_path, path_to_pyobject},
+    super::conversion::{path_to_pathlib_path, path_to_pyobject},
     cpython::exc::{ImportError, OSError, TypeError, ValueError},
     cpython::{
         py_class, py_class_call_slot_impl_with_ref, py_class_prop_getter, py_class_prop_setter,
