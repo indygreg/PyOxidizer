@@ -17,9 +17,17 @@ class TestImporterConstruction(unittest.TestCase):
         resources = f.indexed_resources()
         self.assertIsInstance(resources, list)
         self.assertGreater(len(resources), 0)
-        self.assertIsInstance(resources[0], OxidizedResource)
 
-        self.assertRegex(repr(resources[0]), '<OxidizedResource name=".*">')
+        resources = sorted(resources, key=lambda x: x.name)
+
+        resource = [x for x in resources if x.name == "_io"][0]
+
+        self.assertIsInstance(resource, OxidizedResource)
+
+        self.assertEqual(repr(resource), '<OxidizedResource name="_io">')
+
+        self.assertIsInstance(resource.name, str)
+        self.assertEqual(resource.name, "_io")
 
 
 if __name__ == "__main__":

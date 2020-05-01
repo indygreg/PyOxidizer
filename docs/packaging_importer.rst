@@ -281,3 +281,11 @@ by a ``PyOxidizerFinder`` instance.
 Each instance represents a named entity with associated metadata and data.
 e.g. an instance can represent a Python module with associated source and
 bytecode.
+
+Properties
+----------
+
+The following properties/attributes exist on ``OxidizedResource`` instances:
+
+``name``
+   The ``str`` name of the resource.

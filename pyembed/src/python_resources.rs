@@ -10,8 +10,8 @@ use {
     super::pystr::path_to_pyobject,
     cpython::exc::{ImportError, OSError},
     cpython::{
-        py_class, NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyObject,
-        PyResult, PyString, Python, PythonObject, ToPyObject,
+        py_class, py_class_prop_getter, NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr,
+        PyList, PyObject, PyResult, PyString, Python, PythonObject, ToPyObject,
     },
     python3_sys as pyffi,
     python_packed_resources::data::{Resource, ResourceFlavor},
@@ -784,6 +784,10 @@ py_class!(class OxidizedResource |py| {
 
     def __repr__(&self) -> PyResult<String> {
         Ok(format!("<OxidizedResource name=\"{}\">", self.resource(py).name.to_string()))
+    }
+
+    @property def name(&self) -> PyResult<String> {
+        Ok(self.resource(py).name.to_string())
     }
 });
 
