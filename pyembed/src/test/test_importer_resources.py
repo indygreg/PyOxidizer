@@ -29,6 +29,9 @@ class TestImporterConstruction(unittest.TestCase):
         self.assertIsInstance(resource.name, str)
         self.assertEqual(resource.name, "_io")
 
+        self.assertFalse(resource.is_package)
+        self.assertFalse(resource.is_namespace_package)
+
 
 if __name__ == "__main__":
     # Reset command arguments so test runner isn't confused.

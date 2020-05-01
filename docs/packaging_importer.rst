@@ -289,3 +289,9 @@ The following properties/attributes exist on ``OxidizedResource`` instances:
 
 ``name``
    The ``str`` name of the resource.
+
+``is_package``
+   A ``bool`` indicating if this resource is a Python package.
+
+``is_namespace_package``
+   A ``bool`` indicating if this resource is a Python namespace package.

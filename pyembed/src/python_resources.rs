@@ -789,6 +789,14 @@ py_class!(class OxidizedResource |py| {
     @property def name(&self) -> PyResult<String> {
         Ok(self.resource(py).name.to_string())
     }
+
+    @property def is_package(&self) -> PyResult<bool> {
+        Ok(self.resource(py).is_package)
+    }
+
+    @property def is_namespace_package(&self) -> PyResult<bool> {
+        Ok(self.resource(py).is_namespace_package)
+    }
 });
 
 /// Convert a Resource to an OxidizedResource.
