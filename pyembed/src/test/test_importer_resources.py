@@ -200,6 +200,74 @@ class TestImporterResources(unittest.TestCase):
         with self.assertRaises(TypeError):
             resource.in_memory_extension_module_shared_library = "ELF"
 
+    def test_resource_in_memory_package_resources(self):
+        resource = OxidizedResource()
+
+        resource.in_memory_package_resources = {}
+        self.assertEqual(resource.in_memory_package_resources, {})
+
+        resource.in_memory_package_resources = None
+        self.assertIsNone(resource.in_memory_package_resources)
+
+        resource.in_memory_package_resources = {"foo": b"foo value"}
+        self.assertEqual(resource.in_memory_package_resources, {"foo": b"foo value"})
+
+        # Updating the dict does *not* work.
+        resource.in_memory_package_resources["foo"] = "ignored"
+        resource.in_memory_package_resources["ignored"] = None
+        self.assertEqual(resource.in_memory_package_resources, {"foo": b"foo value"})
+
+        with self.assertRaises(TypeError):
+            del resource.in_memory_package_resources
+
+        with self.assertRaises(TypeError):
+            resource.in_memory_package_resources = True
+
+        with self.assertRaises(TypeError):
+            resource.in_memory_package_resources = []
+
+        with self.assertRaises(TypeError):
+            resource.in_memory_package_resources = {b"foo": b"bar"}
+
+        with self.assertRaises(TypeError):
+            resource.in_memory_package_resources = {"foo": None}
+
+    def test_in_memory_distribution_resources(self):
+        resource = OxidizedResource()
+
+        resource.in_memory_distribution_resources = {}
+        self.assertEqual(resource.in_memory_distribution_resources, {})
+
+        resource.in_memory_distribution_resources = None
+        self.assertIsNone(resource.in_memory_distribution_resources)
+
+        resource.in_memory_distribution_resources = {"foo": b"foo value"}
+        self.assertEqual(
+            resource.in_memory_distribution_resources, {"foo": b"foo value"}
+        )
+
+        # Updating the dict does *not* work.
+        resource.in_memory_distribution_resources["foo"] = "ignored"
+        resource.in_memory_distribution_resources["ignored"] = None
+        self.assertEqual(
+            resource.in_memory_distribution_resources, {"foo": b"foo value"}
+        )
+
+        with self.assertRaises(TypeError):
+            del resource.in_memory_distribution_resources
+
+        with self.assertRaises(TypeError):
+            resource.in_memory_distribution_resources = True
+
+        with self.assertRaises(TypeError):
+            resource.in_memory_distribution_resources = []
+
+        with self.assertRaises(TypeError):
+            resource.in_memory_distribution_resources = {b"foo": b"bar"}
+
+        with self.assertRaises(TypeError):
+            resource.in_memory_distribution_resources = {"foo": None}
+
     def test_resource_in_memory_shared_library(self):
         resource = OxidizedResource()
 

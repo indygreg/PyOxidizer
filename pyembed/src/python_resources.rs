@@ -7,7 +7,10 @@ Management of Python resources.
 */
 
 use {
-    super::conversion::{path_to_pathlib_path, path_to_pyobject, pyobject_to_owned_bytes_optional},
+    super::conversion::{
+        path_to_pathlib_path, path_to_pyobject, pyobject_optional_resources_map_to_owned_bytes,
+        pyobject_to_owned_bytes_optional,
+    },
     cpython::exc::{ImportError, OSError, TypeError, ValueError},
     cpython::{
         py_class, py_class_call_slot_impl_with_ref, py_class_prop_getter, py_class_prop_setter,
@@ -939,16 +942,44 @@ py_class!(class OxidizedResource |py| {
         }
     }
 
-    @property def in_memory_package_resources(&self) -> PyResult<Option<HashMap<String, Vec<u8>>>> {
+    @property def in_memory_package_resources(&self) -> PyResult<Option<HashMap<String, PyBytes>>> {
         Ok(self.resource(py).borrow().in_memory_package_resources.as_ref().map(|x| {
-            HashMap::from_iter(x.iter().map(|(k, v)| (k.to_string(), v.to_vec())))
+            HashMap::from_iter(x.iter().map(|(k, v)| (k.to_string(), PyBytes::new(py, v))))
         }))
     }
 
-    @property def in_memory_distribution_resources(&self) -> PyResult<Option<HashMap<String, Vec<u8>>>> {
+    @in_memory_package_resources.setter def set_in_memory_package_resources(&self, value: Option<PyObject>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().in_memory_package_resources =
+                pyobject_optional_resources_map_to_owned_bytes(py, &value)?
+                    .map(|x| HashMap::from_iter(
+                        x.iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned())))
+                     ));
+
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete in_memory_package_resources"))
+        }
+    }
+
+    @property def in_memory_distribution_resources(&self) -> PyResult<Option<HashMap<String, PyBytes>>> {
         Ok(self.resource(py).borrow().in_memory_distribution_resources.as_ref().map(|x| {
-            HashMap::from_iter(x.iter().map(|(k, v)| (k.to_string(), v.to_vec())))
+            HashMap::from_iter(x.iter().map(|(k, v)| (k.to_string(), PyBytes::new(py, v))))
         }))
+    }
+
+    @in_memory_distribution_resources.setter def set_in_memory_distribution_resources(&self, value: Option<PyObject>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().in_memory_distribution_resources =
+                pyobject_optional_resources_map_to_owned_bytes(py, &value)?
+                    .map(|x| HashMap::from_iter(
+                        x.iter().map(|(k, v)| (Cow::Owned(k.to_owned()), Cow::Owned(v.to_owned())))
+                     ));
+
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete in_memory_distribution_resources"))
+        }
     }
 
     @property def in_memory_shared_library(&self) -> PyResult<Option<PyBytes>> {

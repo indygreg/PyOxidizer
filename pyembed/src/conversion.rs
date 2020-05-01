@@ -7,8 +7,9 @@
 use {
     cpython::buffer::PyBuffer,
     cpython::exc::UnicodeDecodeError,
-    cpython::{PyErr, PyObject, PyResult, Python},
+    cpython::{PyDict, PyErr, PyObject, PyResult, Python},
     python3_sys as pyffi,
+    std::collections::HashMap,
     std::ffi::{CStr, CString, NulError, OsStr, OsString},
     std::path::{Path, PathBuf},
 };
@@ -185,5 +186,23 @@ pub fn pyobject_to_owned_bytes_optional(py: Python, value: &PyObject) -> PyResul
         Ok(None)
     } else {
         Ok(Some(pyobject_to_owned_bytes(py, value)?))
+    }
+}
+
+pub fn pyobject_optional_resources_map_to_owned_bytes(
+    py: Python,
+    value: &PyObject,
+) -> PyResult<Option<HashMap<String, Vec<u8>>>> {
+    if value == &py.None() {
+        Ok(None)
+    } else {
+        let source = value.cast_as::<PyDict>(py)?;
+        let mut res = HashMap::with_capacity(source.len(py));
+
+        for (k, v) in source.items(py) {
+            res.insert(k.extract::<String>(py)?, pyobject_to_owned_bytes(py, &v)?);
+        }
+
+        Ok(Some(res))
     }
 }
