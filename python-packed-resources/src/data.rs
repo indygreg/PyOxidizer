@@ -4,7 +4,10 @@
 
 /*! Declares the foundational data primitives inside packed resources data. */
 
-use {std::borrow::Cow, std::collections::HashMap, std::convert::TryFrom, std::path::Path};
+use {
+    std::borrow::Cow, std::collections::HashMap, std::convert::TryFrom, std::iter::FromIterator,
+    std::path::Path,
+};
 
 /// Header value for version 1 of resources payload.
 pub const HEADER_V1: &[u8] = b"pyembed\x01";
@@ -301,6 +304,143 @@ where
             relative_path_extension_module_shared_library: None,
             relative_path_package_resources: None,
             relative_path_distribution_resources: None,
+        }
+    }
+}
+
+impl<'a, X> Resource<'a, X>
+where
+    [X]: ToOwned<Owned = Vec<X>>,
+{
+    /// Produces a fully owned variation of the instance.
+    ///
+    /// This is ugly and an ugly workaround to Cow::to_owned() effectively
+    /// being .clone(), which would preserve Cow::Borrowed variants.
+    pub fn to_owned_clone(&self) -> Resource<'static, X> {
+        Resource {
+            flavor: self.flavor,
+            name: Cow::Owned(self.name.clone().into_owned()),
+            is_package: self.is_package,
+            is_namespace_package: self.is_namespace_package,
+            in_memory_source: if let Some(value) = &self.in_memory_source {
+                Some(Cow::Owned(value.clone().into_owned()))
+            } else {
+                None
+            },
+            in_memory_bytecode: if let Some(value) = &self.in_memory_bytecode {
+                Some(Cow::Owned(value.clone().into_owned()))
+            } else {
+                None
+            },
+            in_memory_bytecode_opt1: if let Some(value) = &self.in_memory_bytecode_opt1 {
+                Some(Cow::Owned(value.clone().into_owned()))
+            } else {
+                None
+            },
+            in_memory_bytecode_opt2: if let Some(value) = &self.in_memory_bytecode_opt2 {
+                Some(Cow::Owned(value.clone().into_owned()))
+            } else {
+                None
+            },
+            in_memory_extension_module_shared_library: if let Some(value) =
+                &self.in_memory_extension_module_shared_library
+            {
+                Some(Cow::Owned(value.clone().into_owned()))
+            } else {
+                None
+            },
+            in_memory_package_resources: if let Some(value) = &self.in_memory_package_resources {
+                Some(HashMap::from_iter(value.iter().map(|(k, v)| {
+                    (
+                        Cow::Owned(k.clone().into_owned()),
+                        Cow::Owned(v.clone().into_owned()),
+                    )
+                })))
+            } else {
+                None
+            },
+            in_memory_distribution_resources: if let Some(value) =
+                &self.in_memory_distribution_resources
+            {
+                Some(HashMap::from_iter(value.iter().map(|(k, v)| {
+                    (
+                        Cow::Owned(k.clone().into_owned()),
+                        Cow::Owned(v.clone().into_owned()),
+                    )
+                })))
+            } else {
+                None
+            },
+            in_memory_shared_library: if let Some(value) = &self.in_memory_shared_library {
+                Some(Cow::Owned(value.clone().into_owned()))
+            } else {
+                None
+            },
+            shared_library_dependency_names: if let Some(value) =
+                &self.shared_library_dependency_names
+            {
+                Some(Vec::from_iter(
+                    value.iter().map(|x| Cow::Owned(x.clone().into_owned())),
+                ))
+            } else {
+                None
+            },
+            relative_path_module_source: if let Some(value) = &self.relative_path_module_source {
+                Some(Cow::Owned(value.clone().into_owned()))
+            } else {
+                None
+            },
+            relative_path_module_bytecode: if let Some(value) = &self.relative_path_module_bytecode
+            {
+                Some(Cow::Owned(value.clone().into_owned()))
+            } else {
+                None
+            },
+            relative_path_module_bytecode_opt1: if let Some(value) =
+                &self.relative_path_module_bytecode_opt1
+            {
+                Some(Cow::Owned(value.clone().into_owned()))
+            } else {
+                None
+            },
+            relative_path_module_bytecode_opt2: if let Some(value) =
+                &self.relative_path_module_bytecode_opt2
+            {
+                Some(Cow::Owned(value.clone().into_owned()))
+            } else {
+                None
+            },
+            relative_path_extension_module_shared_library: if let Some(value) =
+                &self.relative_path_extension_module_shared_library
+            {
+                Some(Cow::Owned(value.clone().into_owned()))
+            } else {
+                None
+            },
+            relative_path_package_resources: if let Some(value) =
+                &self.relative_path_package_resources
+            {
+                Some(HashMap::from_iter(value.iter().map(|(k, v)| {
+                    (
+                        Cow::Owned(k.clone().into_owned()),
+                        Cow::Owned(v.clone().into_owned()),
+                    )
+                })))
+            } else {
+                None
+            },
+            relative_path_distribution_resources: if let Some(value) =
+                &self.relative_path_distribution_resources
+            {
+                Some(HashMap::from_iter(value.iter().map(|(k, v)| {
+                    (
+                        Cow::Owned(k.clone().into_owned()),
+                        Cow::Owned(v.clone().into_owned()),
+                    )
+                })))
+            } else {
+                None
+            },
         }
     }
 }
