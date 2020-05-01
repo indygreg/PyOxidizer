@@ -316,6 +316,23 @@ The following properties/attributes exist on ``OxidizedResource`` instances:
    ``bytes`` or ``None`` holding native machine code defining a Python extension
    module shared library that should be imported from memory.
 
+``in_memory_package_resources``
+   ``dict[str, bytes]`` or ``None`` holding resource files to make available to
+   the ``importlib.resources`` APIs via in-memory data access. The ``name`` of
+   this object will be a Python package name. Keys in this dict are virtual
+   filenames under that package. Values are raw file data.
+
+``in_memory_distribution_resources``
+   ``dict[str, bytes]`` or ``None`` holding resource files to make available to
+   the ``importlib.metadata`` API via in-memory data access. The ``name`` of
+   this object will be a Python package name. Keys in this dict are virtual
+   filenames. Values are raw file data.
+
 ``in_memory_shared_library``
    ``bytes`` or ``None`` holding a shared library that should be imported from
    memory.
+
+``shared_library_dependency_names``
+   ``list[str]`` or ``None`` holding the names of shared libraries that this
+   resource depends on. If this resource defines a loadable shared library,
+   this list can be used to express what other shared libraries it depends on.

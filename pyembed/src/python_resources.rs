@@ -18,6 +18,7 @@ use {
     std::borrow::Cow,
     std::collections::{HashMap, HashSet},
     std::ffi::CStr,
+    std::iter::FromIterator,
     std::path::{Path, PathBuf},
 };
 
@@ -818,8 +819,26 @@ py_class!(class OxidizedResource |py| {
         Ok(self.resource(py).in_memory_extension_module_shared_library.as_ref().map(|x| x.to_vec()))
     }
 
+    @property def in_memory_package_resources(&self) -> PyResult<Option<HashMap<String, Vec<u8>>>> {
+        Ok(self.resource(py).in_memory_package_resources.as_ref().map(|x| {
+            HashMap::from_iter(x.iter().map(|(k, v)| (k.to_string(), v.to_vec())))
+        }))
+    }
+
+    @property def in_memory_distribution_resources(&self) -> PyResult<Option<HashMap<String, Vec<u8>>>> {
+        Ok(self.resource(py).in_memory_distribution_resources.as_ref().map(|x| {
+            HashMap::from_iter(x.iter().map(|(k, v)| (k.to_string(), v.to_vec())))
+        }))
+    }
+
     @property def in_memory_shared_library(&self) -> PyResult<Option<Vec<u8>>> {
         Ok(self.resource(py).in_memory_shared_library.as_ref().map(|x| x.to_vec()))
+    }
+
+    @property def shared_library_dependency_names(&self) -> PyResult<Option<Vec<String>>> {
+        Ok(self.resource(py).shared_library_dependency_names.as_ref().map(|x| {
+            Vec::from_iter(x.iter().map(|v| v.to_string()))
+        }))
     }
 });
 
