@@ -63,7 +63,7 @@ class TestImporterConstruction(unittest.TestCase):
         self.assertEqual(resource.flavor, "none")
         self.assertEqual(resource.name, "")
 
-    def test_resource_mutate(self):
+    def test_resource_set_name(self):
         resource = OxidizedResource()
 
         resource.name = "foobar"
@@ -74,6 +74,29 @@ class TestImporterConstruction(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             resource.name = None
+
+    def test_resource_set_flavor(self):
+        resource = OxidizedResource()
+
+        for flavor in (
+            "module",
+            "none",
+            "builtin",
+            "frozen",
+            "extension",
+            "shared_library",
+        ):
+            resource.flavor = flavor
+            self.assertEqual(resource.flavor, flavor)
+
+        with self.assertRaises(TypeError):
+            del resource.flavor
+
+        with self.assertRaises(TypeError):
+            resource.flavor = None
+
+        with self.assertRaisesRegex(ValueError, "unknown resource flavor"):
+            resource.flavor = "foo"
 
 
 if __name__ == "__main__":

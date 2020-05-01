@@ -8,7 +8,7 @@ Management of Python resources.
 
 use {
     super::pystr::{path_to_pathlib_path, path_to_pyobject},
-    cpython::exc::{ImportError, OSError, TypeError},
+    cpython::exc::{ImportError, OSError, TypeError, ValueError},
     cpython::{
         py_class, py_class_call_slot_impl_with_ref, py_class_prop_getter, py_class_prop_setter,
         NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyObject, PyResult,
@@ -806,13 +806,31 @@ py_class!(class OxidizedResource |py| {
         })
     }
 
+    @flavor.setter def set_flavor(&self, value: Option<&str>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().flavor = match value {
+                "none" => ResourceFlavor::None,
+                "module" => ResourceFlavor::Module,
+                "builtin" => ResourceFlavor::BuiltinExtensionModule,
+                "frozen" => ResourceFlavor::FrozenModule,
+                "extension" => ResourceFlavor::Extension,
+                "shared_library" => ResourceFlavor::SharedLibrary,
+                _ => return Err(PyErr::new::<ValueError, _>(py, "unknown resource flavor"))
+            };
+
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete flavor"))
+        }
+    }
+
     @property def name(&self) -> PyResult<String> {
         Ok(self.resource(py).borrow().name.to_string())
     }
 
-    @name.setter def set_name(&self, value: Option<String>) -> PyResult<()> {
+    @name.setter def set_name(&self, value: Option<&str>) -> PyResult<()> {
         if let Some(value) = value {
-            self.resource(py).borrow_mut().name = Cow::Owned(value);
+            self.resource(py).borrow_mut().name = Cow::Owned(value.to_owned());
 
             Ok(())
         } else {
