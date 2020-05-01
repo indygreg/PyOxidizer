@@ -19,6 +19,8 @@ class TestImporterConstruction(unittest.TestCase):
         self.assertGreater(len(resources), 0)
         self.assertIsInstance(resources[0], OxidizedResource)
 
+        self.assertRegex(repr(resources[0]), '<OxidizedResource name=".*">')
+
 
 if __name__ == "__main__":
     # Reset command arguments so test runner isn't confused.

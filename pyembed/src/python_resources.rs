@@ -781,6 +781,10 @@ impl<'a> PythonResourcesState<'a, u8> {
 
 py_class!(class OxidizedResource |py| {
     data resource: Resource<'static, u8>;
+
+    def __repr__(&self) -> PyResult<String> {
+        Ok(format!("<OxidizedResource name=\"{}\">", self.resource(py).name.to_string()))
+    }
 });
 
 /// Convert a Resource to an OxidizedResource.
