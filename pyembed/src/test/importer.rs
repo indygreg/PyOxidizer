@@ -114,3 +114,9 @@ fn importer_module_py() -> Result<()> {
 fn importer_construction_py() -> Result<()> {
     run_py_test("test_importer_construction.py")
 }
+
+/// Run test_importer_resources.py.
+#[test]
+fn importer_resources_py() -> Result<()> {
+    run_py_test("test_importer_resources.py")
+}

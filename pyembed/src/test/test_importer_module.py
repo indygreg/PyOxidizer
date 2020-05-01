@@ -11,7 +11,9 @@ class TestImporterModule(unittest.TestCase):
         import _pyoxidizer_importer as importer
 
         attrs = {a for a in dir(importer) if not a.startswith("__")}
-        self.assertEqual(attrs, {"decode_source", "PyOxidizerFinder"})
+        self.assertEqual(
+            attrs, {"decode_source", "OxidizedResource", "PyOxidizerFinder"}
+        )
 
     def test_finder_attrs(self):
         from _pyoxidizer_importer import PyOxidizerFinder
@@ -30,6 +32,7 @@ class TestImporterModule(unittest.TestCase):
                 "get_filename",
                 "get_resource_reader",
                 "get_source",
+                "indexed_resources",
                 "invalidate_caches",
             },
         )

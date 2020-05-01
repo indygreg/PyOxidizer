@@ -9,6 +9,7 @@ This module defines a Python meta path importer and associated functionality
 for importing Python modules from memory.
 */
 
+use cpython::ToPyObject;
 #[cfg(windows)]
 use {
     super::memory_dll::{free_library_memory, get_proc_address_memory, load_library_memory},
@@ -17,7 +18,7 @@ use {
 };
 use {
     super::pystr::pyobject_to_pathbuf,
-    super::python_resources::{OptimizeLevel, PythonResourcesState},
+    super::python_resources::{resource_to_pyobject, OptimizeLevel, PythonResourcesState},
     cpython::buffer::PyBuffer,
     cpython::exc::{FileNotFoundError, ImportError, ValueError},
     cpython::{
@@ -25,7 +26,7 @@ use {
         PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject,
     },
     python3_sys as pyffi,
-    python_packed_resources::data::ResourceFlavor,
+    python_packed_resources::data::{Resource, ResourceFlavor},
     std::sync::Arc,
 };
 
@@ -519,6 +520,10 @@ py_class!(class PyOxidizerFinder |py| {
     def __new__(_cls, resources: Option<PyObject> = None, relative_path_origin: Option<PyObject> = None) -> PyResult<PyOxidizerFinder> {
         pyoxidizer_finder_new(py, resources, relative_path_origin)
     }
+
+    def indexed_resources(&self) -> PyResult<PyObject> {
+        self.indexed_resources_impl(py)
+    }
 });
 
 // importlib.abc.MetaPathFinder interface.
@@ -852,6 +857,7 @@ impl PyOxidizerFinder {
         Ok(importer)
     }
 }
+
 /// PyOxidizerFinder.__new__(resources=None)
 fn pyoxidizer_finder_new(
     py: Python,
@@ -926,6 +932,20 @@ fn pyoxidizer_finder_new(
     Box::leak(resources_state);
 
     Ok(importer)
+}
+
+impl PyOxidizerFinder {
+    fn indexed_resources_impl(&self, py: Python) -> PyResult<PyObject> {
+        let resources_state: &PythonResourcesState<u8> = self.state(py).get_resources_state();
+
+        let objects: Result<Vec<PyObject>, PyErr> = resources_state
+            .resources
+            .values()
+            .map(|resource| resource_to_pyobject(py, resource))
+            .collect();
+
+        Ok(objects?.to_py_object(py).into_object())
+    }
 }
 
 // Implements in-memory reading of resource data.
@@ -1248,6 +1268,10 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
             decode_source(io_module: &PyModule, source_bytes: PyObject)
         ),
     )?;
+
+    let resource: Resource<u8> = Resource::default();
+    let resource = resource_to_pyobject(py, &resource)?;
+    m.add(py, "OxidizedResource", resource.get_type(py))?;
 
     Ok(())
 }

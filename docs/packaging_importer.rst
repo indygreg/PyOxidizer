@@ -128,6 +128,17 @@ Filesystem-based resources are stored as a relative path to some other
 value. This is that some other value. If not specified, the directory of
 the current executable will be used.
 
+.. _pyoxidizer_finder_indexed_resources:
+
+``indexed_resources(self) -> List[OxidizedResource]``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method returns a list of resources that are indexed by the
+``PyOxidizerFinder`` instance. It allows Python code to inspect what
+the finder knows about.
+
+See :ref:`oxidized_resource` for more on the returned type.
+
 Behavior and Compliance
 =======================
 
@@ -258,3 +269,15 @@ is consulted. If ``name`` is ``None``, all packages with registered
 distribution files will be returned. Otherwise the returned ``list``
 contains at most 1 ``PyOxidizerDistribution`` corresponding to the
 requested package ``name``.
+
+.. _oxidized_resource:
+
+``OxidizedResource`` Python Type
+================================
+
+The ``OxidizedResource`` Python type represents a *resource* that is indexed
+by a ``PyOxidizerFinder`` instance.
+
+Each instance represents a named entity with associated metadata and data.
+e.g. an instance can represent a Python module with associated source and
+bytecode.

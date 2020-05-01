@@ -10,8 +10,8 @@ use {
     super::pystr::path_to_pyobject,
     cpython::exc::{ImportError, OSError},
     cpython::{
-        NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyObject, PyResult,
-        PyString, Python, PythonObject, ToPyObject,
+        py_class, NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyObject,
+        PyResult, PyString, Python, PythonObject, ToPyObject,
     },
     python3_sys as pyffi,
     python_packed_resources::data::{Resource, ResourceFlavor},
@@ -777,4 +777,15 @@ impl<'a> PythonResourcesState<'a, u8> {
 
         Ok(())
     }
+}
+
+py_class!(class OxidizedResource |py| {
+    data resource: Resource<'static, u8>;
+});
+
+/// Convert a Resource to an OxidizedResource.
+pub fn resource_to_pyobject(py: Python, resource: &Resource<u8>) -> PyResult<PyObject> {
+    let resource = OxidizedResource::create_instance(py, resource.to_owned())?;
+
+    Ok(resource.into_object())
 }
