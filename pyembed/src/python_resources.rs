@@ -75,9 +75,6 @@ where
     /// Path from which relative paths should be interpreted.
     origin: &'a Path,
 
-    /// Cached bytecode (when read from an external source such as the filesystem).
-    bytecode: Option<Vec<u8>>,
-
     /// The resource/module flavor.
     pub flavor: &'a ResourceFlavor,
     /// Whether this module is a package.
@@ -130,17 +127,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
         py: Python,
         optimize_level: OptimizeLevel,
     ) -> PyResult<Option<PyObject>> {
-        if let Some(cached) = &self.bytecode {
-            let ptr = unsafe {
-                pyffi::PyMemoryView_FromMemory(
-                    cached.as_ptr() as _,
-                    cached.len() as _,
-                    pyffi::PyBUF_READ,
-                )
-            };
-
-            Ok(unsafe { PyObject::from_owned_ptr_opt(py, ptr) })
-        } else if let Some(data) = match optimize_level {
+        if let Some(data) = match optimize_level {
             OptimizeLevel::Zero => &self.resource.in_memory_bytecode,
             OptimizeLevel::One => &self.resource.in_memory_bytecode_opt1,
             OptimizeLevel::Two => &self.resource.in_memory_bytecode_opt2,
@@ -155,6 +142,8 @@ impl<'a> ImportablePythonModule<'a, u8> {
 
             Ok(unsafe { PyObject::from_owned_ptr_opt(py, ptr) })
         } else if let Some(path) = self.bytecode_path(optimize_level) {
+            // TODO we could potentially avoid the double allocation for bytecode
+            // by reading directly into a buffer transferred to Python.
             let bytecode = std::fs::read(&path).or_else(|e| {
                 Err(PyErr::new::<ImportError, _>(
                     py,
@@ -165,19 +154,8 @@ impl<'a> ImportablePythonModule<'a, u8> {
                 ))
             })?;
 
-            // We could avoid a double allocation if we wanted...
-            self.bytecode = Some(Vec::from(&bytecode[16..]));
-            let bytecode = self.bytecode.as_ref().unwrap();
-
-            let ptr = unsafe {
-                pyffi::PyMemoryView_FromMemory(
-                    bytecode.as_ptr() as _,
-                    bytecode.len() as _,
-                    pyffi::PyBUF_READ,
-                )
-            };
-
-            Ok(unsafe { PyObject::from_owned_ptr_opt(py, ptr) })
+            // First 16 bytes of .pyc files are a header.
+            Ok(Some(PyBytes::new(py, &bytecode[16..]).into_object()))
         } else {
             Ok(None)
         }
@@ -430,7 +408,6 @@ impl<'a> PythonResourcesState<'a, u8> {
                         resource,
                         current_exe: &self.current_exe,
                         origin: &self.origin,
-                        bytecode: None,
                         flavor: &resource.flavor,
                         is_package: resource.is_package,
                     })
@@ -442,7 +419,6 @@ impl<'a> PythonResourcesState<'a, u8> {
                 resource,
                 current_exe: &self.current_exe,
                 origin: &self.origin,
-                bytecode: None,
                 flavor: &resource.flavor,
                 is_package: resource.is_package,
             }),
@@ -450,7 +426,6 @@ impl<'a> PythonResourcesState<'a, u8> {
                 resource,
                 current_exe: &self.current_exe,
                 origin: &self.origin,
-                bytecode: None,
                 flavor: &resource.flavor,
                 is_package: resource.is_package,
             }),
@@ -458,7 +433,6 @@ impl<'a> PythonResourcesState<'a, u8> {
                 resource,
                 current_exe: &self.current_exe,
                 origin: &self.origin,
-                bytecode: None,
                 flavor: &resource.flavor,
                 is_package: resource.is_package,
             }),

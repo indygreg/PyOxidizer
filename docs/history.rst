@@ -88,6 +88,12 @@ New Features
   its own Python modules and register them with the importer. See
   :ref:`pyoxidizer_finder_add_resource` for more.
 
+Bug Fixes
+^^^^^^^^^
+
+* Fixed potential process crash due to illegal memory access when loading
+  Python bytecode modules from the filesystem.
+
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
 
