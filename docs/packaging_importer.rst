@@ -379,6 +379,22 @@ The following properties/attributes exist on ``OxidizedResource`` instances:
    filenames under that package. Values are relative paths to files from which
    to read data.
 
+Property getters return a copy of data backed by a data structure not
+exposed to Python.
+
+.. warning::
+
+   Mutations on values return by properties will **not** mutate the
+   underlying ``OxidizedResource`` instance. You **must reassign a new
+   value to persist changes**.
+
+For example, ``resource.in_memory_package_resources["foo"] = b"foo"``
+will create a new ``dict`` to service the ``in_memory_package_resources``
+attribute access. Then, a new key will be inserted into that ``dict``.
+This ``dict`` will be immediately thrown away because it was created
+to service the attribute access and isn't stored in the underlying
+data structure.
+
 .. _oxidized_resource_flavors:
 
 ``OxidizedResource`` Flavors

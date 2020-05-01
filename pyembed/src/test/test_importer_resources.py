@@ -203,17 +203,17 @@ class TestImporterResources(unittest.TestCase):
     def test_resource_in_memory_shared_library(self):
         resource = OxidizedResource()
 
-        resource.test_resource_in_memory_shared_library = b"ELF"
-        self.assertEqual(resource.test_resource_in_memory_shared_library, b"ELF")
+        resource.in_memory_shared_library = b"ELF"
+        self.assertEqual(resource.in_memory_shared_library, b"ELF")
 
-        resource.test_resource_in_memory_shared_library = None
-        self.assertIsNone(resource.test_resource_in_memory_shared_library)
-
-        with self.assertRaises(TypeError):
-            del resource.test_resource_in_memory_shared_library
+        resource.in_memory_shared_library = None
+        self.assertIsNone(resource.in_memory_shared_library)
 
         with self.assertRaises(TypeError):
-            resource.test_resource_in_memory_shared_library = "ELF"
+            del resource.in_memory_shared_library
+
+        with self.assertRaises(TypeError):
+            resource.in_memory_shared_library = "ELF"
 
 
 if __name__ == "__main__":
