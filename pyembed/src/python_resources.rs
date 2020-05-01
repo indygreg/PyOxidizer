@@ -878,16 +878,46 @@ py_class!(class OxidizedResource |py| {
         }
     }
 
-    @property def in_memory_bytecode(&self) -> PyResult<Option<Vec<u8>>> {
-        Ok(self.resource(py).borrow().in_memory_bytecode.as_ref().map(|x| x.to_vec()))
+    @property def in_memory_bytecode(&self) -> PyResult<Option<PyBytes>> {
+        Ok(self.resource(py).borrow().in_memory_bytecode.as_ref().map(|x| PyBytes::new(py, x)))
     }
 
-    @property def in_memory_bytecode_opt1(&self) -> PyResult<Option<Vec<u8>>> {
-        Ok(self.resource(py).borrow().in_memory_bytecode_opt1.as_ref().map(|x| x.to_vec()))
+    @in_memory_bytecode.setter def set_in_memory_bytecode(&self, value: Option<PyObject>) -> PyResult<()> {
+        if let Some(value) = value {
+            let data = pyobject_to_owned_bytes(py, &value)?;
+            self.resource(py).borrow_mut().in_memory_bytecode = Some(Cow::Owned(data));
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete in_memory_bytecode"))
+        }
     }
 
-    @property def in_memory_bytecode_opt2(&self) -> PyResult<Option<Vec<u8>>> {
-        Ok(self.resource(py).borrow().in_memory_bytecode_opt2.as_ref().map(|x| x.to_vec()))
+    @property def in_memory_bytecode_opt1(&self) -> PyResult<Option<PyBytes>> {
+        Ok(self.resource(py).borrow().in_memory_bytecode_opt1.as_ref().map(|x| PyBytes::new(py, x)))
+    }
+
+    @in_memory_bytecode_opt1.setter def set_in_memory_bytecode_opt1(&self, value: Option<PyObject>) -> PyResult<()> {
+        if let Some(value) = value {
+            let data = pyobject_to_owned_bytes(py, &value)?;
+            self.resource(py).borrow_mut().in_memory_bytecode_opt1 = Some(Cow::Owned(data));
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete in_memory_bytecode_opt1"))
+        }
+    }
+
+    @property def in_memory_bytecode_opt2(&self) -> PyResult<Option<PyBytes>> {
+        Ok(self.resource(py).borrow().in_memory_bytecode_opt2.as_ref().map(|x| PyBytes::new(py, x)))
+    }
+
+    @in_memory_bytecode_opt2.setter def set_in_memory_bytecode_opt2(&self, value: Option<PyObject>) -> PyResult<()> {
+        if let Some(value) = value {
+            let data = pyobject_to_owned_bytes(py, &value)?;
+            self.resource(py).borrow_mut().in_memory_bytecode_opt2 = Some(Cow::Owned(data));
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete in_memory_bytecode_opt2"))
+        }
     }
 
     @property def in_memory_extension_module_shared_library(&self) -> PyResult<Option<Vec<u8>>> {

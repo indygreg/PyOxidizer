@@ -150,6 +150,31 @@ class TestImporterResources(unittest.TestCase):
         with self.assertRaises(TypeError):
             resource.in_memory_source = "import foo"
 
+    def test_resource_set_in_memory_bytecode(self):
+        resource = OxidizedResource()
+
+        resource.in_memory_bytecode = b"b0"
+        resource.in_memory_bytecode_opt1 = b"b1"
+        resource.in_memory_bytecode_opt2 = b"b2"
+
+        self.assertEqual(resource.in_memory_bytecode, b"b0")
+        self.assertEqual(resource.in_memory_bytecode_opt1, b"b1")
+        self.assertEqual(resource.in_memory_bytecode_opt2, b"b2")
+
+        with self.assertRaises(TypeError):
+            del resource.in_memory_bytecode
+        with self.assertRaises(TypeError):
+            del resource.in_memory_bytecode_opt1
+        with self.assertRaises(TypeError):
+            del resource.in_memory_bytecode_opt2
+
+        with self.assertRaises(TypeError):
+            resource.in_memory_bytecode = True
+        with self.assertRaises(TypeError):
+            resource.in_memory_bytecode_opt1 = "foo"
+        with self.assertRaises(TypeError):
+            resource.in_memory_bytecode_opt2 = False
+
 
 if __name__ == "__main__":
     # Reset command arguments so test runner isn't confused.
