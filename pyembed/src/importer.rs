@@ -16,6 +16,7 @@ use {
     std::ffi::{c_void, CString},
 };
 use {
+    super::pystr::pyobject_to_pathbuf,
     super::python_resources::{OptimizeLevel, PythonResourcesState},
     cpython::buffer::PyBuffer,
     cpython::exc::{FileNotFoundError, ImportError, ValueError},
@@ -515,8 +516,8 @@ py_class!(class PyOxidizerFinder |py| {
     }
 
     // Additional methods provided for convenience.
-    def __new__(_cls, resources: Option<PyObject> = None) -> PyResult<PyOxidizerFinder> {
-        pyoxidizer_finder_new(py, resources)
+    def __new__(_cls, resources: Option<PyObject> = None, relative_path_origin: Option<PyObject> = None) -> PyResult<PyOxidizerFinder> {
+        pyoxidizer_finder_new(py, resources, relative_path_origin)
     }
 });
 
@@ -852,7 +853,11 @@ impl PyOxidizerFinder {
     }
 }
 /// PyOxidizerFinder.__new__(resources=None)
-fn pyoxidizer_finder_new(py: Python, resources: Option<PyObject>) -> PyResult<PyOxidizerFinder> {
+fn pyoxidizer_finder_new(
+    py: Python,
+    resources: Option<PyObject>,
+    relative_path_origin: Option<PyObject>,
+) -> PyResult<PyOxidizerFinder> {
     // We need to obtain an ImporterState instance. This requires handles on a
     // few items...
 
@@ -881,6 +886,11 @@ fn pyoxidizer_finder_new(py: Python, resources: Option<PyObject>) -> PyResult<Py
         PythonResourcesState::new_from_env()
             .or_else(|err| Err(PyErr::new::<ValueError, _>(py, err)))?,
     );
+
+    // Update origin if a value is given.
+    if let Some(py_origin) = relative_path_origin {
+        resources_state.origin = pyobject_to_pathbuf(py, py_origin)?;
+    }
 
     // If we received a PyObject defining resources data, try to resolve it.
     let resources_data = if let Some(resources) = &resources {

@@ -104,8 +104,8 @@ inspect, and manipulate instances.
 
 .. _pyoxidizer_finder__new__:
 
-``__new__(cls, resources=None)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``__new__(cls, resources=None, relative_path_origin=None)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 New instances of ``PyOxidizerFinder`` can be constructed like normal
 Python types::
@@ -121,6 +121,12 @@ the ``PyOxidizerFinder`` instance.
 See the `python_packed_resources <https://docs.rs/python-packed-resources/0.1.0/python_packed_resources/>`_
 Rust crate for the specification of the binary data blob accepted by this
 function.
+
+``relative_path_origin`` is a *path-like* object denoting the filesystem
+path that should be used as the *origin* value for relative path resources.
+Filesystem-based resources are stored as a relative path to some other
+value. This is that some other value. If not specified, the directory of
+the current executable will be used.
 
 Behavior and Compliance
 =======================

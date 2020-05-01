@@ -9,7 +9,7 @@ use {
     cpython::{PyErr, PyObject, PyResult, Python},
     python3_sys as pyffi,
     std::ffi::{CStr, CString, NulError, OsStr, OsString},
-    std::path::Path,
+    std::path::{Path, PathBuf},
 };
 
 #[cfg(target_family = "unix")]
@@ -119,4 +119,39 @@ pub fn path_to_pyobject(py: Python, path: &Path) -> PyResult<PyObject> {
 
     osstr_to_pyobject(py, path.as_os_str(), encoding)
         .or_else(|e| Err(PyErr::new::<UnicodeDecodeError, _>(py, e)))
+}
+
+#[cfg(unix)]
+pub fn pyobject_to_pathbuf(py: Python, value: PyObject) -> PyResult<PathBuf> {
+    let os = py.import("os")?;
+
+    let encoded = os
+        .call(py, "fsencode", (value,), None)?
+        .extract::<Vec<u8>>(py)?;
+    let os_str = OsStr::from_bytes(&encoded);
+
+    Ok(PathBuf::from(os_str))
+}
+
+#[cfg(windows)]
+pub fn pyobject_to_pathbuf(py: Python, value: PyObject) -> PyResult<PathBuf> {
+    let os = py.import("os")?;
+
+    // This conversion is a bit wonky. First, the PyObject could be of various
+    // types: str, bytes, or a path-like object. We normalize to a PyString
+    // by round tripping through os.fsencode() and os.fsdecode(). The
+    // os.fsencode() will take care of the type normalization for us and
+    // os.fsdecode() gets us a PyString.
+    let encoded = os.call(py, "fsencode", (value,), None)?;
+    let normalized = os.call(py, "fsdecode", (encoded,), None)?;
+
+    // We now have a Python str, which is a series of code points. The
+    // ideal thing to do here would be to go to a wchar_t, then to OsStr,
+    // then to PathBuf. As then the PathBuf would hold onto the native
+    // wchar_t and allow lossless round-tripping. But we're lazy. So
+    // we simply convert to a Rust string and feed that into PathBuf.
+    // It should be close enough.
+    let rust_normalized = normalized.extract::<String>(py)?;
+
+    Ok(PathBuf::from(rust_normalized))
 }

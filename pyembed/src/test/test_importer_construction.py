@@ -35,6 +35,13 @@ class TestImporterConstruction(unittest.TestCase):
     def test_no_indices(self):
         Finder(b"pyembed\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
 
+    def test_origin_bad_value(self):
+        with self.assertRaises(TypeError):
+            Finder(relative_path_origin=True)
+
+    def test_origin(self):
+        Finder(relative_path_origin="/path/to/origin")
+
 
 if __name__ == "__main__":
     # Reset command arguments so test runner isn't confused.
