@@ -357,13 +357,28 @@ The following properties/attributes exist on ``OxidizedResource`` instances:
    ``bytes`` or ``None`` holding Python module bytecode that should be
    imported from memory.
 
+   This is raw Python bytecode, as produced from the ``marshal`` module.
+   ``.pyc`` files have a header before this data that will need to be
+   stripped should you want to move data from a ``.pyc`` file into this
+   field.
+
 ``in_memory_bytecode_opt1``
    ``bytes`` or ``None`` holding Python module bytecode at optimization level 1
    that should be imported from memory.
 
+   This is raw Python bytecode, as produced from the ``marshal`` module.
+   ``.pyc`` files have a header before this data that will need to be
+   stripped should you want to move data from a ``.pyc`` file into this
+   field.
+
 ``in_memory_bytecode_opt2``
    ``bytes`` or ``None`` holding Python module bytecode at optimization level 2
    that should be imported from memory.
+
+   This is raw Python bytecode, as produced from the ``marshal`` module.
+   ``.pyc`` files have a header before this data that will need to be
+   stripped should you want to move data from a ``.pyc`` file into this
+   field.
 
 ``in_memory_extension_module_shared_library``
    ``bytes`` or ``None`` holding native machine code defining a Python extension
