@@ -283,6 +283,32 @@ class TestImporterResources(unittest.TestCase):
         with self.assertRaises(TypeError):
             resource.in_memory_shared_library = "ELF"
 
+    def test_resource_shared_library_dependency_names(self):
+        resource = OxidizedResource()
+
+        resource.shared_library_dependency_names = []
+        self.assertEqual(resource.shared_library_dependency_names, [])
+
+        resource.shared_library_dependency_names = None
+        self.assertIsNone(resource.shared_library_dependency_names)
+
+        resource.shared_library_dependency_names = ["foo"]
+        self.assertEqual(resource.shared_library_dependency_names, ["foo"])
+
+        # List mutation is not reflected in original object.
+        resource.shared_library_dependency_names[:] = []
+        resource.shared_library_dependency_names.append("bar")
+        self.assertEqual(resource.shared_library_dependency_names, ["foo"])
+
+        with self.assertRaises(TypeError):
+            del resource.shared_library_dependency_names
+
+        with self.assertRaises(TypeError):
+            resource.shared_library_dependency_names = True
+
+        with self.assertRaises(TypeError):
+            resource.shared_library_dependency_names = [b"foo"]
+
 
 if __name__ == "__main__":
     # Reset command arguments so test runner isn't confused.

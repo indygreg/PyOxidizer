@@ -1003,6 +1003,17 @@ py_class!(class OxidizedResource |py| {
         }))
     }
 
+    @shared_library_dependency_names.setter def set_shared_library_dependency_names(&self, value: Option<Option<Vec<String>>>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().shared_library_dependency_names =
+                value.map(|x| Vec::from_iter(x.iter().map(|v| Cow::Owned(v.to_owned()))));
+
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete shared_library_dependency_names"))
+        }
+    }
+
     @property def relative_path_module_source(&self) -> PyResult<PyObject> {
         Ok(self.resource(py).borrow().relative_path_module_source.as_ref().map_or_else(
             || Ok(py.None()),
