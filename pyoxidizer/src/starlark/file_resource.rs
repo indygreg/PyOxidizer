@@ -21,10 +21,10 @@ use {
     },
     crate::project_building::build_python_executable,
     crate::py_packaging::binary::PythonBinaryBuilder,
-    crate::py_packaging::resource::PythonModuleBytecodeFromSource,
     crate::py_packaging::standalone_distribution::DistributionExtensionModule,
     anyhow::Result,
     itertools::Itertools,
+    python_packaging::resource::PythonModuleBytecodeFromSource,
     slog::warn,
     starlark::environment::Environment,
     starlark::values::{

@@ -19,8 +19,8 @@ use {
     super::fsscan::{find_python_resources, is_package_from_path, walk_tree_files},
     super::libpython::link_libpython,
     super::resource::{
-        PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
-        PythonPackageDistributionResource, PythonPackageResource, PythonResource,
+        PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
+        PythonPackageResource, PythonResource,
     },
     super::resources_policy::PythonResourcesPolicy,
     crate::app_packaging::resource::FileContent,
@@ -29,7 +29,9 @@ use {
     copy_dir::copy_dir,
     lazy_static::lazy_static,
     python_packaging::bytecode::BytecodeCompiler,
-    python_packaging::resource::{BytecodeOptimizationLevel, DataLocation},
+    python_packaging::resource::{
+        BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource,
+    },
     serde::{Deserialize, Serialize},
     slog::{info, warn},
     std::collections::{BTreeMap, BTreeSet, HashMap},
