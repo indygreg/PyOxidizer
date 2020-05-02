@@ -320,7 +320,7 @@ impl ImporterState {
         // only meta path importers present.
 
         let meta_path = meta_path_object.cast_as::<PyList>(py)?;
-        if meta_path.len(py) != 2 {
+        if meta_path.len(py) < 2 {
             return Err(PyErr::new::<ValueError, _>(
                 py,
                 "sys.meta_path does not contain 2 values",
