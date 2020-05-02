@@ -6,6 +6,7 @@
 
 use {
     anyhow::{Context, Result},
+    std::convert::TryFrom,
     std::path::PathBuf,
 };
 
@@ -41,13 +42,15 @@ pub enum BytecodeOptimizationLevel {
     Two,
 }
 
-impl From<i32> for BytecodeOptimizationLevel {
-    fn from(i: i32) -> Self {
+impl TryFrom<i32> for BytecodeOptimizationLevel {
+    type Error = &'static str;
+
+    fn try_from(i: i32) -> Result<Self, Self::Error> {
         match i {
-            0 => BytecodeOptimizationLevel::Zero,
-            1 => BytecodeOptimizationLevel::One,
-            2 => BytecodeOptimizationLevel::Two,
-            _ => panic!("unsupported bytecode optimization level"),
+            0 => Ok(BytecodeOptimizationLevel::Zero),
+            1 => Ok(BytecodeOptimizationLevel::One),
+            2 => Ok(BytecodeOptimizationLevel::Two),
+            _ => Err("unsupported bytecode optimization level"),
         }
     }
 }
