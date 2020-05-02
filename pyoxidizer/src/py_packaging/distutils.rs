@@ -7,9 +7,10 @@ Interacting with distutils.
 */
 
 use {
-    super::resource::{DataLocation, PythonExtensionModule},
+    super::resource::PythonExtensionModule,
     anyhow::{Context, Result},
     lazy_static::lazy_static,
+    python_packaging::resource::DataLocation,
     serde::Deserialize,
     slog::warn,
     std::collections::{BTreeMap, HashMap},

@@ -6,18 +6,19 @@
 Building a native binary containing Python.
 */
 
-use anyhow::Result;
-use itertools::Itertools;
-use lazy_static::lazy_static;
-use slog::{info, warn};
-use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
-use std::fs::create_dir_all;
-use std::path::{Path, PathBuf};
-
-use super::embedded_resource::EmbeddedPythonResources;
-use super::resource::DataLocation;
-use super::standalone_distribution::{LicenseInfo, StandaloneDistribution};
+use {
+    super::embedded_resource::EmbeddedPythonResources,
+    super::standalone_distribution::{LicenseInfo, StandaloneDistribution},
+    anyhow::Result,
+    itertools::Itertools,
+    lazy_static::lazy_static,
+    python_packaging::resource::DataLocation,
+    slog::{info, warn},
+    std::collections::{BTreeMap, BTreeSet},
+    std::fs,
+    std::fs::create_dir_all,
+    std::path::{Path, PathBuf},
+};
 
 lazy_static! {
     /// Libraries provided by the host that we can ignore in Python module library dependencies.

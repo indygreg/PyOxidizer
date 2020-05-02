@@ -10,7 +10,8 @@ use {
     super::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode},
     super::fsscan::is_package_from_path,
     crate::app_packaging::resource::{FileContent, FileManifest},
-    anyhow::{Context, Result},
+    anyhow::Result,
+    python_packaging::resource::DataLocation,
     std::collections::BTreeSet,
     std::path::{Path, PathBuf},
 };
@@ -110,28 +111,6 @@ pub fn has_dunder_file(source: &[u8]) -> Result<bool> {
     let (source, ..) = encoder.decode(source);
 
     Ok(source.contains("__file__"))
-}
-
-/// Represents binary data that can be fetched from somewhere.
-#[derive(Clone, Debug, PartialEq)]
-pub enum DataLocation {
-    Path(PathBuf),
-    Memory(Vec<u8>),
-}
-
-impl DataLocation {
-    /// Resolve the raw content of this instance.
-    pub fn resolve(&self) -> Result<Vec<u8>> {
-        match self {
-            DataLocation::Path(p) => std::fs::read(p).context(format!("reading {}", p.display())),
-            DataLocation::Memory(data) => Ok(data.clone()),
-        }
-    }
-
-    /// Resolve the instance to a Memory variant.
-    pub fn to_memory(&self) -> Result<DataLocation> {
-        Ok(DataLocation::Memory(self.resolve()?))
-    }
 }
 
 /// A Python module defined via source code.

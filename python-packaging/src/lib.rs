@@ -7,3 +7,5 @@
 This crate exposes functionality for interacting with Python resources
 and packaging facilities.
 */
+
+pub mod resource;
