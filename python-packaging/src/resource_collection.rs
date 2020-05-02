@@ -5,7 +5,7 @@
 /*! Functionality for collecting Python resources. */
 
 use {
-    crate::module_util::resolve_path_for_module,
+    crate::module_util::{packages_from_module_name, resolve_path_for_module},
     crate::resource::DataLocation,
     anyhow::{anyhow, Error, Result},
     python_packed_resources::data::{Resource, ResourceFlavor},
@@ -245,6 +245,74 @@ impl PrePackagedResource {
     }
 }
 
+/// Fill in missing data on parent packages.
+///
+/// When resources are added, their parent packages could be missing
+/// data. If we simply materialized the child resources without the
+/// parents, Python's importer would get confused due to the missing
+/// resources.
+///
+/// This function fills in the blanks in our resources state.
+///
+/// The way this works is that if a child resource has data in
+/// a particular field, we populate that field in all its parent
+/// packages. If a corresponding fields is already populated, we
+/// copy its data as well.
+pub fn populate_parent_packages(
+    resources: &mut BTreeMap<String, PrePackagedResource>,
+) -> Result<()> {
+    let original_resources = resources
+        .iter()
+        .filter_map(|(k, v)| {
+            let emit = match v.flavor {
+                ResourceFlavor::BuiltinExtensionModule => true,
+                ResourceFlavor::Extension => true,
+                ResourceFlavor::FrozenModule => true,
+                ResourceFlavor::Module => true,
+                ResourceFlavor::None => false,
+                ResourceFlavor::SharedLibrary => false,
+            };
+
+            if emit {
+                Some((k.to_owned(), v.to_owned()))
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<(String, PrePackagedResource)>>();
+
+    for (name, original) in original_resources {
+        for package in packages_from_module_name(&name) {
+            let entry = resources
+                .entry(package.clone())
+                .or_insert_with(|| PrePackagedResource {
+                    flavor: ResourceFlavor::Module,
+                    name: package,
+                    ..PrePackagedResource::default()
+                });
+
+            // Parents must be packages by definition.
+            entry.is_package = true;
+
+            // If the child had path-based source, we need to materialize source as well.
+            if let Some((prefix, _)) = &original.relative_path_module_source {
+                entry
+                    .relative_path_module_source
+                    .get_or_insert_with(|| (prefix.clone(), DataLocation::Memory(vec![])));
+            }
+
+            // Ditto for in-memory source.
+            if original.in_memory_source.is_some() {
+                entry
+                    .in_memory_source
+                    .get_or_insert(DataLocation::Memory(vec![]));
+            }
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -268,6 +336,97 @@ mod tests {
                 .unwrap_err()
                 .to_string(),
             "invalid value for Python Resources Policy: foo"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_populate_parent_packages_in_memory_source() -> Result<()> {
+        let mut h = BTreeMap::new();
+        h.insert(
+            "root.parent.child".to_string(),
+            PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: "root.parent.child".to_string(),
+                in_memory_source: Some(DataLocation::Memory(vec![42])),
+                is_package: true,
+                ..PrePackagedResource::default()
+            },
+        );
+
+        populate_parent_packages(&mut h)?;
+
+        assert_eq!(h.len(), 3);
+        assert_eq!(
+            h.get("root.parent"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: "root.parent".to_string(),
+                is_package: true,
+                in_memory_source: Some(DataLocation::Memory(vec![])),
+                ..PrePackagedResource::default()
+            })
+        );
+        assert_eq!(
+            h.get("root"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: "root".to_string(),
+                is_package: true,
+                in_memory_source: Some(DataLocation::Memory(vec![])),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_populate_parent_packages_relative_path_source() -> Result<()> {
+        let mut h = BTreeMap::new();
+        h.insert(
+            "root.parent.child".to_string(),
+            PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: "root.parent.child".to_string(),
+                relative_path_module_source: Some((
+                    "prefix".to_string(),
+                    DataLocation::Memory(vec![42]),
+                )),
+                is_package: true,
+                ..PrePackagedResource::default()
+            },
+        );
+
+        populate_parent_packages(&mut h)?;
+
+        assert_eq!(h.len(), 3);
+        assert_eq!(
+            h.get("root.parent"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: "root.parent".to_string(),
+                is_package: true,
+                relative_path_module_source: Some((
+                    "prefix".to_string(),
+                    DataLocation::Memory(vec![])
+                )),
+                ..PrePackagedResource::default()
+            })
+        );
+        assert_eq!(
+            h.get("root"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: "root".to_string(),
+                is_package: true,
+                relative_path_module_source: Some((
+                    "prefix".to_string(),
+                    DataLocation::Memory(vec![])
+                )),
+                ..PrePackagedResource::default()
+            })
         );
 
         Ok(())

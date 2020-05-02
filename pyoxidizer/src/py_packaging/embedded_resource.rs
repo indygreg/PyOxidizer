@@ -19,7 +19,9 @@ use {
         PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
         PythonPackageResource,
     },
-    python_packaging::resource_collection::{PrePackagedResource, PythonResourcesPolicy},
+    python_packaging::resource_collection::{
+        populate_parent_packages, PrePackagedResource, PythonResourcesPolicy,
+    },
     python_packed_resources::data::{Resource, ResourceFlavor},
     python_packed_resources::writer::write_embedded_resources_v1,
     slog::{info, warn},
@@ -206,7 +208,7 @@ impl PrePackagedResources {
         entry.is_package = module.is_package;
         entry.in_memory_source = Some(module.source.clone());
 
-        self.add_parent_packages(&module.name, ModuleLocation::InMemory, true, None)
+        Ok(())
     }
 
     /// Add module source to be loaded from a file on the filesystem relative to the resources.
@@ -228,12 +230,7 @@ impl PrePackagedResources {
         entry.is_package = module.is_package;
         entry.relative_path_module_source = Some((prefix.to_string(), module.source.clone()));
 
-        self.add_parent_packages(
-            &module.name,
-            ModuleLocation::RelativePath(prefix.to_string()),
-            true,
-            None,
-        )
+        Ok(())
     }
 
     /// Add a bytecode module to the collection of embedded bytecode modules.
@@ -888,12 +885,15 @@ impl PrePackagedResources {
             );
         }
 
+        let mut input_resources = self.resources.clone();
+        populate_parent_packages(&mut input_resources)?;
+
         let mut resources = BTreeMap::new();
         let mut extra_files = self.derive_extra_files()?;
 
         let mut compiler = BytecodeCompiler::new(&python_exe)?;
         {
-            for (name, module) in &self.resources {
+            for (name, module) in &input_resources {
                 let mut entry = Resource::try_from(module)?;
 
                 if let Some(location) = &module.in_memory_bytecode {
@@ -1349,7 +1349,7 @@ mod tests {
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
         })?;
 
-        assert_eq!(r.resources.len(), 3);
+        assert_eq!(r.resources.len(), 1);
         assert_eq!(
             r.resources.get("root.parent.child"),
             Some(&PrePackagedResource {
@@ -1357,28 +1357,6 @@ mod tests {
                 name: "root.parent.child".to_string(),
                 is_package: true,
                 in_memory_source: Some(DataLocation::Memory(vec![42])),
-                ..PrePackagedResource::default()
-            })
-        );
-
-        assert_eq!(
-            r.resources.get("root.parent"),
-            Some(&PrePackagedResource {
-                flavor: ResourceFlavor::Module,
-                name: "root.parent".to_string(),
-                is_package: true,
-                in_memory_source: Some(DataLocation::Memory(vec![])),
-                ..PrePackagedResource::default()
-            })
-        );
-
-        assert_eq!(
-            r.resources.get("root"),
-            Some(&PrePackagedResource {
-                flavor: ResourceFlavor::Module,
-                name: "root".to_string(),
-                is_package: true,
-                in_memory_source: Some(DataLocation::Memory(vec![])),
                 ..PrePackagedResource::default()
             })
         );
