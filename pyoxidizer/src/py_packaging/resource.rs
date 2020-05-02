@@ -11,43 +11,10 @@ use {
     super::fsscan::is_package_from_path,
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::Result,
+    python_packaging::module_util::packages_from_module_name,
     python_packaging::resource::DataLocation,
-    std::collections::BTreeSet,
     std::path::{Path, PathBuf},
 };
-
-/// Resolve the set of packages present in a fully qualified module name.
-pub fn packages_from_module_name(module: &str) -> BTreeSet<String> {
-    let mut package_names = BTreeSet::new();
-
-    let mut search: &str = &module;
-
-    while let Some(idx) = search.rfind('.') {
-        package_names.insert(search[0..idx].to_string());
-        search = &search[0..idx];
-    }
-
-    package_names
-}
-
-/// Resolve the set of packages present in a series of fully qualified module names.
-pub fn packages_from_module_names<I>(names: I) -> BTreeSet<String>
-where
-    I: Iterator<Item = String>,
-{
-    let mut package_names = BTreeSet::new();
-
-    for name in names {
-        let mut search: &str = &name;
-
-        while let Some(idx) = search.rfind('.') {
-            package_names.insert(search[0..idx].to_string());
-            search = &search[0..idx];
-        }
-    }
-
-    package_names
-}
 
 /// Resolve the filesystem path for a module.
 ///
@@ -683,21 +650,9 @@ impl PythonResource {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, itertools::Itertools, std::iter::FromIterator};
+    use {super::*, itertools::Itertools};
 
     const DEFAULT_CACHE_TAG: &str = "cpython-37";
-
-    #[test]
-    fn test_packages_from_module_name() {
-        assert_eq!(
-            packages_from_module_name("foo.bar"),
-            BTreeSet::from_iter(vec!["foo".to_string()])
-        );
-        assert_eq!(
-            packages_from_module_name("foo.bar.baz"),
-            BTreeSet::from_iter(vec!["foo".to_string(), "foo.bar".to_string()])
-        );
-    }
 
     #[test]
     fn test_resolve_path_for_module() {
