@@ -4,7 +4,26 @@
 
 /*! Utility functions related to Python modules. */
 
-use {std::collections::BTreeSet, std::path::Path, std::path::PathBuf};
+use {serde::Deserialize, std::collections::BTreeSet, std::path::Path, std::path::PathBuf};
+
+/// Represents file name suffixes for Python modules.
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct PythonModuleSuffixes {
+    /// Suffixes for Python source modules.
+    pub source: Vec<String>,
+
+    /// Suffixes for Python bytecode modules.
+    pub bytecode: Vec<String>,
+
+    /// Suffixes for Python debug bytecode modules.
+    pub debug_bytecode: Vec<String>,
+
+    /// Suffixes for Python optimized bytecode modules.
+    pub optimized_bytecode: Vec<String>,
+
+    /// Suffixes for Python extension modules.
+    pub extension: Vec<String>,
+}
 
 /// Resolve the set of packages present in a fully qualified module name.
 pub fn packages_from_module_name(module: &str) -> BTreeSet<String> {

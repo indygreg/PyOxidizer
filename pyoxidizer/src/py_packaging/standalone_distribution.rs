@@ -12,7 +12,6 @@ use {
     super::distribution::{
         is_stdlib_test_package, resolve_python_distribution_from_location, DistributionExtractLock,
         ExtensionModuleFilter, PythonDistribution, PythonDistributionLocation,
-        PythonModuleSuffixes,
     },
     super::distutils::prepare_hacked_distutils,
     super::embedded_resource::{EmbeddedPythonResources, EmbeddedPythonResourcesPrePackaged},
@@ -25,7 +24,7 @@ use {
     copy_dir::copy_dir,
     lazy_static::lazy_static,
     python_packaging::bytecode::BytecodeCompiler,
-    python_packaging::module_util::is_package_from_path,
+    python_packaging::module_util::{is_package_from_path, PythonModuleSuffixes},
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
         PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,

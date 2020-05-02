@@ -15,8 +15,8 @@ use {
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
     python_packaging::bytecode::BytecodeCompiler,
+    python_packaging::module_util::PythonModuleSuffixes,
     python_packaging::resource::{PythonModuleSource, PythonPackageResource, PythonResource},
-    serde::Deserialize,
     sha2::{Digest, Sha256},
     slog::warn,
     std::collections::HashMap,
@@ -77,25 +77,6 @@ impl TryFrom<&str> for ExtensionModuleFilter {
             t => Err(format!("{} is not a valid extension module filter", t)),
         }
     }
-}
-
-/// Represents file name suffixes for Python modules.
-#[derive(Clone, Debug, PartialEq, Deserialize)]
-pub struct PythonModuleSuffixes {
-    /// Suffixes for Python source modules.
-    pub source: Vec<String>,
-
-    /// Suffixes for Python bytecode modules.
-    pub bytecode: Vec<String>,
-
-    /// Suffixes for Python debug bytecode modules.
-    pub debug_bytecode: Vec<String>,
-
-    /// Suffixes for Python optimized bytecode modules.
-    pub optimized_bytecode: Vec<String>,
-
-    /// Suffixes for Python extension modules.
-    pub extension: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
