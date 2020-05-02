@@ -95,11 +95,7 @@ impl AddToFileManifest for PythonExtensionModule {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        itertools::Itertools,
-        python_packaging::resource::{
-            BytecodeOptimizationLevel, DataLocation, PythonModuleBytecode, PythonResource,
-        },
+        super::*, itertools::Itertools, python_packaging::resource::DataLocation,
         std::path::PathBuf,
     };
 
@@ -195,28 +191,5 @@ mod tests {
         );
 
         Ok(())
-    }
-
-    #[test]
-    fn test_is_in_packages() {
-        let source = PythonResource::ModuleSource(PythonModuleSource {
-            name: "foo".to_string(),
-            source: DataLocation::Memory(vec![]),
-            is_package: false,
-            cache_tag: DEFAULT_CACHE_TAG.to_string(),
-        });
-        assert!(source.is_in_packages(&["foo".to_string()]));
-        assert!(!source.is_in_packages(&[]));
-        assert!(!source.is_in_packages(&["bar".to_string()]));
-
-        let bytecode = PythonResource::ModuleBytecode(PythonModuleBytecode {
-            name: "foo".to_string(),
-            bytecode: DataLocation::Memory(vec![]),
-            optimize_level: BytecodeOptimizationLevel::Zero,
-            is_package: false,
-        });
-        assert!(bytecode.is_in_packages(&["foo".to_string()]));
-        assert!(!bytecode.is_in_packages(&[]));
-        assert!(!bytecode.is_in_packages(&["bar".to_string()]));
     }
 }
