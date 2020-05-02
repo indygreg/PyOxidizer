@@ -14,7 +14,7 @@ use {
         ExtensionModuleFilter, PythonDistribution, PythonDistributionLocation,
     },
     super::distutils::prepare_hacked_distutils,
-    super::embedded_resource::{EmbeddedPythonResources, EmbeddedPythonResourcesPrePackaged},
+    super::embedded_resource::{EmbeddedPythonResources, PrePackagedResources},
     super::libpython::link_libpython,
     crate::app_packaging::resource::FileContent,
     crate::licensing::NON_GPL_LICENSES,
@@ -1065,7 +1065,7 @@ impl PythonDistribution for StandaloneDistribution {
             exe_name: name.to_string(),
             distribution: self.clone(),
             resources_policy: resources_policy.clone(),
-            resources: EmbeddedPythonResourcesPrePackaged::new(resources_policy, &self.cache_tag),
+            resources: PrePackagedResources::new(resources_policy, &self.cache_tag),
             config: config.clone(),
             python_exe,
             extension_module_filter: extension_module_filter.clone(),
@@ -1337,7 +1337,7 @@ pub struct StandalonePythonExecutableBuilder {
     resources_policy: PythonResourcesPolicy,
 
     /// Python resources to be embedded in the binary.
-    resources: EmbeddedPythonResourcesPrePackaged,
+    resources: PrePackagedResources,
 
     /// Configuration of the embedded Python interpreter.
     config: EmbeddedPythonConfig,
@@ -1827,7 +1827,7 @@ pub mod tests {
         logger: &slog::Logger,
     ) -> Result<StandalonePythonExecutableBuilder> {
         let distribution = get_default_distribution()?;
-        let mut resources = EmbeddedPythonResourcesPrePackaged::new(
+        let mut resources = PrePackagedResources::new(
             &PythonResourcesPolicy::InMemoryOnly,
             &distribution.cache_tag,
         );

@@ -213,7 +213,7 @@ pub struct ExtensionModuleBuildState {
 /// This collection holds resources before packaging. This type is
 /// transformed to `EmbeddedPythonResources` as part of packaging.
 #[derive(Debug, Clone)]
-pub struct EmbeddedPythonResourcesPrePackaged {
+pub struct PrePackagedResources {
     policy: PythonResourcesPolicy,
     resources: BTreeMap<String, PrePackagedResource>,
     cache_tag: String,
@@ -223,7 +223,7 @@ pub struct EmbeddedPythonResourcesPrePackaged {
     extra_files: FileManifest,
 }
 
-impl EmbeddedPythonResourcesPrePackaged {
+impl PrePackagedResources {
     pub fn new(policy: &PythonResourcesPolicy, cache_tag: &str) -> Self {
         Self {
             policy: policy.clone(),
@@ -1369,10 +1369,8 @@ mod tests {
 
     #[test]
     fn test_add_in_memory_source_module() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::new(
-            &PythonResourcesPolicy::InMemoryOnly,
-            DEFAULT_CACHE_TAG,
-        );
+        let mut r =
+            PrePackagedResources::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
         r.add_in_memory_module_source(&PythonModuleSource {
             name: "foo".to_string(),
             source: DataLocation::Memory(vec![42]),
@@ -1396,7 +1394,7 @@ mod tests {
 
     #[test]
     fn test_add_relative_path_source_module() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::new(
+        let mut r = PrePackagedResources::new(
             &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
             DEFAULT_CACHE_TAG,
         );
@@ -1439,10 +1437,8 @@ mod tests {
 
     #[test]
     fn test_add_in_memory_source_module_parents() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::new(
-            &PythonResourcesPolicy::InMemoryOnly,
-            DEFAULT_CACHE_TAG,
-        );
+        let mut r =
+            PrePackagedResources::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
         r.add_in_memory_module_source(&PythonModuleSource {
             name: "root.parent.child".to_string(),
             source: DataLocation::Memory(vec![42]),
@@ -1486,10 +1482,8 @@ mod tests {
 
     #[test]
     fn test_add_in_memory_bytecode_module() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::new(
-            &PythonResourcesPolicy::InMemoryOnly,
-            DEFAULT_CACHE_TAG,
-        );
+        let mut r =
+            PrePackagedResources::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
         r.add_in_memory_module_bytecode(&PythonModuleBytecodeFromSource {
             name: "foo".to_string(),
             source: DataLocation::Memory(vec![42]),
@@ -1514,10 +1508,8 @@ mod tests {
 
     #[test]
     fn test_add_in_memory_bytecode_module_parents() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::new(
-            &PythonResourcesPolicy::InMemoryOnly,
-            DEFAULT_CACHE_TAG,
-        );
+        let mut r =
+            PrePackagedResources::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
         r.add_in_memory_module_bytecode(&PythonModuleBytecodeFromSource {
             name: "root.parent.child".to_string(),
             source: DataLocation::Memory(vec![42]),
@@ -1560,10 +1552,8 @@ mod tests {
 
     #[test]
     fn test_add_in_memory_resource() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::new(
-            &PythonResourcesPolicy::InMemoryOnly,
-            DEFAULT_CACHE_TAG,
-        );
+        let mut r =
+            PrePackagedResources::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
         r.add_in_memory_package_resource(&PythonPackageResource {
             full_name: "foo/resource.txt".to_string(),
             leaf_package: "foo".to_string(),
@@ -1591,10 +1581,8 @@ mod tests {
 
     #[test]
     fn test_add_distribution_extension_module() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::new(
-            &PythonResourcesPolicy::InMemoryOnly,
-            DEFAULT_CACHE_TAG,
-        );
+        let mut r =
+            PrePackagedResources::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
         let em = DistributionExtensionModule {
             module: "foo.bar".to_string(),
             init_fn: None,
@@ -1642,10 +1630,8 @@ mod tests {
 
     #[test]
     fn test_add_extension_module_data() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::new(
-            &PythonResourcesPolicy::InMemoryOnly,
-            DEFAULT_CACHE_TAG,
-        );
+        let mut r =
+            PrePackagedResources::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
         let em = PythonExtensionModule {
             name: "foo.bar".to_string(),
             init_fn: Some("".to_string()),
@@ -1688,7 +1674,7 @@ mod tests {
 
     #[test]
     fn test_add_relative_path_extension_module() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::new(
+        let mut r = PrePackagedResources::new(
             &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
             DEFAULT_CACHE_TAG,
         );
@@ -1738,10 +1724,8 @@ mod tests {
 
     #[test]
     fn test_find_dunder_file() -> Result<()> {
-        let mut r = EmbeddedPythonResourcesPrePackaged::new(
-            &PythonResourcesPolicy::InMemoryOnly,
-            DEFAULT_CACHE_TAG,
-        );
+        let mut r =
+            PrePackagedResources::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
         assert_eq!(r.find_dunder_file()?.len(), 0);
 
         r.add_in_memory_module_source(&PythonModuleSource {
