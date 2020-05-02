@@ -82,7 +82,8 @@ pub struct PrePackagedResource {
     pub in_memory_distribution_resources: Option<BTreeMap<String, DataLocation>>,
     pub in_memory_shared_library: Option<DataLocation>,
     pub shared_library_dependency_names: Option<Vec<String>>,
-    pub relative_path_module_source: Option<PathBuf>,
+    // (path, source code)
+    pub relative_path_module_source: Option<(PathBuf, DataLocation)>,
     // (prefix, source code)
     pub relative_path_module_bytecode: Option<(String, DataLocation)>,
     pub relative_path_module_bytecode_opt1: Option<(String, DataLocation)>,
@@ -150,8 +151,9 @@ impl<'a> TryFrom<&PrePackagedResource> for Resource<'a, u8> {
             } else {
                 None
             },
-            relative_path_module_source: if let Some(path) = &value.relative_path_module_source {
-                Some(Cow::Owned(path.clone()))
+            relative_path_module_source: if let Some((path, _)) = &value.relative_path_module_source
+            {
+                Some(Cow::Owned(path.into()))
             } else {
                 None
             },

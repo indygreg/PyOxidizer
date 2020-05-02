@@ -230,9 +230,8 @@ impl PrePackagedResources {
             });
 
         entry.is_package = module.is_package;
-        entry.relative_path_module_source = Some(module.resolve_path(prefix));
-
-        module.add_to_file_manifest(&mut self.extra_files, prefix)?;
+        entry.relative_path_module_source =
+            Some((module.resolve_path(prefix), module.source.clone()));
 
         self.add_parent_packages(
             &module.name,
@@ -834,6 +833,24 @@ impl PrePackagedResources {
         Ok(res)
     }
 
+    fn derive_extra_files(&self) -> Result<FileManifest> {
+        let mut m = FileManifest::default();
+
+        for resource in self.resources.values() {
+            if let Some((path, location)) = &resource.relative_path_module_source {
+                m.add_file(
+                    path,
+                    &FileContent {
+                        data: location.resolve()?,
+                        executable: false,
+                    },
+                )?;
+            }
+        }
+
+        Ok(m)
+    }
+
     /// Transform this instance into embedded resources data.
     ///
     /// This method performs actions necessary to produce entities which will allow the
@@ -863,6 +880,7 @@ impl PrePackagedResources {
 
         let mut resources = BTreeMap::new();
         let mut extra_files = self.extra_files.clone();
+        extra_files.add_manifest(&self.derive_extra_files()?)?;
 
         let mut compiler = BytecodeCompiler::new(&python_exe)?;
         {
@@ -1047,8 +1065,8 @@ impl PrePackagedResources {
                                 is_package: true,
                                 cache_tag: self.cache_tag.clone(),
                             };
-                            module.add_to_file_manifest(&mut self.extra_files, prefix)?;
-                            m.relative_path_module_source = Some(module.resolve_path(prefix));
+                            m.relative_path_module_source =
+                                Some((module.resolve_path(prefix), module.source));
                         }
                     }
                 }
@@ -1292,14 +1310,15 @@ mod tests {
                 flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 is_package: false,
-                relative_path_module_source: Some(PathBuf::from("foo.py")),
+                relative_path_module_source: Some((
+                    PathBuf::from("foo.py"),
+                    DataLocation::Memory(vec![42])
+                )),
                 ..PrePackagedResource::default()
             })
         );
-        let entries = r
-            .extra_files
-            .entries()
-            .collect::<Vec<(&PathBuf, &FileContent)>>();
+        let m = r.derive_extra_files()?;
+        let entries = m.entries().collect::<Vec<(&PathBuf, &FileContent)>>();
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].0, &PathBuf::from("foo.py"));
         assert_eq!(
