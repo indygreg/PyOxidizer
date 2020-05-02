@@ -265,7 +265,6 @@ impl PrePackagedResources {
         self.add_parent_packages(
             &module.name,
             ModuleLocation::InMemory,
-            false,
             Some(module.optimize_level),
         )
     }
@@ -336,12 +335,7 @@ impl PrePackagedResources {
             .unwrap()
             .insert(resource.relative_name.clone(), resource.data.clone());
 
-        self.add_parent_packages(
-            &resource.leaf_package,
-            ModuleLocation::InMemory,
-            false,
-            None,
-        )
+        self.add_parent_packages(&resource.leaf_package, ModuleLocation::InMemory, None)
     }
 
     /// Add resource data to be loaded from the filesystem.
@@ -383,7 +377,6 @@ impl PrePackagedResources {
         self.add_parent_packages(
             &resource.leaf_package,
             ModuleLocation::RelativePath(prefix.to_string()),
-            false,
             None,
         )
     }
@@ -524,7 +517,6 @@ impl PrePackagedResources {
         self.add_parent_packages(
             &module.module,
             ModuleLocation::InMemory,
-            false,
             Some(BytecodeOptimizationLevel::Zero),
         )
     }
@@ -587,7 +579,6 @@ impl PrePackagedResources {
         self.add_parent_packages(
             &module.module,
             ModuleLocation::InMemory,
-            false,
             Some(BytecodeOptimizationLevel::Zero),
         )
     }
@@ -658,7 +649,6 @@ impl PrePackagedResources {
         self.add_parent_packages(
             &module.module,
             ModuleLocation::RelativePath(prefix.to_string()),
-            false,
             None,
         )
     }
@@ -711,7 +701,6 @@ impl PrePackagedResources {
         self.add_parent_packages(
             &module.name,
             ModuleLocation::InMemory,
-            false,
             Some(BytecodeOptimizationLevel::Zero),
         )
     }
@@ -742,7 +731,6 @@ impl PrePackagedResources {
         self.add_parent_packages(
             module,
             ModuleLocation::InMemory,
-            false,
             Some(BytecodeOptimizationLevel::Zero),
         )
 
@@ -782,7 +770,6 @@ impl PrePackagedResources {
         self.add_parent_packages(
             &em.name,
             ModuleLocation::RelativePath(prefix.to_string()),
-            false,
             None,
         )
     }
@@ -1042,7 +1029,6 @@ impl PrePackagedResources {
         &mut self,
         name: &str,
         location: ModuleLocation,
-        add_source: bool,
         bytecode_level: Option<BytecodeOptimizationLevel>,
     ) -> Result<()> {
         for package in packages_from_module_name(name) {
@@ -1057,29 +1043,6 @@ impl PrePackagedResources {
 
             // All parents are packages by definition.
             m.is_package = true;
-
-            // Add empty source code if told to do so.
-            if add_source {
-                match location {
-                    ModuleLocation::InMemory => {
-                        if m.in_memory_source.is_none() {
-                            m.in_memory_source = Some(DataLocation::Memory(vec![]));
-                        }
-                    }
-                    ModuleLocation::RelativePath(ref prefix) => {
-                        if m.relative_path_module_source.is_none() {
-                            let module = PythonModuleSource {
-                                name: package.clone(),
-                                source: DataLocation::Memory(vec![]),
-                                is_package: true,
-                                cache_tag: self.cache_tag.clone(),
-                            };
-                            m.relative_path_module_source =
-                                Some((prefix.to_string(), module.source));
-                        }
-                    }
-                }
-            }
 
             if let Some(level) = bytecode_level {
                 match level {
