@@ -12,7 +12,9 @@ use {
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Result},
     python_packaging::bytecode::{BytecodeCompiler, CompileMode},
-    python_packaging::module_util::{packages_from_module_name, packages_from_module_names},
+    python_packaging::module_util::{
+        packages_from_module_name, packages_from_module_names, resolve_path_for_module,
+    },
     python_packaging::python_source::has_dunder_file,
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
@@ -226,11 +228,7 @@ impl PrePackagedResources {
             });
 
         entry.is_package = module.is_package;
-        entry.relative_path_module_source = Some((
-            prefix.to_string(),
-            module.resolve_path(prefix),
-            module.source.clone(),
-        ));
+        entry.relative_path_module_source = Some((prefix.to_string(), module.source.clone()));
 
         self.add_parent_packages(
             &module.name,
@@ -846,9 +844,9 @@ impl PrePackagedResources {
         let mut m = FileManifest::default();
 
         for resource in self.resources.values() {
-            if let Some((_, path, location)) = &resource.relative_path_module_source {
+            if let Some((prefix, location)) = &resource.relative_path_module_source {
                 m.add_file(
-                    path,
+                    &resolve_path_for_module(prefix, &resource.name, resource.is_package, None),
                     &FileContent {
                         data: location.resolve()?,
                         executable: false,
@@ -1119,11 +1117,8 @@ impl PrePackagedResources {
                                 is_package: true,
                                 cache_tag: self.cache_tag.clone(),
                             };
-                            m.relative_path_module_source = Some((
-                                prefix.to_string(),
-                                module.resolve_path(prefix),
-                                module.source,
-                            ));
+                            m.relative_path_module_source =
+                                Some((prefix.to_string(), module.source));
                         }
                     }
                 }
@@ -1367,11 +1362,7 @@ mod tests {
                 flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 is_package: false,
-                relative_path_module_source: Some((
-                    "".to_string(),
-                    PathBuf::from("foo.py"),
-                    DataLocation::Memory(vec![42])
-                )),
+                relative_path_module_source: Some(("".to_string(), DataLocation::Memory(vec![42]))),
                 ..PrePackagedResource::default()
             })
         );

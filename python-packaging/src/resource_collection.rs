@@ -5,6 +5,7 @@
 /*! Functionality for collecting Python resources. */
 
 use {
+    crate::module_util::resolve_path_for_module,
     crate::resource::DataLocation,
     anyhow::{anyhow, Error, Result},
     python_packed_resources::data::{Resource, ResourceFlavor},
@@ -82,8 +83,8 @@ pub struct PrePackagedResource {
     pub in_memory_distribution_resources: Option<BTreeMap<String, DataLocation>>,
     pub in_memory_shared_library: Option<DataLocation>,
     pub shared_library_dependency_names: Option<Vec<String>>,
-    // (prefix, path, source code)
-    pub relative_path_module_source: Option<(String, PathBuf, DataLocation)>,
+    // (prefix, source code)
+    pub relative_path_module_source: Option<(String, DataLocation)>,
     // (prefix, source code)
     pub relative_path_module_bytecode: Option<(String, DataLocation)>,
     pub relative_path_module_bytecode_opt1: Option<(String, DataLocation)>,
@@ -154,10 +155,15 @@ impl<'a> TryFrom<&PrePackagedResource> for Resource<'a, u8> {
             } else {
                 None
             },
-            relative_path_module_source: if let Some((_, path, _)) =
+            relative_path_module_source: if let Some((prefix, _)) =
                 &value.relative_path_module_source
             {
-                Some(Cow::Owned(path.clone()))
+                Some(Cow::Owned(resolve_path_for_module(
+                    prefix,
+                    &value.name,
+                    value.is_package,
+                    None,
+                )))
             } else {
                 None
             },
