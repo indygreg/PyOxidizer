@@ -74,10 +74,9 @@ pub struct PrePackagedResource {
     pub is_package: bool,
     pub is_namespace_package: bool,
     pub in_memory_source: Option<DataLocation>,
-    // This is actually source code to be compiled to bytecode.
-    pub in_memory_bytecode: Option<DataLocation>,
-    pub in_memory_bytecode_opt1: Option<DataLocation>,
-    pub in_memory_bytecode_opt2: Option<DataLocation>,
+    pub in_memory_bytecode_source: Option<DataLocation>,
+    pub in_memory_bytecode_opt1_source: Option<DataLocation>,
+    pub in_memory_bytecode_opt2_source: Option<DataLocation>,
     pub in_memory_extension_module_shared_library: Option<DataLocation>,
     pub in_memory_resources: Option<BTreeMap<String, DataLocation>>,
     pub in_memory_distribution_resources: Option<BTreeMap<String, DataLocation>>,
@@ -86,9 +85,9 @@ pub struct PrePackagedResource {
     // (prefix, source code)
     pub relative_path_module_source: Option<(String, DataLocation)>,
     // (prefix, bytecode tag, source code)
-    pub relative_path_module_bytecode: Option<(String, String, DataLocation)>,
-    pub relative_path_module_bytecode_opt1: Option<(String, String, DataLocation)>,
-    pub relative_path_module_bytecode_opt2: Option<(String, String, DataLocation)>,
+    pub relative_path_bytecode_source: Option<(String, String, DataLocation)>,
+    pub relative_path_bytecode_opt1_source: Option<(String, String, DataLocation)>,
+    pub relative_path_bytecode_opt2_source: Option<(String, String, DataLocation)>,
     // (prefix, path, data)
     pub relative_path_extension_module_shared_library: Option<(String, PathBuf, DataLocation)>,
     pub relative_path_package_resources: Option<BTreeMap<String, (String, PathBuf, DataLocation)>>,
@@ -299,25 +298,30 @@ pub fn populate_parent_packages(
             // location, we materialize that variant on parents. We take
             // the source from the parent resource, if present. Otherwise
             // defaulting to empty.
-            if original.in_memory_bytecode.is_some() && entry.in_memory_bytecode.is_none() {
-                entry.in_memory_bytecode = Some(if let Some(source) = &entry.in_memory_source {
-                    source.clone()
-                } else {
-                    DataLocation::Memory(vec![])
-                });
-            }
-            if original.in_memory_bytecode_opt1.is_some() && entry.in_memory_bytecode_opt1.is_none()
+            if original.in_memory_bytecode_source.is_some()
+                && entry.in_memory_bytecode_source.is_none()
             {
-                entry.in_memory_bytecode_opt1 =
+                entry.in_memory_bytecode_source =
                     Some(if let Some(source) = &entry.in_memory_source {
                         source.clone()
                     } else {
                         DataLocation::Memory(vec![])
                     });
             }
-            if original.in_memory_bytecode_opt2.is_some() && entry.in_memory_bytecode_opt2.is_none()
+            if original.in_memory_bytecode_opt1_source.is_some()
+                && entry.in_memory_bytecode_opt1_source.is_none()
             {
-                entry.in_memory_bytecode_opt2 =
+                entry.in_memory_bytecode_opt1_source =
+                    Some(if let Some(source) = &entry.in_memory_source {
+                        source.clone()
+                    } else {
+                        DataLocation::Memory(vec![])
+                    });
+            }
+            if original.in_memory_bytecode_opt2_source.is_some()
+                && entry.in_memory_bytecode_opt2_source.is_none()
+            {
+                entry.in_memory_bytecode_opt2_source =
                     Some(if let Some(source) = &entry.in_memory_source {
                         source.clone()
                     } else {
@@ -325,9 +329,9 @@ pub fn populate_parent_packages(
                     });
             }
 
-            if let Some((prefix, cache_tag, _)) = &original.relative_path_module_bytecode {
-                if entry.relative_path_module_bytecode.is_none() {
-                    entry.relative_path_module_bytecode = Some((
+            if let Some((prefix, cache_tag, _)) = &original.relative_path_bytecode_source {
+                if entry.relative_path_bytecode_source.is_none() {
+                    entry.relative_path_bytecode_source = Some((
                         prefix.clone(),
                         cache_tag.clone(),
                         if let Some((_, location)) = &entry.relative_path_module_source {
@@ -339,9 +343,9 @@ pub fn populate_parent_packages(
                 }
             }
 
-            if let Some((prefix, cache_tag, _)) = &original.relative_path_module_bytecode_opt1 {
-                if entry.relative_path_module_bytecode_opt1.is_none() {
-                    entry.relative_path_module_bytecode_opt1 = Some((
+            if let Some((prefix, cache_tag, _)) = &original.relative_path_bytecode_opt1_source {
+                if entry.relative_path_bytecode_opt1_source.is_none() {
+                    entry.relative_path_bytecode_opt1_source = Some((
                         prefix.clone(),
                         cache_tag.clone(),
                         if let Some((_, location)) = &entry.relative_path_module_source {
@@ -353,9 +357,9 @@ pub fn populate_parent_packages(
                 }
             }
 
-            if let Some((prefix, cache_tag, _)) = &original.relative_path_module_bytecode_opt2 {
-                if entry.relative_path_module_bytecode_opt2.is_none() {
-                    entry.relative_path_module_bytecode_opt2 = Some((
+            if let Some((prefix, cache_tag, _)) = &original.relative_path_bytecode_opt2_source {
+                if entry.relative_path_bytecode_opt2_source.is_none() {
+                    entry.relative_path_bytecode_opt2_source = Some((
                         prefix.clone(),
                         cache_tag.clone(),
                         if let Some((_, location)) = &entry.relative_path_module_source {
@@ -513,7 +517,7 @@ mod tests {
             PrePackagedResource {
                 flavor: ResourceFlavor::Module,
                 name: "root.parent.child".to_string(),
-                in_memory_bytecode: Some(DataLocation::Memory(vec![42])),
+                in_memory_bytecode_source: Some(DataLocation::Memory(vec![42])),
                 is_package: true,
                 ..PrePackagedResource::default()
             },
@@ -528,7 +532,7 @@ mod tests {
                 flavor: ResourceFlavor::Module,
                 name: "root.parent".to_string(),
                 is_package: true,
-                in_memory_bytecode: Some(DataLocation::Memory(vec![])),
+                in_memory_bytecode_source: Some(DataLocation::Memory(vec![])),
                 ..PrePackagedResource::default()
             })
         );
@@ -538,7 +542,7 @@ mod tests {
                 flavor: ResourceFlavor::Module,
                 name: "root".to_string(),
                 is_package: true,
-                in_memory_bytecode: Some(DataLocation::Memory(vec![])),
+                in_memory_bytecode_source: Some(DataLocation::Memory(vec![])),
                 ..PrePackagedResource::default()
             })
         );

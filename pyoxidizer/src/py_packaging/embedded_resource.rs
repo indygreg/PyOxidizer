@@ -110,7 +110,7 @@ impl PrePackagedResources {
         &self,
     ) -> BTreeMap<String, PythonModuleBytecodeFromSource> {
         BTreeMap::from_iter(self.resources.iter().filter_map(|(name, module)| {
-            if let Some(location) = &module.in_memory_bytecode {
+            if let Some(location) = &module.in_memory_bytecode_source {
                 Some((
                     name.clone(),
                     PythonModuleBytecodeFromSource {
@@ -121,7 +121,7 @@ impl PrePackagedResources {
                         cache_tag: self.cache_tag.clone(),
                     },
                 ))
-            } else if let Some(location) = &module.in_memory_bytecode_opt1 {
+            } else if let Some(location) = &module.in_memory_bytecode_opt1_source {
                 Some((
                     name.clone(),
                     PythonModuleBytecodeFromSource {
@@ -132,7 +132,7 @@ impl PrePackagedResources {
                         cache_tag: self.cache_tag.clone(),
                     },
                 ))
-            } else if let Some(location) = &module.in_memory_bytecode_opt2 {
+            } else if let Some(location) = &module.in_memory_bytecode_opt2_source {
                 Some((
                     name.clone(),
                     PythonModuleBytecodeFromSource {
@@ -247,13 +247,13 @@ impl PrePackagedResources {
 
         match module.optimize_level {
             BytecodeOptimizationLevel::Zero => {
-                entry.in_memory_bytecode = Some(module.source.clone());
+                entry.in_memory_bytecode_source = Some(module.source.clone());
             }
             BytecodeOptimizationLevel::One => {
-                entry.in_memory_bytecode_opt1 = Some(module.source.clone());
+                entry.in_memory_bytecode_opt1_source = Some(module.source.clone());
             }
             BytecodeOptimizationLevel::Two => {
-                entry.in_memory_bytecode_opt2 = Some(module.source.clone());
+                entry.in_memory_bytecode_opt2_source = Some(module.source.clone());
             }
         }
 
@@ -280,21 +280,21 @@ impl PrePackagedResources {
 
         match module.optimize_level {
             BytecodeOptimizationLevel::Zero => {
-                entry.relative_path_module_bytecode = Some((
+                entry.relative_path_bytecode_source = Some((
                     prefix.to_string(),
                     module.cache_tag.clone(),
                     module.source.clone(),
                 ))
             }
             BytecodeOptimizationLevel::One => {
-                entry.relative_path_module_bytecode_opt1 = Some((
+                entry.relative_path_bytecode_opt1_source = Some((
                     prefix.to_string(),
                     module.cache_tag.clone(),
                     module.source.clone(),
                 ))
             }
             BytecodeOptimizationLevel::Two => {
-                entry.relative_path_module_bytecode_opt2 = Some((
+                entry.relative_path_bytecode_opt2_source = Some((
                     prefix.to_string(),
                     module.cache_tag.clone(),
                     module.source.clone(),
@@ -773,19 +773,19 @@ impl PrePackagedResources {
                 }
             }
 
-            if let Some(location) = &module.in_memory_bytecode {
+            if let Some(location) = &module.in_memory_bytecode_source {
                 if has_dunder_file(&location.resolve()?)? {
                     res.insert(name.clone());
                 }
             }
 
-            if let Some(location) = &module.in_memory_bytecode_opt1 {
+            if let Some(location) = &module.in_memory_bytecode_opt1_source {
                 if has_dunder_file(&location.resolve()?)? {
                     res.insert(name.clone());
                 }
             }
 
-            if let Some(location) = &module.in_memory_bytecode_opt2 {
+            if let Some(location) = &module.in_memory_bytecode_opt2_source {
                 if has_dunder_file(&location.resolve()?)? {
                     res.insert(name.clone());
                 }
@@ -851,7 +851,7 @@ impl PrePackagedResources {
             for (name, module) in &input_resources {
                 let mut entry = Resource::try_from(module)?;
 
-                if let Some(location) = &module.in_memory_bytecode {
+                if let Some(location) = &module.in_memory_bytecode_source {
                     entry.in_memory_bytecode = Some(Cow::Owned(compiler.compile(
                         &location.resolve()?,
                         &name,
@@ -860,7 +860,7 @@ impl PrePackagedResources {
                     )?));
                 }
 
-                if let Some(location) = &module.in_memory_bytecode_opt1 {
+                if let Some(location) = &module.in_memory_bytecode_opt1_source {
                     entry.in_memory_bytecode_opt1 = Some(Cow::Owned(compiler.compile(
                         &location.resolve()?,
                         &name,
@@ -869,7 +869,7 @@ impl PrePackagedResources {
                     )?));
                 }
 
-                if let Some(location) = &module.in_memory_bytecode_opt2 {
+                if let Some(location) = &module.in_memory_bytecode_opt2_source {
                     entry.in_memory_bytecode_opt2 = Some(Cow::Owned(compiler.compile(
                         &location.resolve()?,
                         &name,
@@ -878,7 +878,7 @@ impl PrePackagedResources {
                     )?));
                 }
 
-                if let Some((prefix, cache_tag, location)) = &module.relative_path_module_bytecode {
+                if let Some((prefix, cache_tag, location)) = &module.relative_path_bytecode_source {
                     let module = PythonModuleBytecodeFromSource {
                         name: name.clone(),
                         source: DataLocation::Memory(vec![]),
@@ -906,7 +906,7 @@ impl PrePackagedResources {
                 }
 
                 if let Some((prefix, cache_tag, location)) =
-                    &module.relative_path_module_bytecode_opt1
+                    &module.relative_path_bytecode_opt1_source
                 {
                     let module = PythonModuleBytecodeFromSource {
                         name: name.clone(),
@@ -935,7 +935,7 @@ impl PrePackagedResources {
                 }
 
                 if let Some((prefix, cache_tag, location)) =
-                    &module.relative_path_module_bytecode_opt2
+                    &module.relative_path_bytecode_opt2_source
                 {
                     let module = PythonModuleBytecodeFromSource {
                         name: name.clone(),
@@ -1250,7 +1250,7 @@ mod tests {
             Some(&PrePackagedResource {
                 flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
-                in_memory_bytecode: Some(DataLocation::Memory(vec![42])),
+                in_memory_bytecode_source: Some(DataLocation::Memory(vec![42])),
                 is_package: false,
                 ..PrePackagedResource::default()
             })
@@ -1277,7 +1277,7 @@ mod tests {
             Some(&PrePackagedResource {
                 flavor: ResourceFlavor::Module,
                 name: "root.parent.child".to_string(),
-                in_memory_bytecode_opt1: Some(DataLocation::Memory(vec![42])),
+                in_memory_bytecode_opt1_source: Some(DataLocation::Memory(vec![42])),
                 is_package: true,
                 ..PrePackagedResource::default()
             })
