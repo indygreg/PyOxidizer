@@ -205,6 +205,46 @@ impl<'a> TryFrom<&PrePackagedResource> for Resource<'a, u8> {
     }
 }
 
+impl PrePackagedResource {
+    /// Derive additional file installs to perform for filesystem-based resources.
+    ///
+    /// Returns 3-tuples denoting the relative resource path, data to materialize there,
+    /// whether the file should be executable.
+    pub fn derive_file_installs(&self) -> Result<Vec<(PathBuf, &DataLocation, bool)>> {
+        let mut res = Vec::new();
+
+        if let Some((prefix, location)) = &self.relative_path_module_source {
+            res.push((
+                resolve_path_for_module(prefix, &self.name, self.is_package, None),
+                location,
+                false,
+            ));
+        }
+
+        if let Some((_, path, location)) = &self.relative_path_extension_module_shared_library {
+            res.push((path.clone(), location, true));
+        }
+
+        if let Some(resources) = &self.relative_path_package_resources {
+            for (_, path, location) in resources.values() {
+                res.push((path.clone(), location, false));
+            }
+        }
+
+        if let Some(resources) = &self.relative_path_distribution_resources {
+            for (_, path, location) in resources.values() {
+                res.push((path.clone(), location, false));
+            }
+        }
+
+        if let Some((prefix, location)) = &self.relative_path_shared_library {
+            res.push((PathBuf::from(prefix).join(&self.name), location, true));
+        }
+
+        Ok(res)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

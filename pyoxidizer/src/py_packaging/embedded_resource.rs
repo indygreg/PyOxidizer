@@ -12,9 +12,7 @@ use {
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Result},
     python_packaging::bytecode::{BytecodeCompiler, CompileMode},
-    python_packaging::module_util::{
-        packages_from_module_name, packages_from_module_names, resolve_path_for_module,
-    },
+    python_packaging::module_util::{packages_from_module_name, packages_from_module_names},
     python_packaging::python_source::has_dunder_file,
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
@@ -849,58 +847,12 @@ impl PrePackagedResources {
         let mut m = FileManifest::default();
 
         for resource in self.resources.values() {
-            if let Some((prefix, location)) = &resource.relative_path_module_source {
+            for (path, location, executable) in resource.derive_file_installs()? {
                 m.add_file(
-                    &resolve_path_for_module(prefix, &resource.name, resource.is_package, None),
+                    &path,
                     &FileContent {
                         data: location.resolve()?,
-                        executable: false,
-                    },
-                )?;
-            }
-
-            if let Some((_, path, location)) =
-                &resource.relative_path_extension_module_shared_library
-            {
-                m.add_file(
-                    path,
-                    &FileContent {
-                        data: location.resolve()?,
-                        executable: true,
-                    },
-                )?;
-            }
-
-            if let Some(resources) = &resource.relative_path_package_resources {
-                for (_, path, location) in resources.values() {
-                    m.add_file(
-                        path,
-                        &FileContent {
-                            data: location.resolve()?,
-                            executable: false,
-                        },
-                    )?;
-                }
-            }
-
-            if let Some(resources) = &resource.relative_path_distribution_resources {
-                for (_, path, location) in resources.values() {
-                    m.add_file(
-                        path,
-                        &FileContent {
-                            data: location.resolve()?,
-                            executable: false,
-                        },
-                    )?;
-                }
-            }
-
-            if let Some((prefix, location)) = &resource.relative_path_shared_library {
-                m.add_file(
-                    &PathBuf::from(prefix).join(&resource.name),
-                    &FileContent {
-                        data: location.resolve()?,
-                        executable: true,
+                        executable,
                     },
                 )?;
             }
