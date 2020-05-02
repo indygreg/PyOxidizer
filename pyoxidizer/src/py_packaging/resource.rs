@@ -11,9 +11,9 @@ use {
     anyhow::Result,
     python_packaging::module_util::{packages_from_module_name, resolve_path_for_module},
     python_packaging::resource::{
-        PythonEggFile, PythonExtensionModule, PythonModuleBytecode, PythonModuleBytecodeFromSource,
+        PythonExtensionModule, PythonModuleBytecode, PythonModuleBytecodeFromSource,
         PythonModuleSource, PythonPackageDistributionResource, PythonPackageResource,
-        PythonPathExtension,
+        PythonResource,
     },
 };
 
@@ -125,99 +125,6 @@ impl AddToFileManifest for PythonExtensionModule {
         } else {
             Ok(())
         }
-    }
-}
-
-/// Represents a resource that can be read by Python somehow.
-#[derive(Clone, Debug, PartialEq)]
-pub enum PythonResource {
-    /// A module defined by source code.
-    ModuleSource(PythonModuleSource),
-    /// A module defined by a request to generate bytecode from source.
-    ModuleBytecodeRequest(PythonModuleBytecodeFromSource),
-    /// A module defined by existing bytecode.
-    ModuleBytecode(PythonModuleBytecode),
-    /// A non-module resource file.
-    Resource(PythonPackageResource),
-    /// A file in a Python package distribution metadata collection.
-    DistributionResource(PythonPackageDistributionResource),
-    /// An extension module that is represented by a dynamic library.
-    ExtensionModuleDynamicLibrary(PythonExtensionModule),
-    /// An extension module that was built from source and can be statically linked.
-    ExtensionModuleStaticallyLinked(PythonExtensionModule),
-    /// A self-contained Python egg.
-    EggFile(PythonEggFile),
-    /// A path extension.
-    PathExtension(PythonPathExtension),
-}
-
-impl PythonResource {
-    /// Resolves the fully qualified resource name.
-    pub fn full_name(&self) -> String {
-        match self {
-            PythonResource::ModuleSource(m) => m.name.clone(),
-            PythonResource::ModuleBytecode(m) => m.name.clone(),
-            PythonResource::ModuleBytecodeRequest(m) => m.name.clone(),
-            PythonResource::Resource(resource) => {
-                format!("{}.{}", resource.leaf_package, resource.relative_name)
-            }
-            PythonResource::DistributionResource(resource) => {
-                format!("{}:{}", resource.package, resource.name)
-            }
-            PythonResource::ExtensionModuleDynamicLibrary(em) => em.name.clone(),
-            PythonResource::ExtensionModuleStaticallyLinked(em) => em.name.clone(),
-            PythonResource::EggFile(_) => "".to_string(),
-            PythonResource::PathExtension(_) => "".to_string(),
-        }
-    }
-
-    pub fn is_in_packages(&self, packages: &[String]) -> bool {
-        let name = match self {
-            PythonResource::ModuleSource(m) => &m.name,
-            PythonResource::ModuleBytecode(m) => &m.name,
-            PythonResource::ModuleBytecodeRequest(m) => &m.name,
-            PythonResource::Resource(resource) => &resource.leaf_package,
-            PythonResource::DistributionResource(resource) => &resource.package,
-            PythonResource::ExtensionModuleDynamicLibrary(em) => &em.name,
-            PythonResource::ExtensionModuleStaticallyLinked(em) => &em.name,
-            PythonResource::EggFile(_) => return false,
-            PythonResource::PathExtension(_) => return false,
-        };
-
-        for package in packages {
-            // Even though the entity may not be marked as a package, we allow exact
-            // name matches through the filter because this makes sense for filtering.
-            // The package annotation is really only useful to influence file layout,
-            // when __init__.py files need to be materialized.
-            if name == package || packages_from_module_name(&name).contains(package) {
-                return true;
-            }
-        }
-
-        false
-    }
-
-    /// Create a new instance that is guaranteed to be backed by memory.
-    pub fn to_memory(&self) -> Result<Self> {
-        Ok(match self {
-            PythonResource::ModuleSource(m) => PythonResource::ModuleSource(m.to_memory()?),
-            PythonResource::ModuleBytecode(m) => PythonResource::ModuleBytecode(m.to_memory()?),
-            PythonResource::ModuleBytecodeRequest(m) => {
-                PythonResource::ModuleBytecodeRequest(m.to_memory()?)
-            }
-            PythonResource::Resource(r) => PythonResource::Resource(r.to_memory()?),
-            PythonResource::DistributionResource(r) => {
-                PythonResource::DistributionResource(r.to_memory()?)
-            }
-            PythonResource::ExtensionModuleDynamicLibrary(m) => {
-                PythonResource::ExtensionModuleDynamicLibrary(m.to_memory()?)
-            }
-            PythonResource::ExtensionModuleStaticallyLinked(m) => {
-                PythonResource::ExtensionModuleStaticallyLinked(m.to_memory()?)
-            }
-            PythonResource::EggFile(e) => PythonResource::EggFile(e.to_memory()?),
-            PythonResource::PathExtension(e) => PythonResource::PathExtension(e.to_memory()?),
-        })
     }
 }
 

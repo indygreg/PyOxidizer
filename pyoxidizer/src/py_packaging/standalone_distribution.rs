@@ -18,7 +18,6 @@ use {
     super::embedded_resource::{EmbeddedPythonResources, EmbeddedPythonResourcesPrePackaged},
     super::fsscan::{find_python_resources, walk_tree_files},
     super::libpython::link_libpython,
-    super::resource::PythonResource,
     super::resources_policy::PythonResourcesPolicy,
     crate::app_packaging::resource::FileContent,
     crate::licensing::NON_GPL_LICENSES,
@@ -30,7 +29,7 @@ use {
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
         PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
-        PythonPackageResource,
+        PythonPackageResource, PythonResource,
     },
     serde::{Deserialize, Serialize},
     slog::{info, warn},
