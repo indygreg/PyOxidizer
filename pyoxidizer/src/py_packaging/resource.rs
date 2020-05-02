@@ -11,26 +11,14 @@ use {
     anyhow::Result,
     python_packaging::module_util::{packages_from_module_name, resolve_path_for_module},
     python_packaging::resource::{
-        PythonExtensionModule, PythonModuleBytecode, PythonModuleBytecodeFromSource,
-        PythonModuleSource, PythonPackageDistributionResource, PythonPackageResource,
-        PythonResource,
+        PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
+        PythonPackageResource,
     },
 };
-
-pub trait ToPythonResource {
-    /// Converts the type to a `PythonResource` instance.
-    fn to_python_resource(&self) -> PythonResource;
-}
 
 pub trait AddToFileManifest {
     /// Add the object to a FileManifest instance.
     fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()>;
-}
-
-impl ToPythonResource for PythonModuleSource {
-    fn to_python_resource(&self) -> PythonResource {
-        PythonResource::ModuleSource(self.clone())
-    }
 }
 
 impl AddToFileManifest for PythonModuleSource {
@@ -60,24 +48,6 @@ impl AddToFileManifest for PythonModuleSource {
     }
 }
 
-impl ToPythonResource for PythonModuleBytecodeFromSource {
-    fn to_python_resource(&self) -> PythonResource {
-        PythonResource::ModuleBytecodeRequest(self.clone())
-    }
-}
-
-impl ToPythonResource for PythonModuleBytecode {
-    fn to_python_resource(&self) -> PythonResource {
-        PythonResource::ModuleBytecode(self.clone())
-    }
-}
-
-impl ToPythonResource for PythonPackageResource {
-    fn to_python_resource(&self) -> PythonResource {
-        PythonResource::Resource(self.clone())
-    }
-}
-
 impl AddToFileManifest for PythonPackageResource {
     fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
         let dest_path = self.resolve_path(prefix);
@@ -89,12 +59,6 @@ impl AddToFileManifest for PythonPackageResource {
                 executable: false,
             },
         )
-    }
-}
-
-impl ToPythonResource for PythonPackageDistributionResource {
-    fn to_python_resource(&self) -> PythonResource {
-        PythonResource::DistributionResource(self.clone())
     }
 }
 
@@ -133,7 +97,9 @@ mod tests {
     use {
         super::*,
         itertools::Itertools,
-        python_packaging::resource::{BytecodeOptimizationLevel, DataLocation},
+        python_packaging::resource::{
+            BytecodeOptimizationLevel, DataLocation, PythonModuleBytecode, PythonResource,
+        },
         std::path::PathBuf,
     };
 
