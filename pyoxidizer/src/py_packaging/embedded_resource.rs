@@ -265,7 +265,7 @@ impl PrePackagedResources {
         self.add_parent_packages(
             &module.name,
             ModuleLocation::InMemory,
-            Some(module.optimize_level),
+            module.optimize_level,
         )
     }
 
@@ -513,7 +513,7 @@ impl PrePackagedResources {
         self.add_parent_packages(
             &module.module,
             ModuleLocation::InMemory,
-            Some(BytecodeOptimizationLevel::Zero),
+            BytecodeOptimizationLevel::Zero,
         )
     }
 
@@ -575,7 +575,7 @@ impl PrePackagedResources {
         self.add_parent_packages(
             &module.module,
             ModuleLocation::InMemory,
-            Some(BytecodeOptimizationLevel::Zero),
+            BytecodeOptimizationLevel::Zero,
         )
     }
 
@@ -693,7 +693,7 @@ impl PrePackagedResources {
         self.add_parent_packages(
             &module.name,
             ModuleLocation::InMemory,
-            Some(BytecodeOptimizationLevel::Zero),
+            BytecodeOptimizationLevel::Zero,
         )
     }
 
@@ -723,7 +723,7 @@ impl PrePackagedResources {
         self.add_parent_packages(
             module,
             ModuleLocation::InMemory,
-            Some(BytecodeOptimizationLevel::Zero),
+            BytecodeOptimizationLevel::Zero,
         )
 
         // TODO add shared library dependencies to be packaged as well.
@@ -1017,7 +1017,7 @@ impl PrePackagedResources {
         &mut self,
         name: &str,
         location: ModuleLocation,
-        bytecode_level: Option<BytecodeOptimizationLevel>,
+        bytecode_level: BytecodeOptimizationLevel,
     ) -> Result<()> {
         for package in packages_from_module_name(name) {
             let m = self
@@ -1032,48 +1032,46 @@ impl PrePackagedResources {
             // All parents are packages by definition.
             m.is_package = true;
 
-            if let Some(level) = bytecode_level {
-                match level {
-                    BytecodeOptimizationLevel::Zero => match location {
-                        ModuleLocation::InMemory => {
-                            if m.in_memory_bytecode.is_none() {
-                                m.in_memory_bytecode = Some(DataLocation::Memory(vec![]));
-                            }
+            match bytecode_level {
+                BytecodeOptimizationLevel::Zero => match location {
+                    ModuleLocation::InMemory => {
+                        if m.in_memory_bytecode.is_none() {
+                            m.in_memory_bytecode = Some(DataLocation::Memory(vec![]));
                         }
-                        ModuleLocation::RelativePath(ref prefix) => {
-                            if m.relative_path_module_bytecode.is_none() {
-                                m.relative_path_module_bytecode =
-                                    Some((prefix.to_string(), DataLocation::Memory(vec![])));
-                            }
+                    }
+                    ModuleLocation::RelativePath(ref prefix) => {
+                        if m.relative_path_module_bytecode.is_none() {
+                            m.relative_path_module_bytecode =
+                                Some((prefix.to_string(), DataLocation::Memory(vec![])));
                         }
-                    },
-                    BytecodeOptimizationLevel::One => match location {
-                        ModuleLocation::InMemory => {
-                            if m.in_memory_bytecode_opt1.is_none() {
-                                m.in_memory_bytecode_opt1 = Some(DataLocation::Memory(vec![]));
-                            }
+                    }
+                },
+                BytecodeOptimizationLevel::One => match location {
+                    ModuleLocation::InMemory => {
+                        if m.in_memory_bytecode_opt1.is_none() {
+                            m.in_memory_bytecode_opt1 = Some(DataLocation::Memory(vec![]));
                         }
-                        ModuleLocation::RelativePath(ref prefix) => {
-                            if m.relative_path_module_bytecode_opt1.is_none() {
-                                m.relative_path_module_bytecode_opt1 =
-                                    Some((prefix.to_string(), DataLocation::Memory(vec![])));
-                            }
+                    }
+                    ModuleLocation::RelativePath(ref prefix) => {
+                        if m.relative_path_module_bytecode_opt1.is_none() {
+                            m.relative_path_module_bytecode_opt1 =
+                                Some((prefix.to_string(), DataLocation::Memory(vec![])));
                         }
-                    },
-                    BytecodeOptimizationLevel::Two => match location {
-                        ModuleLocation::InMemory => {
-                            if m.in_memory_bytecode_opt2.is_none() {
-                                m.in_memory_bytecode_opt2 = Some(DataLocation::Memory(vec![]));
-                            }
+                    }
+                },
+                BytecodeOptimizationLevel::Two => match location {
+                    ModuleLocation::InMemory => {
+                        if m.in_memory_bytecode_opt2.is_none() {
+                            m.in_memory_bytecode_opt2 = Some(DataLocation::Memory(vec![]));
                         }
-                        ModuleLocation::RelativePath(ref prefix) => {
-                            if m.relative_path_module_bytecode_opt2.is_none() {
-                                m.relative_path_module_bytecode_opt2 =
-                                    Some((prefix.to_string(), DataLocation::Memory(vec![])));
-                            }
+                    }
+                    ModuleLocation::RelativePath(ref prefix) => {
+                        if m.relative_path_module_bytecode_opt2.is_none() {
+                            m.relative_path_module_bytecode_opt2 =
+                                Some((prefix.to_string(), DataLocation::Memory(vec![])));
                         }
-                    },
-                }
+                    }
+                },
             }
         }
 
