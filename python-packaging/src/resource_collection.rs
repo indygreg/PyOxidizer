@@ -85,10 +85,10 @@ pub struct PrePackagedResource {
     pub shared_library_dependency_names: Option<Vec<String>>,
     // (prefix, source code)
     pub relative_path_module_source: Option<(String, DataLocation)>,
-    // (prefix, source code)
-    pub relative_path_module_bytecode: Option<(String, DataLocation)>,
-    pub relative_path_module_bytecode_opt1: Option<(String, DataLocation)>,
-    pub relative_path_module_bytecode_opt2: Option<(String, DataLocation)>,
+    // (prefix, bytecode tag, source code)
+    pub relative_path_module_bytecode: Option<(String, String, DataLocation)>,
+    pub relative_path_module_bytecode_opt1: Option<(String, String, DataLocation)>,
+    pub relative_path_module_bytecode_opt2: Option<(String, String, DataLocation)>,
     // (prefix, path, data)
     pub relative_path_extension_module_shared_library: Option<(String, PathBuf, DataLocation)>,
     pub relative_path_package_resources: Option<BTreeMap<String, (String, PathBuf, DataLocation)>>,

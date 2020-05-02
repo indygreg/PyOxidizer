@@ -280,16 +280,25 @@ impl PrePackagedResources {
 
         match module.optimize_level {
             BytecodeOptimizationLevel::Zero => {
-                entry.relative_path_module_bytecode =
-                    Some((prefix.to_string(), module.source.clone()))
+                entry.relative_path_module_bytecode = Some((
+                    prefix.to_string(),
+                    module.cache_tag.clone(),
+                    module.source.clone(),
+                ))
             }
             BytecodeOptimizationLevel::One => {
-                entry.relative_path_module_bytecode_opt1 =
-                    Some((prefix.to_string(), module.source.clone()))
+                entry.relative_path_module_bytecode_opt1 = Some((
+                    prefix.to_string(),
+                    module.cache_tag.clone(),
+                    module.source.clone(),
+                ))
             }
             BytecodeOptimizationLevel::Two => {
-                entry.relative_path_module_bytecode_opt2 =
-                    Some((prefix.to_string(), module.source.clone()))
+                entry.relative_path_module_bytecode_opt2 = Some((
+                    prefix.to_string(),
+                    module.cache_tag.clone(),
+                    module.source.clone(),
+                ))
             }
         }
 
@@ -873,13 +882,13 @@ impl PrePackagedResources {
                     )?));
                 }
 
-                if let Some((prefix, location)) = &module.relative_path_module_bytecode {
+                if let Some((prefix, cache_tag, location)) = &module.relative_path_module_bytecode {
                     let module = PythonModuleBytecodeFromSource {
                         name: name.clone(),
                         source: DataLocation::Memory(vec![]),
                         optimize_level: BytecodeOptimizationLevel::Zero,
                         is_package: entry.is_package,
-                        cache_tag: self.cache_tag.clone(),
+                        cache_tag: cache_tag.clone(),
                     };
 
                     let path = module.resolve_path(prefix);
@@ -900,13 +909,15 @@ impl PrePackagedResources {
                     entry.relative_path_module_bytecode = Some(Cow::Owned(path));
                 }
 
-                if let Some((prefix, location)) = &module.relative_path_module_bytecode_opt1 {
+                if let Some((prefix, cache_tag, location)) =
+                    &module.relative_path_module_bytecode_opt1
+                {
                     let module = PythonModuleBytecodeFromSource {
                         name: name.clone(),
                         source: DataLocation::Memory(vec![]),
                         optimize_level: BytecodeOptimizationLevel::One,
                         is_package: entry.is_package,
-                        cache_tag: self.cache_tag.clone(),
+                        cache_tag: cache_tag.clone(),
                     };
 
                     let path = module.resolve_path(prefix);
@@ -927,13 +938,15 @@ impl PrePackagedResources {
                     entry.relative_path_module_bytecode_opt1 = Some(Cow::Owned(path));
                 }
 
-                if let Some((prefix, location)) = &module.relative_path_module_bytecode_opt2 {
+                if let Some((prefix, cache_tag, location)) =
+                    &module.relative_path_module_bytecode_opt2
+                {
                     let module = PythonModuleBytecodeFromSource {
                         name: name.clone(),
                         source: DataLocation::Memory(vec![]),
                         optimize_level: BytecodeOptimizationLevel::Two,
                         is_package: entry.is_package,
-                        cache_tag: self.cache_tag.clone(),
+                        cache_tag: cache_tag.clone(),
                     };
 
                     let path = module.resolve_path(prefix);
