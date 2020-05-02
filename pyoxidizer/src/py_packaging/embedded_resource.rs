@@ -639,17 +639,23 @@ impl PrePackagedResources {
             // is searched for dependencies.
             // TODO this logic likely needs to be expanded.
             if let Some(shared_library) = &link.dynamic_path {
+                let file_name = shared_library
+                    .file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .to_string();
+
                 let resource = self.resources.entry(link.name.clone()).or_insert_with(|| {
                     PrePackagedResource {
                         flavor: ResourceFlavor::SharedLibrary,
-                        name: link.name.clone(),
+                        name: file_name.clone(),
                         ..PrePackagedResource::default()
                     }
                 });
 
                 resource.relative_path_shared_library = Some((
                     prefix.to_string(),
-                    prefix_path.join(shared_library.file_name().unwrap()),
+                    prefix_path.join(file_name),
                     DataLocation::Path(shared_library.clone()),
                 ));
             }
