@@ -9,16 +9,14 @@ Scanning the filesystem for Python resources.
 use {
     super::distribution::PythonModuleSuffixes,
     super::package_metadata::PythonPackageMetadata,
-    super::resource::{
-        PythonExtensionModule, PythonPackageDistributionResource,
-        PythonPackageDistributionResourceFlavor, PythonResource,
-    },
+    super::resource::{PythonExtensionModule, PythonResource},
     anyhow::Result,
     itertools::Itertools,
     python_packaging::module_util::is_package_from_path,
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonEggFile, PythonModuleBytecode,
-        PythonModuleSource, PythonPackageResource, PythonPathExtension,
+        PythonModuleSource, PythonPackageDistributionResource,
+        PythonPackageDistributionResourceFlavor, PythonPackageResource, PythonPathExtension,
     },
     std::collections::HashSet,
     std::ffi::OsStr,

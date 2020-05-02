@@ -8,9 +8,7 @@ Embedded Python resources in a binary.
 
 use {
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
-    super::resource::{
-        AddToFileManifest, PythonExtensionModule, PythonPackageDistributionResource,
-    },
+    super::resource::{AddToFileManifest, PythonExtensionModule},
     super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::DistributionExtensionModule,
     crate::app_packaging::resource::{FileContent, FileManifest},
@@ -20,7 +18,7 @@ use {
     python_packaging::python_source::has_dunder_file,
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource,
-        PythonModuleSource, PythonPackageResource,
+        PythonModuleSource, PythonPackageDistributionResource, PythonPackageResource,
     },
     python_packed_resources::data::{Resource as EmbeddedResource, ResourceFlavor},
     python_packed_resources::writer::write_embedded_resources_v1,

@@ -259,6 +259,70 @@ impl PythonPackageResource {
     }
 }
 
+/// Represents where a Python package distribution resource is materialized.
+#[derive(Clone, Debug, PartialEq)]
+pub enum PythonPackageDistributionResourceFlavor {
+    /// In a .dist-info directory.
+    DistInfo,
+
+    /// In a .egg-info directory.
+    EggInfo,
+}
+
+/// Represents a file defining Python package metadata.
+///
+/// Instances of this correspond to files in a `<package>-<version>.dist-info`
+/// or `.egg-info` directory.
+///
+/// In terms of `importlib.metadata` terminology, instances correspond to
+/// files in a `Distribution`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PythonPackageDistributionResource {
+    /// Where the resource is materialized.
+    pub location: PythonPackageDistributionResourceFlavor,
+
+    /// The name of the Python package this resource is associated with.
+    pub package: String,
+
+    /// Version string of Python package.
+    pub version: String,
+
+    /// Name of this resource within the distribution.
+    ///
+    /// Corresponds to the file name in the `.dist-info` directory for this
+    /// package distribution.
+    pub name: String,
+
+    /// The raw content of the distribution resource.
+    pub data: DataLocation,
+}
+
+impl PythonPackageDistributionResource {
+    pub fn to_memory(&self) -> Result<Self> {
+        Ok(Self {
+            location: self.location.clone(),
+            package: self.package.clone(),
+            version: self.version.clone(),
+            name: self.name.clone(),
+            data: self.data.to_memory()?,
+        })
+    }
+
+    /// Resolve filesystem path to this resource file.
+    pub fn resolve_path(&self, prefix: &str) -> PathBuf {
+        let p = match self.location {
+            PythonPackageDistributionResourceFlavor::DistInfo => {
+                format!("{}-{}.dist-info", self.package, self.version)
+            }
+            PythonPackageDistributionResourceFlavor::EggInfo => {
+                format!("{}-{}.egg-info", self.package, self.version)
+            }
+        };
+
+        PathBuf::from(prefix).join(p).join(&self.name)
+    }
+}
+
 /// Represents a Python .egg file.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PythonEggFile {
