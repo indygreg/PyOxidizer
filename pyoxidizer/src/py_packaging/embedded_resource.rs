@@ -33,10 +33,6 @@ use {
     std::path::{Path, PathBuf},
 };
 
-enum ModuleLocation {
-    InMemory,
-}
-
 enum ResourceLocation {
     InMemory,
     RelativePath,
@@ -261,11 +257,7 @@ impl PrePackagedResources {
             }
         }
 
-        self.add_parent_packages(
-            &module.name,
-            ModuleLocation::InMemory,
-            module.optimize_level,
-        )
+        self.add_parent_packages(&module.name, module.optimize_level)
     }
 
     /// Add a bytecode module to be loaded from the filesystem relative to some entity.
@@ -509,11 +501,7 @@ impl PrePackagedResources {
         );
 
         // TODO should we populate opt1, opt2, source?
-        self.add_parent_packages(
-            &module.module,
-            ModuleLocation::InMemory,
-            BytecodeOptimizationLevel::Zero,
-        )
+        self.add_parent_packages(&module.module, BytecodeOptimizationLevel::Zero)
     }
 
     /// Add a distribution extension module to be loaded from in-memory import.
@@ -571,11 +559,7 @@ impl PrePackagedResources {
             }
         }
 
-        self.add_parent_packages(
-            &module.module,
-            ModuleLocation::InMemory,
-            BytecodeOptimizationLevel::Zero,
-        )
+        self.add_parent_packages(&module.module, BytecodeOptimizationLevel::Zero)
     }
 
     /// Add an extension module from a Python distribution to be loaded from the filesystem as a dynamic library.
@@ -689,11 +673,7 @@ impl PrePackagedResources {
 
         // Add empty bytecode for missing parent packages.
         // TODO should we populate opt1, opt2?
-        self.add_parent_packages(
-            &module.name,
-            ModuleLocation::InMemory,
-            BytecodeOptimizationLevel::Zero,
-        )
+        self.add_parent_packages(&module.name, BytecodeOptimizationLevel::Zero)
     }
 
     /// Add an extension module shared library that should be imported from memory.
@@ -719,11 +699,7 @@ impl PrePackagedResources {
         entry.in_memory_extension_module_shared_library = Some(DataLocation::Memory(data.to_vec()));
 
         // Add empty bytecode for missing parent packages.
-        self.add_parent_packages(
-            module,
-            ModuleLocation::InMemory,
-            BytecodeOptimizationLevel::Zero,
-        )
+        self.add_parent_packages(module, BytecodeOptimizationLevel::Zero)
 
         // TODO add shared library dependencies to be packaged as well.
         // TODO add shared library dependency names.
@@ -1015,7 +991,6 @@ impl PrePackagedResources {
     fn add_parent_packages(
         &mut self,
         name: &str,
-        location: ModuleLocation,
         bytecode_level: BytecodeOptimizationLevel,
     ) -> Result<()> {
         for package in packages_from_module_name(name) {
@@ -1032,27 +1007,21 @@ impl PrePackagedResources {
             m.is_package = true;
 
             match bytecode_level {
-                BytecodeOptimizationLevel::Zero => match location {
-                    ModuleLocation::InMemory => {
-                        if m.in_memory_bytecode.is_none() {
-                            m.in_memory_bytecode = Some(DataLocation::Memory(vec![]));
-                        }
+                BytecodeOptimizationLevel::Zero => {
+                    if m.in_memory_bytecode.is_none() {
+                        m.in_memory_bytecode = Some(DataLocation::Memory(vec![]));
                     }
-                },
-                BytecodeOptimizationLevel::One => match location {
-                    ModuleLocation::InMemory => {
-                        if m.in_memory_bytecode_opt1.is_none() {
-                            m.in_memory_bytecode_opt1 = Some(DataLocation::Memory(vec![]));
-                        }
+                }
+                BytecodeOptimizationLevel::One => {
+                    if m.in_memory_bytecode_opt1.is_none() {
+                        m.in_memory_bytecode_opt1 = Some(DataLocation::Memory(vec![]));
                     }
-                },
-                BytecodeOptimizationLevel::Two => match location {
-                    ModuleLocation::InMemory => {
-                        if m.in_memory_bytecode_opt2.is_none() {
-                            m.in_memory_bytecode_opt2 = Some(DataLocation::Memory(vec![]));
-                        }
+                }
+                BytecodeOptimizationLevel::Two => {
+                    if m.in_memory_bytecode_opt2.is_none() {
+                        m.in_memory_bytecode_opt2 = Some(DataLocation::Memory(vec![]));
                     }
-                },
+                }
             }
         }
 
