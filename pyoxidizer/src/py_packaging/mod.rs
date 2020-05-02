@@ -18,5 +18,4 @@ pub mod libpython;
 pub mod packaging_tool;
 pub mod pyembed;
 pub mod resource;
-pub mod resources_policy;
 pub mod standalone_distribution;

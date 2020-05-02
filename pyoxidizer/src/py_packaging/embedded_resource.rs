@@ -9,7 +9,6 @@ Embedded Python resources in a binary.
 use {
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
     super::resource::AddToFileManifest,
-    super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::DistributionExtensionModule,
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Error, Result},
@@ -21,6 +20,7 @@ use {
         PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
         PythonPackageResource,
     },
+    python_packaging::resource_collection::PythonResourcesPolicy,
     python_packed_resources::data::{Resource as EmbeddedResource, ResourceFlavor},
     python_packed_resources::writer::write_embedded_resources_v1,
     slog::{info, warn},

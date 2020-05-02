@@ -14,3 +14,4 @@ pub mod module_util;
 pub mod package_metadata;
 pub mod python_source;
 pub mod resource;
+pub mod resource_collection;

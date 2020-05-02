@@ -9,7 +9,6 @@ Defining and manipulating Python distributions.
 use {
     super::binary::PythonBinaryBuilder,
     super::config::EmbeddedPythonConfig,
-    super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::{DistributionExtensionModule, StandaloneDistribution},
     crate::python_distributions::PYTHON_DISTRIBUTIONS,
     anyhow::{anyhow, Context, Result},
@@ -17,6 +16,7 @@ use {
     python_packaging::bytecode::BytecodeCompiler,
     python_packaging::module_util::PythonModuleSuffixes,
     python_packaging::resource::{PythonModuleSource, PythonPackageResource, PythonResource},
+    python_packaging::resource_collection::PythonResourcesPolicy,
     sha2::{Digest, Sha256},
     slog::warn,
     std::collections::HashMap,
