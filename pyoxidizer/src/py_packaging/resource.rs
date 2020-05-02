@@ -23,6 +23,11 @@ pub trait ToPythonResource {
     fn to_python_resource(&self) -> PythonResource;
 }
 
+pub trait AddToFileManifest {
+    /// Add the object to a FileManifest instance.
+    fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()>;
+}
+
 /// A Python module defined via source code.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PythonModuleSource {
@@ -80,11 +85,20 @@ impl PythonModuleSource {
         resolve_path_for_module(prefix, &self.name, self.is_package, None)
     }
 
-    /// Add this source module to a `FileManifest`.
-    ///
-    /// The reference added to `FileManifest` is a copy of this instance and won't
-    /// reflect modification made to this instance.
-    pub fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
+    /// Whether the source code for this module has __file__
+    pub fn has_dunder_file(&self) -> Result<bool> {
+        has_dunder_file(&self.source.resolve()?)
+    }
+}
+
+impl ToPythonResource for PythonModuleSource {
+    fn to_python_resource(&self) -> PythonResource {
+        PythonResource::ModuleSource(self.clone())
+    }
+}
+
+impl AddToFileManifest for PythonModuleSource {
+    fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
         let content = FileContent {
             data: self.source.resolve()?,
             executable: false,
@@ -107,17 +121,6 @@ impl PythonModuleSource {
         }
 
         Ok(())
-    }
-
-    /// Whether the source code for this module has __file__
-    pub fn has_dunder_file(&self) -> Result<bool> {
-        has_dunder_file(&self.source.resolve()?)
-    }
-}
-
-impl ToPythonResource for PythonModuleSource {
-    fn to_python_resource(&self) -> PythonResource {
-        PythonResource::ModuleSource(self.clone())
     }
 }
 
@@ -164,8 +167,16 @@ impl PythonPackageResource {
     pub fn resolve_path(&self, prefix: &str) -> PathBuf {
         PathBuf::from(prefix).join(&self.full_name)
     }
+}
 
-    pub fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
+impl ToPythonResource for PythonPackageResource {
+    fn to_python_resource(&self) -> PythonResource {
+        PythonResource::Resource(self.clone())
+    }
+}
+
+impl AddToFileManifest for PythonPackageResource {
+    fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
         let dest_path = self.resolve_path(prefix);
 
         manifest.add_file(
@@ -175,12 +186,6 @@ impl PythonPackageResource {
                 executable: false,
             },
         )
-    }
-}
-
-impl ToPythonResource for PythonPackageResource {
-    fn to_python_resource(&self) -> PythonResource {
-        PythonResource::Resource(self.clone())
     }
 }
 
@@ -246,8 +251,16 @@ impl PythonPackageDistributionResource {
 
         PathBuf::from(prefix).join(p).join(&self.name)
     }
+}
 
-    pub fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
+impl ToPythonResource for PythonPackageDistributionResource {
+    fn to_python_resource(&self) -> PythonResource {
+        PythonResource::DistributionResource(self.clone())
+    }
+}
+
+impl AddToFileManifest for PythonPackageDistributionResource {
+    fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
         let dest_path = self.resolve_path(prefix);
 
         manifest.add_file(
@@ -257,12 +270,6 @@ impl PythonPackageDistributionResource {
                 executable: false,
             },
         )
-    }
-}
-
-impl ToPythonResource for PythonPackageDistributionResource {
-    fn to_python_resource(&self) -> PythonResource {
-        PythonResource::DistributionResource(self.clone())
     }
 }
 
@@ -336,8 +343,10 @@ impl PythonExtensionModule {
             Vec::new()
         }
     }
+}
 
-    pub fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
+impl AddToFileManifest for PythonExtensionModule {
+    fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
         if let Some(data) = &self.extension_data {
             manifest.add_file(
                 &self.resolve_path(prefix),

@@ -9,8 +9,8 @@ Embedded Python resources in a binary.
 use {
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
     super::resource::{
-        PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
-        PythonPackageResource,
+        AddToFileManifest, PythonExtensionModule, PythonModuleSource,
+        PythonPackageDistributionResource, PythonPackageResource,
     },
     super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::DistributionExtensionModule,
