@@ -552,10 +552,8 @@ mod tests {
     use {
         super::super::testutil::*,
         super::*,
-        crate::py_packaging::resource::{
-            PythonModuleSource, PythonPackageResource as RawPackageResource,
-        },
-        python_packaging::resource::DataLocation,
+        crate::py_packaging::resource::PythonPackageResource as RawPackageResource,
+        python_packaging::resource::{DataLocation, PythonModuleSource},
         std::path::PathBuf,
     };
 

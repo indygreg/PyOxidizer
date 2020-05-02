@@ -4,12 +4,15 @@
 
 use {
     crate::py_packaging::resource::{
-        PythonExtensionModule as RawExtensionModule, PythonModuleSource as RawSourceModule,
+        PythonExtensionModule as RawExtensionModule,
         PythonPackageDistributionResource as RawDistributionResource,
         PythonPackageResource as RawPackageResource, PythonResource,
     },
     crate::py_packaging::standalone_distribution::DistributionExtensionModule,
-    python_packaging::resource::{BytecodeOptimizationLevel, PythonModuleBytecodeFromSource},
+    python_packaging::resource::{
+        BytecodeOptimizationLevel, PythonModuleBytecodeFromSource,
+        PythonModuleSource as RawSourceModule,
+    },
     starlark::environment::Environment,
     starlark::values::{default_compare, TypedValue, Value, ValueError, ValueResult},
     starlark::{any, immutable, not_supported},

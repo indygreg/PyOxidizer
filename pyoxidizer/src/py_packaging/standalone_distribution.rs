@@ -19,8 +19,8 @@ use {
     super::fsscan::{find_python_resources, walk_tree_files},
     super::libpython::link_libpython,
     super::resource::{
-        PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
-        PythonPackageResource, PythonResource,
+        PythonExtensionModule, PythonPackageDistributionResource, PythonPackageResource,
+        PythonResource,
     },
     super::resources_policy::PythonResourcesPolicy,
     crate::app_packaging::resource::FileContent,
@@ -31,7 +31,7 @@ use {
     python_packaging::bytecode::BytecodeCompiler,
     python_packaging::module_util::is_package_from_path,
     python_packaging::resource::{
-        BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource,
+        BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource, PythonModuleSource,
     },
     serde::{Deserialize, Serialize},
     slog::{info, warn},

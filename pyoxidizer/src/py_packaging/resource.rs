@@ -10,10 +10,9 @@ use {
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::Result,
     python_packaging::module_util::{packages_from_module_name, resolve_path_for_module},
-    python_packaging::python_source::has_dunder_file,
     python_packaging::resource::{
-        BytecodeOptimizationLevel, DataLocation, PythonEggFile, PythonModuleBytecode,
-        PythonModuleBytecodeFromSource, PythonPathExtension,
+        DataLocation, PythonEggFile, PythonModuleBytecode, PythonModuleBytecodeFromSource,
+        PythonModuleSource, PythonPathExtension,
     },
     std::path::PathBuf,
 };
@@ -26,69 +25,6 @@ pub trait ToPythonResource {
 pub trait AddToFileManifest {
     /// Add the object to a FileManifest instance.
     fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()>;
-}
-
-/// A Python module defined via source code.
-#[derive(Clone, Debug, PartialEq)]
-pub struct PythonModuleSource {
-    /// The fully qualified Python module name.
-    pub name: String,
-    /// Python source code.
-    pub source: DataLocation,
-    /// Whether this module is also a package.
-    pub is_package: bool,
-    /// Tag to apply to bytecode files.
-    ///
-    /// e.g. `cpython-37`.
-    pub cache_tag: String,
-}
-
-impl PythonModuleSource {
-    pub fn to_memory(&self) -> Result<Self> {
-        Ok(Self {
-            name: self.name.clone(),
-            source: self.source.to_memory()?,
-            is_package: self.is_package,
-            cache_tag: self.cache_tag.clone(),
-        })
-    }
-
-    /// Resolve the package containing this module.
-    ///
-    /// If this module is a package, returns the name of self.
-    pub fn package(&self) -> String {
-        if self.is_package {
-            self.name.clone()
-        } else if let Some(idx) = self.name.rfind('.') {
-            self.name[0..idx].to_string()
-        } else {
-            self.name.clone()
-        }
-    }
-
-    /// Convert the instance to a BytecodeModule.
-    pub fn as_bytecode_module(
-        &self,
-        optimize_level: BytecodeOptimizationLevel,
-    ) -> PythonModuleBytecodeFromSource {
-        PythonModuleBytecodeFromSource {
-            name: self.name.clone(),
-            source: self.source.clone(),
-            optimize_level,
-            is_package: self.is_package,
-            cache_tag: self.cache_tag.clone(),
-        }
-    }
-
-    /// Resolve the filesystem path for this source module.
-    pub fn resolve_path(&self, prefix: &str) -> PathBuf {
-        resolve_path_for_module(prefix, &self.name, self.is_package, None)
-    }
-
-    /// Whether the source code for this module has __file__
-    pub fn has_dunder_file(&self) -> Result<bool> {
-        has_dunder_file(&self.source.resolve()?)
-    }
 }
 
 impl ToPythonResource for PythonModuleSource {
@@ -456,7 +392,7 @@ impl PythonResource {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, itertools::Itertools};
+    use {super::*, itertools::Itertools, python_packaging::resource::BytecodeOptimizationLevel};
 
     const DEFAULT_CACHE_TAG: &str = "cpython-37";
 

@@ -10,7 +10,7 @@ use {
     super::distribution::PythonModuleSuffixes,
     super::package_metadata::PythonPackageMetadata,
     super::resource::{
-        PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
+        PythonExtensionModule, PythonPackageDistributionResource,
         PythonPackageDistributionResourceFlavor, PythonPackageResource, PythonResource,
     },
     anyhow::Result,
@@ -18,7 +18,7 @@ use {
     python_packaging::module_util::is_package_from_path,
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonEggFile, PythonModuleBytecode,
-        PythonPathExtension,
+        PythonModuleSource, PythonPathExtension,
     },
     std::collections::HashSet,
     std::ffi::OsStr,
