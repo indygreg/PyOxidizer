@@ -77,8 +77,6 @@ pub struct PrePackagedResources {
     cache_tag: String,
 
     extension_module_states: BTreeMap<String, ExtensionModuleBuildState>,
-
-    extra_files: FileManifest,
 }
 
 impl PrePackagedResources {
@@ -88,7 +86,6 @@ impl PrePackagedResources {
             resources: BTreeMap::new(),
             cache_tag: cache_tag.to_string(),
             extension_module_states: BTreeMap::new(),
-            extra_files: FileManifest::default(),
         }
     }
 
@@ -630,13 +627,18 @@ impl PrePackagedResources {
             // is searched for dependencies.
             // TODO this logic likely needs to be expanded.
             if let Some(shared_library) = &link.dynamic_path {
-                self.extra_files.add_file(
-                    &prefix_path.join(shared_library.file_name().unwrap()),
-                    &FileContent {
-                        data: std::fs::read(&shared_library)?,
-                        executable: false,
-                    },
-                )?;
+                let resource = self.resources.entry(link.name.clone()).or_insert_with(|| {
+                    PrePackagedResource {
+                        flavor: ResourceFlavor::SharedLibrary,
+                        name: link.name.clone(),
+                        ..PrePackagedResource::default()
+                    }
+                });
+
+                resource.relative_path_shared_library = Some((
+                    prefix_path.join(shared_library.file_name().unwrap()),
+                    DataLocation::Path(shared_library.clone()),
+                ));
             }
         }
 
@@ -872,6 +874,16 @@ impl PrePackagedResources {
                     )?;
                 }
             }
+
+            if let Some((path, location)) = &resource.relative_path_shared_library {
+                m.add_file(
+                    path,
+                    &FileContent {
+                        data: location.resolve()?,
+                        executable: true,
+                    },
+                )?;
+            }
         }
 
         Ok(m)
@@ -905,8 +917,7 @@ impl PrePackagedResources {
         }
 
         let mut resources = BTreeMap::new();
-        let mut extra_files = self.extra_files.clone();
-        extra_files.add_manifest(&self.derive_extra_files()?)?;
+        let mut extra_files = self.derive_extra_files()?;
 
         let mut compiler = BytecodeCompiler::new(&python_exe)?;
         {
