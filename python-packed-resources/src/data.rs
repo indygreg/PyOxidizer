@@ -23,6 +23,12 @@ pub enum ResourceFlavor {
     SharedLibrary = 0x05,
 }
 
+impl Default for ResourceFlavor {
+    fn default() -> Self {
+        ResourceFlavor::None
+    }
+}
+
 impl Into<u8> for ResourceFlavor {
     fn into(self) -> u8 {
         match self {

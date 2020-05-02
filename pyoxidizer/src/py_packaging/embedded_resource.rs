@@ -21,7 +21,7 @@ use {
         PythonPackageResource,
     },
     python_packaging::resource_collection::{PrePackagedResource, PythonResourcesPolicy},
-    python_packed_resources::data::Resource,
+    python_packed_resources::data::{Resource, ResourceFlavor},
     python_packed_resources::writer::write_embedded_resources_v1,
     slog::{info, warn},
     std::borrow::Cow,
@@ -203,6 +203,7 @@ impl PrePackagedResources {
             .resources
             .entry(module.name.clone())
             .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 ..PrePackagedResource::default()
             });
@@ -223,6 +224,7 @@ impl PrePackagedResources {
             .resources
             .entry(module.name.clone())
             .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 ..PrePackagedResource::default()
             });
@@ -250,6 +252,7 @@ impl PrePackagedResources {
             .resources
             .entry(module.name.clone())
             .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 ..PrePackagedResource::default()
             });
@@ -287,6 +290,7 @@ impl PrePackagedResources {
             .resources
             .entry(module.name.clone())
             .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 ..PrePackagedResource::default()
             });
@@ -323,6 +327,7 @@ impl PrePackagedResources {
             .resources
             .entry(resource.leaf_package.clone())
             .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Module,
                 name: resource.leaf_package.clone(),
                 ..PrePackagedResource::default()
             });
@@ -359,6 +364,7 @@ impl PrePackagedResources {
             .resources
             .entry(resource.leaf_package.clone())
             .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Module,
                 name: resource.leaf_package.clone(),
                 ..PrePackagedResource::default()
             });
@@ -400,6 +406,7 @@ impl PrePackagedResources {
             .resources
             .entry(resource.package.clone())
             .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Module,
                 name: resource.package.clone(),
                 ..PrePackagedResource::default()
             });
@@ -430,6 +437,7 @@ impl PrePackagedResources {
             .resources
             .entry(resource.package.clone())
             .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Module,
                 name: resource.package.clone(),
                 ..PrePackagedResource::default()
             });
@@ -538,6 +546,7 @@ impl PrePackagedResources {
             .resources
             .entry(module.module.clone())
             .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Extension,
                 name: module.module.clone(),
                 ..PrePackagedResource::default()
             });
@@ -559,6 +568,7 @@ impl PrePackagedResources {
                     self.resources
                         .entry(name.to_string())
                         .or_insert_with(|| PrePackagedResource {
+                            flavor: ResourceFlavor::SharedLibrary,
                             name: name.to_string(),
                             ..PrePackagedResource::default()
                         });
@@ -603,6 +613,7 @@ impl PrePackagedResources {
             .resources
             .entry(module.module.clone())
             .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Extension,
                 name: module.module.clone(),
                 ..PrePackagedResource::default()
             });
@@ -684,6 +695,7 @@ impl PrePackagedResources {
             .resources
             .entry(module.name.clone())
             .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::BuiltinExtensionModule,
                 name: module.name.clone(),
                 ..PrePackagedResource::default()
             });
@@ -712,6 +724,7 @@ impl PrePackagedResources {
             self.resources
                 .entry(module.to_string())
                 .or_insert_with(|| PrePackagedResource {
+                    flavor: ResourceFlavor::Extension,
                     name: module.to_string(),
                     ..PrePackagedResource::default()
                 });
@@ -749,6 +762,7 @@ impl PrePackagedResources {
             .resources
             .entry(em.name.clone())
             .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Extension,
                 name: em.name.clone(),
                 ..PrePackagedResource::default()
             });
@@ -1009,6 +1023,7 @@ impl PrePackagedResources {
                 .resources
                 .entry(package.clone())
                 .or_insert_with(|| PrePackagedResource {
+                    flavor: ResourceFlavor::Module,
                     name: package.clone(),
                     ..PrePackagedResource::default()
                 });
@@ -1243,6 +1258,7 @@ mod tests {
         assert_eq!(
             r.resources.get("foo"),
             Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 is_package: false,
                 in_memory_source: Some(DataLocation::Memory(vec![42])),
@@ -1273,6 +1289,7 @@ mod tests {
         assert_eq!(
             r.resources.get("foo"),
             Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 is_package: false,
                 relative_path_module_source: Some(PathBuf::from("foo.py")),
@@ -1311,6 +1328,7 @@ mod tests {
         assert_eq!(
             r.resources.get("root.parent.child"),
             Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
                 name: "root.parent.child".to_string(),
                 is_package: true,
                 in_memory_source: Some(DataLocation::Memory(vec![42])),
@@ -1321,6 +1339,7 @@ mod tests {
         assert_eq!(
             r.resources.get("root.parent"),
             Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
                 name: "root.parent".to_string(),
                 is_package: true,
                 in_memory_source: Some(DataLocation::Memory(vec![])),
@@ -1331,6 +1350,7 @@ mod tests {
         assert_eq!(
             r.resources.get("root"),
             Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
                 name: "root".to_string(),
                 is_package: true,
                 in_memory_source: Some(DataLocation::Memory(vec![])),
@@ -1357,6 +1377,7 @@ mod tests {
         assert_eq!(
             r.resources.get("foo"),
             Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 in_memory_bytecode: Some(DataLocation::Memory(vec![42])),
                 is_package: false,
@@ -1383,6 +1404,7 @@ mod tests {
         assert_eq!(
             r.resources.get("root.parent.child"),
             Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
                 name: "root.parent.child".to_string(),
                 in_memory_bytecode_opt1: Some(DataLocation::Memory(vec![42])),
                 is_package: true,
@@ -1392,6 +1414,7 @@ mod tests {
         assert_eq!(
             r.resources.get("root.parent"),
             Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
                 name: "root.parent".to_string(),
                 in_memory_bytecode_opt1: Some(DataLocation::Memory(vec![])),
                 is_package: true,
@@ -1401,6 +1424,7 @@ mod tests {
         assert_eq!(
             r.resources.get("root"),
             Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
                 name: "root".to_string(),
                 in_memory_bytecode_opt1: Some(DataLocation::Memory(vec![])),
                 is_package: true,
@@ -1426,6 +1450,7 @@ mod tests {
         assert_eq!(
             r.resources.get("foo"),
             Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 is_package: true,
                 in_memory_resources: Some(BTreeMap::from_iter(
@@ -1479,6 +1504,7 @@ mod tests {
         assert_eq!(
             r.resources.get("foo"),
             Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 in_memory_bytecode: Some(DataLocation::Memory(vec![])),
                 is_package: true,
@@ -1523,6 +1549,7 @@ mod tests {
         assert_eq!(
             r.resources.get("foo"),
             Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 in_memory_bytecode: Some(DataLocation::Memory(vec![])),
                 is_package: true,
@@ -1555,6 +1582,7 @@ mod tests {
         assert_eq!(
             r.resources.get("foo.bar"),
             Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Extension,
                 name: "foo.bar".to_string(),
                 is_package: false,
                 relative_path_extension_module_shared_library: Some(PathBuf::from(

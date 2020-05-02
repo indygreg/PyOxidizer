@@ -68,6 +68,7 @@ impl TryFrom<&str> for PythonResourcesPolicy {
 /// we want data resolution to be lazy.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PrePackagedResource {
+    pub flavor: ResourceFlavor,
     pub name: String,
     pub is_package: bool,
     pub is_namespace_package: bool,
@@ -96,17 +97,7 @@ impl<'a> TryFrom<&PrePackagedResource> for Resource<'a, u8> {
 
     fn try_from(value: &PrePackagedResource) -> Result<Self, Self::Error> {
         Ok(Self {
-            flavor: if value.in_memory_extension_module_shared_library.is_some()
-                || value
-                    .relative_path_extension_module_shared_library
-                    .is_some()
-            {
-                ResourceFlavor::Extension
-            } else if value.in_memory_shared_library.is_some() {
-                ResourceFlavor::SharedLibrary
-            } else {
-                ResourceFlavor::Module
-            },
+            flavor: value.flavor,
             name: Cow::Owned(value.name.clone()),
             is_package: value.is_package,
             is_namespace_package: value.is_namespace_package,
