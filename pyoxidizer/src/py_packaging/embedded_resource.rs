@@ -847,7 +847,7 @@ impl PrePackagedResources {
             );
         }
 
-        let mut modules = BTreeMap::new();
+        let mut resources = BTreeMap::new();
         let mut extra_files = self.extra_files.clone();
 
         let mut compiler = BytecodeCompiler::new(&python_exe)?;
@@ -963,20 +963,22 @@ impl PrePackagedResources {
                     entry.relative_path_module_bytecode_opt1 = Some(Cow::Owned(path));
                 }
 
-                modules.insert(name.clone(), entry);
+                resources.insert(name.clone(), entry);
             }
         }
 
-        let mut derived_package_names = packages_from_module_names(modules.keys().cloned());
+        let mut derived_package_names = packages_from_module_names(resources.keys().cloned());
         derived_package_names.extend(packages_from_module_names(
             self.extension_module_states.keys().cloned(),
         ));
 
         for package in derived_package_names {
-            let entry = modules.entry(package.clone()).or_insert_with(|| Resource {
-                name: Cow::Owned(package.clone()),
-                ..Resource::default()
-            });
+            let entry = resources
+                .entry(package.clone())
+                .or_insert_with(|| Resource {
+                    name: Cow::Owned(package.clone()),
+                    ..Resource::default()
+                });
 
             if !entry.is_package {
                 warn!(
@@ -989,7 +991,7 @@ impl PrePackagedResources {
         }
 
         Ok(EmbeddedPythonResources {
-            resources: modules,
+            resources,
             extra_files,
             extension_modules: self.extension_module_states.clone(),
         })
