@@ -618,20 +618,12 @@ impl PrePackagedResources {
             });
 
         let prefix_path = PathBuf::from(prefix);
-        let extension_path = module.shared_library.as_ref().unwrap();
+        let extension_path = module.shared_library.clone().unwrap();
         let install_path = prefix_path.join(extension_path.file_name().unwrap());
-        let extension_data = std::fs::read(&extension_path)?;
 
         entry.is_package = false;
-        entry.relative_path_extension_module_shared_library = Some(install_path.clone());
-
-        self.extra_files.add_file(
-            &install_path,
-            &FileContent {
-                data: extension_data,
-                executable: false,
-            },
-        )?;
+        entry.relative_path_extension_module_shared_library =
+            Some((install_path, DataLocation::Path(extension_path)));
 
         for link in &module.links {
             // Install dynamic library dependencies next to extension module.
@@ -766,9 +758,10 @@ impl PrePackagedResources {
                 ..PrePackagedResource::default()
             });
         entry.is_package = em.is_package;
-        entry.relative_path_extension_module_shared_library = Some(em.resolve_path(prefix));
-
-        em.add_to_file_manifest(&mut self.extra_files, prefix)?;
+        entry.relative_path_extension_module_shared_library = Some((
+            em.resolve_path(prefix),
+            em.extension_data.as_ref().unwrap().clone(),
+        ));
 
         // TODO add shared library dependencies.
 
@@ -843,6 +836,17 @@ impl PrePackagedResources {
                     &FileContent {
                         data: location.resolve()?,
                         executable: false,
+                    },
+                )?;
+            }
+
+            if let Some((path, location)) = &resource.relative_path_extension_module_shared_library
+            {
+                m.add_file(
+                    path,
+                    &FileContent {
+                        data: location.resolve()?,
+                        executable: true,
                     },
                 )?;
             }
@@ -1604,17 +1608,16 @@ mod tests {
                 flavor: ResourceFlavor::Extension,
                 name: "foo.bar".to_string(),
                 is_package: false,
-                relative_path_extension_module_shared_library: Some(PathBuf::from(
-                    "prefix/foo/bar.so"
+                relative_path_extension_module_shared_library: Some((
+                    PathBuf::from("prefix/foo/bar.so"),
+                    DataLocation::Memory(vec![42])
                 )),
                 ..PrePackagedResource::default()
             })
         );
 
-        let extra_files = r
-            .extra_files
-            .entries()
-            .collect::<Vec<(&PathBuf, &FileContent)>>();
+        let m = r.derive_extra_files()?;
+        let extra_files = m.entries().collect::<Vec<(&PathBuf, &FileContent)>>();
         assert_eq!(extra_files.len(), 1);
         assert_eq!(
             extra_files[0],

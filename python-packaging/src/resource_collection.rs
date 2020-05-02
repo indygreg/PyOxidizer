@@ -88,7 +88,8 @@ pub struct PrePackagedResource {
     pub relative_path_module_bytecode: Option<(String, DataLocation)>,
     pub relative_path_module_bytecode_opt1: Option<(String, DataLocation)>,
     pub relative_path_module_bytecode_opt2: Option<(String, DataLocation)>,
-    pub relative_path_extension_module_shared_library: Option<PathBuf>,
+    // (path, data)
+    pub relative_path_extension_module_shared_library: Option<(PathBuf, DataLocation)>,
     pub relative_path_package_resources: Option<BTreeMap<String, PathBuf>>,
     pub relative_path_distribution_resources: Option<BTreeMap<String, PathBuf>>,
 }
@@ -153,7 +154,7 @@ impl<'a> TryFrom<&PrePackagedResource> for Resource<'a, u8> {
             },
             relative_path_module_source: if let Some((path, _)) = &value.relative_path_module_source
             {
-                Some(Cow::Owned(path.into()))
+                Some(Cow::Owned(path.clone()))
             } else {
                 None
             },
@@ -162,7 +163,7 @@ impl<'a> TryFrom<&PrePackagedResource> for Resource<'a, u8> {
             relative_path_module_bytecode: None,
             relative_path_module_bytecode_opt1: None,
             relative_path_module_bytecode_opt2: None,
-            relative_path_extension_module_shared_library: if let Some(path) =
+            relative_path_extension_module_shared_library: if let Some((path, _)) =
                 &value.relative_path_extension_module_shared_library
             {
                 Some(Cow::Owned(path.clone()))
