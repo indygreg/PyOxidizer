@@ -15,7 +15,6 @@ use {
     },
     super::distutils::prepare_hacked_distutils,
     super::embedded_resource::{EmbeddedPythonResources, EmbeddedPythonResourcesPrePackaged},
-    super::fsscan::{find_python_resources, walk_tree_files},
     super::libpython::link_libpython,
     super::resources_policy::PythonResourcesPolicy,
     crate::app_packaging::resource::FileContent,
@@ -24,6 +23,7 @@ use {
     copy_dir::copy_dir,
     lazy_static::lazy_static,
     python_packaging::bytecode::BytecodeCompiler,
+    python_packaging::filesystem_scanning::{find_python_resources, walk_tree_files},
     python_packaging::module_util::{is_package_from_path, PythonModuleSuffixes},
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,

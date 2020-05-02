@@ -7,13 +7,13 @@
 use anyhow::{anyhow, Result};
 use handlebars::Handlebars;
 use lazy_static::lazy_static;
+use python_packaging::filesystem_scanning::walk_tree_files;
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use crate::environment::{PyOxidizerSource, BUILD_GIT_COMMIT, PYOXIDIZER_VERSION};
-use crate::py_packaging::fsscan::walk_tree_files;
 
 lazy_static! {
     static ref HANDLEBARS: Handlebars = {

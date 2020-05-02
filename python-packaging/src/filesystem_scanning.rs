@@ -7,16 +7,16 @@ Scanning the filesystem for Python resources.
 */
 
 use {
-    anyhow::Result,
-    itertools::Itertools,
-    python_packaging::module_util::{is_package_from_path, PythonModuleSuffixes},
-    python_packaging::package_metadata::PythonPackageMetadata,
-    python_packaging::resource::{
+    crate::module_util::{is_package_from_path, PythonModuleSuffixes},
+    crate::package_metadata::PythonPackageMetadata,
+    crate::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonEggFile, PythonExtensionModule,
         PythonModuleBytecode, PythonModuleSource, PythonPackageDistributionResource,
         PythonPackageDistributionResourceFlavor, PythonPackageResource, PythonPathExtension,
         PythonResource,
     },
+    anyhow::Result,
+    itertools::Itertools,
     std::collections::HashSet,
     std::ffi::OsStr,
     std::path::{Path, PathBuf},

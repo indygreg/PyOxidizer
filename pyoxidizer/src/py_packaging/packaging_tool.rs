@@ -9,10 +9,10 @@ Interaction with Python packaging tools (pip, setuptools, etc).
 use {
     super::distribution::{download_distribution, PythonDistribution},
     super::distutils::read_built_extensions,
-    super::fsscan::find_python_resources,
     super::standalone_distribution::resolve_python_paths,
     crate::python_distributions::GET_PIP_PY_19,
     anyhow::{anyhow, Context, Result},
+    python_packaging::filesystem_scanning::find_python_resources,
     python_packaging::resource::PythonResource,
     slog::warn,
     std::collections::HashMap,
