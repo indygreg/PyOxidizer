@@ -46,7 +46,6 @@ path-dedot = "1.1"
 podio = "0.1"
 python-packaging = { version = "0.1.0-pre", path = "../python-packaging" }
 python-packed-resources = { version = "0.2.0-pre", path = "../python-packed-resources" }
-regex = "1"
 reqwest = "0.9"
 rustc_version = "0.2"
 semver = "0.9"

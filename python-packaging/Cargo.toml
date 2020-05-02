@@ -12,3 +12,5 @@ keywords = ["python"]
 
 [dependencies]
 anyhow = "1.0"
+lazy_static = "1.4"
+regex = "1"

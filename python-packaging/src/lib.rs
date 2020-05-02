@@ -9,4 +9,5 @@ and packaging facilities.
 */
 
 pub mod module_util;
+pub mod python_source;
 pub mod resource;

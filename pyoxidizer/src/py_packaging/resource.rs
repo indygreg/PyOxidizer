@@ -7,11 +7,12 @@ Defines primitives representing Python resources.
 */
 
 use {
-    super::bytecode::{python_source_encoding, BytecodeCompiler, CompileMode},
+    super::bytecode::{BytecodeCompiler, CompileMode},
     super::fsscan::is_package_from_path,
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::Result,
     python_packaging::module_util::{packages_from_module_name, resolve_path_for_module},
+    python_packaging::python_source::python_source_encoding,
     python_packaging::resource::DataLocation,
     std::path::{Path, PathBuf},
 };

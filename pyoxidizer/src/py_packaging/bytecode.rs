@@ -7,7 +7,6 @@ Working with Python bytecode.
 */
 
 use anyhow::Result;
-use lazy_static::lazy_static;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
@@ -16,31 +15,6 @@ use std::process;
 use super::resource::BytecodeOptimizationLevel;
 
 pub const BYTECODE_COMPILER: &[u8] = include_bytes!("bytecodecompiler.py");
-
-lazy_static! {
-    static ref RE_CODING: regex::bytes::Regex =
-        { regex::bytes::Regex::new(r"^[ \t\f]*#.*?coding[:=][ \t]*([-_.a-zA-Z0-9]+)").unwrap() };
-}
-
-/// Derive the source encoding from Python source code.
-pub fn python_source_encoding(source: &[u8]) -> Vec<u8> {
-    // Default source encoding is UTF-8. But per PEP 263, the first or second
-    // line of source can match a regular expression to define a custom
-    // encoding.
-    let lines = source.split(|v| v == &b'\n');
-
-    for (i, line) in lines.enumerate() {
-        if i > 1 {
-            break;
-        }
-
-        if let Some(m) = RE_CODING.find(line) {
-            return m.as_bytes().to_vec();
-        }
-    }
-
-    b"utf-8".to_vec()
-}
 
 /// An entity to perform Python bytecode compilation.
 #[derive(Debug)]
