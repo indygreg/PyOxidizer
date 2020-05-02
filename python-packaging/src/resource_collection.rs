@@ -90,7 +90,7 @@ pub struct PrePackagedResource {
     pub relative_path_module_bytecode_opt2: Option<(String, DataLocation)>,
     // (path, data)
     pub relative_path_extension_module_shared_library: Option<(PathBuf, DataLocation)>,
-    pub relative_path_package_resources: Option<BTreeMap<String, PathBuf>>,
+    pub relative_path_package_resources: Option<BTreeMap<String, (PathBuf, DataLocation)>>,
     pub relative_path_distribution_resources: Option<BTreeMap<String, PathBuf>>,
 }
 
@@ -174,7 +174,7 @@ impl<'a> TryFrom<&PrePackagedResource> for Resource<'a, u8> {
                 &value.relative_path_package_resources
             {
                 let mut res = HashMap::new();
-                for (key, path) in resources {
+                for (key, (path, _)) in resources {
                     res.insert(Cow::Owned(key.clone()), Cow::Owned(path.clone()));
                 }
                 Some(res)

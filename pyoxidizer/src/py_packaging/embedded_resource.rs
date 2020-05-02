@@ -381,10 +381,8 @@ impl PrePackagedResources {
             .unwrap()
             .insert(
                 resource.relative_name.clone(),
-                resource.resolve_path(prefix),
+                (resource.resolve_path(prefix), resource.data.clone()),
             );
-
-        resource.add_to_file_manifest(&mut self.extra_files, prefix)?;
 
         self.add_parent_packages(
             &resource.leaf_package,
@@ -849,6 +847,18 @@ impl PrePackagedResources {
                         executable: true,
                     },
                 )?;
+            }
+
+            if let Some(package) = &resource.relative_path_package_resources {
+                for (path, location) in package.values() {
+                    m.add_file(
+                        path,
+                        &FileContent {
+                            data: location.resolve()?,
+                            executable: false,
+                        },
+                    )?;
+                }
             }
         }
 
