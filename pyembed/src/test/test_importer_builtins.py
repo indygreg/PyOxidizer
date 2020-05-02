@@ -12,7 +12,7 @@ class TestImporterBuiltins(unittest.TestCase):
         self.assertEqual(len(sys.meta_path), 2)
 
         importer = sys.meta_path[0]
-        self.assertEqual(importer.__class__.__name__, "PyOxidizerFinder")
+        self.assertEqual(importer.__class__.__name__, "OxidizedFinder")
 
         return importer
 

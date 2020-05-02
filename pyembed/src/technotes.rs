@@ -191,7 +191,7 @@ The in-memory data structure is parsed into a Rust collection type
 (basically a `HashMap<&str, (&[u8], &[u8])>`) mapping Python module names
 to their source and bytecode data.
 
-The extension module defines a `PyOxidizerFinder` Python type that
+The extension module defines an `OxidizedFinder` Python type that
 implements the requisite `importlib.abc.*` interfaces for providing a
 *meta path importer*. An instance of this type is constructed from the
 parsed data structure containing known Python modules. That instance is
@@ -204,7 +204,7 @@ registered first, it should always be used.
 
 As part of _main_ interpreter initialization, Python attempts various
 imports of `.py` based modules. The standard `sys.meta_path` traversal
-is performed. The Rust-implemented `PyOxidizerFinder` converts the
+is performed. The Rust-implemented `OxidizedFinder` converts the
 requested Python module name to a Rust `&str` and does a lookup in a
 `HashMap<&str, ...>` to see if it knows about the module. Assuming the
 module is found, a `&[u8]` handle on that module's source or bytecode is
@@ -215,9 +215,9 @@ the bytecode is sent to `marshal.loads()`, converted into a Python `code`
 object, which is then executed via the equivalent of
 `exec(code, module.__dict__)` to populate an empty Python module object.
 
-In addition, `PyOxidizerFinder` indexes the built-in extension modules
+In addition, `OxidizedFinder` indexes the built-in extension modules
 and frozen modules. It removes `BuiltinImporter` and `FrozenImporter`
-from `sys.meta_path`. When `PyOxidizerFinder` sees a request for a
+from `sys.meta_path`. When `OxidizedFinder` sees a request for a
 built-in or frozen module, it dispatches to `BuiltinImporter` or
 `FrozenImporter` to complete the request. The reason we do this is
 performance. Imports have to traverse `sys.meta_path` entries until a
@@ -225,7 +225,7 @@ registered finder says it can service the request. So the more entries
 there are, the more overhead there is. Compounding the problem is that
 `BuiltinImporter` and `FrozenImporter` do a `strcmp()`
 against the global module arrays when trying to service an import.
-`PyOxidizerFinder` already has an index of module name to data. So it
+`OxidizedFinder` already has an index of module name to data. So it
 was not that much effort to also index built-in and frozen modules
 so there's a fixed, low cost for finding modules (a Rust `HashMap` key
 lookup).

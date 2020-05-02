@@ -54,6 +54,8 @@ Backwards Compatibility Notes
   and ``OxidizedPythonInterpreterConfig`` must now be annotated with
   a lifetime for the resources data they hold such that Rust lifetimes
   can be enforced.
+* The type of the custom Python importer has been renamed from
+  ``PyOxidizerFinder`` to ``OxidizedFinder``.
 
 New Features
 ^^^^^^^^^^^^
@@ -75,18 +77,18 @@ New Features
   non-``'static`` lifetime. This means that resources data can be
   more dynamically obtained (e.g. by reading a file). PyOxidizer does
   not yet support such mechanisms, however.
-* ``PyOxidizerFinder`` instances can now be
-  :ref:`constructed from Python code <pyoxidizer_finder__new__>`.
+* ``OxidizedFinder`` instances can now be
+  :ref:`constructed from Python code <oxidized_finder__new__>`.
   This means that a Python application can instantiate and install its
   own oxidized module importer.
-* The resources indexed by ``PyOxidizerFinder`` instances are now
+* The resources indexed by ``OxidizedFinder`` instances are now
   representable to Python code as ``OxidizedResource`` instances. These
   types can be created, queried, and mutated by Python code. See
   :ref:`oxidized_resource` for the API.
-* ``PyOxidizerFinder`` instances can now have custom ``OxidizedResource``
+* ``OxidizedFinder`` instances can now have custom ``OxidizedResource``
   instances registered against them. This means Python code can collect
   its own Python modules and register them with the importer. See
-  :ref:`pyoxidizer_finder_add_resource` for more.
+  :ref:`oxidized_finder_add_resource` for more.
 
 Bug Fixes
 ^^^^^^^^^

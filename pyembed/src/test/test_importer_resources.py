@@ -10,13 +10,13 @@ import unittest
 
 from _pyoxidizer_importer import (
     OxidizedResource,
-    PyOxidizerFinder as Finder,
+    OxidizedFinder,
 )
 
 
 class TestImporterResources(unittest.TestCase):
     def test_resources_builtins(self):
-        f = Finder()
+        f = OxidizedFinder()
         resources = f.indexed_resources()
         self.assertIsInstance(resources, list)
         self.assertGreater(len(resources), 0)
@@ -54,7 +54,7 @@ class TestImporterResources(unittest.TestCase):
         self.assertIsNone(resource.relative_path_distribution_resources)
 
     def test_resources_frozen(self):
-        f = Finder()
+        f = OxidizedFinder()
         resources = f.indexed_resources()
 
         resource = [x for x in resources if x.name == "_frozen_importlib"][0]
@@ -539,13 +539,13 @@ class TestImporterResources(unittest.TestCase):
             resource.relative_path_distribution_resources = {"foo": None}
 
     def test_add_resource_bad_type(self):
-        f = Finder()
+        f = OxidizedFinder()
 
         with self.assertRaises(TypeError):
             f.add_resource(None)
 
     def test_add_resource_module(self):
-        f = Finder()
+        f = OxidizedFinder()
         resource = OxidizedResource()
         resource.name = "my_module"
         resource.flavor = "module"
@@ -572,7 +572,7 @@ class TestImporterResources(unittest.TestCase):
         self.assertEqual(f.get_code("my_module"), code)
 
     def test_add_resources(self):
-        f = Finder()
+        f = OxidizedFinder()
         a = OxidizedResource()
         a.name = "foo_a"
         a.flavor = "module"

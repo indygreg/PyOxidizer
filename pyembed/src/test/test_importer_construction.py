@@ -5,42 +5,44 @@
 import sys
 import unittest
 
-from _pyoxidizer_importer import PyOxidizerFinder as Finder
+from _pyoxidizer_importer import OxidizedFinder
 
 
 class TestImporterConstruction(unittest.TestCase):
     def test_no_args(self):
-        f = Finder()
-        self.assertIsInstance(f, Finder)
+        f = OxidizedFinder()
+        self.assertIsInstance(f, OxidizedFinder)
 
     def test_none(self):
-        f = Finder(None)
-        self.assertIsInstance(f, Finder)
+        f = OxidizedFinder(None)
+        self.assertIsInstance(f, OxidizedFinder)
 
-        f = Finder(resources=None)
-        self.assertIsInstance(f, Finder)
+        f = OxidizedFinder(resources=None)
+        self.assertIsInstance(f, OxidizedFinder)
 
     def test_bad_resources_type(self):
         with self.assertRaises(TypeError):
-            Finder("foo")
+            OxidizedFinder("foo")
 
     def test_resources_no_magic(self):
         with self.assertRaisesRegex(ValueError, "reading 8 byte"):
-            Finder(b"foo")
+            OxidizedFinder(b"foo")
 
     def test_resources_bad_magic(self):
         with self.assertRaisesRegex(ValueError, "unrecognized file format"):
-            Finder(b"\xde\xad\xbe\xef\xaa\xaa\xaa\xaa")
+            OxidizedFinder(b"\xde\xad\xbe\xef\xaa\xaa\xaa\xaa")
 
     def test_no_indices(self):
-        Finder(b"pyembed\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+        OxidizedFinder(
+            b"pyembed\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+        )
 
     def test_origin_bad_value(self):
         with self.assertRaises(TypeError):
-            Finder(relative_path_origin=True)
+            OxidizedFinder(relative_path_origin=True)
 
     def test_origin(self):
-        Finder(relative_path_origin="/path/to/origin")
+        OxidizedFinder(relative_path_origin="/path/to/origin")
 
 
 if __name__ == "__main__":

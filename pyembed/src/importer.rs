@@ -466,7 +466,7 @@ impl Drop for ImporterState {
 // Because macro expansion confuses IDE type hinting and rustfmt, most
 // methods call into non-macro implemented methods named <method>_impl which
 // are defined below in separate `impl {}` blocks.
-py_class!(class PyOxidizerFinder |py| {
+py_class!(class OxidizedFinder |py| {
     data state: Arc<Box<ImporterState>>;
 
     // Start of importlib.abc.MetaPathFinder interface.
@@ -536,8 +536,8 @@ py_class!(class PyOxidizerFinder |py| {
     }
 
     // Additional methods provided for convenience.
-    def __new__(_cls, resources: Option<PyObject> = None, relative_path_origin: Option<PyObject> = None) -> PyResult<PyOxidizerFinder> {
-        pyoxidizer_finder_new(py, resources, relative_path_origin)
+    def __new__(_cls, resources: Option<PyObject> = None, relative_path_origin: Option<PyObject> = None) -> PyResult<OxidizedFinder> {
+        oxidized_finder_new(py, resources, relative_path_origin)
     }
 
     def indexed_resources(&self) -> PyResult<PyObject> {
@@ -554,7 +554,7 @@ py_class!(class PyOxidizerFinder |py| {
 });
 
 // importlib.abc.MetaPathFinder interface.
-impl PyOxidizerFinder {
+impl OxidizedFinder {
     fn find_spec_impl(
         &self,
         py: Python,
@@ -619,7 +619,7 @@ impl PyOxidizerFinder {
 }
 
 // importlib.abc.MetaPathFinder interface.
-impl PyOxidizerFinder {
+impl OxidizedFinder {
     fn create_module_impl(&self, py: Python, spec: &PyObject) -> PyResult<PyObject> {
         let state = self.state(py);
         let name = spec.getattr(py, "name")?;
@@ -713,7 +713,7 @@ impl PyOxidizerFinder {
 }
 
 // importlib.abc.ResourceLoader interface.
-impl PyOxidizerFinder {
+impl OxidizedFinder {
     /// An abstract method to return the bytes for the data located at path.
     ///
     /// Loaders that have a file-like storage back-end that allows storing
@@ -729,7 +729,7 @@ impl PyOxidizerFinder {
 }
 
 // importlib.abc.InspectLoader interface.
-impl PyOxidizerFinder {
+impl OxidizedFinder {
     fn get_code_impl(&self, py: Python, fullname: &PyString) -> PyResult<PyObject> {
         let state = self.state(py);
         let key = fullname.to_string(py)?;
@@ -776,7 +776,7 @@ impl PyOxidizerFinder {
 }
 
 // importlib.abc.ExecutionLoader interface.
-impl PyOxidizerFinder {
+impl OxidizedFinder {
     /// An abstract method that is to return the value of __file__ for the specified module.
     ///
     /// If no path is available, ImportError is raised.
@@ -802,7 +802,7 @@ impl PyOxidizerFinder {
 }
 
 // Resource loading interface.
-impl PyOxidizerFinder {
+impl OxidizedFinder {
     fn get_resource_reader_impl(&self, py: Python, fullname: &PyString) -> PyResult<PyObject> {
         let state = self.state(py);
         let key = fullname.to_string(py)?;
@@ -828,7 +828,7 @@ impl PyOxidizerFinder {
 }
 
 // importlib.metadata support.
-impl PyOxidizerFinder {
+impl OxidizedFinder {
     /// def find_distributions(context=DistributionFinder.Context()):
     ///
     /// Return an iterable of all Distribution instances capable of
@@ -860,16 +860,16 @@ impl PyOxidizerFinder {
     }
 }
 
-impl PyOxidizerFinder {
+impl OxidizedFinder {
     /// Construct an instance from a module and resources state.
     fn new_from_module_and_resources<'a>(
         py: Python,
         m: &PyModule,
         resources_state: &PythonResourcesState<'a, u8>,
-    ) -> PyResult<PyOxidizerFinder> {
+    ) -> PyResult<OxidizedFinder> {
         let bootstrap_module = py.import("_frozen_importlib")?;
 
-        let importer = PyOxidizerFinder::create_instance(
+        let importer = OxidizedFinder::create_instance(
             py,
             Arc::new(Box::new(ImporterState::new(
                 py,
@@ -885,12 +885,12 @@ impl PyOxidizerFinder {
     }
 }
 
-/// PyOxidizerFinder.__new__(resources=None)
-fn pyoxidizer_finder_new(
+/// OxidizedFinder.__new__(resources=None)
+fn oxidized_finder_new(
     py: Python,
     resources: Option<PyObject>,
     relative_path_origin: Option<PyObject>,
-) -> PyResult<PyOxidizerFinder> {
+) -> PyResult<OxidizedFinder> {
     // We need to obtain an ImporterState instance. This requires handles on a
     // few items...
 
@@ -903,7 +903,7 @@ fn pyoxidizer_finder_new(
     // It loads resources data from a memory location and stores references
     // to that memory address. That means resources data passed in must live
     // for at least as long as the PythonResourcesState / ImporterState /
-    // PyOxidizerFinder instances or else we could have an unsafety issue.
+    // OxidizedFinder instances or else we could have an unsafety issue.
     //
     // To make matters more complex, ImporterState stores the reference to
     // PythonResourcesState as a PyCapsule to avoid 'static lifetime restrictions.
@@ -942,7 +942,7 @@ fn pyoxidizer_finder_new(
         .load(resources_data)
         .or_else(|err| Err(PyErr::new::<ValueError, _>(py, err)))?;
 
-    let importer = PyOxidizerFinder::create_instance(
+    let importer = OxidizedFinder::create_instance(
         py,
         Arc::new(Box::new(ImporterState::new(
             py,
@@ -961,7 +961,7 @@ fn pyoxidizer_finder_new(
     Ok(importer)
 }
 
-impl PyOxidizerFinder {
+impl OxidizedFinder {
     fn indexed_resources_impl(&self, py: Python) -> PyResult<PyObject> {
         let resources_state: &PythonResourcesState<u8> = self.state(py).get_resources_state();
 
@@ -1359,18 +1359,18 @@ pub(crate) fn initialize_importer<'a>(
     // importer is able to handle builtin and frozen modules, the existing meta path
     // importers are removed. The assumption here is that we're called very early
     // during startup and the 2 default meta path importers are installed.
-    let unified_importer = PyOxidizerFinder::new_from_module_and_resources(py, m, resources_state)?;
+    let unified_importer = OxidizedFinder::new_from_module_and_resources(py, m, resources_state)?;
 
     let meta_path_object = sys_module.get(py, "meta_path")?;
 
     meta_path_object.call_method(py, "clear", NoArgs, None)?;
     meta_path_object.call_method(py, "append", (unified_importer.clone_ref(py),), None)?;
 
-    // We also expose the type of PyOxidizerFinder on the module so Python
+    // We also expose the type of OxidizedFinder on the module so Python
     // can more easily get a handle on it.
     m.add(
         py,
-        "PyOxidizerFinder",
+        "OxidizedFinder",
         unified_importer.as_object().get_type(py),
     )?;
 

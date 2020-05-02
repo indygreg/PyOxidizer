@@ -21,14 +21,14 @@ There are a handful of optional methods available on implementations.
 PyOxidizer implements a custom *meta path finder* (which we'll refer to
 as an *importer*). This custom importer is implemented in Rust in the
 ``pyembed`` Rust crate, which provides the run-time functionality of
-PyOxidizer. The type's name is ``PyOxidizerFinder`` and it will
+PyOxidizer. The type's name is ``OxidizedFinder`` and it will
 automatically be registered as the first element in ``sys.meta_path``
 when starting a Python interpreter. You can verify this inside a binary
 built with PyOxidizer::
 
    >>> import sys
    >>> sys.meta_path
-   [<PyOxidizerFinder object at 0x7f16bb6f93d0>]
+   [<OxidizedFinder object at 0x7f16bb6f93d0>]
 
 Contrast with a typical Python environment::
 
@@ -43,39 +43,39 @@ Contrast with a typical Python environment::
 High-Level Operation
 ====================
 
-The ``PyOxidizerFinder`` instance is constructed while the Python interpreter
+The ``OxidizedFinder`` instance is constructed while the Python interpreter
 is initializing. It is registered on ``sys.meta_path`` before the first
 ``import`` is performed, allowing it to service every ``import`` for the
 interpreter, even those performed during interpreter initialization itself.
 
-Instances of ``PyOxidizerFinder`` are bound to a binary blob holding
+Instances of ``OxidizedFinder`` are bound to a binary blob holding
 *packed resources data*. This is a custom data format that has serialized
 Python modules, bytecode, extension modules, resource files, etc to be made
 available to Python. See the ``python-packed-resources`` Rust crate for
 the data specification and implementation of this format.
 
-When a ``PyOxidizerFinder`` instance is created, the *packed resources data*
-is parsed into a data structure. This data structure allows ``PyOxidizerFinder``
+When a ``OxidizedFinder`` instance is created, the *packed resources data*
+is parsed into a data structure. This data structure allows ``OxidizedFinder``
 to quickly find resources and their corresponding data.
 
-The main ``PyOxidizerFinder`` instance also merges other low-level Python
+The main ``OxidizedFinder`` instance also merges other low-level Python
 interpreter state into its own state. For example, it creates records in
 its resources data structure for the *built-in* extension modules compiled
 into the Python interpreter as well as the *frozen* modules also compiled
-into the interpreter. This allows ``PyOxidizerFinder`` to subsume
+into the interpreter. This allows ``OxidizedFinder`` to subsume
 functionality normally provided by other *meta path finders*, which is
 why the ``BuiltinImporter`` and ``FrozenImporter`` *meta path finders* are
-not present on ``sys.meta_path`` when ``PyOxidizerFinder`` is.
+not present on ``sys.meta_path`` when ``OxidizedFinder`` is.
 
 When Python's import machinery calls various methods of the
-``PyOxidizerFinder`` on ``sys.meta_path``, Rust code is invoked and Rust
+``OxidizedFinder`` on ``sys.meta_path``, Rust code is invoked and Rust
 code does the heavy work before returning from the called function (either
 returning a Python object or raising a Python exception).
 
 Python API
 ==========
 
-``PyOxidizerFinder`` instances implement the following interfaces:
+``OxidizedFinder`` instances implement the following interfaces:
 
 * ``importlib.abc.MetaPathFinder``
 * ``importlib.abc.Loader``
@@ -98,25 +98,25 @@ defined by ``importlib`` are exposed:
 Non-``importlib`` API
 ---------------------
 
-``PyOxidizerFinder`` instances have additional functionality over what
+``OxidizedFinder`` instances have additional functionality over what
 is defined by ``importlib``. This functionality allows you to construct,
 inspect, and manipulate instances.
 
-.. _pyoxidizer_finder__new__:
+.. _oxidized_finder__new__:
 
 ``__new__(cls, resources=None, relative_path_origin=None)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-New instances of ``PyOxidizerFinder`` can be constructed like normal
+New instances of ``OxidizedFinder`` can be constructed like normal
 Python types::
 
-    finder = PyOxidizerFinder()
+    finder = OxidizedFinder()
 
 The constructor takes an optional ``resources`` argument, which defines
 *packed resources data* to parse. The argument must be a bytes-like type.
 A reference to the passed in value will be stored internally in the
 constructed instance, as the memory needs to live for the lifetime of
-the ``PyOxidizerFinder`` instance.
+the ``OxidizedFinder`` instance.
 
 See the `python_packed_resources <https://docs.rs/python-packed-resources/0.1.0/python_packed_resources/>`_
 Rust crate for the specification of the binary data blob accepted by this
@@ -128,18 +128,18 @@ Filesystem-based resources are stored as a relative path to some other
 value. This is that some other value. If not specified, the directory of
 the current executable will be used.
 
-.. _pyoxidizer_finder_indexed_resources:
+.. _oxidized_finder_indexed_resources:
 
 ``indexed_resources(self) -> List[OxidizedResource]``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This method returns a list of resources that are indexed by the
-``PyOxidizerFinder`` instance. It allows Python code to inspect what
+``OxidizedFinder`` instance. It allows Python code to inspect what
 the finder knows about.
 
 See :ref:`oxidized_resource` for more on the returned type.
 
-.. _pyoxidizer_finder_add_resource:
+.. _oxidized_finder_add_resource:
 
 ``add_resource(self, resource: OxidizedResource)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -187,7 +187,7 @@ of times.
 Behavior and Compliance
 =======================
 
-``PyOxidizerFinder`` strives to be as compliant as possible with other *meta
+``OxidizedFinder`` strives to be as compliant as possible with other *meta
 path importers*. So generally speaking, the behavior as described by the
 `importlib documentation <https://docs.python.org/3/library/importlib.html>`_
 should be compatible. In other words, things should mostly *just work*
@@ -216,7 +216,7 @@ a path to a ``.py`` file). There is also the similar - but lesser known -
 
 .. important::
 
-   ``PyOxidizerFinder`` will not set either attribute when importing modules
+   ``OxidizedFinder`` will not set either attribute when importing modules
    from memory.
 
 These attributes are not set because it isn't obvious what the values
@@ -230,7 +230,7 @@ harm than good.
 While we may make it possible to define ``__file__`` (and ``__cached__``)
 on modules imported from memory someday, we do not yet support this.
 
-``PyOxidizerFinder`` does, however, set ``__file__`` and ``__cached__``
+``OxidizedFinder`` does, however, set ``__file__`` and ``__cached__``
 on modules imported from the filesystem. See
 :ref:`packaging_resource_locations` for more on registering files for
 filesystem loading. So, a workaround to restore these missing attributes
@@ -248,7 +248,7 @@ is to avoid in-memory loading.
 Python modules that are also packages must have a ``__path__`` attribute
 containing an iterable of ``str``. The iterable can be empty.
 
-If a module is imported from the filesystem, ``PyOxidizerFinder`` will
+If a module is imported from the filesystem, ``OxidizedFinder`` will
 set ``__path__`` to the parent directory of the module's file, just like
 the standard filesystem importer would.
 
@@ -284,7 +284,7 @@ See :ref:`resource_loader_support` for details.
 ``importlib.metadata`` Compatibility
 ====================================
 
-``PyOxidizerFinder`` implements ``find_distributions()`` and therefore provides
+``OxidizedFinder`` implements ``find_distributions()`` and therefore provides
 the required hook for ``importlib.metadata`` to resolve ``Distribution``
 instances. However, the returned objects do not implement the full
 ``Distribution`` interface.
@@ -296,7 +296,7 @@ would be easier to wait until PyOxidizer requires Python 3.8 and then we
 can use the types in ``importlib.metadata`` directly.
 
 The ``PyOxidizerDistribution`` instances returned by
-``PyOxidizerFinder.find_distributions()`` have the following behavior:
+``OxidizedFinder.find_distributions()`` have the following behavior:
 
 * ``read_text(filename)`` will return a ``str`` on success or raise
   ``IOError`` on failure.
@@ -308,7 +308,7 @@ The ``PyOxidizerDistribution`` instances returned by
 * The ``entry_points``, ``files``, and ``requires`` properties/attributes
   will raise ``NotImplementedError`` on access.
 
-In addition, ``PyOxidizerFinder.find_distributions()`` ignores the ``path``
+In addition, ``OxidizedFinder.find_distributions()`` ignores the ``path``
 attribute of the passed ``Context`` instance. Only the ``name`` attribute
 is consulted. If ``name`` is ``None``, all packages with registered
 distribution files will be returned. Otherwise the returned ``list``
@@ -321,7 +321,7 @@ requested package ``name``.
 ================================
 
 The ``OxidizedResource`` Python type represents a *resource* that is indexed
-by a ``PyOxidizerFinder`` instance.
+by a ``OxidizedFinder`` instance.
 
 Each instance represents a named entity with associated metadata and data.
 e.g. an instance can represent a Python module with associated source and
@@ -493,7 +493,7 @@ The following flavors are defined:
 Security Implications of Loading Resources
 ==========================================
 
-``PyOxidizerFinder`` allows Python code to define its own ``OxidizedResource``
+``OxidizedFinder`` allows Python code to define its own ``OxidizedResource``
 instances to be made available for loading. This means Python code can define
 its own Python module source or bytecode that could later be executed. It also
 allows registration of extension modules and shared libraries, which give
@@ -508,11 +508,11 @@ it is extremely difficult to sandbox Python code. Security sandboxing at the
 Python layer is effectively impossible: the only effective mechanism to
 sandbox Python is to add protections at the process level. e.g. by restricting
 what system calls can be performed. We feel that the capability to inject
-new Python modules and even shared libraries via ``PyOxidizerFinder`` doesn't
+new Python modules and even shared libraries via ``OxidizedFinder`` doesn't
 provide any new or novel vector that doesn't already exist in Python's standard
 library and can't already be exploited by well-crafted Python code. Therefore,
 this feature isn't a net regression in security protection.
 
 If you have a use case that requires limiting the features of
-``PyOxidizerFinder`` so security isn't sacrificed, please
+``OxidizedFinder`` so security isn't sacrificed, please
 `file an issue <https://github.com/indygreg/PyOxidizer/issues>`.

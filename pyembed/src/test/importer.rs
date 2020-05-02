@@ -44,7 +44,7 @@ fn get_importer(interp: &mut MainPythonInterpreter) -> Result<PyObject> {
     assert_eq!(meta_path.len(py).unwrap(), 2);
 
     let importer = meta_path.get_item(py, 0).unwrap();
-    assert_eq!(importer.get_type(py).name(py), "PyOxidizerFinder");
+    assert_eq!(importer.get_type(py).name(py), "OxidizedFinder");
 
     Ok(importer)
 }
@@ -62,11 +62,11 @@ fn no_resources() -> Result<()> {
     assert_eq!(meta_path.len(py).unwrap(), 2);
 
     let importer = meta_path.get_item(py, 0).unwrap();
-    assert_eq!(importer.get_type(py).name(py), "PyOxidizerFinder");
+    assert_eq!(importer.get_type(py).name(py), "OxidizedFinder");
 
     let errno = py.import("errno").unwrap();
     let loader = errno.get(py, "__loader__").unwrap();
-    // It isn't PyOxidizerFinder because PyOxidizerFinder is just a proxy.
+    // It isn't OxidizedFinder because OxidizedFinder is just a proxy.
     assert!(loader
         .to_string()
         .contains("_frozen_importlib.BuiltinImporter"));
