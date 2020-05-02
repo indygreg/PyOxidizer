@@ -10,14 +10,14 @@ use {
     super::config::EmbeddedPythonConfig,
     super::embedded_resource::EmbeddedPythonResources,
     super::pyembed::{derive_python_config, write_default_python_config_rs},
-    super::resource::{
-        PythonExtensionModule, PythonPackageDistributionResource, PythonPackageResource,
-    },
+    super::resource::{PythonExtensionModule, PythonPackageDistributionResource},
     super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::DistributionExtensionModule,
     crate::app_packaging::resource::FileManifest,
     anyhow::Result,
-    python_packaging::resource::{PythonModuleBytecodeFromSource, PythonModuleSource},
+    python_packaging::resource::{
+        PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageResource,
+    },
     std::collections::BTreeMap,
     std::convert::TryFrom,
     std::fs::File,

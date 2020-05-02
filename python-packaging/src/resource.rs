@@ -226,6 +226,39 @@ impl PythonModuleBytecode {
     }
 }
 
+/// Python package resource data, agnostic of storage location.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PythonPackageResource {
+    /// The full relative path to this resource from a library root.
+    pub full_name: String,
+    /// The leaf-most Python package this resource belongs to.
+    pub leaf_package: String,
+    /// The relative path within `leaf_package` to this resource.
+    pub relative_name: String,
+    /// Location of resource data.
+    pub data: DataLocation,
+}
+
+impl PythonPackageResource {
+    pub fn to_memory(&self) -> Result<Self> {
+        Ok(Self {
+            full_name: self.full_name.clone(),
+            leaf_package: self.leaf_package.clone(),
+            relative_name: self.relative_name.clone(),
+            data: self.data.to_memory()?,
+        })
+    }
+
+    pub fn symbolic_name(&self) -> String {
+        format!("{}:{}", self.leaf_package, self.relative_name)
+    }
+
+    /// Resolve filesystem path to this bytecode.
+    pub fn resolve_path(&self, prefix: &str) -> PathBuf {
+        PathBuf::from(prefix).join(&self.full_name)
+    }
+}
+
 /// Represents a Python .egg file.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PythonEggFile {

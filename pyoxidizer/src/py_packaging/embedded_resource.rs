@@ -10,7 +10,6 @@ use {
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
     super::resource::{
         AddToFileManifest, PythonExtensionModule, PythonPackageDistributionResource,
-        PythonPackageResource,
     },
     super::resources_policy::PythonResourcesPolicy,
     super::standalone_distribution::DistributionExtensionModule,
@@ -20,7 +19,8 @@ use {
     python_packaging::module_util::{packages_from_module_name, packages_from_module_names},
     python_packaging::python_source::has_dunder_file,
     python_packaging::resource::{
-        BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource, PythonModuleSource,
+        BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource,
+        PythonModuleSource, PythonPackageResource,
     },
     python_packed_resources::data::{Resource as EmbeddedResource, ResourceFlavor},
     python_packed_resources::writer::write_embedded_resources_v1,
