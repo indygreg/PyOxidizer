@@ -22,7 +22,7 @@ use {
         PyList, PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
     },
     python3_sys as pyffi,
-    python_packed_resources::data::{Resource, ResourceFlavor},
+    python_packed_resources::data::ResourceFlavor,
     std::sync::Arc,
 };
 #[cfg(windows)]
@@ -1358,9 +1358,8 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
         ),
     )?;
 
-    let resource: Resource<u8> = Resource::default();
-    let resource = resource_to_pyobject(py, &resource)?;
-    m.add(py, "OxidizedResource", resource.get_type(py))?;
+    m.add(py, "OxidizedFinder", py.get_type::<OxidizedFinder>())?;
+    m.add(py, "OxidizedResource", py.get_type::<OxidizedResource>())?;
 
     Ok(())
 }
@@ -1389,14 +1388,6 @@ pub(crate) fn initialize_importer<'a>(
 
     meta_path_object.call_method(py, "clear", NoArgs, None)?;
     meta_path_object.call_method(py, "append", (unified_importer.clone_ref(py),), None)?;
-
-    // We also expose the type of OxidizedFinder on the module so Python
-    // can more easily get a handle on it.
-    m.add(
-        py,
-        "OxidizedFinder",
-        unified_importer.as_object().get_type(py),
-    )?;
 
     state.initialized = true;
 
