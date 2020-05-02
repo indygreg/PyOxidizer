@@ -16,7 +16,6 @@ pub mod embedded_resource;
 pub mod filtering;
 pub mod fsscan;
 pub mod libpython;
-pub mod package_metadata;
 pub mod packaging_tool;
 pub mod pyembed;
 pub mod resource;

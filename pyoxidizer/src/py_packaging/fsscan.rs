@@ -8,10 +8,10 @@ Scanning the filesystem for Python resources.
 
 use {
     super::distribution::PythonModuleSuffixes,
-    super::package_metadata::PythonPackageMetadata,
     anyhow::Result,
     itertools::Itertools,
     python_packaging::module_util::is_package_from_path,
+    python_packaging::package_metadata::PythonPackageMetadata,
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonEggFile, PythonExtensionModule,
         PythonModuleBytecode, PythonModuleSource, PythonPackageDistributionResource,
