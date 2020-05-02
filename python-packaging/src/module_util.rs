@@ -4,7 +4,7 @@
 
 /*! Utility functions related to Python modules. */
 
-use {std::collections::BTreeSet, std::path::PathBuf};
+use {std::collections::BTreeSet, std::path::Path, std::path::PathBuf};
 
 /// Resolve the set of packages present in a fully qualified module name.
 pub fn packages_from_module_name(module: &str) -> BTreeSet<String> {
@@ -84,6 +84,11 @@ pub fn resolve_path_for_module(
     module_path.push(format!("{}{}", basename, suffix));
 
     module_path
+}
+
+pub fn is_package_from_path(path: &Path) -> bool {
+    let file_name = path.file_name().unwrap().to_str().unwrap();
+    file_name.starts_with("__init__.")
 }
 
 #[cfg(test)]

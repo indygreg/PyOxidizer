@@ -16,7 +16,7 @@ use {
     },
     super::distutils::prepare_hacked_distutils,
     super::embedded_resource::{EmbeddedPythonResources, EmbeddedPythonResourcesPrePackaged},
-    super::fsscan::{find_python_resources, is_package_from_path, walk_tree_files},
+    super::fsscan::{find_python_resources, walk_tree_files},
     super::libpython::link_libpython,
     super::resource::{
         PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
@@ -29,6 +29,7 @@ use {
     copy_dir::copy_dir,
     lazy_static::lazy_static,
     python_packaging::bytecode::BytecodeCompiler,
+    python_packaging::module_util::is_package_from_path,
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource,
     },
