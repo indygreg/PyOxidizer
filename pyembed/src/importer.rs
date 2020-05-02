@@ -18,8 +18,8 @@ use {
     cpython::buffer::PyBuffer,
     cpython::exc::{FileNotFoundError, ImportError, ValueError},
     cpython::{
-        py_class, py_fn, NoArgs, ObjectProtocol, PyCapsule, PyClone, PyDict, PyErr, PyList,
-        PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
+        py_class, py_fn, NoArgs, ObjectProtocol, PyBytes, PyCapsule, PyClone, PyDict, PyErr,
+        PyList, PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
     },
     python3_sys as pyffi,
     python_packed_resources::data::{Resource, ResourceFlavor},
@@ -551,6 +551,10 @@ py_class!(class OxidizedFinder |py| {
     def add_resources(&self, resources: Vec<OxidizedResource>) -> PyResult<PyObject> {
         self.add_resources_impl(py, resources)
     }
+
+    def serialize_indexed_resources(&self, ignore_builtin: bool = true, ignore_frozen: bool = true) -> PyResult<PyObject> {
+        self.serialize_indexed_resources_impl(py, ignore_builtin, ignore_frozen)
+    }
 });
 
 // importlib.abc.MetaPathFinder interface.
@@ -1010,6 +1014,26 @@ impl OxidizedFinder {
         }
 
         Ok(py.None())
+    }
+
+    fn serialize_indexed_resources_impl(
+        &self,
+        py: Python,
+        ignore_builtin: bool,
+        ignore_frozen: bool,
+    ) -> PyResult<PyObject> {
+        let resources_state: &PythonResourcesState<u8> = self.state(py).get_resources_state();
+
+        let data = resources_state
+            .serialize_resources(ignore_builtin, ignore_frozen)
+            .or_else(|e| {
+                Err(PyErr::new::<ValueError, _>(
+                    py,
+                    format!("error serializing: {}", e),
+                ))
+            })?;
+
+        Ok(PyBytes::new(py, &data).into_object())
     }
 }
 

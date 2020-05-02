@@ -89,6 +89,12 @@ New Features
   instances registered against them. This means Python code can collect
   its own Python modules and register them with the importer. See
   :ref:`oxidized_finder_add_resource` for more.
+* ``OxidizedFinder`` instances can now serialize indexed resources out
+  to a ``bytes``. The serialized data can be loaded into a separate
+  ``OxidizedFinder`` instance, perhaps in a different process. This
+  facility enables the creation and reuse of packed resources data
+  structures without having to use ``pyoxidizer`` to collect Python
+  resources data.
 
 Bug Fixes
 ^^^^^^^^^

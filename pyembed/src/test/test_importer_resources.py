@@ -586,6 +586,35 @@ class TestImporterResources(unittest.TestCase):
         resources = [r for r in f.indexed_resources() if r.name in ("foo_a", "foo_b")]
         self.assertEqual(len(resources), 2)
 
+    def test_serialize_simple(self):
+        f = OxidizedFinder()
+
+        m = OxidizedResource()
+        m.name = "my_module"
+        m.flavor = "module"
+        m.in_memory_source = b"import io"
+        f.add_resource(m)
+
+        m = OxidizedResource()
+        m.name = "module_b"
+        m.flavor = "module"
+        m.in_memory_bytecode = b"dummy bytecode"
+        f.add_resource(m)
+
+        serialized = f.serialize_indexed_resources()
+        self.assertIsInstance(serialized, bytes)
+
+        f2 = OxidizedFinder(resources=serialized)
+
+        modules = {r.name: r for r in f2.indexed_resources() if r.flavor == "module"}
+        self.assertEqual(len(modules), 2)
+
+        self.assertIn("my_module", modules)
+        self.assertIn("module_b", modules)
+
+        self.assertEqual(modules["my_module"].in_memory_source, b"import io")
+        self.assertEqual(modules["module_b"].in_memory_bytecode, b"dummy bytecode")
+
 
 if __name__ == "__main__":
     # Reset command arguments so test runner isn't confused.

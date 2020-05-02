@@ -184,6 +184,26 @@ can be non-trivial and it can be quicker to pass in an iterable of
 ``OxidizedResource`` than to call ``add_resource()`` potentially hundreds
 of times.
 
+``serialize_indexed_resources(self, ...) -> bytes``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method serializes all resources currently indexed by the instance
+into an opaque ``bytes`` instance. The returned data can be fed into a
+separate ``OxidizedFinder`` instance by passing it to
+:ref:`oxidized_finder__new__`.
+
+Arguments:
+
+``ignore_builtin`` (bool)
+   Whether to ignore ``builtin`` extension modules from the serialized data.
+
+   Default is ``True``
+
+``ignore_frozen`` (bool)
+   Whether to ignore ``frozen`` extension modules from the serialized data.
+
+   Default is ``True``.
+
 Behavior and Compliance
 =======================
 

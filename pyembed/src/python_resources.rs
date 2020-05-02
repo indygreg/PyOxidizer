@@ -12,6 +12,7 @@ use {
         pyobject_optional_resources_map_to_pathbuf, pyobject_to_owned_bytes_optional,
         pyobject_to_pathbuf_optional,
     },
+    anyhow::Result,
     cpython::exc::{ImportError, OSError, TypeError, ValueError},
     cpython::{
         py_class, py_class_call_slot_impl_with_ref, py_class_prop_getter, py_class_prop_setter,
@@ -765,6 +766,35 @@ impl<'a> PythonResourcesState<'a, u8> {
         }
 
         Ok(())
+    }
+
+    /// Serialize resources contained in this data structure.
+    ///
+    /// `ignore_built` and `ignore_frozen` specify whether to ignore built-in
+    /// extension modules and frozen modules, respectively.
+    pub fn serialize_resources(&self, ignore_builtin: bool, ignore_frozen: bool) -> Result<Vec<u8>> {
+        let mut resources = self
+            .resources
+            .values()
+            .filter(|resource| match resource.flavor {
+                ResourceFlavor::BuiltinExtensionModule => !ignore_builtin,
+                ResourceFlavor::FrozenModule => !ignore_frozen,
+                _ => true,
+            })
+            .collect::<Vec<&Resource<u8>>>();
+
+        // Sort so behavior is deterministic.
+        resources.sort_by_key(|v| &v.name);
+
+        let mut buffer = Vec::new();
+
+        python_packed_resources::writer::write_embedded_resources_v1(
+            &resources,
+            &mut buffer,
+            None,
+        )?;
+
+        Ok(buffer)
     }
 }
 
