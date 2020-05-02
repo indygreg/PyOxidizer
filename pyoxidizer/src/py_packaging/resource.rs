@@ -12,7 +12,7 @@ use {
     python_packaging::module_util::{packages_from_module_name, resolve_path_for_module},
     python_packaging::python_source::has_dunder_file,
     python_packaging::resource::{
-        BytecodeOptimizationLevel, DataLocation, PythonModuleBytecode,
+        BytecodeOptimizationLevel, DataLocation, PythonEggFile, PythonModuleBytecode,
         PythonModuleBytecodeFromSource,
     },
     std::path::PathBuf,
@@ -349,21 +349,6 @@ impl PythonExtensionModule {
         } else {
             Ok(())
         }
-    }
-}
-
-/// Represents a Python .egg file.
-#[derive(Clone, Debug, PartialEq)]
-pub struct PythonEggFile {
-    /// Content of the .egg file.
-    pub data: DataLocation,
-}
-
-impl PythonEggFile {
-    pub fn to_memory(&self) -> Result<Self> {
-        Ok(Self {
-            data: self.data.to_memory()?,
-        })
     }
 }
 

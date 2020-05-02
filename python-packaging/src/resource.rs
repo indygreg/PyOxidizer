@@ -162,3 +162,18 @@ impl PythonModuleBytecode {
         }
     }
 }
+
+/// Represents a Python .egg file.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PythonEggFile {
+    /// Content of the .egg file.
+    pub data: DataLocation,
+}
+
+impl PythonEggFile {
+    pub fn to_memory(&self) -> Result<Self> {
+        Ok(Self {
+            data: self.data.to_memory()?,
+        })
+    }
+}
