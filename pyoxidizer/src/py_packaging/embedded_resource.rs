@@ -21,7 +21,7 @@ use {
         PythonPackageResource,
     },
     python_packaging::resource_collection::PythonResourcesPolicy,
-    python_packed_resources::data::{Resource as EmbeddedResource, ResourceFlavor},
+    python_packed_resources::data::{Resource, ResourceFlavor},
     python_packed_resources::writer::write_embedded_resources_v1,
     slog::{info, warn},
     std::borrow::Cow,
@@ -34,7 +34,7 @@ use {
 
 /// Represents an embedded Python module resource entry before it is packaged.
 ///
-/// Instances hold the same fields as `EmbeddedResource` except
+/// Instances hold the same fields as `Resource` except
 /// content backing fields is a `DataLocation` instead of `Vec<u8>`, since
 /// it may not be available yet.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -62,7 +62,7 @@ pub struct PrePackagedResource {
     pub relative_path_distribution_resources: Option<BTreeMap<String, PathBuf>>,
 }
 
-impl<'a> TryFrom<&PrePackagedResource> for EmbeddedResource<'a, u8> {
+impl<'a> TryFrom<&PrePackagedResource> for Resource<'a, u8> {
     type Error = Error;
 
     fn try_from(value: &PrePackagedResource) -> Result<Self, Self::Error> {
@@ -696,12 +696,13 @@ impl EmbeddedPythonResourcesPrePackaged {
                     .expect("filename on shared library")
                     .to_string_lossy();
 
-                let resource = self.resources.entry(name.to_string()).or_insert_with(|| {
-                    PrePackagedResource {
-                        name: name.to_string(),
-                        ..PrePackagedResource::default()
-                    }
-                });
+                let resource =
+                    self.resources
+                        .entry(name.to_string())
+                        .or_insert_with(|| PrePackagedResource {
+                            name: name.to_string(),
+                            ..PrePackagedResource::default()
+                        });
 
                 resource.in_memory_shared_library =
                     Some(DataLocation::Path(shared_library.clone()));
@@ -848,12 +849,13 @@ impl EmbeddedPythonResourcesPrePackaged {
         data: &[u8],
     ) -> Result<()> {
         self.check_policy(ResourceLocation::InMemory)?;
-        let entry = self.resources.entry(module.to_string()).or_insert_with(|| {
-            PrePackagedResource {
-                name: module.to_string(),
-                ..PrePackagedResource::default()
-            }
-        });
+        let entry =
+            self.resources
+                .entry(module.to_string())
+                .or_insert_with(|| PrePackagedResource {
+                    name: module.to_string(),
+                    ..PrePackagedResource::default()
+                });
 
         if is_package {
             entry.is_package = true;
@@ -884,12 +886,13 @@ impl EmbeddedPythonResourcesPrePackaged {
             return Err(anyhow!("extension module {} lacks shared library data and cannot be loaded from the filesystem", em.name));
         }
 
-        let entry = self.resources.entry(em.name.clone()).or_insert_with(|| {
-            PrePackagedResource {
+        let entry = self
+            .resources
+            .entry(em.name.clone())
+            .or_insert_with(|| PrePackagedResource {
                 name: em.name.clone(),
                 ..PrePackagedResource::default()
-            }
-        });
+            });
         entry.is_package = em.is_package;
         entry.relative_path_extension_module_shared_library = Some(em.resolve_path(prefix));
 
@@ -991,7 +994,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         let mut compiler = BytecodeCompiler::new(&python_exe)?;
         {
             for (name, module) in &self.resources {
-                let mut entry = EmbeddedResource::try_from(module)?;
+                let mut entry = Resource::try_from(module)?;
 
                 if let Some(location) = &module.in_memory_bytecode {
                     entry.in_memory_bytecode = Some(Cow::Owned(compiler.compile(
@@ -1111,12 +1114,10 @@ impl EmbeddedPythonResourcesPrePackaged {
         ));
 
         for package in derived_package_names {
-            let entry = modules
-                .entry(package.clone())
-                .or_insert_with(|| EmbeddedResource {
-                    name: Cow::Owned(package.clone()),
-                    ..EmbeddedResource::default()
-                });
+            let entry = modules.entry(package.clone()).or_insert_with(|| Resource {
+                name: Cow::Owned(package.clone()),
+                ..Resource::default()
+            });
 
             if !entry.is_package {
                 warn!(
@@ -1143,12 +1144,13 @@ impl EmbeddedPythonResourcesPrePackaged {
         bytecode_level: Option<BytecodeOptimizationLevel>,
     ) -> Result<()> {
         for package in packages_from_module_name(name) {
-            let m = self.resources.entry(package.clone()).or_insert_with(|| {
-                PrePackagedResource {
+            let m = self
+                .resources
+                .entry(package.clone())
+                .or_insert_with(|| PrePackagedResource {
                     name: package.clone(),
                     ..PrePackagedResource::default()
-                }
-            });
+                });
 
             // All parents are packages by definition.
             m.is_package = true;
@@ -1240,7 +1242,7 @@ pub struct LibpythonLinkingInfo {
 #[derive(Debug, Default, Clone)]
 pub struct EmbeddedPythonResources<'a> {
     /// Resources to write to a packed resources data structure.
-    resources: BTreeMap<String, EmbeddedResource<'a, u8>>,
+    resources: BTreeMap<String, Resource<'a, u8>>,
 
     /// Additional files that need to be written out next to the produced binary.
     extra_files: FileManifest,
@@ -1264,7 +1266,7 @@ impl<'a> EmbeddedPythonResources<'a> {
                 .resources
                 .values()
                 .cloned()
-                .collect::<Vec<EmbeddedResource<'a, u8>>>(),
+                .collect::<Vec<Resource<'a, u8>>>(),
             resources,
             None,
         )
