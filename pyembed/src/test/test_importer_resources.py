@@ -8,7 +8,7 @@ import pathlib
 import sys
 import unittest
 
-from _pyoxidizer_importer import (
+from oxidized_importer import (
     OxidizedResource,
     OxidizedFinder,
 )

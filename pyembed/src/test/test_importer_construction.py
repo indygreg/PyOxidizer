@@ -5,7 +5,7 @@
 import sys
 import unittest
 
-from _pyoxidizer_importer import OxidizedFinder
+from oxidized_importer import OxidizedFinder
 
 
 class TestImporterConstruction(unittest.TestCase):

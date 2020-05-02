@@ -159,10 +159,10 @@ in Rust (instead of C) and it is compiled into the binary containing Python,
 as opposed to being a standalone shared library that is loaded into the Python
 process.
 
-This extension module provides the `_pyoxidizer_importer` Python module,
+This extension module provides the `oxidized_importer` Python module,
 which defines a meta path importer.
 
-When we initialize the Python interpreter, the `_pyoxidizer_importer`
+When we initialize the Python interpreter, the `oxidized_importer`
 extension module is appended to the global `PyImport_Inittab` array,
 allowing it to be recognized as a *built-in* extension module and
 imported as such.
@@ -176,7 +176,7 @@ initialization pauses between _core_ and _main_ initialization.
 When _core_ is initialized, `_frozen_importlib._install()` is called to
 register `BuiltinImporter` and `FrozenImporter` on `sys.meta_path`.
 At our break point after _core_ initialization, we import our
-`_pyoxidizer_importer` module using the Python C APIs. This import
+`oxidized_importer` module using the Python C APIs. This import
 is serviced by `BuiltinImporter`. Our Rust-implemented module initialization
 function runs and creates a module object. We then call another Rust
 function to complete the module initialization given the current

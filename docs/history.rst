@@ -56,6 +56,8 @@ Backwards Compatibility Notes
   can be enforced.
 * The type of the custom Python importer has been renamed from
   ``PyOxidizerFinder`` to ``OxidizedFinder``.
+* The name of the module providing our custom importer has been renamed
+  from ``_pyoxidizer_importer`` to ``oxidized_importer``.
 
 New Features
 ^^^^^^^^^^^^

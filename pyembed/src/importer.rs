@@ -32,8 +32,8 @@ use {
     std::ffi::{c_void, CString},
 };
 
-pub const PYOXIDIZER_IMPORTER_NAME_STR: &str = "_pyoxidizer_importer";
-pub const PYOXIDIZER_IMPORTER_NAME: &[u8] = b"_pyoxidizer_importer\0";
+pub const OXIDIZED_IMPORTER_NAME_STR: &str = "oxidized_importer";
+pub const OXIDIZED_IMPORTER_NAME: &[u8] = b"oxidized_importer\0";
 
 #[cfg(windows)]
 #[allow(non_camel_case_types)]
@@ -899,7 +899,7 @@ fn oxidized_finder_new(
     // few items...
 
     // The module references are easy to obtain.
-    let m = py.import(PYOXIDIZER_IMPORTER_NAME_STR)?;
+    let m = py.import(OXIDIZED_IMPORTER_NAME_STR)?;
     let bootstrap_module = py.import("_frozen_importlib")?;
 
     // The PythonResourcesState is a bit more complex.
@@ -1302,13 +1302,13 @@ static mut MODULE_DEF: pyffi::PyModuleDef = pyffi::PyModuleDef {
 /// opinionated about how things should work. e.g. they call
 /// PyEval_InitThreads(), which is undesired. We want total control.
 #[allow(non_snake_case)]
-pub extern "C" fn PyInit__pyoxidizer_importer() -> *mut pyffi::PyObject {
+pub extern "C" fn PyInit_oxidized_importer() -> *mut pyffi::PyObject {
     let py = unsafe { cpython::Python::assume_gil_acquired() };
 
     // TRACKING RUST1.32 We can't call as_ptr() in const fn in Rust 1.31.
     unsafe {
         if MODULE_DEF.m_name.is_null() {
-            MODULE_DEF.m_name = PYOXIDIZER_IMPORTER_NAME.as_ptr() as *const _;
+            MODULE_DEF.m_name = OXIDIZED_IMPORTER_NAME.as_ptr() as *const _;
             MODULE_DEF.m_doc = DOC.as_ptr() as *const _;
         }
     }

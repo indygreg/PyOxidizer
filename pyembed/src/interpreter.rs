@@ -8,8 +8,8 @@ use {
     super::config::{MemoryAllocatorBackend, OxidizedPythonInterpreterConfig, TerminfoResolution},
     super::conversion::{osstr_to_pyobject, osstring_to_bytes},
     super::importer::{
-        initialize_importer, PyInit__pyoxidizer_importer, PYOXIDIZER_IMPORTER_NAME,
-        PYOXIDIZER_IMPORTER_NAME_STR,
+        initialize_importer, PyInit_oxidized_importer, OXIDIZED_IMPORTER_NAME,
+        OXIDIZED_IMPORTER_NAME_STR,
     },
     super::osutils::resolve_terminfo_dirs,
     super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
@@ -363,7 +363,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
                     .load(self.config.packed_resources)
                     .or_else(|err| Err(NewInterpreterError::Simple(err)))?;
 
-                let oxidized_importer = py.import(PYOXIDIZER_IMPORTER_NAME_STR).or_else(|err| {
+                let oxidized_importer = py.import(OXIDIZED_IMPORTER_NAME_STR).or_else(|err| {
                     Err(NewInterpreterError::new_from_pyerr(
                         py,
                         err,
@@ -635,9 +635,9 @@ fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig) {
     let mut extensions = Box::new(unsafe { ORIGINAL_BUILTIN_EXTENSIONS.as_ref().unwrap().clone() });
 
     if config.oxidized_importer {
-        let ptr = PyInit__pyoxidizer_importer as *const ();
+        let ptr = PyInit_oxidized_importer as *const ();
         extensions.push(pyffi::_inittab {
-            name: PYOXIDIZER_IMPORTER_NAME.as_ptr() as *mut _,
+            name: OXIDIZED_IMPORTER_NAME.as_ptr() as *mut _,
             initfunc: Some(unsafe { std::mem::transmute::<*const (), extern "C" fn()>(ptr) }),
         });
     }
