@@ -1,2 +1,7 @@
 [workspace]
-members = ["pyembed", "pyoxidizer", "python-packed-resources"]
+members = [
+    "oxidized-importer",
+    "pyembed",
+    "pyoxidizer",
+    "python-packed-resources",
+]

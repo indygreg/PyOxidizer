@@ -83,22 +83,30 @@ That crate's build script will attempt to find a `libpython` from the
 
 */
 
+#[cfg(not(library_mode = "extension"))]
 mod config;
 mod conversion;
 mod importer;
+#[cfg(not(library_mode = "extension"))]
 mod interpreter;
+#[cfg(not(library_mode = "extension"))]
 mod interpreter_config;
 #[cfg(windows)]
 mod memory_dll;
+#[cfg(not(library_mode = "extension"))]
 mod osutils;
 mod package_metadata;
+#[cfg(not(library_mode = "extension"))]
 mod pyalloc;
+#[cfg(not(library_mode = "extension"))]
 mod python_eval;
 mod python_resources;
+#[cfg(not(library_mode = "extension"))]
 pub mod technotes;
 #[cfg(test)]
 mod test;
 
+#[cfg(not(library_mode = "extension"))]
 #[allow(unused_imports)]
 pub use crate::config::{
     Allocator, CheckHashPYCsMode, CoerceCLocale, ExtensionModule, OptimizationLevel,
@@ -106,10 +114,15 @@ pub use crate::config::{
     PythonInterpreterProfile, PythonRawAllocator, PythonRunMode, TerminfoResolution,
 };
 
+#[cfg(not(library_mode = "extension"))]
 #[allow(unused_imports)]
 pub use crate::interpreter::{MainPythonInterpreter, NewInterpreterError};
 
+#[cfg(not(library_mode = "extension"))]
 #[allow(unused_imports)]
 pub use crate::python_eval::{
     run, run_and_handle_error, run_code, run_file, run_module_as_main, run_repl,
 };
+
+#[cfg(library_mode = "extension")]
+pub use crate::importer::PyInit_oxidized_importer;

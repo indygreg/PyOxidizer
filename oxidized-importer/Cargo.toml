@@ -1,0 +1,28 @@
+[package]
+name = "oxidized-importer"
+version = "0.8.0-pre"
+authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
+edition = "2018"
+license = "Python-2.0 AND MPL-2.0"
+description = "A Rust-powered Python importer"
+
+[lib]
+name = "oxidized_importer"
+crate-type = ["cdylib"]
+
+[dependencies]
+anyhow = "1.0"
+lazy_static = "1.4"
+libc = "0.2"
+python3-sys = { git = "https://github.com/indygreg/rust-cpython.git", rev = "e1b18aaae2f7ca2dda1edbd5270b6d1d25c01d7d" }
+python-packed-resources = { version = "0.2.0-pre", path = "../python-packed-resources" }
+
+[dependencies.pyembed]
+version = "0.8.0-pre"
+path = "../pyembed"
+default-features = false
+features = ["build-mode-extension-module"]
+
+[target.'cfg(windows)'.dependencies]
+memory-module-sys = "0.3"
+winapi = { version = "0.3", features = ["libloaderapi", "memoryapi", "minwindef"] }

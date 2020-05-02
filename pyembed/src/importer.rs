@@ -9,6 +9,8 @@ This module defines a Python meta path importer and associated functionality
 for importing Python modules from memory.
 */
 
+#[cfg(not(library_mode = "extension"))]
+use cpython::NoArgs;
 use {
     super::conversion::pyobject_to_pathbuf,
     super::python_resources::{
@@ -18,8 +20,8 @@ use {
     cpython::buffer::PyBuffer,
     cpython::exc::{FileNotFoundError, ImportError, ValueError},
     cpython::{
-        py_class, py_fn, NoArgs, ObjectProtocol, PyBytes, PyCapsule, PyClone, PyDict, PyErr,
-        PyList, PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
+        py_class, py_fn, ObjectProtocol, PyBytes, PyCapsule, PyClone, PyDict, PyErr, PyList,
+        PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
     },
     python3_sys as pyffi,
     python_packed_resources::data::ResourceFlavor,
@@ -866,6 +868,7 @@ impl OxidizedFinder {
 
 impl OxidizedFinder {
     /// Construct an instance from a module and resources state.
+    #[cfg(not(library_mode = "extension"))]
     fn new_from_module_and_resources<'a>(
         py: Python,
         m: &PyModule,
@@ -1369,6 +1372,7 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
 /// This is called after PyInit_* to finish the initialization of the
 /// module. Its state struct is updated. A new instance of the meta path
 /// importer is constructed and registered on sys.meta_path.
+#[cfg(not(library_mode = "extension"))]
 pub(crate) fn initialize_importer<'a>(
     py: Python,
     m: &PyModule,

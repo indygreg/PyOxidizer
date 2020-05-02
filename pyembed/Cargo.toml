@@ -43,6 +43,10 @@ build-mode-pyoxidizer-exe = []
 # set, OUT_DIR will be used.
 build-mode-prebuilt-artifacts = []
 
+build-mode-extension-module = [
+    "cpython/extension-module",
+]
+
 # Build mode for running tests.
 build-mode-test = [
     "cpython-link-default",

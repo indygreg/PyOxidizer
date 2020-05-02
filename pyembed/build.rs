@@ -86,6 +86,8 @@ fn build_with_pyoxidizer_native(resolve_target: Option<&str>) {
 */
 
 fn main() {
+    let mut library_mode = "pyembed";
+
     if env::var("CARGO_FEATURE_BUILD_MODE_STANDALONE").is_ok() {
     } else if env::var("CARGO_FEATURE_BUILD_MODE_PYOXIDIZER_EXE").is_ok() {
         let target = if let Ok(target) = env::var("PYOXIDIZER_BUILD_TARGET") {
@@ -115,6 +117,8 @@ fn main() {
 
         println!("cargo:rerun-if-env-changed=PYOXIDIZER_ARTIFACT_DIR");
         build_with_artifacts_in_dir(&artifact_dir_path);
+    } else if env::var("CARGO_FEATURE_BUILD_MODE_EXTENSION_MODULE").is_ok() {
+        library_mode = "extension";
     } else if env::var("CARGO_FEATURE_BUILD_MODE_TEST").is_ok() {
         println!(
             "cargo:rustc-env=PYEMBED_TESTS_DIR={}/src/test",
@@ -123,4 +127,6 @@ fn main() {
     } else {
         panic!("build-mode-* feature not set");
     }
+
+    println!("cargo:rustc-cfg=library_mode=\"{}\"", library_mode);
 }

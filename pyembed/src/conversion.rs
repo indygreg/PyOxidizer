@@ -10,9 +10,12 @@ use {
     cpython::{PyDict, PyErr, PyObject, PyResult, Python},
     python3_sys as pyffi,
     std::collections::HashMap,
-    std::ffi::{CStr, CString, NulError, OsStr, OsString},
+    std::ffi::{CStr, CString, OsStr},
     std::path::{Path, PathBuf},
 };
+
+#[cfg(not(library_mode = "extension"))]
+use std::ffi::{NulError, OsString};
 
 #[cfg(target_family = "unix")]
 use std::os::unix::ffi::OsStrExt;
@@ -78,7 +81,7 @@ pub fn osstr_to_pyobject(
     }
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(all(unix, not(library_mode = "extension")))]
 pub fn osstring_to_bytes(py: Python, s: OsString) -> PyObject {
     let b = s.as_bytes();
     unsafe {
@@ -87,7 +90,7 @@ pub fn osstring_to_bytes(py: Python, s: OsString) -> PyObject {
     }
 }
 
-#[cfg(target_family = "windows")]
+#[cfg(all(windows, not(library_mode = "extension")))]
 pub fn osstring_to_bytes(py: Python, s: OsString) -> PyObject {
     let w: Vec<u16> = s.encode_wide().collect();
     unsafe {
@@ -96,12 +99,12 @@ pub fn osstring_to_bytes(py: Python, s: OsString) -> PyObject {
     }
 }
 
-#[cfg(unix)]
+#[cfg(all(unix, not(library_mode = "extension")))]
 pub fn path_to_cstring(path: &Path) -> Result<CString, NulError> {
     CString::new(path.as_os_str().as_bytes())
 }
 
-#[cfg(windows)]
+#[cfg(all(windows, not(library_mode = "extension")))]
 pub fn path_to_cstring(path: &Path) -> Result<CString, NulError> {
     // This is not ideal...
     CString::new(path.to_string_lossy().as_bytes())
