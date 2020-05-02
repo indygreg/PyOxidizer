@@ -335,7 +335,7 @@ impl PrePackagedResources {
             .unwrap()
             .insert(resource.relative_name.clone(), resource.data.clone());
 
-        self.add_parent_packages(&resource.leaf_package, ModuleLocation::InMemory, None)
+        Ok(())
     }
 
     /// Add resource data to be loaded from the filesystem.
@@ -374,11 +374,7 @@ impl PrePackagedResources {
                 ),
             );
 
-        self.add_parent_packages(
-            &resource.leaf_package,
-            ModuleLocation::RelativePath(prefix.to_string()),
-            None,
-        )
+        Ok(())
     }
 
     /// Add a package distribution resource to be loaded from memory.
@@ -646,11 +642,7 @@ impl PrePackagedResources {
             }
         }
 
-        self.add_parent_packages(
-            &module.module,
-            ModuleLocation::RelativePath(prefix.to_string()),
-            None,
-        )
+        Ok(())
     }
 
     /// Add an extension module to be linked into the binary.
@@ -767,11 +759,7 @@ impl PrePackagedResources {
 
         // TODO add shared library dependencies.
 
-        self.add_parent_packages(
-            &em.name,
-            ModuleLocation::RelativePath(prefix.to_string()),
-            None,
-        )
+        Ok(())
     }
 
     /// Filter the entities in this instance against names in files.
@@ -1544,7 +1532,7 @@ mod tests {
         };
 
         r.add_relative_path_extension_module(&em, "prefix")?;
-        assert_eq!(r.resources.len(), 2);
+        assert_eq!(r.resources.len(), 1);
         assert_eq!(
             r.resources.get("foo.bar"),
             Some(&PrePackagedResource {

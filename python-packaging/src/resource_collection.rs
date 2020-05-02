@@ -431,4 +431,38 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_populate_parent_packages_relative_extension_module() -> Result<()> {
+        let mut h = BTreeMap::new();
+        h.insert(
+            "foo.bar".to_string(),
+            PrePackagedResource {
+                flavor: ResourceFlavor::Extension,
+                name: "foo.bar".to_string(),
+                relative_path_extension_module_shared_library: Some((
+                    "prefix".to_string(),
+                    PathBuf::from("prefix/foo/bar.so"),
+                    DataLocation::Memory(vec![42]),
+                )),
+                ..PrePackagedResource::default()
+            },
+        );
+
+        populate_parent_packages(&mut h)?;
+
+        assert_eq!(h.len(), 2);
+
+        assert_eq!(
+            h.get("foo"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: "foo".to_string(),
+                is_package: true,
+                ..PrePackagedResource::default()
+            })
+        );
+
+        Ok(())
+    }
 }
