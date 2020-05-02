@@ -13,7 +13,6 @@ use {
         optional_dict_arg, optional_list_arg, optional_str_arg, optional_type_arg,
         required_bool_arg, required_list_arg, required_str_arg,
     },
-    crate::py_packaging::bytecode::{BytecodeCompiler, CompileMode},
     crate::py_packaging::config::EmbeddedPythonConfig,
     crate::py_packaging::distribution::{
         default_distribution_location, is_stdlib_test_package, resolve_distribution,
@@ -27,6 +26,7 @@ use {
     crate::py_packaging::resources_policy::PythonResourcesPolicy,
     anyhow::{anyhow, Result},
     itertools::Itertools,
+    python_packaging::bytecode::{BytecodeCompiler, CompileMode},
     python_packaging::resource::BytecodeOptimizationLevel,
     slog::warn,
     starlark::environment::Environment,

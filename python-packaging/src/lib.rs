@@ -8,6 +8,7 @@ This crate exposes functionality for interacting with Python resources
 and packaging facilities.
 */
 
+pub mod bytecode;
 pub mod module_util;
 pub mod python_source;
 pub mod resource;

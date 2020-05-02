@@ -2,16 +2,16 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-/*!
-Working with Python bytecode.
-*/
+/*! Work with Python bytecode. */
 
-use anyhow::Result;
-use python_packaging::resource::BytecodeOptimizationLevel;
-use std::fs::File;
-use std::io::{BufRead, BufReader, Read, Write};
-use std::path::{Path, PathBuf};
-use std::process;
+use {
+    super::resource::BytecodeOptimizationLevel,
+    anyhow::Result,
+    std::fs::File,
+    std::io::{BufRead, BufReader, Read, Write},
+    std::path::{Path, PathBuf},
+    std::process,
+};
 
 pub const BYTECODE_COMPILER: &[u8] = include_bytes!("bytecodecompiler.py");
 
@@ -33,6 +33,13 @@ pub enum CompileMode {
 }
 
 impl BytecodeCompiler {
+    /// Create a bytecode compiler using a Python executable.
+    ///
+    /// A Python process will be started and it will start executing a Python
+    /// source file embedded in this crate. That process interacts with this
+    /// object via a pipe, which is used to send bytecode compilation
+    /// requests and receive the compiled bytecode. The process is terminated
+    /// when this object is dropped.
     pub fn new(python: &Path) -> Result<BytecodeCompiler> {
         let temp_dir = tempdir::TempDir::new("bytecode-compiler")?;
 

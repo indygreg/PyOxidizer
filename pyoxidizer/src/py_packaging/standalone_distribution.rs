@@ -8,7 +8,6 @@ use {
     super::binary::{
         EmbeddedPythonBinaryData, EmbeddedResourcesBlobs, PythonBinaryBuilder, PythonLinkingInfo,
     },
-    super::bytecode::BytecodeCompiler,
     super::config::{EmbeddedPythonConfig, RawAllocator},
     super::distribution::{
         is_stdlib_test_package, resolve_python_distribution_from_location, DistributionExtractLock,
@@ -29,6 +28,7 @@ use {
     anyhow::{anyhow, Context, Result},
     copy_dir::copy_dir,
     lazy_static::lazy_static,
+    python_packaging::bytecode::BytecodeCompiler,
     python_packaging::resource::{BytecodeOptimizationLevel, DataLocation},
     serde::{Deserialize, Serialize},
     slog::{info, warn},

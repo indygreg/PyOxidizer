@@ -8,7 +8,6 @@ Defining and manipulating Python distributions.
 
 use {
     super::binary::PythonBinaryBuilder,
-    super::bytecode::BytecodeCompiler,
     super::config::EmbeddedPythonConfig,
     super::resource::{PythonModuleSource, PythonPackageResource, PythonResource},
     super::resources_policy::PythonResourcesPolicy,
@@ -16,6 +15,7 @@ use {
     crate::python_distributions::PYTHON_DISTRIBUTIONS,
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
+    python_packaging::bytecode::BytecodeCompiler,
     serde::Deserialize,
     sha2::{Digest, Sha256},
     slog::warn,

@@ -7,7 +7,6 @@ Embedded Python resources in a binary.
 */
 
 use {
-    super::bytecode::{BytecodeCompiler, CompileMode},
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
     super::resource::{
         PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
@@ -17,6 +16,7 @@ use {
     super::standalone_distribution::DistributionExtensionModule,
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Error, Result},
+    python_packaging::bytecode::{BytecodeCompiler, CompileMode},
     python_packaging::module_util::{packages_from_module_name, packages_from_module_names},
     python_packaging::python_source::has_dunder_file,
     python_packaging::resource::{BytecodeOptimizationLevel, DataLocation},
