@@ -13,7 +13,7 @@ use {
     python_packaging::python_source::has_dunder_file,
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonEggFile, PythonModuleBytecode,
-        PythonModuleBytecodeFromSource,
+        PythonModuleBytecodeFromSource, PythonPathExtension,
     },
     std::path::PathBuf,
 };
@@ -349,23 +349,6 @@ impl PythonExtensionModule {
         } else {
             Ok(())
         }
-    }
-}
-
-/// Represents a Python path extension.
-///
-/// i.e. a .pth file.
-#[derive(Clone, Debug, PartialEq)]
-pub struct PythonPathExtension {
-    /// Content of the .pth file.
-    pub data: DataLocation,
-}
-
-impl PythonPathExtension {
-    pub fn to_memory(&self) -> Result<Self> {
-        Ok(Self {
-            data: self.data.to_memory()?,
-        })
     }
 }
 

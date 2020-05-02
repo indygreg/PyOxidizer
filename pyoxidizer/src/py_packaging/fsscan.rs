@@ -11,14 +11,14 @@ use {
     super::package_metadata::PythonPackageMetadata,
     super::resource::{
         PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
-        PythonPackageDistributionResourceFlavor, PythonPackageResource, PythonPathExtension,
-        PythonResource,
+        PythonPackageDistributionResourceFlavor, PythonPackageResource, PythonResource,
     },
     anyhow::Result,
     itertools::Itertools,
     python_packaging::module_util::is_package_from_path,
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonEggFile, PythonModuleBytecode,
+        PythonPathExtension,
     },
     std::collections::HashSet,
     std::ffi::OsStr,

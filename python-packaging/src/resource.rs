@@ -177,3 +177,20 @@ impl PythonEggFile {
         })
     }
 }
+
+/// Represents a Python path extension.
+///
+/// i.e. a .pth file.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PythonPathExtension {
+    /// Content of the .pth file.
+    pub data: DataLocation,
+}
+
+impl PythonPathExtension {
+    pub fn to_memory(&self) -> Result<Self> {
+        Ok(Self {
+            data: self.data.to_memory()?,
+        })
+    }
+}
