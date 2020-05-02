@@ -737,8 +737,8 @@ where
 ///
 /// See the `pyembed` crate for the format of this data structure.
 #[allow(clippy::cognitive_complexity)]
-pub fn write_embedded_resources_v1<W: Write>(
-    modules: &[Resource<u8>],
+pub fn write_embedded_resources_v1<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
+    modules: &[T],
     dest: &mut W,
     interior_padding: Option<BlobInteriorPadding>,
 ) -> Result<()> {
@@ -782,6 +782,7 @@ pub fn write_embedded_resources_v1<W: Write>(
     };
 
     for module in modules {
+        let module = module.as_ref();
         module_index_length += module.index_v1_length();
 
         process_field(&mut blob_sections, module, ResourceField::ModuleName);
@@ -879,53 +880,53 @@ pub fn write_embedded_resources_v1<W: Write>(
 
     // Write the resources index.
     for module in modules {
-        module.write_index_v1(dest)?;
+        module.as_ref().write_index_v1(dest)?;
     }
     dest.write_u8(ResourceField::EndOfIndex.into())?;
 
     // Write blob data, one field at a time.
     for module in modules {
-        dest.write_all(module.name.as_bytes())?;
+        dest.write_all(module.as_ref().name.as_bytes())?;
         add_interior_padding(dest)?;
     }
 
     for module in modules {
-        if let Some(data) = &module.in_memory_source {
+        if let Some(data) = &module.as_ref().in_memory_source {
             dest.write_all(data)?;
             add_interior_padding(dest)?;
         }
     }
 
     for module in modules {
-        if let Some(data) = &module.in_memory_bytecode {
+        if let Some(data) = &module.as_ref().in_memory_bytecode {
             dest.write_all(data)?;
             add_interior_padding(dest)?;
         }
     }
 
     for module in modules {
-        if let Some(data) = &module.in_memory_bytecode_opt1 {
+        if let Some(data) = &module.as_ref().in_memory_bytecode_opt1 {
             dest.write_all(data)?;
             add_interior_padding(dest)?;
         }
     }
 
     for module in modules {
-        if let Some(data) = &module.in_memory_bytecode_opt2 {
+        if let Some(data) = &module.as_ref().in_memory_bytecode_opt2 {
             dest.write_all(data)?;
             add_interior_padding(dest)?;
         }
     }
 
     for module in modules {
-        if let Some(data) = &module.in_memory_extension_module_shared_library {
+        if let Some(data) = &module.as_ref().in_memory_extension_module_shared_library {
             dest.write_all(data)?;
             add_interior_padding(dest)?;
         }
     }
 
     for module in modules {
-        if let Some(resources) = &module.in_memory_package_resources {
+        if let Some(resources) = &module.as_ref().in_memory_package_resources {
             for (key, value) in resources.iter() {
                 dest.write_all(key.as_bytes())?;
                 add_interior_padding(dest)?;
@@ -936,7 +937,7 @@ pub fn write_embedded_resources_v1<W: Write>(
     }
 
     for module in modules {
-        if let Some(resources) = &module.in_memory_distribution_resources {
+        if let Some(resources) = &module.as_ref().in_memory_distribution_resources {
             for (key, value) in resources {
                 dest.write_all(key.as_bytes())?;
                 add_interior_padding(dest)?;
@@ -947,14 +948,14 @@ pub fn write_embedded_resources_v1<W: Write>(
     }
 
     for module in modules {
-        if let Some(data) = &module.in_memory_shared_library {
+        if let Some(data) = &module.as_ref().in_memory_shared_library {
             dest.write_all(data)?;
             add_interior_padding(dest)?;
         }
     }
 
     for module in modules {
-        if let Some(names) = &module.shared_library_dependency_names {
+        if let Some(names) = &module.as_ref().shared_library_dependency_names {
             for name in names {
                 dest.write_all(name.as_bytes())?;
                 add_interior_padding(dest)?;
@@ -963,42 +964,45 @@ pub fn write_embedded_resources_v1<W: Write>(
     }
 
     for module in modules {
-        if let Some(path) = &module.relative_path_module_source {
+        if let Some(path) = &module.as_ref().relative_path_module_source {
             dest.write_all(&path_to_bytes(path))?;
             add_interior_padding(dest)?;
         }
     }
 
     for module in modules {
-        if let Some(path) = &module.relative_path_module_bytecode {
+        if let Some(path) = &module.as_ref().relative_path_module_bytecode {
             dest.write_all(&path_to_bytes(path))?;
             add_interior_padding(dest)?;
         }
     }
 
     for module in modules {
-        if let Some(path) = &module.relative_path_module_bytecode_opt1 {
+        if let Some(path) = &module.as_ref().relative_path_module_bytecode_opt1 {
             dest.write_all(&path_to_bytes(path))?;
             add_interior_padding(dest)?;
         }
     }
 
     for module in modules {
-        if let Some(path) = &module.relative_path_module_bytecode_opt2 {
+        if let Some(path) = &module.as_ref().relative_path_module_bytecode_opt2 {
             dest.write_all(&path_to_bytes(path))?;
             add_interior_padding(dest)?;
         }
     }
 
     for module in modules {
-        if let Some(path) = &module.relative_path_extension_module_shared_library {
+        if let Some(path) = &module
+            .as_ref()
+            .relative_path_extension_module_shared_library
+        {
             dest.write_all(&path_to_bytes(path))?;
             add_interior_padding(dest)?;
         }
     }
 
     for module in modules {
-        if let Some(resources) = &module.relative_path_package_resources {
+        if let Some(resources) = &module.as_ref().relative_path_package_resources {
             for (key, path) in resources.iter() {
                 dest.write_all(key.as_bytes())?;
                 add_interior_padding(dest)?;
@@ -1009,7 +1013,7 @@ pub fn write_embedded_resources_v1<W: Write>(
     }
 
     for module in modules {
-        if let Some(resources) = &module.relative_path_distribution_resources {
+        if let Some(resources) = &module.as_ref().relative_path_distribution_resources {
             for (key, path) in resources {
                 dest.write_all(key.as_bytes())?;
                 add_interior_padding(dest)?;
@@ -1029,7 +1033,8 @@ mod tests {
     #[test]
     fn test_write_empty() -> Result<()> {
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[], &mut data, None)?;
+        let resources: Vec<Resource<u8>> = Vec::new();
+        write_embedded_resources_v1(&resources, &mut data, None)?;
 
         let mut expected: Vec<u8> = b"pyembed\x01".to_vec();
         // Number of blob sections.

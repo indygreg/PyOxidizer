@@ -308,6 +308,15 @@ where
     }
 }
 
+impl<'a, X> AsRef<Resource<'a, X>> for Resource<'a, X>
+where
+    [X]: ToOwned<Owned = Vec<X>>,
+{
+    fn as_ref(&self) -> &Resource<'a, X> {
+        self
+    }
+}
+
 impl<'a, X> Resource<'a, X>
 where
     [X]: ToOwned<Owned = Vec<X>>,

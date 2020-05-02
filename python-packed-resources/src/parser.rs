@@ -1446,4 +1446,31 @@ mod tests {
             Some(&Cow::Borrowed(Path::new("package/resource.txt")))
         );
     }
+
+    #[test]
+    fn test_fields_mix() {
+        let resources: Vec<Resource<u8>> = vec![
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::from("foo"),
+                in_memory_source: Some(Cow::from(b"import io".to_vec())),
+                ..Resource::default()
+            },
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::from("bar"),
+                in_memory_bytecode: Some(Cow::from(b"fake bytecode".to_vec())),
+                ..Resource::default()
+            },
+        ];
+
+        let mut data = Vec::new();
+        write_embedded_resources_v1(&resources, &mut data, None).unwrap();
+        let loaded = load_resources(&data)
+            .unwrap()
+            .collect::<Result<Vec<Resource<u8>>, &'static str>>()
+            .unwrap();
+
+        assert_eq!(resources, loaded);
+    }
 }
