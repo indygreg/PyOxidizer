@@ -1361,6 +1361,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "python-packaging"
+version = "0.1.0-pre"
+dependencies = [
+ "anyhow 1.0.26 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "python-packed-resources"
 version = "0.2.0-pre"
 dependencies = [

@@ -1,0 +1,14 @@
+[package]
+name = "python-packaging"
+version = "0.1.0-pre"
+authors = ["Gregory Szorc <gregory.szorc@gmail.com>"]
+edition = "2018"
+license = "MPL-2.0"
+description = "Python packaging primitives implemented in Rust"
+readme = "README.md"
+homepage = "https://github.com/indygreg/PyOxidizer"
+repository = "https://github.com/indygreg/PyOxidizer.git"
+keywords = ["python"]
+
+[dependencies]
+anyhow = "1.0"

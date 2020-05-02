@@ -3,5 +3,6 @@ members = [
     "oxidized-importer",
     "pyembed",
     "pyoxidizer",
+    "python-packaging",
     "python-packed-resources",
 ]
