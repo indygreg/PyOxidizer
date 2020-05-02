@@ -13,8 +13,9 @@ use {
     super::util::{optional_list_arg, required_bool_arg, required_str_arg, required_type_arg},
     crate::project_building::build_python_executable,
     crate::py_packaging::binary::PythonBinaryBuilder,
-    crate::py_packaging::resource::{BytecodeOptimizationLevel, PythonModuleBytecodeFromSource},
+    crate::py_packaging::resource::PythonModuleBytecodeFromSource,
     anyhow::{anyhow, Context, Result},
+    python_packaging::resource::BytecodeOptimizationLevel,
     slog::{info, warn},
     starlark::environment::Environment,
     starlark::values::{

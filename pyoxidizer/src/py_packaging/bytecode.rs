@@ -7,12 +7,11 @@ Working with Python bytecode.
 */
 
 use anyhow::Result;
+use python_packaging::resource::BytecodeOptimizationLevel;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process;
-
-use super::resource::BytecodeOptimizationLevel;
 
 pub const BYTECODE_COMPILER: &[u8] = include_bytes!("bytecodecompiler.py");
 

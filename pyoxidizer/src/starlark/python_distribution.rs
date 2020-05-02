@@ -24,10 +24,10 @@ use {
         find_resources, pip_install as raw_pip_install, read_virtualenv as raw_read_virtualenv,
         setup_py_install as raw_setup_py_install,
     },
-    crate::py_packaging::resource::BytecodeOptimizationLevel,
     crate::py_packaging::resources_policy::PythonResourcesPolicy,
     anyhow::{anyhow, Result},
     itertools::Itertools,
+    python_packaging::resource::BytecodeOptimizationLevel,
     slog::warn,
     starlark::environment::Environment,
     starlark::values::{

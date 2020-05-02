@@ -32,3 +32,32 @@ impl DataLocation {
         Ok(DataLocation::Memory(self.resolve()?))
     }
 }
+
+/// An optimization level for Python bytecode.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum BytecodeOptimizationLevel {
+    Zero,
+    One,
+    Two,
+}
+
+impl From<i32> for BytecodeOptimizationLevel {
+    fn from(i: i32) -> Self {
+        match i {
+            0 => BytecodeOptimizationLevel::Zero,
+            1 => BytecodeOptimizationLevel::One,
+            2 => BytecodeOptimizationLevel::Two,
+            _ => panic!("unsupported bytecode optimization level"),
+        }
+    }
+}
+
+impl From<BytecodeOptimizationLevel> for i32 {
+    fn from(level: BytecodeOptimizationLevel) -> Self {
+        match level {
+            BytecodeOptimizationLevel::Zero => 0,
+            BytecodeOptimizationLevel::One => 1,
+            BytecodeOptimizationLevel::Two => 2,
+        }
+    }
+}

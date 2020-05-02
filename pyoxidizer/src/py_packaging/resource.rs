@@ -13,7 +13,7 @@ use {
     anyhow::Result,
     python_packaging::module_util::{packages_from_module_name, resolve_path_for_module},
     python_packaging::python_source::has_dunder_file,
-    python_packaging::resource::DataLocation,
+    python_packaging::resource::{BytecodeOptimizationLevel, DataLocation},
     std::path::{Path, PathBuf},
 };
 
@@ -110,35 +110,6 @@ impl PythonModuleSource {
     /// Whether the source code for this module has __file__
     pub fn has_dunder_file(&self) -> Result<bool> {
         has_dunder_file(&self.source.resolve()?)
-    }
-}
-
-/// An optimization level for Python bytecode.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum BytecodeOptimizationLevel {
-    Zero,
-    One,
-    Two,
-}
-
-impl From<i32> for BytecodeOptimizationLevel {
-    fn from(i: i32) -> Self {
-        match i {
-            0 => BytecodeOptimizationLevel::Zero,
-            1 => BytecodeOptimizationLevel::One,
-            2 => BytecodeOptimizationLevel::Two,
-            _ => panic!("unsupported bytecode optimization level"),
-        }
-    }
-}
-
-impl From<BytecodeOptimizationLevel> for i32 {
-    fn from(level: BytecodeOptimizationLevel) -> Self {
-        match level {
-            BytecodeOptimizationLevel::Zero => 0,
-            BytecodeOptimizationLevel::One => 1,
-            BytecodeOptimizationLevel::Two => 2,
-        }
     }
 }
 
