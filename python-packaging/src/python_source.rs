@@ -4,7 +4,7 @@
 
 /*! Utility functions related to Python source code. */
 
-use lazy_static::lazy_static;
+use {anyhow::Result, lazy_static::lazy_static};
 
 lazy_static! {
     static ref RE_CODING: regex::bytes::Regex =
@@ -29,4 +29,21 @@ pub fn python_source_encoding(source: &[u8]) -> Vec<u8> {
     }
 
     b"utf-8".to_vec()
+}
+
+/// Whether __file__ occurs in Python source code.
+pub fn has_dunder_file(source: &[u8]) -> Result<bool> {
+    // We can't just look for b"__file__ because the source file may be in
+    // encodings like UTF-16. So we need to decode to Unicode first then look for
+    // the code points.
+    let encoding = python_source_encoding(source);
+
+    let encoder = match encoding_rs::Encoding::for_label(&encoding) {
+        Some(encoder) => encoder,
+        None => encoding_rs::UTF_8,
+    };
+
+    let (source, ..) = encoder.decode(source);
+
+    Ok(source.contains("__file__"))
 }

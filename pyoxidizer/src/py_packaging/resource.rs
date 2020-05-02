@@ -12,27 +12,10 @@ use {
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::Result,
     python_packaging::module_util::{packages_from_module_name, resolve_path_for_module},
-    python_packaging::python_source::python_source_encoding,
+    python_packaging::python_source::has_dunder_file,
     python_packaging::resource::DataLocation,
     std::path::{Path, PathBuf},
 };
-
-/// Whether __file__ occurs in Python source code.
-pub fn has_dunder_file(source: &[u8]) -> Result<bool> {
-    // We can't just look for b"__file__ because the source file may be in
-    // encodings like UTF-16. So we need to decode to Unicode first then look for
-    // the code points.
-    let encoding = python_source_encoding(source);
-
-    let encoder = match encoding_rs::Encoding::for_label(&encoding) {
-        Some(encoder) => encoder,
-        None => encoding_rs::UTF_8,
-    };
-
-    let (source, ..) = encoder.decode(source);
-
-    Ok(source.contains("__file__"))
-}
 
 /// A Python module defined via source code.
 #[derive(Clone, Debug, PartialEq)]
