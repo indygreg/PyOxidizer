@@ -12,7 +12,7 @@ use {
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Result},
     python_packaging::bytecode::{BytecodeCompiler, CompileMode},
-    python_packaging::module_util::{packages_from_module_name, packages_from_module_names},
+    python_packaging::module_util::packages_from_module_names,
     python_packaging::python_source::has_dunder_file,
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
@@ -257,7 +257,7 @@ impl PrePackagedResources {
             }
         }
 
-        self.add_parent_packages(&module.name, module.optimize_level)
+        Ok(())
     }
 
     /// Add a bytecode module to be loaded from the filesystem relative to some entity.
@@ -509,8 +509,7 @@ impl PrePackagedResources {
             },
         );
 
-        // TODO should we populate opt1, opt2, source?
-        self.add_parent_packages(&module.module, BytecodeOptimizationLevel::Zero)
+        Ok(())
     }
 
     /// Add a distribution extension module to be loaded from in-memory import.
@@ -568,7 +567,7 @@ impl PrePackagedResources {
             }
         }
 
-        self.add_parent_packages(&module.module, BytecodeOptimizationLevel::Zero)
+        Ok(())
     }
 
     /// Add an extension module from a Python distribution to be loaded from the filesystem as a dynamic library.
@@ -680,9 +679,7 @@ impl PrePackagedResources {
 
         entry.is_package = module.is_package;
 
-        // Add empty bytecode for missing parent packages.
-        // TODO should we populate opt1, opt2?
-        self.add_parent_packages(&module.name, BytecodeOptimizationLevel::Zero)
+        Ok(())
     }
 
     /// Add an extension module shared library that should be imported from memory.
@@ -707,11 +704,10 @@ impl PrePackagedResources {
         }
         entry.in_memory_extension_module_shared_library = Some(DataLocation::Memory(data.to_vec()));
 
-        // Add empty bytecode for missing parent packages.
-        self.add_parent_packages(module, BytecodeOptimizationLevel::Zero)
-
         // TODO add shared library dependencies to be packaged as well.
         // TODO add shared library dependency names.
+
+        Ok(())
     }
 
     /// Add an extension module to be loaded from the filesystem as a dynamic library.
@@ -1000,46 +996,6 @@ impl PrePackagedResources {
             extension_modules: self.extension_module_states.clone(),
         })
     }
-
-    fn add_parent_packages(
-        &mut self,
-        name: &str,
-        bytecode_level: BytecodeOptimizationLevel,
-    ) -> Result<()> {
-        for package in packages_from_module_name(name) {
-            let m = self
-                .resources
-                .entry(package.clone())
-                .or_insert_with(|| PrePackagedResource {
-                    flavor: ResourceFlavor::Module,
-                    name: package.clone(),
-                    ..PrePackagedResource::default()
-                });
-
-            // All parents are packages by definition.
-            m.is_package = true;
-
-            match bytecode_level {
-                BytecodeOptimizationLevel::Zero => {
-                    if m.in_memory_bytecode.is_none() {
-                        m.in_memory_bytecode = Some(DataLocation::Memory(vec![]));
-                    }
-                }
-                BytecodeOptimizationLevel::One => {
-                    if m.in_memory_bytecode_opt1.is_none() {
-                        m.in_memory_bytecode_opt1 = Some(DataLocation::Memory(vec![]));
-                    }
-                }
-                BytecodeOptimizationLevel::Two => {
-                    if m.in_memory_bytecode_opt2.is_none() {
-                        m.in_memory_bytecode_opt2 = Some(DataLocation::Memory(vec![]));
-                    }
-                }
-            }
-        }
-
-        Ok(())
-    }
 }
 
 /// Holds state necessary to link libpython.
@@ -1315,33 +1271,13 @@ mod tests {
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
         })?;
 
-        assert_eq!(r.resources.len(), 3);
+        assert_eq!(r.resources.len(), 1);
         assert_eq!(
             r.resources.get("root.parent.child"),
             Some(&PrePackagedResource {
                 flavor: ResourceFlavor::Module,
                 name: "root.parent.child".to_string(),
                 in_memory_bytecode_opt1: Some(DataLocation::Memory(vec![42])),
-                is_package: true,
-                ..PrePackagedResource::default()
-            })
-        );
-        assert_eq!(
-            r.resources.get("root.parent"),
-            Some(&PrePackagedResource {
-                flavor: ResourceFlavor::Module,
-                name: "root.parent".to_string(),
-                in_memory_bytecode_opt1: Some(DataLocation::Memory(vec![])),
-                is_package: true,
-                ..PrePackagedResource::default()
-            })
-        );
-        assert_eq!(
-            r.resources.get("root"),
-            Some(&PrePackagedResource {
-                flavor: ResourceFlavor::Module,
-                name: "root".to_string(),
-                in_memory_bytecode_opt1: Some(DataLocation::Memory(vec![])),
                 is_package: true,
                 ..PrePackagedResource::default()
             })
@@ -1415,18 +1351,6 @@ mod tests {
             })
         );
 
-        assert_eq!(r.resources.len(), 1);
-        assert_eq!(
-            r.resources.get("foo"),
-            Some(&PrePackagedResource {
-                flavor: ResourceFlavor::Module,
-                name: "foo".to_string(),
-                in_memory_bytecode: Some(DataLocation::Memory(vec![])),
-                is_package: true,
-                ..PrePackagedResource::default()
-            })
-        );
-
         Ok(())
     }
 
@@ -1457,18 +1381,6 @@ mod tests {
                 link_static_libraries: BTreeSet::new(),
                 link_dynamic_libraries: BTreeSet::new(),
                 link_external_libraries: BTreeSet::new()
-            })
-        );
-
-        assert_eq!(r.resources.len(), 2);
-        assert_eq!(
-            r.resources.get("foo"),
-            Some(&PrePackagedResource {
-                flavor: ResourceFlavor::Module,
-                name: "foo".to_string(),
-                in_memory_bytecode: Some(DataLocation::Memory(vec![])),
-                is_package: true,
-                ..PrePackagedResource::default()
             })
         );
 

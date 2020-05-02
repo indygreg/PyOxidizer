@@ -294,6 +294,79 @@ pub fn populate_parent_packages(
             // Parents must be packages by definition.
             entry.is_package = true;
 
+            // We want to materialize bytecode on parent packages no matter
+            // what. If the original resource has a variant of bytecode in a
+            // location, we materialize that variant on parents. We take
+            // the source from the parent resource, if present. Otherwise
+            // defaulting to empty.
+            if original.in_memory_bytecode.is_some() && entry.in_memory_bytecode.is_none() {
+                entry.in_memory_bytecode = Some(if let Some(source) = &entry.in_memory_source {
+                    source.clone()
+                } else {
+                    DataLocation::Memory(vec![])
+                });
+            }
+            if original.in_memory_bytecode_opt1.is_some() && entry.in_memory_bytecode_opt1.is_none()
+            {
+                entry.in_memory_bytecode_opt1 =
+                    Some(if let Some(source) = &entry.in_memory_source {
+                        source.clone()
+                    } else {
+                        DataLocation::Memory(vec![])
+                    });
+            }
+            if original.in_memory_bytecode_opt2.is_some() && entry.in_memory_bytecode_opt2.is_none()
+            {
+                entry.in_memory_bytecode_opt2 =
+                    Some(if let Some(source) = &entry.in_memory_source {
+                        source.clone()
+                    } else {
+                        DataLocation::Memory(vec![])
+                    });
+            }
+
+            if let Some((prefix, cache_tag, _)) = &original.relative_path_module_bytecode {
+                if entry.relative_path_module_bytecode.is_none() {
+                    entry.relative_path_module_bytecode = Some((
+                        prefix.clone(),
+                        cache_tag.clone(),
+                        if let Some((_, location)) = &entry.relative_path_module_source {
+                            location.clone()
+                        } else {
+                            DataLocation::Memory(vec![])
+                        },
+                    ));
+                }
+            }
+
+            if let Some((prefix, cache_tag, _)) = &original.relative_path_module_bytecode_opt1 {
+                if entry.relative_path_module_bytecode_opt1.is_none() {
+                    entry.relative_path_module_bytecode_opt1 = Some((
+                        prefix.clone(),
+                        cache_tag.clone(),
+                        if let Some((_, location)) = &entry.relative_path_module_source {
+                            location.clone()
+                        } else {
+                            DataLocation::Memory(vec![])
+                        },
+                    ));
+                }
+            }
+
+            if let Some((prefix, cache_tag, _)) = &original.relative_path_module_bytecode_opt2 {
+                if entry.relative_path_module_bytecode_opt2.is_none() {
+                    entry.relative_path_module_bytecode_opt2 = Some((
+                        prefix.clone(),
+                        cache_tag.clone(),
+                        if let Some((_, location)) = &entry.relative_path_module_source {
+                            location.clone()
+                        } else {
+                            DataLocation::Memory(vec![])
+                        },
+                    ));
+                }
+            }
+
             // If the child had path-based source, we need to materialize source as well.
             if let Some((prefix, _)) = &original.relative_path_module_source {
                 entry
@@ -425,6 +498,79 @@ mod tests {
                     "prefix".to_string(),
                     DataLocation::Memory(vec![])
                 )),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_populate_parent_packages_in_memory_bytecode() -> Result<()> {
+        let mut h = BTreeMap::new();
+        h.insert(
+            "root.parent.child".to_string(),
+            PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: "root.parent.child".to_string(),
+                in_memory_bytecode: Some(DataLocation::Memory(vec![42])),
+                is_package: true,
+                ..PrePackagedResource::default()
+            },
+        );
+
+        populate_parent_packages(&mut h)?;
+
+        assert_eq!(h.len(), 3);
+        assert_eq!(
+            h.get("root.parent"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: "root.parent".to_string(),
+                is_package: true,
+                in_memory_bytecode: Some(DataLocation::Memory(vec![])),
+                ..PrePackagedResource::default()
+            })
+        );
+        assert_eq!(
+            h.get("root"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: "root".to_string(),
+                is_package: true,
+                in_memory_bytecode: Some(DataLocation::Memory(vec![])),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_populate_parent_packages_distribution_extension_module() -> Result<()> {
+        let mut h = BTreeMap::new();
+        h.insert(
+            "foo.bar".to_string(),
+            PrePackagedResource {
+                flavor: ResourceFlavor::BuiltinExtensionModule,
+                name: "foo.bar".to_string(),
+                relative_path_extension_module_shared_library: Some((
+                    "prefix".to_string(),
+                    PathBuf::from("prefix/foo/bar.so"),
+                    DataLocation::Memory(vec![42]),
+                )),
+                ..PrePackagedResource::default()
+            },
+        );
+
+        populate_parent_packages(&mut h)?;
+
+        assert_eq!(
+            h.get("foo"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: "foo".to_string(),
+                is_package: true,
                 ..PrePackagedResource::default()
             })
         );
