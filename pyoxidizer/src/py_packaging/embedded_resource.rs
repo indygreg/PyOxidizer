@@ -215,7 +215,7 @@ pub struct ExtensionModuleBuildState {
 #[derive(Debug, Clone)]
 pub struct EmbeddedPythonResourcesPrePackaged {
     policy: PythonResourcesPolicy,
-    modules: BTreeMap<String, EmbeddedResourcePythonModulePrePackaged>,
+    resources: BTreeMap<String, EmbeddedResourcePythonModulePrePackaged>,
     cache_tag: String,
 
     extension_module_states: BTreeMap<String, ExtensionModuleBuildState>,
@@ -227,7 +227,7 @@ impl EmbeddedPythonResourcesPrePackaged {
     pub fn new(policy: &PythonResourcesPolicy, cache_tag: &str) -> Self {
         Self {
             policy: policy.clone(),
-            modules: BTreeMap::new(),
+            resources: BTreeMap::new(),
             cache_tag: cache_tag.to_string(),
             extension_module_states: BTreeMap::new(),
             extra_files: FileManifest::default(),
@@ -236,7 +236,7 @@ impl EmbeddedPythonResourcesPrePackaged {
 
     /// Obtain `SourceModule` in this instance.
     pub fn get_in_memory_module_sources(&self) -> BTreeMap<String, PythonModuleSource> {
-        BTreeMap::from_iter(self.modules.iter().filter_map(|(name, module)| {
+        BTreeMap::from_iter(self.resources.iter().filter_map(|(name, module)| {
             if let Some(location) = &module.in_memory_source {
                 Some((
                     name.clone(),
@@ -257,7 +257,7 @@ impl EmbeddedPythonResourcesPrePackaged {
     pub fn get_in_memory_module_bytecodes(
         &self,
     ) -> BTreeMap<String, PythonModuleBytecodeFromSource> {
-        BTreeMap::from_iter(self.modules.iter().filter_map(|(name, module)| {
+        BTreeMap::from_iter(self.resources.iter().filter_map(|(name, module)| {
             if let Some(location) = &module.in_memory_bytecode {
                 Some((
                     name.clone(),
@@ -299,7 +299,7 @@ impl EmbeddedPythonResourcesPrePackaged {
 
     /// Obtain resource files in this instance.
     pub fn get_in_memory_package_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
-        BTreeMap::from_iter(self.modules.iter().filter_map(|(name, module)| {
+        BTreeMap::from_iter(self.resources.iter().filter_map(|(name, module)| {
             if let Some(resources) = &module.in_memory_resources {
                 Some((
                     name.clone(),
@@ -340,12 +340,13 @@ impl EmbeddedPythonResourcesPrePackaged {
     pub fn add_in_memory_module_source(&mut self, module: &PythonModuleSource) -> Result<()> {
         self.check_policy(ResourceLocation::InMemory)?;
 
-        let entry = self.modules.entry(module.name.clone()).or_insert_with(|| {
-            EmbeddedResourcePythonModulePrePackaged {
+        let entry = self
+            .resources
+            .entry(module.name.clone())
+            .or_insert_with(|| EmbeddedResourcePythonModulePrePackaged {
                 name: module.name.clone(),
                 ..EmbeddedResourcePythonModulePrePackaged::default()
-            }
-        });
+            });
         entry.is_package = module.is_package;
         entry.in_memory_source = Some(module.source.clone());
 
@@ -359,12 +360,13 @@ impl EmbeddedPythonResourcesPrePackaged {
         prefix: &str,
     ) -> Result<()> {
         self.check_policy(ResourceLocation::RelativePath)?;
-        let entry = self.modules.entry(module.name.clone()).or_insert_with(|| {
-            EmbeddedResourcePythonModulePrePackaged {
+        let entry = self
+            .resources
+            .entry(module.name.clone())
+            .or_insert_with(|| EmbeddedResourcePythonModulePrePackaged {
                 name: module.name.clone(),
                 ..EmbeddedResourcePythonModulePrePackaged::default()
-            }
-        });
+            });
 
         entry.is_package = module.is_package;
         entry.relative_path_module_source = Some(module.resolve_path(prefix));
@@ -385,12 +387,13 @@ impl EmbeddedPythonResourcesPrePackaged {
         module: &PythonModuleBytecodeFromSource,
     ) -> Result<()> {
         self.check_policy(ResourceLocation::InMemory)?;
-        let entry = self.modules.entry(module.name.clone()).or_insert_with(|| {
-            EmbeddedResourcePythonModulePrePackaged {
+        let entry = self
+            .resources
+            .entry(module.name.clone())
+            .or_insert_with(|| EmbeddedResourcePythonModulePrePackaged {
                 name: module.name.clone(),
                 ..EmbeddedResourcePythonModulePrePackaged::default()
-            }
-        });
+            });
 
         entry.is_package = module.is_package;
 
@@ -421,12 +424,13 @@ impl EmbeddedPythonResourcesPrePackaged {
         prefix: &str,
     ) -> Result<()> {
         self.check_policy(ResourceLocation::RelativePath)?;
-        let entry = self.modules.entry(module.name.clone()).or_insert_with(|| {
-            EmbeddedResourcePythonModulePrePackaged {
+        let entry = self
+            .resources
+            .entry(module.name.clone())
+            .or_insert_with(|| EmbeddedResourcePythonModulePrePackaged {
                 name: module.name.clone(),
                 ..EmbeddedResourcePythonModulePrePackaged::default()
-            }
-        });
+            });
 
         entry.is_package = module.is_package;
 
@@ -457,7 +461,7 @@ impl EmbeddedPythonResourcesPrePackaged {
     ) -> Result<()> {
         self.check_policy(ResourceLocation::InMemory)?;
         let entry = self
-            .modules
+            .resources
             .entry(resource.leaf_package.clone())
             .or_insert_with(|| EmbeddedResourcePythonModulePrePackaged {
                 name: resource.leaf_package.clone(),
@@ -493,7 +497,7 @@ impl EmbeddedPythonResourcesPrePackaged {
     ) -> Result<()> {
         self.check_policy(ResourceLocation::RelativePath)?;
         let entry = self
-            .modules
+            .resources
             .entry(resource.leaf_package.clone())
             .or_insert_with(|| EmbeddedResourcePythonModulePrePackaged {
                 name: resource.leaf_package.clone(),
@@ -534,7 +538,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         self.check_policy(ResourceLocation::InMemory)?;
 
         let entry = self
-            .modules
+            .resources
             .entry(resource.package.clone())
             .or_insert_with(|| EmbeddedResourcePythonModulePrePackaged {
                 name: resource.package.clone(),
@@ -564,7 +568,7 @@ impl EmbeddedPythonResourcesPrePackaged {
     ) -> Result<()> {
         self.check_policy(ResourceLocation::RelativePath)?;
         let entry = self
-            .modules
+            .resources
             .entry(resource.package.clone())
             .or_insert_with(|| EmbeddedResourcePythonModulePrePackaged {
                 name: resource.package.clone(),
@@ -672,7 +676,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         }
 
         let entry = self
-            .modules
+            .resources
             .entry(module.module.clone())
             .or_insert_with(|| EmbeddedResourcePythonModulePrePackaged {
                 name: module.module.clone(),
@@ -692,7 +696,7 @@ impl EmbeddedPythonResourcesPrePackaged {
                     .expect("filename on shared library")
                     .to_string_lossy();
 
-                let resource = self.modules.entry(name.to_string()).or_insert_with(|| {
+                let resource = self.resources.entry(name.to_string()).or_insert_with(|| {
                     EmbeddedResourcePythonModulePrePackaged {
                         name: name.to_string(),
                         ..EmbeddedResourcePythonModulePrePackaged::default()
@@ -703,7 +707,7 @@ impl EmbeddedPythonResourcesPrePackaged {
                     Some(DataLocation::Path(shared_library.clone()));
 
                 // And update the extension module entry to record a library dependency.
-                self.modules
+                self.resources
                     .get_mut(&module.module)
                     .expect("entry for extension module")
                     .shared_library_dependency_names
@@ -736,7 +740,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         }
 
         let entry = self
-            .modules
+            .resources
             .entry(module.module.clone())
             .or_insert_with(|| EmbeddedResourcePythonModulePrePackaged {
                 name: module.module.clone(),
@@ -816,12 +820,13 @@ impl EmbeddedPythonResourcesPrePackaged {
             },
         );
 
-        let entry = self.modules.entry(module.name.clone()).or_insert_with(|| {
-            EmbeddedResourcePythonModulePrePackaged {
+        let entry = self
+            .resources
+            .entry(module.name.clone())
+            .or_insert_with(|| EmbeddedResourcePythonModulePrePackaged {
                 name: module.name.clone(),
                 ..EmbeddedResourcePythonModulePrePackaged::default()
-            }
-        });
+            });
 
         entry.is_package = module.is_package;
 
@@ -843,7 +848,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         data: &[u8],
     ) -> Result<()> {
         self.check_policy(ResourceLocation::InMemory)?;
-        let entry = self.modules.entry(module.to_string()).or_insert_with(|| {
+        let entry = self.resources.entry(module.to_string()).or_insert_with(|| {
             EmbeddedResourcePythonModulePrePackaged {
                 name: module.to_string(),
                 ..EmbeddedResourcePythonModulePrePackaged::default()
@@ -879,7 +884,7 @@ impl EmbeddedPythonResourcesPrePackaged {
             return Err(anyhow!("extension module {} lacks shared library data and cannot be loaded from the filesystem", em.name));
         }
 
-        let entry = self.modules.entry(em.name.clone()).or_insert_with(|| {
+        let entry = self.resources.entry(em.name.clone()).or_insert_with(|| {
             EmbeddedResourcePythonModulePrePackaged {
                 name: em.name.clone(),
                 ..EmbeddedResourcePythonModulePrePackaged::default()
@@ -910,7 +915,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         let resource_names = resolve_resource_names_from_files(files, glob_patterns)?;
 
         warn!(logger, "filtering module entries");
-        filter_btreemap(logger, &mut self.modules, &resource_names);
+        filter_btreemap(logger, &mut self.resources, &resource_names);
         warn!(logger, "filtering embedded extension modules");
         filter_btreemap(logger, &mut self.extension_module_states, &resource_names);
 
@@ -924,7 +929,7 @@ impl EmbeddedPythonResourcesPrePackaged {
     pub fn find_dunder_file(&self) -> Result<BTreeSet<String>> {
         let mut res = BTreeSet::new();
 
-        for (name, module) in &self.modules {
+        for (name, module) in &self.resources {
             if let Some(location) = &module.in_memory_source {
                 if has_dunder_file(&location.resolve()?)? {
                     res.insert(name.clone());
@@ -985,7 +990,7 @@ impl EmbeddedPythonResourcesPrePackaged {
 
         let mut compiler = BytecodeCompiler::new(&python_exe)?;
         {
-            for (name, module) in &self.modules {
+            for (name, module) in &self.resources {
                 let mut entry = EmbeddedResource::try_from(module)?;
 
                 if let Some(location) = &module.in_memory_bytecode {
@@ -1138,7 +1143,7 @@ impl EmbeddedPythonResourcesPrePackaged {
         bytecode_level: Option<BytecodeOptimizationLevel>,
     ) -> Result<()> {
         for package in packages_from_module_name(name) {
-            let m = self.modules.entry(package.clone()).or_insert_with(|| {
+            let m = self.resources.entry(package.clone()).or_insert_with(|| {
                 EmbeddedResourcePythonModulePrePackaged {
                     name: package.clone(),
                     ..EmbeddedResourcePythonModulePrePackaged::default()
@@ -1373,9 +1378,9 @@ mod tests {
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
         })?;
 
-        assert!(r.modules.contains_key("foo"));
+        assert!(r.resources.contains_key("foo"));
         assert_eq!(
-            r.modules.get("foo"),
+            r.resources.get("foo"),
             Some(&EmbeddedResourcePythonModulePrePackaged {
                 name: "foo".to_string(),
                 is_package: false,
@@ -1403,9 +1408,9 @@ mod tests {
             "",
         )?;
 
-        assert!(r.modules.contains_key("foo"));
+        assert!(r.resources.contains_key("foo"));
         assert_eq!(
-            r.modules.get("foo"),
+            r.resources.get("foo"),
             Some(&EmbeddedResourcePythonModulePrePackaged {
                 name: "foo".to_string(),
                 is_package: false,
@@ -1443,9 +1448,9 @@ mod tests {
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
         })?;
 
-        assert_eq!(r.modules.len(), 3);
+        assert_eq!(r.resources.len(), 3);
         assert_eq!(
-            r.modules.get("root.parent.child"),
+            r.resources.get("root.parent.child"),
             Some(&EmbeddedResourcePythonModulePrePackaged {
                 name: "root.parent.child".to_string(),
                 is_package: true,
@@ -1455,7 +1460,7 @@ mod tests {
         );
 
         assert_eq!(
-            r.modules.get("root.parent"),
+            r.resources.get("root.parent"),
             Some(&EmbeddedResourcePythonModulePrePackaged {
                 name: "root.parent".to_string(),
                 is_package: true,
@@ -1465,7 +1470,7 @@ mod tests {
         );
 
         assert_eq!(
-            r.modules.get("root"),
+            r.resources.get("root"),
             Some(&EmbeddedResourcePythonModulePrePackaged {
                 name: "root".to_string(),
                 is_package: true,
@@ -1491,9 +1496,9 @@ mod tests {
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
         })?;
 
-        assert!(r.modules.contains_key("foo"));
+        assert!(r.resources.contains_key("foo"));
         assert_eq!(
-            r.modules.get("foo"),
+            r.resources.get("foo"),
             Some(&EmbeddedResourcePythonModulePrePackaged {
                 name: "foo".to_string(),
                 in_memory_bytecode: Some(DataLocation::Memory(vec![42])),
@@ -1519,9 +1524,9 @@ mod tests {
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
         })?;
 
-        assert_eq!(r.modules.len(), 3);
+        assert_eq!(r.resources.len(), 3);
         assert_eq!(
-            r.modules.get("root.parent.child"),
+            r.resources.get("root.parent.child"),
             Some(&EmbeddedResourcePythonModulePrePackaged {
                 name: "root.parent.child".to_string(),
                 in_memory_bytecode_opt1: Some(DataLocation::Memory(vec![42])),
@@ -1530,7 +1535,7 @@ mod tests {
             })
         );
         assert_eq!(
-            r.modules.get("root.parent"),
+            r.resources.get("root.parent"),
             Some(&EmbeddedResourcePythonModulePrePackaged {
                 name: "root.parent".to_string(),
                 in_memory_bytecode_opt1: Some(DataLocation::Memory(vec![])),
@@ -1539,7 +1544,7 @@ mod tests {
             })
         );
         assert_eq!(
-            r.modules.get("root"),
+            r.resources.get("root"),
             Some(&EmbeddedResourcePythonModulePrePackaged {
                 name: "root".to_string(),
                 in_memory_bytecode_opt1: Some(DataLocation::Memory(vec![])),
@@ -1564,9 +1569,9 @@ mod tests {
             data: DataLocation::Memory(vec![42]),
         })?;
 
-        assert_eq!(r.modules.len(), 1);
+        assert_eq!(r.resources.len(), 1);
         assert_eq!(
-            r.modules.get("foo"),
+            r.resources.get("foo"),
             Some(&EmbeddedResourcePythonModulePrePackaged {
                 name: "foo".to_string(),
                 is_package: true,
@@ -1619,9 +1624,9 @@ mod tests {
             })
         );
 
-        assert_eq!(r.modules.len(), 1);
+        assert_eq!(r.resources.len(), 1);
         assert_eq!(
-            r.modules.get("foo"),
+            r.resources.get("foo"),
             Some(&EmbeddedResourcePythonModulePrePackaged {
                 name: "foo".to_string(),
                 in_memory_bytecode: Some(DataLocation::Memory(vec![])),
@@ -1665,9 +1670,9 @@ mod tests {
             })
         );
 
-        assert_eq!(r.modules.len(), 2);
+        assert_eq!(r.resources.len(), 2);
         assert_eq!(
-            r.modules.get("foo"),
+            r.resources.get("foo"),
             Some(&EmbeddedResourcePythonModulePrePackaged {
                 name: "foo".to_string(),
                 in_memory_bytecode: Some(DataLocation::Memory(vec![])),
@@ -1697,9 +1702,9 @@ mod tests {
         };
 
         r.add_relative_path_extension_module(&em, "prefix")?;
-        assert_eq!(r.modules.len(), 2);
+        assert_eq!(r.resources.len(), 2);
         assert_eq!(
-            r.modules.get("foo.bar"),
+            r.resources.get("foo.bar"),
             Some(&EmbeddedResourcePythonModulePrePackaged {
                 name: "foo.bar".to_string(),
                 is_package: false,
