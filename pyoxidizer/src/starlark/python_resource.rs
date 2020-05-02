@@ -352,50 +352,40 @@ impl TypedValue for PythonExtensionModule {
     }
 }
 
-impl<'a> From<&'a PythonResource> for Value {
-    fn from(resource: &'a PythonResource) -> Value {
-        match resource {
-            PythonResource::ModuleSource(sm) => {
-                Value::new(PythonSourceModule { module: sm.clone() })
-            }
+pub fn python_resource_to_value(resource: &PythonResource) -> Value {
+    match resource {
+        PythonResource::ModuleSource(sm) => Value::new(PythonSourceModule { module: sm.clone() }),
 
-            PythonResource::ModuleBytecodeRequest(m) => {
-                Value::new(PythonBytecodeModule { module: m.clone() })
-            }
+        PythonResource::ModuleBytecodeRequest(m) => {
+            Value::new(PythonBytecodeModule { module: m.clone() })
+        }
 
-            PythonResource::ModuleBytecode { .. } => {
-                panic!("not yet implemented");
-            }
+        PythonResource::ModuleBytecode { .. } => {
+            panic!("not yet implemented");
+        }
 
-            PythonResource::Resource(data) => {
-                Value::new(PythonPackageResource { data: data.clone() })
-            }
+        PythonResource::Resource(data) => Value::new(PythonPackageResource { data: data.clone() }),
 
-            PythonResource::DistributionResource(resource) => {
-                Value::new(PythonPackageDistributionResource {
-                    resource: resource.clone(),
-                })
-            }
+        PythonResource::DistributionResource(resource) => {
+            Value::new(PythonPackageDistributionResource {
+                resource: resource.clone(),
+            })
+        }
 
-            PythonResource::ExtensionModuleDynamicLibrary(em) => {
-                Value::new(PythonExtensionModule {
-                    em: PythonExtensionModuleFlavor::DynamicLibrary(em.clone()),
-                })
-            }
+        PythonResource::ExtensionModuleDynamicLibrary(em) => Value::new(PythonExtensionModule {
+            em: PythonExtensionModuleFlavor::DynamicLibrary(em.clone()),
+        }),
 
-            PythonResource::ExtensionModuleStaticallyLinked(em) => {
-                Value::new(PythonExtensionModule {
-                    em: PythonExtensionModuleFlavor::StaticallyLinked(em.clone()),
-                })
-            }
+        PythonResource::ExtensionModuleStaticallyLinked(em) => Value::new(PythonExtensionModule {
+            em: PythonExtensionModuleFlavor::StaticallyLinked(em.clone()),
+        }),
 
-            PythonResource::EggFile(_) => {
-                panic!("egg files not supported");
-            }
+        PythonResource::EggFile(_) => {
+            panic!("egg files not supported");
+        }
 
-            PythonResource::PathExtension(_) => {
-                panic!("path extensions not supported");
-            }
+        PythonResource::PathExtension(_) => {
+            panic!("path extensions not supported");
         }
     }
 }

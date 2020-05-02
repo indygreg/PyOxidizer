@@ -6,8 +6,8 @@ use {
     super::env::EnvironmentContext,
     super::python_executable::PythonExecutable,
     super::python_resource::{
-        PythonExtensionModule, PythonExtensionModuleFlavor, PythonPackageResource,
-        PythonSourceModule,
+        python_resource_to_value, PythonExtensionModule, PythonExtensionModuleFlavor,
+        PythonPackageResource, PythonSourceModule,
     },
     super::util::{
         optional_dict_arg, optional_list_arg, optional_str_arg, optional_type_arg,
@@ -505,7 +505,10 @@ impl PythonDistribution {
             )?;
 
         Ok(Value::from(
-            resources.iter().map(Value::from).collect::<Vec<Value>>(),
+            resources
+                .iter()
+                .map(python_resource_to_value)
+                .collect::<Vec<Value>>(),
         ))
     }
 
@@ -552,7 +555,7 @@ impl PythonDistribution {
             resources
                 .iter()
                 .filter(|x| x.is_in_packages(&packages))
-                .map(Value::from)
+                .map(python_resource_to_value)
                 .collect::<Vec<Value>>(),
         ))
     }
@@ -585,7 +588,10 @@ impl PythonDistribution {
             })?;
 
         Ok(Value::from(
-            resources.iter().map(Value::from).collect::<Vec<Value>>(),
+            resources
+                .iter()
+                .map(python_resource_to_value)
+                .collect::<Vec<Value>>(),
         ))
     }
 
@@ -714,7 +720,10 @@ impl PythonDistribution {
         );
 
         Ok(Value::from(
-            resources.iter().map(Value::from).collect::<Vec<Value>>(),
+            resources
+                .iter()
+                .map(python_resource_to_value)
+                .collect::<Vec<Value>>(),
         ))
     }
 
