@@ -35,7 +35,6 @@ use {
 
 enum ModuleLocation {
     InMemory,
-    RelativePath(String),
 }
 
 enum ResourceLocation {
@@ -1039,12 +1038,6 @@ impl PrePackagedResources {
                             m.in_memory_bytecode = Some(DataLocation::Memory(vec![]));
                         }
                     }
-                    ModuleLocation::RelativePath(ref prefix) => {
-                        if m.relative_path_module_bytecode.is_none() {
-                            m.relative_path_module_bytecode =
-                                Some((prefix.to_string(), DataLocation::Memory(vec![])));
-                        }
-                    }
                 },
                 BytecodeOptimizationLevel::One => match location {
                     ModuleLocation::InMemory => {
@@ -1052,23 +1045,11 @@ impl PrePackagedResources {
                             m.in_memory_bytecode_opt1 = Some(DataLocation::Memory(vec![]));
                         }
                     }
-                    ModuleLocation::RelativePath(ref prefix) => {
-                        if m.relative_path_module_bytecode_opt1.is_none() {
-                            m.relative_path_module_bytecode_opt1 =
-                                Some((prefix.to_string(), DataLocation::Memory(vec![])));
-                        }
-                    }
                 },
                 BytecodeOptimizationLevel::Two => match location {
                     ModuleLocation::InMemory => {
                         if m.in_memory_bytecode_opt2.is_none() {
                             m.in_memory_bytecode_opt2 = Some(DataLocation::Memory(vec![]));
-                        }
-                    }
-                    ModuleLocation::RelativePath(ref prefix) => {
-                        if m.relative_path_module_bytecode_opt2.is_none() {
-                            m.relative_path_module_bytecode_opt2 =
-                                Some((prefix.to_string(), DataLocation::Memory(vec![])));
                         }
                     }
                 },
