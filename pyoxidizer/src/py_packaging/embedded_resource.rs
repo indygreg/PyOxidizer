@@ -226,8 +226,11 @@ impl PrePackagedResources {
             });
 
         entry.is_package = module.is_package;
-        entry.relative_path_module_source =
-            Some((module.resolve_path(prefix), module.source.clone()));
+        entry.relative_path_module_source = Some((
+            prefix.to_string(),
+            module.resolve_path(prefix),
+            module.source.clone(),
+        ));
 
         self.add_parent_packages(
             &module.name,
@@ -377,7 +380,11 @@ impl PrePackagedResources {
             .unwrap()
             .insert(
                 resource.relative_name.clone(),
-                (resource.resolve_path(prefix), resource.data.clone()),
+                (
+                    prefix.to_string(),
+                    resource.resolve_path(prefix),
+                    resource.data.clone(),
+                ),
             );
 
         self.add_parent_packages(
@@ -447,7 +454,11 @@ impl PrePackagedResources {
             .unwrap()
             .insert(
                 resource.name.clone(),
-                (resource.resolve_path(prefix), resource.data.clone()),
+                (
+                    prefix.to_string(),
+                    resource.resolve_path(prefix),
+                    resource.data.clone(),
+                ),
             );
 
         Ok(())
@@ -617,8 +628,11 @@ impl PrePackagedResources {
         let install_path = prefix_path.join(extension_path.file_name().unwrap());
 
         entry.is_package = false;
-        entry.relative_path_extension_module_shared_library =
-            Some((install_path, DataLocation::Path(extension_path)));
+        entry.relative_path_extension_module_shared_library = Some((
+            prefix.to_string(),
+            install_path,
+            DataLocation::Path(extension_path),
+        ));
 
         for link in &module.links {
             // Install dynamic library dependencies next to extension module.
@@ -636,6 +650,7 @@ impl PrePackagedResources {
                 });
 
                 resource.relative_path_shared_library = Some((
+                    prefix.to_string(),
                     prefix_path.join(shared_library.file_name().unwrap()),
                     DataLocation::Path(shared_library.clone()),
                 ));
@@ -759,6 +774,7 @@ impl PrePackagedResources {
             });
         entry.is_package = em.is_package;
         entry.relative_path_extension_module_shared_library = Some((
+            prefix.to_string(),
             em.resolve_path(prefix),
             em.extension_data.as_ref().unwrap().clone(),
         ));
@@ -830,7 +846,7 @@ impl PrePackagedResources {
         let mut m = FileManifest::default();
 
         for resource in self.resources.values() {
-            if let Some((path, location)) = &resource.relative_path_module_source {
+            if let Some((_, path, location)) = &resource.relative_path_module_source {
                 m.add_file(
                     path,
                     &FileContent {
@@ -840,7 +856,8 @@ impl PrePackagedResources {
                 )?;
             }
 
-            if let Some((path, location)) = &resource.relative_path_extension_module_shared_library
+            if let Some((_, path, location)) =
+                &resource.relative_path_extension_module_shared_library
             {
                 m.add_file(
                     path,
@@ -852,7 +869,7 @@ impl PrePackagedResources {
             }
 
             if let Some(resources) = &resource.relative_path_package_resources {
-                for (path, location) in resources.values() {
+                for (_, path, location) in resources.values() {
                     m.add_file(
                         path,
                         &FileContent {
@@ -864,7 +881,7 @@ impl PrePackagedResources {
             }
 
             if let Some(resources) = &resource.relative_path_distribution_resources {
-                for (path, location) in resources.values() {
+                for (_, path, location) in resources.values() {
                     m.add_file(
                         path,
                         &FileContent {
@@ -875,7 +892,7 @@ impl PrePackagedResources {
                 }
             }
 
-            if let Some((path, location)) = &resource.relative_path_shared_library {
+            if let Some((_, path, location)) = &resource.relative_path_shared_library {
                 m.add_file(
                     path,
                     &FileContent {
@@ -1102,8 +1119,11 @@ impl PrePackagedResources {
                                 is_package: true,
                                 cache_tag: self.cache_tag.clone(),
                             };
-                            m.relative_path_module_source =
-                                Some((module.resolve_path(prefix), module.source));
+                            m.relative_path_module_source = Some((
+                                prefix.to_string(),
+                                module.resolve_path(prefix),
+                                module.source,
+                            ));
                         }
                     }
                 }
@@ -1348,6 +1368,7 @@ mod tests {
                 name: "foo".to_string(),
                 is_package: false,
                 relative_path_module_source: Some((
+                    "".to_string(),
                     PathBuf::from("foo.py"),
                     DataLocation::Memory(vec![42])
                 )),
@@ -1642,6 +1663,7 @@ mod tests {
                 name: "foo.bar".to_string(),
                 is_package: false,
                 relative_path_extension_module_shared_library: Some((
+                    "prefix".to_string(),
                     PathBuf::from("prefix/foo/bar.so"),
                     DataLocation::Memory(vec![42])
                 )),

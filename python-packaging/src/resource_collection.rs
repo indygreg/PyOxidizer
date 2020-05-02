@@ -82,17 +82,18 @@ pub struct PrePackagedResource {
     pub in_memory_distribution_resources: Option<BTreeMap<String, DataLocation>>,
     pub in_memory_shared_library: Option<DataLocation>,
     pub shared_library_dependency_names: Option<Vec<String>>,
-    // (path, source code)
-    pub relative_path_module_source: Option<(PathBuf, DataLocation)>,
+    // (prefix, path, source code)
+    pub relative_path_module_source: Option<(String, PathBuf, DataLocation)>,
     // (prefix, source code)
     pub relative_path_module_bytecode: Option<(String, DataLocation)>,
     pub relative_path_module_bytecode_opt1: Option<(String, DataLocation)>,
     pub relative_path_module_bytecode_opt2: Option<(String, DataLocation)>,
-    // (path, data)
-    pub relative_path_extension_module_shared_library: Option<(PathBuf, DataLocation)>,
-    pub relative_path_package_resources: Option<BTreeMap<String, (PathBuf, DataLocation)>>,
-    pub relative_path_distribution_resources: Option<BTreeMap<String, (PathBuf, DataLocation)>>,
-    pub relative_path_shared_library: Option<(PathBuf, DataLocation)>,
+    // (prefix, path, data)
+    pub relative_path_extension_module_shared_library: Option<(String, PathBuf, DataLocation)>,
+    pub relative_path_package_resources: Option<BTreeMap<String, (String, PathBuf, DataLocation)>>,
+    pub relative_path_distribution_resources:
+        Option<BTreeMap<String, (String, PathBuf, DataLocation)>>,
+    pub relative_path_shared_library: Option<(String, PathBuf, DataLocation)>,
 }
 
 impl<'a> TryFrom<&PrePackagedResource> for Resource<'a, u8> {
@@ -153,7 +154,8 @@ impl<'a> TryFrom<&PrePackagedResource> for Resource<'a, u8> {
             } else {
                 None
             },
-            relative_path_module_source: if let Some((path, _)) = &value.relative_path_module_source
+            relative_path_module_source: if let Some((_, path, _)) =
+                &value.relative_path_module_source
             {
                 Some(Cow::Owned(path.clone()))
             } else {
@@ -164,7 +166,7 @@ impl<'a> TryFrom<&PrePackagedResource> for Resource<'a, u8> {
             relative_path_module_bytecode: None,
             relative_path_module_bytecode_opt1: None,
             relative_path_module_bytecode_opt2: None,
-            relative_path_extension_module_shared_library: if let Some((path, _)) =
+            relative_path_extension_module_shared_library: if let Some((_, path, _)) =
                 &value.relative_path_extension_module_shared_library
             {
                 Some(Cow::Owned(path.clone()))
@@ -175,7 +177,7 @@ impl<'a> TryFrom<&PrePackagedResource> for Resource<'a, u8> {
                 &value.relative_path_package_resources
             {
                 let mut res = HashMap::new();
-                for (key, (path, _)) in resources {
+                for (key, (_, path, _)) in resources {
                     res.insert(Cow::Owned(key.clone()), Cow::Owned(path.clone()));
                 }
                 Some(res)
@@ -186,7 +188,7 @@ impl<'a> TryFrom<&PrePackagedResource> for Resource<'a, u8> {
                 &value.relative_path_distribution_resources
             {
                 let mut res = HashMap::new();
-                for (key, (path, _)) in resources {
+                for (key, (_, path, _)) in resources {
                     res.insert(Cow::Owned(key.clone()), Cow::Owned(path.clone()));
                 }
                 Some(res)
