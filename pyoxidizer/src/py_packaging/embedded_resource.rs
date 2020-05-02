@@ -8,7 +8,6 @@ Embedded Python resources in a binary.
 
 use {
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
-    super::resource::AddToFileManifest,
     super::standalone_distribution::DistributionExtensionModule,
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Result},
@@ -449,9 +448,10 @@ impl PrePackagedResources {
             .relative_path_distribution_resources
             .as_mut()
             .unwrap()
-            .insert(resource.name.clone(), resource.resolve_path(prefix));
-
-        resource.add_to_file_manifest(&mut self.extra_files, prefix)?;
+            .insert(
+                resource.name.clone(),
+                (resource.resolve_path(prefix), resource.data.clone()),
+            );
 
         Ok(())
     }
@@ -849,8 +849,20 @@ impl PrePackagedResources {
                 )?;
             }
 
-            if let Some(package) = &resource.relative_path_package_resources {
-                for (path, location) in package.values() {
+            if let Some(resources) = &resource.relative_path_package_resources {
+                for (path, location) in resources.values() {
+                    m.add_file(
+                        path,
+                        &FileContent {
+                            data: location.resolve()?,
+                            executable: false,
+                        },
+                    )?;
+                }
+            }
+
+            if let Some(resources) = &resource.relative_path_distribution_resources {
+                for (path, location) in resources.values() {
                     m.add_file(
                         path,
                         &FileContent {
