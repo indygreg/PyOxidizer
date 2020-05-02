@@ -3,11 +3,11 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::py_packaging::resource::{PythonExtensionModule as RawExtensionModule, PythonResource},
+    crate::py_packaging::resource::PythonResource,
     crate::py_packaging::standalone_distribution::DistributionExtensionModule,
     python_packaging::resource::{
-        BytecodeOptimizationLevel, PythonModuleBytecodeFromSource,
-        PythonModuleSource as RawSourceModule,
+        BytecodeOptimizationLevel, PythonExtensionModule as RawExtensionModule,
+        PythonModuleBytecodeFromSource, PythonModuleSource as RawSourceModule,
         PythonPackageDistributionResource as RawDistributionResource,
         PythonPackageResource as RawPackageResource,
     },

@@ -11,11 +11,10 @@ use {
     anyhow::Result,
     python_packaging::module_util::{packages_from_module_name, resolve_path_for_module},
     python_packaging::resource::{
-        DataLocation, PythonEggFile, PythonModuleBytecode, PythonModuleBytecodeFromSource,
+        PythonEggFile, PythonExtensionModule, PythonModuleBytecode, PythonModuleBytecodeFromSource,
         PythonModuleSource, PythonPackageDistributionResource, PythonPackageResource,
         PythonPathExtension,
     },
-    std::path::PathBuf,
 };
 
 pub trait ToPythonResource {
@@ -110,78 +109,6 @@ impl AddToFileManifest for PythonPackageDistributionResource {
                 executable: false,
             },
         )
-    }
-}
-
-/// Represents an extension module that can be packaged.
-///
-/// This is like a light version of `ExtensionModule`.
-#[derive(Clone, Debug, PartialEq)]
-pub struct PythonExtensionModule {
-    /// The module name this extension module is providing.
-    pub name: String,
-    /// Name of the C function initializing this extension module.
-    pub init_fn: Option<String>,
-    /// Filename suffix to use when writing extension module data.
-    pub extension_file_suffix: String,
-    /// File data for linked extension module.
-    pub extension_data: Option<DataLocation>,
-    /// File data for object files linked together to produce this extension module.
-    pub object_file_data: Vec<Vec<u8>>,
-    /// Whether this extension module is a package.
-    pub is_package: bool,
-    /// Names of libraries that we need to link when building extension module.
-    pub libraries: Vec<String>,
-    /// Paths to directories holding libraries needed for extension module.
-    pub library_dirs: Vec<PathBuf>,
-}
-
-impl PythonExtensionModule {
-    pub fn to_memory(&self) -> Result<Self> {
-        Ok(Self {
-            name: self.name.clone(),
-            init_fn: self.init_fn.clone(),
-            extension_file_suffix: self.extension_file_suffix.clone(),
-            extension_data: if let Some(data) = &self.extension_data {
-                Some(data.to_memory()?)
-            } else {
-                None
-            },
-            object_file_data: self.object_file_data.clone(),
-            is_package: self.is_package,
-            libraries: self.libraries.clone(),
-            library_dirs: self.library_dirs.clone(),
-        })
-    }
-
-    /// The file name (without parent components) this extension module should be
-    /// realized with.
-    pub fn file_name(&self) -> String {
-        if let Some(idx) = self.name.rfind('.') {
-            let name = &self.name[idx + 1..self.name.len()];
-            format!("{}{}", name, self.extension_file_suffix)
-        } else {
-            format!("{}{}", self.name, self.extension_file_suffix)
-        }
-    }
-
-    /// Resolve the filesystem path for this extension module.
-    pub fn resolve_path(&self, prefix: &str) -> PathBuf {
-        let mut path = PathBuf::from(prefix);
-        path.extend(self.package_parts());
-        path.push(self.file_name());
-
-        path
-    }
-
-    /// Returns the part strings constituting the package name.
-    pub fn package_parts(&self) -> Vec<String> {
-        if let Some(idx) = self.name.rfind('.') {
-            let prefix = &self.name[0..idx];
-            prefix.split('.').map(|x| x.to_string()).collect()
-        } else {
-            Vec::new()
-        }
     }
 }
 
@@ -296,7 +223,12 @@ impl PythonResource {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, itertools::Itertools, python_packaging::resource::BytecodeOptimizationLevel};
+    use {
+        super::*,
+        itertools::Itertools,
+        python_packaging::resource::{BytecodeOptimizationLevel, DataLocation},
+        std::path::PathBuf,
+    };
 
     const DEFAULT_CACHE_TAG: &str = "cpython-37";
 
