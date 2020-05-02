@@ -17,6 +17,11 @@ use {
     std::path::{Path, PathBuf},
 };
 
+pub trait ToPythonResource {
+    /// Converts the type to a `PythonResource` instance.
+    fn to_python_resource(&self) -> PythonResource;
+}
+
 /// A Python module defined via source code.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PythonModuleSource {
@@ -53,10 +58,6 @@ impl PythonModuleSource {
         } else {
             self.name.clone()
         }
-    }
-
-    pub fn as_python_resource(&self) -> PythonResource {
-        PythonResource::ModuleSource(self.clone())
     }
 
     /// Convert the instance to a BytecodeModule.
@@ -113,6 +114,12 @@ impl PythonModuleSource {
     }
 }
 
+impl ToPythonResource for PythonModuleSource {
+    fn to_python_resource(&self) -> PythonResource {
+        PythonResource::ModuleSource(self.clone())
+    }
+}
+
 /// Python module bytecode defined via source code.
 ///
 /// This is essentially a request to generate bytecode from Python module
@@ -130,10 +137,6 @@ pub struct PythonModuleBytecodeFromSource {
 }
 
 impl PythonModuleBytecodeFromSource {
-    pub fn as_python_resource(&self) -> PythonResource {
-        PythonResource::ModuleBytecodeRequest(self.clone())
-    }
-
     pub fn to_memory(&self) -> Result<Self> {
         Ok(Self {
             name: self.name.clone(),
@@ -171,6 +174,12 @@ impl PythonModuleBytecodeFromSource {
     }
 }
 
+impl ToPythonResource for PythonModuleBytecodeFromSource {
+    fn to_python_resource(&self) -> PythonResource {
+        PythonResource::ModuleBytecodeRequest(self.clone())
+    }
+}
+
 /// Compiled Python module bytecode.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PythonModuleBytecode {
@@ -188,10 +197,6 @@ impl PythonModuleBytecode {
             optimize_level,
             is_package: is_package_from_path(path),
         }
-    }
-
-    pub fn as_python_resource(&self) -> PythonResource {
-        PythonResource::ModuleBytecode(self.clone())
     }
 
     pub fn to_memory(&self) -> Result<Self> {
@@ -216,6 +221,12 @@ impl PythonModuleBytecode {
     }
 }
 
+impl ToPythonResource for PythonModuleBytecode {
+    fn to_python_resource(&self) -> PythonResource {
+        PythonResource::ModuleBytecode(self.clone())
+    }
+}
+
 /// Python package resource data, agnostic of storage location.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PythonPackageResource {
@@ -230,10 +241,6 @@ pub struct PythonPackageResource {
 }
 
 impl PythonPackageResource {
-    pub fn as_python_resource(&self) -> PythonResource {
-        PythonResource::Resource(self.clone())
-    }
-
     pub fn to_memory(&self) -> Result<Self> {
         Ok(Self {
             full_name: self.full_name.clone(),
@@ -262,6 +269,12 @@ impl PythonPackageResource {
                 executable: false,
             },
         )
+    }
+}
+
+impl ToPythonResource for PythonPackageResource {
+    fn to_python_resource(&self) -> PythonResource {
+        PythonResource::Resource(self.clone())
     }
 }
 
@@ -304,10 +317,6 @@ pub struct PythonPackageDistributionResource {
 }
 
 impl PythonPackageDistributionResource {
-    pub fn as_python_resource(&self) -> PythonResource {
-        PythonResource::DistributionResource(self.clone())
-    }
-
     pub fn to_memory(&self) -> Result<Self> {
         Ok(Self {
             location: self.location.clone(),
@@ -342,6 +351,12 @@ impl PythonPackageDistributionResource {
                 executable: false,
             },
         )
+    }
+}
+
+impl ToPythonResource for PythonPackageDistributionResource {
+    fn to_python_resource(&self) -> PythonResource {
+        PythonResource::DistributionResource(self.clone())
     }
 }
 
