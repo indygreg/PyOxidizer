@@ -6,11 +6,11 @@
 
 use {
     crate::bytecode::{BytecodeCompiler, CompileMode},
-    crate::module_util::resolve_path_for_module,
+    crate::module_util::{is_package_from_path, resolve_path_for_module},
     crate::python_source::has_dunder_file,
     anyhow::{Context, Result},
     std::convert::TryFrom,
-    std::path::PathBuf,
+    std::path::{Path, PathBuf},
 };
 
 /// Represents an abstract location for binary data.
@@ -119,5 +119,46 @@ impl PythonModuleBytecodeFromSource {
     /// Whether the source for this module has __file__.
     pub fn has_dunder_file(&self) -> Result<bool> {
         has_dunder_file(&self.source.resolve()?)
+    }
+}
+
+/// Compiled Python module bytecode.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PythonModuleBytecode {
+    pub name: String,
+    pub bytecode: DataLocation,
+    pub optimize_level: BytecodeOptimizationLevel,
+    pub is_package: bool,
+}
+
+impl PythonModuleBytecode {
+    pub fn from_path(name: &str, optimize_level: BytecodeOptimizationLevel, path: &Path) -> Self {
+        Self {
+            name: name.to_string(),
+            bytecode: DataLocation::Path(path.to_path_buf()),
+            optimize_level,
+            is_package: is_package_from_path(path),
+        }
+    }
+
+    pub fn to_memory(&self) -> Result<Self> {
+        Ok(Self {
+            name: self.name.clone(),
+            bytecode: self.bytecode.to_memory()?,
+            optimize_level: self.optimize_level,
+            is_package: self.is_package,
+        })
+    }
+
+    /// Resolve the bytecode data for this module.
+    pub fn resolve_bytecode(&self) -> Result<Vec<u8>> {
+        match &self.bytecode {
+            DataLocation::Memory(data) => Ok(data.clone()),
+            DataLocation::Path(path) => {
+                let data = std::fs::read(path)?;
+
+                Ok(data[16..data.len()].to_vec())
+            }
+        }
     }
 }

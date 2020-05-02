@@ -9,14 +9,13 @@ Defines primitives representing Python resources.
 use {
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::Result,
-    python_packaging::module_util::{
-        is_package_from_path, packages_from_module_name, resolve_path_for_module,
-    },
+    python_packaging::module_util::{packages_from_module_name, resolve_path_for_module},
     python_packaging::python_source::has_dunder_file,
     python_packaging::resource::{
-        BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource,
+        BytecodeOptimizationLevel, DataLocation, PythonModuleBytecode,
+        PythonModuleBytecodeFromSource,
     },
-    std::path::{Path, PathBuf},
+    std::path::PathBuf,
 };
 
 pub trait ToPythonResource {
@@ -125,47 +124,6 @@ impl ToPythonResource for PythonModuleSource {
 impl ToPythonResource for PythonModuleBytecodeFromSource {
     fn to_python_resource(&self) -> PythonResource {
         PythonResource::ModuleBytecodeRequest(self.clone())
-    }
-}
-
-/// Compiled Python module bytecode.
-#[derive(Clone, Debug, PartialEq)]
-pub struct PythonModuleBytecode {
-    pub name: String,
-    bytecode: DataLocation,
-    pub optimize_level: BytecodeOptimizationLevel,
-    pub is_package: bool,
-}
-
-impl PythonModuleBytecode {
-    pub fn from_path(name: &str, optimize_level: BytecodeOptimizationLevel, path: &Path) -> Self {
-        Self {
-            name: name.to_string(),
-            bytecode: DataLocation::Path(path.to_path_buf()),
-            optimize_level,
-            is_package: is_package_from_path(path),
-        }
-    }
-
-    pub fn to_memory(&self) -> Result<Self> {
-        Ok(Self {
-            name: self.name.clone(),
-            bytecode: self.bytecode.to_memory()?,
-            optimize_level: self.optimize_level,
-            is_package: self.is_package,
-        })
-    }
-
-    /// Resolve the bytecode data for this module.
-    pub fn resolve_bytecode(&self) -> Result<Vec<u8>> {
-        match &self.bytecode {
-            DataLocation::Memory(data) => Ok(data.clone()),
-            DataLocation::Path(path) => {
-                let data = std::fs::read(path)?;
-
-                Ok(data[16..data.len()].to_vec())
-            }
-        }
     }
 }
 
