@@ -655,7 +655,6 @@ impl PrePackagedResources {
 
                 resource.relative_path_shared_library = Some((
                     prefix.to_string(),
-                    prefix_path.join(file_name),
                     DataLocation::Path(shared_library.clone()),
                 ));
             }
@@ -896,9 +895,9 @@ impl PrePackagedResources {
                 }
             }
 
-            if let Some((_, path, location)) = &resource.relative_path_shared_library {
+            if let Some((prefix, location)) = &resource.relative_path_shared_library {
                 m.add_file(
-                    path,
+                    &PathBuf::from(prefix).join(&resource.name),
                     &FileContent {
                         data: location.resolve()?,
                         executable: true,

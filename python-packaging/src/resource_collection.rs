@@ -94,7 +94,7 @@ pub struct PrePackagedResource {
     pub relative_path_package_resources: Option<BTreeMap<String, (String, PathBuf, DataLocation)>>,
     pub relative_path_distribution_resources:
         Option<BTreeMap<String, (String, PathBuf, DataLocation)>>,
-    pub relative_path_shared_library: Option<(String, PathBuf, DataLocation)>,
+    pub relative_path_shared_library: Option<(String, DataLocation)>,
 }
 
 impl<'a> TryFrom<&PrePackagedResource> for Resource<'a, u8> {
