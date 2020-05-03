@@ -12,13 +12,14 @@ use {
         PyBytes, PyErr, PyObject, PyResult, Python,
     },
     python_packaging::resource::{
-        DataLocation, PythonExtensionModule as RawPythonExtensionModule,
+        BytecodeOptimizationLevel, DataLocation, PythonExtensionModule as RawPythonExtensionModule,
         PythonModuleBytecode as RawPythonModuleBytecode,
         PythonModuleSource as RawPythonModuleSource,
         PythonPackageDistributionResource as RawPythonPackageDistributionResource,
         PythonPackageResource as RawPythonPackageResource,
     },
     std::cell::RefCell,
+    std::convert::TryFrom,
 };
 
 py_class!(pub class PythonModuleSource |py| {
@@ -84,16 +85,82 @@ impl PythonModuleSource {
 }
 
 py_class!(pub class PythonModuleBytecode |py| {
-    data bytecode: RefCell<RawPythonModuleBytecode>;
+    data resource: RefCell<RawPythonModuleBytecode>;
 
     def __repr__(&self) -> PyResult<String> {
-        Ok(format!("<PythonModuleBytecode module=\"{}\">", self.bytecode(py).borrow().name))
+        Ok(format!("<PythonModuleBytecode module=\"{}\">", self.resource(py).borrow().name))
+    }
+
+    @property def module(&self) -> PyResult<String> {
+        Ok(self.resource(py).borrow().name.to_string())
+    }
+
+    @module.setter def set_module(&self, value: Option<&str>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().name = value.to_string();
+
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete module"))
+        }
+    }
+
+    @property def bytecode(&self) -> PyResult<PyBytes> {
+        let bytecode = self.resource(py).borrow().bytecode.resolve().or_else(|_| {
+            Err(PyErr::new::<ValueError, _>(py, "error resolving bytecode"))
+        })?;
+
+        Ok(PyBytes::new(py, &bytecode))
+    }
+
+    @bytecode.setter def set_bytecode(&self, value: Option<PyObject>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().bytecode = DataLocation::Memory(
+                pyobject_to_owned_bytes(py, &value)?
+            );
+
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete bytecode"))
+        }
+    }
+
+    @property def optimize_level(&self) -> PyResult<i32> {
+        Ok(self.resource(py).borrow().optimize_level.into())
+    }
+
+    @optimize_level.setter def set_optimize_level(&self, value: Option<i32>) -> PyResult<()> {
+        if let Some(value) = value {
+            let value = BytecodeOptimizationLevel::try_from(value).or_else(|_| {
+                Err(PyErr::new::<ValueError, _>(py, "invalid bytecode optimization level"))
+            })?;
+
+            self.resource(py).borrow_mut().optimize_level = value;
+
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete optimize_level"))
+        }
+    }
+
+    @property def is_package(&self) -> PyResult<bool> {
+        Ok(self.resource(py).borrow().is_package)
+    }
+
+    @is_package.setter def set_is_package(&self, value: Option<bool>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().is_package = value;
+
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete is_package"))
+        }
     }
 });
 
 impl PythonModuleBytecode {
-    pub fn new(py: Python, bytecode: RawPythonModuleBytecode) -> PyResult<Self> {
-        PythonModuleBytecode::create_instance(py, RefCell::new(bytecode))
+    pub fn new(py: Python, resource: RawPythonModuleBytecode) -> PyResult<Self> {
+        PythonModuleBytecode::create_instance(py, RefCell::new(resource))
     }
 }
 

@@ -605,10 +605,10 @@ of Python *resources*. These types are documented in the sections below.
 The ``oxidized_importer.PythonModuleSource`` type represents Python module
 source code. e.g. a ``.py`` file.
 
-This type exposes the following properties:
+Instances have the following properties:
 
 ``module`` (``str``)
-   The fully qualified name of the Python module. e.g. ``my_package.foo``.
+   The fully qualified Python module name. e.g. ``my_package.foo``.
 
 ``source`` (``bytes``)
    The source code of the Python module.
@@ -626,6 +626,25 @@ This type exposes the following properties:
 The ``oxidized_importer.PythonModuleBytecode`` type represents Python
 module bytecode. e.g. what a ``.pyc`` file holds (but without the header
 that a ``.pyc`` file has).
+
+Instances have the following properties:
+
+``module`` (``str``)
+   The fully qualified Python module name.
+
+``bytecode`` (``bytes``)
+   The bytecode of the Python module.
+
+   This is what you would get by compiling Python source code via
+   something like ``marshal.dumps(compile(source, "exe"))``. The bytecode
+   does **not** contain a header, like what would be found in a ``.pyc``
+   file.
+
+``optimize_level`` (``int``)
+   The bytecode optimization level. Either ``0``, ``1``, or ``2``.
+
+``is_package`` (``bool``)
+   Whether this module is a Python package.
 
 ``PythonExtensionModule``
 -------------------------

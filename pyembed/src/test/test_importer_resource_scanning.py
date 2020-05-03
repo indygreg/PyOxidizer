@@ -56,7 +56,12 @@ class TestImporterResourceScanning(unittest.TestCase):
 
         resources = find_resources_in_path(self.td)
         self.assertEqual(len(resources), 1)
-        self.assertIsInstance(resources[0], PythonModuleBytecode)
+        r = resources[0]
+        self.assertIsInstance(r, PythonModuleBytecode)
+        self.assertEqual(r.module, "foo")
+        self.assertEqual(r.bytecode, b"dummy")
+        self.assertEqual(r.optimize_level, 0)
+        self.assertFalse(r.is_package)
 
     def test_extension_module(self):
         suffix = importlib.machinery.EXTENSION_SUFFIXES[0]
