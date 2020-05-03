@@ -120,3 +120,9 @@ fn importer_construction_py() -> Result<()> {
 fn importer_resources_py() -> Result<()> {
     run_py_test("test_importer_resources.py")
 }
+
+/// Run test_importer_resource_scanning.py.
+#[test]
+fn importer_resource_scanning_py() -> Result<()> {
+    run_py_test("test_importer_resource_scanning.py")
+}

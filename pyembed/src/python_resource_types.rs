@@ -5,7 +5,7 @@
 /*! Defines Python type objects that represent Python resources. */
 
 use {
-    cpython::{py_class, PyResult},
+    cpython::{py_class, PyResult, Python},
     python_packaging::resource::{
         PythonExtensionModule as RawPythonExtensionModule,
         PythonModuleBytecode as RawPythonModuleBytecode,
@@ -24,6 +24,12 @@ py_class!(pub class PythonModuleSource |py| {
     }
 });
 
+impl PythonModuleSource {
+    pub fn new(py: Python, source: RawPythonModuleSource) -> PyResult<Self> {
+        PythonModuleSource::create_instance(py, RefCell::new(source))
+    }
+}
+
 py_class!(pub class PythonModuleBytecode |py| {
     data bytecode: RefCell<RawPythonModuleBytecode>;
 
@@ -31,6 +37,12 @@ py_class!(pub class PythonModuleBytecode |py| {
         Ok(format!("<PythonModuleBytecode module=\"{}\">", self.bytecode(py).borrow().name))
     }
 });
+
+impl PythonModuleBytecode {
+    pub fn new(py: Python, bytecode: RawPythonModuleBytecode) -> PyResult<Self> {
+        PythonModuleBytecode::create_instance(py, RefCell::new(bytecode))
+    }
+}
 
 py_class!(pub class PythonPackageResource |py| {
     data resource: RefCell<RawPythonPackageResource>;
@@ -43,6 +55,12 @@ py_class!(pub class PythonPackageResource |py| {
     }
 });
 
+impl PythonPackageResource {
+    pub fn new(py: Python, resource: RawPythonPackageResource) -> PyResult<Self> {
+        PythonPackageResource::create_instance(py, RefCell::new(resource))
+    }
+}
+
 py_class!(pub class PythonPackageDistributionResource |py| {
     data resource: RefCell<RawPythonPackageDistributionResource>;
 
@@ -54,6 +72,12 @@ py_class!(pub class PythonPackageDistributionResource |py| {
     }
 });
 
+impl PythonPackageDistributionResource {
+    pub fn new(py: Python, resource: RawPythonPackageDistributionResource) -> PyResult<Self> {
+        PythonPackageDistributionResource::create_instance(py, RefCell::new(resource))
+    }
+}
+
 py_class!(pub class PythonExtensionModule |py| {
     data extension: RefCell<RawPythonExtensionModule>;
 
@@ -62,3 +86,9 @@ py_class!(pub class PythonExtensionModule |py| {
             self.extension(py).borrow().name))
     }
 });
+
+impl PythonExtensionModule {
+    pub fn new(py: Python, extension: RawPythonExtensionModule) -> PyResult<Self> {
+        PythonExtensionModule::create_instance(py, RefCell::new(extension))
+    }
+}

@@ -17,6 +17,7 @@ use {
         pyobject_to_resource, resource_to_pyobject, OptimizeLevel, OxidizedResource,
         PythonResourcesState,
     },
+    super::resource_scanning::find_resources_in_path,
     cpython::buffer::PyBuffer,
     cpython::exc::{FileNotFoundError, ImportError, ValueError},
     cpython::{
@@ -1359,6 +1360,11 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
             py,
             decode_source(io_module: &PyModule, source_bytes: PyObject)
         ),
+    )?;
+    m.add(
+        py,
+        "find_resources_in_path",
+        py_fn!(py, find_resources_in_path(path: PyObject)),
     )?;
 
     m.add(py, "OxidizedFinder", py.get_type::<OxidizedFinder>())?;

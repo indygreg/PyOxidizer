@@ -102,6 +102,7 @@ mod pyalloc;
 mod python_eval;
 mod python_resource_types;
 mod python_resources;
+mod resource_scanning;
 #[cfg(not(library_mode = "extension"))]
 pub mod technotes;
 #[cfg(test)]
