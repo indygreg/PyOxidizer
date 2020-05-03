@@ -246,7 +246,12 @@ impl FileManifest {
             }
             "PythonPackageResource" => {
                 let m = resource.downcast_apply(|m: &PythonPackageResource| m.data.clone());
-                warn!(logger, "adding resource file {} to {}", m.full_name, prefix);
+                warn!(
+                    logger,
+                    "adding resource file {} to {}",
+                    m.symbolic_name(),
+                    prefix
+                );
                 m.add_to_file_manifest(&mut self.manifest, &prefix)
                     .or_else(|e| {
                         Err(RuntimeError {
@@ -627,7 +632,6 @@ mod tests {
 
         let v = Value::new(PythonPackageResource {
             data: RawPackageResource {
-                full_name: "foo/bar/resource.txt".to_string(),
                 leaf_package: "foo.bar".to_string(),
                 relative_name: "resource.txt".to_string(),
                 data: DataLocation::Memory(vec![]),

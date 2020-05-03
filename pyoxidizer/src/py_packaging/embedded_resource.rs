@@ -1291,7 +1291,6 @@ mod tests {
         let mut r =
             PrePackagedResources::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
         r.add_in_memory_package_resource(&PythonPackageResource {
-            full_name: "foo/resource.txt".to_string(),
             leaf_package: "foo".to_string(),
             relative_name: "resource.txt".to_string(),
             data: DataLocation::Memory(vec![42]),

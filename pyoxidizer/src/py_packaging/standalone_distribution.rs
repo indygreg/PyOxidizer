@@ -1231,7 +1231,6 @@ impl PythonDistribution for StandaloneDistribution {
         for (package, inner) in self.resources.iter() {
             for (name, path) in inner.iter() {
                 res.push(PythonPackageResource {
-                    full_name: format!("{}/{}", package, name),
                     leaf_package: package.clone(),
                     relative_name: name.clone(),
                     data: DataLocation::Path(path.clone()),

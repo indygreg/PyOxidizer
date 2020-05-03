@@ -231,8 +231,6 @@ impl PythonModuleBytecode {
 /// Python package resource data, agnostic of storage location.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PythonPackageResource {
-    /// The full relative path to this resource from a library root.
-    pub full_name: String,
     /// The leaf-most Python package this resource belongs to.
     pub leaf_package: String,
     /// The relative path within `leaf_package` to this resource.
@@ -244,7 +242,6 @@ pub struct PythonPackageResource {
 impl PythonPackageResource {
     pub fn to_memory(&self) -> Result<Self> {
         Ok(Self {
-            full_name: self.full_name.clone(),
             leaf_package: self.leaf_package.clone(),
             relative_name: self.relative_name.clone(),
             data: self.data.to_memory()?,
@@ -257,7 +254,15 @@ impl PythonPackageResource {
 
     /// Resolve filesystem path to this bytecode.
     pub fn resolve_path(&self, prefix: &str) -> PathBuf {
-        PathBuf::from(prefix).join(&self.full_name)
+        let mut path = PathBuf::from(prefix);
+
+        for p in self.leaf_package.split('.') {
+            path = path.join(p);
+        }
+
+        path = path.join(&self.relative_name);
+
+        path
     }
 }
 

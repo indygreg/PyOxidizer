@@ -452,10 +452,6 @@ impl Iterator for PythonResourceIterator {
                 .unwrap()
                 .to_string_lossy();
 
-            // The full name of the resource is its relative path with path separators normalized to
-            // POSIX conventions.
-            let full_name = resource.relative_path.to_string_lossy().replace("\\", "/");
-
             // We also resolve the leaf-most Python package that this resource is within and
             // the relative path within that package.
             let (leaf_package, relative_name) =
@@ -498,7 +494,6 @@ impl Iterator for PythonResourceIterator {
             let relative_name = relative_name.unwrap();
 
             return Some(Ok(PythonResource::Resource(PythonPackageResource {
-                full_name,
                 leaf_package,
                 relative_name,
                 data: DataLocation::Path(resource.full_path),
@@ -922,7 +917,6 @@ mod tests {
         assert_eq!(
             resources[1],
             PythonResource::Resource(PythonPackageResource {
-                full_name: "foo/resource.txt".to_string(),
                 leaf_package: "foo".to_string(),
                 relative_name: "resource.txt".to_string(),
                 data: DataLocation::Path(resource_path),
@@ -963,7 +957,6 @@ mod tests {
         assert_eq!(
             resources[1],
             PythonResource::Resource(PythonPackageResource {
-                full_name: "foo/resources/resource.txt".to_string(),
                 leaf_package: "foo".to_string(),
                 relative_name: "resources/resource.txt".to_string(),
                 data: DataLocation::Path(resource_path),
