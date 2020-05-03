@@ -164,37 +164,7 @@ impl PrePackagedResources {
         resource: &PythonPackageDistributionResource,
     ) -> Result<()> {
         self.collector
-            .check_policy(ResourceLocation::RelativePath)?;
-        let entry = self
-            .collector
-            .resources
-            .entry(resource.package.clone())
-            .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Module,
-                name: resource.package.clone(),
-                ..PrePackagedResource::default()
-            });
-
-        entry.is_package = true;
-
-        if entry.relative_path_distribution_resources.is_none() {
-            entry.relative_path_distribution_resources = Some(BTreeMap::new());
-        }
-
-        entry
-            .relative_path_distribution_resources
-            .as_mut()
-            .unwrap()
-            .insert(
-                resource.name.clone(),
-                (
-                    prefix.to_string(),
-                    resource.resolve_path(prefix),
-                    resource.data.clone(),
-                ),
-            );
-
-        Ok(())
+            .add_relative_path_package_distribution_resource(prefix, resource)
     }
 
     /// Add an extension module from a Python distribution to be linked into the binary.

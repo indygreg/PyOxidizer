@@ -756,6 +756,44 @@ impl PythonResourceCollector {
 
         Ok(())
     }
+
+    /// Add a `PythonPackageDistributionResource` to be loaded from a relative filesystem path.
+    pub fn add_relative_path_package_distribution_resource(
+        &mut self,
+        prefix: &str,
+        resource: &PythonPackageDistributionResource,
+    ) -> Result<()> {
+        self.check_policy(ResourceLocation::RelativePath)?;
+        let entry = self
+            .resources
+            .entry(resource.package.clone())
+            .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: resource.package.clone(),
+                ..PrePackagedResource::default()
+            });
+
+        entry.is_package = true;
+
+        if entry.relative_path_distribution_resources.is_none() {
+            entry.relative_path_distribution_resources = Some(BTreeMap::new());
+        }
+
+        entry
+            .relative_path_distribution_resources
+            .as_mut()
+            .unwrap()
+            .insert(
+                resource.name.clone(),
+                (
+                    prefix.to_string(),
+                    resource.resolve_path(prefix),
+                    resource.data.clone(),
+                ),
+            );
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
