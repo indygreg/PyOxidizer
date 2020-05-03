@@ -100,6 +100,7 @@ mod package_metadata;
 mod pyalloc;
 #[cfg(not(library_mode = "extension"))]
 mod python_eval;
+#[allow(unused_variables)]
 mod python_resource_collector;
 mod python_resource_types;
 mod python_resources;
