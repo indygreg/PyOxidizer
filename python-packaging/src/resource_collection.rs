@@ -826,6 +826,7 @@ impl PythonResourceCollector {
         module: &str,
         is_package: bool,
         data: &[u8],
+        shared_library_dependency_names: &[&str],
     ) -> Result<()> {
         self.check_policy(ResourceLocation::InMemory)?;
         let entry =
@@ -841,6 +842,12 @@ impl PythonResourceCollector {
             entry.is_package = true;
         }
         entry.in_memory_extension_module_shared_library = Some(DataLocation::Memory(data.to_vec()));
+        entry.shared_library_dependency_names = Some(
+            shared_library_dependency_names
+                .iter()
+                .map(|x| x.to_string())
+                .collect(),
+        );
 
         // TODO add shared library dependency names.
 

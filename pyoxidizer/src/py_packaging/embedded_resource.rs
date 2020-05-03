@@ -244,7 +244,12 @@ impl PrePackagedResources {
         let data = std::fs::read(module.shared_library.as_ref().unwrap())?;
 
         self.collector
-            .add_in_memory_python_extension_module_shared_library(&module.module, false, &data)?;
+            .add_in_memory_python_extension_module_shared_library(
+                &module.module,
+                false,
+                &data,
+                &[],
+            )?;
 
         for link in &module.links {
             if let Some(shared_library) = &link.dynamic_path {
@@ -377,7 +382,7 @@ impl PrePackagedResources {
         data: &[u8],
     ) -> Result<()> {
         self.collector
-            .add_in_memory_python_extension_module_shared_library(module, is_package, data)?;
+            .add_in_memory_python_extension_module_shared_library(module, is_package, data, &[])?;
 
         // TODO add shared library dependencies to be packaged as well.
 
