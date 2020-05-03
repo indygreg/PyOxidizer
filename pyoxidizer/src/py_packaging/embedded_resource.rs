@@ -13,7 +13,6 @@ use {
     anyhow::{anyhow, Result},
     python_packaging::bytecode::{BytecodeCompiler, CompileMode},
     python_packaging::module_util::packages_from_module_names,
-    python_packaging::python_source::has_dunder_file,
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
         PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
@@ -441,42 +440,6 @@ impl PrePackagedResources {
         Ok(())
     }
 
-    /// Searches for embedded module sources for references to __file__.
-    ///
-    /// __file__ usage can be problematic for in-memory modules. This method searches
-    /// for its occurrences and returns module names having it present.
-    pub fn find_dunder_file(&self) -> Result<BTreeSet<String>> {
-        let mut res = BTreeSet::new();
-
-        for (name, module) in &self.collector.resources {
-            if let Some(location) = &module.in_memory_source {
-                if has_dunder_file(&location.resolve()?)? {
-                    res.insert(name.clone());
-                }
-            }
-
-            if let Some(location) = &module.in_memory_bytecode_source {
-                if has_dunder_file(&location.resolve()?)? {
-                    res.insert(name.clone());
-                }
-            }
-
-            if let Some(location) = &module.in_memory_bytecode_opt1_source {
-                if has_dunder_file(&location.resolve()?)? {
-                    res.insert(name.clone());
-                }
-            }
-
-            if let Some(location) = &module.in_memory_bytecode_opt2_source {
-                if has_dunder_file(&location.resolve()?)? {
-                    res.insert(name.clone());
-                }
-            }
-        }
-
-        Ok(res)
-    }
-
     fn derive_extra_files(&self) -> Result<FileManifest> {
         let mut m = FileManifest::default();
 
@@ -505,7 +468,7 @@ impl PrePackagedResources {
         python_exe: &Path,
     ) -> Result<EmbeddedPythonResources> {
         let mut file_seen = false;
-        for module in self.find_dunder_file()? {
+        for module in self.collector.find_dunder_file()? {
             file_seen = true;
             warn!(logger, "warning: {} contains __file__", module);
         }
@@ -980,42 +943,6 @@ mod tests {
                 }
             )
         );
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_find_dunder_file() -> Result<()> {
-        let mut r =
-            PrePackagedResources::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
-        assert_eq!(r.find_dunder_file()?.len(), 0);
-
-        r.add_in_memory_module_source(&PythonModuleSource {
-            name: "foo.bar".to_string(),
-            source: DataLocation::Memory(vec![]),
-            is_package: false,
-            cache_tag: DEFAULT_CACHE_TAG.to_string(),
-        })?;
-        assert_eq!(r.find_dunder_file()?.len(), 0);
-
-        r.add_in_memory_module_source(&PythonModuleSource {
-            name: "baz".to_string(),
-            source: DataLocation::Memory(Vec::from("import foo; if __file__ == 'ignored'")),
-            is_package: false,
-            cache_tag: DEFAULT_CACHE_TAG.to_string(),
-        })?;
-        assert_eq!(r.find_dunder_file()?.len(), 1);
-        assert!(r.find_dunder_file()?.contains("baz"));
-
-        r.add_in_memory_module_bytecode(&PythonModuleBytecodeFromSource {
-            name: "bytecode".to_string(),
-            source: DataLocation::Memory(Vec::from("import foo; if __file__")),
-            optimize_level: BytecodeOptimizationLevel::Zero,
-            is_package: false,
-            cache_tag: DEFAULT_CACHE_TAG.to_string(),
-        })?;
-        assert_eq!(r.find_dunder_file()?.len(), 2);
-        assert!(r.find_dunder_file()?.contains("bytecode"));
 
         Ok(())
     }
