@@ -7,8 +7,9 @@
 use {
     crate::module_util::{packages_from_module_name, resolve_path_for_module},
     crate::resource::{
-        BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource,
-        PythonModuleSource, PythonPackageDistributionResource, PythonPackageResource,
+        BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
+        PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
+        PythonPackageResource,
     },
     anyhow::{anyhow, Error, Result},
     python_packed_resources::data::{Resource, ResourceFlavor},
@@ -791,6 +792,29 @@ impl PythonResourceCollector {
                     resource.data.clone(),
                 ),
             );
+
+        Ok(())
+    }
+
+    /// Add a built-in extension module.
+    ///
+    /// Built-in extension modules are statically linked into the binary.
+    pub fn add_builtin_python_extension_module(
+        &mut self,
+        module: &PythonExtensionModule,
+    ) -> Result<()> {
+        self.check_policy(ResourceLocation::InMemory)?;
+
+        let entry = self
+            .resources
+            .entry(module.name.clone())
+            .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::BuiltinExtensionModule,
+                name: module.name.clone(),
+                ..PrePackagedResource::default()
+            });
+
+        entry.is_package = module.is_package;
 
         Ok(())
     }

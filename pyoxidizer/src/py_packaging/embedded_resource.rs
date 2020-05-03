@@ -370,14 +370,14 @@ impl PrePackagedResources {
     /// binary and the extension module will be made available for import from
     /// Python's _builtin_ importer.
     pub fn add_builtin_extension_module(&mut self, module: &PythonExtensionModule) -> Result<()> {
-        self.collector.check_policy(ResourceLocation::InMemory)?;
-
         if module.object_file_data.is_empty() {
             return Err(anyhow!(
                 "cannot add extension module {} as builtin because it lacks object file data",
                 module.name
             ));
         }
+
+        self.collector.add_builtin_python_extension_module(module)?;
 
         self.extension_module_states.insert(
             module.name.clone(),
@@ -395,18 +395,6 @@ impl PrePackagedResources {
                 link_external_libraries: BTreeSet::from_iter(module.libraries.iter().cloned()),
             },
         );
-
-        let entry = self
-            .collector
-            .resources
-            .entry(module.name.clone())
-            .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::BuiltinExtensionModule,
-                name: module.name.clone(),
-                ..PrePackagedResource::default()
-            });
-
-        entry.is_package = module.is_package;
 
         Ok(())
     }
