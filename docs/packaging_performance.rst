@@ -29,7 +29,7 @@ When binaries are built with PyOxidizer, all available Python resources
 are discovered at build time. An index of these resources along with
 the raw resource data is packed - often into the executable itself -
 and made available to PyOxidizer's
-:ref:`custom importer <packaging_importer>`. When PyOxidizer services an
+:ref:`custom importer <oxidized_importer>`. When PyOxidizer services an
 ``import`` statement, looking up a module is effectively looking up a key
 in a dictionary: there is no explicit filesystem I/O to discover the
 location of a resource.

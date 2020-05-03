@@ -1,8 +1,30 @@
-.. _packaging_importer:
+.. _oxidized_importer:
 
-=====================
-PyOxidizer's Importer
-=====================
+======================================
+``oxidized_importer`` Python Extension
+======================================
+
+``oxidized_importer`` is a Python extension module that is maintained
+as part of the PyOxidizer project. This extension module is automatically
+compiled into applications built with PyOxidizer. It can also be built
+as a standalone extension module and used with regular Python installs.
+
+``oxidized_importer`` allows you to:
+
+* Install a custom, high-performance module importer (``OxidizedFinder``)
+  to service Python ``import`` statements and resource loading (potentially
+  from memory).
+* Scan the filesystem for Python resources (source modules, bytecode
+  files, package resources, distribution metadata, etc) and turn them
+  into Python objects.
+* Serialize Python resource data into an efficient binary data structure
+  for loading into an ``OxidizedFinder`` instance. This facilitates
+  producing a standalone *resources blob* that can be distributed with
+  a Python application which contains all the Python modules, bytecode,
+  etc required to power that application.
+
+Python Meta Path Finders
+========================
 
 Python allows providing custom Python types to handle the low-level
 machinery behind the ``import`` statement. The way this works is a
@@ -18,62 +40,63 @@ These *meta path finder* not only service basic Python module loading,
 but they can also facilitate loading resource files and package metadata.
 There are a handful of optional methods available on implementations.
 
-PyOxidizer implements a custom *meta path finder* (which we'll refer to
-as an *importer*). This custom importer is implemented in Rust in the
-``pyembed`` Rust crate, which provides the run-time functionality of
-PyOxidizer. The type's name is ``OxidizedFinder`` and it will
-automatically be registered as the first element in ``sys.meta_path``
-when starting a Python interpreter. You can verify this inside a binary
-built with PyOxidizer::
+This document will often refer to a *meta path finder* as an *importer*,
+because it is primarily used for *importing* Python modules.
 
-   >>> import sys
-   >>> sys.meta_path
-   [<OxidizedFinder object at 0x7f16bb6f93d0>]
+Normally when you start a Python process, the Python interpreter itself
+will install 3 *meta path finders* on ``sys.meta_path`` before your
+code even has a chance of running:
 
-Contrast with a typical Python environment::
+``BuiltinImporter``
+   Handles importing of *built-in* extension modules, which are compiled
+   into the Python interpreter. These include modules like ``sys``.
+``FrozenImporter``
+   Handles importing of *frozen* bytecode modules, which are compiled
+   into the Python interpreter. This *finder* is typically only used
+   to initialize Python's importing mechanism.
+``PathFinder``
+   Handles filesystem-based loading of resources. This is what is used
+   to import ``.py`` and ``.pyc`` files. It also handles ``.zip`` files.
+   This is the *meta path finder* that most imports are traditionally
+   serviced by. It queries the filesystem at ``import`` time to find
+   and load resources.
 
-   >>> import sys
-   >>> sys.meta_path
-   [
-       <class '_frozen_importlib.BuiltinImporter'>,
-       <class '_frozen_importlib.FrozenImporter'>,
-       <class '_frozen_importlib_external.PathFinder'>
-   ]
+``OxidizedFinder``
+==================
 
-High-Level Operation
-====================
+``oxidized_importer.OxidizedFinder`` is a Python type that implements a
+custom *meta path finder*. *Oxidized* is in its name because it is
+implemented in Rust.
 
-The ``OxidizedFinder`` instance is constructed while the Python interpreter
-is initializing. It is registered on ``sys.meta_path`` before the first
-``import`` is performed, allowing it to service every ``import`` for the
-interpreter, even those performed during interpreter initialization itself.
+Unlike traditional *meta path finders* which have to dynamically
+discover resources (often by scanning the filesystem), ``OxidizedFinder``
+instances maintain an *index* of known resources. When a resource is
+requested, ``OxidizedFinder`` can retrieve that resource by effectively
+performing 1 or 2 lookups in a Rust ``HashMap``. This makes resource
+resolution extremely efficient.
 
-Instances of ``OxidizedFinder`` are bound to a binary blob holding
-*packed resources data*. This is a custom data format that has serialized
-Python modules, bytecode, extension modules, resource files, etc to be made
-available to Python. See the ``python-packed-resources`` Rust crate for
-the data specification and implementation of this format.
+Instances of ``OxidizedFinder`` are optionally bound to a binary blob
+holding *packed resources data*. This is a custom serialization format
+for expressing Python modules (source and bytecode), Python extension
+modules, resource files, shared libraries, etc. This data format
+along with a Rust library for interacting with it are defined by the
+`python-packed-resources <https://crates.io/crates/python-packed-resources>`_
+crate.
 
-When a ``OxidizedFinder`` instance is created, the *packed resources data*
-is parsed into a data structure. This data structure allows ``OxidizedFinder``
-to quickly find resources and their corresponding data.
+When an ``OxidizedFinder`` instance is created, the *packed resources
+data* is parsed into a Rust data structure. On a modern machine, parsing
+this resources data for the entirety of the Python standard library
+takes ~1 ms.
 
-The main ``OxidizedFinder`` instance also merges other low-level Python
-interpreter state into its own state. For example, it creates records in
-its resources data structure for the *built-in* extension modules compiled
-into the Python interpreter as well as the *frozen* modules also compiled
-into the interpreter. This allows ``OxidizedFinder`` to subsume
-functionality normally provided by other *meta path finders*, which is
-why the ``BuiltinImporter`` and ``FrozenImporter`` *meta path finders* are
-not present on ``sys.meta_path`` when ``OxidizedFinder`` is.
+``OxidizedFinder`` instances can index *built-in* extension modules
+and *frozen* modules, which are compiled into the Python interpreter. This
+allows ``OxidizedFinder`` to subsume functionality normally provided by
+the ``BuiltinImporter`` and ``FrozenImporter`` *meta path finders*,
+allowing you to potentially replace ``sys.meta_path`` with a single
+instance of ``OxidizedFinder``.
 
-When Python's import machinery calls various methods of the
-``OxidizedFinder`` on ``sys.meta_path``, Rust code is invoked and Rust
-code does the heavy work before returning from the called function (either
-returning a Python object or raising a Python exception).
-
-Python API
-==========
+``OxidizedFinder`` Python API
+=============================
 
 ``OxidizedFinder`` instances implement the following interfaces:
 
@@ -86,7 +109,7 @@ See the `importlib.abc documentation <https://docs.python.org/3/library/importli
 for more on these interfaces.
 
 In addition to the methods on the above interfaces, the following methods
-defined by ``importlib`` are exposed:
+defined elsewhere in ``importlib`` are exposed:
 
 * ``get_resource_reader(fullname: str) -> importlib.abc.ResourceReader``
 * ``find_distributions(context: Optional[DistributionFinder.Context]) -> [Distribution]``
@@ -98,7 +121,7 @@ defined by ``importlib`` are exposed:
 Non-``importlib`` API
 ---------------------
 
-``OxidizedFinder`` instances have additional functionality over what
+``OxidizedFinder`` instances have additional functionality beyond what
 is defined by ``importlib``. This functionality allows you to construct,
 inspect, and manipulate instances.
 
@@ -108,7 +131,9 @@ inspect, and manipulate instances.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 New instances of ``OxidizedFinder`` can be constructed like normal
-Python types::
+Python types:
+
+.. code-block:: python
 
     finder = OxidizedFinder()
 
@@ -122,11 +147,17 @@ See the `python_packed_resources <https://docs.rs/python-packed-resources/0.1.0/
 Rust crate for the specification of the binary data blob accepted by this
 function.
 
-``relative_path_origin`` is a *path-like* object denoting the filesystem
-path that should be used as the *origin* value for relative path resources.
-Filesystem-based resources are stored as a relative path to some other
-value. This is that some other value. If not specified, the directory of
-the current executable will be used.
+.. important::
+
+   The *packed resources data* format is still evolving. It is recommended
+   to use the same version of the ``oxidized_importer`` extension to
+   produce and consume this data structure to ensure compatibility.
+
+The ``relative_path_origin`` argument is a *path-like* object denoting the
+filesystem path that should be used as the *origin* value for relative path
+resources. Filesystem-based resources are stored as a relative path to an
+*anchor* value. This is that *anchor* value. If not specified, the directory
+of the current executable will be used.
 
 .. _oxidized_finder_indexed_resources:
 
@@ -148,8 +179,10 @@ This method registers an :ref:`oxidized_resource` instance with the finder,
 enabling the finder to use it to service lookups.
 
 When an ``OxidizedResource`` is registered, its data is copied into the
-finder instance. So changes to the original object are not reflected on the
-finder.
+finder instance. So changes to the original ``OxidizedResource`` are not
+reflected on the finder. (This is because ``OxidizedFinder`` maintains an
+index and it is important for the data behind that index to not change
+out from under it.)
 
 Resources are stored in an invisible hash map where they are indexed by
 the ``name`` attribute. When a resource is added, any existing resource
@@ -204,6 +237,45 @@ Arguments:
 
    Default is ``True``.
 
+Entries for *built-in* and *frozen* modules are ignored by default because
+they aren't portable, as they are compiled into the interpreter and aren't
+guaranteed to work from one Python interpreter to another. The serialized
+format does support expressing them. Use at your own risk.
+
+``OxidizedFinder`` in PyOxidizer Applications
+=============================================
+
+When running from an application built with PyOxidizer (or using the
+``pyembed`` crate directly), an ``OxidizedFinder`` instance will (likely)
+be automatically registered as the first element in ``sys.meta_path`` when
+starting a Python interpreter.
+
+You can verify this inside a binary built with PyOxidizer::
+
+   >>> import sys
+   >>> sys.meta_path
+   [<OxidizedFinder object at 0x7f16bb6f93d0>]
+
+Contrast with a typical Python environment::
+
+   >>> import sys
+   >>> sys.meta_path
+   [
+       <class '_frozen_importlib.BuiltinImporter'>,
+       <class '_frozen_importlib.FrozenImporter'>,
+       <class '_frozen_importlib_external.PathFinder'>
+   ]
+
+The ``OxidizedFinder`` instance will (likely) be associated with resources
+data embedded in the binary.
+
+This ``OxidizedFinder`` instance is constructed very early during Python
+interpreter initialization. It is registered on ``sys.meta_path`` before
+the first ``import`` requesting a ``.py``/``.pyc`` is performed, allowing
+it to service every ``import`` except those from the very few *built-in
+extension modules* that are compiled into the interpreter and loaded as
+part of Python initialization (e.g. the ``sys`` module).
+
 Behavior and Compliance
 =======================
 
@@ -212,21 +284,21 @@ path importers*. So generally speaking, the behavior as described by the
 `importlib documentation <https://docs.python.org/3/library/importlib.html>`_
 should be compatible. In other words, things should mostly *just work*
 and any deviance from the ``importlib`` documentation constitutes a bug
-in PyOxidizer.
+worth `reporting <https://github.com/indygreg/PyOxidizer/issues>`_.
 
-That being said, PyOxidizer's approach to loading resources is drastically
-different from more traditional means, notably loading files from the
-filesystem. PyOxidizer breaks a lot of assumptions about how things
+That being said, ``OxidizedFinder``'s approach to loading resources is
+drastically different from more traditional means, notably loading files
+from the filesystem. PyOxidizer breaks a lot of assumptions about how things
 have worked in Python and there is some behavior that may seem odd or
 in violation of documented behavior in Python.
 
-The sections below attempt to call out known areas where PyOxidizer's
-importer deviates from typical behavior.
+The sections below attempt to call out known areas where ``OxidizedFinder``
+deviates from typical behavior.
 
 .. _no_file:
 
 ``__file__`` and ``__cached__`` Module Attributes
-=================================================
+-------------------------------------------------
 
 Python modules typically have a ``__file__`` attribute holding a ``str``
 defining the filesystem path the source module was imported from (usually
@@ -263,7 +335,7 @@ is to avoid in-memory loading.
    how to port code to more modern Python APIs for loading resources.
 
 ``__path__`` Module Attribute
-=============================
+-----------------------------
 
 Python modules that are also packages must have a ``__path__`` attribute
 containing an iterable of ``str``. The iterable can be empty.
@@ -276,18 +348,20 @@ If a module is imported from memory, ``__path__`` will be set to the
 path of the current executable joined with the package name. e.g. if
 the current executable is ``/usr/bin/myapp`` and the module/package name
 is ``foo.bar``, ``__path__`` will be ``["/usr/bin/myapp/foo/bar"]``.
-On Windows, paths might look like ``C:\dev\myapp.exe\foo\bar``. Python's
-``zipimport`` importer uses the same approach for modules imported from
-zip files, so there is precedence for PyOxidizer doing things this way.
+On Windows, paths might look like ``C:\dev\myapp.exe\foo\bar``.
+
+Python's ``zipimport`` importer uses the same approach for modules
+imported from zip files, so there is precedence for ``OxidizedFinder``
+doing things this way.
 
 ``ResourceReader`` Compatibility
-================================
+--------------------------------
 
 ``ResourceReader`` has known compatibility differences with Python's default
 filesystem-based importer. See :ref:`resource_reader_support` for details.
 
 ``ResourceLoader`` Compatibility
-================================
+--------------------------------
 
 The ``ResourceLoader`` interface is implemented but behavior of
 ``get_data(path)`` has some variance with Python's filesystem-based importer.
@@ -302,7 +376,7 @@ See :ref:`resource_loader_support` for details.
 .. _packaging_importlib_metadata_compatibility:
 
 ``importlib.metadata`` Compatibility
-====================================
+------------------------------------
 
 ``OxidizedFinder`` implements ``find_distributions()`` and therefore provides
 the required hook for ``importlib.metadata`` to resolve ``Distribution``

@@ -17,7 +17,7 @@ primary area of contact will be with the ``pyembed`` crate.
 The ``pyembed`` crate is a standalone crate maintained as part of the
 PyOxidizer project. This crate provides the core run-time functionality
 for PyOxidizer, such as the implementation of
-:ref:`PyOxidizer's custom importer <packaging_importer>`. It also exposes
+:ref:`PyOxidizer's custom importer <oxidized_importer>`. It also exposes
 a high-level API for initializing a Python interpreter and running code
 in it.
 
@@ -134,7 +134,7 @@ start a Python interpreter.
    in e.g. the ``lib`` directory next to the executable, you can do something
    like ``config.sys_paths.push("$ORIGIN/lib")``.
 
-If you want to use the custom :ref:`PyOxidizer Importer <packaging_importer>`
+If you want to use the custom :ref:`PyOxidizer Importer <oxidized_importer>`
 to import Python resources, you will need to update a handful of fields:
 
 .. code-block:: rust
