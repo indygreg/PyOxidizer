@@ -2,13 +2,16 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import os
 import pathlib
 import sys
 import tempfile
 import unittest
 
 from oxidized_importer import (
+    OxidizedFinder,
     OxidizedResourceCollector,
+    PythonModuleSource,
     find_resources_in_path,
 )
 
@@ -42,6 +45,29 @@ class TestImporterResourceScanning(unittest.TestCase):
 
         for resource in find_resources_in_path(self.td):
             c.add_in_memory(resource)
+
+        f = OxidizedFinder()
+        f.add_resources(c.oxidize())
+
+        resources = [r for r in f.indexed_resources() if r.name == "foo"]
+        self.assertEqual(len(resources), 1)
+
+        r = resources[0]
+        self.assertEqual(r.in_memory_source, b"import io\n")
+
+    def test_add_sys_path(self):
+        c = OxidizedResourceCollector(policy="in-memory-only")
+
+        for path in sys.path:
+            if os.path.isdir(path):
+                for resource in find_resources_in_path(path):
+                    if isinstance(resource, PythonModuleSource):
+                        c.add_in_memory(resource)
+
+        resources = c.oxidize()
+        f = OxidizedFinder()
+        f.add_resources(resources)
+        f.serialize_indexed_resources()
 
 
 if __name__ == "__main__":

@@ -776,6 +776,33 @@ Methods are documented in the following sections.
 type (``PythonModuleSource``, ``PythonModuleBytecode``, etc) to the collector
 and marks it for loading via in-memory mechanisms.
 
+``oxidize()``
+-------------
+
+``OxidizedResourceCollector.oxidize()`` takes all the resources collected so
+far and turns them into a list of ``OxidizedResource``.
+
+Once you have a ``List[OxidizedResource]``, a common next step is to feed
+them into an ``OxidizedFinder`` to index them:
+
+.. code-block:: python
+
+   import oxidized_importer
+
+   collector = oxidized_importer.OxidizedResourceCollector()
+   # ... Add stuff to the collector.
+
+   resources = collector.oxidize()
+
+   finder = oxidized_importer.OxidizedFinder()
+   finder.add_resources(resources)
+
+   # You can then serialize the indexed resources to the packed Python
+   # resources format and use that to instantiate a new OxidizedFinder.
+   serialized = finder.serialize_indexed_resources()
+   finder2 = oxidized_importer.OxidizedFinder(resources=serialized)
+
+
 Security Implications of Loading Resources
 ==========================================
 

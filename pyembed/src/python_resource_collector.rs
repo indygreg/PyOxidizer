@@ -5,10 +5,17 @@
 /*! Python functionality for resource collection. */
 
 use {
+    crate::conversion::pyobject_to_pathbuf,
     crate::python_resource_types::PythonModuleSource,
+    crate::python_resources::resource_to_pyobject,
     cpython::exc::{TypeError, ValueError},
-    cpython::{py_class, py_class_prop_getter, ObjectProtocol, PyErr, PyObject, PyResult, Python},
-    python_packaging::resource_collection::{PythonResourceCollector, PythonResourcesPolicy},
+    cpython::{
+        py_class, py_class_prop_getter, ObjectProtocol, PyErr, PyObject, PyResult, Python,
+        PythonObject, ToPyObject,
+    },
+    python_packaging::resource_collection::{
+        PreparedPythonResources, PythonResourceCollector, PythonResourcesPolicy,
+    },
     std::cell::RefCell,
     std::convert::TryFrom,
 };
@@ -30,6 +37,10 @@ py_class!(pub class OxidizedResourceCollector |py| {
 
     def add_in_memory(&self, resource: PyObject) -> PyResult<PyObject> {
         self.add_in_memory_impl(py, resource)
+    }
+
+    def oxidize(&self) -> PyResult<PyObject> {
+        self.oxidize_impl(py)
     }
 });
 
@@ -67,5 +78,31 @@ impl OxidizedResourceCollector {
                 format!("cannot operate on {} values", typ.name(py)),
             )),
         }
+    }
+
+    fn oxidize_impl(&self, py: Python) -> PyResult<PyObject> {
+        let sys_module = py.import("sys")?;
+        let executable = sys_module.get(py, "executable")?;
+
+        let python_exe = pyobject_to_pathbuf(py, executable)?;
+
+        let collector = self.collector(py).borrow();
+
+        let prepared: PreparedPythonResources = collector
+            .to_prepared_python_resources(&python_exe)
+            .or_else(|e| {
+                Err(PyErr::new::<ValueError, _>(
+                    py,
+                    format!("error oxidizing: {}", e),
+                ))
+            })?;
+
+        let mut resources = Vec::new();
+
+        for resource in prepared.resources.values() {
+            resources.push(resource_to_pyobject(py, resource)?);
+        }
+
+        Ok(resources.into_py_object(py).into_object())
     }
 }
