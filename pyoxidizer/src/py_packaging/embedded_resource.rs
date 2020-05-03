@@ -19,10 +19,9 @@ use {
         PythonPackageResource,
     },
     python_packaging::resource_collection::{
-        populate_parent_packages, PrePackagedResource, PythonResourceCollector,
-        PythonResourcesPolicy, ResourceLocation,
+        populate_parent_packages, PythonResourceCollector, PythonResourcesPolicy,
     },
-    python_packed_resources::data::{Resource, ResourceFlavor},
+    python_packed_resources::data::Resource,
     python_packed_resources::writer::write_embedded_resources_v1,
     slog::{info, warn},
     std::borrow::Cow,
@@ -30,7 +29,7 @@ use {
     std::convert::TryFrom,
     std::io::Write,
     std::iter::FromIterator,
-    std::path::{Path, PathBuf},
+    std::path::Path,
 };
 
 /// Holds state necessary to link an extension module into libpython.
@@ -281,9 +280,6 @@ impl PrePackagedResources {
         prefix: &str,
         module: &DistributionExtensionModule,
     ) -> Result<()> {
-        self.collector
-            .check_policy(ResourceLocation::RelativePath)?;
-
         if module.shared_library.is_none() {
             return Err(anyhow!(
                 "cannot add extension module {} as path relative because it lacks a shared library",
@@ -291,26 +287,19 @@ impl PrePackagedResources {
             ));
         }
 
-        let entry = self
-            .collector
-            .resources
-            .entry(module.module.clone())
-            .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Extension,
-                name: module.module.clone(),
-                ..PrePackagedResource::default()
-            });
+        let ext = PythonExtensionModule {
+            name: module.module.clone(),
+            init_fn: None,
+            extension_file_suffix: "".to_string(),
+            extension_data: Some(DataLocation::Path(module.shared_library.clone().unwrap())),
+            object_file_data: vec![],
+            is_package: false,
+            libraries: vec![],
+            library_dirs: vec![],
+        };
 
-        let prefix_path = PathBuf::from(prefix);
-        let extension_path = module.shared_library.clone().unwrap();
-        let install_path = prefix_path.join(extension_path.file_name().unwrap());
-
-        entry.is_package = false;
-        entry.relative_path_extension_module_shared_library = Some((
-            prefix.to_string(),
-            install_path,
-            DataLocation::Path(extension_path),
-        ));
+        self.collector
+            .add_relative_path_python_extension_module(&ext, prefix)?;
 
         for link in &module.links {
             // Install dynamic library dependencies next to extension module.
@@ -750,7 +739,10 @@ impl<'a> EmbeddedPythonResources<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {
+        super::*, python_packaging::resource_collection::PrePackagedResource,
+        python_packed_resources::data::ResourceFlavor, std::path::PathBuf,
+    };
 
     const DEFAULT_CACHE_TAG: &str = "cpython-37";
 
