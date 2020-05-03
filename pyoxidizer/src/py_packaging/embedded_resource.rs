@@ -106,21 +106,7 @@ impl PrePackagedResources {
         prefix: &str,
     ) -> Result<()> {
         self.collector
-            .check_policy(ResourceLocation::RelativePath)?;
-        let entry = self
-            .collector
-            .resources
-            .entry(module.name.clone())
-            .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Module,
-                name: module.name.clone(),
-                ..PrePackagedResource::default()
-            });
-
-        entry.is_package = module.is_package;
-        entry.relative_path_module_source = Some((prefix.to_string(), module.source.clone()));
-
-        Ok(())
+            .add_relative_path_python_module_source(module, prefix)
     }
 
     /// Add a bytecode module to the collection of embedded bytecode modules.

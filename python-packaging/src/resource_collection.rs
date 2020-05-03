@@ -552,6 +552,28 @@ impl PythonResourceCollector {
 
         Ok(())
     }
+
+    /// Add Python module source to be loaded from a file on the filesystem relative to the resources.
+    pub fn add_relative_path_python_module_source(
+        &mut self,
+        module: &PythonModuleSource,
+        prefix: &str,
+    ) -> Result<()> {
+        self.check_policy(ResourceLocation::RelativePath)?;
+        let entry = self
+            .resources
+            .entry(module.name.clone())
+            .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: module.name.clone(),
+                ..PrePackagedResource::default()
+            });
+
+        entry.is_package = module.is_package;
+        entry.relative_path_module_source = Some((prefix.to_string(), module.source.clone()));
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
