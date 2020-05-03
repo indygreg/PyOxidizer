@@ -453,6 +453,24 @@ impl PythonResourceCollector {
         }
     }
 
+    /// Apply a filter function on resources in this collection and mutate in place.
+    ///
+    /// If the filter function returns true, the item will be preserved.
+    pub fn filter_resources_mut<F>(&mut self, filter: F) -> Result<()>
+    where
+        F: Fn(&PrePackagedResource) -> bool,
+    {
+        self.resources = BTreeMap::from_iter(self.resources.iter().filter_map(|(k, v)| {
+            if filter(v) {
+                Some((k.clone(), v.clone()))
+            } else {
+                None
+            }
+        }));
+
+        Ok(())
+    }
+
     /// Obtain `PythonModuleSource` in this instance.
     pub fn get_in_memory_module_sources(&self) -> BTreeMap<String, PythonModuleSource> {
         BTreeMap::from_iter(self.resources.iter().filter_map(|(name, module)| {

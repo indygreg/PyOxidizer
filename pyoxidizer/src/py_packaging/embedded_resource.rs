@@ -395,7 +395,16 @@ impl PrePackagedResources {
         let resource_names = resolve_resource_names_from_files(files, glob_patterns)?;
 
         warn!(logger, "filtering module entries");
-        filter_btreemap(logger, &mut self.collector.resources, &resource_names);
+
+        self.collector.filter_resources_mut(|resource| {
+            if !resource_names.contains(&resource.name) {
+                warn!(logger, "removing {}", resource.name);
+                false
+            } else {
+                true
+            }
+        })?;
+
         warn!(logger, "filtering embedded extension modules");
         filter_btreemap(logger, &mut self.extension_module_states, &resource_names);
 
