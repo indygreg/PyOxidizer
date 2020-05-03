@@ -5,6 +5,7 @@
 /*! Functionality for collecting Python resources. */
 
 use {
+    crate::bytecode::{BytecodeCompiler, CompileMode},
     crate::module_util::{packages_from_module_name, resolve_path_for_module},
     crate::python_source::has_dunder_file,
     crate::resource::{
@@ -18,7 +19,7 @@ use {
     std::collections::{BTreeMap, BTreeSet, HashMap},
     std::convert::TryFrom,
     std::iter::FromIterator,
-    std::path::PathBuf,
+    std::path::{Path, PathBuf},
 };
 
 /// Describes a policy for the location of Python resources.
@@ -402,6 +403,16 @@ pub enum ResourceLocation {
     InMemory,
     /// Resource is loaded from a relative filesystem path.
     RelativePath,
+}
+
+/// Represents a finalized collection of Python resources.
+///
+/// Instances are produced from a `PythonResourceCollector` and a
+/// Python interpreter (to compile bytecode).
+#[derive(Clone, Debug, Default)]
+pub struct PreparedPythonResources<'a> {
+    pub resources: BTreeMap<String, Resource<'a, u8>>,
+    pub extra_files: Vec<(PathBuf, DataLocation, bool)>,
 }
 
 /// Type used to collect Python resources to they can be serialized.
@@ -990,6 +1001,143 @@ impl PythonResourceCollector {
         }
 
         Ok(res)
+    }
+
+    /// Converts this collection of resources into a `PreparedPythonResources`.
+    pub fn to_prepared_python_resources(
+        &self,
+        python_exe: &Path,
+    ) -> Result<PreparedPythonResources> {
+        let mut input_resources = self.resources.clone();
+        populate_parent_packages(&mut input_resources)?;
+
+        let mut resources = BTreeMap::new();
+        let mut extra_files = Vec::new();
+
+        let mut compiler = BytecodeCompiler::new(python_exe)?;
+        {
+            for (name, resource) in &input_resources {
+                if resource.flavor != ResourceFlavor::Module {
+                    continue;
+                }
+
+                let mut entry = Resource::try_from(resource)?;
+
+                if let Some(location) = &resource.in_memory_bytecode_source {
+                    entry.in_memory_bytecode = Some(Cow::Owned(compiler.compile(
+                        &location.resolve()?,
+                        &name,
+                        BytecodeOptimizationLevel::Zero,
+                        CompileMode::Bytecode,
+                    )?));
+                }
+
+                if let Some(location) = &resource.in_memory_bytecode_opt1_source {
+                    entry.in_memory_bytecode_opt1 = Some(Cow::Owned(compiler.compile(
+                        &location.resolve()?,
+                        &name,
+                        BytecodeOptimizationLevel::One,
+                        CompileMode::Bytecode,
+                    )?));
+                }
+
+                if let Some(location) = &resource.in_memory_bytecode_opt2_source {
+                    entry.in_memory_bytecode_opt2 = Some(Cow::Owned(compiler.compile(
+                        &location.resolve()?,
+                        &name,
+                        BytecodeOptimizationLevel::Two,
+                        CompileMode::Bytecode,
+                    )?));
+                }
+
+                if let Some((prefix, cache_tag, location)) = &resource.relative_path_bytecode_source
+                {
+                    let module = PythonModuleBytecodeFromSource {
+                        name: name.clone(),
+                        source: DataLocation::Memory(vec![]),
+                        optimize_level: BytecodeOptimizationLevel::Zero,
+                        is_package: entry.is_package,
+                        cache_tag: cache_tag.clone(),
+                    };
+
+                    let path = module.resolve_path(prefix);
+
+                    extra_files.push((
+                        path.clone(),
+                        DataLocation::Memory(compiler.compile(
+                            &location.resolve()?,
+                            &name,
+                            BytecodeOptimizationLevel::Zero,
+                            CompileMode::PycUncheckedHash,
+                        )?),
+                        false,
+                    ));
+
+                    entry.relative_path_module_bytecode = Some(Cow::Owned(path));
+                }
+
+                if let Some((prefix, cache_tag, location)) =
+                    &resource.relative_path_bytecode_opt1_source
+                {
+                    let module = PythonModuleBytecodeFromSource {
+                        name: name.clone(),
+                        source: DataLocation::Memory(vec![]),
+                        optimize_level: BytecodeOptimizationLevel::One,
+                        is_package: entry.is_package,
+                        cache_tag: cache_tag.clone(),
+                    };
+
+                    let path = module.resolve_path(prefix);
+
+                    extra_files.push((
+                        path.clone(),
+                        DataLocation::Memory(compiler.compile(
+                            &location.resolve()?,
+                            &name,
+                            BytecodeOptimizationLevel::One,
+                            CompileMode::PycUncheckedHash,
+                        )?),
+                        false,
+                    ));
+
+                    entry.relative_path_module_bytecode_opt1 = Some(Cow::Owned(path));
+                }
+
+                if let Some((prefix, cache_tag, location)) =
+                    &resource.relative_path_bytecode_opt2_source
+                {
+                    let module = PythonModuleBytecodeFromSource {
+                        name: name.clone(),
+                        source: DataLocation::Memory(vec![]),
+                        optimize_level: BytecodeOptimizationLevel::Two,
+                        is_package: entry.is_package,
+                        cache_tag: cache_tag.clone(),
+                    };
+
+                    let path = module.resolve_path(prefix);
+
+                    extra_files.push((
+                        path.clone(),
+                        DataLocation::Memory(compiler.compile(
+                            &location.resolve()?,
+                            &name,
+                            BytecodeOptimizationLevel::Two,
+                            CompileMode::PycUncheckedHash,
+                        )?),
+                        false,
+                    ));
+
+                    entry.relative_path_module_bytecode_opt2 = Some(Cow::Owned(path));
+                }
+
+                resources.insert(name.clone(), entry);
+            }
+        }
+
+        Ok(PreparedPythonResources {
+            resources,
+            extra_files,
+        })
     }
 }
 

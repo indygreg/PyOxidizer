@@ -11,22 +11,17 @@ use {
     super::standalone_distribution::DistributionExtensionModule,
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Result},
-    python_packaging::bytecode::{BytecodeCompiler, CompileMode},
-    python_packaging::module_util::packages_from_module_names,
     python_packaging::resource::{
-        BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
-        PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
-        PythonPackageResource,
+        DataLocation, PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
+        PythonPackageDistributionResource, PythonPackageResource,
     },
     python_packaging::resource_collection::{
-        populate_parent_packages, PythonResourceCollector, PythonResourcesPolicy,
+        PreparedPythonResources, PythonResourceCollector, PythonResourcesPolicy,
     },
     python_packed_resources::data::Resource,
     python_packed_resources::writer::write_embedded_resources_v1,
     slog::{info, warn},
-    std::borrow::Cow,
     std::collections::{BTreeMap, BTreeSet},
-    std::convert::TryFrom,
     std::io::Write,
     std::iter::FromIterator,
     std::path::Path,
@@ -411,22 +406,6 @@ impl PrePackagedResources {
         Ok(())
     }
 
-    fn derive_extra_files(&self) -> Result<FileManifest> {
-        let mut m = FileManifest::default();
-
-        for (path, location, executable) in self.collector.derive_file_installs()? {
-            m.add_file(
-                &path,
-                &FileContent {
-                    data: location.resolve()?,
-                    executable,
-                },
-            )?;
-        }
-
-        Ok(m)
-    }
-
     /// Transform this instance into embedded resources data.
     ///
     /// This method performs actions necessary to produce entities which will allow the
@@ -454,159 +433,10 @@ impl PrePackagedResources {
             );
         }
 
-        let mut input_resources = self.collector.resources.clone();
-        populate_parent_packages(&mut input_resources)?;
-
-        let mut resources = BTreeMap::new();
-        let mut extra_files = self.derive_extra_files()?;
-
-        let mut compiler = BytecodeCompiler::new(&python_exe)?;
-        {
-            for (name, module) in &input_resources {
-                let mut entry = Resource::try_from(module)?;
-
-                if let Some(location) = &module.in_memory_bytecode_source {
-                    entry.in_memory_bytecode = Some(Cow::Owned(compiler.compile(
-                        &location.resolve()?,
-                        &name,
-                        BytecodeOptimizationLevel::Zero,
-                        CompileMode::Bytecode,
-                    )?));
-                }
-
-                if let Some(location) = &module.in_memory_bytecode_opt1_source {
-                    entry.in_memory_bytecode_opt1 = Some(Cow::Owned(compiler.compile(
-                        &location.resolve()?,
-                        &name,
-                        BytecodeOptimizationLevel::One,
-                        CompileMode::Bytecode,
-                    )?));
-                }
-
-                if let Some(location) = &module.in_memory_bytecode_opt2_source {
-                    entry.in_memory_bytecode_opt2 = Some(Cow::Owned(compiler.compile(
-                        &location.resolve()?,
-                        &name,
-                        BytecodeOptimizationLevel::Two,
-                        CompileMode::Bytecode,
-                    )?));
-                }
-
-                if let Some((prefix, cache_tag, location)) = &module.relative_path_bytecode_source {
-                    let module = PythonModuleBytecodeFromSource {
-                        name: name.clone(),
-                        source: DataLocation::Memory(vec![]),
-                        optimize_level: BytecodeOptimizationLevel::Zero,
-                        is_package: entry.is_package,
-                        cache_tag: cache_tag.clone(),
-                    };
-
-                    let path = module.resolve_path(prefix);
-
-                    extra_files.add_file(
-                        &path,
-                        &FileContent {
-                            data: compiler.compile(
-                                &location.resolve()?,
-                                &name,
-                                BytecodeOptimizationLevel::Zero,
-                                CompileMode::PycUncheckedHash,
-                            )?,
-                            executable: false,
-                        },
-                    )?;
-
-                    entry.relative_path_module_bytecode = Some(Cow::Owned(path));
-                }
-
-                if let Some((prefix, cache_tag, location)) =
-                    &module.relative_path_bytecode_opt1_source
-                {
-                    let module = PythonModuleBytecodeFromSource {
-                        name: name.clone(),
-                        source: DataLocation::Memory(vec![]),
-                        optimize_level: BytecodeOptimizationLevel::One,
-                        is_package: entry.is_package,
-                        cache_tag: cache_tag.clone(),
-                    };
-
-                    let path = module.resolve_path(prefix);
-
-                    extra_files.add_file(
-                        &path,
-                        &FileContent {
-                            data: compiler.compile(
-                                &location.resolve()?,
-                                &name,
-                                BytecodeOptimizationLevel::One,
-                                CompileMode::PycUncheckedHash,
-                            )?,
-                            executable: false,
-                        },
-                    )?;
-
-                    entry.relative_path_module_bytecode_opt1 = Some(Cow::Owned(path));
-                }
-
-                if let Some((prefix, cache_tag, location)) =
-                    &module.relative_path_bytecode_opt2_source
-                {
-                    let module = PythonModuleBytecodeFromSource {
-                        name: name.clone(),
-                        source: DataLocation::Memory(vec![]),
-                        optimize_level: BytecodeOptimizationLevel::Two,
-                        is_package: entry.is_package,
-                        cache_tag: cache_tag.clone(),
-                    };
-
-                    let path = module.resolve_path(prefix);
-
-                    extra_files.add_file(
-                        &path,
-                        &FileContent {
-                            data: compiler.compile(
-                                &location.resolve()?,
-                                &name,
-                                BytecodeOptimizationLevel::Two,
-                                CompileMode::PycUncheckedHash,
-                            )?,
-                            executable: false,
-                        },
-                    )?;
-
-                    entry.relative_path_module_bytecode_opt1 = Some(Cow::Owned(path));
-                }
-
-                resources.insert(name.clone(), entry);
-            }
-        }
-
-        let mut derived_package_names = packages_from_module_names(resources.keys().cloned());
-        derived_package_names.extend(packages_from_module_names(
-            self.extension_module_states.keys().cloned(),
-        ));
-
-        for package in derived_package_names {
-            let entry = resources
-                .entry(package.clone())
-                .or_insert_with(|| Resource {
-                    name: Cow::Owned(package.clone()),
-                    ..Resource::default()
-                });
-
-            if !entry.is_package {
-                warn!(
-                    logger,
-                    "package {} not initially detected as such; possible package detection bug",
-                    package
-                );
-                entry.is_package = true;
-            }
-        }
+        let resources = self.collector.to_prepared_python_resources(python_exe)?;
 
         Ok(EmbeddedPythonResources {
             resources,
-            extra_files,
             extension_modules: self.extension_module_states.clone(),
         })
     }
@@ -627,10 +457,7 @@ pub struct LibpythonLinkingInfo {
 #[derive(Debug, Default, Clone)]
 pub struct EmbeddedPythonResources<'a> {
     /// Resources to write to a packed resources data structure.
-    resources: BTreeMap<String, Resource<'a, u8>>,
-
-    /// Additional files that need to be written out next to the produced binary.
-    extra_files: FileManifest,
+    resources: PreparedPythonResources<'a>,
 
     /// Holds state needed for adding extension modules to libpython.
     extension_modules: BTreeMap<String, ExtensionModuleBuildState>,
@@ -639,7 +466,7 @@ pub struct EmbeddedPythonResources<'a> {
 impl<'a> EmbeddedPythonResources<'a> {
     /// Write entities defining resources.
     pub fn write_blobs<W: Write>(&self, module_names: &mut W, resources: &mut W) -> Result<()> {
-        for name in self.resources.keys() {
+        for name in self.resources.resources.keys() {
             module_names
                 .write_all(name.as_bytes())
                 .expect("failed to write");
@@ -648,6 +475,7 @@ impl<'a> EmbeddedPythonResources<'a> {
 
         write_embedded_resources_v1(
             &self
+                .resources
                 .resources
                 .values()
                 .cloned()
@@ -677,7 +505,15 @@ impl<'a> EmbeddedPythonResources<'a> {
     pub fn extra_install_files(&self) -> Result<FileManifest> {
         let mut res = FileManifest::default();
 
-        res.add_manifest(&self.extra_files)?;
+        for (path, location, executable) in &self.resources.extra_files {
+            res.add_file(
+                path,
+                &FileContent {
+                    data: location.resolve()?,
+                    executable: *executable,
+                },
+            )?;
+        }
 
         Ok(res)
     }
@@ -748,7 +584,7 @@ impl<'a> EmbeddedPythonResources<'a> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, std::path::PathBuf};
+    use super::*;
 
     const DEFAULT_CACHE_TAG: &str = "cpython-37";
 
