@@ -77,102 +77,21 @@ impl PrePackagedResources {
         }
     }
 
-    /// Obtain `SourceModule` in this instance.
+    /// Obtain `PythonModuleSource` in this instance.
     pub fn get_in_memory_module_sources(&self) -> BTreeMap<String, PythonModuleSource> {
-        BTreeMap::from_iter(
-            self.collector
-                .resources
-                .iter()
-                .filter_map(|(name, module)| {
-                    if let Some(location) = &module.in_memory_source {
-                        Some((
-                            name.clone(),
-                            PythonModuleSource {
-                                name: name.clone(),
-                                is_package: module.is_package,
-                                source: location.clone(),
-                                cache_tag: self.collector.cache_tag.clone(),
-                            },
-                        ))
-                    } else {
-                        None
-                    }
-                }),
-        )
+        self.collector.get_in_memory_module_sources()
     }
 
     /// Obtain `BytecodeModule` in this instance.
     pub fn get_in_memory_module_bytecodes(
         &self,
     ) -> BTreeMap<String, PythonModuleBytecodeFromSource> {
-        BTreeMap::from_iter(
-            self.collector
-                .resources
-                .iter()
-                .filter_map(|(name, module)| {
-                    if let Some(location) = &module.in_memory_bytecode_source {
-                        Some((
-                            name.clone(),
-                            PythonModuleBytecodeFromSource {
-                                name: name.clone(),
-                                is_package: module.is_package,
-                                source: location.clone(),
-                                optimize_level: BytecodeOptimizationLevel::Zero,
-                                cache_tag: self.collector.cache_tag.clone(),
-                            },
-                        ))
-                    } else if let Some(location) = &module.in_memory_bytecode_opt1_source {
-                        Some((
-                            name.clone(),
-                            PythonModuleBytecodeFromSource {
-                                name: name.clone(),
-                                is_package: module.is_package,
-                                source: location.clone(),
-                                optimize_level: BytecodeOptimizationLevel::One,
-                                cache_tag: self.collector.cache_tag.clone(),
-                            },
-                        ))
-                    } else if let Some(location) = &module.in_memory_bytecode_opt2_source {
-                        Some((
-                            name.clone(),
-                            PythonModuleBytecodeFromSource {
-                                name: name.clone(),
-                                is_package: module.is_package,
-                                source: location.clone(),
-                                optimize_level: BytecodeOptimizationLevel::Two,
-                                cache_tag: self.collector.cache_tag.clone(),
-                            },
-                        ))
-                    } else {
-                        None
-                    }
-                }),
-        )
+        self.collector.get_in_memory_module_bytecodes()
     }
 
     /// Obtain resource files in this instance.
     pub fn get_in_memory_package_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
-        BTreeMap::from_iter(
-            self.collector
-                .resources
-                .iter()
-                .filter_map(|(name, module)| {
-                    if let Some(resources) = &module.in_memory_resources {
-                        Some((
-                            name.clone(),
-                            BTreeMap::from_iter(resources.iter().map(|(key, value)| {
-                                (
-                                    key.clone(),
-                                    // TODO should return a DataLocation or Result.
-                                    value.resolve().expect("resolved resource location"),
-                                )
-                            })),
-                        ))
-                    } else {
-                        None
-                    }
-                }),
-        )
+        self.collector.get_in_memory_package_resources()
     }
 
     /// Add a source module to the collection of embedded source modules.

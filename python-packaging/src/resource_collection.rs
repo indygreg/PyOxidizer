@@ -6,12 +6,15 @@
 
 use {
     crate::module_util::{packages_from_module_name, resolve_path_for_module},
-    crate::resource::DataLocation,
+    crate::resource::{
+        BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource, PythonModuleSource,
+    },
     anyhow::{anyhow, Error, Result},
     python_packed_resources::data::{Resource, ResourceFlavor},
     std::borrow::Cow,
     std::collections::{BTreeMap, HashMap},
     std::convert::TryFrom,
+    std::iter::FromIterator,
     std::path::PathBuf,
 };
 
@@ -445,6 +448,88 @@ impl PythonResourceCollector {
             },
             PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => Ok(()),
         }
+    }
+
+    /// Obtain `PythonModuleSource` in this instance.
+    pub fn get_in_memory_module_sources(&self) -> BTreeMap<String, PythonModuleSource> {
+        BTreeMap::from_iter(self.resources.iter().filter_map(|(name, module)| {
+            if let Some(location) = &module.in_memory_source {
+                Some((
+                    name.clone(),
+                    PythonModuleSource {
+                        name: name.clone(),
+                        is_package: module.is_package,
+                        source: location.clone(),
+                        cache_tag: self.cache_tag.clone(),
+                    },
+                ))
+            } else {
+                None
+            }
+        }))
+    }
+
+    pub fn get_in_memory_module_bytecodes(
+        &self,
+    ) -> BTreeMap<String, PythonModuleBytecodeFromSource> {
+        BTreeMap::from_iter(self.resources.iter().filter_map(|(name, module)| {
+            if let Some(location) = &module.in_memory_bytecode_source {
+                Some((
+                    name.clone(),
+                    PythonModuleBytecodeFromSource {
+                        name: name.clone(),
+                        is_package: module.is_package,
+                        source: location.clone(),
+                        optimize_level: BytecodeOptimizationLevel::Zero,
+                        cache_tag: self.cache_tag.clone(),
+                    },
+                ))
+            } else if let Some(location) = &module.in_memory_bytecode_opt1_source {
+                Some((
+                    name.clone(),
+                    PythonModuleBytecodeFromSource {
+                        name: name.clone(),
+                        is_package: module.is_package,
+                        source: location.clone(),
+                        optimize_level: BytecodeOptimizationLevel::One,
+                        cache_tag: self.cache_tag.clone(),
+                    },
+                ))
+            } else if let Some(location) = &module.in_memory_bytecode_opt2_source {
+                Some((
+                    name.clone(),
+                    PythonModuleBytecodeFromSource {
+                        name: name.clone(),
+                        is_package: module.is_package,
+                        source: location.clone(),
+                        optimize_level: BytecodeOptimizationLevel::Two,
+                        cache_tag: self.cache_tag.clone(),
+                    },
+                ))
+            } else {
+                None
+            }
+        }))
+    }
+
+    /// Obtain resource files in this instance.
+    pub fn get_in_memory_package_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
+        BTreeMap::from_iter(self.resources.iter().filter_map(|(name, module)| {
+            if let Some(resources) = &module.in_memory_resources {
+                Some((
+                    name.clone(),
+                    BTreeMap::from_iter(resources.iter().map(|(key, value)| {
+                        (
+                            key.clone(),
+                            // TODO should return a DataLocation or Result.
+                            value.resolve().expect("resolved resource location"),
+                        )
+                    })),
+                ))
+            } else {
+                None
+            }
+        }))
     }
 }
 
