@@ -406,24 +406,10 @@ impl PrePackagedResources {
         is_package: bool,
         data: &[u8],
     ) -> Result<()> {
-        self.collector.check_policy(ResourceLocation::InMemory)?;
-        let entry = self
-            .collector
-            .resources
-            .entry(module.to_string())
-            .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Extension,
-                name: module.to_string(),
-                ..PrePackagedResource::default()
-            });
-
-        if is_package {
-            entry.is_package = true;
-        }
-        entry.in_memory_extension_module_shared_library = Some(DataLocation::Memory(data.to_vec()));
+        self.collector
+            .add_in_memory_python_extension_module_shared_library(module, is_package, data)?;
 
         // TODO add shared library dependencies to be packaged as well.
-        // TODO add shared library dependency names.
 
         Ok(())
     }

@@ -818,6 +818,33 @@ impl PythonResourceCollector {
 
         Ok(())
     }
+
+    /// Add a Python extension module shared library that should be imported from memory.
+    pub fn add_in_memory_python_extension_module_shared_library(
+        &mut self,
+        module: &str,
+        is_package: bool,
+        data: &[u8],
+    ) -> Result<()> {
+        self.check_policy(ResourceLocation::InMemory)?;
+        let entry =
+            self.resources
+                .entry(module.to_string())
+                .or_insert_with(|| PrePackagedResource {
+                    flavor: ResourceFlavor::Extension,
+                    name: module.to_string(),
+                    ..PrePackagedResource::default()
+                });
+
+        if is_package {
+            entry.is_package = true;
+        }
+        entry.in_memory_extension_module_shared_library = Some(DataLocation::Memory(data.to_vec()));
+
+        // TODO add shared library dependency names.
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
