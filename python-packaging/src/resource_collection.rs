@@ -685,6 +685,45 @@ impl PythonResourceCollector {
 
         Ok(())
     }
+
+    /// Add resource data to be loaded from the filesystem.
+    pub fn add_relative_path_python_package_resource(
+        &mut self,
+        prefix: &str,
+        resource: &PythonPackageResource,
+    ) -> Result<()> {
+        self.check_policy(ResourceLocation::RelativePath)?;
+        let entry = self
+            .resources
+            .entry(resource.leaf_package.clone())
+            .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: resource.leaf_package.clone(),
+                ..PrePackagedResource::default()
+            });
+
+        // Adding a resource automatically makes the module a package.
+        entry.is_package = true;
+
+        if entry.relative_path_package_resources.is_none() {
+            entry.relative_path_package_resources = Some(BTreeMap::new());
+        }
+
+        entry
+            .relative_path_package_resources
+            .as_mut()
+            .unwrap()
+            .insert(
+                resource.relative_name.clone(),
+                (
+                    prefix.to_string(),
+                    resource.resolve_path(prefix),
+                    resource.data.clone(),
+                ),
+            );
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
