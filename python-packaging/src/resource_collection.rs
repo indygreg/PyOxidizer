@@ -7,7 +7,8 @@
 use {
     crate::module_util::{packages_from_module_name, resolve_path_for_module},
     crate::resource::{
-        BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource, PythonModuleSource,
+        BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource,
+        PythonModuleSource, PythonPackageResource,
     },
     anyhow::{anyhow, Error, Result},
     python_packed_resources::data::{Resource, ResourceFlavor},
@@ -651,6 +652,39 @@ impl PythonResourceCollector {
 
         Ok(())
     }
+
+    /// Add resource data.
+    ///
+    /// Resource data belongs to a Python package and has a name and bytes data.
+    pub fn add_in_memory_python_package_resource(
+        &mut self,
+        resource: &PythonPackageResource,
+    ) -> Result<()> {
+        self.check_policy(ResourceLocation::InMemory)?;
+        let entry = self
+            .resources
+            .entry(resource.leaf_package.clone())
+            .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: resource.leaf_package.clone(),
+                ..PrePackagedResource::default()
+            });
+
+        // Adding a resource automatically makes the module a package.
+        entry.is_package = true;
+
+        if entry.in_memory_resources.is_none() {
+            entry.in_memory_resources = Some(BTreeMap::new());
+        }
+
+        entry
+            .in_memory_resources
+            .as_mut()
+            .unwrap()
+            .insert(resource.relative_name.clone(), resource.data.clone());
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -980,6 +1014,35 @@ mod tests {
                 name: "root.parent.child".to_string(),
                 in_memory_bytecode_opt1_source: Some(DataLocation::Memory(vec![42])),
                 is_package: true,
+                ..PrePackagedResource::default()
+            })
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_in_memory_resource() -> Result<()> {
+        let mut r =
+            PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
+        r.add_in_memory_python_package_resource(&PythonPackageResource {
+            leaf_package: "foo".to_string(),
+            relative_name: "resource.txt".to_string(),
+            data: DataLocation::Memory(vec![42]),
+        })?;
+
+        assert_eq!(r.resources.len(), 1);
+        assert_eq!(
+            r.resources.get("foo"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: "foo".to_string(),
+                is_package: true,
+                in_memory_resources: Some(BTreeMap::from_iter(
+                    [("resource.txt".to_string(), DataLocation::Memory(vec![42]))]
+                        .iter()
+                        .cloned()
+                )),
                 ..PrePackagedResource::default()
             })
         );

@@ -135,31 +135,8 @@ impl PrePackagedResources {
         &mut self,
         resource: &PythonPackageResource,
     ) -> Result<()> {
-        self.collector.check_policy(ResourceLocation::InMemory)?;
-        let entry = self
-            .collector
-            .resources
-            .entry(resource.leaf_package.clone())
-            .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Module,
-                name: resource.leaf_package.clone(),
-                ..PrePackagedResource::default()
-            });
-
-        // Adding a resource automatically makes the module a package.
-        entry.is_package = true;
-
-        if entry.in_memory_resources.is_none() {
-            entry.in_memory_resources = Some(BTreeMap::new());
-        }
-
-        entry
-            .in_memory_resources
-            .as_mut()
-            .unwrap()
-            .insert(resource.relative_name.clone(), resource.data.clone());
-
-        Ok(())
+        self.collector
+            .add_in_memory_python_package_resource(resource)
     }
 
     /// Add resource data to be loaded from the filesystem.
@@ -1015,35 +992,6 @@ mod tests {
                 data: vec![42],
                 executable: false
             }
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_add_in_memory_resource() -> Result<()> {
-        let mut r =
-            PrePackagedResources::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
-        r.add_in_memory_package_resource(&PythonPackageResource {
-            leaf_package: "foo".to_string(),
-            relative_name: "resource.txt".to_string(),
-            data: DataLocation::Memory(vec![42]),
-        })?;
-
-        assert_eq!(r.collector.resources.len(), 1);
-        assert_eq!(
-            r.collector.resources.get("foo"),
-            Some(&PrePackagedResource {
-                flavor: ResourceFlavor::Module,
-                name: "foo".to_string(),
-                is_package: true,
-                in_memory_resources: Some(BTreeMap::from_iter(
-                    [("resource.txt".to_string(), DataLocation::Memory(vec![42]))]
-                        .iter()
-                        .cloned()
-                )),
-                ..PrePackagedResource::default()
-            })
         );
 
         Ok(())
