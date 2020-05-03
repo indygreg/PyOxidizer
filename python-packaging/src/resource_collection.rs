@@ -390,6 +390,37 @@ pub fn populate_parent_packages(
     Ok(())
 }
 
+/// Type used to collect Python resources to they can be serialized.
+///
+/// We often want to turn Python resource primitives (module source,
+/// bytecode, etc) into a collection of ``Resource`` so they can be
+/// serialized to the *Python packed resources* format. This type
+/// exists to facilitate doing this.
+#[derive(Debug, Clone)]
+pub struct PythonResourceCollector {
+    // TODO remove pub once functionality ported from PyOxidizer.
+    pub policy: PythonResourcesPolicy,
+    pub resources: BTreeMap<String, PrePackagedResource>,
+    pub cache_tag: String,
+}
+
+impl PythonResourceCollector {
+    /// Construct a new instance of the collector.
+    ///
+    /// The instance is associated with a resources policy to validate that
+    /// added resources conform with rules.
+    ///
+    /// We also pass a Python bytecode cache tag, which is used to
+    /// derive filenames.
+    pub fn new(policy: &PythonResourcesPolicy, cache_tag: &str) -> Self {
+        Self {
+            policy: policy.clone(),
+            resources: BTreeMap::new(),
+            cache_tag: cache_tag.to_string(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

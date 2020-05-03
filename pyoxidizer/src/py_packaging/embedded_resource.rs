@@ -20,7 +20,8 @@ use {
         PythonPackageResource,
     },
     python_packaging::resource_collection::{
-        populate_parent_packages, PrePackagedResource, PythonResourcesPolicy,
+        populate_parent_packages, PrePackagedResource, PythonResourceCollector,
+        PythonResourcesPolicy,
     },
     python_packed_resources::data::{Resource, ResourceFlavor},
     python_packed_resources::writer::write_embedded_resources_v1,
@@ -69,109 +70,119 @@ pub struct ExtensionModuleBuildState {
 /// transformed to `EmbeddedPythonResources` as part of packaging.
 #[derive(Debug, Clone)]
 pub struct PrePackagedResources {
-    policy: PythonResourcesPolicy,
-    resources: BTreeMap<String, PrePackagedResource>,
-    cache_tag: String,
-
+    collector: PythonResourceCollector,
     extension_module_states: BTreeMap<String, ExtensionModuleBuildState>,
 }
 
 impl PrePackagedResources {
     pub fn new(policy: &PythonResourcesPolicy, cache_tag: &str) -> Self {
         Self {
-            policy: policy.clone(),
-            resources: BTreeMap::new(),
-            cache_tag: cache_tag.to_string(),
+            collector: PythonResourceCollector::new(policy, cache_tag),
             extension_module_states: BTreeMap::new(),
         }
     }
 
     /// Obtain `SourceModule` in this instance.
     pub fn get_in_memory_module_sources(&self) -> BTreeMap<String, PythonModuleSource> {
-        BTreeMap::from_iter(self.resources.iter().filter_map(|(name, module)| {
-            if let Some(location) = &module.in_memory_source {
-                Some((
-                    name.clone(),
-                    PythonModuleSource {
-                        name: name.clone(),
-                        is_package: module.is_package,
-                        source: location.clone(),
-                        cache_tag: self.cache_tag.clone(),
-                    },
-                ))
-            } else {
-                None
-            }
-        }))
+        BTreeMap::from_iter(
+            self.collector
+                .resources
+                .iter()
+                .filter_map(|(name, module)| {
+                    if let Some(location) = &module.in_memory_source {
+                        Some((
+                            name.clone(),
+                            PythonModuleSource {
+                                name: name.clone(),
+                                is_package: module.is_package,
+                                source: location.clone(),
+                                cache_tag: self.collector.cache_tag.clone(),
+                            },
+                        ))
+                    } else {
+                        None
+                    }
+                }),
+        )
     }
 
     /// Obtain `BytecodeModule` in this instance.
     pub fn get_in_memory_module_bytecodes(
         &self,
     ) -> BTreeMap<String, PythonModuleBytecodeFromSource> {
-        BTreeMap::from_iter(self.resources.iter().filter_map(|(name, module)| {
-            if let Some(location) = &module.in_memory_bytecode_source {
-                Some((
-                    name.clone(),
-                    PythonModuleBytecodeFromSource {
-                        name: name.clone(),
-                        is_package: module.is_package,
-                        source: location.clone(),
-                        optimize_level: BytecodeOptimizationLevel::Zero,
-                        cache_tag: self.cache_tag.clone(),
-                    },
-                ))
-            } else if let Some(location) = &module.in_memory_bytecode_opt1_source {
-                Some((
-                    name.clone(),
-                    PythonModuleBytecodeFromSource {
-                        name: name.clone(),
-                        is_package: module.is_package,
-                        source: location.clone(),
-                        optimize_level: BytecodeOptimizationLevel::One,
-                        cache_tag: self.cache_tag.clone(),
-                    },
-                ))
-            } else if let Some(location) = &module.in_memory_bytecode_opt2_source {
-                Some((
-                    name.clone(),
-                    PythonModuleBytecodeFromSource {
-                        name: name.clone(),
-                        is_package: module.is_package,
-                        source: location.clone(),
-                        optimize_level: BytecodeOptimizationLevel::Two,
-                        cache_tag: self.cache_tag.clone(),
-                    },
-                ))
-            } else {
-                None
-            }
-        }))
+        BTreeMap::from_iter(
+            self.collector
+                .resources
+                .iter()
+                .filter_map(|(name, module)| {
+                    if let Some(location) = &module.in_memory_bytecode_source {
+                        Some((
+                            name.clone(),
+                            PythonModuleBytecodeFromSource {
+                                name: name.clone(),
+                                is_package: module.is_package,
+                                source: location.clone(),
+                                optimize_level: BytecodeOptimizationLevel::Zero,
+                                cache_tag: self.collector.cache_tag.clone(),
+                            },
+                        ))
+                    } else if let Some(location) = &module.in_memory_bytecode_opt1_source {
+                        Some((
+                            name.clone(),
+                            PythonModuleBytecodeFromSource {
+                                name: name.clone(),
+                                is_package: module.is_package,
+                                source: location.clone(),
+                                optimize_level: BytecodeOptimizationLevel::One,
+                                cache_tag: self.collector.cache_tag.clone(),
+                            },
+                        ))
+                    } else if let Some(location) = &module.in_memory_bytecode_opt2_source {
+                        Some((
+                            name.clone(),
+                            PythonModuleBytecodeFromSource {
+                                name: name.clone(),
+                                is_package: module.is_package,
+                                source: location.clone(),
+                                optimize_level: BytecodeOptimizationLevel::Two,
+                                cache_tag: self.collector.cache_tag.clone(),
+                            },
+                        ))
+                    } else {
+                        None
+                    }
+                }),
+        )
     }
 
     /// Obtain resource files in this instance.
     pub fn get_in_memory_package_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
-        BTreeMap::from_iter(self.resources.iter().filter_map(|(name, module)| {
-            if let Some(resources) = &module.in_memory_resources {
-                Some((
-                    name.clone(),
-                    BTreeMap::from_iter(resources.iter().map(|(key, value)| {
-                        (
-                            key.clone(),
-                            // TODO should return a DataLocation or Result.
-                            value.resolve().expect("resolved resource location"),
-                        )
-                    })),
-                ))
-            } else {
-                None
-            }
-        }))
+        BTreeMap::from_iter(
+            self.collector
+                .resources
+                .iter()
+                .filter_map(|(name, module)| {
+                    if let Some(resources) = &module.in_memory_resources {
+                        Some((
+                            name.clone(),
+                            BTreeMap::from_iter(resources.iter().map(|(key, value)| {
+                                (
+                                    key.clone(),
+                                    // TODO should return a DataLocation or Result.
+                                    value.resolve().expect("resolved resource location"),
+                                )
+                            })),
+                        ))
+                    } else {
+                        None
+                    }
+                }),
+        )
     }
 
     /// Validate that a resource add in the specified location is allowed.
     fn check_policy(&self, location: ResourceLocation) -> Result<()> {
-        match self.policy {
+        match self.collector.policy {
             PythonResourcesPolicy::InMemoryOnly => match location {
                 ResourceLocation::InMemory => Ok(()),
                 ResourceLocation::RelativePath => Err(anyhow!(
@@ -193,6 +204,7 @@ impl PrePackagedResources {
         self.check_policy(ResourceLocation::InMemory)?;
 
         let entry = self
+            .collector
             .resources
             .entry(module.name.clone())
             .or_insert_with(|| PrePackagedResource {
@@ -214,6 +226,7 @@ impl PrePackagedResources {
     ) -> Result<()> {
         self.check_policy(ResourceLocation::RelativePath)?;
         let entry = self
+            .collector
             .resources
             .entry(module.name.clone())
             .or_insert_with(|| PrePackagedResource {
@@ -235,6 +248,7 @@ impl PrePackagedResources {
     ) -> Result<()> {
         self.check_policy(ResourceLocation::InMemory)?;
         let entry = self
+            .collector
             .resources
             .entry(module.name.clone())
             .or_insert_with(|| PrePackagedResource {
@@ -268,6 +282,7 @@ impl PrePackagedResources {
     ) -> Result<()> {
         self.check_policy(ResourceLocation::RelativePath)?;
         let entry = self
+            .collector
             .resources
             .entry(module.name.clone())
             .or_insert_with(|| PrePackagedResource {
@@ -314,6 +329,7 @@ impl PrePackagedResources {
     ) -> Result<()> {
         self.check_policy(ResourceLocation::InMemory)?;
         let entry = self
+            .collector
             .resources
             .entry(resource.leaf_package.clone())
             .or_insert_with(|| PrePackagedResource {
@@ -346,6 +362,7 @@ impl PrePackagedResources {
     ) -> Result<()> {
         self.check_policy(ResourceLocation::RelativePath)?;
         let entry = self
+            .collector
             .resources
             .entry(resource.leaf_package.clone())
             .or_insert_with(|| PrePackagedResource {
@@ -385,6 +402,7 @@ impl PrePackagedResources {
         self.check_policy(ResourceLocation::InMemory)?;
 
         let entry = self
+            .collector
             .resources
             .entry(resource.package.clone())
             .or_insert_with(|| PrePackagedResource {
@@ -416,6 +434,7 @@ impl PrePackagedResources {
     ) -> Result<()> {
         self.check_policy(ResourceLocation::RelativePath)?;
         let entry = self
+            .collector
             .resources
             .entry(resource.package.clone())
             .or_insert_with(|| PrePackagedResource {
@@ -524,6 +543,7 @@ impl PrePackagedResources {
         }
 
         let entry = self
+            .collector
             .resources
             .entry(module.module.clone())
             .or_insert_with(|| PrePackagedResource {
@@ -545,20 +565,22 @@ impl PrePackagedResources {
                     .expect("filename on shared library")
                     .to_string_lossy();
 
-                let resource =
-                    self.resources
-                        .entry(name.to_string())
-                        .or_insert_with(|| PrePackagedResource {
-                            flavor: ResourceFlavor::SharedLibrary,
-                            name: name.to_string(),
-                            ..PrePackagedResource::default()
-                        });
+                let resource = self
+                    .collector
+                    .resources
+                    .entry(name.to_string())
+                    .or_insert_with(|| PrePackagedResource {
+                        flavor: ResourceFlavor::SharedLibrary,
+                        name: name.to_string(),
+                        ..PrePackagedResource::default()
+                    });
 
                 resource.in_memory_shared_library =
                     Some(DataLocation::Path(shared_library.clone()));
 
                 // And update the extension module entry to record a library dependency.
-                self.resources
+                self.collector
+                    .resources
                     .get_mut(&module.module)
                     .expect("entry for extension module")
                     .shared_library_dependency_names
@@ -586,6 +608,7 @@ impl PrePackagedResources {
         }
 
         let entry = self
+            .collector
             .resources
             .entry(module.module.clone())
             .or_insert_with(|| PrePackagedResource {
@@ -618,13 +641,15 @@ impl PrePackagedResources {
                     .to_string_lossy()
                     .to_string();
 
-                let resource = self.resources.entry(link.name.clone()).or_insert_with(|| {
-                    PrePackagedResource {
+                let resource = self
+                    .collector
+                    .resources
+                    .entry(link.name.clone())
+                    .or_insert_with(|| PrePackagedResource {
                         flavor: ResourceFlavor::SharedLibrary,
                         name: file_name.clone(),
                         ..PrePackagedResource::default()
-                    }
-                });
+                    });
 
                 resource.relative_path_shared_library = Some((
                     prefix.to_string(),
@@ -669,6 +694,7 @@ impl PrePackagedResources {
         );
 
         let entry = self
+            .collector
             .resources
             .entry(module.name.clone())
             .or_insert_with(|| PrePackagedResource {
@@ -690,14 +716,15 @@ impl PrePackagedResources {
         data: &[u8],
     ) -> Result<()> {
         self.check_policy(ResourceLocation::InMemory)?;
-        let entry =
-            self.resources
-                .entry(module.to_string())
-                .or_insert_with(|| PrePackagedResource {
-                    flavor: ResourceFlavor::Extension,
-                    name: module.to_string(),
-                    ..PrePackagedResource::default()
-                });
+        let entry = self
+            .collector
+            .resources
+            .entry(module.to_string())
+            .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Extension,
+                name: module.to_string(),
+                ..PrePackagedResource::default()
+            });
 
         if is_package {
             entry.is_package = true;
@@ -723,6 +750,7 @@ impl PrePackagedResources {
         }
 
         let entry = self
+            .collector
             .resources
             .entry(em.name.clone())
             .or_insert_with(|| PrePackagedResource {
@@ -752,7 +780,7 @@ impl PrePackagedResources {
         let resource_names = resolve_resource_names_from_files(files, glob_patterns)?;
 
         warn!(logger, "filtering module entries");
-        filter_btreemap(logger, &mut self.resources, &resource_names);
+        filter_btreemap(logger, &mut self.collector.resources, &resource_names);
         warn!(logger, "filtering embedded extension modules");
         filter_btreemap(logger, &mut self.extension_module_states, &resource_names);
 
@@ -766,7 +794,7 @@ impl PrePackagedResources {
     pub fn find_dunder_file(&self) -> Result<BTreeSet<String>> {
         let mut res = BTreeSet::new();
 
-        for (name, module) in &self.resources {
+        for (name, module) in &self.collector.resources {
             if let Some(location) = &module.in_memory_source {
                 if has_dunder_file(&location.resolve()?)? {
                     res.insert(name.clone());
@@ -798,7 +826,7 @@ impl PrePackagedResources {
     fn derive_extra_files(&self) -> Result<FileManifest> {
         let mut m = FileManifest::default();
 
-        for resource in self.resources.values() {
+        for resource in self.collector.resources.values() {
             for (path, location, executable) in resource.derive_file_installs()? {
                 m.add_file(
                     &path,
@@ -840,7 +868,7 @@ impl PrePackagedResources {
             );
         }
 
-        let mut input_resources = self.resources.clone();
+        let mut input_resources = self.collector.resources.clone();
         populate_parent_packages(&mut input_resources)?;
 
         let mut resources = BTreeMap::new();
@@ -1149,9 +1177,9 @@ mod tests {
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
         })?;
 
-        assert!(r.resources.contains_key("foo"));
+        assert!(r.collector.resources.contains_key("foo"));
         assert_eq!(
-            r.resources.get("foo"),
+            r.collector.resources.get("foo"),
             Some(&PrePackagedResource {
                 flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
@@ -1180,9 +1208,9 @@ mod tests {
             "",
         )?;
 
-        assert!(r.resources.contains_key("foo"));
+        assert!(r.collector.resources.contains_key("foo"));
         assert_eq!(
-            r.resources.get("foo"),
+            r.collector.resources.get("foo"),
             Some(&PrePackagedResource {
                 flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
@@ -1217,9 +1245,9 @@ mod tests {
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
         })?;
 
-        assert_eq!(r.resources.len(), 1);
+        assert_eq!(r.collector.resources.len(), 1);
         assert_eq!(
-            r.resources.get("root.parent.child"),
+            r.collector.resources.get("root.parent.child"),
             Some(&PrePackagedResource {
                 flavor: ResourceFlavor::Module,
                 name: "root.parent.child".to_string(),
@@ -1244,9 +1272,9 @@ mod tests {
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
         })?;
 
-        assert!(r.resources.contains_key("foo"));
+        assert!(r.collector.resources.contains_key("foo"));
         assert_eq!(
-            r.resources.get("foo"),
+            r.collector.resources.get("foo"),
             Some(&PrePackagedResource {
                 flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
@@ -1271,9 +1299,9 @@ mod tests {
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
         })?;
 
-        assert_eq!(r.resources.len(), 1);
+        assert_eq!(r.collector.resources.len(), 1);
         assert_eq!(
-            r.resources.get("root.parent.child"),
+            r.collector.resources.get("root.parent.child"),
             Some(&PrePackagedResource {
                 flavor: ResourceFlavor::Module,
                 name: "root.parent.child".to_string(),
@@ -1296,9 +1324,9 @@ mod tests {
             data: DataLocation::Memory(vec![42]),
         })?;
 
-        assert_eq!(r.resources.len(), 1);
+        assert_eq!(r.collector.resources.len(), 1);
         assert_eq!(
-            r.resources.get("foo"),
+            r.collector.resources.get("foo"),
             Some(&PrePackagedResource {
                 flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
@@ -1404,9 +1432,9 @@ mod tests {
         };
 
         r.add_relative_path_extension_module(&em, "prefix")?;
-        assert_eq!(r.resources.len(), 1);
+        assert_eq!(r.collector.resources.len(), 1);
         assert_eq!(
-            r.resources.get("foo.bar"),
+            r.collector.resources.get("foo.bar"),
             Some(&PrePackagedResource {
                 flavor: ResourceFlavor::Extension,
                 name: "foo.bar".to_string(),
