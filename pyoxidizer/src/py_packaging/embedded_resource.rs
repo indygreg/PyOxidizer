@@ -154,32 +154,8 @@ impl PrePackagedResources {
         &mut self,
         resource: &PythonPackageDistributionResource,
     ) -> Result<()> {
-        self.collector.check_policy(ResourceLocation::InMemory)?;
-
-        let entry = self
-            .collector
-            .resources
-            .entry(resource.package.clone())
-            .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Module,
-                name: resource.package.clone(),
-                ..PrePackagedResource::default()
-            });
-
-        // A distribution resource makes the entity a package.
-        entry.is_package = true;
-
-        if entry.in_memory_distribution_resources.is_none() {
-            entry.in_memory_distribution_resources = Some(BTreeMap::new());
-        }
-
-        entry
-            .in_memory_distribution_resources
-            .as_mut()
-            .unwrap()
-            .insert(resource.name.clone(), resource.data.clone());
-
-        Ok(())
+        self.collector
+            .add_in_memory_package_distribution_resource(resource)
     }
 
     pub fn add_relative_path_package_distribution_resource(

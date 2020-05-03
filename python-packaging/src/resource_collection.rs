@@ -8,7 +8,7 @@ use {
     crate::module_util::{packages_from_module_name, resolve_path_for_module},
     crate::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource,
-        PythonModuleSource, PythonPackageResource,
+        PythonModuleSource, PythonPackageDistributionResource, PythonPackageResource,
     },
     anyhow::{anyhow, Error, Result},
     python_packed_resources::data::{Resource, ResourceFlavor},
@@ -721,6 +721,38 @@ impl PythonResourceCollector {
                     resource.data.clone(),
                 ),
             );
+
+        Ok(())
+    }
+
+    /// Add a package distribution resource to be loaded from memory.
+    pub fn add_in_memory_package_distribution_resource(
+        &mut self,
+        resource: &PythonPackageDistributionResource,
+    ) -> Result<()> {
+        self.check_policy(ResourceLocation::InMemory)?;
+
+        let entry = self
+            .resources
+            .entry(resource.package.clone())
+            .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: resource.package.clone(),
+                ..PrePackagedResource::default()
+            });
+
+        // A distribution resource makes the entity a package.
+        entry.is_package = true;
+
+        if entry.in_memory_distribution_resources.is_none() {
+            entry.in_memory_distribution_resources = Some(BTreeMap::new());
+        }
+
+        entry
+            .in_memory_distribution_resources
+            .as_mut()
+            .unwrap()
+            .insert(resource.name.clone(), resource.data.clone());
 
         Ok(())
     }
