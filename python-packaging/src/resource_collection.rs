@@ -439,8 +439,7 @@ impl<'a> PreparedPythonResources<'a> {
 #[derive(Debug, Clone)]
 pub struct PythonResourceCollector {
     policy: PythonResourcesPolicy,
-    // TODO remove pub once functionality ported from PyOxidizer.
-    pub resources: BTreeMap<String, PrePackagedResource>,
+    resources: BTreeMap<String, PrePackagedResource>,
     cache_tag: String,
 }
 
