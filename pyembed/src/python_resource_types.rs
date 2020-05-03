@@ -110,7 +110,7 @@ py_class!(pub class PythonModuleBytecode |py| {
     }
 
     @property def bytecode(&self) -> PyResult<PyBytes> {
-        let bytecode = self.resource(py).borrow().bytecode.resolve().or_else(|_| {
+        let bytecode = self.resource(py).borrow().resolve_bytecode().or_else(|_| {
             Err(PyErr::new::<ValueError, _>(py, "error resolving bytecode"))
         })?;
 
@@ -119,8 +119,8 @@ py_class!(pub class PythonModuleBytecode |py| {
 
     @bytecode.setter def set_bytecode(&self, value: Option<PyObject>) -> PyResult<()> {
         if let Some(value) = value {
-            self.resource(py).borrow_mut().bytecode = DataLocation::Memory(
-                pyobject_to_owned_bytes(py, &value)?
+            self.resource(py).borrow_mut().set_bytecode(
+                &pyobject_to_owned_bytes(py, &value)?
             );
 
             Ok(())

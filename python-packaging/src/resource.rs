@@ -191,7 +191,7 @@ impl PythonModuleBytecodeFromSource {
 #[derive(Clone, Debug, PartialEq)]
 pub struct PythonModuleBytecode {
     pub name: String,
-    pub bytecode: DataLocation,
+    bytecode: DataLocation,
     pub optimize_level: BytecodeOptimizationLevel,
     pub is_package: bool,
 }
@@ -209,7 +209,7 @@ impl PythonModuleBytecode {
     pub fn to_memory(&self) -> Result<Self> {
         Ok(Self {
             name: self.name.clone(),
-            bytecode: self.bytecode.to_memory()?,
+            bytecode: DataLocation::Memory(self.resolve_bytecode()?),
             optimize_level: self.optimize_level,
             is_package: self.is_package,
         })
@@ -225,6 +225,11 @@ impl PythonModuleBytecode {
                 Ok(data[16..data.len()].to_vec())
             }
         }
+    }
+
+    /// Sets the bytecode for this module.
+    pub fn set_bytecode(&mut self, data: &[u8]) {
+        self.bytecode = DataLocation::Memory(data.to_vec());
     }
 }
 

@@ -52,14 +52,15 @@ class TestImporterResourceScanning(unittest.TestCase):
         path.parent.mkdir()
 
         with path.open("wb") as fh:
-            fh.write(b"dummy")
+            # First 16 bytes are a header, which gets stripped.
+            fh.write(b"0123456789abcdefbytecode")
 
         resources = find_resources_in_path(self.td)
         self.assertEqual(len(resources), 1)
         r = resources[0]
         self.assertIsInstance(r, PythonModuleBytecode)
         self.assertEqual(r.module, "foo")
-        self.assertEqual(r.bytecode, b"dummy")
+        self.assertEqual(r.bytecode, b"bytecode")
         self.assertEqual(r.optimize_level, 0)
         self.assertFalse(r.is_package)
 
