@@ -7,7 +7,8 @@
 use {
     crate::conversion::pyobject_to_pathbuf,
     crate::python_resource_types::{
-        PythonModuleSource, PythonPackageDistributionResource, PythonPackageResource,
+        PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
+        PythonPackageResource,
     },
     crate::python_resources::resource_to_pyobject,
     cpython::exc::{TypeError, ValueError},
@@ -67,6 +68,37 @@ impl OxidizedResourceCollector {
         let typ = resource.get_type(py);
 
         match typ.name(py).as_ref() {
+            "PythonExtensionModule" => {
+                let module = resource.cast_into::<PythonExtensionModule>(py)?;
+
+                let resource = module.get_resource(py);
+
+                if let Some(location) = &resource.extension_data {
+                    let data = location.resolve().or_else(|e| {
+                        Err(PyErr::new::<ValueError, _>(
+                            py,
+                            "unable to resolve extension data",
+                        ))
+                    })?;
+
+                    collector
+                        .add_in_memory_python_extension_module_shared_library(
+                            &resource.name,
+                            resource.is_package,
+                            &data,
+                            // TODO handle shared libraries.
+                            &[],
+                        )
+                        .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+
+                    Ok(py.None())
+                } else {
+                    Err(PyErr::new::<ValueError, _>(
+                        py,
+                        "PythonExtensionModule lacks a shared library",
+                    ))
+                }
+            }
             "PythonModuleSource" => {
                 let module = resource.cast_into::<PythonModuleSource>(py)?;
                 collector

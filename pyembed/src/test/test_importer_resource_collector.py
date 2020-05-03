@@ -11,6 +11,7 @@ import unittest
 from oxidized_importer import (
     OxidizedFinder,
     OxidizedResourceCollector,
+    PythonExtensionModule,
     PythonModuleSource,
     PythonPackageResource,
     PythonPackageDistributionResource,
@@ -66,6 +67,7 @@ class TestImporterResourceScanning(unittest.TestCase):
                     if isinstance(
                         resource,
                         (
+                            PythonExtensionModule,
                             PythonModuleSource,
                             PythonPackageResource,
                             PythonPackageDistributionResource,
