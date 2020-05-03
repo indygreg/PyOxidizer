@@ -159,7 +159,7 @@ Using a Python Interpreter
 
 Once you've constructed a ``pyembed::MainPythonInterpreter`` instance, you
 can obtain a ``cpython::Python`` instance via ``.acquire_gil()`` and then
-use it::
+use it:
 
 .. code-block:: rust
 
