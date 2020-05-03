@@ -166,6 +166,10 @@ impl PythonModuleBytecode {
     pub fn new(py: Python, resource: RawPythonModuleBytecode) -> PyResult<Self> {
         PythonModuleBytecode::create_instance(py, RefCell::new(resource))
     }
+
+    pub fn get_resource<'a>(&'a self, py: Python<'a>) -> Ref<'a, RawPythonModuleBytecode> {
+        self.resource(py).borrow()
+    }
 }
 
 py_class!(pub class PythonPackageResource |py| {
@@ -339,5 +343,9 @@ py_class!(pub class PythonExtensionModule |py| {
 impl PythonExtensionModule {
     pub fn new(py: Python, resource: RawPythonExtensionModule) -> PyResult<Self> {
         PythonExtensionModule::create_instance(py, RefCell::new(resource))
+    }
+
+    pub fn get_resource<'a>(&'a self, py: Python<'a>) -> Ref<'a, RawPythonExtensionModule> {
+        self.resource(py).borrow()
     }
 }
