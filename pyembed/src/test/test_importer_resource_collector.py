@@ -12,6 +12,8 @@ from oxidized_importer import (
     OxidizedFinder,
     OxidizedResourceCollector,
     PythonModuleSource,
+    PythonPackageResource,
+    PythonPackageDistributionResource,
     find_resources_in_path,
 )
 
@@ -61,7 +63,14 @@ class TestImporterResourceScanning(unittest.TestCase):
         for path in sys.path:
             if os.path.isdir(path):
                 for resource in find_resources_in_path(path):
-                    if isinstance(resource, PythonModuleSource):
+                    if isinstance(
+                        resource,
+                        (
+                            PythonModuleSource,
+                            PythonPackageResource,
+                            PythonPackageDistributionResource,
+                        ),
+                    ):
                         c.add_in_memory(resource)
 
         resources = c.oxidize()

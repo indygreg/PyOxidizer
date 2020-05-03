@@ -231,6 +231,10 @@ impl PythonPackageResource {
     pub fn new(py: Python, resource: RawPythonPackageResource) -> PyResult<Self> {
         PythonPackageResource::create_instance(py, RefCell::new(resource))
     }
+
+    pub fn get_resource<'a>(&'a self, py: Python<'a>) -> Ref<'a, RawPythonPackageResource> {
+        self.resource(py).borrow()
+    }
 }
 
 py_class!(pub class PythonPackageDistributionResource |py| {
@@ -309,6 +313,13 @@ py_class!(pub class PythonPackageDistributionResource |py| {
 impl PythonPackageDistributionResource {
     pub fn new(py: Python, resource: RawPythonPackageDistributionResource) -> PyResult<Self> {
         PythonPackageDistributionResource::create_instance(py, RefCell::new(resource))
+    }
+
+    pub fn get_resource<'a>(
+        &'a self,
+        py: Python<'a>,
+    ) -> Ref<'a, RawPythonPackageDistributionResource> {
+        self.resource(py).borrow()
     }
 }
 

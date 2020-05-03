@@ -6,7 +6,9 @@
 
 use {
     crate::conversion::pyobject_to_pathbuf,
-    crate::python_resource_types::PythonModuleSource,
+    crate::python_resource_types::{
+        PythonModuleSource, PythonPackageDistributionResource, PythonPackageResource,
+    },
     crate::python_resources::resource_to_pyobject,
     cpython::exc::{TypeError, ValueError},
     cpython::{
@@ -69,6 +71,22 @@ impl OxidizedResourceCollector {
                 let module = resource.cast_into::<PythonModuleSource>(py)?;
                 collector
                     .add_in_memory_python_module_source(&module.get_resource(py))
+                    .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+
+                Ok(py.None())
+            }
+            "PythonPackageResource" => {
+                let resource = resource.cast_into::<PythonPackageResource>(py)?;
+                collector
+                    .add_in_memory_python_package_resource(&resource.get_resource(py))
+                    .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+
+                Ok(py.None())
+            }
+            "PythonPackageDistributionResource" => {
+                let resource = resource.cast_into::<PythonPackageDistributionResource>(py)?;
+                collector
+                    .add_in_memory_package_distribution_resource(&resource.get_resource(py))
                     .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
 
                 Ok(py.None())
