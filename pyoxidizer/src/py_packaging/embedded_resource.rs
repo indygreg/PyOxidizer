@@ -323,20 +323,11 @@ impl PrePackagedResources {
                     .to_string_lossy()
                     .to_string();
 
-                let resource = self
-                    .collector
-                    .resources
-                    .entry(link.name.clone())
-                    .or_insert_with(|| PrePackagedResource {
-                        flavor: ResourceFlavor::SharedLibrary,
-                        name: file_name.clone(),
-                        ..PrePackagedResource::default()
-                    });
-
-                resource.relative_path_shared_library = Some((
-                    prefix.to_string(),
-                    DataLocation::Path(shared_library.clone()),
-                ));
+                self.collector.add_relative_path_shared_library(
+                    prefix,
+                    &file_name,
+                    &DataLocation::Path(shared_library.clone()),
+                )?;
             }
         }
 

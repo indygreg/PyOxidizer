@@ -897,6 +897,29 @@ impl PythonResourceCollector {
         Ok(())
     }
 
+    /// Add a shared library to be loaded from a relative path.
+    pub fn add_relative_path_shared_library(
+        &mut self,
+        prefix: &str,
+        name: &str,
+        data: &DataLocation,
+    ) -> Result<()> {
+        self.check_policy(ResourceLocation::RelativePath)?;
+
+        let resource =
+            self.resources
+                .entry(name.to_string())
+                .or_insert_with(|| PrePackagedResource {
+                    flavor: ResourceFlavor::SharedLibrary,
+                    name: name.to_string().clone(),
+                    ..PrePackagedResource::default()
+                });
+
+        resource.relative_path_shared_library = Some((prefix.to_string(), data.clone()));
+
+        Ok(())
+    }
+
     /// Searches for Python sources for references to __file__.
     ///
     /// __file__ usage can be problematic for in-memory modules. This method searches
