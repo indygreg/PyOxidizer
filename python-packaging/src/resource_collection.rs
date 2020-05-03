@@ -914,6 +914,17 @@ impl PythonResourceCollector {
 
         Ok(res)
     }
+
+    /// Derive a list of extra file installs that need to be performed for referenced resources.
+    pub fn derive_file_installs(&self) -> Result<Vec<(PathBuf, &DataLocation, bool)>> {
+        let mut res = Vec::new();
+
+        for resource in self.resources.values() {
+            res.append(&mut resource.derive_file_installs()?);
+        }
+
+        Ok(res)
+    }
 }
 
 #[cfg(test)]

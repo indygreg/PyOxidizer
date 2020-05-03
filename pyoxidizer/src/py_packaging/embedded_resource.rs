@@ -443,16 +443,14 @@ impl PrePackagedResources {
     fn derive_extra_files(&self) -> Result<FileManifest> {
         let mut m = FileManifest::default();
 
-        for resource in self.collector.resources.values() {
-            for (path, location, executable) in resource.derive_file_installs()? {
-                m.add_file(
-                    &path,
-                    &FileContent {
-                        data: location.resolve()?,
-                        executable,
-                    },
-                )?;
-            }
+        for (path, location, executable) in self.collector.derive_file_installs()? {
+            m.add_file(
+                &path,
+                &FileContent {
+                    data: location.resolve()?,
+                    executable,
+                },
+            )?;
         }
 
         Ok(m)
