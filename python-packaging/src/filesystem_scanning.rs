@@ -334,27 +334,34 @@ impl PythonResourceIterator {
 
             self.seen_packages.insert(package);
 
-            return Some(DirEntryItem::PythonResource(
-                if rel_str.ends_with(".opt-1.pyc") {
+            if rel_str.ends_with(&format!("{}.opt-1.pyc", self.cache_tag)) {
+                return Some(DirEntryItem::PythonResource(
                     PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
                         &full_module_name,
                         BytecodeOptimizationLevel::One,
                         path,
-                    ))
-                } else if rel_str.ends_with(".opt-2.pyc") {
+                    )),
+                ));
+            } else if rel_str.ends_with(&format!("{}.opt-2.pyc", self.cache_tag)) {
+                return Some(DirEntryItem::PythonResource(
                     PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
                         &full_module_name,
                         BytecodeOptimizationLevel::Two,
                         path,
-                    ))
-                } else {
+                    )),
+                ));
+            } else if rel_str.ends_with(&format!("{}.pyc", self.cache_tag)) {
+                return Some(DirEntryItem::PythonResource(
                     PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
                         &full_module_name,
                         BytecodeOptimizationLevel::Zero,
                         path,
-                    ))
-                },
-            ));
+                    )),
+                ));
+            } else {
+                // A .pyc file not ending with our bytecode cache tag is weird. Ignore it.
+                return None;
+            }
         }
 
         let resource = match rel_path.extension().and_then(OsStr::to_str) {
