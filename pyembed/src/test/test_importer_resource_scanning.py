@@ -73,7 +73,9 @@ class TestImporterResourceScanning(unittest.TestCase):
 
         resources = find_resources_in_path(self.td)
         self.assertEqual(len(resources), 1)
-        self.assertIsInstance(resources[0], PythonExtensionModule)
+        r = resources[0]
+        self.assertIsInstance(r, PythonExtensionModule)
+        self.assertEqual(r.name, "foo")
 
     def test_package_resource(self):
         init_py = self.td / "package" / "__init__.py"

@@ -655,6 +655,15 @@ extension implemented in native machine code that can be loaded into
 a process and defines a Python module. Extension modules are typically
 defined by ``.so``, ``.dylib``, or ``.pyd`` files.
 
+Instances have the following properties:
+
+``name`` (``str``)
+   The name of the extension module.
+
+.. note::
+
+   Properties of this type are read-only.
+
 ``PythonPackageResource``
 -------------------------
 

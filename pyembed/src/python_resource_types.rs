@@ -309,16 +309,20 @@ impl PythonPackageDistributionResource {
 }
 
 py_class!(pub class PythonExtensionModule |py| {
-    data extension: RefCell<RawPythonExtensionModule>;
+    data resource: RefCell<RawPythonExtensionModule>;
 
     def __repr__(&self) -> PyResult<String> {
         Ok(format!("<PythonExtensionModule module=\"{}\">",
-            self.extension(py).borrow().name))
+            self.resource(py).borrow().name))
+    }
+
+    @property def name(&self) -> PyResult<String> {
+        Ok(self.resource(py).borrow().name.clone())
     }
 });
 
 impl PythonExtensionModule {
-    pub fn new(py: Python, extension: RawPythonExtensionModule) -> PyResult<Self> {
-        PythonExtensionModule::create_instance(py, RefCell::new(extension))
+    pub fn new(py: Python, resource: RawPythonExtensionModule) -> PyResult<Self> {
+        PythonExtensionModule::create_instance(py, RefCell::new(resource))
     }
 }
