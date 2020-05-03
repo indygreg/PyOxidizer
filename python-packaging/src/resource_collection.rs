@@ -83,11 +83,21 @@ impl Into<String> for &PythonResourcesPolicy {
     }
 }
 
+/// Describes how Python module bytecode will be obtained.
+#[derive(Clone, Debug, PartialEq)]
+pub enum PythonModuleBytecodeProvider {
+    /// Bytecode is already available.
+    Provided(DataLocation),
+    /// Bytecode will be computed from source.
+    FromSource(DataLocation),
+}
+
 /// Represents a Python resource entry before it is packaged.
 ///
 /// Instances hold the same fields as `Resource` except fields holding
 /// content are backed by a `DataLocation` instead of `Vec<u8>`, since
-/// we want data resolution to be lazy.
+/// we want data resolution to be lazy. In addition, bytecode can either be
+/// provided verbatim or via source.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PrePackagedResource {
     pub flavor: ResourceFlavor,
@@ -95,9 +105,9 @@ pub struct PrePackagedResource {
     pub is_package: bool,
     pub is_namespace_package: bool,
     pub in_memory_source: Option<DataLocation>,
-    pub in_memory_bytecode_source: Option<DataLocation>,
-    pub in_memory_bytecode_opt1_source: Option<DataLocation>,
-    pub in_memory_bytecode_opt2_source: Option<DataLocation>,
+    pub in_memory_bytecode: Option<PythonModuleBytecodeProvider>,
+    pub in_memory_bytecode_opt1: Option<PythonModuleBytecodeProvider>,
+    pub in_memory_bytecode_opt2: Option<PythonModuleBytecodeProvider>,
     pub in_memory_extension_module_shared_library: Option<DataLocation>,
     pub in_memory_resources: Option<BTreeMap<String, DataLocation>>,
     pub in_memory_distribution_resources: Option<BTreeMap<String, DataLocation>>,
@@ -106,9 +116,9 @@ pub struct PrePackagedResource {
     // (prefix, source code)
     pub relative_path_module_source: Option<(String, DataLocation)>,
     // (prefix, bytecode tag, source code)
-    pub relative_path_bytecode_source: Option<(String, String, DataLocation)>,
-    pub relative_path_bytecode_opt1_source: Option<(String, String, DataLocation)>,
-    pub relative_path_bytecode_opt2_source: Option<(String, String, DataLocation)>,
+    pub relative_path_bytecode: Option<(String, String, PythonModuleBytecodeProvider)>,
+    pub relative_path_bytecode_opt1: Option<(String, String, PythonModuleBytecodeProvider)>,
+    pub relative_path_bytecode_opt2: Option<(String, String, PythonModuleBytecodeProvider)>,
     // (prefix, path, data)
     pub relative_path_extension_module_shared_library: Option<(String, PathBuf, DataLocation)>,
     pub relative_path_package_resources: Option<BTreeMap<String, (String, PathBuf, DataLocation)>>,
@@ -131,11 +141,29 @@ impl<'a> TryFrom<&PrePackagedResource> for Resource<'a, u8> {
             } else {
                 None
             },
-            // Stored data is source, not bytecode. So don't populate bytecode with
-            // wrong data type.
-            in_memory_bytecode: None,
-            in_memory_bytecode_opt1: None,
-            in_memory_bytecode_opt2: None,
+            // If bytecode is provided, populate it. If derived from source, leave blank
+            // and it will be filled in later.
+            in_memory_bytecode: if let Some(PythonModuleBytecodeProvider::Provided(location)) =
+                &value.in_memory_bytecode
+            {
+                Some(Cow::Owned(location.resolve()?))
+            } else {
+                None
+            },
+            in_memory_bytecode_opt1: if let Some(PythonModuleBytecodeProvider::Provided(location)) =
+                &value.in_memory_bytecode_opt1
+            {
+                Some(Cow::Owned(location.resolve()?))
+            } else {
+                None
+            },
+            in_memory_bytecode_opt2: if let Some(PythonModuleBytecodeProvider::Provided(location)) =
+                &value.in_memory_bytecode_opt2
+            {
+                Some(Cow::Owned(location.resolve()?))
+            } else {
+                None
+            },
             in_memory_extension_module_shared_library: if let Some(location) =
                 &value.in_memory_extension_module_shared_library
             {
@@ -319,75 +347,80 @@ pub fn populate_parent_packages(
             // location, we materialize that variant on parents. We take
             // the source from the parent resource, if present. Otherwise
             // defaulting to empty.
-            if original.in_memory_bytecode_source.is_some()
-                && entry.in_memory_bytecode_source.is_none()
-            {
-                entry.in_memory_bytecode_source =
-                    Some(if let Some(source) = &entry.in_memory_source {
+            if original.in_memory_bytecode.is_some() && entry.in_memory_bytecode.is_none() {
+                entry.in_memory_bytecode = Some(PythonModuleBytecodeProvider::FromSource(
+                    if let Some(source) = &entry.in_memory_source {
                         source.clone()
                     } else {
                         DataLocation::Memory(vec![])
-                    });
+                    },
+                ));
             }
-            if original.in_memory_bytecode_opt1_source.is_some()
-                && entry.in_memory_bytecode_opt1_source.is_none()
+            if original.in_memory_bytecode_opt1.is_some() && entry.in_memory_bytecode_opt1.is_none()
             {
-                entry.in_memory_bytecode_opt1_source =
-                    Some(if let Some(source) = &entry.in_memory_source {
+                entry.in_memory_bytecode_opt1 = Some(PythonModuleBytecodeProvider::FromSource(
+                    if let Some(source) = &entry.in_memory_source {
                         source.clone()
                     } else {
                         DataLocation::Memory(vec![])
-                    });
+                    },
+                ));
             }
-            if original.in_memory_bytecode_opt2_source.is_some()
-                && entry.in_memory_bytecode_opt2_source.is_none()
+            if original.in_memory_bytecode_opt2.is_some() && entry.in_memory_bytecode_opt2.is_none()
             {
-                entry.in_memory_bytecode_opt2_source =
-                    Some(if let Some(source) = &entry.in_memory_source {
+                entry.in_memory_bytecode_opt2 = Some(PythonModuleBytecodeProvider::FromSource(
+                    if let Some(source) = &entry.in_memory_source {
                         source.clone()
                     } else {
                         DataLocation::Memory(vec![])
-                    });
+                    },
+                ));
             }
 
-            if let Some((prefix, cache_tag, _)) = &original.relative_path_bytecode_source {
-                if entry.relative_path_bytecode_source.is_none() {
-                    entry.relative_path_bytecode_source = Some((
+            if let Some((prefix, cache_tag, _)) = &original.relative_path_bytecode {
+                if entry.relative_path_bytecode.is_none() {
+                    entry.relative_path_bytecode = Some((
                         prefix.clone(),
                         cache_tag.clone(),
-                        if let Some((_, location)) = &entry.relative_path_module_source {
-                            location.clone()
-                        } else {
-                            DataLocation::Memory(vec![])
-                        },
+                        PythonModuleBytecodeProvider::FromSource(
+                            if let Some((_, location)) = &entry.relative_path_module_source {
+                                location.clone()
+                            } else {
+                                DataLocation::Memory(vec![])
+                            },
+                        ),
                     ));
                 }
             }
 
-            if let Some((prefix, cache_tag, _)) = &original.relative_path_bytecode_opt1_source {
-                if entry.relative_path_bytecode_opt1_source.is_none() {
-                    entry.relative_path_bytecode_opt1_source = Some((
+            if let Some((prefix, cache_tag, _)) = &original.relative_path_bytecode_opt1 {
+                if entry.relative_path_bytecode_opt1.is_none() {
+                    entry.relative_path_bytecode_opt1 = Some((
                         prefix.clone(),
                         cache_tag.clone(),
-                        if let Some((_, location)) = &entry.relative_path_module_source {
-                            location.clone()
-                        } else {
-                            DataLocation::Memory(vec![])
-                        },
+                        PythonModuleBytecodeProvider::FromSource(
+                            if let Some((_, location)) = &entry.relative_path_module_source {
+                                location.clone()
+                            } else {
+                                DataLocation::Memory(vec![])
+                            },
+                        ),
                     ));
                 }
             }
 
-            if let Some((prefix, cache_tag, _)) = &original.relative_path_bytecode_opt2_source {
-                if entry.relative_path_bytecode_opt2_source.is_none() {
-                    entry.relative_path_bytecode_opt2_source = Some((
+            if let Some((prefix, cache_tag, _)) = &original.relative_path_bytecode_opt2 {
+                if entry.relative_path_bytecode_opt2.is_none() {
+                    entry.relative_path_bytecode_opt2 = Some((
                         prefix.clone(),
                         cache_tag.clone(),
-                        if let Some((_, location)) = &entry.relative_path_module_source {
-                            location.clone()
-                        } else {
-                            DataLocation::Memory(vec![])
-                        },
+                        PythonModuleBytecodeProvider::FromSource(
+                            if let Some((_, location)) = &entry.relative_path_module_source {
+                                location.clone()
+                            } else {
+                                DataLocation::Memory(vec![])
+                            },
+                        ),
                     ));
                 }
             }
@@ -616,13 +649,19 @@ impl PythonResourceCollector {
 
         match module.optimize_level {
             BytecodeOptimizationLevel::Zero => {
-                entry.in_memory_bytecode_source = Some(module.source.clone());
+                entry.in_memory_bytecode = Some(PythonModuleBytecodeProvider::FromSource(
+                    module.source.clone(),
+                ));
             }
             BytecodeOptimizationLevel::One => {
-                entry.in_memory_bytecode_opt1_source = Some(module.source.clone());
+                entry.in_memory_bytecode_opt1 = Some(PythonModuleBytecodeProvider::FromSource(
+                    module.source.clone(),
+                ));
             }
             BytecodeOptimizationLevel::Two => {
-                entry.in_memory_bytecode_opt2_source = Some(module.source.clone());
+                entry.in_memory_bytecode_opt2 = Some(PythonModuleBytecodeProvider::FromSource(
+                    module.source.clone(),
+                ));
             }
         }
 
@@ -649,24 +688,24 @@ impl PythonResourceCollector {
 
         match module.optimize_level {
             BytecodeOptimizationLevel::Zero => {
-                entry.relative_path_bytecode_source = Some((
+                entry.relative_path_bytecode = Some((
                     prefix.to_string(),
                     module.cache_tag.clone(),
-                    module.source.clone(),
+                    PythonModuleBytecodeProvider::FromSource(module.source.clone()),
                 ))
             }
             BytecodeOptimizationLevel::One => {
-                entry.relative_path_bytecode_opt1_source = Some((
+                entry.relative_path_bytecode_opt1 = Some((
                     prefix.to_string(),
                     module.cache_tag.clone(),
-                    module.source.clone(),
+                    PythonModuleBytecodeProvider::FromSource(module.source.clone()),
                 ))
             }
             BytecodeOptimizationLevel::Two => {
-                entry.relative_path_bytecode_opt2_source = Some((
+                entry.relative_path_bytecode_opt2 = Some((
                     prefix.to_string(),
                     module.cache_tag.clone(),
-                    module.source.clone(),
+                    PythonModuleBytecodeProvider::FromSource(module.source.clone()),
                 ))
             }
         }
@@ -962,19 +1001,25 @@ impl PythonResourceCollector {
                 }
             }
 
-            if let Some(location) = &module.in_memory_bytecode_source {
+            if let Some(PythonModuleBytecodeProvider::FromSource(location)) =
+                &module.in_memory_bytecode
+            {
                 if has_dunder_file(&location.resolve()?)? {
                     res.insert(name.clone());
                 }
             }
 
-            if let Some(location) = &module.in_memory_bytecode_opt1_source {
+            if let Some(PythonModuleBytecodeProvider::FromSource(location)) =
+                &module.in_memory_bytecode_opt1
+            {
                 if has_dunder_file(&location.resolve()?)? {
                     res.insert(name.clone());
                 }
             }
 
-            if let Some(location) = &module.in_memory_bytecode_opt2_source {
+            if let Some(PythonModuleBytecodeProvider::FromSource(location)) =
+                &module.in_memory_bytecode_opt2
+            {
                 if has_dunder_file(&location.resolve()?)? {
                     res.insert(name.clone());
                 }
@@ -1015,7 +1060,9 @@ impl PythonResourceCollector {
 
                 let mut entry = Resource::try_from(resource)?;
 
-                if let Some(location) = &resource.in_memory_bytecode_source {
+                if let Some(PythonModuleBytecodeProvider::FromSource(location)) =
+                    &resource.in_memory_bytecode
+                {
                     entry.in_memory_bytecode = Some(Cow::Owned(compiler.compile(
                         &location.resolve()?,
                         &name,
@@ -1024,7 +1071,9 @@ impl PythonResourceCollector {
                     )?));
                 }
 
-                if let Some(location) = &resource.in_memory_bytecode_opt1_source {
+                if let Some(PythonModuleBytecodeProvider::FromSource(location)) =
+                    &resource.in_memory_bytecode_opt1
+                {
                     entry.in_memory_bytecode_opt1 = Some(Cow::Owned(compiler.compile(
                         &location.resolve()?,
                         &name,
@@ -1033,7 +1082,9 @@ impl PythonResourceCollector {
                     )?));
                 }
 
-                if let Some(location) = &resource.in_memory_bytecode_opt2_source {
+                if let Some(PythonModuleBytecodeProvider::FromSource(location)) =
+                    &resource.in_memory_bytecode_opt2
+                {
                     entry.in_memory_bytecode_opt2 = Some(Cow::Owned(compiler.compile(
                         &location.resolve()?,
                         &name,
@@ -1042,7 +1093,11 @@ impl PythonResourceCollector {
                     )?));
                 }
 
-                if let Some((prefix, cache_tag, location)) = &resource.relative_path_bytecode_source
+                if let Some((
+                    prefix,
+                    cache_tag,
+                    PythonModuleBytecodeProvider::FromSource(location),
+                )) = &resource.relative_path_bytecode
                 {
                     let module = PythonModuleBytecodeFromSource {
                         name: name.clone(),
@@ -1068,8 +1123,11 @@ impl PythonResourceCollector {
                     entry.relative_path_module_bytecode = Some(Cow::Owned(path));
                 }
 
-                if let Some((prefix, cache_tag, location)) =
-                    &resource.relative_path_bytecode_opt1_source
+                if let Some((
+                    prefix,
+                    cache_tag,
+                    PythonModuleBytecodeProvider::FromSource(location),
+                )) = &resource.relative_path_bytecode_opt1
                 {
                     let module = PythonModuleBytecodeFromSource {
                         name: name.clone(),
@@ -1095,8 +1153,11 @@ impl PythonResourceCollector {
                     entry.relative_path_module_bytecode_opt1 = Some(Cow::Owned(path));
                 }
 
-                if let Some((prefix, cache_tag, location)) =
-                    &resource.relative_path_bytecode_opt2_source
+                if let Some((
+                    prefix,
+                    cache_tag,
+                    PythonModuleBytecodeProvider::FromSource(location),
+                )) = &resource.relative_path_bytecode_opt2
                 {
                     let module = PythonModuleBytecodeFromSource {
                         name: name.clone(),
@@ -1262,7 +1323,9 @@ mod tests {
             PrePackagedResource {
                 flavor: ResourceFlavor::Module,
                 name: "root.parent.child".to_string(),
-                in_memory_bytecode_source: Some(DataLocation::Memory(vec![42])),
+                in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
+                    DataLocation::Memory(vec![42]),
+                )),
                 is_package: true,
                 ..PrePackagedResource::default()
             },
@@ -1277,7 +1340,9 @@ mod tests {
                 flavor: ResourceFlavor::Module,
                 name: "root.parent".to_string(),
                 is_package: true,
-                in_memory_bytecode_source: Some(DataLocation::Memory(vec![])),
+                in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
+                    DataLocation::Memory(vec![])
+                )),
                 ..PrePackagedResource::default()
             })
         );
@@ -1287,7 +1352,9 @@ mod tests {
                 flavor: ResourceFlavor::Module,
                 name: "root".to_string(),
                 is_package: true,
-                in_memory_bytecode_source: Some(DataLocation::Memory(vec![])),
+                in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
+                    DataLocation::Memory(vec![])
+                )),
                 ..PrePackagedResource::default()
             })
         );
@@ -1467,7 +1534,9 @@ mod tests {
             Some(&PrePackagedResource {
                 flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
-                in_memory_bytecode_source: Some(DataLocation::Memory(vec![42])),
+                in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
+                    DataLocation::Memory(vec![42])
+                )),
                 is_package: false,
                 ..PrePackagedResource::default()
             })
@@ -1494,7 +1563,9 @@ mod tests {
             Some(&PrePackagedResource {
                 flavor: ResourceFlavor::Module,
                 name: "root.parent.child".to_string(),
-                in_memory_bytecode_opt1_source: Some(DataLocation::Memory(vec![42])),
+                in_memory_bytecode_opt1: Some(PythonModuleBytecodeProvider::FromSource(
+                    DataLocation::Memory(vec![42])
+                )),
                 is_package: true,
                 ..PrePackagedResource::default()
             })
