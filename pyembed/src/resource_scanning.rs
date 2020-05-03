@@ -21,6 +21,13 @@ use {
 pub(crate) fn find_resources_in_path(py: Python, path: PyObject) -> PyResult<PyObject> {
     let path = pyobject_to_pathbuf(py, path)?;
 
+    if !path.is_dir() {
+        return Err(PyErr::new::<ValueError, _>(
+            py,
+            format!("path is not a directory: {}", path.display()),
+        ));
+    }
+
     let sys_module = py.import("sys")?;
     let implementation = sys_module.get(py, "implementation")?;
     let cache_tag = implementation

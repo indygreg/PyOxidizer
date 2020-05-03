@@ -642,6 +642,24 @@ specified filesystem path and return an iterable of objects representing
 found resources. Those objects will by 1 of the types documented in
 :ref:`python_resource_types`.
 
+Only directories can be scanned.
+
+To discover all filesystem based resources that Python's ``PathFinder``
+*meta path finder* would (with the exception of ``.zip`` files), try the
+following:
+
+.. code-block:: python
+
+   import os
+   import oxidized_importer
+   import sys
+
+   resources = []
+   for path in sys.path:
+       if os.path.isdir(path):
+           resources.extend(oxidized_importer.find_resources_in_path(path))
+
+
 Security Implications of Loading Resources
 ==========================================
 

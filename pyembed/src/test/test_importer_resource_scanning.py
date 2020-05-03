@@ -3,6 +3,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import importlib.machinery
+import os
 import pathlib
 import sys
 import tempfile
@@ -99,6 +100,23 @@ class TestImporterResourceScanning(unittest.TestCase):
         self.assertEqual(len(resources), 2)
         self.assertIsInstance(resources[0], PythonModuleSource)
         self.assertIsInstance(resources[1], PythonPackageDistributionResource)
+
+    def test_scan_missing(self):
+        with self.assertRaisesRegex(ValueError, "path is not a directory"):
+            find_resources_in_path(self.td / "missing")
+
+    def test_scan_not_directory(self):
+        path = self.td / "file"
+        with path.open("wb"):
+            pass
+
+        with self.assertRaisesRegex(ValueError, "path is not a directory"):
+            find_resources_in_path(path)
+
+    def test_scan_sys_path(self):
+        for path in sys.path:
+            if os.path.isdir(path):
+                find_resources_in_path(path)
 
 
 if __name__ == "__main__":
