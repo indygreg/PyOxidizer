@@ -16,6 +16,7 @@ class TestImporterModule(unittest.TestCase):
             {
                 "decode_source",
                 "find_resources_in_path",
+                "OxidizedResourceCollector",
                 "OxidizedResource",
                 "OxidizedFinder",
                 "PythonExtensionModule",

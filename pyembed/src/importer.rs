@@ -1388,6 +1388,11 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
     m.add(py, "OxidizedResource", py.get_type::<OxidizedResource>())?;
     m.add(
         py,
+        "OxidizedResourceCollector",
+        py.get_type::<crate::python_resource_collector::OxidizedResourceCollector>(),
+    )?;
+    m.add(
+        py,
         "PythonModuleSource",
         py.get_type::<crate::python_resource_types::PythonModuleSource>(),
     )?;

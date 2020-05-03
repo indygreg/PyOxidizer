@@ -739,6 +739,14 @@ following:
        if os.path.isdir(path):
            resources.extend(oxidized_importer.find_resources_in_path(path))
 
+``OxidizedResourceCollector`` Python Type
+=========================================
+
+The ``oxidized_importer.OxidizedResourceCollector`` type provides functionality
+for turning instances of :ref:`python_resource_types` into a collection
+of ``OxidizedResource`` for loading into an ``OxidizedFinder`` instance. It
+exists as a convenience, as working with individual ``OxidizedResource``
+instances can be rather cumbersome.
 
 Security Implications of Loading Resources
 ==========================================
