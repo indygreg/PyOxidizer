@@ -733,11 +733,11 @@ where
     }
 }
 
-/// Write an embedded resources blob, version 1.
+/// Write packed resources data, version 1.
 ///
-/// See the `pyembed` crate for the format of this data structure.
+/// See the `specifications` module for the format.
 #[allow(clippy::cognitive_complexity)]
-pub fn write_embedded_resources_v1<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
+pub fn write_packed_resources_v1<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
     modules: &[T],
     dest: &mut W,
     interior_padding: Option<BlobInteriorPadding>,
@@ -1034,7 +1034,7 @@ mod tests {
     fn test_write_empty() -> Result<()> {
         let mut data = Vec::new();
         let resources: Vec<Resource<u8>> = Vec::new();
-        write_embedded_resources_v1(&resources, &mut data, None)?;
+        write_packed_resources_v1(&resources, &mut data, None)?;
 
         let mut expected: Vec<u8> = b"pyembed\x01".to_vec();
         // Number of blob sections.
@@ -1063,7 +1063,7 @@ mod tests {
             ..Resource::default()
         };
 
-        write_embedded_resources_v1(&[module], &mut data, None)?;
+        write_packed_resources_v1(&[module], &mut data, None)?;
 
         let mut expected: Vec<u8> = b"pyembed\x01".to_vec();
         // Number of blob sections.

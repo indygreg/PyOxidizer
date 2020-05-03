@@ -604,7 +604,7 @@ mod tests {
     use {
         super::*,
         crate::data::{BlobInteriorPadding, Resource},
-        crate::writer::write_embedded_resources_v1,
+        crate::writer::write_packed_resources_v1,
         std::collections::BTreeMap,
     };
 
@@ -679,7 +679,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        write_packed_resources_v1(&[resource], &mut data, None).unwrap();
 
         let resources = load_resources(&data)
             .unwrap()
@@ -711,7 +711,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource1, resource2], &mut data, None).unwrap();
+        write_packed_resources_v1(&[resource1, resource2], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
             .collect::<Result<Vec<Resource<u8>>, &'static str>>()
@@ -752,7 +752,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(
+        write_packed_resources_v1(
             &[resource1, resource2],
             &mut data,
             Some(BlobInteriorPadding::Null),
@@ -793,7 +793,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        write_packed_resources_v1(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
             .collect::<Result<Vec<Resource<u8>>, &'static str>>()
@@ -824,7 +824,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        write_packed_resources_v1(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
             .collect::<Result<Vec<Resource<u8>>, &'static str>>()
@@ -858,7 +858,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        write_packed_resources_v1(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
             .collect::<Result<Vec<Resource<u8>>, &'static str>>()
@@ -892,7 +892,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        write_packed_resources_v1(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
             .collect::<Result<Vec<Resource<u8>>, &'static str>>()
@@ -926,7 +926,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        write_packed_resources_v1(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
             .collect::<Result<Vec<Resource<u8>>, &'static str>>()
@@ -970,7 +970,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        write_packed_resources_v1(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
             .collect::<Result<Vec<Resource<u8>>, &'static str>>()
@@ -999,7 +999,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        write_packed_resources_v1(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
             .collect::<Result<Vec<Resource<u8>>, &'static str>>()
@@ -1024,7 +1024,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        write_packed_resources_v1(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
             .collect::<Result<Vec<Resource<u8>>, &'static str>>()
@@ -1060,7 +1060,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        write_packed_resources_v1(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
             .collect::<Result<Vec<Resource<u8>>, &'static str>>()
@@ -1085,7 +1085,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        write_packed_resources_v1(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
             .collect::<Result<Vec<Resource<u8>>, &'static str>>()
@@ -1114,7 +1114,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        write_packed_resources_v1(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
             .collect::<Result<Vec<Resource<u8>>, &'static str>>()
@@ -1143,7 +1143,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        write_packed_resources_v1(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
             .collect::<Result<Vec<Resource<u8>>, &'static str>>()
@@ -1172,7 +1172,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        write_packed_resources_v1(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
             .collect::<Result<Vec<Resource<u8>>, &'static str>>()
@@ -1201,7 +1201,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        write_packed_resources_v1(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
             .collect::<Result<Vec<Resource<u8>>, &'static str>>()
@@ -1236,7 +1236,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        write_packed_resources_v1(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
             .collect::<Result<Vec<Resource<u8>>, &'static str>>()
@@ -1271,7 +1271,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        write_packed_resources_v1(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
             .collect::<Result<Vec<Resource<u8>>, &'static str>>()
@@ -1348,7 +1348,7 @@ mod tests {
         };
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&[resource], &mut data, None).unwrap();
+        write_packed_resources_v1(&[resource], &mut data, None).unwrap();
         let resources = load_resources(&data)
             .unwrap()
             .collect::<Result<Vec<Resource<u8>>, &'static str>>()
@@ -1465,7 +1465,7 @@ mod tests {
         ];
 
         let mut data = Vec::new();
-        write_embedded_resources_v1(&resources, &mut data, None).unwrap();
+        write_packed_resources_v1(&resources, &mut data, None).unwrap();
         let loaded = load_resources(&data)
             .unwrap()
             .collect::<Result<Vec<Resource<u8>>, &'static str>>()

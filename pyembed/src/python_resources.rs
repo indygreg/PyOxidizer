@@ -772,7 +772,11 @@ impl<'a> PythonResourcesState<'a, u8> {
     ///
     /// `ignore_built` and `ignore_frozen` specify whether to ignore built-in
     /// extension modules and frozen modules, respectively.
-    pub fn serialize_resources(&self, ignore_builtin: bool, ignore_frozen: bool) -> Result<Vec<u8>> {
+    pub fn serialize_resources(
+        &self,
+        ignore_builtin: bool,
+        ignore_frozen: bool,
+    ) -> Result<Vec<u8>> {
         let mut resources = self
             .resources
             .values()
@@ -788,11 +792,7 @@ impl<'a> PythonResourcesState<'a, u8> {
 
         let mut buffer = Vec::new();
 
-        python_packed_resources::writer::write_embedded_resources_v1(
-            &resources,
-            &mut buffer,
-            None,
-        )?;
+        python_packed_resources::writer::write_packed_resources_v1(&resources, &mut buffer, None)?;
 
         Ok(buffer)
     }

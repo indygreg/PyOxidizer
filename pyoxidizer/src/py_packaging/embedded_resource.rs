@@ -19,7 +19,7 @@ use {
         PreparedPythonResources, PythonResourceCollector, PythonResourcesPolicy,
     },
     python_packed_resources::data::Resource,
-    python_packed_resources::writer::write_embedded_resources_v1,
+    python_packed_resources::writer::write_packed_resources_v1,
     slog::{info, warn},
     std::collections::{BTreeMap, BTreeSet},
     std::io::Write,
@@ -473,7 +473,7 @@ impl<'a> EmbeddedPythonResources<'a> {
             module_names.write_all(b"\n").expect("failed to write");
         }
 
-        write_embedded_resources_v1(
+        write_packed_resources_v1(
             &self
                 .resources
                 .resources
