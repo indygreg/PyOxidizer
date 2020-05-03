@@ -339,6 +339,7 @@ impl PythonResourceIterator {
                     PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
                         &full_module_name,
                         BytecodeOptimizationLevel::One,
+                        &self.cache_tag,
                         path,
                     )),
                 ));
@@ -347,6 +348,7 @@ impl PythonResourceIterator {
                     PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
                         &full_module_name,
                         BytecodeOptimizationLevel::Two,
+                        &self.cache_tag,
                         path,
                     )),
                 ));
@@ -355,6 +357,7 @@ impl PythonResourceIterator {
                     PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
                         &full_module_name,
                         BytecodeOptimizationLevel::Zero,
+                        &self.cache_tag,
                         path,
                     )),
                 ));

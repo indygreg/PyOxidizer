@@ -194,15 +194,25 @@ pub struct PythonModuleBytecode {
     bytecode: DataLocation,
     pub optimize_level: BytecodeOptimizationLevel,
     pub is_package: bool,
+    /// Tag to apply to bytecode files.
+    ///
+    /// e.g. `cpython-37`.
+    pub cache_tag: String,
 }
 
 impl PythonModuleBytecode {
-    pub fn from_path(name: &str, optimize_level: BytecodeOptimizationLevel, path: &Path) -> Self {
+    pub fn from_path(
+        name: &str,
+        optimize_level: BytecodeOptimizationLevel,
+        cache_tag: &str,
+        path: &Path,
+    ) -> Self {
         Self {
             name: name.to_string(),
             bytecode: DataLocation::Path(path.to_path_buf()),
             optimize_level,
             is_package: is_package_from_path(path),
+            cache_tag: cache_tag.to_string(),
         }
     }
 
@@ -212,6 +222,7 @@ impl PythonModuleBytecode {
             bytecode: DataLocation::Memory(self.resolve_bytecode()?),
             optimize_level: self.optimize_level,
             is_package: self.is_package,
+            cache_tag: self.cache_tag.clone(),
         })
     }
 
@@ -230,6 +241,17 @@ impl PythonModuleBytecode {
     /// Sets the bytecode for this module.
     pub fn set_bytecode(&mut self, data: &[u8]) {
         self.bytecode = DataLocation::Memory(data.to_vec());
+    }
+
+    /// Resolve filesystem path to this bytecode.
+    pub fn resolve_path(&self, prefix: &str) -> PathBuf {
+        let bytecode_tag = match self.optimize_level {
+            BytecodeOptimizationLevel::Zero => self.cache_tag.clone(),
+            BytecodeOptimizationLevel::One => format!("{}.opt-1", self.cache_tag),
+            BytecodeOptimizationLevel::Two => format!("{}.opt-2", self.cache_tag),
+        };
+
+        resolve_path_for_module(prefix, &self.name, self.is_package, Some(&bytecode_tag))
     }
 }
 
@@ -553,6 +575,7 @@ mod tests {
             bytecode: DataLocation::Memory(vec![]),
             optimize_level: BytecodeOptimizationLevel::Zero,
             is_package: false,
+            cache_tag: DEFAULT_CACHE_TAG.to_string(),
         });
         assert!(bytecode.is_in_packages(&["foo".to_string()]));
         assert!(!bytecode.is_in_packages(&[]));
