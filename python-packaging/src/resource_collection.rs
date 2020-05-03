@@ -1256,6 +1256,42 @@ mod tests {
     }
 
     #[test]
+    fn test_add_relative_path_source_module() -> Result<()> {
+        let mut r = PythonResourceCollector::new(
+            &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
+            DEFAULT_CACHE_TAG,
+        );
+        r.add_relative_path_python_module_source(
+            &PythonModuleSource {
+                name: "foo".to_string(),
+                source: DataLocation::Memory(vec![42]),
+                is_package: false,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
+            },
+            "",
+        )?;
+
+        assert!(r.resources.contains_key("foo"));
+        assert_eq!(
+            r.resources.get("foo"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: "foo".to_string(),
+                is_package: false,
+                relative_path_module_source: Some(("".to_string(), DataLocation::Memory(vec![42]))),
+                ..PrePackagedResource::default()
+            })
+        );
+        let entries = r.derive_file_installs()?;
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].0, PathBuf::from("foo.py"));
+        assert_eq!(entries[0].1, &DataLocation::Memory(vec![42]));
+        assert_eq!(entries[0].2, false);
+
+        Ok(())
+    }
+
+    #[test]
     fn test_add_in_memory_bytecode_module() -> Result<()> {
         let mut r =
             PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);

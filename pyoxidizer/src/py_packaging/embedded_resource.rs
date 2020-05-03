@@ -747,48 +747,6 @@ mod tests {
     const DEFAULT_CACHE_TAG: &str = "cpython-37";
 
     #[test]
-    fn test_add_relative_path_source_module() -> Result<()> {
-        let mut r = PrePackagedResources::new(
-            &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
-            DEFAULT_CACHE_TAG,
-        );
-        r.add_relative_path_module_source(
-            &PythonModuleSource {
-                name: "foo".to_string(),
-                source: DataLocation::Memory(vec![42]),
-                is_package: false,
-                cache_tag: DEFAULT_CACHE_TAG.to_string(),
-            },
-            "",
-        )?;
-
-        assert!(r.collector.resources.contains_key("foo"));
-        assert_eq!(
-            r.collector.resources.get("foo"),
-            Some(&PrePackagedResource {
-                flavor: ResourceFlavor::Module,
-                name: "foo".to_string(),
-                is_package: false,
-                relative_path_module_source: Some(("".to_string(), DataLocation::Memory(vec![42]))),
-                ..PrePackagedResource::default()
-            })
-        );
-        let m = r.derive_extra_files()?;
-        let entries = m.entries().collect::<Vec<(&PathBuf, &FileContent)>>();
-        assert_eq!(entries.len(), 1);
-        assert_eq!(entries[0].0, &PathBuf::from("foo.py"));
-        assert_eq!(
-            entries[0].1,
-            &FileContent {
-                data: vec![42],
-                executable: false
-            }
-        );
-
-        Ok(())
-    }
-
-    #[test]
     fn test_add_distribution_extension_module() -> Result<()> {
         let mut r =
             PrePackagedResources::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
