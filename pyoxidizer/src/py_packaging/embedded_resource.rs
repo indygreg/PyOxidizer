@@ -254,18 +254,10 @@ impl PrePackagedResources {
                     .expect("filename on shared library")
                     .to_string_lossy();
 
-                let resource = self
-                    .collector
-                    .resources
-                    .entry(name.to_string())
-                    .or_insert_with(|| PrePackagedResource {
-                        flavor: ResourceFlavor::SharedLibrary,
-                        name: name.to_string(),
-                        ..PrePackagedResource::default()
-                    });
-
-                resource.in_memory_shared_library =
-                    Some(DataLocation::Path(shared_library.clone()));
+                self.collector.add_in_memory_shared_library(
+                    &name,
+                    &DataLocation::Path(shared_library.clone()),
+                )?;
 
                 // And update the extension module entry to record a library dependency.
                 self.collector

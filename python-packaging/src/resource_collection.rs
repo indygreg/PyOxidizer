@@ -879,6 +879,24 @@ impl PythonResourceCollector {
         Ok(())
     }
 
+    /// Add a shared library to be loaded from memory.
+    pub fn add_in_memory_shared_library(&mut self, name: &str, data: &DataLocation) -> Result<()> {
+        self.check_policy(ResourceLocation::InMemory)?;
+
+        let entry = self
+            .resources
+            .entry(name.to_string())
+            .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::SharedLibrary,
+                name: name.to_string(),
+                ..PrePackagedResource::default()
+            });
+
+        entry.in_memory_shared_library = Some(data.clone());
+
+        Ok(())
+    }
+
     /// Searches for Python sources for references to __file__.
     ///
     /// __file__ usage can be problematic for in-memory modules. This method searches
