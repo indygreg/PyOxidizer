@@ -243,13 +243,7 @@ impl PrePackagedResources {
 
         let data = std::fs::read(module.shared_library.as_ref().unwrap())?;
 
-        self.collector
-            .add_in_memory_python_extension_module_shared_library(
-                &module.module,
-                false,
-                &data,
-                &[],
-            )?;
+        let mut depends = Vec::new();
 
         for link in &module.links {
             if let Some(shared_library) = &link.dynamic_path {
@@ -264,16 +258,19 @@ impl PrePackagedResources {
                     &DataLocation::Path(shared_library.clone()),
                 )?;
 
-                // And update the extension module entry to record a library dependency.
-                self.collector
-                    .resources
-                    .get_mut(&module.module)
-                    .expect("entry for extension module")
-                    .shared_library_dependency_names
-                    .get_or_insert_with(Vec::new)
-                    .push(name.to_string());
+                depends.push(name.to_string());
             }
         }
+
+        let depends_refs = depends.iter().map(|x| x.as_ref()).collect::<Vec<&str>>();
+
+        self.collector
+            .add_in_memory_python_extension_module_shared_library(
+                &module.module,
+                false,
+                &data,
+                &depends_refs,
+            )?;
 
         Ok(())
     }
