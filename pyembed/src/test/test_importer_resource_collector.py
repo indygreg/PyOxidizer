@@ -7,7 +7,10 @@ import sys
 import tempfile
 import unittest
 
-from oxidized_importer import OxidizedResourceCollector
+from oxidized_importer import (
+    OxidizedResourceCollector,
+    find_resources_in_path,
+)
 
 
 class TestImporterResourceScanning(unittest.TestCase):
@@ -28,6 +31,17 @@ class TestImporterResourceScanning(unittest.TestCase):
 
         c = OxidizedResourceCollector(policy="in-memory-only")
         self.assertEqual(c.policy, "in-memory-only")
+
+    def test_source_module(self):
+        c = OxidizedResourceCollector(policy="in-memory-only")
+
+        source_path = self.td / "foo.py"
+
+        with source_path.open("wb") as fh:
+            fh.write(b"import io\n")
+
+        for resource in find_resources_in_path(self.td):
+            c.add_in_memory(resource)
 
 
 if __name__ == "__main__":

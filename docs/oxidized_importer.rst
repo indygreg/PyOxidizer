@@ -767,6 +767,15 @@ Instances of ``OxidizedResourceCollector`` have the following properties:
    Exposes the policy string this instance was constructed with. This property
    is read-only.
 
+Methods are documented in the following sections.
+
+``add_in_memory(resource)``
+---------------------------
+
+``OxidizedResourceCollector.add_in_memory(resource)`` adds a Python resource
+type (``PythonModuleSource``, ``PythonModuleBytecode``, etc) to the collector
+and marks it for loading via in-memory mechanisms.
+
 Security Implications of Loading Resources
 ==========================================
 

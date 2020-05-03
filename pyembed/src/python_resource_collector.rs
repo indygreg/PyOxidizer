@@ -5,8 +5,9 @@
 /*! Python functionality for resource collection. */
 
 use {
-    cpython::exc::ValueError,
-    cpython::{py_class, py_class_prop_getter, ObjectProtocol, PyErr, PyResult, Python},
+    crate::python_resource_types::PythonModuleSource,
+    cpython::exc::{TypeError, ValueError},
+    cpython::{py_class, py_class_prop_getter, ObjectProtocol, PyErr, PyObject, PyResult, Python},
     python_packaging::resource_collection::{PythonResourceCollector, PythonResourcesPolicy},
     std::cell::RefCell,
     std::convert::TryFrom,
@@ -26,6 +27,10 @@ py_class!(pub class OxidizedResourceCollector |py| {
     @property def policy(&self) -> PyResult<String> {
         Ok(self.collector(py).borrow().get_policy().into())
     }
+
+    def add_in_memory(&self, resource: PyObject) -> PyResult<PyObject> {
+        self.add_in_memory_impl(py, resource)
+    }
 });
 
 impl OxidizedResourceCollector {
@@ -42,5 +47,25 @@ impl OxidizedResourceCollector {
         let collector = PythonResourceCollector::new(&policy, &cache_tag);
 
         OxidizedResourceCollector::create_instance(py, RefCell::new(collector))
+    }
+
+    fn add_in_memory_impl(&self, py: Python, resource: PyObject) -> PyResult<PyObject> {
+        let mut collector = self.collector(py).borrow_mut();
+        let typ = resource.get_type(py);
+
+        match typ.name(py).as_ref() {
+            "PythonModuleSource" => {
+                let module = resource.cast_into::<PythonModuleSource>(py)?;
+                collector
+                    .add_in_memory_python_module_source(&module.get_resource(py))
+                    .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+
+                Ok(py.None())
+            }
+            _ => Err(PyErr::new::<TypeError, _>(
+                py,
+                format!("cannot operate on {} values", typ.name(py)),
+            )),
+        }
     }
 }

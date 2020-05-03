@@ -18,7 +18,7 @@ use {
         PythonPackageDistributionResource as RawPythonPackageDistributionResource,
         PythonPackageResource as RawPythonPackageResource,
     },
-    std::cell::RefCell,
+    std::cell::{Ref, RefCell},
     std::convert::TryFrom,
 };
 
@@ -81,6 +81,10 @@ py_class!(pub class PythonModuleSource |py| {
 impl PythonModuleSource {
     pub fn new(py: Python, resource: RawPythonModuleSource) -> PyResult<Self> {
         PythonModuleSource::create_instance(py, RefCell::new(resource))
+    }
+
+    pub fn get_resource<'a>(&'a self, py: Python<'a>) -> Ref<'a, RawPythonModuleSource> {
+        self.resource(py).borrow()
     }
 }
 
