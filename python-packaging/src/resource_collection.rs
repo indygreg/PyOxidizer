@@ -1375,6 +1375,56 @@ mod tests {
     }
 
     #[test]
+    fn test_add_relative_path_extension_module() -> Result<()> {
+        let mut c = PythonResourceCollector::new(
+            &PythonResourcesPolicy::FilesystemRelativeOnly("prefix".to_string()),
+            DEFAULT_CACHE_TAG,
+        );
+
+        let em = PythonExtensionModule {
+            name: "foo.bar".to_string(),
+            init_fn: None,
+            extension_file_suffix: ".so".to_string(),
+            extension_data: Some(DataLocation::Memory(vec![42])),
+            object_file_data: vec![],
+            is_package: false,
+            libraries: vec![],
+            library_dirs: vec![],
+        };
+
+        c.add_relative_path_python_extension_module(&em, "prefix")?;
+        assert_eq!(c.resources.len(), 1);
+        assert_eq!(
+            c.resources.get("foo.bar"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Extension,
+                name: "foo.bar".to_string(),
+                is_package: false,
+                relative_path_extension_module_shared_library: Some((
+                    "prefix".to_string(),
+                    PathBuf::from("prefix/foo/bar.so"),
+                    DataLocation::Memory(vec![42])
+                )),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        let files = c.derive_file_installs()?;
+
+        assert_eq!(files.len(), 1);
+        assert_eq!(
+            files[0],
+            (
+                PathBuf::from("prefix/foo/bar.so"),
+                &DataLocation::Memory(vec![42]),
+                true
+            )
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn test_find_dunder_file() -> Result<()> {
         let mut r =
             PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);

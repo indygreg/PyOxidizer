@@ -739,10 +739,7 @@ impl<'a> EmbeddedPythonResources<'a> {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*, python_packaging::resource_collection::PrePackagedResource,
-        python_packed_resources::data::ResourceFlavor, std::path::PathBuf,
-    };
+    use {super::*, std::path::PathBuf};
 
     const DEFAULT_CACHE_TAG: &str = "cpython-37";
 
@@ -835,21 +832,6 @@ mod tests {
         };
 
         r.add_relative_path_extension_module(&em, "prefix")?;
-        assert_eq!(r.collector.resources.len(), 1);
-        assert_eq!(
-            r.collector.resources.get("foo.bar"),
-            Some(&PrePackagedResource {
-                flavor: ResourceFlavor::Extension,
-                name: "foo.bar".to_string(),
-                is_package: false,
-                relative_path_extension_module_shared_library: Some((
-                    "prefix".to_string(),
-                    PathBuf::from("prefix/foo/bar.so"),
-                    DataLocation::Memory(vec![42])
-                )),
-                ..PrePackagedResource::default()
-            })
-        );
 
         let m = r.derive_extra_files()?;
         let extra_files = m.entries().collect::<Vec<(&PathBuf, &FileContent)>>();
