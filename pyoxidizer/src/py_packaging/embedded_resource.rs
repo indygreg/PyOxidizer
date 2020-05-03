@@ -21,7 +21,7 @@ use {
     },
     python_packaging::resource_collection::{
         populate_parent_packages, PrePackagedResource, PythonResourceCollector,
-        PythonResourcesPolicy,
+        PythonResourcesPolicy, ResourceLocation,
     },
     python_packed_resources::data::{Resource, ResourceFlavor},
     python_packed_resources::writer::write_embedded_resources_v1,
@@ -33,11 +33,6 @@ use {
     std::iter::FromIterator,
     std::path::{Path, PathBuf},
 };
-
-enum ResourceLocation {
-    InMemory,
-    RelativePath,
-}
 
 /// Holds state necessary to link an extension module into libpython.
 #[derive(Debug, Clone, PartialEq)]

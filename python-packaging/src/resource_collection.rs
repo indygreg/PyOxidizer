@@ -390,6 +390,14 @@ pub fn populate_parent_packages(
     Ok(())
 }
 
+/// Describes the location of a Python resource.
+pub enum ResourceLocation {
+    /// Resource is loaded from memory.
+    InMemory,
+    /// Resource is loaded from a relative filesystem path.
+    RelativePath,
+}
+
 /// Type used to collect Python resources to they can be serialized.
 ///
 /// We often want to turn Python resource primitives (module source,
