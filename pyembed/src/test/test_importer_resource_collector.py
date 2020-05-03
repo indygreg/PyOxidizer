@@ -26,7 +26,8 @@ class TestImporterResourceScanning(unittest.TestCase):
         with self.assertRaises(TypeError):
             OxidizedResourceCollector()
 
-        OxidizedResourceCollector(policy="in-memory-only")
+        c = OxidizedResourceCollector(policy="in-memory-only")
+        self.assertEqual(c.policy, "in-memory-only")
 
 
 if __name__ == "__main__":

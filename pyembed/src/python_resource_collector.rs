@@ -6,7 +6,7 @@
 
 use {
     cpython::exc::ValueError,
-    cpython::{py_class, ObjectProtocol, PyErr, PyResult, Python},
+    cpython::{py_class, py_class_prop_getter, ObjectProtocol, PyErr, PyResult, Python},
     python_packaging::resource_collection::{PythonResourceCollector, PythonResourcesPolicy},
     std::cell::RefCell,
     std::convert::TryFrom,
@@ -21,6 +21,10 @@ py_class!(pub class OxidizedResourceCollector |py| {
 
     def __repr__(&self) -> PyResult<String> {
         Ok("<OxidizedResourceCollector>".to_string())
+    }
+
+    @property def policy(&self) -> PyResult<String> {
+        Ok(self.collector(py).borrow().get_policy().into())
     }
 });
 

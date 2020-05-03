@@ -748,6 +748,25 @@ of ``OxidizedResource`` for loading into an ``OxidizedFinder`` instance. It
 exists as a convenience, as working with individual ``OxidizedResource``
 instances can be rather cumbersome.
 
+Instances can be constructed by passing a ``policy=<str>`` argument defining
+the resources policy for this collector. The string values are the same
+as recognized by PyOxidizer's config files and are documented at
+:ref:`config_python_resources_policy`.
+
+e.g. to create a collector that only marks resources for in-memory loading:
+
+.. code-block:: python
+
+   import oxidized_importer
+
+   collector = oxidized_importer.OxidizedResourceCollector(policy="in-memory-only")
+
+Instances of ``OxidizedResourceCollector`` have the following properties:
+
+``policy`` (``str``)
+   Exposes the policy string this instance was constructed with. This property
+   is read-only.
+
 Security Implications of Loading Resources
 ==========================================
 

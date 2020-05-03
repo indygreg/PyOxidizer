@@ -69,6 +69,20 @@ impl TryFrom<&str> for PythonResourcesPolicy {
     }
 }
 
+impl Into<String> for &PythonResourcesPolicy {
+    fn into(self) -> String {
+        match self {
+            PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
+                format!("filesystem-relative-only:{}", prefix)
+            }
+            PythonResourcesPolicy::InMemoryOnly => "in-memory-only".to_string(),
+            PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(ref prefix) => {
+                format!("prefer-in-memory-fallback-filesystem-relative:{}", prefix)
+            }
+        }
+    }
+}
+
 /// Represents a Python resource entry before it is packaged.
 ///
 /// Instances hold the same fields as `Resource` except fields holding
@@ -457,6 +471,11 @@ impl PythonResourceCollector {
             resources: BTreeMap::new(),
             cache_tag: cache_tag.to_string(),
         }
+    }
+
+    /// Obtain the policy for this collector.
+    pub fn get_policy(&self) -> &PythonResourcesPolicy {
+        &self.policy
     }
 
     /// Validate that a resource add in the specified location is allowed.
