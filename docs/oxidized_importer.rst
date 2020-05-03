@@ -685,6 +685,21 @@ a non-module *resource* file living in a package distribution directory
 (e.g. ``<package>-<version>.dist-info`` or ``<package>-<version>.egg-info``).
 These resources are typically accessed via the APIs in ``importlib.metadata``.
 
+Instances have the following properties:
+
+``package`` (``str``)
+   The name of the Python package this resource is associated with.
+
+``version`` (``str``)
+   Version string of Python package this resource is associated with.
+
+``name`` (``str``)
+   The name of the resource within the metadata distribution. This is
+   typically the filename of the resource. e.g. ``METADATA``.
+
+``data`` (``bytes``)
+   The raw binary content of the resource.
+
 Resource Scanning APIs
 ======================
 

@@ -116,8 +116,18 @@ class TestImporterResourceScanning(unittest.TestCase):
 
         resources = find_resources_in_path(self.td)
         self.assertEqual(len(resources), 2)
-        self.assertIsInstance(resources[0], PythonModuleSource)
-        self.assertIsInstance(resources[1], PythonPackageDistributionResource)
+
+        r = resources[0]
+        self.assertIsInstance(r, PythonModuleSource)
+        self.assertEqual(r.module, "foo")
+        self.assertTrue(r.is_package)
+
+        r = resources[1]
+        self.assertIsInstance(r, PythonPackageDistributionResource)
+        self.assertEqual(r.package, "foo")
+        self.assertEqual(r.version, "1.0")
+        self.assertEqual(r.name, "METADATA")
+        self.assertEqual(r.data, b"Name: foo\nVersion: 1.0\n")
 
     def test_scan_missing(self):
         with self.assertRaisesRegex(ValueError, "path is not a directory"):
