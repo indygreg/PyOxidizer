@@ -584,6 +584,49 @@ The following flavors are defined:
 ``shared_library``
    A shared library. e.g. a ``.so`` or ``.dll``.
 
+Python Types Representing Python Resources
+==========================================
+
+``oxidized_importer`` defines Python types which represent specific types
+of Python *resources*. These types are documented in the sections below.
+
+``PythonModuleSource``
+----------------------
+
+The ``oxidized_importer.PythonModuleSource`` type represents Python module
+source code. e.g. a ``.py`` file.
+
+``PythonModuleBytecode``
+------------------------
+
+The ``oxidized_importer.PythonModuleBytecode`` type represents Python
+module bytecode. e.g. what a ``.pyc`` file holds (but without the header
+that a ``.pyc`` file has).
+
+``PythonExtensionModule``
+-------------------------
+
+The ``oxidized_importer.PythonExtensionModule`` type represents a
+Python extension module. This is a shared library defining a Python
+extension implemented in native machine code that can be loaded into
+a process and defines a Python module. Extension modules are typically
+defined by ``.so``, ``.dylib``, or ``.pyd`` files.
+
+``PythonPackageResource``
+-------------------------
+
+The ``oxidized_importer.PythonPackageResource`` type represents a non-module
+*resource* file. These are files that live next to Python modules that
+are typically accessed via the APIs in ``importlib.resources``.
+
+``PythonPackageDistributionResource``
+-------------------------------------
+
+The ``oxidized_importer.PythonPackageDistributionResource`` type represents
+a non-module *resource* file living in a package distribution directory
+(e.g. ``<package>-<version>.dist-info`` or ``<package>-<version>.egg-info``).
+These resources are typically accessed via the APIs in ``importlib.metadata``.
+
 Security Implications of Loading Resources
 ==========================================
 
