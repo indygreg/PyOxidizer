@@ -1491,10 +1491,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.resources.get_in_memory_module_sources()
     }
 
-    fn in_memory_module_bytecodes(&self) -> BTreeMap<String, PythonModuleBytecodeFromSource> {
-        self.resources.get_in_memory_module_bytecodes()
-    }
-
     fn in_memory_package_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
         self.resources.get_in_memory_package_resources()
     }

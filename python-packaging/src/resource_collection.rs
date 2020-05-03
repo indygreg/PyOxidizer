@@ -534,49 +534,6 @@ impl PythonResourceCollector {
         }))
     }
 
-    pub fn get_in_memory_module_bytecodes(
-        &self,
-    ) -> BTreeMap<String, PythonModuleBytecodeFromSource> {
-        BTreeMap::from_iter(self.resources.iter().filter_map(|(name, module)| {
-            if let Some(location) = &module.in_memory_bytecode_source {
-                Some((
-                    name.clone(),
-                    PythonModuleBytecodeFromSource {
-                        name: name.clone(),
-                        is_package: module.is_package,
-                        source: location.clone(),
-                        optimize_level: BytecodeOptimizationLevel::Zero,
-                        cache_tag: self.cache_tag.clone(),
-                    },
-                ))
-            } else if let Some(location) = &module.in_memory_bytecode_opt1_source {
-                Some((
-                    name.clone(),
-                    PythonModuleBytecodeFromSource {
-                        name: name.clone(),
-                        is_package: module.is_package,
-                        source: location.clone(),
-                        optimize_level: BytecodeOptimizationLevel::One,
-                        cache_tag: self.cache_tag.clone(),
-                    },
-                ))
-            } else if let Some(location) = &module.in_memory_bytecode_opt2_source {
-                Some((
-                    name.clone(),
-                    PythonModuleBytecodeFromSource {
-                        name: name.clone(),
-                        is_package: module.is_package,
-                        source: location.clone(),
-                        optimize_level: BytecodeOptimizationLevel::Two,
-                        cache_tag: self.cache_tag.clone(),
-                    },
-                ))
-            } else {
-                None
-            }
-        }))
-    }
-
     /// Obtain resource files in this instance.
     pub fn get_in_memory_package_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
         BTreeMap::from_iter(self.resources.iter().filter_map(|(name, module)| {

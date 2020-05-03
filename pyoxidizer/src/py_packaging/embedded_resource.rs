@@ -73,13 +73,6 @@ impl PrePackagedResources {
         self.collector.get_in_memory_module_sources()
     }
 
-    /// Obtain `BytecodeModule` in this instance.
-    pub fn get_in_memory_module_bytecodes(
-        &self,
-    ) -> BTreeMap<String, PythonModuleBytecodeFromSource> {
-        self.collector.get_in_memory_module_bytecodes()
-    }
-
     /// Obtain resource files in this instance.
     pub fn get_in_memory_package_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
         self.collector.get_in_memory_package_resources()
