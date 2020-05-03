@@ -421,31 +421,7 @@ impl PrePackagedResources {
         prefix: &str,
     ) -> Result<()> {
         self.collector
-            .check_policy(ResourceLocation::RelativePath)?;
-
-        if em.extension_data.is_none() {
-            return Err(anyhow!("extension module {} lacks shared library data and cannot be loaded from the filesystem", em.name));
-        }
-
-        let entry = self
-            .collector
-            .resources
-            .entry(em.name.clone())
-            .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Extension,
-                name: em.name.clone(),
-                ..PrePackagedResource::default()
-            });
-        entry.is_package = em.is_package;
-        entry.relative_path_extension_module_shared_library = Some((
-            prefix.to_string(),
-            em.resolve_path(prefix),
-            em.extension_data.as_ref().unwrap().clone(),
-        ));
-
-        // TODO add shared library dependencies.
-
-        Ok(())
+            .add_relative_path_python_extension_module(em, prefix)
     }
 
     /// Filter the entities in this instance against names in files.

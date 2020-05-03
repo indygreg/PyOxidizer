@@ -845,6 +845,38 @@ impl PythonResourceCollector {
 
         Ok(())
     }
+
+    /// Add an extension module to be loaded from the filesystem as a dynamic library.
+    pub fn add_relative_path_python_extension_module(
+        &mut self,
+        module: &PythonExtensionModule,
+        prefix: &str,
+    ) -> Result<()> {
+        self.check_policy(ResourceLocation::RelativePath)?;
+
+        if module.extension_data.is_none() {
+            return Err(anyhow!("extension module {} lacks shared library data and cannot be loaded from the filesystem", module.name));
+        }
+
+        let entry = self
+            .resources
+            .entry(module.name.clone())
+            .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Extension,
+                name: module.name.clone(),
+                ..PrePackagedResource::default()
+            });
+        entry.is_package = module.is_package;
+        entry.relative_path_extension_module_shared_library = Some((
+            prefix.to_string(),
+            module.resolve_path(prefix),
+            module.extension_data.as_ref().unwrap().clone(),
+        ));
+
+        // TODO add shared library dependencies.
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
