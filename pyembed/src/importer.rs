@@ -1349,6 +1349,23 @@ pub extern "C" fn PyInit_oxidized_importer() -> *mut pyffi::PyObject {
 /// Python module instance. It populates the internal module state and registers
 /// functions on the module object for usage by Python.
 fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
+    // Enforce minimum Python version requirement.
+    //
+    // Some features likely work on older Python versions. But we can't
+    // guarantee it. Let's prevent footguns.
+    let sys_module = py.import("sys")?;
+    let version_info = sys_module.get(py, "version_info")?;
+
+    let major_version = version_info.getattr(py, "major")?.extract::<i32>(py)?;
+    let minor_version = version_info.getattr(py, "minor")?.extract::<i32>(py)?;
+
+    if major_version < 3 || minor_version < 8 {
+        return Err(PyErr::new::<ImportError, _>(
+            py,
+            "module requires Python 3.8+",
+        ));
+    }
+
     let mut state = get_module_state(py, m)?;
 
     state.initialized = false;
