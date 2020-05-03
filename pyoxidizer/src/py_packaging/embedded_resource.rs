@@ -237,26 +237,14 @@ impl PrePackagedResources {
         &mut self,
         module: &DistributionExtensionModule,
     ) -> Result<()> {
-        self.collector.check_policy(ResourceLocation::InMemory)?;
-
         if module.shared_library.is_none() {
             return Err(anyhow!("cannot add extension module {} for in-memory loading because it lacks shared library data", module.module));
         }
 
-        let entry = self
-            .collector
-            .resources
-            .entry(module.module.clone())
-            .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Extension,
-                name: module.module.clone(),
-                ..PrePackagedResource::default()
-            });
+        let data = std::fs::read(module.shared_library.as_ref().unwrap())?;
 
-        entry.is_package = false;
-        entry.in_memory_extension_module_shared_library = Some(DataLocation::Path(
-            module.shared_library.as_ref().unwrap().to_path_buf(),
-        ));
+        self.collector
+            .add_in_memory_python_extension_module_shared_library(&module.module, false, &data)?;
 
         for link in &module.links {
             if let Some(shared_library) = &link.dynamic_path {
