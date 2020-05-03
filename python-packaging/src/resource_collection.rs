@@ -406,8 +406,8 @@ pub enum ResourceLocation {
 /// exists to facilitate doing this.
 #[derive(Debug, Clone)]
 pub struct PythonResourceCollector {
+    policy: PythonResourcesPolicy,
     // TODO remove pub once functionality ported from PyOxidizer.
-    pub policy: PythonResourcesPolicy,
     pub resources: BTreeMap<String, PrePackagedResource>,
     pub cache_tag: String,
 }
@@ -425,6 +425,25 @@ impl PythonResourceCollector {
             policy: policy.clone(),
             resources: BTreeMap::new(),
             cache_tag: cache_tag.to_string(),
+        }
+    }
+
+    /// Validate that a resource add in the specified location is allowed.
+    pub fn check_policy(&self, location: ResourceLocation) -> Result<()> {
+        match self.policy {
+            PythonResourcesPolicy::InMemoryOnly => match location {
+                ResourceLocation::InMemory => Ok(()),
+                ResourceLocation::RelativePath => Err(anyhow!(
+                    "in-memory-only policy does not allow relative path resources"
+                )),
+            },
+            PythonResourcesPolicy::FilesystemRelativeOnly(_) => match location {
+                ResourceLocation::InMemory => Err(anyhow!(
+                    "filesystem-relative-only policy does not allow in-memory resources"
+                )),
+                ResourceLocation::RelativePath => Ok(()),
+            },
+            PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => Ok(()),
         }
     }
 }

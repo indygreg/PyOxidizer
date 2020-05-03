@@ -175,28 +175,9 @@ impl PrePackagedResources {
         )
     }
 
-    /// Validate that a resource add in the specified location is allowed.
-    fn check_policy(&self, location: ResourceLocation) -> Result<()> {
-        match self.collector.policy {
-            PythonResourcesPolicy::InMemoryOnly => match location {
-                ResourceLocation::InMemory => Ok(()),
-                ResourceLocation::RelativePath => Err(anyhow!(
-                    "in-memory-only policy does not allow relative path resources"
-                )),
-            },
-            PythonResourcesPolicy::FilesystemRelativeOnly(_) => match location {
-                ResourceLocation::InMemory => Err(anyhow!(
-                    "filesystem-relative-only policy does not allow in-memory resources"
-                )),
-                ResourceLocation::RelativePath => Ok(()),
-            },
-            PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => Ok(()),
-        }
-    }
-
     /// Add a source module to the collection of embedded source modules.
     pub fn add_in_memory_module_source(&mut self, module: &PythonModuleSource) -> Result<()> {
-        self.check_policy(ResourceLocation::InMemory)?;
+        self.collector.check_policy(ResourceLocation::InMemory)?;
 
         let entry = self
             .collector
@@ -219,7 +200,8 @@ impl PrePackagedResources {
         module: &PythonModuleSource,
         prefix: &str,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::RelativePath)?;
+        self.collector
+            .check_policy(ResourceLocation::RelativePath)?;
         let entry = self
             .collector
             .resources
@@ -241,7 +223,7 @@ impl PrePackagedResources {
         &mut self,
         module: &PythonModuleBytecodeFromSource,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::InMemory)?;
+        self.collector.check_policy(ResourceLocation::InMemory)?;
         let entry = self
             .collector
             .resources
@@ -275,7 +257,8 @@ impl PrePackagedResources {
         module: &PythonModuleBytecodeFromSource,
         prefix: &str,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::RelativePath)?;
+        self.collector
+            .check_policy(ResourceLocation::RelativePath)?;
         let entry = self
             .collector
             .resources
@@ -322,7 +305,7 @@ impl PrePackagedResources {
         &mut self,
         resource: &PythonPackageResource,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::InMemory)?;
+        self.collector.check_policy(ResourceLocation::InMemory)?;
         let entry = self
             .collector
             .resources
@@ -355,7 +338,8 @@ impl PrePackagedResources {
         prefix: &str,
         resource: &PythonPackageResource,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::RelativePath)?;
+        self.collector
+            .check_policy(ResourceLocation::RelativePath)?;
         let entry = self
             .collector
             .resources
@@ -394,7 +378,7 @@ impl PrePackagedResources {
         &mut self,
         resource: &PythonPackageDistributionResource,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::InMemory)?;
+        self.collector.check_policy(ResourceLocation::InMemory)?;
 
         let entry = self
             .collector
@@ -427,7 +411,8 @@ impl PrePackagedResources {
         prefix: &str,
         resource: &PythonPackageDistributionResource,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::RelativePath)?;
+        self.collector
+            .check_policy(ResourceLocation::RelativePath)?;
         let entry = self
             .collector
             .resources
@@ -531,7 +516,7 @@ impl PrePackagedResources {
         &mut self,
         module: &DistributionExtensionModule,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::InMemory)?;
+        self.collector.check_policy(ResourceLocation::InMemory)?;
 
         if module.shared_library.is_none() {
             return Err(anyhow!("cannot add extension module {} for in-memory loading because it lacks shared library data", module.module));
@@ -593,7 +578,8 @@ impl PrePackagedResources {
         prefix: &str,
         module: &DistributionExtensionModule,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::RelativePath)?;
+        self.collector
+            .check_policy(ResourceLocation::RelativePath)?;
 
         if module.shared_library.is_none() {
             return Err(anyhow!(
@@ -662,7 +648,7 @@ impl PrePackagedResources {
     /// binary and the extension module will be made available for import from
     /// Python's _builtin_ importer.
     pub fn add_builtin_extension_module(&mut self, module: &PythonExtensionModule) -> Result<()> {
-        self.check_policy(ResourceLocation::InMemory)?;
+        self.collector.check_policy(ResourceLocation::InMemory)?;
 
         if module.object_file_data.is_empty() {
             return Err(anyhow!(
@@ -710,7 +696,7 @@ impl PrePackagedResources {
         is_package: bool,
         data: &[u8],
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::InMemory)?;
+        self.collector.check_policy(ResourceLocation::InMemory)?;
         let entry = self
             .collector
             .resources
@@ -738,7 +724,8 @@ impl PrePackagedResources {
         em: &PythonExtensionModule,
         prefix: &str,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::RelativePath)?;
+        self.collector
+            .check_policy(ResourceLocation::RelativePath)?;
 
         if em.extension_data.is_none() {
             return Err(anyhow!("extension module {} lacks shared library data and cannot be loaded from the filesystem", em.name));
