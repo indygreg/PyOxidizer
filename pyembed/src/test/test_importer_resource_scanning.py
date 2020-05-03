@@ -39,7 +39,11 @@ class TestImporterResourceScanning(unittest.TestCase):
 
         resources = find_resources_in_path(self.td)
         self.assertEqual(len(resources), 1)
-        self.assertIsInstance(resources[0], PythonModuleSource)
+        r = resources[0]
+        self.assertIsInstance(r, PythonModuleSource)
+        self.assertEqual(r.module, "foo")
+        self.assertEqual(r.source, b"import io\n")
+        self.assertFalse(r.is_package)
 
     def test_bytecode_file(self):
         cache_tag = sys.implementation.cache_tag

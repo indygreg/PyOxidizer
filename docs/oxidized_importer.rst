@@ -592,11 +592,33 @@ Python Types Representing Python Resources
 ``oxidized_importer`` defines Python types which represent specific types
 of Python *resources*. These types are documented in the sections below.
 
+.. important::
+
+   All types are backed by Rust structs and all properties return copies
+   of the data. This means that if you mutate a Python variable that was
+   obtained from an instance's property, that mutation won't be reflected
+   in the backing Rust struct.
+
 ``PythonModuleSource``
 ----------------------
 
 The ``oxidized_importer.PythonModuleSource`` type represents Python module
 source code. e.g. a ``.py`` file.
+
+This type exposes the following properties:
+
+``module`` (``str``)
+   The fully qualified name of the Python module. e.g. ``my_package.foo``.
+
+``source`` (``bytes``)
+   The source code of the Python module.
+
+   Note that source code is stored as ``bytes``, not ``str``. Most Python
+   source is stored as ``utf-8``, so you can ``.encode("utf-8")`` or
+   ``.decode("utf-8")`` to convert between ``bytes`` and ``str``.
+
+``is_package`` (``bool``)
+   This this module is a Python package.
 
 ``PythonModuleBytecode``
 ------------------------
