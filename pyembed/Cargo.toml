@@ -19,6 +19,7 @@ jemalloc-sys = { version = "0.3", optional = true }
 lazy_static = "1.4"
 libc = "0.2"
 python3-sys = { git = "https://github.com/indygreg/rust-cpython.git", rev = "e1b18aaae2f7ca2dda1edbd5270b6d1d25c01d7d" }
+python-packaging = { version = "0.1.0-pre", path = "../python-packaging" }
 python-packed-resources = { version = "0.2.0-pre", path = "../python-packed-resources" }
 uuid = { version = "0.8", features = ["v4"] }
 

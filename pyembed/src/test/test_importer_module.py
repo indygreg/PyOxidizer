@@ -11,7 +11,19 @@ class TestImporterModule(unittest.TestCase):
         import oxidized_importer as importer
 
         attrs = {a for a in dir(importer) if not a.startswith("__")}
-        self.assertEqual(attrs, {"decode_source", "OxidizedResource", "OxidizedFinder"})
+        self.assertEqual(
+            attrs,
+            {
+                "decode_source",
+                "OxidizedResource",
+                "OxidizedFinder",
+                "PythonExtensionModule",
+                "PythonModuleBytecode",
+                "PythonModuleSource",
+                "PythonPackageDistributionResource",
+                "PythonPackageResource",
+            },
+        )
 
     def test_finder_attrs(self):
         from oxidized_importer import OxidizedFinder

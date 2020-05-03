@@ -1363,6 +1363,31 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
 
     m.add(py, "OxidizedFinder", py.get_type::<OxidizedFinder>())?;
     m.add(py, "OxidizedResource", py.get_type::<OxidizedResource>())?;
+    m.add(
+        py,
+        "PythonModuleSource",
+        py.get_type::<crate::python_resource_types::PythonModuleSource>(),
+    )?;
+    m.add(
+        py,
+        "PythonModuleBytecode",
+        py.get_type::<crate::python_resource_types::PythonModuleBytecode>(),
+    )?;
+    m.add(
+        py,
+        "PythonPackageResource",
+        py.get_type::<crate::python_resource_types::PythonPackageResource>(),
+    )?;
+    m.add(
+        py,
+        "PythonPackageDistributionResource",
+        py.get_type::<crate::python_resource_types::PythonPackageDistributionResource>(),
+    )?;
+    m.add(
+        py,
+        "PythonExtensionModule",
+        py.get_type::<crate::python_resource_types::PythonExtensionModule>(),
+    )?;
 
     Ok(())
 }

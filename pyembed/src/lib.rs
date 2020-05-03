@@ -100,6 +100,7 @@ mod package_metadata;
 mod pyalloc;
 #[cfg(not(library_mode = "extension"))]
 mod python_eval;
+mod python_resource_types;
 mod python_resources;
 #[cfg(not(library_mode = "extension"))]
 pub mod technotes;
