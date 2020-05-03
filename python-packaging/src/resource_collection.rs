@@ -415,6 +415,21 @@ pub struct PreparedPythonResources<'a> {
     pub extra_files: Vec<(PathBuf, DataLocation, bool)>,
 }
 
+impl<'a> PreparedPythonResources<'a> {
+    /// Write resources to packed resources data, version 1.
+    pub fn write_packed_resources_v1<W: std::io::Write>(&self, writer: &mut W) -> Result<()> {
+        python_packed_resources::writer::write_packed_resources_v1(
+            &self
+                .resources
+                .values()
+                .cloned()
+                .collect::<Vec<Resource<'a, u8>>>(),
+            writer,
+            None,
+        )
+    }
+}
+
 /// Type used to collect Python resources to they can be serialized.
 ///
 /// We often want to turn Python resource primitives (module source,

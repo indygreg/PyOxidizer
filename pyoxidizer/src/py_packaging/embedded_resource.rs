@@ -18,8 +18,6 @@ use {
     python_packaging::resource_collection::{
         PreparedPythonResources, PythonResourceCollector, PythonResourcesPolicy,
     },
-    python_packed_resources::data::Resource,
-    python_packed_resources::writer::write_packed_resources_v1,
     slog::{info, warn},
     std::collections::{BTreeMap, BTreeSet},
     std::io::Write,
@@ -473,16 +471,7 @@ impl<'a> EmbeddedPythonResources<'a> {
             module_names.write_all(b"\n").expect("failed to write");
         }
 
-        write_packed_resources_v1(
-            &self
-                .resources
-                .resources
-                .values()
-                .cloned()
-                .collect::<Vec<Resource<'a, u8>>>(),
-            resources,
-            None,
-        )
+        self.resources.write_packed_resources_v1(resources)
     }
 
     /// Obtain a list of built-in extensions.
