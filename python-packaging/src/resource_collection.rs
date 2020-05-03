@@ -606,6 +606,51 @@ impl PythonResourceCollector {
 
         Ok(())
     }
+
+    /// Add a Python bytecode module from source to be loaded from the filesystem relative to some entity.
+    pub fn add_relative_path_python_module_bytecode_from_source(
+        &mut self,
+        module: &PythonModuleBytecodeFromSource,
+        prefix: &str,
+    ) -> Result<()> {
+        self.check_policy(ResourceLocation::RelativePath)?;
+        let entry = self
+            .resources
+            .entry(module.name.clone())
+            .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: module.name.clone(),
+                ..PrePackagedResource::default()
+            });
+
+        entry.is_package = module.is_package;
+
+        match module.optimize_level {
+            BytecodeOptimizationLevel::Zero => {
+                entry.relative_path_bytecode_source = Some((
+                    prefix.to_string(),
+                    module.cache_tag.clone(),
+                    module.source.clone(),
+                ))
+            }
+            BytecodeOptimizationLevel::One => {
+                entry.relative_path_bytecode_opt1_source = Some((
+                    prefix.to_string(),
+                    module.cache_tag.clone(),
+                    module.source.clone(),
+                ))
+            }
+            BytecodeOptimizationLevel::Two => {
+                entry.relative_path_bytecode_opt2_source = Some((
+                    prefix.to_string(),
+                    module.cache_tag.clone(),
+                    module.source.clone(),
+                ))
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
