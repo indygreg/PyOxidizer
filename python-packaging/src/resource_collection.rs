@@ -531,11 +531,34 @@ impl PythonResourceCollector {
             }
         }))
     }
+
+    /// Add Python module source to be loaded from memory.
+    pub fn add_in_memory_python_module_source(
+        &mut self,
+        module: &PythonModuleSource,
+    ) -> Result<()> {
+        self.check_policy(ResourceLocation::InMemory)?;
+
+        let entry = self
+            .resources
+            .entry(module.name.clone())
+            .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: module.name.clone(),
+                ..PrePackagedResource::default()
+            });
+        entry.is_package = module.is_package;
+        entry.in_memory_source = Some(module.source.clone());
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const DEFAULT_CACHE_TAG: &str = "cpython-37";
 
     #[test]
     fn test_resource_policy_from_str() -> Result<()> {
@@ -752,6 +775,58 @@ mod tests {
                 flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 is_package: true,
+                ..PrePackagedResource::default()
+            })
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_in_memory_source_module() -> Result<()> {
+        let mut r =
+            PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
+        r.add_in_memory_python_module_source(&PythonModuleSource {
+            name: "foo".to_string(),
+            source: DataLocation::Memory(vec![42]),
+            is_package: false,
+            cache_tag: DEFAULT_CACHE_TAG.to_string(),
+        })?;
+
+        assert!(r.resources.contains_key("foo"));
+        assert_eq!(
+            r.resources.get("foo"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: "foo".to_string(),
+                is_package: false,
+                in_memory_source: Some(DataLocation::Memory(vec![42])),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_in_memory_source_module_parents() -> Result<()> {
+        let mut r =
+            PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
+        r.add_in_memory_python_module_source(&PythonModuleSource {
+            name: "root.parent.child".to_string(),
+            source: DataLocation::Memory(vec![42]),
+            is_package: true,
+            cache_tag: DEFAULT_CACHE_TAG.to_string(),
+        })?;
+
+        assert_eq!(r.resources.len(), 1);
+        assert_eq!(
+            r.resources.get("root.parent.child"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: "root.parent.child".to_string(),
+                is_package: true,
+                in_memory_source: Some(DataLocation::Memory(vec![42])),
                 ..PrePackagedResource::default()
             })
         );
