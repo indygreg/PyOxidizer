@@ -415,7 +415,7 @@ pub struct PythonResourceCollector {
     policy: PythonResourcesPolicy,
     // TODO remove pub once functionality ported from PyOxidizer.
     pub resources: BTreeMap<String, PrePackagedResource>,
-    pub cache_tag: String,
+    cache_tag: String,
 }
 
 impl PythonResourceCollector {
