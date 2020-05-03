@@ -883,6 +883,8 @@ impl PythonResourceCollector {
     }
 
     /// Add a Python extension module shared library that should be imported from memory.
+    ///
+    /// TODO pass in a PythonExtensionModule.
     pub fn add_in_memory_python_extension_module_shared_library(
         &mut self,
         module: &str,
