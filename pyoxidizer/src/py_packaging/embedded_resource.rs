@@ -822,40 +822,4 @@ mod tests {
 
         Ok(())
     }
-
-    #[test]
-    fn test_add_relative_path_extension_module() -> Result<()> {
-        let mut r = PrePackagedResources::new(
-            &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
-            DEFAULT_CACHE_TAG,
-        );
-        let em = PythonExtensionModule {
-            name: "foo.bar".to_string(),
-            init_fn: Some("PyInit_bar".to_string()),
-            extension_file_suffix: ".so".to_string(),
-            extension_data: Some(DataLocation::Memory(vec![42])),
-            object_file_data: vec![],
-            is_package: false,
-            libraries: vec![],
-            library_dirs: vec![],
-        };
-
-        r.add_relative_path_extension_module(&em, "prefix")?;
-
-        let m = r.derive_extra_files()?;
-        let extra_files = m.entries().collect::<Vec<(&PathBuf, &FileContent)>>();
-        assert_eq!(extra_files.len(), 1);
-        assert_eq!(
-            extra_files[0],
-            (
-                &PathBuf::from("prefix/foo/bar.so"),
-                &FileContent {
-                    data: vec![42],
-                    executable: true
-                }
-            )
-        );
-
-        Ok(())
-    }
 }
