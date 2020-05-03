@@ -88,8 +88,17 @@ class TestImporterResourceScanning(unittest.TestCase):
 
         resources = find_resources_in_path(self.td)
         self.assertEqual(len(resources), 2)
-        self.assertIsInstance(resources[0], PythonModuleSource)
-        self.assertIsInstance(resources[1], PythonPackageResource)
+
+        r = resources[0]
+        self.assertIsInstance(r, PythonModuleSource)
+        self.assertEqual(r.module, "package")
+        self.assertTrue(r.is_package)
+
+        r = resources[1]
+        self.assertIsInstance(r, PythonPackageResource)
+        self.assertEqual(r.package, "package")
+        self.assertEqual(r.name, "resource.txt")
+        self.assertEqual(r.data, b"resource file")
 
     def test_package_distribution_resource(self):
         init_py = self.td / "foo" / "__init__.py"

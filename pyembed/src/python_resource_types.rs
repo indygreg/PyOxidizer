@@ -173,6 +173,54 @@ py_class!(pub class PythonPackageResource |py| {
             resource.leaf_package, resource.relative_name
         ))
     }
+
+    @property def package(&self) -> PyResult<String> {
+        Ok(self.resource(py).borrow().leaf_package.clone())
+    }
+
+    @package.setter def set_package(&self, value: Option<&str>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().leaf_package = value.to_string();
+
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete package"))
+        }
+    }
+
+    @property def name(&self) -> PyResult<String> {
+        Ok(self.resource(py).borrow().relative_name.clone())
+    }
+
+    @name.setter def set_name(&self, value: Option<&str>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().relative_name = value.to_string();
+
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete name"))
+        }
+    }
+
+    @property def data(&self) -> PyResult<PyBytes> {
+        let data = self.resource(py).borrow().data.resolve().or_else(|_| {
+            Err(PyErr::new::<ValueError, _>(py, "error resolving data"))
+        })?;
+
+        Ok(PyBytes::new(py, &data))
+    }
+
+    @data.setter def set_data(&self, value: Option<PyObject>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().data = DataLocation::Memory(
+                pyobject_to_owned_bytes(py, &value)?
+            );
+
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete data"))
+        }
+    }
 });
 
 impl PythonPackageResource {

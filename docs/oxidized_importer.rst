@@ -662,6 +662,21 @@ The ``oxidized_importer.PythonPackageResource`` type represents a non-module
 *resource* file. These are files that live next to Python modules that
 are typically accessed via the APIs in ``importlib.resources``.
 
+Instances have the following properties:
+
+``package`` (``str``)
+   The name of the leaf-most Python package this resource is associated with.
+
+   With ``OxidizedFinder``, an ``importlib.abc.ResourceReader`` associated
+   with this package will be used to load the resource.
+
+``name`` (``str``)
+   The name of the resource within its ``package``. This is typically the
+   filename of the resource. e.g. ``resource.txt`` or ``child/foo.png``.
+
+``data`` (``bytes``)
+   The raw binary content of the resource.
+
 ``PythonPackageDistributionResource``
 -------------------------------------
 
