@@ -584,6 +584,8 @@ The following flavors are defined:
 ``shared_library``
    A shared library. e.g. a ``.so`` or ``.dll``.
 
+.. _python_resource_types:
+
 Python Types Representing Python Resources
 ==========================================
 
@@ -626,6 +628,19 @@ The ``oxidized_importer.PythonPackageDistributionResource`` type represents
 a non-module *resource* file living in a package distribution directory
 (e.g. ``<package>-<version>.dist-info`` or ``<package>-<version>.egg-info``).
 These resources are typically accessed via the APIs in ``importlib.metadata``.
+
+Resource Scanning APIs
+======================
+
+.. _find_resources_in_path:
+
+``find_resources_in_path(path)``
+--------------------------------
+
+The ``oxidized_importer.find_resources_in_path()`` function will scan the
+specified filesystem path and return an iterable of objects representing
+found resources. Those objects will by 1 of the types documented in
+:ref:`python_resource_types`.
 
 Security Implications of Loading Resources
 ==========================================
