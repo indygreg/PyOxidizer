@@ -9,7 +9,7 @@ use {
     crate::module_util::{packages_from_module_name, resolve_path_for_module},
     crate::python_source::has_dunder_file,
     crate::resource::{
-        BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
+        BytecodeOptimizationLevel, DataLocation, PythonExtensionModule, PythonModuleBytecode,
         PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
         PythonPackageResource,
     },
@@ -264,6 +264,46 @@ impl PrePackagedResource {
         if let Some((prefix, location)) = &self.relative_path_module_source {
             res.push((
                 resolve_path_for_module(prefix, &self.name, self.is_package, None),
+                location,
+                false,
+            ));
+        }
+
+        if let Some((prefix, cache_tag, PythonModuleBytecodeProvider::Provided(location))) =
+            &self.relative_path_bytecode
+        {
+            res.push((
+                resolve_path_for_module(prefix, &self.name, self.is_package, Some(cache_tag)),
+                location,
+                false,
+            ));
+        }
+
+        if let Some((prefix, cache_tag, PythonModuleBytecodeProvider::Provided(location))) =
+            &self.relative_path_bytecode_opt1
+        {
+            res.push((
+                resolve_path_for_module(
+                    prefix,
+                    &self.name,
+                    self.is_package,
+                    Some(&format!("{}.opt-1", cache_tag)),
+                ),
+                location,
+                false,
+            ));
+        }
+
+        if let Some((prefix, cache_tag, PythonModuleBytecodeProvider::Provided(location))) =
+            &self.relative_path_bytecode_opt2
+        {
+            res.push((
+                resolve_path_for_module(
+                    prefix,
+                    &self.name,
+                    self.is_package,
+                    Some(&format!("{}.opt-2", cache_tag)),
+                ),
                 location,
                 false,
             ));
@@ -630,6 +670,49 @@ impl PythonResourceCollector {
         Ok(())
     }
 
+    /// Add Python module bytecode to be loaded from memory.
+    ///
+    /// Actual bytecode is provided, not bytecode derived from source.
+    pub fn add_in_memory_python_module_bytecode(
+        &mut self,
+        module: &PythonModuleBytecode,
+    ) -> Result<()> {
+        self.check_policy(ResourceLocation::InMemory)?;
+
+        let entry = self
+            .resources
+            .entry(module.name.clone())
+            .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: module.name.clone(),
+                ..PrePackagedResource::default()
+            });
+
+        entry.is_package = module.is_package;
+
+        match module.optimize_level {
+            // TODO having to resolve the DataLocation here is a bit unfortunate.
+            // We could invent a better type to allow the I/O to remain lazy.
+            BytecodeOptimizationLevel::Zero => {
+                entry.in_memory_bytecode = Some(PythonModuleBytecodeProvider::Provided(
+                    DataLocation::Memory(module.resolve_bytecode()?),
+                ));
+            }
+            BytecodeOptimizationLevel::One => {
+                entry.in_memory_bytecode_opt1 = Some(PythonModuleBytecodeProvider::Provided(
+                    DataLocation::Memory(module.resolve_bytecode()?),
+                ));
+            }
+            BytecodeOptimizationLevel::Two => {
+                entry.in_memory_bytecode_opt2 = Some(PythonModuleBytecodeProvider::Provided(
+                    DataLocation::Memory(module.resolve_bytecode()?),
+                ));
+            }
+        }
+
+        Ok(())
+    }
+
     /// Add Python module bytecode from source to the collection.
     pub fn add_in_memory_python_module_bytecode_from_source(
         &mut self,
@@ -661,6 +744,57 @@ impl PythonResourceCollector {
             BytecodeOptimizationLevel::Two => {
                 entry.in_memory_bytecode_opt2 = Some(PythonModuleBytecodeProvider::FromSource(
                     module.source.clone(),
+                ));
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn add_relative_path_python_module_bytecode(
+        &mut self,
+        module: &PythonModuleBytecode,
+        prefix: &str,
+    ) -> Result<()> {
+        self.check_policy(ResourceLocation::RelativePath)?;
+
+        let entry = self
+            .resources
+            .entry(module.name.clone())
+            .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: module.name.clone(),
+                ..PrePackagedResource::default()
+            });
+
+        entry.is_package = module.is_package;
+
+        match module.optimize_level {
+            BytecodeOptimizationLevel::Zero => {
+                entry.relative_path_bytecode = Some((
+                    prefix.to_string(),
+                    module.cache_tag.clone(),
+                    PythonModuleBytecodeProvider::Provided(DataLocation::Memory(
+                        module.resolve_bytecode()?,
+                    )),
+                ));
+            }
+            BytecodeOptimizationLevel::One => {
+                entry.relative_path_bytecode_opt1 = Some((
+                    prefix.to_string(),
+                    module.cache_tag.clone(),
+                    PythonModuleBytecodeProvider::Provided(DataLocation::Memory(
+                        module.resolve_bytecode()?,
+                    )),
+                ));
+            }
+            BytecodeOptimizationLevel::Two => {
+                entry.relative_path_bytecode_opt2 = Some((
+                    prefix.to_string(),
+                    module.cache_tag.clone(),
+                    PythonModuleBytecodeProvider::Provided(DataLocation::Memory(
+                        module.resolve_bytecode()?,
+                    )),
                 ));
             }
         }
@@ -1518,6 +1652,35 @@ mod tests {
 
     #[test]
     fn test_add_in_memory_bytecode_module() -> Result<()> {
+        let mut r =
+            PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
+        r.add_in_memory_python_module_bytecode(&PythonModuleBytecode::new(
+            "foo",
+            BytecodeOptimizationLevel::Zero,
+            false,
+            DEFAULT_CACHE_TAG,
+            &vec![42],
+        ))?;
+
+        assert!(r.resources.contains_key("foo"));
+        assert_eq!(
+            r.resources.get("foo"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: "foo".to_string(),
+                in_memory_bytecode: Some(PythonModuleBytecodeProvider::Provided(
+                    DataLocation::Memory(vec![42])
+                )),
+                is_package: false,
+                ..PrePackagedResource::default()
+            })
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_in_memory_bytecode_module_from_source() -> Result<()> {
         let mut r =
             PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
         r.add_in_memory_python_module_bytecode_from_source(&PythonModuleBytecodeFromSource {

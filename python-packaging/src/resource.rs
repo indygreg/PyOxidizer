@@ -201,6 +201,22 @@ pub struct PythonModuleBytecode {
 }
 
 impl PythonModuleBytecode {
+    pub fn new(
+        name: &str,
+        optimize_level: BytecodeOptimizationLevel,
+        is_package: bool,
+        cache_tag: &str,
+        data: &[u8],
+    ) -> Self {
+        Self {
+            name: name.to_string(),
+            bytecode: DataLocation::Memory(data.to_vec()),
+            optimize_level,
+            is_package,
+            cache_tag: cache_tag.to_string(),
+        }
+    }
+
     pub fn from_path(
         name: &str,
         optimize_level: BytecodeOptimizationLevel,
