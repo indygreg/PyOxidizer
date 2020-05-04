@@ -16,7 +16,6 @@ use {
         PythonResource,
     },
     anyhow::Result,
-    itertools::Itertools,
     std::collections::HashSet,
     std::ffi::OsStr,
     std::path::{Path, PathBuf},
@@ -310,15 +309,49 @@ impl PythonResourceIterator {
             let package_parts = &components[0..components.len() - 2];
             let mut package = itertools::join(package_parts, ".");
 
-            // Files have format <package>/__pycache__/<module>.<cache_tag>.opt-1.pyc
-            let module_name = rel_path
-                .file_stem()
-                .expect("unable to get file stem")
-                .to_str()
-                .expect("unable to convert file stem to str");
-            let module_name_parts = module_name.split('.').collect_vec();
-            let module_name =
-                itertools::join(&module_name_parts[0..module_name_parts.len() - 1], ".");
+            // Files have format <package>/__pycache__/<module>.<cache_tag>.<extra tag><suffix>>
+            let filename = rel_path
+                .file_name()
+                .expect("unable to get file name")
+                .to_string_lossy()
+                .to_string();
+
+            let filename_parts = filename.split('.').collect::<Vec<&str>>();
+
+            if filename_parts.len() < 3 {
+                return None;
+            }
+
+            let mut remaining_filename = filename.clone();
+
+            // The first part is always the module name.
+            let module_name = filename_parts[0];
+            remaining_filename = remaining_filename[module_name.len() + 1..].to_string();
+
+            // The second part is the cache tag. It should match ours.
+            if filename_parts[1] != self.cache_tag {
+                return None;
+            }
+
+            // Keep the leading dot in case there is no cache tag: in this case the
+            // suffix has the leading dot and we'll need to match against that.
+            remaining_filename = remaining_filename[self.cache_tag.len()..].to_string();
+
+            // Look for optional tag, of which we only recognize opt-1, opt-2, and None.
+            let optimization_level = if filename_parts[2] == "opt-1" {
+                remaining_filename = remaining_filename[6..].to_string();
+                BytecodeOptimizationLevel::One
+            } else if filename_parts[2] == "opt-2" {
+                remaining_filename = remaining_filename[6..].to_string();
+                BytecodeOptimizationLevel::Two
+            } else {
+                BytecodeOptimizationLevel::Zero
+            };
+
+            // Only the bytecode suffix should remain.
+            if !self.suffixes.bytecode.contains(&remaining_filename) {
+                return None;
+            }
 
             let mut full_module_name: Vec<&str> = package_parts.to_vec();
 
@@ -334,37 +367,14 @@ impl PythonResourceIterator {
 
             self.seen_packages.insert(package);
 
-            if rel_str.ends_with(&format!("{}.opt-1.pyc", self.cache_tag)) {
-                return Some(DirEntryItem::PythonResource(
-                    PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
-                        &full_module_name,
-                        BytecodeOptimizationLevel::One,
-                        &self.cache_tag,
-                        path,
-                    )),
-                ));
-            } else if rel_str.ends_with(&format!("{}.opt-2.pyc", self.cache_tag)) {
-                return Some(DirEntryItem::PythonResource(
-                    PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
-                        &full_module_name,
-                        BytecodeOptimizationLevel::Two,
-                        &self.cache_tag,
-                        path,
-                    )),
-                ));
-            } else if rel_str.ends_with(&format!("{}.pyc", self.cache_tag)) {
-                return Some(DirEntryItem::PythonResource(
-                    PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
-                        &full_module_name,
-                        BytecodeOptimizationLevel::Zero,
-                        &self.cache_tag,
-                        path,
-                    )),
-                ));
-            } else {
-                // A .pyc file not ending with our bytecode cache tag is weird. Ignore it.
-                return None;
-            }
+            return Some(DirEntryItem::PythonResource(
+                PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
+                    &full_module_name,
+                    optimization_level,
+                    &self.cache_tag,
+                    path,
+                )),
+            ));
         }
 
         let resource = match rel_path.extension().and_then(OsStr::to_str) {
@@ -606,6 +616,263 @@ mod tests {
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
             })
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_bytecode_resolution() -> Result<()> {
+        let td = tempdir::TempDir::new("pyoxidizer-test")?;
+        let tp = td.path();
+
+        let acme_path = tp.join("acme");
+        let acme_a_path = acme_path.join("a");
+        let acme_bar_path = acme_path.join("bar");
+
+        create_dir_all(&acme_a_path)?;
+        create_dir_all(&acme_bar_path)?;
+
+        let acme_pycache_path = acme_path.join("__pycache__");
+        let acme_a_pycache_path = acme_a_path.join("__pycache__");
+        let acme_bar_pycache_path = acme_bar_path.join("__pycache__");
+
+        create_dir_all(&acme_pycache_path)?;
+        create_dir_all(&acme_a_pycache_path)?;
+        create_dir_all(&acme_bar_pycache_path)?;
+
+        // Dummy paths that should be ignored.
+        write(acme_pycache_path.join("__init__.pyc"), "")?;
+        write(acme_pycache_path.join("__init__.cpython-37.foo.pyc"), "")?;
+
+        write(acme_pycache_path.join("__init__.cpython-37.pyc"), "")?;
+        write(acme_pycache_path.join("__init__.cpython-37.opt-1.pyc"), "")?;
+        write(acme_pycache_path.join("__init__.cpython-37.opt-2.pyc"), "")?;
+        write(acme_pycache_path.join("__init__.cpython-38.pyc"), "")?;
+        write(acme_pycache_path.join("__init__.cpython-38.opt-1.pyc"), "")?;
+        write(acme_pycache_path.join("__init__.cpython-38.opt-2.pyc"), "")?;
+        write(acme_pycache_path.join("foo.cpython-37.pyc"), "")?;
+        write(acme_pycache_path.join("foo.cpython-37.opt-1.pyc"), "")?;
+        write(acme_pycache_path.join("foo.cpython-37.opt-2.pyc"), "")?;
+        write(acme_pycache_path.join("foo.cpython-38.pyc"), "")?;
+        write(acme_pycache_path.join("foo.cpython-38.opt-1.pyc"), "")?;
+        write(acme_pycache_path.join("foo.cpython-38.opt-2.pyc"), "")?;
+
+        write(acme_a_pycache_path.join("__init__.cpython-37.pyc"), "")?;
+        write(
+            acme_a_pycache_path.join("__init__.cpython-37.opt-1.pyc"),
+            "",
+        )?;
+        write(
+            acme_a_pycache_path.join("__init__.cpython-37.opt-2.pyc"),
+            "",
+        )?;
+        write(acme_a_pycache_path.join("__init__.cpython-38.pyc"), "")?;
+        write(
+            acme_a_pycache_path.join("__init__.cpython-38.opt-1.pyc"),
+            "",
+        )?;
+        write(
+            acme_a_pycache_path.join("__init__.cpython-38.opt-2.pyc"),
+            "",
+        )?;
+        write(acme_a_pycache_path.join("foo.cpython-37.pyc"), "")?;
+        write(acme_a_pycache_path.join("foo.cpython-37.opt-1.pyc"), "")?;
+        write(acme_a_pycache_path.join("foo.cpython-37.opt-2.pyc"), "")?;
+        write(acme_a_pycache_path.join("foo.cpython-38.pyc"), "")?;
+        write(acme_a_pycache_path.join("foo.cpython-38.opt-1.pyc"), "")?;
+        write(acme_a_pycache_path.join("foo.cpython-38.opt-2.pyc"), "")?;
+
+        write(acme_bar_pycache_path.join("__init__.cpython-37.pyc"), "")?;
+        write(
+            acme_bar_pycache_path.join("__init__.cpython-37.opt-1.pyc"),
+            "",
+        )?;
+        write(
+            acme_bar_pycache_path.join("__init__.cpython-37.opt-2.pyc"),
+            "",
+        )?;
+        write(acme_bar_pycache_path.join("__init__.cpython-38.pyc"), "")?;
+        write(
+            acme_bar_pycache_path.join("__init__.cpython-38.opt-1.pyc"),
+            "",
+        )?;
+        write(
+            acme_bar_pycache_path.join("__init__.cpython-38.opt-2.pyc"),
+            "",
+        )?;
+        write(acme_bar_pycache_path.join("foo.cpython-37.pyc"), "")?;
+        write(acme_bar_pycache_path.join("foo.cpython-37.opt-1.pyc"), "")?;
+        write(acme_bar_pycache_path.join("foo.cpython-37.opt-2.pyc"), "")?;
+        write(acme_bar_pycache_path.join("foo.cpython-38.pyc"), "")?;
+        write(acme_bar_pycache_path.join("foo.cpython-38.opt-1.pyc"), "")?;
+        write(acme_bar_pycache_path.join("foo.cpython-38.opt-2.pyc"), "")?;
+
+        let resources = PythonResourceIterator::new(tp, "cpython-38", &DEFAULT_SUFFIXES)
+            .collect::<Result<Vec<_>>>()?;
+        assert_eq!(resources.len(), 18);
+
+        assert_eq!(
+            resources[0],
+            PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
+                "acme",
+                BytecodeOptimizationLevel::One,
+                "cpython-38",
+                &acme_pycache_path.join("__init__.cpython-38.opt-1.pyc")
+            ))
+        );
+        assert_eq!(
+            resources[1],
+            PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
+                "acme",
+                BytecodeOptimizationLevel::Two,
+                "cpython-38",
+                &acme_pycache_path.join("__init__.cpython-38.opt-2.pyc")
+            ))
+        );
+        assert_eq!(
+            resources[2],
+            PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
+                "acme",
+                BytecodeOptimizationLevel::Zero,
+                "cpython-38",
+                &acme_pycache_path.join("__init__.cpython-38.pyc")
+            ))
+        );
+        assert_eq!(
+            resources[3],
+            PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
+                "acme.foo",
+                BytecodeOptimizationLevel::One,
+                "cpython-38",
+                &acme_pycache_path.join("foo.cpython-38.opt-1.pyc")
+            ))
+        );
+        assert_eq!(
+            resources[4],
+            PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
+                "acme.foo",
+                BytecodeOptimizationLevel::Two,
+                "cpython-38",
+                &acme_pycache_path.join("foo.cpython-38.opt-2.pyc")
+            ))
+        );
+        assert_eq!(
+            resources[5],
+            PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
+                "acme.foo",
+                BytecodeOptimizationLevel::Zero,
+                "cpython-38",
+                &acme_pycache_path.join("foo.cpython-38.pyc")
+            ))
+        );
+        assert_eq!(
+            resources[6],
+            PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
+                "acme.a",
+                BytecodeOptimizationLevel::One,
+                "cpython-38",
+                &acme_a_pycache_path.join("__init__.cpython-38.opt-1.pyc")
+            ))
+        );
+        assert_eq!(
+            resources[7],
+            PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
+                "acme.a",
+                BytecodeOptimizationLevel::Two,
+                "cpython-38",
+                &acme_a_pycache_path.join("__init__.cpython-38.opt-2.pyc")
+            ))
+        );
+        assert_eq!(
+            resources[8],
+            PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
+                "acme.a",
+                BytecodeOptimizationLevel::Zero,
+                "cpython-38",
+                &acme_a_pycache_path.join("__init__.cpython-38.pyc")
+            ))
+        );
+        assert_eq!(
+            resources[9],
+            PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
+                "acme.a.foo",
+                BytecodeOptimizationLevel::One,
+                "cpython-38",
+                &acme_a_pycache_path.join("foo.cpython-38.opt-1.pyc")
+            ))
+        );
+        assert_eq!(
+            resources[10],
+            PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
+                "acme.a.foo",
+                BytecodeOptimizationLevel::Two,
+                "cpython-38",
+                &acme_a_pycache_path.join("foo.cpython-38.opt-2.pyc")
+            ))
+        );
+        assert_eq!(
+            resources[11],
+            PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
+                "acme.a.foo",
+                BytecodeOptimizationLevel::Zero,
+                "cpython-38",
+                &acme_a_pycache_path.join("foo.cpython-38.pyc")
+            ))
+        );
+        assert_eq!(
+            resources[12],
+            PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
+                "acme.bar",
+                BytecodeOptimizationLevel::One,
+                "cpython-38",
+                &acme_bar_pycache_path.join("__init__.cpython-38.opt-1.pyc")
+            ))
+        );
+        assert_eq!(
+            resources[13],
+            PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
+                "acme.bar",
+                BytecodeOptimizationLevel::Two,
+                "cpython-38",
+                &acme_bar_pycache_path.join("__init__.cpython-38.opt-2.pyc")
+            ))
+        );
+        assert_eq!(
+            resources[14],
+            PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
+                "acme.bar",
+                BytecodeOptimizationLevel::Zero,
+                "cpython-38",
+                &acme_bar_pycache_path.join("__init__.cpython-38.pyc")
+            ))
+        );
+        assert_eq!(
+            resources[15],
+            PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
+                "acme.bar.foo",
+                BytecodeOptimizationLevel::One,
+                "cpython-38",
+                &acme_bar_pycache_path.join("foo.cpython-38.opt-1.pyc")
+            ))
+        );
+        assert_eq!(
+            resources[16],
+            PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
+                "acme.bar.foo",
+                BytecodeOptimizationLevel::Two,
+                "cpython-38",
+                &acme_bar_pycache_path.join("foo.cpython-38.opt-2.pyc")
+            ))
+        );
+        assert_eq!(
+            resources[17],
+            PythonResource::ModuleBytecode(PythonModuleBytecode::from_path(
+                "acme.bar.foo",
+                BytecodeOptimizationLevel::Zero,
+                "cpython-38",
+                &acme_bar_pycache_path.join("foo.cpython-38.pyc")
+            ))
         );
 
         Ok(())

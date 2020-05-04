@@ -103,6 +103,10 @@ Bug Fixes
 
 * Fixed potential process crash due to illegal memory access when loading
   Python bytecode modules from the filesystem.
+* Detection of Python bytecode files based on registered suffixes and
+  cache tags is now more robust. Before, it was possible for modules to
+  get picked up having the cache tag (e.g. ``cpython-38``) in the module
+  name.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
