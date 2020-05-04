@@ -299,7 +299,7 @@ impl PythonResourceIterator {
         {
             // .pyc files should be in a __pycache__ directory.
             if components.len() < 2 {
-                panic!("encountered .pyc file with invalid path: {}", rel_str);
+                return None;
             }
 
             // Possibly from Python 2?
