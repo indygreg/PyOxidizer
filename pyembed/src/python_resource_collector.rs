@@ -5,7 +5,7 @@
 /*! Python functionality for resource collection. */
 
 use {
-    crate::conversion::pyobject_to_pathbuf,
+    crate::conversion::{path_to_pathlib_path, pyobject_to_pathbuf},
     crate::python_resource_types::{
         PythonExtensionModule, PythonModuleBytecode, PythonModuleSource,
         PythonPackageDistributionResource, PythonPackageResource,
@@ -13,7 +13,7 @@ use {
     crate::python_resources::resource_to_pyobject,
     cpython::exc::{TypeError, ValueError},
     cpython::{
-        py_class, py_class_prop_getter, ObjectProtocol, PyErr, PyObject, PyResult, Python,
+        py_class, py_class_prop_getter, ObjectProtocol, PyBytes, PyErr, PyObject, PyResult, Python,
         PythonObject, ToPyObject,
     },
     python_packaging::resource_collection::{
@@ -226,6 +226,21 @@ impl OxidizedResourceCollector {
             resources.push(resource_to_pyobject(py, resource)?);
         }
 
-        Ok(resources.into_py_object(py).into_object())
+        let mut file_installs = Vec::new();
+
+        for (path, location, executable) in &prepared.extra_files {
+            let path = path_to_pathlib_path(py, path)?;
+            let data = location
+                .resolve()
+                .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+            let data = PyBytes::new(py, &data);
+            let executable = executable.to_py_object(py);
+
+            file_installs.push((path, data, executable).into_py_object(py));
+        }
+
+        Ok((resources.into_py_object(py), file_installs)
+            .into_py_object(py)
+            .into_object())
     }
 }

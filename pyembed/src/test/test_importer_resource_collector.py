@@ -46,7 +46,7 @@ class TestImporterResourceScanning(unittest.TestCase):
             c.add_in_memory(resource)
 
         f = OxidizedFinder()
-        f.add_resources(c.oxidize())
+        f.add_resources(c.oxidize()[0])
 
         resources = [r for r in f.indexed_resources() if r.name == "foo"]
         self.assertEqual(len(resources), 1)
@@ -65,7 +65,7 @@ class TestImporterResourceScanning(unittest.TestCase):
                     c.add_in_memory(resource)
                     c.add_filesystem_relative("", resource)
 
-        resources = c.oxidize()
+        resources, file_installs = c.oxidize()
         f = OxidizedFinder()
         f.add_resources(resources)
         f.serialize_indexed_resources()
