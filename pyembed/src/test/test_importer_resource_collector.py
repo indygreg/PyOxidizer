@@ -2,6 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import importlib.util
 import os
 import pathlib
 import sys
@@ -11,6 +12,7 @@ import unittest
 from oxidized_importer import (
     OxidizedFinder,
     OxidizedResourceCollector,
+    PythonModuleBytecode,
     find_resources_in_path,
 )
 
@@ -69,6 +71,39 @@ class TestImporterResourceScanning(unittest.TestCase):
         f = OxidizedFinder()
         f.add_resources(resources)
         f.serialize_indexed_resources()
+
+    def test_urllib(self):
+        c = OxidizedResourceCollector(policy="filesystem-relative-only:lib")
+
+        for path in sys.path:
+            if os.path.isdir(path):
+                for resource in find_resources_in_path(path):
+                    if isinstance(resource, PythonModuleBytecode):
+                        if resource.module.startswith("urllib"):
+                            if resource.optimize_level == 0:
+                                c.add_filesystem_relative("lib", resource)
+
+        resources, file_installs = c.oxidize()
+        self.assertEqual(len(resources), len(file_installs))
+
+        idx = None
+        for i, resource in enumerate(resources):
+            if resource.name == "urllib.request":
+                idx = i
+                break
+
+        self.assertIsNotNone(idx)
+
+        (path, data, executable) = file_installs[idx]
+        self.assertEqual(
+            path,
+            pathlib.Path("lib")
+            / "urllib"
+            / "__pycache__"
+            / ("request.%s.pyc" % sys.implementation.cache_tag),
+        )
+
+        self.assertTrue(data.startswith(importlib.util.MAGIC_NUMBER))
 
 
 if __name__ == "__main__":
