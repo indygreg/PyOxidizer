@@ -6,8 +6,8 @@
 
 use {
     super::resource::BytecodeOptimizationLevel,
-    anyhow::Result,
-    byteorder::{LittleEndian, WriteBytesExt},
+    anyhow::{anyhow, Result},
+    byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt},
     std::fs::File,
     std::io::{BufRead, BufReader, Read, Write},
     std::path::{Path, PathBuf},
@@ -21,6 +21,9 @@ pub const BYTECODE_COMPILER: &[u8] = include_bytes!("bytecodecompiler.py");
 pub struct BytecodeCompiler {
     _temp_dir: tempdir::TempDir,
     command: process::Child,
+
+    /// Magic number for bytecode header.
+    pub magic_number: u32,
 }
 
 /// Output mode for BytecodeCompiler.
@@ -51,15 +54,30 @@ impl BytecodeCompiler {
             fh.write_all(BYTECODE_COMPILER)?;
         }
 
-        let command = process::Command::new(python)
+        let mut command = process::Command::new(python)
             .arg(script_path)
             .stdin(process::Stdio::piped())
             .stdout(process::Stdio::piped())
             .spawn()?;
 
+        let stdin = command
+            .stdin
+            .as_mut()
+            .ok_or_else(|| anyhow!("unable to get stdin"))?;
+
+        stdin.write_all(b"magic_number\n")?;
+        stdin.flush()?;
+
+        let stdout = command
+            .stdout
+            .as_mut()
+            .ok_or_else(|| anyhow!("unable to get stdou"))?;
+        let magic_number = stdout.read_u32::<LittleEndian>()?;
+
         Ok(BytecodeCompiler {
             _temp_dir: temp_dir,
             command,
+            magic_number,
         })
     }
 
