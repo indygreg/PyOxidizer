@@ -7,8 +7,8 @@
 use {
     crate::conversion::pyobject_to_pathbuf,
     crate::python_resource_types::{
-        PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
-        PythonPackageResource,
+        PythonExtensionModule, PythonModuleBytecode, PythonModuleSource,
+        PythonPackageDistributionResource, PythonPackageResource,
     },
     crate::python_resources::resource_to_pyobject,
     cpython::exc::{TypeError, ValueError},
@@ -98,6 +98,14 @@ impl OxidizedResourceCollector {
                         "PythonExtensionModule lacks a shared library",
                     ))
                 }
+            }
+            "PythonModuleBytecode" => {
+                let module = resource.cast_into::<PythonModuleBytecode>(py)?;
+                collector
+                    .add_in_memory_python_module_bytecode(&module.get_resource(py))
+                    .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+
+                Ok(py.None())
             }
             "PythonModuleSource" => {
                 let module = resource.cast_into::<PythonModuleSource>(py)?;
