@@ -47,6 +47,17 @@ pub enum BytecodeOptimizationLevel {
     Two,
 }
 
+impl BytecodeOptimizationLevel {
+    /// Determine hte extra filename tag for bytecode files of this variant.
+    pub fn to_extra_tag(&self) -> &'static str {
+        match self {
+            BytecodeOptimizationLevel::Zero => "",
+            BytecodeOptimizationLevel::One => ".opt-1",
+            BytecodeOptimizationLevel::Two => ".opt-2",
+        }
+    }
+}
+
 impl TryFrom<i32> for BytecodeOptimizationLevel {
     type Error = &'static str;
 
