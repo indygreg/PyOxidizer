@@ -7,6 +7,7 @@
 use {
     super::resource::BytecodeOptimizationLevel,
     anyhow::Result,
+    byteorder::{LittleEndian, WriteBytesExt},
     std::fs::File,
     std::io::{BufRead, BufReader, Read, Write},
     std::path::{Path, PathBuf},
@@ -112,5 +113,70 @@ impl Drop for BytecodeCompiler {
         stdin.flush().expect("flush failed");
 
         self.command.wait().expect("compiler process did not exit");
+    }
+}
+
+/// How to write out a .pyc bytecode header.
+#[derive(Debug, Clone, Copy)]
+pub enum BytecodeHeaderMode {
+    /// Use a file modified time plus source size.
+    ModifiedTimeAndSourceSize((u32, u32)),
+    /// Check the hash against the hash of a source file.
+    CheckedHash(u64),
+    /// Do not check the hash, but embed it anyway.
+    UncheckedHash(u64),
+}
+
+/// Compute the header for a .pyc file.
+pub fn compute_bytecode_header(magic_number: u32, mode: BytecodeHeaderMode) -> Result<Vec<u8>> {
+    let mut header: Vec<u8> = Vec::new();
+
+    header.write_u32::<LittleEndian>(magic_number)?;
+
+    match mode {
+        BytecodeHeaderMode::ModifiedTimeAndSourceSize((mtime, source_size)) => {
+            header.write_u32::<LittleEndian>(0)?;
+            header.write_u32::<LittleEndian>(mtime)?;
+            header.write_u32::<LittleEndian>(source_size)?;
+        }
+        BytecodeHeaderMode::CheckedHash(hash) => {
+            header.write_u32::<LittleEndian>(3)?;
+            header.write_u64::<LittleEndian>(hash)?;
+        }
+        BytecodeHeaderMode::UncheckedHash(hash) => {
+            header.write_u32::<LittleEndian>(1)?;
+            header.write_u64::<LittleEndian>(hash)?;
+        }
+    }
+
+    assert_eq!(header.len(), 16);
+
+    Ok(header)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_header() -> Result<()> {
+        assert_eq!(
+            compute_bytecode_header(
+                168627541,
+                BytecodeHeaderMode::ModifiedTimeAndSourceSize((5, 10))
+            )?,
+            b"U\r\r\n\x00\x00\x00\x00\x05\x00\x00\x00\x0a\x00\x00\x00"
+        );
+
+        assert_eq!(
+            compute_bytecode_header(168627541, BytecodeHeaderMode::CheckedHash(0))?,
+            b"U\r\r\n\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+        );
+        assert_eq!(
+            compute_bytecode_header(168627541, BytecodeHeaderMode::UncheckedHash(0))?,
+            b"U\r\r\n\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+        );
+
+        Ok(())
     }
 }
