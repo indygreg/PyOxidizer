@@ -861,7 +861,7 @@ Try something like the following:
    for path in sys.path:
        # Only directories can be scanned by oxidized_importer.
        if os.path.isdir(path):
-           for resource in oxidized_finder.find_resources_in_path(path):
+           for resource in oxidized_importer.find_resources_in_path(path):
                collector.add_in_memory(resource)
 
    # Turn the collected resources into ``OxidizedResource`` and file
@@ -972,6 +972,15 @@ like this:
            collector.add_filesystem_relative("lib", resource)
        else:
            collector.add_in_memory(resource)
+
+Resource Scanning Descends Into ``site-packages``
+-------------------------------------------------
+
+``oxidized_importer.find_resources_in_path()`` descends into ``site-packages``
+directories. This is arguably not the desired behavior, especially when
+in the context of virtualenvs, which may want to not inherit the resources
+in the ``site-packages`` of the *outer* Python installation. This will
+likely be fixed in a future release.
 
 Security Implications of Loading Resources
 ==========================================
