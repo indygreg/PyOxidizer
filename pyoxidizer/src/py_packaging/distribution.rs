@@ -233,8 +233,8 @@ fn sha256_path(path: &PathBuf) -> Vec<u8> {
     hasher.result().to_vec()
 }
 
-pub fn get_http_client() -> reqwest::Result<reqwest::Client> {
-    let mut builder = reqwest::ClientBuilder::new();
+pub fn get_http_client() -> reqwest::Result<reqwest::blocking::Client> {
+    let mut builder = reqwest::blocking::ClientBuilder::new();
 
     for (key, value) in std::env::vars() {
         let key = key.to_lowercase();
