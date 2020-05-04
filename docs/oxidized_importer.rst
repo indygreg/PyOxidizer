@@ -776,6 +776,17 @@ Methods are documented in the following sections.
 type (``PythonModuleSource``, ``PythonModuleBytecode``, etc) to the collector
 and marks it for loading via in-memory mechanisms.
 
+``add_filesystem_relative(prefix, resource)``
+---------------------------------------------
+
+``OxidizedResourceCollector.add_filesystem_relative(prefix, resource)`` adds a
+Python resource type (``PythonModuleSource``, ``PythonModuleBytecode``, etc) to
+the collector and marks it for loading via a relative path next to some
+*origin* path (as specified to the ``OxidizedFinder``). That relative path
+can have a ``prefix`` value prepended to it. If no prefix is desired and you
+want the resource placed next to the *origin*, use an empty ``str`` for
+``prefix``.
+
 ``oxidize()``
 -------------
 

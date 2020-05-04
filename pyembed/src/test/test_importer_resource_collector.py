@@ -55,12 +55,15 @@ class TestImporterResourceScanning(unittest.TestCase):
         self.assertEqual(r.in_memory_source, b"import io\n")
 
     def test_add_sys_path(self):
-        c = OxidizedResourceCollector(policy="in-memory-only")
+        c = OxidizedResourceCollector(
+            policy="prefer-in-memory-fallback-filesystem-relative:prefix"
+        )
 
         for path in sys.path:
             if os.path.isdir(path):
                 for resource in find_resources_in_path(path):
                     c.add_in_memory(resource)
+                    c.add_filesystem_relative("", resource)
 
         resources = c.oxidize()
         f = OxidizedFinder()

@@ -42,6 +42,10 @@ py_class!(pub class OxidizedResourceCollector |py| {
         self.add_in_memory_impl(py, resource)
     }
 
+    def add_filesystem_relative(&self, prefix: String, resource: PyObject) -> PyResult<PyObject> {
+        self.add_filesystem_relative_impl(py, prefix, resource)
+    }
+
     def oxidize(&self) -> PyResult<PyObject> {
         self.oxidize_impl(py)
     }
@@ -134,6 +138,67 @@ impl OxidizedResourceCollector {
             _ => Err(PyErr::new::<TypeError, _>(
                 py,
                 format!("cannot operate on {} values", typ.name(py)),
+            )),
+        }
+    }
+
+    fn add_filesystem_relative_impl(
+        &self,
+        py: Python,
+        prefix: String,
+        resource: PyObject,
+    ) -> PyResult<PyObject> {
+        let mut collector = self.collector(py).borrow_mut();
+
+        match resource.get_type(py).name(py).as_ref() {
+            "PythonExtensionModule" => {
+                let module = resource.cast_into::<PythonExtensionModule>(py)?;
+                let resource = module.get_resource(py);
+
+                collector
+                    .add_relative_path_python_extension_module(&resource, &prefix)
+                    .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+
+                Ok(py.None())
+            }
+            "PythonModuleBytecode" => {
+                let module = resource.cast_into::<PythonModuleBytecode>(py)?;
+                collector
+                    .add_relative_path_python_module_bytecode(&module.get_resource(py), &prefix)
+                    .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+
+                Ok(py.None())
+            }
+            "PythonModuleSource" => {
+                let module = resource.cast_into::<PythonModuleSource>(py)?;
+                collector
+                    .add_relative_path_python_module_source(&module.get_resource(py), &prefix)
+                    .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+
+                Ok(py.None())
+            }
+            "PythonPackageResource" => {
+                let resource = resource.cast_into::<PythonPackageResource>(py)?;
+                collector
+                    .add_relative_path_python_package_resource(&prefix, &resource.get_resource(py))
+                    .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+
+                Ok(py.None())
+            }
+            "PythonPackageDistributionResource" => {
+                let resource = resource.cast_into::<PythonPackageDistributionResource>(py)?;
+                collector
+                    .add_relative_path_package_distribution_resource(
+                        &prefix,
+                        &resource.get_resource(py),
+                    )
+                    .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+
+                Ok(py.None())
+            }
+            name => Err(PyErr::new::<TypeError, _>(
+                py,
+                format!("cannot operate on {} values", name),
             )),
         }
     }
