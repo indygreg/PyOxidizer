@@ -5,7 +5,7 @@
 /*! Functionality for collecting Python resources. */
 
 use {
-    crate::bytecode::{BytecodeCompiler, CompileMode},
+    crate::bytecode::{compute_bytecode_header, BytecodeCompiler, BytecodeHeaderMode, CompileMode},
     crate::module_util::{packages_from_module_name, resolve_path_for_module},
     crate::python_source::has_dunder_file,
     crate::resource::{
@@ -264,46 +264,6 @@ impl PrePackagedResource {
         if let Some((prefix, location)) = &self.relative_path_module_source {
             res.push((
                 resolve_path_for_module(prefix, &self.name, self.is_package, None),
-                location,
-                false,
-            ));
-        }
-
-        if let Some((prefix, cache_tag, PythonModuleBytecodeProvider::Provided(location))) =
-            &self.relative_path_bytecode
-        {
-            res.push((
-                resolve_path_for_module(prefix, &self.name, self.is_package, Some(cache_tag)),
-                location,
-                false,
-            ));
-        }
-
-        if let Some((prefix, cache_tag, PythonModuleBytecodeProvider::Provided(location))) =
-            &self.relative_path_bytecode_opt1
-        {
-            res.push((
-                resolve_path_for_module(
-                    prefix,
-                    &self.name,
-                    self.is_package,
-                    Some(&format!("{}.opt-1", cache_tag)),
-                ),
-                location,
-                false,
-            ));
-        }
-
-        if let Some((prefix, cache_tag, PythonModuleBytecodeProvider::Provided(location))) =
-            &self.relative_path_bytecode_opt2
-        {
-            res.push((
-                resolve_path_for_module(
-                    prefix,
-                    &self.name,
-                    self.is_package,
-                    Some(&format!("{}.opt-2", cache_tag)),
-                ),
                 location,
                 false,
             ));
@@ -1227,90 +1187,114 @@ impl PythonResourceCollector {
                     )?));
                 }
 
-                if let Some((
-                    prefix,
-                    cache_tag,
-                    PythonModuleBytecodeProvider::FromSource(location),
-                )) = &resource.relative_path_bytecode
-                {
-                    let module = PythonModuleBytecodeFromSource {
-                        name: name.clone(),
-                        source: DataLocation::Memory(vec![]),
-                        optimize_level: BytecodeOptimizationLevel::Zero,
-                        is_package: entry.is_package,
-                        cache_tag: cache_tag.clone(),
-                    };
-
-                    let path = module.resolve_path(prefix);
+                if let Some((prefix, cache_tag, provider)) = &resource.relative_path_bytecode {
+                    let path = resolve_path_for_module(
+                        prefix,
+                        &resource.name,
+                        resource.is_package,
+                        Some(&format!(
+                            "{}{}",
+                            cache_tag,
+                            BytecodeOptimizationLevel::Zero.to_extra_tag()
+                        )),
+                    );
 
                     extra_files.push((
                         path.clone(),
-                        DataLocation::Memory(compiler.compile(
-                            &location.resolve()?,
-                            &name,
-                            BytecodeOptimizationLevel::Zero,
-                            CompileMode::PycUncheckedHash,
-                        )?),
+                        DataLocation::Memory(match provider {
+                            PythonModuleBytecodeProvider::FromSource(location) => compiler
+                                .compile(
+                                    &location.resolve()?,
+                                    &name,
+                                    BytecodeOptimizationLevel::Zero,
+                                    CompileMode::PycUncheckedHash,
+                                )?,
+                            PythonModuleBytecodeProvider::Provided(location) => {
+                                let mut data = compute_bytecode_header(
+                                    compiler.magic_number,
+                                    BytecodeHeaderMode::UncheckedHash(0),
+                                )?;
+                                data.extend(location.resolve()?);
+
+                                data
+                            }
+                        }),
                         false,
                     ));
 
                     entry.relative_path_module_bytecode = Some(Cow::Owned(path));
                 }
 
-                if let Some((
-                    prefix,
-                    cache_tag,
-                    PythonModuleBytecodeProvider::FromSource(location),
-                )) = &resource.relative_path_bytecode_opt1
-                {
-                    let module = PythonModuleBytecodeFromSource {
-                        name: name.clone(),
-                        source: DataLocation::Memory(vec![]),
-                        optimize_level: BytecodeOptimizationLevel::One,
-                        is_package: entry.is_package,
-                        cache_tag: cache_tag.clone(),
-                    };
-
-                    let path = module.resolve_path(prefix);
+                if let Some((prefix, cache_tag, provider)) = &resource.relative_path_bytecode_opt1 {
+                    let path = resolve_path_for_module(
+                        prefix,
+                        &resource.name,
+                        resource.is_package,
+                        Some(&format!(
+                            "{}{}",
+                            cache_tag,
+                            BytecodeOptimizationLevel::One.to_extra_tag()
+                        )),
+                    );
 
                     extra_files.push((
                         path.clone(),
-                        DataLocation::Memory(compiler.compile(
-                            &location.resolve()?,
-                            &name,
-                            BytecodeOptimizationLevel::One,
-                            CompileMode::PycUncheckedHash,
-                        )?),
+                        DataLocation::Memory(match provider {
+                            PythonModuleBytecodeProvider::FromSource(location) => compiler
+                                .compile(
+                                    &location.resolve()?,
+                                    &name,
+                                    BytecodeOptimizationLevel::One,
+                                    CompileMode::PycUncheckedHash,
+                                )?,
+                            PythonModuleBytecodeProvider::Provided(location) => {
+                                let mut data = compute_bytecode_header(
+                                    compiler.magic_number,
+                                    BytecodeHeaderMode::UncheckedHash(0),
+                                )?;
+                                data.extend(location.resolve()?);
+
+                                data
+                            }
+                        }),
                         false,
                     ));
 
                     entry.relative_path_module_bytecode_opt1 = Some(Cow::Owned(path));
                 }
 
-                if let Some((
-                    prefix,
-                    cache_tag,
-                    PythonModuleBytecodeProvider::FromSource(location),
-                )) = &resource.relative_path_bytecode_opt2
-                {
-                    let module = PythonModuleBytecodeFromSource {
-                        name: name.clone(),
-                        source: DataLocation::Memory(vec![]),
-                        optimize_level: BytecodeOptimizationLevel::Two,
-                        is_package: entry.is_package,
-                        cache_tag: cache_tag.clone(),
-                    };
-
-                    let path = module.resolve_path(prefix);
+                if let Some((prefix, cache_tag, provider)) = &resource.relative_path_bytecode_opt2 {
+                    let path = resolve_path_for_module(
+                        prefix,
+                        &resource.name,
+                        resource.is_package,
+                        Some(&format!(
+                            "{}{}",
+                            cache_tag,
+                            BytecodeOptimizationLevel::Two.to_extra_tag()
+                        )),
+                    );
 
                     extra_files.push((
                         path.clone(),
-                        DataLocation::Memory(compiler.compile(
-                            &location.resolve()?,
-                            &name,
-                            BytecodeOptimizationLevel::Two,
-                            CompileMode::PycUncheckedHash,
-                        )?),
+                        DataLocation::Memory(match provider {
+                            PythonModuleBytecodeProvider::FromSource(location) => compiler
+                                .compile(
+                                    &location.resolve()?,
+                                    &name,
+                                    BytecodeOptimizationLevel::Two,
+                                    CompileMode::PycUncheckedHash,
+                                )?,
+                            PythonModuleBytecodeProvider::Provided(location) => {
+                                let mut data = compute_bytecode_header(
+                                    compiler.magic_number,
+                                    BytecodeHeaderMode::UncheckedHash(0),
+                                )?;
+                                data.extend(location.resolve()?);
+
+                                data
+                            }
+                        }),
                         false,
                     ));
 
