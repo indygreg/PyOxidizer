@@ -58,6 +58,8 @@ Backwards Compatibility Notes
   ``PyOxidizerFinder`` to ``OxidizedFinder``.
 * The name of the module providing our custom importer has been renamed
   from ``_pyoxidizer_importer`` to ``oxidized_importer``.
+* Minimum Rust version changed from 1.36 to 1.39 to allow for upgrading
+  various dependencies to modern versions.
 
 New Features
 ^^^^^^^^^^^^
