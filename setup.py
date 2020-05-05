@@ -47,9 +47,12 @@ class RustExtension(distutils.extension.Extension):
         subprocess.run(args, env=env, cwd=OXIDIZED_IMPORTER, check=True)
 
         dest_path = pathlib.Path(get_ext_path_fn(self.name))
-        suffix = pathlib.Path(dest_path).suffix
 
-        rust_lib_filename = "lib%s%s" % (self.name, suffix)
+        if os.name == "nt":
+            rust_lib_filename = "%s.dll" % self.name
+        else:
+            rust_lib_filename = "lib%s.so" % self.name
+
         rust_lib = build_dir / "release" / rust_lib_filename
 
         dest_path.parent.mkdir(parents=True, exist_ok=True)
