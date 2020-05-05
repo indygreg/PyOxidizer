@@ -50,6 +50,8 @@ class RustExtension(distutils.extension.Extension):
 
         if os.name == "nt":
             rust_lib_filename = "%s.dll" % self.name
+        elif sys.platform == "darwin":
+            rust_lib_filename = "lib%s.dylib" % self.name
         else:
             rust_lib_filename = "lib%s.so" % self.name
 
