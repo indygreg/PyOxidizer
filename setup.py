@@ -2,6 +2,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+"""This setup.py is for the oxidized_importer Python extension module.
+
+It should exist in the `oxidzed-importer` directory. But since it needs
+to pull in sources from outside that directory and `pip` can be opinionated
+about not allowing that, the file exists in the root of the repository to
+work around this limitation.
+"""
+
 import distutils.command.build_ext
 import distutils.extension
 import os
@@ -13,6 +21,7 @@ import subprocess
 import sys
 
 HERE = pathlib.Path(os.path.dirname(os.path.abspath(__file__)))
+OXIDIZED_IMPORTER = HERE / "oxidized-importer"
 
 
 class RustExtension(distutils.extension.Extension):
@@ -20,7 +29,7 @@ class RustExtension(distutils.extension.Extension):
         super().__init__(name, [])
 
         self.depends.extend(
-            [HERE / "Cargo.toml", "src/lib.rs",]
+            [OXIDIZED_IMPORTER / "Cargo.toml", OXIDIZED_IMPORTER / "src/lib.rs"]
         )
 
     def build(self, build_dir: pathlib.Path, get_ext_path_fn):
@@ -35,7 +44,7 @@ class RustExtension(distutils.extension.Extension):
             str(build_dir),
         ]
 
-        subprocess.run(args, env=env, check=True)
+        subprocess.run(args, env=env, cwd=OXIDIZED_IMPORTER, check=True)
 
         dest_path = get_ext_path_fn(self.name)
         suffix = pathlib.Path(dest_path).suffix
@@ -51,13 +60,13 @@ class RustBuildExt(distutils.command.build_ext.build_ext):
         assert isinstance(ext, RustExtension)
 
         ext.build(
-            build_dir=pathlib.Path(self.build_temp),
+            build_dir=pathlib.Path(os.path.abspath(self.build_temp)),
             get_ext_path_fn=self.get_ext_fullpath,
         )
 
 
 def get_version():
-    cargo_toml = HERE / "Cargo.toml"
+    cargo_toml = OXIDIZED_IMPORTER / "Cargo.toml"
 
     with cargo_toml.open("r", encoding="utf-8") as fh:
         for line in fh:
