@@ -46,12 +46,13 @@ class RustExtension(distutils.extension.Extension):
 
         subprocess.run(args, env=env, cwd=OXIDIZED_IMPORTER, check=True)
 
-        dest_path = get_ext_path_fn(self.name)
+        dest_path = pathlib.Path(get_ext_path_fn(self.name))
         suffix = pathlib.Path(dest_path).suffix
 
         rust_lib_filename = "lib%s%s" % (self.name, suffix)
         rust_lib = build_dir / "release" / rust_lib_filename
 
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(rust_lib, dest_path)
 
 
