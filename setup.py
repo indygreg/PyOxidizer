@@ -78,7 +78,6 @@ def get_version():
     raise Exception("could not find version string")
 
 
-# TODO check for Python 3.8.
 setuptools.setup(
     name="oxidized_importer",
     version=get_version(),
@@ -87,6 +86,7 @@ setuptools.setup(
     url="https://github.com/indygreg/PyOxidizer",
     description="Python importer implemented in Rust",
     license="MPL 2.0",
+    python_requires=">=3.8",
     classifiers=["Intended Audience :: Developers", "Programming Language :: Rust",],
     ext_modules=[RustExtension("oxidized_importer")],
     cmdclass={"build_ext": RustBuildExt},
