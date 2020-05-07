@@ -13,3 +13,74 @@ jobs:
   parameters:
     name: Windows
     vmImage: windows-2019
+
+- job: wheel_linux
+  pool:
+    vmImage: ubuntu-18.04
+  steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: 3.8
+
+    - script: |
+        python3.8 -m pip install --upgrade pip==20.0.2
+        python3.8 -m pip install cibuildwheel==1.4.1
+        python3.8 -m cibuildwheel --output-dir wheelhouse .
+      env:
+        CIBW_ENVIRONMENT: 'PATH="$PATH:$HOME/.cargo/bin"'
+        CIBW_BEFORE_BUILD: 'ci/install-rust-linux.sh'
+        CIBW_BUILD: cp38-manylinux_x86_64
+        CIBW_BUILD_VERBOSITY: 1
+
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: wheelhouse
+
+- job: wheel_macos
+  pool:
+    vmImage: macOS-10.15
+  steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: 3.8
+
+    - script: |
+        curl https://sh.rustup.rs -sSf | sh -s -- -y
+        echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
+
+        python3.8 -m pip install --upgrade pip==20.0.2
+        python3.8 -m pip install cibuildwheel==1.4.1
+        python3.8 -m cibuildwheel --output-dir wheelhouse .
+      env:
+        CIBW_BUILD: cp38-macosx_x86_64
+        CIBW_BUILD_VERBOSITY: 1
+
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: wheelhouse
+
+- job: wheel_windows
+  pool:
+    vmImage: vs2017-win2016
+  steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: 3.8
+
+    - script: |
+        curl -sSf -o rustup-init.exe https://win.rustup.rs
+        rustup-init.exe -y
+        set PATH=%PATH%;%USERPROFILE%\.cargo\bin
+        echo "##vso[task.setvariable variable=PATH;]%PATH%;%USERPROFILE%\.cargo\bin"
+        rustup default stable-x86_64-pc-windows-msvc
+
+        python -m pip install --upgrade pip==20.0.2
+        python -m pip install cibuildwheel==1.4.1
+        python -m cibuildwheel --output-dir wheelhouse .
+      env:
+        CIBW_BUILD_VERBOSITY: 1
+        CIBW_BUILD: cp38-win_amd64
+
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: wheelhouse
