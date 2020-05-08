@@ -4,12 +4,8 @@
 ``oxidized_importer`` Python Extension
 ======================================
 
-``oxidized_importer`` is a Python extension module that is maintained
-as part of the PyOxidizer project. This extension module is automatically
-compiled into applications built with PyOxidizer. It can also be built
-as a standalone extension module and used with regular Python installs.
-
-``oxidized_importer`` allows you to:
+``oxidized_importer`` is a Python extension module maintained as part of
+the PyOxidizer project that allows you to:
 
 * Install a custom, high-performance module importer (``OxidizedFinder``)
   to service Python ``import`` statements and resource loading (potentially
@@ -22,6 +18,10 @@ as a standalone extension module and used with regular Python installs.
   producing a standalone *resources blob* that can be distributed with
   a Python application which contains all the Python modules, bytecode,
   etc required to power that application.
+
+``oxidized_importer`` is automatically compiled into applications built
+with PyOxidizer. It can also be built as a standalone extension module and
+used with regular Python installs.
 
 Python Meta Path Finders
 ========================
