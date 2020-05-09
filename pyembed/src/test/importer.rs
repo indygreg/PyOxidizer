@@ -115,6 +115,12 @@ fn importer_construction_py() -> Result<()> {
     run_py_test("test_importer_construction.py")
 }
 
+/// Run test_importer_metadata.py.
+#[test]
+fn importer_metadata_py() -> Result<()> {
+    run_py_test("test_importer_metadata.py")
+}
+
 /// Run test_importer_resource_collector.py.
 #[test]
 fn importer_resource_collector_py() -> Result<()> {

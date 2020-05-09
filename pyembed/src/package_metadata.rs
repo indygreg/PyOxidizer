@@ -65,8 +65,14 @@ impl OxidizedDistribution {
                 py,
                 format!("error when resolving resource: {}", e),
             ))
-        })?
-        .ok_or_else(|| PyErr::new::<IOError, _>(py, format!("resource not found: {}", filename)))?;
+        })?;
+
+        // Missing resource returns None.
+        let data = if let Some(data) = data {
+            data
+        } else {
+            return Ok(py.None());
+        };
 
         let data = PyBytes::new(py, &data);
 

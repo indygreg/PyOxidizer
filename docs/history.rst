@@ -109,6 +109,9 @@ Bug Fixes
   cache tags is now more robust. Before, it was possible for modules to
   get picked up having the cache tag (e.g. ``cpython-38``) in the module
   name.
+* In the custom Python importer, ``read_text()`` of distributions returned
+  from ``find_distributions()`` now returns ``None`` on unknown file instead
+  of raising ``IOError``. This matches the behavior of ``importlib.metadata``.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
