@@ -86,6 +86,30 @@ class TestImporterResourceScanning(unittest.TestCase):
         self.assertEqual(metadata["Name"], "my_package")
         self.assertEqual(metadata["Version"], "1.0")
 
+    def test_load_pkg_info(self):
+        # In absence of a METADATA file, a PKG-INFO file will be read.
+        pkginfo_path = self.td / "my_package-1.0.egg-info" / "PKG-INFO"
+        pkginfo_path.parent.mkdir()
+
+        with pkginfo_path.open("w", encoding="utf-8") as fh:
+            fh.write("Name: my_package\n")
+            fh.write("Version: 1.0\n")
+
+        collector = OxidizedResourceCollector(policy="in-memory-only")
+        for r in find_resources_in_path(self.td):
+            collector.add_in_memory(r)
+
+        f = OxidizedFinder()
+        f.add_resources(collector.oxidize()[0])
+
+        dists = f.find_distributions()
+        self.assertEqual(len(dists), 1)
+
+        metadata = dists[0].metadata
+        self.assertIsInstance(metadata, email.message.Message)
+        self.assertEqual(metadata["Name"], "my_package")
+        self.assertEqual(metadata["Version"], "1.0")
+
     def test_version(self):
         metadata_path = self.td / "my_package-1.0.dist-info" / "METADATA"
         metadata_path.parent.mkdir()
