@@ -14,7 +14,6 @@ import distutils.command.build_ext
 import distutils.extension
 import os
 import pathlib
-import re
 import setuptools
 import shutil
 import subprocess
@@ -71,21 +70,9 @@ class RustBuildExt(distutils.command.build_ext.build_ext):
         )
 
 
-def get_version():
-    cargo_toml = OXIDIZED_IMPORTER / "Cargo.toml"
-
-    with cargo_toml.open("r", encoding="utf-8") as fh:
-        for line in fh:
-            m = re.match('^version = "([^"]+)"', line)
-            if m:
-                return m.group(1)
-
-    raise Exception("could not find version string")
-
-
 setuptools.setup(
     name="oxidized_importer",
-    version=get_version(),
+    version="0.1",
     author="Gregory Szorc",
     author_email="gregory.szorc@gmail.com",
     url="https://github.com/indygreg/PyOxidizer",
