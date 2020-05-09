@@ -772,13 +772,13 @@ impl OxidizedFinder {
             None => return Ok(py.None()),
         };
 
-        if let Some(source) = module.resolve_source(py)? {
-            state
-                .decode_source
-                .call(py, (&state.io_module, source), None)
+        let source = module.resolve_source(py, &state.decode_source, &state.io_module)?;
+
+        Ok(if let Some(source) = source {
+            source
         } else {
-            Ok(py.None())
-        }
+            py.None()
+        })
     }
 }
 

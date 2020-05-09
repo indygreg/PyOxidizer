@@ -16,8 +16,8 @@ use {
     cpython::exc::{ImportError, OSError, TypeError, ValueError},
     cpython::{
         py_class, py_class_call_slot_impl_with_ref, py_class_prop_getter, py_class_prop_setter,
-        NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyObject, PyResult,
-        PyString, Python, PythonObject, ToPyObject,
+        NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyModule, PyObject,
+        PyResult, PyString, Python, PythonObject, ToPyObject,
     },
     python3_sys as pyffi,
     python_packed_resources::data::{Resource, ResourceFlavor},
@@ -86,15 +86,15 @@ impl<'a> ImportablePythonModule<'a, u8> {
     /// Attempt to resolve a Python `bytes` for the source code behind this module.
     ///
     /// Will return a PyErr if an error occurs resolving source. If there is no source,
-    /// returns `Ok(None)`. Otherwise an `Ok(PyBytes)` is returned.
-    ///
-    /// We could potentially return a `memoryview` to avoid the extra allocation required
-    /// by `PyBytes_FromStringAndSize()`. However, callers of this method typically
-    /// call `importlib._bootstrap_external.decode_source()` with the returned value
-    /// and this function can't handle `memoryview`. So until callers can support
-    /// 0-copy, let's not worry about it.
-    pub fn resolve_source(&self, py: Python) -> PyResult<Option<PyBytes>> {
-        Ok(if let Some(data) = &self.resource.in_memory_source {
+    /// returns `Ok(None)`. Otherwise an `Ok(PyString)` cast into a `PyObject` is
+    /// returned.
+    pub fn resolve_source(
+        &self,
+        py: Python,
+        decode_source: &PyObject,
+        io_module: &PyModule,
+    ) -> PyResult<Option<PyObject>> {
+        let bytes = if let Some(data) = &self.resource.in_memory_source {
             Some(PyBytes::new(py, data))
         } else if let Some(relative_path) = &self.resource.relative_path_module_source {
             let path = self.origin.join(relative_path);
@@ -112,7 +112,13 @@ impl<'a> ImportablePythonModule<'a, u8> {
             Some(PyBytes::new(py, &source))
         } else {
             None
-        })
+        };
+
+        if let Some(bytes) = bytes {
+            Ok(Some(decode_source.call(py, (io_module, bytes), None)?))
+        } else {
+            Ok(None)
+        }
     }
 
     /// Attempt to resolve bytecode for this module.
