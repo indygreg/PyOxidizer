@@ -2,6 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import email.message
 import pathlib
 import sys
 import tempfile
@@ -57,6 +58,14 @@ class TestImporterResourceScanning(unittest.TestCase):
 
         # read_text() on missing file returns None.
         self.assertIsNone(d.read_text("does_not_exist"))
+
+        data = d.read_text("METADATA")
+        self.assertEqual(data, "Name: my_package\nVersion: 1.0\n")
+
+        metadata = d.metadata
+        self.assertIsInstance(metadata, email.message.Message)
+        self.assertEqual(metadata["Name"], "my_package")
+        self.assertEqual(metadata["Version"], "1.0")
 
 
 if __name__ == "__main__":
