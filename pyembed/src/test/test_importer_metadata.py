@@ -113,6 +113,16 @@ class TestImporterResourceScanning(unittest.TestCase):
         dists = f.find_distributions()
         self.assertEqual(dists[0].version, "1.0")
 
+    def test_missing_entry_points(self):
+        self._write_metadata()
+        f = self._finder_from_td()
+
+        dists = f.find_distributions()
+        self.assertEqual(len(dists), 1)
+
+        with self.assertRaises(NotImplementedError):
+            dists[0].entry_points
+
 
 if __name__ == "__main__":
     # Reset command arguments so test runner isn't confused.
