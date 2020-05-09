@@ -825,7 +825,7 @@ impl OxidizedFinder {
         // Resources are only available on packages.
         if entry.is_package {
             let reader =
-                PyOxidizerResourceReader::create_instance(py, state.clone(), key.to_string())?
+                OxidizedResourceReader::create_instance(py, state.clone(), key.to_string())?
                     .into_object();
             Ok(reader)
         } else {
@@ -1044,7 +1044,7 @@ impl OxidizedFinder {
 // Implements in-memory reading of resource data.
 //
 // Implements importlib.abc.ResourceReader.
-py_class!(class PyOxidizerResourceReader |py| {
+py_class!(class OxidizedResourceReader |py| {
     data state: Arc<Box<ImporterState>>;
     data package: String;
 
@@ -1065,7 +1065,7 @@ py_class!(class PyOxidizerResourceReader |py| {
     }
 });
 
-impl PyOxidizerResourceReader {
+impl OxidizedResourceReader {
     /// Returns an opened, file-like object for binary reading of the resource.
     ///
     /// If the resource cannot be found, FileNotFoundError is raised.
@@ -1390,6 +1390,11 @@ fn module_init(py: Python, m: &PyModule) -> PyResult<()> {
         py,
         "OxidizedResourceCollector",
         py.get_type::<crate::python_resource_collector::OxidizedResourceCollector>(),
+    )?;
+    m.add(
+        py,
+        "OxidizedResourceReader",
+        py.get_type::<OxidizedResourceReader>(),
     )?;
     m.add(
         py,
