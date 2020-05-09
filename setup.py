@@ -70,13 +70,18 @@ class RustBuildExt(distutils.command.build_ext.build_ext):
         )
 
 
+with open("oxidized-importer/README.md", "r", encoding="utf-8") as fh:
+    long_description = fh.read()
+
+
 setuptools.setup(
     name="oxidized_importer",
-    version="0.1",
+    version="0.1dev0",
     author="Gregory Szorc",
     author_email="gregory.szorc@gmail.com",
     url="https://github.com/indygreg/PyOxidizer",
     description="Python importer implemented in Rust",
+    long_description=long_description,
     license="MPL 2.0",
     python_requires=">=3.8",
     classifiers=["Intended Audience :: Developers", "Programming Language :: Rust",],
