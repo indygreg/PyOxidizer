@@ -98,6 +98,33 @@ class TestImporterResourceReading(unittest.TestCase):
         self.assertIsInstance(f, io.BytesIO)
         self.assertEqual(f.getvalue(), b"my resource")
 
+    def test_child_directory(self):
+        p = self._make_package("my_package")
+
+        child0_path = p / "child0"
+        child1_path = p / "child1"
+
+        child0_path.mkdir()
+        child1_path.mkdir()
+
+        with (child0_path / "a.txt").open("wb") as fh:
+            fh.write(b"a")
+        with (child1_path / "b.txt").open("wb") as fh:
+            fh.write(b"b")
+
+        f = self._finder_from_td()
+        r = f.get_resource_reader("my_package")
+
+        self.assertIsInstance(r, OxidizedResourceReader)
+
+        self.assertTrue(r.is_resource("child0/a.txt"))
+        self.assertTrue(r.is_resource("child1/b.txt"))
+
+        self.assertEqual(r.contents(), ["child0/a.txt", "child1/b.txt"])
+
+        self.assertEqual(r.open_resource("child0/a.txt").getvalue(), b"a")
+        self.assertEqual(r.open_resource("child1/b.txt").getvalue(), b"b")
+
 
 if __name__ == "__main__":
     # Reset command arguments so test runner isn't confused.
