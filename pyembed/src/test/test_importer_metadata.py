@@ -151,6 +151,15 @@ class TestImporterResourceScanning(unittest.TestCase):
         self.assertEqual(ep.value, "my_package:module")
         self.assertEqual(ep.group, "console_scripts")
 
+    def test_requires_missing(self):
+        self._write_metadata()
+        f = self._finder_from_td()
+
+        dists = f.find_distributions()
+
+        with self.assertRaises(NotImplementedError):
+            dists[0].requires
+
 
 if __name__ == "__main__":
     # Reset command arguments so test runner isn't confused.
