@@ -103,6 +103,8 @@ New Features
   implement ``entry_points``, allowing *entry points* to be discovered.
 * The types returned by ``OxidizedFinder.find_distributions()`` now
   implement ``requires``, allowing package requirements to be discovered.
+* ``OxidizedFinder`` is now able to load Python modules when only source
+  code is provided. Previously, it required that bytecode be available.
 
 Bug Fixes
 ^^^^^^^^^

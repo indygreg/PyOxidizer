@@ -46,17 +46,19 @@ where
 {
     assert_eq!(entry.flavor, ResourceFlavor::Module);
 
-    match optimize_level {
-        OptimizeLevel::Zero => {
-            entry.in_memory_bytecode.is_some() || entry.relative_path_module_bytecode.is_some()
+    entry.in_memory_source.is_some()
+        || entry.relative_path_module_source.is_some()
+        || match optimize_level {
+            OptimizeLevel::Zero => {
+                entry.in_memory_bytecode.is_some() || entry.relative_path_module_bytecode.is_some()
+            }
+            OptimizeLevel::One => {
+                entry.in_memory_bytecode_opt1.is_some() || entry.in_memory_bytecode_opt1.is_some()
+            }
+            OptimizeLevel::Two => {
+                entry.in_memory_bytecode_opt2.is_some() || entry.in_memory_bytecode_opt2.is_some()
+            }
         }
-        OptimizeLevel::One => {
-            entry.in_memory_bytecode_opt1.is_some() || entry.in_memory_bytecode_opt1.is_some()
-        }
-        OptimizeLevel::Two => {
-            entry.in_memory_bytecode_opt2.is_some() || entry.in_memory_bytecode_opt2.is_some()
-        }
-    }
 }
 
 /// Holds state for an importable Python module.
@@ -133,6 +135,8 @@ impl<'a> ImportablePythonModule<'a, u8> {
         &mut self,
         py: Python,
         optimize_level: OptimizeLevel,
+        decode_source: &PyObject,
+        io_module: &PyModule,
     ) -> PyResult<Option<PyObject>> {
         if let Some(data) = match optimize_level {
             OptimizeLevel::Zero => &self.resource.in_memory_bytecode,
@@ -163,6 +167,14 @@ impl<'a> ImportablePythonModule<'a, u8> {
 
             // First 16 bytes of .pyc files are a header.
             Ok(Some(PyBytes::new(py, &bytecode[16..]).into_object()))
+        } else if let Some(source) = self.resolve_source(py, decode_source, io_module)? {
+            let builtins = py.import("builtins")?;
+            let marshal = py.import("marshal")?;
+
+            let code = builtins.call(py, "compile", (source, &self.resource.name, "exec"), None)?;
+            let bytecode = marshal.call(py, "dumps", (code,), None)?;
+
+            Ok(Some(bytecode))
         } else {
             Ok(None)
         }

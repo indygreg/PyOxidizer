@@ -691,7 +691,12 @@ impl OxidizedFinder {
             }
         };
 
-        if let Some(bytecode) = entry.resolve_bytecode(py, state.optimize_level)? {
+        if let Some(bytecode) = entry.resolve_bytecode(
+            py,
+            state.optimize_level,
+            &state.decode_source,
+            &state.io_module,
+        )? {
             let code = state.marshal_loads.call(py, (bytecode,), None)?;
             let dict = module.getattr(py, "__dict__")?;
 
@@ -749,7 +754,12 @@ impl OxidizedFinder {
             None => return Ok(py.None()),
         };
 
-        if let Some(bytecode) = module.resolve_bytecode(py, state.optimize_level)? {
+        if let Some(bytecode) = module.resolve_bytecode(
+            py,
+            state.optimize_level,
+            &state.decode_source,
+            &state.io_module,
+        )? {
             state.marshal_loads.call(py, (bytecode,), None)
         } else if module.flavor == &ResourceFlavor::FrozenModule {
             state

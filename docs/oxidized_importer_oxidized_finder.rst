@@ -165,10 +165,8 @@ the ``name`` attribute. When a resource is added, any existing resource
 under the same name has its data replaced by the incoming ``OxidizedResource``
 instance.
 
-For a Python module to be made available for import, it must have
-bytecode registered: it isn't enough to register source code. If you have
-source code and want to produce bytecode, you can do something like the
-following:
+If you have source code and want to produce bytecode, you can do something
+like the following:
 
 .. code-block:: python
 
