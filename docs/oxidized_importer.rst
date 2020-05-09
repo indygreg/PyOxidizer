@@ -26,6 +26,7 @@ used with regular Python installs.
 .. toctree::
    :maxdepth: 2
 
+   oxidized_importer_getting_started
    oxidized_importer_meta_path_finders
    oxidized_importer_oxidized_finder
    oxidized_importer_behavior_and_compliance
