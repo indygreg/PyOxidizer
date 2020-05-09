@@ -17,7 +17,7 @@ use {
 };
 
 // A importlib.metadata.Distribution allowing access to package distribution data.
-py_class!(class PyOxidizerDistribution |py| {
+py_class!(class OxidizedDistribution |py| {
     data state: Arc<Box<ImporterState>>;
     data package: String;
 
@@ -46,7 +46,7 @@ py_class!(class PyOxidizerDistribution |py| {
     }
 });
 
-impl PyOxidizerDistribution {
+impl OxidizedDistribution {
     fn read_text_impl(&self, py: Python, filename: &PyString) -> PyResult<PyObject> {
         let state: &Arc<Box<ImporterState>> = self.state(py);
         let package: &str = self.package(py);
@@ -165,9 +165,7 @@ pub(crate) fn find_distributions<'a>(
                 && (resource.in_memory_distribution_resources.is_some()
                     || resource.relative_path_distribution_resources.is_some())
             {
-                vec![
-                    PyOxidizerDistribution::create_instance(py, state.clone(), name)?.into_object(),
-                ]
+                vec![OxidizedDistribution::create_instance(py, state.clone(), name)?.into_object()]
             } else {
                 vec![]
             }
@@ -184,7 +182,7 @@ pub(crate) fn find_distributions<'a>(
                     || v.relative_path_distribution_resources.is_some())
             {
                 distributions.push(
-                    PyOxidizerDistribution::create_instance(py, state.clone(), k.to_string())?
+                    OxidizedDistribution::create_instance(py, state.clone(), k.to_string())?
                         .into_object(),
                 );
             }
