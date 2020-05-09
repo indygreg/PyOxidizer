@@ -33,7 +33,7 @@ class TestImporterResourceScanning(unittest.TestCase):
         self.assertIsInstance(dists, list)
         self.assertEqual(len(dists), 0)
 
-    def test_load_metadata(self):
+    def test_read_text(self):
         metadata_path = self.td / "my_package-1.0.dist-info" / "METADATA"
         metadata_path.parent.mkdir()
 
@@ -62,7 +62,26 @@ class TestImporterResourceScanning(unittest.TestCase):
         data = d.read_text("METADATA")
         self.assertEqual(data, "Name: my_package\nVersion: 1.0\n")
 
-        metadata = d.metadata
+    def test_load_metadata(self):
+        metadata_path = self.td / "my_package-1.0.dist-info" / "METADATA"
+        metadata_path.parent.mkdir()
+
+        with metadata_path.open("w", encoding="utf-8") as fh:
+            fh.write("Name: my_package\n")
+            fh.write("Version: 1.0\n")
+
+        collector = OxidizedResourceCollector(policy="in-memory-only")
+        for r in find_resources_in_path(self.td):
+            collector.add_in_memory(r)
+
+        f = OxidizedFinder()
+        f.add_resources(collector.oxidize()[0])
+
+        dists = f.find_distributions()
+        self.assertIsInstance(dists, list)
+        self.assertEqual(len(dists), 1)
+
+        metadata = dists[0].metadata
         self.assertIsInstance(metadata, email.message.Message)
         self.assertEqual(metadata["Name"], "my_package")
         self.assertEqual(metadata["Version"], "1.0")
