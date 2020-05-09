@@ -113,27 +113,33 @@ Python types:
 
     finder = OxidizedFinder()
 
-The constructor takes an optional ``resources_data`` argument, which defines
-*packed resources data* to parse. The argument must be a bytes-like type.
-A reference to the passed in value will be stored internally in the
-constructed instance, as the memory needs to live for the lifetime of
-the ``OxidizedFinder`` instance.
+The constructor takes the following named arguments:
+
+``resources_data``
+   Bytes-like *packed resources data* to parse. A reference to the passed in
+   value will be stored internally in the constructed instance, as the memory
+   needs to live for the lifetime of the ``OxidizedFinder`` instance.
+
+``resources_file``
+   A path-like object defining the filesystem path to a file containing
+   *packed resources data*. If provided, the file will be opened and
+   memory mapped and resources data will be parsed from it.
+
+``relative_path_origin``
+   A path-like object denoting the filesystem path that should be used as the
+   *origin* value for relative path resources. Filesystem-based resources are
+   stored as a relative path to an *anchor* value. This is that *anchor* value.
+   If not specified, the directory of the current executable will be used.
 
 See the `python_packed_resources <https://docs.rs/python-packed-resources/0.1.0/python_packed_resources/>`_
-Rust crate for the specification of the binary data blob accepted by this
-function.
+Rust crate for the specification of the binary data blob defining *packed
+resources data*.
 
 .. important::
 
    The *packed resources data* format is still evolving. It is recommended
    to use the same version of the ``oxidized_importer`` extension to
    produce and consume this data structure to ensure compatibility.
-
-The ``relative_path_origin`` argument is a *path-like* object denoting the
-filesystem path that should be used as the *origin* value for relative path
-resources. Filesystem-based resources are stored as a relative path to an
-*anchor* value. This is that *anchor* value. If not specified, the directory
-of the current executable will be used.
 
 .. _oxidized_finder_indexed_resources:
 

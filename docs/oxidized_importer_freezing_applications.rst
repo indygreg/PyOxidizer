@@ -112,14 +112,10 @@ and register the custom importer with Python:
 
    import oxidized_importer
 
-   # Load the resources data into memory.
-   with open("oxidized_resources", "rb") as fh:
-       packed_data = fh.read()
-
    # Load those resources into an instance of our custom importer. This
    # will read the index in the passed data structure and make all
    # resources immediately available for importing.
-   finder = oxidized_importer.OxidizedFinder(resources=packed_data)
+   finder = oxidized_importer.OxidizedFinder(resources_file="oxidized_resources")
 
    # If the relative path of filesystem-based resources is not relative
    # to the current executable (which is likely the ``python3`` executable),

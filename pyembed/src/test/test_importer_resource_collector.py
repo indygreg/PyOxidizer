@@ -70,7 +70,17 @@ class TestImporterResourceScanning(unittest.TestCase):
         resources, file_installs = c.oxidize()
         f = OxidizedFinder()
         f.add_resources(resources)
-        f.serialize_indexed_resources()
+
+        with (self.td / "serialized").open("wb") as fh:
+            fh.write(f.serialize_indexed_resources())
+
+        f = OxidizedFinder(resources_file=self.td / "serialized")
+
+        self.assertGreaterEqual(len(f.indexed_resources()), len(resources))
+
+        for r in f.indexed_resources():
+            r.in_memory_source
+            r.in_memory_bytecode
 
     def test_urllib(self):
         c = OxidizedResourceCollector(policy="filesystem-relative-only:lib")

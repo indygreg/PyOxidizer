@@ -19,7 +19,7 @@ use {
     },
     super::resource_scanning::find_resources_in_path,
     cpython::buffer::PyBuffer,
-    cpython::exc::{FileNotFoundError, ImportError, ValueError},
+    cpython::exc::{FileNotFoundError, IOError, ImportError, ValueError},
     cpython::{
         py_class, py_fn, ObjectProtocol, PyBytes, PyCapsule, PyClone, PyDict, PyErr, PyList,
         PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
@@ -294,6 +294,12 @@ pub(crate) struct ImporterState {
 
     /// Python object that was used to supply resources data.
     _resources_py_object: Option<PyObject>,
+
+    /// Holds a memory mapped file instance that resources data came from.
+    ///
+    /// We need to hold a reference to this instance because resources_state
+    /// was constructed from a &[u8] backed by it.
+    _resources_mmap: Option<Box<memmap::Mmap>>,
 }
 
 impl ImporterState {
@@ -304,6 +310,7 @@ impl ImporterState {
         resources_state: &'a PythonResourcesState<'a, u8>,
         resources_state_owned: bool,
         resources_py_object: Option<PyObject>,
+        resources_mmap: Option<Box<memmap::Mmap>>,
     ) -> Result<Self, PyErr> {
         let decode_source = importer_module.get(py, "decode_source")?;
 
@@ -404,6 +411,7 @@ impl ImporterState {
             resources_state: capsule,
             resources_state_owned,
             _resources_py_object: resources_py_object,
+            _resources_mmap: resources_mmap,
         })
     }
 
@@ -539,8 +547,8 @@ py_class!(class OxidizedFinder |py| {
     }
 
     // Additional methods provided for convenience.
-    def __new__(_cls, resources_data: Option<PyObject> = None, relative_path_origin: Option<PyObject> = None) -> PyResult<OxidizedFinder> {
-        oxidized_finder_new(py, resources_data, relative_path_origin)
+    def __new__(_cls, resources_data: Option<PyObject> = None, resources_file: Option<PyObject> = None, relative_path_origin: Option<PyObject> = None) -> PyResult<OxidizedFinder> {
+        oxidized_finder_new(py, resources_data, resources_file, relative_path_origin)
     }
 
     def indexed_resources(&self) -> PyResult<PyObject> {
@@ -896,6 +904,7 @@ impl OxidizedFinder {
                 resources_state,
                 false,
                 None,
+                None,
             )?)),
         )?;
 
@@ -907,6 +916,7 @@ impl OxidizedFinder {
 fn oxidized_finder_new(
     py: Python,
     resources_data: Option<PyObject>,
+    resources_file: Option<PyObject>,
     relative_path_origin: Option<PyObject>,
 ) -> PyResult<OxidizedFinder> {
     // We need to obtain an ImporterState instance. This requires handles on a
@@ -944,16 +954,40 @@ fn oxidized_finder_new(
     }
 
     // If we received a PyObject defining resources data, try to resolve it.
-    let raw_resources_data = if let Some(resources) = &resources_data {
+    let (raw_resources_data, mapped) = if let Some(resources) = &resources_data {
         let buffer = PyBuffer::get(py, resources)?;
 
         let data = unsafe {
             std::slice::from_raw_parts::<u8>(buffer.buf_ptr() as *const _, buffer.len_bytes())
         };
 
-        Some(data)
+        (Some(data), None)
+    } else if let Some(resources_file) = resources_file {
+        let path = pyobject_to_pathbuf(py, resources_file)?;
+
+        let f = std::fs::File::open(&path).or_else(|e| {
+            Err(PyErr::new::<IOError, _>(
+                py,
+                format!("unable to open resources file: {}", e),
+            ))
+        })?;
+
+        let mapped = Box::new(unsafe { memmap::Mmap::map(&f) }.or_else(|e| {
+            Err(PyErr::new::<IOError, _>(
+                py,
+                format!("unable to memory map resources file: {}", e),
+            ))
+        })?);
+
+        // We "leak" a pointer to the memory mapped data and create a slice from it
+        // so we don't have a reference to a borrowed value, which the borrow checker
+        // would complain about. But when we do this, we need to stash the Mmap so it
+        // lives at least as long as this slice.
+        let data = unsafe { std::slice::from_raw_parts::<u8>(mapped.as_ptr(), mapped.len()) };
+
+        (Some(data), Some(mapped))
     } else {
-        None
+        (None, None)
     };
 
     resources_state
@@ -969,6 +1003,7 @@ fn oxidized_finder_new(
             &resources_state,
             true,
             resources_data,
+            mapped,
         )?)),
     )?;
 
