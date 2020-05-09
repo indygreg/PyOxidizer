@@ -7,7 +7,7 @@ use {
     cpython::exc::{IOError, NotImplementedError},
     cpython::{
         py_class, py_class_prop_getter, NoArgs, ObjectProtocol, PyBytes, PyErr, PyList, PyObject,
-        PyResult, PyString, Python, PythonObject,
+        PyResult, PyString, Python, PythonObject, ToPyObject,
     },
     python_packed_resources::data::Resource,
     std::borrow::Cow,
@@ -139,7 +139,13 @@ impl OxidizedDistribution {
     }
 
     fn entry_points_impl(&self, py: Python) -> PyResult<PyObject> {
-        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+        let importlib_metadata = py.import("importlib.metadata")?;
+
+        let entry_point = importlib_metadata.get(py, "EntryPoint")?;
+
+        let text = self.read_text_impl(py, &"entry_points.txt".to_py_object(py))?;
+
+        entry_point.call_method(py, "_from_text", (text,), None)
     }
 
     fn files_impl(&self, py: Python) -> PyResult<PyObject> {

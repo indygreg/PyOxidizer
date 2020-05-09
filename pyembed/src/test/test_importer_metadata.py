@@ -3,6 +3,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import email.message
+import importlib.metadata
 import pathlib
 import sys
 import tempfile
@@ -120,8 +121,35 @@ class TestImporterResourceScanning(unittest.TestCase):
         dists = f.find_distributions()
         self.assertEqual(len(dists), 1)
 
-        with self.assertRaises(NotImplementedError):
-            dists[0].entry_points
+        eps = dists[0].entry_points
+
+        # This is kinda weird but it is what the stdlib does when it receives None.
+        self.assertIsInstance(eps, list)
+        self.assertEqual(len(eps), 0)
+
+    def test_populated_entry_points(self):
+        self._write_metadata()
+
+        entry_points_path = self.td / "my_package-1.0.dist-info" / "entry_points.txt"
+        with entry_points_path.open("w", encoding="utf-8") as fh:
+            fh.write("[console_scripts]\n")
+            fh.write("script = my_package:module\n")
+
+        f = self._finder_from_td()
+
+        dists = f.find_distributions()
+
+        eps = dists[0].entry_points
+
+        self.assertIsInstance(eps, list)
+        self.assertEqual(len(eps), 1)
+
+        ep = eps[0]
+        self.assertIsInstance(ep, importlib.metadata.EntryPoint)
+
+        self.assertEqual(ep.name, "script")
+        self.assertEqual(ep.value, "my_package:module")
+        self.assertEqual(ep.group, "console_scripts")
 
 
 if __name__ == "__main__":

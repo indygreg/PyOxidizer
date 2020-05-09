@@ -99,6 +99,8 @@ New Features
   facility enables the creation and reuse of packed resources data
   structures without having to use ``pyoxidizer`` to collect Python
   resources data.
+* The types returned by ``OxidizedFinder.find_distributions()`` now
+  implement ``entry_points``, allowing *entry points* to be discovered.
 
 Bug Fixes
 ^^^^^^^^^
