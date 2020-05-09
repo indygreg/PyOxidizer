@@ -139,6 +139,12 @@ fn importer_resource_scanning_py() -> Result<()> {
     run_py_test("test_importer_resource_scanning.py")
 }
 
+/// Run test_importer_module_loading.py.
+#[test]
+fn importer_module_loading_py() -> Result<()> {
+    run_py_test("test_importer_module_loading.py")
+}
+
 /// Run test_importer_resource_reading.py.
 #[test]
 fn importer_resource_reading_py() -> Result<()> {
