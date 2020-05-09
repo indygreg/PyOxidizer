@@ -2,6 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import io
 import pathlib
 import sys
 import tempfile
@@ -10,6 +11,7 @@ import unittest
 from oxidized_importer import (
     OxidizedFinder,
     OxidizedResourceCollector,
+    OxidizedResourceReader,
     find_resources_in_path,
 )
 
@@ -25,6 +27,19 @@ class TestImporterResourceReading(unittest.TestCase):
         self.raw_temp_dir.cleanup()
         del self.raw_temp_dir
         del self.td
+
+    def _make_package(self, name):
+        package_path = self.td
+
+        for part in name.split("."):
+            package_path = package_path / part
+
+            package_path.mkdir(exist_ok=True)
+
+            with (package_path / "__init__.py").open("wb"):
+                pass
+
+        return package_path
 
     def _finder_from_td(self):
         collector = OxidizedResourceCollector(policy="in-memory-only")
@@ -47,6 +62,41 @@ class TestImporterResourceReading(unittest.TestCase):
         f = self._finder_from_td()
 
         self.assertIsNone(f.get_resource_reader("my_package"))
+
+    def test_top_level_package(self):
+        p = self._make_package("my_package")
+
+        with (p / "resource.txt").open("wb") as fh:
+            fh.write(b"my resource")
+
+        f = self._finder_from_td()
+
+        entries = [r for r in f.indexed_resources() if r.name == "my_package"]
+        self.assertEqual(len(entries), 1)
+        self.assertTrue(entries[0].is_package)
+
+        r = f.get_resource_reader("my_package")
+
+        self.assertIsInstance(r, OxidizedResourceReader)
+
+        with self.assertRaises(FileNotFoundError):
+            r.is_resource("missing")
+
+        self.assertTrue(r.is_resource("resource.txt"))
+
+        contents = r.contents()
+        self.assertIsInstance(contents, list)
+        self.assertEqual(contents, ["resource.txt"])
+
+        with self.assertRaises(FileNotFoundError):
+            r.resource_path("resource.txt")
+
+        with self.assertRaises(FileNotFoundError):
+            r.open_resource("missing")
+
+        f = r.open_resource("resource.txt")
+        self.assertIsInstance(f, io.BytesIO)
+        self.assertEqual(f.getvalue(), b"my resource")
 
 
 if __name__ == "__main__":
