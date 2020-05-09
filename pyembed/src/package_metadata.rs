@@ -153,7 +153,34 @@ impl OxidizedDistribution {
     }
 
     fn requires_impl(&self, py: Python) -> PyResult<PyObject> {
-        Err(PyErr::new::<NotImplementedError, _>(py, NoArgs))
+        let requires: PyObject =
+            self.metadata_impl(py)?
+                .call_method(py, "get_all", ("Requires-Dist",), None)?;
+
+        let requires = if requires == py.None() {
+            // Fall back to reading from requires.txt.
+            let source = self.read_text_impl(py, &"requires.txt".to_py_object(py))?;
+
+            if source == py.None() {
+                py.None()
+            } else {
+                let importlib_metadata = py.import("importlib.metadata")?;
+                let distribution = importlib_metadata.get(py, "Distribution")?;
+
+                distribution.call_method(py, "_deps_from_requires_text", (source,), None)?
+            }
+        } else {
+            requires
+        };
+
+        if requires == py.None() {
+            Ok(py.None())
+        } else {
+            let res = PyList::new(py, &[]).into_object();
+            res.call_method(py, "extend", (requires,), None)?;
+
+            Ok(res)
+        }
     }
 }
 

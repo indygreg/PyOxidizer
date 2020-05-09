@@ -157,8 +157,41 @@ class TestImporterResourceScanning(unittest.TestCase):
 
         dists = f.find_distributions()
 
-        with self.assertRaises(NotImplementedError):
-            dists[0].requires
+        self.assertIsNone(dists[0].requires)
+
+    def test_requires_metadata(self):
+        self._write_metadata()
+
+        with (self.td / "my_package-1.0.dist-info" / "METADATA").open("ab") as fh:
+            fh.write(b"Requires-Dist: foo\n")
+            fh.write(b"Requires-Dist: bar; extra == 'all'\n")
+
+        f = self._finder_from_td()
+        dists = f.find_distributions()
+
+        requires = dists[0].requires
+        self.assertIsInstance(requires, list)
+        self.assertEqual(requires, ["foo", "bar; extra == 'all'"])
+
+    def test_requires_egg_info(self):
+        pkginfo_path = self.td / "my_package-1.0.egg-info" / "PKG-INFO"
+        pkginfo_path.parent.mkdir()
+
+        with pkginfo_path.open("w", encoding="utf-8") as fh:
+            fh.write("Name: my_package\n")
+            fh.write("Version: 1.0\n")
+
+        requires_path = self.td / "my_package-1.0.egg-info" / "requires.txt"
+        with requires_path.open("w", encoding="utf-8") as fh:
+            fh.write("foo\n")
+
+        f = self._finder_from_td()
+        dists = f.find_distributions()
+        self.assertEqual(len(dists), 1)
+
+        requires = dists[0].requires
+        self.assertIsInstance(requires, list)
+        self.assertEqual(requires, ["foo"])
 
 
 if __name__ == "__main__":
