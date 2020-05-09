@@ -27,13 +27,7 @@ class TestImporterResourceScanning(unittest.TestCase):
         del self.raw_temp_dir
         del self.td
 
-    def test_find_distributions_empty(self):
-        f = OxidizedFinder()
-        dists = f.find_distributions()
-        self.assertIsInstance(dists, list)
-        self.assertEqual(len(dists), 0)
-
-    def test_read_text(self):
+    def _write_metadata(self):
         metadata_path = self.td / "my_package-1.0.dist-info" / "METADATA"
         metadata_path.parent.mkdir()
 
@@ -41,12 +35,25 @@ class TestImporterResourceScanning(unittest.TestCase):
             fh.write("Name: my_package\n")
             fh.write("Version: 1.0\n")
 
+    def _finder_from_td(self):
         collector = OxidizedResourceCollector(policy="in-memory-only")
         for r in find_resources_in_path(self.td):
             collector.add_in_memory(r)
 
         f = OxidizedFinder()
         f.add_resources(collector.oxidize()[0])
+
+        return f
+
+    def test_find_distributions_empty(self):
+        f = OxidizedFinder()
+        dists = f.find_distributions()
+        self.assertIsInstance(dists, list)
+        self.assertEqual(len(dists), 0)
+
+    def test_read_text(self):
+        self._write_metadata()
+        f = self._finder_from_td()
 
         dists = f.find_distributions()
         self.assertIsInstance(dists, list)
@@ -63,19 +70,8 @@ class TestImporterResourceScanning(unittest.TestCase):
         self.assertEqual(data, "Name: my_package\nVersion: 1.0\n")
 
     def test_load_metadata(self):
-        metadata_path = self.td / "my_package-1.0.dist-info" / "METADATA"
-        metadata_path.parent.mkdir()
-
-        with metadata_path.open("w", encoding="utf-8") as fh:
-            fh.write("Name: my_package\n")
-            fh.write("Version: 1.0\n")
-
-        collector = OxidizedResourceCollector(policy="in-memory-only")
-        for r in find_resources_in_path(self.td):
-            collector.add_in_memory(r)
-
-        f = OxidizedFinder()
-        f.add_resources(collector.oxidize()[0])
+        self._write_metadata()
+        f = self._finder_from_td()
 
         dists = f.find_distributions()
         self.assertIsInstance(dists, list)
@@ -111,19 +107,8 @@ class TestImporterResourceScanning(unittest.TestCase):
         self.assertEqual(metadata["Version"], "1.0")
 
     def test_version(self):
-        metadata_path = self.td / "my_package-1.0.dist-info" / "METADATA"
-        metadata_path.parent.mkdir()
-
-        with metadata_path.open("w", encoding="utf-8") as fh:
-            fh.write("Name: my_package\n")
-            fh.write("Version: 1.0\n")
-
-        collector = OxidizedResourceCollector(policy="in-memory-only")
-        for r in find_resources_in_path(self.td):
-            collector.add_in_memory(r)
-
-        f = OxidizedFinder()
-        f.add_resources(collector.oxidize()[0])
+        self._write_metadata()
+        f = self._finder_from_td()
 
         dists = f.find_distributions()
         self.assertEqual(dists[0].version, "1.0")
