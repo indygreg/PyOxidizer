@@ -16,8 +16,8 @@ use {
     cpython::exc::{ImportError, OSError, TypeError, ValueError},
     cpython::{
         py_class, py_class_call_slot_impl_with_ref, py_class_prop_getter, py_class_prop_setter,
-        NoArgs, ObjectProtocol, PyBytes, PyClone, PyDict, PyErr, PyList, PyModule, PyObject,
-        PyResult, PyString, Python, PythonObject, ToPyObject,
+        NoArgs, ObjectProtocol, PyBytes, PyDict, PyErr, PyList, PyModule, PyObject, PyResult,
+        PyString, Python, PythonObject, ToPyObject,
     },
     python3_sys as pyffi,
     python_packed_resources::data::{Resource, ResourceFlavor},
@@ -522,31 +522,30 @@ impl<'a> PythonResourcesState<'a, u8> {
     }
 
     /// Obtain the resources available in a Python package, as a Python list.
+    ///
+    /// The names are returned in sorted order.
     pub fn package_resource_names(&self, py: Python, package: &str) -> PyResult<PyObject> {
         let entry = match self.resources.get(package) {
             Some(entry) => entry,
             None => return Ok(PyList::new(py, &[]).into_object()),
         };
 
-        if let Some(resources) = &entry.in_memory_package_resources {
-            let names = resources
-                .keys()
-                .map(|name| name.to_py_object(py))
-                .collect::<Vec<PyString>>();
+        let mut names = if let Some(resources) = &entry.in_memory_package_resources {
+            resources.keys().collect()
+        } else if let Some(resources) = &entry.relative_path_package_resources {
+            resources.keys().collect()
+        } else {
+            vec![]
+        };
 
-            return Ok(names.to_py_object(py).as_object().clone_ref(py));
-        }
+        names.sort();
 
-        if let Some(resources) = &entry.relative_path_package_resources {
-            let names = resources
-                .keys()
-                .map(|name| name.to_py_object(py))
-                .collect::<Vec<PyString>>();
+        let names = names
+            .iter()
+            .map(|x| x.to_py_object(py).into_object())
+            .collect::<Vec<PyObject>>();
 
-            return Ok(names.to_py_object(py).as_object().clone_ref(py));
-        }
-
-        Ok(PyList::new(py, &[]).into_object())
+        Ok(PyList::new(py, &names).into_object())
     }
 
     /// Attempt to resolve a PyBytes for resource data given a relative path.
