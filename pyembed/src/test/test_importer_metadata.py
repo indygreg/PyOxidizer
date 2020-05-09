@@ -86,6 +86,24 @@ class TestImporterResourceScanning(unittest.TestCase):
         self.assertEqual(metadata["Name"], "my_package")
         self.assertEqual(metadata["Version"], "1.0")
 
+    def test_version(self):
+        metadata_path = self.td / "my_package-1.0.dist-info" / "METADATA"
+        metadata_path.parent.mkdir()
+
+        with metadata_path.open("w", encoding="utf-8") as fh:
+            fh.write("Name: my_package\n")
+            fh.write("Version: 1.0\n")
+
+        collector = OxidizedResourceCollector(policy="in-memory-only")
+        for r in find_resources_in_path(self.td):
+            collector.add_in_memory(r)
+
+        f = OxidizedFinder()
+        f.add_resources(collector.oxidize()[0])
+
+        dists = f.find_distributions()
+        self.assertEqual(dists[0].version, "1.0")
+
 
 if __name__ == "__main__":
     # Reset command arguments so test runner isn't confused.
