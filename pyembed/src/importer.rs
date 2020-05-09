@@ -973,10 +973,16 @@ impl OxidizedFinder {
     fn indexed_resources_impl(&self, py: Python) -> PyResult<PyObject> {
         let resources_state: &PythonResourcesState<u8> = self.state(py).get_resources_state();
 
-        let objects: Result<Vec<PyObject>, PyErr> = resources_state
+        let mut resources = resources_state
             .resources
             .values()
-            .map(|resource| resource_to_pyobject(py, resource))
+            .collect::<Vec<&python_packed_resources::data::Resource<u8>>>();
+
+        resources.sort_by_key(|r| &r.name);
+
+        let objects: Result<Vec<PyObject>, PyErr> = resources
+            .iter()
+            .map(|r| resource_to_pyobject(py, r))
             .collect();
 
         Ok(objects?.to_py_object(py).into_object())
