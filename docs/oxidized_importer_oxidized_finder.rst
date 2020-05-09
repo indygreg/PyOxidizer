@@ -103,8 +103,8 @@ inspect, and manipulate instances.
 
 .. _oxidized_finder__new__:
 
-``__new__(cls, resources=None, relative_path_origin=None)``
------------------------------------------------------------
+``__new__(cls, ...)``
+---------------------
 
 New instances of ``OxidizedFinder`` can be constructed like normal
 Python types:
@@ -113,7 +113,7 @@ Python types:
 
     finder = OxidizedFinder()
 
-The constructor takes an optional ``resources`` argument, which defines
+The constructor takes an optional ``resources_data`` argument, which defines
 *packed resources data* to parse. The argument must be a bytes-like type.
 A reference to the passed in value will be stored internally in the
 constructed instance, as the memory needs to live for the lifetime of

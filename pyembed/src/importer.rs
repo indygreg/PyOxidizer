@@ -539,8 +539,8 @@ py_class!(class OxidizedFinder |py| {
     }
 
     // Additional methods provided for convenience.
-    def __new__(_cls, resources: Option<PyObject> = None, relative_path_origin: Option<PyObject> = None) -> PyResult<OxidizedFinder> {
-        oxidized_finder_new(py, resources, relative_path_origin)
+    def __new__(_cls, resources_data: Option<PyObject> = None, relative_path_origin: Option<PyObject> = None) -> PyResult<OxidizedFinder> {
+        oxidized_finder_new(py, resources_data, relative_path_origin)
     }
 
     def indexed_resources(&self) -> PyResult<PyObject> {
@@ -903,10 +903,10 @@ impl OxidizedFinder {
     }
 }
 
-/// OxidizedFinder.__new__(resources=None)
+/// OxidizedFinder.__new__(resources_data=None)
 fn oxidized_finder_new(
     py: Python,
-    resources: Option<PyObject>,
+    resources_data: Option<PyObject>,
     relative_path_origin: Option<PyObject>,
 ) -> PyResult<OxidizedFinder> {
     // We need to obtain an ImporterState instance. This requires handles on a
@@ -944,7 +944,7 @@ fn oxidized_finder_new(
     }
 
     // If we received a PyObject defining resources data, try to resolve it.
-    let resources_data = if let Some(resources) = &resources {
+    let raw_resources_data = if let Some(resources) = &resources_data {
         let buffer = PyBuffer::get(py, resources)?;
 
         let data = unsafe {
@@ -957,7 +957,7 @@ fn oxidized_finder_new(
     };
 
     resources_state
-        .load(resources_data)
+        .load(raw_resources_data)
         .or_else(|err| Err(PyErr::new::<ValueError, _>(py, err)))?;
 
     let importer = OxidizedFinder::create_instance(
@@ -968,7 +968,7 @@ fn oxidized_finder_new(
             &bootstrap_module,
             &resources_state,
             true,
-            resources,
+            resources_data,
         )?)),
     )?;
 
