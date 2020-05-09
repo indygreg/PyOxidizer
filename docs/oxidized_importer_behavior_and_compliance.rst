@@ -108,24 +108,19 @@ the required hook for ``importlib.metadata`` to resolve ``Distribution``
 instances. However, the returned objects do not implement the full
 ``Distribution`` interface.
 
-This is because there is no available ``Distribution`` base class in Python
-3.7 for PyOxidizer to extend with its custom functionality. We could
-implement all of this functionality, but it would be a lot of work: it
-would be easier to wait until PyOxidizer requires Python 3.8 and then we
-can use the types in ``importlib.metadata`` directly.
+Here are the known differences between ``OxidizedDistribution`` and
+``importlib.metadata.Distribution`` instances:
 
-The ``PyOxidizerDistribution`` instances returned by
-``OxidizedFinder.find_distributions()`` have the following behavior:
+* ``locate_file()`` is not defined.
+* ``@classmethod from_name()`` is not defined.
+* ``@classmethod discover()`` is not defined.
+* ``@staticmethod at()`` is not defined.
+* ``@property files`` raises ``NotImplementedError``.
 
-* ``read_text(filename)`` will return a ``str`` on success or raise
-  ``IOError`` on failure.
-* The ``metadata`` property will return an ``email.message.Message`` instance
-  from the parsed ``METADATA`` or ``PKG-INFO`` file, just like the standard
-  library. ``IOError`` will be raised if these metadata files cannot be found.
-* The ``version`` property will resolve to a ``str`` on success or raise
-  ``IOError`` on failure to resolve ``metadata``.
-* The ``entry_points``, ``files``, and ``requires`` properties/attributes
-  will raise ``NotImplementedError`` on access.
+There are additional ``_`` prefixed attributes of
+``importlib.metadata.Distribution`` that are not implemented. But we do not
+consider these part of the public API and don't feel they are worth calling
+out.
 
 In addition, ``OxidizedFinder.find_distributions()`` ignores the ``path``
 attribute of the passed ``Context`` instance. Only the ``name`` attribute
