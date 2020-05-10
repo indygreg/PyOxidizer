@@ -10,7 +10,7 @@ use {
         is_package_from_path, packages_from_module_name, resolve_path_for_module,
     },
     crate::python_source::has_dunder_file,
-    anyhow::{Context, Result},
+    anyhow::{anyhow, Context, Result},
     std::convert::TryFrom,
     std::path::{Path, PathBuf},
 };
@@ -260,7 +260,11 @@ impl PythonModuleBytecode {
             DataLocation::Path(path) => {
                 let data = std::fs::read(path)?;
 
-                Ok(data[16..data.len()].to_vec())
+                if data.len() >= 16 {
+                    Ok(data[16..data.len()].to_vec())
+                } else {
+                    Err(anyhow!("bytecode file is too short"))
+                }
             }
         }
     }
