@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 use crate::environment::{PyOxidizerSource, BUILD_GIT_COMMIT, PYOXIDIZER_VERSION};
 
 lazy_static! {
-    static ref HANDLEBARS: Handlebars = {
+    static ref HANDLEBARS: Handlebars<'static> = {
         let mut handlebars = Handlebars::new();
 
         handlebars
