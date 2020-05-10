@@ -165,6 +165,13 @@ impl<'a> ImportablePythonModule<'a, u8> {
                 ))
             })?;
 
+            if bytecode.len() < 16 {
+                return Err(PyErr::new::<ImportError, _>(
+                    py,
+                    "bytecode file does not contain enough data",
+                ));
+            }
+
             // First 16 bytes of .pyc files are a header.
             Ok(Some(PyBytes::new(py, &bytecode[16..]).into_object()))
         } else if let Some(source) = self.resolve_source(py, decode_source, io_module)? {
