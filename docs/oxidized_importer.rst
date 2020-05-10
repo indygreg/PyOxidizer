@@ -32,6 +32,7 @@ used with regular Python installs.
    oxidized_importer_behavior_and_compliance
    oxidized_importer_python_resource_types
    oxidized_importer_resource_scanning
+   oxidized_importer_resource_files
    oxidized_importer_freezing_applications
    oxidized_importer_known_issues
    oxidized_importer_security

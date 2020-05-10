@@ -11,14 +11,15 @@ plugin systems load Python modules outside the context of the normal
 ``import`` mechanism and therefore treat standalone Python source/bytecode
 files as non-module *resources*.
 
-PyOxidizer has support for loading resource files. But compatibility with
-Python's expected behavior may vary.
+``oxidized_importer`` has support for loading resource files. But
+compatibility with Python's expected behavior may vary.
 
 Python Resource Loading Mechanisms
 ==================================
 
-Before we talk about PyOxidizer's support for resource loading, it is
-important to understand how Python code in the wild can load resources.
+Before we talk about ``oxidized_importer``'s support for resource loading,
+it is important to understand how Python code in the wild can load
+resources.
 
 We'll overview them in the chronological order they were introduced into
 the Python ecosystem.
@@ -91,7 +92,7 @@ may be actively avoided.
 .. important::
 
    As of Python 3.8, ``ResourceReader`` and ``importlib.resources`` are the
-   most robust mechanisms for loading resources and PyOxidizer recommends
+   most robust mechanisms for loading resources and we recommend
    adopting these APIs if possible.
 
 .. _resource_reader_support:
@@ -99,15 +100,15 @@ may be actively avoided.
 Support for ``ResourceReader``
 ==============================
 
-PyOxidizer's custom importer implements the ``ResourceReader`` interface for
+``oxidized_importer`` implements the ``ResourceReader`` interface for
 loading resource files.
 
 However, compatibility with Python's default filesystem-based implementation
 can vary. Unfortunately, various behavior with ``ResourceReader`` is
 `undefined <https://bugs.python.org/issue36128>`_, so it isn't clear
-if CPython or PyOxidizer is buggy here.
+if CPython or ``oxidized_importer`` is buggy here.
 
-PyOxidizer's custom importer maintains an index of known resource files.
+``oxidized_importer`` maintains an index of known resource files.
 This index is logically a ``dict`` of ``dict``s, where the outer key is
 the Python package name and the inner key is the resource name. Package
 names are fully qualified. e.g. ``foo`` or ``foo.bar``. Resource names
@@ -115,43 +116,46 @@ are effectively relative filesystem paths. e.g. ``resource.txt`` or
 ``subdir/resource.txt``. The relative paths always use ``/`` as the
 directory separator, even on Windows.
 
-``ResourceReader`` instances are bound to a specific Python package: that's
-how they are defined. When a PyOxidizer ``ResourceReader`` receives the
-name of a resource, it performs a simple lookup in the global resources
-index. If the string key is found, it is used. Otherwise, PyOxidizer
-assumes the resource doesn't exist.
+``OxidizedFinder.get_resource_reader()`` returns instances of
+``OxidizedResourceReader``. Each instance is bound to a specific Python
+package: that's how they are defined. When an ``OxidizedResourceReader``
+receives the name of a resource, it performs a simple lookup in the global
+resources index. If the string key is found, it is used. Otherwise, it is
+assumed the resource doesn't exist.
 
-The ``ResourceReader.contents()`` method will return a list of all keys
-in the internal resources index.
+The ``OxidizedResourceReader.contents()`` method will return a list of all
+keys in the internal resources index.
 
-PyOxidizer's ``ReaderResource`` works the same way for in-memory and
+``OxidizedResourceReader`` works the same way for in-memory and
 filesystem-relative :ref:`packaging_resource_locations` because internally
 both use the same index of resources to drive execution: only the location
 of the resource content varies.
 
-PyOxidizer's implementation varies from the standard library filesystem-based
-implementation in the following ways:
+``OxidizedResourceReader``'s implementation varies from the standard library
+filesystem-based implementation in the following ways:
 
-* ``ResourceReader.contents()`` will return keys from the package's
+* ``OxidizedResourceReader.contents()`` will return keys from the package's
   resources dictionary, not all the files in the same directory as the
   underlying Python package (the standard library uses ``os.listdir()``).
-  PyOxidizer will therefore return resource names in sub-directories
-  as long as those sub-directories aren't themselves Python packages.
-* Resources must be explicitly registered with PyOxidizer as such in order
-  to be exposed via the resources API. By contrast, the filesystem-based
-  importer - relying on ``os.listdir()`` - will expose all files in a
-  directory as a resource. This includes ``.py`` files.
-* ``ResourceReader.is_resource()`` will return ``True`` for resource names
-  containing a slash. Contrast with Python's, which returns ``False``
+  ``OxidizedResourceReader`` will therefore return resource names in
+  sub-directories as long as those sub-directories aren't themselves Python
+  packages.
+* Resources must be explicitly registered with ``OxidizedFinder`` as such in
+  order   to be exposed via the resources API. By contrast, the
+  filesystem-based   importer - relying on ``os.listdir()`` - will expose
+  all files in a directory as a resource. This includes ``.py`` files.
+* ``OxidizedResourceReader.is_resource()`` will return ``True`` for resource
+  names containing a slash. Contrast with Python's, which returns ``False``
   (even though you can open a resource with ``ResourceReader.open_resource()``
-  for the same path). PyOxidizer's behavior is more consistent.
+  for the same path). ``OxidizedResourceReader``'s behavior is more
+  consistent.
 
 .. _resource_loader_support:
 
 Support for ``ResourceLoader``
 ==============================
 
-PyOxidizer's importer implements the deprecated ``ResourceLoader`` interface
+``OxidizedFinder`` implements the deprecated ``ResourceLoader`` interface
 and ``get_data(path)`` will return ``bytes`` instances for registered
 resources or raise ``OSError`` on request of an unregistered resource.
 
@@ -174,7 +178,7 @@ valid filesystem path pointing to an existing file is passed in.
 .. note::
 
    The behavior of not servicing paths that actually exist but aren't
-   registered with PyOxidizer as resources may be overly opinionated
+   registered with ``OxidizedFinder`` as resources may be overly opinionated
    and undesirable for some applications.
 
    If this is a legitimate use case for your application, please create a
@@ -183,10 +187,11 @@ valid filesystem path pointing to an existing file is passed in.
 Once a path is recognized as having the prefix of the current executable
 or its directory, the remaining path components will be interpreted as the
 resource path. This resource path logically contains a package name component
-and a resource name component. PyOxidizer will traverse all potential package
-names starting from the longest/deepest up until the top-level package looking
-for a known Python package. Once a known package name is encountered, its
-resources will be consulted. At most 1 package will be consulted for resources.
+and a resource name component. ``OxidizedFinder`` will traverse all
+potential package names starting from the longest/deepest up until the
+top-level package looking for a known Python package. Once a known package
+name is encountered, its resources will be consulted. At most 1 package
+will be consulted for resources.
 
 Here is a concrete example.
 
@@ -225,22 +230,23 @@ file permission errors).
 Support for ``__file__``
 ========================
 
-PyOxidizer's custom importer may or may not set the ``__file__`` attribute
-on loaded modules. See :ref:`no_file` for details.
+``OxidizedFinder`` may or may not set the ``__file__`` attribute on loaded
+modules. See :ref:`no_file` for details.
 
 Therefore, Python code relying on the presence of ``__file__`` to derive
-paths to resource files may or may not work with PyOxidizer.
+paths to resource files may or may not work with ``oxidized_importer``.
 
 Code utilizing ``__file__`` for resource loading is highly encouraged to switch
 to the ``importlib.resources`` API. If this is not possible, you can change
 packaging settings to move the :ref:`packaging_resource_locations` from
-in-memory to filesystem-relative.
+in-memory to filesystem-relative, as ``__file__`` is set when loading modules
+from the filesystem.
 
 Support for ``pkg_resources``
 =============================
 
 ``pkg_resources``'s APIs for loading resources likely do not work with
-PyOxidizer.
+``oxidized_importer``.
 
 Porting Code to Modern Resources APIs
 =====================================
@@ -302,7 +308,7 @@ This is a standalone Python package that is a backport of ``importlib.resources`
 to older Python versions. Essentially, you can always get the APIs from the
 latest Python version. This shim knows about the various APIs available
 on ``Loader`` instances and chooses the best available one. It should
-*just work* with PyOxidizer's custom ``ResourceReader`` interface.
+*just work* with ``oxidized_importer``.
 
 If you want to implement your own shim without introducing a dependency
 on ``importlib_resources``, the following code can be used as a starting
