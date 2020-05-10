@@ -76,7 +76,7 @@ with open("oxidized-importer/README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="oxidized_importer",
-    version="0.1dev0",
+    version="0.1",
     author="Gregory Szorc",
     author_email="gregory.szorc@gmail.com",
     url="https://github.com/indygreg/PyOxidizer",
