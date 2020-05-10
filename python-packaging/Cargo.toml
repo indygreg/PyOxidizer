@@ -14,7 +14,7 @@ keywords = ["python"]
 anyhow = "1.0"
 byteorder = "1.2"
 encoding_rs = "0.8"
-itertools = "0.8"
+itertools = "0.9"
 lazy_static = "1.4"
 mailparse = "0.12"
 python-packed-resources = { version = "0.2.0-pre", path = "../python-packed-resources" }
