@@ -19,9 +19,7 @@ Installing from PyPI
 
 ``oxidized_importer`` is
 `available <https://pypi.org/project/oxidized_importer/>`_ on PyPI. This
-means that installing is as simple as:
-
-.. code-block::
+means that installing is as simple as::
 
    $ pip3 install oxidized_importer
 
@@ -30,9 +28,7 @@ Compiling from Source
 
 To build from source, obtain a clone of PyOxidizer's Git repository and
 run the ``setup.py`` script or use ``pip`` to build the Python project in
-the root of the repository. e.g.
-
-.. code-block::
+the root of the repository. e.g.::
 
    $ python3.8 setup.py build_ext -i
    $ python3.8 setup.py install
@@ -42,18 +38,14 @@ the root of the repository. e.g.
 
 The ``setup.py`` is pretty minimal and is a thin wrapper around ``cargo build``
 for the underlying Rust project. If you want to build using Rust's standard
-toolchain, do something like the following:
-
-.. code-block::
+toolchain, do something like the following::
 
    $ cd oxidized-importer
    $ cargo build --release
 
 If you don't have a Python 3.8 ``python3`` executable in your ``PATH``, you
 will need to tell the Rust build system which ``python3`` executable to use to
-help derive the build configuration for the Python extension:
-
-.. code-block::
+help derive the build configuration for the Python extension::
 
    $ PYTHON_SYS_EXECUTABLE=/path/to/python3.8 cargo build
 
