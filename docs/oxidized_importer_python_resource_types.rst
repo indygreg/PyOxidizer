@@ -1,10 +1,10 @@
 .. _oxidized_importer_python_resource_types:
 
-=========================================
-``oxidized_finder`` Python Resource Types
-=========================================
+===========================================
+``oxidized_importer`` Python Resource Types
+===========================================
 
-The ``oxidized_finder`` module defines Python types beyond
+The ``oxidized_importer`` module defines Python types beyond
 ``OxidizedFinder``. This page documents those types and their APIs.
 
 .. important::
