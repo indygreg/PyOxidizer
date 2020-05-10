@@ -4,10 +4,10 @@
 
 /*! Utility functions related to Python modules. */
 
-use {serde::Deserialize, std::collections::BTreeSet, std::path::Path, std::path::PathBuf};
+use {std::collections::BTreeSet, std::path::Path, std::path::PathBuf};
 
 /// Represents file name suffixes for Python modules.
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PythonModuleSuffixes {
     /// Suffixes for Python source modules.
     pub source: Vec<String>,
