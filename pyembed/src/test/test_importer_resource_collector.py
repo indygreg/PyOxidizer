@@ -17,7 +17,7 @@ from oxidized_importer import (
 )
 
 
-class TestImporterResourceScanning(unittest.TestCase):
+class TestImporterResourceCollector(unittest.TestCase):
     def setUp(self):
         self.raw_temp_dir = tempfile.TemporaryDirectory(
             prefix="oxidized_importer-test-"
