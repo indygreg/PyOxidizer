@@ -468,6 +468,9 @@ pub struct StandaloneDistribution {
     /// How libpython is linked in this distribution.
     pub link_mode: StandaloneDistributionLinkMode,
 
+    /// Symbol visibility for Python symbols.
+    python_symbol_visibility: String,
+
     /// Capabilities of distribution to load extension modules.
     extension_module_loading: Vec<String>,
 
@@ -896,6 +899,7 @@ impl StandaloneDistribution {
             python_exe: python_exe_path(dist_dir)?,
             stdlib_path,
             link_mode,
+            python_symbol_visibility: pi.python_symbol_visibility,
             extension_module_loading: pi.python_extension_module_loading,
             licenses: pi.licenses.clone(),
             license_path: match pi.license_path {
@@ -1373,7 +1377,15 @@ impl StandalonePythonExecutableBuilder {
     /// Whether we're building for a target that supports loading extension modules
     /// from memory.
     fn supports_in_memory_dynamically_linked_extension_loading(&self) -> bool {
-        self.link_mode == LibpythonLinkMode::Dynamic && self.target_triple.contains("pc-windows")
+        // Loading from memory is only supported on Windows where symbols are
+        // declspec(dllexport) and the distribution is capable of loading
+        // shared library extensions.
+        self.target_triple.contains("pc-windows")
+            && self.distribution.python_symbol_visibility == "dllexport"
+            && self
+                .distribution
+                .extension_module_loading
+                .contains(&"shared-library".to_string())
     }
 
     #[allow(clippy::too_many_arguments)]
