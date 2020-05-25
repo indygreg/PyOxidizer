@@ -1871,14 +1871,10 @@ pub mod tests {
 
         // We need to add minimal extension modules so builds actually work. If they are missing,
         // we'll get missing symbol errors during linking.
-        if distribution.link_mode == StandaloneDistributionLinkMode::Static {
-            for ext in distribution.filter_extension_modules(
-                logger,
-                &ExtensionModuleFilter::Minimal,
-                None,
-            )? {
-                resources.add_builtin_distribution_extension_module(&ext)?;
-            }
+        for ext in
+            distribution.filter_extension_modules(logger, &ExtensionModuleFilter::Minimal, None)?
+        {
+            resources.add_builtin_distribution_extension_module(&ext)?;
         }
 
         let config = EmbeddedPythonConfig::default();
