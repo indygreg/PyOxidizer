@@ -15,7 +15,7 @@ crate-type = ["cdylib"]
 anyhow = "1.0"
 lazy_static = "1.4"
 libc = "0.2"
-python3-sys = { git = "https://github.com/indygreg/rust-cpython.git", rev = "e1b18aaae2f7ca2dda1edbd5270b6d1d25c01d7d" }
+python3-sys = { git = "https://github.com/dgrunwald/rust-cpython.git", rev = "4283acd94f4e794fe03679efc7a6c18bc50938a8" }
 python-packed-resources = { version = "0.2.0-pre", path = "../python-packed-resources" }
 
 [dependencies.pyembed]
