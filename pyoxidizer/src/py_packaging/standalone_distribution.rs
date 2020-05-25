@@ -1063,9 +1063,13 @@ impl PythonDistribution for StandaloneDistribution {
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
         let python_exe = self.python_exe.clone();
 
-        let link_mode = match self.link_mode {
-            StandaloneDistributionLinkMode::Static => LibpythonLinkMode::Static,
-            StandaloneDistributionLinkMode::Dynamic => LibpythonLinkMode::Dynamic,
+        // TODO allow this logic to be configurable.
+        let link_mode = if self.target_triple.contains("pc-windows")
+            && self.python_symbol_visibility == "dllexport"
+        {
+            LibpythonLinkMode::Dynamic
+        } else {
+            LibpythonLinkMode::Static
         };
 
         let mut builder = Box::new(StandalonePythonExecutableBuilder {
@@ -1851,9 +1855,13 @@ pub mod tests {
     ) -> Result<StandalonePythonExecutableBuilder> {
         let distribution = get_default_distribution()?;
 
-        let link_mode = match distribution.link_mode {
-            StandaloneDistributionLinkMode::Static => LibpythonLinkMode::Static,
-            StandaloneDistributionLinkMode::Dynamic => LibpythonLinkMode::Dynamic,
+        // Link mode is static unless we're a dynamic distribution on Windows.
+        let link_mode = if distribution.target_triple.contains("pc-windows")
+            && distribution.python_symbol_visibility == "dllexport"
+        {
+            LibpythonLinkMode::Dynamic
+        } else {
+            LibpythonLinkMode::Static
         };
 
         let mut resources = PrePackagedResources::new(
