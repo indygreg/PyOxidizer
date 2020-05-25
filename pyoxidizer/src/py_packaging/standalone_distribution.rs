@@ -1059,11 +1059,17 @@ impl PythonDistribution for StandaloneDistribution {
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
         let python_exe = self.python_exe.clone();
 
+        let link_mode = match self.link_mode {
+            StandaloneDistributionLinkMode::Static => LibpythonLinkMode::Static,
+            StandaloneDistributionLinkMode::Dynamic => LibpythonLinkMode::Dynamic,
+        };
+
         let mut builder = Box::new(StandalonePythonExecutableBuilder {
             host_triple: host_triple.to_string(),
             target_triple: target_triple.to_string(),
             exe_name: name.to_string(),
             distribution: self.clone(),
+            link_mode,
             resources_policy: resources_policy.clone(),
             resources: PrePackagedResources::new(resources_policy, &self.cache_tag),
             config: config.clone(),
@@ -1314,6 +1320,15 @@ impl PythonDistribution for StandaloneDistribution {
     }
 }
 
+/// How libpython should be linked.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum LibpythonLinkMode {
+    /// Statically linked into the final binary.
+    Static,
+    /// A standalone dynamic library.
+    Dynamic,
+}
+
 /// A self-contained Python executable before it is compiled.
 #[derive(Clone, Debug)]
 pub struct StandalonePythonExecutableBuilder {
@@ -1331,6 +1346,9 @@ pub struct StandalonePythonExecutableBuilder {
     /// TODO replace with just the elements needed to link in order to avoid
     /// a .clone().
     distribution: StandaloneDistribution,
+
+    /// How libpython should be linked.
+    link_mode: LibpythonLinkMode,
 
     /// Policy to apply to added resources.
     resources_policy: PythonResourcesPolicy,
@@ -1355,8 +1373,7 @@ impl StandalonePythonExecutableBuilder {
     /// Whether we're building for a target that supports loading extension modules
     /// from memory.
     fn supports_in_memory_dynamically_linked_extension_loading(&self) -> bool {
-        self.distribution.link_mode == StandaloneDistributionLinkMode::Dynamic
-            && self.target_triple.contains("pc-windows")
+        self.link_mode == LibpythonLinkMode::Dynamic && self.target_triple.contains("pc-windows")
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1418,8 +1435,8 @@ impl StandalonePythonExecutableBuilder {
         let libpyembeddedconfig_data: Option<Vec<u8>>;
         let libpyembeddedconfig_filename: Option<PathBuf>;
 
-        match self.distribution.link_mode {
-            StandaloneDistributionLinkMode::Static => {
+        match self.link_mode {
+            LibpythonLinkMode::Static => {
                 let temp_dir = TempDir::new("pyoxidizer-build-exe")?;
                 let temp_dir_path = temp_dir.path();
 
@@ -1450,7 +1467,7 @@ impl StandalonePythonExecutableBuilder {
                     Some(std::fs::read(&library_info.libpyembeddedconfig_path)?);
             }
 
-            StandaloneDistributionLinkMode::Dynamic => {
+            LibpythonLinkMode::Dynamic => {
                 libpythonxy_filename = PathBuf::from("pythonXY.lib");
                 libpythonxy_data = Vec::new();
                 libpython_filename = self.distribution.libpython_shared_library.clone();
@@ -1605,29 +1622,28 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         }
 
         match self.resources_policy.clone() {
-            PythonResourcesPolicy::InMemoryOnly => match self.distribution.link_mode {
-                StandaloneDistributionLinkMode::Static => {
+            PythonResourcesPolicy::InMemoryOnly => match self.link_mode {
+                LibpythonLinkMode::Static => {
                     self.add_builtin_distribution_extension_module(extension_module)
                 }
-                StandaloneDistributionLinkMode::Dynamic => {
+                LibpythonLinkMode::Dynamic => {
                     self.add_in_memory_distribution_extension_module(extension_module)
                 }
             },
-            PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
-                match self.distribution.link_mode {
-                    StandaloneDistributionLinkMode::Static => {
-                        self.add_builtin_distribution_extension_module(extension_module)
-                    }
-                    StandaloneDistributionLinkMode::Dynamic => self
-                        .add_relative_path_distribution_extension_module(&prefix, extension_module),
+            PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => match self.link_mode {
+                LibpythonLinkMode::Static => {
+                    self.add_builtin_distribution_extension_module(extension_module)
                 }
-            }
+                LibpythonLinkMode::Dynamic => {
+                    self.add_relative_path_distribution_extension_module(&prefix, extension_module)
+                }
+            },
             PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(prefix) => {
-                match self.distribution.link_mode {
-                    StandaloneDistributionLinkMode::Static => {
+                match self.link_mode {
+                    LibpythonLinkMode::Static => {
                         self.add_builtin_distribution_extension_module(extension_module)
                     }
-                    StandaloneDistributionLinkMode::Dynamic => {
+                    LibpythonLinkMode::Dynamic => {
                         // Try in-memory and fall back to file-based if that fails.
                         let mut res =
                             self.add_in_memory_distribution_extension_module(extension_module);
@@ -1788,7 +1804,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         let linking_info = self.resolve_python_linking_info(logger, opt_level, &resources)?;
         let resources = EmbeddedResourcesBlobs::try_from(resources)?;
 
-        if self.distribution.link_mode == StandaloneDistributionLinkMode::Dynamic {
+        if self.link_mode == LibpythonLinkMode::Dynamic {
             if let Some(p) = &self.distribution.libpython_shared_library {
                 let manifest_path = Path::new(p.file_name().unwrap());
                 let content = FileContent {
@@ -1822,6 +1838,12 @@ pub mod tests {
         logger: &slog::Logger,
     ) -> Result<StandalonePythonExecutableBuilder> {
         let distribution = get_default_distribution()?;
+
+        let link_mode = match distribution.link_mode {
+            StandaloneDistributionLinkMode::Static => LibpythonLinkMode::Static,
+            StandaloneDistributionLinkMode::Dynamic => LibpythonLinkMode::Dynamic,
+        };
+
         let mut resources = PrePackagedResources::new(
             &PythonResourcesPolicy::InMemoryOnly,
             &distribution.cache_tag,
@@ -1848,6 +1870,7 @@ pub mod tests {
             target_triple: env!("HOST").to_string(),
             exe_name: "testapp".to_string(),
             distribution: distribution.deref().deref().clone(),
+            link_mode,
             resources_policy: PythonResourcesPolicy::InMemoryOnly,
             resources,
             config,
