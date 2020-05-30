@@ -235,3 +235,26 @@ instead of the filesystem).
 ``PyOxidizer`` has yet to invest significantly into making producing
 distributable artifacts (such as Windows installers) simple, so pynsist
 still has an advantage over ``PyOxidizer`` here.
+
+.. _compare_bazel:
+
+Bazel
+=====
+
+Bazel has `Python rules <https://docs.bazel.build/versions/master/be/python.html>`_
+for building Python binaries and libraries. From a high level, it works
+similarly to how PyOxidizer's Starlark config files allow you to perform
+much of the same actions.
+
+The executables produced by ``py_binary`` are significantly different
+from what PyOxidizer does, however.
+
+An executable produced by ``py_binary`` is a glorified self-executing
+zip file. At run time, it extracts Python resources to a temporary
+directory and then runs a Python interpreter against them. The approach
+is similar in nature to what Shiv and PEX do.
+
+PyOxidizer, by contrast, produces a specialized binary containing the
+Python interpreter and allows you to embed Python resources inside that
+binary, enabling Python modules to be imported without the overhead of
+writing a temporary directory and extracting a zip file.
