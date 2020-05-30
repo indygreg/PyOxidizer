@@ -123,8 +123,8 @@ lazy_static! {
             // macOS.
             PythonDistributionRecord {
                 location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200517/cpython-3.8.3-x86_64-apple-darwin-pgo-20200518T0141.tar.zst".to_string(),
-                    sha256: "f330f7af05395f548fe17ded51d1e31e6e16037d4dc38e307638ec976f9950d1".to_string(),
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200530/cpython-3.8.3-x86_64-apple-darwin-pgo-20200530T1845.tar.zst".to_string(),
+                    sha256: "adf98af0f0ba8f55a84476e0800210b59edd67bb98800be3ebc5d1f0157ff01e".to_string(),
                 },
                 target_triple: "x86_64-apple-darwin".to_string(),
                 supports_prebuilt_extension_modules: true,
