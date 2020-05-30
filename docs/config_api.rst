@@ -275,15 +275,37 @@ of the following:
 ``standalone``
    A distribution produced by the ``python-build-standalone`` project. The
    distribution may be statically or dynamically linked, depending on the
-   ``build_target`` and availability.
+   ``build_target`` and availability. This option effectively chooses the
+   best available ``standalone_dynamic`` or ``standalone_static`` option.
 
-``standalone_static``
-   This is like ``standalone`` but the distribution must have a statically
-   linked ``libpython``.
+   This option is effectively ``standalone_dynamic`` for all targets except
+   musl libc, where it is effectively ``standalone_static``.
 
 ``standalone_dynamic``
-   This is like ``standalone`` but the distribution must have a dynamically
-   linked ``libpython``.
+   This is like ``standalone`` but guarantees the distribution is dynamically
+   linked against various system libraries, notably libc. Despite the
+   dependence on system libraries, binaries built with these distributions can
+   generally be run in most environments.
+
+   This flavor is available for all supported targets except musl libc.
+
+``standalone_static``
+   This is like ``standalone`` but guarantees the distribution is statically
+   linked and has minimal - possibly none - dependencies on system libraries.
+
+   On Windows, the Python distribution does not export Python's symbols,
+   meaning that it is impossible to load dynamically linked Python extensions
+   with it.
+
+   On musl libc, statically linked distributions do not support loading
+   extension modules existing as shared libraries.
+
+   This flavor is only available for Windows and musl libc targets.
+
+.. note::
+
+   The *static* versus *dynamic* terminology refers to the linking of the
+   overall distribution, not ``libpython`` or the final produced binaries.
 
 The ``pyoxidizer`` binary has a set of known distributions built-in
 which are automatically available and used by this function. Typically you don't

@@ -38,6 +38,10 @@ Backwards Compatibility Notes
   support files that make them difficult to integrate with PyOxidizer.
 * The default Python distributions have been upgraded to CPython
   3.8.3 (from 3.7.7) and support for Python 3.7 has been removed.
+* On Windows, the ``default_python_distribution()`` Starlark function
+  now defaults to returning a ``standalone_dynamic`` distribution
+  variant, meaning that it picks a distribution that can load standalone
+  ``.pyd`` Python extension modules by default.
 * The ``pyembed`` crate now defines a new ``OxidizedPythonInterpreterConfig``
   type to configure Python interpreters. ``PythonConfig`` still exists
   and can be converted into a ``OxidizedPythonInterpreterConfig`` using

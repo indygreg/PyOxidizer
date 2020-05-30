@@ -22,6 +22,7 @@ pub struct PythonDistributionCollection {
 }
 
 impl PythonDistributionCollection {
+    /// Find a Python distribution given a target triple and flavor preference.
     pub fn find_distribution(
         &self,
         target_triple: &str,
@@ -77,25 +78,11 @@ lazy_static! {
             },
 
             // The order here is important because we will choose the
-            // first one.
-
-            // Windows static.
-            PythonDistributionRecord {
-                location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200517/cpython-3.8.3-i686-pc-windows-msvc-static-noopt-20200517T2247.tar.zst".to_string(),
-                    sha256: "2b7857e66d00068e407a82e737d19156ec24e9c6808b71170244e8707b3e8bed".to_string(),
-                },
-                target_triple: "i686-pc-windows-msvc".to_string(),
-                supports_prebuilt_extension_modules: false,
-            },
-            PythonDistributionRecord {
-                location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200517/cpython-3.8.3-x86_64-pc-windows-msvc-static-noopt-20200517T2203.tar.zst".to_string(),
-                    sha256: "a5357691aafb186c65e7736e9c21a4ba47cb675a25d89ac65be320698f72fd9e".to_string(),
-                },
-                target_triple: "x86_64-pc-windows-msvc".to_string(),
-                supports_prebuilt_extension_modules: false,
-            },
+            // first one. We prefer shared distributions on Windows because
+            // they are more versatile: statically linked Windows distributions
+            // don't declspec(dllexport) Python symbols and can't load shared
+            // shared library Python extensions, making them a pain to work
+            // with.
 
             // Windows shared.
             PythonDistributionRecord {
@@ -113,6 +100,24 @@ lazy_static! {
                 },
                 target_triple: "x86_64-pc-windows-msvc".to_string(),
                 supports_prebuilt_extension_modules: true,
+            },
+
+            // Windows static.
+            PythonDistributionRecord {
+                location: PythonDistributionLocation::Url {
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200517/cpython-3.8.3-i686-pc-windows-msvc-static-noopt-20200517T2247.tar.zst".to_string(),
+                    sha256: "2b7857e66d00068e407a82e737d19156ec24e9c6808b71170244e8707b3e8bed".to_string(),
+                },
+                target_triple: "i686-pc-windows-msvc".to_string(),
+                supports_prebuilt_extension_modules: false,
+            },
+            PythonDistributionRecord {
+                location: PythonDistributionLocation::Url {
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200517/cpython-3.8.3-x86_64-pc-windows-msvc-static-noopt-20200517T2203.tar.zst".to_string(),
+                    sha256: "a5357691aafb186c65e7736e9c21a4ba47cb675a25d89ac65be320698f72fd9e".to_string(),
+                },
+                target_triple: "x86_64-pc-windows-msvc".to_string(),
+                supports_prebuilt_extension_modules: false,
             },
 
             // macOS.
