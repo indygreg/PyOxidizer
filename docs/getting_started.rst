@@ -74,6 +74,14 @@ Or by cloning the Git repository and building the project locally::
    should always be relatively safe to use ``main`` instead of a released
    version.
 
+.. danger::
+
+   A ``cargo build`` from the repository root directory will likely fail due
+   to how some of the Rust crates are configured.
+
+   See :ref:`rust_cargo_source_checkouts` for instructions on how to invoke
+   ``cargo``.
+
 Once the ``pyoxidizer`` executable is installed, try to run it::
 
    $ pyoxidizer

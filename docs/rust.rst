@@ -19,6 +19,7 @@ can be leveraged to build more advanced applications embedding Python.
 .. toctree::
    :maxdepth: 2
 
+   rust_cargo_source_checkouts
    rust_projects
    rust_crate_configuration
    rust_rust_code
