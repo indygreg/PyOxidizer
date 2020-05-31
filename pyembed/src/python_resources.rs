@@ -17,7 +17,7 @@ use {
     cpython::{
         py_class, py_class_call_slot_impl_with_ref, py_class_prop_getter, py_class_prop_setter,
         NoArgs, ObjectProtocol, PyBytes, PyDict, PyErr, PyList, PyModule, PyObject, PyResult,
-        PyString, Python, PythonObject, ToPyObject,
+        PyString, PyTuple, Python, PythonObject, ToPyObject,
     },
     python3_sys as pyffi,
     python_packed_resources::data::{Resource, ResourceFlavor},
@@ -701,6 +701,44 @@ impl<'a> PythonResourcesState<'a, u8> {
             py,
             (libc::ENOENT, "resource not known", path.clone()),
         ))
+    }
+
+    /// Obtain a PyList of pkgutil.ModuleInfo for known resources.
+    ///
+    /// This is intended to be used as the implementation for Finder.iter_modules().
+    pub fn pkgutil_modules_infos(
+        &self,
+        py: Python,
+        prefix: Option<String>,
+        optimize_level: OptimizeLevel,
+    ) -> PyResult<PyObject> {
+        let infos: PyResult<Vec<PyObject>> = self
+            .resources
+            .values()
+            .filter(|r| match r.flavor {
+                ResourceFlavor::Module => is_module_importable(r, optimize_level),
+                ResourceFlavor::Extension => true,
+                _ => false,
+            })
+            .map(|r| {
+                let name = if let Some(prefix) = &prefix {
+                    format!("{}{}", prefix, r.name)
+                } else {
+                    r.name.to_string()
+                };
+
+                let name = name.to_py_object(py).into_object();
+                let is_package = r.is_package.to_py_object(py).into_object();
+
+                Ok(PyTuple::new(py, &[name, is_package]).into_object())
+            })
+            .collect();
+
+        let infos = infos?;
+
+        let res = PyList::new(py, &infos);
+
+        Ok(res.into_object())
     }
 
     /// Load `builtin` modules from the Python interpreter.

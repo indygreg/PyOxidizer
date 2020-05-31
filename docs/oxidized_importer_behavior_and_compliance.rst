@@ -128,3 +128,27 @@ is consulted. If ``name`` is ``None``, all packages with registered
 distribution files will be returned. Otherwise the returned ``list``
 contains at most 1 ``PyOxidizerDistribution`` corresponding to the
 requested package ``name``.
+
+``pkgutil`` Compatibility
+=========================
+
+The `pkgutil <https://docs.python.org/3/library/pkgutil.html>`_ package
+in Python's standard library reacts to special functionality on
+``MetaPathFinder`` instances.
+
+``pkgutil.iter_modules()`` attempts to use an ``iter_modules()`` method
+to obtain results.
+
+``OxidizedFinder`` implements ``iter_modules(prefix="")`` and
+``pkgutil.iter_modules()`` should work. However, there are some
+differences in behavior:
+
+* ``iter_modules()`` is defined to be a generator but
+  ``OxidizedFinder.iter_modules()`` returns a ``list``. ``list`` is
+  iterable and this difference should hopefully be a harmless
+  implementation detail.
+* ``pkgutil.iter_modules()`` inspects ``sys.path_importer_cache`` as
+  part of evaluating its ``path`` argument. However, ``OxidizedFinder``
+  does not populate ``sys.path_importer_cache``, so path-based
+  filtering via ``pkgutil.iter_modules(path=...)`` will not work like it
+  does with the standard library's importer.

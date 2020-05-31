@@ -546,6 +546,11 @@ py_class!(class OxidizedFinder |py| {
         self.find_distributions_impl(py, context)
     }
 
+    // pkgutil methods.
+    def iter_modules(&self, prefix: Option<PyString> = None) -> PyResult<PyObject> {
+        self.iter_modules_impl(py, prefix)
+    }
+
     // Additional methods provided for convenience.
     def __new__(_cls, resources_data: Option<PyObject> = None, resources_file: Option<PyObject> = None, relative_path_origin: Option<PyObject> = None) -> PyResult<OxidizedFinder> {
         oxidized_finder_new(py, resources_data, resources_file, relative_path_origin)
@@ -882,6 +887,23 @@ impl OxidizedFinder {
         };
 
         super::package_metadata::find_distributions(py, state.clone(), path, name)
+    }
+}
+
+// pkgutil support.
+impl OxidizedFinder {
+    /// def iter_modules(prefix="")
+    fn iter_modules_impl(&self, py: Python, prefix: Option<PyString>) -> PyResult<PyObject> {
+        let state: &ImporterState = self.state(py);
+        let resources_state = state.get_resources_state();
+
+        let prefix = if let Some(prefix) = prefix {
+            Some(prefix.to_string(py)?.to_string())
+        } else {
+            None
+        };
+
+        resources_state.pkgutil_modules_infos(py, prefix, state.optimize_level)
     }
 }
 

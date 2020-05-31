@@ -107,6 +107,8 @@ New Features
   implement ``requires``, allowing package requirements to be discovered.
 * ``OxidizedFinder`` is now able to load Python modules when only source
   code is provided. Previously, it required that bytecode be available.
+* ``OxidizedFinder`` now implements ``iter_modules()``. This enables
+  ``pkgutil.iter_modules()`` to return modules serviced by ``OxidizedFinder``.
 
 Bug Fixes
 ^^^^^^^^^
