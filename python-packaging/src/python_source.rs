@@ -8,7 +8,7 @@ use {anyhow::Result, lazy_static::lazy_static};
 
 lazy_static! {
     static ref RE_CODING: regex::bytes::Regex =
-        { regex::bytes::Regex::new(r"^[ \t\f]*#.*?coding[:=][ \t]*([-_.a-zA-Z0-9]+)").unwrap() };
+        regex::bytes::Regex::new(r"^[ \t\f]*#.*?coding[:=][ \t]*([-_.a-zA-Z0-9]+)").unwrap();
 }
 
 /// Derive the source encoding from Python source code.
