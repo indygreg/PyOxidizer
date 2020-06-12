@@ -53,6 +53,9 @@ strong copyleft protections in the GPL license.
 
    It is critical to audit which Python extensions and packages are being
    packaged because of licensing requirements of various extensions.
+   Consider using a package such as 
+   `pip-licenses <https://github.com/raimon49/pip-licenses>`_ to
+   generate a license report for your Python packages.
 
 Showing Python Distribution Licenses
 ------------------------------------
