@@ -35,7 +35,7 @@ use super::pyalloc::make_raw_jemalloc_allocator;
 use python3_sys::PyMemAllocatorEx;
 
 lazy_static! {
-    static ref GLOBAL_INTERPRETER_GUARD: std::sync::Mutex<()> = { std::sync::Mutex::new(()) };
+    static ref GLOBAL_INTERPRETER_GUARD: std::sync::Mutex<()> = std::sync::Mutex::new(());
 }
 
 #[cfg(feature = "jemalloc-sys")]
