@@ -61,7 +61,7 @@ the following:
        // Calls function from include!()'d file.
        let config: pyembed::PythonConfig = default_python_config();
 
-       pyembed::MaintPythonInterpreter::new(config)
+       pyembed::MainPythonInterpreter::new(config)
    }
 
 Using a Custom ``PythonConfig``
