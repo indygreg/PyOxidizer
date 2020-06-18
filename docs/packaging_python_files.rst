@@ -76,7 +76,7 @@ The ``PythonExecutable`` type holds all state needed to package and run
 a Python interpreter. This includes low-level interpreter configuration
 settings to which Python resources (like source and bytecode modules)
 are embedded in that executable binary. This type exposes an
-:ref:`add_in_memory_python_resources() <config_python_executable_add_in_memory_python_resources>`
+:ref:`add_python_resources() <config_python_executable_add_python_resources>`
 method which adds an iterable of objects representing Python resources to the
 set of embedded resources.
 
@@ -95,13 +95,17 @@ instance. This is done like so:
 
 .. code-block:: python
 
-   exe.add_in_memory_python_resources(dist.pip_install(["pyflakes==2.1.1"]))
+   exe.add_python_resources(dist.pip_install(["pyflakes==2.1.1"]))
 
 The inner call to ``dist.pip_install()`` will effectively run
 ``pip install pyflakes==2.1.1`` and collect a set of installed
 Python resources (like module sources and bytecode data) and return
-that as an iterable data structure. The ``exe.add_in_memory_python_resources()``
-call will then embed these resources in the built executable binary.
+that as an iterable data structure. The ``exe.add_python_resources()``
+call will then teach the built executable binary about the existence of
+these resources. Many resource types will be embedded in the binary
+and loaded from binary. But some resource types (notably compiled
+extension modules) may be installed next to the built binary and
+loaded from the filesystem.
 
 Next, we tell PyOxidizer to run ``pyflakes`` when the interpreter is executed:
 
@@ -134,7 +138,7 @@ comments removed for brevity):
            include_test=False,
        )
 
-       exe.add_in_memory_python_resources(dist.pip_install(["pyflakes==2.1.1"]))
+       exe.add_python_resources(dist.pip_install(["pyflakes==2.1.1"]))
 
        return exe
 
