@@ -122,6 +122,8 @@ Bug Fixes
 * In the custom Python importer, ``read_text()`` of distributions returned
   from ``find_distributions()`` now returns ``None`` on unknown file instead
   of raising ``IOError``. This matches the behavior of ``importlib.metadata``.
+* The ``pyembed`` Rust project build script now reruns when the source
+  Starlark file changes.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
