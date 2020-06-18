@@ -391,6 +391,8 @@ pub fn run_from_build(
         panic!("PyOxidizer config file does not exist");
     }
 
+    println!("cargo:rerun-if-changed={}", config_path.display());
+
     let dest_dir = match env::var("PYOXIDIZER_ARTIFACT_DIR") {
         Ok(ref v) => PathBuf::from(v),
         Err(_) => PathBuf::from(env::var("OUT_DIR").context("OUT_DIR")?),
