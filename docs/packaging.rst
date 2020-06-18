@@ -16,7 +16,7 @@ instructions.
 
    packaging_creating_projects
    packaging_resources
-   packaging_pypi
+   packaging_python_files
    packaging_additional_files
    packaging_trimming_resources
    packaging_performance

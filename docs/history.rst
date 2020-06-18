@@ -130,6 +130,8 @@ Other Relevant Changes
   initialization no longer relies on running custom frozen bytecode
   for the ``importlib._bootstrap_external`` Python module. This
   simplifies packaging and interpreter configuration a bit.
+* Packaging documentation now gives more examples on how to use available
+  Starlark packaging methods.
 
 0.7.0
 -----

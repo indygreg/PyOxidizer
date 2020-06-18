@@ -18,6 +18,8 @@ binary*.
 *Resources* are typically represented by a dedicated Starlark type. Locations
 are typically expressed through a function name.
 
+.. _packaging_resource_types:
+
 Resource Types
 ==============
 
@@ -135,6 +137,8 @@ Here are some examples of how policies are used:
        )
 
        return exe
+
+.. _packaging_routing_resources:
 
 Routing Python Resources to Locations
 =====================================

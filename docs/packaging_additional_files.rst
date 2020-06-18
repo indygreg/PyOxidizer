@@ -1,8 +1,8 @@
 .. _packaging_additional_files:
 
-==========================
-Packaging Additional Files
-==========================
+====================================================
+Packaging Python Files Next to the Built Application
+====================================================
 
 By default PyOxidizer will embed Python resources such as modules into
 the compiled executable. This is the ideal method to produce distributable

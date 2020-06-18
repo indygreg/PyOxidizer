@@ -400,6 +400,8 @@ The returned resources are typically added to a ``FileManifest`` or
 ``PythonExecutable`` to make them available to a packaged
 application.
 
+.. _config_python_distribution_read_package_root:
+
 ``PythonDistribution.read_package_root(path, packages)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -434,6 +436,8 @@ The types of these objects can be ``PythonSourceModule``, ``PythonBytecodeModule
 The returned resources are typically added to a ``FileManifest`` or
 ``PythonExecutable`` to make them available to a packaged application.
 
+.. _config_python_distribution_read_virtualenv:
+
 ``PythonDistribution.read_virtualenv(path)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -461,6 +465,8 @@ The types of these objects can be ``PythonSourceModule``, ``PythonBytecodeModule
 
 The returned resources are typically added to a ``FileManifest`` or
 ``PythonExecutable`` to make them available to a packaged application.
+
+.. _config_python_distribution_setup_py_install:
 
 ``PythonDistribution.setup_py_install(...)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
