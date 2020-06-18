@@ -1755,7 +1755,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                                 .resolve()?,
                         )
                 } else {
-                    Err(anyhow!("in-memory-only resources policy active but in-memory extension module importing not supported by this configuration"))
+                    Err(anyhow!("in-memory-only resources policy active but in-memory extension module importing not supported by this configuration: cannot load {}", extension_module.name))
                 }
             }
             PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
