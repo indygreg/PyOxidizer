@@ -10,8 +10,8 @@ jobs:
         rustup_toolchain: beta
       nightly:
         rustup_toolchain: nightly
-      1.39:
-        rustup_toolchain: 1.39.0
+      1.40:
+        rustup_toolchain: 1.40.0
 
   steps:
   - ${{ if ne(parameters.name, 'Windows') }}:
