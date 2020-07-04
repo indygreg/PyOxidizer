@@ -62,6 +62,8 @@ Backwards Compatibility Notes
   from ``_pyoxidizer_importer`` to ``oxidized_importer``.
 * Minimum Rust version changed from 1.36 to 1.40 to allow for upgrading
   various dependencies to modern versions.
+* (TO BE FIXED BEFORE RELEASE) Windows static extension building is likely
+  broken due to changes to ``distutils``.
 
 New Features
 ^^^^^^^^^^^^
@@ -134,6 +136,8 @@ Other Relevant Changes
   simplifies packaging and interpreter configuration a bit.
 * Packaging documentation now gives more examples on how to use available
   Starlark packaging methods.
+* The modified ``distutils`` files used when building statically linked
+  extensions have been upgraded to those based on Python 3.8.3.
 
 0.7.0
 -----
