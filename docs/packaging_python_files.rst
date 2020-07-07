@@ -30,6 +30,10 @@ representing discovered resources:
    Invokes ``pip install`` with specified arguments and collects all
    resources installed by that process.
 
+:ref:`setup_py_install(...) <config_python_executable_setup_py_install>`
+   Invokes ``python setup.py install`` for a given path and collects
+   resources installed by that process.
+
 .. _packaging_python_distribution_python_resource_methods:
 
 ``PythonDistribution`` Python Resources Methods
@@ -45,10 +49,6 @@ objects representing discovered resources:
 
 :ref:`read_virtualenv(...) <config_python_distribution_read_virtualenv>`
    Reads Python resources present in an already populated virtualenv.
-
-:ref:`setup_py_install(...) <config_python_distribution_setup_py_install>`
-   Invokes ``python setup.py install`` for a given path and collects
-   resources installed by that process.
 
 Typically, the Starlark types resolved by these method calls are
 passed into a method that adds the resource to a to-be-generated
@@ -261,7 +261,7 @@ you can do so:
 
 .. code-block:: python
 
-   exe.add_python_resources(dist.setup_py_install(package_path=CWD))
+   exe.add_python_resources(exe.setup_py_install(package_path=CWD))
 
 Or if you don't want to run a Python packaging tool at all and just
 scan a directory tree for Python files:

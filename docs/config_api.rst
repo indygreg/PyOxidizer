@@ -444,36 +444,6 @@ The types of these objects can be ``PythonSourceModule``, ``PythonBytecodeModule
 The returned resources are typically added to a ``FileManifest`` or
 ``PythonExecutable`` to make them available to a packaged application.
 
-.. _config_python_distribution_setup_py_install:
-
-``PythonDistribution.setup_py_install(...)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method runs ``python setup.py install`` against a package at the
-specified path.
-
-It accepts the following arguments:
-
-``package_path``
-   String filesystem path to directory containing a ``setup.py`` to invoke.
-
-``extra_envs={}``
-   Optional dict of string key-value pairs constituting extra environment
-   variables to set in the invoked ``python`` process.
-
-``extra_global_arguments=[]``
-   Optional list of strings of extra command line arguments to pass to
-   ``python setup.py``. These will be added before the ``install``
-   argument.
-
-Returns a ``list`` of objects representing Python resources installed
-as part of the operation. The types of these objects can be
-``PythonSourceModule``, ``PythonBytecodeModule``, ``PythonPackageResource``,
-etc.
-
-The returned resources are typically added to a ``FileManifest`` or
-``PythonExecutable`` to make them available to a packaged application.
-
 .. _config_python_distribution_to_python_executable:
 
 ``PythonDistribution.to_python_executable(...)``
@@ -1027,6 +997,36 @@ part of the operation. The types of these objects can be ``PythonSourceModule``,
 The returned resources are typically added to a ``FileManifest`` or
 ``PythonExecutable`` to make them available to a packaged
 application.
+
+.. _config_python_executable_setup_py_install:
+
+``PythonExecutable.setup_py_install(...)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method runs ``python setup.py install`` against a package at the
+specified path.
+
+It accepts the following arguments:
+
+``package_path``
+   String filesystem path to directory containing a ``setup.py`` to invoke.
+
+``extra_envs={}``
+   Optional dict of string key-value pairs constituting extra environment
+   variables to set in the invoked ``python`` process.
+
+``extra_global_arguments=[]``
+   Optional list of strings of extra command line arguments to pass to
+   ``python setup.py``. These will be added before the ``install``
+   argument.
+
+Returns a ``list`` of objects representing Python resources installed
+as part of the operation. The types of these objects can be
+``PythonSourceModule``, ``PythonBytecodeModule``, ``PythonPackageResource``,
+etc.
+
+The returned resources are typically added to a ``FileManifest`` or
+``PythonExecutable`` to make them available to a packaged application.
 
 .. _config_python_executable_add_in_memory_module_source:
 

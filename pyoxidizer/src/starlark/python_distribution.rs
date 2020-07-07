@@ -10,8 +10,8 @@ use {
         PythonPackageResource, PythonSourceModule,
     },
     super::util::{
-        optional_dict_arg, optional_list_arg, optional_str_arg, optional_type_arg,
-        required_bool_arg, required_list_arg, required_str_arg,
+        optional_dict_arg, optional_str_arg, optional_type_arg, required_bool_arg,
+        required_list_arg, required_str_arg,
     },
     crate::py_packaging::config::EmbeddedPythonConfig,
     crate::py_packaging::distribution::{
@@ -19,16 +19,12 @@ use {
         DistributionFlavor, ExtensionModuleFilter, PythonDistribution as PythonDistributionTrait,
         PythonDistributionLocation,
     },
-    crate::py_packaging::packaging_tool::{
-        find_resources, read_virtualenv as raw_read_virtualenv,
-        setup_py_install as raw_setup_py_install,
-    },
+    crate::py_packaging::packaging_tool::{find_resources, read_virtualenv as raw_read_virtualenv},
     anyhow::{anyhow, Result},
     itertools::Itertools,
     python_packaging::bytecode::{BytecodeCompiler, CompileMode},
     python_packaging::resource::BytecodeOptimizationLevel,
     python_packaging::resource_collection::PythonResourcesPolicy,
-    slog::warn,
     starlark::environment::Environment,
     starlark::values::{
         default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
@@ -582,93 +578,6 @@ impl PythonDistribution {
         ))
     }
 
-    /// PythonDistribution.setup_py_install(package_path, extra_envs=None, extra_global_arguments=None)
-    pub fn setup_py_install(
-        &mut self,
-        env: &Environment,
-        package_path: &Value,
-        extra_envs: &Value,
-        extra_global_arguments: &Value,
-    ) -> ValueResult {
-        let package_path = required_str_arg("package_path", &package_path)?;
-        optional_dict_arg("extra_envs", "string", "string", &extra_envs)?;
-        optional_list_arg("extra_global_arguments", "string", &extra_global_arguments)?;
-
-        let extra_envs = match extra_envs.get_type() {
-            "dict" => extra_envs
-                .into_iter()?
-                .map(|key| {
-                    let k = key.to_string();
-                    let v = extra_envs.at(key).unwrap().to_string();
-                    (k, v)
-                })
-                .collect(),
-            "NoneType" => HashMap::new(),
-            _ => panic!("should have validated type above"),
-        };
-        let extra_global_arguments = match extra_global_arguments.get_type() {
-            "list" => extra_global_arguments
-                .into_iter()?
-                .map(|x| x.to_string())
-                .collect(),
-            "NoneType" => Vec::new(),
-            _ => panic!("should have validated type above"),
-        };
-
-        let package_path = PathBuf::from(package_path);
-
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let cwd = env.get("CWD").expect("CWD not defined").to_string();
-        let (logger, verbose) =
-            context.downcast_apply(|x: &EnvironmentContext| (x.logger.clone(), x.verbose));
-
-        let package_path = if package_path.is_absolute() {
-            package_path
-        } else {
-            PathBuf::from(cwd).join(package_path)
-        };
-
-        self.ensure_distribution_resolved(&logger).or_else(|e| {
-            Err(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "resolve_distribution()".to_string(),
-            }
-            .into())
-        })?;
-        let dist = self.distribution.as_ref().unwrap();
-
-        let resources = raw_setup_py_install(
-            &logger,
-            dist.deref().as_ref(),
-            &package_path,
-            verbose,
-            &extra_envs,
-            &extra_global_arguments,
-        )
-        .or_else(|e| {
-            Err(RuntimeError {
-                code: "SETUP_PY_ERROR",
-                message: e.to_string(),
-                label: "setup_py_install()".to_string(),
-            }
-            .into())
-        })?;
-
-        warn!(
-            logger,
-            "collected {} resources from setup.py install",
-            resources.len()
-        );
-
-        Ok(Value::from(
-            resources
-                .iter()
-                .map(python_resource_to_value)
-                .collect::<Vec<Value>>(),
-        ))
-    }
-
     /// PythonDistribution.source_modules()
     pub fn source_modules(&mut self, env: &Environment) -> ValueResult {
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
@@ -758,19 +667,6 @@ starlark_module! { python_distribution_module =>
     ) {
         this.downcast_apply_mut(|dist: &mut PythonDistribution| {
             dist.read_virtualenv(&env, &path)
-        })
-    }
-
-    #[allow(clippy::ptr_arg)]
-    PythonDistribution.setup_py_install(
-        env env,
-        this,
-        package_path,
-        extra_envs=None,
-        extra_global_arguments=None
-    ) {
-        this.downcast_apply_mut(|dist: &mut PythonDistribution| {
-            dist.setup_py_install(&env, &package_path, &extra_envs, &extra_global_arguments)
         })
     }
 

@@ -17,7 +17,7 @@ use {
     super::distutils::prepare_hacked_distutils,
     super::embedded_resource::{EmbeddedPythonResources, PrePackagedResources},
     super::libpython::link_libpython,
-    super::packaging_tool::pip_install,
+    super::packaging_tool::{pip_install, setup_py_install},
     crate::app_packaging::resource::FileContent,
     crate::licensing::NON_GPL_LICENSES,
     anyhow::{anyhow, Context, Result},
@@ -1538,6 +1538,24 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             verbose,
             install_args,
             extra_envs,
+        )
+    }
+
+    fn setup_py_install(
+        &self,
+        logger: &slog::Logger,
+        package_path: &Path,
+        verbose: bool,
+        extra_envs: &HashMap<String, String>,
+        extra_global_arguments: &[String],
+    ) -> Result<Vec<PythonResource>> {
+        setup_py_install(
+            logger,
+            &self.distribution,
+            package_path,
+            verbose,
+            extra_envs,
+            extra_global_arguments,
         )
     }
 

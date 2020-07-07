@@ -78,6 +78,18 @@ pub trait PythonBinaryBuilder {
         extra_envs: &HashMap<String, String>,
     ) -> Result<Vec<PythonResource>>;
 
+    /// Runs `python setup.py install` using the binary builder's settings.
+    ///
+    /// Returns resources discovered as part of performing an install.
+    fn setup_py_install(
+        &self,
+        logger: &slog::Logger,
+        package_path: &Path,
+        verbose: bool,
+        extra_envs: &HashMap<String, String>,
+        extra_global_arguments: &[String],
+    ) -> Result<Vec<PythonResource>>;
+
     /// Add Python module source code to be imported from memory to the embedded resources.
     fn add_in_memory_module_source(&mut self, module: &PythonModuleSource) -> Result<()>;
 
