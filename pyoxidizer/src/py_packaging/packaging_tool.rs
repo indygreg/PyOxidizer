@@ -7,6 +7,7 @@ Interaction with Python packaging tools (pip, setuptools, etc).
 */
 
 use {
+    super::binary::LibpythonLinkMode,
     super::distribution::{download_distribution, PythonDistribution},
     super::distutils::read_built_extensions,
     super::standalone_distribution::resolve_python_paths,
@@ -214,6 +215,7 @@ pub fn find_resources(
 pub fn pip_install<S: BuildHasher>(
     logger: &slog::Logger,
     dist: &dyn PythonDistribution,
+    libpython_link_mode: LibpythonLinkMode,
     verbose: bool,
     install_args: &[String],
     extra_envs: &HashMap<String, String, S>,
@@ -222,7 +224,7 @@ pub fn pip_install<S: BuildHasher>(
 
     dist.ensure_pip(logger)?;
 
-    let mut env = dist.resolve_distutils(logger, temp_dir.path(), &[])?;
+    let mut env = dist.resolve_distutils(logger, libpython_link_mode, temp_dir.path(), &[])?;
 
     for (key, value) in extra_envs.iter() {
         env.insert(key.clone(), value.clone());
@@ -296,6 +298,7 @@ pub fn read_virtualenv(
 pub fn setup_py_install<S: BuildHasher>(
     logger: &slog::Logger,
     dist: &dyn PythonDistribution,
+    libpython_link_mode: LibpythonLinkMode,
     package_path: &Path,
     verbose: bool,
     extra_envs: &HashMap<String, String, S>,
@@ -319,6 +322,7 @@ pub fn setup_py_install<S: BuildHasher>(
 
     let mut envs = dist.resolve_distutils(
         &logger,
+        libpython_link_mode,
         temp_dir.path(),
         &[&python_paths.site_packages, &python_paths.stdlib],
     )?;
@@ -392,6 +396,7 @@ mod tests {
         let resources: Vec<PythonResource> = pip_install(
             &logger,
             distribution.deref().as_ref(),
+            LibpythonLinkMode::Dynamic,
             false,
             &["black==19.10b0".to_string()],
             &HashMap::new(),
@@ -413,6 +418,7 @@ mod tests {
         let resources: Vec<PythonResource> = pip_install(
             &logger,
             distribution.deref().as_ref(),
+            LibpythonLinkMode::Dynamic,
             false,
             &["cffi==1.14.0".to_string()],
             &HashMap::new(),

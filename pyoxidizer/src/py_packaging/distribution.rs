@@ -7,7 +7,7 @@ Defining and manipulating Python distributions.
 */
 
 use {
-    super::binary::PythonBinaryBuilder,
+    super::binary::{LibpythonLinkMode, PythonBinaryBuilder},
     super::config::EmbeddedPythonConfig,
     super::standalone_distribution::{DistributionExtensionModule, StandaloneDistribution},
     crate::python_distributions::PYTHON_DISTRIBUTIONS,
@@ -165,10 +165,15 @@ pub trait PythonDistribution {
     /// Some distributions may need to use a modified `distutils` to coerce builds to work
     /// as PyOxidizer desires. This method is used to realize such a `distutils` installation.
     ///
+    /// Note that we pass in an explicit libpython link mode because the link mode
+    /// we care about may differ from the link mode of the distribution itself (as some
+    /// distributions support multiple link modes).
+    ///
     /// The return is a map of environment variables to set in the build environment.
     fn resolve_distutils(
         &self,
         logger: &slog::Logger,
+        libpython_link_mode: LibpythonLinkMode,
         dest_dir: &Path,
         extra_python_paths: &[&Path],
     ) -> Result<HashMap<String, String>>;

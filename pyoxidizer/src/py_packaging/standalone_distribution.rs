@@ -1275,19 +1275,19 @@ impl PythonDistribution for StandaloneDistribution {
     fn resolve_distutils(
         &self,
         logger: &slog::Logger,
+        libpython_link_mode: LibpythonLinkMode,
         dest_dir: &Path,
         extra_python_paths: &[&Path],
     ) -> Result<HashMap<String, String>> {
-        // We only need to patch distutils if the distribution is statically linked.
-        if self.link_mode == StandaloneDistributionLinkMode::Static {
-            prepare_hacked_distutils(
+        match libpython_link_mode {
+            // We need to patch distutils if the distribution is statically linked.
+            LibpythonLinkMode::Static => prepare_hacked_distutils(
                 logger,
                 &self.stdlib_path.join("distutils"),
                 dest_dir,
                 extra_python_paths,
-            )
-        } else {
-            Ok(HashMap::new())
+            ),
+            LibpythonLinkMode::Dynamic => Ok(HashMap::new()),
         }
     }
 
@@ -1535,6 +1535,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         pip_install(
             logger,
             &self.distribution,
+            self.link_mode,
             verbose,
             install_args,
             extra_envs,
@@ -1574,6 +1575,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         setup_py_install(
             logger,
             &self.distribution,
+            self.link_mode,
             package_path,
             verbose,
             extra_envs,
