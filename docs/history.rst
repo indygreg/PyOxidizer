@@ -138,6 +138,8 @@ Other Relevant Changes
   Starlark packaging methods.
 * The modified ``distutils`` files used when building statically linked
   extensions have been upgraded to those based on Python 3.8.3.
+* The default ``pyoxidizer.bzl`` now has comments for the ``resources_policy``
+  argument to ``PythonDistribution.to_python_executable()``.
 
 0.7.0
 -----

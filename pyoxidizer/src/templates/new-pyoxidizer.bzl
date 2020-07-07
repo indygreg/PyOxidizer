@@ -62,6 +62,26 @@ def make_exe(dist):
     # standalone executable that will be built.
     exe = dist.to_python_executable(
         name="{{program_name}}",
+
+        # Python resources are to be loaded from memory only.
+        resources_policy='in-memory-only',
+
+        # Python resources are to be loaded from the filesystem, from a
+        # directory relative to the produced binary. (The directory name
+        # follows the colon. Use "." to denote the same directory as the
+        # binary.) In order to import Python modules from the filesystem,
+        # you will need to define `sys_paths` on the `PythonInterpreterConfig`
+        # instance so the Python interpreter is configured to locate resources
+        # in said path.
+        #resources_policy='filesystem-relative-only:<prefix>',
+
+        # Python resources are loaded from memory if memory loading is supported
+        # and from the filesystem if they are not. This is a hybrid of
+        # `in-memory-only` and `filesystem-relative-only:<prefix>`. See the
+        # "Managing Resources and Their Locations" packaging documentation for
+        # more on behavior.
+        #resources_policy='prefer-in-memory-fallback-filesystem-relative:<prefix>',
+
         config=python_config,
         # Embed all extension modules, making this a fully-featured Python.
         extension_module_filter='all',
