@@ -260,7 +260,7 @@ impl PythonDistribution {
     ///     include_test=false,
     /// )
     #[allow(clippy::ptr_arg, clippy::too_many_arguments)]
-    fn as_python_executable_starlark(
+    fn to_python_executable_starlark(
         &mut self,
         env: Environment,
         call_stack: &Vec<(String, String)>,
@@ -854,7 +854,7 @@ starlark_module! { python_distribution_module =>
         include_test=false
     ) {
         this.downcast_apply_mut(|dist: &mut PythonDistribution| {
-            dist.as_python_executable_starlark(
+            dist.to_python_executable_starlark(
                 env.clone(),
                 call_stack,
                 &name,
