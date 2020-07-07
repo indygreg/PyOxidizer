@@ -13,6 +13,7 @@ use {
         optional_dict_arg, optional_str_arg, optional_type_arg, required_bool_arg, required_str_arg,
     },
     crate::py_packaging::config::EmbeddedPythonConfig,
+    crate::py_packaging::distribution::BinaryLibpythonLinkMode,
     crate::py_packaging::distribution::{
         default_distribution_location, is_stdlib_test_package, resolve_distribution,
         DistributionFlavor, ExtensionModuleFilter, PythonDistribution as PythonDistributionTrait,
@@ -353,6 +354,8 @@ impl PythonDistribution {
                     &host_triple,
                     &target_triple,
                     &name,
+                    // TODO make configurable
+                    BinaryLibpythonLinkMode::Default,
                     &resources_policy,
                     &config,
                     &extension_module_filter,

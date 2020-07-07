@@ -57,6 +57,17 @@ pub fn is_stdlib_test_package(name: &str) -> bool {
     false
 }
 
+/// Denotes how a binary should link libpython.
+#[derive(Clone, Debug, PartialEq)]
+pub enum BinaryLibpythonLinkMode {
+    /// Use default link mode semantics.
+    Default,
+    /// Statically link libpython into the binary.
+    Static,
+    /// Binary should dynamically link libpython.
+    Dynamic,
+}
+
 /// Denotes methods to filter extension modules.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ExtensionModuleFilter {
@@ -132,6 +143,7 @@ pub trait PythonDistribution {
         host_triple: &str,
         target_triple: &str,
         name: &str,
+        libpython_link_mode: BinaryLibpythonLinkMode,
         resources_policy: &PythonResourcesPolicy,
         config: &EmbeddedPythonConfig,
         extension_module_filter: &ExtensionModuleFilter,

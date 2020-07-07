@@ -11,8 +11,9 @@ use {
     },
     super::config::{EmbeddedPythonConfig, RawAllocator},
     super::distribution::{
-        is_stdlib_test_package, resolve_python_distribution_from_location, DistributionExtractLock,
-        ExtensionModuleFilter, PythonDistribution, PythonDistributionLocation,
+        is_stdlib_test_package, resolve_python_distribution_from_location, BinaryLibpythonLinkMode,
+        DistributionExtractLock, ExtensionModuleFilter, PythonDistribution,
+        PythonDistributionLocation,
     },
     super::distutils::prepare_hacked_distutils,
     super::embedded_resource::{EmbeddedPythonResources, PrePackagedResources},
@@ -1055,6 +1056,7 @@ impl PythonDistribution for StandaloneDistribution {
         host_triple: &str,
         target_triple: &str,
         name: &str,
+        libpython_link_mode: BinaryLibpythonLinkMode,
         resources_policy: &PythonResourcesPolicy,
         config: &EmbeddedPythonConfig,
         extension_module_filter: &ExtensionModuleFilter,
@@ -1065,13 +1067,50 @@ impl PythonDistribution for StandaloneDistribution {
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
         let python_exe = self.python_exe.clone();
 
-        // TODO allow this logic to be configurable.
-        let link_mode = if self.target_triple.contains("pc-windows")
-            && self.python_symbol_visibility == "dllexport"
-        {
-            LibpythonLinkMode::Dynamic
+        let (supports_static, supports_dynamic) = if self.target_triple.contains("pc-windows") {
+            // On Windows, the symbol visibility dictates which link modes are
+            // supported.
+            if self.python_symbol_visibility == "dllexport" {
+                (false, true)
+            } else {
+                (true, false)
+            }
+        } else if self.target_triple.contains("linux-musl") {
+            // Musl binaries don't support dynamic linking.
+            (true, false)
         } else {
-            LibpythonLinkMode::Static
+            // Elsewhere we can choose which link mode to use.
+            (true, true)
+        };
+
+        let link_mode = match libpython_link_mode {
+            BinaryLibpythonLinkMode::Default => {
+                if supports_static {
+                    LibpythonLinkMode::Static
+                } else if supports_dynamic {
+                    LibpythonLinkMode::Dynamic
+                } else {
+                    return Err(anyhow!("no link modes supported; please report this bug"));
+                }
+            }
+            BinaryLibpythonLinkMode::Static => {
+                if !supports_static {
+                    return Err(anyhow!(
+                        "Python distribution does not support statically linking libpython"
+                    ));
+                }
+
+                LibpythonLinkMode::Static
+            }
+            BinaryLibpythonLinkMode::Dynamic => {
+                if !supports_dynamic {
+                    return Err(anyhow!(
+                        "Python distribution does not support dynamically linking libpython"
+                    ));
+                }
+
+                LibpythonLinkMode::Dynamic
+            }
         };
 
         let mut builder = Box::new(StandalonePythonExecutableBuilder {
