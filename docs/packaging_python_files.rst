@@ -30,6 +30,10 @@ representing discovered resources:
    Invokes ``pip install`` with specified arguments and collects all
    resources installed by that process.
 
+:ref:`read_package_root(...) <config_python_executable_read_package_root>`
+   Recursively scans a filesystem directory for Python resources in a
+   typical Python installation layout.
+
 :ref:`setup_py_install(...) <config_python_executable_setup_py_install>`
    Invokes ``python setup.py install`` for a given path and collects
    resources installed by that process.
@@ -42,10 +46,6 @@ representing discovered resources:
 The ``PythonDistribution`` Starlark type has the following methods
 that can be called to perform an action and obtain an iterable of
 objects representing discovered resources:
-
-:ref:`read_package_root(...) <config_python_distribution_read_package_root>`
-   Recursively scans a filesystem directory for Python resources in a
-   typical Python installation layout.
 
 :ref:`read_virtualenv(...) <config_python_distribution_read_virtualenv>`
    Reads Python resources present in an already populated virtualenv.
@@ -268,7 +268,7 @@ scan a directory tree for Python files:
 
 .. code-block:: python
 
-   exe.add_python_resources(dist.read_package_root(CWD, ["mypackage"]))
+   exe.add_python_resources(exe.read_package_root(CWD, ["mypackage"]))
 
 .. note::
 

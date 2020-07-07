@@ -152,7 +152,45 @@ impl PythonExecutable {
         ))
     }
 
-    /// PythonExecutagble.setup_py_install(package_path, extra_envs=None, extra_global_arguments=None)
+    /// PythonExecutable.read_package_root(path, packages)
+    pub fn starlark_read_package_root(
+        &self,
+        env: &Environment,
+        path: &Value,
+        packages: &Value,
+    ) -> ValueResult {
+        let path = required_str_arg("path", &path)?;
+        required_list_arg("packages", "string", &packages)?;
+
+        let packages = packages
+            .into_iter()?
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>();
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        let resources = self
+            .exe
+            .read_package_root(&logger, Path::new(&path), &packages)
+            .or_else(|e| {
+                Err(RuntimeError {
+                    code: "PACKAGE_ROOT_ERROR",
+                    message: format!("could not find resources: {}", e),
+                    label: "read_package_root()".to_string(),
+                }
+                .into())
+            })?;
+
+        Ok(Value::from(
+            resources
+                .iter()
+                .map(python_resource_to_value)
+                .collect::<Vec<Value>>(),
+        ))
+    }
+
+    /// PythonExecutable.setup_py_install(package_path, extra_envs=None, extra_global_arguments=None)
     pub fn starlark_setup_py_install(
         &self,
         env: &Environment,
@@ -1066,6 +1104,18 @@ starlark_module! { python_executable_env =>
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
+    PythonExecutable.read_package_root(
+        env env,
+        this,
+        path,
+        packages
+    ) {
+        this.downcast_apply(|exe: &PythonExecutable| {
+            exe.starlark_read_package_root(&env, &path, &packages)
+        })
+    }
+
+    #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.setup_py_install(
         env env,
         this,
@@ -1395,5 +1445,65 @@ mod tests {
             assert_eq!(x.module.name, "pyflakes");
             assert!(x.module.is_package);
         });
+    }
+
+    #[test]
+    fn test_read_package_root_simple() -> Result<()> {
+        let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
+
+        let root = temp_dir.path();
+        std::fs::create_dir(root.join("bar"))?;
+        let bar_init = root.join("bar").join("__init__.py");
+        std::fs::write(&bar_init, "# bar")?;
+
+        let foo_path = root.join("foo.py");
+        std::fs::write(&foo_path, "# foo")?;
+
+        let baz_path = root.join("baz.py");
+        std::fs::write(&baz_path, "# baz")?;
+
+        std::fs::create_dir(root.join("extra"))?;
+        let extra_path = root.join("extra").join("__init__.py");
+        std::fs::write(&extra_path, "# extra")?;
+
+        let mut env = starlark_env();
+        starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
+        starlark_eval_in_env(
+            &mut env,
+            "exe = dist.to_python_executable('testapp', include_sources=False)",
+        )
+        .unwrap();
+
+        let resources = starlark_eval_in_env(
+            &mut env,
+            &format!(
+                "exe.read_package_root(\"{}\", packages=['foo', 'bar'])",
+                root.display()
+            ),
+        )
+        .unwrap();
+
+        assert_eq!(resources.get_type(), "list");
+        assert_eq!(resources.length().unwrap(), 2);
+
+        let mut it = resources.into_iter().unwrap();
+
+        let v = it.next().unwrap();
+        assert_eq!(v.get_type(), "PythonSourceModule");
+        v.downcast_apply(|x: &PythonSourceModule| {
+            assert_eq!(x.module.name, "bar");
+            assert!(x.module.is_package);
+            assert_eq!(x.module.source.resolve().unwrap(), b"# bar");
+        });
+
+        let v = it.next().unwrap();
+        assert_eq!(v.get_type(), "PythonSourceModule");
+        v.downcast_apply(|x: &PythonSourceModule| {
+            assert_eq!(x.module.name, "foo");
+            assert!(!x.module.is_package);
+            assert_eq!(x.module.source.resolve().unwrap(), b"# foo");
+        });
+
+        Ok(())
     }
 }

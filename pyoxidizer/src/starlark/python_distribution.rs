@@ -10,8 +10,7 @@ use {
         PythonPackageResource, PythonSourceModule,
     },
     super::util::{
-        optional_dict_arg, optional_str_arg, optional_type_arg, required_bool_arg,
-        required_list_arg, required_str_arg,
+        optional_dict_arg, optional_str_arg, optional_type_arg, required_bool_arg, required_str_arg,
     },
     crate::py_packaging::config::EmbeddedPythonConfig,
     crate::py_packaging::distribution::{
@@ -19,7 +18,7 @@ use {
         DistributionFlavor, ExtensionModuleFilter, PythonDistribution as PythonDistributionTrait,
         PythonDistributionLocation,
     },
-    crate::py_packaging::packaging_tool::{find_resources, read_virtualenv as raw_read_virtualenv},
+    crate::py_packaging::packaging_tool::read_virtualenv as raw_read_virtualenv,
     anyhow::{anyhow, Result},
     itertools::Itertools,
     python_packaging::bytecode::{BytecodeCompiler, CompileMode},
@@ -450,54 +449,6 @@ impl PythonDistribution {
         ))
     }
 
-    /// PythonDistribution.read_package_root(path, packages)
-    pub fn read_package_root(
-        &mut self,
-        env: &Environment,
-        path: &Value,
-        packages: &Value,
-    ) -> ValueResult {
-        let path = required_str_arg("path", &path)?;
-        required_list_arg("packages", "string", &packages)?;
-
-        let packages = packages
-            .into_iter()?
-            .map(|x| x.to_string())
-            .collect::<Vec<String>>();
-
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
-
-        self.ensure_distribution_resolved(&logger).or_else(|e| {
-            Err(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "resolve_distribution()".to_string(),
-            }
-            .into())
-        })?;
-
-        let dist = self.distribution.as_ref().unwrap();
-
-        let resources = find_resources(&logger, dist.deref().as_ref(), Path::new(&path), None)
-            .or_else(|e| {
-                Err(RuntimeError {
-                    code: "PACKAGE_ROOT_ERROR",
-                    message: format!("could not find resources: {}", e),
-                    label: "read_package_root()".to_string(),
-                }
-                .into())
-            })?;
-
-        Ok(Value::from(
-            resources
-                .iter()
-                .filter(|x| x.is_in_packages(&packages))
-                .map(python_resource_to_value)
-                .collect::<Vec<Value>>(),
-        ))
-    }
-
     /// PythonDistribution.read_virtualenv(path)
     pub fn read_virtualenv(&mut self, env: &Environment, path: &Value) -> ValueResult {
         let path = required_str_arg("path", &path)?;
@@ -644,18 +595,6 @@ starlark_module! { python_distribution_module =>
     PythonDistribution.package_resources(env env, this, include_test=false) {
         this.downcast_apply_mut(|dist: &mut PythonDistribution| {
             dist.package_resources(&env, &include_test)
-        })
-    }
-
-    #[allow(clippy::ptr_arg)]
-    PythonDistribution.read_package_root(
-        env env,
-        this,
-        path,
-        packages
-    ) {
-        this.downcast_apply_mut(|dist: &mut PythonDistribution| {
-            dist.read_package_root(&env, &path, &packages)
         })
     }
 
@@ -815,53 +754,5 @@ mod tests {
         let data_length = data_tests.length().unwrap();
 
         assert!(default_length < data_length);
-    }
-
-    #[test]
-    fn test_read_package_root_simple() -> Result<()> {
-        let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
-
-        let root = temp_dir.path();
-        std::fs::create_dir(root.join("bar"))?;
-        let bar_init = root.join("bar").join("__init__.py");
-        std::fs::write(&bar_init, "# bar")?;
-
-        let foo_path = root.join("foo.py");
-        std::fs::write(&foo_path, "# foo")?;
-
-        let baz_path = root.join("baz.py");
-        std::fs::write(&baz_path, "# baz")?;
-
-        std::fs::create_dir(root.join("extra"))?;
-        let extra_path = root.join("extra").join("__init__.py");
-        std::fs::write(&extra_path, "# extra")?;
-
-        let resources = starlark_ok(&format!(
-            "default_python_distribution().read_package_root(\"{}\", packages=['foo', 'bar'])",
-            root.display()
-        ));
-
-        assert_eq!(resources.get_type(), "list");
-        assert_eq!(resources.length().unwrap(), 2);
-
-        let mut it = resources.into_iter().unwrap();
-
-        let v = it.next().unwrap();
-        assert_eq!(v.get_type(), "PythonSourceModule");
-        v.downcast_apply(|x: &PythonSourceModule| {
-            assert_eq!(x.module.name, "bar");
-            assert!(x.module.is_package);
-            assert_eq!(x.module.source.resolve().unwrap(), b"# bar");
-        });
-
-        let v = it.next().unwrap();
-        assert_eq!(v.get_type(), "PythonSourceModule");
-        v.downcast_apply(|x: &PythonSourceModule| {
-            assert_eq!(x.module.name, "foo");
-            assert!(!x.module.is_package);
-            assert_eq!(x.module.source.resolve().unwrap(), b"# foo");
-        });
-
-        Ok(())
     }
 }

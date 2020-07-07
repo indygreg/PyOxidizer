@@ -129,7 +129,7 @@ def make_exe(dist):
     # Read Python files from a local directory and add them to our embedded
     # context, taking just the resources belonging to the `foo` and `bar`
     # Python packages.
-    #exe.add_python_resources(dist.read_package_root(
+    #exe.add_python_resources(exe.read_package_root(
     #    path="/src/mypackage",
     #    packages=["foo", "bar"],
     #))

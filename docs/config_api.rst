@@ -378,42 +378,6 @@ this mapping will be used. Otherwise the first variant will be used.
    license and therefore open source. See :ref:`licensing_considerations` for
    more.
 
-.. _config_python_distribution_read_package_root:
-
-``PythonDistribution.read_package_root(path, packages)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method discovers resources from a directory on the filesystem.
-
-The specified directory will be scanned for resource files. However,
-only specific named *packages* will be found. e.g. if the directory
-contains sub-directories ``foo/`` and ``bar``, you must explicitly
-state that you want the ``foo`` and/or ``bar`` package to be included
-so files from these directories will be read.
-
-This rule is frequently used to pull in packages from local source
-directories (e.g. directories containing a ``setup.py`` file). This
-rule doesn't involve any packaging tools and is a purely driven by
-filesystem walking. It is primitive, yet effective.
-
-This rule has the following arguments:
-
-``path`` (string)
-   The filesystem path to the directory to scan.
-
-``packages`` (list of string)
-   List of package names to include.
-
-   Filesystem walking will find files in a directory ``<path>/<value>/`` or in
-   a file ``<path>/<value>.py``.
-
-Returns a ``list`` of objects representing Python resources found in the virtualenv.
-The types of these objects can be ``PythonSourceModule``, ``PythonBytecodeModule``,
-``PythonPackageResource``, etc.
-
-The returned resources are typically added to a ``FileManifest`` or
-``PythonExecutable`` to make them available to a packaged application.
-
 .. _config_python_distribution_read_virtualenv:
 
 ``PythonDistribution.read_virtualenv(path)``
@@ -997,6 +961,42 @@ part of the operation. The types of these objects can be ``PythonSourceModule``,
 The returned resources are typically added to a ``FileManifest`` or
 ``PythonExecutable`` to make them available to a packaged
 application.
+
+.. _config_python_executable_read_package_root:
+
+``PythonExecutable.read_package_root(path, packages)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method discovers resources from a directory on the filesystem.
+
+The specified directory will be scanned for resource files. However,
+only specific named *packages* will be found. e.g. if the directory
+contains sub-directories ``foo/`` and ``bar``, you must explicitly
+state that you want the ``foo`` and/or ``bar`` package to be included
+so files from these directories will be read.
+
+This rule is frequently used to pull in packages from local source
+directories (e.g. directories containing a ``setup.py`` file). This
+rule doesn't involve any packaging tools and is a purely driven by
+filesystem walking. It is primitive, yet effective.
+
+This rule has the following arguments:
+
+``path`` (string)
+   The filesystem path to the directory to scan.
+
+``packages`` (list of string)
+   List of package names to include.
+
+   Filesystem walking will find files in a directory ``<path>/<value>/`` or in
+   a file ``<path>/<value>.py``.
+
+Returns a ``list`` of objects representing Python resources found in the virtualenv.
+The types of these objects can be ``PythonSourceModule``, ``PythonBytecodeModule``,
+``PythonPackageResource``, etc.
+
+The returned resources are typically added to a ``FileManifest`` or
+``PythonExecutable`` to make them available to a packaged application.
 
 .. _config_python_executable_setup_py_install:
 

@@ -78,6 +78,14 @@ pub trait PythonBinaryBuilder {
         extra_envs: &HashMap<String, String>,
     ) -> Result<Vec<PythonResource>>;
 
+    /// Reads Python resources from the filesystem.
+    fn read_package_root(
+        &self,
+        logger: &slog::Logger,
+        path: &Path,
+        packages: &[String],
+    ) -> Result<Vec<PythonResource>>;
+
     /// Runs `python setup.py install` using the binary builder's settings.
     ///
     /// Returns resources discovered as part of performing an install.
