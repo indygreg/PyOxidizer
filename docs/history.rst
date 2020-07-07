@@ -140,6 +140,8 @@ Other Relevant Changes
   extensions have been upgraded to those based on Python 3.8.3.
 * The default ``pyoxidizer.bzl`` now has comments for the ``resources_policy``
   argument to ``PythonDistribution.to_python_executable()``.
+* The default ``pyoxidizer.bzl`` now uses ``add_python_resources()`` instead
+  of ``add_in_memory_python_resources()``.
 
 0.7.0
 -----
