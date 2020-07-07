@@ -29,6 +29,7 @@ use {
     uuid::Uuid,
 };
 
+// TODO denote test packages in Python distribution.
 const STDLIB_TEST_PACKAGES: &[&str] = &[
     "bsddb.test",
     "ctypes.test",
