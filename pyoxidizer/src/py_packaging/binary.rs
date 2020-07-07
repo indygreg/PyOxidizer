@@ -86,6 +86,9 @@ pub trait PythonBinaryBuilder {
         packages: &[String],
     ) -> Result<Vec<PythonResource>>;
 
+    /// Read Python resources from a populated virtualenv directory.
+    fn read_virtualenv(&self, logger: &slog::Logger, path: &Path) -> Result<Vec<PythonResource>>;
+
     /// Runs `python setup.py install` using the binary builder's settings.
     ///
     /// Returns resources discovered as part of performing an install.

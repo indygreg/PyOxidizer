@@ -6,8 +6,8 @@ use {
     super::env::EnvironmentContext,
     super::python_executable::PythonExecutable,
     super::python_resource::{
-        python_resource_to_value, PythonExtensionModule, PythonExtensionModuleFlavor,
-        PythonPackageResource, PythonSourceModule,
+        PythonExtensionModule, PythonExtensionModuleFlavor, PythonPackageResource,
+        PythonSourceModule,
     },
     super::util::{
         optional_dict_arg, optional_str_arg, optional_type_arg, required_bool_arg, required_str_arg,
@@ -18,7 +18,6 @@ use {
         DistributionFlavor, ExtensionModuleFilter, PythonDistribution as PythonDistributionTrait,
         PythonDistributionLocation,
     },
-    crate::py_packaging::packaging_tool::read_virtualenv as raw_read_virtualenv,
     anyhow::{anyhow, Result},
     itertools::Itertools,
     python_packaging::bytecode::{BytecodeCompiler, CompileMode},
@@ -37,7 +36,6 @@ use {
     std::cmp::Ordering,
     std::collections::HashMap,
     std::convert::TryFrom,
-    std::ops::Deref,
     std::path::{Path, PathBuf},
     std::sync::Arc,
 };
@@ -449,41 +447,6 @@ impl PythonDistribution {
         ))
     }
 
-    /// PythonDistribution.read_virtualenv(path)
-    pub fn read_virtualenv(&mut self, env: &Environment, path: &Value) -> ValueResult {
-        let path = required_str_arg("path", &path)?;
-
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
-
-        self.ensure_distribution_resolved(&logger).or_else(|e| {
-            Err(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "resolve_distribution()".to_string(),
-            }
-            .into())
-        })?;
-        let dist = self.distribution.as_ref().unwrap();
-
-        let resources = raw_read_virtualenv(&logger, dist.deref().as_ref(), &Path::new(&path))
-            .or_else(|e| {
-                Err(RuntimeError {
-                    code: "VIRTUALENV_ERROR",
-                    message: format!("could not find resources: {}", e),
-                    label: "read_virtualenv()".to_string(),
-                }
-                .into())
-            })?;
-
-        Ok(Value::from(
-            resources
-                .iter()
-                .map(python_resource_to_value)
-                .collect::<Vec<Value>>(),
-        ))
-    }
-
     /// PythonDistribution.package_resources(include_test=false)
     pub fn package_resources(&mut self, env: &Environment, include_test: &Value) -> ValueResult {
         let include_test = required_bool_arg("include_test", &include_test)?;
@@ -595,17 +558,6 @@ starlark_module! { python_distribution_module =>
     PythonDistribution.package_resources(env env, this, include_test=false) {
         this.downcast_apply_mut(|dist: &mut PythonDistribution| {
             dist.package_resources(&env, &include_test)
-        })
-    }
-
-    #[allow(clippy::ptr_arg)]
-    PythonDistribution.read_virtualenv(
-        env env,
-        this,
-        path
-    ) {
-        this.downcast_apply_mut(|dist: &mut PythonDistribution| {
-            dist.read_virtualenv(&env, &path)
         })
     }
 

@@ -38,16 +38,7 @@ representing discovered resources:
    Invokes ``python setup.py install`` for a given path and collects
    resources installed by that process.
 
-.. _packaging_python_distribution_python_resource_methods:
-
-``PythonDistribution`` Python Resources Methods
-===============================================
-
-The ``PythonDistribution`` Starlark type has the following methods
-that can be called to perform an action and obtain an iterable of
-objects representing discovered resources:
-
-:ref:`read_virtualenv(...) <config_python_distribution_read_virtualenv>`
+:ref:`read_virtualenv(...) <config_python_executable_read_virtualenv>`
    Reads Python resources present in an already populated virtualenv.
 
 Typically, the Starlark types resolved by these method calls are
@@ -197,7 +188,7 @@ following:
            include_test=False,
        )
 
-       exe.add_python_resources(dist.read_virtualenv("/path/to/virtualenv"))
+       exe.add_python_resources(exe.read_virtualenv("/path/to/virtualenv"))
 
        return exe
 
@@ -238,7 +229,7 @@ files in sub-directories corresponding to the package name. e.g.::
 You have a number of choices as to how to proceed here. Again, the
 workflow is very similar to what was explained above. The main difference
 is the content of the ``pyoxidizer.bzl`` file and the exact
-:ref:`method <packaging_python_distribution_python_resource_methods>` to call
+:ref:`method <packaging_python_executable_python_resource_methods>` to call
 to obtain the Python resources.
 
 You could use ``pip install <local path>`` to use ``pip`` to process a local

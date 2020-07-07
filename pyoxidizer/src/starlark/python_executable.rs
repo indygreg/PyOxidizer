@@ -190,6 +190,33 @@ impl PythonExecutable {
         ))
     }
 
+    /// PythonExecutable.read_virtualenv(path)
+    pub fn starlark_read_virtualenv(&self, env: &Environment, path: &Value) -> ValueResult {
+        let path = required_str_arg("path", &path)?;
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+        let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
+
+        let resources = self
+            .exe
+            .read_virtualenv(&logger, &Path::new(&path))
+            .or_else(|e| {
+                Err(RuntimeError {
+                    code: "VIRTUALENV_ERROR",
+                    message: format!("could not find resources: {}", e),
+                    label: "read_virtualenv()".to_string(),
+                }
+                .into())
+            })?;
+
+        Ok(Value::from(
+            resources
+                .iter()
+                .map(python_resource_to_value)
+                .collect::<Vec<Value>>(),
+        ))
+    }
+
     /// PythonExecutable.setup_py_install(package_path, extra_envs=None, extra_global_arguments=None)
     pub fn starlark_setup_py_install(
         &self,
@@ -1112,6 +1139,17 @@ starlark_module! { python_executable_env =>
     ) {
         this.downcast_apply(|exe: &PythonExecutable| {
             exe.starlark_read_package_root(&env, &path, &packages)
+        })
+    }
+
+    #[allow(non_snake_case, clippy::ptr_arg)]
+    PythonExecutabvle.read_virtualenv(
+        env env,
+        this,
+        path
+    ) {
+        this.downcast_apply(|exe: &PythonExecutable| {
+            exe.starlark_read_virtualenv(&env, &path)
         })
     }
 

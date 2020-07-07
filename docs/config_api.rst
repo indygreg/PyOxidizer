@@ -378,36 +378,6 @@ this mapping will be used. Otherwise the first variant will be used.
    license and therefore open source. See :ref:`licensing_considerations` for
    more.
 
-.. _config_python_distribution_read_virtualenv:
-
-``PythonDistribution.read_virtualenv(path)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method attempts to read Python resources from an already built
-virtualenv.
-
-.. important::
-
-   PyOxidizer only supports finding modules and resources
-   populated via *traditional* means (e.g. ``pip install`` or ``python setup.py
-   install``). If ``.pth`` or similar mechanisms are used for installing modules,
-   files may not be discovered properly.
-
-It accepts the following arguments:
-
-``path`` (string)
-   The filesystem path to the root of the virtualenv.
-
-   Python modules are typically in a ``lib/pythonX.Y/site-packages`` directory
-   (on UNIX) or ``Lib/site-packages`` directory (on Windows) under this path.
-
-Returns a ``list`` of objects representing Python resources found in the virtualenv.
-The types of these objects can be ``PythonSourceModule``, ``PythonBytecodeModule``,
-``PythonPackageResource``, etc.
-
-The returned resources are typically added to a ``FileManifest`` or
-``PythonExecutable`` to make them available to a packaged application.
-
 .. _config_python_distribution_to_python_executable:
 
 ``PythonDistribution.to_python_executable(...)``
@@ -990,6 +960,36 @@ This rule has the following arguments:
 
    Filesystem walking will find files in a directory ``<path>/<value>/`` or in
    a file ``<path>/<value>.py``.
+
+Returns a ``list`` of objects representing Python resources found in the virtualenv.
+The types of these objects can be ``PythonSourceModule``, ``PythonBytecodeModule``,
+``PythonPackageResource``, etc.
+
+The returned resources are typically added to a ``FileManifest`` or
+``PythonExecutable`` to make them available to a packaged application.
+
+.. _config_python_executable_read_virtualenv:
+
+``PythonExecutable.read_virtualenv(path)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method attempts to read Python resources from an already built
+virtualenv.
+
+.. important::
+
+   PyOxidizer only supports finding modules and resources
+   populated via *traditional* means (e.g. ``pip install`` or ``python setup.py
+   install``). If ``.pth`` or similar mechanisms are used for installing modules,
+   files may not be discovered properly.
+
+It accepts the following arguments:
+
+``path`` (string)
+   The filesystem path to the root of the virtualenv.
+
+   Python modules are typically in a ``lib/pythonX.Y/site-packages`` directory
+   (on UNIX) or ``Lib/site-packages`` directory (on Windows) under this path.
 
 Returns a ``list`` of objects representing Python resources found in the virtualenv.
 The types of these objects can be ``PythonSourceModule``, ``PythonBytecodeModule``,

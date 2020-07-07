@@ -136,7 +136,7 @@ def make_exe(dist):
 
     # Discover Python files from a virtualenv and add them to our embedded
     # context.
-    #exe.add_python_resources(dist.read_virtualenv(path="/path/to/venv"))
+    #exe.add_python_resources(exe.read_virtualenv(path="/path/to/venv"))
 
     # Filter all resources collected so far through a filter of names
     # in a file.

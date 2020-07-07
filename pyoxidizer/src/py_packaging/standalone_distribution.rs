@@ -17,7 +17,7 @@ use {
     super::distutils::prepare_hacked_distutils,
     super::embedded_resource::{EmbeddedPythonResources, PrePackagedResources},
     super::libpython::link_libpython,
-    super::packaging_tool::{find_resources, pip_install, setup_py_install},
+    super::packaging_tool::{find_resources, pip_install, read_virtualenv, setup_py_install},
     crate::app_packaging::resource::FileContent,
     crate::licensing::NON_GPL_LICENSES,
     anyhow::{anyhow, Context, Result},
@@ -1557,6 +1557,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 }
             })
             .collect::<Vec<_>>())
+    }
+
+    fn read_virtualenv(&self, logger: &slog::Logger, path: &Path) -> Result<Vec<PythonResource>> {
+        read_virtualenv(logger, &self.distribution, path)
     }
 
     fn setup_py_install(
