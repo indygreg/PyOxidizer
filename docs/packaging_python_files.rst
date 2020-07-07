@@ -17,6 +17,19 @@ a Python packaging action (such as invoking ``pip install``) along the way.
 This documentation covers the available methods and how they can be
 used.
 
+.. _packaging_python_executable_python_resource_methods:
+
+``PythonExecutable`` Python Resources Methods
+=============================================
+
+The ``PythonExecutable`` Starlark type has the following methods that
+can be called to perform an action and obtain an iterable of objects
+representing discovered resources:
+
+:ref:`pip_install(...) <config_python_executable_pip_install>`
+   Invokes ``pip install`` with specified arguments and collects all
+   resources installed by that process.
+
 .. _packaging_python_distribution_python_resource_methods:
 
 ``PythonDistribution`` Python Resources Methods
@@ -25,10 +38,6 @@ used.
 The ``PythonDistribution`` Starlark type has the following methods
 that can be called to perform an action and obtain an iterable of
 objects representing discovered resources:
-
-:ref:`pip_install(...) <config_python_distribution_pip_install>`
-   Invokes ``pip install`` with specified arguments and collects all
-   resources installed by that process.
 
 :ref:`read_package_root(...) <config_python_distribution_read_package_root>`
    Recursively scans a filesystem directory for Python resources in a
@@ -83,21 +92,21 @@ set of embedded resources.
 Elsewhere in this function, the ``dist`` variable holds an instance of
 :ref:`PythonDistribution <config_python_distribution>`. This type
 represents a Python distribution, which is a fancy way of saying
-*an implementation of Python*. In addition to defining the files
-constituting that distribution, a ``PythonDistribution`` exposes
-methods for performing Python packaging. One of those methods is
-:ref:`pip_install() <config_python_distribution_pip_install>`,
-which invokes ``pip install`` using that Python distribution.
+*an implementation of Python*.
+
+One of the methods exposed by ``PythonExecutable`` is
+:ref:`pip_install() <config_python_executable_pip_install>`, which
+invokes ``pip install`` with settings to target the built executable.
 
 To add a new Python package to our executable, we call
-``dist.pip_install()`` then add the results to our ``PythonExecutable``
+``exe.pip_install()`` then add the results to our ``PythonExecutable``
 instance. This is done like so:
 
 .. code-block:: python
 
-   exe.add_python_resources(dist.pip_install(["pyflakes==2.1.1"]))
+   exe.add_python_resources(exe.pip_install(["pyflakes==2.1.1"]))
 
-The inner call to ``dist.pip_install()`` will effectively run
+The inner call to ``exe.pip_install()`` will effectively run
 ``pip install pyflakes==2.1.1`` and collect a set of installed
 Python resources (like module sources and bytecode data) and return
 that as an iterable data structure. The ``exe.add_python_resources()``
@@ -138,7 +147,7 @@ comments removed for brevity):
            include_test=False,
        )
 
-       exe.add_python_resources(dist.pip_install(["pyflakes==2.1.1"]))
+       exe.add_python_resources(exe.pip_install(["pyflakes==2.1.1"]))
 
        return exe
 
@@ -237,7 +246,7 @@ filesystem path:
 
 .. code-block:: python
 
-   exe.add_python_resources(dist.pip_install(["/path/to/local/package"]))
+   exe.add_python_resources(exe.pip_install(["/path/to/local/package"]))
 
 If the ``pyoxidizer.bzl`` file is in the same directory as the directory you
 want to process, you can derive the absolute path to this directory via the
@@ -245,7 +254,7 @@ want to process, you can derive the absolute path to this directory via the
 
 .. code-block:: python
 
-   exe.add_python_resources(dist.pip_install([CWD]))
+   exe.add_python_resources(exe.pip_install([CWD]))
 
 If you don't want to use ``pip`` and want to run ``setup.py`` directly,
 you can do so:

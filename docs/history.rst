@@ -64,6 +64,10 @@ Backwards Compatibility Notes
   various dependencies to modern versions.
 * (TO BE FIXED BEFORE RELEASE) Windows static extension building is likely
   broken due to changes to ``distutils``.
+* The ``pip_install()`` method of the ``PythonDistribution`` Starlark type
+  has been moved to the ``PythonExecutable`` type. Existing Starlark config
+  files will need to change references accordingly (often by replacing
+  ``dist.`` with ``exe.``).
 
 New Features
 ^^^^^^^^^^^^

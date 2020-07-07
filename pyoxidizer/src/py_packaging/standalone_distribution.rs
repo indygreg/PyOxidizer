@@ -17,6 +17,7 @@ use {
     super::distutils::prepare_hacked_distutils,
     super::embedded_resource::{EmbeddedPythonResources, PrePackagedResources},
     super::libpython::link_libpython,
+    super::packaging_tool::pip_install,
     crate::app_packaging::resource::FileContent,
     crate::licensing::NON_GPL_LICENSES,
     anyhow::{anyhow, Context, Result},
@@ -1522,6 +1523,22 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn in_memory_package_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
         self.resources.get_in_memory_package_resources()
+    }
+
+    fn pip_install(
+        &self,
+        logger: &slog::Logger,
+        verbose: bool,
+        install_args: &[String],
+        extra_envs: &HashMap<String, String>,
+    ) -> Result<Vec<PythonResource>> {
+        pip_install(
+            logger,
+            &self.distribution,
+            verbose,
+            install_args,
+            extra_envs,
+        )
     }
 
     fn add_in_memory_module_source(&mut self, module: &PythonModuleSource) -> Result<()> {

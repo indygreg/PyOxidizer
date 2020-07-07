@@ -20,7 +20,7 @@ use {
         PythonDistributionLocation,
     },
     crate::py_packaging::packaging_tool::{
-        find_resources, pip_install as raw_pip_install, read_virtualenv as raw_read_virtualenv,
+        find_resources, read_virtualenv as raw_read_virtualenv,
         setup_py_install as raw_setup_py_install,
     },
     anyhow::{anyhow, Result},
@@ -454,65 +454,6 @@ impl PythonDistribution {
         ))
     }
 
-    /// PythonDistribution.pip_install(args, extra_envs=None)
-    pub fn pip_install(
-        &mut self,
-        env: &Environment,
-        args: &Value,
-        extra_envs: &Value,
-    ) -> ValueResult {
-        required_list_arg("args", "string", &args)?;
-        optional_dict_arg("extra_envs", "string", "string", &extra_envs)?;
-
-        let args: Vec<String> = args.into_iter()?.map(|x| x.to_string()).collect();
-
-        let extra_envs = match extra_envs.get_type() {
-            "dict" => extra_envs
-                .into_iter()?
-                .map(|key| {
-                    let k = key.to_string();
-                    let v = extra_envs.at(key).unwrap().to_string();
-                    (k, v)
-                })
-                .collect(),
-            "NoneType" => HashMap::new(),
-            _ => panic!("should have validated type above"),
-        };
-
-        let context = env.get("CONTEXT").expect("CONTEXT not defined");
-        let (logger, verbose) =
-            context.downcast_apply(|x: &EnvironmentContext| (x.logger.clone(), x.verbose));
-
-        self.ensure_distribution_resolved(&logger).or_else(|e| {
-            Err(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "resolve_distribution()".to_string(),
-            }
-            .into())
-        })?;
-        let dist = self.distribution.as_ref().unwrap();
-
-        let resources =
-            raw_pip_install(&logger, dist.deref().as_ref(), verbose, &args, &extra_envs).or_else(
-                |e| {
-                    Err(RuntimeError {
-                        code: "PIP_INSTALL_ERROR",
-                        message: format!("error running pip install: {}", e),
-                        label: "pip_install()".to_string(),
-                    }
-                    .into())
-                },
-            )?;
-
-        Ok(Value::from(
-            resources
-                .iter()
-                .map(python_resource_to_value)
-                .collect::<Vec<Value>>(),
-        ))
-    }
-
     /// PythonDistribution.read_package_root(path, packages)
     pub fn read_package_root(
         &mut self,
@@ -798,13 +739,6 @@ starlark_module! { python_distribution_module =>
     }
 
     #[allow(clippy::ptr_arg)]
-    PythonDistribution.pip_install(env env, this, args, extra_envs=None) {
-        this.downcast_apply_mut(|dist: &mut PythonDistribution| {
-            dist.pip_install(&env, &args, &extra_envs)
-        })
-    }
-
-    #[allow(clippy::ptr_arg)]
     PythonDistribution.read_package_root(
         env env,
         this,
@@ -985,22 +919,6 @@ mod tests {
         let data_length = data_tests.length().unwrap();
 
         assert!(default_length < data_length);
-    }
-
-    #[test]
-    fn test_pip_install_simple() {
-        let resources =
-            starlark_ok("default_python_distribution().pip_install(['pyflakes==2.1.1'])");
-        assert_eq!(resources.get_type(), "list");
-
-        let mut it = resources.into_iter().unwrap();
-
-        let v = it.next().unwrap();
-        assert_eq!(v.get_type(), "PythonSourceModule");
-        v.downcast_apply(|x: &PythonSourceModule| {
-            assert_eq!(x.module.name, "pyflakes");
-            assert!(x.module.is_package);
-        });
     }
 
     #[test]

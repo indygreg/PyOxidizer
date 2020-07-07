@@ -156,7 +156,7 @@ For example, to add a ``PythonSourceModule`` to a ``PythonExecutable``:
            resources_policy="prefer-in-memory-fallback-filesystem-relative:lib",
        )
 
-       for resource in dist.pip_install(["my-package"]):
+       for resource in exe.pip_install(["my-package"]):
            if type(resource) == "PythonSourceModule":
                exe.add_in_memory_module_source(resource)
                exe.add_filesystem_relative_module_source("site-packages", resource)

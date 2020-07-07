@@ -116,14 +116,14 @@ def make_exe(dist):
     # `pip_install()` returns objects representing installed files.
     # `add_python_resources()` adds these objects to the binary, with a load
     # location as defined by the current `resources_policy`.
-    #exe.add_python_resources(dist.pip_install(["appdirs"]))
+    #exe.add_python_resources(exe.pip_install(["appdirs"]))
 
     # Invoke `pip install` using a requirements file and add the collected resources
     # to our binary.
-    #exe.add_python_resources(dist.pip_install(["-r", "requirements.txt"]))
+    #exe.add_python_resources(exe.pip_install(["-r", "requirements.txt"]))
 
     {{#each pip_install_simple}}
-    exe.add_python_resources(dist.pip_install("{{{ this }}}"))
+    exe.add_python_resources(exe.pip_install("{{{ this }}}"))
     {{/each}}
 
     # Read Python files from a local directory and add them to our embedded

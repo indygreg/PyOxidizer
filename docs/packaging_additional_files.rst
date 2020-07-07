@@ -35,7 +35,7 @@ Then edit the ``pyoxidizer.bzl`` file to have the following:
            name="black",
        )
 
-       exe.add_in_memory_python_resources(dist.pip_install(["black==19.3b0"]))
+       exe.add_in_memory_python_resources(exe.pip_install(["black==19.3b0"]))
 
        return exe
 
@@ -71,7 +71,7 @@ the issue.
 
 To fix this problem, we change the configuration file to install ``black``
 relative to the built application. This requires changing our approach a
-little. Before, we ran ``dist.pip_install()`` from ``make_exe()`` to collect
+little. Before, we ran ``exe.pip_install()`` from ``make_exe()`` to collect
 Python resources and added them to a ``PythonEmbeddedResources`` instance.
 This meant those resources were embedded in the self-contained
 ``PythonExecutable`` instance returned from ``make_exe()``.
@@ -107,18 +107,18 @@ Change your configuration file to look like the following:
        )
 
 
-   def make_install(dist, exe):
+   def make_install(exe):
        files = FileManifest()
 
        files.add_python_resource(".", exe)
 
-       files.add_python_resources("lib", dist.pip_install(["black==19.3b0"]))
+       files.add_python_resources("lib", exe.pip_install(["black==19.3b0"]))
 
        return files
 
    register_target("python_dist", make_python_dist)
    register_target("exe", make_exe, depends=["python_dist"])
-   register_target("install", make_install, depends=["python_dist", "exe"], default=True)
+   register_target("install", make_install, depends=["exe"], default=True)
 
    resolve_targets()
 

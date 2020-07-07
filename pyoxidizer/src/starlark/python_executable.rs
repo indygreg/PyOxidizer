@@ -6,11 +6,14 @@ use {
     super::env::EnvironmentContext,
     super::python_embedded_resources::PythonEmbeddedResources,
     super::python_resource::{
-        PythonExtensionModule, PythonExtensionModuleFlavor, PythonPackageDistributionResource,
-        PythonPackageResource, PythonSourceModule,
+        python_resource_to_value, PythonExtensionModule, PythonExtensionModuleFlavor,
+        PythonPackageDistributionResource, PythonPackageResource, PythonSourceModule,
     },
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
-    super::util::{optional_list_arg, required_bool_arg, required_str_arg, required_type_arg},
+    super::util::{
+        optional_dict_arg, optional_list_arg, required_bool_arg, required_list_arg,
+        required_str_arg, required_type_arg,
+    },
     crate::project_building::build_python_executable,
     crate::py_packaging::binary::PythonBinaryBuilder,
     anyhow::{anyhow, Context, Result},
@@ -100,6 +103,55 @@ impl BuildTarget for PythonExecutable {
 
 // Starlark functions.
 impl PythonExecutable {
+    /// PythonExecutable.pip_install(args, extra_envs=None)
+    pub fn starlark_pip_install(
+        &self,
+        env: &Environment,
+        args: &Value,
+        extra_envs: &Value,
+    ) -> ValueResult {
+        required_list_arg("args", "string", &args)?;
+        optional_dict_arg("extra_envs", "string", "string", &extra_envs)?;
+
+        let args: Vec<String> = args.into_iter()?.map(|x| x.to_string()).collect();
+
+        let extra_envs = match extra_envs.get_type() {
+            "dict" => extra_envs
+                .into_iter()?
+                .map(|key| {
+                    let k = key.to_string();
+                    let v = extra_envs.at(key).unwrap().to_string();
+                    (k, v)
+                })
+                .collect(),
+            "NoneType" => HashMap::new(),
+            _ => panic!("should have validated type above"),
+        };
+
+        let context = env.get("CONTEXT").expect("CONTEXT not defined");
+        let (logger, verbose) =
+            context.downcast_apply(|x: &EnvironmentContext| (x.logger.clone(), x.verbose));
+
+        let resources = self
+            .exe
+            .pip_install(&logger, verbose, &args, &extra_envs)
+            .or_else(|e| {
+                Err(RuntimeError {
+                    code: "PIP_INSTALL_ERROR",
+                    message: format!("error running pip install: {}", e),
+                    label: "pip_install()".to_string(),
+                }
+                .into())
+            })?;
+
+        Ok(Value::from(
+            resources
+                .iter()
+                .map(python_resource_to_value)
+                .collect::<Vec<Value>>(),
+        ))
+    }
+
     /// PythonExecutable.add_in_memory_module_source(module)
     pub fn starlark_add_in_memory_module_source(
         &mut self,
@@ -929,6 +981,13 @@ impl PythonExecutable {
 
 starlark_module! { python_executable_env =>
     #[allow(non_snake_case, clippy::ptr_arg)]
+    PythonExecutable.pip_install(env env, this, args, extra_envs=None) {
+        this.downcast_apply(|exe: &PythonExecutable| {
+            exe.starlark_pip_install(&env, &args, &extra_envs)
+        })
+    }
+
+    #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_in_memory_module_source(env env, this, module) {
         this.downcast_apply_mut(|exe: &mut PythonExecutable| {
             exe.starlark_add_in_memory_module_source(&env, &module)
@@ -1218,6 +1277,32 @@ mod tests {
 
         exe.downcast_apply(|exe: &PythonExecutable| {
             assert!(exe.exe.in_memory_module_sources().is_empty());
+        });
+    }
+
+    #[test]
+    fn test_pip_install_simple() {
+        let mut env = starlark_env();
+
+        starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
+
+        starlark_eval_in_env(
+            &mut env,
+            "exe = dist.to_python_executable('testapp', include_sources=False)",
+        )
+        .unwrap();
+
+        let resources =
+            starlark_eval_in_env(&mut env, "exe.pip_install(['pyflakes==2.1.1'])").unwrap();
+        assert_eq!(resources.get_type(), "list");
+
+        let mut it = resources.into_iter().unwrap();
+
+        let v = it.next().unwrap();
+        assert_eq!(v.get_type(), "PythonSourceModule");
+        v.downcast_apply(|x: &PythonSourceModule| {
+            assert_eq!(x.module.name, "pyflakes");
+            assert!(x.module.is_package);
         });
     }
 }

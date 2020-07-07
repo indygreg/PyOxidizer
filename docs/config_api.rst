@@ -378,28 +378,6 @@ this mapping will be used. Otherwise the first variant will be used.
    license and therefore open source. See :ref:`licensing_considerations` for
    more.
 
-.. _config_python_distribution_pip_install:
-
-``PythonDistribution.pip_install(args, extra_envs={})``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method runs ``pip install <args>`` with the specified distribution.
-
-``args``
-   List of strings defining raw process arguments to pass to ``pip install``.
-
-``extra_envs``
-   Optional dict of string key-value pairs constituting extra environment
-   variables to set in the invoked ``pip`` process.
-
-Returns a ``list`` of objects representing Python resources installed as
-part of the operation. The types of these objects can be ``PythonSourceModule``,
-``PythonBytecodeModule``, ``PythonPackageResource``, etc.
-
-The returned resources are typically added to a ``FileManifest`` or
-``PythonExecutable`` to make them available to a packaged
-application.
-
 .. _config_python_distribution_read_package_root:
 
 ``PythonDistribution.read_package_root(path, packages)``
@@ -1026,6 +1004,29 @@ and a default run-time configuration for that interpreter.
 
 Instances are constructed from ``PythonDistribution`` instances using
 :ref:`config_python_distribution_to_python_executable`.
+
+.. _config_python_executable_pip_install:
+
+``PythonExecutable.pip_install(args, extra_envs={})``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method runs ``pip install <args>`` with settings appropriate to target
+the executable being built.
+
+``args``
+   List of strings defining raw process arguments to pass to ``pip install``.
+
+``extra_envs``
+   Optional dict of string key-value pairs constituting extra environment
+   variables to set in the invoked ``pip`` process.
+
+Returns a ``list`` of objects representing Python resources installed as
+part of the operation. The types of these objects can be ``PythonSourceModule``,
+``PythonBytecodeModule``, ``PythonPackageResource``, etc.
+
+The returned resources are typically added to a ``FileManifest`` or
+``PythonExecutable`` to make them available to a packaged
+application.
 
 .. _config_python_executable_add_in_memory_module_source:
 

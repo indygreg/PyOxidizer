@@ -15,10 +15,10 @@ use {
     anyhow::Result,
     python_packaging::resource::{
         PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
-        PythonPackageDistributionResource, PythonPackageResource,
+        PythonPackageDistributionResource, PythonPackageResource, PythonResource,
     },
     python_packaging::resource_collection::PythonResourcesPolicy,
-    std::collections::BTreeMap,
+    std::collections::{BTreeMap, HashMap},
     std::convert::TryFrom,
     std::fs::File,
     std::io::Write,
@@ -66,6 +66,17 @@ pub trait PythonBinaryBuilder {
 
     /// Obtain Python package resources data loaded from memory to be embedded in this instance.
     fn in_memory_package_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>>;
+
+    /// Runs `pip install` using the binary builder's settings.
+    ///
+    /// Returns resources discovered as part of performing an install.
+    fn pip_install(
+        &self,
+        logger: &slog::Logger,
+        verbose: bool,
+        install_args: &[String],
+        extra_envs: &HashMap<String, String>,
+    ) -> Result<Vec<PythonResource>>;
 
     /// Add Python module source code to be imported from memory to the embedded resources.
     fn add_in_memory_module_source(&mut self, module: &PythonModuleSource) -> Result<()>;
