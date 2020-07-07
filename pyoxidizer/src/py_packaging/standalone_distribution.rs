@@ -501,7 +501,7 @@ pub struct StandaloneDistribution {
     /// Filesystem location of pythonXY shared library for this distribution.
     ///
     /// Only set if `link_mode` is `StandaloneDistributionLinkMode::Dynamic`.
-    pub libpython_shared_library: Option<PathBuf>,
+    libpython_shared_library: Option<PathBuf>,
 
     /// Extension modules available to this distribution.
     pub extension_modules: BTreeMap<String, Vec<DistributionExtensionModule>>,
