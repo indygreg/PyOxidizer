@@ -6,7 +6,8 @@
 
 use {
     super::binary::{
-        EmbeddedPythonBinaryData, EmbeddedResourcesBlobs, PythonBinaryBuilder, PythonLinkingInfo,
+        EmbeddedPythonBinaryData, EmbeddedResourcesBlobs, LibpythonLinkMode, PythonBinaryBuilder,
+        PythonLinkingInfo,
     },
     super::config::{EmbeddedPythonConfig, RawAllocator},
     super::distribution::{
@@ -1328,15 +1329,6 @@ impl PythonDistribution for StandaloneDistribution {
     }
 }
 
-/// How libpython should be linked.
-#[derive(Clone, Copy, Debug, PartialEq)]
-enum LibpythonLinkMode {
-    /// Statically linked into the final binary.
-    Static,
-    /// A standalone dynamic library.
-    Dynamic,
-}
-
 /// A self-contained Python executable before it is compiled.
 #[derive(Clone, Debug)]
 pub struct StandalonePythonExecutableBuilder {
@@ -1510,6 +1502,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn name(&self) -> String {
         self.exe_name.clone()
+    }
+
+    fn libpython_link_mode(&self) -> LibpythonLinkMode {
+        self.link_mode
     }
 
     fn python_resources_policy(&self) -> &PythonResourcesPolicy {

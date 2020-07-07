@@ -25,6 +25,15 @@ use {
     std::path::{Path, PathBuf},
 };
 
+/// How a binary should link against libpython.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum LibpythonLinkMode {
+    /// Libpython will be statically linked into the binary.
+    Static,
+    /// The binary will dynamically link against libpython.
+    Dynamic,
+}
+
 /// Describes a generic way to build a Python binary.
 ///
 /// Binary here means an executable or library containing or linking to a
@@ -39,6 +48,9 @@ pub trait PythonBinaryBuilder {
 
     /// The name of the binary.
     fn name(&self) -> String;
+
+    /// How the binary will link against libpython.
+    fn libpython_link_mode(&self) -> LibpythonLinkMode;
 
     /// Obtain the `PythonResourcesPolicy` for the builder.
     fn python_resources_policy(&self) -> &PythonResourcesPolicy;
