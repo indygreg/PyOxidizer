@@ -41,6 +41,7 @@ use {
     std::io::{BufRead, BufReader, Read},
     std::iter::FromIterator,
     std::path::{Path, PathBuf},
+    std::sync::Arc,
     tempdir::TempDir,
 };
 
@@ -1117,7 +1118,8 @@ impl PythonDistribution for StandaloneDistribution {
             host_triple: host_triple.to_string(),
             target_triple: target_triple.to_string(),
             exe_name: name.to_string(),
-            distribution: self.clone(),
+            // TODO can we avoid this clone()?
+            distribution: Arc::new(Box::new(self.clone())),
             link_mode,
             resources_policy: resources_policy.clone(),
             resources: PrePackagedResources::new(resources_policy, &self.cache_tag),
@@ -1382,10 +1384,7 @@ pub struct StandalonePythonExecutableBuilder {
     exe_name: String,
 
     /// The Python distribution being used to build this executable.
-    ///
-    /// TODO replace with just the elements needed to link in order to avoid
-    /// a .clone().
-    distribution: StandaloneDistribution,
+    distribution: Arc<Box<StandaloneDistribution>>,
 
     /// How libpython should be linked.
     link_mode: LibpythonLinkMode,
@@ -1573,7 +1572,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<Vec<PythonResource>> {
         pip_install(
             logger,
-            &self.distribution,
+            &**self.distribution,
             self.link_mode,
             verbose,
             install_args,
@@ -1587,7 +1586,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         path: &Path,
         packages: &[String],
     ) -> Result<Vec<PythonResource>> {
-        Ok(find_resources(&logger, &self.distribution, path, None)?
+        Ok(find_resources(&logger, &**self.distribution, path, None)?
             .iter()
             .filter_map(|x| {
                 if x.is_in_packages(packages) {
@@ -1600,7 +1599,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     }
 
     fn read_virtualenv(&self, logger: &slog::Logger, path: &Path) -> Result<Vec<PythonResource>> {
-        read_virtualenv(logger, &self.distribution, path)
+        read_virtualenv(logger, &**self.distribution, path)
     }
 
     fn setup_py_install(
@@ -1613,7 +1612,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<Vec<PythonResource>> {
         setup_py_install(
             logger,
-            &self.distribution,
+            &**self.distribution,
             self.link_mode,
             package_path,
             verbose,
@@ -1941,7 +1940,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 pub mod tests {
     use {
         super::*, crate::py_packaging::standalone_distribution::ExtensionModuleFilter,
-        crate::testutil::*, std::ops::Deref,
+        crate::testutil::*,
     };
 
     pub fn get_standalone_executable_builder(
@@ -1979,7 +1978,7 @@ pub mod tests {
             host_triple: env!("HOST").to_string(),
             target_triple: env!("HOST").to_string(),
             exe_name: "testapp".to_string(),
-            distribution: distribution.deref().deref().clone(),
+            distribution: distribution.clone(),
             link_mode,
             resources_policy: PythonResourcesPolicy::InMemoryOnly,
             resources,
