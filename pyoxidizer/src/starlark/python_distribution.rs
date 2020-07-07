@@ -252,6 +252,7 @@ impl PythonDistribution {
 
     /// PythonDistribution.to_python_executable(
     ///     name,
+    ///     resources_policy="in-memory-only",
     ///     config=None,
     ///     extension_module_filter="all",
     ///     preferred_extension_module_variants=None,
