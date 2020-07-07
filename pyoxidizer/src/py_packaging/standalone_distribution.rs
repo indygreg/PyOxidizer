@@ -468,7 +468,7 @@ pub struct StandaloneDistribution {
     pub stdlib_path: PathBuf,
 
     /// How libpython is linked in this distribution.
-    pub link_mode: StandaloneDistributionLinkMode,
+    link_mode: StandaloneDistributionLinkMode,
 
     /// Symbol visibility for Python symbols.
     python_symbol_visibility: String,
