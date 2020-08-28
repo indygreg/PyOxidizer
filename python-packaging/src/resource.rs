@@ -583,6 +583,48 @@ impl PythonResource {
     }
 }
 
+impl From<PythonModuleSource> for PythonResource {
+    fn from(m: PythonModuleSource) -> Self {
+        PythonResource::ModuleSource(m)
+    }
+}
+
+impl From<PythonModuleBytecodeFromSource> for PythonResource {
+    fn from(m: PythonModuleBytecodeFromSource) -> Self {
+        PythonResource::ModuleBytecodeRequest(m)
+    }
+}
+
+impl From<PythonModuleBytecode> for PythonResource {
+    fn from(m: PythonModuleBytecode) -> Self {
+        PythonResource::ModuleBytecode(m)
+    }
+}
+
+impl From<PythonPackageResource> for PythonResource {
+    fn from(r: PythonPackageResource) -> Self {
+        PythonResource::Resource(r)
+    }
+}
+
+impl From<PythonPackageDistributionResource> for PythonResource {
+    fn from(r: PythonPackageDistributionResource) -> Self {
+        PythonResource::DistributionResource(r)
+    }
+}
+
+impl From<PythonEggFile> for PythonResource {
+    fn from(e: PythonEggFile) -> Self {
+        PythonResource::EggFile(e)
+    }
+}
+
+impl From<PythonPathExtension> for PythonResource {
+    fn from(e: PythonPathExtension) -> Self {
+        PythonResource::PathExtension(e)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
