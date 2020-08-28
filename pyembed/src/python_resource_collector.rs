@@ -55,7 +55,7 @@ py_class!(pub class OxidizedResourceCollector |py| {
 impl OxidizedResourceCollector {
     pub fn new(py: Python, policy: String) -> PyResult<Self> {
         let policy = PythonResourcesPolicy::try_from(policy.as_ref())
-            .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+            .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
 
         let sys_module = py.import("sys")?;
         let cache_tag = sys_module
@@ -79,11 +79,8 @@ impl OxidizedResourceCollector {
                 let resource = module.get_resource(py);
 
                 if let Some(location) = &resource.extension_data {
-                    let data = location.resolve().or_else(|e| {
-                        Err(PyErr::new::<ValueError, _>(
-                            py,
-                            "unable to resolve extension data",
-                        ))
+                    let data = location.resolve().map_err(|e| {
+                        PyErr::new::<ValueError, _>(py, "unable to resolve extension data")
                     })?;
 
                     collector
@@ -94,7 +91,7 @@ impl OxidizedResourceCollector {
                             // TODO handle shared libraries.
                             &[],
                         )
-                        .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+                        .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
 
                     Ok(py.None())
                 } else {
@@ -111,7 +108,7 @@ impl OxidizedResourceCollector {
                         &module.get_resource(py),
                         &ConcreteResourceLocation::InMemory,
                     )
-                    .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+                    .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
 
                 Ok(py.None())
             }
@@ -122,7 +119,7 @@ impl OxidizedResourceCollector {
                         &module.get_resource(py),
                         &ConcreteResourceLocation::InMemory,
                     )
-                    .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+                    .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
 
                 Ok(py.None())
             }
@@ -133,7 +130,7 @@ impl OxidizedResourceCollector {
                         &resource.get_resource(py),
                         &ConcreteResourceLocation::InMemory,
                     )
-                    .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+                    .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
 
                 Ok(py.None())
             }
@@ -144,7 +141,7 @@ impl OxidizedResourceCollector {
                         &resource.get_resource(py),
                         &ConcreteResourceLocation::InMemory,
                     )
-                    .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+                    .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
 
                 Ok(py.None())
             }
@@ -170,7 +167,7 @@ impl OxidizedResourceCollector {
 
                 collector
                     .add_relative_path_python_extension_module(&resource, &prefix)
-                    .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+                    .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
 
                 Ok(py.None())
             }
@@ -181,7 +178,7 @@ impl OxidizedResourceCollector {
                         &module.get_resource(py),
                         &ConcreteResourceLocation::RelativePath(prefix),
                     )
-                    .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+                    .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
 
                 Ok(py.None())
             }
@@ -192,7 +189,7 @@ impl OxidizedResourceCollector {
                         &module.get_resource(py),
                         &ConcreteResourceLocation::RelativePath(prefix),
                     )
-                    .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+                    .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
 
                 Ok(py.None())
             }
@@ -203,7 +200,7 @@ impl OxidizedResourceCollector {
                         &resource.get_resource(py),
                         &ConcreteResourceLocation::RelativePath(prefix),
                     )
-                    .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+                    .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
 
                 Ok(py.None())
             }
@@ -214,7 +211,7 @@ impl OxidizedResourceCollector {
                         &resource.get_resource(py),
                         &ConcreteResourceLocation::RelativePath(prefix),
                     )
-                    .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+                    .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
 
                 Ok(py.None())
             }
@@ -235,12 +232,7 @@ impl OxidizedResourceCollector {
 
         let prepared: PreparedPythonResources = collector
             .to_prepared_python_resources(&python_exe)
-            .or_else(|e| {
-                Err(PyErr::new::<ValueError, _>(
-                    py,
-                    format!("error oxidizing: {}", e),
-                ))
-            })?;
+            .map_err(|e| PyErr::new::<ValueError, _>(py, format!("error oxidizing: {}", e)))?;
 
         let mut resources = Vec::new();
 
@@ -254,7 +246,7 @@ impl OxidizedResourceCollector {
             let path = path_to_pathlib_path(py, path)?;
             let data = location
                 .resolve()
-                .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
+                .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
             let data = PyBytes::new(py, &data);
             let executable = executable.to_py_object(py);
 

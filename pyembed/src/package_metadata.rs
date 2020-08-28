@@ -60,11 +60,8 @@ impl OxidizedDistribution {
             package,
             &filename,
         )
-        .or_else(|e| {
-            Err(PyErr::new::<IOError, _>(
-                py,
-                format!("error when resolving resource: {}", e),
-            ))
+        .map_err(|e| {
+            PyErr::new::<IOError, _>(py, format!("error when resolving resource: {}", e))
         })?;
 
         // Missing resource returns None.
@@ -99,11 +96,8 @@ impl OxidizedDistribution {
             package,
             "METADATA",
         )
-        .or_else(|e| {
-            Err(PyErr::new::<IOError, _>(
-                py,
-                format!("error when resolving resource: {}", e),
-            ))
+        .map_err(|e| {
+            PyErr::new::<IOError, _>(py, format!("error when resolving resource: {}", e))
         })?;
 
         let data = if let Some(data) = data {
@@ -115,11 +109,8 @@ impl OxidizedDistribution {
                 package,
                 "PKG-INFO",
             )
-            .or_else(|e| {
-                Err(PyErr::new::<IOError, _>(
-                    py,
-                    format!("error when resolving resource: {}", e),
-                ))
+            .map_err(|e| {
+                PyErr::new::<IOError, _>(py, format!("error when resolving resource: {}", e))
             })?
             .ok_or_else(|| PyErr::new::<IOError, _>(py, ("package metadata not found",)))?
         };

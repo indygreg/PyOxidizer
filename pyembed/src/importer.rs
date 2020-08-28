@@ -987,18 +987,12 @@ fn oxidized_finder_new(
     } else if let Some(resources_file) = resources_file {
         let path = pyobject_to_pathbuf(py, resources_file)?;
 
-        let f = std::fs::File::open(&path).or_else(|e| {
-            Err(PyErr::new::<IOError, _>(
-                py,
-                format!("unable to open resources file: {}", e),
-            ))
+        let f = std::fs::File::open(&path).map_err(|e| {
+            PyErr::new::<IOError, _>(py, format!("unable to open resources file: {}", e))
         })?;
 
-        let mapped = Box::new(unsafe { memmap::Mmap::map(&f) }.or_else(|e| {
-            Err(PyErr::new::<IOError, _>(
-                py,
-                format!("unable to memory map resources file: {}", e),
-            ))
+        let mapped = Box::new(unsafe { memmap::Mmap::map(&f) }.map_err(|e| {
+            PyErr::new::<IOError, _>(py, format!("unable to memory map resources file: {}", e))
         })?);
 
         // We "leak" a pointer to the memory mapped data and create a slice from it
@@ -1014,7 +1008,7 @@ fn oxidized_finder_new(
 
     resources_state
         .load(raw_resources_data)
-        .or_else(|err| Err(PyErr::new::<ValueError, _>(py, err)))?;
+        .map_err(|err| PyErr::new::<ValueError, _>(py, err))?;
 
     let importer = OxidizedFinder::create_instance(
         py,
@@ -1061,12 +1055,7 @@ impl OxidizedFinder {
 
         resources_state
             .add_resource(pyobject_to_resource(py, resource))
-            .or_else(|_| {
-                Err(PyErr::new::<ValueError, _>(
-                    py,
-                    "unable to add resource to finder",
-                ))
-            })?;
+            .map_err(|_| PyErr::new::<ValueError, _>(py, "unable to add resource to finder"))?;
 
         Ok(py.None())
     }
@@ -1082,12 +1071,7 @@ impl OxidizedFinder {
         for resource in resources {
             resources_state
                 .add_resource(pyobject_to_resource(py, resource))
-                .or_else(|_| {
-                    Err(PyErr::new::<ValueError, _>(
-                        py,
-                        "unable to add resource to finder",
-                    ))
-                })?;
+                .map_err(|_| PyErr::new::<ValueError, _>(py, "unable to add resource to finder"))?;
         }
 
         Ok(py.None())
@@ -1103,12 +1087,7 @@ impl OxidizedFinder {
 
         let data = resources_state
             .serialize_resources(ignore_builtin, ignore_frozen)
-            .or_else(|e| {
-                Err(PyErr::new::<ValueError, _>(
-                    py,
-                    format!("error serializing: {}", e),
-                ))
-            })?;
+            .map_err(|e| PyErr::new::<ValueError, _>(py, format!("error serializing: {}", e)))?;
 
         Ok(PyBytes::new(py, &data).into_object())
     }

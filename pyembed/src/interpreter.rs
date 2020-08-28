@@ -56,12 +56,12 @@ fn format_pyerr(py: Python, err: PyErr) -> Result<String, &'static str> {
     let type_repr = err
         .ptype
         .repr(py)
-        .or_else(|_| Err("unable to get repr of error type"))?;
+        .map_err(|_| "unable to get repr of error type")?;
 
     if let Some(value) = &err.pvalue {
         let value_repr = value
             .repr(py)
-            .or_else(|_| Err("unable to get repr of error value"))?;
+            .map_err(|_| "unable to get repr of error value")?;
 
         let value = format!(
             "{}: {}",
@@ -265,16 +265,14 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         }
 
         assert!(self.interpreter_guard.is_none());
-        self.interpreter_guard = Some(GLOBAL_INTERPRETER_GUARD.lock().or_else(|_| {
-            Err(NewInterpreterError::Simple(
-                "unable to acquire global interpreter guard",
-            ))
+        self.interpreter_guard = Some(GLOBAL_INTERPRETER_GUARD.lock().map_err(|_| {
+            NewInterpreterError::Simple("unable to acquire global interpreter guard")
         })?);
 
         self.interpreter_state = InterpreterState::Initializing;
 
         let exe = env::current_exe()
-            .or_else(|_| Err(NewInterpreterError::Simple("could not obtain current exe")))?;
+            .map_err(|_| NewInterpreterError::Simple("could not obtain current exe"))?;
         let origin = exe
             .parent()
             .ok_or_else(|| NewInterpreterError::Simple("unable to get exe parent"))?
@@ -286,7 +284,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         // Pre-configure Python.
         let pre_config: pyffi::PyPreConfig = (&self.config.interpreter_config)
             .try_into()
-            .or_else(|err| Err(NewInterpreterError::Dynamic(err)))?;
+            .map_err(|err| NewInterpreterError::Dynamic(err))?;
 
         unsafe {
             let status = pyffi::Py_PreInitialize(&pre_config);
@@ -331,7 +329,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
 
         let mut py_config: pyffi::PyConfig = (&self.config)
             .try_into()
-            .or_else(|err| Err(NewInterpreterError::Dynamic(err)))?;
+            .map_err(|err| NewInterpreterError::Dynamic(err))?;
 
         // Enable multi-phase initialization. This allows us to initialize
         // our custom importer before Python attempts any imports.
@@ -355,28 +353,28 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         if self.config.oxidized_importer {
             self.resources_state = Some(Box::new(
                 PythonResourcesState::new_from_env()
-                    .or_else(|err| Err(NewInterpreterError::Simple(err)))?,
+                    .map_err(|err| NewInterpreterError::Simple(err))?,
             ));
 
             if let Some(ref mut resources_state) = self.resources_state {
                 resources_state
                     .load(self.config.packed_resources)
-                    .or_else(|err| Err(NewInterpreterError::Simple(err)))?;
+                    .map_err(|err| NewInterpreterError::Simple(err))?;
 
-                let oxidized_importer = py.import(OXIDIZED_IMPORTER_NAME_STR).or_else(|err| {
-                    Err(NewInterpreterError::new_from_pyerr(
+                let oxidized_importer = py.import(OXIDIZED_IMPORTER_NAME_STR).map_err(|err| {
+                    NewInterpreterError::new_from_pyerr(
                         py,
                         err,
                         "import of oxidized importer module",
-                    ))
+                    )
                 })?;
 
-                initialize_importer(py, &oxidized_importer, resources_state).or_else(|err| {
-                    Err(NewInterpreterError::new_from_pyerr(
+                initialize_importer(py, &oxidized_importer, resources_state).map_err(|err| {
+                    NewInterpreterError::new_from_pyerr(
                         py,
                         err,
                         "initialization of oxidized importer",
-                    ))
+                    )
                 })?;
             }
         }
@@ -404,28 +402,16 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         // controls both internal and external bootstrap modules and when
         // set it will disable a lot of "main" initialization.
         if !self.config.filesystem_importer {
-            let sys_module = py.import("sys").or_else(|err| {
-                Err(NewInterpreterError::new_from_pyerr(
-                    py,
-                    err,
-                    "obtaining sys module",
-                ))
+            let sys_module = py.import("sys").map_err(|err| {
+                NewInterpreterError::new_from_pyerr(py, err, "obtaining sys module")
             })?;
-            let meta_path = sys_module.get(py, "meta_path").or_else(|err| {
-                Err(NewInterpreterError::new_from_pyerr(
-                    py,
-                    err,
-                    "obtaining sys.meta_path",
-                ))
+            let meta_path = sys_module.get(py, "meta_path").map_err(|err| {
+                NewInterpreterError::new_from_pyerr(py, err, "obtaining sys.meta_path")
             })?;
             meta_path
                 .call_method(py, "pop", NoArgs, None)
-                .or_else(|err| {
-                    Err(NewInterpreterError::new_from_pyerr(
-                        py,
-                        err,
-                        "sys.meta_path.pop()",
-                    ))
+                .map_err(|err| {
+                    NewInterpreterError::new_from_pyerr(py, err, "sys.meta_path.pop()")
                 })?;
         }
 
@@ -682,28 +668,28 @@ fn write_modules_to_directory(py: Python, path: &PathBuf) -> Result<(), &'static
 
     let sys = py
         .import("sys")
-        .or_else(|_| Err("could not obtain sys module"))?;
+        .map_err(|_| "could not obtain sys module")?;
     let modules = sys
         .get(py, "modules")
-        .or_else(|_| Err("could not obtain sys.modules"))?;
+        .map_err(|_| "could not obtain sys.modules")?;
 
     let modules = modules
         .cast_as::<PyDict>(py)
-        .or_else(|_| Err("sys.modules is not a dict"))?;
+        .map_err(|_| "sys.modules is not a dict")?;
 
     let mut names = BTreeSet::new();
     for (key, _value) in modules.items(py) {
         names.insert(
             key.extract::<String>(py)
-                .or_else(|_| Err("module name is not a str"))?,
+                .map_err(|_| "module name is not a str")?,
         );
     }
 
-    let mut f = fs::File::create(path).or_else(|_| Err("could not open file for writing"))?;
+    let mut f = fs::File::create(path).map_err(|_| "could not open file for writing")?;
 
     for name in names {
         f.write_fmt(format_args!("{}\n", name))
-            .or_else(|_| Err("could not write"))?;
+            .map_err(|_| "could not write")?;
     }
 
     Ok(())

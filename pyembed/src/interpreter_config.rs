@@ -77,7 +77,7 @@ fn set_config_string_from_path(
     context: &str,
 ) -> Result<(), String> {
     let value = CString::new(path.as_os_str().as_bytes())
-        .or_else(|_| Err("cannot convert path to C string".to_string()))?;
+        .map_err(|_| "cannot convert path to C string".to_string())?;
 
     let status = unsafe {
         pyffi::PyConfig_SetBytesString(
@@ -125,7 +125,7 @@ fn append_wide_string_list_from_str(
     context: &str,
 ) -> Result<(), String> {
     let value =
-        CString::new(value).or_else(|_| Err("unable to convert value to C string".to_string()))?;
+        CString::new(value).map_err(|_| "unable to convert value to C string".to_string())?;
 
     let mut len: size_t = 0;
 
@@ -187,7 +187,7 @@ fn append_wide_string_list_from_osstr(
     context: &str,
 ) -> Result<(), String> {
     let value = String::from_utf8(value.as_bytes().into())
-        .or_else(|_| Err("unable to convert value to str".to_string()))?;
+        .map_err(|_| "unable to convert value to str".to_string())?;
     append_wide_string_list_from_str(dest, &value, context)
 }
 
@@ -591,7 +591,7 @@ impl<'a> TryInto<pyffi::PyConfig> for &'a OxidizedPythonInterpreterConfig<'a> {
         // are explicitly set in the config.
         if self.interpreter_config.profile == PythonInterpreterProfile::Isolated {
             let exe = std::env::current_exe()
-                .or_else(|err| Err(format!("unable to obtain current executable: {}", err)))?;
+                .map_err(|err| format!("unable to obtain current executable: {}", err))?;
             let origin = exe
                 .parent()
                 .ok_or_else(|| "unable to get current executable directory".to_string())?;

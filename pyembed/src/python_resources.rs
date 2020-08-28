@@ -101,14 +101,14 @@ impl<'a> ImportablePythonModule<'a, u8> {
         } else if let Some(relative_path) = &self.resource.relative_path_module_source {
             let path = self.origin.join(relative_path);
 
-            let source = std::fs::read(&path).or_else(|e| {
-                Err(PyErr::new::<ImportError, _>(
+            let source = std::fs::read(&path).map_err(|e| {
+                PyErr::new::<ImportError, _>(
                     py,
                     (
                         format!("error reading module source from {}: {}", path.display(), e),
                         self.resource.name.clone(),
                     ),
-                ))
+                )
             })?;
 
             Some(PyBytes::new(py, &source))
@@ -155,14 +155,14 @@ impl<'a> ImportablePythonModule<'a, u8> {
         } else if let Some(path) = self.bytecode_path(optimize_level) {
             // TODO we could potentially avoid the double allocation for bytecode
             // by reading directly into a buffer transferred to Python.
-            let bytecode = std::fs::read(&path).or_else(|e| {
-                Err(PyErr::new::<ImportError, _>(
+            let bytecode = std::fs::read(&path).map_err(|e| {
+                PyErr::new::<ImportError, _>(
                     py,
                     (
                         format!("error reading bytecode from {}: {}", path.display(), e),
                         self.resource.name.clone(),
                     ),
-                ))
+                )
             })?;
 
             if bytecode.len() < 16 {
@@ -376,8 +376,7 @@ impl<'a> Default for PythonResourcesState<'a, u8> {
 impl<'a> PythonResourcesState<'a, u8> {
     /// Construct an instance from environment state.
     pub fn new_from_env() -> Result<Self, &'static str> {
-        let exe =
-            std::env::current_exe().or_else(|_| Err("unable to obtain current executable"))?;
+        let exe = std::env::current_exe().map_err(|_| "unable to obtain current executable")?;
         let origin = exe
             .parent()
             .ok_or_else(|| "unable to get executable parent")?
