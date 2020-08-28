@@ -982,25 +982,6 @@ impl PythonResourceCollector {
         Ok(())
     }
 
-    /// Add a shared library to be loaded from memory.
-    pub fn add_in_memory_shared_library(&mut self, name: &str, data: &DataLocation) -> Result<()> {
-        self.add_shared_library(name, data, &ConcreteResourceLocation::InMemory)
-    }
-
-    /// Add a shared library to be loaded from a relative path.
-    pub fn add_relative_path_shared_library(
-        &mut self,
-        prefix: &str,
-        name: &str,
-        data: &DataLocation,
-    ) -> Result<()> {
-        self.add_shared_library(
-            name,
-            data,
-            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-        )
-    }
-
     /// Searches for Python sources for references to __file__.
     ///
     /// __file__ usage can be problematic for in-memory modules. This method searches

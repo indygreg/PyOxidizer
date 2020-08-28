@@ -248,9 +248,10 @@ impl PrePackagedResources {
                     .expect("filename on shared library")
                     .to_string_lossy();
 
-                self.collector.add_in_memory_shared_library(
+                self.collector.add_shared_library(
                     &name,
                     &DataLocation::Path(shared_library.clone()),
+                    &ConcreteResourceLocation::InMemory,
                 )?;
 
                 depends.push(name.to_string());
@@ -310,10 +311,10 @@ impl PrePackagedResources {
                     .to_string_lossy()
                     .to_string();
 
-                self.collector.add_relative_path_shared_library(
-                    prefix,
+                self.collector.add_shared_library(
                     &file_name,
                     &DataLocation::Path(shared_library.clone()),
+                    &ConcreteResourceLocation::RelativePath(prefix.to_string()),
                 )?;
             }
         }
