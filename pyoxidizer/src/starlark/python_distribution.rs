@@ -254,7 +254,11 @@ impl PythonDistribution {
     ///     include_resources=true,
     ///     include_test=false,
     /// )
-    #[allow(clippy::ptr_arg, clippy::too_many_arguments)]
+    #[allow(
+        clippy::ptr_arg,
+        clippy::too_many_arguments,
+        clippy::clippy::wrong_self_convention
+    )]
     fn to_python_executable_starlark(
         &mut self,
         env: Environment,
