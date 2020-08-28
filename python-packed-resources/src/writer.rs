@@ -727,7 +727,7 @@ where
         }
 
         dest.write_u8(ResourceField::EndOfEntry.into())
-            .or_else(|_| Err(anyhow!("error writing end of index entry")))?;
+            .map_err(|_| anyhow!("error writing end of index entry"))?;
 
         Ok(())
     }

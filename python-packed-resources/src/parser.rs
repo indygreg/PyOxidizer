@@ -102,7 +102,7 @@ impl<'a> ResourceParserIterator<'a> {
             let field_type = self
                 .reader
                 .read_u8()
-                .or_else(|_| Err("failed reading field type"))?;
+                .map_err(|_| "failed reading field type")?;
 
             let field_type = ResourceField::try_from(field_type)?;
 
@@ -138,7 +138,7 @@ impl<'a> ResourceParserIterator<'a> {
                     let flavor = self
                         .reader
                         .read_u8()
-                        .or_else(|_| Err("failed reading flavor value"))?;
+                        .map_err(|_| "failed reading flavor value")?;
 
                     current_resource.flavor = ResourceFlavor::try_from(flavor)?;
                 }
@@ -147,7 +147,7 @@ impl<'a> ResourceParserIterator<'a> {
                     let l = self
                         .reader
                         .read_u16::<LittleEndian>()
-                        .or_else(|_| Err("failed reading resource name length"))?
+                        .map_err(|_| "failed reading resource name length")?
                         as usize;
 
                     let name = unsafe {
@@ -167,7 +167,7 @@ impl<'a> ResourceParserIterator<'a> {
                     let l = self
                         .reader
                         .read_u32::<LittleEndian>()
-                        .or_else(|_| Err("failed reading source length"))?
+                        .map_err(|_| "failed reading source length")?
                         as usize;
 
                     current_resource.in_memory_source =
@@ -177,7 +177,7 @@ impl<'a> ResourceParserIterator<'a> {
                     let l = self
                         .reader
                         .read_u32::<LittleEndian>()
-                        .or_else(|_| Err("failed reading bytecode length"))?
+                        .map_err(|_| "failed reading bytecode length")?
                         as usize;
 
                     current_resource.in_memory_bytecode =
@@ -187,7 +187,7 @@ impl<'a> ResourceParserIterator<'a> {
                     let l = self
                         .reader
                         .read_u32::<LittleEndian>()
-                        .or_else(|_| Err("failed reading bytecode length"))?
+                        .map_err(|_| "failed reading bytecode length")?
                         as usize;
 
                     current_resource.in_memory_bytecode_opt1 =
@@ -197,7 +197,7 @@ impl<'a> ResourceParserIterator<'a> {
                     let l = self
                         .reader
                         .read_u32::<LittleEndian>()
-                        .or_else(|_| Err("failed reading bytecode length"))?
+                        .map_err(|_| "failed reading bytecode length")?
                         as usize;
 
                     current_resource.in_memory_bytecode_opt2 =
@@ -207,7 +207,7 @@ impl<'a> ResourceParserIterator<'a> {
                     let l = self
                         .reader
                         .read_u32::<LittleEndian>()
-                        .or_else(|_| Err("failed reading extension module length"))?
+                        .map_err(|_| "failed reading extension module length")?
                         as usize;
 
                     current_resource.in_memory_extension_module_shared_library =
@@ -218,7 +218,7 @@ impl<'a> ResourceParserIterator<'a> {
                     let resource_count = self
                         .reader
                         .read_u32::<LittleEndian>()
-                        .or_else(|_| Err("failed reading resources length"))?
+                        .map_err(|_| "failed reading resources length")?
                         as usize;
 
                     let mut resources = HashMap::with_capacity(resource_count);
@@ -227,7 +227,7 @@ impl<'a> ResourceParserIterator<'a> {
                         let resource_name_length = self
                             .reader
                             .read_u16::<LittleEndian>()
-                            .or_else(|_| Err("failed reading resource name"))?
+                            .map_err(|_| "failed reading resource name")?
                             as usize;
 
                         let resource_name = unsafe {
@@ -239,7 +239,7 @@ impl<'a> ResourceParserIterator<'a> {
                         let resource_length = self
                             .reader
                             .read_u64::<LittleEndian>()
-                            .or_else(|_| Err("failed reading resource length"))?
+                            .map_err(|_| "failed reading resource length")?
                             as usize;
 
                         let resource_data = self.resolve_blob_data(field_type, resource_length);
@@ -255,7 +255,7 @@ impl<'a> ResourceParserIterator<'a> {
                     let resource_count = self
                         .reader
                         .read_u32::<LittleEndian>()
-                        .or_else(|_| Err("failed reading package distribution length"))?
+                        .map_err(|_| "failed reading package distribution length")?
                         as usize;
 
                     let mut resources = HashMap::with_capacity(resource_count);
@@ -264,7 +264,7 @@ impl<'a> ResourceParserIterator<'a> {
                         let name_length = self
                             .reader
                             .read_u16::<LittleEndian>()
-                            .or_else(|_| Err("failed reading distribution metadata name"))?
+                            .map_err(|_| "failed reading distribution metadata name")?
                             as usize;
 
                         let name = unsafe {
@@ -274,8 +274,8 @@ impl<'a> ResourceParserIterator<'a> {
                         };
 
                         let resource_length =
-                            self.reader.read_u64::<LittleEndian>().or_else(|_| {
-                                Err("failed reading package distribution resource length")
+                            self.reader.read_u64::<LittleEndian>().map_err(|_| {
+                                "failed reading package distribution resource length"
                             })? as usize;
 
                         let resource_data = self.resolve_blob_data(field_type, resource_length);
@@ -290,7 +290,7 @@ impl<'a> ResourceParserIterator<'a> {
                     let l = self
                         .reader
                         .read_u64::<LittleEndian>()
-                        .or_else(|_| Err("failed reading in-memory shared library length"))?
+                        .map_err(|_| "failed reading in-memory shared library length")?
                         as usize;
 
                     current_resource.in_memory_shared_library =
@@ -298,17 +298,19 @@ impl<'a> ResourceParserIterator<'a> {
                 }
 
                 ResourceField::SharedLibraryDependencyNames => {
-                    let names_count =
-                        self.reader.read_u16::<LittleEndian>().or_else(|_| {
-                            Err("failed reading shared library dependency names length")
-                        })? as usize;
+                    let names_count = self
+                        .reader
+                        .read_u16::<LittleEndian>()
+                        .map_err(|_| "failed reading shared library dependency names length")?
+                        as usize;
 
                     let mut names = Vec::new();
 
                     for _ in 0..names_count {
-                        let name_length = self.reader.read_u16::<LittleEndian>().or_else(|_| {
-                            Err("failed reading shared library dependency name length")
-                        })? as usize;
+                        let name_length =
+                            self.reader.read_u16::<LittleEndian>().map_err(|_| {
+                                "failed reading shared library dependency name length"
+                            })? as usize;
 
                         let name = unsafe {
                             std::str::from_utf8_unchecked(
@@ -326,7 +328,7 @@ impl<'a> ResourceParserIterator<'a> {
                     let path_length = self
                         .reader
                         .read_u32::<LittleEndian>()
-                        .or_else(|_| Err("failed reading Python module relative path length"))?
+                        .map_err(|_| "failed reading Python module relative path length")?
                         as usize;
 
                     let path = self.resolve_path(field_type, path_length);
@@ -335,9 +337,10 @@ impl<'a> ResourceParserIterator<'a> {
                 }
 
                 ResourceField::RelativeFilesystemModuleBytecode => {
-                    let path_length = self.reader.read_u32::<LittleEndian>().or_else(|_| {
-                        Err("failed reading Python module bytecode relative path length")
-                    })? as usize;
+                    let path_length =
+                        self.reader.read_u32::<LittleEndian>().map_err(|_| {
+                            "failed reading Python module bytecode relative path length"
+                        })? as usize;
 
                     let path = self.resolve_path(field_type, path_length);
 
@@ -345,8 +348,8 @@ impl<'a> ResourceParserIterator<'a> {
                 }
 
                 ResourceField::RelativeFilesystemModuleBytecodeOpt1 => {
-                    let path_length = self.reader.read_u32::<LittleEndian>().or_else(|_| {
-                        Err("failed reading Python module bytecode opt 1 relative path length")
+                    let path_length = self.reader.read_u32::<LittleEndian>().map_err(|_| {
+                        "failed reading Python module bytecode opt 1 relative path length"
                     })? as usize;
 
                     let path = self.resolve_path(field_type, path_length);
@@ -355,8 +358,8 @@ impl<'a> ResourceParserIterator<'a> {
                 }
 
                 ResourceField::RelativeFilesystemModuleBytecodeOpt2 => {
-                    let path_length = self.reader.read_u32::<LittleEndian>().or_else(|_| {
-                        Err("failed reading Python module bytecode opt 2 relative path length")
+                    let path_length = self.reader.read_u32::<LittleEndian>().map_err(|_| {
+                        "failed reading Python module bytecode opt 2 relative path length"
                     })? as usize;
 
                     let path = self.resolve_path(field_type, path_length);
@@ -365,8 +368,8 @@ impl<'a> ResourceParserIterator<'a> {
                 }
 
                 ResourceField::RelativeFilesystemExtensionModuleSharedLibrary => {
-                    let path_length = self.reader.read_u32::<LittleEndian>().or_else(|_| {
-                        Err("failed reading Python extension module shared library relative path length")
+                    let path_length = self.reader.read_u32::<LittleEndian>().map_err(|_| {
+                        "failed reading Python extension module shared library relative path length"
                     })? as usize;
 
                     let path = self.resolve_path(field_type, path_length);
@@ -375,9 +378,10 @@ impl<'a> ResourceParserIterator<'a> {
                 }
 
                 ResourceField::RelativeFilesystemPackageResources => {
-                    let resource_count = self.reader.read_u32::<LittleEndian>().or_else(|_| {
-                        Err("failed reading package resources relative path item count")
-                    })? as usize;
+                    let resource_count =
+                        self.reader.read_u32::<LittleEndian>().map_err(|_| {
+                            "failed reading package resources relative path item count"
+                        })? as usize;
 
                     let mut resources = HashMap::with_capacity(resource_count);
 
@@ -385,7 +389,7 @@ impl<'a> ResourceParserIterator<'a> {
                         let resource_name_length = self
                             .reader
                             .read_u16::<LittleEndian>()
-                            .or_else(|_| Err("failed reading resource name"))?
+                            .map_err(|_| "failed reading resource name")?
                             as usize;
 
                         let resource_name = unsafe {
@@ -397,7 +401,7 @@ impl<'a> ResourceParserIterator<'a> {
                         let path_length = self
                             .reader
                             .read_u32::<LittleEndian>()
-                            .or_else(|_| Err("failed reading resource path length"))?
+                            .map_err(|_| "failed reading resource path length")?
                             as usize;
 
                         let path = self.resolve_path(field_type, path_length);
@@ -409,17 +413,18 @@ impl<'a> ResourceParserIterator<'a> {
                 }
 
                 ResourceField::RelativeFilesystemDistributionResource => {
-                    let resource_count = self.reader.read_u32::<LittleEndian>().or_else(|_| {
-                        Err("failed reading package distribution relative path item count")
+                    let resource_count = self.reader.read_u32::<LittleEndian>().map_err(|_| {
+                        "failed reading package distribution relative path item count"
                     })? as usize;
 
                     let mut resources = HashMap::with_capacity(resource_count);
 
                     for _ in 0..resource_count {
-                        let name_length =
-                            self.reader.read_u16::<LittleEndian>().or_else(|_| {
-                                Err("failed reading package distribution metadata name")
-                            })? as usize;
+                        let name_length = self
+                            .reader
+                            .read_u16::<LittleEndian>()
+                            .map_err(|_| "failed reading package distribution metadata name")?
+                            as usize;
 
                         let name = unsafe {
                             std::str::from_utf8_unchecked(
@@ -427,10 +432,11 @@ impl<'a> ResourceParserIterator<'a> {
                             )
                         };
 
-                        let path_length =
-                            self.reader.read_u32::<LittleEndian>().or_else(|_| {
-                                Err("failed reading package distribution path length")
-                            })? as usize;
+                        let path_length = self
+                            .reader
+                            .read_u32::<LittleEndian>()
+                            .map_err(|_| "failed reading package distribution path length")?
+                            as usize;
 
                         let path = self.resolve_path(field_type, path_length);
 
@@ -481,16 +487,16 @@ fn load_resources_v1<'a>(data: &'a [u8]) -> Result<ResourceParserIterator<'a>, &
 
     let blob_section_count = reader
         .read_u8()
-        .or_else(|_| Err("failed reading blob section count"))?;
+        .map_err(|_| "failed reading blob section count")?;
     let blob_index_length = reader
         .read_u32::<LittleEndian>()
-        .or_else(|_| Err("failed reading blob index length"))? as usize;
+        .map_err(|_| "failed reading blob index length")? as usize;
     let resources_count = reader
         .read_u32::<LittleEndian>()
-        .or_else(|_| Err("failed reading resources count"))? as usize;
+        .map_err(|_| "failed reading resources count")? as usize;
     let resources_index_length = reader
         .read_u32::<LittleEndian>()
-        .or_else(|_| Err("failed reading resources index length"))?
+        .map_err(|_| "failed reading resources index length")?
         as usize;
 
     let mut current_blob_field = None;
@@ -503,7 +509,7 @@ fn load_resources_v1<'a>(data: &'a [u8]) -> Result<ResourceParserIterator<'a>, &
         loop {
             let field_type = reader
                 .read_u8()
-                .or_else(|_| Err("failed reading blob section field type"))?;
+                .map_err(|_| "failed reading blob section field type")?;
 
             let field_type = BlobSectionField::try_from(field_type)?;
 
@@ -536,19 +542,19 @@ fn load_resources_v1<'a>(data: &'a [u8]) -> Result<ResourceParserIterator<'a>, &
                 BlobSectionField::ResourceFieldType => {
                     let field = reader
                         .read_u8()
-                        .or_else(|_| Err("failed reading blob resource field value"))?;
+                        .map_err(|_| "failed reading blob resource field value")?;
                     current_blob_field = Some(field);
                 }
                 BlobSectionField::RawPayloadLength => {
                     let l = reader
                         .read_u64::<LittleEndian>()
-                        .or_else(|_| Err("failed reading raw payload length"))?;
+                        .map_err(|_| "failed reading raw payload length")?;
                     current_blob_raw_payload_length = Some(l as usize);
                 }
                 BlobSectionField::InteriorPadding => {
                     let padding = reader
                         .read_u8()
-                        .or_else(|_| Err("failed reading interior padding field value"))?;
+                        .map_err(|_| "failed reading interior padding field value")?;
 
                     current_blob_interior_padding = Some(match padding {
                         0x01 => BlobInteriorPadding::None,
