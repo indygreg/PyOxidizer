@@ -198,13 +198,13 @@ impl FileManifest {
 
         let other = other.downcast_apply(|other: &FileManifest| other.manifest.clone());
 
-        self.manifest.add_manifest(&other).or_else(|e| {
-            Err(RuntimeError {
+        self.manifest.add_manifest(&other).map_err(|e| {
+            RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "add_manifest()".to_string(),
             }
-            .into())
+            .into()
         })?;
 
         Ok(Value::new(None))
@@ -228,13 +228,13 @@ impl FileManifest {
                 warn!(logger, "adding source module {} to {}", m.name, prefix);
 
                 m.add_to_file_manifest(&mut self.manifest, &prefix)
-                    .or_else(|e| {
-                        Err(RuntimeError {
+                    .map_err(|e| {
+                        RuntimeError {
                             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                             message: e.to_string(),
                             label: e.to_string(),
                         }
-                        .into())
+                        .into()
                     })
             }
             "PythonBytecodeModule" => {
@@ -253,13 +253,13 @@ impl FileManifest {
                     prefix
                 );
                 m.add_to_file_manifest(&mut self.manifest, &prefix)
-                    .or_else(|e| {
-                        Err(RuntimeError {
+                    .map_err(|e| {
+                        RuntimeError {
                             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                             message: e.to_string(),
                             label: e.to_string(),
                         }
-                        .into())
+                        .into()
                     })
             }
             "PythonPackageDistributionResource" => {
@@ -273,13 +273,13 @@ impl FileManifest {
                     prefix
                 );
                 m.add_to_file_manifest(&mut self.manifest, &prefix)
-                    .or_else(|e| {
-                        Err(RuntimeError {
+                    .map_err(|e| {
+                        RuntimeError {
                             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                             message: e.to_string(),
                             label: e.to_string(),
                         }
-                        .into())
+                        .into()
                     })
             }
             "PythonExtensionModule" => {
@@ -300,13 +300,13 @@ impl FileManifest {
                             "adding statically linked extension module {} to {}", m.name, prefix
                         );
                         m.add_to_file_manifest(&mut self.manifest, &prefix)
-                            .or_else(|e| {
-                                Err(RuntimeError {
+                            .map_err(|e| {
+                                RuntimeError {
                                     code: "PYOXIDIZER_BUILD",
                                     message: e.to_string(),
                                     label: "add_python_resource".to_string(),
                                 }
-                                .into())
+                                .into()
                             })
                     }
                     PythonExtensionModuleFlavor::DynamicLibrary(m) => {
@@ -315,13 +315,13 @@ impl FileManifest {
                             "adding dynamic library extension module {} to {}", m.name, prefix
                         );
                         m.add_to_file_manifest(&mut self.manifest, &prefix)
-                            .or_else(|e| {
-                                Err(RuntimeError {
+                            .map_err(|e| {
+                                RuntimeError {
                                     code: "PYOXIDIZER_BUILD",
                                     message: e.to_string(),
                                     label: "add_python_resource".to_string(),
                                 }
-                                .into())
+                                .into()
                             })
                     }
                 }
@@ -353,13 +353,13 @@ impl FileManifest {
                     release,
                     &opt_level,
                 )
-                .or_else(|e| {
-                    Err(RuntimeError {
+                .map_err(|e| {
+                    RuntimeError {
                         code: "PYOXIDIZER_BUILD",
                         message: e.to_string(),
                         label: "add_python_resource".to_string(),
                     }
-                    .into())
+                    .into()
                 })
             }
             t => Err(RuntimeError {
@@ -405,13 +405,13 @@ impl FileManifest {
         } else {
             self.manifest.write_to_path(&dest_path)
         }
-        .or_else(|e| {
-            Err(RuntimeError {
+        .map_err(|e| {
+            RuntimeError {
                 code: "PYOXIDIZER_INSTALL",
                 message: format!("error installing FileManifest: {}", e),
                 label: "FileManifest.install()".to_string(),
             }
-            .into())
+            .into()
         })?;
 
         Ok(Value::new(None))
@@ -446,13 +446,13 @@ fn starlark_glob(
 
     // Evaluate all the includes first.
     for v in include {
-        for p in evaluate_glob(&cwd, &v).or_else(|e| {
-            Err(RuntimeError {
+        for p in evaluate_glob(&cwd, &v).map_err(|e| {
+            RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "glob()".to_string(),
             }
-            .into())
+            .into()
         })? {
             result.insert(p);
         }
@@ -460,13 +460,13 @@ fn starlark_glob(
 
     // Then apply excludes.
     for v in exclude {
-        for p in evaluate_glob(&cwd, &v).or_else(|e| {
-            Err(RuntimeError {
+        for p in evaluate_glob(&cwd, &v).map_err(|e| {
+            RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "glob()".to_string(),
             }
-            .into())
+            .into()
         })? {
             result.remove(&p);
         }
@@ -475,37 +475,37 @@ fn starlark_glob(
     let mut manifest = RawFileManifest::default();
 
     for path in result {
-        let content = RawFileContent::try_from(path.as_path()).or_else(|e| {
-            Err(RuntimeError {
+        let content = RawFileContent::try_from(path.as_path()).map_err(|e| {
+            RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "glob()".to_string(),
             }
-            .into())
+            .into()
         })?;
 
         let path = if let Some(prefix) = &strip_prefix {
             path.strip_prefix(prefix)
-                .or_else(|e| {
-                    Err(RuntimeError {
+                .map_err(|e| {
+                    RuntimeError {
                         code: "PYOXIDIZER_BUILD",
                         message: e.to_string(),
                         label: "glob()".to_string(),
                     }
-                    .into())
+                    .into()
                 })?
                 .to_path_buf()
         } else {
             path.to_path_buf()
         };
 
-        manifest.add_file(&path, &content).or_else(|e| {
-            Err(RuntimeError {
+        manifest.add_file(&path, &content).map_err(|e| {
+            RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "glob()".to_string(),
             }
-            .into())
+            .into()
         })?;
     }
 

@@ -41,27 +41,23 @@ pub fn evaluate_file(
         resolve_targets,
         build_script_mode,
     )
-    .or_else(|e| {
-        Err(Diagnostic {
-            level: Level::Error,
-            message: e.to_string(),
-            code: Some("environment".to_string()),
-            spans: vec![],
-        })
+    .map_err(|e| Diagnostic {
+        level: Level::Error,
+        message: e.to_string(),
+        code: Some("environment".to_string()),
+        spans: vec![],
     })?;
 
-    let mut env = global_environment(&context).or_else(|_| {
-        Err(Diagnostic {
-            level: Level::Error,
-            message: "error creating environment".to_string(),
-            code: Some("environment".to_string()),
-            spans: vec![],
-        })
+    let mut env = global_environment(&context).map_err(|_| Diagnostic {
+        level: Level::Error,
+        message: "error creating environment".to_string(),
+        code: Some("environment".to_string()),
+        spans: vec![],
     })?;
 
     let map = Arc::new(Mutex::new(CodeMap::new()));
     starlark::eval::simple::eval_file(&map, &config_path.display().to_string(), false, &mut env)
-        .or_else(|e| {
+        .map_err(|e| {
             let mut msg = Vec::new();
             let raw_map = map.lock().unwrap();
             {
@@ -71,18 +67,16 @@ pub fn evaluate_file(
 
             slog::error!(logger, "{}", String::from_utf8_lossy(&msg));
 
-            Err(e)
+            e
         })?;
 
     // The EnvironmentContext is cloned as part of evaluation, which is a bit wonky.
     // TODO avoid this clone.
-    let env_context = env.get("CONTEXT").or_else(|_| {
-        Err(Diagnostic {
-            level: Level::Error,
-            message: "CONTEXT not defined".to_string(),
-            code: Some("environment".to_string()),
-            spans: vec![],
-        })
+    let env_context = env.get("CONTEXT").map_err(|_| Diagnostic {
+        level: Level::Error,
+        message: "CONTEXT not defined".to_string(),
+        code: Some("environment".to_string()),
+        spans: vec![],
     })?;
 
     Ok(EvalResult {
@@ -110,5 +104,5 @@ pub fn eval_starlark_config_file(
         resolve_targets,
         build_script_mode,
     )
-    .or_else(|d| Err(anyhow!(d.message)))
+    .map_err(|d| anyhow!(d.message))
 }
