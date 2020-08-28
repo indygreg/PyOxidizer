@@ -610,7 +610,7 @@ impl<'a> PythonResourcesState<'a, u8> {
             } else {
                 return Err(PyErr::new::<OSError, _>(
                     py,
-                    (libc::ENOENT, "resource not known", path.clone()),
+                    (libc::ENOENT, "resource not known", path),
                 ));
             };
 
@@ -637,7 +637,7 @@ impl<'a> PythonResourcesState<'a, u8> {
                 (
                     libc::ENOENT,
                     "illegal resource name: missing package component",
-                    path.clone(),
+                    path,
                 ),
             ));
         }
@@ -698,7 +698,7 @@ impl<'a> PythonResourcesState<'a, u8> {
 
         Err(PyErr::new::<OSError, _>(
             py,
-            (libc::ENOENT, "resource not known", path.clone()),
+            (libc::ENOENT, "resource not known", path),
         ))
     }
 
