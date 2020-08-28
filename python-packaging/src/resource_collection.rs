@@ -455,6 +455,14 @@ pub enum AbstractResourceLocation {
     RelativePath,
 }
 
+/// Describes the concrete location of a Python resource.
+pub enum ConcreteResourceLocation {
+    /// Resource is loaded from memory.
+    InMemory,
+    /// Reosurce is loaded from a relative filesystem path.
+    RelativePath(String),
+}
+
 /// Represents a finalized collection of Python resources.
 ///
 /// Instances are produced from a `PythonResourceCollector` and a
@@ -590,6 +598,20 @@ impl PythonResourceCollector {
         }))
     }
 
+    /// Add Python module source with a specific location.
+    pub fn add_python_module_source(
+        &mut self,
+        module: &PythonModuleSource,
+        location: &ConcreteResourceLocation,
+    ) -> Result<()> {
+        match location {
+            ConcreteResourceLocation::InMemory => self.add_in_memory_python_module_source(module),
+            ConcreteResourceLocation::RelativePath(prefix) => {
+                self.add_relative_path_python_module_source(module, prefix)
+            }
+        }
+    }
+
     /// Add Python module source to be loaded from memory.
     pub fn add_in_memory_python_module_source(
         &mut self,
@@ -633,6 +655,20 @@ impl PythonResourceCollector {
         Ok(())
     }
 
+    /// Add Python module bytecode to the specified location.
+    pub fn add_python_module_bytecode(
+        &mut self,
+        module: &PythonModuleBytecode,
+        location: &ConcreteResourceLocation,
+    ) -> Result<()> {
+        match location {
+            ConcreteResourceLocation::InMemory => self.add_in_memory_python_module_bytecode(module),
+            ConcreteResourceLocation::RelativePath(prefix) => {
+                self.add_relative_path_python_module_bytecode(module, prefix)
+            }
+        }
+    }
+
     /// Add Python module bytecode to be loaded from memory.
     ///
     /// Actual bytecode is provided, not bytecode derived from source.
@@ -669,44 +705,6 @@ impl PythonResourceCollector {
             BytecodeOptimizationLevel::Two => {
                 entry.in_memory_bytecode_opt2 = Some(PythonModuleBytecodeProvider::Provided(
                     DataLocation::Memory(module.resolve_bytecode()?),
-                ));
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Add Python module bytecode from source to the collection.
-    pub fn add_in_memory_python_module_bytecode_from_source(
-        &mut self,
-        module: &PythonModuleBytecodeFromSource,
-    ) -> Result<()> {
-        self.check_policy(AbstractResourceLocation::InMemory)?;
-        let entry = self
-            .resources
-            .entry(module.name.clone())
-            .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Module,
-                name: module.name.clone(),
-                ..PrePackagedResource::default()
-            });
-
-        entry.is_package = module.is_package;
-
-        match module.optimize_level {
-            BytecodeOptimizationLevel::Zero => {
-                entry.in_memory_bytecode = Some(PythonModuleBytecodeProvider::FromSource(
-                    module.source.clone(),
-                ));
-            }
-            BytecodeOptimizationLevel::One => {
-                entry.in_memory_bytecode_opt1 = Some(PythonModuleBytecodeProvider::FromSource(
-                    module.source.clone(),
-                ));
-            }
-            BytecodeOptimizationLevel::Two => {
-                entry.in_memory_bytecode_opt2 = Some(PythonModuleBytecodeProvider::FromSource(
-                    module.source.clone(),
                 ));
             }
         }
@@ -765,6 +763,60 @@ impl PythonResourceCollector {
         Ok(())
     }
 
+    /// Add Python module bytecode derived from source code to the collection.
+    pub fn add_python_module_bytecode_from_source(
+        &mut self,
+        module: &PythonModuleBytecodeFromSource,
+        location: &ConcreteResourceLocation,
+    ) -> Result<()> {
+        match location {
+            ConcreteResourceLocation::InMemory => {
+                self.add_in_memory_python_module_bytecode_from_source(module)
+            }
+            ConcreteResourceLocation::RelativePath(prefix) => {
+                self.add_relative_path_python_module_bytecode_from_source(module, prefix)
+            }
+        }
+    }
+
+    /// Add Python module bytecode from source to the collection.
+    pub fn add_in_memory_python_module_bytecode_from_source(
+        &mut self,
+        module: &PythonModuleBytecodeFromSource,
+    ) -> Result<()> {
+        self.check_policy(AbstractResourceLocation::InMemory)?;
+        let entry = self
+            .resources
+            .entry(module.name.clone())
+            .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: module.name.clone(),
+                ..PrePackagedResource::default()
+            });
+
+        entry.is_package = module.is_package;
+
+        match module.optimize_level {
+            BytecodeOptimizationLevel::Zero => {
+                entry.in_memory_bytecode = Some(PythonModuleBytecodeProvider::FromSource(
+                    module.source.clone(),
+                ));
+            }
+            BytecodeOptimizationLevel::One => {
+                entry.in_memory_bytecode_opt1 = Some(PythonModuleBytecodeProvider::FromSource(
+                    module.source.clone(),
+                ));
+            }
+            BytecodeOptimizationLevel::Two => {
+                entry.in_memory_bytecode_opt2 = Some(PythonModuleBytecodeProvider::FromSource(
+                    module.source.clone(),
+                ));
+            }
+        }
+
+        Ok(())
+    }
+
     /// Add a Python bytecode module from source to be loaded from the filesystem relative to some entity.
     pub fn add_relative_path_python_module_bytecode_from_source(
         &mut self,
@@ -808,6 +860,24 @@ impl PythonResourceCollector {
         }
 
         Ok(())
+    }
+
+    /// Add resource data to a given location.
+    ///
+    /// Resource data belongs to a Python package and has a name and bytes data.
+    pub fn add_python_package_resource(
+        &mut self,
+        resource: &PythonPackageResource,
+        location: &ConcreteResourceLocation,
+    ) -> Result<()> {
+        match location {
+            ConcreteResourceLocation::InMemory => {
+                self.add_in_memory_python_package_resource(resource)
+            }
+            ConcreteResourceLocation::RelativePath(prefix) => {
+                self.add_relative_path_python_package_resource(prefix, resource)
+            }
+        }
     }
 
     /// Add resource data.
@@ -882,6 +952,22 @@ impl PythonResourceCollector {
         Ok(())
     }
 
+    /// Add a package distribution resource to a given location.
+    pub fn add_package_distribution_resource(
+        &mut self,
+        resource: &PythonPackageDistributionResource,
+        location: &ConcreteResourceLocation,
+    ) -> Result<()> {
+        match location {
+            ConcreteResourceLocation::InMemory => {
+                self.add_in_memory_package_distribution_resource(resource)
+            }
+            ConcreteResourceLocation::RelativePath(prefix) => {
+                self.add_relative_path_package_distribution_resource(prefix, resource)
+            }
+        }
+    }
+
     /// Add a package distribution resource to be loaded from memory.
     pub fn add_in_memory_package_distribution_resource(
         &mut self,
@@ -954,7 +1040,8 @@ impl PythonResourceCollector {
 
     /// Add a built-in extension module.
     ///
-    /// Built-in extension modules are statically linked into the binary.
+    /// Built-in extension modules are statically linked into the binary and
+    /// cannot have their location defined.
     pub fn add_builtin_python_extension_module(
         &mut self,
         module: &PythonExtensionModule,
@@ -974,6 +1061,9 @@ impl PythonResourceCollector {
 
         Ok(())
     }
+
+    // TODO define add_python_extension_module() once we pass a PythonExtensionModule
+    // into add_in_memory_python_extension_module_shared_library().
 
     /// Add a Python extension module shared library that should be imported from memory.
     ///
@@ -1041,6 +1131,21 @@ impl PythonResourceCollector {
         // TODO add shared library dependencies.
 
         Ok(())
+    }
+
+    /// Add a shared library to be loaded from a location.
+    pub fn add_shared_library(
+        &mut self,
+        name: &str,
+        data: &DataLocation,
+        location: &ConcreteResourceLocation,
+    ) -> Result<()> {
+        match location {
+            ConcreteResourceLocation::InMemory => self.add_in_memory_shared_library(name, data),
+            ConcreteResourceLocation::RelativePath(prefix) => {
+                self.add_relative_path_shared_library(prefix, name, data)
+            }
+        }
     }
 
     /// Add a shared library to be loaded from memory.
