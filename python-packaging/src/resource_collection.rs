@@ -746,26 +746,6 @@ impl PythonResourceCollector {
         Ok(())
     }
 
-    /// Add Python module bytecode from source to the collection.
-    pub fn add_in_memory_python_module_bytecode_from_source(
-        &mut self,
-        module: &PythonModuleBytecodeFromSource,
-    ) -> Result<()> {
-        self.add_python_module_bytecode_from_source(module, &ConcreteResourceLocation::InMemory)
-    }
-
-    /// Add a Python bytecode module from source to be loaded from the filesystem relative to some entity.
-    pub fn add_relative_path_python_module_bytecode_from_source(
-        &mut self,
-        module: &PythonModuleBytecodeFromSource,
-        prefix: &str,
-    ) -> Result<()> {
-        self.add_python_module_bytecode_from_source(
-            module,
-            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-        )
-    }
-
     /// Add resource data to a given location.
     ///
     /// Resource data belongs to a Python package and has a name and bytes data.
@@ -1658,13 +1638,16 @@ mod tests {
     fn test_add_in_memory_bytecode_module_from_source() -> Result<()> {
         let mut r =
             PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
-        r.add_in_memory_python_module_bytecode_from_source(&PythonModuleBytecodeFromSource {
-            name: "foo".to_string(),
-            source: DataLocation::Memory(vec![42]),
-            optimize_level: BytecodeOptimizationLevel::Zero,
-            is_package: false,
-            cache_tag: DEFAULT_CACHE_TAG.to_string(),
-        })?;
+        r.add_python_module_bytecode_from_source(
+            &PythonModuleBytecodeFromSource {
+                name: "foo".to_string(),
+                source: DataLocation::Memory(vec![42]),
+                optimize_level: BytecodeOptimizationLevel::Zero,
+                is_package: false,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
+            },
+            &ConcreteResourceLocation::InMemory,
+        )?;
 
         assert!(r.resources.contains_key("foo"));
         assert_eq!(
@@ -1687,13 +1670,16 @@ mod tests {
     fn test_add_in_memory_bytecode_module_parents() -> Result<()> {
         let mut r =
             PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
-        r.add_in_memory_python_module_bytecode_from_source(&PythonModuleBytecodeFromSource {
-            name: "root.parent.child".to_string(),
-            source: DataLocation::Memory(vec![42]),
-            optimize_level: BytecodeOptimizationLevel::One,
-            is_package: true,
-            cache_tag: DEFAULT_CACHE_TAG.to_string(),
-        })?;
+        r.add_python_module_bytecode_from_source(
+            &PythonModuleBytecodeFromSource {
+                name: "root.parent.child".to_string(),
+                source: DataLocation::Memory(vec![42]),
+                optimize_level: BytecodeOptimizationLevel::One,
+                is_package: true,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
+            },
+            &ConcreteResourceLocation::InMemory,
+        )?;
 
         assert_eq!(r.resources.len(), 1);
         assert_eq!(

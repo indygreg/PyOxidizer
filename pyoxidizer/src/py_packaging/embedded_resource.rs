@@ -103,7 +103,7 @@ impl PrePackagedResources {
         module: &PythonModuleBytecodeFromSource,
     ) -> Result<()> {
         self.collector
-            .add_in_memory_python_module_bytecode_from_source(module)
+            .add_python_module_bytecode_from_source(module, &ConcreteResourceLocation::InMemory)
     }
 
     /// Add a bytecode module to be loaded from the filesystem relative to some entity.
@@ -112,8 +112,10 @@ impl PrePackagedResources {
         module: &PythonModuleBytecodeFromSource,
         prefix: &str,
     ) -> Result<()> {
-        self.collector
-            .add_relative_path_python_module_bytecode_from_source(module, prefix)
+        self.collector.add_python_module_bytecode_from_source(
+            module,
+            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+        )
     }
 
     /// Add resource data.
