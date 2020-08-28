@@ -949,7 +949,7 @@ py_class!(pub class OxidizedResource |py| {
         if let Some(value) = value {
             self.resource(py).borrow_mut().in_memory_source =
                 pyobject_to_owned_bytes_optional(py, &value)?
-                    .map(|x| Cow::Owned(x));
+                    .map(Cow::Owned);
             Ok(())
         } else {
             Err(PyErr::new::<TypeError, _>(py, "cannot delete in_memory_source"))
@@ -964,7 +964,7 @@ py_class!(pub class OxidizedResource |py| {
         if let Some(value) = value {
             self.resource(py).borrow_mut().in_memory_bytecode =
                 pyobject_to_owned_bytes_optional(py, &value)?
-                    .map(|x| Cow::Owned(x));
+                    .map(Cow::Owned);
             Ok(())
         } else {
             Err(PyErr::new::<TypeError, _>(py, "cannot delete in_memory_bytecode"))
@@ -979,7 +979,7 @@ py_class!(pub class OxidizedResource |py| {
         if let Some(value) = value {
             self.resource(py).borrow_mut().in_memory_bytecode_opt1 =
                 pyobject_to_owned_bytes_optional(py, &value)?
-                    .map(|x| Cow::Owned(x));
+                    .map(Cow::Owned);
             Ok(())
         } else {
             Err(PyErr::new::<TypeError, _>(py, "cannot delete in_memory_bytecode_opt1"))
@@ -994,7 +994,7 @@ py_class!(pub class OxidizedResource |py| {
         if let Some(value) = value {
             self.resource(py).borrow_mut().in_memory_bytecode_opt2 =
                 pyobject_to_owned_bytes_optional(py, &value)?
-                    .map(|x| Cow::Owned(x));
+                    .map(Cow::Owned);
             Ok(())
         } else {
             Err(PyErr::new::<TypeError, _>(py, "cannot delete in_memory_bytecode_opt2"))
@@ -1009,7 +1009,7 @@ py_class!(pub class OxidizedResource |py| {
         if let Some(value) = value {
             self.resource(py).borrow_mut().in_memory_extension_module_shared_library =
                 pyobject_to_owned_bytes_optional(py, &value)?
-                    .map(|x| Cow::Owned(x));
+                    .map(Cow::Owned);
             Ok(())
         } else {
             Err(PyErr::new::<TypeError, _>(py, "cannot delete in_memory_extension_module_shared_library"))
@@ -1064,7 +1064,7 @@ py_class!(pub class OxidizedResource |py| {
         if let Some(value) = value {
             self.resource(py).borrow_mut().in_memory_shared_library =
                 pyobject_to_owned_bytes_optional(py, &value)?
-                    .map(|x| Cow::Owned(x));
+                    .map(Cow::Owned);
             Ok(())
         } else {
             Err(PyErr::new::<TypeError, _>(py, "cannot delete in_memory_shared_library"))
@@ -1099,7 +1099,7 @@ py_class!(pub class OxidizedResource |py| {
         if let Some(value) = value {
             self.resource(py).borrow_mut().relative_path_module_source =
                 pyobject_to_pathbuf_optional(py, value)?
-                    .map(|x| Cow::Owned(x));
+                    .map(Cow::Owned);
 
             Ok(())
         } else {
@@ -1118,7 +1118,7 @@ py_class!(pub class OxidizedResource |py| {
         if let Some(value) = value {
             self.resource(py).borrow_mut().relative_path_module_bytecode =
                 pyobject_to_pathbuf_optional(py, value)?
-                    .map(|x| Cow::Owned(x));
+                    .map(Cow::Owned);
 
             Ok(())
         } else {
@@ -1137,7 +1137,7 @@ py_class!(pub class OxidizedResource |py| {
         if let Some(value) = value {
             self.resource(py).borrow_mut().relative_path_module_bytecode_opt1 =
                 pyobject_to_pathbuf_optional(py, value)?
-                    .map(|x| Cow::Owned(x));
+                    .map(Cow::Owned);
 
             Ok(())
         } else {
@@ -1156,7 +1156,7 @@ py_class!(pub class OxidizedResource |py| {
         if let Some(value) = value {
             self.resource(py).borrow_mut().relative_path_module_bytecode_opt2 =
                 pyobject_to_pathbuf_optional(py, value)?
-                    .map(|x| Cow::Owned(x));
+                    .map(Cow::Owned);
 
             Ok(())
         } else {
@@ -1175,7 +1175,7 @@ py_class!(pub class OxidizedResource |py| {
         if let Some(value) = value {
             self.resource(py).borrow_mut().relative_path_extension_module_shared_library =
                 pyobject_to_pathbuf_optional(py, value)?
-                    .map(|x| Cow::Owned(x));
+                    .map(Cow::Owned);
 
             Ok(())
         } else {
