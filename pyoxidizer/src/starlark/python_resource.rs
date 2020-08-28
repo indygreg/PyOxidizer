@@ -11,7 +11,7 @@ use {
         PythonPackageResource as RawPackageResource, PythonResource,
     },
     starlark::environment::Environment,
-    starlark::values::{default_compare, TypedValue, Value, ValueError, ValueResult},
+    starlark::values::{default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult},
     starlark::{any, immutable, not_supported},
     std::any::Any,
     std::cmp::Ordering,
@@ -53,8 +53,27 @@ impl TypedValue for PythonSourceModule {
     fn get_attr(&self, attribute: &str) -> ValueResult {
         let v = match attribute {
             "name" => Value::new(self.module.name.clone()),
-            // TODO expose source
-            // "source" => Value::new(self.module.source),
+            "source" => {
+                let source = self.module.source.resolve().map_err(|e| {
+                    RuntimeError {
+                        code: "PYOXIDIZER_SOURCE_ERROR",
+                        message: format!("error resolving source code: {}", e),
+                        label: "source".to_string(),
+                    }
+                    .into()
+                })?;
+
+                let source = String::from_utf8(source).map_err(|_| {
+                    RuntimeError {
+                        code: "PYOXIDIZER_SOURCE_ERROR",
+                        message: "error converting source code to UTF-8".to_string(),
+                        label: "source".to_string(),
+                    }
+                    .into()
+                })?;
+
+                Value::new(source)
+            }
             "is_package" => Value::new(self.module.is_package),
             attr => {
                 return Err(ValueError::OperationNotSupported {

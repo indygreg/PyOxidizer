@@ -17,7 +17,10 @@ use {
     crate::project_building::build_python_executable,
     crate::py_packaging::binary::PythonBinaryBuilder,
     anyhow::{anyhow, Context, Result},
-    python_packaging::resource::{BytecodeOptimizationLevel, PythonModuleBytecodeFromSource},
+    python_packaging::resource::{
+        BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource,
+        PythonModuleSource as RawPythonModuleSource,
+    },
     slog::{info, warn},
     starlark::environment::Environment,
     starlark::values::{
@@ -103,6 +106,27 @@ impl BuildTarget for PythonExecutable {
 
 // Starlark functions.
 impl PythonExecutable {
+    /// PythonExecutable.make_python_source_module(name, source, is_package=false)
+    pub fn starlark_make_python_source_module(
+        &self,
+        name: &Value,
+        source: &Value,
+        is_package: &Value,
+    ) -> ValueResult {
+        let name = required_str_arg("name", &name)?;
+        let source = required_str_arg("source", &source)?;
+        let is_package = required_bool_arg("is_package", &is_package)?;
+
+        Ok(Value::new(PythonSourceModule {
+            module: RawPythonModuleSource {
+                name,
+                source: DataLocation::Memory(source.into_bytes()),
+                is_package,
+                cache_tag: self.exe.cache_tag().to_string(),
+            },
+        }))
+    }
+
     /// PythonExecutable.pip_install(args, extra_envs=None)
     pub fn starlark_pip_install(
         &self,
@@ -1106,6 +1130,13 @@ impl PythonExecutable {
 
 starlark_module! { python_executable_env =>
     #[allow(non_snake_case, clippy::ptr_arg)]
+    PythonExecutable.make_python_source_module(this, name, source, is_package=false) {
+        this.downcast_apply(|exe: &PythonExecutable| {
+            exe.starlark_make_python_source_module(&name, &source, &is_package)
+        })
+    }
+
+    #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.pip_install(env env, this, args, extra_envs=None) {
         this.downcast_apply(|exe: &PythonExecutable| {
             exe.starlark_pip_install(&env, &args, &extra_envs)
@@ -1439,6 +1470,26 @@ mod tests {
         exe.downcast_apply(|exe: &PythonExecutable| {
             assert!(exe.exe.in_memory_module_sources().is_empty());
         });
+    }
+
+    #[test]
+    fn test_make_python_source_module() {
+        let mut env = starlark_env();
+
+        starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
+
+        starlark_eval_in_env(&mut env, "exe = dist.to_python_executable('testapp')").unwrap();
+
+        let m = starlark_eval_in_env(
+            &mut env,
+            "exe.make_python_source_module('foo', 'import bar')",
+        )
+        .unwrap();
+
+        assert_eq!(m.get_type(), "PythonSourceModule");
+        assert_eq!(m.get_attr("name").unwrap().to_str(), "foo");
+        assert_eq!(m.get_attr("source").unwrap().to_str(), "import bar");
+        assert_eq!(m.get_attr("is_package").unwrap().to_bool(), false);
     }
 
     #[test]

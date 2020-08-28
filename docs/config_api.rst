@@ -464,6 +464,9 @@ Each instance has the following attributes:
 ``name`` (string)
    Fully qualified name of the module. e.g. ``foo.bar``.
 
+``source`` (string)
+   The Python source code for this module.
+
 ``is_package`` (bool)
    Whether this module is also a Python package (or sub-package).
 
@@ -908,6 +911,25 @@ and a default run-time configuration for that interpreter.
 
 Instances are constructed from ``PythonDistribution`` instances using
 :ref:`config_python_distribution_to_python_executable`.
+
+.. _config_python_executable_make_python_source_module:
+
+``PythonExecutable.make_python_source_module(name, source, is_package=false)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This method creates a ``PythonSourceModule`` instance suitable for use with
+the executable being built.
+
+Arguments are as follows:
+
+``name`` (string)
+   The name of the Python module. This is the fully qualified module
+   name. e.g. ``foo`` or ``foo.bar``.
+``source`` (string)
+   Python source code comprising the module.
+``is_package`` (bool)
+   Whether the Python module is also a package. (e.g. the equivalent of a
+   ``__init__.py`` file or a module without a ``.`` in its name.
 
 .. _config_python_executable_pip_install:
 

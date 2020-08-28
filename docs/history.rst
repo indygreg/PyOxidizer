@@ -116,6 +116,11 @@ New Features
   code is provided. Previously, it required that bytecode be available.
 * ``OxidizedFinder`` now implements ``iter_modules()``. This enables
   ``pkgutil.iter_modules()`` to return modules serviced by ``OxidizedFinder``.
+* The ``PythonSourceModule`` Starlark type now exposes module source code
+  via the ``source`` attribute.
+* The ``PythonExecutable`` Starlark type now has a
+  ``make_python_source_module()`` method to allow construction of
+  ``PythonSourceModule`` instances.
 
 Bug Fixes
 ^^^^^^^^^
