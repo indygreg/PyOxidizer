@@ -815,14 +815,52 @@ impl PythonResourceCollector {
         resource: &PythonPackageResource,
         location: &ConcreteResourceLocation,
     ) -> Result<()> {
+        self.check_policy(location.into())?;
+
+        let entry = self
+            .resources
+            .entry(resource.leaf_package.clone())
+            .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: resource.leaf_package.clone(),
+                ..PrePackagedResource::default()
+            });
+
+        // Adding a resource automatically makes the module a package.
+        entry.is_package = true;
+
         match location {
             ConcreteResourceLocation::InMemory => {
-                self.add_in_memory_python_package_resource(resource)
+                if entry.in_memory_resources.is_none() {
+                    entry.in_memory_resources = Some(BTreeMap::new());
+                }
+                entry
+                    .in_memory_resources
+                    .as_mut()
+                    .unwrap()
+                    .insert(resource.relative_name.clone(), resource.data.clone());
             }
             ConcreteResourceLocation::RelativePath(prefix) => {
-                self.add_relative_path_python_package_resource(prefix, resource)
+                if entry.relative_path_package_resources.is_none() {
+                    entry.relative_path_package_resources = Some(BTreeMap::new());
+                }
+
+                entry
+                    .relative_path_package_resources
+                    .as_mut()
+                    .unwrap()
+                    .insert(
+                        resource.relative_name.clone(),
+                        (
+                            prefix.to_string(),
+                            resource.resolve_path(prefix),
+                            resource.data.clone(),
+                        ),
+                    );
             }
         }
+
+        Ok(())
     }
 
     /// Add resource data.
@@ -832,30 +870,7 @@ impl PythonResourceCollector {
         &mut self,
         resource: &PythonPackageResource,
     ) -> Result<()> {
-        self.check_policy(AbstractResourceLocation::InMemory)?;
-        let entry = self
-            .resources
-            .entry(resource.leaf_package.clone())
-            .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Module,
-                name: resource.leaf_package.clone(),
-                ..PrePackagedResource::default()
-            });
-
-        // Adding a resource automatically makes the module a package.
-        entry.is_package = true;
-
-        if entry.in_memory_resources.is_none() {
-            entry.in_memory_resources = Some(BTreeMap::new());
-        }
-
-        entry
-            .in_memory_resources
-            .as_mut()
-            .unwrap()
-            .insert(resource.relative_name.clone(), resource.data.clone());
-
-        Ok(())
+        self.add_python_package_resource(resource, &ConcreteResourceLocation::InMemory)
     }
 
     /// Add resource data to be loaded from the filesystem.
@@ -864,37 +879,10 @@ impl PythonResourceCollector {
         prefix: &str,
         resource: &PythonPackageResource,
     ) -> Result<()> {
-        self.check_policy(AbstractResourceLocation::RelativePath)?;
-        let entry = self
-            .resources
-            .entry(resource.leaf_package.clone())
-            .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Module,
-                name: resource.leaf_package.clone(),
-                ..PrePackagedResource::default()
-            });
-
-        // Adding a resource automatically makes the module a package.
-        entry.is_package = true;
-
-        if entry.relative_path_package_resources.is_none() {
-            entry.relative_path_package_resources = Some(BTreeMap::new());
-        }
-
-        entry
-            .relative_path_package_resources
-            .as_mut()
-            .unwrap()
-            .insert(
-                resource.relative_name.clone(),
-                (
-                    prefix.to_string(),
-                    resource.resolve_path(prefix),
-                    resource.data.clone(),
-                ),
-            );
-
-        Ok(())
+        self.add_python_package_resource(
+            resource,
+            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+        )
     }
 
     /// Add a package distribution resource to a given location.
