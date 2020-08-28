@@ -445,7 +445,10 @@ pub fn populate_parent_packages(
 }
 
 /// Describes the location of a Python resource.
-pub enum ResourceLocation {
+///
+/// The location is abstract because a concrete location (such as the
+/// relative path) is not specified.
+pub enum AbstractResourceLocation {
     /// Resource is loaded from memory.
     InMemory,
     /// Resource is loaded from a relative filesystem path.
@@ -512,19 +515,19 @@ impl PythonResourceCollector {
     }
 
     /// Validate that a resource add in the specified location is allowed.
-    pub fn check_policy(&self, location: ResourceLocation) -> Result<()> {
+    pub fn check_policy(&self, location: AbstractResourceLocation) -> Result<()> {
         match self.policy {
             PythonResourcesPolicy::InMemoryOnly => match location {
-                ResourceLocation::InMemory => Ok(()),
-                ResourceLocation::RelativePath => Err(anyhow!(
+                AbstractResourceLocation::InMemory => Ok(()),
+                AbstractResourceLocation::RelativePath => Err(anyhow!(
                     "in-memory-only policy does not allow relative path resources"
                 )),
             },
             PythonResourcesPolicy::FilesystemRelativeOnly(_) => match location {
-                ResourceLocation::InMemory => Err(anyhow!(
+                AbstractResourceLocation::InMemory => Err(anyhow!(
                     "filesystem-relative-only policy does not allow in-memory resources"
                 )),
-                ResourceLocation::RelativePath => Ok(()),
+                AbstractResourceLocation::RelativePath => Ok(()),
             },
             PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => Ok(()),
         }
@@ -592,7 +595,7 @@ impl PythonResourceCollector {
         &mut self,
         module: &PythonModuleSource,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::InMemory)?;
+        self.check_policy(AbstractResourceLocation::InMemory)?;
 
         let entry = self
             .resources
@@ -614,7 +617,7 @@ impl PythonResourceCollector {
         module: &PythonModuleSource,
         prefix: &str,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::RelativePath)?;
+        self.check_policy(AbstractResourceLocation::RelativePath)?;
         let entry = self
             .resources
             .entry(module.name.clone())
@@ -637,7 +640,7 @@ impl PythonResourceCollector {
         &mut self,
         module: &PythonModuleBytecode,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::InMemory)?;
+        self.check_policy(AbstractResourceLocation::InMemory)?;
 
         let entry = self
             .resources
@@ -678,7 +681,7 @@ impl PythonResourceCollector {
         &mut self,
         module: &PythonModuleBytecodeFromSource,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::InMemory)?;
+        self.check_policy(AbstractResourceLocation::InMemory)?;
         let entry = self
             .resources
             .entry(module.name.clone())
@@ -716,7 +719,7 @@ impl PythonResourceCollector {
         module: &PythonModuleBytecode,
         prefix: &str,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::RelativePath)?;
+        self.check_policy(AbstractResourceLocation::RelativePath)?;
 
         let entry = self
             .resources
@@ -768,7 +771,7 @@ impl PythonResourceCollector {
         module: &PythonModuleBytecodeFromSource,
         prefix: &str,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::RelativePath)?;
+        self.check_policy(AbstractResourceLocation::RelativePath)?;
         let entry = self
             .resources
             .entry(module.name.clone())
@@ -814,7 +817,7 @@ impl PythonResourceCollector {
         &mut self,
         resource: &PythonPackageResource,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::InMemory)?;
+        self.check_policy(AbstractResourceLocation::InMemory)?;
         let entry = self
             .resources
             .entry(resource.leaf_package.clone())
@@ -846,7 +849,7 @@ impl PythonResourceCollector {
         prefix: &str,
         resource: &PythonPackageResource,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::RelativePath)?;
+        self.check_policy(AbstractResourceLocation::RelativePath)?;
         let entry = self
             .resources
             .entry(resource.leaf_package.clone())
@@ -884,7 +887,7 @@ impl PythonResourceCollector {
         &mut self,
         resource: &PythonPackageDistributionResource,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::InMemory)?;
+        self.check_policy(AbstractResourceLocation::InMemory)?;
 
         let entry = self
             .resources
@@ -917,7 +920,7 @@ impl PythonResourceCollector {
         prefix: &str,
         resource: &PythonPackageDistributionResource,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::RelativePath)?;
+        self.check_policy(AbstractResourceLocation::RelativePath)?;
         let entry = self
             .resources
             .entry(resource.package.clone())
@@ -956,7 +959,7 @@ impl PythonResourceCollector {
         &mut self,
         module: &PythonExtensionModule,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::InMemory)?;
+        self.check_policy(AbstractResourceLocation::InMemory)?;
 
         let entry = self
             .resources
@@ -982,7 +985,7 @@ impl PythonResourceCollector {
         data: &[u8],
         shared_library_dependency_names: &[&str],
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::InMemory)?;
+        self.check_policy(AbstractResourceLocation::InMemory)?;
         let entry =
             self.resources
                 .entry(module.to_string())
@@ -1014,7 +1017,7 @@ impl PythonResourceCollector {
         module: &PythonExtensionModule,
         prefix: &str,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::RelativePath)?;
+        self.check_policy(AbstractResourceLocation::RelativePath)?;
 
         if module.extension_data.is_none() {
             return Err(anyhow!("extension module {} lacks shared library data and cannot be loaded from the filesystem", module.name));
@@ -1042,7 +1045,7 @@ impl PythonResourceCollector {
 
     /// Add a shared library to be loaded from memory.
     pub fn add_in_memory_shared_library(&mut self, name: &str, data: &DataLocation) -> Result<()> {
-        self.check_policy(ResourceLocation::InMemory)?;
+        self.check_policy(AbstractResourceLocation::InMemory)?;
 
         let entry = self
             .resources
@@ -1065,7 +1068,7 @@ impl PythonResourceCollector {
         name: &str,
         data: &DataLocation,
     ) -> Result<()> {
-        self.check_policy(ResourceLocation::RelativePath)?;
+        self.check_policy(AbstractResourceLocation::RelativePath)?;
 
         let resource =
             self.resources
