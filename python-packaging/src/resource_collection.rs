@@ -638,26 +638,6 @@ impl PythonResourceCollector {
         Ok(())
     }
 
-    /// Add Python module source to be loaded from memory.
-    pub fn add_in_memory_python_module_source(
-        &mut self,
-        module: &PythonModuleSource,
-    ) -> Result<()> {
-        self.add_python_module_source(module, &ConcreteResourceLocation::InMemory)
-    }
-
-    /// Add Python module source to be loaded from a file on the filesystem relative to the resources.
-    pub fn add_relative_path_python_module_source(
-        &mut self,
-        module: &PythonModuleSource,
-        prefix: &str,
-    ) -> Result<()> {
-        self.add_python_module_source(
-            module,
-            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-        )
-    }
-
     /// Add Python module bytecode to the specified location.
     pub fn add_python_module_bytecode(
         &mut self,
@@ -1573,12 +1553,15 @@ mod tests {
     fn test_add_in_memory_source_module() -> Result<()> {
         let mut r =
             PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
-        r.add_in_memory_python_module_source(&PythonModuleSource {
-            name: "foo".to_string(),
-            source: DataLocation::Memory(vec![42]),
-            is_package: false,
-            cache_tag: DEFAULT_CACHE_TAG.to_string(),
-        })?;
+        r.add_python_module_source(
+            &PythonModuleSource {
+                name: "foo".to_string(),
+                source: DataLocation::Memory(vec![42]),
+                is_package: false,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
+            },
+            &ConcreteResourceLocation::InMemory,
+        )?;
 
         assert!(r.resources.contains_key("foo"));
         assert_eq!(
@@ -1599,12 +1582,15 @@ mod tests {
     fn test_add_in_memory_source_module_parents() -> Result<()> {
         let mut r =
             PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
-        r.add_in_memory_python_module_source(&PythonModuleSource {
-            name: "root.parent.child".to_string(),
-            source: DataLocation::Memory(vec![42]),
-            is_package: true,
-            cache_tag: DEFAULT_CACHE_TAG.to_string(),
-        })?;
+        r.add_python_module_source(
+            &PythonModuleSource {
+                name: "root.parent.child".to_string(),
+                source: DataLocation::Memory(vec![42]),
+                is_package: true,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
+            },
+            &ConcreteResourceLocation::InMemory,
+        )?;
 
         assert_eq!(r.resources.len(), 1);
         assert_eq!(
@@ -1627,14 +1613,14 @@ mod tests {
             &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
             DEFAULT_CACHE_TAG,
         );
-        r.add_relative_path_python_module_source(
+        r.add_python_module_source(
             &PythonModuleSource {
                 name: "foo".to_string(),
                 source: DataLocation::Memory(vec![42]),
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
             },
-            "",
+            &ConcreteResourceLocation::RelativePath("".to_string()),
         )?;
 
         assert!(r.resources.contains_key("foo"));
@@ -1829,30 +1815,39 @@ mod tests {
             PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
         assert_eq!(r.find_dunder_file()?.len(), 0);
 
-        r.add_in_memory_python_module_source(&PythonModuleSource {
-            name: "foo.bar".to_string(),
-            source: DataLocation::Memory(vec![]),
-            is_package: false,
-            cache_tag: DEFAULT_CACHE_TAG.to_string(),
-        })?;
+        r.add_python_module_source(
+            &PythonModuleSource {
+                name: "foo.bar".to_string(),
+                source: DataLocation::Memory(vec![]),
+                is_package: false,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
+            },
+            &ConcreteResourceLocation::InMemory,
+        )?;
         assert_eq!(r.find_dunder_file()?.len(), 0);
 
-        r.add_in_memory_python_module_source(&PythonModuleSource {
-            name: "baz".to_string(),
-            source: DataLocation::Memory(Vec::from("import foo; if __file__ == 'ignored'")),
-            is_package: false,
-            cache_tag: DEFAULT_CACHE_TAG.to_string(),
-        })?;
+        r.add_python_module_source(
+            &PythonModuleSource {
+                name: "baz".to_string(),
+                source: DataLocation::Memory(Vec::from("import foo; if __file__ == 'ignored'")),
+                is_package: false,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
+            },
+            &ConcreteResourceLocation::InMemory,
+        )?;
         assert_eq!(r.find_dunder_file()?.len(), 1);
         assert!(r.find_dunder_file()?.contains("baz"));
 
-        r.add_in_memory_python_module_bytecode_from_source(&PythonModuleBytecodeFromSource {
-            name: "bytecode".to_string(),
-            source: DataLocation::Memory(Vec::from("import foo; if __file__")),
-            optimize_level: BytecodeOptimizationLevel::Zero,
-            is_package: false,
-            cache_tag: DEFAULT_CACHE_TAG.to_string(),
-        })?;
+        r.add_python_module_bytecode_from_source(
+            &PythonModuleBytecodeFromSource {
+                name: "bytecode".to_string(),
+                source: DataLocation::Memory(Vec::from("import foo; if __file__")),
+                optimize_level: BytecodeOptimizationLevel::Zero,
+                is_package: false,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
+            },
+            &ConcreteResourceLocation::InMemory,
+        )?;
         assert_eq!(r.find_dunder_file()?.len(), 2);
         assert!(r.find_dunder_file()?.contains("bytecode"));
 

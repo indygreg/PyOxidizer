@@ -16,7 +16,8 @@ use {
         PythonPackageDistributionResource, PythonPackageResource,
     },
     python_packaging::resource_collection::{
-        PreparedPythonResources, PythonResourceCollector, PythonResourcesPolicy,
+        ConcreteResourceLocation, PreparedPythonResources, PythonResourceCollector,
+        PythonResourcesPolicy,
     },
     slog::{info, warn},
     std::collections::{BTreeMap, BTreeSet},
@@ -80,7 +81,8 @@ impl PrePackagedResources {
 
     /// Add a source module to the collection of embedded source modules.
     pub fn add_in_memory_module_source(&mut self, module: &PythonModuleSource) -> Result<()> {
-        self.collector.add_in_memory_python_module_source(module)
+        self.collector
+            .add_python_module_source(module, &ConcreteResourceLocation::InMemory)
     }
 
     /// Add module source to be loaded from a file on the filesystem relative to the resources.
@@ -89,8 +91,10 @@ impl PrePackagedResources {
         module: &PythonModuleSource,
         prefix: &str,
     ) -> Result<()> {
-        self.collector
-            .add_relative_path_python_module_source(module, prefix)
+        self.collector.add_python_module_source(
+            module,
+            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+        )
     }
 
     /// Add a bytecode module to the collection of embedded bytecode modules.

@@ -17,7 +17,8 @@ use {
         PythonObject, ToPyObject,
     },
     python_packaging::resource_collection::{
-        PreparedPythonResources, PythonResourceCollector, PythonResourcesPolicy,
+        ConcreteResourceLocation, PreparedPythonResources, PythonResourceCollector,
+        PythonResourcesPolicy,
     },
     std::cell::RefCell,
     std::convert::TryFrom,
@@ -114,7 +115,10 @@ impl OxidizedResourceCollector {
             "PythonModuleSource" => {
                 let module = resource.cast_into::<PythonModuleSource>(py)?;
                 collector
-                    .add_in_memory_python_module_source(&module.get_resource(py))
+                    .add_python_module_source(
+                        &module.get_resource(py),
+                        &ConcreteResourceLocation::InMemory,
+                    )
                     .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
 
                 Ok(py.None())
@@ -172,7 +176,10 @@ impl OxidizedResourceCollector {
             "PythonModuleSource" => {
                 let module = resource.cast_into::<PythonModuleSource>(py)?;
                 collector
-                    .add_relative_path_python_module_source(&module.get_resource(py), &prefix)
+                    .add_python_module_source(
+                        &module.get_resource(py),
+                        &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+                    )
                     .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
 
                 Ok(py.None())
