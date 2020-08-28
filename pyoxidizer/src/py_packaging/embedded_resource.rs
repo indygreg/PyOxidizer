@@ -147,7 +147,7 @@ impl PrePackagedResources {
         resource: &PythonPackageDistributionResource,
     ) -> Result<()> {
         self.collector
-            .add_in_memory_package_distribution_resource(resource)
+            .add_package_distribution_resource(resource, &ConcreteResourceLocation::InMemory)
     }
 
     pub fn add_relative_path_package_distribution_resource(
@@ -155,8 +155,10 @@ impl PrePackagedResources {
         prefix: &str,
         resource: &PythonPackageDistributionResource,
     ) -> Result<()> {
-        self.collector
-            .add_relative_path_package_distribution_resource(prefix, resource)
+        self.collector.add_package_distribution_resource(
+            resource,
+            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+        )
     }
 
     /// Add an extension module from a Python distribution to be linked into the binary.

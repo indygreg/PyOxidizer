@@ -857,26 +857,6 @@ impl PythonResourceCollector {
         Ok(())
     }
 
-    /// Add a package distribution resource to be loaded from memory.
-    pub fn add_in_memory_package_distribution_resource(
-        &mut self,
-        resource: &PythonPackageDistributionResource,
-    ) -> Result<()> {
-        self.add_package_distribution_resource(resource, &ConcreteResourceLocation::InMemory)
-    }
-
-    /// Add a `PythonPackageDistributionResource` to be loaded from a relative filesystem path.
-    pub fn add_relative_path_package_distribution_resource(
-        &mut self,
-        prefix: &str,
-        resource: &PythonPackageDistributionResource,
-    ) -> Result<()> {
-        self.add_package_distribution_resource(
-            resource,
-            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-        )
-    }
-
     /// Add a built-in extension module.
     ///
     /// Built-in extension modules are statically linked into the binary and
