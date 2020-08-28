@@ -36,12 +36,8 @@ use {
 /// code, consider using `Python.eval()`. e.g.
 /// `interpreter.acquire_gil().eval(...)`.
 pub fn run_code(py: Python, code: &str) -> PyResult<PyObject> {
-    let code = CString::new(code).or_else(|_| {
-        Err(PyErr::new::<ValueError, _>(
-            py,
-            "source code is not a valid C string",
-        ))
-    })?;
+    let code = CString::new(code)
+        .map_err(|_| PyErr::new::<ValueError, _>(py, "source code is not a valid C string"))?;
 
     unsafe {
         let main = pyffi::PyImport_AddModule("__main__\0".as_ptr() as *const _);
@@ -83,12 +79,8 @@ pub fn run_file(py: Python, path: &Path) -> PyResult<PyObject> {
         // Python's APIs operate on a FILE*. So we need to coerce the
         // filename to a char*. Is there a better way to get a FILE* from
         // a HANDLE on Windows?
-        let filename = path_to_cstring(path).or_else(|_| {
-            Err(PyErr::new::<RuntimeError, _>(
-                py,
-                "cannot convert path to C string",
-            ))
-        })?;
+        let filename = path_to_cstring(path)
+            .map_err(|_| PyErr::new::<RuntimeError, _>(py, "cannot convert path to C string"))?;
 
         let fp = libc::fopen(filename.as_ptr(), "rb\0".as_ptr() as *const _);
         let mut cf = pyffi::PyCompilerFlags {
@@ -219,7 +211,7 @@ pub fn run_repl(py: Python) -> PyResult<PyObject> {
 
     let stdin_filename = "<stdin>";
     let filename = CString::new(stdin_filename)
-        .or_else(|_| Err(PyErr::new::<ValueError, _>(py, "could not create CString")))?;
+        .map_err(|_| PyErr::new::<ValueError, _>(py, "could not create CString"))?;
     let mut cf = pyffi::PyCompilerFlags {
         cf_flags: 0,
         cf_feature_version: 0,
@@ -278,7 +270,7 @@ fn stderr_to_file() -> *mut libc::FILE {
 pub(crate) fn handle_system_exit(py: Python, err: PyErr) -> Result<i32, &'static str> {
     std::io::stdout()
         .flush()
-        .or_else(|_| Err("failed to flush stdout"))?;
+        .map_err(|_| "failed to flush stdout")?;
 
     let mut value = match err.pvalue {
         Some(ref instance) => {
@@ -312,7 +304,7 @@ pub(crate) fn handle_system_exit(py: Python, err: PyErr) -> Result<i32, &'static
 
     let sys_module = py
         .import("sys")
-        .or_else(|_| Err("unable to obtain sys module"))?;
+        .map_err(|_| "unable to obtain sys module")?;
     let stderr = sys_module.get(py, "stderr");
 
     // This is a cargo cult from the canonical implementation.
@@ -328,7 +320,7 @@ pub(crate) fn handle_system_exit(py: Python, err: PyErr) -> Result<i32, &'static
             }
             std::io::stderr()
                 .flush()
-                .or_else(|_| Err("failure to flush stderr"))?;
+                .map_err(|_| "failure to flush stderr")?;
         }
     }
 

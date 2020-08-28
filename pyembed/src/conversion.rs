@@ -38,11 +38,11 @@ pub fn osstr_to_pyobject(
 ) -> Result<PyObject, &'static str> {
     // PyUnicode_DecodeLocaleAndSize says the input must have a trailing NULL.
     // So use a CString for that.
-    let b = CString::new(s.as_bytes()).or_else(|_| Err("not a valid C string"))?;
+    let b = CString::new(s.as_bytes()).map_err(|_| "not a valid C string")?;
 
     let raw_object = if let Some(encoding) = encoding {
         let encoding_cstring =
-            CString::new(encoding.as_bytes()).or_else(|_| Err("encoding not a valid C string"))?;
+            CString::new(encoding.as_bytes()).map_err(|_| "encoding not a valid C string")?;
 
         unsafe {
             pyffi::PyUnicode_Decode(
@@ -118,12 +118,12 @@ pub fn path_to_pyobject(py: Python, path: &Path) -> PyResult<PyObject> {
     } else {
         Some(
             unsafe { CStr::from_ptr(encoding_ptr).to_str() }
-                .or_else(|e| Err(PyErr::new::<UnicodeDecodeError, _>(py, e.to_string())))?,
+                .map_err(|e| PyErr::new::<UnicodeDecodeError, _>(py, e.to_string()))?,
         )
     };
 
     osstr_to_pyobject(py, path.as_os_str(), encoding)
-        .or_else(|e| Err(PyErr::new::<UnicodeDecodeError, _>(py, e)))
+        .map_err(|e| PyErr::new::<UnicodeDecodeError, _>(py, e))
 }
 
 /// Convert a Rust Path to a pathlib.Path.

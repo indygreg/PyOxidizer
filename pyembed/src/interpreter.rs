@@ -660,7 +660,7 @@ fn set_pyimport_inittab(config: &OxidizedPythonInterpreterConfig) {
 fn write_modules_to_directory(py: Python, path: &PathBuf) -> Result<(), &'static str> {
     // TODO this needs better error handling all over.
 
-    fs::create_dir_all(path).or_else(|_| Err("could not create directory for modules"))?;
+    fs::create_dir_all(path).map_err(|_| "could not create directory for modules")?;
 
     let rand = uuid::Uuid::new_v4();
 

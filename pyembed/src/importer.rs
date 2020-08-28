@@ -826,7 +826,7 @@ impl OxidizedFinder {
 
         module
             .resolve_origin(py)
-            .or_else(|_| Err(make_error("unable to resolve origin")))?
+            .map_err(|_| make_error("unable to resolve origin"))?
             .ok_or_else(|| make_error("no origin"))
     }
 }
@@ -966,8 +966,7 @@ fn oxidized_finder_new(
 
     // It needs to live on the heap to ensure that the memory address is constant.
     let mut resources_state = Box::new(
-        PythonResourcesState::new_from_env()
-            .or_else(|err| Err(PyErr::new::<ValueError, _>(py, err)))?,
+        PythonResourcesState::new_from_env().map_err(|err| PyErr::new::<ValueError, _>(py, err))?,
     );
 
     // Update origin if a value is given.

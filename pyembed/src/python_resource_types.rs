@@ -44,9 +44,7 @@ py_class!(pub class PythonModuleSource |py| {
     }
 
     @property def source(&self) -> PyResult<PyBytes> {
-        let source = self.resource(py).borrow().source.resolve().or_else(|_| {
-            Err(PyErr::new::<ValueError, _>(py, "error resolving source code"))
-        })?;
+        let source = self.resource(py).borrow().source.resolve().map_err(|_| PyErr::new::<ValueError, _>(py, "error resolving source code"))?;
 
         Ok(PyBytes::new(py, &source))
     }
@@ -110,9 +108,7 @@ py_class!(pub class PythonModuleBytecode |py| {
     }
 
     @property def bytecode(&self) -> PyResult<PyBytes> {
-        let bytecode = self.resource(py).borrow().resolve_bytecode().or_else(|_| {
-            Err(PyErr::new::<ValueError, _>(py, "error resolving bytecode"))
-        })?;
+        let bytecode = self.resource(py).borrow().resolve_bytecode().map_err(|_| PyErr::new::<ValueError, _>(py, "error resolving bytecode"))?;
 
         Ok(PyBytes::new(py, &bytecode))
     }
@@ -135,9 +131,7 @@ py_class!(pub class PythonModuleBytecode |py| {
 
     @optimize_level.setter def set_optimize_level(&self, value: Option<i32>) -> PyResult<()> {
         if let Some(value) = value {
-            let value = BytecodeOptimizationLevel::try_from(value).or_else(|_| {
-                Err(PyErr::new::<ValueError, _>(py, "invalid bytecode optimization level"))
-            })?;
+            let value = BytecodeOptimizationLevel::try_from(value).map_err(|_| PyErr::new::<ValueError, _>(py, "invalid bytecode optimization level"))?;
 
             self.resource(py).borrow_mut().optimize_level = value;
 
@@ -211,9 +205,7 @@ py_class!(pub class PythonPackageResource |py| {
     }
 
     @property def data(&self) -> PyResult<PyBytes> {
-        let data = self.resource(py).borrow().data.resolve().or_else(|_| {
-            Err(PyErr::new::<ValueError, _>(py, "error resolving data"))
-        })?;
+        let data = self.resource(py).borrow().data.resolve().map_err(|_| PyErr::new::<ValueError, _>(py, "error resolving data"))?;
 
         Ok(PyBytes::new(py, &data))
     }
@@ -294,9 +286,7 @@ py_class!(pub class PythonPackageDistributionResource |py| {
     }
 
     @property def data(&self) -> PyResult<PyBytes> {
-        let data = self.resource(py).borrow().data.resolve().or_else(|_| {
-            Err(PyErr::new::<ValueError, _>(py, "error resolving data"))
-        })?;
+        let data = self.resource(py).borrow().data.resolve().map_err(|_| PyErr::new::<ValueError, _>(py, "error resolving data"))?;
 
         Ok(PyBytes::new(py, &data))
     }
