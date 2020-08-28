@@ -52,6 +52,9 @@ pub trait PythonBinaryBuilder {
     /// How the binary will link against libpython.
     fn libpython_link_mode(&self) -> LibpythonLinkMode;
 
+    /// Obtain the cache tag to apply to Python bytecode modules.
+    fn cache_tag(&self) -> &str;
+
     /// Obtain the `PythonResourcesPolicy` for the builder.
     fn python_resources_policy(&self) -> &PythonResourcesPolicy;
 

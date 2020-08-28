@@ -1549,6 +1549,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.link_mode
     }
 
+    fn cache_tag(&self) -> &str {
+        self.distribution.cache_tag()
+    }
+
     fn python_resources_policy(&self) -> &PythonResourcesPolicy {
         &self.resources_policy
     }
