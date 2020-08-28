@@ -741,22 +741,8 @@ impl PythonResourceCollector {
         module: &PythonModuleBytecodeFromSource,
         location: &ConcreteResourceLocation,
     ) -> Result<()> {
-        match location {
-            ConcreteResourceLocation::InMemory => {
-                self.add_in_memory_python_module_bytecode_from_source(module)
-            }
-            ConcreteResourceLocation::RelativePath(prefix) => {
-                self.add_relative_path_python_module_bytecode_from_source(module, prefix)
-            }
-        }
-    }
+        self.check_policy(location.into())?;
 
-    /// Add Python module bytecode from source to the collection.
-    pub fn add_in_memory_python_module_bytecode_from_source(
-        &mut self,
-        module: &PythonModuleBytecodeFromSource,
-    ) -> Result<()> {
-        self.check_policy(AbstractResourceLocation::InMemory)?;
         let entry = self
             .resources
             .entry(module.name.clone())
@@ -768,25 +754,45 @@ impl PythonResourceCollector {
 
         entry.is_package = module.is_package;
 
-        match module.optimize_level {
-            BytecodeOptimizationLevel::Zero => {
-                entry.in_memory_bytecode = Some(PythonModuleBytecodeProvider::FromSource(
-                    module.source.clone(),
-                ));
-            }
-            BytecodeOptimizationLevel::One => {
-                entry.in_memory_bytecode_opt1 = Some(PythonModuleBytecodeProvider::FromSource(
-                    module.source.clone(),
-                ));
-            }
-            BytecodeOptimizationLevel::Two => {
-                entry.in_memory_bytecode_opt2 = Some(PythonModuleBytecodeProvider::FromSource(
-                    module.source.clone(),
-                ));
-            }
+        let bytecode = PythonModuleBytecodeProvider::FromSource(module.source.clone());
+
+        match location {
+            ConcreteResourceLocation::InMemory => match module.optimize_level {
+                BytecodeOptimizationLevel::Zero => {
+                    entry.in_memory_bytecode = Some(bytecode);
+                }
+                BytecodeOptimizationLevel::One => {
+                    entry.in_memory_bytecode_opt1 = Some(bytecode);
+                }
+                BytecodeOptimizationLevel::Two => {
+                    entry.in_memory_bytecode_opt2 = Some(bytecode);
+                }
+            },
+            ConcreteResourceLocation::RelativePath(prefix) => match module.optimize_level {
+                BytecodeOptimizationLevel::Zero => {
+                    entry.relative_path_bytecode =
+                        Some((prefix.to_string(), module.cache_tag.clone(), bytecode))
+                }
+                BytecodeOptimizationLevel::One => {
+                    entry.relative_path_bytecode_opt1 =
+                        Some((prefix.to_string(), module.cache_tag.clone(), bytecode))
+                }
+                BytecodeOptimizationLevel::Two => {
+                    entry.relative_path_bytecode_opt2 =
+                        Some((prefix.to_string(), module.cache_tag.clone(), bytecode))
+                }
+            },
         }
 
         Ok(())
+    }
+
+    /// Add Python module bytecode from source to the collection.
+    pub fn add_in_memory_python_module_bytecode_from_source(
+        &mut self,
+        module: &PythonModuleBytecodeFromSource,
+    ) -> Result<()> {
+        self.add_python_module_bytecode_from_source(module, &ConcreteResourceLocation::InMemory)
     }
 
     /// Add a Python bytecode module from source to be loaded from the filesystem relative to some entity.
@@ -795,43 +801,10 @@ impl PythonResourceCollector {
         module: &PythonModuleBytecodeFromSource,
         prefix: &str,
     ) -> Result<()> {
-        self.check_policy(AbstractResourceLocation::RelativePath)?;
-        let entry = self
-            .resources
-            .entry(module.name.clone())
-            .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Module,
-                name: module.name.clone(),
-                ..PrePackagedResource::default()
-            });
-
-        entry.is_package = module.is_package;
-
-        match module.optimize_level {
-            BytecodeOptimizationLevel::Zero => {
-                entry.relative_path_bytecode = Some((
-                    prefix.to_string(),
-                    module.cache_tag.clone(),
-                    PythonModuleBytecodeProvider::FromSource(module.source.clone()),
-                ))
-            }
-            BytecodeOptimizationLevel::One => {
-                entry.relative_path_bytecode_opt1 = Some((
-                    prefix.to_string(),
-                    module.cache_tag.clone(),
-                    PythonModuleBytecodeProvider::FromSource(module.source.clone()),
-                ))
-            }
-            BytecodeOptimizationLevel::Two => {
-                entry.relative_path_bytecode_opt2 = Some((
-                    prefix.to_string(),
-                    module.cache_tag.clone(),
-                    PythonModuleBytecodeProvider::FromSource(module.source.clone()),
-                ))
-            }
-        }
-
-        Ok(())
+        self.add_python_module_bytecode_from_source(
+            module,
+            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+        )
     }
 
     /// Add resource data to a given location.
