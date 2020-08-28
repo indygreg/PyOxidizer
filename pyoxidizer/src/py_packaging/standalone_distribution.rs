@@ -1068,34 +1068,35 @@ impl PythonDistribution for StandaloneDistribution {
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
         let python_exe = self.python_exe.clone();
 
-        let (supports_static, supports_dynamic) = if self.target_triple.contains("pc-windows") {
-            // On Windows, the symbol visibility dictates which link modes are
-            // supported.
-            if self.python_symbol_visibility == "dllexport" {
-                (false, true)
-            } else {
+        let (supports_static_libpython, supports_dynamic_libpython) =
+            if self.target_triple.contains("pc-windows") {
+                // On Windows, the symbol visibility dictates which link modes are
+                // supported.
+                if self.python_symbol_visibility == "dllexport" {
+                    (false, true)
+                } else {
+                    (true, false)
+                }
+            } else if self.target_triple.contains("linux-musl") {
+                // Musl binaries don't support dynamic linking.
                 (true, false)
-            }
-        } else if self.target_triple.contains("linux-musl") {
-            // Musl binaries don't support dynamic linking.
-            (true, false)
-        } else {
-            // Elsewhere we can choose which link mode to use.
-            (true, true)
-        };
+            } else {
+                // Elsewhere we can choose which link mode to use.
+                (true, true)
+            };
 
         let link_mode = match libpython_link_mode {
             BinaryLibpythonLinkMode::Default => {
-                if supports_static {
+                if supports_static_libpython {
                     LibpythonLinkMode::Static
-                } else if supports_dynamic {
+                } else if supports_dynamic_libpython {
                     LibpythonLinkMode::Dynamic
                 } else {
                     return Err(anyhow!("no link modes supported; please report this bug"));
                 }
             }
             BinaryLibpythonLinkMode::Static => {
-                if !supports_static {
+                if !supports_static_libpython {
                     return Err(anyhow!(
                         "Python distribution does not support statically linking libpython"
                     ));
@@ -1104,7 +1105,7 @@ impl PythonDistribution for StandaloneDistribution {
                 LibpythonLinkMode::Static
             }
             BinaryLibpythonLinkMode::Dynamic => {
-                if !supports_dynamic {
+                if !supports_dynamic_libpython {
                     return Err(anyhow!(
                         "Python distribution does not support dynamically linking libpython"
                     ));
