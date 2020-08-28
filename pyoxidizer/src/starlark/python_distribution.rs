@@ -169,13 +169,13 @@ impl PythonDistribution {
             }
         };
 
-        let location = default_distribution_location(&flavor, &build_target).or_else(|e| {
-            Err(RuntimeError {
+        let location = default_distribution_location(&flavor, &build_target).map_err(|e| {
+            RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "default_python_distribution()".to_string(),
             }
-            .into())
+            .into()
         })?;
 
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
@@ -290,23 +290,23 @@ impl PythonDistribution {
         });
 
         let resources_policy =
-            PythonResourcesPolicy::try_from(resources_policy.as_str()).or_else(|e| {
-                Err(RuntimeError {
+            PythonResourcesPolicy::try_from(resources_policy.as_str()).map_err(|e| {
+                RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "resources_policy".to_string(),
                 }
-                .into())
+                .into()
             })?;
 
         let extension_module_filter =
-            ExtensionModuleFilter::try_from(extension_module_filter.as_str()).or_else(|e| {
-                Err(RuntimeError {
+            ExtensionModuleFilter::try_from(extension_module_filter.as_str()).map_err(|e| {
+                RuntimeError {
                     code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                     message: e,
                     label: "invalid policy value".to_string(),
                 }
-                .into())
+                .into()
             })?;
 
         let preferred_extension_module_variants =
@@ -327,13 +327,13 @@ impl PythonDistribution {
                 _ => panic!("type should have been validated above"),
             };
 
-        self.ensure_distribution_resolved(&logger).or_else(|e| {
-            Err(RuntimeError {
+        self.ensure_distribution_resolved(&logger).map_err(|e| {
+            RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "resolve_distribution()".to_string(),
             }
-            .into())
+            .into()
         })?;
         let dist = self.distribution.as_ref().unwrap().clone();
 
@@ -364,13 +364,13 @@ impl PythonDistribution {
                     include_resources,
                     include_test,
                 )
-                .or_else(|e| {
-                    Err(RuntimeError {
+                .map_err(|e| {
+                    RuntimeError {
                         code: "PYOXIDIZER_BUILD",
                         message: e.to_string(),
                         label: "to_python_executable()".to_string(),
                     }
-                    .into())
+                    .into()
                 })?,
         }))
     }
@@ -390,13 +390,13 @@ impl PythonDistribution {
             &preferred_variants,
         )?;
 
-        let filter = ExtensionModuleFilter::try_from(filter.as_str()).or_else(|e| {
-            Err(RuntimeError {
+        let filter = ExtensionModuleFilter::try_from(filter.as_str()).map_err(|e| {
+            RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                 message: e,
                 label: "invalid policy value".to_string(),
             }
-            .into())
+            .into()
         })?;
 
         let preferred_variants = match preferred_variants.get_type() {
@@ -418,13 +418,13 @@ impl PythonDistribution {
 
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
-        self.ensure_distribution_resolved(&logger).or_else(|e| {
-            Err(RuntimeError {
+        self.ensure_distribution_resolved(&logger).map_err(|e| {
+            RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "resolve_distribution()".to_string(),
             }
-            .into())
+            .into()
         })?;
 
         Ok(Value::from(
@@ -432,13 +432,13 @@ impl PythonDistribution {
                 .as_ref()
                 .unwrap()
                 .filter_extension_modules(&logger, &filter, preferred_variants)
-                .or_else(|e| {
-                    Err(RuntimeError {
+                .map_err(|e| {
+                    RuntimeError {
                         code: "PYOXIDIZER_BUILD",
                         message: e.to_string(),
                         label: "extension_modules()".to_string(),
                     }
-                    .into())
+                    .into()
                 })?
                 .iter()
                 .map(|em| {
@@ -458,13 +458,13 @@ impl PythonDistribution {
 
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
-        self.ensure_distribution_resolved(&logger).or_else(|e| {
-            Err(RuntimeError {
+        self.ensure_distribution_resolved(&logger).map_err(|e| {
+            RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "resolve_distribution()".to_string(),
             }
-            .into())
+            .into()
         })?;
 
         let resources = self
@@ -472,13 +472,13 @@ impl PythonDistribution {
             .as_ref()
             .unwrap()
             .resource_datas()
-            .or_else(|e| {
-                Err(RuntimeError {
+            .map_err(|e| {
+                RuntimeError {
                     code: "PYTHON_DISTRIBUTION",
                     message: e.to_string(),
                     label: e.to_string(),
                 }
-                .into())
+                .into()
             })?;
 
         Ok(Value::from(
@@ -501,13 +501,13 @@ impl PythonDistribution {
 
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
-        self.ensure_distribution_resolved(&logger).or_else(|e| {
-            Err(RuntimeError {
+        self.ensure_distribution_resolved(&logger).map_err(|e| {
+            RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "resolve_distribution()".to_string(),
             }
-            .into())
+            .into()
         })?;
 
         let modules = self
@@ -515,13 +515,13 @@ impl PythonDistribution {
             .as_ref()
             .unwrap()
             .source_modules()
-            .or_else(|e| {
-                Err(RuntimeError {
+            .map_err(|e| {
+                RuntimeError {
                     code: "PYTHON_DISTRIBUTION",
                     message: e.to_string(),
                     label: e.to_string(),
                 }
-                .into())
+                .into()
             })?;
 
         Ok(Value::from(

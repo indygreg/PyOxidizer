@@ -135,13 +135,13 @@ impl PythonExecutable {
         let resources = self
             .exe
             .pip_install(&logger, verbose, &args, &extra_envs)
-            .or_else(|e| {
-                Err(RuntimeError {
+            .map_err(|e| {
+                RuntimeError {
                     code: "PIP_INSTALL_ERROR",
                     message: format!("error running pip install: {}", e),
                     label: "pip_install()".to_string(),
                 }
-                .into())
+                .into()
             })?;
 
         Ok(Value::from(
@@ -173,13 +173,13 @@ impl PythonExecutable {
         let resources = self
             .exe
             .read_package_root(&logger, Path::new(&path), &packages)
-            .or_else(|e| {
-                Err(RuntimeError {
+            .map_err(|e| {
+                RuntimeError {
                     code: "PACKAGE_ROOT_ERROR",
                     message: format!("could not find resources: {}", e),
                     label: "read_package_root()".to_string(),
                 }
-                .into())
+                .into()
             })?;
 
         Ok(Value::from(
@@ -200,13 +200,13 @@ impl PythonExecutable {
         let resources = self
             .exe
             .read_virtualenv(&logger, &Path::new(&path))
-            .or_else(|e| {
-                Err(RuntimeError {
+            .map_err(|e| {
+                RuntimeError {
                     code: "VIRTUALENV_ERROR",
                     message: format!("could not find resources: {}", e),
                     label: "read_virtualenv()".to_string(),
                 }
-                .into())
+                .into()
             })?;
 
         Ok(Value::from(
@@ -272,13 +272,13 @@ impl PythonExecutable {
                 &extra_envs,
                 &extra_global_arguments,
             )
-            .or_else(|e| {
-                Err(RuntimeError {
+            .map_err(|e| {
+                RuntimeError {
                     code: "SETUP_PY_ERROR",
                     message: e.to_string(),
                     label: "setup_py_install()".to_string(),
                 }
-                .into())
+                .into()
             })?;
 
         warn!(
@@ -308,15 +308,13 @@ impl PythonExecutable {
 
         let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
         info!(&logger, "adding in-memory source module {}", m.name);
-        self.exe.add_in_memory_module_source(&m).or_else(|e| {
-            {
-                Err(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
-                    label: "add_in_memory_module_source".to_string(),
-                }
-                .into())
+        self.exe.add_in_memory_module_source(&m).map_err(|e| {
+            RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "add_in_memory_module_source".to_string(),
             }
+            .into()
         })?;
 
         Ok(Value::new(None))
@@ -342,13 +340,13 @@ impl PythonExecutable {
         );
         self.exe
             .add_relative_path_module_source(&prefix, &m)
-            .or_else(|e| {
-                Err(RuntimeError {
+            .map_err(|e| {
+                RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "add_filesystem_relative_module_source".to_string(),
                 }
-                .into())
+                .into()
             })?;
 
         Ok(Value::new(None))
@@ -363,15 +361,13 @@ impl PythonExecutable {
 
         let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
         info!(&logger, "adding source module {}", m.name);
-        self.exe.add_module_source(&m).or_else(|e| {
-            {
-                Err(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
-                    label: "add_module_source".to_string(),
-                }
-                .into())
+        self.exe.add_module_source(&m).map_err(|e| {
+            RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "add_module_source".to_string(),
             }
+            .into()
         })?;
 
         Ok(Value::new(None))
@@ -416,15 +412,13 @@ impl PythonExecutable {
                 is_package: m.is_package,
                 cache_tag: m.cache_tag,
             })
-            .or_else(|e| {
-                {
-                    Err(RuntimeError {
-                        code: "PYOXIDIZER_BUILD",
-                        message: e.to_string(),
-                        label: "add_in_memory_module_bytecode".to_string(),
-                    }
-                    .into())
+            .map_err(|e| {
+                RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "add_in_memory_module_bytecode".to_string(),
                 }
+                .into()
             })?;
 
         Ok(Value::new(None))
@@ -477,13 +471,13 @@ impl PythonExecutable {
                     cache_tag: m.cache_tag,
                 },
             )
-            .or_else(|e| {
-                Err(RuntimeError {
+            .map_err(|e| {
+                RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "add_filesystem_relative_module_bytecode".to_string(),
                 }
-                .into())
+                .into()
             })?;
 
         Ok(Value::new(None))
@@ -528,15 +522,13 @@ impl PythonExecutable {
                 is_package: m.is_package,
                 cache_tag: m.cache_tag,
             })
-            .or_else(|e| {
-                {
-                    Err(RuntimeError {
-                        code: "PYOXIDIZER_BUILD",
-                        message: e.to_string(),
-                        label: "add_module_bytecode".to_string(),
-                    }
-                    .into())
+            .map_err(|e| {
+                RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "add_module_bytecode".to_string(),
                 }
+                .into()
             })?;
 
         Ok(Value::new(None))
@@ -559,15 +551,13 @@ impl PythonExecutable {
             "adding in-memory resource data {}",
             r.symbolic_name()
         );
-        self.exe.add_in_memory_package_resource(&r).or_else(|e| {
-            {
-                Err(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
-                    label: "add_in_memory_package_resource".to_string(),
-                }
-                .into())
+        self.exe.add_in_memory_package_resource(&r).map_err(|e| {
+            RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "add_in_memory_package_resource".to_string(),
             }
+            .into()
         })?;
 
         Ok(Value::new(None))
@@ -586,15 +576,13 @@ impl PythonExecutable {
 
         let r = resource.downcast_apply(|r: &PythonPackageResource| r.data.clone());
         info!(&logger, "adding resource data {}", r.symbolic_name());
-        self.exe.add_package_resource(&r).or_else(|e| {
-            {
-                Err(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
-                    label: "add_package_resource".to_string(),
-                }
-                .into())
+        self.exe.add_package_resource(&r).map_err(|e| {
+            RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "add_package_resource".to_string(),
             }
+            .into()
         })?;
 
         Ok(Value::new(None))
@@ -621,13 +609,13 @@ impl PythonExecutable {
         );
         self.exe
             .add_relative_path_package_resource(&prefix, &r)
-            .or_else(|e| {
-                Err(RuntimeError {
+            .map_err(|e| {
+                RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "add_filesystem_relative_package_resource".to_string(),
                 }
-                .into())
+                .into()
             })?;
 
         Ok(Value::new(None))
@@ -651,15 +639,13 @@ impl PythonExecutable {
         );
         self.exe
             .add_in_memory_package_distribution_resource(&r)
-            .or_else(|e| {
-                {
-                    Err(RuntimeError {
-                        code: "PYOXIDIZER_BUILD",
-                        message: e.to_string(),
-                        label: "add_in_memory_package_distribution_resource".to_string(),
-                    }
-                    .into())
+            .map_err(|e| {
+                RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "add_in_memory_package_distribution_resource".to_string(),
                 }
+                .into()
             })?;
 
         Ok(Value::new(None))
@@ -685,13 +671,13 @@ impl PythonExecutable {
         );
         self.exe
             .add_relative_path_package_distribution_resource(&prefix, &r)
-            .or_else(|e| {
-                Err(RuntimeError {
+            .map_err(|e| {
+                RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
                     label: "add_filesystem_relative_package_distribution_resource".to_string(),
                 }
-                .into())
+                .into()
             })?;
 
         Ok(Value::new(None))
@@ -715,15 +701,13 @@ impl PythonExecutable {
         );
         self.exe
             .add_package_distribution_resource(&r)
-            .or_else(|e| {
-                {
-                    Err(RuntimeError {
-                        code: "PYOXIDIZER_BUILD",
-                        message: e.to_string(),
-                        label: "add_package_distribution_resource".to_string(),
-                    }
-                    .into())
+            .map_err(|e| {
+                RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "add_package_distribution_resource".to_string(),
                 }
+                .into()
             })?;
 
         Ok(Value::new(None))
@@ -754,13 +738,13 @@ impl PythonExecutable {
                 self.exe.add_in_memory_dynamic_extension_module(&m)
             }
         }
-        .or_else(|e| {
-            Err(RuntimeError {
+        .map_err(|e| {
+            RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "add_in_memory_extension_module".to_string(),
             }
-            .into())
+            .into()
         })?;
 
         Ok(Value::new(None))
@@ -793,13 +777,13 @@ impl PythonExecutable {
                 .exe
                 .add_relative_path_dynamic_extension_module(&prefix, &m),
         }
-        .or_else(|e| {
-            Err(RuntimeError {
+        .map_err(|e| {
+            RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "add_filesystem_relative_extension_module".to_string(),
             }
-            .into())
+            .into()
         })?;
 
         Ok(Value::new(None))
@@ -838,15 +822,13 @@ impl PythonExecutable {
                 self.exe.add_dynamic_extension_module(&m)
             }
         }
-        .or_else(|e| {
-            {
-                Err(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
-                    label: "add_extension_module".to_string(),
-                }
-                .into())
+        .map_err(|e| {
+            RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "add_extension_module".to_string(),
             }
+            .into()
         })?;
 
         Ok(Value::new(None))
@@ -1109,13 +1091,13 @@ impl PythonExecutable {
 
         self.exe
             .filter_resources_from_files(&logger, &files_refs, &glob_files_refs)
-            .or_else(|e| {
-                Err(RuntimeError {
+            .map_err(|e| {
+                RuntimeError {
                     code: "RUNTIME_ERROR",
                     message: e.to_string(),
                     label: "filter_from_files()".to_string(),
                 }
-                .into())
+                .into()
             })?;
 
         Ok(Value::new(None))

@@ -485,13 +485,13 @@ fn starlark_set_build_path(env: &Environment, path: &Value) -> ValueResult {
 
     context
         .downcast_apply_mut(|x: &mut EnvironmentContext| x.set_build_path(&PathBuf::from(&path)))
-        .or_else(|e| {
-            Err(RuntimeError {
+        .map_err(|e| {
+            RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
                 label: "set_build_path()".to_string(),
             }
-            .into())
+            .into()
         })?;
 
     Ok(Value::new(None))
