@@ -463,6 +463,15 @@ pub enum ConcreteResourceLocation {
     RelativePath(String),
 }
 
+impl From<&ConcreteResourceLocation> for AbstractResourceLocation {
+    fn from(l: &ConcreteResourceLocation) -> Self {
+        match l {
+            ConcreteResourceLocation::InMemory => AbstractResourceLocation::InMemory,
+            ConcreteResourceLocation::RelativePath(_) => AbstractResourceLocation::RelativePath,
+        }
+    }
+}
+
 /// Represents a finalized collection of Python resources.
 ///
 /// Instances are produced from a `PythonResourceCollector` and a
@@ -604,20 +613,7 @@ impl PythonResourceCollector {
         module: &PythonModuleSource,
         location: &ConcreteResourceLocation,
     ) -> Result<()> {
-        match location {
-            ConcreteResourceLocation::InMemory => self.add_in_memory_python_module_source(module),
-            ConcreteResourceLocation::RelativePath(prefix) => {
-                self.add_relative_path_python_module_source(module, prefix)
-            }
-        }
-    }
-
-    /// Add Python module source to be loaded from memory.
-    pub fn add_in_memory_python_module_source(
-        &mut self,
-        module: &PythonModuleSource,
-    ) -> Result<()> {
-        self.check_policy(AbstractResourceLocation::InMemory)?;
+        self.check_policy(location.into())?;
 
         let entry = self
             .resources
@@ -628,9 +624,26 @@ impl PythonResourceCollector {
                 ..PrePackagedResource::default()
             });
         entry.is_package = module.is_package;
-        entry.in_memory_source = Some(module.source.clone());
+
+        match location {
+            ConcreteResourceLocation::InMemory => {
+                entry.in_memory_source = Some(module.source.clone());
+            }
+            ConcreteResourceLocation::RelativePath(prefix) => {
+                entry.relative_path_module_source =
+                    Some((prefix.to_string(), module.source.clone()));
+            }
+        }
 
         Ok(())
+    }
+
+    /// Add Python module source to be loaded from memory.
+    pub fn add_in_memory_python_module_source(
+        &mut self,
+        module: &PythonModuleSource,
+    ) -> Result<()> {
+        self.add_python_module_source(module, &ConcreteResourceLocation::InMemory)
     }
 
     /// Add Python module source to be loaded from a file on the filesystem relative to the resources.
@@ -639,20 +652,10 @@ impl PythonResourceCollector {
         module: &PythonModuleSource,
         prefix: &str,
     ) -> Result<()> {
-        self.check_policy(AbstractResourceLocation::RelativePath)?;
-        let entry = self
-            .resources
-            .entry(module.name.clone())
-            .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Module,
-                name: module.name.clone(),
-                ..PrePackagedResource::default()
-            });
-
-        entry.is_package = module.is_package;
-        entry.relative_path_module_source = Some((prefix.to_string(), module.source.clone()));
-
-        Ok(())
+        self.add_python_module_source(
+            module,
+            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+        )
     }
 
     /// Add Python module bytecode to the specified location.
