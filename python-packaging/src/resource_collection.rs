@@ -694,27 +694,6 @@ impl PythonResourceCollector {
         Ok(())
     }
 
-    /// Add Python module bytecode to be loaded from memory.
-    ///
-    /// Actual bytecode is provided, not bytecode derived from source.
-    pub fn add_in_memory_python_module_bytecode(
-        &mut self,
-        module: &PythonModuleBytecode,
-    ) -> Result<()> {
-        self.add_python_module_bytecode(module, &ConcreteResourceLocation::InMemory)
-    }
-
-    pub fn add_relative_path_python_module_bytecode(
-        &mut self,
-        module: &PythonModuleBytecode,
-        prefix: &str,
-    ) -> Result<()> {
-        self.add_python_module_bytecode(
-            module,
-            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-        )
-    }
-
     /// Add Python module bytecode derived from source code to the collection.
     pub fn add_python_module_bytecode_from_source(
         &mut self,
@@ -1647,13 +1626,16 @@ mod tests {
     fn test_add_in_memory_bytecode_module() -> Result<()> {
         let mut r =
             PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
-        r.add_in_memory_python_module_bytecode(&PythonModuleBytecode::new(
-            "foo",
-            BytecodeOptimizationLevel::Zero,
-            false,
-            DEFAULT_CACHE_TAG,
-            &vec![42],
-        ))?;
+        r.add_python_module_bytecode(
+            &PythonModuleBytecode::new(
+                "foo",
+                BytecodeOptimizationLevel::Zero,
+                false,
+                DEFAULT_CACHE_TAG,
+                &vec![42],
+            ),
+            &ConcreteResourceLocation::InMemory,
+        )?;
 
         assert!(r.resources.contains_key("foo"));
         assert_eq!(

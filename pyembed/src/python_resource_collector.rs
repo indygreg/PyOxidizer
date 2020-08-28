@@ -107,7 +107,10 @@ impl OxidizedResourceCollector {
             "PythonModuleBytecode" => {
                 let module = resource.cast_into::<PythonModuleBytecode>(py)?;
                 collector
-                    .add_in_memory_python_module_bytecode(&module.get_resource(py))
+                    .add_python_module_bytecode(
+                        &module.get_resource(py),
+                        &ConcreteResourceLocation::InMemory,
+                    )
                     .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
 
                 Ok(py.None())
@@ -168,7 +171,10 @@ impl OxidizedResourceCollector {
             "PythonModuleBytecode" => {
                 let module = resource.cast_into::<PythonModuleBytecode>(py)?;
                 collector
-                    .add_relative_path_python_module_bytecode(&module.get_resource(py), &prefix)
+                    .add_python_module_bytecode(
+                        &module.get_resource(py),
+                        &ConcreteResourceLocation::RelativePath(prefix),
+                    )
                     .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
 
                 Ok(py.None())
@@ -178,7 +184,7 @@ impl OxidizedResourceCollector {
                 collector
                     .add_python_module_source(
                         &module.get_resource(py),
-                        &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+                        &ConcreteResourceLocation::RelativePath(prefix),
                     )
                     .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
 
