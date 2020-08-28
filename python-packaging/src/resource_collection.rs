@@ -477,7 +477,7 @@ impl<'a> PreparedPythonResources<'a> {
     }
 }
 
-/// Type used to collect Python resources to they can be serialized.
+/// Type used to collect Python resources so they can be serialized.
 ///
 /// We often want to turn Python resource primitives (module source,
 /// bytecode, etc) into a collection of ``Resource`` so they can be
