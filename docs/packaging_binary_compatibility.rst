@@ -37,7 +37,8 @@ managed at the system level (the latter is preferred).
 There is also currently a dependency on the Universal C Runtime (UCRT).
 
 PyOxidizer will eventually make producing Windows installers from packaged
-applications turnkey. Until that time arrives, see the
+applications turnkey (`#279 <https://github.com/indygreg/PyOxidizer/issues/279>`).
+Until that time arrives, see the
 `Microsoft documentation <https://docs.microsoft.com/en-us/cpp/windows/deploying-native-desktop-applications-visual-cpp?view=vs-2019>`_
 on deployment considerations for Windows binaries. The
 `Dependency Walker <http://www.dependencywalker.com/>`_ tool is also
