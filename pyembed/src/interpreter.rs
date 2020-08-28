@@ -284,7 +284,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         // Pre-configure Python.
         let pre_config: pyffi::PyPreConfig = (&self.config.interpreter_config)
             .try_into()
-            .map_err(|err| NewInterpreterError::Dynamic(err))?;
+            .map_err(NewInterpreterError::Dynamic)?;
 
         unsafe {
             let status = pyffi::Py_PreInitialize(&pre_config);
@@ -329,7 +329,7 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
 
         let mut py_config: pyffi::PyConfig = (&self.config)
             .try_into()
-            .map_err(|err| NewInterpreterError::Dynamic(err))?;
+            .map_err(NewInterpreterError::Dynamic)?;
 
         // Enable multi-phase initialization. This allows us to initialize
         // our custom importer before Python attempts any imports.
