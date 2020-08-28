@@ -1115,6 +1115,16 @@ impl PythonDistribution for StandaloneDistribution {
             }
         };
 
+        // Loading from memory is only supported on Windows where symbols are
+        // declspec(dllexport) and the distribution is capable of loading
+        // shared library extensions.
+        let supports_in_memory_dynamically_linked_extension_loading = target_triple
+            .contains("pc-windows")
+            && self.python_symbol_visibility == "dllexport"
+            && self
+                .extension_module_loading
+                .contains(&"shared-library".to_string());
+
         let mut builder = Box::new(StandalonePythonExecutableBuilder {
             host_triple: host_triple.to_string(),
             target_triple: target_triple.to_string(),
@@ -1122,6 +1132,7 @@ impl PythonDistribution for StandaloneDistribution {
             // TODO can we avoid this clone()?
             distribution: Arc::new(Box::new(self.clone())),
             link_mode,
+            supports_in_memory_dynamically_linked_extension_loading,
             resources_policy: resources_policy.clone(),
             resources: PrePackagedResources::new(resources_policy, &self.cache_tag),
             config: config.clone(),
@@ -1390,6 +1401,10 @@ pub struct StandalonePythonExecutableBuilder {
     /// How libpython should be linked.
     link_mode: LibpythonLinkMode,
 
+    /// Whether the built binary is capable of loading dynamically linked
+    /// extension modules from memory.
+    supports_in_memory_dynamically_linked_extension_loading: bool,
+
     /// Policy to apply to added resources.
     resources_policy: PythonResourcesPolicy,
 
@@ -1410,20 +1425,6 @@ pub struct StandalonePythonExecutableBuilder {
 }
 
 impl StandalonePythonExecutableBuilder {
-    /// Whether we're building for a target that supports loading extension modules
-    /// from memory.
-    fn supports_in_memory_dynamically_linked_extension_loading(&self) -> bool {
-        // Loading from memory is only supported on Windows where symbols are
-        // declspec(dllexport) and the distribution is capable of loading
-        // shared library extensions.
-        self.target_triple.contains("pc-windows")
-            && self.distribution.python_symbol_visibility == "dllexport"
-            && self
-                .distribution
-                .extension_module_loading
-                .contains(&"shared-library".to_string())
-    }
-
     #[allow(clippy::too_many_arguments)]
     fn add_distribution_resources(
         &mut self,
@@ -1693,7 +1694,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &mut self,
         extension_module: &DistributionExtensionModule,
     ) -> Result<()> {
-        if !self.supports_in_memory_dynamically_linked_extension_loading() {
+        if !self.supports_in_memory_dynamically_linked_extension_loading {
             return Err(anyhow!(
                 "loading extension modules from memory not supported by this build configuration"
             ));
@@ -1776,7 +1777,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &mut self,
         extension_module: &PythonExtensionModule,
     ) -> Result<()> {
-        if self.supports_in_memory_dynamically_linked_extension_loading()
+        if self.supports_in_memory_dynamically_linked_extension_loading
             && extension_module.extension_data.is_some()
         {
             self.resources
@@ -1837,7 +1838,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
         match self.resources_policy {
             PythonResourcesPolicy::InMemoryOnly => {
-                if self.supports_in_memory_dynamically_linked_extension_loading() {
+                if self.supports_in_memory_dynamically_linked_extension_loading {
                     self.resources
                         .add_in_memory_extension_module_shared_library(
                             &extension_module.name,
@@ -1861,7 +1862,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 }
             }
             PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(ref prefix) => {
-                if self.supports_in_memory_dynamically_linked_extension_loading() {
+                if self.supports_in_memory_dynamically_linked_extension_loading {
                     self.resources
                         .add_in_memory_extension_module_shared_library(
                             &extension_module.name,
@@ -1981,6 +1982,7 @@ pub mod tests {
             exe_name: "testapp".to_string(),
             distribution: distribution.clone(),
             link_mode,
+            supports_in_memory_dynamically_linked_extension_loading: false,
             resources_policy: PythonResourcesPolicy::InMemoryOnly,
             resources,
             config,
