@@ -1062,17 +1062,7 @@ impl PythonResourceCollector {
         data: &DataLocation,
         location: &ConcreteResourceLocation,
     ) -> Result<()> {
-        match location {
-            ConcreteResourceLocation::InMemory => self.add_in_memory_shared_library(name, data),
-            ConcreteResourceLocation::RelativePath(prefix) => {
-                self.add_relative_path_shared_library(prefix, name, data)
-            }
-        }
-    }
-
-    /// Add a shared library to be loaded from memory.
-    pub fn add_in_memory_shared_library(&mut self, name: &str, data: &DataLocation) -> Result<()> {
-        self.check_policy(AbstractResourceLocation::InMemory)?;
+        self.check_policy(location.into())?;
 
         let entry = self
             .resources
@@ -1083,9 +1073,21 @@ impl PythonResourceCollector {
                 ..PrePackagedResource::default()
             });
 
-        entry.in_memory_shared_library = Some(data.clone());
+        match location {
+            ConcreteResourceLocation::InMemory => {
+                entry.in_memory_shared_library = Some(data.clone());
+            }
+            ConcreteResourceLocation::RelativePath(prefix) => {
+                entry.relative_path_shared_library = Some((prefix.to_string(), data.clone()));
+            }
+        }
 
         Ok(())
+    }
+
+    /// Add a shared library to be loaded from memory.
+    pub fn add_in_memory_shared_library(&mut self, name: &str, data: &DataLocation) -> Result<()> {
+        self.add_shared_library(name, data, &ConcreteResourceLocation::InMemory)
     }
 
     /// Add a shared library to be loaded from a relative path.
@@ -1095,20 +1097,11 @@ impl PythonResourceCollector {
         name: &str,
         data: &DataLocation,
     ) -> Result<()> {
-        self.check_policy(AbstractResourceLocation::RelativePath)?;
-
-        let resource =
-            self.resources
-                .entry(name.to_string())
-                .or_insert_with(|| PrePackagedResource {
-                    flavor: ResourceFlavor::SharedLibrary,
-                    name: name.to_string().clone(),
-                    ..PrePackagedResource::default()
-                });
-
-        resource.relative_path_shared_library = Some((prefix.to_string(), data.clone()));
-
-        Ok(())
+        self.add_shared_library(
+            name,
+            data,
+            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+        )
     }
 
     /// Searches for Python sources for references to __file__.
