@@ -16,7 +16,7 @@ def make_exe(dist):
     # embedded Python interpreter.
     python_config = PythonInterpreterConfig(
     #     bytes_warning=0,
-    #     dont_write_bytecode=True,
+    #     write_bytecode=False,
     #     ignore_environment=True,
     #     inspect=False,
     #     interactive=False,

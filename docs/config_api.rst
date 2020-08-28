@@ -662,7 +662,7 @@ behavior:
    Default is ``0``, which is the Python default. Only the values ``0``, ``1``,
    and ``2`` are accepted.
 
-   This setting is only relevant if ``dont_write_bytecode`` is ``false`` and Python
+   This setting is only relevant if ``write_bytecode`` is ``true`` and Python
    modules are being imported from the filesystem.
 
 ``parser_debug`` (bool)
