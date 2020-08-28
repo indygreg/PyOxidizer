@@ -891,22 +891,7 @@ impl PythonResourceCollector {
         resource: &PythonPackageDistributionResource,
         location: &ConcreteResourceLocation,
     ) -> Result<()> {
-        match location {
-            ConcreteResourceLocation::InMemory => {
-                self.add_in_memory_package_distribution_resource(resource)
-            }
-            ConcreteResourceLocation::RelativePath(prefix) => {
-                self.add_relative_path_package_distribution_resource(prefix, resource)
-            }
-        }
-    }
-
-    /// Add a package distribution resource to be loaded from memory.
-    pub fn add_in_memory_package_distribution_resource(
-        &mut self,
-        resource: &PythonPackageDistributionResource,
-    ) -> Result<()> {
-        self.check_policy(AbstractResourceLocation::InMemory)?;
+        self.check_policy(location.into())?;
 
         let entry = self
             .resources
@@ -920,17 +905,47 @@ impl PythonResourceCollector {
         // A distribution resource makes the entity a package.
         entry.is_package = true;
 
-        if entry.in_memory_distribution_resources.is_none() {
-            entry.in_memory_distribution_resources = Some(BTreeMap::new());
+        match location {
+            ConcreteResourceLocation::InMemory => {
+                if entry.in_memory_distribution_resources.is_none() {
+                    entry.in_memory_distribution_resources = Some(BTreeMap::new());
+                }
+
+                entry
+                    .in_memory_distribution_resources
+                    .as_mut()
+                    .unwrap()
+                    .insert(resource.name.clone(), resource.data.clone());
+            }
+            ConcreteResourceLocation::RelativePath(prefix) => {
+                if entry.relative_path_distribution_resources.is_none() {
+                    entry.relative_path_distribution_resources = Some(BTreeMap::new());
+                }
+
+                entry
+                    .relative_path_distribution_resources
+                    .as_mut()
+                    .unwrap()
+                    .insert(
+                        resource.name.clone(),
+                        (
+                            prefix.to_string(),
+                            resource.resolve_path(prefix),
+                            resource.data.clone(),
+                        ),
+                    );
+            }
         }
 
-        entry
-            .in_memory_distribution_resources
-            .as_mut()
-            .unwrap()
-            .insert(resource.name.clone(), resource.data.clone());
-
         Ok(())
+    }
+
+    /// Add a package distribution resource to be loaded from memory.
+    pub fn add_in_memory_package_distribution_resource(
+        &mut self,
+        resource: &PythonPackageDistributionResource,
+    ) -> Result<()> {
+        self.add_package_distribution_resource(resource, &ConcreteResourceLocation::InMemory)
     }
 
     /// Add a `PythonPackageDistributionResource` to be loaded from a relative filesystem path.
@@ -939,36 +954,10 @@ impl PythonResourceCollector {
         prefix: &str,
         resource: &PythonPackageDistributionResource,
     ) -> Result<()> {
-        self.check_policy(AbstractResourceLocation::RelativePath)?;
-        let entry = self
-            .resources
-            .entry(resource.package.clone())
-            .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Module,
-                name: resource.package.clone(),
-                ..PrePackagedResource::default()
-            });
-
-        entry.is_package = true;
-
-        if entry.relative_path_distribution_resources.is_none() {
-            entry.relative_path_distribution_resources = Some(BTreeMap::new());
-        }
-
-        entry
-            .relative_path_distribution_resources
-            .as_mut()
-            .unwrap()
-            .insert(
-                resource.name.clone(),
-                (
-                    prefix.to_string(),
-                    resource.resolve_path(prefix),
-                    resource.data.clone(),
-                ),
-            );
-
-        Ok(())
+        self.add_package_distribution_resource(
+            resource,
+            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+        )
     }
 
     /// Add a built-in extension module.
