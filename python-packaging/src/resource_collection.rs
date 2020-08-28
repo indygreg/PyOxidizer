@@ -802,28 +802,6 @@ impl PythonResourceCollector {
         Ok(())
     }
 
-    /// Add resource data.
-    ///
-    /// Resource data belongs to a Python package and has a name and bytes data.
-    pub fn add_in_memory_python_package_resource(
-        &mut self,
-        resource: &PythonPackageResource,
-    ) -> Result<()> {
-        self.add_python_package_resource(resource, &ConcreteResourceLocation::InMemory)
-    }
-
-    /// Add resource data to be loaded from the filesystem.
-    pub fn add_relative_path_python_package_resource(
-        &mut self,
-        prefix: &str,
-        resource: &PythonPackageResource,
-    ) -> Result<()> {
-        self.add_python_package_resource(
-            resource,
-            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-        )
-    }
-
     /// Add a package distribution resource to a given location.
     pub fn add_package_distribution_resource(
         &mut self,
@@ -1702,11 +1680,14 @@ mod tests {
     fn test_add_in_memory_resource() -> Result<()> {
         let mut r =
             PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
-        r.add_in_memory_python_package_resource(&PythonPackageResource {
-            leaf_package: "foo".to_string(),
-            relative_name: "resource.txt".to_string(),
-            data: DataLocation::Memory(vec![42]),
-        })?;
+        r.add_python_package_resource(
+            &PythonPackageResource {
+                leaf_package: "foo".to_string(),
+                relative_name: "resource.txt".to_string(),
+                data: DataLocation::Memory(vec![42]),
+            },
+            &ConcreteResourceLocation::InMemory,
+        )?;
 
         assert_eq!(r.resources.len(), 1);
         assert_eq!(

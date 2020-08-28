@@ -126,7 +126,7 @@ impl PrePackagedResources {
         resource: &PythonPackageResource,
     ) -> Result<()> {
         self.collector
-            .add_in_memory_python_package_resource(resource)
+            .add_python_package_resource(resource, &ConcreteResourceLocation::InMemory)
     }
 
     /// Add resource data to be loaded from the filesystem.
@@ -135,8 +135,10 @@ impl PrePackagedResources {
         prefix: &str,
         resource: &PythonPackageResource,
     ) -> Result<()> {
-        self.collector
-            .add_relative_path_python_package_resource(prefix, resource)
+        self.collector.add_python_package_resource(
+            resource,
+            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+        )
     }
 
     /// Add a package distribution resource to be loaded from memory.

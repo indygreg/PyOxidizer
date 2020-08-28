@@ -129,7 +129,10 @@ impl OxidizedResourceCollector {
             "PythonPackageResource" => {
                 let resource = resource.cast_into::<PythonPackageResource>(py)?;
                 collector
-                    .add_in_memory_python_package_resource(&resource.get_resource(py))
+                    .add_python_package_resource(
+                        &resource.get_resource(py),
+                        &ConcreteResourceLocation::InMemory,
+                    )
                     .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
 
                 Ok(py.None())
@@ -193,7 +196,10 @@ impl OxidizedResourceCollector {
             "PythonPackageResource" => {
                 let resource = resource.cast_into::<PythonPackageResource>(py)?;
                 collector
-                    .add_relative_path_python_package_resource(&prefix, &resource.get_resource(py))
+                    .add_python_package_resource(
+                        &resource.get_resource(py),
+                        &ConcreteResourceLocation::RelativePath(prefix),
+                    )
                     .or_else(|e| Err(PyErr::new::<ValueError, _>(py, e.to_string())))?;
 
                 Ok(py.None())
