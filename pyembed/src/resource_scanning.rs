@@ -65,11 +65,8 @@ pub(crate) fn find_resources_in_path(py: Python, path: PyObject) -> PyResult<PyO
     let iter = find_python_resources(&path, &cache_tag, &suffixes);
 
     for resource in iter {
-        let resource = resource.or_else(|e| {
-            Err(PyErr::new::<ValueError, _>(
-                py,
-                format!("error scanning filesystem: {}", e),
-            ))
+        let resource = resource.map_err(|e| {
+            PyErr::new::<ValueError, _>(py, format!("error scanning filesystem: {}", e))
         })?;
 
         match resource {
