@@ -176,7 +176,7 @@ impl OxidizedDistribution {
 }
 
 /// Find package metadata distributions given search criteria.
-pub(crate) fn find_distributions<'a>(
+pub(crate) fn find_distributions(
     py: Python,
     state: Arc<Box<ImporterState>>,
     name: Option<PyObject>,
