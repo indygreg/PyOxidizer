@@ -110,6 +110,7 @@ mod tests {
             source: DataLocation::Memory(vec![]),
             is_package: false,
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
+            is_stdlib: false,
         }
         .add_to_file_manifest(&mut m, ".")?;
 
@@ -118,6 +119,7 @@ mod tests {
             source: DataLocation::Memory(vec![]),
             is_package: false,
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
+            is_stdlib: false,
         }
         .add_to_file_manifest(&mut m, ".")?;
 
@@ -138,6 +140,7 @@ mod tests {
             source: DataLocation::Memory(vec![]),
             is_package: true,
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
+            is_stdlib: false,
         }
         .add_to_file_manifest(&mut m, ".")?;
 
@@ -157,6 +160,7 @@ mod tests {
             source: DataLocation::Memory(vec![]),
             is_package: false,
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
+            is_stdlib: false,
         }
         .add_to_file_manifest(&mut m, ".")?;
 
@@ -178,6 +182,7 @@ mod tests {
             source: DataLocation::Memory(vec![]),
             is_package: true,
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
+            is_stdlib: false,
         }
         .add_to_file_manifest(&mut m, ".")?;
 

@@ -286,6 +286,7 @@ impl PythonResourceIterator {
                     source: DataLocation::Path(path.to_path_buf()),
                     is_package: is_package_from_path(&path),
                     cache_tag: self.cache_tag.clone(),
+                    is_stdlib: false,
                 },
             )));
         }
@@ -588,6 +589,7 @@ mod tests {
                 source: DataLocation::Path(acme_path.join("__init__.py")),
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
             })
         );
         assert_eq!(
@@ -597,6 +599,7 @@ mod tests {
                 source: DataLocation::Path(acme_a_path.join("__init__.py")),
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
             })
         );
         assert_eq!(
@@ -606,6 +609,7 @@ mod tests {
                 source: DataLocation::Path(acme_a_path.join("foo.py")),
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
             })
         );
         assert_eq!(
@@ -615,6 +619,7 @@ mod tests {
                 source: DataLocation::Path(acme_bar_path.join("__init__.py")),
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
             })
         );
 
@@ -902,6 +907,7 @@ mod tests {
                 source: DataLocation::Path(acme_path.join("__init__.py")),
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
             })
         );
         assert_eq!(
@@ -911,6 +917,7 @@ mod tests {
                 source: DataLocation::Path(acme_path.join("bar.py")),
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
             })
         );
 
@@ -1079,6 +1086,7 @@ mod tests {
                 source: DataLocation::Path(package_path.join("__init__.py")),
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
             })
         );
         assert_eq!(
@@ -1088,6 +1096,7 @@ mod tests {
                 source: DataLocation::Path(package_path.join("bar.py")),
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
             })
         );
 
@@ -1158,6 +1167,7 @@ mod tests {
                 source: DataLocation::Path(tp.join("foo.py")),
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
             })
         );
 
@@ -1189,6 +1199,7 @@ mod tests {
                 source: DataLocation::Path(module_path),
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
             })
         );
         assert_eq!(
@@ -1229,6 +1240,7 @@ mod tests {
                 source: DataLocation::Path(module_path),
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
             }),
         );
         assert_eq!(

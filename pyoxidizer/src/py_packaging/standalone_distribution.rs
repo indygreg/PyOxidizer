@@ -1290,6 +1290,7 @@ impl PythonDistribution for StandaloneDistribution {
                     source: DataLocation::Path(path.clone()),
                     is_package,
                     cache_tag: self.cache_tag.clone(),
+                    is_stdlib: true,
                 })
             })
             .collect()

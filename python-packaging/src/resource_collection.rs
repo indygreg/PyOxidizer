@@ -509,6 +509,9 @@ impl PythonResourceCollector {
     }
 
     /// Obtain `PythonModuleSource` in this instance.
+    ///
+    /// The ``is_stdlib`` field will always be false since this metadata is not
+    /// preserved by the collector.
     pub fn get_in_memory_module_sources(&self) -> BTreeMap<String, PythonModuleSource> {
         BTreeMap::from_iter(self.resources.iter().filter_map(|(name, module)| {
             if let Some(location) = &module.in_memory_source {
@@ -519,6 +522,7 @@ impl PythonResourceCollector {
                         is_package: module.is_package,
                         source: location.clone(),
                         cache_tag: self.cache_tag.clone(),
+                        is_stdlib: false,
                     },
                 ))
             } else {
@@ -1397,6 +1401,7 @@ mod tests {
                 source: DataLocation::Memory(vec![42]),
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
             },
             &ConcreteResourceLocation::InMemory,
         )?;
@@ -1426,6 +1431,7 @@ mod tests {
                 source: DataLocation::Memory(vec![42]),
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
             },
             &ConcreteResourceLocation::InMemory,
         )?;
@@ -1457,6 +1463,7 @@ mod tests {
                 source: DataLocation::Memory(vec![42]),
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
             },
             &ConcreteResourceLocation::RelativePath("".to_string()),
         )?;
@@ -1671,6 +1678,7 @@ mod tests {
                 source: DataLocation::Memory(vec![]),
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
             },
             &ConcreteResourceLocation::InMemory,
         )?;
@@ -1682,6 +1690,7 @@ mod tests {
                 source: DataLocation::Memory(Vec::from("import foo; if __file__ == 'ignored'")),
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
             },
             &ConcreteResourceLocation::InMemory,
         )?;

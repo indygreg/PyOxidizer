@@ -122,6 +122,7 @@ impl PythonExecutable {
             source: DataLocation::Memory(source.into_bytes()),
             is_package,
             cache_tag: self.exe.cache_tag().to_string(),
+            is_stdlib: false,
         })))
     }
 

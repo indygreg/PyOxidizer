@@ -94,6 +94,10 @@ pub struct PythonModuleSource {
     ///
     /// e.g. `cpython-37`.
     pub cache_tag: String,
+    /// Whether this module belongs to the Python standard library.
+    ///
+    /// Modules with this set are distributed as part of Python itself.
+    pub is_stdlib: bool,
 }
 
 impl PythonModuleSource {
@@ -103,6 +107,7 @@ impl PythonModuleSource {
             source: self.source.to_memory()?,
             is_package: self.is_package,
             cache_tag: self.cache_tag.clone(),
+            is_stdlib: self.is_stdlib,
         })
     }
 
@@ -638,6 +643,7 @@ mod tests {
             source: DataLocation::Memory(vec![]),
             is_package: false,
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
+            is_stdlib: false,
         });
         assert!(source.is_in_packages(&["foo".to_string()]));
         assert!(!source.is_in_packages(&[]));
