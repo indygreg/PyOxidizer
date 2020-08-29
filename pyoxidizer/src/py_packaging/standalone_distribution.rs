@@ -1291,6 +1291,7 @@ impl PythonDistribution for StandaloneDistribution {
                     is_package,
                     cache_tag: self.cache_tag.clone(),
                     is_stdlib: true,
+                    is_test: is_stdlib_test_package(name),
                 })
             })
             .collect()
@@ -2000,6 +2001,21 @@ pub mod tests {
         let temp_dir = tempdir::TempDir::new("pyoxidizer-test")?;
 
         embedded.write_files(temp_dir.path())?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_stdlib_annotations() -> Result<()> {
+        let distribution = get_default_distribution()?;
+
+        for module in distribution.source_modules()? {
+            assert!(module.is_stdlib);
+
+            if module.name.starts_with("test") {
+                assert!(module.is_test);
+            }
+        }
 
         Ok(())
     }

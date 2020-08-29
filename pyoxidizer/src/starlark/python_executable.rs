@@ -123,6 +123,7 @@ impl PythonExecutable {
             is_package,
             cache_tag: self.exe.cache_tag().to_string(),
             is_stdlib: false,
+            is_test: false,
         })))
     }
 

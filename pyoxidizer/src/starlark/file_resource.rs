@@ -587,6 +587,7 @@ mod tests {
             is_package: false,
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
             is_stdlib: false,
+            is_test: false,
         }));
 
         let mut env = starlark_env();

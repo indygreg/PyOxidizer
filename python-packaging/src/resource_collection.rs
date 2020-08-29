@@ -523,6 +523,7 @@ impl PythonResourceCollector {
                         source: location.clone(),
                         cache_tag: self.cache_tag.clone(),
                         is_stdlib: false,
+                        is_test: false,
                     },
                 ))
             } else {
@@ -1402,6 +1403,7 @@ mod tests {
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
+                is_test: false,
             },
             &ConcreteResourceLocation::InMemory,
         )?;
@@ -1432,6 +1434,7 @@ mod tests {
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
+                is_test: false,
             },
             &ConcreteResourceLocation::InMemory,
         )?;
@@ -1464,6 +1467,7 @@ mod tests {
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
+                is_test: false,
             },
             &ConcreteResourceLocation::RelativePath("".to_string()),
         )?;
@@ -1679,6 +1683,7 @@ mod tests {
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
+                is_test: false,
             },
             &ConcreteResourceLocation::InMemory,
         )?;
@@ -1691,6 +1696,7 @@ mod tests {
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
+                is_test: false,
             },
             &ConcreteResourceLocation::InMemory,
         )?;

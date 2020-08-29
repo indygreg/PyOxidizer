@@ -98,6 +98,11 @@ pub struct PythonModuleSource {
     ///
     /// Modules with this set are distributed as part of Python itself.
     pub is_stdlib: bool,
+    /// Whether this module is a test module.
+    ///
+    /// Test modules are those defining test code and aren't critical to
+    /// run-time functionality of a package.
+    pub is_test: bool,
 }
 
 impl PythonModuleSource {
@@ -108,6 +113,7 @@ impl PythonModuleSource {
             is_package: self.is_package,
             cache_tag: self.cache_tag.clone(),
             is_stdlib: self.is_stdlib,
+            is_test: self.is_test,
         })
     }
 
@@ -644,6 +650,7 @@ mod tests {
             is_package: false,
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
             is_stdlib: false,
+            is_test: false,
         });
         assert!(source.is_in_packages(&["foo".to_string()]));
         assert!(!source.is_in_packages(&[]));
