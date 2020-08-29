@@ -612,6 +612,9 @@ mod tests {
             builtin_default: true,
             required: false,
             variant: None,
+            licenses: None,
+            license_texts: None,
+            license_public_domain: None,
         };
 
         r.add_builtin_extension_module(&em)?;

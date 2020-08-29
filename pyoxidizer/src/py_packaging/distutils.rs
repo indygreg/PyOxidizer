@@ -208,6 +208,9 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<PythonExtensionModu
             builtin_default: false,
             required: false,
             variant: None,
+            licenses: None,
+            license_texts: None,
+            license_public_domain: None,
         });
     }
 

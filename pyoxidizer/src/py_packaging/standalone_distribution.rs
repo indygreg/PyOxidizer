@@ -399,6 +399,17 @@ impl From<&DistributionExtensionModule> for PythonExtensionModule {
             .map(|x| DataLocation::Path(x.clone()))
             .collect();
 
+        let license_texts = if let Some(paths) = &em.license_paths {
+            Some(
+                paths
+                    .iter()
+                    .map(|p| DataLocation::Path(p.clone()))
+                    .collect(),
+            )
+        } else {
+            None
+        };
+
         Self {
             name: em.module.clone(),
             init_fn: em.init_fn.clone(),
@@ -411,6 +422,9 @@ impl From<&DistributionExtensionModule> for PythonExtensionModule {
             builtin_default: em.builtin_default,
             required: em.required,
             variant: Some(em.variant.clone()),
+            licenses: em.licenses.clone(),
+            license_texts,
+            license_public_domain: em.license_public_domain.clone(),
         }
     }
 }

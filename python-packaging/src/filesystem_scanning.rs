@@ -248,6 +248,9 @@ impl PythonResourceIterator {
                         builtin_default: false,
                         required: false,
                         variant: None,
+                        licenses: None,
+                        license_texts: None,
+                        license_public_domain: None,
                     }),
                 ));
             }
@@ -990,6 +993,9 @@ mod tests {
                 builtin_default: false,
                 required: false,
                 variant: None,
+                licenses: None,
+                license_texts: None,
+                license_public_domain: None,
             })
         );
         assert_eq!(
@@ -1006,6 +1012,9 @@ mod tests {
                 builtin_default: false,
                 required: false,
                 variant: None,
+                licenses: None,
+                license_texts: None,
+                license_public_domain: None,
             }),
         );
         assert_eq!(
@@ -1022,6 +1031,9 @@ mod tests {
                 builtin_default: false,
                 required: false,
                 variant: None,
+                licenses: None,
+                license_texts: None,
+                license_public_domain: None,
             }),
         );
         assert_eq!(
@@ -1038,6 +1050,9 @@ mod tests {
                 builtin_default: false,
                 required: false,
                 variant: None,
+                licenses: None,
+                license_texts: None,
+                license_public_domain: None,
             }),
         );
         assert_eq!(
@@ -1054,6 +1069,9 @@ mod tests {
                 builtin_default: false,
                 required: false,
                 variant: None,
+                licenses: None,
+                license_texts: None,
+                license_public_domain: None,
             }),
         );
 
