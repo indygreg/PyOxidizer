@@ -122,9 +122,6 @@ pub trait PythonDistribution {
         libpython_link_mode: BinaryLibpythonLinkMode,
         policy: &PythonPackagingPolicy,
         config: &EmbeddedPythonConfig,
-        include_sources: bool,
-        include_resources: bool,
-        include_test: bool,
     ) -> Result<Box<dyn PythonBinaryBuilder>>;
 
     /// Obtain extension modules matching a specified filter and variant selection preferences.

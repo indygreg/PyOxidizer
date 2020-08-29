@@ -1061,9 +1061,6 @@ impl PythonDistribution for StandaloneDistribution {
         libpython_link_mode: BinaryLibpythonLinkMode,
         policy: &PythonPackagingPolicy,
         config: &EmbeddedPythonConfig,
-        include_sources: bool,
-        include_resources: bool,
-        include_test: bool,
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
         let python_exe = self.python_exe.clone();
 
@@ -1141,9 +1138,9 @@ impl PythonDistribution for StandaloneDistribution {
         builder.add_distribution_resources(
             logger,
             &policy.extension_module_filter,
-            include_sources,
-            include_resources,
-            include_test,
+            policy.include_sources,
+            policy.include_resources,
+            policy.include_test,
         )?;
 
         // Always ensure minimal extension modules are present, otherwise we get

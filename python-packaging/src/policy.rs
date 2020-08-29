@@ -103,6 +103,15 @@ pub struct PythonPackagingPolicy {
 
     /// Where resources should be packaged by default.
     pub resources_policy: PythonResourcesPolicy,
+
+    /// Whether to include source modules.
+    pub include_sources: bool,
+
+    /// Whether to include package resource files.
+    pub include_resources: bool,
+
+    /// Whether to include test files.
+    pub include_test: bool,
 }
 
 impl Default for PythonPackagingPolicy {
@@ -111,6 +120,9 @@ impl Default for PythonPackagingPolicy {
             extension_module_filter: ExtensionModuleFilter::All,
             preferred_extension_module_variants: None,
             resources_policy: PythonResourcesPolicy::InMemoryOnly,
+            include_sources: true,
+            include_resources: false,
+            include_test: false,
         }
     }
 }
