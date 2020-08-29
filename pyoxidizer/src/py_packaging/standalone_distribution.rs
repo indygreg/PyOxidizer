@@ -1440,11 +1440,11 @@ impl StandalonePythonExecutableBuilder {
                 self.add_module_source(&source)?;
             }
 
-            if !policy.include_test && is_stdlib_test_package(&source.package()) {
-                continue;
-            }
+            let bytecode = source.as_bytecode_module(BytecodeOptimizationLevel::Zero);
 
-            self.add_module_bytecode(&source.as_bytecode_module(BytecodeOptimizationLevel::Zero))?;
+            if policy.filter_python_resource(&bytecode.clone().into()) {
+                self.add_module_bytecode(&bytecode)?;
+            }
         }
 
         if policy.include_resources {

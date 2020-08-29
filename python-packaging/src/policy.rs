@@ -146,8 +146,8 @@ impl PythonPackagingPolicy {
                     self.include_sources
                 }
             }
+            PythonResource::ModuleBytecodeRequest(module) => self.include_test || !module.is_test,
             PythonResource::ModuleBytecode(_) => false,
-            PythonResource::ModuleBytecodeRequest(_) => false,
             PythonResource::Resource(_) => false,
             PythonResource::DistributionResource(_) => false,
             PythonResource::ExtensionModuleDynamicLibrary(_) => false,
