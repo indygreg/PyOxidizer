@@ -567,7 +567,6 @@ mod tests {
             module: "foo.bar".to_string(),
             init_fn: None,
             builtin_default: false,
-            disableable: false,
             object_paths: vec![],
             static_library: None,
             shared_library: None,

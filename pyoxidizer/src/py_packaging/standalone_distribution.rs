@@ -357,12 +357,6 @@ pub struct DistributionExtensionModule {
     /// This field will be true for those modules.
     pub builtin_default: bool,
 
-    /// Whether the extension module can be disabled.
-    ///
-    /// On some distributions, built-in extension modules cannot be
-    /// disabled. This field describes whether they can be.
-    pub disableable: bool,
-
     /// Compiled object files providing this extension module.
     pub object_paths: Vec<PathBuf>,
 
@@ -796,7 +790,6 @@ impl StandaloneDistribution {
                     module: module.clone(),
                     init_fn: Some(entry.init_fn.clone()),
                     builtin_default: entry.in_core,
-                    disableable: !entry.in_core,
                     license_public_domain: entry.license_public_domain,
                     license_paths: match entry.license_paths {
                         Some(ref refs) => Some(refs.iter().map(|p| python_path.join(p)).collect()),
