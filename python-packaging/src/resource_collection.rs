@@ -1535,6 +1535,8 @@ mod tests {
                 optimize_level: BytecodeOptimizationLevel::Zero,
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
+                is_test: false,
             },
             &ConcreteResourceLocation::InMemory,
         )?;
@@ -1567,6 +1569,8 @@ mod tests {
                 optimize_level: BytecodeOptimizationLevel::One,
                 is_package: true,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
+                is_test: false,
             },
             &ConcreteResourceLocation::InMemory,
         )?;
@@ -1710,6 +1714,8 @@ mod tests {
                 optimize_level: BytecodeOptimizationLevel::Zero,
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
+                is_test: false,
             },
             &ConcreteResourceLocation::InMemory,
         )?;

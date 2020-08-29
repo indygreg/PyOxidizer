@@ -141,6 +141,8 @@ impl PythonModuleSource {
             optimize_level,
             is_package: self.is_package,
             cache_tag: self.cache_tag.clone(),
+            is_stdlib: self.is_stdlib,
+            is_test: self.is_test,
         }
     }
 
@@ -169,6 +171,15 @@ pub struct PythonModuleBytecodeFromSource {
     ///
     /// e.g. `cpython-37`.
     pub cache_tag: String,
+    /// Whether this module belongs to the Python standard library.
+    ///
+    /// Modules with this set are distributed as part of Python itself.
+    pub is_stdlib: bool,
+    /// Whether this module is a test module.
+    ///
+    /// Test modules are those defining test code and aren't critical to
+    /// run-time functionality of a package.
+    pub is_test: bool,
 }
 
 impl PythonModuleBytecodeFromSource {
@@ -179,6 +190,8 @@ impl PythonModuleBytecodeFromSource {
             optimize_level: self.optimize_level,
             is_package: self.is_package,
             cache_tag: self.cache_tag.clone(),
+            is_stdlib: self.is_stdlib,
+            is_test: self.is_test,
         })
     }
 

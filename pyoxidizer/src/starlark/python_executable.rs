@@ -435,6 +435,8 @@ impl PythonExecutable {
                 optimize_level,
                 is_package: m.is_package,
                 cache_tag: m.cache_tag,
+                is_stdlib: m.is_stdlib,
+                is_test: m.is_test,
             })
             .map_err(|e| {
                 RuntimeError {
@@ -493,6 +495,8 @@ impl PythonExecutable {
                     optimize_level,
                     is_package: m.is_package,
                     cache_tag: m.cache_tag,
+                    is_stdlib: m.is_stdlib,
+                    is_test: m.is_test,
                 },
             )
             .map_err(|e| {
@@ -545,6 +549,8 @@ impl PythonExecutable {
                 optimize_level,
                 is_package: m.is_package,
                 cache_tag: m.cache_tag,
+                is_stdlib: m.is_stdlib,
+                is_test: m.is_test,
             })
             .map_err(|e| {
                 RuntimeError {
