@@ -169,57 +169,55 @@ impl PrePackagedResources {
     /// importer.
     pub fn add_builtin_distribution_extension_module(
         &mut self,
-        module: &DistributionExtensionModule,
+        module: &PythonExtensionModule,
     ) -> Result<()> {
         // No policy check because distribution extension modules are special.
 
         self.extension_module_states.insert(
-            module.module.clone(),
+            module.name.clone(),
             ExtensionModuleBuildState {
                 init_fn: module.init_fn.clone(),
                 link_object_files: if module.builtin_default {
                     vec![]
                 } else {
-                    module
-                        .object_paths
-                        .iter()
-                        .map(|p| DataLocation::Path(p.clone()))
-                        .collect()
+                    module.object_file_data.clone()
                 },
-                link_frameworks: BTreeSet::from_iter(module.links.iter().filter_map(|link| {
-                    if link.framework {
-                        Some(link.name.clone())
-                    } else {
-                        None
-                    }
-                })),
-                link_system_libraries: BTreeSet::from_iter(module.links.iter().filter_map(
+                link_frameworks: BTreeSet::from_iter(module.link_libraries.iter().filter_map(
                     |link| {
+                        if link.framework {
+                            Some(link.name.clone())
+                        } else {
+                            None
+                        }
+                    },
+                )),
+                link_system_libraries: BTreeSet::from_iter(
+                    module.link_libraries.iter().filter_map(|link| {
                         if link.system {
                             Some(link.name.clone())
                         } else {
                             None
                         }
-                    },
-                )),
-                link_static_libraries: BTreeSet::from_iter(module.links.iter().filter_map(
-                    |link| {
+                    }),
+                ),
+                link_static_libraries: BTreeSet::from_iter(
+                    module.link_libraries.iter().filter_map(|link| {
                         if link.static_library.is_some() {
                             Some(link.name.clone())
                         } else {
                             None
                         }
-                    },
-                )),
-                link_dynamic_libraries: BTreeSet::from_iter(module.links.iter().filter_map(
-                    |link| {
+                    }),
+                ),
+                link_dynamic_libraries: BTreeSet::from_iter(
+                    module.link_libraries.iter().filter_map(|link| {
                         if link.dynamic_library.is_some() {
                             Some(link.name.clone())
                         } else {
                             None
                         }
-                    },
-                )),
+                    }),
+                ),
                 link_external_libraries: BTreeSet::new(),
             },
         );
@@ -578,7 +576,7 @@ mod tests {
             license_public_domain: None,
         };
 
-        r.add_builtin_distribution_extension_module(&em)?;
+        r.add_builtin_distribution_extension_module(&PythonExtensionModule::from(&em))?;
         assert_eq!(r.extension_module_states.len(), 1);
         assert_eq!(
             r.extension_module_states.get("foo.bar"),

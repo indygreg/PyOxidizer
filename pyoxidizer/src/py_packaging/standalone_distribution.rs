@@ -1155,7 +1155,9 @@ impl PythonDistribution for StandaloneDistribution {
             for ext in self.filter_extension_modules(&logger, &static_policy)? {
                 builder
                     .resources
-                    .add_builtin_distribution_extension_module(&ext)?;
+                    .add_builtin_distribution_extension_module(&PythonExtensionModule::from(
+                        &ext,
+                    ))?;
             }
         }
 
@@ -1690,7 +1692,9 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         extension_module: &DistributionExtensionModule,
     ) -> Result<()> {
         self.resources
-            .add_builtin_distribution_extension_module(extension_module)
+            .add_builtin_distribution_extension_module(&PythonExtensionModule::from(
+                extension_module,
+            ))
     }
 
     fn add_in_memory_distribution_extension_module(
@@ -1974,7 +1978,8 @@ pub mod tests {
         // We need to add minimal extension modules so builds actually work. If they are missing,
         // we'll get missing symbol errors during linking.
         for ext in distribution.filter_extension_modules(logger, &packaging_policy)? {
-            resources.add_builtin_distribution_extension_module(&ext)?;
+            resources
+                .add_builtin_distribution_extension_module(&PythonExtensionModule::from(&ext))?;
         }
 
         let config = EmbeddedPythonConfig::default();
