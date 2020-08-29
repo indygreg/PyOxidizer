@@ -178,7 +178,7 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<PythonExtensionModu
             let path = PathBuf::from(object_path);
             let data = std::fs::read(&path).context(format!("reading {}", path.display()))?;
 
-            object_file_data.push(data);
+            object_file_data.push(DataLocation::Memory(data));
         }
 
         // TODO packaging rule functionality for requiring / denying shared library

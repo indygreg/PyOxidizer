@@ -341,11 +341,7 @@ impl PrePackagedResources {
             module.name.clone(),
             ExtensionModuleBuildState {
                 init_fn: module.init_fn.clone(),
-                link_object_files: module
-                    .object_file_data
-                    .iter()
-                    .map(|d| DataLocation::Memory(d.clone()))
-                    .collect(),
+                link_object_files: module.object_file_data.clone(),
                 link_frameworks: BTreeSet::new(),
                 link_system_libraries: BTreeSet::new(),
                 link_static_libraries: BTreeSet::new(),
@@ -628,7 +624,7 @@ mod tests {
             init_fn: Some("".to_string()),
             extension_file_suffix: "".to_string(),
             extension_data: None,
-            object_file_data: vec![vec![42]],
+            object_file_data: vec![DataLocation::Memory(vec![42])],
             is_package: false,
             libraries: vec![],
             library_dirs: vec![],

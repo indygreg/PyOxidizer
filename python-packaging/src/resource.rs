@@ -447,7 +447,7 @@ pub struct PythonExtensionModule {
     /// File data for linked extension module.
     pub extension_data: Option<DataLocation>,
     /// File data for object files linked together to produce this extension module.
-    pub object_file_data: Vec<Vec<u8>>,
+    pub object_file_data: Vec<DataLocation>,
     /// Whether this extension module is a package.
     pub is_package: bool,
     /// Names of libraries that we need to link when building extension module.
