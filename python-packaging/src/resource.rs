@@ -454,6 +454,10 @@ pub struct PythonExtensionModule {
     pub libraries: Vec<String>,
     /// Paths to directories holding libraries needed for extension module.
     pub library_dirs: Vec<PathBuf>,
+    /// Whether this extension module is part of the Python standard library.
+    ///
+    /// This is true if the extension is distributed with Python itself.
+    pub is_stdlib: bool,
 }
 
 impl PythonExtensionModule {
@@ -471,6 +475,7 @@ impl PythonExtensionModule {
             is_package: self.is_package,
             libraries: self.libraries.clone(),
             library_dirs: self.library_dirs.clone(),
+            is_stdlib: self.is_stdlib,
         })
     }
 

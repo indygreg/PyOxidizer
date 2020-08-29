@@ -194,6 +194,7 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<PythonExtensionModu
             is_package: final_name == "__init__",
             libraries: info.libraries,
             library_dirs: info.library_dirs.iter().map(PathBuf::from).collect(),
+            is_stdlib: false,
         });
     }
 

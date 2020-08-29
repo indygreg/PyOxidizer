@@ -1642,6 +1642,7 @@ mod tests {
             is_package: false,
             libraries: vec![],
             library_dirs: vec![],
+            is_stdlib: false,
         };
 
         c.add_relative_path_python_extension_module(&em, "prefix")?;

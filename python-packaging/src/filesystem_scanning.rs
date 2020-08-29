@@ -245,6 +245,7 @@ impl PythonResourceIterator {
                         is_package: is_package_from_path(path),
                         libraries: vec![],
                         library_dirs: vec![],
+                        is_stdlib: false,
                     }),
                 ));
             }
@@ -984,6 +985,7 @@ mod tests {
                 is_package: false,
                 libraries: vec![],
                 library_dirs: vec![],
+                is_stdlib: false,
             })
         );
         assert_eq!(
@@ -997,6 +999,7 @@ mod tests {
                 is_package: false,
                 libraries: vec![],
                 library_dirs: vec![],
+                is_stdlib: false,
             }),
         );
         assert_eq!(
@@ -1010,6 +1013,7 @@ mod tests {
                 is_package: false,
                 libraries: vec![],
                 library_dirs: vec![],
+                is_stdlib: false,
             }),
         );
         assert_eq!(
@@ -1023,6 +1027,7 @@ mod tests {
                 is_package: false,
                 libraries: vec![],
                 library_dirs: vec![],
+                is_stdlib: false,
             }),
         );
         assert_eq!(
@@ -1036,6 +1041,7 @@ mod tests {
                 is_package: false,
                 libraries: vec![],
                 library_dirs: vec![],
+                is_stdlib: false,
             }),
         );
 

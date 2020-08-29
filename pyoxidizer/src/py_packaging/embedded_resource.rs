@@ -293,6 +293,7 @@ impl PrePackagedResources {
             is_package: false,
             libraries: vec![],
             library_dirs: vec![],
+            is_stdlib: true,
         };
 
         self.collector
@@ -628,6 +629,7 @@ mod tests {
             is_package: false,
             libraries: vec![],
             library_dirs: vec![],
+            is_stdlib: true,
         };
 
         r.add_builtin_extension_module(&em)?;
