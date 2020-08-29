@@ -1449,12 +1449,8 @@ impl StandalonePythonExecutableBuilder {
             }
         }
 
-        if policy.include_resources {
-            for resource in self.distribution.resource_datas()? {
-                if !policy.include_test && is_stdlib_test_package(&resource.leaf_package) {
-                    continue;
-                }
-
+        for resource in self.distribution.resource_datas()? {
+            if policy.filter_python_resource(&resource.clone().into()) {
                 self.add_package_resource(&resource)?;
             }
         }

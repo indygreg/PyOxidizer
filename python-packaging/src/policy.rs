@@ -111,10 +111,10 @@ pub struct PythonPackagingPolicy {
     include_distribution_sources: bool,
 
     /// Whether to include package resource files.
-    pub include_resources: bool,
+    include_distribution_resources: bool,
 
     /// Whether to include test files.
-    pub include_test: bool,
+    include_test: bool,
 }
 
 impl Default for PythonPackagingPolicy {
@@ -124,7 +124,7 @@ impl Default for PythonPackagingPolicy {
             preferred_extension_module_variants: None,
             resources_policy: PythonResourcesPolicy::InMemoryOnly,
             include_distribution_sources: true,
-            include_resources: false,
+            include_distribution_resources: false,
             include_test: false,
         }
     }
@@ -134,6 +134,11 @@ impl PythonPackagingPolicy {
     /// Set whether we should include a Python distribution's module source code.
     pub fn set_include_distribution_sources(&mut self, include: bool) {
         self.include_distribution_sources = include;
+    }
+
+    /// Set whether to include package resources from the Python distribution.
+    pub fn set_include_distribution_resources(&mut self, include: bool) {
+        self.include_distribution_resources = include;
     }
 
     /// Set whether we should include Python modules that define tests.
@@ -158,7 +163,13 @@ impl PythonPackagingPolicy {
             }
             PythonResource::ModuleBytecodeRequest(module) => self.include_test || !module.is_test,
             PythonResource::ModuleBytecode(_) => false,
-            PythonResource::Resource(_) => false,
+            PythonResource::Resource(resource) => {
+                if self.include_distribution_resources {
+                    self.include_test || !resource.is_test
+                } else {
+                    false
+                }
+            }
             PythonResource::DistributionResource(_) => false,
             PythonResource::ExtensionModuleDynamicLibrary(_) => false,
             PythonResource::ExtensionModuleStaticallyLinked(_) => false,
