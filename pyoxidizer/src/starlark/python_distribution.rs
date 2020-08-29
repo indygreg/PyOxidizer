@@ -334,10 +334,10 @@ impl PythonDistribution {
             };
 
         let mut policy = PythonPackagingPolicy::default();
+        policy.set_include_distribution_sources(include_sources);
         policy.extension_module_filter = extension_module_filter;
         policy.resources_policy = resources_policy;
         policy.preferred_extension_module_variants = preferred_extension_module_variants;
-        policy.include_sources = include_sources;
         policy.include_resources = include_resources;
         policy.include_test = include_test;
 

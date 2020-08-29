@@ -107,8 +107,8 @@ pub struct PythonPackagingPolicy {
     /// Where resources should be packaged by default.
     pub resources_policy: PythonResourcesPolicy,
 
-    /// Whether to include source modules.
-    pub include_sources: bool,
+    /// Whether to include source module from the Python distribution.
+    include_distribution_sources: bool,
 
     /// Whether to include package resource files.
     pub include_resources: bool,
@@ -123,7 +123,7 @@ impl Default for PythonPackagingPolicy {
             extension_module_filter: ExtensionModuleFilter::All,
             preferred_extension_module_variants: None,
             resources_policy: PythonResourcesPolicy::InMemoryOnly,
-            include_sources: true,
+            include_distribution_sources: true,
             include_resources: false,
             include_test: false,
         }
@@ -131,6 +131,11 @@ impl Default for PythonPackagingPolicy {
 }
 
 impl PythonPackagingPolicy {
+    /// Set whether we should include a Python distribution's module source code.
+    pub fn set_include_distribution_sources(&mut self, include: bool) {
+        self.include_distribution_sources = include;
+    }
+
     /// Determine if a Python resource is applicable to the current policy.
     ///
     /// Given a `PythonResource`, this answers the question of whether that
@@ -143,7 +148,7 @@ impl PythonPackagingPolicy {
                 if !self.include_test && module.is_test {
                     false
                 } else {
-                    self.include_sources
+                    self.include_distribution_sources
                 }
             }
             PythonResource::ModuleBytecodeRequest(module) => self.include_test || !module.is_test,
