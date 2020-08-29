@@ -11,13 +11,13 @@ use {
     super::standalone_distribution::DistributionExtensionModule,
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Result},
+    python_packaging::policy::PythonResourcesPolicy,
     python_packaging::resource::{
         DataLocation, PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
         PythonPackageDistributionResource, PythonPackageResource,
     },
     python_packaging::resource_collection::{
         ConcreteResourceLocation, PreparedPythonResources, PythonResourceCollector,
-        PythonResourcesPolicy,
     },
     slog::{info, warn},
     std::collections::{BTreeMap, BTreeSet},

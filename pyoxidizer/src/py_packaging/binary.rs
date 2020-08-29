@@ -13,11 +13,11 @@ use {
     super::standalone_distribution::DistributionExtensionModule,
     crate::app_packaging::resource::FileManifest,
     anyhow::Result,
+    python_packaging::policy::PythonResourcesPolicy,
     python_packaging::resource::{
         PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
         PythonPackageDistributionResource, PythonPackageResource, PythonResource,
     },
-    python_packaging::resource_collection::PythonResourcesPolicy,
     std::collections::{BTreeMap, HashMap},
     std::convert::TryFrom,
     std::fs::File,

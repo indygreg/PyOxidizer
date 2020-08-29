@@ -22,8 +22,8 @@ use {
     anyhow::{anyhow, Result},
     itertools::Itertools,
     python_packaging::bytecode::{BytecodeCompiler, CompileMode},
+    python_packaging::policy::PythonResourcesPolicy,
     python_packaging::resource::BytecodeOptimizationLevel,
-    python_packaging::resource_collection::PythonResourcesPolicy,
     starlark::environment::Environment,
     starlark::values::{
         default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,

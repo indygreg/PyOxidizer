@@ -16,9 +16,9 @@ use {
         py_class, py_class_prop_getter, ObjectProtocol, PyBytes, PyErr, PyObject, PyResult, Python,
         PythonObject, ToPyObject,
     },
+    python_packaging::policy::PythonResourcesPolicy,
     python_packaging::resource_collection::{
         ConcreteResourceLocation, PreparedPythonResources, PythonResourceCollector,
-        PythonResourcesPolicy,
     },
     std::cell::RefCell,
     std::convert::TryFrom,

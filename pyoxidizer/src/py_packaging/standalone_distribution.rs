@@ -27,12 +27,12 @@ use {
     python_packaging::bytecode::BytecodeCompiler,
     python_packaging::filesystem_scanning::{find_python_resources, walk_tree_files},
     python_packaging::module_util::{is_package_from_path, PythonModuleSuffixes},
+    python_packaging::policy::PythonResourcesPolicy,
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
         PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
         PythonPackageResource, PythonResource,
     },
-    python_packaging::resource_collection::PythonResourcesPolicy,
     serde::{Deserialize, Serialize},
     slog::{info, warn},
     std::collections::{BTreeMap, BTreeSet, HashMap},
