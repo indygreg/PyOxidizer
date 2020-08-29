@@ -420,6 +420,34 @@ pub struct DistributionExtensionModule {
     pub license_public_domain: Option<bool>,
 }
 
+impl From<&DistributionExtensionModule> for PythonExtensionModule {
+    fn from(em: &DistributionExtensionModule) -> Self {
+        let extension_data = if let Some(path) = &em.shared_library {
+            Some(DataLocation::Path(path.clone()))
+        } else {
+            None
+        };
+
+        let object_file_data = em
+            .object_paths
+            .iter()
+            .map(|x| DataLocation::Path(x.clone()))
+            .collect();
+
+        Self {
+            name: em.module.clone(),
+            init_fn: em.init_fn.clone(),
+            extension_file_suffix: "".to_string(),
+            extension_data,
+            object_file_data,
+            is_package: false,
+            libraries: vec![],
+            library_dirs: vec![],
+            is_stdlib: true,
+        }
+    }
+}
+
 /// Describes license information for a library.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LicenseInfo {
