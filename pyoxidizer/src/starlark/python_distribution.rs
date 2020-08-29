@@ -16,13 +16,13 @@ use {
     crate::py_packaging::distribution::BinaryLibpythonLinkMode,
     crate::py_packaging::distribution::{
         default_distribution_location, is_stdlib_test_package, resolve_distribution,
-        DistributionFlavor, ExtensionModuleFilter, PythonDistribution as PythonDistributionTrait,
+        DistributionFlavor, PythonDistribution as PythonDistributionTrait,
         PythonDistributionLocation,
     },
     anyhow::{anyhow, Result},
     itertools::Itertools,
     python_packaging::bytecode::{BytecodeCompiler, CompileMode},
-    python_packaging::policy::PythonResourcesPolicy,
+    python_packaging::policy::{ExtensionModuleFilter, PythonResourcesPolicy},
     python_packaging::resource::BytecodeOptimizationLevel,
     starlark::environment::Environment,
     starlark::values::{

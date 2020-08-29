@@ -12,8 +12,7 @@ use {
     super::config::{EmbeddedPythonConfig, RawAllocator},
     super::distribution::{
         is_stdlib_test_package, resolve_python_distribution_from_location, BinaryLibpythonLinkMode,
-        DistributionExtractLock, ExtensionModuleFilter, PythonDistribution,
-        PythonDistributionLocation,
+        DistributionExtractLock, PythonDistribution, PythonDistributionLocation,
     },
     super::distutils::prepare_hacked_distutils,
     super::embedded_resource::{EmbeddedPythonResources, PrePackagedResources},
@@ -27,7 +26,7 @@ use {
     python_packaging::bytecode::BytecodeCompiler,
     python_packaging::filesystem_scanning::{find_python_resources, walk_tree_files},
     python_packaging::module_util::{is_package_from_path, PythonModuleSuffixes},
-    python_packaging::policy::PythonResourcesPolicy,
+    python_packaging::policy::{ExtensionModuleFilter, PythonResourcesPolicy},
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
         PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,

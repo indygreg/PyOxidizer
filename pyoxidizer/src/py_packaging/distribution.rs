@@ -15,12 +15,11 @@ use {
     fs2::FileExt,
     python_packaging::bytecode::BytecodeCompiler,
     python_packaging::module_util::PythonModuleSuffixes,
-    python_packaging::policy::PythonResourcesPolicy,
+    python_packaging::policy::{ExtensionModuleFilter, PythonResourcesPolicy},
     python_packaging::resource::{PythonModuleSource, PythonPackageResource, PythonResource},
     sha2::{Digest, Sha256},
     slog::warn,
     std::collections::HashMap,
-    std::convert::TryFrom,
     std::fs,
     std::fs::{create_dir_all, File},
     std::io::Read,
@@ -66,29 +65,6 @@ pub enum BinaryLibpythonLinkMode {
     Static,
     /// Binary should dynamically link libpython.
     Dynamic,
-}
-
-/// Denotes methods to filter extension modules.
-#[derive(Clone, Debug, PartialEq)]
-pub enum ExtensionModuleFilter {
-    Minimal,
-    All,
-    NoLibraries,
-    NoGPL,
-}
-
-impl TryFrom<&str> for ExtensionModuleFilter {
-    type Error = String;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value {
-            "minimal" => Ok(ExtensionModuleFilter::Minimal),
-            "all" => Ok(ExtensionModuleFilter::All),
-            "no-libraries" => Ok(ExtensionModuleFilter::NoLibraries),
-            "no-gpl" => Ok(ExtensionModuleFilter::NoGPL),
-            t => Err(format!("{} is not a valid extension module filter", t)),
-        }
-    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

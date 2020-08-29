@@ -68,3 +68,26 @@ impl Into<String> for &PythonResourcesPolicy {
         }
     }
 }
+
+/// Denotes methods to filter extension modules.
+#[derive(Clone, Debug, PartialEq)]
+pub enum ExtensionModuleFilter {
+    Minimal,
+    All,
+    NoLibraries,
+    NoGPL,
+}
+
+impl TryFrom<&str> for ExtensionModuleFilter {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "minimal" => Ok(ExtensionModuleFilter::Minimal),
+            "all" => Ok(ExtensionModuleFilter::All),
+            "no-libraries" => Ok(ExtensionModuleFilter::NoLibraries),
+            "no-gpl" => Ok(ExtensionModuleFilter::NoGPL),
+            t => Err(format!("{} is not a valid extension module filter", t)),
+        }
+    }
+}
