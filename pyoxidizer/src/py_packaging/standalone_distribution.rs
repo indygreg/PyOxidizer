@@ -1061,7 +1061,6 @@ impl PythonDistribution for StandaloneDistribution {
         libpython_link_mode: BinaryLibpythonLinkMode,
         policy: &PythonPackagingPolicy,
         config: &EmbeddedPythonConfig,
-        preferred_extension_module_variants: Option<HashMap<String, String>>,
         include_sources: bool,
         include_resources: bool,
         include_test: bool,
@@ -1137,7 +1136,6 @@ impl PythonDistribution for StandaloneDistribution {
             resources: PrePackagedResources::new(&policy.resources_policy, &self.cache_tag),
             config: config.clone(),
             python_exe,
-            extension_module_variants: preferred_extension_module_variants,
         });
 
         builder.add_distribution_resources(
@@ -1415,9 +1413,6 @@ pub struct StandalonePythonExecutableBuilder {
 
     /// Path to python executable that can be invoked at build time.
     python_exe: PathBuf,
-
-    /// Preferred extension module variants.
-    extension_module_variants: Option<HashMap<String, String>>,
 }
 
 impl StandalonePythonExecutableBuilder {
@@ -1434,7 +1429,9 @@ impl StandalonePythonExecutableBuilder {
         for ext in self.distribution.filter_extension_modules(
             logger,
             extension_module_filter,
-            self.extension_module_variants.clone(),
+            self.packaging_policy
+                .preferred_extension_module_variants
+                .clone(),
         )? {
             self.add_distribution_extension_module(&ext)?;
         }
@@ -1992,7 +1989,6 @@ pub mod tests {
             resources,
             config,
             python_exe,
-            extension_module_variants: None,
         })
     }
 

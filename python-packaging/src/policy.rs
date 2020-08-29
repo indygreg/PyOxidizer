@@ -6,7 +6,7 @@
 Functionality for defining how Python resources should be packaged.
 */
 
-use {anyhow::anyhow, std::convert::TryFrom};
+use {anyhow::anyhow, std::collections::HashMap, std::convert::TryFrom};
 
 /// Describes a policy for the location of Python resources.
 #[derive(Clone, Debug, PartialEq)]
@@ -95,7 +95,13 @@ impl TryFrom<&str> for ExtensionModuleFilter {
 /// Defines how Python resources should be packaged.
 #[derive(Clone, Debug)]
 pub struct PythonPackagingPolicy {
+    /// Which extension modules should be included.
     pub extension_module_filter: ExtensionModuleFilter,
+
+    /// Preferred variants of extension modules.
+    pub preferred_extension_module_variants: Option<HashMap<String, String>>,
+
+    /// Where resources should be packaged by default.
     pub resources_policy: PythonResourcesPolicy,
 }
 
@@ -103,6 +109,7 @@ impl Default for PythonPackagingPolicy {
     fn default() -> Self {
         PythonPackagingPolicy {
             extension_module_filter: ExtensionModuleFilter::All,
+            preferred_extension_module_variants: None,
             resources_policy: PythonResourcesPolicy::InMemoryOnly,
         }
     }

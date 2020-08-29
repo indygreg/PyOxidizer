@@ -336,6 +336,7 @@ impl PythonDistribution {
         let mut policy = PythonPackagingPolicy::default();
         policy.extension_module_filter = extension_module_filter;
         policy.resources_policy = resources_policy;
+        policy.preferred_extension_module_variants = preferred_extension_module_variants;
 
         self.ensure_distribution_resolved(&logger).map_err(|e| {
             RuntimeError {
@@ -368,7 +369,6 @@ impl PythonDistribution {
                     BinaryLibpythonLinkMode::Default,
                     &policy,
                     &config,
-                    preferred_extension_module_variants,
                     include_sources,
                     include_resources,
                     include_test,
