@@ -337,7 +337,9 @@ impl PrePackagedResources {
                 link_system_libraries: BTreeSet::new(),
                 link_static_libraries: BTreeSet::new(),
                 link_dynamic_libraries: BTreeSet::new(),
-                link_external_libraries: BTreeSet::from_iter(module.libraries.iter().cloned()),
+                link_external_libraries: BTreeSet::from_iter(
+                    module.link_libraries.iter().map(|l| l.name.clone()),
+                ),
             },
         );
 
@@ -617,8 +619,7 @@ mod tests {
             extension_data: None,
             object_file_data: vec![DataLocation::Memory(vec![42])],
             is_package: false,
-            libraries: vec![],
-            library_dirs: vec![],
+            link_libraries: vec![],
             is_stdlib: true,
             builtin_default: true,
             required: false,

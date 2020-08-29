@@ -435,6 +435,50 @@ impl PythonPackageDistributionResource {
     }
 }
 
+/// Represents a dependency on a library.
+///
+/// The library can be defined a number of ways and multiple variants may be
+/// present.
+#[derive(Clone, Debug, PartialEq)]
+pub struct LibraryDependency {
+    /// Name of the library.
+    ///
+    /// This will be used to tell the linker what to link.
+    pub name: String,
+
+    /// Static library version of library.
+    pub static_library: Option<DataLocation>,
+
+    /// Shared library version of library.
+    pub dynamic_library: Option<DataLocation>,
+
+    /// Whether this is a system framework (macOS).
+    pub framework: bool,
+
+    /// Whether this is a system library.
+    pub system: bool,
+}
+
+impl LibraryDependency {
+    pub fn to_memory(&self) -> Result<Self> {
+        Ok(Self {
+            name: self.name.clone(),
+            static_library: if let Some(data) = &self.static_library {
+                Some(data.to_memory()?)
+            } else {
+                None
+            },
+            dynamic_library: if let Some(data) = &self.dynamic_library {
+                Some(data.to_memory()?)
+            } else {
+                None
+            },
+            framework: self.framework,
+            system: self.system,
+        })
+    }
+}
+
 /// Represents a Python extension module.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PythonExtensionModule {
@@ -450,10 +494,8 @@ pub struct PythonExtensionModule {
     pub object_file_data: Vec<DataLocation>,
     /// Whether this extension module is a package.
     pub is_package: bool,
-    /// Names of libraries that we need to link when building extension module.
-    pub libraries: Vec<String>,
-    /// Paths to directories holding libraries needed for extension module.
-    pub library_dirs: Vec<PathBuf>,
+    /// Libraries that this extension depends on.
+    pub link_libraries: Vec<LibraryDependency>,
     /// Whether this extension module is part of the Python standard library.
     ///
     /// This is true if the extension is distributed with Python itself.
@@ -480,8 +522,11 @@ impl PythonExtensionModule {
             },
             object_file_data: self.object_file_data.clone(),
             is_package: self.is_package,
-            libraries: self.libraries.clone(),
-            library_dirs: self.library_dirs.clone(),
+            link_libraries: self
+                .link_libraries
+                .iter()
+                .map(|l| l.to_memory())
+                .collect::<Result<Vec<_>, _>>()?,
             is_stdlib: self.is_stdlib,
             builtin_default: self.builtin_default,
             required: self.required,

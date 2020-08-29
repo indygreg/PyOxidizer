@@ -30,7 +30,7 @@ use {
         ExtensionModuleFilter, PythonPackagingPolicy, PythonResourcesPolicy,
     },
     python_packaging::resource::{
-        BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
+        BytecodeOptimizationLevel, DataLocation, LibraryDependency, PythonExtensionModule,
         PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
         PythonPackageResource, PythonResource,
     },
@@ -434,6 +434,26 @@ impl From<&DistributionExtensionModule> for PythonExtensionModule {
             .map(|x| DataLocation::Path(x.clone()))
             .collect();
 
+        let link_libraries = em
+            .links
+            .iter()
+            .map(|l| LibraryDependency {
+                name: l.name.clone(),
+                static_library: if let Some(path) = &l.static_path {
+                    Some(DataLocation::Path(path.clone()))
+                } else {
+                    None
+                },
+                dynamic_library: if let Some(path) = &l.dynamic_path {
+                    Some(DataLocation::Path(path.clone()))
+                } else {
+                    None
+                },
+                framework: l.framework,
+                system: l.system,
+            })
+            .collect();
+
         Self {
             name: em.module.clone(),
             init_fn: em.init_fn.clone(),
@@ -441,8 +461,7 @@ impl From<&DistributionExtensionModule> for PythonExtensionModule {
             extension_data,
             object_file_data,
             is_package: false,
-            libraries: vec![],
-            library_dirs: vec![],
+            link_libraries,
             is_stdlib: true,
             builtin_default: em.builtin_default,
             required: em.required,

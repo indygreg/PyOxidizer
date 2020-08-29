@@ -9,8 +9,7 @@ Interacting with distutils.
 use {
     anyhow::{Context, Result},
     lazy_static::lazy_static,
-    python_packaging::resource::DataLocation,
-    python_packaging::resource::PythonExtensionModule,
+    python_packaging::resource::{DataLocation, LibraryDependency, PythonExtensionModule},
     serde::Deserialize,
     slog::warn,
     std::collections::{BTreeMap, HashMap},
@@ -181,6 +180,18 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<PythonExtensionModu
             object_file_data.push(DataLocation::Memory(data));
         }
 
+        let link_libraries = info
+            .libraries
+            .iter()
+            .map(|l| LibraryDependency {
+                name: l.clone(),
+                static_library: None,
+                dynamic_library: None,
+                framework: false,
+                system: false,
+            })
+            .collect();
+
         // TODO packaging rule functionality for requiring / denying shared library
         // linking, annotating licenses of 3rd party libraries, disabling libraries
         // wholesale, etc.
@@ -192,8 +203,7 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<PythonExtensionModu
             extension_data,
             object_file_data,
             is_package: final_name == "__init__",
-            libraries: info.libraries,
-            library_dirs: info.library_dirs.iter().map(PathBuf::from).collect(),
+            link_libraries,
             is_stdlib: false,
             builtin_default: false,
             required: false,
