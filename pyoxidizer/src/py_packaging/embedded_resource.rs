@@ -284,19 +284,7 @@ impl PrePackagedResources {
             ));
         }
 
-        let ext = PythonExtensionModule {
-            name: module.module.clone(),
-            init_fn: None,
-            extension_file_suffix: "".to_string(),
-            extension_data: Some(DataLocation::Path(module.shared_library.clone().unwrap())),
-            object_file_data: vec![],
-            is_package: false,
-            libraries: vec![],
-            library_dirs: vec![],
-            is_stdlib: true,
-            builtin_default: module.builtin_default,
-            required: module.required,
-        };
+        let ext = PythonExtensionModule::from(module);
 
         self.collector
             .add_relative_path_python_extension_module(&ext, prefix)?;
