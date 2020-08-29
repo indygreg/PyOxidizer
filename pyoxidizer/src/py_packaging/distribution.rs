@@ -122,7 +122,6 @@ pub trait PythonDistribution {
         libpython_link_mode: BinaryLibpythonLinkMode,
         policy: &PythonPackagingPolicy,
         config: &EmbeddedPythonConfig,
-        extension_module_filter: &ExtensionModuleFilter,
         preferred_extension_module_variants: Option<HashMap<String, String>>,
         include_sources: bool,
         include_resources: bool,

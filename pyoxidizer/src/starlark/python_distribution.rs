@@ -334,6 +334,7 @@ impl PythonDistribution {
             };
 
         let mut policy = PythonPackagingPolicy::default();
+        policy.extension_module_filter = extension_module_filter;
         policy.resources_policy = resources_policy;
 
         self.ensure_distribution_resolved(&logger).map_err(|e| {
@@ -367,7 +368,6 @@ impl PythonDistribution {
                     BinaryLibpythonLinkMode::Default,
                     &policy,
                     &config,
-                    &extension_module_filter,
                     preferred_extension_module_variants,
                     include_sources,
                     include_resources,

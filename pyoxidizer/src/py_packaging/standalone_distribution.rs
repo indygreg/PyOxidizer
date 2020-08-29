@@ -1061,7 +1061,6 @@ impl PythonDistribution for StandaloneDistribution {
         libpython_link_mode: BinaryLibpythonLinkMode,
         policy: &PythonPackagingPolicy,
         config: &EmbeddedPythonConfig,
-        extension_module_filter: &ExtensionModuleFilter,
         preferred_extension_module_variants: Option<HashMap<String, String>>,
         include_sources: bool,
         include_resources: bool,
@@ -1138,13 +1137,12 @@ impl PythonDistribution for StandaloneDistribution {
             resources: PrePackagedResources::new(&policy.resources_policy, &self.cache_tag),
             config: config.clone(),
             python_exe,
-            extension_module_filter: extension_module_filter.clone(),
             extension_module_variants: preferred_extension_module_variants,
         });
 
         builder.add_distribution_resources(
             logger,
-            extension_module_filter,
+            &policy.extension_module_filter,
             include_sources,
             include_resources,
             include_test,
@@ -1418,9 +1416,6 @@ pub struct StandalonePythonExecutableBuilder {
     /// Path to python executable that can be invoked at build time.
     python_exe: PathBuf,
 
-    /// Extension module filter to apply.
-    extension_module_filter: ExtensionModuleFilter,
-
     /// Preferred extension module variants.
     extension_module_variants: Option<HashMap<String, String>>,
 }
@@ -1430,6 +1425,7 @@ impl StandalonePythonExecutableBuilder {
     fn add_distribution_resources(
         &mut self,
         logger: &slog::Logger,
+        // TODO use PythonPackagingPolicy instead.
         extension_module_filter: &ExtensionModuleFilter,
         include_sources: bool,
         include_resources: bool,
@@ -1978,6 +1974,7 @@ pub mod tests {
         }
 
         let mut packaging_policy = PythonPackagingPolicy::default();
+        packaging_policy.extension_module_filter = ExtensionModuleFilter::Minimal;
         packaging_policy.resources_policy = PythonResourcesPolicy::InMemoryOnly;
 
         let config = EmbeddedPythonConfig::default();
@@ -1995,7 +1992,6 @@ pub mod tests {
             resources,
             config,
             python_exe,
-            extension_module_filter: ExtensionModuleFilter::Minimal,
             extension_module_variants: None,
         })
     }
