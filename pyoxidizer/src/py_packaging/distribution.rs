@@ -15,7 +15,7 @@ use {
     fs2::FileExt,
     python_packaging::bytecode::BytecodeCompiler,
     python_packaging::module_util::PythonModuleSuffixes,
-    python_packaging::policy::{ExtensionModuleFilter, PythonPackagingPolicy},
+    python_packaging::policy::PythonPackagingPolicy,
     python_packaging::resource::{PythonModuleSource, PythonPackageResource, PythonResource},
     sha2::{Digest, Sha256},
     slog::warn,
@@ -128,8 +128,7 @@ pub trait PythonDistribution {
     fn filter_extension_modules(
         &self,
         logger: &slog::Logger,
-        filter: &ExtensionModuleFilter,
-        preferred_variants: Option<HashMap<String, String>>,
+        policy: &PythonPackagingPolicy,
     ) -> Result<Vec<DistributionExtensionModule>>;
 
     /// Obtain `SourceModule` instances present in this distribution.

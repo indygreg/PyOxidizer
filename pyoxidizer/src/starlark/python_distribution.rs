@@ -423,6 +423,10 @@ impl PythonDistribution {
             _ => panic!("type should have been validated above"),
         };
 
+        let mut policy = PythonPackagingPolicy::default();
+        policy.extension_module_filter = filter;
+        policy.preferred_extension_module_variants = preferred_variants;
+
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
 
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
@@ -440,7 +444,7 @@ impl PythonDistribution {
             self.distribution
                 .as_ref()
                 .unwrap()
-                .filter_extension_modules(&logger, &filter, preferred_variants)
+                .filter_extension_modules(&logger, &policy)
                 .map_err(|e| {
                     RuntimeError {
                         code: "PYOXIDIZER_BUILD",

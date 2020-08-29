@@ -1140,9 +1140,11 @@ impl PythonDistribution for StandaloneDistribution {
         // Always ensure minimal extension modules are present, otherwise we get
         // missing symbol errors at link time.
         if self.link_mode == StandaloneDistributionLinkMode::Static {
-            for ext in
-                self.filter_extension_modules(&logger, &ExtensionModuleFilter::Minimal, None)?
-            {
+            let mut static_policy = policy.clone();
+            static_policy.extension_module_filter = ExtensionModuleFilter::Minimal;
+            static_policy.preferred_extension_module_variants = None;
+
+            for ext in self.filter_extension_modules(&logger, &static_policy)? {
                 builder
                     .resources
                     .add_builtin_distribution_extension_module(&ext)?;
@@ -1156,8 +1158,7 @@ impl PythonDistribution for StandaloneDistribution {
     fn filter_extension_modules(
         &self,
         logger: &slog::Logger,
-        filter: &ExtensionModuleFilter,
-        variants: Option<HashMap<String, String>>,
+        policy: &PythonPackagingPolicy,
     ) -> Result<Vec<DistributionExtensionModule>> {
         let mut res = Vec::new();
 
@@ -1173,7 +1174,7 @@ impl PythonDistribution for StandaloneDistribution {
                 continue;
             }
 
-            match filter {
+            match policy.extension_module_filter {
                 ExtensionModuleFilter::Minimal => {
                     let ext_variants = ext_variants
                         .iter()
@@ -1187,12 +1188,18 @@ impl PythonDistribution for StandaloneDistribution {
                         .collect::<Vec<DistributionExtensionModule>>();
 
                     if !ext_variants.is_empty() {
-                        res.push(choose_variant(&ext_variants, &variants));
+                        res.push(choose_variant(
+                            &ext_variants,
+                            &policy.preferred_extension_module_variants,
+                        ));
                     }
                 }
 
                 ExtensionModuleFilter::All => {
-                    res.push(choose_variant(&ext_variants, &variants));
+                    res.push(choose_variant(
+                        &ext_variants,
+                        &policy.preferred_extension_module_variants,
+                    ));
                 }
 
                 ExtensionModuleFilter::NoLibraries => {
@@ -1208,7 +1215,10 @@ impl PythonDistribution for StandaloneDistribution {
                         .collect::<Vec<DistributionExtensionModule>>();
 
                     if !ext_variants.is_empty() {
-                        res.push(choose_variant(&ext_variants, &variants));
+                        res.push(choose_variant(
+                            &ext_variants,
+                            &policy.preferred_extension_module_variants,
+                        ));
                     }
                 }
 
@@ -1244,7 +1254,10 @@ impl PythonDistribution for StandaloneDistribution {
                         .collect::<Vec<DistributionExtensionModule>>();
 
                     if !ext_variants.is_empty() {
-                        res.push(choose_variant(&ext_variants, &variants));
+                        res.push(choose_variant(
+                            &ext_variants,
+                            &policy.preferred_extension_module_variants,
+                        ));
                     }
                 }
             }
@@ -1413,13 +1426,10 @@ impl StandalonePythonExecutableBuilder {
         logger: &slog::Logger,
         policy: &PythonPackagingPolicy,
     ) -> Result<()> {
-        for ext in self.distribution.filter_extension_modules(
-            logger,
-            &policy.extension_module_filter,
-            self.packaging_policy
-                .preferred_extension_module_variants
-                .clone(),
-        )? {
+        for ext in self
+            .distribution
+            .filter_extension_modules(logger, &policy)?
+        {
             self.add_distribution_extension_module(&ext)?;
         }
 
@@ -1949,17 +1959,15 @@ pub mod tests {
             &distribution.cache_tag,
         );
 
-        // We need to add minimal extension modules so builds actually work. If they are missing,
-        // we'll get missing symbol errors during linking.
-        for ext in
-            distribution.filter_extension_modules(logger, &ExtensionModuleFilter::Minimal, None)?
-        {
-            resources.add_builtin_distribution_extension_module(&ext)?;
-        }
-
         let mut packaging_policy = PythonPackagingPolicy::default();
         packaging_policy.extension_module_filter = ExtensionModuleFilter::Minimal;
         packaging_policy.resources_policy = PythonResourcesPolicy::InMemoryOnly;
+
+        // We need to add minimal extension modules so builds actually work. If they are missing,
+        // we'll get missing symbol errors during linking.
+        for ext in distribution.filter_extension_modules(logger, &packaging_policy)? {
+            resources.add_builtin_distribution_extension_module(&ext)?;
+        }
 
         let config = EmbeddedPythonConfig::default();
 
