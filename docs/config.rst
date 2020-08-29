@@ -46,6 +46,8 @@ conceptually similar to running ``python setup.py`` to build a Python
 package. As functions within the Starlark environment are called,
 ``PyOxidizer`` will perform actions as described by those functions.
 
+.. _config_targets:
+
 Targets
 =======
 
@@ -92,86 +94,3 @@ on the run mode. For example, when running ``pyoxidizer build`` to
 on the value returned by a target function, if present. For example,
 a ``PythonExecutable``'s *build* functionality would compile an
 executable binary embedding Python.
-
-Common Operations
-=================
-
-Obtain a Python Distribution
-----------------------------
-
-A :ref:`PythonDistribution <config_python_distribution>` type defines a
-Python distribution from which you can derive binaries, perform packaging
-actions, etc. Every configuration file will likely utilize this type.
-
-Instances are typically constructed from
-:ref:`default_python_distribution() <config_default_python_distribution>`
-and are registered as their own target, since multiple targets may want
-to reference the distribution instance:
-
-.. code-block:: python
-
-   def make_dist():
-      return default_python_distribution()
-
-   register_target("dist", make_dist)
-
-Creating an Executable File Embedding Python
---------------------------------------------
-
-A :ref:`config_python_executable` type defines an executable file embedding
-Python.
-
-Instances are derived from a ``PythonDistribution`` instance, usually
-by using target dependencies. In this example, we create an executable
-that runs a Python REPL on startup:
-
-.. code-block:: python
-
-   def make_dist():
-       return default_python_distribution()
-
-   def make_exe(dist):
-       return dist.to_python_executable(
-           "myapp",
-           run_repl=True,
-       )
-
-   register_target("dist", make_dist)
-   register_target("exe", make_exe, depends=["dist"], default=True)
-
-See :ref:`packaging` for more examples.
-
-Copying Files Next To Your Application
---------------------------------------
-
-The :ref:`FileManifest <config_file_manifest>` type represents a collection of
-files and their content. When ``FileManifest`` instances are returned from a
-target function, their build action results in their contents being
-manifested in a directory having the name of the build target.
-
-``FileManifest`` instances can be used to construct custom file *install
-layouts*.
-
-Say you have an existing directory tree of files you want to copy
-next to your application.
-
-The :ref:`config_glob` function can be used to discover existing files
-on the filesystem and turn them into a ``FileManifest``. You can then
-return this ``FileManifest`` directory or overlay it onto another
-instance using :ref:`config_file_manifest_add_manifest`. Here's an
-example:
-
-.. code-block:: python
-
-   def make_install():
-       m = FileManifest()
-
-       templates = glob("/path/to/project/templates/**/*", strip_prefix="/path/to/project/")
-       m.add_manifest(templates)
-
-       return m
-
-This will take all files ``/path/to/project/templates/``, strip the path
-prefix ``/path/to/project/`` from them and then add all those files to your
-main ``FileManifest``. The files should be installed as ``templates/*`` when
-the ``InstallManifest`` is materialized.

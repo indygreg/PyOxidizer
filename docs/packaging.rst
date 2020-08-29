@@ -15,6 +15,7 @@ instructions.
    :maxdepth: 2
 
    packaging_creating_projects
+   packaging_config_file
    packaging_resources
    packaging_python_files
    packaging_additional_files

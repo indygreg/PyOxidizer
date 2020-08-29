@@ -399,7 +399,7 @@ The accepted arguments are:
    See :ref:`config_python_resources_policy` for documentation on allowed
    values. The default value is ``in-memory-only``.
 
-``config`` (``PythonEmbeddedConfig``)
+``config`` (``PythonInterpreterConfig``)
    The default configuration of the embedded Python interpreter.
 
    Default is what ``PythonInterpreterConfig()`` returns.
@@ -594,7 +594,7 @@ files represent these settings through the
 This type configures the default behavior of the embedded Python interpreter.
 
 Embedded Python interpreters are configured and instantiated using a
-``pyembed::PythonConfig`` data structure. The ``pyembed`` crate defines a
+Rust ``pyembed::PythonConfig`` data structure. The ``pyembed`` crate defines a
 default instance of this data structure with parameters defined by the settings
 in this type.
 
