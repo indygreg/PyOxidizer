@@ -1601,6 +1601,8 @@ mod tests {
                 leaf_package: "foo".to_string(),
                 relative_name: "resource.txt".to_string(),
                 data: DataLocation::Memory(vec![42]),
+                is_stdlib: false,
+                is_test: false,
             },
             &ConcreteResourceLocation::InMemory,
         )?;

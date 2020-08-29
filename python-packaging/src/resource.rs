@@ -334,6 +334,12 @@ pub struct PythonPackageResource {
     pub relative_name: String,
     /// Location of resource data.
     pub data: DataLocation,
+    /// Whether this resource belongs to the Python standard library.
+    ///
+    /// Modules with this set are distributed as part of Python itself.
+    pub is_stdlib: bool,
+    /// Whether this resource belongs to a package that is a test.
+    pub is_test: bool,
 }
 
 impl PythonPackageResource {
@@ -342,6 +348,8 @@ impl PythonPackageResource {
             leaf_package: self.leaf_package.clone(),
             relative_name: self.relative_name.clone(),
             data: self.data.to_memory()?,
+            is_stdlib: self.is_stdlib,
+            is_test: self.is_test,
         })
     }
 

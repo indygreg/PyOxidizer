@@ -1306,6 +1306,8 @@ impl PythonDistribution for StandaloneDistribution {
                     leaf_package: package.clone(),
                     relative_name: name.clone(),
                     data: DataLocation::Path(path.clone()),
+                    is_stdlib: true,
+                    is_test: is_stdlib_test_package(&package),
                 });
             }
         }
@@ -2014,6 +2016,13 @@ pub mod tests {
 
             if module.name.starts_with("test") {
                 assert!(module.is_test);
+            }
+        }
+
+        for resource in distribution.resource_datas()? {
+            assert!(resource.is_stdlib);
+            if resource.leaf_package.starts_with("test") {
+                assert!(resource.is_test);
             }
         }
 

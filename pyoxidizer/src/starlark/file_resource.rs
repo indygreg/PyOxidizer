@@ -635,6 +635,8 @@ mod tests {
                 leaf_package: "foo.bar".to_string(),
                 relative_name: "resource.txt".to_string(),
                 data: DataLocation::Memory(vec![]),
+                is_stdlib: false,
+                is_test: false,
             },
         });
 

@@ -519,6 +519,8 @@ impl Iterator for PythonResourceIterator {
                 leaf_package,
                 relative_name,
                 data: DataLocation::Path(resource.full_path),
+                is_stdlib: false,
+                is_test: false,
             })));
         }
     }
@@ -1219,6 +1221,8 @@ mod tests {
                 leaf_package: "foo".to_string(),
                 relative_name: "resource.txt".to_string(),
                 data: DataLocation::Path(resource_path),
+                is_stdlib: false,
+                is_test: false,
             })
         );
 
@@ -1261,6 +1265,8 @@ mod tests {
                 leaf_package: "foo".to_string(),
                 relative_name: "resources/resource.txt".to_string(),
                 data: DataLocation::Path(resource_path),
+                is_stdlib: false,
+                is_test: false,
             })
         );
 
