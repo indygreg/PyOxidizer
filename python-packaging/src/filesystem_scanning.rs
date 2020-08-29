@@ -247,6 +247,7 @@ impl PythonResourceIterator {
                         library_dirs: vec![],
                         is_stdlib: false,
                         builtin_default: false,
+                        required: false,
                     }),
                 ));
             }
@@ -988,6 +989,7 @@ mod tests {
                 library_dirs: vec![],
                 is_stdlib: false,
                 builtin_default: false,
+                required: false,
             })
         );
         assert_eq!(
@@ -1003,6 +1005,7 @@ mod tests {
                 library_dirs: vec![],
                 is_stdlib: false,
                 builtin_default: false,
+                required: false,
             }),
         );
         assert_eq!(
@@ -1018,6 +1021,7 @@ mod tests {
                 library_dirs: vec![],
                 is_stdlib: false,
                 builtin_default: false,
+                required: false,
             }),
         );
         assert_eq!(
@@ -1033,6 +1037,7 @@ mod tests {
                 library_dirs: vec![],
                 is_stdlib: false,
                 builtin_default: false,
+                required: false,
             }),
         );
         assert_eq!(
@@ -1048,6 +1053,7 @@ mod tests {
                 library_dirs: vec![],
                 is_stdlib: false,
                 builtin_default: false,
+                required: false,
             }),
         );
 

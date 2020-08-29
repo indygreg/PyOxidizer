@@ -196,6 +196,7 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<PythonExtensionModu
             library_dirs: info.library_dirs.iter().map(PathBuf::from).collect(),
             is_stdlib: false,
             builtin_default: false,
+            required: false,
         });
     }
 

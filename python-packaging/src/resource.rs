@@ -463,6 +463,8 @@ pub struct PythonExtensionModule {
     /// Some extension modules in Python distributions are always compiled into
     /// libpython. This field will be true for those extension modules.
     pub builtin_default: bool,
+    /// Whether the extension must be loaded to initialize Python.
+    pub required: bool,
 }
 
 impl PythonExtensionModule {
@@ -482,6 +484,7 @@ impl PythonExtensionModule {
             library_dirs: self.library_dirs.clone(),
             is_stdlib: self.is_stdlib,
             builtin_default: self.builtin_default,
+            required: self.required,
         })
     }
 
