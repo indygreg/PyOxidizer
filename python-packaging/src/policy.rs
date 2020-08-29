@@ -6,7 +6,10 @@
 Functionality for defining how Python resources should be packaged.
 */
 
-use {anyhow::anyhow, std::collections::HashMap, std::convert::TryFrom};
+use {
+    crate::resource::PythonResource, anyhow::anyhow, std::collections::HashMap,
+    std::convert::TryFrom,
+};
 
 /// Describes a policy for the location of Python resources.
 #[derive(Clone, Debug, PartialEq)]
@@ -123,6 +126,34 @@ impl Default for PythonPackagingPolicy {
             include_sources: true,
             include_resources: false,
             include_test: false,
+        }
+    }
+}
+
+impl PythonPackagingPolicy {
+    /// Determine if a Python resource is applicable to the current policy.
+    ///
+    /// Given a `PythonResource`, this answers the question of whether that
+    /// resource meets the inclusion requirements for the current policy.
+    ///
+    /// Returns true if the resource should be included, false otherwise.
+    pub fn filter_python_resource(&self, resource: &PythonResource) -> bool {
+        match resource {
+            PythonResource::ModuleSource(module) => {
+                if !self.include_test && module.is_test {
+                    false
+                } else {
+                    self.include_sources
+                }
+            }
+            PythonResource::ModuleBytecode(_) => false,
+            PythonResource::ModuleBytecodeRequest(_) => false,
+            PythonResource::Resource(_) => false,
+            PythonResource::DistributionResource(_) => false,
+            PythonResource::ExtensionModuleDynamicLibrary(_) => false,
+            PythonResource::ExtensionModuleStaticallyLinked(_) => false,
+            PythonResource::PathExtension(_) => false,
+            PythonResource::EggFile(_) => false,
         }
     }
 }

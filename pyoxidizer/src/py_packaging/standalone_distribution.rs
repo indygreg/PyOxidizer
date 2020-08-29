@@ -1436,12 +1436,12 @@ impl StandalonePythonExecutableBuilder {
         }
 
         for source in self.distribution.source_modules()? {
-            if !policy.include_test && is_stdlib_test_package(&source.package()) {
-                continue;
+            if policy.filter_python_resource(&source.clone().into()) {
+                self.add_module_source(&source)?;
             }
 
-            if policy.include_sources {
-                self.add_module_source(&source)?;
+            if !policy.include_test && is_stdlib_test_package(&source.package()) {
+                continue;
             }
 
             self.add_module_bytecode(&source.as_bytecode_module(BytecodeOptimizationLevel::Zero))?;
