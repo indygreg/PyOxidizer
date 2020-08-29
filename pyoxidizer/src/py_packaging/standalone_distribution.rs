@@ -444,6 +444,7 @@ impl From<&DistributionExtensionModule> for PythonExtensionModule {
             libraries: vec![],
             library_dirs: vec![],
             is_stdlib: true,
+            builtin_default: em.builtin_default,
         }
     }
 }

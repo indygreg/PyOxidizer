@@ -458,6 +458,11 @@ pub struct PythonExtensionModule {
     ///
     /// This is true if the extension is distributed with Python itself.
     pub is_stdlib: bool,
+    /// Whether the extension module is built-in by default.
+    ///
+    /// Some extension modules in Python distributions are always compiled into
+    /// libpython. This field will be true for those extension modules.
+    pub builtin_default: bool,
 }
 
 impl PythonExtensionModule {
@@ -476,6 +481,7 @@ impl PythonExtensionModule {
             libraries: self.libraries.clone(),
             library_dirs: self.library_dirs.clone(),
             is_stdlib: self.is_stdlib,
+            builtin_default: self.builtin_default,
         })
     }
 
