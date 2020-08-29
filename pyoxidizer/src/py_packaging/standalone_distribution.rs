@@ -26,7 +26,9 @@ use {
     python_packaging::bytecode::BytecodeCompiler,
     python_packaging::filesystem_scanning::{find_python_resources, walk_tree_files},
     python_packaging::module_util::{is_package_from_path, PythonModuleSuffixes},
-    python_packaging::policy::{ExtensionModuleFilter, PythonResourcesPolicy},
+    python_packaging::policy::{
+        ExtensionModuleFilter, PythonPackagingPolicy, PythonResourcesPolicy,
+    },
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
         PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
@@ -1057,7 +1059,7 @@ impl PythonDistribution for StandaloneDistribution {
         target_triple: &str,
         name: &str,
         libpython_link_mode: BinaryLibpythonLinkMode,
-        resources_policy: &PythonResourcesPolicy,
+        policy: &PythonPackagingPolicy,
         config: &EmbeddedPythonConfig,
         extension_module_filter: &ExtensionModuleFilter,
         preferred_extension_module_variants: Option<HashMap<String, String>>,
@@ -1132,8 +1134,8 @@ impl PythonDistribution for StandaloneDistribution {
             distribution: Arc::new(Box::new(self.clone())),
             link_mode,
             supports_in_memory_dynamically_linked_extension_loading,
-            resources_policy: resources_policy.clone(),
-            resources: PrePackagedResources::new(resources_policy, &self.cache_tag),
+            packaging_policy: policy.clone(),
+            resources: PrePackagedResources::new(&policy.resources_policy, &self.cache_tag),
             config: config.clone(),
             python_exe,
             extension_module_filter: extension_module_filter.clone(),
@@ -1405,7 +1407,7 @@ pub struct StandalonePythonExecutableBuilder {
     supports_in_memory_dynamically_linked_extension_loading: bool,
 
     /// Policy to apply to added resources.
-    resources_policy: PythonResourcesPolicy,
+    packaging_policy: PythonPackagingPolicy,
 
     /// Python resources to be embedded in the binary.
     resources: PrePackagedResources,
@@ -1552,8 +1554,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.distribution.cache_tag()
     }
 
-    fn python_resources_policy(&self) -> &PythonResourcesPolicy {
-        &self.resources_policy
+    fn python_packaging_policy(&self) -> &PythonPackagingPolicy {
+        &self.packaging_policy
     }
 
     fn python_exe_path(&self) -> &Path {
@@ -1735,7 +1737,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             return self.add_builtin_distribution_extension_module(extension_module);
         }
 
-        match self.resources_policy.clone() {
+        match self.packaging_policy.clone().resources_policy {
             PythonResourcesPolicy::InMemoryOnly => match self.link_mode {
                 LibpythonLinkMode::Static => {
                     self.add_builtin_distribution_extension_module(extension_module)
@@ -1839,7 +1841,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             ));
         }
 
-        match self.resources_policy {
+        match self.packaging_policy.resources_policy {
             PythonResourcesPolicy::InMemoryOnly => {
                 if self.supports_in_memory_dynamically_linked_extension_loading {
                     self.resources
@@ -1975,6 +1977,9 @@ pub mod tests {
             resources.add_builtin_distribution_extension_module(&ext)?;
         }
 
+        let mut packaging_policy = PythonPackagingPolicy::default();
+        packaging_policy.resources_policy = PythonResourcesPolicy::InMemoryOnly;
+
         let config = EmbeddedPythonConfig::default();
 
         let python_exe = distribution.python_exe.clone();
@@ -1986,7 +1991,7 @@ pub mod tests {
             distribution: distribution.clone(),
             link_mode,
             supports_in_memory_dynamically_linked_extension_loading: false,
-            resources_policy: PythonResourcesPolicy::InMemoryOnly,
+            packaging_policy,
             resources,
             config,
             python_exe,

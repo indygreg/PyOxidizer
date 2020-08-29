@@ -91,3 +91,17 @@ impl TryFrom<&str> for ExtensionModuleFilter {
         }
     }
 }
+
+/// Defines how Python resources should be packaged.
+#[derive(Clone, Debug)]
+pub struct PythonPackagingPolicy {
+    pub resources_policy: PythonResourcesPolicy,
+}
+
+impl Default for PythonPackagingPolicy {
+    fn default() -> Self {
+        PythonPackagingPolicy {
+            resources_policy: PythonResourcesPolicy::InMemoryOnly,
+        }
+    }
+}

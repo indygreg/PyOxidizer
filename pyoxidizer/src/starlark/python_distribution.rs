@@ -22,7 +22,9 @@ use {
     anyhow::{anyhow, Result},
     itertools::Itertools,
     python_packaging::bytecode::{BytecodeCompiler, CompileMode},
-    python_packaging::policy::{ExtensionModuleFilter, PythonResourcesPolicy},
+    python_packaging::policy::{
+        ExtensionModuleFilter, PythonPackagingPolicy, PythonResourcesPolicy,
+    },
     python_packaging::resource::BytecodeOptimizationLevel,
     starlark::environment::Environment,
     starlark::values::{
@@ -331,6 +333,9 @@ impl PythonDistribution {
                 _ => panic!("type should have been validated above"),
             };
 
+        let mut policy = PythonPackagingPolicy::default();
+        policy.resources_policy = resources_policy;
+
         self.ensure_distribution_resolved(&logger).map_err(|e| {
             RuntimeError {
                 code: "PYOXIDIZER_BUILD",
@@ -360,7 +365,7 @@ impl PythonDistribution {
                     &name,
                     // TODO make configurable
                     BinaryLibpythonLinkMode::Default,
-                    &resources_policy,
+                    &policy,
                     &config,
                     &extension_module_filter,
                     preferred_extension_module_variants,
