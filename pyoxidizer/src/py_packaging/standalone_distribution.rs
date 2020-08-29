@@ -1135,13 +1135,7 @@ impl PythonDistribution for StandaloneDistribution {
             python_exe,
         });
 
-        builder.add_distribution_resources(
-            logger,
-            &policy.extension_module_filter,
-            policy.include_sources,
-            policy.include_resources,
-            policy.include_test,
-        )?;
+        builder.add_distribution_resources(logger, &policy)?;
 
         // Always ensure minimal extension modules are present, otherwise we get
         // missing symbol errors at link time.
@@ -1417,15 +1411,11 @@ impl StandalonePythonExecutableBuilder {
     fn add_distribution_resources(
         &mut self,
         logger: &slog::Logger,
-        // TODO use PythonPackagingPolicy instead.
-        extension_module_filter: &ExtensionModuleFilter,
-        include_sources: bool,
-        include_resources: bool,
-        include_test: bool,
+        policy: &PythonPackagingPolicy,
     ) -> Result<()> {
         for ext in self.distribution.filter_extension_modules(
             logger,
-            extension_module_filter,
+            &policy.extension_module_filter,
             self.packaging_policy
                 .preferred_extension_module_variants
                 .clone(),
@@ -1434,20 +1424,20 @@ impl StandalonePythonExecutableBuilder {
         }
 
         for source in self.distribution.source_modules()? {
-            if !include_test && is_stdlib_test_package(&source.package()) {
+            if !policy.include_test && is_stdlib_test_package(&source.package()) {
                 continue;
             }
 
-            if include_sources {
+            if policy.include_sources {
                 self.add_module_source(&source)?;
             }
 
             self.add_module_bytecode(&source.as_bytecode_module(BytecodeOptimizationLevel::Zero))?;
         }
 
-        if include_resources {
+        if policy.include_resources {
             for resource in self.distribution.resource_datas()? {
-                if !include_test && is_stdlib_test_package(&resource.leaf_package) {
+                if !policy.include_test && is_stdlib_test_package(&resource.leaf_package) {
                     continue;
                 }
 
