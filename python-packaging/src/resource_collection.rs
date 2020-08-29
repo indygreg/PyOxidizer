@@ -1644,6 +1644,7 @@ mod tests {
             is_stdlib: false,
             builtin_default: false,
             required: false,
+            variant: None,
         };
 
         c.add_relative_path_python_extension_module(&em, "prefix")?;

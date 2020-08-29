@@ -611,6 +611,7 @@ mod tests {
             is_stdlib: true,
             builtin_default: true,
             required: false,
+            variant: None,
         };
 
         r.add_builtin_extension_module(&em)?;

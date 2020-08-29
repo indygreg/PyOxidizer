@@ -507,6 +507,11 @@ pub struct PythonExtensionModule {
     pub builtin_default: bool,
     /// Whether the extension must be loaded to initialize Python.
     pub required: bool,
+    /// Name of the variant of this extension module.
+    ///
+    /// This may be set if there are multiple versions of an extension module
+    /// available to choose from.
+    pub variant: Option<String>,
 }
 
 impl PythonExtensionModule {
@@ -530,6 +535,7 @@ impl PythonExtensionModule {
             is_stdlib: self.is_stdlib,
             builtin_default: self.builtin_default,
             required: self.required,
+            variant: self.variant.clone(),
         })
     }
 

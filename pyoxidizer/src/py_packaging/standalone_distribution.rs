@@ -410,6 +410,7 @@ impl From<&DistributionExtensionModule> for PythonExtensionModule {
             is_stdlib: true,
             builtin_default: em.builtin_default,
             required: em.required,
+            variant: Some(em.variant.clone()),
         }
     }
 }

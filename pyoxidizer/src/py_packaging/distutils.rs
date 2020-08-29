@@ -207,6 +207,7 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<PythonExtensionModu
             is_stdlib: false,
             builtin_default: false,
             required: false,
+            variant: None,
         });
     }
 
