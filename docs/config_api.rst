@@ -470,7 +470,11 @@ Each instance has the following attributes:
 ``is_package`` (bool)
    Whether this module is also a Python package (or sub-package).
 
-Instances cannot be manually constructed.
+``location`` (string) (mutable)
+   Location from which this resource should be loaded when added to a binary.
+
+Instances can be constructed via
+:ref:`config_python_executable_make_python_source_module`.
 
 .. _config_python_bytecode_module:
 

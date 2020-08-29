@@ -121,6 +121,9 @@ New Features
 * The ``PythonExecutable`` Starlark type now has a
   ``make_python_source_module()`` method to allow construction of
   ``PythonSourceModule`` instances.
+* The ``PythonSourceModule`` Starlark type now has a ``location``
+  attribute exposing the location where the resource should be
+  loaded from.
 
 Bug Fixes
 ^^^^^^^^^

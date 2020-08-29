@@ -581,14 +581,12 @@ mod tests {
             manifest: RawFileManifest::default(),
         });
 
-        let v = Value::new(PythonSourceModule {
-            module: PythonModuleSource {
-                name: "foo.bar".to_string(),
-                source: DataLocation::Memory(vec![]),
-                is_package: false,
-                cache_tag: DEFAULT_CACHE_TAG.to_string(),
-            },
-        });
+        let v = Value::new(PythonSourceModule::new(PythonModuleSource {
+            name: "foo.bar".to_string(),
+            source: DataLocation::Memory(vec![]),
+            is_package: false,
+            cache_tag: DEFAULT_CACHE_TAG.to_string(),
+        }));
 
         let mut env = starlark_env();
         env.set("m", m).unwrap();

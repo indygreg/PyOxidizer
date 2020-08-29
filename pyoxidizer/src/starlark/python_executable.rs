@@ -117,14 +117,12 @@ impl PythonExecutable {
         let source = required_str_arg("source", &source)?;
         let is_package = required_bool_arg("is_package", &is_package)?;
 
-        Ok(Value::new(PythonSourceModule {
-            module: RawPythonModuleSource {
-                name,
-                source: DataLocation::Memory(source.into_bytes()),
-                is_package,
-                cache_tag: self.exe.cache_tag().to_string(),
-            },
-        }))
+        Ok(Value::new(PythonSourceModule::new(RawPythonModuleSource {
+            name,
+            source: DataLocation::Memory(source.into_bytes()),
+            is_package,
+            cache_tag: self.exe.cache_tag().to_string(),
+        })))
     }
 
     /// PythonExecutable.pip_install(args, extra_envs=None)

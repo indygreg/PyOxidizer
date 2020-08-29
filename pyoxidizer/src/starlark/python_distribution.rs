@@ -531,11 +531,7 @@ impl PythonDistribution {
         Ok(Value::from(
             modules
                 .iter()
-                .map(|module| {
-                    Value::new(PythonSourceModule {
-                        module: module.clone(),
-                    })
-                })
+                .map(|module| Value::new(PythonSourceModule::new(module.clone())))
                 .collect_vec(),
         ))
     }

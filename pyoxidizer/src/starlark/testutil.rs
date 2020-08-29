@@ -66,3 +66,12 @@ pub fn starlark_nok(snippet: &str) -> Diagnostic {
 
     res.unwrap_err()
 }
+
+/// Construct a new Starlark environment and create a `PythonExecutable` in the `exe` variable.
+pub fn starlark_make_exe() -> Result<Environment, Diagnostic> {
+    let mut env = starlark_env();
+    starlark_eval_in_env(&mut env, "dist = default_python_distribution()")?;
+    starlark_eval_in_env(&mut env, "exe = dist.to_python_executable('testapp')")?;
+
+    Ok(env)
+}
