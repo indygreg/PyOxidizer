@@ -136,6 +136,11 @@ impl PythonPackagingPolicy {
         self.include_distribution_sources = include;
     }
 
+    /// Set whether we should include Python modules that define tests.
+    pub fn set_include_test(&mut self, include: bool) {
+        self.include_test = include;
+    }
+
     /// Determine if a Python resource is applicable to the current policy.
     ///
     /// Given a `PythonResource`, this answers the question of whether that
