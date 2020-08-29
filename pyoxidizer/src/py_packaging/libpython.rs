@@ -249,10 +249,15 @@ pub fn link_libpython(
         }
 
         // Find the library in the distribution and statically link against it.
-        let fs_path = dist
+        let data = dist
             .libraries
             .get(&library)
             .unwrap_or_else(|| panic!("unable to find library {}", library));
+
+        let fs_path = match data {
+            DataLocation::Path(fs_path) => fs_path,
+            DataLocation::Memory(_) => panic!("cannot link libraries not backed by the filesystem"),
+        };
 
         extra_library_paths.insert(fs_path.parent().unwrap().to_path_buf());
 

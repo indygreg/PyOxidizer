@@ -93,26 +93,20 @@ struct LinkEntry {
 }
 
 impl LinkEntry {
-    /// Convert the instance to a `LibraryDepends`.
-    fn to_library_depends(&self, python_path: &Path) -> LibraryDepends {
-        LibraryDepends {
+    /// Convert the instance to a `LibraryDependency`.
+    fn to_library_dependency(&self, python_path: &Path) -> LibraryDependency {
+        LibraryDependency {
             name: self.name.clone(),
-            static_path: match &self.path_static {
-                Some(p) => Some(python_path.join(p)),
-                None => None,
-            },
-            dynamic_path: match &self.path_dynamic {
-                Some(p) => Some(python_path.join(p)),
-                None => None,
-            },
-            framework: match &self.framework {
-                Some(v) => *v,
-                None => false,
-            },
-            system: match &self.system {
-                Some(v) => *v,
-                None => false,
-            },
+            static_library: self
+                .path_static
+                .clone()
+                .map(|p| DataLocation::Path(python_path.join(p))),
+            dynamic_library: self
+                .path_dynamic
+                .clone()
+                .map(|p| DataLocation::Path(python_path.join(p))),
+            framework: self.framework.unwrap_or(false),
+            system: self.system.unwrap_or(false),
         }
     }
 }
@@ -345,29 +339,6 @@ pub fn choose_variant<S: BuildHasher>(
     }
 }
 
-/// Describes a library dependency.
-///
-/// If the license fields are Some value, then license metadata was
-/// present in the distribution. If the values are None, then license
-/// metadata is not known.
-#[derive(Clone, Debug, PartialEq)]
-pub struct LibraryDepends {
-    /// Name of the library we depend on.
-    pub name: String,
-
-    /// Path to a file providing a static version of this library.
-    pub static_path: Option<PathBuf>,
-
-    /// Path to a file providing a dynamic version of this library.
-    pub dynamic_path: Option<PathBuf>,
-
-    /// Whether this is a system framework.
-    pub framework: bool,
-
-    /// Whether this is a system library.
-    pub system: bool,
-}
-
 /// Describes an extension module in a Python distribution.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DistributionExtensionModule {
@@ -402,7 +373,7 @@ pub struct DistributionExtensionModule {
     pub shared_library: Option<PathBuf>,
 
     /// Library linking metadata.
-    pub links: Vec<LibraryDepends>,
+    pub links: Vec<LibraryDependency>,
 
     /// Whether the extension must be loaded to initialize Python.
     pub required: bool,
@@ -434,26 +405,6 @@ impl From<&DistributionExtensionModule> for PythonExtensionModule {
             .map(|x| DataLocation::Path(x.clone()))
             .collect();
 
-        let link_libraries = em
-            .links
-            .iter()
-            .map(|l| LibraryDependency {
-                name: l.name.clone(),
-                static_library: if let Some(path) = &l.static_path {
-                    Some(DataLocation::Path(path.clone()))
-                } else {
-                    None
-                },
-                dynamic_library: if let Some(path) = &l.dynamic_path {
-                    Some(DataLocation::Path(path.clone()))
-                } else {
-                    None
-                },
-                framework: l.framework,
-                system: l.system,
-            })
-            .collect();
-
         Self {
             name: em.module.clone(),
             init_fn: em.init_fn.clone(),
@@ -461,7 +412,7 @@ impl From<&DistributionExtensionModule> for PythonExtensionModule {
             extension_data,
             object_file_data,
             is_package: false,
-            link_libraries,
+            link_libraries: em.links.clone(),
             is_stdlib: true,
             builtin_default: em.builtin_default,
             required: em.required,
@@ -547,7 +498,7 @@ pub struct StandaloneDistribution {
     pub objs_core: BTreeMap<PathBuf, PathBuf>,
 
     /// Linking information for the core Python implementation.
-    pub links_core: Vec<LibraryDepends>,
+    pub links_core: Vec<LibraryDependency>,
 
     /// Filesystem location of pythonXY shared library for this distribution.
     ///
@@ -568,7 +519,7 @@ pub struct StandaloneDistribution {
     ///
     /// Keys are library names, without the "lib" prefix or file extension.
     /// Values are filesystem paths where library is located.
-    pub libraries: BTreeMap<String, PathBuf>,
+    pub libraries: BTreeMap<String, DataLocation>,
 
     pub py_modules: BTreeMap<String, PathBuf>,
 
@@ -688,11 +639,11 @@ impl StandaloneDistribution {
     #[allow(clippy::cognitive_complexity)]
     pub fn from_directory(dist_dir: &Path) -> Result<Self> {
         let mut objs_core: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
-        let mut links_core: Vec<LibraryDepends> = Vec::new();
+        let mut links_core: Vec<LibraryDependency> = Vec::new();
         let mut extension_modules: BTreeMap<String, Vec<DistributionExtensionModule>> =
             BTreeMap::new();
         let mut includes: BTreeMap<String, PathBuf> = BTreeMap::new();
-        let mut libraries: BTreeMap<String, PathBuf> = BTreeMap::new();
+        let mut libraries: BTreeMap<String, DataLocation> = BTreeMap::new();
         let frozen_c: Vec<u8> = Vec::new();
         let mut py_modules: BTreeMap<String, PathBuf> = BTreeMap::new();
         let mut resources: BTreeMap<String, BTreeMap<String, PathBuf>> = BTreeMap::new();
@@ -763,9 +714,9 @@ impl StandaloneDistribution {
         }
 
         for entry in &pi.build_info.core.links {
-            let depends = entry.to_library_depends(&python_path);
+            let depends = entry.to_library_dependency(&python_path);
 
-            if let Some(p) = &depends.static_path {
+            if let Some(p) = &depends.static_library {
                 libraries.insert(depends.name.clone(), p.clone());
             }
 
@@ -809,9 +760,9 @@ impl StandaloneDistribution {
                 let mut links = Vec::new();
 
                 for link in &entry.links {
-                    let depends = link.to_library_depends(&python_path);
+                    let depends = link.to_library_dependency(&python_path);
 
-                    if let Some(p) = &depends.static_path {
+                    if let Some(p) = &depends.static_library {
                         libraries.insert(depends.name.clone(), p.clone());
                     }
 

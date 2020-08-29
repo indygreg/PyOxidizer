@@ -204,7 +204,7 @@ impl PrePackagedResources {
                 )),
                 link_static_libraries: BTreeSet::from_iter(module.links.iter().filter_map(
                     |link| {
-                        if link.static_path.is_some() {
+                        if link.static_library.is_some() {
                             Some(link.name.clone())
                         } else {
                             None
@@ -213,7 +213,7 @@ impl PrePackagedResources {
                 )),
                 link_dynamic_libraries: BTreeSet::from_iter(module.links.iter().filter_map(
                     |link| {
-                        if link.dynamic_path.is_some() {
+                        if link.dynamic_library.is_some() {
                             Some(link.name.clone())
                         } else {
                             None
@@ -241,20 +241,15 @@ impl PrePackagedResources {
         let mut depends = Vec::new();
 
         for link in &module.links {
-            if let Some(shared_library) = &link.dynamic_path {
+            if let Some(shared_library) = &link.dynamic_library {
                 // Add a resource holding the shared library data.
-                let name = shared_library
-                    .file_name()
-                    .expect("filename on shared library")
-                    .to_string_lossy();
-
                 self.collector.add_shared_library(
-                    &name,
-                    &DataLocation::Path(shared_library.clone()),
+                    &link.name,
+                    shared_library,
                     &ConcreteResourceLocation::InMemory,
                 )?;
 
-                depends.push(name.to_string());
+                depends.push(link.name.to_string());
             }
         }
 
@@ -295,16 +290,10 @@ impl PrePackagedResources {
             // On Windows, this should "just work" since the opening DLL's directory
             // is searched for dependencies.
             // TODO this logic likely needs to be expanded.
-            if let Some(shared_library) = &link.dynamic_path {
-                let file_name = shared_library
-                    .file_name()
-                    .unwrap()
-                    .to_string_lossy()
-                    .to_string();
-
+            if let Some(shared_library) = &link.dynamic_library {
                 self.collector.add_shared_library(
-                    &file_name,
-                    &DataLocation::Path(shared_library.clone()),
+                    &link.name,
+                    shared_library,
                     &ConcreteResourceLocation::RelativePath(prefix.to_string()),
                 )?;
             }
