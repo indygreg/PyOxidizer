@@ -318,7 +318,7 @@ pub fn invoke_python(python_paths: &PythonPaths, logger: &slog::Logger, args: &[
 pub fn choose_variant<S: BuildHasher>(
     extensions: &[DistributionExtensionModule],
     variants: &Option<HashMap<String, String, S>>,
-) -> DistributionExtensionModule {
+) -> PythonExtensionModule {
     if let Some(variants) = variants {
         if let Some(preferred) = variants.get(&extensions[0].module) {
             let mut desired = extensions[0].clone();
@@ -330,12 +330,12 @@ pub fn choose_variant<S: BuildHasher>(
                 }
             }
 
-            desired
+            PythonExtensionModule::from(&desired)
         } else {
-            extensions[0].clone()
+            PythonExtensionModule::from(&extensions[0])
         }
     } else {
-        extensions[0].clone()
+        PythonExtensionModule::from(&extensions[0])
     }
 }
 
@@ -1155,9 +1155,7 @@ impl PythonDistribution for StandaloneDistribution {
             for ext in self.filter_extension_modules(&logger, &static_policy)? {
                 builder
                     .resources
-                    .add_builtin_distribution_extension_module(&PythonExtensionModule::from(
-                        &ext,
-                    ))?;
+                    .add_builtin_distribution_extension_module(&ext)?;
             }
         }
 
@@ -1169,7 +1167,7 @@ impl PythonDistribution for StandaloneDistribution {
         &self,
         logger: &slog::Logger,
         policy: &PythonPackagingPolicy,
-    ) -> Result<Vec<DistributionExtensionModule>> {
+    ) -> Result<Vec<PythonExtensionModule>> {
         let mut res = Vec::new();
 
         for (name, ext_variants) in &self.extension_modules {
@@ -1274,7 +1272,7 @@ impl PythonDistribution for StandaloneDistribution {
         }
 
         // Do a sanity pass to ensure we got all builtin default or required extension modules.
-        let added: BTreeSet<String> = BTreeSet::from_iter(res.iter().map(|em| em.module.clone()));
+        let added: BTreeSet<String> = BTreeSet::from_iter(res.iter().map(|em| em.name.clone()));
 
         for (name, ext_variants) in &self.extension_modules {
             let required = ext_variants
@@ -1444,7 +1442,7 @@ impl StandalonePythonExecutableBuilder {
             .distribution
             .filter_extension_modules(logger, &policy)?
         {
-            self.add_distribution_extension_module(&PythonExtensionModule::from(&ext))?;
+            self.add_distribution_extension_module(&ext)?;
         }
 
         for source in self.distribution.source_modules()? {
@@ -1976,8 +1974,7 @@ pub mod tests {
         // We need to add minimal extension modules so builds actually work. If they are missing,
         // we'll get missing symbol errors during linking.
         for ext in distribution.filter_extension_modules(logger, &packaging_policy)? {
-            resources
-                .add_builtin_distribution_extension_module(&PythonExtensionModule::from(&ext))?;
+            resources.add_builtin_distribution_extension_module(&ext)?;
         }
 
         let config = EmbeddedPythonConfig::default();

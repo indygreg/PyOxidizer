@@ -9,14 +9,16 @@ Defining and manipulating Python distributions.
 use {
     super::binary::{LibpythonLinkMode, PythonBinaryBuilder},
     super::config::EmbeddedPythonConfig,
-    super::standalone_distribution::{DistributionExtensionModule, StandaloneDistribution},
+    super::standalone_distribution::StandaloneDistribution,
     crate::python_distributions::PYTHON_DISTRIBUTIONS,
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
     python_packaging::bytecode::BytecodeCompiler,
     python_packaging::module_util::PythonModuleSuffixes,
     python_packaging::policy::PythonPackagingPolicy,
-    python_packaging::resource::{PythonModuleSource, PythonPackageResource, PythonResource},
+    python_packaging::resource::{
+        PythonExtensionModule, PythonModuleSource, PythonPackageResource, PythonResource,
+    },
     sha2::{Digest, Sha256},
     slog::warn,
     std::collections::HashMap,
@@ -129,7 +131,7 @@ pub trait PythonDistribution {
         &self,
         logger: &slog::Logger,
         policy: &PythonPackagingPolicy,
-    ) -> Result<Vec<DistributionExtensionModule>>;
+    ) -> Result<Vec<PythonExtensionModule>>;
 
     /// Obtain `SourceModule` instances present in this distribution.
     fn source_modules(&self) -> Result<Vec<PythonModuleSource>>;

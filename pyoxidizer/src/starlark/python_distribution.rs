@@ -25,9 +25,7 @@ use {
     python_packaging::policy::{
         ExtensionModuleFilter, PythonPackagingPolicy, PythonResourcesPolicy,
     },
-    python_packaging::resource::{
-        BytecodeOptimizationLevel, PythonExtensionModule as RawPythonExtensionModule,
-    },
+    python_packaging::resource::BytecodeOptimizationLevel,
     starlark::environment::Environment,
     starlark::values::{
         default_compare, RuntimeError, TypedValue, Value, ValueError, ValueResult,
@@ -458,9 +456,7 @@ impl PythonDistribution {
                 .iter()
                 .map(|em| {
                     Value::new(PythonExtensionModule {
-                        em: PythonExtensionModuleFlavor::Distribution(
-                            RawPythonExtensionModule::from(em),
-                        ),
+                        em: PythonExtensionModuleFlavor::Distribution(em.clone()),
                     })
                 })
                 .collect_vec(),
