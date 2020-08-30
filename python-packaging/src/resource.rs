@@ -12,6 +12,7 @@ use {
     crate::python_source::has_dunder_file,
     anyhow::{anyhow, Context, Result},
     std::convert::TryFrom,
+    std::iter::FromIterator,
     std::path::{Path, PathBuf},
 };
 
@@ -600,6 +601,45 @@ impl PythonExtensionModule {
     /// initialization.
     pub fn is_minimally_required(&self) -> bool {
         self.is_stdlib && (self.builtin_default || self.required)
+    }
+}
+
+/// Represents a collection of variants for a given Python extension module.
+#[derive(Clone, Debug)]
+pub struct PythonExtensionModuleVariants {
+    extensions: Vec<PythonExtensionModule>,
+}
+
+impl Default for PythonExtensionModuleVariants {
+    fn default() -> Self {
+        Self { extensions: vec![] }
+    }
+}
+
+impl FromIterator<PythonExtensionModule> for PythonExtensionModuleVariants {
+    fn from_iter<I: IntoIterator<Item = PythonExtensionModule>>(iter: I) -> Self {
+        Self {
+            extensions: Vec::from_iter(iter),
+        }
+    }
+}
+
+impl PythonExtensionModuleVariants {
+    pub fn push(&mut self, em: PythonExtensionModule) {
+        self.extensions.push(em);
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.extensions.is_empty()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &PythonExtensionModule> {
+        self.extensions.iter()
+    }
+
+    /// Obtains the default / first variant of an extension module.
+    pub fn default_variant(&self) -> &PythonExtensionModule {
+        &self.extensions[0]
     }
 }
 

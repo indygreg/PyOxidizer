@@ -248,13 +248,13 @@ pub fn python_distribution_info(dist_path: &str) -> Result<()> {
         println!("{}", "-".repeat(name.len()));
         println!();
 
-        for em in ems {
+        for em in ems.iter() {
             println!("{}", em.variant.as_ref().unwrap());
             println!("{}", "^".repeat(em.variant.as_ref().unwrap().len()));
             println!();
             println!("Required: {}", em.required);
             println!("Built-in Default: {}", em.builtin_default);
-            if let Some(licenses) = em.licenses {
+            if let Some(licenses) = &em.licenses {
                 println!("Licenses: {}", licenses.join(", "));
             }
             if !em.link_libraries.is_empty() {
@@ -315,7 +315,7 @@ pub fn python_distribution_licenses(path: &str) -> Result<()> {
     println!();
 
     for (name, variants) in &dist.extension_modules {
-        for variant in variants {
+        for variant in variants.iter() {
             if variant.link_libraries.is_empty() {
                 continue;
             }

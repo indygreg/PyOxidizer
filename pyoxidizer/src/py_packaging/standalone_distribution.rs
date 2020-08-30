@@ -32,8 +32,8 @@ use {
     },
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, LibraryDependency, PythonExtensionModule,
-        PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
-        PythonPackageResource, PythonResource,
+        PythonExtensionModuleVariants, PythonModuleBytecodeFromSource, PythonModuleSource,
+        PythonPackageDistributionResource, PythonPackageResource, PythonResource,
     },
     serde::{Deserialize, Serialize},
     slog::{info, warn},
@@ -317,14 +317,14 @@ pub fn invoke_python(python_paths: &PythonPaths, logger: &slog::Logger, args: &[
 }
 
 pub fn choose_variant<S: BuildHasher>(
-    extensions: &[PythonExtensionModule],
+    extensions: &PythonExtensionModuleVariants,
     variants: &Option<HashMap<String, String, S>>,
 ) -> PythonExtensionModule {
     if let Some(variants) = variants {
-        if let Some(preferred) = variants.get(&extensions[0].name) {
-            let mut desired = extensions[0].clone();
+        if let Some(preferred) = variants.get(&extensions.default_variant().name) {
+            let mut desired = extensions.default_variant().clone();
 
-            for em in extensions {
+            for em in extensions.iter() {
                 if em.variant == Some(preferred.to_owned()) {
                     desired = em.clone();
                     break;
@@ -333,10 +333,10 @@ pub fn choose_variant<S: BuildHasher>(
 
             desired
         } else {
-            extensions[0].clone()
+            extensions.default_variant().clone()
         }
     } else {
-        extensions[0].clone()
+        extensions.default_variant().clone()
     }
 }
 
@@ -426,7 +426,7 @@ pub struct StandaloneDistribution {
     libpython_shared_library: Option<PathBuf>,
 
     /// Extension modules available to this distribution.
-    pub extension_modules: BTreeMap<String, Vec<PythonExtensionModule>>,
+    pub extension_modules: BTreeMap<String, PythonExtensionModuleVariants>,
 
     pub frozen_c: Vec<u8>,
 
@@ -560,7 +560,8 @@ impl StandaloneDistribution {
     pub fn from_directory(dist_dir: &Path) -> Result<Self> {
         let mut objs_core: BTreeMap<PathBuf, PathBuf> = BTreeMap::new();
         let mut links_core: Vec<LibraryDependency> = Vec::new();
-        let mut extension_modules: BTreeMap<String, Vec<PythonExtensionModule>> = BTreeMap::new();
+        let mut extension_modules: BTreeMap<String, PythonExtensionModuleVariants> =
+            BTreeMap::new();
         let mut includes: BTreeMap<String, PathBuf> = BTreeMap::new();
         let mut libraries: BTreeMap<String, DataLocation> = BTreeMap::new();
         let frozen_c: Vec<u8> = Vec::new();
@@ -672,7 +673,7 @@ impl StandaloneDistribution {
 
         // Collect extension modules.
         for (module, variants) in &pi.build_info.extensions {
-            let mut ems = Vec::new();
+            let mut ems = PythonExtensionModuleVariants::default();
 
             for entry in variants.iter() {
                 let object_file_data = entry
@@ -1104,16 +1105,15 @@ impl PythonDistribution for StandaloneDistribution {
 
             match policy.extension_module_filter {
                 ExtensionModuleFilter::Minimal => {
-                    let ext_variants = ext_variants
-                        .iter()
-                        .filter_map(|em| {
+                    let ext_variants = PythonExtensionModuleVariants::from_iter(
+                        ext_variants.iter().filter_map(|em| {
                             if em.is_minimally_required() {
                                 Some(em.clone())
                             } else {
                                 None
                             }
-                        })
-                        .collect::<Vec<_>>();
+                        }),
+                    );
 
                     if !ext_variants.is_empty() {
                         res.push(choose_variant(
@@ -1131,16 +1131,15 @@ impl PythonDistribution for StandaloneDistribution {
                 }
 
                 ExtensionModuleFilter::NoLibraries => {
-                    let ext_variants = ext_variants
-                        .iter()
-                        .filter_map(|em| {
+                    let ext_variants = PythonExtensionModuleVariants::from_iter(
+                        ext_variants.iter().filter_map(|em| {
                             if !em.requires_libraries() {
                                 Some(em.clone())
                             } else {
                                 None
                             }
-                        })
-                        .collect::<Vec<_>>();
+                        }),
+                    );
 
                     if !ext_variants.is_empty() {
                         res.push(choose_variant(
@@ -1151,9 +1150,8 @@ impl PythonDistribution for StandaloneDistribution {
                 }
 
                 ExtensionModuleFilter::NoGPL => {
-                    let ext_variants = ext_variants
-                        .iter()
-                        .filter_map(|em| {
+                    let ext_variants = PythonExtensionModuleVariants::from_iter(
+                        ext_variants.iter().filter_map(|em| {
                             if em.link_libraries.is_empty() {
                                 Some(em.clone())
                             // Public domain is always allowed.
@@ -1178,8 +1176,8 @@ impl PythonDistribution for StandaloneDistribution {
                                 warn!(logger, "unable to determine {} is not GPL; ignoring", &name);
                                 None
                             }
-                        })
-                        .collect::<Vec<_>>();
+                        }),
+                    );
 
                     if !ext_variants.is_empty() {
                         res.push(choose_variant(
@@ -1975,8 +1973,8 @@ pub mod tests {
             .extension_modules
             .iter()
             .filter_map(|(_, extensions)| {
-                if extensions[0].is_minimally_required() {
-                    Some(extensions[0].name.clone())
+                if extensions.default_variant().is_minimally_required() {
+                    Some(extensions.default_variant().name.clone())
                 } else {
                     None
                 }
