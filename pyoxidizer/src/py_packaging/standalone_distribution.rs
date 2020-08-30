@@ -4,6 +4,7 @@
 
 /*! Functionality for standalone Python distributions. */
 
+use python_packaging::resource_collection::PrePackagedResource;
 use {
     super::binary::{
         EmbeddedPythonBinaryData, EmbeddedResourcesBlobs, LibpythonLinkMode, PythonBinaryBuilder,
@@ -1479,12 +1480,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &self.python_exe
     }
 
-    fn in_memory_module_sources(&self) -> BTreeMap<String, PythonModuleSource> {
-        self.resources.get_in_memory_module_sources()
-    }
-
-    fn in_memory_package_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
-        self.resources.get_in_memory_package_resources()
+    fn iter_resources<'a>(
+        &'a self,
+    ) -> Box<dyn Iterator<Item = (&'a String, &'a PrePackagedResource)> + 'a> {
+        Box::new(self.resources.iter_resources())
     }
 
     fn pip_install(

@@ -508,48 +508,9 @@ impl PythonResourceCollector {
         Ok(())
     }
 
-    /// Obtain `PythonModuleSource` in this instance.
-    ///
-    /// The ``is_stdlib`` field will always be false since this metadata is not
-    /// preserved by the collector.
-    pub fn get_in_memory_module_sources(&self) -> BTreeMap<String, PythonModuleSource> {
-        BTreeMap::from_iter(self.resources.iter().filter_map(|(name, module)| {
-            if let Some(location) = &module.in_memory_source {
-                Some((
-                    name.clone(),
-                    PythonModuleSource {
-                        name: name.clone(),
-                        is_package: module.is_package,
-                        source: location.clone(),
-                        cache_tag: self.cache_tag.clone(),
-                        is_stdlib: false,
-                        is_test: false,
-                    },
-                ))
-            } else {
-                None
-            }
-        }))
-    }
-
-    /// Obtain resource files in this instance.
-    pub fn get_in_memory_package_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
-        BTreeMap::from_iter(self.resources.iter().filter_map(|(name, module)| {
-            if let Some(resources) = &module.in_memory_resources {
-                Some((
-                    name.clone(),
-                    BTreeMap::from_iter(resources.iter().map(|(key, value)| {
-                        (
-                            key.clone(),
-                            // TODO should return a DataLocation or Result.
-                            value.resolve().expect("resolved resource location"),
-                        )
-                    })),
-                ))
-            } else {
-                None
-            }
-        }))
+    /// Obtain an iterator over the resources in this collector.
+    pub fn iter_resources(&self) -> impl Iterator<Item = (&String, &PrePackagedResource)> {
+        Box::new(self.resources.iter())
     }
 
     /// Add Python module source with a specific location.

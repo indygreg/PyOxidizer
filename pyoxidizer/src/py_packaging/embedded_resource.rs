@@ -16,7 +16,8 @@ use {
         PythonPackageDistributionResource, PythonPackageResource,
     },
     python_packaging::resource_collection::{
-        ConcreteResourceLocation, PreparedPythonResources, PythonResourceCollector,
+        ConcreteResourceLocation, PrePackagedResource, PreparedPythonResources,
+        PythonResourceCollector,
     },
     slog::{info, warn},
     std::collections::{BTreeMap, BTreeSet},
@@ -68,14 +69,8 @@ impl PrePackagedResources {
         }
     }
 
-    /// Obtain `PythonModuleSource` in this instance.
-    pub fn get_in_memory_module_sources(&self) -> BTreeMap<String, PythonModuleSource> {
-        self.collector.get_in_memory_module_sources()
-    }
-
-    /// Obtain resource files in this instance.
-    pub fn get_in_memory_package_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>> {
-        self.collector.get_in_memory_package_resources()
+    pub fn iter_resources(&self) -> impl Iterator<Item = (&String, &PrePackagedResource)> {
+        self.collector.iter_resources()
     }
 
     /// Add a source module to the collection of embedded source modules.

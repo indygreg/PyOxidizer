@@ -17,7 +17,8 @@ use {
         PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
         PythonPackageDistributionResource, PythonPackageResource, PythonResource,
     },
-    std::collections::{BTreeMap, HashMap},
+    python_packaging::resource_collection::PrePackagedResource,
+    std::collections::HashMap,
     std::convert::TryFrom,
     std::fs::File,
     std::io::Write,
@@ -63,11 +64,10 @@ pub trait PythonBinaryBuilder {
     /// returned executable.
     fn python_exe_path(&self) -> &Path;
 
-    /// Obtain Python source modules imported from memory to be embedded in this instance.
-    fn in_memory_module_sources(&self) -> BTreeMap<String, PythonModuleSource>;
-
-    /// Obtain Python package resources data loaded from memory to be embedded in this instance.
-    fn in_memory_package_resources(&self) -> BTreeMap<String, BTreeMap<String, Vec<u8>>>;
+    /// Obtain an iterator over all resource entries that will be embedded in the binary.
+    fn iter_resources<'a>(
+        &'a self,
+    ) -> Box<dyn Iterator<Item = (&'a String, &'a PrePackagedResource)> + 'a>;
 
     /// Runs `pip install` using the binary builder's settings.
     ///

@@ -1454,8 +1454,14 @@ mod tests {
         assert_eq!(exe.get_type(), "PythonExecutable");
 
         exe.downcast_apply(|exe: &PythonExecutable| {
-            assert!(!exe.exe.in_memory_module_sources().is_empty());
-            assert!(exe.exe.in_memory_package_resources().is_empty());
+            assert!(exe
+                .exe
+                .iter_resources()
+                .any(|(_, r)| r.in_memory_source.is_some()));
+            assert!(exe
+                .exe
+                .iter_resources()
+                .all(|(_, r)| r.in_memory_resources.is_none()));
         });
     }
 
@@ -1474,7 +1480,10 @@ mod tests {
         assert_eq!(exe.get_type(), "PythonExecutable");
 
         exe.downcast_apply(|exe: &PythonExecutable| {
-            assert!(exe.exe.in_memory_module_sources().is_empty());
+            assert!(exe
+                .exe
+                .iter_resources()
+                .all(|(_, r)| r.in_memory_source.is_none()));
         });
     }
 
