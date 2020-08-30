@@ -12,6 +12,7 @@ use {
     slog::{Drain, Logger},
     std::collections::HashMap,
     std::ops::{Deref, DerefMut},
+    std::path::PathBuf,
     std::sync::{Arc, Mutex},
 };
 
@@ -35,7 +36,18 @@ lazy_static! {
 pub fn get_distribution(
     location: &PythonDistributionLocation,
 ) -> Result<Arc<Box<StandaloneDistribution>>> {
-    let path = DEFAULT_DISTRIBUTION_TEMP_DIR.path();
+    // Use Rust's build directory for distributions if available. This
+    // facilitates caching and can make execution much faster.
+    // The logic here is far from robust. Perhaps we should add more
+    // well-defined and controllable location for storing these files?
+    // TODO improve default storage directory detection.
+    let dest_path = if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
+        PathBuf::from(manifest_dir)
+            .join("target")
+            .join("python_distributions")
+    } else {
+        DEFAULT_DISTRIBUTION_TEMP_DIR.path().to_path_buf()
+    };
 
     let logger = get_logger()?;
 
@@ -43,7 +55,7 @@ pub fn get_distribution(
 
     if !lock.deref_mut().contains_key(location) {
         let dist = Arc::new(Box::new(StandaloneDistribution::from_location(
-            &logger, &location, path,
+            &logger, &location, &dest_path,
         )?));
 
         lock.deref_mut().insert(location.clone(), dist);
