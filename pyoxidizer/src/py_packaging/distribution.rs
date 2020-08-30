@@ -69,14 +69,14 @@ pub enum BinaryLibpythonLinkMode {
     Dynamic,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum PythonDistributionLocation {
     Local { local_path: String, sha256: String },
     Url { url: String, sha256: String },
 }
 
 /// Describes an obtainable Python distribution.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PythonDistributionRecord {
     /// Where the distribution can be obtained from.
     pub location: PythonDistributionLocation,
@@ -531,6 +531,13 @@ mod tests {
             target,
             temp_dir.path(),
         )?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_all_standalone_distributions() -> Result<()> {
+        assert!(!get_all_standalone_distributions()?.is_empty());
 
         Ok(())
     }

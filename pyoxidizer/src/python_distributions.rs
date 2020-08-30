@@ -52,6 +52,11 @@ impl PythonDistributionCollection {
 
         None
     }
+
+    /// Obtain records for all registered distributions.
+    pub fn iter(&self) -> impl Iterator<Item = &PythonDistributionRecord> {
+        self.dists.iter()
+    }
 }
 
 lazy_static! {
