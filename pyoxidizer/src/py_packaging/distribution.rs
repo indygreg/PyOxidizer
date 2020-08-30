@@ -108,6 +108,9 @@ pub trait PythonDistribution {
     /// Create a `BytecodeCompiler` from this instance.
     fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler>;
 
+    /// Construct a `PythonPackagingPolicy` derived from this instance.
+    fn create_packaging_policy(&self) -> Result<PythonPackagingPolicy>;
+
     /// Obtain a `PythonBinaryBuilder` for constructing an executable embedding Python.
     ///
     /// This method is how you start the process of creating a new executable file

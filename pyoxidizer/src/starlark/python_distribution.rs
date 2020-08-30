@@ -22,9 +22,7 @@ use {
     anyhow::{anyhow, Result},
     itertools::Itertools,
     python_packaging::bytecode::{BytecodeCompiler, CompileMode},
-    python_packaging::policy::{
-        ExtensionModuleFilter, PythonPackagingPolicy, PythonResourcesPolicy,
-    },
+    python_packaging::policy::{ExtensionModuleFilter, PythonResourcesPolicy},
     python_packaging::resource::BytecodeOptimizationLevel,
     starlark::environment::Environment,
     starlark::values::{
@@ -333,14 +331,6 @@ impl PythonDistribution {
                 _ => panic!("type should have been validated above"),
             };
 
-        let mut policy = PythonPackagingPolicy::default();
-        policy.set_include_distribution_sources(include_sources);
-        policy.set_include_distribution_resources(include_resources);
-        policy.set_include_test(include_test);
-        policy.extension_module_filter = extension_module_filter;
-        policy.resources_policy = resources_policy;
-        policy.preferred_extension_module_variants = preferred_extension_module_variants;
-
         self.ensure_distribution_resolved(&logger).map_err(|e| {
             RuntimeError {
                 code: "PYOXIDIZER_BUILD",
@@ -350,6 +340,21 @@ impl PythonDistribution {
             .into()
         })?;
         let dist = self.distribution.as_ref().unwrap().clone();
+
+        let mut policy = dist.create_packaging_policy().map_err(|e| {
+            RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "resolve_distribution()".to_string(),
+            }
+            .into()
+        })?;
+        policy.set_include_distribution_sources(include_sources);
+        policy.set_include_distribution_resources(include_resources);
+        policy.set_include_test(include_test);
+        policy.extension_module_filter = extension_module_filter;
+        policy.resources_policy = resources_policy;
+        policy.preferred_extension_module_variants = preferred_extension_module_variants;
 
         let config = if config.get_type() == "NoneType" {
             let v = env
@@ -423,10 +428,6 @@ impl PythonDistribution {
             _ => panic!("type should have been validated above"),
         };
 
-        let mut policy = PythonPackagingPolicy::default();
-        policy.extension_module_filter = filter;
-        policy.preferred_extension_module_variants = preferred_variants;
-
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
 
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
@@ -443,11 +444,21 @@ impl PythonDistribution {
             .into()
         })?;
 
+        let dist = self.distribution.as_ref().unwrap();
+
+        let mut policy = dist.create_packaging_policy().map_err(|e| {
+            RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "resolve_distribution()".to_string(),
+            }
+            .into()
+        })?;
+        policy.extension_module_filter = filter;
+        policy.preferred_extension_module_variants = preferred_variants;
+
         Ok(Value::from(
-            self.distribution
-                .as_ref()
-                .unwrap()
-                .filter_extension_modules(&logger, &policy, &target_triple)
+            dist.filter_extension_modules(&logger, &policy, &target_triple)
                 .map_err(|e| {
                     RuntimeError {
                         code: "PYOXIDIZER_BUILD",

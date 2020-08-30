@@ -956,6 +956,12 @@ impl PythonDistribution for StandaloneDistribution {
         BytecodeCompiler::new(&self.python_exe)
     }
 
+    fn create_packaging_policy(&self) -> Result<PythonPackagingPolicy> {
+        let policy = PythonPackagingPolicy::default();
+
+        Ok(policy)
+    }
+
     fn as_python_executable_builder(
         &self,
         logger: &slog::Logger,
@@ -1876,7 +1882,7 @@ pub mod tests {
             &distribution.cache_tag,
         );
 
-        let mut packaging_policy = PythonPackagingPolicy::default();
+        let mut packaging_policy = distribution.create_packaging_policy()?;
         packaging_policy.extension_module_filter = ExtensionModuleFilter::Minimal;
         packaging_policy.resources_policy = PythonResourcesPolicy::InMemoryOnly;
 
