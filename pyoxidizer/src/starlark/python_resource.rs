@@ -5,7 +5,7 @@
 use {
     crate::py_packaging::standalone_distribution::DistributionExtensionModule,
     python_packaging::resource::{
-        BytecodeOptimizationLevel, PythonExtensionModule as RawExtensionModule,
+        BytecodeOptimizationLevel, PythonExtensionModule as RawPythonExtensionModule,
         PythonModuleBytecodeFromSource, PythonModuleSource as RawSourceModule,
         PythonPackageDistributionResource as RawDistributionResource,
         PythonPackageResource as RawPackageResource, PythonResource,
@@ -375,10 +375,10 @@ pub enum PythonExtensionModuleFlavor {
     Distribution(DistributionExtensionModule),
 
     /// An extension module that can be statically linked.
-    StaticallyLinked(RawExtensionModule),
+    StaticallyLinked(RawPythonExtensionModule),
 
     /// An extension module that exists as a dynamic library.
-    DynamicLibrary(RawExtensionModule),
+    DynamicLibrary(RawPythonExtensionModule),
 }
 
 impl PythonExtensionModuleFlavor {
