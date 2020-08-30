@@ -22,10 +22,11 @@ use {
     crate::project_building::build_python_executable,
     crate::py_packaging::binary::PythonBinaryBuilder,
     crate::py_packaging::resource::AddToFileManifest,
-    crate::py_packaging::standalone_distribution::DistributionExtensionModule,
     anyhow::Result,
     itertools::Itertools,
-    python_packaging::resource::PythonModuleBytecodeFromSource,
+    python_packaging::resource::{
+        PythonExtensionModule as RawPythonExtensionModule, PythonModuleBytecodeFromSource,
+    },
     slog::warn,
     starlark::environment::Environment,
     starlark::values::{
@@ -87,7 +88,7 @@ impl FileManifest {
     }
 
     // TODO implement.
-    fn add_extension_module(&self, _prefix: &str, _em: &DistributionExtensionModule) {
+    fn add_extension_module(&self, _prefix: &str, _em: &RawPythonExtensionModule) {
         println!("support for adding extension modules not yet implemented");
     }
 
@@ -291,7 +292,7 @@ impl FileManifest {
                             logger,
                             "adding distribution module {} to {}", m.module, prefix
                         );
-                        self.add_extension_module(&prefix, &m);
+                        self.add_extension_module(&prefix, &RawPythonExtensionModule::from(&m));
                         Ok(())
                     }
                     PythonExtensionModuleFlavor::StaticallyLinked(m) => {
