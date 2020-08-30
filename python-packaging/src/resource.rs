@@ -587,6 +587,11 @@ impl PythonExtensionModule {
             Vec::new()
         }
     }
+
+    /// Whether the extension module requires additional libraries.
+    pub fn requires_libraries(&self) -> bool {
+        !self.link_libraries.is_empty()
+    }
 }
 
 /// Represents a Python .egg file.

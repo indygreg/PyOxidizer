@@ -1134,7 +1134,7 @@ impl PythonDistribution for StandaloneDistribution {
                     let ext_variants = ext_variants
                         .iter()
                         .filter_map(|em| {
-                            if em.link_libraries.is_empty() {
+                            if !em.requires_libraries() {
                                 Some(em.clone())
                             } else {
                                 None
