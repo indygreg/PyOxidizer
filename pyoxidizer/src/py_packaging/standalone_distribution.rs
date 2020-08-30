@@ -1107,7 +1107,7 @@ impl PythonDistribution for StandaloneDistribution {
                     let ext_variants = ext_variants
                         .iter()
                         .filter_map(|em| {
-                            if em.builtin_default || em.required {
+                            if em.is_minimally_required() {
                                 Some(em.clone())
                             } else {
                                 None
@@ -1195,9 +1195,7 @@ impl PythonDistribution for StandaloneDistribution {
         let added: BTreeSet<String> = BTreeSet::from_iter(res.iter().map(|em| em.name.clone()));
 
         for (name, ext_variants) in &self.extension_modules {
-            let required = ext_variants
-                .iter()
-                .any(|em| em.builtin_default || em.required);
+            let required = ext_variants.iter().any(|em| em.is_minimally_required());
 
             if required && !added.contains(name) {
                 return Err(anyhow!("required extension module {} missing", name));
@@ -1977,7 +1975,7 @@ pub mod tests {
             .extension_modules
             .iter()
             .filter_map(|(_, extensions)| {
-                if extensions[0].builtin_default || extensions[0].required {
+                if extensions[0].is_minimally_required() {
                     Some(extensions[0].name.clone())
                 } else {
                     None

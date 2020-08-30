@@ -592,6 +592,15 @@ impl PythonExtensionModule {
     pub fn requires_libraries(&self) -> bool {
         !self.link_libraries.is_empty()
     }
+
+    /// Whether the extension module is minimally required for a Python interpreter.
+    ///
+    /// This will be true only for extension modules in the standard library that
+    /// are builtins part of libpython or are required as part of Python interpreter
+    /// initialization.
+    pub fn is_minimally_required(&self) -> bool {
+        self.is_stdlib && (self.builtin_default || self.required)
+    }
 }
 
 /// Represents a Python .egg file.
