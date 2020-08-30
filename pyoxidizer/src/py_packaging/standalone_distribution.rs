@@ -62,6 +62,25 @@ const PIP_EXE_BASENAME: &str = "pip3.exe";
 const PIP_EXE_BASENAME: &str = "pip3";
 
 lazy_static! {
+    /// Target triples for Linux.
+    pub static ref LINUX_TARGET_TRIPLES: Vec<&'static str> = vec![
+        "x86_64-unknown-linux-gnu",
+        "x86_64-unknown-linux-musl",
+    ];
+
+    /// Target triples for macOS.
+    pub static ref MACOS_TARGET_TRIPLES: Vec<&'static str> = vec![
+        "x86_64-apple-ios",
+    ];
+
+    /// Target triples for Windows.
+    pub static ref WINDOWS_TARGET_TRIPLES: Vec<&'static str> = vec![
+        "i686-pc-windows-gnu",
+        "i686-pc-windows-msvc",
+        "x86_64-pc-windows-gnu",
+        "x86_64-pc-windows-msvc",
+    ];
+
     /// Distribution extensions with known problems on Linux.
     ///
     /// These will never be packaged.
@@ -957,7 +976,19 @@ impl PythonDistribution for StandaloneDistribution {
     }
 
     fn create_packaging_policy(&self) -> Result<PythonPackagingPolicy> {
-        let policy = PythonPackagingPolicy::default();
+        let mut policy = PythonPackagingPolicy::default();
+
+        for triple in LINUX_TARGET_TRIPLES.iter() {
+            for ext in BROKEN_EXTENSIONS_LINUX.iter() {
+                policy.register_broken_extension(triple, ext);
+            }
+        }
+
+        for triple in MACOS_TARGET_TRIPLES.iter() {
+            for ext in BROKEN_EXTENSIONS_MACOS.iter() {
+                policy.register_broken_extension(triple, ext);
+            }
+        }
 
         Ok(policy)
     }

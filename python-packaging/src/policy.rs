@@ -115,6 +115,12 @@ pub struct PythonPackagingPolicy {
 
     /// Whether to include test files.
     include_test: bool,
+
+    /// Mapping of target triple to list of extensions that don't work for that triple.
+    ///
+    /// Policy constructors can populate this with known broken extensions to
+    /// prevent the policy from allowing an extension.
+    broken_extensions: HashMap<String, Vec<String>>,
 }
 
 impl Default for PythonPackagingPolicy {
@@ -126,6 +132,7 @@ impl Default for PythonPackagingPolicy {
             include_distribution_sources: true,
             include_distribution_resources: false,
             include_test: false,
+            broken_extensions: HashMap::new(),
         }
     }
 }
@@ -144,6 +151,19 @@ impl PythonPackagingPolicy {
     /// Set whether we should include Python modules that define tests.
     pub fn set_include_test(&mut self, include: bool) {
         self.include_test = include;
+    }
+
+    /// Mark an extension as broken on a target platform, preventing it from being used.
+    pub fn register_broken_extension(&mut self, target_triple: &str, extension: &str) {
+        if !self.broken_extensions.contains_key(target_triple) {
+            self.broken_extensions
+                .insert(target_triple.to_string(), vec![]);
+        }
+
+        self.broken_extensions
+            .get_mut(target_triple)
+            .unwrap()
+            .push(extension.to_string());
     }
 
     /// Determine if a Python resource is applicable to the current policy.
