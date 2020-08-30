@@ -647,7 +647,7 @@ impl PythonExtensionModuleVariants {
     /// Choose a variant given preferences.
     pub fn choose_variant<S: BuildHasher>(
         &self,
-        variants: &Option<HashMap<String, String, S>>,
+        variants: &HashMap<String, String, S>,
     ) -> &PythonExtensionModule {
         // The default / first item is the chosen one by default.
         let mut chosen = self.default_variant();
@@ -655,13 +655,11 @@ impl PythonExtensionModuleVariants {
         // But it can be overridden if we passed in a hash defining variant
         // preferences, the hash contains a key with the extension name, and the
         // requested variant value exists.
-        if let Some(variants) = variants {
-            if let Some(preferred) = variants.get(&chosen.name) {
-                for em in self.iter() {
-                    if em.variant == Some(preferred.to_string()) {
-                        chosen = em;
-                        break;
-                    }
+        if let Some(preferred) = variants.get(&chosen.name) {
+            for em in self.iter() {
+                if em.variant == Some(preferred.to_string()) {
+                    chosen = em;
+                    break;
                 }
             }
         }

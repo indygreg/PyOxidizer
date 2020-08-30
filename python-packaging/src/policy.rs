@@ -106,7 +106,7 @@ pub struct PythonPackagingPolicy {
     extension_module_filter: ExtensionModuleFilter,
 
     /// Preferred variants of extension modules.
-    preferred_extension_module_variants: Option<HashMap<String, String>>,
+    preferred_extension_module_variants: HashMap<String, String>,
 
     /// Where resources should be packaged by default.
     pub resources_policy: PythonResourcesPolicy,
@@ -131,7 +131,7 @@ impl Default for PythonPackagingPolicy {
     fn default() -> Self {
         PythonPackagingPolicy {
             extension_module_filter: ExtensionModuleFilter::All,
-            preferred_extension_module_variants: None,
+            preferred_extension_module_variants: HashMap::new(),
             resources_policy: PythonResourcesPolicy::InMemoryOnly,
             include_distribution_sources: true,
             include_distribution_resources: false,
@@ -151,13 +151,7 @@ impl PythonPackagingPolicy {
     ///
     /// If set, the named variant will be chosen if it is present.
     pub fn set_preferred_extension_module_variant(&mut self, extension: &str, variant: &str) {
-        if self.preferred_extension_module_variants.is_none() {
-            self.preferred_extension_module_variants = Some(HashMap::new());
-        }
-
         self.preferred_extension_module_variants
-            .as_mut()
-            .unwrap()
             .insert(extension.to_string(), variant.to_string());
     }
 
