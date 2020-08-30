@@ -797,9 +797,12 @@ impl PythonExecutable {
         info!(&logger, "adding in-extension module {}", m.name());
 
         match m {
-            PythonExtensionModuleFlavor::Distribution(m) => self
-                .exe
-                .add_relative_path_distribution_extension_module(&prefix, &m),
+            PythonExtensionModuleFlavor::Distribution(m) => {
+                self.exe.add_relative_path_distribution_extension_module(
+                    &prefix,
+                    &RawPythonExtensionModule::from(&m),
+                )
+            }
             PythonExtensionModuleFlavor::StaticallyLinked(_) => Err(anyhow!(
                 "statically linked extension modules cannot be added as filesystem relative"
             )),

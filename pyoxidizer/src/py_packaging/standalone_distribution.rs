@@ -1712,14 +1712,11 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     fn add_relative_path_distribution_extension_module(
         &mut self,
         prefix: &str,
-        extension_module: &DistributionExtensionModule,
+        extension_module: &PythonExtensionModule,
     ) -> Result<()> {
         if self.distribution.is_extension_module_file_loadable() {
             self.resources
-                .add_relative_path_distribution_extension_module(
-                    prefix,
-                    &PythonExtensionModule::from(extension_module),
-                )
+                .add_relative_path_distribution_extension_module(prefix, extension_module)
         } else {
             Err(anyhow!(
                 "loading extension modules from files not supported by this build configuration"
@@ -1750,7 +1747,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => match self.link_mode {
                 LibpythonLinkMode::Static => self.add_builtin_distribution_extension_module(&em),
                 LibpythonLinkMode::Dynamic => {
-                    self.add_relative_path_distribution_extension_module(&prefix, extension_module)
+                    self.add_relative_path_distribution_extension_module(&prefix, &em)
                 }
             },
             PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(prefix) => {
@@ -1763,10 +1760,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                         let mut res = self.add_in_memory_distribution_extension_module(&em);
 
                         if res.is_err() {
-                            res = self.add_relative_path_distribution_extension_module(
-                                &prefix,
-                                extension_module,
-                            )
+                            res = self.add_relative_path_distribution_extension_module(&prefix, &em)
                         }
 
                         res
