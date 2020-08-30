@@ -18,8 +18,8 @@ use {
     crate::py_packaging::binary::PythonBinaryBuilder,
     anyhow::{anyhow, Context, Result},
     python_packaging::resource::{
-        BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource,
-        PythonModuleSource as RawPythonModuleSource,
+        BytecodeOptimizationLevel, DataLocation, PythonExtensionModule as RawPythonExtensionModule,
+        PythonModuleBytecodeFromSource, PythonModuleSource as RawPythonModuleSource,
     },
     slog::{info, warn},
     starlark::environment::Environment,
@@ -758,9 +758,9 @@ impl PythonExecutable {
         info!(&logger, "adding in-memory extension module {}", m.name());
 
         match m {
-            PythonExtensionModuleFlavor::Distribution(m) => {
-                self.exe.add_in_memory_distribution_extension_module(&m)
-            }
+            PythonExtensionModuleFlavor::Distribution(m) => self
+                .exe
+                .add_in_memory_distribution_extension_module(&RawPythonExtensionModule::from(&m)),
             PythonExtensionModuleFlavor::StaticallyLinked(m) => {
                 self.exe.add_static_extension_module(&m)
             }

@@ -217,7 +217,7 @@ pub trait PythonBinaryBuilder {
     /// Add an extension module from a Python distribution to be loaded from memory.
     fn add_in_memory_distribution_extension_module(
         &mut self,
-        extension_module: &DistributionExtensionModule,
+        extension_module: &PythonExtensionModule,
     ) -> Result<()>;
 
     /// Add an extension module from a Python distribution to be loaded from a relative filesystem path.

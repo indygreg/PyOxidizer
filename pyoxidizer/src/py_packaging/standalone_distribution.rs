@@ -1697,7 +1697,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn add_in_memory_distribution_extension_module(
         &mut self,
-        extension_module: &DistributionExtensionModule,
+        extension_module: &PythonExtensionModule,
     ) -> Result<()> {
         if !self.supports_in_memory_dynamically_linked_extension_loading {
             return Err(anyhow!(
@@ -1706,9 +1706,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         }
 
         self.resources
-            .add_in_memory_distribution_extension_module(&PythonExtensionModule::from(
-                extension_module,
-            ))
+            .add_in_memory_distribution_extension_module(extension_module)
     }
 
     fn add_relative_path_distribution_extension_module(
@@ -1747,9 +1745,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         match self.packaging_policy.clone().resources_policy {
             PythonResourcesPolicy::InMemoryOnly => match self.link_mode {
                 LibpythonLinkMode::Static => self.add_builtin_distribution_extension_module(&em),
-                LibpythonLinkMode::Dynamic => {
-                    self.add_in_memory_distribution_extension_module(extension_module)
-                }
+                LibpythonLinkMode::Dynamic => self.add_in_memory_distribution_extension_module(&em),
             },
             PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => match self.link_mode {
                 LibpythonLinkMode::Static => self.add_builtin_distribution_extension_module(&em),
@@ -1764,8 +1760,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                     }
                     LibpythonLinkMode::Dynamic => {
                         // Try in-memory and fall back to file-based if that fails.
-                        let mut res =
-                            self.add_in_memory_distribution_extension_module(extension_module);
+                        let mut res = self.add_in_memory_distribution_extension_module(&em);
 
                         if res.is_err() {
                             res = self.add_relative_path_distribution_extension_module(
