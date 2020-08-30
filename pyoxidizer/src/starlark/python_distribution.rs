@@ -354,7 +354,12 @@ impl PythonDistribution {
         policy.set_include_distribution_resources(include_resources);
         policy.set_include_test(include_test);
         policy.resources_policy = resources_policy;
-        policy.preferred_extension_module_variants = preferred_extension_module_variants;
+
+        if let Some(variants) = preferred_extension_module_variants {
+            for (ext, variant) in variants {
+                policy.set_preferred_extension_module_variant(&ext, &variant);
+            }
+        }
 
         let config = if config.get_type() == "NoneType" {
             let v = env
