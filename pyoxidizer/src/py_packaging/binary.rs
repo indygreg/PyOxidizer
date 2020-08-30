@@ -10,7 +10,6 @@ use {
     super::config::EmbeddedPythonConfig,
     super::embedded_resource::EmbeddedPythonResources,
     super::pyembed::{derive_python_config, write_default_python_config_rs},
-    super::standalone_distribution::DistributionExtensionModule,
     crate::app_packaging::resource::FileManifest,
     anyhow::Result,
     python_packaging::policy::{PythonPackagingPolicy, PythonResourcesPolicy},
@@ -205,6 +204,10 @@ pub trait PythonBinaryBuilder {
         }
     }
 
+    // TODO consider consolidating the distribution and non-distribution variants.
+    // Historically they used different types. PythonExtensionModule now likely has
+    // sufficient context to consolidate the methods.
+
     /// Add an extension module from a Python distribution to be linked into `libpython`.
     ///
     /// The extension module will be available for import using Python's special
@@ -230,7 +233,7 @@ pub trait PythonBinaryBuilder {
     /// Add an extension module from a Python distribution to be imported via whatever means the policy allows.
     fn add_distribution_extension_module(
         &mut self,
-        extension_module: &DistributionExtensionModule,
+        extension_module: &PythonExtensionModule,
     ) -> Result<()>;
 
     /// Add an extension module as defined by a dynamic library to be loaded from memory.

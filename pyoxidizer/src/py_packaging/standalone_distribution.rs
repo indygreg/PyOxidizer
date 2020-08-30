@@ -1444,7 +1444,7 @@ impl StandalonePythonExecutableBuilder {
             .distribution
             .filter_extension_modules(logger, &policy)?
         {
-            self.add_distribution_extension_module(&ext)?;
+            self.add_distribution_extension_module(&PythonExtensionModule::from(&ext))?;
         }
 
         for source in self.distribution.source_modules()? {
@@ -1726,41 +1726,49 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn add_distribution_extension_module(
         &mut self,
-        extension_module: &DistributionExtensionModule,
+        extension_module: &PythonExtensionModule,
     ) -> Result<()> {
         // Distribution extensions are special in that we allow them to be
         // builtin extensions, even if it violates the resources policy that prohibits
         // memory loading.
 
-        let em = PythonExtensionModule::from(extension_module);
-
         // Builtins always get added as such.
         if extension_module.builtin_default {
-            return self.add_builtin_distribution_extension_module(&em);
+            return self.add_builtin_distribution_extension_module(&extension_module);
         }
 
         match self.packaging_policy.clone().resources_policy {
             PythonResourcesPolicy::InMemoryOnly => match self.link_mode {
-                LibpythonLinkMode::Static => self.add_builtin_distribution_extension_module(&em),
-                LibpythonLinkMode::Dynamic => self.add_in_memory_distribution_extension_module(&em),
+                LibpythonLinkMode::Static => {
+                    self.add_builtin_distribution_extension_module(&extension_module)
+                }
+                LibpythonLinkMode::Dynamic => {
+                    self.add_in_memory_distribution_extension_module(&extension_module)
+                }
             },
             PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => match self.link_mode {
-                LibpythonLinkMode::Static => self.add_builtin_distribution_extension_module(&em),
+                LibpythonLinkMode::Static => {
+                    self.add_builtin_distribution_extension_module(&extension_module)
+                }
                 LibpythonLinkMode::Dynamic => {
-                    self.add_relative_path_distribution_extension_module(&prefix, &em)
+                    self.add_relative_path_distribution_extension_module(&prefix, &extension_module)
                 }
             },
             PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(prefix) => {
                 match self.link_mode {
                     LibpythonLinkMode::Static => {
-                        self.add_builtin_distribution_extension_module(&em)
+                        self.add_builtin_distribution_extension_module(&extension_module)
                     }
                     LibpythonLinkMode::Dynamic => {
                         // Try in-memory and fall back to file-based if that fails.
-                        let mut res = self.add_in_memory_distribution_extension_module(&em);
+                        let mut res =
+                            self.add_in_memory_distribution_extension_module(&extension_module);
 
                         if res.is_err() {
-                            res = self.add_relative_path_distribution_extension_module(&prefix, &em)
+                            res = self.add_relative_path_distribution_extension_module(
+                                &prefix,
+                                &extension_module,
+                            )
                         }
 
                         res

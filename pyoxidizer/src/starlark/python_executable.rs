@@ -838,7 +838,8 @@ impl PythonExecutable {
         match m {
             PythonExtensionModuleFlavor::Distribution(m) => {
                 info!(logger, "adding extension module {}", m.module);
-                self.exe.add_distribution_extension_module(&m)
+                self.exe
+                    .add_distribution_extension_module(&RawPythonExtensionModule::from(&m))
             }
             PythonExtensionModuleFlavor::StaticallyLinked(m) => {
                 info!(
