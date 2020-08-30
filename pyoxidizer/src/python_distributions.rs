@@ -87,16 +87,16 @@ lazy_static! {
             // Windows shared.
             PythonDistributionRecord {
                 location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200822/cpython-3.8.5-i686-pc-windows-msvc-shared-pgo-20200823T0209.tar.zst".to_string(),
-                    sha256: "62bb31b18d4f0e4eafff180ae2f9a26968600a50f53610d7c84bcce13a7e843f".to_string(),
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200830/cpython-3.8.5-i686-pc-windows-msvc-shared-pgo-20200830T2311.tar.zst".to_string(),
+                    sha256: "f4069091e13b1cd79a107c0f6abb4b568f45b4a0363e0486c034f264627f0be7".to_string(),
                 },
                 target_triple: "i686-pc-windows-msvc".to_string(),
                 supports_prebuilt_extension_modules: true,
             },
             PythonDistributionRecord {
                 location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200822/cpython-3.8.5-x86_64-pc-windows-msvc-shared-pgo-20200823T0130.tar.zst".to_string(),
-                    sha256: "7b56968a32801d15ef22acc4e2a509fc9f6fae06e68361abb7566db3e2fb3943".to_string(),
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200830/cpython-3.8.5-x86_64-pc-windows-msvc-shared-pgo-20200830T2254.tar.zst".to_string(),
+                    sha256: "38fae4ef0e1eb3c87b761e0911d12cda9f36274ea6610266b3bfccbb8cb9ad9e".to_string(),
                 },
                 target_triple: "x86_64-pc-windows-msvc".to_string(),
                 supports_prebuilt_extension_modules: true,
@@ -105,16 +105,16 @@ lazy_static! {
             // Windows static.
             PythonDistributionRecord {
                 location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200822/cpython-3.8.5-i686-pc-windows-msvc-static-noopt-20200823T0304.tar.zst".to_string(),
-                    sha256: "1bc1661b5721d0a652f73f2851c61e190c9e223f4acb9155ab0bcc819b09e121".to_string(),
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200830/cpython-3.8.5-i686-pc-windows-msvc-static-noopt-20200830T2307.tar.zst".to_string(),
+                    sha256: "16701af1df56a80b839a4f150e1df301df62f18aa342a61561f42e9d2b526387".to_string(),
                 },
                 target_triple: "i686-pc-windows-msvc".to_string(),
                 supports_prebuilt_extension_modules: false,
             },
             PythonDistributionRecord {
                 location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200822/cpython-3.8.5-x86_64-pc-windows-msvc-static-noopt-20200823T0237.tar.zst".to_string(),
-                    sha256: "9e9acf23d9c4d6eda830b21f49f30df1a110054ef88aead253009921203ab66c".to_string(),
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200830/cpython-3.8.5-x86_64-pc-windows-msvc-static-noopt-20200830T2250.tar.zst".to_string(),
+                    sha256: "6f10c0dcb70ce41f2b291cdea25f983a60168988d27421dec5f0bc781a88be0a".to_string(),
                 },
                 target_triple: "x86_64-pc-windows-msvc".to_string(),
                 supports_prebuilt_extension_modules: false,
