@@ -431,6 +431,9 @@ impl PythonDistribution {
 
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
+        let target_triple =
+            context.downcast_apply(|x: &EnvironmentContext| x.build_target_triple.clone());
+
         self.ensure_distribution_resolved(&logger).map_err(|e| {
             RuntimeError {
                 code: "PYOXIDIZER_BUILD",
@@ -444,7 +447,7 @@ impl PythonDistribution {
             self.distribution
                 .as_ref()
                 .unwrap()
-                .filter_extension_modules(&logger, &policy)
+                .filter_extension_modules(&logger, &policy, &target_triple)
                 .map_err(|e| {
                     RuntimeError {
                         code: "PYOXIDIZER_BUILD",

@@ -1048,7 +1048,7 @@ impl PythonDistribution for StandaloneDistribution {
             static_policy.extension_module_filter = ExtensionModuleFilter::Minimal;
             static_policy.preferred_extension_module_variants = None;
 
-            for ext in self.filter_extension_modules(&logger, &static_policy)? {
+            for ext in self.filter_extension_modules(&logger, &static_policy, target_triple)? {
                 builder
                     .resources
                     .add_builtin_distribution_extension_module(&ext)?;
@@ -1063,13 +1063,14 @@ impl PythonDistribution for StandaloneDistribution {
         &self,
         logger: &slog::Logger,
         policy: &PythonPackagingPolicy,
+        target_triple: &str,
     ) -> Result<Vec<PythonExtensionModule>> {
         let mut res = Vec::new();
 
         for (name, ext_variants) in &self.extension_modules {
-            // TODO use target triple
-            if (cfg!(target_os = "linux") && BROKEN_EXTENSIONS_LINUX.contains(name))
-                || (cfg!(target_os = "macos") && BROKEN_EXTENSIONS_MACOS.contains(name))
+            if (target_triple.contains("unknown-linux") && BROKEN_EXTENSIONS_LINUX.contains(name))
+                || (target_triple == "x86_64-apple-darwin"
+                    && BROKEN_EXTENSIONS_MACOS.contains(name))
             {
                 info!(
                     logger,
@@ -1333,9 +1334,9 @@ impl StandalonePythonExecutableBuilder {
         logger: &slog::Logger,
         policy: &PythonPackagingPolicy,
     ) -> Result<()> {
-        for ext in self
-            .distribution
-            .filter_extension_modules(logger, &policy)?
+        for ext in
+            self.distribution
+                .filter_extension_modules(logger, &policy, &self.target_triple)?
         {
             self.add_distribution_extension_module(&ext)?;
         }
@@ -1881,7 +1882,7 @@ pub mod tests {
 
         // We need to add minimal extension modules so builds actually work. If they are missing,
         // we'll get missing symbol errors during linking.
-        for ext in distribution.filter_extension_modules(logger, &packaging_policy)? {
+        for ext in distribution.filter_extension_modules(logger, &packaging_policy, env!("HOST"))? {
             resources.add_builtin_distribution_extension_module(&ext)?;
         }
 

@@ -131,6 +131,7 @@ pub trait PythonDistribution {
         &self,
         logger: &slog::Logger,
         policy: &PythonPackagingPolicy,
+        target_triple: &str,
     ) -> Result<Vec<PythonExtensionModule>>;
 
     /// Obtain `SourceModule` instances present in this distribution.
