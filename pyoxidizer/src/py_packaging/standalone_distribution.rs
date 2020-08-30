@@ -25,9 +25,7 @@ use {
     python_packaging::bytecode::BytecodeCompiler,
     python_packaging::filesystem_scanning::{find_python_resources, walk_tree_files},
     python_packaging::module_util::{is_package_from_path, PythonModuleSuffixes},
-    python_packaging::policy::{
-        ExtensionModuleFilter, PythonPackagingPolicy, PythonResourcesPolicy,
-    },
+    python_packaging::policy::{PythonPackagingPolicy, PythonResourcesPolicy},
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, LibraryDependency, PythonExtensionModule,
         PythonExtensionModuleVariants, PythonModuleBytecodeFromSource, PythonModuleSource,
@@ -1076,23 +1074,6 @@ impl PythonDistribution for StandaloneDistribution {
 
         builder.add_distribution_resources(&policy)?;
 
-        // Always ensure minimal extension modules are present, otherwise we get
-        // missing symbol errors at link time.
-        if self.link_mode == StandaloneDistributionLinkMode::Static {
-            let mut static_policy = policy.clone();
-            static_policy.extension_module_filter = ExtensionModuleFilter::Minimal;
-            static_policy.preferred_extension_module_variants = None;
-
-            for ext in builder
-                .packaging_policy
-                .resolve_python_extension_modules(self.extension_modules.values(), target_triple)?
-            {
-                builder
-                    .resources
-                    .add_builtin_distribution_extension_module(&ext)?;
-            }
-        }
-
         Ok(builder)
     }
 
@@ -1772,10 +1753,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
 #[cfg(test)]
 pub mod tests {
-    use {
-        super::*, crate::py_packaging::standalone_distribution::ExtensionModuleFilter,
-        crate::testutil::*,
-    };
+    use {super::*, crate::testutil::*, python_packaging::policy::ExtensionModuleFilter};
 
     pub fn get_standalone_executable_builder() -> Result<StandalonePythonExecutableBuilder> {
         let distribution = get_default_distribution()?;
