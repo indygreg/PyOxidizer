@@ -78,7 +78,7 @@ impl OxidizedResourceCollector {
 
                 let resource = module.get_resource(py);
 
-                if let Some(location) = &resource.extension_data {
+                if let Some(location) = &resource.shared_library {
                     let data = location.resolve().map_err(|e| {
                         PyErr::new::<ValueError, _>(py, "unable to resolve extension data")
                     })?;

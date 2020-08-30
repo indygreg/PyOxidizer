@@ -200,7 +200,7 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<PythonExtensionModu
             name: info.name.clone(),
             init_fn: Some(init_fn),
             extension_file_suffix,
-            extension_data,
+            shared_library: extension_data,
             object_file_data,
             is_package: final_name == "__init__",
             link_libraries,

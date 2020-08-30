@@ -602,7 +602,7 @@ mod tests {
             name: "foo.bar".to_string(),
             init_fn: Some("".to_string()),
             extension_file_suffix: "".to_string(),
-            extension_data: None,
+            shared_library: None,
             object_file_data: vec![DataLocation::Memory(vec![42])],
             is_package: false,
             link_libraries: vec![],

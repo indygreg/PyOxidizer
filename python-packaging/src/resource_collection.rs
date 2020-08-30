@@ -873,7 +873,7 @@ impl PythonResourceCollector {
     ) -> Result<()> {
         self.check_policy(AbstractResourceLocation::RelativePath)?;
 
-        if module.extension_data.is_none() {
+        if module.shared_library.is_none() {
             return Err(anyhow!("extension module {} lacks shared library data and cannot be loaded from the filesystem", module.name));
         }
 
@@ -889,7 +889,7 @@ impl PythonResourceCollector {
         entry.relative_path_extension_module_shared_library = Some((
             prefix.to_string(),
             module.resolve_path(prefix),
-            module.extension_data.as_ref().unwrap().clone(),
+            module.shared_library.as_ref().unwrap().clone(),
         ));
 
         // TODO add shared library dependencies.
@@ -1637,7 +1637,7 @@ mod tests {
             name: "foo.bar".to_string(),
             init_fn: None,
             extension_file_suffix: ".so".to_string(),
-            extension_data: Some(DataLocation::Memory(vec![42])),
+            shared_library: Some(DataLocation::Memory(vec![42])),
             object_file_data: vec![],
             is_package: false,
             link_libraries: vec![],

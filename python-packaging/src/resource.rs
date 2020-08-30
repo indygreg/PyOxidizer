@@ -489,7 +489,7 @@ pub struct PythonExtensionModule {
     /// Filename suffix to use when writing extension module data.
     pub extension_file_suffix: String,
     /// File data for linked extension module.
-    pub extension_data: Option<DataLocation>,
+    pub shared_library: Option<DataLocation>,
     /// File data for object files linked together to produce this extension module.
     pub object_file_data: Vec<DataLocation>,
     /// Whether this extension module is a package.
@@ -526,7 +526,7 @@ impl PythonExtensionModule {
             name: self.name.clone(),
             init_fn: self.init_fn.clone(),
             extension_file_suffix: self.extension_file_suffix.clone(),
-            extension_data: if let Some(data) = &self.extension_data {
+            shared_library: if let Some(data) = &self.shared_library {
                 Some(data.to_memory()?)
             } else {
                 None

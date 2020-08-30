@@ -78,7 +78,7 @@ impl AddToFileManifest for PythonPackageDistributionResource {
 
 impl AddToFileManifest for PythonExtensionModule {
     fn add_to_file_manifest(&self, manifest: &mut FileManifest, prefix: &str) -> Result<()> {
-        if let Some(data) = &self.extension_data {
+        if let Some(data) = &self.shared_library {
             manifest.add_file(
                 &self.resolve_path(prefix),
                 &FileContent {

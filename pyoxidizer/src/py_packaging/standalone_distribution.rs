@@ -414,7 +414,7 @@ impl From<&DistributionExtensionModule> for PythonExtensionModule {
             name: em.module.clone(),
             init_fn: em.init_fn.clone(),
             extension_file_suffix: "".to_string(),
-            extension_data,
+            shared_library: extension_data,
             object_file_data,
             is_package: false,
             link_libraries: em.links.clone(),
@@ -1785,14 +1785,14 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         extension_module: &PythonExtensionModule,
     ) -> Result<()> {
         if self.supports_in_memory_dynamically_linked_extension_loading
-            && extension_module.extension_data.is_some()
+            && extension_module.shared_library.is_some()
         {
             self.resources
                 .add_in_memory_extension_module_shared_library(
                     &extension_module.name,
                     extension_module.is_package,
                     &extension_module
-                        .extension_data
+                        .shared_library
                         .as_ref()
                         .unwrap()
                         .resolve()?,
@@ -1801,7 +1801,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             // TODO we shouldn't be adding a builtin extension module from this API.
             self.resources
                 .add_builtin_extension_module(extension_module)
-        } else if extension_module.extension_data.is_some() {
+        } else if extension_module.shared_library.is_some() {
             Err(anyhow!(
                 "loading extension modules from memory not supported by this build configuration"
             ))
@@ -1817,7 +1817,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         prefix: &str,
         extension_module: &PythonExtensionModule,
     ) -> Result<()> {
-        if extension_module.extension_data.is_none() {
+        if extension_module.shared_library.is_none() {
             return Err(anyhow!(
                 "extension module instance has no shared library data"
             ));
@@ -1837,7 +1837,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &mut self,
         extension_module: &PythonExtensionModule,
     ) -> Result<()> {
-        if extension_module.extension_data.is_none() {
+        if extension_module.shared_library.is_none() {
             return Err(anyhow!(
                 "extension module instance has no shared library data"
             ));
@@ -1851,7 +1851,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                             &extension_module.name,
                             extension_module.is_package,
                             &extension_module
-                                .extension_data
+                                .shared_library
                                 .as_ref()
                                 .unwrap()
                                 .resolve()?,
@@ -1875,7 +1875,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                             &extension_module.name,
                             extension_module.is_package,
                             &extension_module
-                                .extension_data
+                                .shared_library
                                 .as_ref()
                                 .unwrap()
                                 .resolve()?,
