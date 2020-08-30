@@ -18,8 +18,8 @@ use {
     crate::py_packaging::binary::PythonBinaryBuilder,
     anyhow::{anyhow, Context, Result},
     python_packaging::resource::{
-        BytecodeOptimizationLevel, DataLocation, PythonExtensionModule as RawPythonExtensionModule,
-        PythonModuleBytecodeFromSource, PythonModuleSource as RawPythonModuleSource,
+        BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource,
+        PythonModuleSource as RawPythonModuleSource,
     },
     slog::{info, warn},
     starlark::environment::Environment,
@@ -758,9 +758,9 @@ impl PythonExecutable {
         info!(&logger, "adding in-memory extension module {}", m.name());
 
         match m {
-            PythonExtensionModuleFlavor::Distribution(m) => self
-                .exe
-                .add_in_memory_distribution_extension_module(&RawPythonExtensionModule::from(&m)),
+            PythonExtensionModuleFlavor::Distribution(m) => {
+                self.exe.add_in_memory_distribution_extension_module(&m)
+            }
             PythonExtensionModuleFlavor::StaticallyLinked(m) => {
                 self.exe.add_static_extension_module(&m)
             }
@@ -797,12 +797,9 @@ impl PythonExecutable {
         info!(&logger, "adding in-extension module {}", m.name());
 
         match m {
-            PythonExtensionModuleFlavor::Distribution(m) => {
-                self.exe.add_relative_path_distribution_extension_module(
-                    &prefix,
-                    &RawPythonExtensionModule::from(&m),
-                )
-            }
+            PythonExtensionModuleFlavor::Distribution(m) => self
+                .exe
+                .add_relative_path_distribution_extension_module(&prefix, &m),
             PythonExtensionModuleFlavor::StaticallyLinked(_) => Err(anyhow!(
                 "statically linked extension modules cannot be added as filesystem relative"
             )),
@@ -837,9 +834,8 @@ impl PythonExecutable {
 
         match m {
             PythonExtensionModuleFlavor::Distribution(m) => {
-                info!(logger, "adding extension module {}", m.module);
-                self.exe
-                    .add_distribution_extension_module(&RawPythonExtensionModule::from(&m))
+                info!(logger, "adding extension module {}", m.name);
+                self.exe.add_distribution_extension_module(&m)
             }
             PythonExtensionModuleFlavor::StaticallyLinked(m) => {
                 info!(

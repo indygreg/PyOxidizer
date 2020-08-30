@@ -290,9 +290,9 @@ impl FileManifest {
                     PythonExtensionModuleFlavor::Distribution(m) => {
                         warn!(
                             logger,
-                            "adding distribution module {} to {}", m.module, prefix
+                            "adding distribution module {} to {}", m.name, prefix
                         );
-                        self.add_extension_module(&prefix, &RawPythonExtensionModule::from(&m));
+                        self.add_extension_module(&prefix, &m);
                         Ok(())
                     }
                     PythonExtensionModuleFlavor::StaticallyLinked(m) => {

@@ -3,7 +3,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::py_packaging::standalone_distribution::DistributionExtensionModule,
     python_packaging::resource::{
         BytecodeOptimizationLevel, PythonExtensionModule as RawPythonExtensionModule,
         PythonModuleBytecodeFromSource, PythonModuleSource as RawSourceModule,
@@ -372,7 +371,7 @@ impl TypedValue for PythonPackageDistributionResource {
 #[derive(Debug, Clone)]
 pub enum PythonExtensionModuleFlavor {
     /// An extension module from a Python distribution.
-    Distribution(DistributionExtensionModule),
+    Distribution(RawPythonExtensionModule),
 
     /// An extension module that can be statically linked.
     StaticallyLinked(RawPythonExtensionModule),
@@ -384,7 +383,7 @@ pub enum PythonExtensionModuleFlavor {
 impl PythonExtensionModuleFlavor {
     pub fn name(&self) -> String {
         match self {
-            PythonExtensionModuleFlavor::Distribution(m) => m.module.clone(),
+            PythonExtensionModuleFlavor::Distribution(m) => m.name.clone(),
             PythonExtensionModuleFlavor::StaticallyLinked(m) => m.name.clone(),
             PythonExtensionModuleFlavor::DynamicLibrary(m) => m.name.clone(),
         }
