@@ -7,8 +7,12 @@ Functionality for defining how Python resources should be packaged.
 */
 
 use {
-    crate::resource::PythonResource, anyhow::anyhow, std::collections::HashMap,
+    crate::licensing::NON_GPL_LICENSES,
+    crate::resource::{PythonExtensionModule, PythonExtensionModuleVariants, PythonResource},
+    anyhow::{anyhow, Result},
+    std::collections::HashMap,
     std::convert::TryFrom,
+    std::iter::FromIterator,
 };
 
 /// Describes a policy for the location of Python resources.
@@ -196,5 +200,121 @@ impl PythonPackagingPolicy {
             PythonResource::PathExtension(_) => false,
             PythonResource::EggFile(_) => false,
         }
+    }
+
+    /// Resolve Python extension modules that are compliant with the policy.
+    #[allow(clippy::if_same_then_else)]
+    pub fn resolve_python_extension_modules<'a>(
+        &self,
+        extensions_variants: impl Iterator<Item = &'a PythonExtensionModuleVariants>,
+        target_triple: &str,
+    ) -> Result<Vec<PythonExtensionModule>> {
+        let mut res = vec![];
+
+        for variants in extensions_variants {
+            let name = &variants.default_variant().name;
+
+            // This extension is broken on this target. Ignore it.
+            if self
+                .broken_extensions
+                .get(target_triple)
+                .unwrap_or(&Vec::new())
+                .contains(name)
+            {
+                continue;
+            }
+
+            // Always add minimally required extension modules, because things don't
+            // work if we don't do this.
+            let ext_variants =
+                PythonExtensionModuleVariants::from_iter(variants.iter().filter_map(|em| {
+                    if em.is_minimally_required() {
+                        Some(em.clone())
+                    } else {
+                        None
+                    }
+                }));
+
+            if !ext_variants.is_empty() {
+                res.push(
+                    ext_variants
+                        .choose_variant(&self.preferred_extension_module_variants)
+                        .clone(),
+                );
+            }
+
+            match self.extension_module_filter {
+                // Nothing to do here since we added minimal extensions above.
+                ExtensionModuleFilter::Minimal => {}
+
+                ExtensionModuleFilter::All => {
+                    res.push(
+                        variants
+                            .choose_variant(&self.preferred_extension_module_variants)
+                            .clone(),
+                    );
+                }
+
+                ExtensionModuleFilter::NoLibraries => {
+                    let ext_variants = PythonExtensionModuleVariants::from_iter(
+                        variants.iter().filter_map(|em| {
+                            if !em.requires_libraries() {
+                                Some(em.clone())
+                            } else {
+                                None
+                            }
+                        }),
+                    );
+
+                    if !ext_variants.is_empty() {
+                        res.push(
+                            ext_variants
+                                .choose_variant(&self.preferred_extension_module_variants)
+                                .clone(),
+                        );
+                    }
+                }
+
+                ExtensionModuleFilter::NoGPL => {
+                    let ext_variants = PythonExtensionModuleVariants::from_iter(
+                        variants.iter().filter_map(|em| {
+                            if em.link_libraries.is_empty() {
+                                Some(em.clone())
+                            // Public domain is always allowed.
+                            } else if em.license_public_domain == Some(true) {
+                                Some(em.clone())
+                            // Use explicit license list if one is defined.
+                            } else if let Some(ref licenses) = em.licenses {
+                                // We filter through an allow list because it is safer. (No new GPL
+                                // licenses can slip through.)
+                                if licenses
+                                    .iter()
+                                    .all(|license| NON_GPL_LICENSES.contains(&license.as_str()))
+                                {
+                                    Some(em.clone())
+                                } else {
+                                    None
+                                }
+                            } else {
+                                // In lack of evidence that it isn't GPL, assume GPL.
+                                // TODO consider improving logic here, like allowing known system
+                                // and framework libraries to be used.
+                                None
+                            }
+                        }),
+                    );
+
+                    if !ext_variants.is_empty() {
+                        res.push(
+                            ext_variants
+                                .choose_variant(&self.preferred_extension_module_variants)
+                                .clone(),
+                        );
+                    }
+                }
+            }
+        }
+
+        Ok(res)
     }
 }

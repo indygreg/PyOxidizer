@@ -33,7 +33,6 @@ pub mod app_packaging;
 mod cli;
 //mod distribution;
 mod environment;
-mod licensing;
 mod logging;
 mod project_building;
 mod project_layout;

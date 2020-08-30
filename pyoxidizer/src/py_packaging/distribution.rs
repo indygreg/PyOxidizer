@@ -129,14 +129,6 @@ pub trait PythonDistribution {
         config: &EmbeddedPythonConfig,
     ) -> Result<Box<dyn PythonBinaryBuilder>>;
 
-    /// Obtain extension modules matching a specified filter and variant selection preferences.
-    fn filter_extension_modules(
-        &self,
-        logger: &slog::Logger,
-        policy: &PythonPackagingPolicy,
-        target_triple: &str,
-    ) -> Result<Vec<PythonExtensionModule>>;
-
     /// Obtain `PythonExtensionModule` instances present in this distribution.
     ///
     /// Multiple variants of the same extension module may be returned.

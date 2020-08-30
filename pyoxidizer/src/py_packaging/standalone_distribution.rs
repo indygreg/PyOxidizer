@@ -4,7 +4,6 @@
 
 /*! Functionality for standalone Python distributions. */
 
-use python_packaging::resource_collection::{ConcreteResourceLocation, PrePackagedResource};
 use {
     super::binary::{
         EmbeddedPythonBinaryData, EmbeddedResourcesBlobs, LibpythonLinkMode, PythonBinaryBuilder,
@@ -20,7 +19,6 @@ use {
     super::libpython::link_libpython,
     super::packaging_tool::{find_resources, pip_install, read_virtualenv, setup_py_install},
     crate::app_packaging::resource::FileContent,
-    crate::licensing::NON_GPL_LICENSES,
     anyhow::{anyhow, Context, Result},
     copy_dir::copy_dir,
     lazy_static::lazy_static,
@@ -35,12 +33,12 @@ use {
         PythonExtensionModuleVariants, PythonModuleBytecodeFromSource, PythonModuleSource,
         PythonPackageDistributionResource, PythonPackageResource, PythonResource,
     },
+    python_packaging::resource_collection::{ConcreteResourceLocation, PrePackagedResource},
     serde::{Deserialize, Serialize},
     slog::{info, warn},
-    std::collections::{BTreeMap, BTreeSet, HashMap},
+    std::collections::{BTreeMap, HashMap},
     std::convert::TryFrom,
     std::io::{BufRead, BufReader, Read},
-    std::iter::FromIterator,
     std::path::{Path, PathBuf},
     std::sync::Arc,
     tempdir::TempDir,
@@ -995,7 +993,7 @@ impl PythonDistribution for StandaloneDistribution {
 
     fn as_python_executable_builder(
         &self,
-        logger: &slog::Logger,
+        _logger: &slog::Logger,
         host_triple: &str,
         target_triple: &str,
         name: &str,
@@ -1076,7 +1074,7 @@ impl PythonDistribution for StandaloneDistribution {
             python_exe,
         });
 
-        builder.add_distribution_resources(logger, &policy)?;
+        builder.add_distribution_resources(&policy)?;
 
         // Always ensure minimal extension modules are present, otherwise we get
         // missing symbol errors at link time.
@@ -1085,7 +1083,10 @@ impl PythonDistribution for StandaloneDistribution {
             static_policy.extension_module_filter = ExtensionModuleFilter::Minimal;
             static_policy.preferred_extension_module_variants = None;
 
-            for ext in self.filter_extension_modules(&logger, &static_policy, target_triple)? {
+            for ext in builder
+                .packaging_policy
+                .resolve_python_extension_modules(self.extension_modules.values(), target_triple)?
+            {
                 builder
                     .resources
                     .add_builtin_distribution_extension_module(&ext)?;
@@ -1093,131 +1094,6 @@ impl PythonDistribution for StandaloneDistribution {
         }
 
         Ok(builder)
-    }
-
-    #[allow(clippy::if_same_then_else, clippy::eq_op)]
-    fn filter_extension_modules(
-        &self,
-        logger: &slog::Logger,
-        policy: &PythonPackagingPolicy,
-        target_triple: &str,
-    ) -> Result<Vec<PythonExtensionModule>> {
-        let mut res = Vec::new();
-
-        for (name, ext_variants) in &self.extension_modules {
-            if (target_triple.contains("unknown-linux") && BROKEN_EXTENSIONS_LINUX.contains(name))
-                || (target_triple == "x86_64-apple-darwin"
-                    && BROKEN_EXTENSIONS_MACOS.contains(name))
-            {
-                info!(
-                    logger,
-                    "ignoring extension module {} because it is broken on this platform", name
-                );
-                continue;
-            }
-
-            match policy.extension_module_filter {
-                ExtensionModuleFilter::Minimal => {
-                    let ext_variants = PythonExtensionModuleVariants::from_iter(
-                        ext_variants.iter().filter_map(|em| {
-                            if em.is_minimally_required() {
-                                Some(em.clone())
-                            } else {
-                                None
-                            }
-                        }),
-                    );
-
-                    if !ext_variants.is_empty() {
-                        res.push(
-                            ext_variants
-                                .choose_variant(&policy.preferred_extension_module_variants)
-                                .clone(),
-                        );
-                    }
-                }
-
-                ExtensionModuleFilter::All => {
-                    res.push(
-                        ext_variants
-                            .choose_variant(&policy.preferred_extension_module_variants)
-                            .clone(),
-                    );
-                }
-
-                ExtensionModuleFilter::NoLibraries => {
-                    let ext_variants = PythonExtensionModuleVariants::from_iter(
-                        ext_variants.iter().filter_map(|em| {
-                            if !em.requires_libraries() {
-                                Some(em.clone())
-                            } else {
-                                None
-                            }
-                        }),
-                    );
-
-                    if !ext_variants.is_empty() {
-                        res.push(
-                            ext_variants
-                                .choose_variant(&policy.preferred_extension_module_variants)
-                                .clone(),
-                        );
-                    }
-                }
-
-                ExtensionModuleFilter::NoGPL => {
-                    let ext_variants = PythonExtensionModuleVariants::from_iter(
-                        ext_variants.iter().filter_map(|em| {
-                            if em.link_libraries.is_empty() {
-                                Some(em.clone())
-                            // Public domain is always allowed.
-                            } else if em.license_public_domain == Some(true) {
-                                Some(em.clone())
-                            // Use explicit license list if one is defined.
-                            } else if let Some(ref licenses) = em.licenses {
-                                // We filter through an allow list because it is safer. (No new GPL
-                                // licenses can slip through.)
-                                if licenses
-                                    .iter()
-                                    .all(|license| NON_GPL_LICENSES.contains(&license.as_str()))
-                                {
-                                    Some(em.clone())
-                                } else {
-                                    None
-                                }
-                            } else {
-                                // In lack of evidence that it isn't GPL, assume GPL.
-                                // TODO consider improving logic here, like allowing known system
-                                // and framework libraries to be used.
-                                warn!(logger, "unable to determine {} is not GPL; ignoring", &name);
-                                None
-                            }
-                        }),
-                    );
-
-                    if !ext_variants.is_empty() {
-                        res.push(
-                            ext_variants
-                                .choose_variant(&policy.preferred_extension_module_variants)
-                                .clone(),
-                        );
-                    }
-                }
-            }
-        }
-
-        // Do a sanity pass to ensure we got all builtin default or required extension modules.
-        let added: BTreeSet<String> = BTreeSet::from_iter(res.iter().map(|em| em.name.clone()));
-
-        for (name, ext_variants) in &self.extension_modules {
-            let required = ext_variants.iter().any(|em| em.is_minimally_required());
-
-            if required && !added.contains(name) {
-                return Err(anyhow!("required extension module {} missing", name));
-            }
-        }
-
-        Ok(res)
     }
 
     fn iter_extension_modules<'a>(
@@ -1377,15 +1253,11 @@ pub struct StandalonePythonExecutableBuilder {
 
 impl StandalonePythonExecutableBuilder {
     #[allow(clippy::too_many_arguments)]
-    fn add_distribution_resources(
-        &mut self,
-        logger: &slog::Logger,
-        policy: &PythonPackagingPolicy,
-    ) -> Result<()> {
-        for ext in
-            self.distribution
-                .filter_extension_modules(logger, &policy, &self.target_triple)?
-        {
+    fn add_distribution_resources(&mut self, policy: &PythonPackagingPolicy) -> Result<()> {
+        for ext in self.packaging_policy.resolve_python_extension_modules(
+            self.distribution.extension_modules.values(),
+            &self.target_triple,
+        )? {
             self.add_distribution_extension_module(&ext)?;
         }
 
@@ -1905,9 +1777,7 @@ pub mod tests {
         crate::testutil::*,
     };
 
-    pub fn get_standalone_executable_builder(
-        logger: &slog::Logger,
-    ) -> Result<StandalonePythonExecutableBuilder> {
+    pub fn get_standalone_executable_builder() -> Result<StandalonePythonExecutableBuilder> {
         let distribution = get_default_distribution()?;
 
         // Link mode is static unless we're a dynamic distribution on Windows.
@@ -1945,14 +1815,14 @@ pub mod tests {
             python_exe,
         };
 
-        builder.add_distribution_resources(&logger, &packaging_policy)?;
+        builder.add_distribution_resources(&packaging_policy)?;
 
         Ok(builder)
     }
 
     pub fn get_embedded(logger: &slog::Logger) -> Result<EmbeddedPythonBinaryData> {
-        let exe = get_standalone_executable_builder(logger)?;
-        exe.as_embedded_python_binary_data(&get_logger()?, "0")
+        let exe = get_standalone_executable_builder()?;
+        exe.as_embedded_python_binary_data(logger, "0")
     }
 
     #[test]
@@ -1990,9 +1860,7 @@ pub mod tests {
 
     #[test]
     fn test_minimal_extensions_present() -> Result<()> {
-        let logger = get_logger()?;
-        let builder: StandalonePythonExecutableBuilder =
-            get_standalone_executable_builder(&logger)?;
+        let builder: StandalonePythonExecutableBuilder = get_standalone_executable_builder()?;
 
         let expected = builder
             .distribution

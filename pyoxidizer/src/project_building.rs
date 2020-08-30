@@ -524,7 +524,7 @@ mod tests {
     #[test]
     fn test_empty_project() -> Result<()> {
         let logger = get_logger()?;
-        let pre_built = get_standalone_executable_builder(&logger)?;
+        let pre_built = get_standalone_executable_builder()?;
 
         build_python_executable(&logger, "myapp", &pre_built, env!("HOST"), "0", false)?;
 

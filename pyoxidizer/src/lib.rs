@@ -15,7 +15,6 @@ pub mod analyze;
 pub mod app_packaging;
 //pub mod distribution;
 pub mod environment;
-mod licensing;
 pub mod logging;
 pub mod project_building;
 pub mod project_layout;
