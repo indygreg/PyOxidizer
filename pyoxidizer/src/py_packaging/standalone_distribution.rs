@@ -1708,7 +1708,9 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         }
 
         self.resources
-            .add_in_memory_distribution_extension_module(extension_module)
+            .add_in_memory_distribution_extension_module(&PythonExtensionModule::from(
+                extension_module,
+            ))
     }
 
     fn add_relative_path_distribution_extension_module(

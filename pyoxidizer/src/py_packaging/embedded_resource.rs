@@ -228,17 +228,17 @@ impl PrePackagedResources {
     /// Add a distribution extension module to be loaded from in-memory import.
     pub fn add_in_memory_distribution_extension_module(
         &mut self,
-        module: &DistributionExtensionModule,
+        module: &PythonExtensionModule,
     ) -> Result<()> {
         if module.shared_library.is_none() {
-            return Err(anyhow!("cannot add extension module {} for in-memory loading because it lacks shared library data", module.module));
+            return Err(anyhow!("cannot add extension module {} for in-memory loading because it lacks shared library data", module.name));
         }
 
-        let data = std::fs::read(module.shared_library.as_ref().unwrap())?;
+        let data = module.shared_library.as_ref().unwrap().resolve()?;
 
         let mut depends = Vec::new();
 
-        for link in &module.links {
+        for link in &module.link_libraries {
             if let Some(shared_library) = &link.dynamic_library {
                 // Add a resource holding the shared library data.
                 self.collector.add_shared_library(
@@ -255,7 +255,7 @@ impl PrePackagedResources {
 
         self.collector
             .add_in_memory_python_extension_module_shared_library(
-                &module.module,
+                &module.name,
                 false,
                 &data,
                 &depends_refs,
