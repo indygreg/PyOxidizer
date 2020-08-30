@@ -1689,12 +1689,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn add_builtin_distribution_extension_module(
         &mut self,
-        extension_module: &DistributionExtensionModule,
+        extension_module: &PythonExtensionModule,
     ) -> Result<()> {
         self.resources
-            .add_builtin_distribution_extension_module(&PythonExtensionModule::from(
-                extension_module,
-            ))
+            .add_builtin_distribution_extension_module(&extension_module)
     }
 
     fn add_in_memory_distribution_extension_module(
@@ -1739,24 +1737,22 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         // builtin extensions, even if it violates the resources policy that prohibits
         // memory loading.
 
+        let em = PythonExtensionModule::from(extension_module);
+
         // Builtins always get added as such.
         if extension_module.builtin_default {
-            return self.add_builtin_distribution_extension_module(extension_module);
+            return self.add_builtin_distribution_extension_module(&em);
         }
 
         match self.packaging_policy.clone().resources_policy {
             PythonResourcesPolicy::InMemoryOnly => match self.link_mode {
-                LibpythonLinkMode::Static => {
-                    self.add_builtin_distribution_extension_module(extension_module)
-                }
+                LibpythonLinkMode::Static => self.add_builtin_distribution_extension_module(&em),
                 LibpythonLinkMode::Dynamic => {
                     self.add_in_memory_distribution_extension_module(extension_module)
                 }
             },
             PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => match self.link_mode {
-                LibpythonLinkMode::Static => {
-                    self.add_builtin_distribution_extension_module(extension_module)
-                }
+                LibpythonLinkMode::Static => self.add_builtin_distribution_extension_module(&em),
                 LibpythonLinkMode::Dynamic => {
                     self.add_relative_path_distribution_extension_module(&prefix, extension_module)
                 }
@@ -1764,7 +1760,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(prefix) => {
                 match self.link_mode {
                     LibpythonLinkMode::Static => {
-                        self.add_builtin_distribution_extension_module(extension_module)
+                        self.add_builtin_distribution_extension_module(&em)
                     }
                     LibpythonLinkMode::Dynamic => {
                         // Try in-memory and fall back to file-based if that fails.
