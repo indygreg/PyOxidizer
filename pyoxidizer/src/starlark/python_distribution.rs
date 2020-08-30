@@ -349,10 +349,10 @@ impl PythonDistribution {
             }
             .into()
         })?;
+        policy.set_extension_module_filter(extension_module_filter);
         policy.set_include_distribution_sources(include_sources);
         policy.set_include_distribution_resources(include_resources);
         policy.set_include_test(include_test);
-        policy.extension_module_filter = extension_module_filter;
         policy.resources_policy = resources_policy;
         policy.preferred_extension_module_variants = preferred_extension_module_variants;
 

@@ -103,7 +103,7 @@ impl TryFrom<&str> for ExtensionModuleFilter {
 #[derive(Clone, Debug)]
 pub struct PythonPackagingPolicy {
     /// Which extension modules should be included.
-    pub extension_module_filter: ExtensionModuleFilter,
+    extension_module_filter: ExtensionModuleFilter,
 
     /// Preferred variants of extension modules.
     pub preferred_extension_module_variants: Option<HashMap<String, String>>,
@@ -142,6 +142,11 @@ impl Default for PythonPackagingPolicy {
 }
 
 impl PythonPackagingPolicy {
+    /// Set the extension module filter to use.
+    pub fn set_extension_module_filter(&mut self, filter: ExtensionModuleFilter) {
+        self.extension_module_filter = filter;
+    }
+
     /// Set whether we should include a Python distribution's module source code.
     pub fn set_include_distribution_sources(&mut self, include: bool) {
         self.include_distribution_sources = include;

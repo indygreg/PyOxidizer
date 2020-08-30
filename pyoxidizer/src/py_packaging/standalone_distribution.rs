@@ -1773,7 +1773,7 @@ pub mod tests {
         );
 
         let mut packaging_policy = distribution.create_packaging_policy()?;
-        packaging_policy.extension_module_filter = ExtensionModuleFilter::Minimal;
+        packaging_policy.set_extension_module_filter(ExtensionModuleFilter::Minimal);
         packaging_policy.resources_policy = PythonResourcesPolicy::InMemoryOnly;
 
         let config = EmbeddedPythonConfig::default();
