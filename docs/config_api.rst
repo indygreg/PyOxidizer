@@ -331,52 +331,13 @@ with test packages are included.
 
 .. _config_python_distribution_extension_modules:
 
-``PythonDistribution.extension_modules(filter='all', preferred_variants=None)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonDistribution.extension_modules()``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Returns a ``list`` of ``PythonExtensionModule`` representing extension
 modules in this distribution.
 
-The ``filter`` argument denotes how to filter the extension modules. The
-following values are recognized:
-
-``all``
-   Every named extension module will be included.
-
-``minimal``
-   Return only extension modules that are required to initialize a
-   Python interpreter. This is a very small set and various functionality
-   from the Python standard library will not work with this value.
-
-``no-libraries``
-   Return only extension modules that don't require any additional libraries.
-
-   Most common Python extension modules are included. Extension modules
-   like ``_ssl`` (links against OpenSSL) and ``zlib`` are not included.
-
-``no-gpl``
-   Return only extension modules that do not link against GPL licensed
-   libraries.
-
-   Not all Python distributions may annotate license info for all extensions or
-   the libraries they link against. If license info is missing, the extension is
-   not included because it *could* be GPL licensed. Similarly, the mechanism for
-   determining whether a license is GPL is based on an explicit list of non-GPL
-   licenses. This ensures new GPL licenses don't slip through.
-
-The ``preferred_variants`` argument denotes a string to string mapping of
-extension module name to its preferred variant name. If multiple variants of
-an extension module meet the filter requirements, the preferred variant from
-this mapping will be used. Otherwise the first variant will be used.
-
-.. important::
-
-   Libraries that extension modules link against have various software
-   licenses, including GPL version 3. Adding these extension modules will
-   also include the library. This typically exposes your program to additional
-   licensing requirements, including making your application subject to that
-   license and therefore open source. See :ref:`licensing_considerations` for
-   more.
+There may exist multiple extensions with the same name.
 
 .. _config_python_distribution_to_python_executable:
 
@@ -406,15 +367,41 @@ The accepted arguments are:
 
 ``extension_module_filter`` (``str``)
    The filter to apply to determine which extension modules to add.
+   The following values are recognized:
 
-   See :ref:`config_python_distribution_extension_modules` for what
-   values are accepted and their behavior.
+   ``all``
+      Every named extension module will be included.
+
+   ``minimal``
+      Return only extension modules that are required to initialize a
+      Python interpreter. This is a very small set and various functionality
+      from the Python standard library will not work with this value.
+
+   ``no-libraries``
+      Return only extension modules that don't require any additional libraries.
+
+      Most common Python extension modules are included. Extension modules
+      like ``_ssl`` (links against OpenSSL) and ``zlib`` are not included.
+
+   ``no-gpl``
+      Return only extension modules that do not link against GPL licensed
+      libraries.
+
+      Not all Python distributions may annotate license info for all extensions
+      or the libraries they link against. If license info is missing, the
+      extension is not included because it *could* be GPL licensed. Similarly,
+      the mechanism for determining whether a license is GPL is based on an
+      explicit list of non-GPL licenses. This ensures new GPL licenses don't
+      slip through.
 
    Default is ``all``.
 
 ``preferred_extension_module_variants`` (``dict`` of ``string`` to ``string``)
-   Preferred extension module variants to use. See
-   See :ref:`config_python_distribution_extension_modules` for behavior.
+   Preferred extension module variants to use.
+
+   If multiple variants of an extension module meet the filter requirements, the
+   preferred variant from this mapping will be used. Otherwise the first variant
+   will be used.
 
    Default is ``None``, which will use the first variant.
 
@@ -434,6 +421,15 @@ The accepted arguments are:
    Boolean to control whether test-specific objects are included.
 
    Default is ``False``.
+
+.. important::
+
+   Libraries that extension modules link against have various software
+   licenses, including GPL version 3. Adding these extension modules will
+   also include the library. This typically exposes your program to additional
+   licensing requirements, including making your application subject to that
+   license and therefore open source. See :ref:`licensing_considerations` for
+   more.
 
 .. _config_python_resources:
 

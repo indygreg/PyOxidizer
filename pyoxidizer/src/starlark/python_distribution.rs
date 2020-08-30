@@ -390,50 +390,10 @@ impl PythonDistribution {
     }
 
     /// PythonDistribution.extension_modules(filter="all", preferred_variants=None)
-    pub fn extension_modules(
-        &mut self,
-        env: &Environment,
-        filter: &Value,
-        preferred_variants: &Value,
-    ) -> ValueResult {
-        let filter = required_str_arg("filter", &filter)?;
-        optional_dict_arg(
-            "preferred_variants",
-            "string",
-            "string",
-            &preferred_variants,
-        )?;
-
-        let filter = ExtensionModuleFilter::try_from(filter.as_str()).map_err(|e| {
-            RuntimeError {
-                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                message: e,
-                label: "invalid policy value".to_string(),
-            }
-            .into()
-        })?;
-
-        let preferred_variants = match preferred_variants.get_type() {
-            "NoneType" => None,
-            "dict" => {
-                let mut m = HashMap::new();
-
-                for k in preferred_variants.into_iter()? {
-                    let v = preferred_variants.at(k.clone())?.to_string();
-                    m.insert(k.to_string(), v);
-                }
-
-                Some(m)
-            }
-            _ => panic!("type should have been validated above"),
-        };
-
+    pub fn extension_modules(&mut self, env: &Environment) -> ValueResult {
         let context = env.get("CONTEXT").expect("CONTEXT not defined");
 
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
-
-        let target_triple =
-            context.downcast_apply(|x: &EnvironmentContext| x.build_target_triple.clone());
 
         self.ensure_distribution_resolved(&logger).map_err(|e| {
             RuntimeError {
@@ -444,30 +404,11 @@ impl PythonDistribution {
             .into()
         })?;
 
-        let dist = self.distribution.as_ref().unwrap();
-
-        let mut policy = dist.create_packaging_policy().map_err(|e| {
-            RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "resolve_distribution()".to_string(),
-            }
-            .into()
-        })?;
-        policy.extension_module_filter = filter;
-        policy.preferred_extension_module_variants = preferred_variants;
-
         Ok(Value::from(
-            dist.filter_extension_modules(&logger, &policy, &target_triple)
-                .map_err(|e| {
-                    RuntimeError {
-                        code: "PYOXIDIZER_BUILD",
-                        message: e.to_string(),
-                        label: "extension_modules()".to_string(),
-                    }
-                    .into()
-                })?
-                .iter()
+            self.distribution
+                .as_ref()
+                .unwrap()
+                .iter_extension_modules()
                 .map(|em| {
                     Value::new(PythonExtensionModule {
                         em: PythonExtensionModuleFlavor::Distribution(em.clone()),
@@ -567,9 +508,9 @@ starlark_module! { python_distribution_module =>
     }
 
     #[allow(clippy::ptr_arg)]
-    PythonDistribution.extension_modules(env env, this, filter="all", preferred_variants=None) {
+    PythonDistribution.extension_modules(env env, this) {
         this.downcast_apply_mut(|dist: &mut PythonDistribution| {
-            dist.extension_modules(&env, &filter, &preferred_variants)
+            dist.extension_modules(&env)
         })
     }
 

@@ -137,6 +137,13 @@ pub trait PythonDistribution {
         target_triple: &str,
     ) -> Result<Vec<PythonExtensionModule>>;
 
+    /// Obtain `PythonExtensionModule` instances present in this distribution.
+    ///
+    /// Multiple variants of the same extension module may be returned.
+    fn iter_extension_modules<'a>(
+        &'a self,
+    ) -> Box<dyn Iterator<Item = &'a PythonExtensionModule> + 'a>;
+
     /// Obtain `SourceModule` instances present in this distribution.
     fn source_modules(&self) -> Result<Vec<PythonModuleSource>>;
 

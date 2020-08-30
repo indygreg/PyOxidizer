@@ -69,6 +69,12 @@ Backwards Compatibility Notes
   have been moved to the ``PythonExecutable`` type. Existing Starlark config
   files will need to change references accordingly (often by replacing ``dist.``
   with ``exe.``).
+* The ``PythonDistribution.extension_modules()`` Starlark function no
+  longer accepts arguments ``filter`` and ``preferred_variants``. The
+  function now returns every extension in the distribution. The reasons
+  for this change were to make code simpler and the justification for
+  removing it was rather weak. Please file an issue if this feature loss
+  affects you.
 
 New Features
 ^^^^^^^^^^^^

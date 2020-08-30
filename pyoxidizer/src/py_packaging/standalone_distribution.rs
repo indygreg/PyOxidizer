@@ -1220,6 +1220,17 @@ impl PythonDistribution for StandaloneDistribution {
         Ok(res)
     }
 
+    fn iter_extension_modules<'a>(
+        &'a self,
+    ) -> Box<dyn Iterator<Item = &'a PythonExtensionModule> + 'a> {
+        Box::new(
+            self.extension_modules
+                .iter()
+                .map(|(_, exts)| exts.iter())
+                .flatten(),
+        )
+    }
+
     fn source_modules(&self) -> Result<Vec<PythonModuleSource>> {
         self.py_modules
             .iter()
