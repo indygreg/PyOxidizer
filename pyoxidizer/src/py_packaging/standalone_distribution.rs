@@ -1919,7 +1919,7 @@ pub mod tests {
             LibpythonLinkMode::Static
         };
 
-        let mut resources = PrePackagedResources::new(
+        let resources = PrePackagedResources::new(
             &PythonResourcesPolicy::InMemoryOnly,
             &distribution.cache_tag,
         );
@@ -1928,28 +1928,26 @@ pub mod tests {
         packaging_policy.extension_module_filter = ExtensionModuleFilter::Minimal;
         packaging_policy.resources_policy = PythonResourcesPolicy::InMemoryOnly;
 
-        // We need to add minimal extension modules so builds actually work. If they are missing,
-        // we'll get missing symbol errors during linking.
-        for ext in distribution.filter_extension_modules(logger, &packaging_policy, env!("HOST"))? {
-            resources.add_builtin_distribution_extension_module(&ext)?;
-        }
-
         let config = EmbeddedPythonConfig::default();
 
         let python_exe = distribution.python_exe.clone();
 
-        Ok(StandalonePythonExecutableBuilder {
+        let mut builder = StandalonePythonExecutableBuilder {
             host_triple: env!("HOST").to_string(),
             target_triple: env!("HOST").to_string(),
             exe_name: "testapp".to_string(),
             distribution: distribution.clone(),
             link_mode,
             supports_in_memory_dynamically_linked_extension_loading: false,
-            packaging_policy,
+            packaging_policy: packaging_policy.clone(),
             resources,
             config,
             python_exe,
-        })
+        };
+
+        builder.add_distribution_resources(&logger, &packaging_policy)?;
+
+        Ok(builder)
     }
 
     pub fn get_embedded(logger: &slog::Logger) -> Result<EmbeddedPythonBinaryData> {
