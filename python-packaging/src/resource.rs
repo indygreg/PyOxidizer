@@ -490,6 +490,7 @@ pub struct PythonExtensionModule {
     pub extension_file_suffix: String,
     /// File data for linked extension module.
     pub shared_library: Option<DataLocation>,
+    // TODO capture static library?
     /// File data for object files linked together to produce this extension module.
     pub object_file_data: Vec<DataLocation>,
     /// Whether this extension module is a package.

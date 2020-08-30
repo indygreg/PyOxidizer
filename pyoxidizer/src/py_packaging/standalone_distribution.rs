@@ -339,96 +339,6 @@ pub fn choose_variant<S: BuildHasher>(
     }
 }
 
-/// Describes an extension module in a Python distribution.
-#[derive(Clone, Debug, PartialEq)]
-pub struct DistributionExtensionModule {
-    /// Name of the Python module this extension module provides.
-    pub module: String,
-
-    /// Module initialization function.
-    ///
-    /// If None, there is no module initialization function. This is
-    /// typically represented as NULL in Python's inittab.
-    pub init_fn: Option<String>,
-
-    /// Whether the extension module is built-in by default.
-    ///
-    /// Some extension modules are always compiled into libpython.
-    /// This field will be true for those modules.
-    pub builtin_default: bool,
-
-    /// Compiled object files providing this extension module.
-    pub object_paths: Vec<PathBuf>,
-
-    /// Path to static library providing this extension module.
-    pub static_library: Option<PathBuf>,
-
-    /// Path to a shared library providing this extension module.
-    pub shared_library: Option<PathBuf>,
-
-    /// Library linking metadata.
-    pub links: Vec<LibraryDependency>,
-
-    /// Whether the extension must be loaded to initialize Python.
-    pub required: bool,
-
-    /// Name of the variant of this extension module.
-    pub variant: String,
-
-    /// SPDX license shortnames that apply to this library dependency.
-    pub licenses: Option<Vec<String>>,
-
-    /// Path to file holding license text for this library.
-    pub license_paths: Option<Vec<PathBuf>>,
-
-    /// Whether the license for this library is in the public domain.
-    pub license_public_domain: Option<bool>,
-}
-
-impl From<&DistributionExtensionModule> for PythonExtensionModule {
-    fn from(em: &DistributionExtensionModule) -> Self {
-        let extension_data = if let Some(path) = &em.shared_library {
-            Some(DataLocation::Path(path.clone()))
-        } else {
-            None
-        };
-
-        let object_file_data = em
-            .object_paths
-            .iter()
-            .map(|x| DataLocation::Path(x.clone()))
-            .collect();
-
-        let license_texts = if let Some(paths) = &em.license_paths {
-            Some(
-                paths
-                    .iter()
-                    .map(|p| DataLocation::Path(p.clone()))
-                    .collect(),
-            )
-        } else {
-            None
-        };
-
-        Self {
-            name: em.module.clone(),
-            init_fn: em.init_fn.clone(),
-            extension_file_suffix: "".to_string(),
-            shared_library: extension_data,
-            object_file_data,
-            is_package: false,
-            link_libraries: em.links.clone(),
-            is_stdlib: true,
-            builtin_default: em.builtin_default,
-            required: em.required,
-            variant: Some(em.variant.clone()),
-            licenses: em.licenses.clone(),
-            license_texts,
-            license_public_domain: em.license_public_domain.clone(),
-        }
-    }
-}
-
 /// Describes license information for a library.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LicenseInfo {
@@ -764,7 +674,11 @@ impl StandaloneDistribution {
             let mut ems = Vec::new();
 
             for entry in variants.iter() {
-                let object_paths = entry.objs.iter().map(|p| python_path.join(p)).collect();
+                let object_file_data = entry
+                    .objs
+                    .iter()
+                    .map(|p| DataLocation::Path(python_path.join(p)))
+                    .collect();
                 let mut links = Vec::new();
 
                 for link in &entry.links {
@@ -800,29 +714,35 @@ impl StandaloneDistribution {
                     license_infos.insert(module.clone(), licenses);
                 }
 
-                ems.push(PythonExtensionModule::from(&DistributionExtensionModule {
-                    module: module.clone(),
+                ems.push(PythonExtensionModule {
+                    name: module.clone(),
                     init_fn: Some(entry.init_fn.clone()),
+                    extension_file_suffix: "".to_string(),
+                    shared_library: if let Some(path) = &entry.shared_lib {
+                        Some(DataLocation::Path(python_path.join(path)))
+                    } else {
+                        None
+                    },
+                    object_file_data,
+                    is_package: false,
+                    link_libraries: links,
+                    is_stdlib: true,
                     builtin_default: entry.in_core,
-                    license_public_domain: entry.license_public_domain,
-                    license_paths: match entry.license_paths {
-                        Some(ref refs) => Some(refs.iter().map(|p| python_path.join(p)).collect()),
-                        None => None,
-                    },
-                    licenses: entry.licenses.clone(),
-                    object_paths,
                     required: entry.required,
-                    static_library: match &entry.static_lib {
-                        Some(p) => Some(python_path.join(p)),
-                        None => None,
+                    variant: Some(entry.variant.clone()),
+                    licenses: entry.licenses.clone(),
+                    license_texts: if let Some(licenses) = &entry.license_paths {
+                        Some(
+                            licenses
+                                .iter()
+                                .map(|p| DataLocation::Path(python_path.join(p)))
+                                .collect(),
+                        )
+                    } else {
+                        None
                     },
-                    shared_library: match &entry.shared_lib {
-                        Some(p) => Some(python_path.join(p)),
-                        None => None,
-                    },
-                    links,
-                    variant: entry.variant.clone(),
-                }));
+                    license_public_domain: entry.license_public_domain,
+                });
             }
 
             extension_modules.insert(module.clone(), ems);
