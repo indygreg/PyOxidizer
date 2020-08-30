@@ -73,86 +73,43 @@ impl PrePackagedResources {
         self.collector.iter_resources()
     }
 
-    /// Add a source module to the collection of embedded source modules.
-    pub fn add_in_memory_module_source(&mut self, module: &PythonModuleSource) -> Result<()> {
-        self.collector
-            .add_python_module_source(module, &ConcreteResourceLocation::InMemory)
-    }
-
-    /// Add module source to be loaded from a file on the filesystem relative to the resources.
-    pub fn add_relative_path_module_source(
+    /// Add Python module source to the collection.
+    pub fn add_python_module_source(
         &mut self,
         module: &PythonModuleSource,
-        prefix: &str,
+        location: &ConcreteResourceLocation,
     ) -> Result<()> {
-        self.collector.add_python_module_source(
-            module,
-            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-        )
+        self.collector.add_python_module_source(module, location)
     }
 
-    /// Add a bytecode module to the collection of embedded bytecode modules.
-    pub fn add_in_memory_module_bytecode(
+    /// Add Python module bytecode to be derived from source code to the collection.
+    pub fn add_python_module_bytecode_from_source(
         &mut self,
         module: &PythonModuleBytecodeFromSource,
+        location: &ConcreteResourceLocation,
     ) -> Result<()> {
         self.collector
-            .add_python_module_bytecode_from_source(module, &ConcreteResourceLocation::InMemory)
+            .add_python_module_bytecode_from_source(module, location)
     }
 
-    /// Add a bytecode module to be loaded from the filesystem relative to some entity.
-    pub fn add_relative_path_module_bytecode(
-        &mut self,
-        module: &PythonModuleBytecodeFromSource,
-        prefix: &str,
-    ) -> Result<()> {
-        self.collector.add_python_module_bytecode_from_source(
-            module,
-            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-        )
-    }
-
-    /// Add resource data.
-    ///
-    /// Resource data belongs to a Python package and has a name and bytes data.
-    pub fn add_in_memory_package_resource(
+    /// Add Python package resource data to the collection.
+    pub fn add_python_package_resource(
         &mut self,
         resource: &PythonPackageResource,
+        location: &ConcreteResourceLocation,
     ) -> Result<()> {
         self.collector
-            .add_python_package_resource(resource, &ConcreteResourceLocation::InMemory)
+            .add_python_package_resource(resource, location)
     }
 
-    /// Add resource data to be loaded from the filesystem.
-    pub fn add_relative_path_package_resource(
-        &mut self,
-        prefix: &str,
-        resource: &PythonPackageResource,
-    ) -> Result<()> {
-        self.collector.add_python_package_resource(
-            resource,
-            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-        )
-    }
-
-    /// Add a package distribution resource to be loaded from memory.
-    pub fn add_in_memory_package_distribution_resource(
+    /// Add a Python package distribution resource to the collection.
+    pub fn add_python_package_distribution_resource(
         &mut self,
         resource: &PythonPackageDistributionResource,
+        location: &ConcreteResourceLocation,
     ) -> Result<()> {
         self.collector
-            .add_package_distribution_resource(resource, &ConcreteResourceLocation::InMemory)
-    }
-
-    pub fn add_relative_path_package_distribution_resource(
-        &mut self,
-        prefix: &str,
-        resource: &PythonPackageDistributionResource,
-    ) -> Result<()> {
-        self.collector.add_package_distribution_resource(
-            resource,
-            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-        )
+            .add_package_distribution_resource(resource, location)
     }
 
     /// Add an extension module from a Python distribution to be linked into the binary.

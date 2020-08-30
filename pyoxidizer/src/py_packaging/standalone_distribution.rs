@@ -4,7 +4,7 @@
 
 /*! Functionality for standalone Python distributions. */
 
-use python_packaging::resource_collection::PrePackagedResource;
+use python_packaging::resource_collection::{ConcreteResourceLocation, PrePackagedResource};
 use {
     super::binary::{
         EmbeddedPythonBinaryData, EmbeddedResourcesBlobs, LibpythonLinkMode, PythonBinaryBuilder,
@@ -1545,7 +1545,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     }
 
     fn add_in_memory_module_source(&mut self, module: &PythonModuleSource) -> Result<()> {
-        self.resources.add_in_memory_module_source(module)
+        self.resources
+            .add_python_module_source(module, &ConcreteResourceLocation::InMemory)
     }
 
     fn add_relative_path_module_source(
@@ -1553,15 +1554,18 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         prefix: &str,
         module: &PythonModuleSource,
     ) -> Result<()> {
-        self.resources
-            .add_relative_path_module_source(module, prefix)
+        self.resources.add_python_module_source(
+            module,
+            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+        )
     }
 
     fn add_in_memory_module_bytecode(
         &mut self,
         module: &PythonModuleBytecodeFromSource,
     ) -> Result<()> {
-        self.resources.add_in_memory_module_bytecode(module)
+        self.resources
+            .add_python_module_bytecode_from_source(module, &ConcreteResourceLocation::InMemory)
     }
 
     fn add_relative_path_module_bytecode(
@@ -1569,12 +1573,15 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         prefix: &str,
         module: &PythonModuleBytecodeFromSource,
     ) -> Result<()> {
-        self.resources
-            .add_relative_path_module_bytecode(module, prefix)
+        self.resources.add_python_module_bytecode_from_source(
+            module,
+            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+        )
     }
 
     fn add_in_memory_package_resource(&mut self, resource: &PythonPackageResource) -> Result<()> {
-        self.resources.add_in_memory_package_resource(resource)
+        self.resources
+            .add_python_package_resource(resource, &ConcreteResourceLocation::InMemory)
     }
 
     fn add_relative_path_package_resource(
@@ -1582,8 +1589,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         prefix: &str,
         resource: &PythonPackageResource,
     ) -> Result<()> {
-        self.resources
-            .add_relative_path_package_resource(prefix, resource)
+        self.resources.add_python_package_resource(
+            resource,
+            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+        )
     }
 
     fn add_in_memory_package_distribution_resource(
@@ -1591,7 +1600,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         resource: &PythonPackageDistributionResource,
     ) -> Result<()> {
         self.resources
-            .add_in_memory_package_distribution_resource(resource)
+            .add_python_package_distribution_resource(resource, &ConcreteResourceLocation::InMemory)
     }
 
     fn add_relative_path_package_distribution_resource(
@@ -1599,8 +1608,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         prefix: &str,
         resource: &PythonPackageDistributionResource,
     ) -> Result<()> {
-        self.resources
-            .add_relative_path_package_distribution_resource(prefix, resource)
+        self.resources.add_python_package_distribution_resource(
+            resource,
+            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+        )
     }
 
     fn add_builtin_distribution_extension_module(
