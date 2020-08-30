@@ -1720,7 +1720,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<()> {
         if self.distribution.is_extension_module_file_loadable() {
             self.resources
-                .add_relative_path_distribution_extension_module(prefix, extension_module)
+                .add_relative_path_distribution_extension_module(
+                    prefix,
+                    &PythonExtensionModule::from(extension_module),
+                )
         } else {
             Err(anyhow!(
                 "loading extension modules from files not supported by this build configuration"

@@ -8,7 +8,6 @@ Embedded Python resources in a binary.
 
 use {
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
-    super::standalone_distribution::DistributionExtensionModule,
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Result},
     python_packaging::policy::PythonResourcesPolicy,
@@ -268,21 +267,19 @@ impl PrePackagedResources {
     pub fn add_relative_path_distribution_extension_module(
         &mut self,
         prefix: &str,
-        module: &DistributionExtensionModule,
+        module: &PythonExtensionModule,
     ) -> Result<()> {
         if module.shared_library.is_none() {
             return Err(anyhow!(
                 "cannot add extension module {} as path relative because it lacks a shared library",
-                module.module
+                module.name
             ));
         }
 
-        let ext = PythonExtensionModule::from(module);
-
         self.collector
-            .add_relative_path_python_extension_module(&ext, prefix)?;
+            .add_relative_path_python_extension_module(&module, prefix)?;
 
-        for link in &module.links {
+        for link in &module.link_libraries {
             // Install dynamic library dependencies next to extension module.
             //
             // On Windows, this should "just work" since the opening DLL's directory
@@ -561,22 +558,24 @@ mod tests {
     fn test_add_distribution_extension_module() -> Result<()> {
         let mut r =
             PrePackagedResources::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
-        let em = DistributionExtensionModule {
-            module: "foo.bar".to_string(),
+        let em = PythonExtensionModule {
+            name: "foo.bar".to_string(),
             init_fn: None,
+            extension_file_suffix: "".to_string(),
             builtin_default: false,
-            object_paths: vec![],
-            static_library: None,
+            object_file_data: vec![],
             shared_library: None,
-            links: vec![],
+            link_libraries: vec![],
             required: false,
-            variant: "".to_string(),
+            is_package: false,
+            is_stdlib: false,
+            variant: None,
             licenses: None,
-            license_paths: None,
+            license_texts: None,
             license_public_domain: None,
         };
 
-        r.add_builtin_distribution_extension_module(&PythonExtensionModule::from(&em))?;
+        r.add_builtin_distribution_extension_module(&em)?;
         assert_eq!(r.extension_module_states.len(), 1);
         assert_eq!(
             r.extension_module_states.get("foo.bar"),
