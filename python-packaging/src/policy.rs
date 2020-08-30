@@ -155,6 +155,11 @@ impl PythonPackagingPolicy {
             .insert(extension.to_string(), variant.to_string());
     }
 
+    /// Set the resource loading policy.
+    pub fn set_resources_policy(&mut self, policy: PythonResourcesPolicy) {
+        self.resources_policy = policy;
+    }
+
     /// Set whether we should include a Python distribution's module source code.
     pub fn set_include_distribution_sources(&mut self, include: bool) {
         self.include_distribution_sources = include;

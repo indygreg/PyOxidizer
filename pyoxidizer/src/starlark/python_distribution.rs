@@ -350,10 +350,10 @@ impl PythonDistribution {
             .into()
         })?;
         policy.set_extension_module_filter(extension_module_filter);
+        policy.set_resources_policy(resources_policy);
         policy.set_include_distribution_sources(include_sources);
         policy.set_include_distribution_resources(include_resources);
         policy.set_include_test(include_test);
-        policy.resources_policy = resources_policy;
 
         if let Some(variants) = preferred_extension_module_variants {
             for (ext, variant) in variants {
