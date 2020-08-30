@@ -39,7 +39,6 @@ use {
     slog::{info, warn},
     std::collections::{BTreeMap, BTreeSet, HashMap},
     std::convert::TryFrom,
-    std::hash::BuildHasher,
     std::io::{BufRead, BufReader, Read},
     std::iter::FromIterator,
     std::path::{Path, PathBuf},
@@ -313,30 +312,6 @@ pub fn invoke_python(python_paths: &PythonPaths, logger: &slog::Logger, args: &[
         for line in reader.lines() {
             warn!(logger, "{}", line.unwrap());
         }
-    }
-}
-
-pub fn choose_variant<S: BuildHasher>(
-    extensions: &PythonExtensionModuleVariants,
-    variants: &Option<HashMap<String, String, S>>,
-) -> PythonExtensionModule {
-    if let Some(variants) = variants {
-        if let Some(preferred) = variants.get(&extensions.default_variant().name) {
-            let mut desired = extensions.default_variant().clone();
-
-            for em in extensions.iter() {
-                if em.variant == Some(preferred.to_owned()) {
-                    desired = em.clone();
-                    break;
-                }
-            }
-
-            desired
-        } else {
-            extensions.default_variant().clone()
-        }
-    } else {
-        extensions.default_variant().clone()
     }
 }
 
@@ -1116,18 +1091,20 @@ impl PythonDistribution for StandaloneDistribution {
                     );
 
                     if !ext_variants.is_empty() {
-                        res.push(choose_variant(
-                            &ext_variants,
-                            &policy.preferred_extension_module_variants,
-                        ));
+                        res.push(
+                            ext_variants
+                                .choose_variant(&policy.preferred_extension_module_variants)
+                                .clone(),
+                        );
                     }
                 }
 
                 ExtensionModuleFilter::All => {
-                    res.push(choose_variant(
-                        &ext_variants,
-                        &policy.preferred_extension_module_variants,
-                    ));
+                    res.push(
+                        ext_variants
+                            .choose_variant(&policy.preferred_extension_module_variants)
+                            .clone(),
+                    );
                 }
 
                 ExtensionModuleFilter::NoLibraries => {
@@ -1142,10 +1119,11 @@ impl PythonDistribution for StandaloneDistribution {
                     );
 
                     if !ext_variants.is_empty() {
-                        res.push(choose_variant(
-                            &ext_variants,
-                            &policy.preferred_extension_module_variants,
-                        ));
+                        res.push(
+                            ext_variants
+                                .choose_variant(&policy.preferred_extension_module_variants)
+                                .clone(),
+                        );
                     }
                 }
 
@@ -1180,10 +1158,11 @@ impl PythonDistribution for StandaloneDistribution {
                     );
 
                     if !ext_variants.is_empty() {
-                        res.push(choose_variant(
-                            &ext_variants,
-                            &policy.preferred_extension_module_variants,
-                        ));
+                        res.push(
+                            ext_variants
+                                .choose_variant(&policy.preferred_extension_module_variants)
+                                .clone(),
+                        );
                     }
                 }
             }

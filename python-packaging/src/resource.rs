@@ -11,7 +11,9 @@ use {
     },
     crate::python_source::has_dunder_file,
     anyhow::{anyhow, Context, Result},
+    std::collections::HashMap,
     std::convert::TryFrom,
+    std::hash::BuildHasher,
     std::iter::FromIterator,
     std::path::{Path, PathBuf},
 };
@@ -640,6 +642,31 @@ impl PythonExtensionModuleVariants {
     /// Obtains the default / first variant of an extension module.
     pub fn default_variant(&self) -> &PythonExtensionModule {
         &self.extensions[0]
+    }
+
+    /// Choose a variant given preferences.
+    pub fn choose_variant<S: BuildHasher>(
+        &self,
+        variants: &Option<HashMap<String, String, S>>,
+    ) -> &PythonExtensionModule {
+        // The default / first item is the chosen one by default.
+        let mut chosen = self.default_variant();
+
+        // But it can be overridden if we passed in a hash defining variant
+        // preferences, the hash contains a key with the extension name, and the
+        // requested variant value exists.
+        if let Some(variants) = variants {
+            if let Some(preferred) = variants.get(&chosen.name) {
+                for em in self.iter() {
+                    if em.variant == Some(preferred.to_string()) {
+                        chosen = em;
+                        break;
+                    }
+                }
+            }
+        }
+
+        chosen
     }
 }
 
