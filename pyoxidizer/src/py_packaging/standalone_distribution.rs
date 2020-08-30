@@ -1486,6 +1486,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         Box::new(self.resources.iter_resources())
     }
 
+    fn builtin_extension_module_names<'a>(&'a self) -> Box<dyn Iterator<Item = &'a String> + 'a> {
+        Box::new(self.resources.builtin_extension_module_names())
+    }
+
     fn pip_install(
         &self,
         logger: &slog::Logger,
@@ -1957,6 +1961,40 @@ pub mod tests {
             if resource.leaf_package.starts_with("test") {
                 assert!(resource.is_test);
             }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_minimal_extensions_present() -> Result<()> {
+        let logger = get_logger()?;
+        let builder: StandalonePythonExecutableBuilder =
+            get_standalone_executable_builder(&logger)?;
+
+        let expected = builder
+            .distribution
+            .extension_modules
+            .iter()
+            .filter_map(|(_, extensions)| {
+                if extensions[0].builtin_default || extensions[0].required {
+                    Some(extensions[0].name.clone())
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        // Sanity check.
+        assert!(expected.contains(&"_io".to_string()));
+
+        for name in &expected {
+            // All extensions annotated as required in the distribution are marked
+            // as built-ins.
+            assert!(builder.builtin_extension_module_names().any(|x| x == name));
+
+            // Built-in extension modules shouldn't be annotated as resources.
+            assert!(!builder.iter_resources().any(|(x, _)| x == name));
         }
 
         Ok(())

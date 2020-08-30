@@ -73,6 +73,15 @@ impl PrePackagedResources {
         self.collector.iter_resources()
     }
 
+    /// Obtain the names of extension modules that will be compiled into libpython.
+    ///
+    /// These extension modules are statically linked into the binary. They
+    /// aren't tracked as Python resources since they aren't part of the resources
+    /// data structure.
+    pub fn builtin_extension_module_names(&self) -> impl Iterator<Item = &String> {
+        self.extension_module_states.keys()
+    }
+
     /// Add Python module source to the collection.
     pub fn add_python_module_source(
         &mut self,
