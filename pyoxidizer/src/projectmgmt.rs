@@ -249,18 +249,18 @@ pub fn python_distribution_info(dist_path: &str) -> Result<()> {
         println!();
 
         for em in ems {
-            println!("{}", em.variant);
-            println!("{}", "^".repeat(em.variant.len()));
+            println!("{}", em.variant.as_ref().unwrap());
+            println!("{}", "^".repeat(em.variant.as_ref().unwrap().len()));
             println!();
             println!("Required: {}", em.required);
             println!("Built-in Default: {}", em.builtin_default);
             if let Some(licenses) = em.licenses {
                 println!("Licenses: {}", licenses.join(", "));
             }
-            if !em.links.is_empty() {
+            if !em.link_libraries.is_empty() {
                 println!(
                     "Links: {}",
-                    em.links
+                    em.link_libraries
                         .iter()
                         .map(|l| l.name.clone())
                         .collect::<Vec<String>>()
@@ -316,21 +316,21 @@ pub fn python_distribution_licenses(path: &str) -> Result<()> {
 
     for (name, variants) in &dist.extension_modules {
         for variant in variants {
-            if variant.links.is_empty() {
+            if variant.link_libraries.is_empty() {
                 continue;
             }
 
-            let name = if variant.variant == "default" {
+            let name = if variant.variant.as_ref().unwrap() == "default" {
                 name.clone()
             } else {
-                format!("{} ({})", name, variant.variant)
+                format!("{} ({})", name, variant.variant.as_ref().unwrap())
             };
 
             println!("{}", name);
             println!("{}", "-".repeat(name.len()));
             println!();
 
-            for link in &variant.links {
+            for link in &variant.link_libraries {
                 println!("Dependency: {}", &link.name);
                 println!(
                     "Link Type: {}",
