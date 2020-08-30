@@ -554,7 +554,7 @@ impl PythonExtensionModule {
             } else {
                 None
             },
-            license_public_domain: self.license_public_domain.clone(),
+            license_public_domain: self.license_public_domain,
         })
     }
 
