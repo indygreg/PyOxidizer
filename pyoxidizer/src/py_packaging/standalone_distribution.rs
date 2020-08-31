@@ -22,6 +22,7 @@ use {
     anyhow::{anyhow, Context, Result},
     copy_dir::copy_dir,
     lazy_static::lazy_static,
+    path_dedot::ParseDot,
     python_packaging::bytecode::BytecodeCompiler,
     python_packaging::filesystem_scanning::{find_python_resources, walk_tree_files},
     python_packaging::module_util::{is_package_from_path, PythonModuleSuffixes},
@@ -518,8 +519,64 @@ impl StandaloneDistribution {
             if !test_path.exists() {
                 std::fs::create_dir_all(extract_dir)?;
                 let absolute_path = std::fs::canonicalize(extract_dir)?;
-                tf.unpack(&absolute_path)
-                    .with_context(|| "unable to extract tar archive")?;
+
+                let mut symlinks = vec![];
+
+                for entry in tf.entries()? {
+                    let mut entry =
+                        entry.map_err(|e| anyhow!("failed to iterate over archive: {}", e))?;
+
+                    // Windows doesn't support symlinks without special permissions.
+                    // So we track symlinks explicitly and copy files post extract if
+                    // running on that platform.
+                    let link_name = entry.link_name().unwrap_or(None);
+
+                    if link_name.is_some() && cfg!(target_family = "windows") {
+                        // The entry's path is the file to write, relative to the archive's
+                        // root. We need to expand to an absolute path to facilitate copying.
+
+                        // The link name is the file to symlink to, or the file we're copying.
+                        // This path is relative to the entry path. So we need join with the
+                        // entry's directory and canonicalize. There is also a security issue
+                        // at play: archives could contain bogus symlinks pointing outside the
+                        // archive. So we detect this, just in case.
+
+                        let mut dest = absolute_path.clone();
+                        dest.extend(entry.path()?.components());
+                        let dest = dest
+                            .parse_dot()
+                            .with_context(|| "dedotting symlinked source")?;
+
+                        let mut source = dest
+                            .parent()
+                            .ok_or_else(|| anyhow!("unable to resolve parent"))?
+                            .to_path_buf();
+                        source.extend(link_name.unwrap().components());
+                        let source = source
+                            .parse_dot()
+                            .with_context(|| "dedotting symlink destination")?;
+
+                        if !source.starts_with(&absolute_path) {
+                            return Err(anyhow!("malicious symlink detected in archive"));
+                        }
+
+                        symlinks.push((source, dest));
+                    } else {
+                        entry
+                            .unpack_in(&absolute_path)
+                            .with_context(|| "unable to extract tar member")?;
+                    }
+                }
+
+                for (source, dest) in symlinks {
+                    std::fs::copy(&source, &dest).with_context(|| {
+                        format!(
+                            "copying symlinked file {} -> {}",
+                            source.display(),
+                            dest.display(),
+                        )
+                    })?;
+                }
 
                 // Ensure unpacked files are writable. We've had issues where we
                 // consume archives with read-only file permissions. When we later
