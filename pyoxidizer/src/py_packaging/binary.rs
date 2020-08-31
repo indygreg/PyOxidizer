@@ -125,7 +125,11 @@ pub trait PythonBinaryBuilder {
 
     /// Add Python module source code to a location as determined by the builder's resource policy.
     fn add_module_source(&mut self, module: &PythonModuleSource) -> Result<()> {
-        match self.python_packaging_policy().clone().resources_policy {
+        match self
+            .python_packaging_policy()
+            .get_resources_policy()
+            .clone()
+        {
             PythonResourcesPolicy::InMemoryOnly
             | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
                 self.add_in_memory_module_source(module)
@@ -151,7 +155,11 @@ pub trait PythonBinaryBuilder {
 
     /// Add Python module bytecode to a location as determined by the builder's resource policy.
     fn add_module_bytecode(&mut self, module: &PythonModuleBytecodeFromSource) -> Result<()> {
-        match self.python_packaging_policy().clone().resources_policy {
+        match self
+            .python_packaging_policy()
+            .get_resources_policy()
+            .clone()
+        {
             PythonResourcesPolicy::InMemoryOnly
             | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
                 self.add_in_memory_module_bytecode(module)
@@ -174,7 +182,11 @@ pub trait PythonBinaryBuilder {
 
     /// Add resource data to the collection of embedded resource data to a location as determined by the builder's resource policy.
     fn add_package_resource(&mut self, resource: &PythonPackageResource) -> Result<()> {
-        match self.python_packaging_policy().clone().resources_policy {
+        match self
+            .python_packaging_policy()
+            .get_resources_policy()
+            .clone()
+        {
             PythonResourcesPolicy::InMemoryOnly
             | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
                 self.add_in_memory_package_resource(resource)
@@ -203,7 +215,11 @@ pub trait PythonBinaryBuilder {
         &mut self,
         resource: &PythonPackageDistributionResource,
     ) -> Result<()> {
-        match self.python_packaging_policy().clone().resources_policy {
+        match self
+            .python_packaging_policy()
+            .get_resources_policy()
+            .clone()
+        {
             PythonResourcesPolicy::InMemoryOnly
             | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
                 self.add_in_memory_package_distribution_resource(resource)

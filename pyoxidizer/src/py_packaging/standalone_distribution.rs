@@ -1124,7 +1124,7 @@ impl PythonDistribution for StandaloneDistribution {
             link_mode,
             supports_in_memory_dynamically_linked_extension_loading,
             packaging_policy: policy.clone(),
-            resources: PrePackagedResources::new(&policy.resources_policy, &self.cache_tag),
+            resources: PrePackagedResources::new(policy.get_resources_policy(), &self.cache_tag),
             config: config.clone(),
             python_exe,
         });
@@ -1602,7 +1602,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             return self.add_builtin_distribution_extension_module(&extension_module);
         }
 
-        match self.packaging_policy.clone().resources_policy {
+        match self.packaging_policy.get_resources_policy().clone() {
             PythonResourcesPolicy::InMemoryOnly => match self.link_mode {
                 LibpythonLinkMode::Static => {
                     self.add_builtin_distribution_extension_module(&extension_module)
@@ -1706,7 +1706,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             ));
         }
 
-        match self.packaging_policy.resources_policy {
+        match self.packaging_policy.get_resources_policy().clone() {
             PythonResourcesPolicy::InMemoryOnly => {
                 if self.supports_in_memory_dynamically_linked_extension_loading {
                     self.resources

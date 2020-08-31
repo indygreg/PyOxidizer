@@ -109,7 +109,7 @@ pub struct PythonPackagingPolicy {
     preferred_extension_module_variants: HashMap<String, String>,
 
     /// Where resources should be packaged by default.
-    pub resources_policy: PythonResourcesPolicy,
+    resources_policy: PythonResourcesPolicy,
 
     /// Whether to include source module from the Python distribution.
     include_distribution_sources: bool,
@@ -153,6 +153,11 @@ impl PythonPackagingPolicy {
     pub fn set_preferred_extension_module_variant(&mut self, extension: &str, variant: &str) {
         self.preferred_extension_module_variants
             .insert(extension.to_string(), variant.to_string());
+    }
+
+    /// Obtain the active resources policy for this instance.
+    pub fn get_resources_policy(&self) -> &PythonResourcesPolicy {
+        &self.resources_policy
     }
 
     /// Set the resource loading policy.
