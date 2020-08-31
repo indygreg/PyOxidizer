@@ -1810,8 +1810,80 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
 #[cfg(test)]
 pub mod tests {
-    use {super::*, crate::testutil::*, python_packaging::policy::ExtensionModuleFilter};
+    use {
+        super::*, crate::py_packaging::distribution::DistributionFlavor,
+        crate::python_distributions::PYTHON_DISTRIBUTIONS, crate::testutil::*,
+        python_packaging::policy::ExtensionModuleFilter,
+    };
 
+    /// Defines construction options for a `StandalonePythonExecutableBuilder`.
+    ///
+    /// This is mostly intended to be used by tests, to reduce boilerplate for
+    /// constructing instances.
+    pub struct StandalonePythonExecutableBuilderOptions {
+        pub logger: Option<slog::Logger>,
+        pub host_triple: String,
+        pub target_triple: String,
+        pub distribution_flavor: DistributionFlavor,
+        pub app_name: String,
+        pub libpython_link_mode: BinaryLibpythonLinkMode,
+        pub extension_module_filter: ExtensionModuleFilter,
+    }
+
+    impl Default for StandalonePythonExecutableBuilderOptions {
+        fn default() -> Self {
+            Self {
+                logger: None,
+                host_triple: env!("HOST").to_string(),
+                target_triple: env!("HOST").to_string(),
+                distribution_flavor: DistributionFlavor::Standalone,
+                app_name: "testapp".to_string(),
+                libpython_link_mode: BinaryLibpythonLinkMode::Default,
+                extension_module_filter: ExtensionModuleFilter::Minimal,
+            }
+        }
+    }
+
+    impl StandalonePythonExecutableBuilderOptions {
+        fn new_builder(
+            &self,
+        ) -> Result<(
+            Arc<Box<StandaloneDistribution>>,
+            Box<dyn PythonBinaryBuilder>,
+        )> {
+            let logger = if let Some(logger) = &self.logger {
+                logger.clone()
+            } else {
+                get_logger()?
+            };
+
+            let record = PYTHON_DISTRIBUTIONS
+                .find_distribution(&self.target_triple, &self.distribution_flavor)
+                .ok_or_else(|| anyhow!("could not find Python distribution"))?;
+
+            let distribution = get_distribution(&record.location)?;
+
+            let mut policy = PythonPackagingPolicy::default();
+            policy.set_extension_module_filter(self.extension_module_filter.clone());
+
+            let config = EmbeddedPythonConfig::default();
+
+            Ok((
+                distribution.clone(),
+                distribution.as_python_executable_builder(
+                    &logger,
+                    &self.host_triple,
+                    &self.target_triple,
+                    &self.app_name,
+                    self.libpython_link_mode.clone(),
+                    &policy,
+                    &config,
+                )?,
+            ))
+        }
+    }
+
+    // TODO switch users to StandalonePythonExecutableBuilderOptions
     pub fn get_standalone_executable_builder() -> Result<StandalonePythonExecutableBuilder> {
         let distribution = get_default_distribution()?;
 
@@ -1920,6 +1992,56 @@ pub mod tests {
 
             // Built-in extension modules shouldn't be annotated as resources.
             assert!(!builder.iter_resources().any(|(x, _)| x == name));
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_musl_all_extensions_builtin() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-unknown-linux-musl".to_string(),
+            extension_module_filter: ExtensionModuleFilter::All,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let (distribution, builder) = options.new_builder()?;
+
+        // All extensions for musl Linux are built-in because dynamic linking
+        // not possible.
+        for name in distribution.extension_modules.keys() {
+            assert!(builder.builtin_extension_module_names().any(|e| name == e));
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_windows_dynamic_extensions_sanity() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-pc-windows-msvc".to_string(),
+            extension_module_filter: ExtensionModuleFilter::All,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let (distribution, builder) = options.new_builder()?;
+
+        let builtin_names = builder.builtin_extension_module_names().collect::<Vec<_>>();
+
+        // In-core extensions are compiled as built-ins.
+        for (name, variants) in distribution.extension_modules.iter() {
+            let builtin_default = variants.iter().any(|e| e.builtin_default);
+            assert_eq!(builtin_names.contains(&name), builtin_default);
+        }
+
+        // Required extensions are compiled as built-in.
+        // This assumes that are extensions annotated as required are built-in.
+        // But this is an implementation detail. If this fails, it might be OK.
+        for (name, variants) in distribution.extension_modules.iter() {
+            // !required does not mean it is missing, however!
+            if variants.iter().any(|e| e.required) {
+                assert!(builtin_names.contains(&name));
+            }
         }
 
         Ok(())
