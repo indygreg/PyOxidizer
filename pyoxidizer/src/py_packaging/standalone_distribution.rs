@@ -1060,13 +1060,19 @@ impl PythonDistribution for StandaloneDistribution {
 
         let (supports_static_libpython, supports_dynamic_libpython) =
             if self.target_triple.contains("pc-windows") {
-                // On Windows, the symbol visibility dictates which link modes are
-                // supported.
-                if self.python_symbol_visibility == "dllexport" {
-                    (false, true)
-                } else {
-                    (true, false)
-                }
+                // On Windows, support for libpython linkage is determined
+                // by presence of a shared library in the distribution. This
+                // isn't entirely semantically correct. Since we use `dllexport`
+                // for all symbols in standalone distributions, it may
+                // theoretically be possible to produce both a static and dynamic
+                // libpython from the same object files. But since the
+                // static and dynamic distributions are built so differently, we
+                // don't want to take any chances and we force each distribution
+                // to its own domain.
+                (
+                    self.libpython_shared_library.is_none(),
+                    self.libpython_shared_library.is_some(),
+                )
             } else if self.target_triple.contains("linux-musl") {
                 // Musl binaries don't support dynamic linking.
                 (true, false)
@@ -2042,6 +2048,28 @@ pub mod tests {
             if variants.iter().any(|e| e.required) {
                 assert!(builtin_names.contains(&name));
             }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_windows_static_extensions_sanity() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-pc-windows-msvc".to_string(),
+            distribution_flavor: DistributionFlavor::StandaloneStatic,
+            extension_module_filter: ExtensionModuleFilter::All,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let (distribution, builder) = options.new_builder()?;
+
+        let builtin_names = builder.builtin_extension_module_names().collect::<Vec<_>>();
+
+        // All distribution extensions are built-ins in static Windows
+        // distributions.
+        for name in distribution.extension_modules.keys() {
+            assert!(builtin_names.contains(&name));
         }
 
         Ok(())
