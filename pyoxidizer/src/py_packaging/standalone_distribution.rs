@@ -1834,6 +1834,7 @@ pub mod tests {
         pub app_name: String,
         pub libpython_link_mode: BinaryLibpythonLinkMode,
         pub extension_module_filter: ExtensionModuleFilter,
+        pub resources_policy: PythonResourcesPolicy,
     }
 
     impl Default for StandalonePythonExecutableBuilderOptions {
@@ -1846,6 +1847,7 @@ pub mod tests {
                 app_name: "testapp".to_string(),
                 libpython_link_mode: BinaryLibpythonLinkMode::Default,
                 extension_module_filter: ExtensionModuleFilter::Minimal,
+                resources_policy: PythonResourcesPolicy::InMemoryOnly,
             }
         }
     }
@@ -1871,6 +1873,7 @@ pub mod tests {
 
             let mut policy = PythonPackagingPolicy::default();
             policy.set_extension_module_filter(self.extension_module_filter.clone());
+            policy.set_resources_policy(self.resources_policy.clone());
 
             let config = EmbeddedPythonConfig::default();
 
@@ -2049,6 +2052,88 @@ pub mod tests {
                 assert!(builtin_names.contains(&name));
             }
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_windows_dynamic_distribution_dynamic_extension_files() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-pc-windows-msvc".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly("lib".to_string()),
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let (distribution, mut builder): (
+            Arc<Box<StandaloneDistribution>>,
+            Box<dyn PythonBinaryBuilder>,
+        ) = options.new_builder()?;
+
+        // When loading resources from the filesystem, dynamically linked
+        // extension modules should be manifested as filesystem files and
+        // library dependencies should be captured.
+
+        let ssl_extension = distribution
+            .extension_modules
+            .get("_ssl")
+            .unwrap()
+            .default_variant();
+        builder.add_distribution_extension_module(ssl_extension)?;
+
+        let extensions = builder
+            .iter_resources()
+            .filter_map(|(_, r)| {
+                if r.relative_path_extension_module_shared_library.is_some() {
+                    Some(r)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            extensions.len(),
+            1,
+            "only manually added extension present when using minimal extension mode"
+        );
+        let ssl = &extensions[0];
+        assert_eq!(ssl.name, "_ssl");
+
+        let (prefix, path, _) = ssl
+            .relative_path_extension_module_shared_library
+            .as_ref()
+            .unwrap();
+        assert_eq!(prefix, "lib");
+        assert_eq!(path, &PathBuf::from("lib/_ssl"));
+
+        let shared_libraries = builder
+            .iter_resources()
+            .filter_map(|(_, r)| {
+                if r.relative_path_shared_library.is_some() {
+                    Some(r)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            shared_libraries.len(),
+            2,
+            "pulled in shared library dependencies for _ssl"
+        );
+
+        assert_eq!(shared_libraries[0].name, "libcrypto-1_1-x64");
+        assert_eq!(
+            shared_libraries[0]
+                .relative_path_shared_library
+                .as_ref()
+                .unwrap()
+                .0,
+            "lib"
+        );
+        assert_eq!(shared_libraries[1].name, "libssl-1_1-x64");
 
         Ok(())
     }
