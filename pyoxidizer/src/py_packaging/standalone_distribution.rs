@@ -1839,6 +1839,9 @@ pub mod tests {
 
     impl Default for StandalonePythonExecutableBuilderOptions {
         fn default() -> Self {
+            // Grab default values from a default policy so they stay in sync.
+            let default_policy = PythonPackagingPolicy::default();
+
             Self {
                 logger: None,
                 host_triple: env!("HOST").to_string(),
@@ -1846,8 +1849,8 @@ pub mod tests {
                 distribution_flavor: DistributionFlavor::Standalone,
                 app_name: "testapp".to_string(),
                 libpython_link_mode: BinaryLibpythonLinkMode::Default,
-                extension_module_filter: ExtensionModuleFilter::Minimal,
-                resources_policy: PythonResourcesPolicy::InMemoryOnly,
+                extension_module_filter: default_policy.get_extension_module_filter().clone(),
+                resources_policy: default_policy.get_resources_policy().clone(),
             }
         }
     }

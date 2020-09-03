@@ -142,6 +142,11 @@ impl Default for PythonPackagingPolicy {
 }
 
 impl PythonPackagingPolicy {
+    /// Obtain the active extension module filter for this instance.
+    pub fn get_extension_module_filter(&self) -> &ExtensionModuleFilter {
+        &self.extension_module_filter
+    }
+
     /// Set the extension module filter to use.
     pub fn set_extension_module_filter(&mut self, filter: ExtensionModuleFilter) {
         self.extension_module_filter = filter;
