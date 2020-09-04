@@ -900,6 +900,34 @@ impl StandaloneDistribution {
         })
     }
 
+    /// Determines support for building a libpython from this distribution.
+    ///
+    /// Returns a tuple of bools indicating whether this distribution can
+    /// build a static libpython and a dynamically linked libpython.
+    pub fn libpython_link_support(&self) -> (bool, bool) {
+        if self.target_triple.contains("pc-windows") {
+            // On Windows, support for libpython linkage is determined
+            // by presence of a shared library in the distribution. This
+            // isn't entirely semantically correct. Since we use `dllexport`
+            // for all symbols in standalone distributions, it may
+            // theoretically be possible to produce both a static and dynamic
+            // libpython from the same object files. But since the
+            // static and dynamic distributions are built so differently, we
+            // don't want to take any chances and we force each distribution
+            // to its own domain.
+            (
+                self.libpython_shared_library.is_none(),
+                self.libpython_shared_library.is_some(),
+            )
+        } else if self.target_triple.contains("linux-musl") {
+            // Musl binaries don't support dynamic linking.
+            (true, false)
+        } else {
+            // Elsewhere we can choose which link mode to use.
+            (true, true)
+        }
+    }
+
     /// Duplicate the python distribution, with distutils hacked
     #[allow(unused)]
     pub fn create_hacked_base(&self, logger: &slog::Logger) -> PythonPaths {
@@ -1046,28 +1074,7 @@ impl PythonDistribution for StandaloneDistribution {
         policy: &PythonPackagingPolicy,
         config: &EmbeddedPythonConfig,
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
-        let (supports_static_libpython, supports_dynamic_libpython) =
-            if self.target_triple.contains("pc-windows") {
-                // On Windows, support for libpython linkage is determined
-                // by presence of a shared library in the distribution. This
-                // isn't entirely semantically correct. Since we use `dllexport`
-                // for all symbols in standalone distributions, it may
-                // theoretically be possible to produce both a static and dynamic
-                // libpython from the same object files. But since the
-                // static and dynamic distributions are built so differently, we
-                // don't want to take any chances and we force each distribution
-                // to its own domain.
-                (
-                    self.libpython_shared_library.is_none(),
-                    self.libpython_shared_library.is_some(),
-                )
-            } else if self.target_triple.contains("linux-musl") {
-                // Musl binaries don't support dynamic linking.
-                (true, false)
-            } else {
-                // Elsewhere we can choose which link mode to use.
-                (true, true)
-            };
+        let (supports_static_libpython, supports_dynamic_libpython) = self.libpython_link_support();
 
         let link_mode = match libpython_link_mode {
             BinaryLibpythonLinkMode::Default => {
