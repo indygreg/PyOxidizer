@@ -928,6 +928,18 @@ impl StandaloneDistribution {
         }
     }
 
+    /// Determines whether dynamically linked extension modules can be loaded from memory.
+    pub fn supports_in_memory_dynamically_linked_extension_loading(&self) -> bool {
+        // Loading from memory is only supported on Windows where symbols are
+        // declspec(dllexport) and the distribution is capable of loading
+        // shared library extensions.
+        self.target_triple.contains("pc-windows")
+            && self.python_symbol_visibility == "dllexport"
+            && self
+                .extension_module_loading
+                .contains(&"shared-library".to_string())
+    }
+
     /// Duplicate the python distribution, with distutils hacked
     #[allow(unused)]
     pub fn create_hacked_base(&self, logger: &slog::Logger) -> PythonPaths {
@@ -1106,15 +1118,8 @@ impl PythonDistribution for StandaloneDistribution {
             }
         };
 
-        // Loading from memory is only supported on Windows where symbols are
-        // declspec(dllexport) and the distribution is capable of loading
-        // shared library extensions.
-        let supports_in_memory_dynamically_linked_extension_loading = target_triple
-            .contains("pc-windows")
-            && self.python_symbol_visibility == "dllexport"
-            && self
-                .extension_module_loading
-                .contains(&"shared-library".to_string());
+        let supports_in_memory_dynamically_linked_extension_loading =
+            self.supports_in_memory_dynamically_linked_extension_loading();
 
         StandalonePythonExecutableBuilder::from_distribution(
             // TODO can we avoid this clone?
