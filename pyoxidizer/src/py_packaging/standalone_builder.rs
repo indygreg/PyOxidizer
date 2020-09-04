@@ -787,7 +787,9 @@ pub mod tests {
     }
 
     pub fn get_embedded(logger: &slog::Logger) -> Result<EmbeddedPythonBinaryData> {
-        let exe = get_standalone_executable_builder()?;
+        let options = StandalonePythonExecutableBuilderOptions::default();
+        let (_, exe) = options.new_builder()?;
+
         exe.as_embedded_python_binary_data(logger, "0")
     }
 
