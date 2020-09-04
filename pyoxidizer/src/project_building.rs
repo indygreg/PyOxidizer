@@ -517,7 +517,7 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
 mod tests {
     use {
         super::*,
-        crate::py_packaging::standalone_distribution::tests::get_standalone_executable_builder,
+        crate::py_packaging::standalone_builder::tests::get_standalone_executable_builder,
         crate::testutil::*,
     };
 
