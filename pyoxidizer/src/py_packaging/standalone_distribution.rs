@@ -57,7 +57,7 @@ lazy_static! {
 
     /// Target triples for macOS.
     pub static ref MACOS_TARGET_TRIPLES: Vec<&'static str> = vec![
-        "x86_64-apple-ios",
+        "x86_64-apple-darwin",
     ];
 
     /// Target triples for Windows.
