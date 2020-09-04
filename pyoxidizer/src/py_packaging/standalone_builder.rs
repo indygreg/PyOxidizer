@@ -742,50 +742,6 @@ pub mod tests {
         }
     }
 
-    // TODO switch users to StandalonePythonExecutableBuilderOptions
-    pub fn get_standalone_executable_builder() -> Result<StandalonePythonExecutableBuilder> {
-        let distribution = get_default_distribution()?;
-
-        // Link mode is static unless we're a dynamic distribution on Windows.
-        let link_mode = if distribution.target_triple.contains("pc-windows")
-            && distribution.python_symbol_visibility == "dllexport"
-        {
-            LibpythonLinkMode::Dynamic
-        } else {
-            LibpythonLinkMode::Static
-        };
-
-        let resources = PrePackagedResources::new(
-            &PythonResourcesPolicy::InMemoryOnly,
-            &distribution.cache_tag,
-        );
-
-        let mut packaging_policy = distribution.create_packaging_policy()?;
-        packaging_policy.set_extension_module_filter(ExtensionModuleFilter::Minimal);
-        packaging_policy.set_resources_policy(PythonResourcesPolicy::InMemoryOnly);
-
-        let config = EmbeddedPythonConfig::default();
-
-        let python_exe = distribution.python_exe.clone();
-
-        let mut builder = StandalonePythonExecutableBuilder {
-            host_triple: env!("HOST").to_string(),
-            target_triple: env!("HOST").to_string(),
-            exe_name: "testapp".to_string(),
-            distribution: distribution.clone(),
-            link_mode,
-            supports_in_memory_dynamically_linked_extension_loading: false,
-            packaging_policy: packaging_policy.clone(),
-            resources,
-            config,
-            python_exe,
-        };
-
-        builder.add_distribution_resources(&packaging_policy)?;
-
-        Ok(builder)
-    }
-
     pub fn get_embedded(logger: &slog::Logger) -> Result<EmbeddedPythonBinaryData> {
         let options = StandalonePythonExecutableBuilderOptions::default();
         let (_, exe) = options.new_builder()?;
@@ -806,10 +762,10 @@ pub mod tests {
 
     #[test]
     fn test_minimal_extensions_present() -> Result<()> {
-        let builder: StandalonePythonExecutableBuilder = get_standalone_executable_builder()?;
+        let options = StandalonePythonExecutableBuilderOptions::default();
+        let (distribution, builder) = options.new_builder()?;
 
-        let expected = builder
-            .distribution
+        let expected = distribution
             .extension_modules
             .iter()
             .filter_map(|(_, extensions)| {
