@@ -1086,51 +1086,14 @@ impl PythonDistribution for StandaloneDistribution {
         policy: &PythonPackagingPolicy,
         config: &EmbeddedPythonConfig,
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
-        let (supports_static_libpython, supports_dynamic_libpython) = self.libpython_link_support();
-
-        let link_mode = match libpython_link_mode {
-            BinaryLibpythonLinkMode::Default => {
-                if supports_static_libpython {
-                    LibpythonLinkMode::Static
-                } else if supports_dynamic_libpython {
-                    LibpythonLinkMode::Dynamic
-                } else {
-                    return Err(anyhow!("no link modes supported; please report this bug"));
-                }
-            }
-            BinaryLibpythonLinkMode::Static => {
-                if !supports_static_libpython {
-                    return Err(anyhow!(
-                        "Python distribution does not support statically linking libpython"
-                    ));
-                }
-
-                LibpythonLinkMode::Static
-            }
-            BinaryLibpythonLinkMode::Dynamic => {
-                if !supports_dynamic_libpython {
-                    return Err(anyhow!(
-                        "Python distribution does not support dynamically linking libpython"
-                    ));
-                }
-
-                LibpythonLinkMode::Dynamic
-            }
-        };
-
-        let supports_in_memory_dynamically_linked_extension_loading =
-            self.supports_in_memory_dynamically_linked_extension_loading();
-
         StandalonePythonExecutableBuilder::from_distribution(
             // TODO can we avoid this clone?
             Arc::new(Box::new(self.clone())),
             host_triple.to_string(),
             target_triple.to_string(),
             name.to_string(),
-            link_mode,
-            supports_in_memory_dynamically_linked_extension_loading,
+            libpython_link_mode,
             policy.clone(),
-            &self.cache_tag,
             config.clone(),
         )
     }

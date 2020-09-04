@@ -8,7 +8,7 @@ use {
         PythonLinkingInfo,
     },
     super::config::{EmbeddedPythonConfig, RawAllocator},
-    super::distribution::PythonDistribution,
+    super::distribution::{BinaryLibpythonLinkMode, PythonDistribution},
     super::embedded_resource::{EmbeddedPythonResources, PrePackagedResources},
     super::libpython::link_libpython,
     super::packaging_tool::{find_resources, pip_install, read_virtualenv, setup_py_install},
@@ -72,13 +72,48 @@ impl StandalonePythonExecutableBuilder {
         host_triple: String,
         target_triple: String,
         exe_name: String,
-        link_mode: LibpythonLinkMode,
-        supports_in_memory_dynamically_linked_extension_loading: bool,
+        link_mode: BinaryLibpythonLinkMode,
         packaging_policy: PythonPackagingPolicy,
-        cache_tag: &str,
         config: EmbeddedPythonConfig,
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
         let python_exe = distribution.python_exe.clone();
+        let cache_tag = distribution.cache_tag.clone();
+
+        let (supports_static_libpython, supports_dynamic_libpython) =
+            distribution.libpython_link_support();
+
+        let link_mode = match link_mode {
+            BinaryLibpythonLinkMode::Default => {
+                if supports_static_libpython {
+                    LibpythonLinkMode::Static
+                } else if supports_dynamic_libpython {
+                    LibpythonLinkMode::Dynamic
+                } else {
+                    return Err(anyhow!("no link modes supported; please report this bug"));
+                }
+            }
+            BinaryLibpythonLinkMode::Static => {
+                if !supports_static_libpython {
+                    return Err(anyhow!(
+                        "Python distribution does not support statically linking libpython"
+                    ));
+                }
+
+                LibpythonLinkMode::Static
+            }
+            BinaryLibpythonLinkMode::Dynamic => {
+                if !supports_dynamic_libpython {
+                    return Err(anyhow!(
+                        "Python distribution does not support dynamically linking libpython"
+                    ));
+                }
+
+                LibpythonLinkMode::Dynamic
+            }
+        };
+
+        let supports_in_memory_dynamically_linked_extension_loading =
+            distribution.supports_in_memory_dynamically_linked_extension_loading();
 
         let mut builder = Box::new(Self {
             host_triple,
@@ -90,7 +125,7 @@ impl StandalonePythonExecutableBuilder {
             packaging_policy: packaging_policy.clone(),
             resources: PrePackagedResources::new(
                 packaging_policy.get_resources_policy(),
-                cache_tag,
+                &cache_tag,
             ),
             config,
             python_exe,
