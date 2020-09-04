@@ -812,6 +812,26 @@ pub mod tests {
     }
 
     #[test]
+    fn test_macos_extensions_sanity() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-apple-darwin".to_string(),
+            extension_module_filter: ExtensionModuleFilter::All,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let (distribution, builder) = options.new_builder()?;
+
+        let builtin_names = builder.builtin_extension_module_names().collect::<Vec<_>>();
+
+        // All extensions compiled as built-ins by default.
+        for (name, _) in distribution.extension_modules.iter() {
+            assert!(builtin_names.contains(&name));
+        }
+
+        Ok(())
+    }
+
+    #[test]
     fn test_windows_dynamic_extensions_sanity() -> Result<()> {
         for target in WINDOWS_TARGET_TRIPLES.iter() {
             let options = StandalonePythonExecutableBuilderOptions {
