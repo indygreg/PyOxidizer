@@ -703,7 +703,7 @@ pub mod tests {
     }
 
     impl StandalonePythonExecutableBuilderOptions {
-        fn new_builder(
+        pub fn new_builder(
             &self,
         ) -> Result<(
             Arc<Box<StandaloneDistribution>>,

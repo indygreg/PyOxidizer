@@ -517,16 +517,24 @@ fn artifacts_current(logger: &slog::Logger, config_path: &Path, artifacts_path: 
 mod tests {
     use {
         super::*,
-        crate::py_packaging::standalone_builder::tests::get_standalone_executable_builder,
+        crate::py_packaging::standalone_builder::tests::StandalonePythonExecutableBuilderOptions,
         crate::testutil::*,
     };
 
     #[test]
     fn test_empty_project() -> Result<()> {
         let logger = get_logger()?;
-        let pre_built = get_standalone_executable_builder()?;
+        let options = StandalonePythonExecutableBuilderOptions::default();
+        let (_, pre_built) = options.new_builder()?;
 
-        build_python_executable(&logger, "myapp", &pre_built, env!("HOST"), "0", false)?;
+        build_python_executable(
+            &logger,
+            "myapp",
+            pre_built.as_ref(),
+            env!("HOST"),
+            "0",
+            false,
+        )?;
 
         Ok(())
     }
