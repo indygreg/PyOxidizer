@@ -660,8 +660,14 @@ pub mod tests {
         crate::py_packaging::distribution::{BinaryLibpythonLinkMode, DistributionFlavor},
         crate::python_distributions::PYTHON_DISTRIBUTIONS,
         crate::testutil::*,
+        lazy_static::lazy_static,
         python_packaging::policy::ExtensionModuleFilter,
     };
+
+    lazy_static! {
+        pub static ref WINDOWS_TARGET_TRIPLES: Vec<&'static str> =
+            vec!["i686-pc-windows-msvc", "x86_64-pc-windows-msvc"];
+    }
 
     /// Defines construction options for a `StandalonePythonExecutableBuilder`.
     ///
@@ -849,29 +855,31 @@ pub mod tests {
 
     #[test]
     fn test_windows_dynamic_extensions_sanity() -> Result<()> {
-        let options = StandalonePythonExecutableBuilderOptions {
-            target_triple: "x86_64-pc-windows-msvc".to_string(),
-            extension_module_filter: ExtensionModuleFilter::All,
-            ..StandalonePythonExecutableBuilderOptions::default()
-        };
+        for target in WINDOWS_TARGET_TRIPLES.iter() {
+            let options = StandalonePythonExecutableBuilderOptions {
+                target_triple: target.to_string(),
+                extension_module_filter: ExtensionModuleFilter::All,
+                ..StandalonePythonExecutableBuilderOptions::default()
+            };
 
-        let (distribution, builder) = options.new_builder()?;
+            let (distribution, builder) = options.new_builder()?;
 
-        let builtin_names = builder.builtin_extension_module_names().collect::<Vec<_>>();
+            let builtin_names = builder.builtin_extension_module_names().collect::<Vec<_>>();
 
-        // In-core extensions are compiled as built-ins.
-        for (name, variants) in distribution.extension_modules.iter() {
-            let builtin_default = variants.iter().any(|e| e.builtin_default);
-            assert_eq!(builtin_names.contains(&name), builtin_default);
-        }
+            // In-core extensions are compiled as built-ins.
+            for (name, variants) in distribution.extension_modules.iter() {
+                let builtin_default = variants.iter().any(|e| e.builtin_default);
+                assert_eq!(builtin_names.contains(&name), builtin_default);
+            }
 
-        // Required extensions are compiled as built-in.
-        // This assumes that are extensions annotated as required are built-in.
-        // But this is an implementation detail. If this fails, it might be OK.
-        for (name, variants) in distribution.extension_modules.iter() {
-            // !required does not mean it is missing, however!
-            if variants.iter().any(|e| e.required) {
-                assert!(builtin_names.contains(&name));
+            // Required extensions are compiled as built-in.
+            // This assumes that are extensions annotated as required are built-in.
+            // But this is an implementation detail. If this fails, it might be OK.
+            for (name, variants) in distribution.extension_modules.iter() {
+                // !required does not mean it is missing, however!
+                if variants.iter().any(|e| e.required) {
+                    assert!(builtin_names.contains(&name));
+                }
             }
         }
 
@@ -880,103 +888,119 @@ pub mod tests {
 
     #[test]
     fn test_windows_dynamic_distribution_dynamic_extension_files() -> Result<()> {
-        let options = StandalonePythonExecutableBuilderOptions {
-            target_triple: "x86_64-pc-windows-msvc".to_string(),
-            extension_module_filter: ExtensionModuleFilter::Minimal,
-            resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly("lib".to_string()),
-            ..StandalonePythonExecutableBuilderOptions::default()
-        };
+        for target in WINDOWS_TARGET_TRIPLES.iter() {
+            let options = StandalonePythonExecutableBuilderOptions {
+                target_triple: target.to_string(),
+                extension_module_filter: ExtensionModuleFilter::Minimal,
+                resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly("lib".to_string()),
+                ..StandalonePythonExecutableBuilderOptions::default()
+            };
 
-        let (distribution, mut builder): (
-            Arc<Box<StandaloneDistribution>>,
-            Box<dyn PythonBinaryBuilder>,
-        ) = options.new_builder()?;
+            let (distribution, mut builder): (
+                Arc<Box<StandaloneDistribution>>,
+                Box<dyn PythonBinaryBuilder>,
+            ) = options.new_builder()?;
 
-        // When loading resources from the filesystem, dynamically linked
-        // extension modules should be manifested as filesystem files and
-        // library dependencies should be captured.
+            // When loading resources from the filesystem, dynamically linked
+            // extension modules should be manifested as filesystem files and
+            // library dependencies should be captured.
 
-        let ssl_extension = distribution
-            .extension_modules
-            .get("_ssl")
-            .unwrap()
-            .default_variant();
-        builder.add_distribution_extension_module(ssl_extension)?;
-
-        let extensions = builder
-            .iter_resources()
-            .filter_map(|(_, r)| {
-                if r.relative_path_extension_module_shared_library.is_some() {
-                    Some(r)
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>();
-
-        assert_eq!(
-            extensions.len(),
-            1,
-            "only manually added extension present when using minimal extension mode"
-        );
-        let ssl = &extensions[0];
-        assert_eq!(ssl.name, "_ssl");
-
-        let (prefix, path, _) = ssl
-            .relative_path_extension_module_shared_library
-            .as_ref()
-            .unwrap();
-        assert_eq!(prefix, "lib");
-        assert_eq!(path, &PathBuf::from("lib/_ssl"));
-
-        let shared_libraries = builder
-            .iter_resources()
-            .filter_map(|(_, r)| {
-                if r.relative_path_shared_library.is_some() {
-                    Some(r)
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>();
-
-        assert_eq!(
-            shared_libraries.len(),
-            2,
-            "pulled in shared library dependencies for _ssl"
-        );
-
-        assert_eq!(shared_libraries[0].name, "libcrypto-1_1-x64");
-        assert_eq!(
-            shared_libraries[0]
-                .relative_path_shared_library
-                .as_ref()
+            let ssl_extension = distribution
+                .extension_modules
+                .get("_ssl")
                 .unwrap()
-                .0,
-            "lib"
-        );
-        assert_eq!(shared_libraries[1].name, "libssl-1_1-x64");
+                .default_variant();
+            builder.add_distribution_extension_module(ssl_extension)?;
 
+            let extensions = builder
+                .iter_resources()
+                .filter_map(|(_, r)| {
+                    if r.relative_path_extension_module_shared_library.is_some() {
+                        Some(r)
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            assert_eq!(
+                extensions.len(),
+                1,
+                "only manually added extension present when using minimal extension mode"
+            );
+            let ssl = &extensions[0];
+            assert_eq!(ssl.name, "_ssl");
+
+            let (prefix, path, _) = ssl
+                .relative_path_extension_module_shared_library
+                .as_ref()
+                .unwrap();
+            assert_eq!(prefix, "lib");
+            assert_eq!(path, &PathBuf::from("lib/_ssl"));
+
+            let shared_libraries = builder
+                .iter_resources()
+                .filter_map(|(_, r)| {
+                    if r.relative_path_shared_library.is_some() {
+                        Some(r)
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            assert_eq!(
+                shared_libraries.len(),
+                2,
+                "pulled in shared library dependencies for _ssl"
+            );
+
+            let lib_suffix = match *target {
+                "i686-pc-windows-msvc" => "",
+                "x86_64-pc-windows-msvc" => "-x64",
+                _ => panic!("unexpected target: {}", target),
+            };
+
+            assert_eq!(
+                shared_libraries[0].name,
+                format!("libcrypto-1_1{}", lib_suffix)
+            );
+            assert_eq!(
+                shared_libraries[0]
+                    .relative_path_shared_library
+                    .as_ref()
+                    .unwrap()
+                    .0,
+                "lib"
+            );
+
+            assert_eq!(
+                shared_libraries[1].name,
+                format!("libssl-1_1{}", lib_suffix)
+            );
+        }
         Ok(())
     }
 
     #[test]
     fn test_windows_static_extensions_sanity() -> Result<()> {
-        let options = StandalonePythonExecutableBuilderOptions {
-            target_triple: "x86_64-pc-windows-msvc".to_string(),
-            distribution_flavor: DistributionFlavor::StandaloneStatic,
-            extension_module_filter: ExtensionModuleFilter::All,
-            ..StandalonePythonExecutableBuilderOptions::default()
-        };
+        for target in WINDOWS_TARGET_TRIPLES.iter() {
+            let options = StandalonePythonExecutableBuilderOptions {
+                target_triple: target.to_string(),
+                distribution_flavor: DistributionFlavor::StandaloneStatic,
+                extension_module_filter: ExtensionModuleFilter::All,
+                ..StandalonePythonExecutableBuilderOptions::default()
+            };
 
-        let (distribution, builder) = options.new_builder()?;
+            let (distribution, builder) = options.new_builder()?;
 
-        let builtin_names = builder.builtin_extension_module_names().collect::<Vec<_>>();
+            let builtin_names = builder.builtin_extension_module_names().collect::<Vec<_>>();
 
-        // All distribution extensions are built-ins in static Windows
-        // distributions.
-        for name in distribution.extension_modules.keys() {
-            assert!(builtin_names.contains(&name));
+            // All distribution extensions are built-ins in static Windows
+            // distributions.
+            for name in distribution.extension_modules.keys() {
+                assert!(builtin_names.contains(&name));
+            }
         }
 
         Ok(())
