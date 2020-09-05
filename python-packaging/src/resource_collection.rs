@@ -1132,6 +1132,36 @@ mod tests {
 
     const DEFAULT_CACHE_TAG: &str = "cpython-37";
 
+    pub struct FakeBytecodeCompiler {
+        magic_number: u32,
+    }
+
+    impl PythonBytecodeCompiler for FakeBytecodeCompiler {
+        fn get_magic_number(&self) -> u32 {
+            self.magic_number
+        }
+
+        fn compile(
+            &mut self,
+            source: &[u8],
+            _filename: &str,
+            optimize: BytecodeOptimizationLevel,
+            _output_mode: CompileMode,
+        ) -> Result<Vec<u8>> {
+            let mut res = Vec::new();
+
+            res.extend(match optimize {
+                BytecodeOptimizationLevel::Zero => b"bc0",
+                BytecodeOptimizationLevel::One => b"bc1",
+                BytecodeOptimizationLevel::Two => b"bc2",
+            });
+
+            res.extend(source);
+
+            Ok(res)
+        }
+    }
+
     #[test]
     fn test_resource_policy_from_str() -> Result<()> {
         assert_eq!(
@@ -1152,6 +1182,777 @@ mod tests {
                 .to_string(),
             "invalid value for Python Resources Policy: foo"
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_basic() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "module".to_string(),
+            is_package: true,
+            is_namespace_package: true,
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("module".to_string()),
+                is_package: true,
+                is_namespace_package: true,
+                ..Resource::default()
+            }
+        );
+
+        assert!(installs.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_in_memory_source() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "module".to_string(),
+            in_memory_source: Some(DataLocation::Memory(b"source".to_vec())),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("module".to_string()),
+                in_memory_source: Some(Cow::Owned(b"source".to_vec())),
+                ..Resource::default()
+            }
+        );
+
+        assert!(installs.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_in_memory_bytecode_provided() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "module".to_string(),
+            in_memory_bytecode: Some(PythonModuleBytecodeProvider::Provided(
+                DataLocation::Memory(b"bytecode".to_vec()),
+            )),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("module".to_string()),
+                in_memory_bytecode: Some(Cow::Owned(b"bytecode".to_vec())),
+                ..Resource::default()
+            }
+        );
+        assert!(installs.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_in_memory_bytecode_from_source() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "module".to_string(),
+            in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
+                DataLocation::Memory(b"source".to_vec()),
+            )),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("module".to_string()),
+                in_memory_bytecode: Some(Cow::Owned(b"bc0source".to_vec())),
+                ..Resource::default()
+            }
+        );
+        assert!(installs.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_in_memory_bytecode_opt1_provided() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "module".to_string(),
+            in_memory_bytecode_opt1: Some(PythonModuleBytecodeProvider::Provided(
+                DataLocation::Memory(b"bytecode".to_vec()),
+            )),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("module".to_string()),
+                in_memory_bytecode_opt1: Some(Cow::Owned(b"bytecode".to_vec())),
+                ..Resource::default()
+            }
+        );
+        assert!(installs.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_in_memory_bytecode_opt1_from_source() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "module".to_string(),
+            in_memory_bytecode_opt1: Some(PythonModuleBytecodeProvider::FromSource(
+                DataLocation::Memory(b"source".to_vec()),
+            )),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("module".to_string()),
+                in_memory_bytecode_opt1: Some(Cow::Owned(b"bc1source".to_vec())),
+                ..Resource::default()
+            }
+        );
+        assert!(installs.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_in_memory_bytecode_opt2_provided() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "module".to_string(),
+            in_memory_bytecode_opt2: Some(PythonModuleBytecodeProvider::Provided(
+                DataLocation::Memory(b"bytecode".to_vec()),
+            )),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("module".to_string()),
+                in_memory_bytecode_opt2: Some(Cow::Owned(b"bytecode".to_vec())),
+                ..Resource::default()
+            }
+        );
+        assert!(installs.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_in_memory_bytecode_opt2_from_source() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "module".to_string(),
+            in_memory_bytecode_opt2: Some(PythonModuleBytecodeProvider::FromSource(
+                DataLocation::Memory(b"source".to_vec()),
+            )),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("module".to_string()),
+                in_memory_bytecode_opt2: Some(Cow::Owned(b"bc2source".to_vec())),
+                ..Resource::default()
+            }
+        );
+        assert!(installs.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_in_memory_extension_module_shared_library() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "module".to_string(),
+            in_memory_extension_module_shared_library: Some(DataLocation::Memory(
+                b"library".to_vec(),
+            )),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("module".to_string()),
+                in_memory_extension_module_shared_library: Some(Cow::Owned(b"library".to_vec())),
+                ..Resource::default()
+            }
+        );
+
+        assert!(installs.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_in_memory_package_resources() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let mut resources = BTreeMap::new();
+        resources.insert("foo".to_string(), DataLocation::Memory(b"value".to_vec()));
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "module".to_string(),
+            in_memory_resources: Some(resources),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        let mut resources = HashMap::new();
+        resources.insert(Cow::Owned("foo".to_string()), Cow::Owned(b"value".to_vec()));
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("module".to_string()),
+                in_memory_package_resources: Some(resources),
+                ..Resource::default()
+            }
+        );
+
+        assert!(installs.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_in_memory_distribution_resources() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let mut resources = BTreeMap::new();
+        resources.insert("foo".to_string(), DataLocation::Memory(b"value".to_vec()));
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "module".to_string(),
+            in_memory_distribution_resources: Some(resources),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        let mut resources = HashMap::new();
+        resources.insert(Cow::Owned("foo".to_string()), Cow::Owned(b"value".to_vec()));
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("module".to_string()),
+                in_memory_distribution_resources: Some(resources),
+                ..Resource::default()
+            }
+        );
+
+        assert!(installs.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_in_memory_shared_library() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "module".to_string(),
+            in_memory_shared_library: Some(DataLocation::Memory(b"library".to_vec())),
+            shared_library_dependency_names: Some(vec!["foo".to_string(), "bar".to_string()]),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("module".to_string()),
+                in_memory_shared_library: Some(Cow::Owned(b"library".to_vec())),
+                shared_library_dependency_names: Some(vec![
+                    Cow::Owned("foo".to_string()),
+                    Cow::Owned("bar".to_string())
+                ]),
+                ..Resource::default()
+            }
+        );
+
+        assert!(installs.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_relative_path_module_source() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "module".to_string(),
+            relative_path_module_source: Some((
+                "prefix".to_string(),
+                DataLocation::Memory(b"source".to_vec()),
+            )),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("module".to_string()),
+                relative_path_module_source: Some(Cow::Owned(PathBuf::from("prefix/module.py"))),
+                ..Resource::default()
+            }
+        );
+
+        assert!(installs.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_relative_path_module_bytecode_provided() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "foo.bar".to_string(),
+            relative_path_bytecode: Some((
+                "prefix".to_string(),
+                "tag".to_string(),
+                PythonModuleBytecodeProvider::Provided(DataLocation::Memory(b"bytecode".to_vec())),
+            )),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("foo.bar".to_string()),
+                relative_path_module_bytecode: Some(Cow::Owned(PathBuf::from(
+                    "prefix/foo/__pycache__/bar.tag.pyc"
+                ))),
+                ..Resource::default()
+            }
+        );
+
+        assert_eq!(
+            installs,
+            vec![(
+                PathBuf::from("prefix/foo/__pycache__/bar.tag.pyc"),
+                DataLocation::Memory(
+                    b"\x2a\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00bytecode"
+                        .to_vec()
+                ),
+                false
+            )]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_relative_path_module_bytecode_from_source() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "foo.bar".to_string(),
+            relative_path_bytecode: Some((
+                "prefix".to_string(),
+                "tag".to_string(),
+                PythonModuleBytecodeProvider::FromSource(DataLocation::Memory(b"source".to_vec())),
+            )),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("foo.bar".to_string()),
+                relative_path_module_bytecode: Some(Cow::Owned(PathBuf::from(
+                    "prefix/foo/__pycache__/bar.tag.pyc"
+                ))),
+                ..Resource::default()
+            }
+        );
+
+        assert_eq!(
+            installs,
+            vec![(
+                PathBuf::from("prefix/foo/__pycache__/bar.tag.pyc"),
+                DataLocation::Memory(b"bc0source".to_vec()),
+                false
+            )]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_relative_path_module_bytecode_opt1_provided() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "foo.bar".to_string(),
+            relative_path_bytecode_opt1: Some((
+                "prefix".to_string(),
+                "tag".to_string(),
+                PythonModuleBytecodeProvider::Provided(DataLocation::Memory(b"bytecode".to_vec())),
+            )),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("foo.bar".to_string()),
+                relative_path_module_bytecode_opt1: Some(Cow::Owned(PathBuf::from(
+                    "prefix/foo/__pycache__/bar.tag.opt-1.pyc"
+                ))),
+                ..Resource::default()
+            }
+        );
+
+        assert_eq!(
+            installs,
+            vec![(
+                PathBuf::from("prefix/foo/__pycache__/bar.tag.opt-1.pyc"),
+                DataLocation::Memory(
+                    b"\x2a\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00bytecode"
+                        .to_vec()
+                ),
+                false
+            )]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_relative_path_module_bytecode_opt1_from_source() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "foo.bar".to_string(),
+            relative_path_bytecode_opt1: Some((
+                "prefix".to_string(),
+                "tag".to_string(),
+                PythonModuleBytecodeProvider::FromSource(DataLocation::Memory(b"source".to_vec())),
+            )),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("foo.bar".to_string()),
+                relative_path_module_bytecode_opt1: Some(Cow::Owned(PathBuf::from(
+                    "prefix/foo/__pycache__/bar.tag.opt-1.pyc"
+                ))),
+                ..Resource::default()
+            }
+        );
+
+        assert_eq!(
+            installs,
+            vec![(
+                PathBuf::from("prefix/foo/__pycache__/bar.tag.opt-1.pyc"),
+                DataLocation::Memory(b"bc1source".to_vec()),
+                false
+            )]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_relative_path_module_bytecode_opt2_provided() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "foo.bar".to_string(),
+            relative_path_bytecode_opt2: Some((
+                "prefix".to_string(),
+                "tag".to_string(),
+                PythonModuleBytecodeProvider::Provided(DataLocation::Memory(b"bytecode".to_vec())),
+            )),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("foo.bar".to_string()),
+                relative_path_module_bytecode_opt2: Some(Cow::Owned(PathBuf::from(
+                    "prefix/foo/__pycache__/bar.tag.opt-2.pyc"
+                ))),
+                ..Resource::default()
+            }
+        );
+
+        assert_eq!(
+            installs,
+            vec![(
+                PathBuf::from("prefix/foo/__pycache__/bar.tag.opt-2.pyc"),
+                DataLocation::Memory(
+                    b"\x2a\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00bytecode"
+                        .to_vec()
+                ),
+                false
+            )]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_relative_path_module_bytecode_opt2_from_source() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "foo.bar".to_string(),
+            relative_path_bytecode_opt2: Some((
+                "prefix".to_string(),
+                "tag".to_string(),
+                PythonModuleBytecodeProvider::FromSource(DataLocation::Memory(b"source".to_vec())),
+            )),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("foo.bar".to_string()),
+                relative_path_module_bytecode_opt2: Some(Cow::Owned(PathBuf::from(
+                    "prefix/foo/__pycache__/bar.tag.opt-2.pyc"
+                ))),
+                ..Resource::default()
+            }
+        );
+
+        assert_eq!(
+            installs,
+            vec![(
+                PathBuf::from("prefix/foo/__pycache__/bar.tag.opt-2.pyc"),
+                DataLocation::Memory(b"bc2source".to_vec()),
+                false
+            )]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_relative_path_extension_module_shared_library() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "module".to_string(),
+            relative_path_extension_module_shared_library: Some((
+                "prefix".to_string(),
+                PathBuf::from("ext.so"),
+                DataLocation::Memory(b"data".to_vec()),
+            )),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("module".to_string()),
+                relative_path_extension_module_shared_library: Some(Cow::Owned(PathBuf::from(
+                    "ext.so"
+                ))),
+                ..Resource::default()
+            }
+        );
+
+        assert!(installs.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_relative_path_package_resources() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let mut resources = BTreeMap::new();
+        resources.insert(
+            "foo.txt".to_string(),
+            (
+                "prefix".to_string(),
+                PathBuf::from("foo.txt"),
+                DataLocation::Memory(b"data".to_vec()),
+            ),
+        );
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "module".to_string(),
+            relative_path_package_resources: Some(resources),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        let mut resources = HashMap::new();
+        resources.insert(
+            Cow::Owned("foo.txt".to_string()),
+            Cow::Owned(PathBuf::from("foo.txt")),
+        );
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("module".to_string()),
+                relative_path_package_resources: Some(resources),
+                ..Resource::default()
+            }
+        );
+
+        assert!(installs.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_relative_path_distribution_resources() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let mut resources = BTreeMap::new();
+        resources.insert(
+            "foo.txt".to_string(),
+            (
+                "prefix".to_string(),
+                PathBuf::from("foo.txt"),
+                DataLocation::Memory(b"data".to_vec()),
+            ),
+        );
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::Module,
+            name: "module".to_string(),
+            relative_path_distribution_resources: Some(resources),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        let mut resources = HashMap::new();
+        resources.insert(
+            Cow::Owned("foo.txt".to_string()),
+            Cow::Owned(PathBuf::from("foo.txt")),
+        );
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("module".to_string()),
+                relative_path_distribution_resources: Some(resources),
+                ..Resource::default()
+            }
+        );
+
+        assert!(installs.is_empty());
 
         Ok(())
     }
