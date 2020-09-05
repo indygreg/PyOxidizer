@@ -2809,6 +2809,57 @@ mod tests {
     }
 
     #[test]
+    fn test_add_builtin_python_extension_module() -> Result<()> {
+        let mut c =
+            PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
+
+        let em = PythonExtensionModule {
+            name: "_io".to_string(),
+            init_fn: Some("PyInit__io".to_string()),
+            extension_file_suffix: "".to_string(),
+            shared_library: None,
+            object_file_data: vec![],
+            is_package: false,
+            link_libraries: vec![],
+            is_stdlib: true,
+            builtin_default: true,
+            required: true,
+            variant: None,
+            licenses: None,
+            license_texts: None,
+            license_public_domain: None,
+        };
+
+        c.add_builtin_python_extension_module(&em)?;
+        assert_eq!(c.resources.len(), 1);
+        assert_eq!(
+            c.resources.get("_io"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::BuiltinExtensionModule,
+                name: "_io".to_string(),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let resources = c.to_prepared_python_resources(&mut compiler)?;
+
+        assert_eq!(resources.resources.len(), 1);
+        assert_eq!(
+            resources.resources.get("_io"),
+            Some(&Resource {
+                flavor: ResourceFlavor::BuiltinExtensionModule,
+                name: Cow::Owned("_io".to_string()),
+                ..Resource::default()
+            })
+        );
+        assert!(resources.extra_files.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
     fn test_add_relative_path_extension_module() -> Result<()> {
         let mut c = PythonResourceCollector::new(
             &PythonResourcesPolicy::FilesystemRelativeOnly("prefix".to_string()),
