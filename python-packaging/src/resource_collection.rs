@@ -2321,24 +2321,27 @@ mod tests {
         );
         r.add_python_module_source(
             &PythonModuleSource {
-                name: "foo".to_string(),
+                name: "foo.bar".to_string(),
                 source: DataLocation::Memory(vec![42]),
                 is_package: false,
                 cache_tag: DEFAULT_CACHE_TAG.to_string(),
                 is_stdlib: false,
                 is_test: false,
             },
-            &ConcreteResourceLocation::RelativePath("".to_string()),
+            &ConcreteResourceLocation::RelativePath("prefix".to_string()),
         )?;
 
-        assert!(r.resources.contains_key("foo"));
+        assert_eq!(r.resources.len(), 1);
         assert_eq!(
-            r.resources.get("foo"),
+            r.resources.get("foo.bar"),
             Some(&PrePackagedResource {
                 flavor: ResourceFlavor::Module,
-                name: "foo".to_string(),
+                name: "foo.bar".to_string(),
                 is_package: false,
-                relative_path_module_source: Some(("".to_string(), DataLocation::Memory(vec![42]))),
+                relative_path_module_source: Some((
+                    "prefix".to_string(),
+                    DataLocation::Memory(vec![42])
+                )),
                 ..PrePackagedResource::default()
             })
         );
@@ -2347,23 +2350,42 @@ mod tests {
 
         let resources = r.to_prepared_python_resources(&mut compiler)?;
 
-        assert_eq!(resources.resources.len(), 1);
+        assert_eq!(resources.resources.len(), 2);
         assert_eq!(
             resources.resources.get("foo"),
             Some(&Resource {
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo".to_string()),
-                relative_path_module_source: Some(Cow::Owned(PathBuf::from("foo.py"))),
+                is_package: true,
+                relative_path_module_source: Some(Cow::Owned(PathBuf::from(
+                    "prefix/foo/__init__.py"
+                ))),
+                ..Resource::default()
+            })
+        );
+        assert_eq!(
+            resources.resources.get("foo.bar"),
+            Some(&Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("foo.bar".to_string()),
+                relative_path_module_source: Some(Cow::Owned(PathBuf::from("prefix/foo/bar.py"))),
                 ..Resource::default()
             })
         );
         assert_eq!(
             resources.extra_files,
-            vec![(
-                PathBuf::from("foo.py"),
-                DataLocation::Memory(vec![42]),
-                false
-            )]
+            vec![
+                (
+                    PathBuf::from("prefix/foo/__init__.py"),
+                    DataLocation::Memory(vec![]),
+                    false
+                ),
+                (
+                    PathBuf::from("prefix/foo/bar.py"),
+                    DataLocation::Memory(vec![42]),
+                    false
+                )
+            ]
         );
 
         Ok(())
