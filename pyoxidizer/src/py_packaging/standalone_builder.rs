@@ -909,11 +909,10 @@ pub mod tests {
             let ssl = &extensions[0];
             assert_eq!(ssl.name, "_ssl");
 
-            let (prefix, path, _) = ssl
+            let (path, _) = ssl
                 .relative_path_extension_module_shared_library
                 .as_ref()
                 .unwrap();
-            assert_eq!(prefix, "lib");
             assert_eq!(path, &PathBuf::from("lib/_ssl"));
 
             let shared_libraries = builder

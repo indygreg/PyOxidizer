@@ -66,8 +66,8 @@ pub struct PrePackagedResource {
     pub relative_path_bytecode: Option<(String, String, PythonModuleBytecodeProvider)>,
     pub relative_path_bytecode_opt1: Option<(String, String, PythonModuleBytecodeProvider)>,
     pub relative_path_bytecode_opt2: Option<(String, String, PythonModuleBytecodeProvider)>,
-    // (prefix, path, data)
-    pub relative_path_extension_module_shared_library: Option<(String, PathBuf, DataLocation)>,
+    // (path, data)
+    pub relative_path_extension_module_shared_library: Option<(PathBuf, DataLocation)>,
     pub relative_path_package_resources: Option<BTreeMap<String, (String, PathBuf, DataLocation)>>,
     pub relative_path_distribution_resources:
         Option<BTreeMap<String, (String, PathBuf, DataLocation)>>,
@@ -308,10 +308,10 @@ impl PrePackagedResource {
             } else {
                 None
             },
-            relative_path_extension_module_shared_library: if let Some((prefix, path, location)) =
+            relative_path_extension_module_shared_library: if let Some((path, location)) =
                 &self.relative_path_extension_module_shared_library
             {
-                installs.push((PathBuf::from(prefix).join(path), location.clone(), true));
+                installs.push((path.clone(), location.clone(), true));
 
                 Some(Cow::Owned(path.clone()))
             } else {
@@ -972,7 +972,6 @@ impl PythonResourceCollector {
             });
         entry.is_package = module.is_package;
         entry.relative_path_extension_module_shared_library = Some((
-            prefix.to_string(),
             module.resolve_path(prefix),
             module.shared_library.as_ref().unwrap().clone(),
         ));
@@ -1066,10 +1065,6 @@ impl PythonResourceCollector {
         let mut extra_files = Vec::new();
 
         for (name, resource) in &input_resources {
-            if resource.flavor != ResourceFlavor::Module {
-                continue;
-            }
-
             let (entry, installs) = resource.to_resource(compiler)?;
 
             for install in installs {
@@ -1810,8 +1805,7 @@ mod tests {
             flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             relative_path_extension_module_shared_library: Some((
-                "prefix".to_string(),
-                PathBuf::from("ext.so"),
+                PathBuf::from("prefix/ext.so"),
                 DataLocation::Memory(b"data".to_vec()),
             )),
             ..PrePackagedResource::default()
@@ -1825,7 +1819,7 @@ mod tests {
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 relative_path_extension_module_shared_library: Some(Cow::Owned(PathBuf::from(
-                    "ext.so"
+                    "prefix/ext.so"
                 ))),
                 ..Resource::default()
             }
@@ -2148,7 +2142,6 @@ mod tests {
                 flavor: ResourceFlavor::BuiltinExtensionModule,
                 name: "foo.bar".to_string(),
                 relative_path_extension_module_shared_library: Some((
-                    "prefix".to_string(),
                     PathBuf::from("prefix/foo/bar.so"),
                     DataLocation::Memory(vec![42]),
                 )),
@@ -2180,7 +2173,6 @@ mod tests {
                 flavor: ResourceFlavor::Extension,
                 name: "foo.bar".to_string(),
                 relative_path_extension_module_shared_library: Some((
-                    "prefix".to_string(),
                     PathBuf::from("prefix/foo/bar.so"),
                     DataLocation::Memory(vec![42]),
                 )),
@@ -2634,12 +2626,46 @@ mod tests {
                 name: "foo.bar".to_string(),
                 is_package: false,
                 relative_path_extension_module_shared_library: Some((
-                    "prefix".to_string(),
                     PathBuf::from("prefix/foo/bar.so"),
                     DataLocation::Memory(vec![42])
                 )),
                 ..PrePackagedResource::default()
             })
+        );
+
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let resources = c.to_prepared_python_resources(&mut compiler)?;
+
+        assert_eq!(resources.resources.len(), 2);
+        assert_eq!(
+            resources.resources.get("foo"),
+            Some(&Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("foo".to_string()),
+                is_package: true,
+                ..Resource::default()
+            })
+        );
+        assert_eq!(
+            resources.resources.get("foo.bar"),
+            Some(&Resource {
+                flavor: ResourceFlavor::Extension,
+                name: Cow::Owned("foo.bar".to_string()),
+                is_package: false,
+                relative_path_extension_module_shared_library: Some(Cow::Owned(PathBuf::from(
+                    "prefix/foo/bar.so"
+                ))),
+                ..Resource::default()
+            })
+        );
+        assert_eq!(
+            resources.extra_files,
+            vec![(
+                PathBuf::from("prefix/foo/bar.so"),
+                DataLocation::Memory(vec![42]),
+                true
+            )]
         );
 
         Ok(())
