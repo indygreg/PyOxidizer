@@ -5,7 +5,10 @@
 /*! Functionality for collecting Python resources. */
 
 use {
-    crate::bytecode::{compute_bytecode_header, BytecodeCompiler, BytecodeHeaderMode, CompileMode},
+    crate::bytecode::{
+        compute_bytecode_header, BytecodeCompiler, BytecodeHeaderMode, CompileMode,
+        PythonBytecodeCompiler,
+    },
     crate::module_util::{packages_from_module_name, resolve_path_for_module},
     crate::policy::PythonResourcesPolicy,
     crate::python_source::has_dunder_file,
@@ -202,7 +205,7 @@ impl<'a> TryFrom<&PrePackagedResource> for Resource<'a, u8> {
 impl PrePackagedResource {
     /// Perform bytecode compilation and store the results in a target resource.
     ///
-    /// The specified `BytecodeCompiler` will be used to compile source code
+    /// The specified `PythonBytecodeCompiler` will be used to compile source code
     /// into bytecode.
     ///
     /// The passed `Resource` will have its appropriate bytecode fields
@@ -212,7 +215,7 @@ impl PrePackagedResource {
     /// for all referenced resources to function as intended.
     pub fn compile_into(
         &self,
-        compiler: &mut BytecodeCompiler,
+        compiler: &mut dyn PythonBytecodeCompiler,
         resource: &mut Resource<u8>,
     ) -> Result<Vec<FileInstall>> {
         let mut installs = Vec::new();

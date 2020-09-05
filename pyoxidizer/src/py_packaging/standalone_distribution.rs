@@ -17,7 +17,7 @@ use {
     copy_dir::copy_dir,
     lazy_static::lazy_static,
     path_dedot::ParseDot,
-    python_packaging::bytecode::BytecodeCompiler,
+    python_packaging::bytecode::{BytecodeCompiler, PythonBytecodeCompiler},
     python_packaging::filesystem_scanning::{find_python_resources, walk_tree_files},
     python_packaging::module_util::{is_package_from_path, PythonModuleSuffixes},
     python_packaging::policy::PythonPackagingPolicy,
@@ -1054,8 +1054,8 @@ impl PythonDistribution for StandaloneDistribution {
         Ok(self.module_suffixes.clone())
     }
 
-    fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler> {
-        BytecodeCompiler::new(&self.python_exe)
+    fn create_bytecode_compiler(&self) -> Result<Box<dyn PythonBytecodeCompiler>> {
+        Ok(Box::new(BytecodeCompiler::new(&self.python_exe)?))
     }
 
     fn create_packaging_policy(&self) -> Result<PythonPackagingPolicy> {

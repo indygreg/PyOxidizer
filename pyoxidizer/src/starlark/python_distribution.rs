@@ -21,7 +21,7 @@ use {
     },
     anyhow::{anyhow, Result},
     itertools::Itertools,
-    python_packaging::bytecode::{BytecodeCompiler, CompileMode},
+    python_packaging::bytecode::{CompileMode, PythonBytecodeCompiler},
     python_packaging::policy::{ExtensionModuleFilter, PythonResourcesPolicy},
     python_packaging::resource::BytecodeOptimizationLevel,
     starlark::environment::Environment,
@@ -49,7 +49,7 @@ pub struct PythonDistribution {
 
     pub distribution: Option<Arc<Box<dyn PythonDistributionTrait>>>,
 
-    compiler: Option<BytecodeCompiler>,
+    compiler: Option<Box<dyn PythonBytecodeCompiler>>,
 }
 
 impl PythonDistribution {

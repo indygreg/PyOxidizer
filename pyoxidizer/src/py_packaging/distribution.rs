@@ -13,7 +13,7 @@ use {
     crate::python_distributions::PYTHON_DISTRIBUTIONS,
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
-    python_packaging::bytecode::BytecodeCompiler,
+    python_packaging::bytecode::PythonBytecodeCompiler,
     python_packaging::module_util::PythonModuleSuffixes,
     python_packaging::policy::PythonPackagingPolicy,
     python_packaging::resource::{
@@ -105,8 +105,8 @@ pub trait PythonDistribution {
     /// Obtain file suffixes for various Python module flavors.
     fn python_module_suffixes(&self) -> Result<PythonModuleSuffixes>;
 
-    /// Create a `BytecodeCompiler` from this instance.
-    fn create_bytecode_compiler(&self) -> Result<BytecodeCompiler>;
+    /// Create a `PythonBytecodeCompiler` from this instance.
+    fn create_bytecode_compiler(&self) -> Result<Box<dyn PythonBytecodeCompiler>>;
 
     /// Construct a `PythonPackagingPolicy` derived from this instance.
     fn create_packaging_policy(&self) -> Result<PythonPackagingPolicy>;

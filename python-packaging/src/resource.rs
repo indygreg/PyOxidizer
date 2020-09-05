@@ -5,7 +5,7 @@
 /*! Defines types representing Python resources. */
 
 use {
-    crate::bytecode::{BytecodeCompiler, CompileMode},
+    crate::bytecode::{CompileMode, PythonBytecodeCompiler},
     crate::module_util::{
         is_package_from_path, packages_from_module_name, resolve_path_for_module,
     },
@@ -199,7 +199,11 @@ impl PythonModuleBytecodeFromSource {
     }
 
     /// Compile source to bytecode using a compiler.
-    pub fn compile(&self, compiler: &mut BytecodeCompiler, mode: CompileMode) -> Result<Vec<u8>> {
+    pub fn compile(
+        &self,
+        compiler: &mut dyn PythonBytecodeCompiler,
+        mode: CompileMode,
+    ) -> Result<Vec<u8>> {
         compiler.compile(
             &self.source.resolve()?,
             &self.name,

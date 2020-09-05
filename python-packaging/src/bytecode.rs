@@ -16,6 +16,21 @@ use {
 
 pub const BYTECODE_COMPILER: &[u8] = include_bytes!("bytecodecompiler.py");
 
+/// An entity that can compile Python bytecode.
+pub trait PythonBytecodeCompiler {
+    /// Obtain the magic number to use in the bytecode header.
+    fn get_magic_number(&self) -> u32;
+
+    /// Compile Python source into bytecode with an optimization level.
+    fn compile(
+        &mut self,
+        source: &[u8],
+        filename: &str,
+        optimize: BytecodeOptimizationLevel,
+        output_mode: CompileMode,
+    ) -> Result<Vec<u8>>;
+}
+
 /// An entity to perform Python bytecode compilation.
 #[derive(Debug)]
 pub struct BytecodeCompiler {
@@ -80,14 +95,14 @@ impl BytecodeCompiler {
             magic_number,
         })
     }
+}
 
-    /// Obtain the magic number used by bytecode header.
-    pub fn get_magic_number(&self) -> u32 {
+impl PythonBytecodeCompiler for BytecodeCompiler {
+    fn get_magic_number(&self) -> u32 {
         self.magic_number
     }
 
-    /// Compile Python source into bytecode with an optimization level.
-    pub fn compile(
+    fn compile(
         self: &mut BytecodeCompiler,
         source: &[u8],
         filename: &str,
