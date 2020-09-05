@@ -80,18 +80,8 @@ impl OxidizedResourceCollector {
                 let resource = module.get_resource(py);
 
                 if let Some(location) = &resource.shared_library {
-                    let data = location.resolve().map_err(|e| {
-                        PyErr::new::<ValueError, _>(py, "unable to resolve extension data")
-                    })?;
-
                     collector
-                        .add_in_memory_python_extension_module_shared_library(
-                            &resource.name,
-                            resource.is_package,
-                            &data,
-                            // TODO handle shared libraries.
-                            &[],
-                        )
+                        .add_in_memory_python_extension_module_shared_library(&resource)
                         .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
 
                     Ok(py.None())

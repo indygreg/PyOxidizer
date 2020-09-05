@@ -195,32 +195,8 @@ impl PrePackagedResources {
             return Err(anyhow!("cannot add extension module {} for in-memory loading because it lacks shared library data", module.name));
         }
 
-        let data = module.shared_library.as_ref().unwrap().resolve()?;
-
-        let mut depends = Vec::new();
-
-        for link in &module.link_libraries {
-            if let Some(shared_library) = &link.dynamic_library {
-                // Add a resource holding the shared library data.
-                self.collector.add_shared_library(
-                    &link.name,
-                    shared_library,
-                    &ConcreteResourceLocation::InMemory,
-                )?;
-
-                depends.push(link.name.to_string());
-            }
-        }
-
-        let depends_refs = depends.iter().map(|x| x.as_ref()).collect::<Vec<&str>>();
-
         self.collector
-            .add_in_memory_python_extension_module_shared_library(
-                &module.name,
-                false,
-                &data,
-                &depends_refs,
-            )?;
+            .add_in_memory_python_extension_module_shared_library(&module)?;
 
         Ok(())
     }
@@ -300,9 +276,22 @@ impl PrePackagedResources {
         data: &[u8],
     ) -> Result<()> {
         self.collector
-            .add_in_memory_python_extension_module_shared_library(module, is_package, data, &[])?;
-
-        // TODO add shared library dependencies to be packaged as well.
+            .add_in_memory_python_extension_module_shared_library(&PythonExtensionModule {
+                name: module.to_string(),
+                init_fn: None,
+                extension_file_suffix: "".to_string(),
+                shared_library: Some(DataLocation::Memory(data.to_vec())),
+                object_file_data: vec![],
+                is_package,
+                link_libraries: vec![],
+                is_stdlib: false,
+                builtin_default: false,
+                required: false,
+                variant: None,
+                licenses: None,
+                license_texts: None,
+                license_public_domain: None,
+            })?;
 
         Ok(())
     }

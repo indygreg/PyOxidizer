@@ -906,37 +906,46 @@ impl PythonResourceCollector {
     // into add_in_memory_python_extension_module_shared_library().
 
     /// Add a Python extension module shared library that should be imported from memory.
-    ///
-    /// TODO pass in a PythonExtensionModule.
     pub fn add_in_memory_python_extension_module_shared_library(
         &mut self,
-        module: &str,
-        is_package: bool,
-        data: &[u8],
-        shared_library_dependency_names: &[&str],
+        module: &PythonExtensionModule,
     ) -> Result<()> {
         self.check_policy(AbstractResourceLocation::InMemory)?;
-        let entry =
-            self.resources
-                .entry(module.to_string())
-                .or_insert_with(|| PrePackagedResource {
-                    flavor: ResourceFlavor::Extension,
-                    name: module.to_string(),
-                    ..PrePackagedResource::default()
-                });
 
-        if is_package {
+        let data = match &module.shared_library {
+            Some(location) => location.resolve()?,
+            None => return Err(anyhow!("no shared library data present")),
+        };
+
+        let mut depends = Vec::new();
+
+        for link in &module.link_libraries {
+            if let Some(shared_library) = &link.dynamic_library {
+                self.add_shared_library(
+                    &link.name,
+                    shared_library,
+                    &ConcreteResourceLocation::InMemory,
+                )?;
+
+                depends.push(link.name.to_string());
+            }
+        }
+
+        let entry = self
+            .resources
+            .entry(module.name.to_string())
+            .or_insert_with(|| PrePackagedResource {
+                flavor: ResourceFlavor::Extension,
+                name: module.name.to_string(),
+                ..PrePackagedResource::default()
+            });
+
+        if module.is_package {
             entry.is_package = true;
         }
-        entry.in_memory_extension_module_shared_library = Some(DataLocation::Memory(data.to_vec()));
-        entry.shared_library_dependency_names = Some(
-            shared_library_dependency_names
-                .iter()
-                .map(|x| x.to_string())
-                .collect(),
-        );
 
-        // TODO add shared library dependency names.
+        entry.in_memory_extension_module_shared_library = Some(DataLocation::Memory(data));
+        entry.shared_library_dependency_names = Some(depends);
 
         Ok(())
     }
@@ -1075,7 +1084,9 @@ impl PythonResourceCollector {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::resource::PythonPackageDistributionResourceFlavor, std::convert::TryFrom,
+        super::*,
+        crate::resource::{LibraryDependency, PythonPackageDistributionResourceFlavor},
+        std::convert::TryFrom,
     };
 
     const DEFAULT_CACHE_TAG: &str = "cpython-37";
@@ -2854,6 +2865,86 @@ mod tests {
                 ..Resource::default()
             })
         );
+        assert!(resources.extra_files.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_in_memory_python_extension_module_shared_library() -> Result<()> {
+        let mut c =
+            PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
+
+        let em = PythonExtensionModule {
+            name: "myext".to_string(),
+            init_fn: Some("PyInit__myext".to_string()),
+            extension_file_suffix: ".so".to_string(),
+            shared_library: Some(DataLocation::Memory(vec![42])),
+            object_file_data: vec![],
+            is_package: false,
+            link_libraries: vec![LibraryDependency {
+                name: "foo".to_string(),
+                static_library: None,
+                dynamic_library: Some(DataLocation::Memory(vec![40])),
+                framework: false,
+                system: false,
+            }],
+            is_stdlib: false,
+            builtin_default: false,
+            required: false,
+            variant: None,
+            licenses: None,
+            license_texts: None,
+            license_public_domain: None,
+        };
+
+        c.add_in_memory_python_extension_module_shared_library(&em)?;
+        assert_eq!(c.resources.len(), 2);
+        assert_eq!(
+            c.resources.get("myext"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Extension,
+                name: "myext".to_string(),
+                in_memory_extension_module_shared_library: Some(DataLocation::Memory(vec![42])),
+                shared_library_dependency_names: Some(vec!["foo".to_string()]),
+                ..PrePackagedResource::default()
+            })
+        );
+        assert_eq!(
+            c.resources.get("foo"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::SharedLibrary,
+                name: "foo".to_string(),
+                in_memory_shared_library: Some(DataLocation::Memory(vec![40])),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let resources = c.to_prepared_python_resources(&mut compiler)?;
+
+        assert_eq!(resources.resources.len(), 2);
+        assert_eq!(
+            resources.resources.get("myext"),
+            Some(&Resource {
+                flavor: ResourceFlavor::Extension,
+                name: Cow::Owned("myext".to_string()),
+                in_memory_extension_module_shared_library: Some(Cow::Owned(vec![42])),
+                shared_library_dependency_names: Some(vec![Cow::Owned("foo".to_string())]),
+                ..Resource::default()
+            })
+        );
+        assert_eq!(
+            resources.resources.get("foo"),
+            Some(&Resource {
+                flavor: ResourceFlavor::SharedLibrary,
+                name: Cow::Owned("foo".to_string()),
+                in_memory_shared_library: Some(Cow::Owned(vec![40])),
+                ..Resource::default()
+            })
+        );
+
         assert!(resources.extra_files.is_empty());
 
         Ok(())
