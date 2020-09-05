@@ -81,7 +81,7 @@ impl OxidizedResourceCollector {
 
                 if let Some(location) = &resource.shared_library {
                     collector
-                        .add_in_memory_python_extension_module_shared_library(&resource)
+                        .add_python_extension_module(&resource, &ConcreteResourceLocation::InMemory)
                         .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
 
                     Ok(py.None())
@@ -157,7 +157,10 @@ impl OxidizedResourceCollector {
                 let resource = module.get_resource(py);
 
                 collector
-                    .add_relative_path_python_extension_module(&resource, &prefix)
+                    .add_python_extension_module(
+                        &resource,
+                        &ConcreteResourceLocation::RelativePath(prefix),
+                    )
                     .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
 
                 Ok(py.None())

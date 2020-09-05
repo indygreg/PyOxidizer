@@ -902,15 +902,13 @@ impl PythonResourceCollector {
         Ok(())
     }
 
-    // TODO define add_python_extension_module() once we pass a PythonExtensionModule
-    // into add_in_memory_python_extension_module_shared_library().
-
     /// Add a Python extension module shared library that should be imported from memory.
-    pub fn add_in_memory_python_extension_module_shared_library(
+    pub fn add_python_extension_module(
         &mut self,
         module: &PythonExtensionModule,
+        location: &ConcreteResourceLocation,
     ) -> Result<()> {
-        self.check_policy(AbstractResourceLocation::InMemory)?;
+        self.check_policy(location.into())?;
 
         let data = match &module.shared_library {
             Some(location) => location.resolve()?,
@@ -921,12 +919,7 @@ impl PythonResourceCollector {
 
         for link in &module.link_libraries {
             if let Some(shared_library) = &link.dynamic_library {
-                self.add_shared_library(
-                    &link.name,
-                    shared_library,
-                    &ConcreteResourceLocation::InMemory,
-                )?;
-
+                self.add_shared_library(&link.name, shared_library, &location)?;
                 depends.push(link.name.to_string());
             }
         }
@@ -944,51 +937,16 @@ impl PythonResourceCollector {
             entry.is_package = true;
         }
 
-        entry.in_memory_extension_module_shared_library = Some(DataLocation::Memory(data));
-        entry.shared_library_dependency_names = Some(depends);
-
-        Ok(())
-    }
-
-    /// Add an extension module to be loaded from the filesystem as a dynamic library.
-    pub fn add_relative_path_python_extension_module(
-        &mut self,
-        module: &PythonExtensionModule,
-        prefix: &str,
-    ) -> Result<()> {
-        self.check_policy(AbstractResourceLocation::RelativePath)?;
-
-        if module.shared_library.is_none() {
-            return Err(anyhow!("extension module {} lacks shared library data and cannot be loaded from the filesystem", module.name));
-        }
-
-        let mut depends = Vec::new();
-
-        for link in &module.link_libraries {
-            if let Some(shared_library) = &link.dynamic_library {
-                self.add_shared_library(
-                    &link.name,
-                    shared_library,
-                    &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-                )?;
-
-                depends.push(link.name.to_string());
+        match location {
+            ConcreteResourceLocation::InMemory => {
+                entry.in_memory_extension_module_shared_library = Some(DataLocation::Memory(data));
+            }
+            ConcreteResourceLocation::RelativePath(prefix) => {
+                entry.relative_path_extension_module_shared_library =
+                    Some((module.resolve_path(prefix), DataLocation::Memory(data)));
             }
         }
 
-        let entry = self
-            .resources
-            .entry(module.name.clone())
-            .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Extension,
-                name: module.name.clone(),
-                ..PrePackagedResource::default()
-            });
-        entry.is_package = module.is_package;
-        entry.relative_path_extension_module_shared_library = Some((
-            module.resolve_path(prefix),
-            module.shared_library.as_ref().unwrap().clone(),
-        ));
         entry.shared_library_dependency_names = Some(depends);
 
         Ok(())
@@ -2911,7 +2869,7 @@ mod tests {
             license_public_domain: None,
         };
 
-        c.add_in_memory_python_extension_module_shared_library(&em)?;
+        c.add_python_extension_module(&em, &ConcreteResourceLocation::InMemory)?;
         assert_eq!(c.resources.len(), 2);
         assert_eq!(
             c.resources.get("myext"),
@@ -2993,7 +2951,10 @@ mod tests {
             license_public_domain: None,
         };
 
-        c.add_relative_path_python_extension_module(&em, "prefix")?;
+        c.add_python_extension_module(
+            &em,
+            &ConcreteResourceLocation::RelativePath("prefix".to_string()),
+        )?;
         assert_eq!(c.resources.len(), 2);
         assert_eq!(
             c.resources.get("foo.bar"),

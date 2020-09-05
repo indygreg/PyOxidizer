@@ -196,7 +196,7 @@ impl PrePackagedResources {
         }
 
         self.collector
-            .add_in_memory_python_extension_module_shared_library(&module)?;
+            .add_python_extension_module(&module, &ConcreteResourceLocation::InMemory)?;
 
         Ok(())
     }
@@ -214,8 +214,10 @@ impl PrePackagedResources {
             ));
         }
 
-        self.collector
-            .add_relative_path_python_extension_module(&module, prefix)?;
+        self.collector.add_python_extension_module(
+            &module,
+            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+        )?;
 
         for link in &module.link_libraries {
             // Install dynamic library dependencies next to extension module.
@@ -275,8 +277,8 @@ impl PrePackagedResources {
         is_package: bool,
         data: &[u8],
     ) -> Result<()> {
-        self.collector
-            .add_in_memory_python_extension_module_shared_library(&PythonExtensionModule {
+        self.collector.add_python_extension_module(
+            &PythonExtensionModule {
                 name: module.to_string(),
                 init_fn: None,
                 extension_file_suffix: "".to_string(),
@@ -291,7 +293,9 @@ impl PrePackagedResources {
                 licenses: None,
                 license_texts: None,
                 license_public_domain: None,
-            })?;
+            },
+            &ConcreteResourceLocation::InMemory,
+        )?;
 
         Ok(())
     }
@@ -302,8 +306,10 @@ impl PrePackagedResources {
         em: &PythonExtensionModule,
         prefix: &str,
     ) -> Result<()> {
-        self.collector
-            .add_relative_path_python_extension_module(em, prefix)
+        self.collector.add_python_extension_module(
+            em,
+            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+        )
     }
 
     /// Filter the entities in this instance against names in files.
