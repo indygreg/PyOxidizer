@@ -919,7 +919,21 @@ impl PythonResourceCollector {
 
         for link in &module.link_libraries {
             if let Some(shared_library) = &link.dynamic_library {
-                self.add_shared_library(&link.name, shared_library, &location)?;
+                let library_location = match location {
+                    ConcreteResourceLocation::InMemory => ConcreteResourceLocation::InMemory,
+                    ConcreteResourceLocation::RelativePath(prefix) => {
+                        // We place the shared library next to the extension module.
+                        let path = module
+                            .resolve_path(prefix)
+                            .parent()
+                            .ok_or_else(|| anyhow!("unable to resolve parent directory"))?
+                            .to_path_buf();
+
+                        ConcreteResourceLocation::RelativePath(format!("{}", path.display()))
+                    }
+                };
+
+                self.add_shared_library(&link.name, shared_library, &library_location)?;
                 depends.push(link.name.to_string());
             }
         }
@@ -2976,7 +2990,7 @@ mod tests {
                 flavor: ResourceFlavor::SharedLibrary,
                 name: "mylib".to_string(),
                 relative_path_shared_library: Some((
-                    "prefix".to_string(),
+                    "prefix/foo".to_string(),
                     DataLocation::Memory(vec![40])
                 )),
                 ..PrePackagedResource::default()
@@ -3028,7 +3042,7 @@ mod tests {
                     true
                 ),
                 (
-                    PathBuf::from("prefix/mylib"),
+                    PathBuf::from("prefix/foo/mylib"),
                     DataLocation::Memory(vec![40]),
                     true
                 )
