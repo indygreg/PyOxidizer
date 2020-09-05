@@ -416,7 +416,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         }
 
         self.resources
-            .add_in_memory_distribution_extension_module(extension_module)
+            .add_python_extension_module(extension_module, &ConcreteResourceLocation::InMemory)
     }
 
     fn add_relative_path_distribution_extension_module(
@@ -425,8 +425,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         extension_module: &PythonExtensionModule,
     ) -> Result<()> {
         if self.distribution.is_extension_module_file_loadable() {
-            self.resources
-                .add_relative_path_distribution_extension_module(prefix, extension_module)
+            self.resources.add_python_extension_module(
+                extension_module,
+                &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+            )
         } else {
             Err(anyhow!(
                 "loading extension modules from files not supported by this build configuration"
@@ -532,8 +534,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         }
 
         if self.distribution.is_extension_module_file_loadable() {
-            self.resources
-                .add_relative_path_extension_module(extension_module, prefix)
+            self.resources.add_python_extension_module(
+                extension_module,
+                &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+            )
         } else {
             Err(anyhow!(
                 "loading extension modules from files not supported by this build configuration"
@@ -570,8 +574,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             }
             PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
                 if self.distribution.is_extension_module_file_loadable() {
-                    self.resources
-                        .add_relative_path_extension_module(extension_module, prefix)
+                    self.resources.add_python_extension_module(
+                        extension_module,
+                        &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+                    )
                 } else {
                     Err(anyhow!("filesystem-relative-only policy active but file-based extension module loading not supported by this configuration"))
                 }
@@ -589,8 +595,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                                 .resolve()?,
                         )
                 } else if self.distribution.is_extension_module_file_loadable() {
-                    self.resources
-                        .add_relative_path_extension_module(extension_module, prefix)
+                    self.resources.add_python_extension_module(
+                        extension_module,
+                        &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+                    )
                 } else {
                     Err(anyhow!("prefer-in-memory-fallback-filesystem-relative policy active but could not find a mechanism to add an extension module"))
                 }

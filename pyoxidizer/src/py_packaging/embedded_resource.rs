@@ -122,6 +122,16 @@ impl PrePackagedResources {
             .add_package_distribution_resource(resource, location)
     }
 
+    /// Add a Python extension module to the collection.
+    pub fn add_python_extension_module(
+        &mut self,
+        resource: &PythonExtensionModule,
+        location: &ConcreteResourceLocation,
+    ) -> Result<()> {
+        self.collector
+            .add_python_extension_module(resource, location)
+    }
+
     /// Add an extension module from a Python distribution to be linked into the binary.
     ///
     /// The extension module will have its object files linked into the produced
@@ -186,40 +196,6 @@ impl PrePackagedResources {
         Ok(())
     }
 
-    /// Add a distribution extension module to be loaded from in-memory import.
-    pub fn add_in_memory_distribution_extension_module(
-        &mut self,
-        module: &PythonExtensionModule,
-    ) -> Result<()> {
-        if module.shared_library.is_none() {
-            return Err(anyhow!("cannot add extension module {} for in-memory loading because it lacks shared library data", module.name));
-        }
-
-        self.collector
-            .add_python_extension_module(&module, &ConcreteResourceLocation::InMemory)?;
-
-        Ok(())
-    }
-
-    /// Add an extension module from a Python distribution to be loaded from the filesystem as a dynamic library.
-    pub fn add_relative_path_distribution_extension_module(
-        &mut self,
-        prefix: &str,
-        module: &PythonExtensionModule,
-    ) -> Result<()> {
-        if module.shared_library.is_none() {
-            return Err(anyhow!(
-                "cannot add extension module {} as path relative because it lacks a shared library",
-                module.name
-            ));
-        }
-
-        self.collector.add_python_extension_module(
-            &module,
-            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-        )
-    }
-
     /// Add an extension module to be linked into the binary.
     ///
     /// The object files for the extension module will be linked into the produced
@@ -281,18 +257,6 @@ impl PrePackagedResources {
         )?;
 
         Ok(())
-    }
-
-    /// Add an extension module to be loaded from the filesystem as a dynamic library.
-    pub fn add_relative_path_extension_module(
-        &mut self,
-        em: &PythonExtensionModule,
-        prefix: &str,
-    ) -> Result<()> {
-        self.collector.add_python_extension_module(
-            em,
-            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-        )
     }
 
     /// Filter the entities in this instance against names in files.
