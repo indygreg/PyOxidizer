@@ -3011,6 +3011,15 @@ mod tests {
             })
         );
         assert_eq!(
+            resources.resources.get("mylib"),
+            Some(&Resource {
+                flavor: ResourceFlavor::SharedLibrary,
+                name: Cow::Owned("mylib".to_string()),
+                ..Resource::default()
+            })
+        );
+
+        assert_eq!(
             resources.extra_files,
             vec![
                 (
