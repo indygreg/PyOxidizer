@@ -962,6 +962,20 @@ impl PythonResourceCollector {
             return Err(anyhow!("extension module {} lacks shared library data and cannot be loaded from the filesystem", module.name));
         }
 
+        let mut depends = Vec::new();
+
+        for link in &module.link_libraries {
+            if let Some(shared_library) = &link.dynamic_library {
+                self.add_shared_library(
+                    &link.name,
+                    shared_library,
+                    &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+                )?;
+
+                depends.push(link.name.to_string());
+            }
+        }
+
         let entry = self
             .resources
             .entry(module.name.clone())
@@ -975,8 +989,7 @@ impl PythonResourceCollector {
             module.resolve_path(prefix),
             module.shared_library.as_ref().unwrap().clone(),
         ));
-
-        // TODO add shared library dependencies.
+        entry.shared_library_dependency_names = Some(depends);
 
         Ok(())
     }
@@ -2964,7 +2977,13 @@ mod tests {
             shared_library: Some(DataLocation::Memory(vec![42])),
             object_file_data: vec![],
             is_package: false,
-            link_libraries: vec![],
+            link_libraries: vec![LibraryDependency {
+                name: "mylib".to_string(),
+                static_library: None,
+                dynamic_library: Some(DataLocation::Memory(vec![40])),
+                framework: false,
+                system: false,
+            }],
             is_stdlib: false,
             builtin_default: false,
             required: false,
@@ -2975,7 +2994,7 @@ mod tests {
         };
 
         c.add_relative_path_python_extension_module(&em, "prefix")?;
-        assert_eq!(c.resources.len(), 1);
+        assert_eq!(c.resources.len(), 2);
         assert_eq!(
             c.resources.get("foo.bar"),
             Some(&PrePackagedResource {
@@ -2986,6 +3005,19 @@ mod tests {
                     PathBuf::from("prefix/foo/bar.so"),
                     DataLocation::Memory(vec![42])
                 )),
+                shared_library_dependency_names: Some(vec!["mylib".to_string()]),
+                ..PrePackagedResource::default()
+            })
+        );
+        assert_eq!(
+            c.resources.get("mylib"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::SharedLibrary,
+                name: "mylib".to_string(),
+                relative_path_shared_library: Some((
+                    "prefix".to_string(),
+                    DataLocation::Memory(vec![40])
+                )),
                 ..PrePackagedResource::default()
             })
         );
@@ -2994,7 +3026,7 @@ mod tests {
 
         let resources = c.to_prepared_python_resources(&mut compiler)?;
 
-        assert_eq!(resources.resources.len(), 2);
+        assert_eq!(resources.resources.len(), 3);
         assert_eq!(
             resources.resources.get("foo"),
             Some(&Resource {
@@ -3013,16 +3045,24 @@ mod tests {
                 relative_path_extension_module_shared_library: Some(Cow::Owned(PathBuf::from(
                     "prefix/foo/bar.so"
                 ))),
+                shared_library_dependency_names: Some(vec![Cow::Owned("mylib".to_string())]),
                 ..Resource::default()
             })
         );
         assert_eq!(
             resources.extra_files,
-            vec![(
-                PathBuf::from("prefix/foo/bar.so"),
-                DataLocation::Memory(vec![42]),
-                true
-            )]
+            vec![
+                (
+                    PathBuf::from("prefix/foo/bar.so"),
+                    DataLocation::Memory(vec![42]),
+                    true
+                ),
+                (
+                    PathBuf::from("prefix/mylib"),
+                    DataLocation::Memory(vec![40]),
+                    true
+                )
+            ]
         );
 
         Ok(())
