@@ -217,24 +217,7 @@ impl PrePackagedResources {
         self.collector.add_python_extension_module(
             &module,
             &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-        )?;
-
-        for link in &module.link_libraries {
-            // Install dynamic library dependencies next to extension module.
-            //
-            // On Windows, this should "just work" since the opening DLL's directory
-            // is searched for dependencies.
-            // TODO this logic likely needs to be expanded.
-            if let Some(shared_library) = &link.dynamic_library {
-                self.collector.add_shared_library(
-                    &link.name,
-                    shared_library,
-                    &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-                )?;
-            }
-        }
-
-        Ok(())
+        )
     }
 
     /// Add an extension module to be linked into the binary.
