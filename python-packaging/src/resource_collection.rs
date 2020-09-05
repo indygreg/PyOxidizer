@@ -68,7 +68,7 @@ pub struct PrePackagedResource {
     pub relative_path_bytecode_opt2: Option<(String, String, PythonModuleBytecodeProvider)>,
     // (path, data)
     pub relative_path_extension_module_shared_library: Option<(PathBuf, DataLocation)>,
-    pub relative_path_package_resources: Option<BTreeMap<String, (String, PathBuf, DataLocation)>>,
+    pub relative_path_package_resources: Option<BTreeMap<String, (PathBuf, DataLocation)>>,
     pub relative_path_distribution_resources:
         Option<BTreeMap<String, (String, PathBuf, DataLocation)>>,
     pub relative_path_shared_library: Option<(String, DataLocation)>,
@@ -321,8 +321,8 @@ impl PrePackagedResource {
                 &self.relative_path_package_resources
             {
                 let mut res = HashMap::new();
-                for (key, (prefix, path, location)) in resources {
-                    installs.push((PathBuf::from(prefix).join(path), location.clone(), false));
+                for (key, (path, location)) in resources {
+                    installs.push((path.clone(), location.clone(), false));
 
                     res.insert(Cow::Owned(key.clone()), Cow::Owned(path.clone()));
                 }
@@ -820,11 +820,7 @@ impl PythonResourceCollector {
                     .unwrap()
                     .insert(
                         resource.relative_name.clone(),
-                        (
-                            prefix.to_string(),
-                            resource.resolve_path(prefix),
-                            resource.data.clone(),
-                        ),
+                        (resource.resolve_path(prefix), resource.data.clone()),
                     );
             }
         }
@@ -1845,16 +1841,14 @@ mod tests {
         resources.insert(
             "foo.txt".to_string(),
             (
-                "prefix".to_string(),
-                PathBuf::from("foo.txt"),
+                PathBuf::from("module/foo.txt"),
                 DataLocation::Memory(b"data".to_vec()),
             ),
         );
         resources.insert(
             "bar.txt".to_string(),
             (
-                "".to_string(),
-                PathBuf::from("bar.txt"),
+                PathBuf::from("module/bar.txt"),
                 DataLocation::Memory(b"bar".to_vec()),
             ),
         );
@@ -1862,6 +1856,7 @@ mod tests {
         let pre = PrePackagedResource {
             flavor: ResourceFlavor::Module,
             name: "module".to_string(),
+            is_package: true,
             relative_path_package_resources: Some(resources),
             ..PrePackagedResource::default()
         };
@@ -1871,11 +1866,11 @@ mod tests {
         let mut resources = HashMap::new();
         resources.insert(
             Cow::Owned("foo.txt".to_string()),
-            Cow::Owned(PathBuf::from("foo.txt")),
+            Cow::Owned(PathBuf::from("module/foo.txt")),
         );
         resources.insert(
             Cow::Owned("bar.txt".to_string()),
-            Cow::Owned(PathBuf::from("bar.txt")),
+            Cow::Owned(PathBuf::from("module/bar.txt")),
         );
 
         assert_eq!(
@@ -1883,6 +1878,7 @@ mod tests {
             Resource {
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
+                is_package: true,
                 relative_path_package_resources: Some(resources),
                 ..Resource::default()
             }
@@ -1892,12 +1888,12 @@ mod tests {
             installs,
             vec![
                 (
-                    PathBuf::from("bar.txt"),
+                    PathBuf::from("module/bar.txt"),
                     DataLocation::Memory(b"bar".to_vec()),
                     false
                 ),
                 (
-                    PathBuf::from("prefix/foo.txt"),
+                    PathBuf::from("module/foo.txt"),
                     DataLocation::Memory(b"data".to_vec()),
                     false
                 ),
@@ -2611,6 +2607,79 @@ mod tests {
             })
         );
         assert!(resources.extra_files.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_relative_path_package_resource() -> Result<()> {
+        let mut r = PythonResourceCollector::new(
+            &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
+            DEFAULT_CACHE_TAG,
+        );
+        r.add_python_package_resource(
+            &PythonPackageResource {
+                leaf_package: "foo".to_string(),
+                relative_name: "resource.txt".to_string(),
+                data: DataLocation::Memory(vec![42]),
+                is_stdlib: false,
+                is_test: false,
+            },
+            &ConcreteResourceLocation::RelativePath("prefix".to_string()),
+        )?;
+
+        assert_eq!(r.resources.len(), 1);
+        assert_eq!(
+            r.resources.get("foo"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: "foo".to_string(),
+                is_package: true,
+                relative_path_package_resources: Some(BTreeMap::from_iter(
+                    [(
+                        "resource.txt".to_string(),
+                        (
+                            PathBuf::from("prefix/foo/resource.txt"),
+                            DataLocation::Memory(vec![42])
+                        )
+                    )]
+                    .iter()
+                    .cloned()
+                )),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let resources = r.to_prepared_python_resources(&mut compiler)?;
+
+        assert_eq!(resources.resources.len(), 1);
+        assert_eq!(
+            resources.resources.get("foo"),
+            Some(&Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("foo".to_string()),
+                is_package: true,
+                relative_path_package_resources: Some(HashMap::from_iter(
+                    [(
+                        Cow::Owned("resource.txt".to_string()),
+                        Cow::Owned(PathBuf::from("prefix/foo/resource.txt")),
+                    )]
+                    .iter()
+                    .cloned()
+                )),
+                ..Resource::default()
+            })
+        );
+        assert_eq!(
+            resources.extra_files,
+            vec![(
+                PathBuf::from("prefix/foo/resource.txt"),
+                DataLocation::Memory(vec![42]),
+                false
+            ),]
+        );
 
         Ok(())
     }
