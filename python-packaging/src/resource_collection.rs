@@ -69,8 +69,7 @@ pub struct PrePackagedResource {
     // (path, data)
     pub relative_path_extension_module_shared_library: Option<(PathBuf, DataLocation)>,
     pub relative_path_package_resources: Option<BTreeMap<String, (PathBuf, DataLocation)>>,
-    pub relative_path_distribution_resources:
-        Option<BTreeMap<String, (String, PathBuf, DataLocation)>>,
+    pub relative_path_distribution_resources: Option<BTreeMap<String, (PathBuf, DataLocation)>>,
     pub relative_path_shared_library: Option<(String, DataLocation)>,
 }
 
@@ -334,8 +333,8 @@ impl PrePackagedResource {
                 &self.relative_path_distribution_resources
             {
                 let mut res = HashMap::new();
-                for (key, (prefix, path, location)) in resources {
-                    installs.push((PathBuf::from(prefix).join(path), location.clone(), false));
+                for (key, (path, location)) in resources {
+                    installs.push((path.clone(), location.clone(), false));
 
                     res.insert(Cow::Owned(key.clone()), Cow::Owned(path.clone()));
                 }
@@ -871,11 +870,7 @@ impl PythonResourceCollector {
                     .unwrap()
                     .insert(
                         resource.name.clone(),
-                        (
-                            prefix.to_string(),
-                            resource.resolve_path(prefix),
-                            resource.data.clone(),
-                        ),
+                        (resource.resolve_path(prefix), resource.data.clone()),
                     );
             }
         }
@@ -1079,7 +1074,9 @@ impl PythonResourceCollector {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, std::convert::TryFrom};
+    use {
+        super::*, crate::resource::PythonPackageDistributionResourceFlavor, std::convert::TryFrom,
+    };
 
     const DEFAULT_CACHE_TAG: &str = "cpython-37";
 
@@ -1911,7 +1908,6 @@ mod tests {
         resources.insert(
             "foo.txt".to_string(),
             (
-                "prefix".to_string(),
                 PathBuf::from("foo.txt"),
                 DataLocation::Memory(b"data".to_vec()),
             ),
@@ -1945,7 +1941,7 @@ mod tests {
         assert_eq!(
             installs,
             vec![(
-                PathBuf::from("prefix/foo.txt"),
+                PathBuf::from("foo.txt"),
                 DataLocation::Memory(b"data".to_vec()),
                 false
             )]
@@ -2676,6 +2672,134 @@ mod tests {
             resources.extra_files,
             vec![(
                 PathBuf::from("prefix/foo/resource.txt"),
+                DataLocation::Memory(vec![42]),
+                false
+            ),]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_in_memory_package_distribution_resource() -> Result<()> {
+        let mut r =
+            PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
+        r.add_package_distribution_resource(
+            &PythonPackageDistributionResource {
+                location: PythonPackageDistributionResourceFlavor::DistInfo,
+                package: "mypackage".to_string(),
+                version: "1.0".to_string(),
+                name: "resource.txt".to_string(),
+                data: DataLocation::Memory(vec![42]),
+            },
+            &ConcreteResourceLocation::InMemory,
+        )?;
+
+        assert_eq!(r.resources.len(), 1);
+        assert_eq!(
+            r.resources.get("mypackage"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: "mypackage".to_string(),
+                is_package: true,
+                in_memory_distribution_resources: Some(BTreeMap::from_iter(
+                    [("resource.txt".to_string(), DataLocation::Memory(vec![42]))]
+                        .iter()
+                        .cloned()
+                )),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let resources = r.to_prepared_python_resources(&mut compiler)?;
+
+        assert_eq!(resources.resources.len(), 1);
+        assert_eq!(
+            resources.resources.get("mypackage"),
+            Some(&Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("mypackage".to_string()),
+                is_package: true,
+                in_memory_distribution_resources: Some(HashMap::from_iter(
+                    [(Cow::Owned("resource.txt".to_string()), Cow::Owned(vec![42]))]
+                        .iter()
+                        .cloned()
+                )),
+                ..Resource::default()
+            })
+        );
+        assert!(resources.extra_files.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_relative_path_package_distribution_resource() -> Result<()> {
+        let mut r = PythonResourceCollector::new(
+            &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
+            DEFAULT_CACHE_TAG,
+        );
+        r.add_package_distribution_resource(
+            &PythonPackageDistributionResource {
+                location: PythonPackageDistributionResourceFlavor::DistInfo,
+                package: "mypackage".to_string(),
+                version: "1.0".to_string(),
+                name: "resource.txt".to_string(),
+                data: DataLocation::Memory(vec![42]),
+            },
+            &ConcreteResourceLocation::RelativePath("prefix".to_string()),
+        )?;
+
+        assert_eq!(r.resources.len(), 1);
+        assert_eq!(
+            r.resources.get("mypackage"),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: "mypackage".to_string(),
+                is_package: true,
+                relative_path_distribution_resources: Some(BTreeMap::from_iter(
+                    [(
+                        "resource.txt".to_string(),
+                        (
+                            PathBuf::from("prefix/mypackage-1.0.dist-info/resource.txt"),
+                            DataLocation::Memory(vec![42])
+                        )
+                    )]
+                    .iter()
+                    .cloned()
+                )),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let resources = r.to_prepared_python_resources(&mut compiler)?;
+
+        assert_eq!(resources.resources.len(), 1);
+        assert_eq!(
+            resources.resources.get("mypackage"),
+            Some(&Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("mypackage".to_string()),
+                is_package: true,
+                relative_path_distribution_resources: Some(HashMap::from_iter(
+                    [(
+                        Cow::Owned("resource.txt".to_string()),
+                        Cow::Owned(PathBuf::from("prefix/mypackage-1.0.dist-info/resource.txt")),
+                    )]
+                    .iter()
+                    .cloned()
+                )),
+                ..Resource::default()
+            })
+        );
+        assert_eq!(
+            resources.extra_files,
+            vec![(
+                PathBuf::from("prefix/mypackage-1.0.dist-info/resource.txt"),
                 DataLocation::Memory(vec![42]),
                 false
             ),]
