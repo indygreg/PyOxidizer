@@ -542,7 +542,7 @@ impl From<&ConcreteResourceLocation> for AbstractResourceLocation {
 #[derive(Clone, Debug, Default)]
 pub struct PreparedPythonResources<'a> {
     pub resources: BTreeMap<String, Resource<'a, u8>>,
-    pub extra_files: Vec<(PathBuf, DataLocation, bool)>,
+    pub extra_files: Vec<FileInstall>,
 }
 
 impl<'a> PreparedPythonResources<'a> {
