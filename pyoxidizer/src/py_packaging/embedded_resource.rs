@@ -10,6 +10,7 @@ use {
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Result},
+    python_packaging::bytecode::BytecodeCompiler,
     python_packaging::policy::PythonResourcesPolicy,
     python_packaging::resource::{
         DataLocation, PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
@@ -369,7 +370,8 @@ impl PrePackagedResources {
             );
         }
 
-        let resources = self.collector.to_prepared_python_resources(python_exe)?;
+        let mut compiler = BytecodeCompiler::new(python_exe)?;
+        let resources = self.collector.to_prepared_python_resources(&mut compiler)?;
 
         Ok(EmbeddedPythonResources {
             resources,

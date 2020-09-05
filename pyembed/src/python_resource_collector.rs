@@ -16,6 +16,7 @@ use {
         py_class, py_class_prop_getter, ObjectProtocol, PyBytes, PyErr, PyObject, PyResult, Python,
         PythonObject, ToPyObject,
     },
+    python_packaging::bytecode::BytecodeCompiler,
     python_packaging::policy::PythonResourcesPolicy,
     python_packaging::resource_collection::{
         ConcreteResourceLocation, PreparedPythonResources, PythonResourceCollector,
@@ -230,8 +231,12 @@ impl OxidizedResourceCollector {
 
         let collector = self.collector(py).borrow();
 
+        let mut compiler = BytecodeCompiler::new(&python_exe).map_err(|e| {
+            PyErr::new::<ValueError, _>(py, format!("error constructing bytecode compiler: {}", e))
+        })?;
+
         let prepared: PreparedPythonResources = collector
-            .to_prepared_python_resources(&python_exe)
+            .to_prepared_python_resources(&mut compiler)
             .map_err(|e| PyErr::new::<ValueError, _>(py, format!("error oxidizing: {}", e)))?;
 
         let mut resources = Vec::new();

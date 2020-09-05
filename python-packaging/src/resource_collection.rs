@@ -6,8 +6,7 @@
 
 use {
     crate::bytecode::{
-        compute_bytecode_header, BytecodeCompiler, BytecodeHeaderMode, CompileMode,
-        PythonBytecodeCompiler,
+        compute_bytecode_header, BytecodeHeaderMode, CompileMode, PythonBytecodeCompiler,
     },
     crate::module_util::{packages_from_module_name, resolve_path_for_module},
     crate::policy::PythonResourcesPolicy,
@@ -22,7 +21,7 @@ use {
     std::borrow::Cow,
     std::collections::{BTreeMap, BTreeSet, HashMap},
     std::iter::FromIterator,
-    std::path::{Path, PathBuf},
+    std::path::PathBuf,
 };
 
 /// Represents a single file install.
@@ -1058,7 +1057,7 @@ impl PythonResourceCollector {
     /// Converts this collection of resources into a `PreparedPythonResources`.
     pub fn to_prepared_python_resources(
         &self,
-        python_exe: &Path,
+        compiler: &mut dyn PythonBytecodeCompiler,
     ) -> Result<PreparedPythonResources> {
         let mut input_resources = self.resources.clone();
         populate_parent_packages(&mut input_resources)?;
@@ -1066,21 +1065,18 @@ impl PythonResourceCollector {
         let mut resources = BTreeMap::new();
         let mut extra_files = Vec::new();
 
-        let mut compiler = BytecodeCompiler::new(python_exe)?;
-        {
-            for (name, resource) in &input_resources {
-                if resource.flavor != ResourceFlavor::Module {
-                    continue;
-                }
-
-                let (entry, installs) = resource.to_resource(&mut compiler)?;
-
-                for install in installs {
-                    extra_files.push(install);
-                }
-
-                resources.insert(name.clone(), entry);
+        for (name, resource) in &input_resources {
+            if resource.flavor != ResourceFlavor::Module {
+                continue;
             }
+
+            let (entry, installs) = resource.to_resource(compiler)?;
+
+            for install in installs {
+                extra_files.push(install);
+            }
+
+            resources.insert(name.clone(), entry);
         }
 
         Ok(PreparedPythonResources {
