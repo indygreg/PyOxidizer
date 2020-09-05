@@ -2860,7 +2860,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_relative_path_extension_module() -> Result<()> {
+    fn test_add_relative_path_python_extension_module() -> Result<()> {
         let mut c = PythonResourceCollector::new(
             &PythonResourcesPolicy::FilesystemRelativeOnly("prefix".to_string()),
             DEFAULT_CACHE_TAG,
