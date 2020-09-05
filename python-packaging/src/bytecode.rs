@@ -23,7 +23,7 @@ pub struct BytecodeCompiler {
     command: process::Child,
 
     /// Magic number for bytecode header.
-    pub magic_number: u32,
+    magic_number: u32,
 }
 
 /// Output mode for BytecodeCompiler.
@@ -79,6 +79,11 @@ impl BytecodeCompiler {
             command,
             magic_number,
         })
+    }
+
+    /// Obtain the magic number used by bytecode header.
+    pub fn get_magic_number(&self) -> u32 {
+        self.magic_number
     }
 
     /// Compile Python source into bytecode with an optimization level.

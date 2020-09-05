@@ -271,7 +271,7 @@ impl PrePackagedResource {
                     )?,
                     PythonModuleBytecodeProvider::Provided(location) => {
                         let mut data = compute_bytecode_header(
-                            compiler.magic_number,
+                            compiler.get_magic_number(),
                             BytecodeHeaderMode::UncheckedHash(0),
                         )?;
                         data.extend(location.resolve()?);
@@ -308,7 +308,7 @@ impl PrePackagedResource {
                     )?,
                     PythonModuleBytecodeProvider::Provided(location) => {
                         let mut data = compute_bytecode_header(
-                            compiler.magic_number,
+                            compiler.get_magic_number(),
                             BytecodeHeaderMode::UncheckedHash(0),
                         )?;
                         data.extend(location.resolve()?);
@@ -345,7 +345,7 @@ impl PrePackagedResource {
                     )?,
                     PythonModuleBytecodeProvider::Provided(location) => {
                         let mut data = compute_bytecode_header(
-                            compiler.magic_number,
+                            compiler.get_magic_number(),
                             BytecodeHeaderMode::UncheckedHash(0),
                         )?;
                         data.extend(location.resolve()?);
