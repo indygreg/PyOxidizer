@@ -2233,6 +2233,22 @@ mod tests {
             })
         );
 
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let resources = r.to_prepared_python_resources(&mut compiler)?;
+
+        assert_eq!(resources.resources.len(), 1);
+        assert_eq!(
+            resources.resources.get("foo"),
+            Some(&Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("foo".to_string()),
+                in_memory_source: Some(Cow::Owned(vec![42])),
+                ..Resource::default()
+            })
+        );
+        assert!(resources.extra_files.is_empty());
+
         Ok(())
     }
 
@@ -2263,6 +2279,44 @@ mod tests {
                 ..PrePackagedResource::default()
             })
         );
+
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let resources = r.to_prepared_python_resources(&mut compiler)?;
+
+        assert_eq!(resources.resources.len(), 3);
+        assert_eq!(
+            resources.resources.get("root"),
+            Some(&Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("root".to_string()),
+                is_package: true,
+                in_memory_source: Some(Cow::Owned(vec![])),
+                ..Resource::default()
+            })
+        );
+        assert_eq!(
+            resources.resources.get("root.parent"),
+            Some(&Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("root.parent".to_string()),
+                is_package: true,
+                in_memory_source: Some(Cow::Owned(vec![])),
+                ..Resource::default()
+            })
+        );
+        assert_eq!(
+            resources.resources.get("root.parent.child"),
+            Some(&Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("root.parent.child".to_string()),
+                is_package: true,
+                in_memory_source: Some(Cow::Owned(vec![42])),
+                ..Resource::default()
+            })
+        );
+
+        assert!(resources.extra_files.is_empty());
 
         Ok(())
     }
@@ -2297,6 +2351,29 @@ mod tests {
             })
         );
 
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let resources = r.to_prepared_python_resources(&mut compiler)?;
+
+        assert_eq!(resources.resources.len(), 1);
+        assert_eq!(
+            resources.resources.get("foo"),
+            Some(&Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("foo".to_string()),
+                relative_path_module_source: Some(Cow::Owned(PathBuf::from("foo.py"))),
+                ..Resource::default()
+            })
+        );
+        assert_eq!(
+            resources.extra_files,
+            vec![(
+                PathBuf::from("foo.py"),
+                DataLocation::Memory(vec![42]),
+                false
+            )]
+        );
+
         Ok(())
     }
 
@@ -2310,7 +2387,7 @@ mod tests {
                 BytecodeOptimizationLevel::Zero,
                 false,
                 DEFAULT_CACHE_TAG,
-                &vec![42],
+                &[42],
             ),
             &ConcreteResourceLocation::InMemory,
         )?;
@@ -2328,6 +2405,22 @@ mod tests {
                 ..PrePackagedResource::default()
             })
         );
+
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let resources = r.to_prepared_python_resources(&mut compiler)?;
+
+        assert_eq!(resources.resources.len(), 1);
+        assert_eq!(
+            resources.resources.get("foo"),
+            Some(&Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("foo".to_string()),
+                in_memory_bytecode: Some(Cow::Owned(vec![42])),
+                ..Resource::default()
+            })
+        );
+        assert!(resources.extra_files.is_empty());
 
         Ok(())
     }
@@ -2363,6 +2456,22 @@ mod tests {
             })
         );
 
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let resources = r.to_prepared_python_resources(&mut compiler)?;
+
+        assert_eq!(resources.resources.len(), 1);
+        assert_eq!(
+            resources.resources.get("foo"),
+            Some(&Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("foo".to_string()),
+                in_memory_bytecode: Some(Cow::Owned(b"bc0\x2a".to_vec())),
+                ..Resource::default()
+            })
+        );
+        assert!(resources.extra_files.is_empty());
+
         Ok(())
     }
 
@@ -2397,6 +2506,43 @@ mod tests {
             })
         );
 
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let resources = r.to_prepared_python_resources(&mut compiler)?;
+
+        assert_eq!(resources.resources.len(), 3);
+        assert_eq!(
+            resources.resources.get("root"),
+            Some(&Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("root".to_string()),
+                is_package: true,
+                in_memory_bytecode_opt1: Some(Cow::Owned(b"bc1".to_vec())),
+                ..Resource::default()
+            })
+        );
+        assert_eq!(
+            resources.resources.get("root.parent"),
+            Some(&Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("root.parent".to_string()),
+                is_package: true,
+                in_memory_bytecode_opt1: Some(Cow::Owned(b"bc1".to_vec())),
+                ..Resource::default()
+            })
+        );
+        assert_eq!(
+            resources.resources.get("root.parent.child"),
+            Some(&Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("root.parent.child".to_string()),
+                is_package: true,
+                in_memory_bytecode_opt1: Some(Cow::Owned(b"bc1\x2a".to_vec())),
+                ..Resource::default()
+            })
+        );
+        assert!(resources.extra_files.is_empty());
+
         Ok(())
     }
 
@@ -2430,6 +2576,27 @@ mod tests {
                 ..PrePackagedResource::default()
             })
         );
+
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let resources = r.to_prepared_python_resources(&mut compiler)?;
+
+        assert_eq!(resources.resources.len(), 1);
+        assert_eq!(
+            resources.resources.get("foo"),
+            Some(&Resource {
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("foo".to_string()),
+                is_package: true,
+                in_memory_package_resources: Some(HashMap::from_iter(
+                    [(Cow::Owned("resource.txt".to_string()), Cow::Owned(vec![42]))]
+                        .iter()
+                        .cloned()
+                )),
+                ..Resource::default()
+            })
+        );
+        assert!(resources.extra_files.is_empty());
 
         Ok(())
     }
