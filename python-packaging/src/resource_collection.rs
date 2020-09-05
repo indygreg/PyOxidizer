@@ -178,15 +178,14 @@ impl PrePackagedResource {
             } else {
                 None
             },
-            relative_path_module_source: if let Some((prefix, _)) =
+            relative_path_module_source: if let Some((prefix, location)) =
                 &self.relative_path_module_source
             {
-                Some(Cow::Owned(resolve_path_for_module(
-                    prefix,
-                    &self.name,
-                    self.is_package,
-                    None,
-                )))
+                let path = resolve_path_for_module(prefix, &self.name, self.is_package, None);
+
+                installs.push((path.clone(), location.clone(), false));
+
+                Some(Cow::Owned(path))
             } else {
                 None
             },
@@ -310,9 +309,11 @@ impl PrePackagedResource {
             } else {
                 None
             },
-            relative_path_extension_module_shared_library: if let Some((_, path, _)) =
+            relative_path_extension_module_shared_library: if let Some((_, path, location)) =
                 &self.relative_path_extension_module_shared_library
             {
+                installs.push((path.clone(), location.clone(), true));
+
                 Some(Cow::Owned(path.clone()))
             } else {
                 None
@@ -321,7 +322,9 @@ impl PrePackagedResource {
                 &self.relative_path_package_resources
             {
                 let mut res = HashMap::new();
-                for (key, (_, path, _)) in resources {
+                for (key, (_, path, location)) in resources {
+                    installs.push((path.clone(), location.clone(), false));
+
                     res.insert(Cow::Owned(key.clone()), Cow::Owned(path.clone()));
                 }
                 Some(res)
@@ -332,7 +335,9 @@ impl PrePackagedResource {
                 &self.relative_path_distribution_resources
             {
                 let mut res = HashMap::new();
-                for (key, (_, path, _)) in resources {
+                for (key, (_, path, location)) in resources {
+                    installs.push((path.clone(), location.clone(), false));
+
                     res.insert(Cow::Owned(key.clone()), Cow::Owned(path.clone()));
                 }
                 Some(res)
@@ -341,45 +346,15 @@ impl PrePackagedResource {
             },
         };
 
-        Ok((resource, installs))
-    }
-
-    /// Derive additional file installs to perform for filesystem-based resources.
-    ///
-    /// Returns 3-tuples denoting the relative resource path, data to materialize there,
-    /// whether the file should be executable.
-    pub fn derive_file_installs(&self) -> Result<Vec<(PathBuf, &DataLocation, bool)>> {
-        let mut res = Vec::new();
-
-        if let Some((prefix, location)) = &self.relative_path_module_source {
-            res.push((
-                resolve_path_for_module(prefix, &self.name, self.is_package, None),
-                location,
-                false,
+        if let Some((prefix, location)) = &self.relative_path_shared_library {
+            installs.push((
+                PathBuf::from(prefix).join(&self.name),
+                location.clone(),
+                true,
             ));
         }
 
-        if let Some((_, path, location)) = &self.relative_path_extension_module_shared_library {
-            res.push((path.clone(), location, true));
-        }
-
-        if let Some(resources) = &self.relative_path_package_resources {
-            for (_, path, location) in resources.values() {
-                res.push((path.clone(), location, false));
-            }
-        }
-
-        if let Some(resources) = &self.relative_path_distribution_resources {
-            for (_, path, location) in resources.values() {
-                res.push((path.clone(), location, false));
-            }
-        }
-
-        if let Some((prefix, location)) = &self.relative_path_shared_library {
-            res.push((PathBuf::from(prefix).join(&self.name), location, true));
-        }
-
-        Ok(res)
+        Ok((resource, installs))
     }
 }
 
@@ -1080,17 +1055,6 @@ impl PythonResourceCollector {
         Ok(res)
     }
 
-    /// Derive a list of extra file installs that need to be performed for referenced resources.
-    pub fn derive_file_installs(&self) -> Result<Vec<(PathBuf, &DataLocation, bool)>> {
-        let mut res = Vec::new();
-
-        for resource in self.resources.values() {
-            res.append(&mut resource.derive_file_installs()?);
-        }
-
-        Ok(res)
-    }
-
     /// Converts this collection of resources into a `PreparedPythonResources`.
     pub fn to_prepared_python_resources(
         &self,
@@ -1575,7 +1539,14 @@ mod tests {
             }
         );
 
-        assert!(installs.is_empty());
+        assert_eq!(
+            installs,
+            vec![(
+                PathBuf::from("prefix/module.py"),
+                DataLocation::Memory(b"source".to_vec()),
+                false
+            )]
+        );
 
         Ok(())
     }
@@ -1864,7 +1835,14 @@ mod tests {
             }
         );
 
-        assert!(installs.is_empty());
+        assert_eq!(
+            installs,
+            vec![(
+                PathBuf::from("ext.so"),
+                DataLocation::Memory(b"data".to_vec()),
+                true
+            )]
+        );
 
         Ok(())
     }
@@ -1908,7 +1886,14 @@ mod tests {
             }
         );
 
-        assert!(installs.is_empty());
+        assert_eq!(
+            installs,
+            vec![(
+                PathBuf::from("foo.txt"),
+                DataLocation::Memory(b"data".to_vec()),
+                false
+            )]
+        );
 
         Ok(())
     }
@@ -1952,7 +1937,51 @@ mod tests {
             }
         );
 
-        assert!(installs.is_empty());
+        assert_eq!(
+            installs,
+            vec![(
+                PathBuf::from("foo.txt"),
+                DataLocation::Memory(b"data".to_vec()),
+                false
+            )]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_resource_conversion_relative_path_shared_library() -> Result<()> {
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let pre = PrePackagedResource {
+            flavor: ResourceFlavor::SharedLibrary,
+            name: "libfoo".to_string(),
+            relative_path_shared_library: Some((
+                "prefix".to_string(),
+                DataLocation::Memory(b"data".to_vec()),
+            )),
+            ..PrePackagedResource::default()
+        };
+
+        let (resource, installs) = pre.to_resource(&mut compiler)?;
+
+        assert_eq!(
+            resource,
+            Resource {
+                flavor: ResourceFlavor::SharedLibrary,
+                name: Cow::Owned("libfoo".to_string()),
+                ..Resource::default()
+            }
+        );
+
+        assert_eq!(
+            installs,
+            vec![(
+                PathBuf::from("prefix/libfoo"),
+                DataLocation::Memory(b"data".to_vec()),
+                true
+            )]
+        );
 
         Ok(())
     }
@@ -2252,11 +2281,6 @@ mod tests {
                 ..PrePackagedResource::default()
             })
         );
-        let entries = r.derive_file_installs()?;
-        assert_eq!(entries.len(), 1);
-        assert_eq!(entries[0].0, PathBuf::from("foo.py"));
-        assert_eq!(entries[0].1, &DataLocation::Memory(vec![42]));
-        assert_eq!(entries[0].2, false);
 
         Ok(())
     }
@@ -2434,18 +2458,6 @@ mod tests {
                 )),
                 ..PrePackagedResource::default()
             })
-        );
-
-        let files = c.derive_file_installs()?;
-
-        assert_eq!(files.len(), 1);
-        assert_eq!(
-            files[0],
-            (
-                PathBuf::from("prefix/foo/bar.so"),
-                &DataLocation::Memory(vec![42]),
-                true
-            )
         );
 
         Ok(())
