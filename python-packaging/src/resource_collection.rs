@@ -309,10 +309,10 @@ impl PrePackagedResource {
             } else {
                 None
             },
-            relative_path_extension_module_shared_library: if let Some((_, path, location)) =
+            relative_path_extension_module_shared_library: if let Some((prefix, path, location)) =
                 &self.relative_path_extension_module_shared_library
             {
-                installs.push((path.clone(), location.clone(), true));
+                installs.push((PathBuf::from(prefix).join(path), location.clone(), true));
 
                 Some(Cow::Owned(path.clone()))
             } else {
@@ -322,8 +322,8 @@ impl PrePackagedResource {
                 &self.relative_path_package_resources
             {
                 let mut res = HashMap::new();
-                for (key, (_, path, location)) in resources {
-                    installs.push((path.clone(), location.clone(), false));
+                for (key, (prefix, path, location)) in resources {
+                    installs.push((PathBuf::from(prefix).join(path), location.clone(), false));
 
                     res.insert(Cow::Owned(key.clone()), Cow::Owned(path.clone()));
                 }
@@ -335,8 +335,8 @@ impl PrePackagedResource {
                 &self.relative_path_distribution_resources
             {
                 let mut res = HashMap::new();
-                for (key, (_, path, location)) in resources {
-                    installs.push((path.clone(), location.clone(), false));
+                for (key, (prefix, path, location)) in resources {
+                    installs.push((PathBuf::from(prefix).join(path), location.clone(), false));
 
                     res.insert(Cow::Owned(key.clone()), Cow::Owned(path.clone()));
                 }
@@ -1838,7 +1838,7 @@ mod tests {
         assert_eq!(
             installs,
             vec![(
-                PathBuf::from("ext.so"),
+                PathBuf::from("prefix/ext.so"),
                 DataLocation::Memory(b"data".to_vec()),
                 true
             )]
@@ -1860,6 +1860,14 @@ mod tests {
                 DataLocation::Memory(b"data".to_vec()),
             ),
         );
+        resources.insert(
+            "bar.txt".to_string(),
+            (
+                "".to_string(),
+                PathBuf::from("bar.txt"),
+                DataLocation::Memory(b"bar".to_vec()),
+            ),
+        );
 
         let pre = PrePackagedResource {
             flavor: ResourceFlavor::Module,
@@ -1875,6 +1883,10 @@ mod tests {
             Cow::Owned("foo.txt".to_string()),
             Cow::Owned(PathBuf::from("foo.txt")),
         );
+        resources.insert(
+            Cow::Owned("bar.txt".to_string()),
+            Cow::Owned(PathBuf::from("bar.txt")),
+        );
 
         assert_eq!(
             resource,
@@ -1888,11 +1900,18 @@ mod tests {
 
         assert_eq!(
             installs,
-            vec![(
-                PathBuf::from("foo.txt"),
-                DataLocation::Memory(b"data".to_vec()),
-                false
-            )]
+            vec![
+                (
+                    PathBuf::from("bar.txt"),
+                    DataLocation::Memory(b"bar".to_vec()),
+                    false
+                ),
+                (
+                    PathBuf::from("prefix/foo.txt"),
+                    DataLocation::Memory(b"data".to_vec()),
+                    false
+                ),
+            ]
         );
 
         Ok(())
@@ -1940,7 +1959,7 @@ mod tests {
         assert_eq!(
             installs,
             vec![(
-                PathBuf::from("foo.txt"),
+                PathBuf::from("prefix/foo.txt"),
                 DataLocation::Memory(b"data".to_vec()),
                 false
             )]

@@ -145,6 +145,8 @@ Bug Fixes
   of raising ``IOError``. This matches the behavior of ``importlib.metadata``.
 * The ``pyembed`` Rust project build script now reruns when the source
   Starlark file changes.
+* Some Python resource types were improperly installed in the wrong
+  relative directory. The buggy behavior has been fixed.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
