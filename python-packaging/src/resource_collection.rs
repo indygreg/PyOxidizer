@@ -2553,7 +2553,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_in_memory_resource() -> Result<()> {
+    fn test_add_in_memory_package_resource() -> Result<()> {
         let mut r =
             PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
         r.add_python_package_resource(
