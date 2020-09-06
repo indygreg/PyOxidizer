@@ -120,6 +120,53 @@ impl Default for LinkingContext {
     }
 }
 
+impl LinkingContext {
+    /// Merge multiple `LinkingContext` together to produce an aggregate instance.
+    pub fn merge(contexts: &[&Self]) -> Self {
+        let mut object_files = Vec::new();
+        let mut system_libraries = BTreeSet::new();
+        let mut dynamic_libraries = BTreeSet::new();
+        let mut static_libraries = BTreeSet::new();
+        let mut frameworks = BTreeSet::new();
+        let mut init_functions = BTreeMap::new();
+        let mut license_infos = BTreeMap::new();
+
+        for context in contexts {
+            for o in &context.object_files {
+                object_files.push(o.clone());
+            }
+            for l in &context.system_libraries {
+                system_libraries.insert(l.clone());
+            }
+            for l in &context.dynamic_libraries {
+                dynamic_libraries.insert(l.clone());
+            }
+            for l in &context.static_libraries {
+                static_libraries.insert(l.clone());
+            }
+            for f in &context.frameworks {
+                frameworks.insert(f.clone());
+            }
+            for (k, v) in &context.init_functions {
+                init_functions.insert(k.clone(), v.clone());
+            }
+            for (k, v) in &context.license_infos {
+                license_infos.insert(k.clone(), v.clone());
+            }
+        }
+
+        Self {
+            object_files,
+            system_libraries,
+            dynamic_libraries,
+            static_libraries,
+            frameworks,
+            init_functions,
+            license_infos,
+        }
+    }
+}
+
 /// Holds state necessary to link an extension module into libpython.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExtensionModuleBuildState {

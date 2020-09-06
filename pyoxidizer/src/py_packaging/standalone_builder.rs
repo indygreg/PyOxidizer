@@ -61,7 +61,13 @@ pub struct StandalonePythonExecutableBuilder {
     resources_collector: PythonResourceCollector,
 
     /// Holds state necessary to link libpython.
-    libpython_link_context: LinkingContext,
+    core_link_context: LinkingContext,
+
+    /// Holds linking context for individual extensions.
+    ///
+    /// We need to track per-extension state separately since we need
+    /// to support filtering extensions as part of building.
+    extension_link_contexts: BTreeMap<String, LinkingContext>,
 
     /// Holds state of extension modules that will be linked.
     extension_module_states: BTreeMap<String, ExtensionModuleBuildState>,
@@ -135,7 +141,8 @@ impl StandalonePythonExecutableBuilder {
                 packaging_policy.get_resources_policy(),
                 &cache_tag,
             ),
-            libpython_link_context: LinkingContext::default(),
+            core_link_context: LinkingContext::default(),
+            extension_link_contexts: BTreeMap::new(),
             extension_module_states: BTreeMap::new(),
             config,
             python_exe,
@@ -155,18 +162,16 @@ impl StandalonePythonExecutableBuilder {
                 continue;
             }
 
-            self.libpython_link_context
+            self.core_link_context
                 .object_files
                 .push(DataLocation::Path(fs_path.clone()));
         }
 
         for entry in &self.distribution.links_core {
             if entry.framework {
-                self.libpython_link_context
-                    .frameworks
-                    .insert(entry.name.clone());
+                self.core_link_context.frameworks.insert(entry.name.clone());
             } else if entry.system {
-                self.libpython_link_context
+                self.core_link_context
                     .system_libraries
                     .insert(entry.name.clone());
             }
@@ -177,13 +182,13 @@ impl StandalonePythonExecutableBuilder {
         if super::standalone_distribution::WINDOWS_TARGET_TRIPLES
             .contains(&self.target_triple.as_str())
         {
-            self.libpython_link_context
+            self.core_link_context
                 .system_libraries
                 .insert("msvcrt".to_string());
         }
 
         if let Some(lis) = self.distribution.license_infos.get("python") {
-            self.libpython_link_context
+            self.core_link_context
                 .license_infos
                 .insert("python".to_string(), lis.clone());
         }
@@ -227,8 +232,10 @@ impl StandalonePythonExecutableBuilder {
         self.resources_collector
             .add_builtin_python_extension_module(module)?;
 
+        let mut link_context = LinkingContext::default();
+
         if let Some(init_fn) = &module.init_fn {
-            self.libpython_link_context
+            link_context
                 .init_functions
                 .insert(module.name.clone(), init_fn.clone());
         }
@@ -241,32 +248,27 @@ impl StandalonePythonExecutableBuilder {
         );
 
         for location in &module.object_file_data {
-            self.libpython_link_context
-                .object_files
-                .push(location.clone());
+            link_context.object_files.push(location.clone());
         }
 
         for depends in &module.link_libraries {
             if depends.framework {
-                self.libpython_link_context
-                    .frameworks
-                    .insert(depends.name.clone());
+                link_context.frameworks.insert(depends.name.clone());
             } else if depends.system {
-                self.libpython_link_context
-                    .system_libraries
-                    .insert(depends.name.clone());
+                link_context.system_libraries.insert(depends.name.clone());
             } else {
-                self.libpython_link_context
-                    .dynamic_libraries
-                    .insert(depends.name.clone());
+                link_context.dynamic_libraries.insert(depends.name.clone());
             }
         }
 
         if let Some(lis) = self.distribution.license_infos.get(&module.name) {
-            self.libpython_link_context
+            link_context
                 .license_infos
                 .insert(module.name.clone(), lis.clone());
         }
+
+        self.extension_link_contexts
+            .insert(module.name.clone(), link_context);
 
         Ok(())
     }
@@ -326,10 +328,16 @@ impl StandalonePythonExecutableBuilder {
                     logger,
                     "generating custom link library containing Python..."
                 );
+
+                let mut link_contexts = vec![&self.core_link_context];
+                for c in self.extension_link_contexts.values() {
+                    link_contexts.push(c);
+                }
+
                 let library_info = link_libpython(
                     logger,
                     &self.distribution,
-                    &self.libpython_link_context,
+                    &LinkingContext::merge(&link_contexts),
                     &temp_dir_path,
                     &self.host_triple,
                     &self.target_triple,
@@ -541,42 +549,34 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &mut self,
         extension_module: &PythonExtensionModule,
     ) -> Result<()> {
+        let mut link_context = LinkingContext::default();
+
         if !extension_module.builtin_default {
             for location in &extension_module.object_file_data {
-                self.libpython_link_context
-                    .object_files
-                    .push(location.clone());
+                link_context.object_files.push(location.clone());
             }
         }
 
         for depends in &extension_module.link_libraries {
             if depends.framework {
-                self.libpython_link_context
-                    .frameworks
-                    .insert(depends.name.clone());
+                link_context.frameworks.insert(depends.name.clone());
             } else if depends.system {
-                self.libpython_link_context
-                    .system_libraries
-                    .insert(depends.name.clone());
+                link_context.system_libraries.insert(depends.name.clone());
             } else if depends.static_library.is_some() {
-                self.libpython_link_context
-                    .static_libraries
-                    .insert(depends.name.clone());
+                link_context.static_libraries.insert(depends.name.clone());
             } else if depends.dynamic_library.is_some() {
-                self.libpython_link_context
-                    .dynamic_libraries
-                    .insert(depends.name.clone());
+                link_context.dynamic_libraries.insert(depends.name.clone());
             }
         }
 
         if let Some(lis) = self.distribution.license_infos.get(&extension_module.name) {
-            self.libpython_link_context
+            link_context
                 .license_infos
                 .insert(extension_module.name.clone(), lis.clone());
         }
 
         if let Some(init_fn) = &extension_module.init_fn {
-            self.libpython_link_context
+            link_context
                 .init_functions
                 .insert(extension_module.name.clone(), init_fn.clone());
         }
@@ -587,6 +587,9 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 init_fn: extension_module.init_fn.clone(),
             },
         );
+
+        self.extension_link_contexts
+            .insert(extension_module.name.clone(), link_context);
 
         Ok(())
     }
@@ -815,6 +818,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         })?;
 
         warn!(logger, "filtering embedded extension modules");
+        filter_btreemap(logger, &mut self.extension_link_contexts, &resource_names);
         filter_btreemap(logger, &mut self.extension_module_states, &resource_names);
 
         Ok(())
