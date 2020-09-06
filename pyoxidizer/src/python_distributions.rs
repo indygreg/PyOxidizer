@@ -54,6 +54,7 @@ impl PythonDistributionCollection {
     }
 
     /// Obtain records for all registered distributions.
+    #[allow(unused)]
     pub fn iter(&self) -> impl Iterator<Item = &PythonDistributionRecord> {
         self.dists.iter()
     }
