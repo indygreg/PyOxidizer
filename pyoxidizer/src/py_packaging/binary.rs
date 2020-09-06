@@ -148,18 +148,23 @@ pub trait PythonBinaryBuilder {
         location: Option<ConcreteResourceLocation>,
     ) -> Result<()>;
 
+    /// Add a `PythonExtensionModule` to make available.
+    ///
+    /// The location to load the extension module from can be specified. However,
+    /// different builders have different capabilities. And the location may be
+    /// ignored in some cases. For example, when adding an extension module that
+    /// is compiled into libpython itself, the location will always be inside
+    /// libpython and it isn't possible to materialize the extension module as
+    /// a standalone file.
+    fn add_python_extension_module(
+        &mut self,
+        extension_module: &PythonExtensionModule,
+        location: Option<ConcreteResourceLocation>,
+    ) -> Result<()>;
+
     // TODO consider consolidating the distribution and non-distribution variants.
     // Historically they used different types. PythonExtensionModule now likely has
     // sufficient context to consolidate the methods.
-
-    /// Add an extension module from a Python distribution to be linked into `libpython`.
-    ///
-    /// The extension module will be available for import using Python's special
-    /// _builtin_ importer.
-    fn add_builtin_distribution_extension_module(
-        &mut self,
-        extension_module: &PythonExtensionModule,
-    ) -> Result<()>;
 
     /// Add an extension module from a Python distribution to be loaded from memory.
     fn add_in_memory_distribution_extension_module(

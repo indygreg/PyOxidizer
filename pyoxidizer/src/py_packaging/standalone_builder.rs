@@ -589,52 +589,62 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             .add_package_distribution_resource(resource, &location)
     }
 
-    fn add_builtin_distribution_extension_module(
+    fn add_python_extension_module(
         &mut self,
         extension_module: &PythonExtensionModule,
+        _location: Option<ConcreteResourceLocation>,
     ) -> Result<()> {
-        let mut link_context = LibPythonBuildContext::default();
+        if extension_module.is_stdlib {
+            // Extension modules shipped with the distribution are special.
+            // We currently assume we are adding the extension as a built-in.
 
-        if !extension_module.builtin_default {
-            for location in &extension_module.object_file_data {
-                link_context.object_files.push(location.clone());
+            let mut link_context = LibPythonBuildContext::default();
+
+            if !extension_module.builtin_default {
+                for location in &extension_module.object_file_data {
+                    link_context.object_files.push(location.clone());
+                }
             }
-        }
 
-        for depends in &extension_module.link_libraries {
-            if depends.framework {
-                link_context.frameworks.insert(depends.name.clone());
-            } else if depends.system {
-                link_context.system_libraries.insert(depends.name.clone());
-            } else if depends.static_library.is_some()
-                && !ignored_libraries_for_target(&self.target_triple)
-                    .contains(&depends.name.as_str())
-            {
-                link_context.static_libraries.insert(depends.name.clone());
-            } else if depends.dynamic_library.is_some()
-                && !ignored_libraries_for_target(&self.target_triple)
-                    .contains(&depends.name.as_str())
-            {
-                link_context.dynamic_libraries.insert(depends.name.clone());
+            for depends in &extension_module.link_libraries {
+                if depends.framework {
+                    link_context.frameworks.insert(depends.name.clone());
+                } else if depends.system {
+                    link_context.system_libraries.insert(depends.name.clone());
+                } else if depends.static_library.is_some()
+                    && !ignored_libraries_for_target(&self.target_triple)
+                        .contains(&depends.name.as_str())
+                {
+                    link_context.static_libraries.insert(depends.name.clone());
+                } else if depends.dynamic_library.is_some()
+                    && !ignored_libraries_for_target(&self.target_triple)
+                        .contains(&depends.name.as_str())
+                {
+                    link_context.dynamic_libraries.insert(depends.name.clone());
+                }
             }
+
+            if let Some(lis) = self.distribution.license_infos.get(&extension_module.name) {
+                link_context
+                    .license_infos
+                    .insert(extension_module.name.clone(), lis.clone());
+            }
+
+            if let Some(init_fn) = &extension_module.init_fn {
+                link_context
+                    .init_functions
+                    .insert(extension_module.name.clone(), init_fn.clone());
+            }
+
+            self.extension_build_contexts
+                .insert(extension_module.name.clone(), link_context);
+
+            Ok(())
+        } else {
+            Err(anyhow!(
+                "only standard library extension modules are supported by this method"
+            ))
         }
-
-        if let Some(lis) = self.distribution.license_infos.get(&extension_module.name) {
-            link_context
-                .license_infos
-                .insert(extension_module.name.clone(), lis.clone());
-        }
-
-        if let Some(init_fn) = &extension_module.init_fn {
-            link_context
-                .init_functions
-                .insert(extension_module.name.clone(), init_fn.clone());
-        }
-
-        self.extension_build_contexts
-            .insert(extension_module.name.clone(), link_context);
-
-        Ok(())
     }
 
     fn add_in_memory_distribution_extension_module(
@@ -678,13 +688,13 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
         // Builtins always get added as such.
         if extension_module.builtin_default {
-            return self.add_builtin_distribution_extension_module(&extension_module);
+            return self.add_python_extension_module(extension_module, None);
         }
 
         match self.packaging_policy.get_resources_policy().clone() {
             PythonResourcesPolicy::InMemoryOnly => match self.link_mode {
                 LibpythonLinkMode::Static => {
-                    self.add_builtin_distribution_extension_module(&extension_module)
+                    self.add_python_extension_module(&extension_module, None)
                 }
                 LibpythonLinkMode::Dynamic => {
                     self.add_in_memory_distribution_extension_module(&extension_module)
@@ -692,7 +702,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             },
             PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => match self.link_mode {
                 LibpythonLinkMode::Static => {
-                    self.add_builtin_distribution_extension_module(&extension_module)
+                    self.add_python_extension_module(&extension_module, None)
                 }
                 LibpythonLinkMode::Dynamic => {
                     self.add_relative_path_distribution_extension_module(&prefix, &extension_module)
@@ -701,7 +711,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(prefix) => {
                 match self.link_mode {
                     LibpythonLinkMode::Static => {
-                        self.add_builtin_distribution_extension_module(&extension_module)
+                        self.add_python_extension_module(&extension_module, None)
                     }
                     LibpythonLinkMode::Dynamic => {
                         // Try in-memory and fall back to file-based if that fails.
@@ -955,6 +965,8 @@ pub mod tests {
         crate::testutil::*,
         lazy_static::lazy_static,
         python_packaging::policy::ExtensionModuleFilter,
+        std::collections::BTreeSet,
+        std::iter::FromIterator,
     };
 
     lazy_static! {
@@ -1097,6 +1109,90 @@ pub mod tests {
     }
 
     #[test]
+    fn test_linux_distribution_extension_static() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-unknown-linux-gnu".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let (distribution, mut builder): StandaloneBuilderContext = options.new_builder()?;
+
+        // When adding an extension module in static link mode, it gets
+        // added as a built-in and linked with libpython.
+
+        let sqlite: &PythonExtensionModule = distribution
+            .extension_modules
+            .get("_sqlite3")
+            .unwrap()
+            .default_variant();
+
+        builder.add_python_extension_module(sqlite, None)?;
+
+        assert_eq!(
+            builder.extension_build_contexts.get("_sqlite3"),
+            Some(&LibPythonBuildContext {
+                object_files: sqlite.object_file_data.clone(),
+                static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
+                init_functions: BTreeMap::from_iter(
+                    [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
+                        .iter()
+                        .cloned()
+                ),
+                license_infos: BTreeMap::from_iter(
+                    [(
+                        "_sqlite3".to_string(),
+                        distribution.license_infos.get("_sqlite3").unwrap().clone()
+                    )]
+                    .iter()
+                    .cloned()
+                ),
+                ..LibPythonBuildContext::default()
+            })
+        );
+
+        // TODO we should add an entry for the builtin extension.
+        assert!(!builder
+            .iter_resources()
+            .any(|(name, _)| *name == "_sqlite3"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_linux_distribution_dynamic() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-unknown-linux-gnu".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Dynamic,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        // Dynamic libpython on Linux is not (yet) supported.
+        let res = options.new_builder();
+        assert!(res.is_err());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_linux_musl_distribution_dynamic() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-unknown-linux-musl".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Dynamic,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        // Dynamic libpython on musl is not supported.
+        let res = options.new_builder();
+        assert!(res.is_err());
+
+        Ok(())
+    }
+
+    #[test]
     fn test_linux_musl_extensions_sanity() -> Result<()> {
         let options = StandalonePythonExecutableBuilderOptions {
             target_triple: "x86_64-unknown-linux-musl".to_string(),
@@ -1116,6 +1212,74 @@ pub mod tests {
     }
 
     #[test]
+    fn test_linux_musl_distribution_extension_static() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-unknown-linux-musl".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let (distribution, mut builder): StandaloneBuilderContext = options.new_builder()?;
+
+        // When adding an extension module in static link mode, it gets
+        // added as a built-in and linked with libpython.
+
+        let sqlite: &PythonExtensionModule = distribution
+            .extension_modules
+            .get("_sqlite3")
+            .unwrap()
+            .default_variant();
+
+        builder.add_python_extension_module(sqlite, None)?;
+
+        assert_eq!(
+            builder.extension_build_contexts.get("_sqlite3"),
+            Some(&LibPythonBuildContext {
+                object_files: sqlite.object_file_data.clone(),
+                static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
+                init_functions: BTreeMap::from_iter(
+                    [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
+                        .iter()
+                        .cloned()
+                ),
+                license_infos: BTreeMap::from_iter(
+                    [(
+                        "_sqlite3".to_string(),
+                        distribution.license_infos.get("_sqlite3").unwrap().clone()
+                    )]
+                    .iter()
+                    .cloned()
+                ),
+                ..LibPythonBuildContext::default()
+            })
+        );
+
+        // TODO we should add an entry for the builtin extension.
+        assert!(!builder
+            .iter_resources()
+            .any(|(name, _)| *name == "_sqlite3"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_macos_distribution_dynamic() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-apple-darwin".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Dynamic,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        // Dynamic libpython on macOS is not supported.
+        let res = options.new_builder();
+        assert!(res.is_err());
+
+        Ok(())
+    }
+
+    #[test]
     fn test_macos_extensions_sanity() -> Result<()> {
         let options = StandalonePythonExecutableBuilderOptions {
             target_triple: "x86_64-apple-darwin".to_string(),
@@ -1130,6 +1294,97 @@ pub mod tests {
         // All extensions compiled as built-ins by default.
         for (name, _) in distribution.extension_modules.iter() {
             assert!(builtin_names.contains(&name));
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_macos_distribution_extension_static() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-apple-darwin".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let (distribution, mut builder): StandaloneBuilderContext = options.new_builder()?;
+
+        // When adding an extension module in static link mode, it gets
+        // added as a built-in and linked with libpython.
+
+        let sqlite: &PythonExtensionModule = distribution
+            .extension_modules
+            .get("_sqlite3")
+            .unwrap()
+            .default_variant();
+
+        builder.add_python_extension_module(sqlite, None)?;
+
+        assert_eq!(
+            builder.extension_build_contexts.get("_sqlite3"),
+            Some(&LibPythonBuildContext {
+                object_files: sqlite.object_file_data.clone(),
+                system_libraries: BTreeSet::from_iter(["iconv".to_string()].iter().cloned()),
+                static_libraries: BTreeSet::from_iter(
+                    ["intl".to_string(), "sqlite3".to_string()].iter().cloned()
+                ),
+                init_functions: BTreeMap::from_iter(
+                    [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
+                        .iter()
+                        .cloned()
+                ),
+                license_infos: BTreeMap::from_iter(
+                    [(
+                        "_sqlite3".to_string(),
+                        distribution.license_infos.get("_sqlite3").unwrap().clone()
+                    )]
+                    .iter()
+                    .cloned()
+                ),
+                ..LibPythonBuildContext::default()
+            })
+        );
+
+        // TODO we should add an entry for the builtin extension.
+        assert!(!builder
+            .iter_resources()
+            .any(|(name, _)| *name == "_sqlite3"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_windows_dynamic_static_mismatch() -> Result<()> {
+        for target_triple in WINDOWS_TARGET_TRIPLES.iter() {
+            let options = StandalonePythonExecutableBuilderOptions {
+                target_triple: target_triple.to_string(),
+                distribution_flavor: DistributionFlavor::StandaloneDynamic,
+                extension_module_filter: ExtensionModuleFilter::Minimal,
+                libpython_link_mode: BinaryLibpythonLinkMode::Static,
+                ..StandalonePythonExecutableBuilderOptions::default()
+            };
+
+            // We can't request static libpython with a dynamic distribution.
+            assert!(options.new_builder().is_err());
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_windows_static_dynamic_mismatch() -> Result<()> {
+        for target_triple in WINDOWS_TARGET_TRIPLES.iter() {
+            let options = StandalonePythonExecutableBuilderOptions {
+                target_triple: target_triple.to_string(),
+                distribution_flavor: DistributionFlavor::StandaloneStatic,
+                extension_module_filter: ExtensionModuleFilter::Minimal,
+                libpython_link_mode: BinaryLibpythonLinkMode::Dynamic,
+                ..StandalonePythonExecutableBuilderOptions::default()
+            };
+
+            // We can't request dynamic libpython with a static distribution.
+            assert!(options.new_builder().is_err());
         }
 
         Ok(())
@@ -1163,6 +1418,116 @@ pub mod tests {
                     assert!(builtin_names.contains(&name));
                 }
             }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_windows_distribution_extension_static() -> Result<()> {
+        for target_triple in WINDOWS_TARGET_TRIPLES.iter() {
+            let options = StandalonePythonExecutableBuilderOptions {
+                target_triple: target_triple.to_string(),
+                distribution_flavor: DistributionFlavor::StandaloneStatic,
+                extension_module_filter: ExtensionModuleFilter::Minimal,
+                libpython_link_mode: BinaryLibpythonLinkMode::Static,
+                ..StandalonePythonExecutableBuilderOptions::default()
+            };
+
+            let (distribution, mut builder): StandaloneBuilderContext = options.new_builder()?;
+
+            // When adding an extension module in static link mode, it gets
+            // added as a built-in and linked with libpython.
+
+            let sqlite: &PythonExtensionModule = distribution
+                .extension_modules
+                .get("_sqlite3")
+                .unwrap()
+                .default_variant();
+
+            builder.add_python_extension_module(sqlite, None)?;
+
+            assert_eq!(
+                builder.extension_build_contexts.get("_sqlite3"),
+                Some(&LibPythonBuildContext {
+                    object_files: sqlite.object_file_data.clone(),
+                    static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
+                    init_functions: BTreeMap::from_iter(
+                        [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
+                            .iter()
+                            .cloned()
+                    ),
+                    license_infos: BTreeMap::from_iter(
+                        [(
+                            "_sqlite3".to_string(),
+                            distribution.license_infos.get("_sqlite3").unwrap().clone()
+                        )]
+                        .iter()
+                        .cloned()
+                    ),
+                    ..LibPythonBuildContext::default()
+                })
+            );
+
+            // TODO we should add an entry for the builtin extension.
+            assert!(!builder
+                .iter_resources()
+                .any(|(name, _)| *name == "_sqlite3"));
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_windows_distribution_extension_dynamic() -> Result<()> {
+        for target_triple in WINDOWS_TARGET_TRIPLES.iter() {
+            let options = StandalonePythonExecutableBuilderOptions {
+                target_triple: target_triple.to_string(),
+                distribution_flavor: DistributionFlavor::StandaloneDynamic,
+                extension_module_filter: ExtensionModuleFilter::Minimal,
+                libpython_link_mode: BinaryLibpythonLinkMode::Dynamic,
+                ..StandalonePythonExecutableBuilderOptions::default()
+            };
+
+            let (distribution, mut builder): StandaloneBuilderContext = options.new_builder()?;
+
+            // When adding an extension module in static link mode, it gets
+            // added as a built-in and linked with libpython.
+
+            let sqlite: &PythonExtensionModule = distribution
+                .extension_modules
+                .get("_sqlite3")
+                .unwrap()
+                .default_variant();
+
+            builder.add_python_extension_module(sqlite, None)?;
+
+            assert_eq!(
+                builder.extension_build_contexts.get("_sqlite3"),
+                Some(&LibPythonBuildContext {
+                    object_files: sqlite.object_file_data.clone(),
+                    dynamic_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
+                    init_functions: BTreeMap::from_iter(
+                        [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
+                            .iter()
+                            .cloned()
+                    ),
+                    license_infos: BTreeMap::from_iter(
+                        [(
+                            "_sqlite3".to_string(),
+                            distribution.license_infos.get("_sqlite3").unwrap().clone()
+                        )]
+                        .iter()
+                        .cloned()
+                    ),
+                    ..LibPythonBuildContext::default()
+                })
+            );
+
+            // TODO we should add an entry for the builtin extension.
+            assert!(!builder
+                .iter_resources()
+                .any(|(name, _)| *name == "_sqlite3"));
         }
 
         Ok(())

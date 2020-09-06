@@ -304,7 +304,7 @@ pub fn invoke_python(python_paths: &PythonPaths, logger: &slog::Logger, args: &[
 }
 
 /// Describes license information for a library.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LicenseInfo {
     /// SPDX license shortnames.
     pub licenses: Vec<String>,

@@ -54,7 +54,7 @@ where
 ///
 /// Note that this context is only for producing libpython: it is very
 /// linker centric and doesn't track state like Python resources.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct LibPythonBuildContext {
     /// Compiled flags to use when compiling the object containing Py_inittab.
     pub inittab_cflags: Option<Vec<String>>,
