@@ -1069,7 +1069,7 @@ impl PythonDistribution for StandaloneDistribution {
         policy: &PythonPackagingPolicy,
         config: &EmbeddedPythonConfig,
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
-        StandalonePythonExecutableBuilder::from_distribution(
+        let builder = StandalonePythonExecutableBuilder::from_distribution(
             // TODO can we avoid this clone?
             Arc::new(Box::new(self.clone())),
             host_triple.to_string(),
@@ -1078,7 +1078,9 @@ impl PythonDistribution for StandaloneDistribution {
             libpython_link_mode,
             policy.clone(),
             config.clone(),
-        )
+        )?;
+
+        Ok(builder as Box<dyn PythonBinaryBuilder>)
     }
 
     fn iter_extension_modules<'a>(

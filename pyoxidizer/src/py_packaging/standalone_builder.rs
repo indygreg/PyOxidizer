@@ -106,7 +106,7 @@ impl StandalonePythonExecutableBuilder {
         link_mode: BinaryLibpythonLinkMode,
         packaging_policy: PythonPackagingPolicy,
         config: EmbeddedPythonConfig,
-    ) -> Result<Box<dyn PythonBinaryBuilder>> {
+    ) -> Result<Box<Self>> {
         let python_exe = distribution.python_exe.clone();
         let cache_tag = distribution.cache_tag.clone();
 
@@ -955,7 +955,7 @@ pub mod tests {
 
     pub type StandaloneBuilderContext = (
         Arc<Box<StandaloneDistribution>>,
-        Box<dyn PythonBinaryBuilder>,
+        Box<StandalonePythonExecutableBuilder>,
     );
 
     /// Defines construction options for a `StandalonePythonExecutableBuilder`.
@@ -963,7 +963,6 @@ pub mod tests {
     /// This is mostly intended to be used by tests, to reduce boilerplate for
     /// constructing instances.
     pub struct StandalonePythonExecutableBuilderOptions {
-        pub logger: Option<slog::Logger>,
         pub host_triple: String,
         pub target_triple: String,
         pub distribution_flavor: DistributionFlavor,
@@ -979,7 +978,6 @@ pub mod tests {
             let default_policy = PythonPackagingPolicy::default();
 
             Self {
-                logger: None,
                 host_triple: env!("HOST").to_string(),
                 target_triple: env!("HOST").to_string(),
                 distribution_flavor: DistributionFlavor::Standalone,
@@ -993,12 +991,6 @@ pub mod tests {
 
     impl StandalonePythonExecutableBuilderOptions {
         pub fn new_builder(&self) -> Result<StandaloneBuilderContext> {
-            let logger = if let Some(logger) = &self.logger {
-                logger.clone()
-            } else {
-                get_logger()?
-            };
-
             let record = PYTHON_DISTRIBUTIONS
                 .find_distribution(&self.target_triple, &self.distribution_flavor)
                 .ok_or_else(|| anyhow!("could not find Python distribution"))?;
@@ -1011,18 +1003,17 @@ pub mod tests {
 
             let config = EmbeddedPythonConfig::default();
 
-            Ok((
+            let builder = StandalonePythonExecutableBuilder::from_distribution(
                 distribution.clone(),
-                distribution.as_python_executable_builder(
-                    &logger,
-                    &self.host_triple,
-                    &self.target_triple,
-                    &self.app_name,
-                    self.libpython_link_mode.clone(),
-                    &policy,
-                    &config,
-                )?,
-            ))
+                self.host_triple.clone(),
+                self.target_triple.clone(),
+                self.app_name.clone(),
+                self.libpython_link_mode.clone(),
+                policy,
+                config,
+            )?;
+
+            Ok((distribution.clone(), builder))
         }
     }
 
@@ -1178,10 +1169,7 @@ pub mod tests {
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
-            let (distribution, mut builder): (
-                Arc<Box<StandaloneDistribution>>,
-                Box<dyn PythonBinaryBuilder>,
-            ) = options.new_builder()?;
+            let (distribution, mut builder): StandaloneBuilderContext = options.new_builder()?;
 
             // When loading resources from the filesystem, dynamically linked
             // extension modules should be manifested as filesystem files and
