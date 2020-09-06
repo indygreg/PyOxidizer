@@ -14,6 +14,7 @@ use {
     super::standalone_distribution::StandaloneDistribution,
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Result},
+    lazy_static::lazy_static,
     python_packaging::bytecode::BytecodeCompiler,
     python_packaging::policy::{PythonPackagingPolicy, PythonResourcesPolicy},
     python_packaging::resource::{
@@ -31,6 +32,25 @@ use {
     std::sync::Arc,
     tempdir::TempDir,
 };
+
+lazy_static! {
+    /// Libraries that we should not link against on Linux.
+    static ref LINUX_IGNORE_LIBRARIES: Vec<&'static str> = vec!["dl", "m",];
+
+    /// Libraries that we should not link against on macOS.
+    static ref MACOS_IGNORE_LIBRARIES: Vec<&'static str> = vec!["dl", "m",];
+}
+
+/// Obtain a list of ignored libraries for a given target triple.
+fn ignored_libraries_for_target(target_triple: &str) -> Vec<&'static str> {
+    if crate::environment::LINUX_TARGET_TRIPLES.contains(&target_triple) {
+        LINUX_IGNORE_LIBRARIES.clone()
+    } else if crate::environment::MACOS_TARGET_TRIPLES.contains(&target_triple) {
+        MACOS_IGNORE_LIBRARIES.clone()
+    } else {
+        vec![]
+    }
+}
 
 /// A self-contained Python executable before it is compiled.
 #[derive(Clone, Debug)]
@@ -270,7 +290,9 @@ impl StandalonePythonExecutableBuilder {
                 link_context.frameworks.insert(depends.name.clone());
             } else if depends.system {
                 link_context.system_libraries.insert(depends.name.clone());
-            } else {
+            } else if !ignored_libraries_for_target(&self.target_triple)
+                .contains(&depends.name.as_str())
+            {
                 link_context.dynamic_libraries.insert(depends.name.clone());
             }
         }
@@ -575,9 +597,15 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 link_context.frameworks.insert(depends.name.clone());
             } else if depends.system {
                 link_context.system_libraries.insert(depends.name.clone());
-            } else if depends.static_library.is_some() {
+            } else if depends.static_library.is_some()
+                && !ignored_libraries_for_target(&self.target_triple)
+                    .contains(&depends.name.as_str())
+            {
                 link_context.static_libraries.insert(depends.name.clone());
-            } else if depends.dynamic_library.is_some() {
+            } else if depends.dynamic_library.is_some()
+                && !ignored_libraries_for_target(&self.target_triple)
+                    .contains(&depends.name.as_str())
+            {
                 link_context.dynamic_libraries.insert(depends.name.clone());
             }
         }

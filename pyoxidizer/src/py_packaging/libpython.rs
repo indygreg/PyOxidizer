@@ -9,7 +9,6 @@ Building a native binary containing Python.
 use {
     super::standalone_distribution::LicenseInfo,
     anyhow::{anyhow, Result},
-    lazy_static::lazy_static,
     python_packaging::resource::DataLocation,
     slog::warn,
     std::collections::{BTreeMap, BTreeSet},
@@ -17,25 +16,6 @@ use {
     std::fs::create_dir_all,
     std::path::{Path, PathBuf},
 };
-
-lazy_static! {
-    /// Libraries provided by the host that we can ignore in Python module library dependencies.
-    ///
-    /// Libraries in this data structure are not provided by the Python distribution.
-    /// A library should only be in this data structure if it is universally distributed
-    /// by the OS. It is assumed that all binaries produced for the target will link
-    /// against these libraries by default.
-    static ref OS_IGNORE_LIBRARIES: Vec<&'static str> = {
-        let mut v = Vec::new();
-
-        if cfg!(target_os = "linux") || cfg!(target_os = "macos") {
-            v.push("dl");
-            v.push("m");
-        }
-
-        v
-    };
-}
 
 /// Produce the content of the config.c file containing built-in extensions.
 pub fn make_config_c<T>(extensions: &[(T, T)]) -> String
@@ -314,15 +294,11 @@ pub fn link_libpython(
     }
 
     for lib in &context.dynamic_libraries {
-        if !OS_IGNORE_LIBRARIES.contains(&lib.as_str()) {
-            cargo_metadata.push(format!("cargo:rustc-link-lib={}", lib));
-        }
+        cargo_metadata.push(format!("cargo:rustc-link-lib={}", lib));
     }
 
     for lib in &context.static_libraries {
-        if !OS_IGNORE_LIBRARIES.contains(&lib.as_str()) {
-            cargo_metadata.push(format!("cargo:rustc-link-lib=static={}", lib));
-        }
+        cargo_metadata.push(format!("cargo:rustc-link-lib=static={}", lib));
     }
 
     // python3-sys uses #[link(name="pythonXY")] attributes heavily on Windows. Its
