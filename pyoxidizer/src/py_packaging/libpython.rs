@@ -75,12 +75,18 @@ pub fn make_config_c(extensions: &[(String, String)]) -> String {
 pub struct LinkingContext {
     /// Object files that will be linked together.
     pub object_files: Vec<DataLocation>,
+
+    /// Frameworks that will be linked against.
+    ///
+    /// Used on Apple platforms.
+    pub frameworks: BTreeSet<String>,
 }
 
 impl Default for LinkingContext {
     fn default() -> Self {
         Self {
             object_files: Vec::new(),
+            frameworks: BTreeSet::new(),
         }
     }
 }
@@ -90,9 +96,6 @@ impl Default for LinkingContext {
 pub struct ExtensionModuleBuildState {
     /// Extension C initialization function.
     pub init_fn: Option<String>,
-
-    /// Frameworks this extension module needs to link against.
-    pub link_frameworks: BTreeSet<String>,
 
     /// System libraries this extension module needs to link against.
     pub link_system_libraries: BTreeSet<String>,
@@ -110,7 +113,6 @@ pub struct ExtensionModuleBuildState {
 /// Holds state necessary to link libpython.
 pub struct LibpythonLinkingInfo {
     pub link_libraries: BTreeSet<String>,
-    pub link_frameworks: BTreeSet<String>,
     pub link_system_libraries: BTreeSet<String>,
     pub link_libraries_external: BTreeSet<String>,
 }
@@ -121,7 +123,6 @@ fn resolve_libpython_linking_info(
     extension_modules: &BTreeMap<String, ExtensionModuleBuildState>,
 ) -> Result<LibpythonLinkingInfo> {
     let mut link_libraries = BTreeSet::new();
-    let mut link_frameworks = BTreeSet::new();
     let mut link_system_libraries = BTreeSet::new();
     let mut link_libraries_external = BTreeSet::new();
 
@@ -132,11 +133,6 @@ fn resolve_libpython_linking_info(
     );
 
     for (name, state) in extension_modules {
-        for framework in &state.link_frameworks {
-            warn!(logger, "framework {} required by {}", framework, name);
-            link_frameworks.insert(framework.clone());
-        }
-
         for library in &state.link_system_libraries {
             warn!(logger, "system library {} required by {}", library, name);
             link_system_libraries.insert(library.clone());
@@ -160,7 +156,6 @@ fn resolve_libpython_linking_info(
 
     Ok(LibpythonLinkingInfo {
         link_libraries,
-        link_frameworks,
         link_system_libraries,
         link_libraries_external,
     })
@@ -267,7 +262,6 @@ pub fn link_libpython(
     // use this pass to collect the set of libraries that we need to link
     // against.
     let mut needed_libraries: BTreeSet<String> = BTreeSet::new();
-    let mut needed_frameworks = BTreeSet::new();
     let mut needed_system_libraries = BTreeSet::new();
     let mut needed_libraries_external = BTreeSet::new();
 
@@ -276,10 +270,7 @@ pub fn link_libpython(
         "resolving libraries required by core distribution..."
     );
     for entry in &dist.links_core {
-        if entry.framework {
-            warn!(logger, "framework {} required by core", entry.name);
-            needed_frameworks.insert(entry.name.clone());
-        } else if entry.system {
+        if entry.system {
             warn!(logger, "system library {} required by core", entry.name);
             needed_system_libraries.insert(entry.name.clone());
         }
@@ -289,7 +280,6 @@ pub fn link_libpython(
     let linking_info = resolve_libpython_linking_info(logger, extension_modules)?;
 
     needed_libraries.extend(linking_info.link_libraries);
-    needed_frameworks.extend(linking_info.link_frameworks);
     needed_system_libraries.extend(linking_info.link_system_libraries);
     needed_libraries_external.extend(linking_info.link_libraries_external);
 
@@ -337,7 +327,7 @@ pub fn link_libpython(
         cargo_metadata.push(format!("cargo:rustc-link-lib=static={}", library))
     }
 
-    for framework in needed_frameworks {
+    for framework in &context.frameworks {
         cargo_metadata.push(format!("cargo:rustc-link-lib=framework={}", framework));
     }
 

@@ -161,6 +161,14 @@ impl StandalonePythonExecutableBuilder {
                 .push(DataLocation::Path(fs_path.clone()));
         }
 
+        for entry in &self.distribution.links_core {
+            if entry.framework {
+                self.libpython_link_context
+                    .frameworks
+                    .insert(entry.name.clone());
+            }
+        }
+
         for ext in self.packaging_policy.resolve_python_extension_modules(
             self.distribution.extension_modules.values(),
             &self.target_triple,
@@ -204,7 +212,6 @@ impl StandalonePythonExecutableBuilder {
             module.name.clone(),
             ExtensionModuleBuildState {
                 init_fn: module.init_fn.clone(),
-                link_frameworks: BTreeSet::new(),
                 link_system_libraries: BTreeSet::new(),
                 link_static_libraries: BTreeSet::new(),
                 link_dynamic_libraries: BTreeSet::new(),
@@ -519,19 +526,18 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             }
         }
 
+        for depends in &extension_module.link_libraries {
+            if depends.framework {
+                self.libpython_link_context
+                    .frameworks
+                    .insert(depends.name.clone());
+            }
+        }
+
         self.extension_module_states.insert(
             extension_module.name.clone(),
             ExtensionModuleBuildState {
                 init_fn: extension_module.init_fn.clone(),
-                link_frameworks: BTreeSet::from_iter(
-                    extension_module.link_libraries.iter().filter_map(|link| {
-                        if link.framework {
-                            Some(link.name.clone())
-                        } else {
-                            None
-                        }
-                    }),
-                ),
                 link_system_libraries: BTreeSet::from_iter(
                     extension_module.link_libraries.iter().filter_map(|link| {
                         if link.system {
