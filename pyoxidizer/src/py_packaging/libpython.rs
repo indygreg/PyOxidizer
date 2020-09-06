@@ -193,11 +193,7 @@ pub fn link_libpython(
     let temp_dir = tempdir::TempDir::new("libpython")?;
     let temp_dir_path = temp_dir.path();
 
-    let windows = match target_triple {
-        "i686-pc-windows-msvc" => true,
-        "x86_64-pc-windows-msvc" => true,
-        _ => false,
-    };
+    let windows = crate::environment::WINDOWS_TARGET_TRIPLES.contains(&target_triple);
 
     // Sometimes we have canonicalized paths. These can break cc/cl.exe when they
     // are \\?\ paths on Windows for some reason. We hack around this by doing
