@@ -567,23 +567,26 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             .add_python_package_resource(resource, &location)
     }
 
-    fn add_in_memory_package_distribution_resource(
+    fn add_python_package_distribution_resource(
         &mut self,
         resource: &PythonPackageDistributionResource,
+        location: Option<ConcreteResourceLocation>,
     ) -> Result<()> {
-        self.resources_collector
-            .add_package_distribution_resource(resource, &ConcreteResourceLocation::InMemory)
-    }
+        let location = match location {
+            Some(location) => location,
+            None => match self.packaging_policy.get_resources_policy().clone() {
+                PythonResourcesPolicy::InMemoryOnly
+                | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
+                    ConcreteResourceLocation::InMemory
+                }
+                PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
+                    ConcreteResourceLocation::RelativePath(prefix)
+                }
+            },
+        };
 
-    fn add_relative_path_package_distribution_resource(
-        &mut self,
-        prefix: &str,
-        resource: &PythonPackageDistributionResource,
-    ) -> Result<()> {
-        self.resources_collector.add_package_distribution_resource(
-            resource,
-            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-        )
+        self.resources_collector
+            .add_package_distribution_resource(resource, &location)
     }
 
     fn add_builtin_distribution_extension_module(

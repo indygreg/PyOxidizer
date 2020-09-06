@@ -11,7 +11,7 @@ use {
     super::pyembed::{derive_python_config, write_default_python_config_rs},
     crate::app_packaging::resource::FileManifest,
     anyhow::Result,
-    python_packaging::policy::{PythonPackagingPolicy, PythonResourcesPolicy},
+    python_packaging::policy::PythonPackagingPolicy,
     python_packaging::resource::{
         PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
         PythonPackageDistributionResource, PythonPackageResource, PythonResource,
@@ -137,38 +137,16 @@ pub trait PythonBinaryBuilder {
         location: Option<ConcreteResourceLocation>,
     ) -> Result<()>;
 
-    /// Add a package distribution resource to be loaded from memory.
-    fn add_in_memory_package_distribution_resource(
+    /// Add a `PythonPackageDistributionResource` to the resources collection.
+    ///
+    /// The location to load the resource from is optional. If specified, it will
+    /// be used. If not, an appropriate location based on the resources policy
+    /// will be chosen.
+    fn add_python_package_distribution_resource(
         &mut self,
         resource: &PythonPackageDistributionResource,
+        location: Option<ConcreteResourceLocation>,
     ) -> Result<()>;
-
-    /// Add a package distribution resource to be loaded from the filesystem relative to the produced binary.
-    fn add_relative_path_package_distribution_resource(
-        &mut self,
-        prefix: &str,
-        resource: &PythonPackageDistributionResource,
-    ) -> Result<()>;
-
-    /// Add a package distribution resource to a location determined by the builder's resource policy.
-    fn add_package_distribution_resource(
-        &mut self,
-        resource: &PythonPackageDistributionResource,
-    ) -> Result<()> {
-        match self
-            .python_packaging_policy()
-            .get_resources_policy()
-            .clone()
-        {
-            PythonResourcesPolicy::InMemoryOnly
-            | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
-                self.add_in_memory_package_distribution_resource(resource)
-            }
-            PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
-                self.add_relative_path_package_distribution_resource(prefix, resource)
-            }
-        }
-    }
 
     // TODO consider consolidating the distribution and non-distribution variants.
     // Historically they used different types. PythonExtensionModule now likely has

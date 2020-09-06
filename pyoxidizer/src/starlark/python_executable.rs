@@ -681,7 +681,7 @@ impl PythonExecutable {
             "adding in-memory package distribution resource {}:{}", r.package, r.name
         );
         self.exe
-            .add_in_memory_package_distribution_resource(&r)
+            .add_python_package_distribution_resource(&r, Some(ConcreteResourceLocation::InMemory))
             .map_err(|e| {
                 RuntimeError {
                     code: "PYOXIDIZER_BUILD",
@@ -713,7 +713,10 @@ impl PythonExecutable {
             "adding executable relative package distribution resource {}:{}", r.package, r.name
         );
         self.exe
-            .add_relative_path_package_distribution_resource(&prefix, &r)
+            .add_python_package_distribution_resource(
+                &r,
+                Some(ConcreteResourceLocation::RelativePath(prefix)),
+            )
             .map_err(|e| {
                 RuntimeError {
                     code: "PYOXIDIZER_BUILD",
@@ -743,7 +746,7 @@ impl PythonExecutable {
             "adding package distribution resource {}:{}", r.package, r.name
         );
         self.exe
-            .add_package_distribution_resource(&r)
+            .add_python_package_distribution_resource(&r, None)
             .map_err(|e| {
                 RuntimeError {
                     code: "PYOXIDIZER_BUILD",
