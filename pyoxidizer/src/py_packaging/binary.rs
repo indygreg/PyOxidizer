@@ -70,13 +70,6 @@ pub trait PythonBinaryBuilder {
         &'a self,
     ) -> Box<dyn Iterator<Item = (&'a String, &'a PrePackagedResource)> + 'a>;
 
-    /// Obtain an iterator of extension modules that are built-in to the binary.
-    ///
-    /// These extension modules will be statically linked into the binary.
-    /// They are tracked separately from the resources returned from
-    /// `iter_resources()` because they are stored in a different location.
-    fn builtin_extension_module_names<'a>(&'a self) -> Box<dyn Iterator<Item = &'a String> + 'a>;
-
     /// Runs `pip install` using the binary builder's settings.
     ///
     /// Returns resources discovered as part of performing an install.

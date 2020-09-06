@@ -443,10 +443,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         Box::new(self.resources_collector.iter_resources())
     }
 
-    fn builtin_extension_module_names<'a>(&'a self) -> Box<dyn Iterator<Item = &'a String> + 'a> {
-        Box::new(self.extension_build_contexts.keys())
-    }
-
     fn pip_install(
         &self,
         logger: &slog::Logger,
@@ -1054,7 +1050,7 @@ pub mod tests {
         for name in &expected {
             // All extensions annotated as required in the distribution are marked
             // as built-ins.
-            assert!(builder.builtin_extension_module_names().any(|x| x == name));
+            assert!(builder.extension_build_contexts.keys().any(|x| x == name));
 
             // Built-in extension modules shouldn't be annotated as resources.
             assert!(!builder.iter_resources().any(|(x, _)| x == name));
@@ -1073,7 +1069,7 @@ pub mod tests {
 
         let (distribution, builder) = options.new_builder()?;
 
-        let builtin_names = builder.builtin_extension_module_names().collect::<Vec<_>>();
+        let builtin_names = builder.extension_build_contexts.keys().collect::<Vec<_>>();
 
         // All extensions compiled as built-ins by default.
         for (name, _) in distribution.extension_modules.iter() {
@@ -1096,7 +1092,7 @@ pub mod tests {
         // All extensions for musl Linux are built-in because dynamic linking
         // not possible.
         for name in distribution.extension_modules.keys() {
-            assert!(builder.builtin_extension_module_names().any(|e| name == e));
+            assert!(builder.extension_build_contexts.keys().any(|e| name == e));
         }
 
         Ok(())
@@ -1112,7 +1108,7 @@ pub mod tests {
 
         let (distribution, builder) = options.new_builder()?;
 
-        let builtin_names = builder.builtin_extension_module_names().collect::<Vec<_>>();
+        let builtin_names = builder.extension_build_contexts.keys().collect::<Vec<_>>();
 
         // All extensions compiled as built-ins by default.
         for (name, _) in distribution.extension_modules.iter() {
@@ -1133,7 +1129,7 @@ pub mod tests {
 
             let (distribution, builder) = options.new_builder()?;
 
-            let builtin_names = builder.builtin_extension_module_names().collect::<Vec<_>>();
+            let builtin_names = builder.extension_build_contexts.keys().collect::<Vec<_>>();
 
             // In-core extensions are compiled as built-ins.
             for (name, variants) in distribution.extension_modules.iter() {
@@ -1259,7 +1255,7 @@ pub mod tests {
 
             let (distribution, builder) = options.new_builder()?;
 
-            let builtin_names = builder.builtin_extension_module_names().collect::<Vec<_>>();
+            let builtin_names = builder.extension_build_contexts.keys().collect::<Vec<_>>();
 
             // All distribution extensions are built-ins in static Windows
             // distributions.
