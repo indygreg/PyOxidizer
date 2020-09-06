@@ -115,35 +115,16 @@ pub trait PythonBinaryBuilder {
         location: Option<ConcreteResourceLocation>,
     ) -> Result<()>;
 
-    /// Add a Python module bytecode to be imported from memory to the embedded resources.
-    fn add_in_memory_module_bytecode(
+    /// Add a `PythonModuleBytecodeFromSource` to the resources collection.
+    ///
+    /// The location to load the resource from is optional. If specified, it will
+    /// be used. If not, an appropriate location based on the resources policy
+    /// will be chosen.
+    fn add_python_module_bytecode_from_source(
         &mut self,
         module: &PythonModuleBytecodeFromSource,
+        location: Option<ConcreteResourceLocation>,
     ) -> Result<()>;
-
-    /// Add Python module bytecode to be imported from the filesystem relative to the produced binary.
-    fn add_relative_path_module_bytecode(
-        &mut self,
-        prefix: &str,
-        module: &PythonModuleBytecodeFromSource,
-    ) -> Result<()>;
-
-    /// Add Python module bytecode to a location as determined by the builder's resource policy.
-    fn add_module_bytecode(&mut self, module: &PythonModuleBytecodeFromSource) -> Result<()> {
-        match self
-            .python_packaging_policy()
-            .get_resources_policy()
-            .clone()
-        {
-            PythonResourcesPolicy::InMemoryOnly
-            | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
-                self.add_in_memory_module_bytecode(module)
-            }
-            PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
-                self.add_relative_path_module_bytecode(prefix, module)
-            }
-        }
-    }
 
     /// Add resource data to the collection of embedded resource data.
     fn add_in_memory_package_resource(&mut self, resource: &PythonPackageResource) -> Result<()>;

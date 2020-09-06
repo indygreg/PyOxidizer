@@ -249,7 +249,7 @@ impl StandalonePythonExecutableBuilder {
             let bytecode = source.as_bytecode_module(BytecodeOptimizationLevel::Zero);
 
             if policy.filter_python_resource(&bytecode.clone().into()) {
-                self.add_module_bytecode(&bytecode)?;
+                self.add_python_module_bytecode_from_source(&bytecode, None)?;
             }
         }
 
@@ -523,24 +523,26 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             .add_python_module_source(module, &location)
     }
 
-    fn add_in_memory_module_bytecode(
+    fn add_python_module_bytecode_from_source(
         &mut self,
         module: &PythonModuleBytecodeFromSource,
+        location: Option<ConcreteResourceLocation>,
     ) -> Result<()> {
-        self.resources_collector
-            .add_python_module_bytecode_from_source(module, &ConcreteResourceLocation::InMemory)
-    }
+        let location = match location {
+            Some(location) => location,
+            None => match self.packaging_policy.get_resources_policy().clone() {
+                PythonResourcesPolicy::InMemoryOnly
+                | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
+                    ConcreteResourceLocation::InMemory
+                }
+                PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
+                    ConcreteResourceLocation::RelativePath(prefix)
+                }
+            },
+        };
 
-    fn add_relative_path_module_bytecode(
-        &mut self,
-        prefix: &str,
-        module: &PythonModuleBytecodeFromSource,
-    ) -> Result<()> {
         self.resources_collector
-            .add_python_module_bytecode_from_source(
-                module,
-                &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-            )
+            .add_python_module_bytecode_from_source(module, &location)
     }
 
     fn add_in_memory_package_resource(&mut self, resource: &PythonPackageResource) -> Result<()> {

@@ -432,15 +432,18 @@ impl PythonExecutable {
         let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
         info!(&logger, "adding in-memory bytecode module {}", m.name);
         self.exe
-            .add_in_memory_module_bytecode(&PythonModuleBytecodeFromSource {
-                name: m.name.clone(),
-                source: m.source.clone(),
-                optimize_level,
-                is_package: m.is_package,
-                cache_tag: m.cache_tag,
-                is_stdlib: m.is_stdlib,
-                is_test: m.is_test,
-            })
+            .add_python_module_bytecode_from_source(
+                &PythonModuleBytecodeFromSource {
+                    name: m.name.clone(),
+                    source: m.source.clone(),
+                    optimize_level,
+                    is_package: m.is_package,
+                    cache_tag: m.cache_tag,
+                    is_stdlib: m.is_stdlib,
+                    is_test: m.is_test,
+                },
+                Some(ConcreteResourceLocation::InMemory),
+            )
             .map_err(|e| {
                 RuntimeError {
                     code: "PYOXIDIZER_BUILD",
@@ -490,8 +493,7 @@ impl PythonExecutable {
             "adding executable relative bytecode module {}", m.name
         );
         self.exe
-            .add_relative_path_module_bytecode(
-                &prefix,
+            .add_python_module_bytecode_from_source(
                 &PythonModuleBytecodeFromSource {
                     name: m.name.clone(),
                     source: m.source.clone(),
@@ -501,6 +503,7 @@ impl PythonExecutable {
                     is_stdlib: m.is_stdlib,
                     is_test: m.is_test,
                 },
+                Some(ConcreteResourceLocation::RelativePath(prefix)),
             )
             .map_err(|e| {
                 RuntimeError {
@@ -546,15 +549,18 @@ impl PythonExecutable {
         let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
         info!(&logger, "adding bytecode module {}", m.name);
         self.exe
-            .add_module_bytecode(&PythonModuleBytecodeFromSource {
-                name: m.name.clone(),
-                source: m.source.clone(),
-                optimize_level,
-                is_package: m.is_package,
-                cache_tag: m.cache_tag,
-                is_stdlib: m.is_stdlib,
-                is_test: m.is_test,
-            })
+            .add_python_module_bytecode_from_source(
+                &PythonModuleBytecodeFromSource {
+                    name: m.name.clone(),
+                    source: m.source.clone(),
+                    optimize_level,
+                    is_package: m.is_package,
+                    cache_tag: m.cache_tag,
+                    is_stdlib: m.is_stdlib,
+                    is_test: m.is_test,
+                },
+                None,
+            )
             .map_err(|e| {
                 RuntimeError {
                     code: "PYOXIDIZER_BUILD",
