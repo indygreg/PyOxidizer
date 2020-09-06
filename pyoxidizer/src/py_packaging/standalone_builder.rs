@@ -61,13 +61,13 @@ pub struct StandalonePythonExecutableBuilder {
     resources_collector: PythonResourceCollector,
 
     /// Holds state necessary to link libpython.
-    core_link_context: LibPythonBuildContext,
+    core_build_context: LibPythonBuildContext,
 
     /// Holds linking context for individual extensions.
     ///
     /// We need to track per-extension state separately since we need
     /// to support filtering extensions as part of building.
-    extension_link_contexts: BTreeMap<String, LibPythonBuildContext>,
+    extension_build_contexts: BTreeMap<String, LibPythonBuildContext>,
 
     /// Configuration of the embedded Python interpreter.
     config: EmbeddedPythonConfig,
@@ -138,8 +138,8 @@ impl StandalonePythonExecutableBuilder {
                 packaging_policy.get_resources_policy(),
                 &cache_tag,
             ),
-            core_link_context: LibPythonBuildContext::default(),
-            extension_link_contexts: BTreeMap::new(),
+            core_build_context: LibPythonBuildContext::default(),
+            extension_build_contexts: BTreeMap::new(),
             config,
             python_exe,
         });
@@ -150,10 +150,10 @@ impl StandalonePythonExecutableBuilder {
     }
 
     fn add_distribution_resources(&mut self, policy: &PythonPackagingPolicy) -> Result<()> {
-        self.core_link_context.inittab_cflags = Some(self.distribution.inittab_cflags.clone());
+        self.core_build_context.inittab_cflags = Some(self.distribution.inittab_cflags.clone());
 
         for (name, path) in &self.distribution.includes {
-            self.core_link_context
+            self.core_build_context
                 .includes
                 .insert(PathBuf::from(name), DataLocation::Path(path.clone()));
         }
@@ -166,16 +166,18 @@ impl StandalonePythonExecutableBuilder {
                 continue;
             }
 
-            self.core_link_context
+            self.core_build_context
                 .object_files
                 .push(DataLocation::Path(fs_path.clone()));
         }
 
         for entry in &self.distribution.links_core {
             if entry.framework {
-                self.core_link_context.frameworks.insert(entry.name.clone());
+                self.core_build_context
+                    .frameworks
+                    .insert(entry.name.clone());
             } else if entry.system {
-                self.core_link_context
+                self.core_build_context
                     .system_libraries
                     .insert(entry.name.clone());
             }
@@ -192,7 +194,7 @@ impl StandalonePythonExecutableBuilder {
                 }
             };
 
-            self.core_link_context.library_search_paths.insert(
+            self.core_build_context.library_search_paths.insert(
                 path.parent()
                     .ok_or_else(|| anyhow!("unable to resolve parent directory"))?
                     .to_path_buf(),
@@ -201,13 +203,13 @@ impl StandalonePythonExecutableBuilder {
 
         // Windows requires dynamic linking against msvcrt. Ensure that happens.
         if crate::environment::WINDOWS_TARGET_TRIPLES.contains(&self.target_triple.as_str()) {
-            self.core_link_context
+            self.core_build_context
                 .system_libraries
                 .insert("msvcrt".to_string());
         }
 
         if let Some(lis) = self.distribution.license_infos.get("python") {
-            self.core_link_context
+            self.core_build_context
                 .license_infos
                 .insert("python".to_string(), lis.clone());
         }
@@ -279,7 +281,7 @@ impl StandalonePythonExecutableBuilder {
                 .insert(module.name.clone(), lis.clone());
         }
 
-        self.extension_link_contexts
+        self.extension_build_contexts
             .insert(module.name.clone(), link_context);
 
         Ok(())
@@ -341,8 +343,8 @@ impl StandalonePythonExecutableBuilder {
                     "generating custom link library containing Python..."
                 );
 
-                let mut link_contexts = vec![&self.core_link_context];
-                for c in self.extension_link_contexts.values() {
+                let mut link_contexts = vec![&self.core_build_context];
+                for c in self.extension_build_contexts.values() {
                     link_contexts.push(c);
                 }
 
@@ -424,7 +426,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     }
 
     fn builtin_extension_module_names<'a>(&'a self) -> Box<dyn Iterator<Item = &'a String> + 'a> {
-        Box::new(self.extension_link_contexts.keys())
+        Box::new(self.extension_build_contexts.keys())
     }
 
     fn pip_install(
@@ -592,7 +594,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 .insert(extension_module.name.clone(), init_fn.clone());
         }
 
-        self.extension_link_contexts
+        self.extension_build_contexts
             .insert(extension_module.name.clone(), link_context);
 
         Ok(())
@@ -822,7 +824,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         })?;
 
         warn!(logger, "filtering embedded extension modules");
-        filter_btreemap(logger, &mut self.extension_link_contexts, &resource_names);
+        filter_btreemap(logger, &mut self.extension_build_contexts, &resource_names);
 
         Ok(())
     }
