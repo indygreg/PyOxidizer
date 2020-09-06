@@ -25,9 +25,8 @@ use {
         ConcreteResourceLocation, PrePackagedResource, PythonResourceCollector,
     },
     slog::warn,
-    std::collections::{BTreeMap, BTreeSet, HashMap},
+    std::collections::{BTreeMap, HashMap},
     std::io::Write,
-    std::iter::FromIterator,
     std::path::{Path, PathBuf},
     std::sync::Arc,
     tempdir::TempDir,
@@ -226,8 +225,6 @@ impl StandalonePythonExecutableBuilder {
             module.name.clone(),
             ExtensionModuleBuildState {
                 init_fn: module.init_fn.clone(),
-                link_static_libraries: BTreeSet::new(),
-                link_dynamic_libraries: BTreeSet::new(),
             },
         );
 
@@ -332,7 +329,6 @@ impl StandalonePythonExecutableBuilder {
                     &self.distribution,
                     &self.libpython_link_context,
                     &self.builtin_extensions(),
-                    &self.extension_module_states,
                     &temp_dir_path,
                     &self.host_triple,
                     &self.target_triple,
@@ -561,6 +557,14 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 self.libpython_link_context
                     .system_libraries
                     .insert(depends.name.clone());
+            } else if depends.static_library.is_some() {
+                self.libpython_link_context
+                    .static_libraries
+                    .insert(depends.name.clone());
+            } else if depends.dynamic_library.is_some() {
+                self.libpython_link_context
+                    .dynamic_libraries
+                    .insert(depends.name.clone());
             }
         }
 
@@ -568,24 +572,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             extension_module.name.clone(),
             ExtensionModuleBuildState {
                 init_fn: extension_module.init_fn.clone(),
-                link_static_libraries: BTreeSet::from_iter(
-                    extension_module.link_libraries.iter().filter_map(|link| {
-                        if link.static_library.is_some() {
-                            Some(link.name.clone())
-                        } else {
-                            None
-                        }
-                    }),
-                ),
-                link_dynamic_libraries: BTreeSet::from_iter(
-                    extension_module.link_libraries.iter().filter_map(|link| {
-                        if link.dynamic_library.is_some() {
-                            Some(link.name.clone())
-                        } else {
-                            None
-                        }
-                    }),
-                ),
             },
         );
 

@@ -8,7 +8,7 @@ Building a native binary containing Python.
 
 use {
     super::standalone_distribution::{LicenseInfo, StandaloneDistribution},
-    anyhow::Result,
+    anyhow::{anyhow, Result},
     lazy_static::lazy_static,
     python_packaging::resource::DataLocation,
     slog::warn,
@@ -82,6 +82,9 @@ pub struct LinkingContext {
     /// Dynamic libraries that will be linked against.
     pub dynamic_libraries: BTreeSet<String>,
 
+    /// Static libraries that will be linked against.
+    pub static_libraries: BTreeSet<String>,
+
     /// Frameworks that will be linked against.
     ///
     /// Used on Apple platforms.
@@ -94,6 +97,7 @@ impl Default for LinkingContext {
             object_files: Vec::new(),
             system_libraries: BTreeSet::new(),
             dynamic_libraries: BTreeSet::new(),
+            static_libraries: BTreeSet::new(),
             frameworks: BTreeSet::new(),
         }
     }
@@ -104,45 +108,6 @@ impl Default for LinkingContext {
 pub struct ExtensionModuleBuildState {
     /// Extension C initialization function.
     pub init_fn: Option<String>,
-
-    /// Static libraries this extension module needs to link against.
-    pub link_static_libraries: BTreeSet<String>,
-
-    /// Dynamic libraries this extension module needs to link against.
-    pub link_dynamic_libraries: BTreeSet<String>,
-}
-
-/// Holds state necessary to link libpython.
-pub struct LibpythonLinkingInfo {
-    pub link_libraries: BTreeSet<String>,
-}
-
-/// Resolve state needed to link a libpython.
-fn resolve_libpython_linking_info(
-    logger: &slog::Logger,
-    extension_modules: &BTreeMap<String, ExtensionModuleBuildState>,
-) -> Result<LibpythonLinkingInfo> {
-    let mut link_libraries = BTreeSet::new();
-
-    warn!(
-        logger,
-        "resolving inputs for {} extension modules...",
-        extension_modules.len()
-    );
-
-    for (name, state) in extension_modules {
-        for library in &state.link_static_libraries {
-            warn!(logger, "static library {} required by {}", library, name);
-            link_libraries.insert(library.clone());
-        }
-
-        for library in &state.link_dynamic_libraries {
-            warn!(logger, "dynamic library {} required by {}", library, name);
-            link_libraries.insert(library.clone());
-        }
-    }
-
-    Ok(LibpythonLinkingInfo { link_libraries })
 }
 
 #[derive(Debug)]
@@ -162,7 +127,6 @@ pub fn link_libpython(
     dist: &StandaloneDistribution,
     context: &LinkingContext,
     builtin_extensions: &[(String, String)],
-    extension_modules: &BTreeMap<String, ExtensionModuleBuildState>,
     out_dir: &Path,
     host_triple: &str,
     target_triple: &str,
@@ -242,15 +206,6 @@ pub fn link_libpython(
     // We handle this ourselves.
     build.cargo_metadata(false);
 
-    // For each extension module, extract and use its object file. We also
-    // use this pass to collect the set of libraries that we need to link
-    // against.
-    let mut needed_libraries: BTreeSet<String> = BTreeSet::new();
-
-    let linking_info = resolve_libpython_linking_info(logger, extension_modules)?;
-
-    needed_libraries.extend(linking_info.link_libraries);
-
     for (i, location) in context.object_files.iter().enumerate() {
         match location {
             DataLocation::Memory(data) => {
@@ -266,25 +221,21 @@ pub fn link_libpython(
 
     let mut extra_library_paths = BTreeSet::new();
 
-    for library in needed_libraries {
-        if OS_IGNORE_LIBRARIES.contains(&library.as_ref()) {
-            continue;
-        }
-
-        // Find the library in the distribution and statically link against it.
-        let data = dist
-            .libraries
-            .get(&library)
-            .unwrap_or_else(|| panic!("unable to find library {}", library));
-
-        let fs_path = match data {
-            DataLocation::Path(fs_path) => fs_path,
-            DataLocation::Memory(_) => panic!("cannot link libraries not backed by the filesystem"),
+    for location in dist.libraries.values() {
+        let path = match location {
+            DataLocation::Path(p) => p,
+            DataLocation::Memory(_) => {
+                return Err(anyhow!(
+                    "cannot link libraries not backed by the filesystem"
+                ))
+            }
         };
 
-        extra_library_paths.insert(fs_path.parent().unwrap().to_path_buf());
-
-        cargo_metadata.push(format!("cargo:rustc-link-lib=static={}", library))
+        extra_library_paths.insert(
+            path.parent()
+                .ok_or_else(|| anyhow!("unable to resolve parent directory"))?
+                .to_path_buf(),
+        );
     }
 
     for framework in &context.frameworks {
@@ -296,7 +247,15 @@ pub fn link_libpython(
     }
 
     for lib in &context.dynamic_libraries {
-        cargo_metadata.push(format!("cargo:rustc-link-lib={}", lib));
+        if !OS_IGNORE_LIBRARIES.contains(&lib.as_str()) {
+            cargo_metadata.push(format!("cargo:rustc-link-lib={}", lib));
+        }
+    }
+
+    for lib in &context.static_libraries {
+        if !OS_IGNORE_LIBRARIES.contains(&lib.as_str()) {
+            cargo_metadata.push(format!("cargo:rustc-link-lib=static={}", lib));
+        }
     }
 
     // python3-sys uses #[link(name="pythonXY")] attributes heavily on Windows. Its
