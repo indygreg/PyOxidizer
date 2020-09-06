@@ -17,7 +17,7 @@ use {
         PythonPackageDistributionResource, PythonPackageResource,
     },
     python_packaging::resource_collection::{
-        ConcreteResourceLocation, PrePackagedResource, PreparedPythonResources,
+        CompiledResourcesCollection, ConcreteResourceLocation, PrePackagedResource,
         PythonResourceCollector,
     },
     slog::{info, warn},
@@ -312,7 +312,7 @@ impl PrePackagedResources {
             );
         }
 
-        let resources = self.collector.to_prepared_python_resources(compiler)?;
+        let resources = self.collector.compile_resources(compiler)?;
 
         Ok(EmbeddedPythonResources {
             resources,
@@ -336,7 +336,7 @@ pub struct LibpythonLinkingInfo {
 #[derive(Debug, Default, Clone)]
 pub struct EmbeddedPythonResources<'a> {
     /// Resources to write to a packed resources data structure.
-    resources: PreparedPythonResources<'a>,
+    resources: CompiledResourcesCollection<'a>,
 
     /// Holds state needed for adding extension modules to libpython.
     extension_modules: BTreeMap<String, ExtensionModuleBuildState>,

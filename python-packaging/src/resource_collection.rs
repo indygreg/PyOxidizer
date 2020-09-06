@@ -538,14 +538,14 @@ impl From<&ConcreteResourceLocation> for AbstractResourceLocation {
 /// Represents a finalized collection of Python resources.
 ///
 /// Instances are produced from a `PythonResourceCollector` and a
-/// Python interpreter (to compile bytecode).
+/// `PythonBytecodeCompiler` to produce bytecode.
 #[derive(Clone, Debug, Default)]
-pub struct PreparedPythonResources<'a> {
+pub struct CompiledResourcesCollection<'a> {
     pub resources: BTreeMap<String, Resource<'a, u8>>,
     pub extra_files: Vec<FileInstall>,
 }
 
-impl<'a> PreparedPythonResources<'a> {
+impl<'a> CompiledResourcesCollection<'a> {
     /// Write resources to packed resources data, version 1.
     pub fn write_packed_resources_v1<W: std::io::Write>(&self, writer: &mut W) -> Result<()> {
         python_packed_resources::writer::write_packed_resources_v1(
@@ -563,7 +563,7 @@ impl<'a> PreparedPythonResources<'a> {
 /// Type used to collect Python resources so they can be serialized.
 ///
 /// We often want to turn Python resource primitives (module source,
-/// bytecode, etc) into a collection of ``Resource`` so they can be
+/// bytecode, etc) into a collection of `Resource` so they can be
 /// serialized to the *Python packed resources* format. This type
 /// exists to facilitate doing this.
 #[derive(Debug, Clone)]
@@ -1038,11 +1038,16 @@ impl PythonResourceCollector {
         Ok(res)
     }
 
-    /// Converts this collection of resources into a `PreparedPythonResources`.
-    pub fn to_prepared_python_resources(
+    /// Compiles resources into a finalized collection.
+    ///
+    /// This will take all resources collected so far and convert them into
+    /// a collection of `Resource` plus extra file install rules.
+    ///
+    /// Missing parent packages will be added automatically.
+    pub fn compile_resources(
         &self,
         compiler: &mut dyn PythonBytecodeCompiler,
-    ) -> Result<PreparedPythonResources> {
+    ) -> Result<CompiledResourcesCollection> {
         let mut input_resources = self.resources.clone();
         populate_parent_packages(&mut input_resources)?;
 
@@ -1059,7 +1064,7 @@ impl PythonResourceCollector {
             resources.insert(name.clone(), entry);
         }
 
-        Ok(PreparedPythonResources {
+        Ok(CompiledResourcesCollection {
             resources,
             extra_files,
         })
@@ -2215,7 +2220,7 @@ mod tests {
 
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
-        let resources = r.to_prepared_python_resources(&mut compiler)?;
+        let resources = r.compile_resources(&mut compiler)?;
 
         assert_eq!(resources.resources.len(), 1);
         assert_eq!(
@@ -2262,7 +2267,7 @@ mod tests {
 
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
-        let resources = r.to_prepared_python_resources(&mut compiler)?;
+        let resources = r.compile_resources(&mut compiler)?;
 
         assert_eq!(resources.resources.len(), 3);
         assert_eq!(
@@ -2336,7 +2341,7 @@ mod tests {
 
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
-        let resources = r.to_prepared_python_resources(&mut compiler)?;
+        let resources = r.compile_resources(&mut compiler)?;
 
         assert_eq!(resources.resources.len(), 2);
         assert_eq!(
@@ -2410,7 +2415,7 @@ mod tests {
 
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
-        let resources = r.to_prepared_python_resources(&mut compiler)?;
+        let resources = r.compile_resources(&mut compiler)?;
 
         assert_eq!(resources.resources.len(), 1);
         assert_eq!(
@@ -2460,7 +2465,7 @@ mod tests {
 
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
-        let resources = r.to_prepared_python_resources(&mut compiler)?;
+        let resources = r.compile_resources(&mut compiler)?;
 
         assert_eq!(resources.resources.len(), 1);
         assert_eq!(
@@ -2510,7 +2515,7 @@ mod tests {
 
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
-        let resources = r.to_prepared_python_resources(&mut compiler)?;
+        let resources = r.compile_resources(&mut compiler)?;
 
         assert_eq!(resources.resources.len(), 3);
         assert_eq!(
@@ -2581,7 +2586,7 @@ mod tests {
 
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
-        let resources = r.to_prepared_python_resources(&mut compiler)?;
+        let resources = r.compile_resources(&mut compiler)?;
 
         assert_eq!(resources.resources.len(), 1);
         assert_eq!(
@@ -2644,7 +2649,7 @@ mod tests {
 
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
-        let resources = r.to_prepared_python_resources(&mut compiler)?;
+        let resources = r.compile_resources(&mut compiler)?;
 
         assert_eq!(resources.resources.len(), 1);
         assert_eq!(
@@ -2709,7 +2714,7 @@ mod tests {
 
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
-        let resources = r.to_prepared_python_resources(&mut compiler)?;
+        let resources = r.compile_resources(&mut compiler)?;
 
         assert_eq!(resources.resources.len(), 1);
         assert_eq!(
@@ -2772,7 +2777,7 @@ mod tests {
 
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
-        let resources = r.to_prepared_python_resources(&mut compiler)?;
+        let resources = r.compile_resources(&mut compiler)?;
 
         assert_eq!(resources.resources.len(), 1);
         assert_eq!(
@@ -2839,7 +2844,7 @@ mod tests {
 
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
-        let resources = c.to_prepared_python_resources(&mut compiler)?;
+        let resources = c.compile_resources(&mut compiler)?;
 
         assert_eq!(resources.resources.len(), 1);
         assert_eq!(
@@ -2907,7 +2912,7 @@ mod tests {
 
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
-        let resources = c.to_prepared_python_resources(&mut compiler)?;
+        let resources = c.compile_resources(&mut compiler)?;
 
         assert_eq!(resources.resources.len(), 2);
         assert_eq!(
@@ -2999,7 +3004,7 @@ mod tests {
 
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
-        let resources = c.to_prepared_python_resources(&mut compiler)?;
+        let resources = c.compile_resources(&mut compiler)?;
 
         assert_eq!(resources.resources.len(), 3);
         assert_eq!(

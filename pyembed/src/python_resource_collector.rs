@@ -19,7 +19,7 @@ use {
     python_packaging::bytecode::BytecodeCompiler,
     python_packaging::policy::PythonResourcesPolicy,
     python_packaging::resource_collection::{
-        ConcreteResourceLocation, PreparedPythonResources, PythonResourceCollector,
+        CompiledResourcesCollection, ConcreteResourceLocation, PythonResourceCollector,
     },
     std::cell::RefCell,
     std::convert::TryFrom,
@@ -228,8 +228,8 @@ impl OxidizedResourceCollector {
             PyErr::new::<ValueError, _>(py, format!("error constructing bytecode compiler: {}", e))
         })?;
 
-        let prepared: PreparedPythonResources = collector
-            .to_prepared_python_resources(&mut compiler)
+        let prepared: CompiledResourcesCollection = collector
+            .compile_resources(&mut compiler)
             .map_err(|e| PyErr::new::<ValueError, _>(py, format!("error oxidizing: {}", e)))?;
 
         let mut resources = Vec::new();
