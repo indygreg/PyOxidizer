@@ -148,6 +148,19 @@ impl StandalonePythonExecutableBuilder {
     }
 
     fn add_distribution_resources(&mut self, policy: &PythonPackagingPolicy) -> Result<()> {
+        // Add the distribution's object files from Python core to linking context.
+        for fs_path in self.distribution.objs_core.values() {
+            // libpython generation derives its own `_PyImport_Inittab`. So ignore
+            // the object file containing it.
+            if fs_path == &self.distribution.inittab_object {
+                continue;
+            }
+
+            self.libpython_link_context
+                .object_files
+                .push(DataLocation::Path(fs_path.clone()));
+        }
+
         for ext in self.packaging_policy.resolve_python_extension_modules(
             self.distribution.extension_modules.values(),
             &self.target_triple,

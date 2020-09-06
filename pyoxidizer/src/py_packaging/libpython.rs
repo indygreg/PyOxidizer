@@ -9,7 +9,6 @@ Building a native binary containing Python.
 use {
     super::standalone_distribution::{LicenseInfo, StandaloneDistribution},
     anyhow::Result,
-    itertools::Itertools,
     lazy_static::lazy_static,
     python_packaging::resource::DataLocation,
     slog::{info, warn},
@@ -281,33 +280,6 @@ pub fn link_libpython(
     build.opt_level_str(opt_level);
     // We handle this ourselves.
     build.cargo_metadata(false);
-
-    info!(
-        logger,
-        "adding {} object files required by Python core: {:#?}",
-        dist.objs_core.len(),
-        dist.objs_core.keys().map(|k| k.display()).collect_vec()
-    );
-    for (rel_path, fs_path) in &dist.objs_core {
-        // We're deriving our own _PyImport_Inittab. So ignore the object
-        // file containing it.
-        if fs_path == &dist.inittab_object {
-            warn!(
-                logger,
-                "ignoring {} since it may conflict with our version",
-                rel_path.display()
-            );
-            continue;
-        }
-
-        let parent = temp_dir_path.join(rel_path.parent().unwrap());
-        create_dir_all(parent)?;
-
-        let full = temp_dir_path.join(rel_path);
-        fs::copy(fs_path, &full)?;
-
-        build.object(&full);
-    }
 
     // For each extension module, extract and use its object file. We also
     // use this pass to collect the set of libraries that we need to link
