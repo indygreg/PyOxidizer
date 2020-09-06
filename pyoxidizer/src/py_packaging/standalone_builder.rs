@@ -9,7 +9,7 @@ use {
     super::config::{EmbeddedPythonConfig, RawAllocator},
     super::distribution::{BinaryLibpythonLinkMode, PythonDistribution},
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
-    super::libpython::{link_libpython, ExtensionModuleBuildState, LinkingContext},
+    super::libpython::{link_libpython, LinkingContext},
     super::packaging_tool::{find_resources, pip_install, read_virtualenv, setup_py_install},
     super::standalone_distribution::StandaloneDistribution,
     crate::app_packaging::resource::{FileContent, FileManifest},
@@ -68,9 +68,6 @@ pub struct StandalonePythonExecutableBuilder {
     /// We need to track per-extension state separately since we need
     /// to support filtering extensions as part of building.
     extension_link_contexts: BTreeMap<String, LinkingContext>,
-
-    /// Holds state of extension modules that will be linked.
-    extension_module_states: BTreeMap<String, ExtensionModuleBuildState>,
 
     /// Configuration of the embedded Python interpreter.
     config: EmbeddedPythonConfig,
@@ -143,7 +140,6 @@ impl StandalonePythonExecutableBuilder {
             ),
             core_link_context: LinkingContext::default(),
             extension_link_contexts: BTreeMap::new(),
-            extension_module_states: BTreeMap::new(),
             config,
             python_exe,
         });
@@ -239,13 +235,6 @@ impl StandalonePythonExecutableBuilder {
                 .init_functions
                 .insert(module.name.clone(), init_fn.clone());
         }
-
-        self.extension_module_states.insert(
-            module.name.clone(),
-            ExtensionModuleBuildState {
-                init_fn: module.init_fn.clone(),
-            },
-        );
 
         for location in &module.object_file_data {
             link_context.object_files.push(location.clone());
@@ -413,7 +402,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     }
 
     fn builtin_extension_module_names<'a>(&'a self) -> Box<dyn Iterator<Item = &'a String> + 'a> {
-        Box::new(self.extension_module_states.keys())
+        Box::new(self.extension_link_contexts.keys())
     }
 
     fn pip_install(
@@ -580,13 +569,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 .init_functions
                 .insert(extension_module.name.clone(), init_fn.clone());
         }
-
-        self.extension_module_states.insert(
-            extension_module.name.clone(),
-            ExtensionModuleBuildState {
-                init_fn: extension_module.init_fn.clone(),
-            },
-        );
 
         self.extension_link_contexts
             .insert(extension_module.name.clone(), link_context);
@@ -819,7 +801,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
         warn!(logger, "filtering embedded extension modules");
         filter_btreemap(logger, &mut self.extension_link_contexts, &resource_names);
-        filter_btreemap(logger, &mut self.extension_module_states, &resource_names);
 
         Ok(())
     }

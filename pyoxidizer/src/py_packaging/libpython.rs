@@ -167,13 +167,6 @@ impl LinkingContext {
     }
 }
 
-/// Holds state necessary to link an extension module into libpython.
-#[derive(Debug, Clone, PartialEq)]
-pub struct ExtensionModuleBuildState {
-    /// Extension C initialization function.
-    pub init_fn: Option<String>,
-}
-
 #[derive(Debug)]
 pub struct LibpythonInfo {
     pub libpython_path: PathBuf,
