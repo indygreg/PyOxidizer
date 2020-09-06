@@ -227,6 +227,12 @@ impl StandalonePythonExecutableBuilder {
         self.resources_collector
             .add_builtin_python_extension_module(module)?;
 
+        if let Some(init_fn) = &module.init_fn {
+            self.libpython_link_context
+                .init_functions
+                .insert(module.name.clone(), init_fn.clone());
+        }
+
         self.extension_module_states.insert(
             module.name.clone(),
             ExtensionModuleBuildState {
@@ -295,22 +301,6 @@ impl StandalonePythonExecutableBuilder {
         Ok(())
     }
 
-    /// Obtain a list of built-in extensions.
-    ///
-    /// The returned list will likely make its way to PyImport_Inittab.
-    fn builtin_extensions(&self) -> Vec<(String, String)> {
-        self.extension_module_states
-            .iter()
-            .filter_map(|(name, state)| {
-                if let Some(init_fn) = &state.init_fn {
-                    Some((name.clone(), init_fn.clone()))
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
-
     /// Build a Python library suitable for linking.
     ///
     /// This will take the underlying distribution, resources, and
@@ -340,7 +330,6 @@ impl StandalonePythonExecutableBuilder {
                     logger,
                     &self.distribution,
                     &self.libpython_link_context,
-                    &self.builtin_extensions(),
                     &temp_dir_path,
                     &self.host_triple,
                     &self.target_triple,
@@ -584,6 +573,12 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             self.libpython_link_context
                 .license_infos
                 .insert(extension_module.name.clone(), lis.clone());
+        }
+
+        if let Some(init_fn) = &extension_module.init_fn {
+            self.libpython_link_context
+                .init_functions
+                .insert(extension_module.name.clone(), init_fn.clone());
         }
 
         self.extension_module_states.insert(

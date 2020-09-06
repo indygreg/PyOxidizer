@@ -38,7 +38,10 @@ lazy_static! {
 }
 
 /// Produce the content of the config.c file containing built-in extensions.
-pub fn make_config_c(extensions: &[(String, String)]) -> String {
+pub fn make_config_c<T>(extensions: &[(T, T)]) -> String
+where
+    T: AsRef<str>,
+{
     // It is easier to construct the file from scratch than parse the template
     // and insert things in the right places.
     let mut lines: Vec<String> = Vec::new();
@@ -47,15 +50,15 @@ pub fn make_config_c(extensions: &[(String, String)]) -> String {
 
     // Declare the initialization functions.
     for (_name, init_fn) in extensions {
-        if init_fn != "NULL" {
-            lines.push(format!("extern PyObject* {}(void);", init_fn));
+        if init_fn.as_ref() != "NULL" {
+            lines.push(format!("extern PyObject* {}(void);", init_fn.as_ref()));
         }
     }
 
     lines.push(String::from("struct _inittab _PyImport_Inittab[] = {"));
 
     for (name, init_fn) in extensions {
-        lines.push(format!("{{\"{}\", {}}},", name, init_fn));
+        lines.push(format!("{{\"{}\", {}}},", name.as_ref(), init_fn.as_ref()));
     }
 
     lines.push(String::from("{0, 0}"));
@@ -90,6 +93,12 @@ pub struct LinkingContext {
     /// Used on Apple platforms.
     pub frameworks: BTreeSet<String>,
 
+    /// Builtin extension module initialization functions.
+    ///
+    /// Key is extension name. Value is initialization function. The
+    /// function can have the special value `NULL`.
+    pub init_functions: BTreeMap<String, String>,
+
     /// Holds licensing info for things being linked together.
     ///
     /// Keys are entity name (e.g. extension name). Values are license
@@ -105,6 +114,7 @@ impl Default for LinkingContext {
             dynamic_libraries: BTreeSet::new(),
             static_libraries: BTreeSet::new(),
             frameworks: BTreeSet::new(),
+            init_functions: BTreeMap::new(),
             license_infos: BTreeMap::new(),
         }
     }
@@ -133,7 +143,6 @@ pub fn link_libpython(
     logger: &slog::Logger,
     dist: &StandaloneDistribution,
     context: &LinkingContext,
-    builtin_extensions: &[(String, String)],
     out_dir: &Path,
     host_triple: &str,
     target_triple: &str,
@@ -162,9 +171,9 @@ pub fn link_libpython(
     warn!(
         logger,
         "deriving custom config.c from {} extension modules",
-        builtin_extensions.len()
+        context.init_functions.len()
     );
-    let config_c_source = make_config_c(&builtin_extensions);
+    let config_c_source = make_config_c(&context.init_functions.iter().collect::<Vec<_>>());
     let config_c_path = out_dir.join("config.c");
     let config_c_temp_path = temp_dir_path.join("config.c");
 
