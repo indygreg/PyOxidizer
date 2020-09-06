@@ -22,7 +22,9 @@ use {
         PythonModuleSource, PythonPackageDistributionResource, PythonPackageResource,
         PythonResource,
     },
-    python_packaging::resource_collection::{ConcreteResourceLocation, PrePackagedResource},
+    python_packaging::resource_collection::{
+        ConcreteResourceLocation, PrePackagedResource, PythonResourceCollector,
+    },
     slog::warn,
     std::collections::HashMap,
     std::convert::TryFrom,
@@ -260,10 +262,14 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &self.python_exe
     }
 
+    fn resource_collector(&self) -> &PythonResourceCollector {
+        &self.resources.collector
+    }
+
     fn iter_resources<'a>(
         &'a self,
     ) -> Box<dyn Iterator<Item = (&'a String, &'a PrePackagedResource)> + 'a> {
-        Box::new(self.resources.iter_resources())
+        Box::new(self.resources.collector.iter_resources())
     }
 
     fn builtin_extension_module_names<'a>(&'a self) -> Box<dyn Iterator<Item = &'a String> + 'a> {

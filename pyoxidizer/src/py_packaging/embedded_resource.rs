@@ -17,8 +17,7 @@ use {
         PythonPackageDistributionResource, PythonPackageResource,
     },
     python_packaging::resource_collection::{
-        CompiledResourcesCollection, ConcreteResourceLocation, PrePackagedResource,
-        PythonResourceCollector,
+        CompiledResourcesCollection, ConcreteResourceLocation, PythonResourceCollector,
     },
     slog::{info, warn},
     std::collections::{BTreeMap, BTreeSet},
@@ -58,7 +57,7 @@ pub struct ExtensionModuleBuildState {
 /// transformed to `EmbeddedPythonResources` as part of packaging.
 #[derive(Debug, Clone)]
 pub struct PrePackagedResources {
-    collector: PythonResourceCollector,
+    pub collector: PythonResourceCollector,
     extension_module_states: BTreeMap<String, ExtensionModuleBuildState>,
 }
 
@@ -68,10 +67,6 @@ impl PrePackagedResources {
             collector: PythonResourceCollector::new(policy, cache_tag),
             extension_module_states: BTreeMap::new(),
         }
-    }
-
-    pub fn iter_resources(&self) -> impl Iterator<Item = (&String, &PrePackagedResource)> {
-        self.collector.iter_resources()
     }
 
     /// Obtain the names of extension modules that will be compiled into libpython.
