@@ -204,7 +204,6 @@ impl StandalonePythonExecutableBuilder {
             module.name.clone(),
             ExtensionModuleBuildState {
                 init_fn: module.init_fn.clone(),
-                link_object_files: module.object_file_data.clone(),
                 link_frameworks: BTreeSet::new(),
                 link_system_libraries: BTreeSet::new(),
                 link_static_libraries: BTreeSet::new(),
@@ -214,6 +213,12 @@ impl StandalonePythonExecutableBuilder {
                 ),
             },
         );
+
+        for location in &module.object_file_data {
+            self.libpython_link_context
+                .object_files
+                .push(location.clone());
+        }
 
         Ok(())
     }
@@ -506,15 +511,18 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &mut self,
         extension_module: &PythonExtensionModule,
     ) -> Result<()> {
+        if !extension_module.builtin_default {
+            for location in &extension_module.object_file_data {
+                self.libpython_link_context
+                    .object_files
+                    .push(location.clone());
+            }
+        }
+
         self.extension_module_states.insert(
             extension_module.name.clone(),
             ExtensionModuleBuildState {
                 init_fn: extension_module.init_fn.clone(),
-                link_object_files: if extension_module.builtin_default {
-                    vec![]
-                } else {
-                    extension_module.object_file_data.clone()
-                },
                 link_frameworks: BTreeSet::from_iter(
                     extension_module.link_libraries.iter().filter_map(|link| {
                         if link.framework {

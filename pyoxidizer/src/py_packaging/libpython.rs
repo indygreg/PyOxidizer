@@ -11,7 +11,7 @@ use {
     anyhow::Result,
     lazy_static::lazy_static,
     python_packaging::resource::DataLocation,
-    slog::{info, warn},
+    slog::warn,
     std::collections::{BTreeMap, BTreeSet},
     std::fs,
     std::fs::create_dir_all,
@@ -91,9 +91,6 @@ pub struct ExtensionModuleBuildState {
     /// Extension C initialization function.
     pub init_fn: Option<String>,
 
-    /// Object files to link into produced binary.
-    pub link_object_files: Vec<DataLocation>,
-
     /// Frameworks this extension module needs to link against.
     pub link_frameworks: BTreeSet<String>,
 
@@ -112,9 +109,6 @@ pub struct ExtensionModuleBuildState {
 
 /// Holds state necessary to link libpython.
 pub struct LibpythonLinkingInfo {
-    /// Object files that need to be linked.
-    pub object_files: Vec<DataLocation>,
-
     pub link_libraries: BTreeSet<String>,
     pub link_frameworks: BTreeSet<String>,
     pub link_system_libraries: BTreeSet<String>,
@@ -126,7 +120,6 @@ fn resolve_libpython_linking_info(
     logger: &slog::Logger,
     extension_modules: &BTreeMap<String, ExtensionModuleBuildState>,
 ) -> Result<LibpythonLinkingInfo> {
-    let mut object_files = Vec::new();
     let mut link_libraries = BTreeSet::new();
     let mut link_frameworks = BTreeSet::new();
     let mut link_system_libraries = BTreeSet::new();
@@ -139,16 +132,6 @@ fn resolve_libpython_linking_info(
     );
 
     for (name, state) in extension_modules {
-        if !state.link_object_files.is_empty() {
-            info!(
-                logger,
-                "adding {} object files for {} extension module",
-                state.link_object_files.len(),
-                name
-            );
-            object_files.extend(state.link_object_files.iter().cloned());
-        }
-
         for framework in &state.link_frameworks {
             warn!(logger, "framework {} required by {}", framework, name);
             link_frameworks.insert(framework.clone());
@@ -176,7 +159,6 @@ fn resolve_libpython_linking_info(
     }
 
     Ok(LibpythonLinkingInfo {
-        object_files,
         link_libraries,
         link_frameworks,
         link_system_libraries,
@@ -311,25 +293,10 @@ pub fn link_libpython(
     needed_system_libraries.extend(linking_info.link_system_libraries);
     needed_libraries_external.extend(linking_info.link_libraries_external);
 
-    for (i, object_file) in linking_info.object_files.iter().enumerate() {
-        match object_file {
-            DataLocation::Memory(data) => {
-                let out_path = temp_dir_path.join(format!("libpython.a.{}.o", i));
-
-                fs::write(&out_path, data)?;
-                build.object(&out_path);
-            }
-            DataLocation::Path(p) => {
-                build.object(&p);
-            }
-        }
-    }
-
     for (i, location) in context.object_files.iter().enumerate() {
         match location {
             DataLocation::Memory(data) => {
-                // TODO remove .b once we have 1 source of object files.
-                let out_path = temp_dir_path.join(format!("libpython.b.{}.o", i));
+                let out_path = temp_dir_path.join(format!("libpython.{}.o", i));
                 fs::write(&out_path, data)?;
                 build.object(&out_path);
             }
