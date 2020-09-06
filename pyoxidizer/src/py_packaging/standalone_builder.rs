@@ -9,7 +9,7 @@ use {
     super::config::{EmbeddedPythonConfig, RawAllocator},
     super::distribution::{BinaryLibpythonLinkMode, PythonDistribution},
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
-    super::libpython::{link_libpython, LinkingContext},
+    super::libpython::{link_libpython, LibPythonBuildContext},
     super::packaging_tool::{find_resources, pip_install, read_virtualenv, setup_py_install},
     super::standalone_distribution::StandaloneDistribution,
     crate::app_packaging::resource::{FileContent, FileManifest},
@@ -61,13 +61,13 @@ pub struct StandalonePythonExecutableBuilder {
     resources_collector: PythonResourceCollector,
 
     /// Holds state necessary to link libpython.
-    core_link_context: LinkingContext,
+    core_link_context: LibPythonBuildContext,
 
     /// Holds linking context for individual extensions.
     ///
     /// We need to track per-extension state separately since we need
     /// to support filtering extensions as part of building.
-    extension_link_contexts: BTreeMap<String, LinkingContext>,
+    extension_link_contexts: BTreeMap<String, LibPythonBuildContext>,
 
     /// Configuration of the embedded Python interpreter.
     config: EmbeddedPythonConfig,
@@ -138,7 +138,7 @@ impl StandalonePythonExecutableBuilder {
                 packaging_policy.get_resources_policy(),
                 &cache_tag,
             ),
-            core_link_context: LinkingContext::default(),
+            core_link_context: LibPythonBuildContext::default(),
             extension_link_contexts: BTreeMap::new(),
             config,
             python_exe,
@@ -243,7 +243,7 @@ impl StandalonePythonExecutableBuilder {
         self.resources_collector
             .add_builtin_python_extension_module(module)?;
 
-        let mut link_context = LinkingContext::default();
+        let mut link_context = LibPythonBuildContext::default();
 
         if let Some(init_fn) = &module.init_fn {
             link_context
@@ -341,7 +341,7 @@ impl StandalonePythonExecutableBuilder {
                 let library_info = link_libpython(
                     logger,
                     &self.distribution,
-                    &LinkingContext::merge(&link_contexts),
+                    &LibPythonBuildContext::merge(&link_contexts),
                     &temp_dir_path,
                     &self.host_triple,
                     &self.target_triple,
@@ -553,7 +553,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &mut self,
         extension_module: &PythonExtensionModule,
     ) -> Result<()> {
-        let mut link_context = LinkingContext::default();
+        let mut link_context = LibPythonBuildContext::default();
 
         if !extension_module.builtin_default {
             for location in &extension_module.object_file_data {

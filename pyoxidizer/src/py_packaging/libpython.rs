@@ -67,7 +67,7 @@ where
     lines.join("\n")
 }
 
-/// Holds state necessary to link a libpython.
+/// Holds state necessary to build and link a libpython.
 ///
 /// Instances of this are likely populated by a binary builder, taking
 /// information from a distribution and added extensions.
@@ -75,7 +75,7 @@ where
 /// Note that this context is only for producing libpython: it is very
 /// linker centric and doesn't track state like Python resources.
 #[derive(Clone, Debug)]
-pub struct LinkingContext {
+pub struct LibPythonBuildContext {
     /// Object files that will be linked together.
     pub object_files: Vec<DataLocation>,
 
@@ -109,7 +109,7 @@ pub struct LinkingContext {
     pub license_infos: BTreeMap<String, Vec<LicenseInfo>>,
 }
 
-impl Default for LinkingContext {
+impl Default for LibPythonBuildContext {
     fn default() -> Self {
         Self {
             object_files: Vec::new(),
@@ -124,7 +124,7 @@ impl Default for LinkingContext {
     }
 }
 
-impl LinkingContext {
+impl LibPythonBuildContext {
     /// Merge multiple `LinkingContext` together to produce an aggregate instance.
     pub fn merge(contexts: &[&Self]) -> Self {
         let mut object_files = Vec::new();
@@ -191,7 +191,7 @@ pub struct LibpythonInfo {
 pub fn link_libpython(
     logger: &slog::Logger,
     dist: &StandaloneDistribution,
-    context: &LinkingContext,
+    context: &LibPythonBuildContext,
     out_dir: &Path,
     host_triple: &str,
     target_triple: &str,
