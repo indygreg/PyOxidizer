@@ -807,7 +807,27 @@ pub mod tests {
     }
 
     #[test]
-    fn test_musl_all_extensions_builtin() -> Result<()> {
+    fn test_linux_extensions_sanity() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-unknown-linux-gnu".to_string(),
+            extension_module_filter: ExtensionModuleFilter::All,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let (distribution, builder) = options.new_builder()?;
+
+        let builtin_names = builder.builtin_extension_module_names().collect::<Vec<_>>();
+
+        // All extensions compiled as built-ins by default.
+        for (name, _) in distribution.extension_modules.iter() {
+            assert!(builtin_names.contains(&name));
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_linux_musl_extensions_sanity() -> Result<()> {
         let options = StandalonePythonExecutableBuilderOptions {
             target_triple: "x86_64-unknown-linux-musl".to_string(),
             extension_module_filter: ExtensionModuleFilter::All,
