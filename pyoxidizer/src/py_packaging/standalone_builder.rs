@@ -437,10 +437,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &self.python_exe
     }
 
-    fn resource_collector(&self) -> &PythonResourceCollector {
-        &self.resources_collector
-    }
-
     fn iter_resources<'a>(
         &'a self,
     ) -> Box<dyn Iterator<Item = (&'a String, &'a PrePackagedResource)> + 'a> {

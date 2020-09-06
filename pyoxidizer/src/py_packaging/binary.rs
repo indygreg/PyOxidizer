@@ -16,7 +16,7 @@ use {
         PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
         PythonPackageDistributionResource, PythonPackageResource, PythonResource,
     },
-    python_packaging::resource_collection::{PrePackagedResource, PythonResourceCollector},
+    python_packaging::resource_collection::PrePackagedResource,
     std::collections::HashMap,
     std::fs::File,
     std::io::Write,
@@ -61,9 +61,6 @@ pub trait PythonBinaryBuilder {
     /// The produced binary is effectively a clone of the Python distribution behind the
     /// returned executable.
     fn python_exe_path(&self) -> &Path;
-
-    /// Obtain the `PythonResourceCollector` holding Python resources seen so far.
-    fn resource_collector(&self) -> &PythonResourceCollector;
 
     /// Obtain an iterator over all resource entries that will be embedded in the binary.
     ///
