@@ -497,6 +497,7 @@ impl StandaloneDistribution {
     }
 
     /// Extract and analyze a standalone distribution from a tar stream.
+    #[allow(clippy::unnecessary_unwrap)]
     pub fn from_tar<R: Read>(source: R, extract_dir: &Path) -> Result<Self> {
         let mut tf = tar::Archive::new(source);
 
