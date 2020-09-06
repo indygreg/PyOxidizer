@@ -12,10 +12,7 @@ use {
     anyhow::{anyhow, Result},
     python_packaging::bytecode::PythonBytecodeCompiler,
     python_packaging::policy::PythonResourcesPolicy,
-    python_packaging::resource::{
-        DataLocation, PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
-        PythonPackageDistributionResource, PythonPackageResource,
-    },
+    python_packaging::resource::{DataLocation, PythonExtensionModule},
     python_packaging::resource_collection::{
         CompiledResourcesCollection, ConcreteResourceLocation, PythonResourceCollector,
     },
@@ -76,55 +73,6 @@ impl PrePackagedResources {
     /// data structure.
     pub fn builtin_extension_module_names(&self) -> impl Iterator<Item = &String> {
         self.extension_module_states.keys()
-    }
-
-    /// Add Python module source to the collection.
-    pub fn add_python_module_source(
-        &mut self,
-        module: &PythonModuleSource,
-        location: &ConcreteResourceLocation,
-    ) -> Result<()> {
-        self.collector.add_python_module_source(module, location)
-    }
-
-    /// Add Python module bytecode to be derived from source code to the collection.
-    pub fn add_python_module_bytecode_from_source(
-        &mut self,
-        module: &PythonModuleBytecodeFromSource,
-        location: &ConcreteResourceLocation,
-    ) -> Result<()> {
-        self.collector
-            .add_python_module_bytecode_from_source(module, location)
-    }
-
-    /// Add Python package resource data to the collection.
-    pub fn add_python_package_resource(
-        &mut self,
-        resource: &PythonPackageResource,
-        location: &ConcreteResourceLocation,
-    ) -> Result<()> {
-        self.collector
-            .add_python_package_resource(resource, location)
-    }
-
-    /// Add a Python package distribution resource to the collection.
-    pub fn add_python_package_distribution_resource(
-        &mut self,
-        resource: &PythonPackageDistributionResource,
-        location: &ConcreteResourceLocation,
-    ) -> Result<()> {
-        self.collector
-            .add_package_distribution_resource(resource, location)
-    }
-
-    /// Add a Python extension module to the collection.
-    pub fn add_python_extension_module(
-        &mut self,
-        resource: &PythonExtensionModule,
-        location: &ConcreteResourceLocation,
-    ) -> Result<()> {
-        self.collector
-            .add_python_extension_module(resource, location)
     }
 
     /// Add an extension module from a Python distribution to be linked into the binary.

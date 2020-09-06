@@ -336,6 +336,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn add_in_memory_module_source(&mut self, module: &PythonModuleSource) -> Result<()> {
         self.resources
+            .collector
             .add_python_module_source(module, &ConcreteResourceLocation::InMemory)
     }
 
@@ -344,7 +345,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         prefix: &str,
         module: &PythonModuleSource,
     ) -> Result<()> {
-        self.resources.add_python_module_source(
+        self.resources.collector.add_python_module_source(
             module,
             &ConcreteResourceLocation::RelativePath(prefix.to_string()),
         )
@@ -355,6 +356,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         module: &PythonModuleBytecodeFromSource,
     ) -> Result<()> {
         self.resources
+            .collector
             .add_python_module_bytecode_from_source(module, &ConcreteResourceLocation::InMemory)
     }
 
@@ -363,14 +365,17 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         prefix: &str,
         module: &PythonModuleBytecodeFromSource,
     ) -> Result<()> {
-        self.resources.add_python_module_bytecode_from_source(
-            module,
-            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-        )
+        self.resources
+            .collector
+            .add_python_module_bytecode_from_source(
+                module,
+                &ConcreteResourceLocation::RelativePath(prefix.to_string()),
+            )
     }
 
     fn add_in_memory_package_resource(&mut self, resource: &PythonPackageResource) -> Result<()> {
         self.resources
+            .collector
             .add_python_package_resource(resource, &ConcreteResourceLocation::InMemory)
     }
 
@@ -379,7 +384,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         prefix: &str,
         resource: &PythonPackageResource,
     ) -> Result<()> {
-        self.resources.add_python_package_resource(
+        self.resources.collector.add_python_package_resource(
             resource,
             &ConcreteResourceLocation::RelativePath(prefix.to_string()),
         )
@@ -390,7 +395,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         resource: &PythonPackageDistributionResource,
     ) -> Result<()> {
         self.resources
-            .add_python_package_distribution_resource(resource, &ConcreteResourceLocation::InMemory)
+            .collector
+            .add_package_distribution_resource(resource, &ConcreteResourceLocation::InMemory)
     }
 
     fn add_relative_path_package_distribution_resource(
@@ -398,7 +404,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         prefix: &str,
         resource: &PythonPackageDistributionResource,
     ) -> Result<()> {
-        self.resources.add_python_package_distribution_resource(
+        self.resources.collector.add_package_distribution_resource(
             resource,
             &ConcreteResourceLocation::RelativePath(prefix.to_string()),
         )
@@ -423,6 +429,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         }
 
         self.resources
+            .collector
             .add_python_extension_module(extension_module, &ConcreteResourceLocation::InMemory)
     }
 
@@ -432,7 +439,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         extension_module: &PythonExtensionModule,
     ) -> Result<()> {
         if self.distribution.is_extension_module_file_loadable() {
-            self.resources.add_python_extension_module(
+            self.resources.collector.add_python_extension_module(
                 extension_module,
                 &ConcreteResourceLocation::RelativePath(prefix.to_string()),
             )
@@ -541,7 +548,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         }
 
         if self.distribution.is_extension_module_file_loadable() {
-            self.resources.add_python_extension_module(
+            self.resources.collector.add_python_extension_module(
                 extension_module,
                 &ConcreteResourceLocation::RelativePath(prefix.to_string()),
             )
@@ -581,7 +588,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             }
             PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
                 if self.distribution.is_extension_module_file_loadable() {
-                    self.resources.add_python_extension_module(
+                    self.resources.collector.add_python_extension_module(
                         extension_module,
                         &ConcreteResourceLocation::RelativePath(prefix.to_string()),
                     )
@@ -602,7 +609,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                                 .resolve()?,
                         )
                 } else if self.distribution.is_extension_module_file_loadable() {
-                    self.resources.add_python_extension_module(
+                    self.resources.collector.add_python_extension_module(
                         extension_module,
                         &ConcreteResourceLocation::RelativePath(prefix.to_string()),
                     )
