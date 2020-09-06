@@ -8,6 +8,7 @@ Embedded Python resources in a binary.
 
 use {
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
+    super::standalone_builder::ExtensionModuleBuildState,
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Result},
     python_packaging::bytecode::PythonBytecodeCompiler,
@@ -22,31 +23,6 @@ use {
     std::iter::FromIterator,
     std::path::Path,
 };
-
-/// Holds state necessary to link an extension module into libpython.
-#[derive(Debug, Clone, PartialEq)]
-pub struct ExtensionModuleBuildState {
-    /// Extension C initialization function.
-    pub init_fn: Option<String>,
-
-    /// Object files to link into produced binary.
-    pub link_object_files: Vec<DataLocation>,
-
-    /// Frameworks this extension module needs to link against.
-    pub link_frameworks: BTreeSet<String>,
-
-    /// System libraries this extension module needs to link against.
-    pub link_system_libraries: BTreeSet<String>,
-
-    /// Static libraries this extension module needs to link against.
-    pub link_static_libraries: BTreeSet<String>,
-
-    /// Dynamic libraries this extension module needs to link against.
-    pub link_dynamic_libraries: BTreeSet<String>,
-
-    /// Dynamic libraries this extension module needs to link against.
-    pub link_external_libraries: BTreeSet<String>,
-}
 
 /// Represents Python resources to embed in a binary.
 ///

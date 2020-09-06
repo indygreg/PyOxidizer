@@ -18,20 +18,45 @@ use {
     python_packaging::bytecode::BytecodeCompiler,
     python_packaging::policy::{PythonPackagingPolicy, PythonResourcesPolicy},
     python_packaging::resource::{
-        BytecodeOptimizationLevel, PythonExtensionModule, PythonModuleBytecodeFromSource,
-        PythonModuleSource, PythonPackageDistributionResource, PythonPackageResource,
-        PythonResource,
+        BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
+        PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
+        PythonPackageResource, PythonResource,
     },
     python_packaging::resource_collection::{
         ConcreteResourceLocation, PrePackagedResource, PythonResourceCollector,
     },
     slog::warn,
-    std::collections::HashMap,
+    std::collections::{BTreeSet, HashMap},
     std::convert::TryFrom,
     std::path::{Path, PathBuf},
     std::sync::Arc,
     tempdir::TempDir,
 };
+
+/// Holds state necessary to link an extension module into libpython.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExtensionModuleBuildState {
+    /// Extension C initialization function.
+    pub init_fn: Option<String>,
+
+    /// Object files to link into produced binary.
+    pub link_object_files: Vec<DataLocation>,
+
+    /// Frameworks this extension module needs to link against.
+    pub link_frameworks: BTreeSet<String>,
+
+    /// System libraries this extension module needs to link against.
+    pub link_system_libraries: BTreeSet<String>,
+
+    /// Static libraries this extension module needs to link against.
+    pub link_static_libraries: BTreeSet<String>,
+
+    /// Dynamic libraries this extension module needs to link against.
+    pub link_dynamic_libraries: BTreeSet<String>,
+
+    /// Dynamic libraries this extension module needs to link against.
+    pub link_external_libraries: BTreeSet<String>,
+}
 
 /// A self-contained Python executable before it is compiled.
 #[derive(Clone, Debug)]
