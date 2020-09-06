@@ -15,6 +15,7 @@ use {
     super::standalone_distribution::StandaloneDistribution,
     crate::app_packaging::resource::FileContent,
     anyhow::{anyhow, Result},
+    python_packaging::bytecode::BytecodeCompiler,
     python_packaging::policy::{PythonPackagingPolicy, PythonResourcesPolicy},
     python_packaging::resource::{
         BytecodeOptimizationLevel, PythonExtensionModule, PythonModuleBytecodeFromSource,
@@ -633,7 +634,12 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         logger: &slog::Logger,
         opt_level: &str,
     ) -> Result<EmbeddedPythonBinaryData> {
-        let resources = self.resources.package(logger, &self.python_exe)?;
+        let resources = {
+            let mut compiler = BytecodeCompiler::new(&self.python_exe)?;
+
+            self.resources.package(logger, &mut compiler)?
+        };
+
         let mut extra_files = resources.extra_install_files()?;
         let linking_info = self.resolve_python_linking_info(logger, opt_level, &resources)?;
         let resources = EmbeddedResourcesBlobs::try_from(resources)?;

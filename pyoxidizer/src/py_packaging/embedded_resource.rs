@@ -10,7 +10,7 @@ use {
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Result},
-    python_packaging::bytecode::BytecodeCompiler,
+    python_packaging::bytecode::PythonBytecodeCompiler,
     python_packaging::policy::PythonResourcesPolicy,
     python_packaging::resource::{
         DataLocation, PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
@@ -292,7 +292,7 @@ impl PrePackagedResources {
     pub fn package(
         &self,
         logger: &slog::Logger,
-        python_exe: &Path,
+        compiler: &mut dyn PythonBytecodeCompiler,
     ) -> Result<EmbeddedPythonResources> {
         let mut file_seen = false;
         for module in self.collector.find_dunder_file()? {
@@ -312,8 +312,7 @@ impl PrePackagedResources {
             );
         }
 
-        let mut compiler = BytecodeCompiler::new(python_exe)?;
-        let resources = self.collector.to_prepared_python_resources(&mut compiler)?;
+        let resources = self.collector.to_prepared_python_resources(compiler)?;
 
         Ok(EmbeddedPythonResources {
             resources,
