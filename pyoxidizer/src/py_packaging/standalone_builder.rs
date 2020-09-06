@@ -228,9 +228,6 @@ impl StandalonePythonExecutableBuilder {
                 init_fn: module.init_fn.clone(),
                 link_static_libraries: BTreeSet::new(),
                 link_dynamic_libraries: BTreeSet::new(),
-                link_external_libraries: BTreeSet::from_iter(
-                    module.link_libraries.iter().map(|l| l.name.clone()),
-                ),
             },
         );
 
@@ -248,6 +245,10 @@ impl StandalonePythonExecutableBuilder {
             } else if depends.system {
                 self.libpython_link_context
                     .system_libraries
+                    .insert(depends.name.clone());
+            } else {
+                self.libpython_link_context
+                    .dynamic_libraries
                     .insert(depends.name.clone());
             }
         }
@@ -585,7 +586,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                         }
                     }),
                 ),
-                link_external_libraries: BTreeSet::new(),
             },
         );
 

@@ -79,6 +79,9 @@ pub struct LinkingContext {
     /// System libraries that will be linked against.
     pub system_libraries: BTreeSet<String>,
 
+    /// Dynamic libraries that will be linked against.
+    pub dynamic_libraries: BTreeSet<String>,
+
     /// Frameworks that will be linked against.
     ///
     /// Used on Apple platforms.
@@ -90,6 +93,7 @@ impl Default for LinkingContext {
         Self {
             object_files: Vec::new(),
             system_libraries: BTreeSet::new(),
+            dynamic_libraries: BTreeSet::new(),
             frameworks: BTreeSet::new(),
         }
     }
@@ -106,15 +110,11 @@ pub struct ExtensionModuleBuildState {
 
     /// Dynamic libraries this extension module needs to link against.
     pub link_dynamic_libraries: BTreeSet<String>,
-
-    /// Dynamic libraries this extension module needs to link against.
-    pub link_external_libraries: BTreeSet<String>,
 }
 
 /// Holds state necessary to link libpython.
 pub struct LibpythonLinkingInfo {
     pub link_libraries: BTreeSet<String>,
-    pub link_libraries_external: BTreeSet<String>,
 }
 
 /// Resolve state needed to link a libpython.
@@ -123,7 +123,6 @@ fn resolve_libpython_linking_info(
     extension_modules: &BTreeMap<String, ExtensionModuleBuildState>,
 ) -> Result<LibpythonLinkingInfo> {
     let mut link_libraries = BTreeSet::new();
-    let mut link_libraries_external = BTreeSet::new();
 
     warn!(
         logger,
@@ -141,17 +140,9 @@ fn resolve_libpython_linking_info(
             warn!(logger, "dynamic library {} required by {}", library, name);
             link_libraries.insert(library.clone());
         }
-
-        for library in &state.link_external_libraries {
-            warn!(logger, "dynamic library {} required by {}", library, name);
-            link_libraries_external.insert(library.clone());
-        }
     }
 
-    Ok(LibpythonLinkingInfo {
-        link_libraries,
-        link_libraries_external,
-    })
+    Ok(LibpythonLinkingInfo { link_libraries })
 }
 
 #[derive(Debug)]
@@ -255,12 +246,10 @@ pub fn link_libpython(
     // use this pass to collect the set of libraries that we need to link
     // against.
     let mut needed_libraries: BTreeSet<String> = BTreeSet::new();
-    let mut needed_libraries_external = BTreeSet::new();
 
     let linking_info = resolve_libpython_linking_info(logger, extension_modules)?;
 
     needed_libraries.extend(linking_info.link_libraries);
-    needed_libraries_external.extend(linking_info.link_libraries_external);
 
     for (i, location) in context.object_files.iter().enumerate() {
         match location {
@@ -306,7 +295,7 @@ pub fn link_libpython(
         cargo_metadata.push(format!("cargo:rustc-link-lib={}", lib));
     }
 
-    for lib in needed_libraries_external {
+    for lib in &context.dynamic_libraries {
         cargo_metadata.push(format!("cargo:rustc-link-lib={}", lib));
     }
 
