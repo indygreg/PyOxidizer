@@ -9,11 +9,12 @@ use {
     },
     super::config::{EmbeddedPythonConfig, RawAllocator},
     super::distribution::{BinaryLibpythonLinkMode, PythonDistribution},
-    super::embedded_resource::{EmbeddedPythonResources, PrePackagedResources},
+    super::embedded_resource::EmbeddedPythonResources,
+    super::filtering::{filter_btreemap, resolve_resource_names_from_files},
     super::libpython::link_libpython,
     super::packaging_tool::{find_resources, pip_install, read_virtualenv, setup_py_install},
     super::standalone_distribution::StandaloneDistribution,
-    crate::app_packaging::resource::FileContent,
+    crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Result},
     python_packaging::bytecode::BytecodeCompiler,
     python_packaging::policy::{PythonPackagingPolicy, PythonResourcesPolicy},
@@ -26,8 +27,9 @@ use {
         ConcreteResourceLocation, PrePackagedResource, PythonResourceCollector,
     },
     slog::warn,
-    std::collections::{BTreeSet, HashMap},
+    std::collections::{BTreeMap, BTreeSet, HashMap},
     std::convert::TryFrom,
+    std::iter::FromIterator,
     std::path::{Path, PathBuf},
     std::sync::Arc,
     tempdir::TempDir,
@@ -84,7 +86,10 @@ pub struct StandalonePythonExecutableBuilder {
     packaging_policy: PythonPackagingPolicy,
 
     /// Python resources to be embedded in the binary.
-    resources: PrePackagedResources,
+    resources_collector: PythonResourceCollector,
+
+    /// Holds state of extension modules that will be linked.
+    extension_module_states: BTreeMap<String, ExtensionModuleBuildState>,
 
     /// Configuration of the embedded Python interpreter.
     config: EmbeddedPythonConfig,
@@ -151,10 +156,11 @@ impl StandalonePythonExecutableBuilder {
             link_mode,
             supports_in_memory_dynamically_linked_extension_loading,
             packaging_policy: packaging_policy.clone(),
-            resources: PrePackagedResources::new(
+            resources_collector: PythonResourceCollector::new(
                 packaging_policy.get_resources_policy(),
                 &cache_tag,
             ),
+            extension_module_states: BTreeMap::new(),
             config,
             python_exe,
         });
@@ -189,6 +195,65 @@ impl StandalonePythonExecutableBuilder {
                 self.add_package_resource(&resource)?;
             }
         }
+
+        Ok(())
+    }
+
+    fn add_builtin_extension_module(&mut self, module: &PythonExtensionModule) -> Result<()> {
+        if module.object_file_data.is_empty() {
+            return Err(anyhow!(
+                "cannot add extension module {} as builtin because it lacks object file data",
+                module.name
+            ));
+        }
+
+        self.resources_collector
+            .add_builtin_python_extension_module(module)?;
+
+        self.extension_module_states.insert(
+            module.name.clone(),
+            ExtensionModuleBuildState {
+                init_fn: module.init_fn.clone(),
+                link_object_files: module.object_file_data.clone(),
+                link_frameworks: BTreeSet::new(),
+                link_system_libraries: BTreeSet::new(),
+                link_static_libraries: BTreeSet::new(),
+                link_dynamic_libraries: BTreeSet::new(),
+                link_external_libraries: BTreeSet::from_iter(
+                    module.link_libraries.iter().map(|l| l.name.clone()),
+                ),
+            },
+        );
+
+        Ok(())
+    }
+
+    // TODO move logic into PythonResourceCollector.add_python_extension_module().
+    fn add_in_memory_extension_module_shared_library(
+        &mut self,
+        module: &str,
+        is_package: bool,
+        data: &[u8],
+    ) -> Result<()> {
+        self.resources_collector.add_python_extension_module(
+            &PythonExtensionModule {
+                name: module.to_string(),
+                init_fn: None,
+                extension_file_suffix: "".to_string(),
+                shared_library: Some(DataLocation::Memory(data.to_vec())),
+                object_file_data: vec![],
+                is_package,
+                link_libraries: vec![],
+                is_stdlib: false,
+                builtin_default: false,
+                required: false,
+                variant: None,
+                licenses: None,
+                license_texts: None,
+                license_public_domain: None,
+            },
+            &ConcreteResourceLocation::InMemory,
+        )?;
 
         Ok(())
     }
@@ -288,17 +353,17 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     }
 
     fn resource_collector(&self) -> &PythonResourceCollector {
-        &self.resources.collector
+        &self.resources_collector
     }
 
     fn iter_resources<'a>(
         &'a self,
     ) -> Box<dyn Iterator<Item = (&'a String, &'a PrePackagedResource)> + 'a> {
-        Box::new(self.resources.collector.iter_resources())
+        Box::new(self.resources_collector.iter_resources())
     }
 
     fn builtin_extension_module_names<'a>(&'a self) -> Box<dyn Iterator<Item = &'a String> + 'a> {
-        Box::new(self.resources.builtin_extension_module_names())
+        Box::new(self.extension_module_states.keys())
     }
 
     fn pip_install(
@@ -360,8 +425,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     }
 
     fn add_in_memory_module_source(&mut self, module: &PythonModuleSource) -> Result<()> {
-        self.resources
-            .collector
+        self.resources_collector
             .add_python_module_source(module, &ConcreteResourceLocation::InMemory)
     }
 
@@ -370,7 +434,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         prefix: &str,
         module: &PythonModuleSource,
     ) -> Result<()> {
-        self.resources.collector.add_python_module_source(
+        self.resources_collector.add_python_module_source(
             module,
             &ConcreteResourceLocation::RelativePath(prefix.to_string()),
         )
@@ -380,8 +444,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &mut self,
         module: &PythonModuleBytecodeFromSource,
     ) -> Result<()> {
-        self.resources
-            .collector
+        self.resources_collector
             .add_python_module_bytecode_from_source(module, &ConcreteResourceLocation::InMemory)
     }
 
@@ -390,8 +453,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         prefix: &str,
         module: &PythonModuleBytecodeFromSource,
     ) -> Result<()> {
-        self.resources
-            .collector
+        self.resources_collector
             .add_python_module_bytecode_from_source(
                 module,
                 &ConcreteResourceLocation::RelativePath(prefix.to_string()),
@@ -399,8 +461,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     }
 
     fn add_in_memory_package_resource(&mut self, resource: &PythonPackageResource) -> Result<()> {
-        self.resources
-            .collector
+        self.resources_collector
             .add_python_package_resource(resource, &ConcreteResourceLocation::InMemory)
     }
 
@@ -409,7 +470,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         prefix: &str,
         resource: &PythonPackageResource,
     ) -> Result<()> {
-        self.resources.collector.add_python_package_resource(
+        self.resources_collector.add_python_package_resource(
             resource,
             &ConcreteResourceLocation::RelativePath(prefix.to_string()),
         )
@@ -419,8 +480,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &mut self,
         resource: &PythonPackageDistributionResource,
     ) -> Result<()> {
-        self.resources
-            .collector
+        self.resources_collector
             .add_package_distribution_resource(resource, &ConcreteResourceLocation::InMemory)
     }
 
@@ -429,7 +489,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         prefix: &str,
         resource: &PythonPackageDistributionResource,
     ) -> Result<()> {
-        self.resources.collector.add_package_distribution_resource(
+        self.resources_collector.add_package_distribution_resource(
             resource,
             &ConcreteResourceLocation::RelativePath(prefix.to_string()),
         )
@@ -439,8 +499,56 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &mut self,
         extension_module: &PythonExtensionModule,
     ) -> Result<()> {
-        self.resources
-            .add_builtin_distribution_extension_module(&extension_module)
+        self.extension_module_states.insert(
+            extension_module.name.clone(),
+            ExtensionModuleBuildState {
+                init_fn: extension_module.init_fn.clone(),
+                link_object_files: if extension_module.builtin_default {
+                    vec![]
+                } else {
+                    extension_module.object_file_data.clone()
+                },
+                link_frameworks: BTreeSet::from_iter(
+                    extension_module.link_libraries.iter().filter_map(|link| {
+                        if link.framework {
+                            Some(link.name.clone())
+                        } else {
+                            None
+                        }
+                    }),
+                ),
+                link_system_libraries: BTreeSet::from_iter(
+                    extension_module.link_libraries.iter().filter_map(|link| {
+                        if link.system {
+                            Some(link.name.clone())
+                        } else {
+                            None
+                        }
+                    }),
+                ),
+                link_static_libraries: BTreeSet::from_iter(
+                    extension_module.link_libraries.iter().filter_map(|link| {
+                        if link.static_library.is_some() {
+                            Some(link.name.clone())
+                        } else {
+                            None
+                        }
+                    }),
+                ),
+                link_dynamic_libraries: BTreeSet::from_iter(
+                    extension_module.link_libraries.iter().filter_map(|link| {
+                        if link.dynamic_library.is_some() {
+                            Some(link.name.clone())
+                        } else {
+                            None
+                        }
+                    }),
+                ),
+                link_external_libraries: BTreeSet::new(),
+            },
+        );
+
+        Ok(())
     }
 
     fn add_in_memory_distribution_extension_module(
@@ -453,8 +561,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             ));
         }
 
-        self.resources
-            .collector
+        self.resources_collector
             .add_python_extension_module(extension_module, &ConcreteResourceLocation::InMemory)
     }
 
@@ -464,7 +571,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         extension_module: &PythonExtensionModule,
     ) -> Result<()> {
         if self.distribution.is_extension_module_file_loadable() {
-            self.resources.collector.add_python_extension_module(
+            self.resources_collector.add_python_extension_module(
                 extension_module,
                 &ConcreteResourceLocation::RelativePath(prefix.to_string()),
             )
@@ -536,20 +643,18 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         if self.supports_in_memory_dynamically_linked_extension_loading
             && extension_module.shared_library.is_some()
         {
-            self.resources
-                .add_in_memory_extension_module_shared_library(
-                    &extension_module.name,
-                    extension_module.is_package,
-                    &extension_module
-                        .shared_library
-                        .as_ref()
-                        .unwrap()
-                        .resolve()?,
-                )
+            self.add_in_memory_extension_module_shared_library(
+                &extension_module.name,
+                extension_module.is_package,
+                &extension_module
+                    .shared_library
+                    .as_ref()
+                    .unwrap()
+                    .resolve()?,
+            )
         } else if !extension_module.object_file_data.is_empty() {
             // TODO we shouldn't be adding a builtin extension module from this API.
-            self.resources
-                .add_builtin_extension_module(extension_module)
+            self.add_builtin_extension_module(extension_module)
         } else if extension_module.shared_library.is_some() {
             Err(anyhow!(
                 "loading extension modules from memory not supported by this build configuration"
@@ -573,7 +678,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         }
 
         if self.distribution.is_extension_module_file_loadable() {
-            self.resources.collector.add_python_extension_module(
+            self.resources_collector.add_python_extension_module(
                 extension_module,
                 &ConcreteResourceLocation::RelativePath(prefix.to_string()),
             )
@@ -597,23 +702,22 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         match self.packaging_policy.get_resources_policy().clone() {
             PythonResourcesPolicy::InMemoryOnly => {
                 if self.supports_in_memory_dynamically_linked_extension_loading {
-                    self.resources
-                        .add_in_memory_extension_module_shared_library(
-                            &extension_module.name,
-                            extension_module.is_package,
-                            &extension_module
-                                .shared_library
-                                .as_ref()
-                                .unwrap()
-                                .resolve()?,
-                        )
+                    self.add_in_memory_extension_module_shared_library(
+                        &extension_module.name,
+                        extension_module.is_package,
+                        &extension_module
+                            .shared_library
+                            .as_ref()
+                            .unwrap()
+                            .resolve()?,
+                    )
                 } else {
                     Err(anyhow!("in-memory-only resources policy active but in-memory extension module importing not supported by this configuration: cannot load {}", extension_module.name))
                 }
             }
             PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
                 if self.distribution.is_extension_module_file_loadable() {
-                    self.resources.collector.add_python_extension_module(
+                    self.resources_collector.add_python_extension_module(
                         extension_module,
                         &ConcreteResourceLocation::RelativePath(prefix.to_string()),
                     )
@@ -623,18 +727,17 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             }
             PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(ref prefix) => {
                 if self.supports_in_memory_dynamically_linked_extension_loading {
-                    self.resources
-                        .add_in_memory_extension_module_shared_library(
-                            &extension_module.name,
-                            extension_module.is_package,
-                            &extension_module
-                                .shared_library
-                                .as_ref()
-                                .unwrap()
-                                .resolve()?,
-                        )
+                    self.add_in_memory_extension_module_shared_library(
+                        &extension_module.name,
+                        extension_module.is_package,
+                        &extension_module
+                            .shared_library
+                            .as_ref()
+                            .unwrap()
+                            .resolve()?,
+                    )
                 } else if self.distribution.is_extension_module_file_loadable() {
-                    self.resources.collector.add_python_extension_module(
+                    self.resources_collector.add_python_extension_module(
                         extension_module,
                         &ConcreteResourceLocation::RelativePath(prefix.to_string()),
                     )
@@ -649,8 +752,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &mut self,
         extension_module: &PythonExtensionModule,
     ) -> Result<()> {
-        self.resources
-            .add_builtin_extension_module(extension_module)
+        self.add_builtin_extension_module(extension_module)
     }
 
     fn filter_resources_from_files(
@@ -659,8 +761,23 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         files: &[&Path],
         glob_patterns: &[&str],
     ) -> Result<()> {
-        self.resources
-            .filter_from_files(logger, files, glob_patterns)
+        let resource_names = resolve_resource_names_from_files(files, glob_patterns)?;
+
+        warn!(logger, "filtering module entries");
+
+        self.resources_collector.filter_resources_mut(|resource| {
+            if !resource_names.contains(&resource.name) {
+                warn!(logger, "removing {}", resource.name);
+                false
+            } else {
+                true
+            }
+        })?;
+
+        warn!(logger, "filtering embedded extension modules");
+        filter_btreemap(logger, &mut self.extension_module_states, &resource_names);
+
+        Ok(())
     }
 
     fn requires_jemalloc(&self) -> bool {
@@ -672,13 +789,46 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         logger: &slog::Logger,
         opt_level: &str,
     ) -> Result<EmbeddedPythonContext> {
-        let resources = {
-            let mut compiler = BytecodeCompiler::new(&self.python_exe)?;
+        let mut file_seen = false;
+        for module in self.resources_collector.find_dunder_file()? {
+            file_seen = true;
+            warn!(logger, "warning: {} contains __file__", module);
+        }
 
-            self.resources.package(logger, &mut compiler)?
+        if file_seen {
+            warn!(logger, "__file__ was encountered in some embedded modules");
+            warn!(
+                logger,
+                "PyOxidizer does not set __file__ and this may create problems at run-time"
+            );
+            warn!(
+                logger,
+                "See https://github.com/indygreg/PyOxidizer/issues/69 for more"
+            );
+        }
+
+        let compiled_resources = {
+            let mut compiler = BytecodeCompiler::new(&self.python_exe)?;
+            self.resources_collector.compile_resources(&mut compiler)?
         };
 
-        let mut extra_files = resources.extra_install_files()?;
+        let mut extra_files = FileManifest::default();
+
+        for (path, location, executable) in &compiled_resources.extra_files {
+            extra_files.add_file(
+                path,
+                &FileContent {
+                    data: location.resolve()?,
+                    executable: *executable,
+                },
+            )?;
+        }
+
+        let resources = EmbeddedPythonResources {
+            resources: compiled_resources,
+            extension_modules: self.extension_module_states.clone(),
+        };
+
         let linking_info = self.resolve_python_linking_info(logger, opt_level, &resources)?;
         let resources = EmbeddedResourcesBlobs::try_from(resources)?;
 
