@@ -208,7 +208,6 @@ pub struct LibpythonInfo {
 /// Create a static libpython from a Python distribution.
 ///
 /// Returns a vector of cargo: lines that can be printed in build scripts.
-#[allow(clippy::cognitive_complexity, clippy::too_many_arguments)]
 pub fn link_libpython(
     logger: &slog::Logger,
     context: &LibPythonBuildContext,
