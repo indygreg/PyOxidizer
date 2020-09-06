@@ -182,6 +182,12 @@ impl StandalonePythonExecutableBuilder {
                 .insert("msvcrt".to_string());
         }
 
+        if let Some(lis) = self.distribution.license_infos.get("python") {
+            self.libpython_link_context
+                .license_infos
+                .insert("python".to_string(), lis.clone());
+        }
+
         for ext in self.packaging_policy.resolve_python_extension_modules(
             self.distribution.extension_modules.values(),
             &self.target_triple,
@@ -248,6 +254,12 @@ impl StandalonePythonExecutableBuilder {
                     .dynamic_libraries
                     .insert(depends.name.clone());
             }
+        }
+
+        if let Some(lis) = self.distribution.license_infos.get(&module.name) {
+            self.libpython_link_context
+                .license_infos
+                .insert(module.name.clone(), lis.clone());
         }
 
         Ok(())
@@ -566,6 +578,12 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                     .dynamic_libraries
                     .insert(depends.name.clone());
             }
+        }
+
+        if let Some(lis) = self.distribution.license_infos.get(&extension_module.name) {
+            self.libpython_link_context
+                .license_infos
+                .insert(extension_module.name.clone(), lis.clone());
         }
 
         self.extension_module_states.insert(

@@ -71,7 +71,7 @@ pub fn make_config_c(extensions: &[(String, String)]) -> String {
 ///
 /// Note that this context is only for producing libpython: it is very
 /// linker centric and doesn't track state like Python resources.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct LinkingContext {
     /// Object files that will be linked together.
     pub object_files: Vec<DataLocation>,
@@ -89,6 +89,12 @@ pub struct LinkingContext {
     ///
     /// Used on Apple platforms.
     pub frameworks: BTreeSet<String>,
+
+    /// Holds licensing info for things being linked together.
+    ///
+    /// Keys are entity name (e.g. extension name). Values are license
+    /// structures.
+    pub license_infos: BTreeMap<String, Vec<LicenseInfo>>,
 }
 
 impl Default for LinkingContext {
@@ -99,6 +105,7 @@ impl Default for LinkingContext {
             dynamic_libraries: BTreeSet::new(),
             static_libraries: BTreeSet::new(),
             frameworks: BTreeSet::new(),
+            license_infos: BTreeMap::new(),
         }
     }
 }
@@ -294,23 +301,10 @@ pub fn link_libpython(
         cargo_metadata.push(format!("cargo:rustc-link-search=native={}", path.display()));
     }
 
-    let mut license_infos = BTreeMap::new();
-
-    if let Some(li) = dist.license_infos.get("python") {
-        license_infos.insert("python".to_string(), li.clone());
-    }
-
-    // TODO capture license info for extensions outside the distribution.
-    for (name, _) in builtin_extensions.iter() {
-        if let Some(li) = dist.license_infos.get(name) {
-            license_infos.insert(name.clone(), li.clone());
-        }
-    }
-
     Ok(LibpythonInfo {
         libpython_path,
         libpyembeddedconfig_path,
         cargo_metadata,
-        license_infos,
+        license_infos: context.license_infos.clone(),
     })
 }
