@@ -7,8 +7,8 @@ Building a native binary containing Python.
 */
 
 use {
-    super::standalone_distribution::{LicenseInfo, StandaloneDistribution},
-    anyhow::Result,
+    super::standalone_distribution::LicenseInfo,
+    anyhow::{anyhow, Result},
     lazy_static::lazy_static,
     python_packaging::resource::DataLocation,
     slog::warn,
@@ -79,6 +79,11 @@ pub struct LibPythonBuildContext {
     /// Compiled flags to use when compiling the object containing Py_inittab.
     pub inittab_cflags: Option<Vec<String>>,
 
+    /// Include files defining Python headers.
+    ///
+    /// These are necessary to compile code that references Python types.
+    pub includes: BTreeMap<PathBuf, DataLocation>,
+
     /// Object files that will be linked together.
     pub object_files: Vec<DataLocation>,
 
@@ -116,6 +121,7 @@ impl Default for LibPythonBuildContext {
     fn default() -> Self {
         Self {
             inittab_cflags: None,
+            includes: BTreeMap::new(),
             object_files: Vec::new(),
             library_search_paths: BTreeSet::new(),
             system_libraries: BTreeSet::new(),
@@ -132,6 +138,7 @@ impl LibPythonBuildContext {
     /// Merge multiple `LinkingContext` together to produce an aggregate instance.
     pub fn merge(contexts: &[&Self]) -> Self {
         let mut inittab_cflags = None;
+        let mut includes = BTreeMap::new();
         let mut object_files = Vec::new();
         let mut library_search_paths = BTreeSet::new();
         let mut system_libraries = BTreeSet::new();
@@ -145,6 +152,9 @@ impl LibPythonBuildContext {
             // Last write wins.
             if let Some(flags) = &context.inittab_cflags {
                 inittab_cflags = Some(flags.clone());
+            }
+            for (k, v) in &context.includes {
+                includes.insert(k.clone(), v.clone());
             }
             for o in &context.object_files {
                 object_files.push(o.clone());
@@ -174,6 +184,7 @@ impl LibPythonBuildContext {
 
         Self {
             inittab_cflags,
+            includes,
             object_files,
             library_search_paths,
             system_libraries,
@@ -200,7 +211,6 @@ pub struct LibpythonInfo {
 #[allow(clippy::cognitive_complexity, clippy::too_many_arguments)]
 pub fn link_libpython(
     logger: &slog::Logger,
-    dist: &StandaloneDistribution,
     context: &LibPythonBuildContext,
     out_dir: &Path,
     host_triple: &str,
@@ -235,11 +245,15 @@ pub fn link_libpython(
     fs::write(&config_c_path, config_c_source.as_bytes())?;
     fs::write(&config_c_temp_path, config_c_source.as_bytes())?;
 
-    // We need to make all .h includes accessible.
-    for (name, fs_path) in &dist.includes {
-        let full = temp_dir_path.join(name);
-        create_dir_all(full.parent().expect("parent directory"))?;
-        fs::copy(fs_path, full)?;
+    // Gather all includes into the temporary directory.
+    for (rel_path, location) in &context.includes {
+        let full = temp_dir_path.join(rel_path);
+        create_dir_all(
+            full.parent()
+                .ok_or_else(|| anyhow!("unable to resolve parent directory"))?,
+        )?;
+        let data = location.resolve()?;
+        std::fs::write(&full, &data)?;
     }
 
     warn!(logger, "compiling custom config.c to object file");
