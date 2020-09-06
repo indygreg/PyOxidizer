@@ -257,6 +257,22 @@ impl StandalonePythonExecutableBuilder {
         Ok(())
     }
 
+    /// Obtain a list of built-in extensions.
+    ///
+    /// The returned list will likely make its way to PyImport_Inittab.
+    fn builtin_extensions(&self) -> Vec<(String, String)> {
+        self.extension_module_states
+            .iter()
+            .filter_map(|(name, state)| {
+                if let Some(init_fn) = &state.init_fn {
+                    Some((name.clone(), init_fn.clone()))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
     /// Build a Python library suitable for linking.
     ///
     /// This will take the underlying distribution, resources, and
@@ -286,6 +302,7 @@ impl StandalonePythonExecutableBuilder {
                 let library_info = link_libpython(
                     logger,
                     &self.distribution,
+                    &self.builtin_extensions(),
                     resources,
                     &temp_dir_path,
                     &self.host_triple,

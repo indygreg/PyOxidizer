@@ -37,22 +37,6 @@ pub struct EmbeddedPythonResources<'a> {
 }
 
 impl<'a> EmbeddedPythonResources<'a> {
-    /// Obtain a list of built-in extensions.
-    ///
-    /// The returned list will likely make its way to PyImport_Inittab.
-    pub fn builtin_extensions(&self) -> Vec<(String, String)> {
-        self.extension_modules
-            .iter()
-            .filter_map(|(name, state)| {
-                if let Some(init_fn) = &state.init_fn {
-                    Some((name.clone(), init_fn.clone()))
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
-
     /// Resolve state needed to link a libpython.
     pub fn resolve_libpython_linking_info(
         &self,
