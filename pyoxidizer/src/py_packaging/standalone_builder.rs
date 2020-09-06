@@ -4,7 +4,7 @@
 
 use {
     super::binary::{
-        EmbeddedPythonBinaryData, EmbeddedResourcesBlobs, LibpythonLinkMode, PythonBinaryBuilder,
+        EmbeddedPythonContext, EmbeddedResourcesBlobs, LibpythonLinkMode, PythonBinaryBuilder,
         PythonLinkingInfo,
     },
     super::config::{EmbeddedPythonConfig, RawAllocator},
@@ -629,11 +629,11 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         self.config.raw_allocator == RawAllocator::Jemalloc
     }
 
-    fn as_embedded_python_binary_data(
+    fn to_embedded_python_context(
         &self,
         logger: &slog::Logger,
         opt_level: &str,
-    ) -> Result<EmbeddedPythonBinaryData> {
+    ) -> Result<EmbeddedPythonContext> {
         let resources = {
             let mut compiler = BytecodeCompiler::new(&self.python_exe)?;
 
@@ -656,13 +656,13 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             }
         }
 
-        Ok(EmbeddedPythonBinaryData {
+        Ok(EmbeddedPythonContext {
             config: self.config.clone(),
             linking_info,
             resources,
             extra_files,
-            host: self.host_triple.clone(),
-            target: self.target_triple.clone(),
+            host_triple: self.host_triple.clone(),
+            target_triple: self.target_triple.clone(),
         })
     }
 }
@@ -756,11 +756,11 @@ pub mod tests {
         }
     }
 
-    pub fn get_embedded(logger: &slog::Logger) -> Result<EmbeddedPythonBinaryData> {
+    pub fn get_embedded(logger: &slog::Logger) -> Result<EmbeddedPythonContext> {
         let options = StandalonePythonExecutableBuilderOptions::default();
         let (_, exe) = options.new_builder()?;
 
-        exe.as_embedded_python_binary_data(logger, "0")
+        exe.to_embedded_python_context(logger, "0")
     }
 
     #[test]

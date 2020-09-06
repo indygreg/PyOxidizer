@@ -307,12 +307,12 @@ pub trait PythonBinaryBuilder {
     /// Whether the binary requires the jemalloc library.
     fn requires_jemalloc(&self) -> bool;
 
-    /// Obtain an `EmbeddedPythonBinaryData` instance from this one.
-    fn as_embedded_python_binary_data(
+    /// Obtain an `EmbeddedPythonContext` instance from this one.
+    fn to_embedded_python_context(
         &self,
         logger: &slog::Logger,
         opt_level: &str,
-    ) -> Result<EmbeddedPythonBinaryData>;
+    ) -> Result<EmbeddedPythonContext>;
 }
 
 /// Describes how to link a binary against Python.
@@ -361,7 +361,7 @@ impl<'a> TryFrom<EmbeddedPythonResources<'a>> for EmbeddedResourcesBlobs {
 }
 
 /// Holds filesystem paths to resources required to build a binary embedding Python.
-pub struct EmbeddedPythonBinaryPaths {
+pub struct EmbeddedPythonPaths {
     /// File containing a list of module names.
     pub module_names: PathBuf,
 
@@ -381,8 +381,8 @@ pub struct EmbeddedPythonBinaryPaths {
     pub cargo_metadata: PathBuf,
 }
 
-/// Represents resources to embed Python in a binary.
-pub struct EmbeddedPythonBinaryData {
+/// Holds context necessary to embed Python in a binary.
+pub struct EmbeddedPythonContext {
     /// The configuration for the embedded interpreter.
     pub config: EmbeddedPythonConfig,
 
@@ -396,15 +396,15 @@ pub struct EmbeddedPythonBinaryData {
     pub extra_files: FileManifest,
 
     /// Rust target triple for the host we are running on.
-    pub host: String,
+    pub host_triple: String,
 
     /// Rust target triple for the target we are building for.
-    pub target: String,
+    pub target_triple: String,
 }
 
-impl EmbeddedPythonBinaryData {
+impl EmbeddedPythonContext {
     /// Write out files needed to link a binary.
-    pub fn write_files(&self, dest_dir: &Path) -> Result<EmbeddedPythonBinaryPaths> {
+    pub fn write_files(&self, dest_dir: &Path) -> Result<EmbeddedPythonPaths> {
         let module_names = dest_dir.join("py-module-names");
         let mut fh = File::create(&module_names)?;
         fh.write_all(&self.resources.module_names)?;
@@ -454,7 +454,7 @@ impl EmbeddedPythonBinaryData {
         let mut fh = File::create(&cargo_metadata)?;
         fh.write_all(cargo_metadata_lines.join("\n").as_bytes())?;
 
-        Ok(EmbeddedPythonBinaryPaths {
+        Ok(EmbeddedPythonPaths {
             module_names,
             embedded_resources,
             libpython,

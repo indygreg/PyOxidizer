@@ -59,7 +59,7 @@ impl BuildTarget for PythonEmbeddedResources {
 
         let embedded = self
             .exe
-            .as_embedded_python_binary_data(&context.logger, &context.opt_level)?;
+            .to_embedded_python_context(&context.logger, &context.opt_level)?;
 
         embedded.write_files(&context.output_path)?;
 
