@@ -7,24 +7,13 @@ Embedded Python resources in a binary.
 */
 
 use {
+    super::libpython::LibpythonLinkingInfo,
     super::standalone_builder::ExtensionModuleBuildState,
     anyhow::Result,
-    python_packaging::resource::DataLocation,
     python_packaging::resource_collection::CompiledResourcesCollection,
     slog::{info, warn},
     std::collections::{BTreeMap, BTreeSet},
 };
-
-/// Holds state necessary to link libpython.
-pub struct LibpythonLinkingInfo {
-    /// Object files that need to be linked.
-    pub object_files: Vec<DataLocation>,
-
-    pub link_libraries: BTreeSet<String>,
-    pub link_frameworks: BTreeSet<String>,
-    pub link_system_libraries: BTreeSet<String>,
-    pub link_libraries_external: BTreeSet<String>,
-}
 
 /// Represents Python resources to embed in a binary.
 #[derive(Debug, Default, Clone)]

@@ -66,6 +66,17 @@ pub fn make_config_c(extensions: &[(String, String)]) -> String {
     lines.join("\n")
 }
 
+/// Holds state necessary to link libpython.
+pub struct LibpythonLinkingInfo {
+    /// Object files that need to be linked.
+    pub object_files: Vec<DataLocation>,
+
+    pub link_libraries: BTreeSet<String>,
+    pub link_frameworks: BTreeSet<String>,
+    pub link_system_libraries: BTreeSet<String>,
+    pub link_libraries_external: BTreeSet<String>,
+}
+
 #[derive(Debug)]
 pub struct LibpythonInfo {
     pub libpython_path: PathBuf,
