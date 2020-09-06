@@ -16,7 +16,7 @@ use {
         PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
         PythonPackageDistributionResource, PythonPackageResource, PythonResource,
     },
-    python_packaging::resource_collection::PrePackagedResource,
+    python_packaging::resource_collection::{ConcreteResourceLocation, PrePackagedResource},
     std::collections::HashMap,
     std::fs::File,
     std::io::Write,
@@ -104,32 +104,16 @@ pub trait PythonBinaryBuilder {
         extra_global_arguments: &[String],
     ) -> Result<Vec<PythonResource>>;
 
-    /// Add Python module source code to be imported from memory to the embedded resources.
-    fn add_in_memory_module_source(&mut self, module: &PythonModuleSource) -> Result<()>;
-
-    /// Add Python module source code to be imported from the filesystem relative to the produced binary.
-    fn add_relative_path_module_source(
+    /// Add a `PythonModuleSource` to the resources collection.
+    ///
+    /// The location to load the resource from is optional. If specified, it
+    /// will be used. If not, an appropriate location based on the resources
+    /// policy will be chosen.
+    fn add_python_module_source(
         &mut self,
-        prefix: &str,
         module: &PythonModuleSource,
+        location: Option<ConcreteResourceLocation>,
     ) -> Result<()>;
-
-    /// Add Python module source code to a location as determined by the builder's resource policy.
-    fn add_module_source(&mut self, module: &PythonModuleSource) -> Result<()> {
-        match self
-            .python_packaging_policy()
-            .get_resources_policy()
-            .clone()
-        {
-            PythonResourcesPolicy::InMemoryOnly
-            | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
-                self.add_in_memory_module_source(module)
-            }
-            PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
-                self.add_relative_path_module_source(prefix, module)
-            }
-        }
-    }
 
     /// Add a Python module bytecode to be imported from memory to the embedded resources.
     fn add_in_memory_module_bytecode(

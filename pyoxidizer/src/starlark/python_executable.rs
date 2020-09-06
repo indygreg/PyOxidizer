@@ -21,6 +21,7 @@ use {
         BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource,
         PythonModuleSource as RawPythonModuleSource,
     },
+    python_packaging::resource_collection::ConcreteResourceLocation,
     slog::{info, warn},
     starlark::environment::Environment,
     starlark::values::{
@@ -332,14 +333,16 @@ impl PythonExecutable {
 
         let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
         info!(&logger, "adding in-memory source module {}", m.name);
-        self.exe.add_in_memory_module_source(&m).map_err(|e| {
-            RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "add_in_memory_module_source".to_string(),
-            }
-            .into()
-        })?;
+        self.exe
+            .add_python_module_source(&m, Some(ConcreteResourceLocation::InMemory))
+            .map_err(|e| {
+                RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "add_in_memory_module_source".to_string(),
+                }
+                .into()
+            })?;
 
         Ok(Value::new(None))
     }
@@ -363,7 +366,7 @@ impl PythonExecutable {
             "adding executable relative source module {}", m.name
         );
         self.exe
-            .add_relative_path_module_source(&prefix, &m)
+            .add_python_module_source(&m, Some(ConcreteResourceLocation::RelativePath(prefix)))
             .map_err(|e| {
                 RuntimeError {
                     code: "PYOXIDIZER_BUILD",
@@ -385,7 +388,7 @@ impl PythonExecutable {
 
         let m = module.downcast_apply(|m: &PythonSourceModule| m.module.clone());
         info!(&logger, "adding source module {}", m.name);
-        self.exe.add_module_source(&m).map_err(|e| {
+        self.exe.add_python_module_source(&m, None).map_err(|e| {
             RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
