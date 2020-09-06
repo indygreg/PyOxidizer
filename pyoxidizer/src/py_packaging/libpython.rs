@@ -8,7 +8,7 @@ Building a native binary containing Python.
 
 use {
     super::standalone_distribution::{LicenseInfo, StandaloneDistribution},
-    anyhow::{anyhow, Result},
+    anyhow::Result,
     lazy_static::lazy_static,
     python_packaging::resource::DataLocation,
     slog::warn,
@@ -79,6 +79,9 @@ pub struct LinkingContext {
     /// Object files that will be linked together.
     pub object_files: Vec<DataLocation>,
 
+    /// Filesystem paths to add to linker search path.
+    pub library_search_paths: BTreeSet<PathBuf>,
+
     /// System libraries that will be linked against.
     pub system_libraries: BTreeSet<String>,
 
@@ -110,6 +113,7 @@ impl Default for LinkingContext {
     fn default() -> Self {
         Self {
             object_files: Vec::new(),
+            library_search_paths: BTreeSet::new(),
             system_libraries: BTreeSet::new(),
             dynamic_libraries: BTreeSet::new(),
             static_libraries: BTreeSet::new(),
@@ -124,6 +128,7 @@ impl LinkingContext {
     /// Merge multiple `LinkingContext` together to produce an aggregate instance.
     pub fn merge(contexts: &[&Self]) -> Self {
         let mut object_files = Vec::new();
+        let mut library_search_paths = BTreeSet::new();
         let mut system_libraries = BTreeSet::new();
         let mut dynamic_libraries = BTreeSet::new();
         let mut static_libraries = BTreeSet::new();
@@ -134,6 +139,9 @@ impl LinkingContext {
         for context in contexts {
             for o in &context.object_files {
                 object_files.push(o.clone());
+            }
+            for p in &context.library_search_paths {
+                library_search_paths.insert(p.clone());
             }
             for l in &context.system_libraries {
                 system_libraries.insert(l.clone());
@@ -157,6 +165,7 @@ impl LinkingContext {
 
         Self {
             object_files,
+            library_search_paths,
             system_libraries,
             dynamic_libraries,
             static_libraries,
@@ -271,25 +280,6 @@ pub fn link_libpython(
         }
     }
 
-    let mut extra_library_paths = BTreeSet::new();
-
-    for location in dist.libraries.values() {
-        let path = match location {
-            DataLocation::Path(p) => p,
-            DataLocation::Memory(_) => {
-                return Err(anyhow!(
-                    "cannot link libraries not backed by the filesystem"
-                ))
-            }
-        };
-
-        extra_library_paths.insert(
-            path.parent()
-                .ok_or_else(|| anyhow!("unable to resolve parent directory"))?
-                .to_path_buf(),
-        );
-    }
-
     for framework in &context.frameworks {
         cargo_metadata.push(format!("cargo:rustc-link-lib=framework={}", framework));
     }
@@ -342,7 +332,7 @@ pub fn link_libpython(
         out_dir.display()
     ));
 
-    for path in extra_library_paths {
+    for path in &context.library_search_paths {
         cargo_metadata.push(format!("cargo:rustc-link-search=native={}", path.display()));
     }
 

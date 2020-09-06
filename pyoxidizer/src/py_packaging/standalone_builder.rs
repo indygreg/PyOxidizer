@@ -174,6 +174,23 @@ impl StandalonePythonExecutableBuilder {
             // TODO handle static/dynamic libraries.
         }
 
+        for location in self.distribution.libraries.values() {
+            let path = match location {
+                DataLocation::Path(p) => p,
+                DataLocation::Memory(_) => {
+                    return Err(anyhow!(
+                        "cannot link libraries not backed by the filesystem"
+                    ))
+                }
+            };
+
+            self.core_link_context.library_search_paths.insert(
+                path.parent()
+                    .ok_or_else(|| anyhow!("unable to resolve parent directory"))?
+                    .to_path_buf(),
+            );
+        }
+
         // Windows requires dynamic linking against msvcrt. Ensure that happens.
         if crate::environment::WINDOWS_TARGET_TRIPLES.contains(&self.target_triple.as_str()) {
             self.core_link_context
