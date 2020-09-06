@@ -8,7 +8,6 @@ Defining and manipulating binaries embedding Python.
 
 use {
     super::config::EmbeddedPythonConfig,
-    super::embedded_resource::EmbeddedPythonResources,
     super::pyembed::{derive_python_config, write_default_python_config_rs},
     crate::app_packaging::resource::FileManifest,
     anyhow::Result,
@@ -19,7 +18,6 @@ use {
     },
     python_packaging::resource_collection::{PrePackagedResource, PythonResourceCollector},
     std::collections::HashMap,
-    std::convert::TryFrom,
     std::fs::File,
     std::io::Write,
     std::path::{Path, PathBuf},
@@ -341,28 +339,6 @@ pub struct PythonLinkingInfo {
     pub cargo_metadata: Vec<String>,
 }
 
-/// Represents serialized data embedded in binaries for loading Python resources.
-pub struct EmbeddedResourcesBlobs {
-    pub module_names: Vec<u8>,
-    pub resources: Vec<u8>,
-}
-
-impl<'a> TryFrom<EmbeddedPythonResources<'a>> for EmbeddedResourcesBlobs {
-    type Error = anyhow::Error;
-
-    fn try_from(value: EmbeddedPythonResources) -> Result<Self, Self::Error> {
-        let mut module_names = Vec::new();
-        let mut resources = Vec::new();
-
-        value.write_blobs(&mut module_names, &mut resources)?;
-
-        Ok(Self {
-            module_names,
-            resources,
-        })
-    }
-}
-
 /// Holds filesystem paths to resources required to build a binary embedding Python.
 pub struct EmbeddedPythonPaths {
     /// File containing a list of module names.
@@ -392,8 +368,11 @@ pub struct EmbeddedPythonContext {
     /// Information on how to link against Python.
     pub linking_info: PythonLinkingInfo,
 
+    /// Newline delimited list of module names in resources.
+    pub module_names: Vec<u8>,
+
     /// Python resources to embed in the binary.
-    pub resources: EmbeddedResourcesBlobs,
+    pub resources: Vec<u8>,
 
     /// Extra files to install next to produced binary.
     pub extra_files: FileManifest,
@@ -410,11 +389,11 @@ impl EmbeddedPythonContext {
     pub fn write_files(&self, dest_dir: &Path) -> Result<EmbeddedPythonPaths> {
         let module_names = dest_dir.join("py-module-names");
         let mut fh = File::create(&module_names)?;
-        fh.write_all(&self.resources.module_names)?;
+        fh.write_all(&self.module_names)?;
 
         let embedded_resources = dest_dir.join("packed-resources");
         let mut fh = File::create(&embedded_resources)?;
-        fh.write_all(&self.resources.resources)?;
+        fh.write_all(&self.resources)?;
 
         let libpython = dest_dir.join(&self.linking_info.libpythonxy_filename);
         let mut fh = File::create(&libpython)?;

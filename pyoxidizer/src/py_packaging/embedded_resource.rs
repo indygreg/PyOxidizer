@@ -13,7 +13,6 @@ use {
     python_packaging::resource_collection::CompiledResourcesCollection,
     slog::{info, warn},
     std::collections::{BTreeMap, BTreeSet},
-    std::io::Write,
 };
 
 /// Holds state necessary to link libpython.
@@ -38,18 +37,6 @@ pub struct EmbeddedPythonResources<'a> {
 }
 
 impl<'a> EmbeddedPythonResources<'a> {
-    /// Write entities defining resources.
-    pub fn write_blobs<W: Write>(&self, module_names: &mut W, resources: &mut W) -> Result<()> {
-        for name in self.resources.resources.keys() {
-            module_names
-                .write_all(name.as_bytes())
-                .expect("failed to write");
-            module_names.write_all(b"\n").expect("failed to write");
-        }
-
-        self.resources.write_packed_resources_v1(resources)
-    }
-
     /// Obtain a list of built-in extensions.
     ///
     /// The returned list will likely make its way to PyImport_Inittab.

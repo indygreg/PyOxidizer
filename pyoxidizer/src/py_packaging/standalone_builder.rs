@@ -4,8 +4,7 @@
 
 use {
     super::binary::{
-        EmbeddedPythonContext, EmbeddedResourcesBlobs, LibpythonLinkMode, PythonBinaryBuilder,
-        PythonLinkingInfo,
+        EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder, PythonLinkingInfo,
     },
     super::config::{EmbeddedPythonConfig, RawAllocator},
     super::distribution::{BinaryLibpythonLinkMode, PythonDistribution},
@@ -28,7 +27,7 @@ use {
     },
     slog::warn,
     std::collections::{BTreeMap, BTreeSet, HashMap},
-    std::convert::TryFrom,
+    std::io::Write,
     std::iter::FromIterator,
     std::path::{Path, PathBuf},
     std::sync::Arc,
@@ -824,13 +823,23 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             )?;
         }
 
-        let resources = EmbeddedPythonResources {
+        let mut module_names = Vec::new();
+
+        for name in compiled_resources.resources.keys() {
+            module_names.write_all(name.as_bytes())?;
+            module_names.write_all(b"\n")?;
+        }
+
+        let mut resources = Vec::new();
+        compiled_resources.write_packed_resources_v1(&mut resources)?;
+
+        let embedded_resources = EmbeddedPythonResources {
             resources: compiled_resources,
             extension_modules: self.extension_module_states.clone(),
         };
 
-        let linking_info = self.resolve_python_linking_info(logger, opt_level, &resources)?;
-        let resources = EmbeddedResourcesBlobs::try_from(resources)?;
+        let linking_info =
+            self.resolve_python_linking_info(logger, opt_level, &embedded_resources)?;
 
         if self.link_mode == LibpythonLinkMode::Dynamic {
             if let Some(p) = &self.distribution.libpython_shared_library {
@@ -847,6 +856,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         Ok(EmbeddedPythonContext {
             config: self.config.clone(),
             linking_info,
+            module_names,
             resources,
             extra_files,
             host_triple: self.host_triple.clone(),
