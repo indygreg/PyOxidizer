@@ -150,6 +150,8 @@ impl StandalonePythonExecutableBuilder {
     }
 
     fn add_distribution_resources(&mut self, policy: &PythonPackagingPolicy) -> Result<()> {
+        self.core_link_context.inittab_cflags = Some(self.distribution.inittab_cflags.clone());
+
         // Add the distribution's object files from Python core to linking context.
         for fs_path in self.distribution.objs_core.values() {
             // libpython generation derives its own `_PyImport_Inittab`. So ignore

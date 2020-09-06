@@ -76,6 +76,9 @@ where
 /// linker centric and doesn't track state like Python resources.
 #[derive(Clone, Debug)]
 pub struct LibPythonBuildContext {
+    /// Compiled flags to use when compiling the object containing Py_inittab.
+    pub inittab_cflags: Option<Vec<String>>,
+
     /// Object files that will be linked together.
     pub object_files: Vec<DataLocation>,
 
@@ -112,6 +115,7 @@ pub struct LibPythonBuildContext {
 impl Default for LibPythonBuildContext {
     fn default() -> Self {
         Self {
+            inittab_cflags: None,
             object_files: Vec::new(),
             library_search_paths: BTreeSet::new(),
             system_libraries: BTreeSet::new(),
@@ -127,6 +131,7 @@ impl Default for LibPythonBuildContext {
 impl LibPythonBuildContext {
     /// Merge multiple `LinkingContext` together to produce an aggregate instance.
     pub fn merge(contexts: &[&Self]) -> Self {
+        let mut inittab_cflags = None;
         let mut object_files = Vec::new();
         let mut library_search_paths = BTreeSet::new();
         let mut system_libraries = BTreeSet::new();
@@ -137,6 +142,10 @@ impl LibPythonBuildContext {
         let mut license_infos = BTreeMap::new();
 
         for context in contexts {
+            // Last write wins.
+            if let Some(flags) = &context.inittab_cflags {
+                inittab_cflags = Some(flags.clone());
+            }
             for o in &context.object_files {
                 object_files.push(o.clone());
             }
@@ -164,6 +173,7 @@ impl LibPythonBuildContext {
         }
 
         Self {
+            inittab_cflags,
             object_files,
             library_search_paths,
             system_libraries,
@@ -235,8 +245,10 @@ pub fn link_libpython(
     warn!(logger, "compiling custom config.c to object file");
     let mut build = cc::Build::new();
 
-    for flag in &dist.inittab_cflags {
-        build.flag(flag);
+    if let Some(flags) = &context.inittab_cflags {
+        for flag in flags {
+            build.flag(flag);
+        }
     }
 
     build
