@@ -7,7 +7,6 @@ Building a native binary containing Python.
 */
 
 use {
-    super::embedded_resource::EmbeddedPythonResources,
     super::standalone_distribution::{LicenseInfo, StandaloneDistribution},
     anyhow::Result,
     itertools::Itertools,
@@ -66,6 +65,31 @@ pub fn make_config_c(extensions: &[(String, String)]) -> String {
     lines.join("\n")
 }
 
+/// Holds state necessary to link an extension module into libpython.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExtensionModuleBuildState {
+    /// Extension C initialization function.
+    pub init_fn: Option<String>,
+
+    /// Object files to link into produced binary.
+    pub link_object_files: Vec<DataLocation>,
+
+    /// Frameworks this extension module needs to link against.
+    pub link_frameworks: BTreeSet<String>,
+
+    /// System libraries this extension module needs to link against.
+    pub link_system_libraries: BTreeSet<String>,
+
+    /// Static libraries this extension module needs to link against.
+    pub link_static_libraries: BTreeSet<String>,
+
+    /// Dynamic libraries this extension module needs to link against.
+    pub link_dynamic_libraries: BTreeSet<String>,
+
+    /// Dynamic libraries this extension module needs to link against.
+    pub link_external_libraries: BTreeSet<String>,
+}
+
 /// Holds state necessary to link libpython.
 pub struct LibpythonLinkingInfo {
     /// Object files that need to be linked.
@@ -75,6 +99,69 @@ pub struct LibpythonLinkingInfo {
     pub link_frameworks: BTreeSet<String>,
     pub link_system_libraries: BTreeSet<String>,
     pub link_libraries_external: BTreeSet<String>,
+}
+
+/// Resolve state needed to link a libpython.
+fn resolve_libpython_linking_info(
+    logger: &slog::Logger,
+    extension_modules: &BTreeMap<String, ExtensionModuleBuildState>,
+) -> Result<LibpythonLinkingInfo> {
+    let mut object_files = Vec::new();
+    let mut link_libraries = BTreeSet::new();
+    let mut link_frameworks = BTreeSet::new();
+    let mut link_system_libraries = BTreeSet::new();
+    let mut link_libraries_external = BTreeSet::new();
+
+    warn!(
+        logger,
+        "resolving inputs for {} extension modules...",
+        extension_modules.len()
+    );
+
+    for (name, state) in extension_modules {
+        if !state.link_object_files.is_empty() {
+            info!(
+                logger,
+                "adding {} object files for {} extension module",
+                state.link_object_files.len(),
+                name
+            );
+            object_files.extend(state.link_object_files.iter().cloned());
+        }
+
+        for framework in &state.link_frameworks {
+            warn!(logger, "framework {} required by {}", framework, name);
+            link_frameworks.insert(framework.clone());
+        }
+
+        for library in &state.link_system_libraries {
+            warn!(logger, "system library {} required by {}", library, name);
+            link_system_libraries.insert(library.clone());
+        }
+
+        for library in &state.link_static_libraries {
+            warn!(logger, "static library {} required by {}", library, name);
+            link_libraries.insert(library.clone());
+        }
+
+        for library in &state.link_dynamic_libraries {
+            warn!(logger, "dynamic library {} required by {}", library, name);
+            link_libraries.insert(library.clone());
+        }
+
+        for library in &state.link_external_libraries {
+            warn!(logger, "dynamic library {} required by {}", library, name);
+            link_libraries_external.insert(library.clone());
+        }
+    }
+
+    Ok(LibpythonLinkingInfo {
+        object_files,
+        link_libraries,
+        link_frameworks,
+        link_system_libraries,
+        link_libraries_external,
+    })
 }
 
 #[derive(Debug)]
@@ -93,7 +180,7 @@ pub fn link_libpython(
     logger: &slog::Logger,
     dist: &StandaloneDistribution,
     builtin_extensions: &[(String, String)],
-    resources: &EmbeddedPythonResources,
+    extension_modules: &BTreeMap<String, ExtensionModuleBuildState>,
     out_dir: &Path,
     host_triple: &str,
     target_triple: &str,
@@ -223,7 +310,7 @@ pub fn link_libpython(
         // TODO handle static/dynamic libraries.
     }
 
-    let linking_info = resources.resolve_libpython_linking_info(logger)?;
+    let linking_info = resolve_libpython_linking_info(logger, extension_modules)?;
 
     needed_libraries.extend(linking_info.link_libraries);
     needed_frameworks.extend(linking_info.link_frameworks);

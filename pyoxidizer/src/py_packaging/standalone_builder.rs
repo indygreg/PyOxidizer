@@ -8,9 +8,8 @@ use {
     },
     super::config::{EmbeddedPythonConfig, RawAllocator},
     super::distribution::{BinaryLibpythonLinkMode, PythonDistribution},
-    super::embedded_resource::EmbeddedPythonResources,
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
-    super::libpython::link_libpython,
+    super::libpython::{link_libpython, ExtensionModuleBuildState},
     super::packaging_tool::{find_resources, pip_install, read_virtualenv, setup_py_install},
     super::standalone_distribution::StandaloneDistribution,
     crate::app_packaging::resource::{FileContent, FileManifest},
@@ -33,31 +32,6 @@ use {
     std::sync::Arc,
     tempdir::TempDir,
 };
-
-/// Holds state necessary to link an extension module into libpython.
-#[derive(Debug, Clone, PartialEq)]
-pub struct ExtensionModuleBuildState {
-    /// Extension C initialization function.
-    pub init_fn: Option<String>,
-
-    /// Object files to link into produced binary.
-    pub link_object_files: Vec<DataLocation>,
-
-    /// Frameworks this extension module needs to link against.
-    pub link_frameworks: BTreeSet<String>,
-
-    /// System libraries this extension module needs to link against.
-    pub link_system_libraries: BTreeSet<String>,
-
-    /// Static libraries this extension module needs to link against.
-    pub link_static_libraries: BTreeSet<String>,
-
-    /// Dynamic libraries this extension module needs to link against.
-    pub link_dynamic_libraries: BTreeSet<String>,
-
-    /// Dynamic libraries this extension module needs to link against.
-    pub link_external_libraries: BTreeSet<String>,
-}
 
 /// A self-contained Python executable before it is compiled.
 #[derive(Clone, Debug)]
@@ -281,7 +255,6 @@ impl StandalonePythonExecutableBuilder {
         &self,
         logger: &slog::Logger,
         opt_level: &str,
-        resources: &EmbeddedPythonResources,
     ) -> Result<PythonLinkingInfo> {
         let libpythonxy_filename;
         let mut cargo_metadata: Vec<String> = Vec::new();
@@ -303,7 +276,7 @@ impl StandalonePythonExecutableBuilder {
                     logger,
                     &self.distribution,
                     &self.builtin_extensions(),
-                    resources,
+                    &self.extension_module_states,
                     &temp_dir_path,
                     &self.host_triple,
                     &self.target_triple,
@@ -850,13 +823,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         let mut resources = Vec::new();
         compiled_resources.write_packed_resources_v1(&mut resources)?;
 
-        let embedded_resources = EmbeddedPythonResources {
-            resources: compiled_resources,
-            extension_modules: self.extension_module_states.clone(),
-        };
-
-        let linking_info =
-            self.resolve_python_linking_info(logger, opt_level, &embedded_resources)?;
+        let linking_info = self.resolve_python_linking_info(logger, opt_level)?;
 
         if self.link_mode == LibpythonLinkMode::Dynamic {
             if let Some(p) = &self.distribution.libpython_shared_library {
