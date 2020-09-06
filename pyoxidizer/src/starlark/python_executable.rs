@@ -590,14 +590,16 @@ impl PythonExecutable {
             "adding in-memory resource data {}",
             r.symbolic_name()
         );
-        self.exe.add_in_memory_package_resource(&r).map_err(|e| {
-            RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "add_in_memory_package_resource".to_string(),
-            }
-            .into()
-        })?;
+        self.exe
+            .add_python_package_resource(&r, Some(ConcreteResourceLocation::InMemory))
+            .map_err(|e| {
+                RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "add_in_memory_package_resource".to_string(),
+                }
+                .into()
+            })?;
 
         Ok(Value::new(None))
     }
@@ -615,14 +617,16 @@ impl PythonExecutable {
 
         let r = resource.downcast_apply(|r: &PythonPackageResource| r.data.clone());
         info!(&logger, "adding resource data {}", r.symbolic_name());
-        self.exe.add_package_resource(&r).map_err(|e| {
-            RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "add_package_resource".to_string(),
-            }
-            .into()
-        })?;
+        self.exe
+            .add_python_package_resource(&r, None)
+            .map_err(|e| {
+                RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "add_package_resource".to_string(),
+                }
+                .into()
+            })?;
 
         Ok(Value::new(None))
     }
@@ -647,7 +651,7 @@ impl PythonExecutable {
             r.symbolic_name()
         );
         self.exe
-            .add_relative_path_package_resource(&prefix, &r)
+            .add_python_package_resource(&r, Some(ConcreteResourceLocation::RelativePath(prefix)))
             .map_err(|e| {
                 RuntimeError {
                     code: "PYOXIDIZER_BUILD",

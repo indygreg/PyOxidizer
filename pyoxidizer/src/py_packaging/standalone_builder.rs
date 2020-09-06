@@ -255,7 +255,7 @@ impl StandalonePythonExecutableBuilder {
 
         for resource in self.distribution.resource_datas()? {
             if policy.filter_python_resource(&resource.clone().into()) {
-                self.add_package_resource(&resource)?;
+                self.add_python_package_resource(&resource, None)?;
             }
         }
 
@@ -545,20 +545,26 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             .add_python_module_bytecode_from_source(module, &location)
     }
 
-    fn add_in_memory_package_resource(&mut self, resource: &PythonPackageResource) -> Result<()> {
-        self.resources_collector
-            .add_python_package_resource(resource, &ConcreteResourceLocation::InMemory)
-    }
-
-    fn add_relative_path_package_resource(
+    fn add_python_package_resource(
         &mut self,
-        prefix: &str,
         resource: &PythonPackageResource,
+        location: Option<ConcreteResourceLocation>,
     ) -> Result<()> {
-        self.resources_collector.add_python_package_resource(
-            resource,
-            &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-        )
+        let location = match location {
+            Some(location) => location,
+            None => match self.packaging_policy.get_resources_policy().clone() {
+                PythonResourcesPolicy::InMemoryOnly
+                | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
+                    ConcreteResourceLocation::InMemory
+                }
+                PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
+                    ConcreteResourceLocation::RelativePath(prefix)
+                }
+            },
+        };
+
+        self.resources_collector
+            .add_python_package_resource(resource, &location)
     }
 
     fn add_in_memory_package_distribution_resource(

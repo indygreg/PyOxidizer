@@ -126,32 +126,16 @@ pub trait PythonBinaryBuilder {
         location: Option<ConcreteResourceLocation>,
     ) -> Result<()>;
 
-    /// Add resource data to the collection of embedded resource data.
-    fn add_in_memory_package_resource(&mut self, resource: &PythonPackageResource) -> Result<()>;
-
-    /// Add resource data to be loaded from the filesystem relative to the produced binary.
-    fn add_relative_path_package_resource(
+    /// Add a `PythonPackageResource` to the resources collection.
+    ///
+    /// The location to load the resource from is optional. If specified, it will
+    /// be used. If not, an appropriate location based on the resources policy
+    /// will be chosen.
+    fn add_python_package_resource(
         &mut self,
-        prefix: &str,
         resource: &PythonPackageResource,
+        location: Option<ConcreteResourceLocation>,
     ) -> Result<()>;
-
-    /// Add resource data to the collection of embedded resource data to a location as determined by the builder's resource policy.
-    fn add_package_resource(&mut self, resource: &PythonPackageResource) -> Result<()> {
-        match self
-            .python_packaging_policy()
-            .get_resources_policy()
-            .clone()
-        {
-            PythonResourcesPolicy::InMemoryOnly
-            | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
-                self.add_in_memory_package_resource(resource)
-            }
-            PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
-                self.add_relative_path_package_resource(prefix, resource)
-            }
-        }
-    }
 
     /// Add a package distribution resource to be loaded from memory.
     fn add_in_memory_package_distribution_resource(
