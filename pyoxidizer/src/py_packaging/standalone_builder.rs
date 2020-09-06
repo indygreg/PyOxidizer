@@ -175,9 +175,7 @@ impl StandalonePythonExecutableBuilder {
         }
 
         // Windows requires dynamic linking against msvcrt. Ensure that happens.
-        if super::standalone_distribution::WINDOWS_TARGET_TRIPLES
-            .contains(&self.target_triple.as_str())
-        {
+        if crate::environment::WINDOWS_TARGET_TRIPLES.contains(&self.target_triple.as_str()) {
             self.core_link_context
                 .system_libraries
                 .insert("msvcrt".to_string());

@@ -35,6 +35,25 @@ pub const BUILD_SEMVER_LIGHTWEIGHT: &str = env!("VERGEN_SEMVER_LIGHTWEIGHT");
 lazy_static! {
     /// Minimum version of Rust required to build PyOxidizer applications.
     pub static ref MINIMUM_RUST_VERSION: semver::Version = semver::Version::new(1, 36, 0);
+
+    /// Target triples for Linux.
+    pub static ref LINUX_TARGET_TRIPLES: Vec<&'static str> = vec![
+        "x86_64-unknown-linux-gnu",
+        "x86_64-unknown-linux-musl",
+    ];
+
+    /// Target triples for macOS.
+    pub static ref MACOS_TARGET_TRIPLES: Vec<&'static str> = vec![
+        "x86_64-apple-darwin",
+    ];
+
+    /// Target triples for Windows.
+    pub static ref WINDOWS_TARGET_TRIPLES: Vec<&'static str> = vec![
+        "i686-pc-windows-gnu",
+        "i686-pc-windows-msvc",
+        "x86_64-pc-windows-gnu",
+        "x86_64-pc-windows-msvc",
+    ];
 }
 
 /// Find the root Git commit given a starting Git commit.

@@ -13,6 +13,7 @@ use {
     },
     super::distutils::prepare_hacked_distutils,
     super::standalone_builder::StandalonePythonExecutableBuilder,
+    crate::environment::{LINUX_TARGET_TRIPLES, MACOS_TARGET_TRIPLES},
     anyhow::{anyhow, Context, Result},
     copy_dir::copy_dir,
     lazy_static::lazy_static,
@@ -49,25 +50,6 @@ const PIP_EXE_BASENAME: &str = "pip3.exe";
 const PIP_EXE_BASENAME: &str = "pip3";
 
 lazy_static! {
-    /// Target triples for Linux.
-    pub static ref LINUX_TARGET_TRIPLES: Vec<&'static str> = vec![
-        "x86_64-unknown-linux-gnu",
-        "x86_64-unknown-linux-musl",
-    ];
-
-    /// Target triples for macOS.
-    pub static ref MACOS_TARGET_TRIPLES: Vec<&'static str> = vec![
-        "x86_64-apple-darwin",
-    ];
-
-    /// Target triples for Windows.
-    pub static ref WINDOWS_TARGET_TRIPLES: Vec<&'static str> = vec![
-        "i686-pc-windows-gnu",
-        "i686-pc-windows-msvc",
-        "x86_64-pc-windows-gnu",
-        "x86_64-pc-windows-msvc",
-    ];
-
     /// Distribution extensions with known problems on Linux.
     ///
     /// These will never be packaged.
