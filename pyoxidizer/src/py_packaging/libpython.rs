@@ -65,6 +65,27 @@ pub fn make_config_c(extensions: &[(String, String)]) -> String {
     lines.join("\n")
 }
 
+/// Holds state necessary to link a libpython.
+///
+/// Instances of this are likely populated by a binary builder, taking
+/// information from a distribution and added extensions.
+///
+/// Note that this context is only for producing libpython: it is very
+/// linker centric and doesn't track state like Python resources.
+#[derive(Clone, Debug, PartialEq)]
+pub struct LinkingContext {
+    /// Object files that will be linked together.
+    pub object_files: Vec<DataLocation>,
+}
+
+impl Default for LinkingContext {
+    fn default() -> Self {
+        Self {
+            object_files: Vec::new(),
+        }
+    }
+}
+
 /// Holds state necessary to link an extension module into libpython.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExtensionModuleBuildState {
@@ -179,6 +200,7 @@ pub struct LibpythonInfo {
 pub fn link_libpython(
     logger: &slog::Logger,
     dist: &StandaloneDistribution,
+    context: &LinkingContext,
     builtin_extensions: &[(String, String)],
     extension_modules: &BTreeMap<String, ExtensionModuleBuildState>,
     out_dir: &Path,
@@ -320,8 +342,22 @@ pub fn link_libpython(
     for (i, object_file) in linking_info.object_files.iter().enumerate() {
         match object_file {
             DataLocation::Memory(data) => {
-                let out_path = temp_dir_path.join(format!("libpython.{}.o", i));
+                let out_path = temp_dir_path.join(format!("libpython.a.{}.o", i));
 
+                fs::write(&out_path, data)?;
+                build.object(&out_path);
+            }
+            DataLocation::Path(p) => {
+                build.object(&p);
+            }
+        }
+    }
+
+    for (i, location) in context.object_files.iter().enumerate() {
+        match location {
+            DataLocation::Memory(data) => {
+                // TODO remove .b once we have 1 source of object files.
+                let out_path = temp_dir_path.join(format!("libpython.b.{}.o", i));
                 fs::write(&out_path, data)?;
                 build.object(&out_path);
             }

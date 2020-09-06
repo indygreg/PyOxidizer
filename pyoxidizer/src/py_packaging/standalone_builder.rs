@@ -9,7 +9,7 @@ use {
     super::config::{EmbeddedPythonConfig, RawAllocator},
     super::distribution::{BinaryLibpythonLinkMode, PythonDistribution},
     super::filtering::{filter_btreemap, resolve_resource_names_from_files},
-    super::libpython::{link_libpython, ExtensionModuleBuildState},
+    super::libpython::{link_libpython, ExtensionModuleBuildState, LinkingContext},
     super::packaging_tool::{find_resources, pip_install, read_virtualenv, setup_py_install},
     super::standalone_distribution::StandaloneDistribution,
     crate::app_packaging::resource::{FileContent, FileManifest},
@@ -60,6 +60,9 @@ pub struct StandalonePythonExecutableBuilder {
 
     /// Python resources to be embedded in the binary.
     resources_collector: PythonResourceCollector,
+
+    /// Holds state necessary to link libpython.
+    libpython_link_context: LinkingContext,
 
     /// Holds state of extension modules that will be linked.
     extension_module_states: BTreeMap<String, ExtensionModuleBuildState>,
@@ -133,6 +136,7 @@ impl StandalonePythonExecutableBuilder {
                 packaging_policy.get_resources_policy(),
                 &cache_tag,
             ),
+            libpython_link_context: LinkingContext::default(),
             extension_module_states: BTreeMap::new(),
             config,
             python_exe,
@@ -275,6 +279,7 @@ impl StandalonePythonExecutableBuilder {
                 let library_info = link_libpython(
                     logger,
                     &self.distribution,
+                    &self.libpython_link_context,
                     &self.builtin_extensions(),
                     &self.extension_module_states,
                     &temp_dir_path,
