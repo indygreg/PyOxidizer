@@ -677,6 +677,11 @@ pub mod tests {
             vec!["i686-pc-windows-msvc", "x86_64-pc-windows-msvc"];
     }
 
+    pub type StandaloneBuilderContext = (
+        Arc<Box<StandaloneDistribution>>,
+        Box<dyn PythonBinaryBuilder>,
+    );
+
     /// Defines construction options for a `StandalonePythonExecutableBuilder`.
     ///
     /// This is mostly intended to be used by tests, to reduce boilerplate for
@@ -711,12 +716,7 @@ pub mod tests {
     }
 
     impl StandalonePythonExecutableBuilderOptions {
-        pub fn new_builder(
-            &self,
-        ) -> Result<(
-            Arc<Box<StandaloneDistribution>>,
-            Box<dyn PythonBinaryBuilder>,
-        )> {
+        pub fn new_builder(&self) -> Result<StandaloneBuilderContext> {
             let logger = if let Some(logger) = &self.logger {
                 logger.clone()
             } else {
