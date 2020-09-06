@@ -76,6 +76,9 @@ pub struct LinkingContext {
     /// Object files that will be linked together.
     pub object_files: Vec<DataLocation>,
 
+    /// System libraries that will be linked against.
+    pub system_libraries: BTreeSet<String>,
+
     /// Frameworks that will be linked against.
     ///
     /// Used on Apple platforms.
@@ -86,6 +89,7 @@ impl Default for LinkingContext {
     fn default() -> Self {
         Self {
             object_files: Vec::new(),
+            system_libraries: BTreeSet::new(),
             frameworks: BTreeSet::new(),
         }
     }
@@ -96,9 +100,6 @@ impl Default for LinkingContext {
 pub struct ExtensionModuleBuildState {
     /// Extension C initialization function.
     pub init_fn: Option<String>,
-
-    /// System libraries this extension module needs to link against.
-    pub link_system_libraries: BTreeSet<String>,
 
     /// Static libraries this extension module needs to link against.
     pub link_static_libraries: BTreeSet<String>,
@@ -113,7 +114,6 @@ pub struct ExtensionModuleBuildState {
 /// Holds state necessary to link libpython.
 pub struct LibpythonLinkingInfo {
     pub link_libraries: BTreeSet<String>,
-    pub link_system_libraries: BTreeSet<String>,
     pub link_libraries_external: BTreeSet<String>,
 }
 
@@ -123,7 +123,6 @@ fn resolve_libpython_linking_info(
     extension_modules: &BTreeMap<String, ExtensionModuleBuildState>,
 ) -> Result<LibpythonLinkingInfo> {
     let mut link_libraries = BTreeSet::new();
-    let mut link_system_libraries = BTreeSet::new();
     let mut link_libraries_external = BTreeSet::new();
 
     warn!(
@@ -133,11 +132,6 @@ fn resolve_libpython_linking_info(
     );
 
     for (name, state) in extension_modules {
-        for library in &state.link_system_libraries {
-            warn!(logger, "system library {} required by {}", library, name);
-            link_system_libraries.insert(library.clone());
-        }
-
         for library in &state.link_static_libraries {
             warn!(logger, "static library {} required by {}", library, name);
             link_libraries.insert(library.clone());
@@ -156,7 +150,6 @@ fn resolve_libpython_linking_info(
 
     Ok(LibpythonLinkingInfo {
         link_libraries,
-        link_system_libraries,
         link_libraries_external,
     })
 }
@@ -262,25 +255,11 @@ pub fn link_libpython(
     // use this pass to collect the set of libraries that we need to link
     // against.
     let mut needed_libraries: BTreeSet<String> = BTreeSet::new();
-    let mut needed_system_libraries = BTreeSet::new();
     let mut needed_libraries_external = BTreeSet::new();
-
-    warn!(
-        logger,
-        "resolving libraries required by core distribution..."
-    );
-    for entry in &dist.links_core {
-        if entry.system {
-            warn!(logger, "system library {} required by core", entry.name);
-            needed_system_libraries.insert(entry.name.clone());
-        }
-        // TODO handle static/dynamic libraries.
-    }
 
     let linking_info = resolve_libpython_linking_info(logger, extension_modules)?;
 
     needed_libraries.extend(linking_info.link_libraries);
-    needed_system_libraries.extend(linking_info.link_system_libraries);
     needed_libraries_external.extend(linking_info.link_libraries_external);
 
     for (i, location) in context.object_files.iter().enumerate() {
@@ -294,14 +273,6 @@ pub fn link_libpython(
                 build.object(&p);
             }
         }
-    }
-
-    // Windows requires dynamic linking against msvcrt. Ensure that happens.
-    // TODO this workaround feels like a bug in the Python distribution not
-    // advertising a dependency on the CRT linkage type. Consider adding this
-    // to the distribution metadata.
-    if windows {
-        needed_system_libraries.insert("msvcrt".to_string());
     }
 
     let mut extra_library_paths = BTreeSet::new();
@@ -331,7 +302,7 @@ pub fn link_libpython(
         cargo_metadata.push(format!("cargo:rustc-link-lib=framework={}", framework));
     }
 
-    for lib in needed_system_libraries {
+    for lib in &context.system_libraries {
         cargo_metadata.push(format!("cargo:rustc-link-lib={}", lib));
     }
 

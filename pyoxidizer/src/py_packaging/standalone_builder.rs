@@ -166,7 +166,21 @@ impl StandalonePythonExecutableBuilder {
                 self.libpython_link_context
                     .frameworks
                     .insert(entry.name.clone());
+            } else if entry.system {
+                self.libpython_link_context
+                    .system_libraries
+                    .insert(entry.name.clone());
             }
+            // TODO handle static/dynamic libraries.
+        }
+
+        // Windows requires dynamic linking against msvcrt. Ensure that happens.
+        if super::standalone_distribution::WINDOWS_TARGET_TRIPLES
+            .contains(&self.target_triple.as_str())
+        {
+            self.libpython_link_context
+                .system_libraries
+                .insert("msvcrt".to_string());
         }
 
         for ext in self.packaging_policy.resolve_python_extension_modules(
@@ -212,7 +226,6 @@ impl StandalonePythonExecutableBuilder {
             module.name.clone(),
             ExtensionModuleBuildState {
                 init_fn: module.init_fn.clone(),
-                link_system_libraries: BTreeSet::new(),
                 link_static_libraries: BTreeSet::new(),
                 link_dynamic_libraries: BTreeSet::new(),
                 link_external_libraries: BTreeSet::from_iter(
@@ -225,6 +238,18 @@ impl StandalonePythonExecutableBuilder {
             self.libpython_link_context
                 .object_files
                 .push(location.clone());
+        }
+
+        for depends in &module.link_libraries {
+            if depends.framework {
+                self.libpython_link_context
+                    .frameworks
+                    .insert(depends.name.clone());
+            } else if depends.system {
+                self.libpython_link_context
+                    .system_libraries
+                    .insert(depends.name.clone());
+            }
         }
 
         Ok(())
@@ -531,6 +556,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 self.libpython_link_context
                     .frameworks
                     .insert(depends.name.clone());
+            } else if depends.system {
+                self.libpython_link_context
+                    .system_libraries
+                    .insert(depends.name.clone());
             }
         }
 
@@ -538,15 +567,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             extension_module.name.clone(),
             ExtensionModuleBuildState {
                 init_fn: extension_module.init_fn.clone(),
-                link_system_libraries: BTreeSet::from_iter(
-                    extension_module.link_libraries.iter().filter_map(|link| {
-                        if link.system {
-                            Some(link.name.clone())
-                        } else {
-                            None
-                        }
-                    }),
-                ),
                 link_static_libraries: BTreeSet::from_iter(
                     extension_module.link_libraries.iter().filter_map(|link| {
                         if link.static_library.is_some() {
