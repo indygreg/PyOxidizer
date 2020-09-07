@@ -1170,6 +1170,85 @@ pub mod tests {
     }
 
     #[test]
+    fn test_linux_extension_in_memory_policy() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-unknown-linux-gnu".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            resources_policy: PythonResourcesPolicy::InMemoryOnly,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let mut builder = options.new_builder()?;
+
+        let ext = PythonExtensionModule {
+            name: "myext".to_string(),
+            init_fn: None,
+            extension_file_suffix: ".so".to_string(),
+            shared_library: Some(DataLocation::Memory(vec![42])),
+            object_file_data: vec![DataLocation::Memory(vec![1])],
+            is_package: false,
+            link_libraries: vec![],
+            is_stdlib: false,
+            builtin_default: false,
+            required: false,
+            variant: None,
+            licenses: None,
+            license_texts: None,
+            license_public_domain: None,
+        };
+
+        let err = builder.add_python_extension_module(&ext, None).err();
+        assert!(err.is_some());
+        assert_eq!(
+            err.unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_linux_extension_in_memory_explicit() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-unknown-linux-gnu".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let mut builder = options.new_builder()?;
+
+        let ext = PythonExtensionModule {
+            name: "myext".to_string(),
+            init_fn: None,
+            extension_file_suffix: ".so".to_string(),
+            shared_library: Some(DataLocation::Memory(vec![42])),
+            object_file_data: vec![DataLocation::Memory(vec![1])],
+            is_package: false,
+            link_libraries: vec![],
+            is_stdlib: false,
+            builtin_default: false,
+            required: false,
+            variant: None,
+            licenses: None,
+            license_texts: None,
+            license_public_domain: None,
+        };
+
+        let err = builder
+            .add_python_extension_module(&ext, Some(ConcreteResourceLocation::InMemory))
+            .err();
+        assert!(err.is_some());
+        assert_eq!(
+            err.unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn test_linux_distribution_dynamic() -> Result<()> {
         let options = StandalonePythonExecutableBuilderOptions {
             target_triple: "x86_64-unknown-linux-gnu".to_string(),
@@ -1385,6 +1464,85 @@ pub mod tests {
                 ..PrePackagedResource::default()
             })
         );
+        Ok(())
+    }
+
+    #[test]
+    fn test_macos_extension_in_memory_policy() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-apple-darwin".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            resources_policy: PythonResourcesPolicy::InMemoryOnly,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let mut builder = options.new_builder()?;
+
+        let ext = PythonExtensionModule {
+            name: "myext".to_string(),
+            init_fn: None,
+            extension_file_suffix: ".so".to_string(),
+            shared_library: Some(DataLocation::Memory(vec![42])),
+            object_file_data: vec![DataLocation::Memory(vec![1])],
+            is_package: false,
+            link_libraries: vec![],
+            is_stdlib: false,
+            builtin_default: false,
+            required: false,
+            variant: None,
+            licenses: None,
+            license_texts: None,
+            license_public_domain: None,
+        };
+
+        let err = builder.add_python_extension_module(&ext, None).err();
+        assert!(err.is_some());
+        assert_eq!(
+            err.unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_macos_extension_in_memory_explicit() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-apple-darwin".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let mut builder = options.new_builder()?;
+
+        let ext = PythonExtensionModule {
+            name: "myext".to_string(),
+            init_fn: None,
+            extension_file_suffix: ".so".to_string(),
+            shared_library: Some(DataLocation::Memory(vec![42])),
+            object_file_data: vec![DataLocation::Memory(vec![1])],
+            is_package: false,
+            link_libraries: vec![],
+            is_stdlib: false,
+            builtin_default: false,
+            required: false,
+            variant: None,
+            licenses: None,
+            license_texts: None,
+            license_public_domain: None,
+        };
+
+        let err = builder
+            .add_python_extension_module(&ext, Some(ConcreteResourceLocation::InMemory))
+            .err();
+        assert!(err.is_some());
+        assert_eq!(
+            err.unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
         Ok(())
     }
 
@@ -1706,6 +1864,90 @@ pub mod tests {
             for name in builder.distribution.extension_modules.keys() {
                 assert!(builtin_names.contains(&name));
             }
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_windows_dynamic_extension_in_memory_policy() -> Result<()> {
+        for target_triple in WINDOWS_TARGET_TRIPLES.iter() {
+            let options = StandalonePythonExecutableBuilderOptions {
+                target_triple: target_triple.to_string(),
+                distribution_flavor: DistributionFlavor::StandaloneDynamic,
+                extension_module_filter: ExtensionModuleFilter::Minimal,
+                libpython_link_mode: BinaryLibpythonLinkMode::Dynamic,
+                resources_policy: PythonResourcesPolicy::InMemoryOnly,
+                ..StandalonePythonExecutableBuilderOptions::default()
+            };
+
+            let mut builder = options.new_builder()?;
+
+            let ext = PythonExtensionModule {
+                name: "myext".to_string(),
+                init_fn: None,
+                extension_file_suffix: ".pyd".to_string(),
+                shared_library: Some(DataLocation::Memory(vec![42])),
+                object_file_data: vec![DataLocation::Memory(vec![1])],
+                is_package: false,
+                link_libraries: vec![],
+                is_stdlib: false,
+                builtin_default: false,
+                required: false,
+                variant: None,
+                licenses: None,
+                license_texts: None,
+                license_public_domain: None,
+            };
+
+            let err = builder.add_python_extension_module(&ext, None).err();
+            assert!(err.is_some());
+            assert_eq!(
+                err.unwrap().to_string(),
+                "only standard library extension modules are supported by this method"
+            );
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_windows_static_extension_in_memory_policy() -> Result<()> {
+        for target_triple in WINDOWS_TARGET_TRIPLES.iter() {
+            let options = StandalonePythonExecutableBuilderOptions {
+                target_triple: target_triple.to_string(),
+                distribution_flavor: DistributionFlavor::StandaloneStatic,
+                extension_module_filter: ExtensionModuleFilter::Minimal,
+                libpython_link_mode: BinaryLibpythonLinkMode::Static,
+                resources_policy: PythonResourcesPolicy::InMemoryOnly,
+                ..StandalonePythonExecutableBuilderOptions::default()
+            };
+
+            let mut builder = options.new_builder()?;
+
+            let ext = PythonExtensionModule {
+                name: "myext".to_string(),
+                init_fn: None,
+                extension_file_suffix: ".pyd".to_string(),
+                shared_library: Some(DataLocation::Memory(vec![42])),
+                object_file_data: vec![DataLocation::Memory(vec![1])],
+                is_package: false,
+                link_libraries: vec![],
+                is_stdlib: false,
+                builtin_default: false,
+                required: false,
+                variant: None,
+                licenses: None,
+                license_texts: None,
+                license_public_domain: None,
+            };
+
+            let err = builder.add_python_extension_module(&ext, None).err();
+            assert!(err.is_some());
+            assert_eq!(
+                err.unwrap().to_string(),
+                "only standard library extension modules are supported by this method"
+            );
         }
 
         Ok(())
