@@ -1269,6 +1269,221 @@ pub mod tests {
     }
 
     #[test]
+    fn test_linux_distribution_extension_relative_path_policy() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-unknown-linux-gnu".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly("prefix".to_string()),
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let mut builder = options.new_builder()?;
+
+        let ext = builder
+            .distribution
+            .extension_modules
+            .get("_sqlite3")
+            .unwrap()
+            .default_variant()
+            .clone();
+
+        // The distribution extension can only be materialized as a built-in.
+        // So it is added as such.
+        builder.add_python_extension_module(&ext, None)?;
+
+        assert_eq!(
+            builder.extension_build_contexts.get("_sqlite3"),
+            Some(&LibPythonBuildContext {
+                object_files: ext.object_file_data.clone(),
+                static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
+                init_functions: BTreeMap::from_iter(
+                    [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
+                        .iter()
+                        .cloned()
+                ),
+                license_infos: BTreeMap::from_iter(
+                    [(
+                        "_sqlite3".to_string(),
+                        builder
+                            .distribution
+                            .license_infos
+                            .get("_sqlite3")
+                            .unwrap()
+                            .clone()
+                    )]
+                    .iter()
+                    .cloned()
+                ),
+                ..LibPythonBuildContext::default()
+            })
+        );
+
+        assert_eq!(
+            builder
+                .iter_resources()
+                .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::BuiltinExtensionModule,
+                name: "_sqlite3".to_string(),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_linux_distribution_extension_relative_path_explicit() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-unknown-linux-gnu".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            resources_policy: PythonResourcesPolicy::InMemoryOnly,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let mut builder = options.new_builder()?;
+
+        let ext = builder
+            .distribution
+            .extension_modules
+            .get("_sqlite3")
+            .unwrap()
+            .default_variant()
+            .clone();
+
+        // TODO this should probably fail since an explicit, invalid location was requested.
+        builder.add_python_extension_module(
+            &ext,
+            Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
+        )?;
+
+        assert_eq!(
+            builder.extension_build_contexts.get("_sqlite3"),
+            Some(&LibPythonBuildContext {
+                object_files: ext.object_file_data.clone(),
+                static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
+                init_functions: BTreeMap::from_iter(
+                    [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
+                        .iter()
+                        .cloned()
+                ),
+                license_infos: BTreeMap::from_iter(
+                    [(
+                        "_sqlite3".to_string(),
+                        builder
+                            .distribution
+                            .license_infos
+                            .get("_sqlite3")
+                            .unwrap()
+                            .clone()
+                    )]
+                    .iter()
+                    .cloned()
+                ),
+                ..LibPythonBuildContext::default()
+            })
+        );
+
+        assert_eq!(
+            builder
+                .iter_resources()
+                .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::BuiltinExtensionModule,
+                name: "_sqlite3".to_string(),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_linux_extension_relative_path_policy() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-unknown-linux-gnu".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly("prefix".to_string()),
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let mut builder = options.new_builder()?;
+
+        let ext = PythonExtensionModule {
+            name: "myext".to_string(),
+            init_fn: None,
+            extension_file_suffix: ".so".to_string(),
+            shared_library: Some(DataLocation::Memory(vec![42])),
+            object_file_data: vec![DataLocation::Memory(vec![1])],
+            is_package: false,
+            link_libraries: vec![],
+            is_stdlib: false,
+            builtin_default: false,
+            required: false,
+            variant: None,
+            licenses: None,
+            license_texts: None,
+            license_public_domain: None,
+        };
+
+        let err = builder.add_python_extension_module(&ext, None).err();
+        assert!(err.is_some());
+        assert_eq!(
+            err.unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_linux_extension_relative_path_explicit() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-unknown-linux-gnu".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            resources_policy: PythonResourcesPolicy::InMemoryOnly,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let mut builder = options.new_builder()?;
+
+        let ext = PythonExtensionModule {
+            name: "myext".to_string(),
+            init_fn: None,
+            extension_file_suffix: ".so".to_string(),
+            shared_library: Some(DataLocation::Memory(vec![42])),
+            object_file_data: vec![DataLocation::Memory(vec![1])],
+            is_package: false,
+            link_libraries: vec![],
+            is_stdlib: false,
+            builtin_default: false,
+            required: false,
+            variant: None,
+            licenses: None,
+            license_texts: None,
+            license_public_domain: None,
+        };
+
+        let err = builder
+            .add_python_extension_module(
+                &ext,
+                Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
+            )
+            .err();
+        assert!(err.is_some());
+        assert_eq!(
+            err.unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn test_linux_musl_distribution_dynamic() -> Result<()> {
         let options = StandalonePythonExecutableBuilderOptions {
             target_triple: "x86_64-unknown-linux-musl".to_string(),
@@ -1335,6 +1550,138 @@ pub mod tests {
             builder.extension_build_contexts.get("_sqlite3"),
             Some(&LibPythonBuildContext {
                 object_files: sqlite.object_file_data.clone(),
+                static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
+                init_functions: BTreeMap::from_iter(
+                    [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
+                        .iter()
+                        .cloned()
+                ),
+                license_infos: BTreeMap::from_iter(
+                    [(
+                        "_sqlite3".to_string(),
+                        builder
+                            .distribution
+                            .license_infos
+                            .get("_sqlite3")
+                            .unwrap()
+                            .clone()
+                    )]
+                    .iter()
+                    .cloned()
+                ),
+                ..LibPythonBuildContext::default()
+            })
+        );
+
+        assert_eq!(
+            builder
+                .iter_resources()
+                .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::BuiltinExtensionModule,
+                name: "_sqlite3".to_string(),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_linux_musl_distribution_extension_relative_path_policy() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-unknown-linux-musl".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly("prefix".to_string()),
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let mut builder = options.new_builder()?;
+
+        let ext = builder
+            .distribution
+            .extension_modules
+            .get("_sqlite3")
+            .unwrap()
+            .default_variant()
+            .clone();
+
+        // The distribution extension can only be materialized as a built-in.
+        // So it is added as such.
+        builder.add_python_extension_module(&ext, None)?;
+
+        assert_eq!(
+            builder.extension_build_contexts.get("_sqlite3"),
+            Some(&LibPythonBuildContext {
+                object_files: ext.object_file_data.clone(),
+                static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
+                init_functions: BTreeMap::from_iter(
+                    [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
+                        .iter()
+                        .cloned()
+                ),
+                license_infos: BTreeMap::from_iter(
+                    [(
+                        "_sqlite3".to_string(),
+                        builder
+                            .distribution
+                            .license_infos
+                            .get("_sqlite3")
+                            .unwrap()
+                            .clone()
+                    )]
+                    .iter()
+                    .cloned()
+                ),
+                ..LibPythonBuildContext::default()
+            })
+        );
+
+        assert_eq!(
+            builder
+                .iter_resources()
+                .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::BuiltinExtensionModule,
+                name: "_sqlite3".to_string(),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_linux_musl_distribution_extension_relative_path_explicit() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-unknown-linux-musl".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            resources_policy: PythonResourcesPolicy::InMemoryOnly,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let mut builder = options.new_builder()?;
+
+        let ext = builder
+            .distribution
+            .extension_modules
+            .get("_sqlite3")
+            .unwrap()
+            .default_variant()
+            .clone();
+
+        // TODO this should fail since we cannot load extension module files on musl
+        builder.add_python_extension_module(
+            &ext,
+            Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
+        )?;
+
+        assert_eq!(
+            builder.extension_build_contexts.get("_sqlite3"),
+            Some(&LibPythonBuildContext {
+                object_files: ext.object_file_data.clone(),
                 static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
                 init_functions: BTreeMap::from_iter(
                     [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
@@ -1480,6 +1827,143 @@ pub mod tests {
     }
 
     #[test]
+    fn test_macos_distribution_extension_relative_path_policy() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-apple-darwin".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly("prefix".to_string()),
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let mut builder = options.new_builder()?;
+
+        let ext = builder
+            .distribution
+            .extension_modules
+            .get("_sqlite3")
+            .unwrap()
+            .default_variant()
+            .clone();
+
+        // Distribution extensions can only be materialized as built-ins.
+        builder.add_python_extension_module(&ext, None)?;
+
+        assert_eq!(
+            builder.extension_build_contexts.get("_sqlite3"),
+            Some(&LibPythonBuildContext {
+                object_files: ext.object_file_data.clone(),
+                system_libraries: BTreeSet::from_iter(["iconv".to_string()].iter().cloned()),
+                static_libraries: BTreeSet::from_iter(
+                    ["intl".to_string(), "sqlite3".to_string()].iter().cloned()
+                ),
+                init_functions: BTreeMap::from_iter(
+                    [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
+                        .iter()
+                        .cloned()
+                ),
+                license_infos: BTreeMap::from_iter(
+                    [(
+                        "_sqlite3".to_string(),
+                        builder
+                            .distribution
+                            .license_infos
+                            .get("_sqlite3")
+                            .unwrap()
+                            .clone()
+                    )]
+                    .iter()
+                    .cloned()
+                ),
+                ..LibPythonBuildContext::default()
+            })
+        );
+
+        assert_eq!(
+            builder
+                .iter_resources()
+                .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::BuiltinExtensionModule,
+                name: "_sqlite3".to_string(),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_macos_distribution_extension_relative_path_explicit() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-apple-darwin".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            resources_policy: PythonResourcesPolicy::InMemoryOnly,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let mut builder = options.new_builder()?;
+
+        let ext = builder
+            .distribution
+            .extension_modules
+            .get("_sqlite3")
+            .unwrap()
+            .default_variant()
+            .clone();
+
+        // TODO this should probably fail due location request not being valid.
+        builder.add_python_extension_module(
+            &ext,
+            Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
+        )?;
+
+        assert_eq!(
+            builder.extension_build_contexts.get("_sqlite3"),
+            Some(&LibPythonBuildContext {
+                object_files: ext.object_file_data.clone(),
+                system_libraries: BTreeSet::from_iter(["iconv".to_string()].iter().cloned()),
+                static_libraries: BTreeSet::from_iter(
+                    ["intl".to_string(), "sqlite3".to_string()].iter().cloned()
+                ),
+                init_functions: BTreeMap::from_iter(
+                    [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
+                        .iter()
+                        .cloned()
+                ),
+                license_infos: BTreeMap::from_iter(
+                    [(
+                        "_sqlite3".to_string(),
+                        builder
+                            .distribution
+                            .license_infos
+                            .get("_sqlite3")
+                            .unwrap()
+                            .clone()
+                    )]
+                    .iter()
+                    .cloned()
+                ),
+                ..LibPythonBuildContext::default()
+            })
+        );
+
+        assert_eq!(
+            builder
+                .iter_resources()
+                .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::BuiltinExtensionModule,
+                name: "_sqlite3".to_string(),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn test_macos_extension_in_memory_policy() -> Result<()> {
         let options = StandalonePythonExecutableBuilderOptions {
             target_triple: "x86_64-apple-darwin".to_string(),
@@ -1548,6 +2032,89 @@ pub mod tests {
 
         let err = builder
             .add_python_extension_module(&ext, Some(ConcreteResourceLocation::InMemory))
+            .err();
+        assert!(err.is_some());
+        assert_eq!(
+            err.unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_macos_extension_relative_path_policy() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-apple-darwin".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly("prefix".to_string()),
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let mut builder = options.new_builder()?;
+
+        let ext = PythonExtensionModule {
+            name: "myext".to_string(),
+            init_fn: None,
+            extension_file_suffix: ".so".to_string(),
+            shared_library: Some(DataLocation::Memory(vec![42])),
+            object_file_data: vec![DataLocation::Memory(vec![1])],
+            is_package: false,
+            link_libraries: vec![],
+            is_stdlib: false,
+            builtin_default: false,
+            required: false,
+            variant: None,
+            licenses: None,
+            license_texts: None,
+            license_public_domain: None,
+        };
+
+        let err = builder.add_python_extension_module(&ext, None).err();
+        assert!(err.is_some());
+        assert_eq!(
+            err.unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_macos_extension_relative_path_explicit() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-apple-darwin".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            resources_policy: PythonResourcesPolicy::InMemoryOnly,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let mut builder = options.new_builder()?;
+
+        let ext = PythonExtensionModule {
+            name: "myext".to_string(),
+            init_fn: None,
+            extension_file_suffix: ".so".to_string(),
+            shared_library: Some(DataLocation::Memory(vec![42])),
+            object_file_data: vec![DataLocation::Memory(vec![1])],
+            is_package: false,
+            link_libraries: vec![],
+            is_stdlib: false,
+            builtin_default: false,
+            required: false,
+            variant: None,
+            licenses: None,
+            license_texts: None,
+            license_public_domain: None,
+        };
+
+        let err = builder
+            .add_python_extension_module(
+                &ext,
+                Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
+            )
             .err();
         assert!(err.is_some());
         assert_eq!(
@@ -1937,6 +2504,94 @@ pub mod tests {
                 extension_module_filter: ExtensionModuleFilter::Minimal,
                 libpython_link_mode: BinaryLibpythonLinkMode::Static,
                 resources_policy: PythonResourcesPolicy::InMemoryOnly,
+                ..StandalonePythonExecutableBuilderOptions::default()
+            };
+
+            let mut builder = options.new_builder()?;
+
+            let ext = PythonExtensionModule {
+                name: "myext".to_string(),
+                init_fn: None,
+                extension_file_suffix: ".pyd".to_string(),
+                shared_library: Some(DataLocation::Memory(vec![42])),
+                object_file_data: vec![DataLocation::Memory(vec![1])],
+                is_package: false,
+                link_libraries: vec![],
+                is_stdlib: false,
+                builtin_default: false,
+                required: false,
+                variant: None,
+                licenses: None,
+                license_texts: None,
+                license_public_domain: None,
+            };
+
+            let err = builder.add_python_extension_module(&ext, None).err();
+            assert!(err.is_some());
+            assert_eq!(
+                err.unwrap().to_string(),
+                "only standard library extension modules are supported by this method"
+            );
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_windows_dynamic_extension_relative_path_policy() -> Result<()> {
+        for target_triple in WINDOWS_TARGET_TRIPLES.iter() {
+            let options = StandalonePythonExecutableBuilderOptions {
+                target_triple: target_triple.to_string(),
+                distribution_flavor: DistributionFlavor::StandaloneDynamic,
+                extension_module_filter: ExtensionModuleFilter::Minimal,
+                libpython_link_mode: BinaryLibpythonLinkMode::Dynamic,
+                resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly(
+                    "prefix".to_string(),
+                ),
+                ..StandalonePythonExecutableBuilderOptions::default()
+            };
+
+            let mut builder = options.new_builder()?;
+
+            let ext = PythonExtensionModule {
+                name: "myext".to_string(),
+                init_fn: None,
+                extension_file_suffix: ".pyd".to_string(),
+                shared_library: Some(DataLocation::Memory(vec![42])),
+                object_file_data: vec![DataLocation::Memory(vec![1])],
+                is_package: false,
+                link_libraries: vec![],
+                is_stdlib: false,
+                builtin_default: false,
+                required: false,
+                variant: None,
+                licenses: None,
+                license_texts: None,
+                license_public_domain: None,
+            };
+
+            let err = builder.add_python_extension_module(&ext, None).err();
+            assert!(err.is_some());
+            assert_eq!(
+                err.unwrap().to_string(),
+                "only standard library extension modules are supported by this method"
+            );
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_windows_static_extension_relative_path_policy() -> Result<()> {
+        for target_triple in WINDOWS_TARGET_TRIPLES.iter() {
+            let options = StandalonePythonExecutableBuilderOptions {
+                target_triple: target_triple.to_string(),
+                distribution_flavor: DistributionFlavor::StandaloneStatic,
+                extension_module_filter: ExtensionModuleFilter::Minimal,
+                libpython_link_mode: BinaryLibpythonLinkMode::Static,
+                resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly(
+                    "prefix".to_string(),
+                ),
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
