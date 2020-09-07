@@ -1003,6 +1003,44 @@ pub mod tests {
                 license_texts: None,
                 license_public_domain: None,
             };
+
+        /// An extension module represented by only object files.
+        pub static ref EXTENSION_MODULE_OBJECT_FILES_ONLY: PythonExtensionModule =
+            PythonExtensionModule {
+                name: "object_files_only".to_string(),
+                init_fn: Some("PyInit__myext".to_string()),
+                extension_file_suffix: ".so".to_string(),
+                shared_library: None,
+                object_file_data: vec![DataLocation::Memory(vec![0]), DataLocation::Memory(vec![1])],
+                is_package: false,
+                link_libraries: vec![],
+                is_stdlib: false,
+                builtin_default: false,
+                required: false,
+                variant: None,
+                licenses: None,
+                license_texts: None,
+                license_public_domain: None,
+        };
+
+        /// An extension module with both a shared library and object files.
+        pub static ref EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES: PythonExtensionModule =
+            PythonExtensionModule {
+                name: "shared_and_object_files".to_string(),
+                init_fn: Some("PyInit__myext".to_string()),
+                extension_file_suffix: ".so".to_string(),
+                shared_library: Some(DataLocation::Memory(b"shared".to_vec())),
+                object_file_data: vec![DataLocation::Memory(vec![0]), DataLocation::Memory(vec![1])],
+                is_package: false,
+                link_libraries: vec![],
+                is_stdlib: false,
+                builtin_default: false,
+                required: false,
+                variant: None,
+                licenses: None,
+                license_texts: None,
+                license_public_domain: None,
+        };
     }
 
     /// Defines construction options for a `StandalonePythonExecutableBuilder`.
@@ -1208,12 +1246,25 @@ pub mod tests {
 
         let mut builder = options.new_builder()?;
 
-        let err = builder
-            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None)
-            .err();
-        assert!(err.is_some());
+        let res = builder.add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None);
+        assert!(res.is_err());
         assert_eq!(
-            err.unwrap().to_string(),
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder
+            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None);
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
             "only standard library extension modules are supported by this method"
         );
 
@@ -1231,15 +1282,33 @@ pub mod tests {
 
         let mut builder = options.new_builder()?;
 
-        let err = builder
-            .add_python_extension_module(
-                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
-                Some(ConcreteResourceLocation::InMemory),
-            )
-            .err();
-        assert!(err.is_some());
+        let res = builder.add_python_extension_module(
+            &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
+            Some(ConcreteResourceLocation::InMemory),
+        );
+        assert!(res.is_err());
         assert_eq!(
-            err.unwrap().to_string(),
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder.add_python_extension_module(
+            &EXTENSION_MODULE_OBJECT_FILES_ONLY,
+            Some(ConcreteResourceLocation::InMemory),
+        );
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder.add_python_extension_module(
+            &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
+            Some(ConcreteResourceLocation::InMemory),
+        );
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
             "only standard library extension modules are supported by this method"
         );
 
@@ -1410,12 +1479,25 @@ pub mod tests {
 
         let mut builder = options.new_builder()?;
 
-        let err = builder
-            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None)
-            .err();
-        assert!(err.is_some());
+        let res = builder.add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None);
+        assert!(res.is_err());
         assert_eq!(
-            err.unwrap().to_string(),
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder
+            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None);
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
             "only standard library extension modules are supported by this method"
         );
 
@@ -1434,15 +1516,33 @@ pub mod tests {
 
         let mut builder = options.new_builder()?;
 
-        let err = builder
-            .add_python_extension_module(
-                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
-                Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
-            )
-            .err();
-        assert!(err.is_some());
+        let res = builder.add_python_extension_module(
+            &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
+            Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
+        );
+        assert!(res.is_err());
         assert_eq!(
-            err.unwrap().to_string(),
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder.add_python_extension_module(
+            &EXTENSION_MODULE_OBJECT_FILES_ONLY,
+            Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
+        );
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder.add_python_extension_module(
+            &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
+            Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
+        );
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
             "only standard library extension modules are supported by this method"
         );
 
@@ -1909,12 +2009,25 @@ pub mod tests {
 
         let mut builder = options.new_builder()?;
 
-        let err = builder
-            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None)
-            .err();
-        assert!(err.is_some());
+        let res = builder.add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None);
+        assert!(res.is_err());
         assert_eq!(
-            err.unwrap().to_string(),
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder
+            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None);
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
             "only standard library extension modules are supported by this method"
         );
 
@@ -1932,15 +2045,33 @@ pub mod tests {
 
         let mut builder = options.new_builder()?;
 
-        let err = builder
-            .add_python_extension_module(
-                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
-                Some(ConcreteResourceLocation::InMemory),
-            )
-            .err();
-        assert!(err.is_some());
+        let res = builder.add_python_extension_module(
+            &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
+            Some(ConcreteResourceLocation::InMemory),
+        );
+        assert!(res.is_err());
         assert_eq!(
-            err.unwrap().to_string(),
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder.add_python_extension_module(
+            &EXTENSION_MODULE_OBJECT_FILES_ONLY,
+            Some(ConcreteResourceLocation::InMemory),
+        );
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder.add_python_extension_module(
+            &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
+            Some(ConcreteResourceLocation::InMemory),
+        );
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
             "only standard library extension modules are supported by this method"
         );
 
@@ -1959,12 +2090,25 @@ pub mod tests {
 
         let mut builder = options.new_builder()?;
 
-        let err = builder
-            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None)
-            .err();
-        assert!(err.is_some());
+        let res = builder.add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None);
+        assert!(res.is_err());
         assert_eq!(
-            err.unwrap().to_string(),
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder
+            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None);
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
             "only standard library extension modules are supported by this method"
         );
 
@@ -1983,15 +2127,33 @@ pub mod tests {
 
         let mut builder = options.new_builder()?;
 
-        let err = builder
-            .add_python_extension_module(
-                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
-                Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
-            )
-            .err();
-        assert!(err.is_some());
+        let res = builder.add_python_extension_module(
+            &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
+            Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
+        );
+        assert!(res.is_err());
         assert_eq!(
-            err.unwrap().to_string(),
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder.add_python_extension_module(
+            &EXTENSION_MODULE_OBJECT_FILES_ONLY,
+            Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
+        );
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder.add_python_extension_module(
+            &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
+            Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
+        );
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
             "only standard library extension modules are supported by this method"
         );
 
@@ -2340,12 +2502,29 @@ pub mod tests {
 
             let mut builder = options.new_builder()?;
 
-            let err = builder
-                .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None)
-                .err();
-            assert!(err.is_some());
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None);
+            assert!(res.is_err());
             assert_eq!(
-                err.unwrap().to_string(),
+                res.err().unwrap().to_string(),
+                "only standard library extension modules are supported by this method"
+            );
+
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+            assert!(res.is_err());
+            assert_eq!(
+                res.err().unwrap().to_string(),
+                "only standard library extension modules are supported by this method"
+            );
+
+            let res = builder.add_python_extension_module(
+                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
+                None,
+            );
+            assert!(res.is_err());
+            assert_eq!(
+                res.err().unwrap().to_string(),
                 "only standard library extension modules are supported by this method"
             );
         }
@@ -2367,12 +2546,29 @@ pub mod tests {
 
             let mut builder = options.new_builder()?;
 
-            let err = builder
-                .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None)
-                .err();
-            assert!(err.is_some());
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None);
+            assert!(res.is_err());
             assert_eq!(
-                err.unwrap().to_string(),
+                res.err().unwrap().to_string(),
+                "only standard library extension modules are supported by this method"
+            );
+
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+            assert!(res.is_err());
+            assert_eq!(
+                res.err().unwrap().to_string(),
+                "only standard library extension modules are supported by this method"
+            );
+
+            let res = builder.add_python_extension_module(
+                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
+                None,
+            );
+            assert!(res.is_err());
+            assert_eq!(
+                res.err().unwrap().to_string(),
                 "only standard library extension modules are supported by this method"
             );
         }
@@ -2396,12 +2592,29 @@ pub mod tests {
 
             let mut builder = options.new_builder()?;
 
-            let err = builder
-                .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None)
-                .err();
-            assert!(err.is_some());
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None);
+            assert!(res.is_err());
             assert_eq!(
-                err.unwrap().to_string(),
+                res.err().unwrap().to_string(),
+                "only standard library extension modules are supported by this method"
+            );
+
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+            assert!(res.is_err());
+            assert_eq!(
+                res.err().unwrap().to_string(),
+                "only standard library extension modules are supported by this method"
+            );
+
+            let res = builder.add_python_extension_module(
+                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
+                None,
+            );
+            assert!(res.is_err());
+            assert_eq!(
+                res.err().unwrap().to_string(),
                 "only standard library extension modules are supported by this method"
             );
         }
@@ -2425,12 +2638,29 @@ pub mod tests {
 
             let mut builder = options.new_builder()?;
 
-            let err = builder
-                .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None)
-                .err();
-            assert!(err.is_some());
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None);
+            assert!(res.is_err());
             assert_eq!(
-                err.unwrap().to_string(),
+                res.err().unwrap().to_string(),
+                "only standard library extension modules are supported by this method"
+            );
+
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+            assert!(res.is_err());
+            assert_eq!(
+                res.err().unwrap().to_string(),
+                "only standard library extension modules are supported by this method"
+            );
+
+            let res = builder.add_python_extension_module(
+                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
+                None,
+            );
+            assert!(res.is_err());
+            assert_eq!(
+                res.err().unwrap().to_string(),
                 "only standard library extension modules are supported by this method"
             );
         }
