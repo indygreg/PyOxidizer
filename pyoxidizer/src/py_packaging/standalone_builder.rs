@@ -1258,8 +1258,12 @@ pub mod tests {
         };
 
         // Dynamic libpython on Linux is not (yet) supported.
-        let res = options.new_builder();
-        assert!(res.is_err());
+        let err = options.new_builder().err();
+        assert!(err.is_some());
+        assert_eq!(
+            err.unwrap().to_string(),
+            "loading extension modules from memory not supported by this build configuration"
+        );
 
         Ok(())
     }
@@ -1274,8 +1278,12 @@ pub mod tests {
         };
 
         // Dynamic libpython on musl is not supported.
-        let res = options.new_builder();
-        assert!(res.is_err());
+        let err = options.new_builder().err();
+        assert!(err.is_some());
+        assert_eq!(
+            err.unwrap().to_string(),
+            "Python distribution does not support dynamically linking libpython"
+        );
 
         Ok(())
     }
@@ -1374,8 +1382,12 @@ pub mod tests {
         };
 
         // Dynamic libpython on macOS is not supported.
-        let res = options.new_builder();
-        assert!(res.is_err());
+        let err = options.new_builder().err();
+        assert!(err.is_some());
+        assert_eq!(
+            err.unwrap().to_string(),
+            "loading extension modules from memory not supported by this build configuration"
+        );
 
         Ok(())
     }
@@ -1558,7 +1570,12 @@ pub mod tests {
             };
 
             // We can't request static libpython with a dynamic distribution.
-            assert!(options.new_builder().is_err());
+            let err = options.new_builder().err();
+            assert!(err.is_some());
+            assert_eq!(
+                err.unwrap().to_string(),
+                "Python distribution does not support statically linking libpython"
+            );
         }
 
         Ok(())
