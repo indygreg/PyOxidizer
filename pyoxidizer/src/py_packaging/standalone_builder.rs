@@ -984,6 +984,25 @@ pub mod tests {
     lazy_static! {
         pub static ref WINDOWS_TARGET_TRIPLES: Vec<&'static str> =
             vec!["i686-pc-windows-msvc", "x86_64-pc-windows-msvc"];
+
+        /// An extension module represented by a shared library file.
+        pub static ref EXTENSION_MODULE_SHARED_LIBRARY_ONLY: PythonExtensionModule =
+            PythonExtensionModule {
+                name: "shared_only".to_string(),
+                init_fn: Some("PyInit__myext".to_string()),
+                extension_file_suffix: ".so".to_string(),
+                shared_library: Some(DataLocation::Memory(vec![42])),
+                object_file_data: vec![],
+                is_package: false,
+                link_libraries: vec![],
+                is_stdlib: false,
+                builtin_default: false,
+                required: false,
+                variant: None,
+                licenses: None,
+                license_texts: None,
+                license_public_domain: None,
+            };
     }
 
     /// Defines construction options for a `StandalonePythonExecutableBuilder`.
@@ -1189,24 +1208,9 @@ pub mod tests {
 
         let mut builder = options.new_builder()?;
 
-        let ext = PythonExtensionModule {
-            name: "myext".to_string(),
-            init_fn: None,
-            extension_file_suffix: ".so".to_string(),
-            shared_library: Some(DataLocation::Memory(vec![42])),
-            object_file_data: vec![DataLocation::Memory(vec![1])],
-            is_package: false,
-            link_libraries: vec![],
-            is_stdlib: false,
-            builtin_default: false,
-            required: false,
-            variant: None,
-            licenses: None,
-            license_texts: None,
-            license_public_domain: None,
-        };
-
-        let err = builder.add_python_extension_module(&ext, None).err();
+        let err = builder
+            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None)
+            .err();
         assert!(err.is_some());
         assert_eq!(
             err.unwrap().to_string(),
@@ -1227,25 +1231,11 @@ pub mod tests {
 
         let mut builder = options.new_builder()?;
 
-        let ext = PythonExtensionModule {
-            name: "myext".to_string(),
-            init_fn: None,
-            extension_file_suffix: ".so".to_string(),
-            shared_library: Some(DataLocation::Memory(vec![42])),
-            object_file_data: vec![DataLocation::Memory(vec![1])],
-            is_package: false,
-            link_libraries: vec![],
-            is_stdlib: false,
-            builtin_default: false,
-            required: false,
-            variant: None,
-            licenses: None,
-            license_texts: None,
-            license_public_domain: None,
-        };
-
         let err = builder
-            .add_python_extension_module(&ext, Some(ConcreteResourceLocation::InMemory))
+            .add_python_extension_module(
+                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
+                Some(ConcreteResourceLocation::InMemory),
+            )
             .err();
         assert!(err.is_some());
         assert_eq!(
@@ -1420,24 +1410,9 @@ pub mod tests {
 
         let mut builder = options.new_builder()?;
 
-        let ext = PythonExtensionModule {
-            name: "myext".to_string(),
-            init_fn: None,
-            extension_file_suffix: ".so".to_string(),
-            shared_library: Some(DataLocation::Memory(vec![42])),
-            object_file_data: vec![DataLocation::Memory(vec![1])],
-            is_package: false,
-            link_libraries: vec![],
-            is_stdlib: false,
-            builtin_default: false,
-            required: false,
-            variant: None,
-            licenses: None,
-            license_texts: None,
-            license_public_domain: None,
-        };
-
-        let err = builder.add_python_extension_module(&ext, None).err();
+        let err = builder
+            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None)
+            .err();
         assert!(err.is_some());
         assert_eq!(
             err.unwrap().to_string(),
@@ -1459,26 +1434,9 @@ pub mod tests {
 
         let mut builder = options.new_builder()?;
 
-        let ext = PythonExtensionModule {
-            name: "myext".to_string(),
-            init_fn: None,
-            extension_file_suffix: ".so".to_string(),
-            shared_library: Some(DataLocation::Memory(vec![42])),
-            object_file_data: vec![DataLocation::Memory(vec![1])],
-            is_package: false,
-            link_libraries: vec![],
-            is_stdlib: false,
-            builtin_default: false,
-            required: false,
-            variant: None,
-            licenses: None,
-            license_texts: None,
-            license_public_domain: None,
-        };
-
         let err = builder
             .add_python_extension_module(
-                &ext,
+                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
                 Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
             )
             .err();
@@ -1951,24 +1909,9 @@ pub mod tests {
 
         let mut builder = options.new_builder()?;
 
-        let ext = PythonExtensionModule {
-            name: "myext".to_string(),
-            init_fn: None,
-            extension_file_suffix: ".so".to_string(),
-            shared_library: Some(DataLocation::Memory(vec![42])),
-            object_file_data: vec![DataLocation::Memory(vec![1])],
-            is_package: false,
-            link_libraries: vec![],
-            is_stdlib: false,
-            builtin_default: false,
-            required: false,
-            variant: None,
-            licenses: None,
-            license_texts: None,
-            license_public_domain: None,
-        };
-
-        let err = builder.add_python_extension_module(&ext, None).err();
+        let err = builder
+            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None)
+            .err();
         assert!(err.is_some());
         assert_eq!(
             err.unwrap().to_string(),
@@ -1989,25 +1932,11 @@ pub mod tests {
 
         let mut builder = options.new_builder()?;
 
-        let ext = PythonExtensionModule {
-            name: "myext".to_string(),
-            init_fn: None,
-            extension_file_suffix: ".so".to_string(),
-            shared_library: Some(DataLocation::Memory(vec![42])),
-            object_file_data: vec![DataLocation::Memory(vec![1])],
-            is_package: false,
-            link_libraries: vec![],
-            is_stdlib: false,
-            builtin_default: false,
-            required: false,
-            variant: None,
-            licenses: None,
-            license_texts: None,
-            license_public_domain: None,
-        };
-
         let err = builder
-            .add_python_extension_module(&ext, Some(ConcreteResourceLocation::InMemory))
+            .add_python_extension_module(
+                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
+                Some(ConcreteResourceLocation::InMemory),
+            )
             .err();
         assert!(err.is_some());
         assert_eq!(
@@ -2030,24 +1959,9 @@ pub mod tests {
 
         let mut builder = options.new_builder()?;
 
-        let ext = PythonExtensionModule {
-            name: "myext".to_string(),
-            init_fn: None,
-            extension_file_suffix: ".so".to_string(),
-            shared_library: Some(DataLocation::Memory(vec![42])),
-            object_file_data: vec![DataLocation::Memory(vec![1])],
-            is_package: false,
-            link_libraries: vec![],
-            is_stdlib: false,
-            builtin_default: false,
-            required: false,
-            variant: None,
-            licenses: None,
-            license_texts: None,
-            license_public_domain: None,
-        };
-
-        let err = builder.add_python_extension_module(&ext, None).err();
+        let err = builder
+            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None)
+            .err();
         assert!(err.is_some());
         assert_eq!(
             err.unwrap().to_string(),
@@ -2069,26 +1983,9 @@ pub mod tests {
 
         let mut builder = options.new_builder()?;
 
-        let ext = PythonExtensionModule {
-            name: "myext".to_string(),
-            init_fn: None,
-            extension_file_suffix: ".so".to_string(),
-            shared_library: Some(DataLocation::Memory(vec![42])),
-            object_file_data: vec![DataLocation::Memory(vec![1])],
-            is_package: false,
-            link_libraries: vec![],
-            is_stdlib: false,
-            builtin_default: false,
-            required: false,
-            variant: None,
-            licenses: None,
-            license_texts: None,
-            license_public_domain: None,
-        };
-
         let err = builder
             .add_python_extension_module(
-                &ext,
+                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
                 Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
             )
             .err();
@@ -2443,24 +2340,9 @@ pub mod tests {
 
             let mut builder = options.new_builder()?;
 
-            let ext = PythonExtensionModule {
-                name: "myext".to_string(),
-                init_fn: None,
-                extension_file_suffix: ".pyd".to_string(),
-                shared_library: Some(DataLocation::Memory(vec![42])),
-                object_file_data: vec![DataLocation::Memory(vec![1])],
-                is_package: false,
-                link_libraries: vec![],
-                is_stdlib: false,
-                builtin_default: false,
-                required: false,
-                variant: None,
-                licenses: None,
-                license_texts: None,
-                license_public_domain: None,
-            };
-
-            let err = builder.add_python_extension_module(&ext, None).err();
+            let err = builder
+                .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None)
+                .err();
             assert!(err.is_some());
             assert_eq!(
                 err.unwrap().to_string(),
@@ -2485,24 +2367,9 @@ pub mod tests {
 
             let mut builder = options.new_builder()?;
 
-            let ext = PythonExtensionModule {
-                name: "myext".to_string(),
-                init_fn: None,
-                extension_file_suffix: ".pyd".to_string(),
-                shared_library: Some(DataLocation::Memory(vec![42])),
-                object_file_data: vec![DataLocation::Memory(vec![1])],
-                is_package: false,
-                link_libraries: vec![],
-                is_stdlib: false,
-                builtin_default: false,
-                required: false,
-                variant: None,
-                licenses: None,
-                license_texts: None,
-                license_public_domain: None,
-            };
-
-            let err = builder.add_python_extension_module(&ext, None).err();
+            let err = builder
+                .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None)
+                .err();
             assert!(err.is_some());
             assert_eq!(
                 err.unwrap().to_string(),
@@ -2529,24 +2396,9 @@ pub mod tests {
 
             let mut builder = options.new_builder()?;
 
-            let ext = PythonExtensionModule {
-                name: "myext".to_string(),
-                init_fn: None,
-                extension_file_suffix: ".pyd".to_string(),
-                shared_library: Some(DataLocation::Memory(vec![42])),
-                object_file_data: vec![DataLocation::Memory(vec![1])],
-                is_package: false,
-                link_libraries: vec![],
-                is_stdlib: false,
-                builtin_default: false,
-                required: false,
-                variant: None,
-                licenses: None,
-                license_texts: None,
-                license_public_domain: None,
-            };
-
-            let err = builder.add_python_extension_module(&ext, None).err();
+            let err = builder
+                .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None)
+                .err();
             assert!(err.is_some());
             assert_eq!(
                 err.unwrap().to_string(),
@@ -2573,24 +2425,9 @@ pub mod tests {
 
             let mut builder = options.new_builder()?;
 
-            let ext = PythonExtensionModule {
-                name: "myext".to_string(),
-                init_fn: None,
-                extension_file_suffix: ".pyd".to_string(),
-                shared_library: Some(DataLocation::Memory(vec![42])),
-                object_file_data: vec![DataLocation::Memory(vec![1])],
-                is_package: false,
-                link_libraries: vec![],
-                is_stdlib: false,
-                builtin_default: false,
-                required: false,
-                variant: None,
-                licenses: None,
-                license_texts: None,
-                license_public_domain: None,
-            };
-
-            let err = builder.add_python_extension_module(&ext, None).err();
+            let err = builder
+                .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None)
+                .err();
             assert!(err.is_some());
             assert_eq!(
                 err.unwrap().to_string(),
