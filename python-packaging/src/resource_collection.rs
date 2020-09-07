@@ -886,8 +886,6 @@ impl PythonResourceCollector {
         &mut self,
         module: &PythonExtensionModule,
     ) -> Result<()> {
-        self.check_policy(AbstractResourceLocation::InMemory)?;
-
         let entry = self
             .resources
             .entry(module.name.clone())

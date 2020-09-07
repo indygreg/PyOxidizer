@@ -639,6 +639,9 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             self.extension_build_contexts
                 .insert(extension_module.name.clone(), link_context);
 
+            self.resources_collector
+                .add_builtin_python_extension_module(extension_module)?;
+
             Ok(())
         } else {
             Err(anyhow!(
@@ -965,6 +968,7 @@ pub mod tests {
         crate::testutil::*,
         lazy_static::lazy_static,
         python_packaging::policy::ExtensionModuleFilter,
+        python_packed_resources::data::ResourceFlavor,
         std::collections::BTreeSet,
         std::iter::FromIterator,
     };
@@ -1080,9 +1084,7 @@ pub mod tests {
             // All extensions annotated as required in the distribution are marked
             // as built-ins.
             assert!(builder.extension_build_contexts.keys().any(|x| x == name));
-
-            // Built-in extension modules shouldn't be annotated as resources.
-            assert!(!builder.iter_resources().any(|(x, _)| x == name));
+            assert!(builder.iter_resources().any(|(x, _)| x == name));
         }
 
         Ok(())
@@ -1152,10 +1154,16 @@ pub mod tests {
             })
         );
 
-        // TODO we should add an entry for the builtin extension.
-        assert!(!builder
-            .iter_resources()
-            .any(|(name, _)| *name == "_sqlite3"));
+        assert_eq!(
+            builder
+                .iter_resources()
+                .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::BuiltinExtensionModule,
+                name: "_sqlite3".to_string(),
+                ..PrePackagedResource::default()
+            })
+        );
 
         Ok(())
     }
@@ -1255,10 +1263,16 @@ pub mod tests {
             })
         );
 
-        // TODO we should add an entry for the builtin extension.
-        assert!(!builder
-            .iter_resources()
-            .any(|(name, _)| *name == "_sqlite3"));
+        assert_eq!(
+            builder
+                .iter_resources()
+                .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::BuiltinExtensionModule,
+                name: "_sqlite3".to_string(),
+                ..PrePackagedResource::default()
+            })
+        );
 
         Ok(())
     }
@@ -1346,11 +1360,16 @@ pub mod tests {
             })
         );
 
-        // TODO we should add an entry for the builtin extension.
-        assert!(!builder
-            .iter_resources()
-            .any(|(name, _)| *name == "_sqlite3"));
-
+        assert_eq!(
+            builder
+                .iter_resources()
+                .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::BuiltinExtensionModule,
+                name: "_sqlite3".to_string(),
+                ..PrePackagedResource::default()
+            })
+        );
         Ok(())
     }
 
@@ -1469,10 +1488,16 @@ pub mod tests {
                 })
             );
 
-            // TODO we should add an entry for the builtin extension.
-            assert!(!builder
-                .iter_resources()
-                .any(|(name, _)| *name == "_sqlite3"));
+            assert_eq!(
+                builder
+                    .iter_resources()
+                    .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
+                Some(&PrePackagedResource {
+                    flavor: ResourceFlavor::BuiltinExtensionModule,
+                    name: "_sqlite3".to_string(),
+                    ..PrePackagedResource::default()
+                })
+            );
         }
 
         Ok(())
@@ -1524,10 +1549,16 @@ pub mod tests {
                 })
             );
 
-            // TODO we should add an entry for the builtin extension.
-            assert!(!builder
-                .iter_resources()
-                .any(|(name, _)| *name == "_sqlite3"));
+            assert_eq!(
+                builder
+                    .iter_resources()
+                    .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
+                Some(&PrePackagedResource {
+                    flavor: ResourceFlavor::BuiltinExtensionModule,
+                    name: "_sqlite3".to_string(),
+                    ..PrePackagedResource::default()
+                })
+            );
         }
 
         Ok(())
