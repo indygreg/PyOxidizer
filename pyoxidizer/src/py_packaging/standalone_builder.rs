@@ -592,8 +592,16 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     fn add_python_extension_module(
         &mut self,
         extension_module: &PythonExtensionModule,
-        _location: Option<ConcreteResourceLocation>,
+        location: Option<ConcreteResourceLocation>,
     ) -> Result<()> {
+        // Reject explicit requests to load extension module from the filesystem
+        // when the distribution doesn't support this.
+        if let Some(ConcreteResourceLocation::RelativePath(_)) = location {
+            if !self.distribution.is_extension_module_file_loadable() {
+                return Err(anyhow!("explicit request to load extension module from the filesystem is not supported by this Python distribution"));
+            }
+        }
+
         if extension_module.is_stdlib {
             // Extension modules shipped with the distribution are special.
             // We currently assume we are adding the extension as a built-in.
@@ -1672,48 +1680,16 @@ pub mod tests {
             .default_variant()
             .clone();
 
-        // TODO this should fail since we cannot load extension module files on musl
-        builder.add_python_extension_module(
-            &ext,
-            Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
-        )?;
-
+        let err = builder
+            .add_python_extension_module(
+                &ext,
+                Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
+            )
+            .err();
+        assert!(err.is_some());
         assert_eq!(
-            builder.extension_build_contexts.get("_sqlite3"),
-            Some(&LibPythonBuildContext {
-                object_files: ext.object_file_data.clone(),
-                static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
-                init_functions: BTreeMap::from_iter(
-                    [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
-                        .iter()
-                        .cloned()
-                ),
-                license_infos: BTreeMap::from_iter(
-                    [(
-                        "_sqlite3".to_string(),
-                        builder
-                            .distribution
-                            .license_infos
-                            .get("_sqlite3")
-                            .unwrap()
-                            .clone()
-                    )]
-                    .iter()
-                    .cloned()
-                ),
-                ..LibPythonBuildContext::default()
-            })
-        );
-
-        assert_eq!(
-            builder
-                .iter_resources()
-                .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
-            Some(&PrePackagedResource {
-                flavor: ResourceFlavor::BuiltinExtensionModule,
-                name: "_sqlite3".to_string(),
-                ..PrePackagedResource::default()
-            })
+            err.unwrap().to_string(),
+            "explicit request to load extension module from the filesystem is not supported by this Python distribution"
         );
 
         Ok(())
