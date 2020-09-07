@@ -978,11 +978,6 @@ pub mod tests {
             vec!["i686-pc-windows-msvc", "x86_64-pc-windows-msvc"];
     }
 
-    pub type StandaloneBuilderContext = (
-        Arc<Box<StandaloneDistribution>>,
-        Box<StandalonePythonExecutableBuilder>,
-    );
-
     /// Defines construction options for a `StandalonePythonExecutableBuilder`.
     ///
     /// This is mostly intended to be used by tests, to reduce boilerplate for
@@ -1015,7 +1010,7 @@ pub mod tests {
     }
 
     impl StandalonePythonExecutableBuilderOptions {
-        pub fn new_builder(&self) -> Result<StandaloneBuilderContext> {
+        pub fn new_builder(&self) -> Result<Box<StandalonePythonExecutableBuilder>> {
             let record = PYTHON_DISTRIBUTIONS
                 .find_distribution(&self.target_triple, &self.distribution_flavor)
                 .ok_or_else(|| anyhow!("could not find Python distribution"))?;
@@ -1028,7 +1023,7 @@ pub mod tests {
 
             let config = EmbeddedPythonConfig::default();
 
-            let builder = StandalonePythonExecutableBuilder::from_distribution(
+            StandalonePythonExecutableBuilder::from_distribution(
                 distribution.clone(),
                 self.host_triple.clone(),
                 self.target_triple.clone(),
@@ -1036,15 +1031,13 @@ pub mod tests {
                 self.libpython_link_mode.clone(),
                 policy,
                 config,
-            )?;
-
-            Ok((distribution.clone(), builder))
+            )
         }
     }
 
     pub fn get_embedded(logger: &slog::Logger) -> Result<EmbeddedPythonContext> {
         let options = StandalonePythonExecutableBuilderOptions::default();
-        let (_, exe) = options.new_builder()?;
+        let exe = options.new_builder()?;
 
         exe.to_embedded_python_context(logger, "0")
     }
@@ -1063,9 +1056,10 @@ pub mod tests {
     #[test]
     fn test_minimal_extensions_present() -> Result<()> {
         let options = StandalonePythonExecutableBuilderOptions::default();
-        let (distribution, builder) = options.new_builder()?;
+        let builder = options.new_builder()?;
 
-        let expected = distribution
+        let expected = builder
+            .distribution
             .extension_modules
             .iter()
             .filter_map(|(_, extensions)| {
@@ -1098,12 +1092,12 @@ pub mod tests {
             ..StandalonePythonExecutableBuilderOptions::default()
         };
 
-        let (distribution, builder) = options.new_builder()?;
+        let builder = options.new_builder()?;
 
         let builtin_names = builder.extension_build_contexts.keys().collect::<Vec<_>>();
 
         // All extensions compiled as built-ins by default.
-        for (name, _) in distribution.extension_modules.iter() {
+        for (name, _) in builder.distribution.extension_modules.iter() {
             assert!(builtin_names.contains(&name));
         }
 
@@ -1119,18 +1113,20 @@ pub mod tests {
             ..StandalonePythonExecutableBuilderOptions::default()
         };
 
-        let (distribution, mut builder): StandaloneBuilderContext = options.new_builder()?;
+        let mut builder = options.new_builder()?;
 
         // When adding an extension module in static link mode, it gets
         // added as a built-in and linked with libpython.
 
-        let sqlite: &PythonExtensionModule = distribution
+        let sqlite = builder
+            .distribution
             .extension_modules
             .get("_sqlite3")
             .unwrap()
-            .default_variant();
+            .default_variant()
+            .clone();
 
-        builder.add_python_extension_module(sqlite, None)?;
+        builder.add_python_extension_module(&sqlite, None)?;
 
         assert_eq!(
             builder.extension_build_contexts.get("_sqlite3"),
@@ -1145,7 +1141,12 @@ pub mod tests {
                 license_infos: BTreeMap::from_iter(
                     [(
                         "_sqlite3".to_string(),
-                        distribution.license_infos.get("_sqlite3").unwrap().clone()
+                        builder
+                            .distribution
+                            .license_infos
+                            .get("_sqlite3")
+                            .unwrap()
+                            .clone()
                     )]
                     .iter()
                     .cloned()
@@ -1208,11 +1209,11 @@ pub mod tests {
             ..StandalonePythonExecutableBuilderOptions::default()
         };
 
-        let (distribution, builder) = options.new_builder()?;
+        let builder = options.new_builder()?;
 
         // All extensions for musl Linux are built-in because dynamic linking
         // not possible.
-        for name in distribution.extension_modules.keys() {
+        for name in builder.distribution.extension_modules.keys() {
             assert!(builder.extension_build_contexts.keys().any(|e| name == e));
         }
 
@@ -1228,18 +1229,20 @@ pub mod tests {
             ..StandalonePythonExecutableBuilderOptions::default()
         };
 
-        let (distribution, mut builder): StandaloneBuilderContext = options.new_builder()?;
+        let mut builder = options.new_builder()?;
 
         // When adding an extension module in static link mode, it gets
         // added as a built-in and linked with libpython.
 
-        let sqlite: &PythonExtensionModule = distribution
+        let sqlite = builder
+            .distribution
             .extension_modules
             .get("_sqlite3")
             .unwrap()
-            .default_variant();
+            .default_variant()
+            .clone();
 
-        builder.add_python_extension_module(sqlite, None)?;
+        builder.add_python_extension_module(&sqlite, None)?;
 
         assert_eq!(
             builder.extension_build_contexts.get("_sqlite3"),
@@ -1254,7 +1257,12 @@ pub mod tests {
                 license_infos: BTreeMap::from_iter(
                     [(
                         "_sqlite3".to_string(),
-                        distribution.license_infos.get("_sqlite3").unwrap().clone()
+                        builder
+                            .distribution
+                            .license_infos
+                            .get("_sqlite3")
+                            .unwrap()
+                            .clone()
                     )]
                     .iter()
                     .cloned()
@@ -1301,12 +1309,12 @@ pub mod tests {
             ..StandalonePythonExecutableBuilderOptions::default()
         };
 
-        let (distribution, builder) = options.new_builder()?;
+        let builder = options.new_builder()?;
 
         let builtin_names = builder.extension_build_contexts.keys().collect::<Vec<_>>();
 
         // All extensions compiled as built-ins by default.
-        for (name, _) in distribution.extension_modules.iter() {
+        for (name, _) in builder.distribution.extension_modules.iter() {
             assert!(builtin_names.contains(&name));
         }
 
@@ -1322,18 +1330,20 @@ pub mod tests {
             ..StandalonePythonExecutableBuilderOptions::default()
         };
 
-        let (distribution, mut builder): StandaloneBuilderContext = options.new_builder()?;
+        let mut builder = options.new_builder()?;
 
         // When adding an extension module in static link mode, it gets
         // added as a built-in and linked with libpython.
 
-        let sqlite: &PythonExtensionModule = distribution
+        let sqlite = builder
+            .distribution
             .extension_modules
             .get("_sqlite3")
             .unwrap()
-            .default_variant();
+            .default_variant()
+            .clone();
 
-        builder.add_python_extension_module(sqlite, None)?;
+        builder.add_python_extension_module(&sqlite, None)?;
 
         assert_eq!(
             builder.extension_build_contexts.get("_sqlite3"),
@@ -1351,7 +1361,12 @@ pub mod tests {
                 license_infos: BTreeMap::from_iter(
                     [(
                         "_sqlite3".to_string(),
-                        distribution.license_infos.get("_sqlite3").unwrap().clone()
+                        builder
+                            .distribution
+                            .license_infos
+                            .get("_sqlite3")
+                            .unwrap()
+                            .clone()
                     )]
                     .iter()
                     .cloned()
@@ -1418,12 +1433,12 @@ pub mod tests {
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
-            let (distribution, builder) = options.new_builder()?;
+            let builder = options.new_builder()?;
 
             let builtin_names = builder.extension_build_contexts.keys().collect::<Vec<_>>();
 
             // In-core extensions are compiled as built-ins.
-            for (name, variants) in distribution.extension_modules.iter() {
+            for (name, variants) in builder.distribution.extension_modules.iter() {
                 let builtin_default = variants.iter().any(|e| e.builtin_default);
                 assert_eq!(builtin_names.contains(&name), builtin_default);
             }
@@ -1431,7 +1446,7 @@ pub mod tests {
             // Required extensions are compiled as built-in.
             // This assumes that are extensions annotated as required are built-in.
             // But this is an implementation detail. If this fails, it might be OK.
-            for (name, variants) in distribution.extension_modules.iter() {
+            for (name, variants) in builder.distribution.extension_modules.iter() {
                 // !required does not mean it is missing, however!
                 if variants.iter().any(|e| e.required) {
                     assert!(builtin_names.contains(&name));
@@ -1453,18 +1468,20 @@ pub mod tests {
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
-            let (distribution, mut builder): StandaloneBuilderContext = options.new_builder()?;
+            let mut builder = options.new_builder()?;
 
             // When adding an extension module in static link mode, it gets
             // added as a built-in and linked with libpython.
 
-            let sqlite: &PythonExtensionModule = distribution
+            let sqlite = builder
+                .distribution
                 .extension_modules
                 .get("_sqlite3")
                 .unwrap()
-                .default_variant();
+                .default_variant()
+                .clone();
 
-            builder.add_python_extension_module(sqlite, None)?;
+            builder.add_python_extension_module(&sqlite, None)?;
 
             assert_eq!(
                 builder.extension_build_contexts.get("_sqlite3"),
@@ -1479,7 +1496,12 @@ pub mod tests {
                     license_infos: BTreeMap::from_iter(
                         [(
                             "_sqlite3".to_string(),
-                            distribution.license_infos.get("_sqlite3").unwrap().clone()
+                            builder
+                                .distribution
+                                .license_infos
+                                .get("_sqlite3")
+                                .unwrap()
+                                .clone()
                         )]
                         .iter()
                         .cloned()
@@ -1514,18 +1536,20 @@ pub mod tests {
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
-            let (distribution, mut builder): StandaloneBuilderContext = options.new_builder()?;
+            let mut builder = options.new_builder()?;
 
             // When adding an extension module in static link mode, it gets
             // added as a built-in and linked with libpython.
 
-            let sqlite: &PythonExtensionModule = distribution
+            let sqlite = builder
+                .distribution
                 .extension_modules
                 .get("_sqlite3")
                 .unwrap()
-                .default_variant();
+                .default_variant()
+                .clone();
 
-            builder.add_python_extension_module(sqlite, None)?;
+            builder.add_python_extension_module(&sqlite, None)?;
 
             assert_eq!(
                 builder.extension_build_contexts.get("_sqlite3"),
@@ -1540,7 +1564,12 @@ pub mod tests {
                     license_infos: BTreeMap::from_iter(
                         [(
                             "_sqlite3".to_string(),
-                            distribution.license_infos.get("_sqlite3").unwrap().clone()
+                            builder
+                                .distribution
+                                .license_infos
+                                .get("_sqlite3")
+                                .unwrap()
+                                .clone()
                         )]
                         .iter()
                         .cloned()
@@ -1574,18 +1603,20 @@ pub mod tests {
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
-            let (distribution, mut builder): StandaloneBuilderContext = options.new_builder()?;
+            let mut builder = options.new_builder()?;
 
             // When loading resources from the filesystem, dynamically linked
             // extension modules should be manifested as filesystem files and
             // library dependencies should be captured.
 
-            let ssl_extension = distribution
+            let ssl_extension = builder
+                .distribution
                 .extension_modules
                 .get("_ssl")
                 .unwrap()
-                .default_variant();
-            builder.add_distribution_extension_module(ssl_extension)?;
+                .default_variant()
+                .clone();
+            builder.add_distribution_extension_module(&ssl_extension)?;
 
             let extensions = builder
                 .iter_resources()
@@ -1666,13 +1697,13 @@ pub mod tests {
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
-            let (distribution, builder) = options.new_builder()?;
+            let builder = options.new_builder()?;
 
             let builtin_names = builder.extension_build_contexts.keys().collect::<Vec<_>>();
 
             // All distribution extensions are built-ins in static Windows
             // distributions.
-            for name in distribution.extension_modules.keys() {
+            for name in builder.distribution.extension_modules.keys() {
                 assert!(builtin_names.contains(&name));
             }
         }

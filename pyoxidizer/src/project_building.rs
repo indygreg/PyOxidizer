@@ -525,7 +525,7 @@ mod tests {
     fn test_empty_project() -> Result<()> {
         let logger = get_logger()?;
         let options = StandalonePythonExecutableBuilderOptions::default();
-        let (_, pre_built) = options.new_builder()?;
+        let pre_built = options.new_builder()?;
 
         build_python_executable(
             &logger,
