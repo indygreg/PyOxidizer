@@ -594,11 +594,37 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         extension_module: &PythonExtensionModule,
         location: Option<ConcreteResourceLocation>,
     ) -> Result<()> {
+        // Whether we can load extension modules as standalone shared library files.
+        let can_load_standalone = self.distribution.is_extension_module_file_loadable();
+
+        // Whether we can load extension module dynamic libraries from memory. This
+        // means we have a dynamic library extension module and that library is loaded
+        // from memory: this is not a built-in extension!
+        let can_load_dynamic_library_memory =
+            self.supports_in_memory_dynamically_linked_extension_loading;
+
+        // Whether we can link the extension as a built-in. This requires the extension
+        // to be builtin to the core distribution, have object files that we can link
+        // together, or a static library to link.
+        let can_link_builtin = if extension_module.builtin_default {
+            true
+        } else {
+            !extension_module.object_file_data.is_empty()
+        };
+
         // Reject explicit requests to load extension module from the filesystem
         // when the distribution doesn't support this.
         if let Some(ConcreteResourceLocation::RelativePath(_)) = location {
-            if !self.distribution.is_extension_module_file_loadable() {
+            if !can_load_standalone {
                 return Err(anyhow!("explicit request to load extension module from the filesystem is not supported by this Python distribution"));
+            }
+        }
+
+        // Reject explicit requests to load extension module from memory when
+        // this isn't supported.
+        if let Some(ConcreteResourceLocation::InMemory) = location {
+            if !can_link_builtin && !can_load_dynamic_library_memory {
+                return Err(anyhow!("rejecting request to load extension module from memory since it is not supported"));
             }
         }
 
@@ -1289,7 +1315,7 @@ pub mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
+            "rejecting request to load extension module from memory since it is not supported"
         );
 
         let res = builder.add_python_extension_module(
@@ -2167,7 +2193,7 @@ pub mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
+            "rejecting request to load extension module from memory since it is not supported"
         );
 
         let res = builder.add_python_extension_module(
