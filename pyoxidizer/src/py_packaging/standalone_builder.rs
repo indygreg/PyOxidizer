@@ -1316,6 +1316,45 @@ pub mod tests {
     }
 
     #[test]
+    fn test_linux_extension_prefer_in_memory_policy() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-unknown-linux-gnu".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
+                "prefix".to_string(),
+            ),
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let mut builder = options.new_builder()?;
+
+        let res = builder.add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None);
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder
+            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None);
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn test_linux_distribution_dynamic() -> Result<()> {
         let options = StandalonePythonExecutableBuilderOptions {
             target_triple: "x86_64-unknown-linux-gnu".to_string(),
@@ -1754,6 +1793,82 @@ pub mod tests {
     }
 
     #[test]
+    fn test_linux_musl_extension_in_memory_policy() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-unknown-linux-musl".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            resources_policy: PythonResourcesPolicy::InMemoryOnly,
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let mut builder = options.new_builder()?;
+
+        let res = builder.add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None);
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder
+            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None);
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_linux_musl_extension_prefer_in_memory_policy() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-unknown-linux-musl".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
+                "prefix".to_string(),
+            ),
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let mut builder = options.new_builder()?;
+
+        let res = builder.add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None);
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder
+            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None);
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn test_macos_distribution_dynamic() -> Result<()> {
         let options = StandalonePythonExecutableBuilderOptions {
             target_triple: "x86_64-apple-darwin".to_string(),
@@ -2151,6 +2266,45 @@ pub mod tests {
             &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
             Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
         );
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_macos_extension_prefer_in_memory_policy() -> Result<()> {
+        let options = StandalonePythonExecutableBuilderOptions {
+            target_triple: "x86_64-apple-darwin".to_string(),
+            extension_module_filter: ExtensionModuleFilter::Minimal,
+            libpython_link_mode: BinaryLibpythonLinkMode::Static,
+            resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
+                "prefix".to_string(),
+            ),
+            ..StandalonePythonExecutableBuilderOptions::default()
+        };
+
+        let mut builder = options.new_builder()?;
+
+        let res = builder.add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None);
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+        assert!(res.is_err());
+        assert_eq!(
+            res.err().unwrap().to_string(),
+            "only standard library extension modules are supported by this method"
+        );
+
+        let res = builder
+            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None);
         assert!(res.is_err());
         assert_eq!(
             res.err().unwrap().to_string(),
@@ -2631,6 +2785,98 @@ pub mod tests {
                 extension_module_filter: ExtensionModuleFilter::Minimal,
                 libpython_link_mode: BinaryLibpythonLinkMode::Static,
                 resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly(
+                    "prefix".to_string(),
+                ),
+                ..StandalonePythonExecutableBuilderOptions::default()
+            };
+
+            let mut builder = options.new_builder()?;
+
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None);
+            assert!(res.is_err());
+            assert_eq!(
+                res.err().unwrap().to_string(),
+                "only standard library extension modules are supported by this method"
+            );
+
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+            assert!(res.is_err());
+            assert_eq!(
+                res.err().unwrap().to_string(),
+                "only standard library extension modules are supported by this method"
+            );
+
+            let res = builder.add_python_extension_module(
+                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
+                None,
+            );
+            assert!(res.is_err());
+            assert_eq!(
+                res.err().unwrap().to_string(),
+                "only standard library extension modules are supported by this method"
+            );
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_windows_dynamic_extension_prefer_in_memory_policy() -> Result<()> {
+        for target_triple in WINDOWS_TARGET_TRIPLES.iter() {
+            let options = StandalonePythonExecutableBuilderOptions {
+                target_triple: target_triple.to_string(),
+                distribution_flavor: DistributionFlavor::StandaloneDynamic,
+                extension_module_filter: ExtensionModuleFilter::Minimal,
+                libpython_link_mode: BinaryLibpythonLinkMode::Dynamic,
+                resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
+                    "prefix".to_string(),
+                ),
+                ..StandalonePythonExecutableBuilderOptions::default()
+            };
+
+            let mut builder = options.new_builder()?;
+
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_ONLY, None);
+            assert!(res.is_err());
+            assert_eq!(
+                res.err().unwrap().to_string(),
+                "only standard library extension modules are supported by this method"
+            );
+
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+            assert!(res.is_err());
+            assert_eq!(
+                res.err().unwrap().to_string(),
+                "only standard library extension modules are supported by this method"
+            );
+
+            let res = builder.add_python_extension_module(
+                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
+                None,
+            );
+            assert!(res.is_err());
+            assert_eq!(
+                res.err().unwrap().to_string(),
+                "only standard library extension modules are supported by this method"
+            );
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_windows_static_extension_prefer_in_memory_policy() -> Result<()> {
+        for target_triple in WINDOWS_TARGET_TRIPLES.iter() {
+            let options = StandalonePythonExecutableBuilderOptions {
+                target_triple: target_triple.to_string(),
+                distribution_flavor: DistributionFlavor::StandaloneStatic,
+                extension_module_filter: ExtensionModuleFilter::Minimal,
+                libpython_link_mode: BinaryLibpythonLinkMode::Static,
+                resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
                     "prefix".to_string(),
                 ),
                 ..StandalonePythonExecutableBuilderOptions::default()
