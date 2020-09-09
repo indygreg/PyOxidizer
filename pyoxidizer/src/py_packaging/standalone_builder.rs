@@ -989,7 +989,7 @@ pub mod tests {
         pub static ref EXTENSION_MODULE_SHARED_LIBRARY_ONLY: PythonExtensionModule =
             PythonExtensionModule {
                 name: "shared_only".to_string(),
-                init_fn: Some("PyInit__myext".to_string()),
+                init_fn: Some("PyInit_shared_only".to_string()),
                 extension_file_suffix: ".so".to_string(),
                 shared_library: Some(DataLocation::Memory(vec![42])),
                 object_file_data: vec![],
@@ -1008,7 +1008,7 @@ pub mod tests {
         pub static ref EXTENSION_MODULE_OBJECT_FILES_ONLY: PythonExtensionModule =
             PythonExtensionModule {
                 name: "object_files_only".to_string(),
-                init_fn: Some("PyInit__myext".to_string()),
+                init_fn: Some("PyInit_object_files_only".to_string()),
                 extension_file_suffix: ".so".to_string(),
                 shared_library: None,
                 object_file_data: vec![DataLocation::Memory(vec![0]), DataLocation::Memory(vec![1])],
@@ -1027,7 +1027,7 @@ pub mod tests {
         pub static ref EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES: PythonExtensionModule =
             PythonExtensionModule {
                 name: "shared_and_object_files".to_string(),
-                init_fn: Some("PyInit__myext".to_string()),
+                init_fn: Some("PyInit_shared_and_object_files".to_string()),
                 extension_file_suffix: ".so".to_string(),
                 shared_library: Some(DataLocation::Memory(b"shared".to_vec())),
                 object_file_data: vec![DataLocation::Memory(vec![0]), DataLocation::Memory(vec![1])],
