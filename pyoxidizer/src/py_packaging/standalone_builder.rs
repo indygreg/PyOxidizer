@@ -589,6 +589,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             .add_package_distribution_resource(resource, &location)
     }
 
+    #[allow(clippy::if_same_then_else)]
     fn add_python_extension_module(
         &mut self,
         extension_module: &PythonExtensionModule,
@@ -612,6 +613,44 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             !extension_module.object_file_data.is_empty()
         };
 
+        // Whether we can produce a standalone shared library extension module.
+        // TODO consider allowing this if object files are present.
+        let can_link_standalone = extension_module.shared_library.is_some();
+
+        // Whether the resources policy prefers in-memory loading.
+        let policy_want_memory = match self.packaging_policy.clone().get_resources_policy() {
+            PythonResourcesPolicy::InMemoryOnly => true,
+            PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => true,
+            PythonResourcesPolicy::FilesystemRelativeOnly(_) => false,
+        };
+
+        let want_in_memory = if let Some(ConcreteResourceLocation::InMemory) = location {
+            true
+        } else {
+            policy_want_memory
+        };
+
+        let _require_in_memory = if let Some(ConcreteResourceLocation::InMemory) = location {
+            true
+        } else {
+            self.packaging_policy.clone().get_resources_policy()
+                == &PythonResourcesPolicy::InMemoryOnly
+        };
+
+        // We produce a builtin extension module (by linking object files) if any
+        // of the following conditions are met:
+        //
+        // * We are a stdlib extension module built into libpython core
+        // * We want in memory loading and we can link a builtin
+        // * Builtin linking is the only mechanism available to us.
+        let produce_builtin = if extension_module.is_stdlib && extension_module.builtin_default {
+            true
+        } else if want_in_memory && can_link_builtin {
+            true
+        } else {
+            can_link_builtin && !can_link_standalone
+        };
+
         // Reject explicit requests to load extension module from the filesystem
         // when the distribution doesn't support this.
         if let Some(ConcreteResourceLocation::RelativePath(_)) = location {
@@ -628,60 +667,53 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             }
         }
 
-        if extension_module.is_stdlib {
-            // Extension modules shipped with the distribution are special.
-            // We currently assume we are adding the extension as a built-in.
+        let mut build_context = LibPythonBuildContext::default();
 
-            let mut link_context = LibPythonBuildContext::default();
-
-            if !extension_module.builtin_default {
-                for location in &extension_module.object_file_data {
-                    link_context.object_files.push(location.clone());
-                }
+        for depends in &extension_module.link_libraries {
+            if depends.framework {
+                build_context.frameworks.insert(depends.name.clone());
+            } else if depends.system {
+                build_context.system_libraries.insert(depends.name.clone());
+            } else if depends.static_library.is_some()
+                && !ignored_libraries_for_target(&self.target_triple)
+                    .contains(&depends.name.as_str())
+            {
+                build_context.static_libraries.insert(depends.name.clone());
+            } else if depends.dynamic_library.is_some()
+                && !ignored_libraries_for_target(&self.target_triple)
+                    .contains(&depends.name.as_str())
+            {
+                build_context.dynamic_libraries.insert(depends.name.clone());
             }
+        }
 
-            for depends in &extension_module.link_libraries {
-                if depends.framework {
-                    link_context.frameworks.insert(depends.name.clone());
-                } else if depends.system {
-                    link_context.system_libraries.insert(depends.name.clone());
-                } else if depends.static_library.is_some()
-                    && !ignored_libraries_for_target(&self.target_triple)
-                        .contains(&depends.name.as_str())
-                {
-                    link_context.static_libraries.insert(depends.name.clone());
-                } else if depends.dynamic_library.is_some()
-                    && !ignored_libraries_for_target(&self.target_triple)
-                        .contains(&depends.name.as_str())
-                {
-                    link_context.dynamic_libraries.insert(depends.name.clone());
-                }
+        if let Some(lis) = self.distribution.license_infos.get(&extension_module.name) {
+            build_context
+                .license_infos
+                .insert(extension_module.name.clone(), lis.clone());
+        }
+
+        if let Some(init_fn) = &extension_module.init_fn {
+            build_context
+                .init_functions
+                .insert(extension_module.name.clone(), init_fn.clone());
+        }
+
+        if produce_builtin {
+            for location in &extension_module.object_file_data {
+                build_context.object_files.push(location.clone());
             }
-
-            if let Some(lis) = self.distribution.license_infos.get(&extension_module.name) {
-                link_context
-                    .license_infos
-                    .insert(extension_module.name.clone(), lis.clone());
-            }
-
-            if let Some(init_fn) = &extension_module.init_fn {
-                link_context
-                    .init_functions
-                    .insert(extension_module.name.clone(), init_fn.clone());
-            }
-
-            self.extension_build_contexts
-                .insert(extension_module.name.clone(), link_context);
 
             self.resources_collector
                 .add_builtin_python_extension_module(extension_module)?;
-
-            Ok(())
         } else {
-            Err(anyhow!(
-                "only standard library extension modules are supported by this method"
-            ))
+            return Err(anyhow!("only builtin extensions currently supported"));
         }
+
+        self.extension_build_contexts
+            .insert(extension_module.name.clone(), build_context);
+
+        Ok(())
     }
 
     fn add_in_memory_distribution_extension_module(
@@ -1115,7 +1147,7 @@ pub mod tests {
             let config = EmbeddedPythonConfig::default();
 
             StandalonePythonExecutableBuilder::from_distribution(
-                distribution.clone(),
+                distribution,
                 self.host_triple.clone(),
                 self.target_triple.clone(),
                 self.app_name.clone(),
@@ -1131,6 +1163,44 @@ pub mod tests {
         let exe = options.new_builder()?;
 
         exe.to_embedded_python_context(logger, "0")
+    }
+
+    fn assert_extension_builtin(
+        builder: &StandalonePythonExecutableBuilder,
+        extension: &PythonExtensionModule,
+    ) -> Result<()> {
+        assert_eq!(
+            builder.iter_resources().find_map(|(name, r)| {
+                if *name == extension.name {
+                    Some(r)
+                } else {
+                    None
+                }
+            }),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::BuiltinExtensionModule,
+                name: extension.name.clone(),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        assert_eq!(
+            builder.extension_build_contexts.get(&extension.name),
+            Some(&LibPythonBuildContext {
+                object_files: extension.object_file_data.clone(),
+                init_functions: BTreeMap::from_iter(
+                    [(
+                        extension.name.to_string(),
+                        extension.init_fn.as_ref().clone().unwrap().to_string()
+                    )]
+                    .iter()
+                    .cloned()
+                ),
+                ..LibPythonBuildContext::default()
+            })
+        );
+
+        Ok(())
     }
 
     #[test]
@@ -1222,7 +1292,7 @@ pub mod tests {
         assert_eq!(
             builder.extension_build_contexts.get("_sqlite3"),
             Some(&LibPythonBuildContext {
-                object_files: sqlite.object_file_data.clone(),
+                object_files: sqlite.object_file_data,
                 static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
                 init_functions: BTreeMap::from_iter(
                     [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
@@ -1276,23 +1346,15 @@ pub mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
+            "only builtin extensions currently supported"
         );
 
-        let res = builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
-        let res = builder
-            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None);
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        builder
+            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None)?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
 
         Ok(())
     }
@@ -1318,25 +1380,17 @@ pub mod tests {
             "rejecting request to load extension module from memory since it is not supported"
         );
 
-        let res = builder.add_python_extension_module(
+        builder.add_python_extension_module(
             &EXTENSION_MODULE_OBJECT_FILES_ONLY,
             Some(ConcreteResourceLocation::InMemory),
-        );
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        )?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
-        let res = builder.add_python_extension_module(
+        builder.add_python_extension_module(
             &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
             Some(ConcreteResourceLocation::InMemory),
-        );
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        )?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
 
         Ok(())
     }
@@ -1359,23 +1413,15 @@ pub mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
+            "only builtin extensions currently supported"
         );
 
-        let res = builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
-        let res = builder
-            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None);
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        builder
+            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None)?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
 
         Ok(())
     }
@@ -1427,7 +1473,7 @@ pub mod tests {
         assert_eq!(
             builder.extension_build_contexts.get("_sqlite3"),
             Some(&LibPythonBuildContext {
-                object_files: ext.object_file_data.clone(),
+                object_files: ext.object_file_data,
                 static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
                 init_functions: BTreeMap::from_iter(
                     [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
@@ -1494,7 +1540,7 @@ pub mod tests {
         assert_eq!(
             builder.extension_build_contexts.get("_sqlite3"),
             Some(&LibPythonBuildContext {
-                object_files: ext.object_file_data.clone(),
+                object_files: ext.object_file_data,
                 static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
                 init_functions: BTreeMap::from_iter(
                     [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
@@ -1548,22 +1594,18 @@ pub mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
+            "only builtin extensions currently supported"
         );
 
-        let res = builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
         let res = builder
             .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None);
         assert!(res.is_err());
         assert_eq!(
             res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
+            "only builtin extensions currently supported"
         );
 
         Ok(())
@@ -1588,28 +1630,20 @@ pub mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
+            "only builtin extensions currently supported"
         );
 
-        let res = builder.add_python_extension_module(
+        builder.add_python_extension_module(
             &EXTENSION_MODULE_OBJECT_FILES_ONLY,
             Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
-        );
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        )?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
-        let res = builder.add_python_extension_module(
+        builder.add_python_extension_module(
             &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
             Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
-        );
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        )?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
 
         Ok(())
     }
@@ -1680,7 +1714,7 @@ pub mod tests {
         assert_eq!(
             builder.extension_build_contexts.get("_sqlite3"),
             Some(&LibPythonBuildContext {
-                object_files: sqlite.object_file_data.clone(),
+                object_files: sqlite.object_file_data,
                 static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
                 init_functions: BTreeMap::from_iter(
                     [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
@@ -1745,7 +1779,7 @@ pub mod tests {
         assert_eq!(
             builder.extension_build_contexts.get("_sqlite3"),
             Some(&LibPythonBuildContext {
-                object_files: ext.object_file_data.clone(),
+                object_files: ext.object_file_data,
                 static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
                 init_functions: BTreeMap::from_iter(
                     [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
@@ -1834,23 +1868,15 @@ pub mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
+            "only builtin extensions currently supported"
         );
 
-        let res = builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
-        let res = builder
-            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None);
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        builder
+            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None)?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
 
         Ok(())
     }
@@ -1873,23 +1899,15 @@ pub mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
+            "only builtin extensions currently supported"
         );
 
-        let res = builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
-        let res = builder
-            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None);
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        builder
+            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None)?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
 
         Ok(())
     }
@@ -1961,7 +1979,7 @@ pub mod tests {
         assert_eq!(
             builder.extension_build_contexts.get("_sqlite3"),
             Some(&LibPythonBuildContext {
-                object_files: sqlite.object_file_data.clone(),
+                object_files: sqlite.object_file_data,
                 system_libraries: BTreeSet::from_iter(["iconv".to_string()].iter().cloned()),
                 static_libraries: BTreeSet::from_iter(
                     ["intl".to_string(), "sqlite3".to_string()].iter().cloned()
@@ -2027,7 +2045,7 @@ pub mod tests {
         assert_eq!(
             builder.extension_build_contexts.get("_sqlite3"),
             Some(&LibPythonBuildContext {
-                object_files: ext.object_file_data.clone(),
+                object_files: ext.object_file_data,
                 system_libraries: BTreeSet::from_iter(["iconv".to_string()].iter().cloned()),
                 static_libraries: BTreeSet::from_iter(
                     ["intl".to_string(), "sqlite3".to_string()].iter().cloned()
@@ -2097,7 +2115,7 @@ pub mod tests {
         assert_eq!(
             builder.extension_build_contexts.get("_sqlite3"),
             Some(&LibPythonBuildContext {
-                object_files: ext.object_file_data.clone(),
+                object_files: ext.object_file_data,
                 system_libraries: BTreeSet::from_iter(["iconv".to_string()].iter().cloned()),
                 static_libraries: BTreeSet::from_iter(
                     ["intl".to_string(), "sqlite3".to_string()].iter().cloned()
@@ -2154,23 +2172,15 @@ pub mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
+            "only builtin extensions currently supported"
         );
 
-        let res = builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
-        let res = builder
-            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None);
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        builder
+            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None)?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
 
         Ok(())
     }
@@ -2196,25 +2206,17 @@ pub mod tests {
             "rejecting request to load extension module from memory since it is not supported"
         );
 
-        let res = builder.add_python_extension_module(
+        builder.add_python_extension_module(
             &EXTENSION_MODULE_OBJECT_FILES_ONLY,
             Some(ConcreteResourceLocation::InMemory),
-        );
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        )?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
-        let res = builder.add_python_extension_module(
+        builder.add_python_extension_module(
             &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
             Some(ConcreteResourceLocation::InMemory),
-        );
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        )?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
 
         Ok(())
     }
@@ -2235,22 +2237,18 @@ pub mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
+            "only builtin extensions currently supported"
         );
 
-        let res = builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
         let res = builder
             .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None);
         assert!(res.is_err());
         assert_eq!(
             res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
+            "only builtin extensions currently supported"
         );
 
         Ok(())
@@ -2275,28 +2273,20 @@ pub mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
+            "only builtin extensions currently supported"
         );
 
-        let res = builder.add_python_extension_module(
+        builder.add_python_extension_module(
             &EXTENSION_MODULE_OBJECT_FILES_ONLY,
             Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
-        );
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        )?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
-        let res = builder.add_python_extension_module(
+        builder.add_python_extension_module(
             &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
             Some(ConcreteResourceLocation::RelativePath("prefix".to_string())),
-        );
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        )?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
 
         Ok(())
     }
@@ -2319,23 +2309,15 @@ pub mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
+            "only builtin extensions currently supported"
         );
 
-        let res = builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
-        let res = builder
-            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None);
-        assert!(res.is_err());
-        assert_eq!(
-            res.err().unwrap().to_string(),
-            "only standard library extension modules are supported by this method"
-        );
+        builder
+            .add_python_extension_module(&EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES, None)?;
+        assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
 
         Ok(())
     }
@@ -2687,26 +2669,17 @@ pub mod tests {
             assert!(res.is_err());
             assert_eq!(
                 res.err().unwrap().to_string(),
-                "only standard library extension modules are supported by this method"
+                "only builtin extensions currently supported"
             );
 
-            let res =
-                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
-            assert!(res.is_err());
-            assert_eq!(
-                res.err().unwrap().to_string(),
-                "only standard library extension modules are supported by this method"
-            );
+            builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
+            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
-            let res = builder.add_python_extension_module(
+            builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
                 None,
-            );
-            assert!(res.is_err());
-            assert_eq!(
-                res.err().unwrap().to_string(),
-                "only standard library extension modules are supported by this method"
-            );
+            )?;
+            assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
         }
 
         Ok(())
@@ -2731,26 +2704,17 @@ pub mod tests {
             assert!(res.is_err());
             assert_eq!(
                 res.err().unwrap().to_string(),
-                "only standard library extension modules are supported by this method"
+                "only builtin extensions currently supported"
             );
 
-            let res =
-                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
-            assert!(res.is_err());
-            assert_eq!(
-                res.err().unwrap().to_string(),
-                "only standard library extension modules are supported by this method"
-            );
+            builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
+            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
-            let res = builder.add_python_extension_module(
+            builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
                 None,
-            );
-            assert!(res.is_err());
-            assert_eq!(
-                res.err().unwrap().to_string(),
-                "only standard library extension modules are supported by this method"
-            );
+            )?;
+            assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
         }
 
         Ok(())
@@ -2777,16 +2741,11 @@ pub mod tests {
             assert!(res.is_err());
             assert_eq!(
                 res.err().unwrap().to_string(),
-                "only standard library extension modules are supported by this method"
+                "only builtin extensions currently supported"
             );
 
-            let res =
-                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
-            assert!(res.is_err());
-            assert_eq!(
-                res.err().unwrap().to_string(),
-                "only standard library extension modules are supported by this method"
-            );
+            builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
+            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
             let res = builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
@@ -2795,7 +2754,7 @@ pub mod tests {
             assert!(res.is_err());
             assert_eq!(
                 res.err().unwrap().to_string(),
-                "only standard library extension modules are supported by this method"
+                "only builtin extensions currently supported"
             );
         }
 
@@ -2823,16 +2782,11 @@ pub mod tests {
             assert!(res.is_err());
             assert_eq!(
                 res.err().unwrap().to_string(),
-                "only standard library extension modules are supported by this method"
+                "only builtin extensions currently supported"
             );
 
-            let res =
-                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
-            assert!(res.is_err());
-            assert_eq!(
-                res.err().unwrap().to_string(),
-                "only standard library extension modules are supported by this method"
-            );
+            builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
+            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
             let res = builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
@@ -2841,7 +2795,7 @@ pub mod tests {
             assert!(res.is_err());
             assert_eq!(
                 res.err().unwrap().to_string(),
-                "only standard library extension modules are supported by this method"
+                "only builtin extensions currently supported"
             );
         }
 
@@ -2869,26 +2823,17 @@ pub mod tests {
             assert!(res.is_err());
             assert_eq!(
                 res.err().unwrap().to_string(),
-                "only standard library extension modules are supported by this method"
+                "only builtin extensions currently supported"
             );
 
-            let res =
-                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
-            assert!(res.is_err());
-            assert_eq!(
-                res.err().unwrap().to_string(),
-                "only standard library extension modules are supported by this method"
-            );
+            builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
+            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
-            let res = builder.add_python_extension_module(
+            builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
                 None,
-            );
-            assert!(res.is_err());
-            assert_eq!(
-                res.err().unwrap().to_string(),
-                "only standard library extension modules are supported by this method"
-            );
+            )?;
+            assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
         }
 
         Ok(())
@@ -2915,26 +2860,17 @@ pub mod tests {
             assert!(res.is_err());
             assert_eq!(
                 res.err().unwrap().to_string(),
-                "only standard library extension modules are supported by this method"
+                "only builtin extensions currently supported"
             );
 
-            let res =
-                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
-            assert!(res.is_err());
-            assert_eq!(
-                res.err().unwrap().to_string(),
-                "only standard library extension modules are supported by this method"
-            );
+            builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
+            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
-            let res = builder.add_python_extension_module(
+            builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
                 None,
-            );
-            assert!(res.is_err());
-            assert_eq!(
-                res.err().unwrap().to_string(),
-                "only standard library extension modules are supported by this method"
-            );
+            )?;
+            assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
         }
 
         Ok(())
