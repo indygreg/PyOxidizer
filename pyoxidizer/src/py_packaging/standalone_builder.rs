@@ -630,7 +630,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             policy_want_memory
         };
 
-        let _require_in_memory = if let Some(ConcreteResourceLocation::InMemory) = location {
+        let require_in_memory = if let Some(ConcreteResourceLocation::InMemory) = location {
             true
         } else {
             self.packaging_policy.clone().get_resources_policy()
@@ -665,6 +665,13 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             if !can_link_builtin && !can_load_dynamic_library_memory {
                 return Err(anyhow!("rejecting request to load extension module from memory since it is not supported"));
             }
+        }
+
+        if require_in_memory && (!can_link_builtin && !can_load_dynamic_library_memory) {
+            return Err(anyhow!(
+                "extension module {} cannot be loaded from memory but memory loading required",
+                extension_module.name
+            ));
         }
 
         let mut build_context = LibPythonBuildContext::default();
@@ -1346,7 +1353,7 @@ pub mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.err().unwrap().to_string(),
-            "only builtin extensions currently supported"
+            "extension module shared_only cannot be loaded from memory but memory loading required"
         );
 
         builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
@@ -1517,7 +1524,9 @@ pub mod tests {
             target_triple: "x86_64-unknown-linux-gnu".to_string(),
             extension_module_filter: ExtensionModuleFilter::Minimal,
             libpython_link_mode: BinaryLibpythonLinkMode::Static,
-            resources_policy: PythonResourcesPolicy::InMemoryOnly,
+            resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
+                "prefix".to_string(),
+            ),
             ..StandalonePythonExecutableBuilderOptions::default()
         };
 
@@ -1617,7 +1626,9 @@ pub mod tests {
             target_triple: "x86_64-unknown-linux-gnu".to_string(),
             extension_module_filter: ExtensionModuleFilter::Minimal,
             libpython_link_mode: BinaryLibpythonLinkMode::Static,
-            resources_policy: PythonResourcesPolicy::InMemoryOnly,
+            resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
+                "prefix".to_string(),
+            ),
             ..StandalonePythonExecutableBuilderOptions::default()
         };
 
@@ -1823,7 +1834,9 @@ pub mod tests {
             target_triple: "x86_64-unknown-linux-musl".to_string(),
             extension_module_filter: ExtensionModuleFilter::Minimal,
             libpython_link_mode: BinaryLibpythonLinkMode::Static,
-            resources_policy: PythonResourcesPolicy::InMemoryOnly,
+            resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
+                "prefix".to_string(),
+            ),
             ..StandalonePythonExecutableBuilderOptions::default()
         };
 
@@ -1868,7 +1881,7 @@ pub mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.err().unwrap().to_string(),
-            "only builtin extensions currently supported"
+            "extension module shared_only cannot be loaded from memory but memory loading required"
         );
 
         builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
@@ -2092,7 +2105,9 @@ pub mod tests {
             target_triple: "x86_64-apple-darwin".to_string(),
             extension_module_filter: ExtensionModuleFilter::Minimal,
             libpython_link_mode: BinaryLibpythonLinkMode::Static,
-            resources_policy: PythonResourcesPolicy::InMemoryOnly,
+            resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
+                "prefix".to_string(),
+            ),
             ..StandalonePythonExecutableBuilderOptions::default()
         };
 
@@ -2172,7 +2187,7 @@ pub mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.err().unwrap().to_string(),
-            "only builtin extensions currently supported"
+            "extension module shared_only cannot be loaded from memory but memory loading required"
         );
 
         builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
@@ -2260,7 +2275,9 @@ pub mod tests {
             target_triple: "x86_64-apple-darwin".to_string(),
             extension_module_filter: ExtensionModuleFilter::Minimal,
             libpython_link_mode: BinaryLibpythonLinkMode::Static,
-            resources_policy: PythonResourcesPolicy::InMemoryOnly,
+            resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
+                "prefix".to_string(),
+            ),
             ..StandalonePythonExecutableBuilderOptions::default()
         };
 
@@ -2704,7 +2721,7 @@ pub mod tests {
             assert!(res.is_err());
             assert_eq!(
                 res.err().unwrap().to_string(),
-                "only builtin extensions currently supported"
+                "extension module shared_only cannot be loaded from memory but memory loading required"
             );
 
             builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
