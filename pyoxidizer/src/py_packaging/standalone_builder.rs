@@ -262,53 +262,6 @@ impl StandalonePythonExecutableBuilder {
         Ok(())
     }
 
-    fn add_builtin_extension_module(&mut self, module: &PythonExtensionModule) -> Result<()> {
-        if module.object_file_data.is_empty() {
-            return Err(anyhow!(
-                "cannot add extension module {} as builtin because it lacks object file data",
-                module.name
-            ));
-        }
-
-        self.resources_collector
-            .add_builtin_python_extension_module(module)?;
-
-        let mut link_context = LibPythonBuildContext::default();
-
-        if let Some(init_fn) = &module.init_fn {
-            link_context
-                .init_functions
-                .insert(module.name.clone(), init_fn.clone());
-        }
-
-        for location in &module.object_file_data {
-            link_context.object_files.push(location.clone());
-        }
-
-        for depends in &module.link_libraries {
-            if depends.framework {
-                link_context.frameworks.insert(depends.name.clone());
-            } else if depends.system {
-                link_context.system_libraries.insert(depends.name.clone());
-            } else if !ignored_libraries_for_target(&self.target_triple)
-                .contains(&depends.name.as_str())
-            {
-                link_context.dynamic_libraries.insert(depends.name.clone());
-            }
-        }
-
-        if let Some(lis) = self.distribution.license_infos.get(&module.name) {
-            link_context
-                .license_infos
-                .insert(module.name.clone(), lis.clone());
-        }
-
-        self.extension_build_contexts
-            .insert(module.name.clone(), link_context);
-
-        Ok(())
-    }
-
     // TODO move logic into PythonResourceCollector.add_python_extension_module().
     fn add_in_memory_extension_module_shared_library(
         &mut self,
@@ -826,7 +779,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             )
         } else if !extension_module.object_file_data.is_empty() {
             // TODO we shouldn't be adding a builtin extension module from this API.
-            self.add_builtin_extension_module(extension_module)
+            self.add_python_extension_module(
+                extension_module,
+                Some(ConcreteResourceLocation::InMemory),
+            )
         } else if extension_module.shared_library.is_some() {
             Err(anyhow!(
                 "loading extension modules from memory not supported by this build configuration"
@@ -924,7 +880,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &mut self,
         extension_module: &PythonExtensionModule,
     ) -> Result<()> {
-        self.add_builtin_extension_module(extension_module)
+        self.add_python_extension_module(extension_module, Some(ConcreteResourceLocation::InMemory))
     }
 
     fn filter_resources_from_files(
