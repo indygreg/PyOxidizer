@@ -262,36 +262,6 @@ impl StandalonePythonExecutableBuilder {
         Ok(())
     }
 
-    // TODO move logic into PythonResourceCollector.add_python_extension_module().
-    fn add_in_memory_extension_module_shared_library(
-        &mut self,
-        module: &str,
-        is_package: bool,
-        data: &[u8],
-    ) -> Result<()> {
-        self.resources_collector.add_python_extension_module(
-            &PythonExtensionModule {
-                name: module.to_string(),
-                init_fn: None,
-                extension_file_suffix: "".to_string(),
-                shared_library: Some(DataLocation::Memory(data.to_vec())),
-                object_file_data: vec![],
-                is_package,
-                link_libraries: vec![],
-                is_stdlib: false,
-                builtin_default: false,
-                required: false,
-                variant: None,
-                licenses: None,
-                license_texts: None,
-                license_public_domain: None,
-            },
-            &ConcreteResourceLocation::InMemory,
-        )?;
-
-        Ok(())
-    }
-
     /// Build a Python library suitable for linking.
     ///
     /// This will take the underlying distribution, resources, and
@@ -812,14 +782,9 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         if self.supports_in_memory_dynamically_linked_extension_loading
             && extension_module.shared_library.is_some()
         {
-            self.add_in_memory_extension_module_shared_library(
-                &extension_module.name,
-                extension_module.is_package,
-                &extension_module
-                    .shared_library
-                    .as_ref()
-                    .unwrap()
-                    .resolve()?,
+            self.add_python_extension_module(
+                extension_module,
+                Some(ConcreteResourceLocation::InMemory),
             )
         } else if !extension_module.object_file_data.is_empty() {
             // TODO we shouldn't be adding a builtin extension module from this API.
@@ -874,14 +839,9 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         match self.packaging_policy.get_resources_policy().clone() {
             PythonResourcesPolicy::InMemoryOnly => {
                 if self.supports_in_memory_dynamically_linked_extension_loading {
-                    self.add_in_memory_extension_module_shared_library(
-                        &extension_module.name,
-                        extension_module.is_package,
-                        &extension_module
-                            .shared_library
-                            .as_ref()
-                            .unwrap()
-                            .resolve()?,
+                    self.add_python_extension_module(
+                        extension_module,
+                        Some(ConcreteResourceLocation::InMemory),
                     )
                 } else {
                     Err(anyhow!("in-memory-only resources policy active but in-memory extension module importing not supported by this configuration: cannot load {}", extension_module.name))
@@ -899,14 +859,9 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             }
             PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(ref prefix) => {
                 if self.supports_in_memory_dynamically_linked_extension_loading {
-                    self.add_in_memory_extension_module_shared_library(
-                        &extension_module.name,
-                        extension_module.is_package,
-                        &extension_module
-                            .shared_library
-                            .as_ref()
-                            .unwrap()
-                            .resolve()?,
+                    self.add_python_extension_module(
+                        extension_module,
+                        Some(ConcreteResourceLocation::InMemory),
                     )
                 } else if self.distribution.is_extension_module_file_loadable() {
                     self.resources_collector.add_python_extension_module(
