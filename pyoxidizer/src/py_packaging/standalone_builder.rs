@@ -590,6 +590,16 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 == &PythonResourcesPolicy::InMemoryOnly
         };
 
+        let require_filesystem = if let Some(ConcreteResourceLocation::RelativePath(_)) = location {
+            true
+        } else {
+            match *self.packaging_policy.clone().get_resources_policy() {
+                PythonResourcesPolicy::FilesystemRelativeOnly(_) => true,
+                PythonResourcesPolicy::InMemoryOnly => false,
+                PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => false,
+            }
+        };
+
         // We produce a builtin extension module (by linking object files) if any
         // of the following conditions are met:
         //
@@ -625,6 +635,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 "extension module {} cannot be loaded from memory but memory loading required",
                 extension_module.name
             ));
+        }
+
+        if require_filesystem && !can_link_standalone && !produce_builtin {
+            return Err(anyhow!("extension module {} cannot be materialized as a shared library extension but filesystem loading required", extension_module.name));
         }
 
         let mut build_context = LibPythonBuildContext::default();
