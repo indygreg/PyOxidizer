@@ -777,9 +777,9 @@ impl PythonExecutable {
             PythonExtensionModuleFlavor::Distribution(m) => {
                 self.exe.add_in_memory_distribution_extension_module(&m)
             }
-            PythonExtensionModuleFlavor::StaticallyLinked(m) => {
-                self.exe.add_static_extension_module(&m)
-            }
+            PythonExtensionModuleFlavor::StaticallyLinked(m) => self
+                .exe
+                .add_python_extension_module(&m, Some(ConcreteResourceLocation::InMemory)),
             PythonExtensionModuleFlavor::DynamicLibrary(m) => {
                 self.exe.add_in_memory_dynamic_extension_module(&m)
             }
@@ -858,7 +858,8 @@ impl PythonExecutable {
                     logger,
                     "adding statically linked extension module {}", m.name
                 );
-                self.exe.add_static_extension_module(&m)
+                self.exe
+                    .add_python_extension_module(&m, Some(ConcreteResourceLocation::InMemory))
             }
             PythonExtensionModuleFlavor::DynamicLibrary(m) => {
                 info!(

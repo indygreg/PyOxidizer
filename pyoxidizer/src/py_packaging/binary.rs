@@ -209,12 +209,6 @@ pub trait PythonBinaryBuilder {
         extension_module: &PythonExtensionModule,
     ) -> Result<()>;
 
-    /// Add an extension module to be statically linked into the binary.
-    fn add_static_extension_module(
-        &mut self,
-        extension_module_data: &PythonExtensionModule,
-    ) -> Result<()>;
-
     /// Filter embedded resources against names in files.
     ///
     /// `files` is files to read names from.

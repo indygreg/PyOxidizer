@@ -875,13 +875,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         }
     }
 
-    fn add_static_extension_module(
-        &mut self,
-        extension_module: &PythonExtensionModule,
-    ) -> Result<()> {
-        self.add_python_extension_module(extension_module, Some(ConcreteResourceLocation::InMemory))
-    }
-
     fn filter_resources_from_files(
         &mut self,
         logger: &slog::Logger,
