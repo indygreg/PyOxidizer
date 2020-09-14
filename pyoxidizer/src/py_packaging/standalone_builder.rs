@@ -1670,6 +1670,7 @@ pub mod tests {
                 "prefix_explicit".to_string(),
             )),
         )?;
+        // TODO should produce shared library since it is available
         assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
 
         Ok(())
@@ -2335,6 +2336,7 @@ pub mod tests {
                 "prefix_explicit".to_string(),
             )),
         )?;
+        // TODO this should be a shared library filesystem
         assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
 
         Ok(())
@@ -2834,6 +2836,7 @@ pub mod tests {
             builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
             assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
+            // TODO Presence of object files should allow conversion to built-in.
             let res = builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
                 None,
