@@ -704,23 +704,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             .add_python_extension_module(extension_module, &ConcreteResourceLocation::InMemory)
     }
 
-    fn add_relative_path_distribution_extension_module(
-        &mut self,
-        prefix: &str,
-        extension_module: &PythonExtensionModule,
-    ) -> Result<()> {
-        if self.distribution.is_extension_module_file_loadable() {
-            self.resources_collector.add_python_extension_module(
-                extension_module,
-                &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-            )
-        } else {
-            Err(anyhow!(
-                "loading extension modules from files not supported by this build configuration"
-            ))
-        }
-    }
-
     fn add_distribution_extension_module(
         &mut self,
         extension_module: &PythonExtensionModule,
@@ -747,9 +730,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                 LibpythonLinkMode::Static => {
                     self.add_python_extension_module(&extension_module, None)
                 }
-                LibpythonLinkMode::Dynamic => {
-                    self.add_relative_path_distribution_extension_module(&prefix, &extension_module)
-                }
+                LibpythonLinkMode::Dynamic => self.add_python_extension_module(
+                    &extension_module,
+                    Some(ConcreteResourceLocation::RelativePath(prefix.clone())),
+                ),
             },
             PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(prefix) => {
                 match self.link_mode {
@@ -762,10 +746,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                             self.add_in_memory_distribution_extension_module(&extension_module);
 
                         if res.is_err() {
-                            res = self.add_relative_path_distribution_extension_module(
-                                &prefix,
+                            res = self.add_python_extension_module(
                                 &extension_module,
-                            )
+                                Some(ConcreteResourceLocation::RelativePath(prefix.clone())),
+                            );
                         }
 
                         res

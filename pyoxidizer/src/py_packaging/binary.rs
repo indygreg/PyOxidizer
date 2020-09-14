@@ -172,13 +172,6 @@ pub trait PythonBinaryBuilder {
         extension_module: &PythonExtensionModule,
     ) -> Result<()>;
 
-    /// Add an extension module from a Python distribution to be loaded from a relative filesystem path.
-    fn add_relative_path_distribution_extension_module(
-        &mut self,
-        prefix: &str,
-        extension_module: &PythonExtensionModule,
-    ) -> Result<()>;
-
     /// Add an extension module from a Python distribution to be imported via whatever means the policy allows.
     fn add_distribution_extension_module(
         &mut self,

@@ -813,15 +813,16 @@ impl PythonExecutable {
         info!(&logger, "adding in-extension module {}", m.name());
 
         match m {
-            PythonExtensionModuleFlavor::Distribution(m) => self
-                .exe
-                .add_relative_path_distribution_extension_module(&prefix, &m),
+            PythonExtensionModuleFlavor::Distribution(m) => self.exe.add_python_extension_module(
+                &m,
+                Some(ConcreteResourceLocation::RelativePath(prefix)),
+            ),
             PythonExtensionModuleFlavor::StaticallyLinked(_) => Err(anyhow!(
                 "statically linked extension modules cannot be added as filesystem relative"
             )),
             PythonExtensionModuleFlavor::DynamicLibrary(m) => self.exe.add_python_extension_module(
                 &m,
-                Some(ConcreteResourceLocation::RelativePath(prefix.clone())),
+                Some(ConcreteResourceLocation::RelativePath(prefix)),
             ),
         }
         .map_err(|e| {
