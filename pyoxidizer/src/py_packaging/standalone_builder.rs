@@ -586,14 +586,14 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         // of the following conditions are met:
         //
         // * We are a stdlib extension module built into libpython core
-        // * We want in memory loading and we can link a builtin
         // * Builtin linking is the only mechanism available to us.
+        // * We want in memory loading and we can link a builtin
         let produce_builtin = if extension_module.is_stdlib && extension_module.builtin_default {
             true
-        } else if want_in_memory && can_link_builtin {
+        } else if can_link_builtin && !can_link_standalone {
             true
         } else {
-            can_link_builtin && !can_link_standalone
+            want_in_memory && can_link_builtin && !require_filesystem
         };
 
         // Reject explicit requests to load extension module from the filesystem
@@ -1670,8 +1670,11 @@ pub mod tests {
                 "prefix_explicit".to_string(),
             )),
         )?;
-        // TODO should produce shared library since it is available
-        assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
+        assert_extension_shared_library(
+            &builder,
+            &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
+            ConcreteResourceLocation::RelativePath("prefix_explicit".to_string()),
+        )?;
 
         Ok(())
     }
@@ -2336,8 +2339,11 @@ pub mod tests {
                 "prefix_explicit".to_string(),
             )),
         )?;
-        // TODO this should be a shared library filesystem
-        assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
+        assert_extension_shared_library(
+            &builder,
+            &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
+            ConcreteResourceLocation::RelativePath("prefix_explicit".to_string()),
+        )?;
 
         Ok(())
     }
