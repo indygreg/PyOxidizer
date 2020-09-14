@@ -600,7 +600,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         // when the distribution doesn't support this.
         if let Some(ConcreteResourceLocation::RelativePath(_)) = location {
             if !can_load_standalone {
-                return Err(anyhow!("explicit request to load extension module from the filesystem is not supported by this Python distribution"));
+                return Err(anyhow!("explicit request to load extension module {} from the filesystem is not supported by this Python distribution", extension_module.name));
             }
         }
 
@@ -608,7 +608,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         // this isn't supported.
         if let Some(ConcreteResourceLocation::InMemory) = location {
             if !can_link_builtin && !can_load_dynamic_library_memory {
-                return Err(anyhow!("rejecting request to load extension module from memory since it is not supported"));
+                return Err(anyhow!("rejecting request to load extension module {} from memory since it is not supported", extension_module.name));
             }
         }
 
@@ -1388,7 +1388,7 @@ pub mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.err().unwrap().to_string(),
-            "rejecting request to load extension module from memory since it is not supported"
+            "rejecting request to load extension module shared_only from memory since it is not supported"
         );
 
         builder.add_python_extension_module(
@@ -1879,7 +1879,7 @@ pub mod tests {
         assert!(err.is_some());
         assert_eq!(
             err.unwrap().to_string(),
-            "explicit request to load extension module from the filesystem is not supported by this Python distribution"
+            "explicit request to load extension module _sqlite3 from the filesystem is not supported by this Python distribution"
         );
 
         Ok(())
@@ -2242,7 +2242,7 @@ pub mod tests {
         assert!(res.is_err());
         assert_eq!(
             res.err().unwrap().to_string(),
-            "rejecting request to load extension module from memory since it is not supported"
+            "rejecting request to load extension module shared_only from memory since it is not supported"
         );
 
         builder.add_python_extension_module(
