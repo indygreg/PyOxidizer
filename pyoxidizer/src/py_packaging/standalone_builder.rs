@@ -775,34 +775,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         }
     }
 
-    fn add_in_memory_dynamic_extension_module(
-        &mut self,
-        extension_module: &PythonExtensionModule,
-    ) -> Result<()> {
-        if self.supports_in_memory_dynamically_linked_extension_loading
-            && extension_module.shared_library.is_some()
-        {
-            self.add_python_extension_module(
-                extension_module,
-                Some(ConcreteResourceLocation::InMemory),
-            )
-        } else if !extension_module.object_file_data.is_empty() {
-            // TODO we shouldn't be adding a builtin extension module from this API.
-            self.add_python_extension_module(
-                extension_module,
-                Some(ConcreteResourceLocation::InMemory),
-            )
-        } else if extension_module.shared_library.is_some() {
-            Err(anyhow!(
-                "loading extension modules from memory not supported by this build configuration"
-            ))
-        } else {
-            Err(anyhow!(
-                "cannot load extension module from memory due to missing object files"
-            ))
-        }
-    }
-
     fn filter_resources_from_files(
         &mut self,
         logger: &slog::Logger,

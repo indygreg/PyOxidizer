@@ -185,12 +185,6 @@ pub trait PythonBinaryBuilder {
         extension_module: &PythonExtensionModule,
     ) -> Result<()>;
 
-    /// Add an extension module as defined by a dynamic library to be loaded from memory.
-    fn add_in_memory_dynamic_extension_module(
-        &mut self,
-        extension_module: &PythonExtensionModule,
-    ) -> Result<()>;
-
     /// Filter embedded resources against names in files.
     ///
     /// `files` is files to read names from.

@@ -780,9 +780,9 @@ impl PythonExecutable {
             PythonExtensionModuleFlavor::StaticallyLinked(m) => self
                 .exe
                 .add_python_extension_module(&m, Some(ConcreteResourceLocation::InMemory)),
-            PythonExtensionModuleFlavor::DynamicLibrary(m) => {
-                self.exe.add_in_memory_dynamic_extension_module(&m)
-            }
+            PythonExtensionModuleFlavor::DynamicLibrary(m) => self
+                .exe
+                .add_python_extension_module(&m, Some(ConcreteResourceLocation::InMemory)),
         }
         .map_err(|e| {
             RuntimeError {
