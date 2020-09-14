@@ -238,7 +238,7 @@ impl StandalonePythonExecutableBuilder {
             self.distribution.extension_modules.values(),
             &self.target_triple,
         )? {
-            self.add_distribution_extension_module(&ext)?;
+            self.add_python_extension_module(&ext, None)?;
         }
 
         for source in self.distribution.source_modules()? {
@@ -585,13 +585,13 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         // We produce a builtin extension module (by linking object files) if any
         // of the following conditions are met:
         //
-        // * We are a stdlib extension module built into libpython core
-        // * Builtin linking is the only mechanism available to us.
-        // * We want in memory loading and we can link a builtin
+        // We are a stdlib extension module built into libpython core
         let produce_builtin = if extension_module.is_stdlib && extension_module.builtin_default {
             true
+        // Builtin linking is the only mechanism available to us.
         } else if can_link_builtin && (!can_link_standalone || !can_load_standalone) {
             true
+        // We want in memory loading and we can link a builtin
         } else {
             want_in_memory && can_link_builtin && !require_filesystem
         };
@@ -688,75 +688,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         }
 
         Ok(())
-    }
-
-    fn add_in_memory_distribution_extension_module(
-        &mut self,
-        extension_module: &PythonExtensionModule,
-    ) -> Result<()> {
-        if !self.supports_in_memory_dynamically_linked_extension_loading {
-            return Err(anyhow!(
-                "loading extension modules from memory not supported by this build configuration"
-            ));
-        }
-
-        self.resources_collector
-            .add_python_extension_module(extension_module, &ConcreteResourceLocation::InMemory)
-    }
-
-    fn add_distribution_extension_module(
-        &mut self,
-        extension_module: &PythonExtensionModule,
-    ) -> Result<()> {
-        // Distribution extensions are special in that we allow them to be
-        // builtin extensions, even if it violates the resources policy that prohibits
-        // memory loading.
-
-        // Builtins always get added as such.
-        if extension_module.builtin_default {
-            return self.add_python_extension_module(extension_module, None);
-        }
-
-        match self.packaging_policy.get_resources_policy().clone() {
-            PythonResourcesPolicy::InMemoryOnly => match self.link_mode {
-                LibpythonLinkMode::Static => {
-                    self.add_python_extension_module(&extension_module, None)
-                }
-                LibpythonLinkMode::Dynamic => {
-                    self.add_in_memory_distribution_extension_module(&extension_module)
-                }
-            },
-            PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => match self.link_mode {
-                LibpythonLinkMode::Static => {
-                    self.add_python_extension_module(&extension_module, None)
-                }
-                LibpythonLinkMode::Dynamic => self.add_python_extension_module(
-                    &extension_module,
-                    Some(ConcreteResourceLocation::RelativePath(prefix.clone())),
-                ),
-            },
-            PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(prefix) => {
-                match self.link_mode {
-                    LibpythonLinkMode::Static => {
-                        self.add_python_extension_module(&extension_module, None)
-                    }
-                    LibpythonLinkMode::Dynamic => {
-                        // Try in-memory and fall back to file-based if that fails.
-                        let mut res =
-                            self.add_in_memory_distribution_extension_module(&extension_module);
-
-                        if res.is_err() {
-                            res = self.add_python_extension_module(
-                                &extension_module,
-                                Some(ConcreteResourceLocation::RelativePath(prefix.clone())),
-                            );
-                        }
-
-                        res
-                    }
-                }
-            }
-        }
     }
 
     fn filter_resources_from_files(
@@ -1315,26 +1246,6 @@ pub mod tests {
     }
 
     #[test]
-    fn test_linux_distribution_dynamic() -> Result<()> {
-        let options = StandalonePythonExecutableBuilderOptions {
-            target_triple: "x86_64-unknown-linux-gnu".to_string(),
-            extension_module_filter: ExtensionModuleFilter::Minimal,
-            libpython_link_mode: BinaryLibpythonLinkMode::Dynamic,
-            ..StandalonePythonExecutableBuilderOptions::default()
-        };
-
-        // Dynamic libpython on Linux is not (yet) supported.
-        let err = options.new_builder().err();
-        assert!(err.is_some());
-        assert_eq!(
-            err.unwrap().to_string(),
-            "loading extension modules from memory not supported by this build configuration"
-        );
-
-        Ok(())
-    }
-
-    #[test]
     fn test_linux_distribution_extension_relative_path_policy() -> Result<()> {
         let options = StandalonePythonExecutableBuilderOptions {
             target_triple: "x86_64-unknown-linux-gnu".to_string(),
@@ -1827,26 +1738,6 @@ pub mod tests {
     }
 
     #[test]
-    fn test_macos_distribution_dynamic() -> Result<()> {
-        let options = StandalonePythonExecutableBuilderOptions {
-            target_triple: "x86_64-apple-darwin".to_string(),
-            extension_module_filter: ExtensionModuleFilter::Minimal,
-            libpython_link_mode: BinaryLibpythonLinkMode::Dynamic,
-            ..StandalonePythonExecutableBuilderOptions::default()
-        };
-
-        // Dynamic libpython on macOS is not supported.
-        let err = options.new_builder().err();
-        assert!(err.is_some());
-        assert_eq!(
-            err.unwrap().to_string(),
-            "loading extension modules from memory not supported by this build configuration"
-        );
-
-        Ok(())
-    }
-
-    #[test]
     fn test_macos_extensions_sanity() -> Result<()> {
         let options = StandalonePythonExecutableBuilderOptions {
             target_triple: "x86_64-apple-darwin".to_string(),
@@ -2302,6 +2193,7 @@ pub mod tests {
         for target in WINDOWS_TARGET_TRIPLES.iter() {
             let options = StandalonePythonExecutableBuilderOptions {
                 target_triple: target.to_string(),
+                distribution_flavor: DistributionFlavor::StandaloneDynamic,
                 extension_module_filter: ExtensionModuleFilter::All,
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
@@ -2310,10 +2202,9 @@ pub mod tests {
 
             let builtin_names = builder.extension_build_contexts.keys().collect::<Vec<_>>();
 
-            // In-core extensions are compiled as built-ins.
-            for (name, variants) in builder.distribution.extension_modules.iter() {
-                let builtin_default = variants.iter().any(|e| e.builtin_default);
-                assert_eq!(builtin_names.contains(&name), builtin_default);
+            // Stdlib extensions are compiled as built-ins.
+            for (name, _variants) in builder.distribution.extension_modules.iter() {
+                assert!(builtin_names.contains(&name));
             }
 
             // Required extensions are compiled as built-in.
@@ -2489,7 +2380,7 @@ pub mod tests {
                 .unwrap()
                 .default_variant()
                 .clone();
-            builder.add_distribution_extension_module(&ssl_extension)?;
+            builder.add_python_extension_module(&ssl_extension, None)?;
 
             let extensions = builder
                 .iter_resources()

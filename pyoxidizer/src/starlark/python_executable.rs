@@ -774,9 +774,9 @@ impl PythonExecutable {
         info!(&logger, "adding in-memory extension module {}", m.name());
 
         match m {
-            PythonExtensionModuleFlavor::Distribution(m) => {
-                self.exe.add_in_memory_distribution_extension_module(&m)
-            }
+            PythonExtensionModuleFlavor::Distribution(m) => self
+                .exe
+                .add_python_extension_module(&m, Some(ConcreteResourceLocation::InMemory)),
             PythonExtensionModuleFlavor::StaticallyLinked(m) => self
                 .exe
                 .add_python_extension_module(&m, Some(ConcreteResourceLocation::InMemory)),
@@ -853,7 +853,7 @@ impl PythonExecutable {
         match m {
             PythonExtensionModuleFlavor::Distribution(m) => {
                 info!(logger, "adding extension module {}", m.name);
-                self.exe.add_distribution_extension_module(&m)
+                self.exe.add_python_extension_module(&m, None)
             }
             PythonExtensionModuleFlavor::StaticallyLinked(m) => {
                 info!(

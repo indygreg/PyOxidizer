@@ -162,22 +162,6 @@ pub trait PythonBinaryBuilder {
         location: Option<ConcreteResourceLocation>,
     ) -> Result<()>;
 
-    // TODO consider consolidating the distribution and non-distribution variants.
-    // Historically they used different types. PythonExtensionModule now likely has
-    // sufficient context to consolidate the methods.
-
-    /// Add an extension module from a Python distribution to be loaded from memory.
-    fn add_in_memory_distribution_extension_module(
-        &mut self,
-        extension_module: &PythonExtensionModule,
-    ) -> Result<()>;
-
-    /// Add an extension module from a Python distribution to be imported via whatever means the policy allows.
-    fn add_distribution_extension_module(
-        &mut self,
-        extension_module: &PythonExtensionModule,
-    ) -> Result<()>;
-
     /// Filter embedded resources against names in files.
     ///
     /// `files` is files to read names from.
