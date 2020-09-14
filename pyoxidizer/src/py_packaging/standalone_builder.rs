@@ -590,7 +590,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         // * We want in memory loading and we can link a builtin
         let produce_builtin = if extension_module.is_stdlib && extension_module.builtin_default {
             true
-        } else if can_link_builtin && !can_link_standalone {
+        } else if can_link_builtin && (!can_link_standalone || !can_load_standalone) {
             true
         } else {
             want_in_memory && can_link_builtin && !require_filesystem
@@ -2842,15 +2842,11 @@ pub mod tests {
             builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
             assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
-            // TODO Presence of object files should allow conversion to built-in.
-            let res = builder.add_python_extension_module(
+            builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
                 None,
-            );
-            assert!(res.is_err());
-            assert_eq!(res.err().unwrap().to_string(),
-                "extension module shared_and_object_files cannot be materialized as a shared library because distribution does not support loading extension module shared libraries"
-            );
+            )?;
+            assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
         }
 
         Ok(())
