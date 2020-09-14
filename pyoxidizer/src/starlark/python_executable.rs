@@ -6,8 +6,8 @@ use {
     super::env::EnvironmentContext,
     super::python_embedded_resources::PythonEmbeddedResources,
     super::python_resource::{
-        python_resource_to_value, PythonExtensionModule, PythonExtensionModuleFlavor,
-        PythonPackageDistributionResource, PythonPackageResource, PythonSourceModule,
+        python_resource_to_value, PythonExtensionModule, PythonPackageDistributionResource,
+        PythonPackageResource, PythonSourceModule,
     },
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
     super::util::{
@@ -16,7 +16,7 @@ use {
     },
     crate::project_building::build_python_executable,
     crate::py_packaging::binary::PythonBinaryBuilder,
-    anyhow::{anyhow, Context, Result},
+    anyhow::{Context, Result},
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource,
         PythonModuleSource as RawPythonModuleSource,
@@ -773,25 +773,16 @@ impl PythonExecutable {
         let m = module.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
         info!(&logger, "adding in-memory extension module {}", m.name());
 
-        match m {
-            PythonExtensionModuleFlavor::Distribution(m) => self
-                .exe
-                .add_python_extension_module(&m, Some(ConcreteResourceLocation::InMemory)),
-            PythonExtensionModuleFlavor::StaticallyLinked(m) => self
-                .exe
-                .add_python_extension_module(&m, Some(ConcreteResourceLocation::InMemory)),
-            PythonExtensionModuleFlavor::DynamicLibrary(m) => self
-                .exe
-                .add_python_extension_module(&m, Some(ConcreteResourceLocation::InMemory)),
-        }
-        .map_err(|e| {
-            RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "add_in_memory_extension_module".to_string(),
-            }
-            .into()
-        })?;
+        self.exe
+            .add_python_extension_module(&m.as_ref(), Some(ConcreteResourceLocation::InMemory))
+            .map_err(|e| {
+                RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "add_in_memory_extension_module".to_string(),
+                }
+                .into()
+            })?;
 
         Ok(Value::new(None))
     }
@@ -812,27 +803,19 @@ impl PythonExecutable {
         let m = module.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
         info!(&logger, "adding in-extension module {}", m.name());
 
-        match m {
-            PythonExtensionModuleFlavor::Distribution(m) => self.exe.add_python_extension_module(
-                &m,
+        self.exe
+            .add_python_extension_module(
+                m.as_ref(),
                 Some(ConcreteResourceLocation::RelativePath(prefix)),
-            ),
-            PythonExtensionModuleFlavor::StaticallyLinked(_) => Err(anyhow!(
-                "statically linked extension modules cannot be added as filesystem relative"
-            )),
-            PythonExtensionModuleFlavor::DynamicLibrary(m) => self.exe.add_python_extension_module(
-                &m,
-                Some(ConcreteResourceLocation::RelativePath(prefix)),
-            ),
-        }
-        .map_err(|e| {
-            RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "add_filesystem_relative_extension_module".to_string(),
-            }
-            .into()
-        })?;
+            )
+            .map_err(|e| {
+                RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "add_filesystem_relative_extension_module".to_string(),
+                }
+                .into()
+            })?;
 
         Ok(Value::new(None))
     }
@@ -850,35 +833,17 @@ impl PythonExecutable {
 
         let m = module.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
 
-        match m {
-            PythonExtensionModuleFlavor::Distribution(m) => {
-                info!(logger, "adding extension module {}", m.name);
-                self.exe.add_python_extension_module(&m, None)
-            }
-            PythonExtensionModuleFlavor::StaticallyLinked(m) => {
-                info!(
-                    logger,
-                    "adding statically linked extension module {}", m.name
-                );
-                self.exe
-                    .add_python_extension_module(&m, Some(ConcreteResourceLocation::InMemory))
-            }
-            PythonExtensionModuleFlavor::DynamicLibrary(m) => {
-                info!(
-                    logger,
-                    "adding dynamically linked extension module {}", m.name
-                );
-                self.exe.add_python_extension_module(&m, None)
-            }
-        }
-        .map_err(|e| {
-            RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "add_extension_module".to_string(),
-            }
-            .into()
-        })?;
+        info!(logger, "adding extension module {}", m.name());
+        self.exe
+            .add_python_extension_module(m.as_ref(), None)
+            .map_err(|e| {
+                RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "add_extension_module".to_string(),
+                }
+                .into()
+            })?;
 
         Ok(Value::new(None))
     }

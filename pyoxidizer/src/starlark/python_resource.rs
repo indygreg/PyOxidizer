@@ -390,6 +390,16 @@ impl PythonExtensionModuleFlavor {
     }
 }
 
+impl AsRef<RawPythonExtensionModule> for PythonExtensionModuleFlavor {
+    fn as_ref(&self) -> &RawPythonExtensionModule {
+        match self {
+            PythonExtensionModuleFlavor::Distribution(m) => m,
+            PythonExtensionModuleFlavor::StaticallyLinked(m) => m,
+            PythonExtensionModuleFlavor::DynamicLibrary(m) => m,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct PythonExtensionModule {
     pub em: PythonExtensionModuleFlavor,
