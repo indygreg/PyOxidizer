@@ -198,17 +198,6 @@ pub trait PythonBinaryBuilder {
         extension_module: &PythonExtensionModule,
     ) -> Result<()>;
 
-    /// Add an extension module as defined by a dynamic library.
-    ///
-    /// The extension module will be made available for import by the
-    /// `PythonResourcesPolicy` attached to this builder. The extension module
-    /// will either by loaded from memory or will be manifested as a file next
-    /// to the produced binary installed in the policy's path prefix.
-    fn add_dynamic_extension_module(
-        &mut self,
-        extension_module: &PythonExtensionModule,
-    ) -> Result<()>;
-
     /// Filter embedded resources against names in files.
     ///
     /// `files` is files to read names from.

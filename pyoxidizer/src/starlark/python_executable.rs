@@ -866,7 +866,7 @@ impl PythonExecutable {
                     logger,
                     "adding dynamically linked extension module {}", m.name
                 );
-                self.exe.add_dynamic_extension_module(&m)
+                self.exe.add_python_extension_module(&m, None)
             }
         }
         .map_err(|e| {

@@ -826,55 +826,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         }
     }
 
-    fn add_dynamic_extension_module(
-        &mut self,
-        extension_module: &PythonExtensionModule,
-    ) -> Result<()> {
-        if extension_module.shared_library.is_none() {
-            return Err(anyhow!(
-                "extension module instance has no shared library data"
-            ));
-        }
-
-        match self.packaging_policy.get_resources_policy().clone() {
-            PythonResourcesPolicy::InMemoryOnly => {
-                if self.supports_in_memory_dynamically_linked_extension_loading {
-                    self.add_python_extension_module(
-                        extension_module,
-                        Some(ConcreteResourceLocation::InMemory),
-                    )
-                } else {
-                    Err(anyhow!("in-memory-only resources policy active but in-memory extension module importing not supported by this configuration: cannot load {}", extension_module.name))
-                }
-            }
-            PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
-                if self.distribution.is_extension_module_file_loadable() {
-                    self.resources_collector.add_python_extension_module(
-                        extension_module,
-                        &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-                    )
-                } else {
-                    Err(anyhow!("filesystem-relative-only policy active but file-based extension module loading not supported by this configuration"))
-                }
-            }
-            PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(ref prefix) => {
-                if self.supports_in_memory_dynamically_linked_extension_loading {
-                    self.add_python_extension_module(
-                        extension_module,
-                        Some(ConcreteResourceLocation::InMemory),
-                    )
-                } else if self.distribution.is_extension_module_file_loadable() {
-                    self.resources_collector.add_python_extension_module(
-                        extension_module,
-                        &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-                    )
-                } else {
-                    Err(anyhow!("prefer-in-memory-fallback-filesystem-relative policy active but could not find a mechanism to add an extension module"))
-                }
-            }
-        }
-    }
-
     fn filter_resources_from_files(
         &mut self,
         logger: &slog::Logger,
