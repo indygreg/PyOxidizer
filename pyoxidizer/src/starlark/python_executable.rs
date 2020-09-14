@@ -819,9 +819,10 @@ impl PythonExecutable {
             PythonExtensionModuleFlavor::StaticallyLinked(_) => Err(anyhow!(
                 "statically linked extension modules cannot be added as filesystem relative"
             )),
-            PythonExtensionModuleFlavor::DynamicLibrary(m) => self
-                .exe
-                .add_relative_path_dynamic_extension_module(&prefix, &m),
+            PythonExtensionModuleFlavor::DynamicLibrary(m) => self.exe.add_python_extension_module(
+                &m,
+                Some(ConcreteResourceLocation::RelativePath(prefix.clone())),
+            ),
         }
         .map_err(|e| {
             RuntimeError {

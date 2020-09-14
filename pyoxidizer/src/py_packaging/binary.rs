@@ -191,13 +191,6 @@ pub trait PythonBinaryBuilder {
         extension_module: &PythonExtensionModule,
     ) -> Result<()>;
 
-    /// Add an extension module as defined by a dynamic library to be loaded from a relative filesystem path.
-    fn add_relative_path_dynamic_extension_module(
-        &mut self,
-        prefix: &str,
-        extension_module: &PythonExtensionModule,
-    ) -> Result<()>;
-
     /// Filter embedded resources against names in files.
     ///
     /// `files` is files to read names from.

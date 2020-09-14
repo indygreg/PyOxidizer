@@ -803,29 +803,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         }
     }
 
-    fn add_relative_path_dynamic_extension_module(
-        &mut self,
-        prefix: &str,
-        extension_module: &PythonExtensionModule,
-    ) -> Result<()> {
-        if extension_module.shared_library.is_none() {
-            return Err(anyhow!(
-                "extension module instance has no shared library data"
-            ));
-        }
-
-        if self.distribution.is_extension_module_file_loadable() {
-            self.resources_collector.add_python_extension_module(
-                extension_module,
-                &ConcreteResourceLocation::RelativePath(prefix.to_string()),
-            )
-        } else {
-            Err(anyhow!(
-                "loading extension modules from files not supported by this build configuration"
-            ))
-        }
-    }
-
     fn filter_resources_from_files(
         &mut self,
         logger: &slog::Logger,
