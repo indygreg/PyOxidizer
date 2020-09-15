@@ -34,7 +34,10 @@ pub const BUILD_SEMVER_LIGHTWEIGHT: &str = env!("VERGEN_SEMVER_LIGHTWEIGHT");
 
 lazy_static! {
     /// Minimum version of Rust required to build PyOxidizer applications.
-    pub static ref MINIMUM_RUST_VERSION: semver::Version = semver::Version::new(1, 36, 0);
+    ///
+    // Remember to update the CI configuration in ci/azure-pipelines-template.yml
+    // when this changes.
+    pub static ref MINIMUM_RUST_VERSION: semver::Version = semver::Version::new(1, 40, 0);
 
     /// Target triples for Linux.
     pub static ref LINUX_TARGET_TRIPLES: Vec<&'static str> = vec![

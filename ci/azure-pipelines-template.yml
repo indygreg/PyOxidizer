@@ -10,6 +10,8 @@ jobs:
         rustup_toolchain: beta
       nightly:
         rustup_toolchain: nightly
+      # Remember to update MINIMUM_RUST_VERSION in pyoxidizer/src/environment.rs
+      # when this changes.
       1.40:
         rustup_toolchain: 1.40.0
 
