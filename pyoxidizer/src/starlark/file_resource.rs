@@ -5,7 +5,6 @@
 use {
     super::env::EnvironmentContext,
     super::python_executable::PythonExecutable,
-    super::python_resource::PythonExtensionModuleFlavor,
     super::python_resource::{
         PythonBytecodeModule, PythonExtensionModule, PythonPackageDistributionResource,
         PythonPackageResource, PythonSourceModule,
@@ -24,9 +23,7 @@ use {
     crate::py_packaging::resource::AddToFileManifest,
     anyhow::Result,
     itertools::Itertools,
-    python_packaging::resource::{
-        PythonExtensionModule as RawPythonExtensionModule, PythonModuleBytecodeFromSource,
-    },
+    python_packaging::resource::PythonModuleBytecodeFromSource,
     slog::warn,
     starlark::environment::Environment,
     starlark::values::{
@@ -85,11 +82,6 @@ impl FileManifest {
     // TODO implement.
     fn add_bytecode_module(&self, _prefix: &str, _module: &PythonModuleBytecodeFromSource) {
         println!("support for adding bytecode modules not yet implemented");
-    }
-
-    // TODO implement.
-    fn add_extension_module(&self, _prefix: &str, _em: &RawPythonExtensionModule) {
-        println!("support for adding extension modules not yet implemented");
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -285,48 +277,23 @@ impl FileManifest {
             }
             "PythonExtensionModule" => {
                 let m = resource.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
-
-                match m {
-                    PythonExtensionModuleFlavor::Distribution(m) => {
-                        warn!(
-                            logger,
-                            "adding distribution module {} to {}", m.name, prefix
-                        );
-                        self.add_extension_module(&prefix, &m);
-                        Ok(())
-                    }
-                    PythonExtensionModuleFlavor::StaticallyLinked(m) => {
-                        warn!(
-                            logger,
-                            "adding statically linked extension module {} to {}", m.name, prefix
-                        );
-                        m.add_to_file_manifest(&mut self.manifest, &prefix)
-                            .map_err(|e| {
-                                RuntimeError {
-                                    code: "PYOXIDIZER_BUILD",
-                                    message: e.to_string(),
-                                    label: "add_python_resource".to_string(),
-                                }
-                                .into()
-                            })
-                    }
-                    PythonExtensionModuleFlavor::DynamicLibrary(m) => {
-                        warn!(
-                            logger,
-                            "adding dynamic library extension module {} to {}", m.name, prefix
-                        );
-                        m.add_to_file_manifest(&mut self.manifest, &prefix)
-                            .map_err(|e| {
-                                RuntimeError {
-                                    code: "PYOXIDIZER_BUILD",
-                                    message: e.to_string(),
-                                    label: "add_python_resource".to_string(),
-                                }
-                                .into()
-                            })
-                    }
-                }
+                let extension = m.as_ref();
+                warn!(
+                    logger,
+                    "adding extension module {} to {}", extension.name, prefix
+                );
+                extension
+                    .add_to_file_manifest(&mut self.manifest, &prefix)
+                    .map_err(|e| {
+                        RuntimeError {
+                            code: "PYOXIDIZER_BUILD",
+                            message: e.to_string(),
+                            label: "add_python_resource".to_string(),
+                        }
+                        .into()
+                    })
             }
+
             "PythonExecutable" => {
                 let context = env.get("CONTEXT").expect("CONTEXT not defined");
                 let (target, release, opt_level) =
