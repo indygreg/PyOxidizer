@@ -295,6 +295,4 @@ Python from `rust-cpython <https://github.com/dgrunwald/rust-cpython>`_,
 which is what ``pyembed`` currently uses.
 
 The ``PyO3`` bindings seem to be ergonomically better than `rust-cpython`.
-``PyOxidizer`` may switch to ``PyO3`` someday. A hard blocker is that
-as of at least June 2019, ``PyO3`` requires Nightly Rust. We do not wish
-to make Nightly Rust a requirement to run ``PyOxidizer``.
+``PyOxidizer`` may switch to ``PyO3`` someday.
