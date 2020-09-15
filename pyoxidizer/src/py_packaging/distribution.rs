@@ -220,10 +220,10 @@ fn sha256_path(path: &PathBuf) -> Vec<u8> {
         if count == 0 {
             break;
         }
-        hasher.input(&buffer[..count]);
+        hasher.update(&buffer[..count]);
     }
 
-    hasher.result().to_vec()
+    hasher.finalize().to_vec()
 }
 
 pub fn get_http_client() -> reqwest::Result<reqwest::blocking::Client> {
@@ -285,9 +285,9 @@ pub fn download_distribution(url: &str, sha256: &str, cache_dir: &Path) -> Resul
     response.read_to_end(&mut data)?;
 
     let mut hasher = Sha256::new();
-    hasher.input(&data);
+    hasher.update(&data);
 
-    let url_hash = hasher.result().to_vec();
+    let url_hash = hasher.finalize().to_vec();
     if url_hash != expected_hash {
         return Err(anyhow!("sha256 of Python distribution does not validate"));
     }
