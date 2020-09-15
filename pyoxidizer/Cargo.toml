@@ -40,7 +40,6 @@ itertools = "0.9"
 lazy_static = "1.4"
 libc = "0.2"
 path-dedot = "1.1"
-podio = "0.1"
 python-packaging = { version = "0.1.0-pre", path = "../python-packaging" }
 python-packed-resources = { version = "0.2.0-pre", path = "../python-packed-resources" }
 reqwest = { version = "0.10", features = ["blocking"] }
