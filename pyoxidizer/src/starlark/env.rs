@@ -149,7 +149,8 @@ impl EnvironmentContext {
         } else {
             path.to_path_buf()
         }
-        .parse_dot()?;
+        .parse_dot()?
+        .to_path_buf();
 
         self.build_path = path.clone();
         self.python_distributions_path = path.join("python_distributions");

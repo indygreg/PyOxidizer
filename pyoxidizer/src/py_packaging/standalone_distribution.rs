@@ -518,7 +518,8 @@ impl StandaloneDistribution {
                         dest.extend(entry.path()?.components());
                         let dest = dest
                             .parse_dot()
-                            .with_context(|| "dedotting symlinked source")?;
+                            .with_context(|| "dedotting symlinked source")?
+                            .to_path_buf();
 
                         let mut source = dest
                             .parent()
@@ -527,7 +528,8 @@ impl StandaloneDistribution {
                         source.extend(link_name.unwrap().components());
                         let source = source
                             .parse_dot()
-                            .with_context(|| "dedotting symlink destination")?;
+                            .with_context(|| "dedotting symlink destination")?
+                            .to_path_buf();
 
                         if !source.starts_with(&absolute_path) {
                             return Err(anyhow!("malicious symlink detected in archive"));
