@@ -367,42 +367,9 @@ impl TypedValue for PythonPackageDistributionResource {
     }
 }
 
-/// Represents an extension module flavor.
-#[derive(Debug, Clone)]
-pub enum PythonExtensionModuleFlavor {
-    /// An extension module from a Python distribution.
-    Distribution(RawPythonExtensionModule),
-
-    /// An extension module that can be statically linked.
-    StaticallyLinked(RawPythonExtensionModule),
-
-    /// An extension module that exists as a dynamic library.
-    DynamicLibrary(RawPythonExtensionModule),
-}
-
-impl PythonExtensionModuleFlavor {
-    pub fn name(&self) -> String {
-        match self {
-            PythonExtensionModuleFlavor::Distribution(m) => m.name.clone(),
-            PythonExtensionModuleFlavor::StaticallyLinked(m) => m.name.clone(),
-            PythonExtensionModuleFlavor::DynamicLibrary(m) => m.name.clone(),
-        }
-    }
-}
-
-impl AsRef<RawPythonExtensionModule> for PythonExtensionModuleFlavor {
-    fn as_ref(&self) -> &RawPythonExtensionModule {
-        match self {
-            PythonExtensionModuleFlavor::Distribution(m) => m,
-            PythonExtensionModuleFlavor::StaticallyLinked(m) => m,
-            PythonExtensionModuleFlavor::DynamicLibrary(m) => m,
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct PythonExtensionModule {
-    pub em: PythonExtensionModuleFlavor,
+    pub em: RawPythonExtensionModule,
 }
 
 impl TypedValue for PythonExtensionModule {
@@ -413,7 +380,7 @@ impl TypedValue for PythonExtensionModule {
     );
 
     fn to_str(&self) -> String {
-        format!("PythonExtensionModule<name={}>", self.em.name())
+        format!("PythonExtensionModule<name={}>", self.em.name)
     }
 
     fn to_repr(&self) -> String {
@@ -434,7 +401,7 @@ impl TypedValue for PythonExtensionModule {
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
         let v = match attribute {
-            "name" => Value::new(self.em.name()),
+            "name" => Value::new(self.em.name.clone()),
             attr => {
                 return Err(ValueError::OperationNotSupported {
                     op: format!(".{}", attr),
@@ -475,13 +442,13 @@ pub fn python_resource_to_value(resource: &PythonResource) -> Value {
             })
         }
 
-        PythonResource::ExtensionModuleDynamicLibrary(em) => Value::new(PythonExtensionModule {
-            em: PythonExtensionModuleFlavor::DynamicLibrary(em.clone()),
-        }),
+        PythonResource::ExtensionModuleDynamicLibrary(em) => {
+            Value::new(PythonExtensionModule { em: em.clone() })
+        }
 
-        PythonResource::ExtensionModuleStaticallyLinked(em) => Value::new(PythonExtensionModule {
-            em: PythonExtensionModuleFlavor::StaticallyLinked(em.clone()),
-        }),
+        PythonResource::ExtensionModuleStaticallyLinked(em) => {
+            Value::new(PythonExtensionModule { em: em.clone() })
+        }
 
         PythonResource::EggFile(_) => {
             panic!("egg files not supported");

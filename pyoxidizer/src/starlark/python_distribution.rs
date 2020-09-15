@@ -5,10 +5,7 @@
 use {
     super::env::EnvironmentContext,
     super::python_executable::PythonExecutable,
-    super::python_resource::{
-        PythonExtensionModule, PythonExtensionModuleFlavor, PythonPackageResource,
-        PythonSourceModule,
-    },
+    super::python_resource::{PythonExtensionModule, PythonPackageResource, PythonSourceModule},
     super::util::{
         optional_dict_arg, optional_str_arg, optional_type_arg, required_bool_arg, required_str_arg,
     },
@@ -414,11 +411,7 @@ impl PythonDistribution {
                 .as_ref()
                 .unwrap()
                 .iter_extension_modules()
-                .map(|em| {
-                    Value::new(PythonExtensionModule {
-                        em: PythonExtensionModuleFlavor::Distribution(em.clone()),
-                    })
-                })
+                .map(|em| Value::new(PythonExtensionModule { em: em.clone() }))
                 .collect_vec(),
         ))
     }

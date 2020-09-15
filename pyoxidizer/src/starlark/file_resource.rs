@@ -276,8 +276,7 @@ impl FileManifest {
                     })
             }
             "PythonExtensionModule" => {
-                let m = resource.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
-                let extension = m.as_ref();
+                let extension = resource.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
                 warn!(
                     logger,
                     "adding extension module {} to {}", extension.name, prefix

@@ -771,10 +771,10 @@ impl PythonExecutable {
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
         let m = module.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
-        info!(&logger, "adding in-memory extension module {}", m.name());
+        info!(&logger, "adding in-memory extension module {}", m.name);
 
         self.exe
-            .add_python_extension_module(&m.as_ref(), Some(ConcreteResourceLocation::InMemory))
+            .add_python_extension_module(&m, Some(ConcreteResourceLocation::InMemory))
             .map_err(|e| {
                 RuntimeError {
                     code: "PYOXIDIZER_BUILD",
@@ -801,13 +801,10 @@ impl PythonExecutable {
         let logger = context.downcast_apply(|x: &EnvironmentContext| x.logger.clone());
 
         let m = module.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
-        info!(&logger, "adding in-extension module {}", m.name());
+        info!(&logger, "adding in-extension module {}", m.name);
 
         self.exe
-            .add_python_extension_module(
-                m.as_ref(),
-                Some(ConcreteResourceLocation::RelativePath(prefix)),
-            )
+            .add_python_extension_module(&m, Some(ConcreteResourceLocation::RelativePath(prefix)))
             .map_err(|e| {
                 RuntimeError {
                     code: "PYOXIDIZER_BUILD",
@@ -833,9 +830,9 @@ impl PythonExecutable {
 
         let m = module.downcast_apply(|m: &PythonExtensionModule| m.em.clone());
 
-        info!(logger, "adding extension module {}", m.name());
+        info!(logger, "adding extension module {}", m.name);
         self.exe
-            .add_python_extension_module(m.as_ref(), None)
+            .add_python_extension_module(&m, None)
             .map_err(|e| {
                 RuntimeError {
                     code: "PYOXIDIZER_BUILD",
