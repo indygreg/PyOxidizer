@@ -38,6 +38,39 @@ impl TypedValue for EmbeddedPythonConfig {
 
 // Starlark functions.
 impl EmbeddedPythonConfig {
+    /// Obtain a default instance from the context of Starlark.
+    pub fn default_starlark() -> Self {
+        // Keep this in sync with default values from Starlark.
+        Self {
+            bytes_warning: 0,
+            ignore_environment: true,
+            inspect: false,
+            interactive: false,
+            isolated: true,
+            legacy_windows_fs_encoding: false,
+            legacy_windows_stdio: false,
+            optimize_level: 0,
+            parser_debug: false,
+            quiet: false,
+            use_hash_seed: false,
+            verbose: 0,
+            stdio_encoding_name: None,
+            stdio_encoding_errors: None,
+            unbuffered_stdio: false,
+            filesystem_importer: false,
+            site_import: false,
+            sys_frozen: false,
+            sys_meipass: false,
+            sys_paths: Vec::new(),
+            raw_allocator: default_raw_allocator(crate::project_building::HOST),
+            run_mode: RunMode::Repl,
+            terminfo_resolution: TerminfoResolution::Dynamic,
+            user_site_directory: false,
+            write_bytecode: false,
+            write_modules_directory_env: None,
+        }
+    }
+
     /// PythonInterpreterConfig(...)
     #[allow(clippy::too_many_arguments)]
     pub fn starlark_new(
@@ -73,6 +106,8 @@ impl EmbeddedPythonConfig {
         write_bytecode: &Value,
         write_modules_directory_env: &Value,
     ) -> ValueResult {
+        // TODO consider passing default of None for all arguments and using
+        // value from default_starlark() so logic doesn't get out of sync.
         required_type_arg("bytes_warning", "int", &bytes_warning)?;
         let ignore_environment = required_bool_arg("ignore_environment", &ignore_environment)?;
         let inspect = required_bool_arg("inspect", &inspect)?;
@@ -238,6 +273,7 @@ starlark_module! { embedded_python_config_module =>
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonInterpreterConfig(
         env env,
+        // Keep this in sync with default_starlark() above.
         bytes_warning=0,
         ignore_environment=true,
         inspect=false,
@@ -310,38 +346,11 @@ mod tests {
     use {super::super::testutil::*, super::*};
 
     #[test]
-    fn test_default() {
+    fn test_constructor() {
         let c = starlark_ok("PythonInterpreterConfig()");
         assert_eq!(c.get_type(), "PythonInterpreterConfig");
 
-        let wanted = crate::py_packaging::config::EmbeddedPythonConfig {
-            bytes_warning: 0,
-            ignore_environment: true,
-            inspect: false,
-            interactive: false,
-            isolated: true,
-            legacy_windows_fs_encoding: false,
-            legacy_windows_stdio: false,
-            optimize_level: 0,
-            parser_debug: false,
-            quiet: false,
-            use_hash_seed: false,
-            verbose: 0,
-            stdio_encoding_name: None,
-            stdio_encoding_errors: None,
-            unbuffered_stdio: false,
-            filesystem_importer: false,
-            site_import: false,
-            sys_frozen: false,
-            sys_meipass: false,
-            sys_paths: Vec::new(),
-            raw_allocator: default_raw_allocator(crate::project_building::HOST),
-            run_mode: RunMode::Repl,
-            terminfo_resolution: TerminfoResolution::Dynamic,
-            user_site_directory: false,
-            write_bytecode: false,
-            write_modules_directory_env: None,
-        };
+        let wanted = EmbeddedPythonConfig::default_starlark();
 
         let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
         assert_eq!(*x, wanted);

@@ -18,12 +18,10 @@ use {
     },
     anyhow::{anyhow, Result},
     itertools::Itertools,
-    linked_hash_map::LinkedHashMap,
     python_packaging::bytecode::{CompileMode, PythonBytecodeCompiler},
     python_packaging::policy::{ExtensionModuleFilter, PythonResourcesPolicy},
     python_packaging::resource::BytecodeOptimizationLevel,
     starlark::environment::Environment,
-    starlark::eval::call_stack::CallStack,
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
     starlark::values::none::NoneType,
     starlark::values::{Mutable, TypedValue, Value, ValueResult},
@@ -246,7 +244,6 @@ impl PythonDistribution {
     fn to_python_executable_starlark(
         &mut self,
         env: &Environment,
-        call_stack: &CallStack,
         name: &Value,
         resources_policy: &Value,
         config: &Value,
@@ -342,23 +339,7 @@ impl PythonDistribution {
         }
 
         let config = if config.get_type() == "NoneType" {
-            let v = env
-                .get("PythonInterpreterConfig")
-                .expect("PythonInterpreterConfig not defined");
-            match v
-                .call(
-                    call_stack,
-                    env.clone(),
-                    Vec::new(),
-                    LinkedHashMap::new(),
-                    None,
-                    None,
-                )?
-                .downcast_ref::<EmbeddedPythonConfig>()
-            {
-                Some(c) => Ok(c.clone()),
-                None => Err(ValueError::IncorrectParameterType),
-            }
+            Ok(EmbeddedPythonConfig::default_starlark())
         } else {
             match config.downcast_ref::<EmbeddedPythonConfig>() {
                 Some(c) => Ok(c.clone()),
@@ -530,7 +511,6 @@ starlark_module! { python_distribution_module =>
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonDistribution.to_python_executable(
         env env,
-        call_stack call_stack,
         this,
         name,
         resources_policy="in-memory-only",
@@ -544,7 +524,6 @@ starlark_module! { python_distribution_module =>
         match this.clone().downcast_mut::<PythonDistribution>()? {
             Some(mut dist) =>dist.to_python_executable_starlark(
                 &env,
-                call_stack,
                 &name,
                 &resources_policy,
                 &config,
