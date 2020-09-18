@@ -314,6 +314,24 @@ impl TypedValue for EnvironmentContext {
     }
 }
 
+/// Starlark type holding context for PyOxidizer.
+pub struct PyOxidizerContext {}
+
+impl Default for PyOxidizerContext {
+    fn default() -> Self {
+        PyOxidizerContext {}
+    }
+}
+
+impl TypedValue for PyOxidizerContext {
+    type Holder = Mutable<PyOxidizerContext>;
+    const TYPE: &'static str = "PyOxidizer";
+
+    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
+        Box::new(std::iter::empty())
+    }
+}
+
 pub fn get_context(env: &Environment) -> ValueResult {
     env.get("CONTEXT").or_else(|_| {
         Err(ValueError::from(RuntimeError {
@@ -443,6 +461,17 @@ fn starlark_resolve_target(
 /// resolve_targets()
 #[allow(clippy::ptr_arg)]
 fn starlark_resolve_targets(env: &Environment, call_stack: &CallStack) -> ValueResult {
+    let resolve_target_fn = env
+        .get_type_value(&Value::new(PyOxidizerContext::default()), "resolve_target")
+        .ok_or_else(|| {
+            ValueError::from(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: "could not find resolve_target() function (this should never happen)"
+                    .to_string(),
+                label: "resolve_targets()".to_string(),
+            })
+        })?;
+
     let raw_context = get_context(env)?;
     let context = raw_context
         .downcast_ref::<EnvironmentContext>()
@@ -452,9 +481,7 @@ fn starlark_resolve_targets(env: &Environment, call_stack: &CallStack) -> ValueR
 
     println!("resolving {} targets", targets.len());
     for target in targets {
-        let resolve = env.get("resolve_target").unwrap();
-
-        resolve.call(
+        resolve_target_fn.call(
             call_stack,
             env.clone(),
             vec![Value::new(target)],
@@ -543,6 +570,23 @@ pub fn global_environment(context: &EnvironmentContext) -> Result<Environment, E
         "BUILD_TARGET_TRIPLE",
         Value::from(context.build_target_triple.clone()),
     )?;
+
+    // We alias various globals as PyOxidizer.* attributes so they are
+    // available via the type object API. This is a bit hacky. But it allows
+    // Rust code with only access to the TypeValues dictionary to retrieve
+    // these globals.
+    for f in &[
+        "register_target",
+        "resolve_target",
+        "resolve_targets",
+        "set_build_path",
+        "CONTEXT",
+        "CWD",
+        "CONFIG_PATH",
+        "BUILD_TARGET_TRIPLE",
+    ] {
+        env.add_type_value(PyOxidizerContext::TYPE, f, env.get(f)?);
+    }
 
     Ok(env)
 }
