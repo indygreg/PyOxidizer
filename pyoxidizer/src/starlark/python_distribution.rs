@@ -21,7 +21,7 @@ use {
     python_packaging::bytecode::{CompileMode, PythonBytecodeCompiler},
     python_packaging::policy::{ExtensionModuleFilter, PythonResourcesPolicy},
     python_packaging::resource::BytecodeOptimizationLevel,
-    starlark::environment::Environment,
+    starlark::environment::TypeValues,
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
     starlark::values::none::NoneType,
     starlark::values::{Mutable, TypedValue, Value, ValueResult},
@@ -120,14 +120,14 @@ impl TypedValue for PythonDistribution {
 impl PythonDistribution {
     /// default_python_distribution(flavor, build_target=None)
     fn default_python_distribution(
-        env: &Environment,
+        type_values: &TypeValues,
         flavor: &Value,
         build_target: &Value,
     ) -> ValueResult {
         let flavor = required_str_arg("flavor", flavor)?;
         let build_target = optional_str_arg("build_target", build_target)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -158,7 +158,7 @@ impl PythonDistribution {
             })
         })?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -172,7 +172,7 @@ impl PythonDistribution {
 
     /// PythonDistribution()
     fn from_args(
-        env: &Environment,
+        type_values: &TypeValues,
         sha256: &Value,
         local_path: &Value,
         url: &Value,
@@ -214,7 +214,7 @@ impl PythonDistribution {
             }
         };
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -243,7 +243,7 @@ impl PythonDistribution {
     )]
     fn to_python_executable_starlark(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         name: &Value,
         resources_policy: &Value,
         config: &Value,
@@ -268,7 +268,7 @@ impl PythonDistribution {
         let include_resources = required_bool_arg("include_resources", &include_resources)?;
         let include_test = required_bool_arg("include_test", &include_test)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -370,8 +370,8 @@ impl PythonDistribution {
     }
 
     /// PythonDistribution.extension_modules()
-    pub fn extension_modules(&mut self, env: &Environment) -> ValueResult {
-        let raw_context = get_context(env)?;
+    pub fn extension_modules(&mut self, type_values: &TypeValues) -> ValueResult {
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -396,10 +396,14 @@ impl PythonDistribution {
     }
 
     /// PythonDistribution.package_resources(include_test=false)
-    pub fn package_resources(&mut self, env: &Environment, include_test: &Value) -> ValueResult {
+    pub fn package_resources(
+        &mut self,
+        type_values: &TypeValues,
+        include_test: &Value,
+    ) -> ValueResult {
         let include_test = required_bool_arg("include_test", &include_test)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -441,8 +445,8 @@ impl PythonDistribution {
     }
 
     /// PythonDistribution.source_modules()
-    pub fn source_modules(&mut self, env: &Environment) -> ValueResult {
-        let raw_context = get_context(env)?;
+    pub fn source_modules(&mut self, type_values: &TypeValues) -> ValueResult {
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;

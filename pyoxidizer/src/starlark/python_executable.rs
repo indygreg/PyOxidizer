@@ -23,7 +23,7 @@ use {
     },
     python_packaging::resource_collection::ConcreteResourceLocation,
     slog::{info, warn},
-    starlark::environment::Environment,
+    starlark::environment::TypeValues,
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
     starlark::values::none::NoneType,
     starlark::values::{Mutable, TypedValue, Value, ValueResult},
@@ -111,7 +111,7 @@ impl PythonExecutable {
     /// PythonExecutable.pip_install(args, extra_envs=None)
     pub fn starlark_pip_install(
         &self,
-        env: &Environment,
+        type_values: &TypeValues,
         args: &Value,
         extra_envs: &Value,
     ) -> ValueResult {
@@ -134,7 +134,7 @@ impl PythonExecutable {
             _ => panic!("should have validated type above"),
         };
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -161,7 +161,7 @@ impl PythonExecutable {
     /// PythonExecutable.read_package_root(path, packages)
     pub fn starlark_read_package_root(
         &self,
-        env: &Environment,
+        type_values: &TypeValues,
         path: &Value,
         packages: &Value,
     ) -> ValueResult {
@@ -174,7 +174,7 @@ impl PythonExecutable {
             .map(|x| x.to_string())
             .collect::<Vec<String>>();
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -199,10 +199,10 @@ impl PythonExecutable {
     }
 
     /// PythonExecutable.read_virtualenv(path)
-    pub fn starlark_read_virtualenv(&self, env: &Environment, path: &Value) -> ValueResult {
+    pub fn starlark_read_virtualenv(&self, type_values: &TypeValues, path: &Value) -> ValueResult {
         let path = required_str_arg("path", &path)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -229,7 +229,7 @@ impl PythonExecutable {
     /// PythonExecutable.setup_py_install(package_path, extra_envs=None, extra_global_arguments=None)
     pub fn starlark_setup_py_install(
         &self,
-        env: &Environment,
+        type_values: &TypeValues,
         package_path: &Value,
         extra_envs: &Value,
         extra_global_arguments: &Value,
@@ -263,7 +263,7 @@ impl PythonExecutable {
 
         let package_path = PathBuf::from(package_path);
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -308,12 +308,12 @@ impl PythonExecutable {
     /// PythonExecutable.add_in_memory_module_source(module)
     pub fn starlark_add_in_memory_module_source(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         module: &Value,
     ) -> ValueResult {
         required_type_arg("module", "PythonSourceModule", &module)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -339,14 +339,14 @@ impl PythonExecutable {
     /// PythonExecutable.add_filesystem_relative_module_source(module, prefix="")
     pub fn starlark_add_filesystem_relative_module_source(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         prefix: &Value,
         module: &Value,
     ) -> ValueResult {
         let prefix = required_str_arg("prefix", &prefix)?;
         required_type_arg("module", "PythonSourceModule", &module)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -374,10 +374,14 @@ impl PythonExecutable {
     }
 
     /// PythonExecutable.add_module_source(module)
-    pub fn starlark_add_module_source(&mut self, env: &Environment, module: &Value) -> ValueResult {
+    pub fn starlark_add_module_source(
+        &mut self,
+        type_values: &TypeValues,
+        module: &Value,
+    ) -> ValueResult {
         required_type_arg("module", "PythonSourceModule", &module)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -401,14 +405,14 @@ impl PythonExecutable {
     /// PythonExecutable.add_in_memory_module_bytecode(module, optimize_level=0)
     pub fn starlark_add_in_memory_module_bytecode(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         module: &Value,
         optimize_level: &Value,
     ) -> ValueResult {
         required_type_arg("module", "PythonSourceModule", &module)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -463,7 +467,7 @@ impl PythonExecutable {
     /// PythonExecutable.add_filesystem_relative_module_bytecode(prefix, module, optimize_level=0)
     pub fn starlark_add_filesystem_relative_module_bytecode(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         prefix: &Value,
         module: &Value,
         optimize_level: &Value,
@@ -472,7 +476,7 @@ impl PythonExecutable {
         required_type_arg("module", "PythonSourceModule", &module)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -527,14 +531,14 @@ impl PythonExecutable {
     /// PythonExecutable.add_module_bytecode(module, optimize_level=0)
     pub fn starlark_add_module_bytecode(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         module: &Value,
         optimize_level: &Value,
     ) -> ValueResult {
         required_type_arg("module", "PythonSourceModule", &module)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -586,12 +590,12 @@ impl PythonExecutable {
     /// PythonExecutable.add_in_memory_package_resource(resource)
     pub fn starlark_add_in_memory_package_resource(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         resource: &Value,
     ) -> ValueResult {
         required_type_arg("resource", "PythonPackageResource", &resource)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -621,12 +625,12 @@ impl PythonExecutable {
     /// PythonExecutable.add_package_resource(resource)
     pub fn starlark_add_package_resource(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         resource: &Value,
     ) -> ValueResult {
         required_type_arg("resource", "PythonPackageResource", &resource)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -656,14 +660,14 @@ impl PythonExecutable {
     /// PythonExecutable.add_filesystem_relative_package_resource(prefix, resource)
     pub fn starlark_add_filesystem_relative_package_resource(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         prefix: &Value,
         resource: &Value,
     ) -> ValueResult {
         let prefix = required_str_arg("prefix", &prefix)?;
         required_type_arg("resource", "PythonPackageResource", &resource)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -693,12 +697,12 @@ impl PythonExecutable {
     /// PythonExecutable.add_in_memory_package_distribution_resource(resource)
     pub fn starlark_add_in_memory_package_distribution_resource(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         resource: &Value,
     ) -> ValueResult {
         required_type_arg("resource", "PythonPackageDistributionResource", &resource)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -727,14 +731,14 @@ impl PythonExecutable {
     /// PythonExecutable.add_filesystem_relative_package_distribution_resource(prefix, resource)
     pub fn starlark_add_filesystem_relative_package_distribution_resource(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         prefix: &Value,
         resource: &Value,
     ) -> ValueResult {
         let prefix = required_str_arg("prefix", &prefix)?;
         required_type_arg("resource", "PythonPackageDistributionResource", &resource)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -766,12 +770,12 @@ impl PythonExecutable {
     /// PythonExecutable.add_package_distribution_resource(resource)
     pub fn starlark_add_package_distribution_resource(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         resource: &Value,
     ) -> ValueResult {
         required_type_arg("resource", "PythonPackageDistributionResource", &resource)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -800,12 +804,12 @@ impl PythonExecutable {
     /// PythonExecutable.add_in_memory_extension_module(module)
     pub fn starlark_add_in_memory_extension_module(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         module: &Value,
     ) -> ValueResult {
         required_type_arg("module", "PythonExtensionModule", &module)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -835,14 +839,14 @@ impl PythonExecutable {
     /// PythonExecutable.add_filesystem_relative_extension_module(module)
     pub fn starlark_add_filesystem_relative_extension_module(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         prefix: &Value,
         module: &Value,
     ) -> ValueResult {
         let prefix = required_str_arg("prefix", &prefix)?;
         required_type_arg("module", "PythonExtensionModule", &module)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -869,12 +873,12 @@ impl PythonExecutable {
     /// PythonExecutable.add_extension_module(module)
     pub fn starlark_add_extension_module(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         module: &Value,
     ) -> ValueResult {
         required_type_arg("module", "PythonExtensionModule", &module)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -900,7 +904,7 @@ impl PythonExecutable {
     /// PythonExecutable.add_in_memory_python_resource(resource, add_source_module=true, add_bytecode_module=true, optimize_level=0)
     pub fn starlark_add_in_memory_python_resource(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         resource: &Value,
         add_source_module: &Value,
         add_bytecode_module: &Value,
@@ -913,22 +917,28 @@ impl PythonExecutable {
         match resource.get_type() {
             "PythonSourceModule" => {
                 if add_source_module {
-                    self.starlark_add_in_memory_module_source(env, resource)?;
+                    self.starlark_add_in_memory_module_source(type_values, resource)?;
                 }
                 if add_bytecode_module {
-                    self.starlark_add_in_memory_module_bytecode(env, resource, optimize_level)?;
+                    self.starlark_add_in_memory_module_bytecode(
+                        type_values,
+                        resource,
+                        optimize_level,
+                    )?;
                 }
 
                 Ok(Value::new(NoneType::None))
             }
             "PythonBytecodeModule" => {
-                self.starlark_add_in_memory_module_bytecode(env, resource, optimize_level)
+                self.starlark_add_in_memory_module_bytecode(type_values, resource, optimize_level)
             }
-            "PythonPackageResource" => self.starlark_add_in_memory_package_resource(env, resource),
+            "PythonPackageResource" => {
+                self.starlark_add_in_memory_package_resource(type_values, resource)
+            }
             "PythonPackageDistributionResource" => {
-                self.starlark_add_package_distribution_resource(env, resource)
+                self.starlark_add_package_distribution_resource(type_values, resource)
             }
-            "PythonExtensionModule" => self.starlark_add_extension_module(env, resource),
+            "PythonExtensionModule" => self.starlark_add_extension_module(type_values, resource),
             _ => Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                 message: "resource argument must be a Python resource type".to_string(),
@@ -940,7 +950,7 @@ impl PythonExecutable {
     /// PythonExecutable.add_filesystem_relative_python_resource(prefix, resource, add_source_module=true, add_bytecode_module=true, optimize_level=0)
     pub fn starlark_add_filesystem_relative_python_resource(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         prefix: &Value,
         resource: &Value,
         add_source_module: &Value,
@@ -955,11 +965,15 @@ impl PythonExecutable {
         match resource.get_type() {
             "PythonSourceModule" => {
                 if add_source_module {
-                    self.starlark_add_filesystem_relative_module_source(env, prefix, resource)?;
+                    self.starlark_add_filesystem_relative_module_source(
+                        type_values,
+                        prefix,
+                        resource,
+                    )?;
                 }
                 if add_bytecode_module {
                     self.starlark_add_filesystem_relative_module_bytecode(
-                        env,
+                        type_values,
                         prefix,
                         resource,
                         optimize_level,
@@ -969,19 +983,23 @@ impl PythonExecutable {
                 Ok(Value::new(NoneType::None))
             }
             "PythonBytecodeModule" => self.starlark_add_filesystem_relative_module_bytecode(
-                env,
+                type_values,
                 prefix,
                 resource,
                 optimize_level,
             ),
-            "PythonPackageResource" => {
-                self.starlark_add_filesystem_relative_package_resource(env, prefix, resource)
-            }
+            "PythonPackageResource" => self.starlark_add_filesystem_relative_package_resource(
+                type_values,
+                prefix,
+                resource,
+            ),
             "PythonPackageDistributionResource" => self
                 .starlark_add_filesystem_relative_package_distribution_resource(
-                    env, prefix, resource,
+                    type_values,
+                    prefix,
+                    resource,
                 ),
-            "PythonExtensionModule" => self.starlark_add_extension_module(env, resource),
+            "PythonExtensionModule" => self.starlark_add_extension_module(type_values, resource),
             _ => Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                 message: "resource argument must be a Python resource type".to_string(),
@@ -993,7 +1011,7 @@ impl PythonExecutable {
     /// PythonExecutable.add_python_resource(resource, add_source_module=true, add_bytecode_module=true, optimize_level=0)
     pub fn starlark_add_python_resource(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         resource: &Value,
         add_source_module: &Value,
         add_bytecode_module: &Value,
@@ -1006,22 +1024,22 @@ impl PythonExecutable {
         match resource.get_type() {
             "PythonSourceModule" => {
                 if add_source_module {
-                    self.starlark_add_module_source(env, resource)?;
+                    self.starlark_add_module_source(type_values, resource)?;
                 }
                 if add_bytecode_module {
-                    self.starlark_add_module_bytecode(env, resource, optimize_level)?;
+                    self.starlark_add_module_bytecode(type_values, resource, optimize_level)?;
                 }
 
                 Ok(Value::new(NoneType::None))
             }
             "PythonBytecodeModule" => {
-                self.starlark_add_module_bytecode(env, resource, optimize_level)
+                self.starlark_add_module_bytecode(type_values, resource, optimize_level)
             }
-            "PythonPackageResource" => self.starlark_add_package_resource(env, resource),
+            "PythonPackageResource" => self.starlark_add_package_resource(type_values, resource),
             "PythonPackageDistributionResource" => {
-                self.starlark_add_package_distribution_resource(env, resource)
+                self.starlark_add_package_distribution_resource(type_values, resource)
             }
-            "PythonExtensionModule" => self.starlark_add_extension_module(env, resource),
+            "PythonExtensionModule" => self.starlark_add_extension_module(type_values, resource),
             _ => Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                 message: "resource argument must be a Python resource type".to_string(),
@@ -1033,7 +1051,7 @@ impl PythonExecutable {
     /// PythonExecutable.add_in_memory_python_resources(resources, add_source_module=true, add_bytecode_module=true, optimize_level=0)
     pub fn starlark_add_in_memory_python_resources(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         resources: &Value,
         add_source_module: &Value,
         add_bytecode_module: &Value,
@@ -1045,7 +1063,7 @@ impl PythonExecutable {
 
         for resource in &resources.iter()? {
             self.starlark_add_in_memory_python_resource(
-                env,
+                type_values,
                 &resource,
                 add_source_module,
                 add_bytecode_module,
@@ -1059,7 +1077,7 @@ impl PythonExecutable {
     /// PythonExecutable.add_filesystem_relative_python_resources(prefix, resources, add_source_module=true, add_bytecode_module=true, optimize_level=0)
     pub fn starlark_add_filesystem_relative_python_resources(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         prefix: &Value,
         resources: &Value,
         add_source_module: &Value,
@@ -1073,7 +1091,7 @@ impl PythonExecutable {
 
         for resource in &resources.iter()? {
             self.starlark_add_filesystem_relative_python_resource(
-                env,
+                type_values,
                 prefix,
                 &resource,
                 add_source_module,
@@ -1088,7 +1106,7 @@ impl PythonExecutable {
     /// PythonExecutable.add_python_resources(resources, add_source_module=true, add_bytecode_module=true, optimize_level=0)
     pub fn starlark_add_python_resources(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         resources: &Value,
         add_source_module: &Value,
         add_bytecode_module: &Value,
@@ -1100,7 +1118,7 @@ impl PythonExecutable {
 
         for resource in &resources.iter()? {
             self.starlark_add_python_resource(
-                env,
+                type_values,
                 &resource,
                 add_source_module,
                 add_bytecode_module,
@@ -1121,7 +1139,7 @@ impl PythonExecutable {
     /// PythonExecutable.filter_resources_from_files(files=None, glob_files=None)
     pub fn starlark_filter_resources_from_files(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         files: &Value,
         glob_files: &Value,
     ) -> ValueResult {
@@ -1147,7 +1165,7 @@ impl PythonExecutable {
         let files_refs = files.iter().map(|x| x.as_ref()).collect::<Vec<&Path>>();
         let glob_files_refs = glob_files.iter().map(|x| x.as_ref()).collect::<Vec<&str>>();
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;

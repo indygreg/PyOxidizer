@@ -12,7 +12,7 @@ use {
     linked_hash_map::LinkedHashMap,
     path_dedot::ParseDot,
     slog::warn,
-    starlark::environment::{Environment, EnvironmentError},
+    starlark::environment::{Environment, EnvironmentError, TypeValues},
     starlark::eval::call_stack::CallStack,
     starlark::values::error::{RuntimeError, ValueError},
     starlark::values::none::NoneType,
@@ -332,8 +332,10 @@ impl TypedValue for PyOxidizerContext {
     }
 }
 
-pub fn get_context(env: &Environment) -> ValueResult {
-    env.get_type_value(&Value::new(PyOxidizerContext::default()), "CONTEXT")
+/// Obtain the EnvironmentContext for the Starlark execution environment.
+pub fn get_context(type_values: &TypeValues) -> ValueResult {
+    type_values
+        .get_type_value(&Value::new(PyOxidizerContext::default()), "CONTEXT")
         .ok_or_else(|| {
             ValueError::from(RuntimeError {
                 code: "PYOXIDIZER",
@@ -345,7 +347,7 @@ pub fn get_context(env: &Environment) -> ValueResult {
 
 /// register_target(target, callable, depends=None, default=false)
 fn starlark_register_target(
-    env: &Environment,
+    type_values: &TypeValues,
     target: &Value,
     callable: &Value,
     depends: &Value,
@@ -363,7 +365,7 @@ fn starlark_register_target(
         _ => Vec::new(),
     };
 
-    let raw_context = get_context(env)?;
+    let raw_context = get_context(type_values)?;
     let mut context = raw_context
         .downcast_mut::<EnvironmentContext>()?
         .ok_or(ValueError::IncorrectParameterType)?;
@@ -397,13 +399,13 @@ fn starlark_register_target(
 /// borrows and Rust would panic at runtime.
 #[allow(clippy::ptr_arg)]
 fn starlark_resolve_target(
-    env: &Environment,
+    type_values: &TypeValues,
     call_stack: &CallStack,
     target: &Value,
 ) -> ValueResult {
     let target = required_str_arg("target", &target)?;
 
-    let raw_context = get_context(env)?;
+    let raw_context = get_context(type_values)?;
     let mut context = raw_context
         .downcast_mut::<EnvironmentContext>()?
         .ok_or(ValueError::IncorrectParameterType)?;
@@ -437,12 +439,16 @@ fn starlark_resolve_target(
 
     for depend_target in target_entry.depends {
         let depend_target = Value::new(depend_target);
-        args.push(starlark_resolve_target(env, call_stack, &depend_target)?);
+        args.push(starlark_resolve_target(
+            type_values,
+            call_stack,
+            &depend_target,
+        )?);
     }
 
     let res = target_entry.callable.call(
         call_stack,
-        env.clone(),
+        type_values.clone(),
         args,
         LinkedHashMap::new(),
         None,
@@ -461,8 +467,8 @@ fn starlark_resolve_target(
 
 /// resolve_targets()
 #[allow(clippy::ptr_arg)]
-fn starlark_resolve_targets(env: &Environment, call_stack: &CallStack) -> ValueResult {
-    let resolve_target_fn = env
+fn starlark_resolve_targets(type_values: &TypeValues, call_stack: &CallStack) -> ValueResult {
+    let resolve_target_fn = type_values
         .get_type_value(&Value::new(PyOxidizerContext::default()), "resolve_target")
         .ok_or_else(|| {
             ValueError::from(RuntimeError {
@@ -473,7 +479,7 @@ fn starlark_resolve_targets(env: &Environment, call_stack: &CallStack) -> ValueR
             })
         })?;
 
-    let raw_context = get_context(env)?;
+    let raw_context = get_context(type_values)?;
     let context = raw_context
         .downcast_ref::<EnvironmentContext>()
         .ok_or(ValueError::IncorrectParameterType)?;
@@ -484,7 +490,7 @@ fn starlark_resolve_targets(env: &Environment, call_stack: &CallStack) -> ValueR
     for target in targets {
         resolve_target_fn.call(
             call_stack,
-            env.clone(),
+            type_values.clone(),
             vec![Value::new(target)],
             LinkedHashMap::new(),
             None,
@@ -496,10 +502,10 @@ fn starlark_resolve_targets(env: &Environment, call_stack: &CallStack) -> ValueR
 }
 
 /// set_build_path(path)
-fn starlark_set_build_path(env: &Environment, path: &Value) -> ValueResult {
+fn starlark_set_build_path(type_values: &TypeValues, path: &Value) -> ValueResult {
     let path = required_str_arg("path", &path)?;
 
-    let raw_context = get_context(env)?;
+    let raw_context = get_context(type_values)?;
     let mut context = raw_context
         .downcast_mut::<EnvironmentContext>()?
         .ok_or(ValueError::IncorrectParameterType)?;
@@ -615,8 +621,7 @@ pub mod tests {
         let mut env = starlark_env();
         starlark_eval_in_env(&mut env, "def foo(): pass").unwrap();
         starlark_eval_in_env(&mut env, "register_target('default', foo)").unwrap();
-
-        let raw_context = get_context(&env).unwrap();
+        let raw_context = starlark_eval_in_env(&mut env, "CONTEXT").unwrap();
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)
@@ -643,8 +648,7 @@ pub mod tests {
             "register_target('bar', bar, depends=['foo'], default=True)",
         )
         .unwrap();
-
-        let raw_context = get_context(&env).unwrap();
+        let raw_context = starlark_eval_in_env(&mut env, "CONTEXT").unwrap();
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)

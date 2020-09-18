@@ -25,7 +25,7 @@ use {
     itertools::Itertools,
     python_packaging::resource::PythonModuleBytecodeFromSource,
     slog::warn,
-    starlark::environment::Environment,
+    starlark::environment::TypeValues,
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
     starlark::values::none::NoneType,
     starlark::values::{Immutable, Mutable, TypedValue, Value, ValueResult},
@@ -171,13 +171,13 @@ impl FileManifest {
     /// FileManifest.add_python_resource(prefix, resource)
     pub fn add_python_resource(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         prefix: &Value,
         resource: &Value,
     ) -> ValueResult {
         let prefix = required_str_arg("prefix", &prefix)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -280,7 +280,7 @@ impl FileManifest {
             }
 
             "PythonExecutable" => {
-                let raw_context = get_context(env)?;
+                let raw_context = get_context(type_values)?;
                 let context = raw_context
                     .downcast_ref::<EnvironmentContext>()
                     .ok_or(ValueError::IncorrectParameterType)?;
@@ -327,25 +327,25 @@ impl FileManifest {
     #[allow(clippy::ptr_arg)]
     pub fn add_python_resources(
         &mut self,
-        env: &Environment,
+        type_values: &TypeValues,
         prefix: &Value,
         resources: &Value,
     ) -> ValueResult {
         required_str_arg("prefix", &prefix)?;
 
         for resource in &resources.iter()? {
-            self.add_python_resource(env, &prefix.clone(), &resource)?;
+            self.add_python_resource(type_values, &prefix.clone(), &resource)?;
         }
 
         Ok(Value::new(NoneType::None))
     }
 
     /// FileManifest.install(path, replace=true)
-    pub fn install(&self, env: &Environment, path: &Value, replace: &Value) -> ValueResult {
+    pub fn install(&self, type_values: &TypeValues, path: &Value, replace: &Value) -> ValueResult {
         let path = required_str_arg("path", &path)?;
         let replace = required_bool_arg("replace", &replace)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
@@ -371,7 +371,7 @@ impl FileManifest {
 
 /// glob(include, exclude=None, relative_to=None)
 fn starlark_glob(
-    env: &Environment,
+    type_values: &TypeValues,
     include: &Value,
     exclude: &Value,
     strip_prefix: &Value,
@@ -391,7 +391,7 @@ fn starlark_glob(
         _ => Vec::new(),
     };
 
-    let raw_context = get_context(env)?;
+    let raw_context = get_context(type_values)?;
     let context = raw_context
         .downcast_ref::<EnvironmentContext>()
         .ok_or(ValueError::IncorrectParameterType)?;
@@ -652,9 +652,11 @@ mod tests {
 
         starlark_eval_in_env(&mut env, "m.add_python_resource('bin', exe)").unwrap();
         starlark_eval_in_env(&mut env, "m.install('myapp')").unwrap();
-
-        let raw_context = get_context(&env).unwrap();
-        let context = raw_context.downcast_ref::<EnvironmentContext>().unwrap();
+        let raw_context = starlark_eval_in_env(&mut env, "CONTEXT").unwrap();
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)
+            .unwrap();
 
         let dest_path = context.build_path.join("myapp");
         assert!(dest_path.exists());

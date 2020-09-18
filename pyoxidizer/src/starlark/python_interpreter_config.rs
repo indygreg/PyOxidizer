@@ -9,7 +9,7 @@ use {
     crate::py_packaging::config::{
         default_raw_allocator, EmbeddedPythonConfig, RawAllocator, TerminfoResolution,
     },
-    starlark::environment::Environment,
+    starlark::environment::TypeValues,
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
     starlark::values::none::NoneType,
     starlark::values::{Immutable, TypedValue, Value, ValueResult},
@@ -74,7 +74,7 @@ impl EmbeddedPythonConfig {
     /// PythonInterpreterConfig(...)
     #[allow(clippy::too_many_arguments)]
     pub fn starlark_new(
-        env: &Environment,
+        type_values: &TypeValues,
         bytes_warning: &Value,
         ignore_environment: &Value,
         inspect: &Value,
@@ -142,7 +142,7 @@ impl EmbeddedPythonConfig {
         let write_modules_directory_env =
             optional_str_arg("write_modules_directory_env", &write_modules_directory_env)?;
 
-        let raw_context = get_context(env)?;
+        let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
