@@ -26,8 +26,8 @@ use {
     starlark::values::none::NoneType,
     starlark::values::{Mutable, TypedValue, Value, ValueResult},
     starlark::{
-        starlark_fun, starlark_module, starlark_param_name, starlark_parse_param_type,
-        starlark_signature, starlark_signature_extraction, starlark_signatures,
+        starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
+        starlark_signature_extraction, starlark_signatures,
     },
     std::collections::HashMap,
     std::convert::TryFrom,
