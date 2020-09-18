@@ -333,13 +333,14 @@ impl TypedValue for PyOxidizerContext {
 }
 
 pub fn get_context(env: &Environment) -> ValueResult {
-    env.get("CONTEXT").or_else(|_| {
-        Err(ValueError::from(RuntimeError {
-            code: "PYOXIDIZER",
-            message: "CONTEXT not set".to_string(),
-            label: "".to_string(),
-        }))
-    })
+    env.get_type_value(&Value::new(PyOxidizerContext::default()), "CONTEXT")
+        .ok_or_else(|| {
+            ValueError::from(RuntimeError {
+                code: "PYOXIDIZER",
+                message: "Unable to resolve context (this should never happen)".to_string(),
+                label: "".to_string(),
+            })
+        })
 }
 
 /// register_target(target, callable, depends=None, default=false)
