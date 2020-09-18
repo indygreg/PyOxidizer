@@ -4,6 +4,7 @@
 
 use crate::py_packaging::config::RunMode;
 use {
+    super::env::{get_context, EnvironmentContext},
     super::util::{optional_list_arg, optional_str_arg, required_bool_arg, required_type_arg},
     crate::py_packaging::config::{
         default_raw_allocator, EmbeddedPythonConfig, RawAllocator, TerminfoResolution,
@@ -106,7 +107,10 @@ impl EmbeddedPythonConfig {
         let write_modules_directory_env =
             optional_str_arg("write_modules_directory_env", &write_modules_directory_env)?;
 
-        let build_target = env.get("BUILD_TARGET_TRIPLE").unwrap().to_str();
+        let raw_context = get_context(env)?;
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
 
         let mut run_count = 0;
         if run_eval.is_some() {
@@ -165,7 +169,7 @@ impl EmbeddedPythonConfig {
                     }));
                 }
             },
-            None => default_raw_allocator(&build_target),
+            None => default_raw_allocator(&context.build_target_triple),
         };
 
         let terminfo_resolution = match terminfo_resolution {

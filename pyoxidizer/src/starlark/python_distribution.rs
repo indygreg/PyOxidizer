@@ -129,9 +129,14 @@ impl PythonDistribution {
         let flavor = required_str_arg("flavor", flavor)?;
         let build_target = optional_str_arg("build_target", build_target)?;
 
+        let raw_context = get_context(env)?;
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
         let build_target = match build_target {
             Some(t) => t,
-            None => env.get("BUILD_TARGET_TRIPLE").unwrap().to_string(),
+            None => context.build_target_triple.clone(),
         };
 
         let flavor = match flavor.as_ref() {
