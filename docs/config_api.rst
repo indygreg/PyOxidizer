@@ -1123,45 +1123,19 @@ possible values. If ``None`` (the default), the resource location will be
 chosen by the active resources policy.
 See :ref:`config_python_resources_policy`.
 
-.. _config_python_executable_add_in_memory_package_distribution_resource:
+.. _config_python_executable.add_python_package_distribution_resource:
 
-``PythonExecutable.add_in_memory_package_distribution_resource(resource)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method adds a ``PythonPackageDistributionResource`` instance to the
-``PythonExecutable`` instance, making that resource available
-via in-memory access.
-
-If multiple resources sharing the same ``(package, name)`` pair are added,
-the last added one is used.
-
-.. _config_python_executable_add_filesystem_relative_package_distribution_resource:
-
-``PythonExecutable.add_filesystem_relative_package_distribution_resource(prefix, resource)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method adds a ``PythonPackageDistributionResource`` instance to the
-``PythonExecutable`` instance. The resource will be materialized on the
-filesystem next to the produced executable at a path derived from the
-resource's attributes. The directory prefix for the generated file is
-defined by ``prefix``.
-
-If multiple resources sharing the same ``(prefix, package, name)`` tuple are
-added, the last added one is used.
-
-.. _config_python_executable.add_package_distribution_resource:
-
-``PythonExecutable.add_package_distribution_resource(resource)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonExecutable.add_python_package_distribution_resource(resource, location=None)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This method adds a ``PythonPackageDistributionResource`` instance to the
 ``PythonExecutable`` instance.
 
-This method is a glorified proxy to
-:ref:`config_python_executable_add_in_memory_package_distribution_resource` or
-:ref:`config_python_executable_add_filesystem_relative_package_distribution_resource`
-depending on the :ref:`config_python_resources_policy` in effect. See these
-other methods for documentation of behavior.
+If ``location`` is defined, it is a ``str`` defining the resource location
+from which to load the resource. See :ref:`config_resource_locations` for
+possible values. If ``None`` (the default), the resource location will be
+chosen by the active resources policy.
+See :ref:`config_python_resources_policy`.
 
 .. _config_python_executable_add_in_memory_extension_module:
 

@@ -437,86 +437,15 @@ impl PythonExecutable {
         Ok(Value::new(NoneType::None))
     }
 
-    /// PythonExecutable.add_in_memory_package_distribution_resource(resource)
-    pub fn starlark_add_in_memory_package_distribution_resource(
+    /// PythonExecutable.add_python_package_distribution_resource(resource, location=None)
+    pub fn starlark_add_python_package_distribution_resource(
         &mut self,
         type_values: &TypeValues,
         resource: &Value,
+        location: &Value,
     ) -> ValueResult {
         required_type_arg("resource", "PythonPackageDistributionResource", &resource)?;
-
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        let r = match resource.downcast_ref::<PythonPackageDistributionResource>() {
-            Some(r) => Ok(r.inner.clone()),
-            None => Err(ValueError::IncorrectParameterType),
-        }?;
-        info!(
-            &context.logger,
-            "adding in-memory package distribution resource {}:{}", r.package, r.name
-        );
-        self.exe
-            .add_python_package_distribution_resource(&r, Some(ConcreteResourceLocation::InMemory))
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
-                    label: "add_in_memory_package_distribution_resource".to_string(),
-                })
-            })?;
-
-        Ok(Value::new(NoneType::None))
-    }
-
-    /// PythonExecutable.add_filesystem_relative_package_distribution_resource(prefix, resource)
-    pub fn starlark_add_filesystem_relative_package_distribution_resource(
-        &mut self,
-        type_values: &TypeValues,
-        prefix: &Value,
-        resource: &Value,
-    ) -> ValueResult {
-        let prefix = required_str_arg("prefix", &prefix)?;
-        required_type_arg("resource", "PythonPackageDistributionResource", &resource)?;
-
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        let r = match resource.downcast_ref::<PythonPackageDistributionResource>() {
-            Some(r) => Ok(r.inner.clone()),
-            None => Err(ValueError::IncorrectParameterType),
-        }?;
-        info!(
-            &context.logger,
-            "adding executable relative package distribution resource {}:{}", r.package, r.name
-        );
-        self.exe
-            .add_python_package_distribution_resource(
-                &r,
-                Some(ConcreteResourceLocation::RelativePath(prefix)),
-            )
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
-                    label: "add_filesystem_relative_package_distribution_resource".to_string(),
-                })
-            })?;
-
-        Ok(Value::new(NoneType::None))
-    }
-
-    /// PythonExecutable.add_package_distribution_resource(resource)
-    pub fn starlark_add_package_distribution_resource(
-        &mut self,
-        type_values: &TypeValues,
-        resource: &Value,
-    ) -> ValueResult {
-        required_type_arg("resource", "PythonPackageDistributionResource", &resource)?;
+        let location = OptionalResourceLocation::try_from(location)?;
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
@@ -532,12 +461,12 @@ impl PythonExecutable {
             "adding package distribution resource {}:{}", r.package, r.name
         );
         self.exe
-            .add_python_package_distribution_resource(&r, None)
+            .add_python_package_distribution_resource(&r, location.into())
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
-                    label: "add_package_distribution_resource".to_string(),
+                    label: "add_python_package_distribution_resource".to_string(),
                 })
             })?;
 
@@ -688,9 +617,12 @@ impl PythonExecutable {
                 resource,
                 &Value::from("in-memory"),
             ),
-            "PythonPackageDistributionResource" => {
-                self.starlark_add_package_distribution_resource(type_values, resource)
-            }
+            "PythonPackageDistributionResource" => self
+                .starlark_add_python_package_distribution_resource(
+                    type_values,
+                    resource,
+                    &Value::from("in-memory"),
+                ),
             "PythonExtensionModule" => self.starlark_add_extension_module(type_values, resource),
             _ => Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -747,10 +679,10 @@ impl PythonExecutable {
                 &Value::from(format!("filesystem-relative:{}", prefix)),
             ),
             "PythonPackageDistributionResource" => self
-                .starlark_add_filesystem_relative_package_distribution_resource(
+                .starlark_add_python_package_distribution_resource(
                     type_values,
-                    prefix,
                     resource,
+                    &Value::from(format!("filesystem-relative:{}", prefix)),
                 ),
             "PythonExtensionModule" => self.starlark_add_extension_module(type_values, resource),
             _ => Err(ValueError::from(RuntimeError {
@@ -805,9 +737,12 @@ impl PythonExecutable {
                 resource,
                 &Value::from(NoneType::None),
             ),
-            "PythonPackageDistributionResource" => {
-                self.starlark_add_package_distribution_resource(type_values, resource)
-            }
+            "PythonPackageDistributionResource" => self
+                .starlark_add_python_package_distribution_resource(
+                    type_values,
+                    resource,
+                    &Value::from(NoneType::None),
+                ),
             "PythonExtensionModule" => self.starlark_add_extension_module(type_values, resource),
             _ => Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -1035,25 +970,9 @@ starlark_module! { python_executable_env =>
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_in_memory_package_distribution_resource(env env, this, resource) {
+    PythonExecutable.add_python_package_distribution_resource(env env, this, resource, location=NoneType::None) {
         match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_in_memory_package_distribution_resource(&env, &resource),
-            None => Err(ValueError::IncorrectParameterType),
-        }
-    }
-
-    #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_filesystem_relative_package_distribution_resource(env env, this, prefix, resource) {
-        match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_filesystem_relative_package_distribution_resource(&env, &prefix, &resource),
-            None => Err(ValueError::IncorrectParameterType),
-        }
-    }
-
-    #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_package_distribution_resource(env env, this, resource) {
-        match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_package_distribution_resource(&env, &resource),
+            Some(mut exe) => exe.starlark_add_python_package_distribution_resource(&env, &resource, &location),
             None => Err(ValueError::IncorrectParameterType),
         }
     }

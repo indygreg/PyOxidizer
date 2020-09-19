@@ -108,6 +108,17 @@ Backwards Compatibility Notes
   been removed, as they are redundant with the new
   ``PythonExecutable.add_python_package_resource()``, which accepts a
   ``location`` argument to control the resource location.
+* The Starlark method ``PythonExecutable.add_package_distribution_resource()``
+  has been renamed to
+  ``PythonExecutable.add_python_package_distribution_resource()`` and it
+  now accepts a ``location`` keyword argument defining the resource
+  location.
+* The Starlark methods
+  ``PythonExecutable.add_in_memory_package_distribution_resource()`` and
+  ``PythonExecutable.add_filesystem_relative_package_distribution_resource()``
+  have been removed, as they are redundant with the new
+  ``PythonExecutable.add_python_package_distribution_resource()``, which
+  accepts a ``location`` argument to control the resource location.
 
 New Features
 ^^^^^^^^^^^^
