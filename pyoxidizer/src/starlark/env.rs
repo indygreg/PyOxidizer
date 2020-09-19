@@ -400,7 +400,7 @@ fn starlark_register_target(
 #[allow(clippy::ptr_arg)]
 fn starlark_resolve_target(
     type_values: &TypeValues,
-    call_stack: &CallStack,
+    call_stack: &mut CallStack,
     target: &Value,
 ) -> ValueResult {
     let target = required_str_arg("target", &target)?;
@@ -467,7 +467,7 @@ fn starlark_resolve_target(
 
 /// resolve_targets()
 #[allow(clippy::ptr_arg)]
-fn starlark_resolve_targets(type_values: &TypeValues, call_stack: &CallStack) -> ValueResult {
+fn starlark_resolve_targets(type_values: &TypeValues, call_stack: &mut CallStack) -> ValueResult {
     let resolve_target_fn = type_values
         .get_type_value(&Value::new(PyOxidizerContext::default()), "resolve_target")
         .ok_or_else(|| {
@@ -543,12 +543,12 @@ starlark_module! { global_module =>
 
     #[allow(clippy::ptr_arg)]
     resolve_target(env env, call_stack cs, target) {
-        starlark_resolve_target(&env, &cs, &target)
+        starlark_resolve_target(&env, cs, &target)
     }
 
     #[allow(clippy::ptr_arg)]
     resolve_targets(env env, call_stack cs) {
-        starlark_resolve_targets(&env, &cs)
+        starlark_resolve_targets(&env, cs)
     }
 
     #[allow(clippy::ptr_arg)]
