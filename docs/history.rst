@@ -163,6 +163,11 @@ Other Relevant Changes
   argument to ``PythonDistribution.to_python_executable()``.
 * The default ``pyoxidizer.bzl`` now uses ``add_python_resources()`` instead
   of ``add_in_memory_python_resources()``.
+* The Rust Starlark crate was upgraded from version 0.2 to 0.3. There were
+  numerous changes as part of this upgrade. While we think behavior should
+  be mostly backwards compatible, there may be some slight changes in
+  behavior. Please file issues if any odd behavior or regressions are
+  observed.
 
 0.7.0
 -----
