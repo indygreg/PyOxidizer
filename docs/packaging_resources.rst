@@ -181,7 +181,8 @@ these APIs include
 
 *Type-aware* APIs require that the resource being passed in be a specific
 type or an error occurs. Examples of *type-aware* APIs include
-:ref:`config_python_executable_add_in_memory_package_resource`.
+:ref:`config_python_executable_add_python_module_source` and
+:ref:`config_python_executable.add_python_package_resource`.
 
 *Type-agnostic* APIs operate on any instance of an allowed type. It is
 safe to call these APIs with any accepted type. Examples of *type-agnostic*
