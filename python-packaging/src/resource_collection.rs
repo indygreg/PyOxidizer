@@ -519,7 +519,7 @@ pub enum AbstractResourceLocation {
 }
 
 /// Describes the concrete location of a Python resource.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ConcreteResourceLocation {
     /// Resource is loaded from memory.
     InMemory,

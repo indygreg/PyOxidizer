@@ -6,13 +6,13 @@ use {
     super::env::{get_context, EnvironmentContext},
     super::python_embedded_resources::PythonEmbeddedResources,
     super::python_resource::{
-        python_resource_to_value, PythonExtensionModule, PythonPackageDistributionResource,
-        PythonPackageResource, PythonSourceModule, ResourceLocation,
+        python_resource_to_value, OptionalResourceLocation, PythonExtensionModule,
+        PythonPackageDistributionResource, PythonPackageResource, PythonSourceModule,
     },
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
     super::util::{
-        optional_dict_arg, optional_list_arg, optional_str_arg, required_bool_arg,
-        required_list_arg, required_str_arg, required_type_arg,
+        optional_dict_arg, optional_list_arg, required_bool_arg, required_list_arg,
+        required_str_arg, required_type_arg,
     },
     crate::project_building::build_python_executable,
     crate::py_packaging::binary::PythonBinaryBuilder,
@@ -314,12 +314,7 @@ impl PythonExecutable {
         location: &Value,
     ) -> ValueResult {
         required_type_arg("module", "PythonSourceModule", &module)?;
-        let location = optional_str_arg("location", &location)?;
-
-        let location = match location {
-            Some(value) => ResourceLocation::try_from(value.as_ref())?.into(),
-            None => None,
-        };
+        let location = OptionalResourceLocation::try_from(location)?;
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
@@ -332,7 +327,7 @@ impl PythonExecutable {
         }?;
         info!(&context.logger, "adding Python source module {}", m.name);
         self.exe
-            .add_python_module_source(&m, location)
+            .add_python_module_source(&m, location.into())
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",

@@ -13,45 +13,43 @@ use {
     starlark::values::error::{
         RuntimeError, UnsupportedOperation, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE,
     },
+    starlark::values::none::NoneType,
     starlark::values::{Immutable, Mutable, TypedValue, Value, ValueResult},
     std::convert::{TryFrom, TryInto},
 };
 
-/// Where a resource should be loaded from.
-///
-// TODO consider removing this type, as it is equivalent to
-// Option<ConcreteResourceLocation>.
 #[derive(Clone, Debug)]
-pub enum ResourceLocation {
-    /// Use default load semantics for the target binary.
-    Default,
-    /// Load the resource from memory.
-    InMemory,
-    /// Load the resource from a filesystem path relative to the binary.
-    RelativePath(String),
+pub struct OptionalResourceLocation {
+    inner: Option<ConcreteResourceLocation>,
 }
 
-impl From<ResourceLocation> for Value {
-    fn from(location: ResourceLocation) -> Self {
-        Value::new(match location {
-            ResourceLocation::Default => "default".to_string(),
-            ResourceLocation::InMemory => "in-memory".to_string(),
-            ResourceLocation::RelativePath(prefix) => format!("filesystem-relative:{}", prefix),
-        })
+impl From<&OptionalResourceLocation> for Value {
+    fn from(location: &OptionalResourceLocation) -> Self {
+        match &location.inner {
+            Some(ConcreteResourceLocation::InMemory) => Value::from("in-memory"),
+            Some(ConcreteResourceLocation::RelativePath(prefix)) => {
+                Value::from(format!("filesystem-relative:{}", prefix))
+            }
+            None => Value::from(NoneType::None),
+        }
     }
 }
 
-impl TryFrom<&str> for ResourceLocation {
+impl TryFrom<&str> for OptionalResourceLocation {
     type Error = ValueError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         if s == "default" {
-            Ok(ResourceLocation::Default)
+            Ok(OptionalResourceLocation { inner: None })
         } else if s == "in-memory" {
-            Ok(ResourceLocation::InMemory)
+            Ok(OptionalResourceLocation {
+                inner: Some(ConcreteResourceLocation::InMemory),
+            })
         } else if s.starts_with("filesystem-relative:") {
             let prefix = s.split_at("filesystem-relative:".len()).1;
-            Ok(ResourceLocation::RelativePath(prefix.to_string()))
+            Ok(OptionalResourceLocation {
+                inner: Some(ConcreteResourceLocation::RelativePath(prefix.to_string())),
+            })
         } else {
             Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -65,25 +63,28 @@ impl TryFrom<&str> for ResourceLocation {
     }
 }
 
-impl TryFrom<Value> for ResourceLocation {
+impl TryFrom<&Value> for OptionalResourceLocation {
     type Error = ValueError;
 
-    fn try_from(value: Value) -> Result<Self, Self::Error> {
-        let s = value.to_str();
-
-        ResourceLocation::try_from(s.as_ref())
+    fn try_from(value: &Value) -> Result<Self, Self::Error> {
+        match value.get_type() {
+            "NoneType" => Ok(OptionalResourceLocation { inner: None }),
+            "string" => {
+                let s = value.to_str();
+                Ok(OptionalResourceLocation::try_from(s.as_str())?)
+            }
+            t => Err(ValueError::from(RuntimeError {
+                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                message: format!("unable to convert value {} to resource location", t),
+                label: "resource location conversion".to_string(),
+            })),
+        }
     }
 }
 
-impl Into<Option<ConcreteResourceLocation>> for ResourceLocation {
+impl Into<Option<ConcreteResourceLocation>> for OptionalResourceLocation {
     fn into(self) -> Option<ConcreteResourceLocation> {
-        match self {
-            ResourceLocation::Default => None,
-            ResourceLocation::InMemory => Some(ConcreteResourceLocation::InMemory),
-            ResourceLocation::RelativePath(prefix) => {
-                Some(ConcreteResourceLocation::RelativePath(prefix))
-            }
-        }
+        self.inner
     }
 }
 
@@ -91,14 +92,14 @@ impl Into<Option<ConcreteResourceLocation>> for ResourceLocation {
 #[derive(Debug, Clone)]
 pub struct PythonSourceModule {
     pub inner: RawSourceModule,
-    pub location: ResourceLocation,
+    pub location: OptionalResourceLocation,
 }
 
 impl PythonSourceModule {
     pub fn new(module: RawSourceModule) -> Self {
         Self {
             inner: module,
-            location: ResourceLocation::Default,
+            location: OptionalResourceLocation { inner: None },
         }
     }
 }
@@ -142,7 +143,7 @@ impl TypedValue for PythonSourceModule {
                 Value::new(source)
             }
             "is_package" => Value::new(self.inner.is_package),
-            "location" => self.location.clone().into(),
+            "location" => Value::from(&self.location),
             attr => {
                 return Err(ValueError::OperationNotSupported {
                     op: UnsupportedOperation::GetAttr(attr.to_string()),
@@ -168,7 +169,7 @@ impl TypedValue for PythonSourceModule {
     fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
         match attribute {
             "location" => {
-                self.location = value.try_into()?;
+                self.location = (&value).try_into()?;
 
                 Ok(())
             }
@@ -461,13 +462,13 @@ mod tests {
         assert_eq!(m.get_attr("is_package").unwrap().to_bool(), false);
 
         assert!(m.has_attr("location").unwrap());
-        assert_eq!(m.get_attr("location").unwrap().to_str(), "default");
+        assert_eq!(m.get_attr("location").unwrap().get_type(), "NoneType");
 
         m.set_attr("location", Value::from("in-memory")).unwrap();
         assert_eq!(m.get_attr("location").unwrap().to_str(), "in-memory");
 
         m.set_attr("location", Value::from("default")).unwrap();
-        assert_eq!(m.get_attr("location").unwrap().to_str(), "default");
+        assert_eq!(m.get_attr("location").unwrap().get_type(), "NoneType");
 
         m.set_attr("location", Value::from("filesystem-relative:lib"))
             .unwrap();
