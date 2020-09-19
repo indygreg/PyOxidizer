@@ -9,7 +9,9 @@ use {
         PythonPackageDistributionResource as RawDistributionResource,
         PythonPackageResource as RawPackageResource, PythonResource,
     },
-    starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
+    starlark::values::error::{
+        RuntimeError, UnsupportedOperation, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+    },
     starlark::values::{Immutable, Mutable, TypedValue, Value, ValueResult},
     std::convert::{TryFrom, TryInto},
 };
@@ -118,7 +120,7 @@ impl TypedValue for PythonSourceModule {
             "location" => self.location.clone().into(),
             attr => {
                 return Err(ValueError::OperationNotSupported {
-                    op: format!(".{}", attr),
+                    op: UnsupportedOperation::GetAttr(attr.to_string()),
                     left: "PythonSourceModule".to_string(),
                     right: None,
                 })
@@ -146,7 +148,7 @@ impl TypedValue for PythonSourceModule {
                 Ok(())
             }
             _ => Err(ValueError::OperationNotSupported {
-                op: format!(".{} =", attribute),
+                op: UnsupportedOperation::SetAttr(attribute.to_string()),
                 left: Self::TYPE.to_owned(),
                 right: None,
             }),
@@ -191,7 +193,7 @@ impl TypedValue for PythonBytecodeModule {
             "is_package" => Value::new(self.module.is_package),
             attr => {
                 return Err(ValueError::OperationNotSupported {
-                    op: format!(".{}", attr),
+                    op: UnsupportedOperation::GetAttr(attr.to_string()),
                     left: "PythonBytecodeModule".to_string(),
                     right: None,
                 })
@@ -244,7 +246,7 @@ impl TypedValue for PythonPackageResource {
             // TODO expose raw data
             attr => {
                 return Err(ValueError::OperationNotSupported {
-                    op: format!(".{}", attr),
+                    op: UnsupportedOperation::GetAttr(attr.to_string()),
                     left: "PythonPackageResource".to_string(),
                     right: None,
                 })
@@ -299,7 +301,7 @@ impl TypedValue for PythonPackageDistributionResource {
             // TODO expose raw data
             attr => {
                 return Err(ValueError::OperationNotSupported {
-                    op: format!(".{}", attr),
+                    op: UnsupportedOperation::GetAttr(attr.to_string()),
                     left: "PythonPackageDistributionResource".to_string(),
                     right: None,
                 })
@@ -345,7 +347,7 @@ impl TypedValue for PythonExtensionModule {
             "name" => Value::new(self.em.name.clone()),
             attr => {
                 return Err(ValueError::OperationNotSupported {
-                    op: format!(".{}", attr),
+                    op: UnsupportedOperation::GetAttr(attr.to_string()),
                     left: "PythonExtensionModule".to_string(),
                     right: None,
                 })
