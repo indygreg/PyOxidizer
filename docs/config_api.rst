@@ -1137,43 +1137,19 @@ possible values. If ``None`` (the default), the resource location will be
 chosen by the active resources policy.
 See :ref:`config_python_resources_policy`.
 
-.. _config_python_executable_add_in_memory_extension_module:
+.. _config_python_executable_add_python_extension_module:
 
-``PythonExecutable.add_in_memory_extension_module(module)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method registers a ``PythonExtensionModule`` instance with a
-``PythonExecutable`` instance. The extension module will be loaded from
-memory via one of the following mechanisms:
-
-* Linking the extension module's symbols directly into the produced binary.
-* Embedded the extension module's shared library into the produced binary
-  and loading it from memory.
-
-If multiple extension modules with the same name are added, the last added
-one is used.
-
-.. _config_python_executable_add_filesystem_relative_extension_module:
-
-``PythonExecutable.add_filesystem_relative_extension_module(prefix, module)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonExecutable.add_python_extension_module(module, location=None)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This method registers a ``PythonExtensionModule`` instance with a
-``PythonExecutable`` instance. The extension module will be loaded from the
-filesystem from a path relative to the produced executable.
+``PythonExecutable`` instance.
 
-If multiple extension modules with the same name are added, the last added
-one is used.
-
-.. _config_python_executable_add_extension_module:
-
-``PythonExecutable.add_extension_module(module)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method registers a ``PythonExtensionModule`` instance with a
-``PythonExecutable`` instance. The extension module will be made available
-to the executable using whatever means are possible, constrained by the
-:ref:`config_python_resources_policy` set by this ``PythonExecutable``.
+If ``location`` is defined, it is a ``str`` defining the resource location
+from which to load the resource. See :ref:`config_resource_locations` for
+possible values. If ``None`` (the default), the resource location will be
+chosen by the active resources policy.
+See :ref:`config_python_resources_policy`.
 
 The extension module could be packaged in the following manner depending
 on the capabilities of the underlying Python distribution and resources

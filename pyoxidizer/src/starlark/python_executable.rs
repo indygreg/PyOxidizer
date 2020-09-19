@@ -21,7 +21,6 @@ use {
         BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource,
         PythonModuleSource as RawPythonModuleSource,
     },
-    python_packaging::resource_collection::ConcreteResourceLocation,
     slog::{info, warn},
     starlark::environment::TypeValues,
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
@@ -473,82 +472,15 @@ impl PythonExecutable {
         Ok(Value::new(NoneType::None))
     }
 
-    /// PythonExecutable.add_in_memory_extension_module(module)
-    pub fn starlark_add_in_memory_extension_module(
+    /// PythonExecutable.add_python_extension_module(module)
+    pub fn starlark_add_python_extension_module(
         &mut self,
         type_values: &TypeValues,
         module: &Value,
+        location: &Value,
     ) -> ValueResult {
         required_type_arg("module", "PythonExtensionModule", &module)?;
-
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        let m = match module.downcast_ref::<PythonExtensionModule>() {
-            Some(m) => Ok(m.inner.clone()),
-            None => Err(ValueError::IncorrectParameterType),
-        }?;
-        info!(
-            &context.logger,
-            "adding in-memory extension module {}", m.name
-        );
-
-        self.exe
-            .add_python_extension_module(&m, Some(ConcreteResourceLocation::InMemory))
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
-                    label: "add_in_memory_extension_module".to_string(),
-                })
-            })?;
-
-        Ok(Value::new(NoneType::None))
-    }
-
-    /// PythonExecutable.add_filesystem_relative_extension_module(module)
-    pub fn starlark_add_filesystem_relative_extension_module(
-        &mut self,
-        type_values: &TypeValues,
-        prefix: &Value,
-        module: &Value,
-    ) -> ValueResult {
-        let prefix = required_str_arg("prefix", &prefix)?;
-        required_type_arg("module", "PythonExtensionModule", &module)?;
-
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        let m = match module.downcast_ref::<PythonExtensionModule>() {
-            Some(m) => Ok(m.inner.clone()),
-            None => Err(ValueError::IncorrectParameterType),
-        }?;
-        info!(&context.logger, "adding in-extension module {}", m.name);
-
-        self.exe
-            .add_python_extension_module(&m, Some(ConcreteResourceLocation::RelativePath(prefix)))
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
-                    label: "add_filesystem_relative_extension_module".to_string(),
-                })
-            })?;
-
-        Ok(Value::new(NoneType::None))
-    }
-
-    /// PythonExecutable.add_extension_module(module)
-    pub fn starlark_add_extension_module(
-        &mut self,
-        type_values: &TypeValues,
-        module: &Value,
-    ) -> ValueResult {
-        required_type_arg("module", "PythonExtensionModule", &module)?;
+        let location = OptionalResourceLocation::try_from(location)?;
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
@@ -561,12 +493,12 @@ impl PythonExecutable {
         }?;
         info!(&context.logger, "adding extension module {}", m.name);
         self.exe
-            .add_python_extension_module(&m, None)
+            .add_python_extension_module(&m, location.into())
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
-                    label: "add_extension_module".to_string(),
+                    label: "add_python_extension_module".to_string(),
                 })
             })?;
 
@@ -623,7 +555,11 @@ impl PythonExecutable {
                     resource,
                     &Value::from("in-memory"),
                 ),
-            "PythonExtensionModule" => self.starlark_add_extension_module(type_values, resource),
+            "PythonExtensionModule" => self.starlark_add_python_extension_module(
+                type_values,
+                resource,
+                &Value::from("in-memory"),
+            ),
             _ => Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                 message: "resource argument must be a Python resource type".to_string(),
@@ -684,7 +620,11 @@ impl PythonExecutable {
                     resource,
                     &Value::from(format!("filesystem-relative:{}", prefix)),
                 ),
-            "PythonExtensionModule" => self.starlark_add_extension_module(type_values, resource),
+            "PythonExtensionModule" => self.starlark_add_python_extension_module(
+                type_values,
+                resource,
+                &Value::from(format!("filesystem-relative:{}", prefix)),
+            ),
             _ => Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                 message: "resource argument must be a Python resource type".to_string(),
@@ -743,7 +683,11 @@ impl PythonExecutable {
                     resource,
                     &Value::from(NoneType::None),
                 ),
-            "PythonExtensionModule" => self.starlark_add_extension_module(type_values, resource),
+            "PythonExtensionModule" => self.starlark_add_python_extension_module(
+                type_values,
+                resource,
+                &Value::from(NoneType::None),
+            ),
             _ => Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                 message: "resource argument must be a Python resource type".to_string(),
@@ -977,26 +921,10 @@ starlark_module! { python_executable_env =>
         }
     }
 
-    #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_in_memory_extension_module(env env, this, module) {
-        match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_in_memory_extension_module(&env, &module),
-            None => Err(ValueError::IncorrectParameterType),
-        }
-    }
-
-    #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_filesystem_relative_extension_module(env env, this, prefix, module) {
-        match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_filesystem_relative_extension_module(&env, &prefix, &module),
-            None => Err(ValueError::IncorrectParameterType),
-        }
-    }
-
     #[allow(clippy::ptr_arg)]
-    PythonExecutable.add_extension_module(env env, this, module) {
+    PythonExecutable.add_python_extension_module(env env, this, module, location=NoneType::None) {
         match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_extension_module(&env, &module),
+            Some(mut exe) => exe.starlark_add_python_extension_module(&env, &module, &location),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
