@@ -1088,46 +1088,26 @@ possible values. If ``None`` (the default), the resource location will be
 chosen by the active resources policy.
 See :ref:`config_python_resources_policy`.
 
-.. _config_python_executable_add_in_memory_module_bytecode:
+.. _config_python_executable_add_python_module_bytecode:
 
-``PythonExecutable.add_in_memory_module_bytecode(module, optimize_level=0)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method registers Python module bytecode with a
-``PythonExecutable`` instance. The module will be imported from memory at
-run-time.
-
-The first argument must be a ``PythonSourceModule`` instance. The 2nd
-argument the value ``0``, ``1``, or ``2``.
-
-.. _config_python_executable_add_filesystem_relative_module_bytecode:
-
-``PythonExecutable.add_filesystem_relative_module_bytecode(prefix, module, optimize_level=0)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method registers Python module bytecode with a ``PythonExecutable``
-instance. The module will be imported from the filesystem from a file relative
-to the built executable. The directory prefix for the generated file is defined
-by ``prefix``.
-
-The ``module`` argument must be a ``PythonSourceModule`` instance. The
-``optimize_level`` argument must be the value ``0``, ``1``, or ``2``.
-
-If called multiple times for the same module, the last write wins.
-
-.. _config_python_executable_add_module_bytecode:
-
-``PythonExecutable.add_module_bytecode(module, optimize_level=0)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonExecutable.add_python_module_bytecode(module, optimize_level=0, location=None)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This method registers a Python module bytecode with a ``PythonExecutable``
 instance.
 
-This method is a glorified proxy to
-:ref:`config_python_executable_add_in_memory_module_bytecode` or
-:ref:`config_python_executable_add_filesystem_relative_module_bytecode`
-depending on the :ref:`config_python_resources_policy` in effect. See these
-other methods for documentation of behavior.
+The ``module`` argument must be a ``PythonSourceModule`` instance.
+
+The ``optimize_level`` argument must be the value ``0``, ``1``, or ``2``.
+
+If ``location`` is defined, it is a ``str`` defining the resource location
+from which to load the module. See :ref:`config_resource_locations` for
+possible values. If ``None`` (the default), the resource location will be
+chosen by the active resources policy.
+See :ref:`config_python_resources_policy`.
+
+If the same bytecode variant (module name + optimization level + location)
+is defined multiple times, the last write wins.
 
 .. _config_python_executable_add_in_memory_package_resource:
 

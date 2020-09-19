@@ -175,7 +175,6 @@ These *resource addition* APIs are either *location-aware* or
 the *resource location policy* for the container. e.g. if ``in-memory-only``
 is in use, resources will be routed to the *in-memory* location. Examples of
 these APIs include
-:ref:`config_python_executable_add_module_bytecode` and
 :ref:`config_python_executable_add_python_resources`.
 
 *Resource addition* APIs are either *type-aware* or *type-agnostic*.

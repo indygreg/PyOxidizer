@@ -90,6 +90,15 @@ Backwards Compatibility Notes
   been removed, as they are redundant with the new
   ``PythonExecutable.add_python_module_source()``, which accepts a
   ``location`` argument to control the resource location.
+* The Starlark method ``PythonExecutable.add_module_bytecode()`` has been
+  renamed to ``PythonExecutable.add_python_module_bytecode()`` and it
+  now accepts a ``location`` keyword argument defining the resource
+  location.
+* The Starlark methods ``PythonExecutable.add_in_memory_module_bytecode()``
+  and ``PythonExecutable.add_filesystem_relative_module_bytecode()`` have
+  been removed, as they are redundant with the new
+  ``PythonExecutable.add_python_module_bytecode()``, which accepts a
+  ``location`` argument to control the resource location.
 
 New Features
 ^^^^^^^^^^^^

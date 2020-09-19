@@ -339,141 +339,17 @@ impl PythonExecutable {
         Ok(Value::new(NoneType::None))
     }
 
-    /// PythonExecutable.add_in_memory_module_bytecode(module, optimize_level=0)
-    pub fn starlark_add_in_memory_module_bytecode(
+    /// PythonExecutable.add_python_module_bytecode(module, optimize_level=0, location=None)
+    pub fn starlark_add_python_module_bytecode(
         &mut self,
         type_values: &TypeValues,
         module: &Value,
         optimize_level: &Value,
+        location: &Value,
     ) -> ValueResult {
         required_type_arg("module", "PythonSourceModule", &module)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
-
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        let optimize_level = optimize_level.to_int().unwrap();
-
-        let optimize_level = match optimize_level {
-            0 => BytecodeOptimizationLevel::Zero,
-            1 => BytecodeOptimizationLevel::One,
-            2 => BytecodeOptimizationLevel::Two,
-            i => {
-                return Err(ValueError::from(RuntimeError {
-                    code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                    message: format!("optimize_level must be 0, 1, or 2: got {}", i),
-                    label: "invalid optimize_level value".to_string(),
-                }));
-            }
-        };
-
-        let m = match module.downcast_ref::<PythonSourceModule>() {
-            Some(m) => Ok(m.inner.clone()),
-            None => Err(ValueError::IncorrectParameterType),
-        }?;
-        info!(
-            &context.logger,
-            "adding in-memory bytecode module {}", m.name
-        );
-        self.exe
-            .add_python_module_bytecode_from_source(
-                &PythonModuleBytecodeFromSource {
-                    name: m.name.clone(),
-                    source: m.source.clone(),
-                    optimize_level,
-                    is_package: m.is_package,
-                    cache_tag: m.cache_tag,
-                    is_stdlib: m.is_stdlib,
-                    is_test: m.is_test,
-                },
-                Some(ConcreteResourceLocation::InMemory),
-            )
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
-                    label: "add_in_memory_module_bytecode".to_string(),
-                })
-            })?;
-
-        Ok(Value::new(NoneType::None))
-    }
-
-    /// PythonExecutable.add_filesystem_relative_module_bytecode(prefix, module, optimize_level=0)
-    pub fn starlark_add_filesystem_relative_module_bytecode(
-        &mut self,
-        type_values: &TypeValues,
-        prefix: &Value,
-        module: &Value,
-        optimize_level: &Value,
-    ) -> ValueResult {
-        let prefix = required_str_arg("prefix", &prefix)?;
-        required_type_arg("module", "PythonSourceModule", &module)?;
-        required_type_arg("optimize_level", "int", &optimize_level)?;
-
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        let optimize_level = optimize_level.to_int().unwrap();
-
-        let optimize_level = match optimize_level {
-            0 => BytecodeOptimizationLevel::Zero,
-            1 => BytecodeOptimizationLevel::One,
-            2 => BytecodeOptimizationLevel::Two,
-            i => {
-                return Err(ValueError::from(RuntimeError {
-                    code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                    message: format!("optimize_level must be 0, 1, or 2: got {}", i),
-                    label: "invalid optimize_level value".to_string(),
-                }));
-            }
-        };
-
-        let m = match module.downcast_ref::<PythonSourceModule>() {
-            Some(m) => Ok(m.inner.clone()),
-            None => Err(ValueError::IncorrectParameterType),
-        }?;
-        info!(
-            &context.logger,
-            "adding executable relative bytecode module {}", m.name
-        );
-        self.exe
-            .add_python_module_bytecode_from_source(
-                &PythonModuleBytecodeFromSource {
-                    name: m.name.clone(),
-                    source: m.source.clone(),
-                    optimize_level,
-                    is_package: m.is_package,
-                    cache_tag: m.cache_tag,
-                    is_stdlib: m.is_stdlib,
-                    is_test: m.is_test,
-                },
-                Some(ConcreteResourceLocation::RelativePath(prefix)),
-            )
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
-                    label: "add_filesystem_relative_module_bytecode".to_string(),
-                })
-            })?;
-
-        Ok(Value::new(NoneType::None))
-    }
-
-    /// PythonExecutable.add_module_bytecode(module, optimize_level=0)
-    pub fn starlark_add_module_bytecode(
-        &mut self,
-        type_values: &TypeValues,
-        module: &Value,
-        optimize_level: &Value,
-    ) -> ValueResult {
-        required_type_arg("module", "PythonSourceModule", &module)?;
-        required_type_arg("optimize_level", "int", &optimize_level)?;
+        let location = OptionalResourceLocation::try_from(location)?;
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
@@ -511,13 +387,13 @@ impl PythonExecutable {
                     is_stdlib: m.is_stdlib,
                     is_test: m.is_test,
                 },
-                None,
+                location.into(),
             )
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
-                    label: "add_module_bytecode".to_string(),
+                    label: "add_python_module_bytecode".to_string(),
                 })
             })?;
 
@@ -861,18 +737,22 @@ impl PythonExecutable {
                     )?;
                 }
                 if add_bytecode_module {
-                    self.starlark_add_in_memory_module_bytecode(
+                    self.starlark_add_python_module_bytecode(
                         type_values,
                         resource,
                         optimize_level,
+                        &Value::from("in-memory"),
                     )?;
                 }
 
                 Ok(Value::new(NoneType::None))
             }
-            "PythonBytecodeModule" => {
-                self.starlark_add_in_memory_module_bytecode(type_values, resource, optimize_level)
-            }
+            "PythonBytecodeModule" => self.starlark_add_python_module_bytecode(
+                type_values,
+                resource,
+                optimize_level,
+                &Value::from("in-memory"),
+            ),
             "PythonPackageResource" => {
                 self.starlark_add_in_memory_package_resource(type_values, resource)
             }
@@ -913,21 +793,21 @@ impl PythonExecutable {
                     )?;
                 }
                 if add_bytecode_module {
-                    self.starlark_add_filesystem_relative_module_bytecode(
+                    self.starlark_add_python_module_bytecode(
                         type_values,
-                        prefix,
                         resource,
                         optimize_level,
+                        &Value::from(format!("filesystem-relative:{}", prefix_str)),
                     )?;
                 }
 
                 Ok(Value::new(NoneType::None))
             }
-            "PythonBytecodeModule" => self.starlark_add_filesystem_relative_module_bytecode(
+            "PythonBytecodeModule" => self.starlark_add_python_module_bytecode(
                 type_values,
-                prefix,
                 resource,
                 optimize_level,
+                &Value::from(format!("filesystem-relative:{}", prefix)),
             ),
             "PythonPackageResource" => self.starlark_add_filesystem_relative_package_resource(
                 type_values,
@@ -972,14 +852,22 @@ impl PythonExecutable {
                     )?;
                 }
                 if add_bytecode_module {
-                    self.starlark_add_module_bytecode(type_values, resource, optimize_level)?;
+                    self.starlark_add_python_module_bytecode(
+                        type_values,
+                        resource,
+                        optimize_level,
+                        &Value::new(NoneType::None),
+                    )?;
                 }
 
                 Ok(Value::new(NoneType::None))
             }
-            "PythonBytecodeModule" => {
-                self.starlark_add_module_bytecode(type_values, resource, optimize_level)
-            }
+            "PythonBytecodeModule" => self.starlark_add_python_module_bytecode(
+                type_values,
+                resource,
+                optimize_level,
+                &Value::from(NoneType::None),
+            ),
             "PythonPackageResource" => self.starlark_add_package_resource(type_values, resource),
             "PythonPackageDistributionResource" => {
                 self.starlark_add_package_distribution_resource(type_values, resource)
@@ -1194,27 +1082,10 @@ starlark_module! { python_executable_env =>
     }
 
     // TODO consider unifying with add_python_module_source() so there only needs to be
-    // a single function call.
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_in_memory_module_bytecode(env env, this, module, optimize_level=0) {
+    PythonExecutable.add_python_module_bytecode(env env, this, module, optimize_level=0, location=NoneType::None) {
         match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_in_memory_module_bytecode(&env, &module, &optimize_level),
-            None => Err(ValueError::IncorrectParameterType),
-        }
-    }
-
-    #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_filesystem_relative_module_bytecode(env env, this, prefix, module, optimize_level=0) {
-        match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_filesystem_relative_module_bytecode(&env, &prefix, &module, &optimize_level),
-            None => Err(ValueError::IncorrectParameterType),
-        }
-    }
-
-    #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_module_bytecode(env env, this, module, optimize_level=0) {
-        match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_module_bytecode(&env, &module, &optimize_level),
+            Some(mut exe) => exe.starlark_add_python_module_bytecode(&env, &module, &optimize_level, &location),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
