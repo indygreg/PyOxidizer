@@ -1523,11 +1523,21 @@ mod tests {
 
     #[test]
     fn test_default_values() {
-        let mut env = starlark_env();
+        let (mut env, type_values) = starlark_env();
 
-        starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "dist = default_python_distribution()",
+        )
+        .unwrap();
 
-        let exe = starlark_eval_in_env(&mut env, "dist.to_python_executable('testapp')").unwrap();
+        let exe = starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "dist.to_python_executable('testapp')",
+        )
+        .unwrap();
 
         assert_eq!(exe.get_type(), "PythonExecutable");
 
@@ -1544,12 +1554,18 @@ mod tests {
 
     #[test]
     fn test_no_sources() {
-        let mut env = starlark_env();
+        let (mut env, type_values) = starlark_env();
 
-        starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "dist = default_python_distribution()",
+        )
+        .unwrap();
 
         let exe = starlark_eval_in_env(
             &mut env,
+            &type_values,
             "dist.to_python_executable('testapp', include_sources=False)",
         )
         .unwrap();
@@ -1565,14 +1581,25 @@ mod tests {
 
     #[test]
     fn test_make_python_source_module() {
-        let mut env = starlark_env();
+        let (mut env, type_values) = starlark_env();
 
-        starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "dist = default_python_distribution()",
+        )
+        .unwrap();
 
-        starlark_eval_in_env(&mut env, "exe = dist.to_python_executable('testapp')").unwrap();
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "exe = dist.to_python_executable('testapp')",
+        )
+        .unwrap();
 
         let m = starlark_eval_in_env(
             &mut env,
+            &type_values,
             "exe.make_python_source_module('foo', 'import bar')",
         )
         .unwrap();
@@ -1585,18 +1612,28 @@ mod tests {
 
     #[test]
     fn test_pip_install_simple() {
-        let mut env = starlark_env();
-
-        starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
+        let (mut env, type_values) = starlark_env();
 
         starlark_eval_in_env(
             &mut env,
+            &type_values,
+            "dist = default_python_distribution()",
+        )
+        .unwrap();
+
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
             "exe = dist.to_python_executable('testapp', include_sources=False)",
         )
         .unwrap();
 
-        let resources =
-            starlark_eval_in_env(&mut env, "exe.pip_install(['pyflakes==2.1.1'])").unwrap();
+        let resources = starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "exe.pip_install(['pyflakes==2.1.1'])",
+        )
+        .unwrap();
         assert_eq!(resources.get_type(), "list");
 
         let raw_it = resources.iter().unwrap();
@@ -1628,16 +1665,23 @@ mod tests {
         let extra_path = root.join("extra").join("__init__.py");
         std::fs::write(&extra_path, "# extra")?;
 
-        let mut env = starlark_env();
-        starlark_eval_in_env(&mut env, "dist = default_python_distribution()").unwrap();
+        let (mut env, type_values) = starlark_env();
         starlark_eval_in_env(
             &mut env,
+            &type_values,
+            "dist = default_python_distribution()",
+        )
+        .unwrap();
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
             "exe = dist.to_python_executable('testapp', include_sources=False)",
         )
         .unwrap();
 
         let resources = starlark_eval_in_env(
             &mut env,
+            &type_values,
             &format!(
                 "exe.read_package_root(\"{}\", packages=['foo', 'bar'])",
                 root.display()

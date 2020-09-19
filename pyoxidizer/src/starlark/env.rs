@@ -448,7 +448,7 @@ fn starlark_resolve_target(
 
     let res = target_entry.callable.call(
         call_stack,
-        type_values.clone(),
+        type_values,
         args,
         LinkedHashMap::new(),
         None,
@@ -490,7 +490,7 @@ fn starlark_resolve_targets(type_values: &TypeValues, call_stack: &mut CallStack
     for target in targets {
         resolve_target_fn.call(
             call_stack,
-            type_values.clone(),
+            type_values,
             vec![Value::new(target)],
             LinkedHashMap::new(),
             None,
@@ -558,13 +558,15 @@ starlark_module! { global_module =>
 }
 
 /// Obtain a Starlark environment for evaluating PyOxidizer configurations.
-pub fn global_environment(context: &EnvironmentContext) -> Result<Environment, EnvironmentError> {
-    let env = starlark::stdlib::global_environment();
-    let env = global_module(env);
-    let env = super::file_resource::file_resource_env(env);
-    let env = super::python_distribution::python_distribution_module(env);
-    let env = super::python_executable::python_executable_env(env);
-    let env = super::python_interpreter_config::embedded_python_config_module(env);
+pub fn global_environment(
+    context: &EnvironmentContext,
+) -> Result<(Environment, TypeValues), EnvironmentError> {
+    let (mut env, mut type_values) = starlark::stdlib::global_environment();
+    global_module(&mut env, &mut type_values);
+    super::file_resource::file_resource_env(&mut env, &mut type_values);
+    super::python_distribution::python_distribution_module(&mut env, &mut type_values);
+    super::python_executable::python_executable_env(&mut env, &mut type_values);
+    super::python_interpreter_config::embedded_python_config_module(&mut env, &mut type_values);
 
     env.set("CONTEXT", Value::new(context.clone()))?;
 
@@ -592,10 +594,10 @@ pub fn global_environment(context: &EnvironmentContext) -> Result<Environment, E
         "CONFIG_PATH",
         "BUILD_TARGET_TRIPLE",
     ] {
-        env.add_type_value(PyOxidizerContext::TYPE, f, env.get(f)?);
+        type_values.add_type_value(PyOxidizerContext::TYPE, f, env.get(f)?);
     }
 
-    Ok(env)
+    Ok((env, type_values))
 }
 
 #[cfg(test)]
@@ -618,10 +620,10 @@ pub mod tests {
 
     #[test]
     fn test_register_target() {
-        let mut env = starlark_env();
-        starlark_eval_in_env(&mut env, "def foo(): pass").unwrap();
-        starlark_eval_in_env(&mut env, "register_target('default', foo)").unwrap();
-        let raw_context = starlark_eval_in_env(&mut env, "CONTEXT").unwrap();
+        let (mut env, type_values) = starlark_env();
+        starlark_eval_in_env(&mut env, &type_values, "def foo(): pass").unwrap();
+        starlark_eval_in_env(&mut env, &type_values, "register_target('default', foo)").unwrap();
+        let raw_context = starlark_eval_in_env(&mut env, &type_values, "CONTEXT").unwrap();
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)
@@ -639,16 +641,17 @@ pub mod tests {
 
     #[test]
     fn test_register_target_multiple() {
-        let mut env = starlark_env();
-        starlark_eval_in_env(&mut env, "def foo(): pass").unwrap();
-        starlark_eval_in_env(&mut env, "def bar(): pass").unwrap();
-        starlark_eval_in_env(&mut env, "register_target('foo', foo)").unwrap();
+        let (mut env, type_values) = starlark_env();
+        starlark_eval_in_env(&mut env, &type_values, "def foo(): pass").unwrap();
+        starlark_eval_in_env(&mut env, &type_values, "def bar(): pass").unwrap();
+        starlark_eval_in_env(&mut env, &type_values, "register_target('foo', foo)").unwrap();
         starlark_eval_in_env(
             &mut env,
+            &type_values,
             "register_target('bar', bar, depends=['foo'], default=True)",
         )
         .unwrap();
-        let raw_context = starlark_eval_in_env(&mut env, "CONTEXT").unwrap();
+        let raw_context = starlark_eval_in_env(&mut env, &type_values, "CONTEXT").unwrap();
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)

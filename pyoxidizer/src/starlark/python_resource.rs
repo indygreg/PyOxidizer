@@ -408,10 +408,11 @@ mod tests {
 
     #[test]
     fn test_source_module_attrs() {
-        let mut env = starlark_make_exe().unwrap();
+        let (mut env, type_values) = starlark_make_exe().unwrap();
 
         let mut m = starlark_eval_in_env(
             &mut env,
+            &type_values,
             "exe.make_python_source_module('foo', 'import bar')",
         )
         .unwrap();

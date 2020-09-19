@@ -8,13 +8,13 @@ use {
     codemap::CodeMap,
     codemap_diagnostic::Diagnostic,
     slog::Drain,
-    starlark::environment::Environment,
+    starlark::environment::{Environment, TypeValues},
     starlark::eval,
     starlark::syntax::dialect::Dialect,
     starlark::values::Value,
 };
 
-pub fn starlark_env() -> Environment {
+pub fn starlark_env() -> (Environment, TypeValues) {
     let logger = slog::Logger::root(
         PrintlnDrain {
             min_level: slog::Level::Error,
@@ -44,15 +44,27 @@ pub fn starlark_env() -> Environment {
     global_environment(&context).expect("unable to get global environment")
 }
 
-pub fn starlark_eval_in_env(env: &mut Environment, snippet: &str) -> Result<Value, Diagnostic> {
+pub fn starlark_eval_in_env(
+    env: &mut Environment,
+    type_values: &TypeValues,
+    snippet: &str,
+) -> Result<Value, Diagnostic> {
     let map = std::sync::Arc::new(std::sync::Mutex::new(CodeMap::new()));
     let file_loader_env = env.clone();
-    eval::simple::eval(&map, "<test>", snippet, Dialect::Bzl, env, file_loader_env)
+    eval::simple::eval(
+        &map,
+        "<test>",
+        snippet,
+        Dialect::Bzl,
+        env,
+        type_values,
+        file_loader_env,
+    )
 }
 
 pub fn starlark_eval(snippet: &str) -> Result<Value, Diagnostic> {
-    let mut env = starlark_env();
-    starlark_eval_in_env(&mut env, snippet)
+    let (mut env, type_values) = starlark_env();
+    starlark_eval_in_env(&mut env, &type_values, snippet)
 }
 
 pub fn starlark_ok(snippet: &str) -> Value {
@@ -70,10 +82,18 @@ pub fn starlark_nok(snippet: &str) -> Diagnostic {
 }
 
 /// Construct a new Starlark environment and create a `PythonExecutable` in the `exe` variable.
-pub fn starlark_make_exe() -> Result<Environment, Diagnostic> {
-    let mut env = starlark_env();
-    starlark_eval_in_env(&mut env, "dist = default_python_distribution()")?;
-    starlark_eval_in_env(&mut env, "exe = dist.to_python_executable('testapp')")?;
+pub fn starlark_make_exe() -> Result<(Environment, TypeValues), Diagnostic> {
+    let (mut env, type_values) = starlark_env();
+    starlark_eval_in_env(
+        &mut env,
+        &type_values,
+        "dist = default_python_distribution()",
+    )?;
+    starlark_eval_in_env(
+        &mut env,
+        &type_values,
+        "exe = dist.to_python_executable('testapp')",
+    )?;
 
-    Ok(env)
+    Ok((env, type_values))
 }
