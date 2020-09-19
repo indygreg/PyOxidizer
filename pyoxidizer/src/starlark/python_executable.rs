@@ -319,7 +319,7 @@ impl PythonExecutable {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let m = match module.downcast_ref::<PythonSourceModule>() {
-            Some(m) => Ok(m.module.clone()),
+            Some(m) => Ok(m.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
         info!(&context.logger, "adding in-memory source module {}", m.name);
@@ -352,7 +352,7 @@ impl PythonExecutable {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let m = match module.downcast_ref::<PythonSourceModule>() {
-            Some(m) => Ok(m.module.clone()),
+            Some(m) => Ok(m.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
 
@@ -387,7 +387,7 @@ impl PythonExecutable {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let m = match module.downcast_ref::<PythonSourceModule>() {
-            Some(m) => Ok(m.module.clone()),
+            Some(m) => Ok(m.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
         info!(&context.logger, "adding source module {}", m.name);
@@ -433,7 +433,7 @@ impl PythonExecutable {
         };
 
         let m = match module.downcast_ref::<PythonSourceModule>() {
-            Some(m) => Ok(m.module.clone()),
+            Some(m) => Ok(m.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
         info!(
@@ -497,7 +497,7 @@ impl PythonExecutable {
         };
 
         let m = match module.downcast_ref::<PythonSourceModule>() {
-            Some(m) => Ok(m.module.clone()),
+            Some(m) => Ok(m.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
         info!(
@@ -559,7 +559,7 @@ impl PythonExecutable {
         };
 
         let m = match module.downcast_ref::<PythonSourceModule>() {
-            Some(m) => Ok(m.module.clone()),
+            Some(m) => Ok(m.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
         info!(&context.logger, "adding bytecode module {}", m.name);
@@ -601,7 +601,7 @@ impl PythonExecutable {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let r = match resource.downcast_ref::<PythonPackageResource>() {
-            Some(r) => Ok(r.data.clone()),
+            Some(r) => Ok(r.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
         info!(
@@ -636,7 +636,7 @@ impl PythonExecutable {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let r = match resource.downcast_ref::<PythonPackageResource>() {
-            Some(r) => Ok(r.data.clone()),
+            Some(r) => Ok(r.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
         info!(
@@ -673,7 +673,7 @@ impl PythonExecutable {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let r = match resource.downcast_ref::<PythonPackageResource>() {
-            Some(r) => Ok(r.data.clone()),
+            Some(r) => Ok(r.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
         info!(
@@ -708,7 +708,7 @@ impl PythonExecutable {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let r = match resource.downcast_ref::<PythonPackageDistributionResource>() {
-            Some(r) => Ok(r.resource.clone()),
+            Some(r) => Ok(r.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
         info!(
@@ -744,7 +744,7 @@ impl PythonExecutable {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let r = match resource.downcast_ref::<PythonPackageDistributionResource>() {
-            Some(r) => Ok(r.resource.clone()),
+            Some(r) => Ok(r.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
         info!(
@@ -781,7 +781,7 @@ impl PythonExecutable {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let r = match resource.downcast_ref::<PythonPackageDistributionResource>() {
-            Some(r) => Ok(r.resource.clone()),
+            Some(r) => Ok(r.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
         info!(
@@ -815,7 +815,7 @@ impl PythonExecutable {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let m = match module.downcast_ref::<PythonExtensionModule>() {
-            Some(m) => Ok(m.em.clone()),
+            Some(m) => Ok(m.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
         info!(
@@ -852,7 +852,7 @@ impl PythonExecutable {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let m = match module.downcast_ref::<PythonExtensionModule>() {
-            Some(m) => Ok(m.em.clone()),
+            Some(m) => Ok(m.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
         info!(&context.logger, "adding in-extension module {}", m.name);
@@ -884,7 +884,7 @@ impl PythonExecutable {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         let m = match module.downcast_ref::<PythonExtensionModule>() {
-            Some(m) => Ok(m.em.clone()),
+            Some(m) => Ok(m.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
         info!(&context.logger, "adding extension module {}", m.name);
@@ -1642,8 +1642,8 @@ mod tests {
         let v = it.next().unwrap();
         assert_eq!(v.get_type(), "PythonSourceModule");
         let x = v.downcast_ref::<PythonSourceModule>().unwrap();
-        assert_eq!(x.module.name, "pyflakes");
-        assert!(x.module.is_package);
+        assert_eq!(x.inner.name, "pyflakes");
+        assert!(x.inner.is_package);
     }
 
     #[test]
@@ -1698,16 +1698,16 @@ mod tests {
         let v = it.next().unwrap();
         assert_eq!(v.get_type(), "PythonSourceModule");
         let x = v.downcast_ref::<PythonSourceModule>().unwrap();
-        assert_eq!(x.module.name, "bar");
-        assert!(x.module.is_package);
-        assert_eq!(x.module.source.resolve().unwrap(), b"# bar");
+        assert_eq!(x.inner.name, "bar");
+        assert!(x.inner.is_package);
+        assert_eq!(x.inner.source.resolve().unwrap(), b"# bar");
 
         let v = it.next().unwrap();
         assert_eq!(v.get_type(), "PythonSourceModule");
         let x = v.downcast_ref::<PythonSourceModule>().unwrap();
-        assert_eq!(x.module.name, "foo");
-        assert!(!x.module.is_package);
-        assert_eq!(x.module.source.resolve().unwrap(), b"# foo");
+        assert_eq!(x.inner.name, "foo");
+        assert!(!x.inner.is_package);
+        assert_eq!(x.inner.source.resolve().unwrap(), b"# foo");
 
         Ok(())
     }

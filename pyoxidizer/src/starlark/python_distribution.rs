@@ -390,7 +390,7 @@ impl PythonDistribution {
                 .as_ref()
                 .unwrap()
                 .iter_extension_modules()
-                .map(|em| Value::new(PythonExtensionModule { em: em.clone() }))
+                .map(|em| Value::new(PythonExtensionModule { inner: em.clone() }))
                 .collect_vec(),
         ))
     }
@@ -437,7 +437,9 @@ impl PythonDistribution {
                     if !include_test && is_stdlib_test_package(&data.leaf_package) {
                         None
                     } else {
-                        Some(Value::new(PythonPackageResource { data: data.clone() }))
+                        Some(Value::new(PythonPackageResource {
+                            inner: data.clone(),
+                        }))
                     }
                 })
                 .collect_vec(),

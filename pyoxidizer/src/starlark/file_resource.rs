@@ -185,7 +185,7 @@ impl FileManifest {
         match resource.get_type() {
             "PythonSourceModule" => {
                 let m = match resource.downcast_ref::<PythonSourceModule>() {
-                    Some(m) => Ok(m.module.clone()),
+                    Some(m) => Ok(m.inner.clone()),
                     None => Err(ValueError::IncorrectParameterType),
                 }?;
                 warn!(
@@ -204,7 +204,7 @@ impl FileManifest {
             }
             "PythonBytecodeModule" => {
                 let m = match resource.downcast_ref::<PythonBytecodeModule>() {
-                    Some(m) => Ok(m.module.clone()),
+                    Some(m) => Ok(m.inner.clone()),
                     None => Err(ValueError::IncorrectParameterType),
                 }?;
                 warn!(
@@ -217,7 +217,7 @@ impl FileManifest {
             }
             "PythonPackageResource" => {
                 let m = match resource.downcast_ref::<PythonPackageResource>() {
-                    Some(m) => Ok(m.data.clone()),
+                    Some(m) => Ok(m.inner.clone()),
                     None => Err(ValueError::IncorrectParameterType),
                 }?;
 
@@ -239,7 +239,7 @@ impl FileManifest {
             }
             "PythonPackageDistributionResource" => {
                 let m = match resource.downcast_ref::<PythonPackageDistributionResource>() {
-                    Some(m) => Ok(m.resource.clone()),
+                    Some(m) => Ok(m.inner.clone()),
                     None => Err(ValueError::IncorrectParameterType),
                 }?;
                 warn!(
@@ -260,7 +260,7 @@ impl FileManifest {
             }
             "PythonExtensionModule" => {
                 let extension = match resource.downcast_ref::<PythonExtensionModule>() {
-                    Some(e) => Ok(e.em.clone()),
+                    Some(e) => Ok(e.inner.clone()),
                     None => Err(ValueError::IncorrectParameterType),
                 }?;
 
@@ -583,7 +583,7 @@ mod tests {
         });
 
         let v = Value::new(PythonPackageResource {
-            data: RawPackageResource {
+            inner: RawPackageResource {
                 leaf_package: "foo.bar".to_string(),
                 relative_name: "resource.txt".to_string(),
                 data: DataLocation::Memory(vec![]),

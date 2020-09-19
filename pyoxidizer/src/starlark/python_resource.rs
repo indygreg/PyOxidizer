@@ -65,14 +65,14 @@ impl TryFrom<Value> for ResourceLocation {
 
 #[derive(Debug, Clone)]
 pub struct PythonSourceModule {
-    pub module: RawSourceModule,
+    pub inner: RawSourceModule,
     pub location: ResourceLocation,
 }
 
 impl PythonSourceModule {
     pub fn new(module: RawSourceModule) -> Self {
         Self {
-            module,
+            inner: module,
             location: ResourceLocation::Default,
         }
     }
@@ -87,7 +87,7 @@ impl TypedValue for PythonSourceModule {
     }
 
     fn to_str(&self) -> String {
-        format!("PythonSourceModule<name={}>", self.module.name)
+        format!("PythonSourceModule<name={}>", self.inner.name)
     }
 
     fn to_repr(&self) -> String {
@@ -96,9 +96,9 @@ impl TypedValue for PythonSourceModule {
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
         let v = match attribute {
-            "name" => Value::new(self.module.name.clone()),
+            "name" => Value::new(self.inner.name.clone()),
             "source" => {
-                let source = self.module.source.resolve().map_err(|e| {
+                let source = self.inner.source.resolve().map_err(|e| {
                     ValueError::from(RuntimeError {
                         code: "PYOXIDIZER_SOURCE_ERROR",
                         message: format!("error resolving source code: {}", e),
@@ -116,7 +116,7 @@ impl TypedValue for PythonSourceModule {
 
                 Value::new(source)
             }
-            "is_package" => Value::new(self.module.is_package),
+            "is_package" => Value::new(self.inner.is_package),
             "location" => self.location.clone().into(),
             attr => {
                 return Err(ValueError::OperationNotSupported {
@@ -158,7 +158,7 @@ impl TypedValue for PythonSourceModule {
 
 #[derive(Debug, Clone)]
 pub struct PythonBytecodeModule {
-    pub module: PythonModuleBytecodeFromSource,
+    pub inner: PythonModuleBytecodeFromSource,
 }
 
 impl TypedValue for PythonBytecodeModule {
@@ -172,7 +172,7 @@ impl TypedValue for PythonBytecodeModule {
     fn to_str(&self) -> String {
         format!(
             "PythonBytecodeModule<name={}; level={:?}>",
-            self.module.name, self.module.optimize_level
+            self.inner.name, self.inner.optimize_level
         )
     }
 
@@ -182,15 +182,15 @@ impl TypedValue for PythonBytecodeModule {
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
         let v = match attribute {
-            "name" => Value::new(self.module.name.clone()),
+            "name" => Value::new(self.inner.name.clone()),
             // TODO expose source
             // "source" => Value::new(self.module.source),
-            "optimize_level" => Value::new(match self.module.optimize_level {
+            "optimize_level" => Value::new(match self.inner.optimize_level {
                 BytecodeOptimizationLevel::Zero => 0,
                 BytecodeOptimizationLevel::One => 1,
                 BytecodeOptimizationLevel::Two => 2,
             }),
-            "is_package" => Value::new(self.module.is_package),
+            "is_package" => Value::new(self.inner.is_package),
             attr => {
                 return Err(ValueError::OperationNotSupported {
                     op: UnsupportedOperation::GetAttr(attr.to_string()),
@@ -217,7 +217,7 @@ impl TypedValue for PythonBytecodeModule {
 
 #[derive(Debug, Clone)]
 pub struct PythonPackageResource {
-    pub data: RawPackageResource,
+    pub inner: RawPackageResource,
 }
 
 impl TypedValue for PythonPackageResource {
@@ -231,7 +231,7 @@ impl TypedValue for PythonPackageResource {
     fn to_str(&self) -> String {
         format!(
             "PythonPackageResource<package={}, name={}>",
-            self.data.leaf_package, self.data.relative_name
+            self.inner.leaf_package, self.inner.relative_name
         )
     }
 
@@ -241,8 +241,8 @@ impl TypedValue for PythonPackageResource {
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
         let v = match attribute {
-            "package" => Value::new(self.data.leaf_package.clone()),
-            "name" => Value::new(self.data.relative_name.clone()),
+            "package" => Value::new(self.inner.leaf_package.clone()),
+            "name" => Value::new(self.inner.relative_name.clone()),
             // TODO expose raw data
             attr => {
                 return Err(ValueError::OperationNotSupported {
@@ -268,7 +268,7 @@ impl TypedValue for PythonPackageResource {
 
 #[derive(Debug, Clone)]
 pub struct PythonPackageDistributionResource {
-    pub resource: RawDistributionResource,
+    pub inner: RawDistributionResource,
 }
 
 impl TypedValue for PythonPackageDistributionResource {
@@ -282,7 +282,7 @@ impl TypedValue for PythonPackageDistributionResource {
     fn to_str(&self) -> String {
         format!(
             "PythonPackageDistributionResource<package={}, name={}>",
-            self.resource.package, self.resource.name
+            self.inner.package, self.inner.name
         )
     }
 
@@ -296,8 +296,8 @@ impl TypedValue for PythonPackageDistributionResource {
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
         let v = match attribute {
-            "package" => Value::new(self.resource.package.clone()),
-            "name" => Value::new(self.resource.name.clone()),
+            "package" => Value::new(self.inner.package.clone()),
+            "name" => Value::new(self.inner.name.clone()),
             // TODO expose raw data
             attr => {
                 return Err(ValueError::OperationNotSupported {
@@ -323,7 +323,7 @@ impl TypedValue for PythonPackageDistributionResource {
 
 #[derive(Debug, Clone)]
 pub struct PythonExtensionModule {
-    pub em: RawPythonExtensionModule,
+    pub inner: RawPythonExtensionModule,
 }
 
 impl TypedValue for PythonExtensionModule {
@@ -335,7 +335,7 @@ impl TypedValue for PythonExtensionModule {
     }
 
     fn to_str(&self) -> String {
-        format!("PythonExtensionModule<name={}>", self.em.name)
+        format!("PythonExtensionModule<name={}>", self.inner.name)
     }
 
     fn to_repr(&self) -> String {
@@ -344,7 +344,7 @@ impl TypedValue for PythonExtensionModule {
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
         let v = match attribute {
-            "name" => Value::new(self.em.name.clone()),
+            "name" => Value::new(self.inner.name.clone()),
             attr => {
                 return Err(ValueError::OperationNotSupported {
                     op: UnsupportedOperation::GetAttr(attr.to_string()),
@@ -370,27 +370,29 @@ pub fn python_resource_to_value(resource: &PythonResource) -> Value {
         PythonResource::ModuleSource(sm) => Value::new(PythonSourceModule::new(sm.clone())),
 
         PythonResource::ModuleBytecodeRequest(m) => {
-            Value::new(PythonBytecodeModule { module: m.clone() })
+            Value::new(PythonBytecodeModule { inner: m.clone() })
         }
 
         PythonResource::ModuleBytecode { .. } => {
             panic!("not yet implemented");
         }
 
-        PythonResource::Resource(data) => Value::new(PythonPackageResource { data: data.clone() }),
+        PythonResource::Resource(data) => Value::new(PythonPackageResource {
+            inner: data.clone(),
+        }),
 
         PythonResource::DistributionResource(resource) => {
             Value::new(PythonPackageDistributionResource {
-                resource: resource.clone(),
+                inner: resource.clone(),
             })
         }
 
         PythonResource::ExtensionModuleDynamicLibrary(em) => {
-            Value::new(PythonExtensionModule { em: em.clone() })
+            Value::new(PythonExtensionModule { inner: em.clone() })
         }
 
         PythonResource::ExtensionModuleStaticallyLinked(em) => {
-            Value::new(PythonExtensionModule { em: em.clone() })
+            Value::new(PythonExtensionModule { inner: em.clone() })
         }
 
         PythonResource::EggFile(_) => {
