@@ -63,6 +63,7 @@ impl TryFrom<Value> for ResourceLocation {
     }
 }
 
+/// Starlark value wrapper for `PythonSourceModule`.
 #[derive(Debug, Clone)]
 pub struct PythonSourceModule {
     pub inner: RawSourceModule,
@@ -156,6 +157,7 @@ impl TypedValue for PythonSourceModule {
     }
 }
 
+/// Starlark `Value` wrapper for `PythonModuleBytecodeFromSource`.
 #[derive(Debug, Clone)]
 pub struct PythonBytecodeModule {
     pub inner: PythonModuleBytecodeFromSource,
@@ -215,6 +217,7 @@ impl TypedValue for PythonBytecodeModule {
     }
 }
 
+/// Starlark `Value` wrapper for `PythonPackageResource`.
 #[derive(Debug, Clone)]
 pub struct PythonPackageResource {
     pub inner: RawPackageResource,
@@ -266,6 +269,7 @@ impl TypedValue for PythonPackageResource {
     }
 }
 
+/// Starlark `Value` wrapper for `PythonPackageDistributionResource`.
 #[derive(Debug, Clone)]
 pub struct PythonPackageDistributionResource {
     pub inner: RawDistributionResource,
@@ -321,6 +325,7 @@ impl TypedValue for PythonPackageDistributionResource {
     }
 }
 
+/// Starlark `Value` wrapper for `PythonExtensionModule`.
 #[derive(Debug, Clone)]
 pub struct PythonExtensionModule {
     pub inner: RawPythonExtensionModule,
