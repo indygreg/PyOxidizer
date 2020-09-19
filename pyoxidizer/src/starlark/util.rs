@@ -62,10 +62,40 @@ pub fn required_bool_arg(name: &str, value: &Value) -> Result<bool, ValueError> 
         t => Err(ValueError::from(RuntimeError {
             code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
             message: format!(
+                "function expects an required bool for {}; got type {}",
+                name, t
+            ),
+            label: format!("expected type bool; got {}", t),
+        })),
+    }
+}
+
+pub fn optional_bool_arg(name: &str, value: &Value) -> Result<Option<bool>, ValueError> {
+    match value.get_type() {
+        "NoneType" => Ok(None),
+        "bool" => Ok(Some(value.to_bool())),
+        t => Err(ValueError::from(RuntimeError {
+            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+            message: format!(
                 "function expects an optional bool for {}; got type {}",
                 name, t
             ),
             label: format!("expected type bool; got {}", t),
+        })),
+    }
+}
+
+pub fn optional_int_arg(name: &str, value: &Value) -> Result<Option<i64>, ValueError> {
+    match value.get_type() {
+        "NoneType" => Ok(None),
+        "int" => Ok(Some(value.to_int()?)),
+        t => Err(ValueError::from(RuntimeError {
+            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+            message: format!(
+                "function expected an optional int for {}; got type {}",
+                name, t
+            ),
+            label: format!("expected type int; got {}", t),
         })),
     }
 }

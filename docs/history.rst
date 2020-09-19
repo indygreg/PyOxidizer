@@ -75,6 +75,12 @@ Backwards Compatibility Notes
   for this change were to make code simpler and the justification for
   removing it was rather weak. Please file an issue if this feature loss
   affects you.
+* The ``PythonInterpreterConfig()`` Starlark function/constructor now
+  internally has all arguments defined to ``None`` by default instead of
+  their default values. To specify no terminfo database resolution at
+  run-time, you must now pass ``terminfo_resolution='none'`` instead of
+  ``terminfo_resolution=None``. ``terminfo_resolution=None`` is now
+  interpreted as the default value, which is ``dynamic``.
 
 New Features
 ^^^^^^^^^^^^
