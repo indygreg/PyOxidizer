@@ -7,12 +7,12 @@ use {
     super::python_embedded_resources::PythonEmbeddedResources,
     super::python_resource::{
         python_resource_to_value, PythonExtensionModule, PythonPackageDistributionResource,
-        PythonPackageResource, PythonSourceModule,
+        PythonPackageResource, PythonSourceModule, ResourceLocation,
     },
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
     super::util::{
-        optional_dict_arg, optional_list_arg, required_bool_arg, required_list_arg,
-        required_str_arg, required_type_arg,
+        optional_dict_arg, optional_list_arg, optional_str_arg, required_bool_arg,
+        required_list_arg, required_str_arg, required_type_arg,
     },
     crate::project_building::build_python_executable,
     crate::py_packaging::binary::PythonBinaryBuilder,
@@ -32,6 +32,7 @@ use {
         starlark_signature_extraction, starlark_signatures,
     },
     std::collections::HashMap,
+    std::convert::TryFrom,
     std::io::Write,
     std::ops::Deref,
     std::path::{Path, PathBuf},
@@ -305,13 +306,20 @@ impl PythonExecutable {
         ))
     }
 
-    /// PythonExecutable.add_in_memory_module_source(module)
-    pub fn starlark_add_in_memory_module_source(
+    /// PythonExecutable.add_python_module_source(module, location=None)
+    pub fn starlark_add_python_module_source(
         &mut self,
         type_values: &TypeValues,
         module: &Value,
+        location: &Value,
     ) -> ValueResult {
         required_type_arg("module", "PythonSourceModule", &module)?;
+        let location = optional_str_arg("location", &location)?;
+
+        let location = match location {
+            Some(value) => ResourceLocation::try_from(value.as_ref())?.into(),
+            None => None,
+        };
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
@@ -322,82 +330,16 @@ impl PythonExecutable {
             Some(m) => Ok(m.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
-        info!(&context.logger, "adding in-memory source module {}", m.name);
+        info!(&context.logger, "adding Python source module {}", m.name);
         self.exe
-            .add_python_module_source(&m, Some(ConcreteResourceLocation::InMemory))
+            .add_python_module_source(&m, location)
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
-                    label: "add_in_memory_module_source".to_string(),
+                    label: "add_python_module_source".to_string(),
                 })
             })?;
-
-        Ok(Value::new(NoneType::None))
-    }
-
-    /// PythonExecutable.add_filesystem_relative_module_source(module, prefix="")
-    pub fn starlark_add_filesystem_relative_module_source(
-        &mut self,
-        type_values: &TypeValues,
-        prefix: &Value,
-        module: &Value,
-    ) -> ValueResult {
-        let prefix = required_str_arg("prefix", &prefix)?;
-        required_type_arg("module", "PythonSourceModule", &module)?;
-
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        let m = match module.downcast_ref::<PythonSourceModule>() {
-            Some(m) => Ok(m.inner.clone()),
-            None => Err(ValueError::IncorrectParameterType),
-        }?;
-
-        info!(
-            &context.logger,
-            "adding executable relative source module {}", m.name
-        );
-        self.exe
-            .add_python_module_source(&m, Some(ConcreteResourceLocation::RelativePath(prefix)))
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
-                    label: "add_filesystem_relative_module_source".to_string(),
-                })
-            })?;
-
-        Ok(Value::new(NoneType::None))
-    }
-
-    /// PythonExecutable.add_module_source(module)
-    pub fn starlark_add_module_source(
-        &mut self,
-        type_values: &TypeValues,
-        module: &Value,
-    ) -> ValueResult {
-        required_type_arg("module", "PythonSourceModule", &module)?;
-
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        let m = match module.downcast_ref::<PythonSourceModule>() {
-            Some(m) => Ok(m.inner.clone()),
-            None => Err(ValueError::IncorrectParameterType),
-        }?;
-        info!(&context.logger, "adding source module {}", m.name);
-        self.exe.add_python_module_source(&m, None).map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "add_module_source".to_string(),
-            })
-        })?;
 
         Ok(Value::new(NoneType::None))
     }
@@ -917,7 +859,11 @@ impl PythonExecutable {
         match resource.get_type() {
             "PythonSourceModule" => {
                 if add_source_module {
-                    self.starlark_add_in_memory_module_source(type_values, resource)?;
+                    self.starlark_add_python_module_source(
+                        type_values,
+                        resource,
+                        &Value::from("in-memory"),
+                    )?;
                 }
                 if add_bytecode_module {
                     self.starlark_add_in_memory_module_bytecode(
@@ -957,7 +903,7 @@ impl PythonExecutable {
         add_bytecode_module: &Value,
         optimize_level: &Value,
     ) -> ValueResult {
-        required_str_arg("prefix", &prefix)?;
+        let prefix_str = required_str_arg("prefix", &prefix)?;
         let add_source_module = required_bool_arg("add_source_module", &add_source_module)?;
         let add_bytecode_module = required_bool_arg("add_bytecode_module", &add_bytecode_module)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
@@ -965,10 +911,10 @@ impl PythonExecutable {
         match resource.get_type() {
             "PythonSourceModule" => {
                 if add_source_module {
-                    self.starlark_add_filesystem_relative_module_source(
+                    self.starlark_add_python_module_source(
                         type_values,
-                        prefix,
                         resource,
+                        &Value::from(format!("filesystem-relative:{}", prefix_str)),
                     )?;
                 }
                 if add_bytecode_module {
@@ -1024,7 +970,11 @@ impl PythonExecutable {
         match resource.get_type() {
             "PythonSourceModule" => {
                 if add_source_module {
-                    self.starlark_add_module_source(type_values, resource)?;
+                    self.starlark_add_python_module_source(
+                        type_values,
+                        resource,
+                        &Value::new(NoneType::None),
+                    )?;
                 }
                 if add_bytecode_module {
                     self.starlark_add_module_bytecode(type_values, resource, optimize_level)?;
@@ -1241,30 +1191,14 @@ starlark_module! { python_executable_env =>
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_in_memory_module_source(env env, this, module) {
+    PythonExecutable.add_python_module_source(env env, this, module, location=NoneType::None) {
         match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_in_memory_module_source(&env, &module),
+            Some(mut exe) => exe.starlark_add_python_module_source(&env, &module, &location),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
 
-    #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_filesystem_relative_module_source(env env, this, prefix, module) {
-        match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_filesystem_relative_module_source(&env, &prefix, &module),
-            None => Err(ValueError::IncorrectParameterType),
-        }
-    }
-
-    #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_module_source(env env, this, module) {
-        match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_module_source(&env, &module),
-            None => Err(ValueError::IncorrectParameterType),
-        }
-    }
-
-    // TODO consider unifying with add_module_source() so there only needs to be
+    // TODO consider unifying with add_python_module_source() so there only needs to be
     // a single function call.
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_in_memory_module_bytecode(env env, this, module, optimize_level=0) {

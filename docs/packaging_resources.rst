@@ -158,15 +158,17 @@ For example, to add a ``PythonSourceModule`` to a ``PythonExecutable``:
 
        for resource in exe.pip_install(["my-package"]):
            if type(resource) == "PythonSourceModule":
-               exe.add_in_memory_module_source(resource)
-               exe.add_filesystem_relative_module_source("site-packages", resource)
+               # Location defined by policy.
+               exe.add_python_module_source(resource)
+               # Force a location.
+               exe.add_python_module_source(resource, location="in-memory")
+               exe.add_python_module_source(resource, location="filesystem-relative:lib")
 
 These *resource addition* APIs are either *location-aware* or
 *location-agnostic*.
 
 *Location-aware* APIs route a resource to a specific location, such as
 *in-memory* or *filesystem-relative*. Examples of these APIs include
-:ref:`config_python_executable_add_module_source` and
 :ref:`config_python_executable_add_filesystem_relative_python_resource`.
 
 *Location-agnostic* APIs route a resource to an appropriate location given
@@ -180,7 +182,6 @@ these APIs include
 
 *Type-aware* APIs require that the resource being passed in be a specific
 type or an error occurs. Examples of *type-aware* APIs include
-:ref:`config_python_executable_add_filesystem_relative_module_source` and
 :ref:`config_python_executable_add_in_memory_package_resource`.
 
 *Type-agnostic* APIs operate on any instance of an allowed type. It is
@@ -188,6 +189,10 @@ safe to call these APIs with any accepted type. Examples of *type-agnostic*
 APIs include
 :ref:`config_python_executable_add_python_resource` and
 :ref:`config_python_executable_add_in_memory_python_resources`.
+
+In addition, resource locations can sometimes be specified in Starlark
+via string values. See :ref:`config_resource_locations` for the mapping
+of string values to resource locations.
 
 .. _python_extension_module_location_compatibility:
 

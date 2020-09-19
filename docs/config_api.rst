@@ -76,6 +76,30 @@ The following custom data types are defined in the Starlark environment:
 ``PythonSourceModule``
    Represents a ``.py`` file containing Python source code.
 
+.. _config_resource_locations:
+
+Specifying Resource Locations
+=============================
+
+Various functionality relates to the concept of a *resource location*, or
+where a resource should be loaded from at run-time. See
+:ref:`packaging_resources` for more.
+
+Resource locations are represented as strings in Starlark. The mapping
+of strings to resource locations is as follows:
+
+``default``
+   Use the default resource location. Often equivalent to a resource location
+   of the type/value ``None``.
+
+``in-memory``
+   Load the resource from memory.
+
+``filesystem-relative:<prefix>``
+   Install and load the resource from a filesystem relative path to the
+   build binary. e.g. ``filesystem-relative:lib`` will place resources
+   in the ``lib/`` directory next to the build binary.
+
 Constants
 =========
 
@@ -1050,41 +1074,19 @@ etc.
 The returned resources are typically added to a ``FileManifest`` or
 ``PythonExecutable`` to make them available to a packaged application.
 
-.. _config_python_executable_add_in_memory_module_source:
+.. _config_python_executable_add_python_module_source:
 
-``PythonExecutable.add_in_memory_module_source(module)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method registers a Python source module with a ``PythonExecutable``
-instance. The module will be imported from memory at run-time. The
-argument must be a ``PythonSourceModule`` instance.
-
-If called multiple times for the same module, the last write wins.
-
-.. _config_python_executable_add_filesystem_relative_module_source:
-
-``PythonExecutable.add_filesystem_relative_module_source(prefix, module)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method registers a Python source module with a ``PythonExecutable``
-instance. The module will be imported from the filesystem from a file
-relative to the built executable. The directory prefix for the generated
-file is defined by ``prefix``.
-
-If called multiple times for the same module, the last write wins.
-
-.. _config_python_executable_add_module_source:
-
-``PythonExecutable.add_module_source(module)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonExecutable.add_python_module_source(module, location=None)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This method registers a Python source module with a ``PythonExecutable``
 instance.
 
-This method is a glorified proxy to
-:ref:`config_python_executable_add_in_memory_module_source` or
-:ref:`config_python_executable_add_filesystem_relative_module_source`
-depending on the :ref:`config_python_resources_policy` in effect.
+If ``location`` is defined, it is a ``str`` defining the resource location
+from which to load the module. See :ref:`config_resource_locations` for
+possible values. If ``None`` (the default), the resource location will be
+chosen by the active resources policy.
+See :ref:`config_python_resources_policy`.
 
 .. _config_python_executable_add_in_memory_module_bytecode:
 

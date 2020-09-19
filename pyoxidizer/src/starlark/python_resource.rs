@@ -9,6 +9,7 @@ use {
         PythonPackageDistributionResource as RawDistributionResource,
         PythonPackageResource as RawPackageResource, PythonResource,
     },
+    python_packaging::resource_collection::ConcreteResourceLocation,
     starlark::values::error::{
         RuntimeError, UnsupportedOperation, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE,
     },
@@ -17,6 +18,9 @@ use {
 };
 
 /// Where a resource should be loaded from.
+///
+// TODO consider removing this type, as it is equivalent to
+// Option<ConcreteResourceLocation>.
 #[derive(Clone, Debug)]
 pub enum ResourceLocation {
     /// Use default load semantics for the target binary.
@@ -37,12 +41,10 @@ impl From<ResourceLocation> for Value {
     }
 }
 
-impl TryFrom<Value> for ResourceLocation {
+impl TryFrom<&str> for ResourceLocation {
     type Error = ValueError;
 
-    fn try_from(value: Value) -> Result<Self, Self::Error> {
-        let s = value.to_str();
-
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
         if s == "default" {
             Ok(ResourceLocation::Default)
         } else if s == "in-memory" {
@@ -59,6 +61,28 @@ impl TryFrom<Value> for ResourceLocation {
                     s
                 ),
             }))
+        }
+    }
+}
+
+impl TryFrom<Value> for ResourceLocation {
+    type Error = ValueError;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        let s = value.to_str();
+
+        ResourceLocation::try_from(s.as_ref())
+    }
+}
+
+impl Into<Option<ConcreteResourceLocation>> for ResourceLocation {
+    fn into(self) -> Option<ConcreteResourceLocation> {
+        match self {
+            ResourceLocation::Default => None,
+            ResourceLocation::InMemory => Some(ConcreteResourceLocation::InMemory),
+            ResourceLocation::RelativePath(prefix) => {
+                Some(ConcreteResourceLocation::RelativePath(prefix))
+            }
         }
     }
 }

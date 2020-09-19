@@ -81,6 +81,15 @@ Backwards Compatibility Notes
   run-time, you must now pass ``terminfo_resolution='none'`` instead of
   ``terminfo_resolution=None``. ``terminfo_resolution=None`` is now
   interpreted as the default value, which is ``dynamic``.
+* The Starlark method ``PythonExecutable.add_module_source()`` has been
+  renamed to ``PythonExecutable.add_python_module_source()`` and it
+  now accepts a ``location`` keyword argument defining the resource
+  location.
+* The Starlark methods ``PythonExecutable.add_in_memory_module_source()``
+  and ``PythonExecutable.add_filesystem_relative_module_source()`` have
+  been removed, as they are redundant with the new
+  ``PythonExecutable.add_python_module_source()``, which accepts a
+  ``location`` argument to control the resource location.
 
 New Features
 ^^^^^^^^^^^^
