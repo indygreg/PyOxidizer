@@ -9,6 +9,7 @@ Work on PyOxidizer started in November 2018 by Gregory Szorc.
 Blog Posts
 ==========
 
+* `Using Rust to Power Python Importing with oxidized_importer <https://gregoryszorc.com/blog/2020/05/10/using-rust-to-power-python-importing-with-oxidized_importer/>`_ (2020-05-10)
 * `PyOxidizer 0.7 <https://gregoryszorc.com/blog/2020/04/09/pyoxidizer-0.7/>`_ (2020-04-09)
 * `C Extension Support in PyOxidizer <https://gregoryszorc.com/blog/2019/06/30/c-extension-support-in-pyoxidizer/>`_ (2019-06-30)
 * `Building Standalone Python Applications with PyOxidizer <https://gregoryszorc.com/blog/2019/06/24/building-standalone-python-applications-with-pyoxidizer>`_ (2019-06-24)
