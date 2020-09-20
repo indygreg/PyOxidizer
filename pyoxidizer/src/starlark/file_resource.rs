@@ -513,6 +513,7 @@ mod tests {
         python_packaging::resource::{
             DataLocation, PythonModuleSource, PythonPackageResource as RawPackageResource,
         },
+        python_packaging::resource_collection::PythonResourceAddCollectionContext,
         std::path::PathBuf,
     };
 
@@ -533,14 +534,17 @@ mod tests {
             manifest: RawFileManifest::default(),
         });
 
-        let v = Value::new(PythonSourceModule::new(PythonModuleSource {
-            name: "foo.bar".to_string(),
-            source: DataLocation::Memory(vec![]),
-            is_package: false,
-            cache_tag: DEFAULT_CACHE_TAG.to_string(),
-            is_stdlib: false,
-            is_test: false,
-        }));
+        let v = Value::new(PythonSourceModule::new(
+            PythonModuleSource {
+                name: "foo.bar".to_string(),
+                source: DataLocation::Memory(vec![]),
+                is_package: false,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
+                is_test: false,
+            },
+            PythonResourceAddCollectionContext::default(),
+        ));
 
         let (mut env, type_values) = starlark_env();
         env.set("m", m).unwrap();

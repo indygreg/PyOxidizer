@@ -9,6 +9,7 @@ Functionality for defining how Python resources should be packaged.
 use {
     crate::licensing::NON_GPL_LICENSES,
     crate::resource::{PythonExtensionModule, PythonExtensionModuleVariants, PythonResource},
+    crate::resource_collection::{ConcreteResourceLocation, PythonResourceAddCollectionContext},
     anyhow::{anyhow, Result},
     std::collections::HashMap,
     std::convert::TryFrom,
@@ -114,6 +115,9 @@ pub struct PythonPackagingPolicy {
     /// Whether to include source module from the Python distribution.
     include_distribution_sources: bool,
 
+    /// Whether to include Python module source for non-distribution modules.
+    include_non_distribution_sources: bool,
+
     /// Whether to include package resource files.
     include_distribution_resources: bool,
 
@@ -125,6 +129,15 @@ pub struct PythonPackagingPolicy {
     /// Policy constructors can populate this with known broken extensions to
     /// prevent the policy from allowing an extension.
     broken_extensions: HashMap<String, Vec<String>>,
+
+    /// Whether to write Python bytecode at optimization level 0.
+    bytecode_optimize_level_zero: bool,
+
+    /// Whether to write Python bytecode at optimization level 1.
+    bytecode_optimize_level_one: bool,
+
+    /// Whether to write Python bytecode at optimization level 2.
+    bytecode_optimize_level_two: bool,
 }
 
 impl Default for PythonPackagingPolicy {
@@ -134,9 +147,13 @@ impl Default for PythonPackagingPolicy {
             preferred_extension_module_variants: HashMap::new(),
             resources_policy: PythonResourcesPolicy::InMemoryOnly,
             include_distribution_sources: true,
+            include_non_distribution_sources: true,
             include_distribution_resources: false,
             include_test: false,
             broken_extensions: HashMap::new(),
+            bytecode_optimize_level_zero: true,
+            bytecode_optimize_level_one: false,
+            bytecode_optimize_level_two: false,
         }
     }
 }
@@ -196,6 +213,49 @@ impl PythonPackagingPolicy {
             .get_mut(target_triple)
             .unwrap()
             .push(extension.to_string());
+    }
+
+    /// Derive a `PythonResourceAddCollectionContext` for a resource using current settings.
+    ///
+    /// The returned object essentially says how the resource should be added
+    /// to a `PythonResourceCollector` given this policy.
+    pub fn derive_collection_add_context(
+        &self,
+        resource: &PythonResource,
+    ) -> PythonResourceAddCollectionContext {
+        let include = self.filter_python_resource(resource);
+
+        let store_source = match resource {
+            PythonResource::ModuleSource(ref module) => {
+                if module.is_stdlib {
+                    self.include_distribution_sources
+                } else {
+                    self.include_non_distribution_sources
+                }
+            }
+            _ => false,
+        };
+
+        let (location, location_fallback) = match self.resources_policy {
+            PythonResourcesPolicy::InMemoryOnly => (ConcreteResourceLocation::InMemory, None),
+            PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
+                (ConcreteResourceLocation::RelativePath(prefix.clone()), None)
+            }
+            PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(ref prefix) => (
+                ConcreteResourceLocation::InMemory,
+                Some(ConcreteResourceLocation::RelativePath(prefix.clone())),
+            ),
+        };
+
+        PythonResourceAddCollectionContext {
+            include,
+            location,
+            location_fallback,
+            store_source,
+            optimize_level_zero: self.bytecode_optimize_level_zero,
+            optimize_level_one: self.bytecode_optimize_level_one,
+            optimize_level_two: self.bytecode_optimize_level_two,
+        }
     }
 
     /// Determine if a Python resource is applicable to the current policy.

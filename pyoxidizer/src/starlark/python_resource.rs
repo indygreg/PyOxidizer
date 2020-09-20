@@ -3,13 +3,16 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
+    python_packaging::policy::PythonPackagingPolicy,
     python_packaging::resource::{
         BytecodeOptimizationLevel, PythonExtensionModule as RawPythonExtensionModule,
         PythonModuleBytecodeFromSource, PythonModuleSource as RawSourceModule,
         PythonPackageDistributionResource as RawDistributionResource,
         PythonPackageResource as RawPackageResource, PythonResource,
     },
-    python_packaging::resource_collection::ConcreteResourceLocation,
+    python_packaging::resource_collection::{
+        ConcreteResourceLocation, PythonResourceAddCollectionContext,
+    },
     starlark::values::error::{
         RuntimeError, UnsupportedOperation, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE,
     },
@@ -92,15 +95,19 @@ impl Into<Option<ConcreteResourceLocation>> for OptionalResourceLocation {
 #[derive(Debug, Clone)]
 pub struct PythonSourceModule {
     pub inner: RawSourceModule,
-    pub location: OptionalResourceLocation,
+    pub add_context: PythonResourceAddCollectionContext,
 }
 
 impl PythonSourceModule {
-    pub fn new(module: RawSourceModule) -> Self {
+    pub fn new(module: RawSourceModule, add_context: PythonResourceAddCollectionContext) -> Self {
         Self {
             inner: module,
-            location: OptionalResourceLocation { inner: None },
+            add_context,
         }
+    }
+
+    pub fn add_location(&self) -> &ConcreteResourceLocation {
+        &self.add_context.location
     }
 }
 
@@ -143,7 +150,7 @@ impl TypedValue for PythonSourceModule {
                 Value::new(source)
             }
             "is_package" => Value::new(self.inner.is_package),
-            "location" => Value::from(&self.location),
+            "location" => Value::new::<String>(self.add_location().clone().into()),
             attr => {
                 return Err(ValueError::OperationNotSupported {
                     op: UnsupportedOperation::GetAttr(attr.to_string()),
@@ -169,7 +176,20 @@ impl TypedValue for PythonSourceModule {
     fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
         match attribute {
             "location" => {
-                self.location = (&value).try_into()?;
+                let location: OptionalResourceLocation = (&value).try_into()?;
+
+                match location.inner {
+                    Some(location) => {
+                        self.add_context.location = location;
+                    }
+                    None => {
+                        return Err(ValueError::OperationNotSupported {
+                            op: UnsupportedOperation::SetAttr(attribute.to_string()),
+                            left: Self::TYPE.to_owned(),
+                            right: None,
+                        });
+                    }
+                }
 
                 Ok(())
             }
@@ -395,9 +415,15 @@ impl TypedValue for PythonExtensionModule {
     }
 }
 
-pub fn python_resource_to_value(resource: &PythonResource) -> Value {
+pub fn python_resource_to_value(
+    resource: &PythonResource,
+    policy: &PythonPackagingPolicy,
+) -> Value {
     match resource {
-        PythonResource::ModuleSource(sm) => Value::new(PythonSourceModule::new(sm.clone())),
+        PythonResource::ModuleSource(sm) => Value::new(PythonSourceModule::new(
+            sm.clone(),
+            policy.derive_collection_add_context(resource),
+        )),
 
         PythonResource::ModuleBytecodeRequest(m) => {
             Value::new(PythonBytecodeModule { inner: m.clone() })
@@ -462,13 +488,10 @@ mod tests {
         assert_eq!(m.get_attr("is_package").unwrap().to_bool(), false);
 
         assert!(m.has_attr("location").unwrap());
-        assert_eq!(m.get_attr("location").unwrap().get_type(), "NoneType");
+        assert_eq!(m.get_attr("location").unwrap().to_str(), "in-memory");
 
         m.set_attr("location", Value::from("in-memory")).unwrap();
         assert_eq!(m.get_attr("location").unwrap().to_str(), "in-memory");
-
-        m.set_attr("location", Value::from("default")).unwrap();
-        assert_eq!(m.get_attr("location").unwrap().get_type(), "NoneType");
 
         m.set_attr("location", Value::from("filesystem-relative:lib"))
             .unwrap();

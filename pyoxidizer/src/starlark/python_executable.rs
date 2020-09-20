@@ -19,7 +19,7 @@ use {
     anyhow::{Context, Result},
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource,
-        PythonModuleSource as RawPythonModuleSource,
+        PythonModuleSource as RawPythonModuleSource, PythonResource,
     },
     slog::{info, warn},
     starlark::environment::TypeValues,
@@ -98,14 +98,21 @@ impl PythonExecutable {
         let source = required_str_arg("source", &source)?;
         let is_package = required_bool_arg("is_package", &is_package)?;
 
-        Ok(Value::new(PythonSourceModule::new(RawPythonModuleSource {
+        let module = RawPythonModuleSource {
             name,
             source: DataLocation::Memory(source.into_bytes()),
             is_package,
             cache_tag: self.exe.cache_tag().to_string(),
             is_stdlib: false,
             is_test: false,
-        })))
+        };
+
+        let add_context = self
+            .exe
+            .python_packaging_policy()
+            .derive_collection_add_context(&PythonResource::ModuleSource(module.clone()));
+
+        Ok(Value::new(PythonSourceModule::new(module, add_context)))
     }
 
     /// PythonExecutable.pip_install(args, extra_envs=None)
@@ -153,7 +160,7 @@ impl PythonExecutable {
         Ok(Value::from(
             resources
                 .iter()
-                .map(python_resource_to_value)
+                .map(|r| python_resource_to_value(r, self.exe.python_packaging_policy()))
                 .collect::<Vec<Value>>(),
         ))
     }
@@ -193,7 +200,7 @@ impl PythonExecutable {
         Ok(Value::from(
             resources
                 .iter()
-                .map(python_resource_to_value)
+                .map(|r| python_resource_to_value(r, self.exe.python_packaging_policy()))
                 .collect::<Vec<Value>>(),
         ))
     }
@@ -221,7 +228,7 @@ impl PythonExecutable {
         Ok(Value::from(
             resources
                 .iter()
-                .map(python_resource_to_value)
+                .map(|r| python_resource_to_value(r, self.exe.python_packaging_policy()))
                 .collect::<Vec<Value>>(),
         ))
     }
@@ -300,7 +307,7 @@ impl PythonExecutable {
         Ok(Value::from(
             resources
                 .iter()
-                .map(python_resource_to_value)
+                .map(|r| python_resource_to_value(r, self.exe.python_packaging_policy()))
                 .collect::<Vec<Value>>(),
         ))
     }

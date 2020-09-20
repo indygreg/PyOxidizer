@@ -536,6 +536,63 @@ impl From<&ConcreteResourceLocation> for AbstractResourceLocation {
     }
 }
 
+impl Into<String> for ConcreteResourceLocation {
+    fn into(self) -> String {
+        match self {
+            ConcreteResourceLocation::InMemory => "in-memory".to_string(),
+            ConcreteResourceLocation::RelativePath(prefix) => {
+                format!("filesystem-relative:{}", prefix)
+            }
+        }
+    }
+}
+
+/// Defines how a Python resource should be added to a `PythonResourceCollector`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PythonResourceAddCollectionContext {
+    /// Whether the resource should be included in `PythonResourceCollection`.
+    pub include: bool,
+
+    /// The location the resource should be loaded from.
+    pub location: ConcreteResourceLocation,
+
+    /// Optional fallback location from which to load the resource from.
+    ///
+    /// If adding the resource to `location` fails, and this is defined,
+    /// we will fall back to adding the resource to this location.
+    pub location_fallback: Option<ConcreteResourceLocation>,
+
+    /// Whether to store Python source code for a `PythonSourceModule`.
+    ///
+    /// When handling a `PythonSourceModule`, sometimes you want to
+    /// write just bytecode or source + bytecode. This flags allows
+    /// controlling this behavior.
+    pub store_source: bool,
+
+    /// Whether to store Python bytecode for optimization level 0.
+    pub optimize_level_zero: bool,
+
+    /// Whether to store Python bytecode for optimization level 1.
+    pub optimize_level_one: bool,
+
+    /// Whether to store Python bytecode for optimization level 2.
+    pub optimize_level_two: bool,
+}
+
+impl Default for PythonResourceAddCollectionContext {
+    fn default() -> Self {
+        Self {
+            include: true,
+            location: ConcreteResourceLocation::InMemory,
+            location_fallback: None,
+            store_source: true,
+            optimize_level_zero: true,
+            optimize_level_one: false,
+            optimize_level_two: false,
+        }
+    }
+}
+
 /// Represents a finalized collection of Python resources.
 ///
 /// Instances are produced from a `PythonResourceCollector` and a
