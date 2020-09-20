@@ -223,7 +223,7 @@ below where ``exe`` is assigned:
 
 .. code-block:: python
 
-   exe.add_in_memory_python_resources(exe.pip_install(["pyflakes==2.1.1"]))
+   exe.add_python_resources(exe.pip_install(["pyflakes==2.1.1"], location="in-memory"))
 
 In addition, replace the ``run_*`` argument to execute ``pyflakes``:
 

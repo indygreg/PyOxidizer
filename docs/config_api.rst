@@ -1207,27 +1207,6 @@ This method is a glorified proxy to the various ``add_python_*`` methods.
 Unlike those methods, this one accepts all types that are known Python
 resources.
 
-.. _config_python_executable_add_in_memory_python_resources:
-
-``PythonExecutable.add_in_memory_python_resources(...)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method registers an iterable of Python resources of various types.
-This method is identical to ``PythonExecutable.add_in_memory_python_resource()``
-except the first argument is an iterable of resources. All other arguments
-are identical.
-
-.. _config_python_executable_add_filesystem_relative_python_resources:
-
-``PythonExecutable.add_filesystem_relative_python_resources(prefix, ...)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method registers an iterable of Python resources of various types.
-This method is identical to
-:ref:`config_python_executable_add_python_resource`
-except the first argument is a path prefix to install files to and the
-second argument is an iterable of resources. All other arguments are identical.
-
 .. _config_python_executable_add_python_resources:
 
 ``PythonExecutable.add_python_resources(...)``
