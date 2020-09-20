@@ -169,7 +169,7 @@ These *resource addition* APIs are either *location-aware* or
 
 *Location-aware* APIs route a resource to a specific location, such as
 *in-memory* or *filesystem-relative*. Examples of these APIs include
-:ref:`config_python_executable_add_filesystem_relative_python_resource`.
+:ref:`config_python_executable_add_filesystem_relative_python_resources`.
 
 *Location-agnostic* APIs route a resource to an appropriate location given
 the *resource location policy* for the container. e.g. if ``in-memory-only``

@@ -128,6 +128,12 @@ Backwards Compatibility Notes
   been removed, as they are redundant with the new
   ``PythonExecutable.add_python_extension_module()``, which accepts a
   ``location`` argument to control the resource location.
+* The Starlark method ``PythonExecutable.add_python_resource()`` now accepts
+  a ``location`` keyword argument defining the resource location.
+* The Starlark methods ``PythonExecutable.add_in_memory_python_resource()``
+  and ``PythonExecutable.add_filesystem_relative_python_resource()`` have
+  been removed, as they are redundant with passing a ``location`` argument
+  to ``PythonExecutable.add_python_resource()``.
 
 New Features
 ^^^^^^^^^^^^

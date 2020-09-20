@@ -1166,16 +1166,16 @@ policy:
 If multiple extension modules with the same name are added, the last
 added one is used.
 
-.. _config_python_executable_add_in_memory_python_resource:
+.. _config_python_executable_add_python_resource:
 
-``PythonExecutable.add_in_memory_python_resource(...)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonExecutable.add_python_resource(...)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This method registers a Python resource of various types for in-memory loading.
+This method registers a Python resource of various types with the instance.
+
 It accepts a ``resource`` argument which can be a ``PythonSourceModule``,
 ``PythonBytecodeModule``, ``PythonPackageResource``, or ``PythonExtensionModule``
-and registers that resource with this instance. This method is a glorified
-proxy to the appropriate ``add_in_memory_*`` method.
+and registers that resource with this instance.
 
 The following arguments are accepted:
 
@@ -1197,27 +1197,15 @@ The following arguments are accepted:
 ``optimize_level`` (int)
    Bytecode optimization level when compiling bytecode.
 
-.. _config_python_executable_add_filesystem_relative_python_resource:
+``location`` (str)
+    Defines the resource location from which to load the resource.
+    See :ref:`config_resource_locations` for possible values. If ``None``
+    (the default), the resource location will be chosen by the active
+    resources policy. See :ref:`config_python_resources_policy`.
 
-``PythonExecutable.add_filesystem_relative_python_resource(prefix, ...)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method registers a Python resource of various types for filesystem loading
-in a path relative to the produced executable. The arguments for this method are
-the same as :ref:`config_python_executable_add_in_memory_python_resource` except
-the first argument is the ``str`` path ``prefix`` to install files into.
-
-.. _config_python_executable_add_python_resource:
-
-``PythonExecutable.add_python_resource(...)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method registers a Python resource of various types with the instance.
-The location the resource will be loaded from will be determined by the
-:ref:`config_python_resources_policy` in effect for the ``PythonExecutable``.
-
-The arguments are the same as for
-:ref:`config_python_executable_add_in_memory_python_resource`.
+This method is a glorified proxy to the various ``add_python_*`` methods.
+Unlike those methods, this one accepts all types that are known Python
+resources.
 
 .. _config_python_executable_add_in_memory_python_resources:
 
@@ -1236,7 +1224,7 @@ are identical.
 
 This method registers an iterable of Python resources of various types.
 This method is identical to
-:ref:`config_python_executable_add_filesystem_relative_python_resource`
+:ref:`config_python_executable_add_python_resource`
 except the first argument is a path prefix to install files to and the
 second argument is an iterable of resources. All other arguments are identical.
 

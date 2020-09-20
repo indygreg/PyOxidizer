@@ -505,135 +505,7 @@ impl PythonExecutable {
         Ok(Value::new(NoneType::None))
     }
 
-    /// PythonExecutable.add_in_memory_python_resource(resource, add_source_module=true, add_bytecode_module=true, optimize_level=0)
-    pub fn starlark_add_in_memory_python_resource(
-        &mut self,
-        type_values: &TypeValues,
-        resource: &Value,
-        add_source_module: &Value,
-        add_bytecode_module: &Value,
-        optimize_level: &Value,
-    ) -> ValueResult {
-        let add_source_module = required_bool_arg("add_source_module", &add_source_module)?;
-        let add_bytecode_module = required_bool_arg("add_bytecode_module", &add_bytecode_module)?;
-        required_type_arg("optimize_level", "int", &optimize_level)?;
-
-        match resource.get_type() {
-            "PythonSourceModule" => {
-                if add_source_module {
-                    self.starlark_add_python_module_source(
-                        type_values,
-                        resource,
-                        &Value::from("in-memory"),
-                    )?;
-                }
-                if add_bytecode_module {
-                    self.starlark_add_python_module_bytecode(
-                        type_values,
-                        resource,
-                        optimize_level,
-                        &Value::from("in-memory"),
-                    )?;
-                }
-
-                Ok(Value::new(NoneType::None))
-            }
-            "PythonBytecodeModule" => self.starlark_add_python_module_bytecode(
-                type_values,
-                resource,
-                optimize_level,
-                &Value::from("in-memory"),
-            ),
-            "PythonPackageResource" => self.starlark_add_python_package_resource(
-                type_values,
-                resource,
-                &Value::from("in-memory"),
-            ),
-            "PythonPackageDistributionResource" => self
-                .starlark_add_python_package_distribution_resource(
-                    type_values,
-                    resource,
-                    &Value::from("in-memory"),
-                ),
-            "PythonExtensionModule" => self.starlark_add_python_extension_module(
-                type_values,
-                resource,
-                &Value::from("in-memory"),
-            ),
-            _ => Err(ValueError::from(RuntimeError {
-                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                message: "resource argument must be a Python resource type".to_string(),
-                label: ".add_in_memory_python_resource()".to_string(),
-            })),
-        }
-    }
-
-    /// PythonExecutable.add_filesystem_relative_python_resource(prefix, resource, add_source_module=true, add_bytecode_module=true, optimize_level=0)
-    pub fn starlark_add_filesystem_relative_python_resource(
-        &mut self,
-        type_values: &TypeValues,
-        prefix: &Value,
-        resource: &Value,
-        add_source_module: &Value,
-        add_bytecode_module: &Value,
-        optimize_level: &Value,
-    ) -> ValueResult {
-        let prefix_str = required_str_arg("prefix", &prefix)?;
-        let add_source_module = required_bool_arg("add_source_module", &add_source_module)?;
-        let add_bytecode_module = required_bool_arg("add_bytecode_module", &add_bytecode_module)?;
-        required_type_arg("optimize_level", "int", &optimize_level)?;
-
-        match resource.get_type() {
-            "PythonSourceModule" => {
-                if add_source_module {
-                    self.starlark_add_python_module_source(
-                        type_values,
-                        resource,
-                        &Value::from(format!("filesystem-relative:{}", prefix_str)),
-                    )?;
-                }
-                if add_bytecode_module {
-                    self.starlark_add_python_module_bytecode(
-                        type_values,
-                        resource,
-                        optimize_level,
-                        &Value::from(format!("filesystem-relative:{}", prefix_str)),
-                    )?;
-                }
-
-                Ok(Value::new(NoneType::None))
-            }
-            "PythonBytecodeModule" => self.starlark_add_python_module_bytecode(
-                type_values,
-                resource,
-                optimize_level,
-                &Value::from(format!("filesystem-relative:{}", prefix)),
-            ),
-            "PythonPackageResource" => self.starlark_add_python_package_resource(
-                type_values,
-                resource,
-                &Value::from(format!("filesystem-relative:{}", prefix)),
-            ),
-            "PythonPackageDistributionResource" => self
-                .starlark_add_python_package_distribution_resource(
-                    type_values,
-                    resource,
-                    &Value::from(format!("filesystem-relative:{}", prefix)),
-                ),
-            "PythonExtensionModule" => self.starlark_add_python_extension_module(
-                type_values,
-                resource,
-                &Value::from(format!("filesystem-relative:{}", prefix)),
-            ),
-            _ => Err(ValueError::from(RuntimeError {
-                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                message: "resource argument must be a Python resource type".to_string(),
-                label: ".add_in_memory_python_resource()".to_string(),
-            })),
-        }
-    }
-
-    /// PythonExecutable.add_python_resource(resource, add_source_module=true, add_bytecode_module=true, optimize_level=0)
+    /// PythonExecutable.add_python_resource(resource, add_source_module=true, add_bytecode_module=true, optimize_level=0, location=None)
     pub fn starlark_add_python_resource(
         &mut self,
         type_values: &TypeValues,
@@ -641,10 +513,12 @@ impl PythonExecutable {
         add_source_module: &Value,
         add_bytecode_module: &Value,
         optimize_level: &Value,
+        location: &Value,
     ) -> ValueResult {
         let add_source_module = required_bool_arg("add_source_module", &add_source_module)?;
         let add_bytecode_module = required_bool_arg("add_bytecode_module", &add_bytecode_module)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
+        let location = OptionalResourceLocation::try_from(location)?;
 
         match resource.get_type() {
             "PythonSourceModule" => {
@@ -652,7 +526,7 @@ impl PythonExecutable {
                     self.starlark_add_python_module_source(
                         type_values,
                         resource,
-                        &Value::new(NoneType::None),
+                        &Value::from(&location),
                     )?;
                 }
                 if add_bytecode_module {
@@ -660,7 +534,7 @@ impl PythonExecutable {
                         type_values,
                         resource,
                         optimize_level,
-                        &Value::new(NoneType::None),
+                        &Value::from(&location),
                     )?;
                 }
 
@@ -670,23 +544,23 @@ impl PythonExecutable {
                 type_values,
                 resource,
                 optimize_level,
-                &Value::from(NoneType::None),
+                &Value::from(&location),
             ),
             "PythonPackageResource" => self.starlark_add_python_package_resource(
                 type_values,
                 resource,
-                &Value::from(NoneType::None),
+                &Value::from(&location),
             ),
             "PythonPackageDistributionResource" => self
                 .starlark_add_python_package_distribution_resource(
                     type_values,
                     resource,
-                    &Value::from(NoneType::None),
+                    &Value::from(&location),
                 ),
             "PythonExtensionModule" => self.starlark_add_python_extension_module(
                 type_values,
                 resource,
-                &Value::from(NoneType::None),
+                &Value::from(&location),
             ),
             _ => Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -709,13 +583,16 @@ impl PythonExecutable {
         required_bool_arg("add_bytecode_module", &add_bytecode_module)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
 
+        let location = Value::from(&OptionalResourceLocation::try_from("in-memory")?);
+
         for resource in &resources.iter()? {
-            self.starlark_add_in_memory_python_resource(
+            self.starlark_add_python_resource(
                 type_values,
                 &resource,
                 add_source_module,
                 add_bytecode_module,
                 optimize_level,
+                &location,
             )?;
         }
 
@@ -737,14 +614,18 @@ impl PythonExecutable {
         required_bool_arg("add_bytecode_module", &add_bytecode_module)?;
         required_type_arg("optimize_level", "int", &optimize_level)?;
 
+        let location = Value::from(&OptionalResourceLocation::try_from(
+            format!("filesystem-relative:{}", prefix).as_str(),
+        )?);
+
         for resource in &resources.iter()? {
-            self.starlark_add_filesystem_relative_python_resource(
+            self.starlark_add_python_resource(
                 type_values,
-                prefix,
                 &resource,
                 add_source_module,
                 add_bytecode_module,
                 optimize_level,
+                &location,
             )?;
         }
 
@@ -771,6 +652,7 @@ impl PythonExecutable {
                 add_source_module,
                 add_bytecode_module,
                 optimize_level,
+                &Value::from(NoneType::None),
             )?;
         }
 
@@ -929,52 +811,6 @@ starlark_module! { python_executable_env =>
         }
     }
 
-    #[allow(clippy::ptr_arg)]
-    PythonExecutable.add_in_memory_python_resource(
-        env env,
-        this,
-        resource,
-        add_source_module=true,
-        add_bytecode_module=true,
-        optimize_level=0
-        )
-    {
-        match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_in_memory_python_resource(
-                &env,
-                &resource,
-                &add_source_module,
-                &add_bytecode_module,
-                &optimize_level,
-            ),
-            None => Err(ValueError::IncorrectParameterType),
-        }
-    }
-
-    #[allow(clippy::ptr_arg)]
-    PythonExecutable.add_filesystem_relative_python_resource(
-        env env,
-        this,
-        prefix,
-        resource,
-        add_source_module=true,
-        add_bytecode_module=true,
-        optimize_level=0
-        )
-    {
-        match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_filesystem_relative_python_resource(
-                &env,
-                &prefix,
-                &resource,
-                &add_source_module,
-                &add_bytecode_module,
-                &optimize_level,
-            ),
-            None => Err(ValueError::IncorrectParameterType),
-        }
-    }
-
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_python_resource(
         env env,
@@ -982,7 +818,8 @@ starlark_module! { python_executable_env =>
         resource,
         add_source_module=true,
         add_bytecode_module=true,
-        optimize_level=0
+        optimize_level=0,
+        location=NoneType::None
     ) {
         match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_python_resource(
@@ -990,7 +827,8 @@ starlark_module! { python_executable_env =>
                 &resource,
                 &add_source_module,
                 &add_bytecode_module,
-                &optimize_level
+                &optimize_level,
+                &location,
             ),
             None => Err(ValueError::IncorrectParameterType),
         }
