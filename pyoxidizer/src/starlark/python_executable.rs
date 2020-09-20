@@ -115,7 +115,7 @@ impl PythonExecutable {
 
         Ok(Value::new(PythonSourceModuleValue::new(
             module,
-            add_context,
+            Some(add_context),
         )))
     }
 

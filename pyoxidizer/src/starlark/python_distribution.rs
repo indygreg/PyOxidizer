@@ -23,7 +23,6 @@ use {
     python_packaging::bytecode::{CompileMode, PythonBytecodeCompiler},
     python_packaging::policy::{ExtensionModuleFilter, PythonResourcesPolicy},
     python_packaging::resource::BytecodeOptimizationLevel,
-    python_packaging::resource_collection::PythonResourceAddCollectionContext,
     starlark::environment::TypeValues,
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
     starlark::values::none::NoneType,
@@ -481,12 +480,7 @@ impl PythonDistribution {
         Ok(Value::from(
             modules
                 .iter()
-                .map(|module| {
-                    Value::new(PythonSourceModuleValue::new(
-                        module.clone(),
-                        PythonResourceAddCollectionContext::default(),
-                    ))
-                })
+                .map(|module| Value::new(PythonSourceModuleValue::new(module.clone(), None)))
                 .collect_vec(),
         ))
     }

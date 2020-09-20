@@ -579,20 +579,6 @@ pub struct PythonResourceAddCollectionContext {
     pub optimize_level_two: bool,
 }
 
-impl Default for PythonResourceAddCollectionContext {
-    fn default() -> Self {
-        Self {
-            include: true,
-            location: ConcreteResourceLocation::InMemory,
-            location_fallback: None,
-            store_source: true,
-            optimize_level_zero: true,
-            optimize_level_one: false,
-            optimize_level_two: false,
-        }
-    }
-}
-
 /// Represents a finalized collection of Python resources.
 ///
 /// Instances are produced from a `PythonResourceCollector` and a

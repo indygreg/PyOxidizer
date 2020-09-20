@@ -510,7 +510,6 @@ mod tests {
         super::super::testutil::*,
         super::*,
         python_packaging::resource::{DataLocation, PythonModuleSource, PythonPackageResource},
-        python_packaging::resource_collection::PythonResourceAddCollectionContext,
         std::path::PathBuf,
     };
 
@@ -540,7 +539,7 @@ mod tests {
                 is_stdlib: false,
                 is_test: false,
             },
-            PythonResourceAddCollectionContext::default(),
+            None,
         ));
 
         let (mut env, type_values) = starlark_env();

@@ -93,10 +93,10 @@ impl Into<Option<ConcreteResourceLocation>> for OptionalResourceLocation {
 /// Defines functionality for exposing `PythonResourceAddCollectionContext` from a type.
 pub trait ResourceCollectionContext {
     /// Obtain the `PythonResourceAddCollectionContext` associated with this instance, if available.
-    fn add_collection_context(&self) -> Option<&PythonResourceAddCollectionContext>;
+    fn add_collection_context(&self) -> &Option<PythonResourceAddCollectionContext>;
 
     /// Obtain the mutable `PythonResourceAddCollectionContext` associated with this instance, if available.
-    fn add_collection_context_mut(&mut self) -> Option<&mut PythonResourceAddCollectionContext>;
+    fn add_collection_context_mut(&mut self) -> &mut Option<PythonResourceAddCollectionContext>;
 
     /// Obtains the Starlark object attributes that are defined by the add collection context.
     fn add_collection_context_attrs(&self) -> Vec<&'static str> {
@@ -166,32 +166,28 @@ pub trait ResourceCollectionContext {
 #[derive(Debug, Clone)]
 pub struct PythonSourceModuleValue {
     pub inner: PythonModuleSource,
-    pub add_context: PythonResourceAddCollectionContext,
+    pub add_context: Option<PythonResourceAddCollectionContext>,
 }
 
 impl PythonSourceModuleValue {
     pub fn new(
         module: PythonModuleSource,
-        add_context: PythonResourceAddCollectionContext,
+        add_context: Option<PythonResourceAddCollectionContext>,
     ) -> Self {
         Self {
             inner: module,
             add_context,
         }
     }
-
-    pub fn add_location(&self) -> &ConcreteResourceLocation {
-        &self.add_context.location
-    }
 }
 
 impl ResourceCollectionContext for PythonSourceModuleValue {
-    fn add_collection_context(&self) -> Option<&PythonResourceAddCollectionContext> {
-        Some(&self.add_context)
+    fn add_collection_context(&self) -> &Option<PythonResourceAddCollectionContext> {
+        &self.add_context
     }
 
-    fn add_collection_context_mut(&mut self) -> Option<&mut PythonResourceAddCollectionContext> {
-        Some(&mut self.add_context)
+    fn add_collection_context_mut(&mut self) -> &mut Option<PythonResourceAddCollectionContext> {
+        &mut self.add_context
     }
 }
 
@@ -492,7 +488,7 @@ pub fn python_resource_to_value(
     match resource {
         PythonResource::ModuleSource(sm) => Value::new(PythonSourceModuleValue::new(
             sm.clone(),
-            policy.derive_collection_add_context(resource),
+            Some(policy.derive_collection_add_context(resource)),
         )),
 
         PythonResource::ModuleBytecodeRequest(m) => {
