@@ -6,8 +6,9 @@ use {
     super::env::{get_context, EnvironmentContext},
     super::python_embedded_resources::PythonEmbeddedResources,
     super::python_resource::{
-        python_resource_to_value, OptionalResourceLocation, PythonExtensionModule,
-        PythonPackageDistributionResource, PythonPackageResource, PythonSourceModule,
+        python_resource_to_value, OptionalResourceLocation, PythonExtensionModuleValue,
+        PythonPackageDistributionResourceValue, PythonPackageResourceValue,
+        PythonSourceModuleValue,
     },
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
     super::util::{
@@ -19,7 +20,7 @@ use {
     anyhow::{Context, Result},
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource,
-        PythonModuleSource as RawPythonModuleSource, PythonResource,
+        PythonModuleSource, PythonResource,
     },
     slog::{info, warn},
     starlark::environment::TypeValues,
@@ -98,7 +99,7 @@ impl PythonExecutable {
         let source = required_str_arg("source", &source)?;
         let is_package = required_bool_arg("is_package", &is_package)?;
 
-        let module = RawPythonModuleSource {
+        let module = PythonModuleSource {
             name,
             source: DataLocation::Memory(source.into_bytes()),
             is_package,
@@ -112,7 +113,10 @@ impl PythonExecutable {
             .python_packaging_policy()
             .derive_collection_add_context(&PythonResource::ModuleSource(module.clone()));
 
-        Ok(Value::new(PythonSourceModule::new(module, add_context)))
+        Ok(Value::new(PythonSourceModuleValue::new(
+            module,
+            add_context,
+        )))
     }
 
     /// PythonExecutable.pip_install(args, extra_envs=None)
@@ -327,7 +331,7 @@ impl PythonExecutable {
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let m = match module.downcast_ref::<PythonSourceModule>() {
+        let m = match module.downcast_ref::<PythonSourceModuleValue>() {
             Some(m) => Ok(m.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
@@ -377,7 +381,7 @@ impl PythonExecutable {
             }
         };
 
-        let m = match module.downcast_ref::<PythonSourceModule>() {
+        let m = match module.downcast_ref::<PythonSourceModuleValue>() {
             Some(m) => Ok(m.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
@@ -421,7 +425,7 @@ impl PythonExecutable {
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let r = match resource.downcast_ref::<PythonPackageResource>() {
+        let r = match resource.downcast_ref::<PythonPackageResourceValue>() {
             Some(r) => Ok(r.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
@@ -458,7 +462,7 @@ impl PythonExecutable {
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let r = match resource.downcast_ref::<PythonPackageDistributionResource>() {
+        let r = match resource.downcast_ref::<PythonPackageDistributionResourceValue>() {
             Some(r) => Ok(r.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
@@ -494,7 +498,7 @@ impl PythonExecutable {
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let m = match module.downcast_ref::<PythonExtensionModule>() {
+        let m = match module.downcast_ref::<PythonExtensionModuleValue>() {
             Some(m) => Ok(m.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
@@ -950,7 +954,7 @@ mod tests {
 
         let v = it.next().unwrap();
         assert_eq!(v.get_type(), "PythonSourceModule");
-        let x = v.downcast_ref::<PythonSourceModule>().unwrap();
+        let x = v.downcast_ref::<PythonSourceModuleValue>().unwrap();
         assert_eq!(x.inner.name, "pyflakes");
         assert!(x.inner.is_package);
     }
@@ -1006,14 +1010,14 @@ mod tests {
 
         let v = it.next().unwrap();
         assert_eq!(v.get_type(), "PythonSourceModule");
-        let x = v.downcast_ref::<PythonSourceModule>().unwrap();
+        let x = v.downcast_ref::<PythonSourceModuleValue>().unwrap();
         assert_eq!(x.inner.name, "bar");
         assert!(x.inner.is_package);
         assert_eq!(x.inner.source.resolve().unwrap(), b"# bar");
 
         let v = it.next().unwrap();
         assert_eq!(v.get_type(), "PythonSourceModule");
-        let x = v.downcast_ref::<PythonSourceModule>().unwrap();
+        let x = v.downcast_ref::<PythonSourceModuleValue>().unwrap();
         assert_eq!(x.inner.name, "foo");
         assert!(!x.inner.is_package);
         assert_eq!(x.inner.source.resolve().unwrap(), b"# foo");

@@ -6,8 +6,9 @@ use {
     super::env::{get_context, EnvironmentContext},
     super::python_executable::PythonExecutable,
     super::python_resource::{
-        PythonBytecodeModule, PythonExtensionModule, PythonPackageDistributionResource,
-        PythonPackageResource, PythonSourceModule,
+        PythonBytecodeModuleValue, PythonExtensionModuleValue,
+        PythonPackageDistributionResourceValue, PythonPackageResourceValue,
+        PythonSourceModuleValue,
     },
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
     super::util::{
@@ -15,9 +16,7 @@ use {
         required_str_arg, required_type_arg,
     },
     crate::app_packaging::glob::evaluate_glob,
-    crate::app_packaging::resource::{
-        FileContent as RawFileContent, FileManifest as RawFileManifest,
-    },
+    crate::app_packaging::resource::{FileContent, FileManifest},
     crate::project_building::build_python_executable,
     crate::py_packaging::binary::PythonBinaryBuilder,
     crate::py_packaging::resource::AddToFileManifest,
@@ -40,12 +39,12 @@ use {
 };
 
 #[derive(Clone, Debug)]
-pub struct FileContent {
-    pub content: RawFileContent,
+pub struct FileContentValue {
+    pub content: FileContent,
 }
 
-impl TypedValue for FileContent {
-    type Holder = Immutable<FileContent>;
+impl TypedValue for FileContentValue {
+    type Holder = Immutable<FileContentValue>;
     const TYPE: &'static str = "FileContent";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
@@ -54,11 +53,11 @@ impl TypedValue for FileContent {
 }
 
 #[derive(Clone, Debug)]
-pub struct FileManifest {
-    pub manifest: RawFileManifest,
+pub struct FileManifestValue {
+    pub manifest: FileManifest,
 }
 
-impl FileManifest {
+impl FileManifestValue {
     // TODO implement.
     fn add_bytecode_module(&self, _prefix: &str, _module: &PythonModuleBytecodeFromSource) {
         println!("support for adding bytecode modules not yet implemented");
@@ -76,7 +75,7 @@ impl FileManifest {
     ) -> Result<()> {
         let build = build_python_executable(logger, &exe.name(), exe, target, opt_level, release)?;
 
-        let content = RawFileContent {
+        let content = FileContent {
             data: build.exe_data.clone(),
             executable: true,
         };
@@ -85,7 +84,7 @@ impl FileManifest {
         self.manifest.add_file(&path, &content)?;
 
         // Add any additional files that the exe builder requires.
-        let mut extra_files = RawFileManifest::default();
+        let mut extra_files = FileManifest::default();
 
         for (path, content) in build.binary_data.extra_files.entries() {
             warn!(logger, "adding extra file {} to {}", path.display(), prefix);
@@ -98,7 +97,7 @@ impl FileManifest {
     }
 }
 
-impl BuildTarget for FileManifest {
+impl BuildTarget for FileManifestValue {
     fn build(&mut self, context: &BuildContext) -> Result<ResolvedTarget> {
         warn!(
             &context.logger,
@@ -130,8 +129,8 @@ impl BuildTarget for FileManifest {
     }
 }
 
-impl TypedValue for FileManifest {
-    type Holder = Mutable<FileManifest>;
+impl TypedValue for FileManifestValue {
+    type Holder = Mutable<FileManifestValue>;
     const TYPE: &'static str = "FileManifest";
 
     fn values_for_descendant_check_and_freeze<'a>(&'a self) -> Box<dyn Iterator<Item = Value>> {
@@ -140,19 +139,19 @@ impl TypedValue for FileManifest {
 }
 
 // Starlark functions.
-impl FileManifest {
+impl FileManifestValue {
     /// FileManifest()
     fn new_from_args() -> ValueResult {
-        let manifest = RawFileManifest::default();
+        let manifest = FileManifest::default();
 
-        Ok(Value::new(FileManifest { manifest }))
+        Ok(Value::new(FileManifestValue { manifest }))
     }
 
     /// FileManifest.add_manifest(other)
     pub fn add_manifest(&mut self, other: &Value) -> ValueResult {
         required_type_arg("other", "FileManifest", other)?;
 
-        let other = match other.downcast_ref::<FileManifest>() {
+        let other = match other.downcast_ref::<FileManifestValue>() {
             Some(other) => Ok(other.manifest.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
@@ -184,7 +183,7 @@ impl FileManifest {
 
         match resource.get_type() {
             "PythonSourceModule" => {
-                let m = match resource.downcast_ref::<PythonSourceModule>() {
+                let m = match resource.downcast_ref::<PythonSourceModuleValue>() {
                     Some(m) => Ok(m.inner.clone()),
                     None => Err(ValueError::IncorrectParameterType),
                 }?;
@@ -203,7 +202,7 @@ impl FileManifest {
                     })
             }
             "PythonBytecodeModule" => {
-                let m = match resource.downcast_ref::<PythonBytecodeModule>() {
+                let m = match resource.downcast_ref::<PythonBytecodeModuleValue>() {
                     Some(m) => Ok(m.inner.clone()),
                     None => Err(ValueError::IncorrectParameterType),
                 }?;
@@ -216,7 +215,7 @@ impl FileManifest {
                 Ok(())
             }
             "PythonPackageResource" => {
-                let m = match resource.downcast_ref::<PythonPackageResource>() {
+                let m = match resource.downcast_ref::<PythonPackageResourceValue>() {
                     Some(m) => Ok(m.inner.clone()),
                     None => Err(ValueError::IncorrectParameterType),
                 }?;
@@ -238,7 +237,7 @@ impl FileManifest {
                     })
             }
             "PythonPackageDistributionResource" => {
-                let m = match resource.downcast_ref::<PythonPackageDistributionResource>() {
+                let m = match resource.downcast_ref::<PythonPackageDistributionResourceValue>() {
                     Some(m) => Ok(m.inner.clone()),
                     None => Err(ValueError::IncorrectParameterType),
                 }?;
@@ -259,7 +258,7 @@ impl FileManifest {
                     })
             }
             "PythonExtensionModule" => {
-                let extension = match resource.downcast_ref::<PythonExtensionModule>() {
+                let extension = match resource.downcast_ref::<PythonExtensionModuleValue>() {
                     Some(e) => Ok(e.inner.clone()),
                     None => Err(ValueError::IncorrectParameterType),
                 }?;
@@ -424,10 +423,10 @@ fn starlark_glob(
         }
     }
 
-    let mut manifest = RawFileManifest::default();
+    let mut manifest = FileManifest::default();
 
     for path in result {
-        let content = RawFileContent::try_from(path.as_path()).map_err(|e| {
+        let content = FileContent::try_from(path.as_path()).map_err(|e| {
             ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
@@ -458,7 +457,7 @@ fn starlark_glob(
         })?;
     }
 
-    Ok(Value::new(FileManifest { manifest }))
+    Ok(Value::new(FileManifestValue { manifest }))
 }
 
 starlark_module! { file_resource_env =>
@@ -469,12 +468,12 @@ starlark_module! { file_resource_env =>
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     FileManifest(env _env) {
-        FileManifest::new_from_args()
+        FileManifestValue::new_from_args()
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
     FileManifest.add_manifest(this, other) {
-        match this.clone().downcast_mut::<FileManifest>()? {
+        match this.clone().downcast_mut::<FileManifestValue>()? {
             Some(mut manifest) => manifest.add_manifest(&other),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -482,7 +481,7 @@ starlark_module! { file_resource_env =>
 
     #[allow(clippy::ptr_arg)]
     FileManifest.add_python_resource(env env, this, prefix, resource) {
-        match this.clone().downcast_mut::<FileManifest>()? {
+        match this.clone().downcast_mut::<FileManifestValue>()? {
             Some(mut manifest) => manifest.add_python_resource(&env, &prefix, &resource),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -490,7 +489,7 @@ starlark_module! { file_resource_env =>
 
     #[allow(clippy::ptr_arg)]
     FileManifest.add_python_resources(env env, this, prefix, resources) {
-        match this.clone().downcast_mut::<FileManifest>()? {
+        match this.clone().downcast_mut::<FileManifestValue>()? {
             Some(mut manifest) => manifest.add_python_resources(&env, &prefix, &resources),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -498,7 +497,7 @@ starlark_module! { file_resource_env =>
 
     #[allow(clippy::ptr_arg)]
     FileManifest.install(env env, this, path, replace=true) {
-        match this.clone().downcast_ref::<FileManifest>() {
+        match this.clone().downcast_ref::<FileManifestValue>() {
             Some(manifest) => manifest.install(&env, &path, &replace),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -510,9 +509,7 @@ mod tests {
     use {
         super::super::testutil::*,
         super::*,
-        python_packaging::resource::{
-            DataLocation, PythonModuleSource, PythonPackageResource as RawPackageResource,
-        },
+        python_packaging::resource::{DataLocation, PythonModuleSource, PythonPackageResource},
         python_packaging::resource_collection::PythonResourceAddCollectionContext,
         std::path::PathBuf,
     };
@@ -524,17 +521,17 @@ mod tests {
         let m = starlark_ok("FileManifest()");
         assert_eq!(m.get_type(), "FileManifest");
 
-        let m = m.downcast_ref::<FileManifest>().unwrap();
-        assert_eq!(m.manifest, RawFileManifest::default());
+        let m = m.downcast_ref::<FileManifestValue>().unwrap();
+        assert_eq!(m.manifest, FileManifest::default());
     }
 
     #[test]
     fn test_add_python_source_module() {
-        let m = Value::new(FileManifest {
-            manifest: RawFileManifest::default(),
+        let m = Value::new(FileManifestValue {
+            manifest: FileManifest::default(),
         });
 
-        let v = Value::new(PythonSourceModule::new(
+        let v = Value::new(PythonSourceModuleValue::new(
             PythonModuleSource {
                 name: "foo.bar".to_string(),
                 source: DataLocation::Memory(vec![]),
@@ -553,7 +550,7 @@ mod tests {
         starlark_eval_in_env(&mut env, &type_values, "m.add_python_resource('lib', v)").unwrap();
 
         let m = env.get("m").unwrap();
-        let m = m.downcast_ref::<FileManifest>().unwrap();
+        let m = m.downcast_ref::<FileManifestValue>().unwrap();
 
         let mut entries = m.manifest.entries();
 
@@ -561,7 +558,7 @@ mod tests {
         assert_eq!(p, &PathBuf::from("lib/foo/__init__.py"));
         assert_eq!(
             c,
-            &RawFileContent {
+            &FileContent {
                 data: vec![],
                 executable: false,
             }
@@ -571,7 +568,7 @@ mod tests {
         assert_eq!(p, &PathBuf::from("lib/foo/bar.py"));
         assert_eq!(
             c,
-            &RawFileContent {
+            &FileContent {
                 data: vec![],
                 executable: false,
             }
@@ -582,12 +579,12 @@ mod tests {
 
     #[test]
     fn test_add_python_resource_data() {
-        let m = Value::new(FileManifest {
-            manifest: RawFileManifest::default(),
+        let m = Value::new(FileManifestValue {
+            manifest: FileManifest::default(),
         });
 
-        let v = Value::new(PythonPackageResource {
-            inner: RawPackageResource {
+        let v = Value::new(PythonPackageResourceValue {
+            inner: PythonPackageResource {
                 leaf_package: "foo.bar".to_string(),
                 relative_name: "resource.txt".to_string(),
                 data: DataLocation::Memory(vec![]),
@@ -603,7 +600,7 @@ mod tests {
         starlark_eval_in_env(&mut env, &type_values, "m.add_python_resource('lib', v)").unwrap();
 
         let m = env.get("m").unwrap();
-        let m = m.downcast_ref::<FileManifest>().unwrap();
+        let m = m.downcast_ref::<FileManifestValue>().unwrap();
 
         let mut entries = m.manifest.entries();
         let (p, c) = entries.next().unwrap();
@@ -611,7 +608,7 @@ mod tests {
         assert_eq!(p, &PathBuf::from("lib/foo/bar/resource.txt"));
         assert_eq!(
             c,
-            &RawFileContent {
+            &FileContent {
                 data: vec![],
                 executable: false,
             }
@@ -642,8 +639,8 @@ mod tests {
         )
         .unwrap();
 
-        let m = Value::new(FileManifest {
-            manifest: RawFileManifest::default(),
+        let m = Value::new(FileManifestValue {
+            manifest: FileManifest::default(),
         });
 
         env.set("m", m).unwrap();
@@ -668,8 +665,8 @@ mod tests {
         )
         .unwrap();
 
-        let m = Value::new(FileManifest {
-            manifest: RawFileManifest::default(),
+        let m = Value::new(FileManifestValue {
+            manifest: FileManifest::default(),
         });
 
         env.set("m", m).unwrap();

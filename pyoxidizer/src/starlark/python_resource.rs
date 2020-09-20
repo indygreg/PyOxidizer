@@ -5,10 +5,9 @@
 use {
     python_packaging::policy::PythonPackagingPolicy,
     python_packaging::resource::{
-        BytecodeOptimizationLevel, PythonExtensionModule as RawPythonExtensionModule,
-        PythonModuleBytecodeFromSource, PythonModuleSource as RawSourceModule,
-        PythonPackageDistributionResource as RawDistributionResource,
-        PythonPackageResource as RawPackageResource, PythonResource,
+        BytecodeOptimizationLevel, PythonExtensionModule, PythonModuleBytecodeFromSource,
+        PythonModuleSource, PythonPackageDistributionResource, PythonPackageResource,
+        PythonResource,
     },
     python_packaging::resource_collection::{
         ConcreteResourceLocation, PythonResourceAddCollectionContext,
@@ -91,15 +90,18 @@ impl Into<Option<ConcreteResourceLocation>> for OptionalResourceLocation {
     }
 }
 
-/// Starlark value wrapper for `PythonSourceModule`.
+/// Starlark value wrapper for `PythonModuleSource`.
 #[derive(Debug, Clone)]
-pub struct PythonSourceModule {
-    pub inner: RawSourceModule,
+pub struct PythonSourceModuleValue {
+    pub inner: PythonModuleSource,
     pub add_context: PythonResourceAddCollectionContext,
 }
 
-impl PythonSourceModule {
-    pub fn new(module: RawSourceModule, add_context: PythonResourceAddCollectionContext) -> Self {
+impl PythonSourceModuleValue {
+    pub fn new(
+        module: PythonModuleSource,
+        add_context: PythonResourceAddCollectionContext,
+    ) -> Self {
         Self {
             inner: module,
             add_context,
@@ -111,8 +113,8 @@ impl PythonSourceModule {
     }
 }
 
-impl TypedValue for PythonSourceModule {
-    type Holder = Mutable<PythonSourceModule>;
+impl TypedValue for PythonSourceModuleValue {
+    type Holder = Mutable<PythonSourceModuleValue>;
     const TYPE: &'static str = "PythonSourceModule";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
@@ -204,12 +206,12 @@ impl TypedValue for PythonSourceModule {
 
 /// Starlark `Value` wrapper for `PythonModuleBytecodeFromSource`.
 #[derive(Debug, Clone)]
-pub struct PythonBytecodeModule {
+pub struct PythonBytecodeModuleValue {
     pub inner: PythonModuleBytecodeFromSource,
 }
 
-impl TypedValue for PythonBytecodeModule {
-    type Holder = Immutable<PythonBytecodeModule>;
+impl TypedValue for PythonBytecodeModuleValue {
+    type Holder = Immutable<PythonBytecodeModuleValue>;
     const TYPE: &'static str = "PythonBytecodeModule";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
@@ -264,12 +266,12 @@ impl TypedValue for PythonBytecodeModule {
 
 /// Starlark `Value` wrapper for `PythonPackageResource`.
 #[derive(Debug, Clone)]
-pub struct PythonPackageResource {
-    pub inner: RawPackageResource,
+pub struct PythonPackageResourceValue {
+    pub inner: PythonPackageResource,
 }
 
-impl TypedValue for PythonPackageResource {
-    type Holder = Immutable<PythonPackageResource>;
+impl TypedValue for PythonPackageResourceValue {
+    type Holder = Immutable<PythonPackageResourceValue>;
     const TYPE: &'static str = "PythonPackageResource";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
@@ -316,12 +318,12 @@ impl TypedValue for PythonPackageResource {
 
 /// Starlark `Value` wrapper for `PythonPackageDistributionResource`.
 #[derive(Debug, Clone)]
-pub struct PythonPackageDistributionResource {
-    pub inner: RawDistributionResource,
+pub struct PythonPackageDistributionResourceValue {
+    pub inner: PythonPackageDistributionResource,
 }
 
-impl TypedValue for PythonPackageDistributionResource {
-    type Holder = Immutable<PythonPackageDistributionResource>;
+impl TypedValue for PythonPackageDistributionResourceValue {
+    type Holder = Immutable<PythonPackageDistributionResourceValue>;
     const TYPE: &'static str = "PythonPackageDistributionResource";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
@@ -372,12 +374,12 @@ impl TypedValue for PythonPackageDistributionResource {
 
 /// Starlark `Value` wrapper for `PythonExtensionModule`.
 #[derive(Debug, Clone)]
-pub struct PythonExtensionModule {
-    pub inner: RawPythonExtensionModule,
+pub struct PythonExtensionModuleValue {
+    pub inner: PythonExtensionModule,
 }
 
-impl TypedValue for PythonExtensionModule {
-    type Holder = Immutable<PythonExtensionModule>;
+impl TypedValue for PythonExtensionModuleValue {
+    type Holder = Immutable<PythonExtensionModuleValue>;
     const TYPE: &'static str = "PythonExtensionModule";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
@@ -420,35 +422,35 @@ pub fn python_resource_to_value(
     policy: &PythonPackagingPolicy,
 ) -> Value {
     match resource {
-        PythonResource::ModuleSource(sm) => Value::new(PythonSourceModule::new(
+        PythonResource::ModuleSource(sm) => Value::new(PythonSourceModuleValue::new(
             sm.clone(),
             policy.derive_collection_add_context(resource),
         )),
 
         PythonResource::ModuleBytecodeRequest(m) => {
-            Value::new(PythonBytecodeModule { inner: m.clone() })
+            Value::new(PythonBytecodeModuleValue { inner: m.clone() })
         }
 
         PythonResource::ModuleBytecode { .. } => {
             panic!("not yet implemented");
         }
 
-        PythonResource::Resource(data) => Value::new(PythonPackageResource {
+        PythonResource::Resource(data) => Value::new(PythonPackageResourceValue {
             inner: data.clone(),
         }),
 
         PythonResource::DistributionResource(resource) => {
-            Value::new(PythonPackageDistributionResource {
+            Value::new(PythonPackageDistributionResourceValue {
                 inner: resource.clone(),
             })
         }
 
         PythonResource::ExtensionModuleDynamicLibrary(em) => {
-            Value::new(PythonExtensionModule { inner: em.clone() })
+            Value::new(PythonExtensionModuleValue { inner: em.clone() })
         }
 
         PythonResource::ExtensionModuleStaticallyLinked(em) => {
-            Value::new(PythonExtensionModule { inner: em.clone() })
+            Value::new(PythonExtensionModuleValue { inner: em.clone() })
         }
 
         PythonResource::EggFile(_) => {

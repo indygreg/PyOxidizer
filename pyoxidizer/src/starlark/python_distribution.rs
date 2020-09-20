@@ -5,7 +5,9 @@
 use {
     super::env::{get_context, EnvironmentContext},
     super::python_executable::PythonExecutable,
-    super::python_resource::{PythonExtensionModule, PythonPackageResource, PythonSourceModule},
+    super::python_resource::{
+        PythonExtensionModuleValue, PythonPackageResourceValue, PythonSourceModuleValue,
+    },
     super::util::{
         optional_dict_arg, optional_str_arg, optional_type_arg, required_bool_arg, required_str_arg,
     },
@@ -391,7 +393,7 @@ impl PythonDistribution {
                 .as_ref()
                 .unwrap()
                 .iter_extension_modules()
-                .map(|em| Value::new(PythonExtensionModule { inner: em.clone() }))
+                .map(|em| Value::new(PythonExtensionModuleValue { inner: em.clone() }))
                 .collect_vec(),
         ))
     }
@@ -438,7 +440,7 @@ impl PythonDistribution {
                     if !include_test && is_stdlib_test_package(&data.leaf_package) {
                         None
                     } else {
-                        Some(Value::new(PythonPackageResource {
+                        Some(Value::new(PythonPackageResourceValue {
                             inner: data.clone(),
                         }))
                     }
@@ -480,7 +482,7 @@ impl PythonDistribution {
             modules
                 .iter()
                 .map(|module| {
-                    Value::new(PythonSourceModule::new(
+                    Value::new(PythonSourceModuleValue::new(
                         module.clone(),
                         PythonResourceAddCollectionContext::default(),
                     ))

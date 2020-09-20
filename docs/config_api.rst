@@ -1200,7 +1200,7 @@ The following arguments are accepted:
 ``location`` (str)
     Defines the resource location from which to load the resource.
     See :ref:`config_resource_locations` for possible values. See
-    als :ref:`config_python_resources_policy`.
+    als /:ref:`config_python_resources_policy`.
 
 This method is a glorified proxy to the various ``add_python_*`` methods.
 Unlike those methods, this one accepts all types that are known Python

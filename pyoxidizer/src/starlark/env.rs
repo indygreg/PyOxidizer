@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::file_resource::FileManifest,
+    super::file_resource::FileManifestValue,
     super::python_embedded_resources::PythonEmbeddedResources,
     super::python_executable::PythonExecutable,
     super::target::{BuildContext, BuildTarget, ResolvedTarget},
@@ -248,7 +248,7 @@ impl EnvironmentContext {
         // TODO surely this can use dynamic dispatch.
         let resolved_target: ResolvedTarget = match resolved_value.get_type() {
             "FileManifest" => resolved_value
-                .downcast_mut::<FileManifest>()
+                .downcast_mut::<FileManifestValue>()
                 .map_err(|_| anyhow!("object isn't mutable"))?
                 .ok_or_else(|| anyhow!("invalid cast"))?
                 .build(&context),
