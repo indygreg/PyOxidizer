@@ -90,6 +90,78 @@ impl Into<Option<ConcreteResourceLocation>> for OptionalResourceLocation {
     }
 }
 
+/// Defines functionality for exposing `PythonResourceAddCollectionContext` from a type.
+pub trait ResourceCollectionContext {
+    /// Obtain the `PythonResourceAddCollectionContext` associated with this instance, if available.
+    fn add_collection_context(&self) -> Option<&PythonResourceAddCollectionContext>;
+
+    /// Obtain the mutable `PythonResourceAddCollectionContext` associated with this instance, if available.
+    fn add_collection_context_mut(&mut self) -> Option<&mut PythonResourceAddCollectionContext>;
+
+    /// Obtains the Starlark object attributes that are defined by the add collection context.
+    fn add_collection_context_attrs(&self) -> Vec<&'static str> {
+        vec!["location"]
+    }
+
+    /// Obtain the attribute value for an add collection context.
+    ///
+    /// The caller should verify the attribute should be serviced by us
+    /// before calling.
+    fn get_attr_add_collection_context(&self, attribute: &str) -> ValueResult {
+        let context = self.add_collection_context();
+
+        match attribute {
+            "location" => Ok(match context {
+                Some(context) => Value::new::<String>(context.location.clone().into()),
+                None => Value::from(NoneType::None),
+            }),
+            attr => panic!(
+                "get_attr_add_collection_context({}) called when it shouldn't have been",
+                attr
+            ),
+        }
+    }
+
+    fn set_attr_add_collection_context(
+        &mut self,
+        attribute: &str,
+        value: Value,
+    ) -> Result<(), ValueError> {
+        let context = self.add_collection_context_mut();
+
+        match context {
+            Some(context) => {
+                match attribute {
+                    "location" => {
+                        let location: OptionalResourceLocation = (&value).try_into()?;
+
+                        match location.inner {
+                            Some(location) => {
+                                context.location = location;
+
+                                Ok(())
+                            }
+                            None => {
+                                Err(ValueError::OperationNotSupported {
+                                    op: UnsupportedOperation::SetAttr(attribute.to_string()),
+                                    left: "set_attr".to_string(),
+                                    right: None,
+                                })
+                            }
+                        }
+                    },
+                    attr => panic!("set_attr_add_collection_context({}) called when it shouldn't have been", attr)
+                }
+            },
+            None => Err(ValueError::from(RuntimeError {
+                code: "PYOXIDIZER",
+                message: "attempting to set a collection context attribute on an object without a context".to_string(),
+                label: "setattr()".to_string()
+            }))
+        }
+    }
+}
+
 /// Starlark value wrapper for `PythonModuleSource`.
 #[derive(Debug, Clone)]
 pub struct PythonSourceModuleValue {
@@ -110,6 +182,16 @@ impl PythonSourceModuleValue {
 
     pub fn add_location(&self) -> &ConcreteResourceLocation {
         &self.add_context.location
+    }
+}
+
+impl ResourceCollectionContext for PythonSourceModuleValue {
+    fn add_collection_context(&self) -> Option<&PythonResourceAddCollectionContext> {
+        Some(&self.add_context)
+    }
+
+    fn add_collection_context_mut(&mut self) -> Option<&mut PythonResourceAddCollectionContext> {
+        Some(&mut self.add_context)
     }
 }
 
@@ -152,13 +234,16 @@ impl TypedValue for PythonSourceModuleValue {
                 Value::new(source)
             }
             "is_package" => Value::new(self.inner.is_package),
-            "location" => Value::new::<String>(self.add_location().clone().into()),
             attr => {
-                return Err(ValueError::OperationNotSupported {
-                    op: UnsupportedOperation::GetAttr(attr.to_string()),
-                    left: "PythonSourceModule".to_string(),
-                    right: None,
-                })
+                return if self.add_collection_context_attrs().contains(&attr) {
+                    self.get_attr_add_collection_context(attr)
+                } else {
+                    Err(ValueError::OperationNotSupported {
+                        op: UnsupportedOperation::GetAttr(attr.to_string()),
+                        left: "PythonSourceModule".to_string(),
+                        right: None,
+                    })
+                };
             }
         };
 
@@ -170,36 +255,19 @@ impl TypedValue for PythonSourceModuleValue {
             "name" => true,
             "source" => true,
             "is_package" => true,
-            "location" => true,
-            _ => false,
+            attr => self.add_collection_context_attrs().contains(&attr),
         })
     }
 
     fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
-        match attribute {
-            "location" => {
-                let location: OptionalResourceLocation = (&value).try_into()?;
-
-                match location.inner {
-                    Some(location) => {
-                        self.add_context.location = location;
-                    }
-                    None => {
-                        return Err(ValueError::OperationNotSupported {
-                            op: UnsupportedOperation::SetAttr(attribute.to_string()),
-                            left: Self::TYPE.to_owned(),
-                            right: None,
-                        });
-                    }
-                }
-
-                Ok(())
-            }
-            _ => Err(ValueError::OperationNotSupported {
+        if self.add_collection_context_attrs().contains(&attribute) {
+            self.set_attr_add_collection_context(attribute, value)
+        } else {
+            Err(ValueError::OperationNotSupported {
                 op: UnsupportedOperation::SetAttr(attribute.to_string()),
                 left: Self::TYPE.to_owned(),
                 right: None,
-            }),
+            })
         }
     }
 }
