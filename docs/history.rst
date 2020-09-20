@@ -81,65 +81,35 @@ Backwards Compatibility Notes
   run-time, you must now pass ``terminfo_resolution='none'`` instead of
   ``terminfo_resolution=None``. ``terminfo_resolution=None`` is now
   interpreted as the default value, which is ``dynamic``.
-* The Starlark method ``PythonExecutable.add_module_source()`` has been
-  renamed to ``PythonExecutable.add_python_module_source()`` and it
-  now accepts a ``location`` keyword argument defining the resource
-  location.
-* The Starlark methods ``PythonExecutable.add_in_memory_module_source()``
-  and ``PythonExecutable.add_filesystem_relative_module_source()`` have
-  been removed, as they are redundant with the new
-  ``PythonExecutable.add_python_module_source()``, which accepts a
-  ``location`` argument to control the resource location.
-* The Starlark method ``PythonExecutable.add_module_bytecode()`` has been
-  renamed to ``PythonExecutable.add_python_module_bytecode()`` and it
-  now accepts a ``location`` keyword argument defining the resource
-  location.
-* The Starlark methods ``PythonExecutable.add_in_memory_module_bytecode()``
-  and ``PythonExecutable.add_filesystem_relative_module_bytecode()`` have
-  been removed, as they are redundant with the new
-  ``PythonExecutable.add_python_module_bytecode()``, which accepts a
-  ``location`` argument to control the resource location.
-* The Starlark method ``PythonExecutable.add_package_resource()`` has been
-  renamed to ``PythonExecutable.add_python_package_resource()`` and it
-  now accepts a ``location`` keyword argument defining the resource
-  location.
-* The Starlark methods ``PythonExecutable.add_in_memory_package_resource()``
-  and ``PythonExecutable.add_filesystem_relative_package_resource()`` have
-  been removed, as they are redundant with the new
-  ``PythonExecutable.add_python_package_resource()``, which accepts a
-  ``location`` argument to control the resource location.
-* The Starlark method ``PythonExecutable.add_package_distribution_resource()``
-  has been renamed to
-  ``PythonExecutable.add_python_package_distribution_resource()`` and it
-  now accepts a ``location`` keyword argument defining the resource
-  location.
-* The Starlark methods
-  ``PythonExecutable.add_in_memory_package_distribution_resource()`` and
-  ``PythonExecutable.add_filesystem_relative_package_distribution_resource()``
-  have been removed, as they are redundant with the new
-  ``PythonExecutable.add_python_package_distribution_resource()``, which
-  accepts a ``location`` argument to control the resource location.
-* The Starlark method ``PythonExecutable.add_extension_module()`` has been
-  renamed to ``PythonExecutable.add_python_extension_module()`` and it
-  now accepts a ``location`` keyword argument defining the resource
-  location.
-* The Starlark methods ``PythonExecutable.add_in_memory_extension_module()``
-  and ``PythonExecutable.add_filesystem_relative_extension_module()`` have
-  been removed, as they are redundant with the new
-  ``PythonExecutable.add_python_extension_module()``, which accepts a
-  ``location`` argument to control the resource location.
-* The Starlark method ``PythonExecutable.add_python_resource()`` now accepts
-  a ``location`` keyword argument defining the resource location.
-* The Starlark methods ``PythonExecutable.add_in_memory_python_resource()``
-  and ``PythonExecutable.add_filesystem_relative_python_resource()`` have
-  been removed, as they are redundant with passing a ``location`` argument
-  to ``PythonExecutable.add_python_resource()``.
-* The Starlark method ``PythonExecutable.add_python_resources()`` now accepts
-  a ``location`` keyword argument defining the resource location.
-* The Starlark methods ``PythonExecutable.add_in_memory_python_resources()``
-  and ``PythonExecutable.add_filesystem_relative_python_resources()`` have
-  been removed, as they are redundant with ping a ``location`` argument to
-  ``PythonExecutable.add_python_resources()``.
+* The following Starlark methods have been renamed:
+  ``PythonExecutable.add_module_source()`` ->
+  ``PythonExecutable.add_python_module_source()``;
+  ``PythonExecutable.add_module_bytecode()`` ->
+  ``PythonExecutable.add_python_module_bytecode()``;
+  ``PythonExecutable.add_package_resource()`` ->
+  ``PythonExecutable.add_python_package_resource()``;
+  ``PythonExecutable.add_package_distribution_resource()`` ->
+  ``PythonExecutable.add_python_package_distribution_resource()``;
+  ``PythonExecutable.add_extension_module()`` ->
+  ``PythonExecutable.add_python_extension_module()``.
+* The location-specific Starlark methods for adding Python resources
+  have been removed. The functionality can be duplicated by passing
+  a ``location`` argument to the new methods for adding resources.
+  The following methods were removed:
+  ``PythonExecutable.add_in_memory_module_source()``;
+  ``PythonExecutable.add_filesystem_relative_module_source()``,
+  ``PythonExecutable.add_in_memory_module_bytecode()``;
+  ``PythonExecutable.add_filesystem_relative_module_bytecode()``;
+  ``PythonExecutable.add_in_memory_package_resource()``;
+  ``PythonExecutable.add_filesystem_relative_package_resource()``;
+  ``PythonExecutable.add_in_memory_package_distribution_resource()``
+  ``PythonExecutable.add_filesystem_relative_package_distribution_resource()``;
+  ``PythonExecutable.add_in_memory_extension_module()``;
+  ``PythonExecutable.add_filesystem_relative_extension_module()``;
+  ``PythonExecutable.add_in_memory_python_resource()``;
+  ``PythonExecutable.add_filesystem_relative_python_resource()``;
+  ``PythonExecutable.add_in_memory_python_resources()``;
+  ``PythonExecutable.add_filesystem_relative_python_resources()``.
 
 New Features
 ^^^^^^^^^^^^
@@ -195,6 +165,19 @@ New Features
 * The ``PythonSourceModule`` Starlark type now has a ``location``
   attribute exposing the location where the resource should be
   loaded from.
+* The Starlark methods for adding Python resources now accept an
+  optional ``location`` argument for controlling the load location
+  of the resource. This functionality replaces the prior functionality
+  provided by location-specific APIs such as
+  ``PythonExecutable.add_in_memory_python_resource()``. The following
+  methods gained this argument:
+  ``PythonExecutable.add_python_module_source()``;
+  ``PythonExecutable.add_python_module_bytecode()``;
+  ``PythonExecutable.add_python_package_resource()``;
+  ``PythonExecutable.add_python_package_distribution_resource()``;
+  ``PythonExecutable.add_python_extension_module()``;
+  ``PythonExecutable.add_python_resource()``;
+  ``PythonExecutable.add_python_resources()``.
 
 Bug Fixes
 ^^^^^^^^^
