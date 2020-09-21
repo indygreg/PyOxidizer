@@ -183,13 +183,10 @@ pub struct PythonSourceModuleValue {
 }
 
 impl PythonSourceModuleValue {
-    pub fn new(
-        module: PythonModuleSource,
-        add_context: Option<PythonResourceAddCollectionContext>,
-    ) -> Self {
+    pub fn new(module: PythonModuleSource) -> Self {
         Self {
             inner: module,
-            add_context,
+            add_context: None,
         }
     }
 }
@@ -503,10 +500,12 @@ pub fn python_resource_to_value(
     policy: &PythonPackagingPolicy,
 ) -> Value {
     match resource {
-        PythonResource::ModuleSource(sm) => Value::new(PythonSourceModuleValue::new(
-            sm.clone().into_owned(),
-            Some(policy.derive_collection_add_context(resource)),
-        )),
+        PythonResource::ModuleSource(sm) => {
+            let mut m = PythonSourceModuleValue::new(sm.clone().into_owned());
+            m.apply_packaging_policy(policy);
+
+            Value::new(m)
+        }
 
         PythonResource::ModuleBytecodeRequest(m) => Value::new(PythonBytecodeModuleValue {
             inner: m.clone().into_owned(),

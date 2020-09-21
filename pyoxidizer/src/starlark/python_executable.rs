@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use crate::starlark::python_resource::ResourceCollectionContext;
 use {
     super::env::{get_context, EnvironmentContext},
     super::python_embedded_resources::PythonEmbeddedResources,
@@ -107,15 +108,10 @@ impl PythonExecutable {
             is_test: false,
         };
 
-        let add_context = self
-            .exe
-            .python_packaging_policy()
-            .derive_collection_add_context(&(&module).into());
+        let mut value = PythonSourceModuleValue::new(module);
+        value.apply_packaging_policy(self.exe.python_packaging_policy());
 
-        Ok(Value::new(PythonSourceModuleValue::new(
-            module,
-            Some(add_context),
-        )))
+        Ok(Value::new(value))
     }
 
     /// PythonExecutable.pip_install(args, extra_envs=None)

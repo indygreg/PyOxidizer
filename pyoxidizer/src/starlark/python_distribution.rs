@@ -480,7 +480,7 @@ impl PythonDistribution {
         Ok(Value::from(
             modules
                 .iter()
-                .map(|module| Value::new(PythonSourceModuleValue::new(module.clone(), None)))
+                .map(|module| Value::new(PythonSourceModuleValue::new(module.clone())))
                 .collect_vec(),
         ))
     }
