@@ -71,20 +71,20 @@ pub(crate) fn find_resources_in_path(py: Python, path: PyObject) -> PyResult<PyO
 
         match resource {
             PythonResource::ModuleSource(source) => {
-                res.push(PythonModuleSource::new(py, source)?.into_object());
+                res.push(PythonModuleSource::new(py, source.into_owned())?.into_object());
             }
             PythonResource::ModuleBytecode(bytecode) => {
-                res.push(PythonModuleBytecode::new(py, bytecode)?.into_object());
+                res.push(PythonModuleBytecode::new(py, bytecode.into_owned())?.into_object());
             }
             PythonResource::ExtensionModule(extension) => {
-                res.push(PythonExtensionModule::new(py, extension)?.into_object());
+                res.push(PythonExtensionModule::new(py, extension.into_owned())?.into_object());
             }
             PythonResource::Resource(resource) => {
-                res.push(PythonPackageResource::new(py, resource)?.into_object());
+                res.push(PythonPackageResource::new(py, resource.into_owned())?.into_object());
             }
-            PythonResource::DistributionResource(resource) => {
-                res.push(PythonPackageDistributionResource::new(py, resource)?.into_object())
-            }
+            PythonResource::DistributionResource(resource) => res.push(
+                PythonPackageDistributionResource::new(py, resource.into_owned())?.into_object(),
+            ),
             _ => {}
         }
     }

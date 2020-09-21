@@ -487,31 +487,31 @@ pub fn python_resource_to_value(
 ) -> Value {
     match resource {
         PythonResource::ModuleSource(sm) => Value::new(PythonSourceModuleValue::new(
-            sm.clone(),
+            sm.clone().into_owned(),
             Some(policy.derive_collection_add_context(resource)),
         )),
 
-        PythonResource::ModuleBytecodeRequest(m) => {
-            Value::new(PythonBytecodeModuleValue { inner: m.clone() })
-        }
+        PythonResource::ModuleBytecodeRequest(m) => Value::new(PythonBytecodeModuleValue {
+            inner: m.clone().into_owned(),
+        }),
 
         PythonResource::ModuleBytecode { .. } => {
             panic!("not yet implemented");
         }
 
         PythonResource::Resource(data) => Value::new(PythonPackageResourceValue {
-            inner: data.clone(),
+            inner: data.clone().into_owned(),
         }),
 
         PythonResource::DistributionResource(resource) => {
             Value::new(PythonPackageDistributionResourceValue {
-                inner: resource.clone(),
+                inner: resource.clone().into_owned(),
             })
         }
 
-        PythonResource::ExtensionModule(em) => {
-            Value::new(PythonExtensionModuleValue { inner: em.clone() })
-        }
+        PythonResource::ExtensionModule(em) => Value::new(PythonExtensionModuleValue {
+            inner: em.clone().into_owned(),
+        }),
 
         PythonResource::EggFile(_) => {
             panic!("egg files not supported");

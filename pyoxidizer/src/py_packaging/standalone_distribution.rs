@@ -808,8 +808,8 @@ impl StandaloneDistribution {
 
                     resources.get_mut(&resource.leaf_package).unwrap().insert(
                         resource.relative_name.clone(),
-                        match resource.data {
-                            DataLocation::Path(path) => path,
+                        match &resource.data {
+                            DataLocation::Path(path) => path.to_path_buf(),
                             DataLocation::Memory(_) => {
                                 return Err(anyhow!(
                                     "should not have received in-memory resource data"
@@ -818,9 +818,9 @@ impl StandaloneDistribution {
                         },
                     );
                 }
-                PythonResource::ModuleSource(source) => match source.source {
+                PythonResource::ModuleSource(source) => match &source.source {
                     DataLocation::Path(path) => {
-                        py_modules.insert(source.name.clone(), path);
+                        py_modules.insert(source.name.clone(), path.to_path_buf());
                     }
                     DataLocation::Memory(_) => {
                         return Err(anyhow!("should not have received in-memory source data"))
@@ -1166,10 +1166,10 @@ impl PythonDistribution for StandaloneDistribution {
         }
     }
 
-    fn filter_compatible_python_resources(
+    fn filter_compatible_python_resources<'a>(
         &self,
-        resources: &[PythonResource],
-    ) -> Result<Vec<PythonResource>> {
+        resources: &[PythonResource<'a>],
+    ) -> Result<Vec<PythonResource<'a>>> {
         Ok(resources
             .iter()
             .filter(|resource| match resource {

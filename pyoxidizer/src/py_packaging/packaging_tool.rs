@@ -170,11 +170,11 @@ pub fn bootstrap_packaging_tools(
 }
 
 /// Find resources installed as part of a packaging operation.
-pub fn find_resources(
+pub fn find_resources<'a>(
     dist: &dyn PythonDistribution,
     path: &Path,
     state_dir: Option<PathBuf>,
-) -> Result<Vec<PythonResource>> {
+) -> Result<Vec<PythonResource<'a>>> {
     let mut res = Vec::new();
 
     for r in find_python_resources(&path, dist.cache_tag(), &dist.python_module_suffixes()?) {
@@ -205,7 +205,7 @@ pub fn find_resources(
     // instead of emitting multiple objects?
     if let Some(p) = state_dir {
         for ext in read_built_extensions(&p)? {
-            res.push(PythonResource::ExtensionModule(ext));
+            res.push(ext.into());
         }
     }
 
@@ -213,14 +213,14 @@ pub fn find_resources(
 }
 
 /// Run `pip install` and return found resources.
-pub fn pip_install<S: BuildHasher>(
+pub fn pip_install<'a, S: BuildHasher>(
     logger: &slog::Logger,
     dist: &dyn PythonDistribution,
     libpython_link_mode: LibpythonLinkMode,
     verbose: bool,
     install_args: &[String],
     extra_envs: &HashMap<String, String, S>,
-) -> Result<Vec<PythonResource>> {
+) -> Result<Vec<PythonResource<'a>>> {
     let temp_dir = tempdir::TempDir::new("pyoxidizer-pip-install")?;
 
     dist.ensure_pip(logger)?;
@@ -285,14 +285,17 @@ pub fn pip_install<S: BuildHasher>(
 }
 
 /// Discover Python resources from a populated virtualenv directory.
-pub fn read_virtualenv(dist: &dyn PythonDistribution, path: &Path) -> Result<Vec<PythonResource>> {
+pub fn read_virtualenv<'a>(
+    dist: &dyn PythonDistribution,
+    path: &Path,
+) -> Result<Vec<PythonResource<'a>>> {
     let python_paths = resolve_python_paths(path, &dist.python_major_minor_version());
 
     find_resources(dist, &python_paths.site_packages, None)
 }
 
 /// Run `setup.py install` against a path and return found resources.
-pub fn setup_py_install<S: BuildHasher>(
+pub fn setup_py_install<'a, S: BuildHasher>(
     logger: &slog::Logger,
     dist: &dyn PythonDistribution,
     libpython_link_mode: LibpythonLinkMode,
@@ -300,7 +303,7 @@ pub fn setup_py_install<S: BuildHasher>(
     verbose: bool,
     extra_envs: &HashMap<String, String, S>,
     extra_global_arguments: &[String],
-) -> Result<Vec<PythonResource>> {
+) -> Result<Vec<PythonResource<'a>>> {
     if !package_path.is_absolute() {
         return Err(anyhow!(
             "package_path must be absolute: got {:?}",

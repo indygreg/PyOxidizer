@@ -171,10 +171,10 @@ pub trait PythonDistribution {
     ///
     /// TODO reconsider the existence of this API given changes to
     /// extension module representation.
-    fn filter_compatible_python_resources(
+    fn filter_compatible_python_resources<'a>(
         &self,
-        resources: &[PythonResource],
-    ) -> Result<Vec<PythonResource>>;
+        resources: &[PythonResource<'a>],
+    ) -> Result<Vec<PythonResource<'a>>>;
 }
 
 /// Multiple threads or processes could race to extract the archive.

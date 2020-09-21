@@ -11,6 +11,7 @@ use {
     },
     crate::python_source::has_dunder_file,
     anyhow::{anyhow, Context, Result},
+    std::borrow::Cow,
     std::collections::HashMap,
     std::convert::TryFrom,
     std::hash::BuildHasher,
@@ -706,26 +707,26 @@ impl PythonPathExtension {
 
 /// Represents a resource that can be read by Python somehow.
 #[derive(Clone, Debug, PartialEq)]
-pub enum PythonResource {
+pub enum PythonResource<'a> {
     /// A module defined by source code.
-    ModuleSource(PythonModuleSource),
+    ModuleSource(Cow<'a, PythonModuleSource>),
     /// A module defined by a request to generate bytecode from source.
-    ModuleBytecodeRequest(PythonModuleBytecodeFromSource),
+    ModuleBytecodeRequest(Cow<'a, PythonModuleBytecodeFromSource>),
     /// A module defined by existing bytecode.
-    ModuleBytecode(PythonModuleBytecode),
+    ModuleBytecode(Cow<'a, PythonModuleBytecode>),
     /// A non-module resource file.
-    Resource(PythonPackageResource),
+    Resource(Cow<'a, PythonPackageResource>),
     /// A file in a Python package distribution metadata collection.
-    DistributionResource(PythonPackageDistributionResource),
+    DistributionResource(Cow<'a, PythonPackageDistributionResource>),
     /// An extension module.
-    ExtensionModule(PythonExtensionModule),
+    ExtensionModule(Cow<'a, PythonExtensionModule>),
     /// A self-contained Python egg.
-    EggFile(PythonEggFile),
+    EggFile(Cow<'a, PythonEggFile>),
     /// A path extension.
-    PathExtension(PythonPathExtension),
+    PathExtension(Cow<'a, PythonPathExtension>),
 }
 
-impl PythonResource {
+impl<'a> PythonResource<'a> {
     /// Resolves the fully qualified resource name.
     pub fn full_name(&self) -> String {
         match self {
@@ -772,67 +773,63 @@ impl PythonResource {
     /// Create a new instance that is guaranteed to be backed by memory.
     pub fn to_memory(&self) -> Result<Self> {
         Ok(match self {
-            PythonResource::ModuleSource(m) => PythonResource::ModuleSource(m.to_memory()?),
-            PythonResource::ModuleBytecode(m) => PythonResource::ModuleBytecode(m.to_memory()?),
-            PythonResource::ModuleBytecodeRequest(m) => {
-                PythonResource::ModuleBytecodeRequest(m.to_memory()?)
-            }
-            PythonResource::Resource(r) => PythonResource::Resource(r.to_memory()?),
-            PythonResource::DistributionResource(r) => {
-                PythonResource::DistributionResource(r.to_memory()?)
-            }
-            PythonResource::ExtensionModule(m) => PythonResource::ExtensionModule(m.to_memory()?),
-            PythonResource::EggFile(e) => PythonResource::EggFile(e.to_memory()?),
-            PythonResource::PathExtension(e) => PythonResource::PathExtension(e.to_memory()?),
+            PythonResource::ModuleSource(m) => m.to_memory()?.into(),
+            PythonResource::ModuleBytecode(m) => m.to_memory()?.into(),
+            PythonResource::ModuleBytecodeRequest(m) => m.to_memory()?.into(),
+            PythonResource::Resource(r) => r.to_memory()?.into(),
+            PythonResource::DistributionResource(r) => r.to_memory()?.into(),
+            PythonResource::ExtensionModule(m) => m.to_memory()?.into(),
+            PythonResource::EggFile(e) => e.to_memory()?.into(),
+            PythonResource::PathExtension(e) => e.to_memory()?.into(),
         })
     }
 }
 
-impl From<PythonModuleSource> for PythonResource {
+impl<'a> From<PythonModuleSource> for PythonResource<'a> {
     fn from(m: PythonModuleSource) -> Self {
-        PythonResource::ModuleSource(m)
+        PythonResource::ModuleSource(Cow::Owned(m))
     }
 }
 
-impl From<PythonModuleBytecodeFromSource> for PythonResource {
+impl<'a> From<PythonModuleBytecodeFromSource> for PythonResource<'a> {
     fn from(m: PythonModuleBytecodeFromSource) -> Self {
-        PythonResource::ModuleBytecodeRequest(m)
+        PythonResource::ModuleBytecodeRequest(Cow::Owned(m))
     }
 }
 
-impl From<PythonModuleBytecode> for PythonResource {
+impl<'a> From<PythonModuleBytecode> for PythonResource<'a> {
     fn from(m: PythonModuleBytecode) -> Self {
-        PythonResource::ModuleBytecode(m)
+        PythonResource::ModuleBytecode(Cow::Owned(m))
     }
 }
 
-impl From<PythonPackageResource> for PythonResource {
+impl<'a> From<PythonPackageResource> for PythonResource<'a> {
     fn from(r: PythonPackageResource) -> Self {
-        PythonResource::Resource(r)
+        PythonResource::Resource(Cow::Owned(r))
     }
 }
 
-impl From<PythonPackageDistributionResource> for PythonResource {
+impl<'a> From<PythonPackageDistributionResource> for PythonResource<'a> {
     fn from(r: PythonPackageDistributionResource) -> Self {
-        PythonResource::DistributionResource(r)
+        PythonResource::DistributionResource(Cow::Owned(r))
     }
 }
 
-impl From<PythonExtensionModule> for PythonResource {
+impl<'a> From<PythonExtensionModule> for PythonResource<'a> {
     fn from(r: PythonExtensionModule) -> Self {
-        PythonResource::ExtensionModule(r)
+        PythonResource::ExtensionModule(Cow::Owned(r))
     }
 }
 
-impl From<PythonEggFile> for PythonResource {
+impl<'a> From<PythonEggFile> for PythonResource<'a> {
     fn from(e: PythonEggFile) -> Self {
-        PythonResource::EggFile(e)
+        PythonResource::EggFile(Cow::Owned(e))
     }
 }
 
-impl From<PythonPathExtension> for PythonResource {
+impl<'a> From<PythonPathExtension> for PythonResource<'a> {
     fn from(e: PythonPathExtension) -> Self {
-        PythonResource::PathExtension(e)
+        PythonResource::PathExtension(Cow::Owned(e))
     }
 }
 
@@ -844,19 +841,19 @@ mod tests {
 
     #[test]
     fn test_is_in_packages() {
-        let source = PythonResource::ModuleSource(PythonModuleSource {
+        let source = PythonResource::ModuleSource(Cow::Owned(PythonModuleSource {
             name: "foo".to_string(),
             source: DataLocation::Memory(vec![]),
             is_package: false,
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
             is_stdlib: false,
             is_test: false,
-        });
+        }));
         assert!(source.is_in_packages(&["foo".to_string()]));
         assert!(!source.is_in_packages(&[]));
         assert!(!source.is_in_packages(&["bar".to_string()]));
 
-        let bytecode = PythonResource::ModuleBytecode(PythonModuleBytecode {
+        let bytecode = PythonResource::ModuleBytecode(Cow::Owned(PythonModuleBytecode {
             name: "foo".to_string(),
             bytecode: DataLocation::Memory(vec![]),
             optimize_level: BytecodeOptimizationLevel::Zero,
@@ -864,7 +861,7 @@ mod tests {
             cache_tag: DEFAULT_CACHE_TAG.to_string(),
             is_stdlib: false,
             is_test: false,
-        });
+        }));
         assert!(bytecode.is_in_packages(&["foo".to_string()]));
         assert!(!bytecode.is_in_packages(&[]));
         assert!(!bytecode.is_in_packages(&["bar".to_string()]));

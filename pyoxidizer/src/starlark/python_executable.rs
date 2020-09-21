@@ -31,6 +31,7 @@ use {
         starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
         starlark_signature_extraction, starlark_signatures,
     },
+    std::borrow::Cow,
     std::collections::HashMap,
     std::convert::TryFrom,
     std::io::Write,
@@ -111,7 +112,7 @@ impl PythonExecutable {
         let add_context = self
             .exe
             .python_packaging_policy()
-            .derive_collection_add_context(&PythonResource::ModuleSource(module.clone()));
+            .derive_collection_add_context(&PythonResource::ModuleSource(Cow::Borrowed(&module)));
 
         Ok(Value::new(PythonSourceModuleValue::new(
             module,
