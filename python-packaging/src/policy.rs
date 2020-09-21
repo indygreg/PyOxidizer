@@ -283,8 +283,7 @@ impl PythonPackagingPolicy {
                 }
             }
             PythonResource::DistributionResource(_) => false,
-            PythonResource::ExtensionModuleDynamicLibrary(_) => false,
-            PythonResource::ExtensionModuleStaticallyLinked(_) => false,
+            PythonResource::ExtensionModule(_) => false,
             PythonResource::PathExtension(_) => false,
             PythonResource::EggFile(_) => false,
         }

@@ -236,7 +236,7 @@ impl PythonResourceIterator {
                 let init_fn = Some(format!("PyInit_{}", final_name));
 
                 return Some(DirEntryItem::PythonResource(
-                    PythonResource::ExtensionModuleDynamicLibrary(PythonExtensionModule {
+                    PythonResource::ExtensionModule(PythonExtensionModule {
                         name: full_module_name,
                         init_fn,
                         extension_file_suffix: ext_suffix.clone(),
@@ -981,7 +981,7 @@ mod tests {
 
         assert_eq!(
             resources[0],
-            PythonResource::ExtensionModuleDynamicLibrary(PythonExtensionModule {
+            PythonResource::ExtensionModule(PythonExtensionModule {
                 name: "_cffi_backend".to_string(),
                 init_fn: Some("PyInit__cffi_backend".to_string()),
                 extension_file_suffix: ".cp37-win_amd64.pyd".to_string(),
@@ -1000,7 +1000,7 @@ mod tests {
         );
         assert_eq!(
             resources[1],
-            PythonResource::ExtensionModuleDynamicLibrary(PythonExtensionModule {
+            PythonResource::ExtensionModule(PythonExtensionModule {
                 name: "bar".to_string(),
                 init_fn: Some("PyInit_bar".to_string()),
                 extension_file_suffix: ".so".to_string(),
@@ -1019,7 +1019,7 @@ mod tests {
         );
         assert_eq!(
             resources[2],
-            PythonResource::ExtensionModuleDynamicLibrary(PythonExtensionModule {
+            PythonResource::ExtensionModule(PythonExtensionModule {
                 name: "foo".to_string(),
                 init_fn: Some("PyInit_foo".to_string()),
                 extension_file_suffix: ".pyd".to_string(),
@@ -1038,7 +1038,7 @@ mod tests {
         );
         assert_eq!(
             resources[3],
-            PythonResource::ExtensionModuleDynamicLibrary(PythonExtensionModule {
+            PythonResource::ExtensionModule(PythonExtensionModule {
                 name: "markupsafe._speedups".to_string(),
                 init_fn: Some("PyInit__speedups".to_string()),
                 extension_file_suffix: ".cpython-37m-x86_64-linux-gnu.so".to_string(),
@@ -1057,7 +1057,7 @@ mod tests {
         );
         assert_eq!(
             resources[4],
-            PythonResource::ExtensionModuleDynamicLibrary(PythonExtensionModule {
+            PythonResource::ExtensionModule(PythonExtensionModule {
                 name: "zstd".to_string(),
                 init_fn: Some("PyInit_zstd".to_string()),
                 extension_file_suffix: ".cpython-37m-x86_64-linux-gnu.so".to_string(),

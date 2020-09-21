@@ -509,11 +509,7 @@ pub fn python_resource_to_value(
             })
         }
 
-        PythonResource::ExtensionModuleDynamicLibrary(em) => {
-            Value::new(PythonExtensionModuleValue { inner: em.clone() })
-        }
-
-        PythonResource::ExtensionModuleStaticallyLinked(em) => {
+        PythonResource::ExtensionModule(em) => {
             Value::new(PythonExtensionModuleValue { inner: em.clone() })
         }
 

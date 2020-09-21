@@ -1168,30 +1168,12 @@ impl PythonDistribution for StandaloneDistribution {
 
     fn filter_compatible_python_resources(
         &self,
-        logger: &slog::Logger,
         resources: &[PythonResource],
     ) -> Result<Vec<PythonResource>> {
         Ok(resources
             .iter()
             .filter(|resource| match resource {
-                // Extension modules defined as shared libraries are only compatible
-                // with some configurations.
-                PythonResource::ExtensionModuleDynamicLibrary { .. } => {
-                    if self.is_extension_module_file_loadable() {
-                        true
-                    } else {
-                        warn!(logger, "ignoring extension module {} because it isn't loadable for the target configuration",
-                            resource.full_name());
-                        false
-                    }
-                }
-
-                // Only look at the raw object files if the distribution produces
-                // them.
-                // TODO have PythonDistribution expose API to determine this.
-                PythonResource::ExtensionModuleStaticallyLinked(_) =>
-                    self.link_mode == StandaloneDistributionLinkMode::Static,
-
+                PythonResource::ExtensionModule { .. } => true,
                 PythonResource::ModuleSource { .. } => true,
                 PythonResource::ModuleBytecodeRequest { .. } => true,
                 PythonResource::ModuleBytecode { .. } => true,

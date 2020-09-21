@@ -167,12 +167,12 @@ pub trait PythonDistribution {
 
     /// Filter a collection of `PythonResource` through this distribution.
     ///
-    /// We will throw away resources that aren't compatible with us. For
-    /// example, on statically linked Windows distributions, dynamically linked
-    /// extension module files are ignored.
+    /// We will throw away resources that aren't compatible with us.
+    ///
+    /// TODO reconsider the existence of this API given changes to
+    /// extension module representation.
     fn filter_compatible_python_resources(
         &self,
-        logger: &slog::Logger,
         resources: &[PythonResource],
     ) -> Result<Vec<PythonResource>>;
 }

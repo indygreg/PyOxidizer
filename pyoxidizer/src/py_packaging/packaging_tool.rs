@@ -171,7 +171,6 @@ pub fn bootstrap_packaging_tools(
 
 /// Find resources installed as part of a packaging operation.
 pub fn find_resources(
-    logger: &slog::Logger,
     dist: &dyn PythonDistribution,
     path: &Path,
     state_dir: Option<PathBuf>,
@@ -194,7 +193,7 @@ pub fn find_resources(
                 res.push(r.to_memory()?);
             }
 
-            PythonResource::ExtensionModuleDynamicLibrary(_) => {
+            PythonResource::ExtensionModule(_) => {
                 res.push(r.to_memory()?);
             }
 
@@ -202,13 +201,15 @@ pub fn find_resources(
         }
     }
 
+    // TODO should we merge into an existing `PythonExtensionModule` instance
+    // instead of emitting multiple objects?
     if let Some(p) = state_dir {
         for ext in read_built_extensions(&p)? {
-            res.push(PythonResource::ExtensionModuleStaticallyLinked(ext));
+            res.push(PythonResource::ExtensionModule(ext));
         }
     }
 
-    dist.filter_compatible_python_resources(logger, &res)
+    dist.filter_compatible_python_resources(&res)
 }
 
 /// Run `pip install` and return found resources.
@@ -280,18 +281,14 @@ pub fn pip_install<S: BuildHasher>(
         None => None,
     };
 
-    find_resources(logger, dist, &target_dir, state_dir)
+    find_resources(dist, &target_dir, state_dir)
 }
 
 /// Discover Python resources from a populated virtualenv directory.
-pub fn read_virtualenv(
-    logger: &slog::Logger,
-    dist: &dyn PythonDistribution,
-    path: &Path,
-) -> Result<Vec<PythonResource>> {
+pub fn read_virtualenv(dist: &dyn PythonDistribution, path: &Path) -> Result<Vec<PythonResource>> {
     let python_paths = resolve_python_paths(path, &dist.python_major_minor_version());
 
-    find_resources(logger, dist, &python_paths.site_packages, None)
+    find_resources(dist, &python_paths.site_packages, None)
 }
 
 /// Run `setup.py install` against a path and return found resources.
@@ -381,7 +378,7 @@ pub fn setup_py_install<S: BuildHasher>(
         "scanning {} for resources",
         python_paths.site_packages.display()
     );
-    find_resources(logger, dist, &python_paths.site_packages, state_dir)
+    find_resources(dist, &python_paths.site_packages, state_dir)
 }
 
 #[cfg(test)]
@@ -427,7 +424,7 @@ mod tests {
         let ems = resources
             .iter()
             .filter(|r| match r {
-                PythonResource::ExtensionModuleDynamicLibrary { .. } => true,
+                PythonResource::ExtensionModule { .. } => true,
                 _ => false,
             })
             .collect::<Vec<&PythonResource>>();

@@ -76,7 +76,7 @@ pub(crate) fn find_resources_in_path(py: Python, path: PyObject) -> PyResult<PyO
             PythonResource::ModuleBytecode(bytecode) => {
                 res.push(PythonModuleBytecode::new(py, bytecode)?.into_object());
             }
-            PythonResource::ExtensionModuleDynamicLibrary(extension) => {
+            PythonResource::ExtensionModule(extension) => {
                 res.push(PythonExtensionModule::new(py, extension)?.into_object());
             }
             PythonResource::Resource(resource) => {

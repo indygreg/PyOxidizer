@@ -717,10 +717,8 @@ pub enum PythonResource {
     Resource(PythonPackageResource),
     /// A file in a Python package distribution metadata collection.
     DistributionResource(PythonPackageDistributionResource),
-    /// An extension module that is represented by a dynamic library.
-    ExtensionModuleDynamicLibrary(PythonExtensionModule),
-    /// An extension module that was built from source and can be statically linked.
-    ExtensionModuleStaticallyLinked(PythonExtensionModule),
+    /// An extension module.
+    ExtensionModule(PythonExtensionModule),
     /// A self-contained Python egg.
     EggFile(PythonEggFile),
     /// A path extension.
@@ -740,8 +738,7 @@ impl PythonResource {
             PythonResource::DistributionResource(resource) => {
                 format!("{}:{}", resource.package, resource.name)
             }
-            PythonResource::ExtensionModuleDynamicLibrary(em) => em.name.clone(),
-            PythonResource::ExtensionModuleStaticallyLinked(em) => em.name.clone(),
+            PythonResource::ExtensionModule(em) => em.name.clone(),
             PythonResource::EggFile(_) => "".to_string(),
             PythonResource::PathExtension(_) => "".to_string(),
         }
@@ -754,8 +751,7 @@ impl PythonResource {
             PythonResource::ModuleBytecodeRequest(m) => &m.name,
             PythonResource::Resource(resource) => &resource.leaf_package,
             PythonResource::DistributionResource(resource) => &resource.package,
-            PythonResource::ExtensionModuleDynamicLibrary(em) => &em.name,
-            PythonResource::ExtensionModuleStaticallyLinked(em) => &em.name,
+            PythonResource::ExtensionModule(em) => &em.name,
             PythonResource::EggFile(_) => return false,
             PythonResource::PathExtension(_) => return false,
         };
@@ -785,12 +781,7 @@ impl PythonResource {
             PythonResource::DistributionResource(r) => {
                 PythonResource::DistributionResource(r.to_memory()?)
             }
-            PythonResource::ExtensionModuleDynamicLibrary(m) => {
-                PythonResource::ExtensionModuleDynamicLibrary(m.to_memory()?)
-            }
-            PythonResource::ExtensionModuleStaticallyLinked(m) => {
-                PythonResource::ExtensionModuleStaticallyLinked(m.to_memory()?)
-            }
+            PythonResource::ExtensionModule(m) => PythonResource::ExtensionModule(m.to_memory()?),
             PythonResource::EggFile(e) => PythonResource::EggFile(e.to_memory()?),
             PythonResource::PathExtension(e) => PythonResource::PathExtension(e.to_memory()?),
         })
@@ -824,6 +815,12 @@ impl From<PythonPackageResource> for PythonResource {
 impl From<PythonPackageDistributionResource> for PythonResource {
     fn from(r: PythonPackageDistributionResource) -> Self {
         PythonResource::DistributionResource(r)
+    }
+}
+
+impl From<PythonExtensionModule> for PythonResource {
+    fn from(r: PythonExtensionModule) -> Self {
+        PythonResource::ExtensionModule(r)
     }
 }
 

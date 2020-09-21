@@ -385,11 +385,11 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
     fn read_package_root(
         &self,
-        logger: &slog::Logger,
+        _logger: &slog::Logger,
         path: &Path,
         packages: &[String],
     ) -> Result<Vec<PythonResource>> {
-        Ok(find_resources(&logger, &**self.distribution, path, None)?
+        Ok(find_resources(&**self.distribution, path, None)?
             .iter()
             .filter_map(|x| {
                 if x.is_in_packages(packages) {
@@ -401,8 +401,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             .collect::<Vec<_>>())
     }
 
-    fn read_virtualenv(&self, logger: &slog::Logger, path: &Path) -> Result<Vec<PythonResource>> {
-        read_virtualenv(logger, &**self.distribution, path)
+    fn read_virtualenv(&self, _logger: &slog::Logger, path: &Path) -> Result<Vec<PythonResource>> {
+        read_virtualenv(&**self.distribution, path)
     }
 
     fn setup_py_install(
