@@ -98,6 +98,19 @@ pub trait ResourceCollectionContext {
     /// Obtain the mutable `PythonResourceAddCollectionContext` associated with this instance, if available.
     fn add_collection_context_mut(&mut self) -> &mut Option<PythonResourceAddCollectionContext>;
 
+    fn as_python_resource(&self) -> PythonResource;
+
+    /// Apply a Python packaging policy to this instance.
+    ///
+    /// This has the effect of replacing the `PythonResourceAddCollectionContext`
+    /// instance with a fresh one derived from the policy. If no context
+    /// is currently defined on the instance, a new one will be created so
+    /// there is.
+    fn apply_packaging_policy(&mut self, policy: &PythonPackagingPolicy) {
+        let new_context = policy.derive_collection_add_context(&self.as_python_resource());
+        self.add_collection_context_mut().replace(new_context);
+    }
+
     /// Obtains the Starlark object attributes that are defined by the add collection context.
     fn add_collection_context_attrs(&self) -> Vec<&'static str> {
         vec!["location"]
@@ -188,6 +201,10 @@ impl ResourceCollectionContext for PythonSourceModuleValue {
 
     fn add_collection_context_mut(&mut self) -> &mut Option<PythonResourceAddCollectionContext> {
         &mut self.add_context
+    }
+
+    fn as_python_resource(&self) -> PythonResource<'_> {
+        PythonResource::from(&self.inner)
     }
 }
 
