@@ -286,6 +286,30 @@ impl TypedValue for PythonSourceModuleValue {
 #[derive(Debug, Clone)]
 pub struct PythonBytecodeModuleValue {
     pub inner: PythonModuleBytecodeFromSource,
+    pub add_context: Option<PythonResourceAddCollectionContext>,
+}
+
+impl PythonBytecodeModuleValue {
+    pub fn new(module: PythonModuleBytecodeFromSource) -> Self {
+        Self {
+            inner: module,
+            add_context: None,
+        }
+    }
+}
+
+impl ResourceCollectionContext for PythonBytecodeModuleValue {
+    fn add_collection_context(&self) -> &Option<PythonResourceAddCollectionContext> {
+        &self.add_context
+    }
+
+    fn add_collection_context_mut(&mut self) -> &mut Option<PythonResourceAddCollectionContext> {
+        &mut self.add_context
+    }
+
+    fn as_python_resource(&self) -> PythonResource<'_> {
+        PythonResource::from(&self.inner)
+    }
 }
 
 impl TypedValue for PythonBytecodeModuleValue {
@@ -319,11 +343,15 @@ impl TypedValue for PythonBytecodeModuleValue {
             }),
             "is_package" => Value::new(self.inner.is_package),
             attr => {
-                return Err(ValueError::OperationNotSupported {
-                    op: UnsupportedOperation::GetAttr(attr.to_string()),
-                    left: "PythonBytecodeModule".to_string(),
-                    right: None,
-                })
+                return if self.add_collection_context_attrs().contains(&attr) {
+                    self.get_attr_add_collection_context(attr)
+                } else {
+                    Err(ValueError::OperationNotSupported {
+                        op: UnsupportedOperation::GetAttr(attr.to_string()),
+                        left: "PythonBytecodeModule".to_string(),
+                        right: None,
+                    })
+                };
             }
         };
 
@@ -337,8 +365,20 @@ impl TypedValue for PythonBytecodeModuleValue {
             // "source" => true,
             "optimize_level" => true,
             "is_package" => true,
-            _ => false,
+            attr => self.add_collection_context_attrs().contains(&attr),
         })
+    }
+
+    fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
+        if self.add_collection_context_attrs().contains(&attribute) {
+            self.set_attr_add_collection_context(attribute, value)
+        } else {
+            Err(ValueError::OperationNotSupported {
+                op: UnsupportedOperation::SetAttr(attribute.to_string()),
+                left: Self::TYPE.to_owned(),
+                right: None,
+            })
+        }
     }
 }
 
@@ -507,9 +547,12 @@ pub fn python_resource_to_value(
             Value::new(m)
         }
 
-        PythonResource::ModuleBytecodeRequest(m) => Value::new(PythonBytecodeModuleValue {
-            inner: m.clone().into_owned(),
-        }),
+        PythonResource::ModuleBytecodeRequest(m) => {
+            let mut m = PythonBytecodeModuleValue::new(m.clone().into_owned());
+            m.apply_packaging_policy(policy);
+
+            Value::new(m)
+        }
 
         PythonResource::ModuleBytecode { .. } => {
             panic!("not yet implemented");
