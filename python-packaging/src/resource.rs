@@ -791,9 +791,21 @@ impl<'a> From<PythonModuleSource> for PythonResource<'a> {
     }
 }
 
+impl<'a> From<&'a PythonModuleSource> for PythonResource<'a> {
+    fn from(m: &'a PythonModuleSource) -> Self {
+        PythonResource::ModuleSource(Cow::Borrowed(m))
+    }
+}
+
 impl<'a> From<PythonModuleBytecodeFromSource> for PythonResource<'a> {
     fn from(m: PythonModuleBytecodeFromSource) -> Self {
         PythonResource::ModuleBytecodeRequest(Cow::Owned(m))
+    }
+}
+
+impl<'a> From<&'a PythonModuleBytecodeFromSource> for PythonResource<'a> {
+    fn from(m: &'a PythonModuleBytecodeFromSource) -> Self {
+        PythonResource::ModuleBytecodeRequest(Cow::Borrowed(m))
     }
 }
 
@@ -803,9 +815,21 @@ impl<'a> From<PythonModuleBytecode> for PythonResource<'a> {
     }
 }
 
+impl<'a> From<&'a PythonModuleBytecode> for PythonResource<'a> {
+    fn from(m: &'a PythonModuleBytecode) -> Self {
+        PythonResource::ModuleBytecode(Cow::Borrowed(m))
+    }
+}
+
 impl<'a> From<PythonPackageResource> for PythonResource<'a> {
     fn from(r: PythonPackageResource) -> Self {
         PythonResource::Resource(Cow::Owned(r))
+    }
+}
+
+impl<'a> From<&'a PythonPackageResource> for PythonResource<'a> {
+    fn from(r: &'a PythonPackageResource) -> Self {
+        PythonResource::Resource(Cow::Borrowed(r))
     }
 }
 
@@ -815,9 +839,21 @@ impl<'a> From<PythonPackageDistributionResource> for PythonResource<'a> {
     }
 }
 
+impl<'a> From<&'a PythonPackageDistributionResource> for PythonResource<'a> {
+    fn from(r: &'a PythonPackageDistributionResource) -> Self {
+        PythonResource::DistributionResource(Cow::Borrowed(r))
+    }
+}
+
 impl<'a> From<PythonExtensionModule> for PythonResource<'a> {
     fn from(r: PythonExtensionModule) -> Self {
         PythonResource::ExtensionModule(Cow::Owned(r))
+    }
+}
+
+impl<'a> From<&'a PythonExtensionModule> for PythonResource<'a> {
+    fn from(r: &'a PythonExtensionModule) -> Self {
+        PythonResource::ExtensionModule(Cow::Borrowed(r))
     }
 }
 
@@ -827,9 +863,21 @@ impl<'a> From<PythonEggFile> for PythonResource<'a> {
     }
 }
 
+impl<'a> From<&'a PythonEggFile> for PythonResource<'a> {
+    fn from(e: &'a PythonEggFile) -> Self {
+        PythonResource::EggFile(Cow::Borrowed(e))
+    }
+}
+
 impl<'a> From<PythonPathExtension> for PythonResource<'a> {
     fn from(e: PythonPathExtension) -> Self {
         PythonResource::PathExtension(Cow::Owned(e))
+    }
+}
+
+impl<'a> From<&'a PythonPathExtension> for PythonResource<'a> {
+    fn from(e: &'a PythonPathExtension) -> Self {
+        PythonResource::PathExtension(Cow::Borrowed(e))
     }
 }
 
