@@ -5,6 +5,7 @@
 use {
     super::env::{get_context, EnvironmentContext},
     super::python_executable::PythonExecutable,
+    super::python_packaging_policy::PythonPackagingPolicyValue,
     super::python_resource::{
         PythonExtensionModuleValue, PythonPackageResourceValue, PythonSourceModuleValue,
     },
@@ -226,6 +227,34 @@ impl PythonDistribution {
             distribution,
             &context.python_distributions_path,
         )))
+    }
+
+    /// PythonDistribution.make_python_packaging_policy()
+    fn make_python_packaging_policy_starlark(&mut self, type_values: &TypeValues) -> ValueResult {
+        let raw_context = get_context(type_values)?;
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        self.ensure_distribution_resolved(&context.logger)
+            .map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "resolve_distribution()".to_string(),
+                })
+            })?;
+        let dist = self.distribution.as_ref().unwrap().clone();
+
+        let policy = dist.create_packaging_policy().map_err(|e| {
+            ValueError::from(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "make_python_packaging_policy()".to_string(),
+            })
+        })?;
+
+        Ok(Value::new(PythonPackagingPolicyValue { inner: policy }))
     }
 
     /// PythonDistribution.to_python_executable(
@@ -492,6 +521,13 @@ starlark_module! { python_distribution_module =>
         PythonDistribution::from_args(&env, &sha256, &local_path, &url, &flavor)
     }
 
+    PythonDistribution.make_python_packaging_policy(env env, this) {
+        match this.clone().downcast_mut::<PythonDistribution>()? {
+            Some(mut dist) => dist.make_python_packaging_policy_starlark(&env),
+            None => Err(ValueError::IncorrectParameterType),
+        }
+    }
+
     #[allow(clippy::ptr_arg)]
     PythonDistribution.extension_modules(env env, this) {
         match this.clone().downcast_mut::<PythonDistribution>()? {
@@ -638,6 +674,12 @@ mod tests {
         let x = dist.downcast_ref::<PythonDistribution>().unwrap();
         assert_eq!(x.source, wanted);
         assert_eq!(x.flavor, DistributionFlavor::Standalone);
+    }
+
+    #[test]
+    fn test_make_python_packaging_policy() {
+        let policy = starlark_ok("default_python_distribution().make_python_packaging_policy()");
+        assert_eq!(policy.get_type(), "PythonPackagingPolicy");
     }
 
     #[test]

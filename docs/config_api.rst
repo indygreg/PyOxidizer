@@ -30,6 +30,7 @@ Starlark environment:
 * :ref:`config_python_interpreter_config`
 * :ref:`config_python_package_distribution_resource`
 * :ref:`config_python_package_resource`
+* :ref:`config_python_packaging_policy`
 * :ref:`config_python_source_module`
 * :ref:`config_register_target`
 * :ref:`config_resolve_target`
@@ -72,6 +73,9 @@ The following custom data types are defined in the Starlark environment:
 
 ``PythonPackageResource``
    Represents a non-module *resource* data file.
+
+``PythonPackagingPolicy``
+   Represents a policy controlling how Python resources are added to a binary.
 
 ``PythonSourceModule``
    Represents a ``.py`` file containing Python source code.
@@ -363,6 +367,16 @@ modules in this distribution.
 
 There may exist multiple extensions with the same name.
 
+.. _config_python_distribution_make_python_packaging_policy:
+
+``PythonDistribution.make_python_packaging_policy()``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Obtain a ``PythonPackagingPolicy`` derived from the distribution.
+
+The policy automatically uses settings globally appropriate for the
+distribution.
+
 .. _config_python_distribution_to_python_executable:
 
 ``PythonDistribution.to_python_executable(...)``
@@ -565,6 +579,16 @@ Each instance has the following attributes:
 
 ``name`` (string)
    Unique name of the module being provided.
+
+.. _config_python_packaging_policy:
+
+Python Packaging Policy
+=======================
+
+When building a Python binary, there are various settings that control which
+Python resources are added, where they are imported from, and other various
+settings. This collection of settings is referred to as a *Python Packaging
+Policy*. These settings are represented by the ``PythonPackagingPolicy`` type.
 
 .. _config_python_resources_policy:
 

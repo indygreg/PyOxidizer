@@ -179,6 +179,12 @@ New Features
   ``PythonExecutable.add_python_extension_module()``;
   ``PythonExecutable.add_python_resource()``;
   ``PythonExecutable.add_python_resources()``.
+* Starlark now has a ``PythonPackagingPolicy`` type to represent the
+  collection of settings influencing how Python resources are packaged
+  into binaries.
+* The ``PythonDistribution`` Starlark type has gained a
+  ``make_packaging_policy()`` method for obtaining the default
+  ``PythonPackagingPolicy`` for that distribution.
 
 Bug Fixes
 ^^^^^^^^^
