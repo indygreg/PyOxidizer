@@ -405,34 +405,38 @@ fn starlark_resolve_target(
 ) -> ValueResult {
     let target = required_str_arg("target", &target)?;
 
-    let raw_context = get_context(type_values)?;
-    let mut context = raw_context
-        .downcast_mut::<EnvironmentContext>()?
-        .ok_or(ValueError::IncorrectParameterType)?;
+    // We need the EnvironmentContext borrow to get dropped before calling
+    // into Starlark or we can get double borrows. Hence the block here.
+    let target_entry = {
+        let raw_context = get_context(type_values)?;
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
 
-    // If we have a resolved value for this target, return it.
-    if let Some(v) = if let Some(t) = context.targets.get(&target) {
-        if let Some(v) = &t.resolved_value {
-            Some(v.clone())
+        // If we have a resolved value for this target, return it.
+        if let Some(v) = if let Some(t) = context.targets.get(&target) {
+            if let Some(v) = &t.resolved_value {
+                Some(v.clone())
+            } else {
+                None
+            }
         } else {
             None
+        } {
+            return Ok(v);
         }
-    } else {
-        None
-    } {
-        return Ok(v);
-    }
 
-    warn!(&context.logger, "resolving target {}", target);
+        warn!(&context.logger, "resolving target {}", target);
 
-    let target_entry = match &context.targets.get(&target) {
-        Some(v) => Ok((*v).clone()),
-        None => Err(ValueError::from(RuntimeError {
-            code: "PYOXIDIZER_BUILD",
-            message: format!("target {} does not exist", target),
-            label: "resolve_target()".to_string(),
-        })),
-    }?;
+        match &context.targets.get(&target) {
+            Some(v) => Ok((*v).clone()),
+            None => Err(ValueError::from(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: format!("target {} does not exist", target),
+                label: "resolve_target()".to_string(),
+            })),
+        }?
+    };
 
     // Resolve target dependencies.
     let mut args = Vec::new();
@@ -458,6 +462,13 @@ fn starlark_resolve_target(
     // TODO consider replacing the target's callable with a new function that returns the
     // resolved value. This will ensure a target function is only ever called once.
 
+    // We can't obtain a mutable reference to the context above because it
+    // would create multiple borrows.
+    let raw_context = get_context(type_values)?;
+    let mut context = raw_context
+        .downcast_mut::<EnvironmentContext>()?
+        .ok_or(ValueError::IncorrectParameterType)?;
+
     if let Some(target_entry) = context.targets.get_mut(&target) {
         target_entry.resolved_value = Some(res.clone());
     }
@@ -479,12 +490,16 @@ fn starlark_resolve_targets(type_values: &TypeValues, call_stack: &mut CallStack
             })
         })?;
 
-    let raw_context = get_context(type_values)?;
-    let context = raw_context
-        .downcast_ref::<EnvironmentContext>()
-        .ok_or(ValueError::IncorrectParameterType)?;
+    // Limit lifetime of EnvironmentContext borrow to prevent double borrows
+    // due to Starlark calls below.
+    let targets = {
+        let raw_context = get_context(type_values)?;
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
 
-    let targets = context.targets_to_resolve();
+        context.targets_to_resolve()
+    };
 
     println!("resolving {} targets", targets.len());
     for target in targets {
