@@ -590,6 +590,61 @@ Python resources are added, where they are imported from, and other various
 settings. This collection of settings is referred to as a *Python Packaging
 Policy*. These settings are represented by the ``PythonPackagingPolicy`` type.
 
+Instances of ``PythonPackagingPolicy`` have the following read-write
+attributes:
+
+``extension_module_filter``
+   (str) The filter to apply to determine which extension modules to add.
+   The following values are recognized:
+
+   ``all``
+      Every named extension module will be included.
+
+   ``minimal``
+      Return only extension modules that are required to initialize a
+      Python interpreter. This is a very small set and various functionality
+      from the Python standard library will not work with this value.
+
+   ``no-libraries``
+      Return only extension modules that don't require any additional libraries.
+
+      Most common Python extension modules are included. Extension modules
+      like ``_ssl`` (links against OpenSSL) and ``zlib`` are not included.
+
+   ``no-gpl``
+      Return only extension modules that do not link against GPL licensed
+      libraries.
+
+      Not all Python distributions may annotate license info for all extensions
+      or the libraries they link against. If license info is missing, the
+      extension is not included because it *could* be GPL licensed. Similarly,
+      the mechanism for determining whether a license is GPL is based on an
+      explicit list of non-GPL licenses. This ensures new GPL licenses don't
+      slip through.
+
+   Default is ``all``.
+
+``include_distribution_sources``
+   (``bool``) Whether to add source code for Python modules in the Python
+   distribution.
+
+   Default is ``True``.
+
+``include_distribution_resources``
+   (``bool``) Whether to add Python package resources for Python packages
+   in the Python distribution.
+
+   Default is ``False``.
+
+``resources_policy``
+   (``string``) The policy to apply when adding resources to the produced
+   instance.
+
+   See :ref:`config_python_resources_policy` for documentation on allowed
+   values.
+
+   Default is ``in-memory-only``.
+
 .. _config_python_resources_policy:
 
 Python Resources Policy

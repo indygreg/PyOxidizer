@@ -100,8 +100,19 @@ impl TryFrom<&str> for ExtensionModuleFilter {
     }
 }
 
+impl AsRef<str> for ExtensionModuleFilter {
+    fn as_ref(&self) -> &str {
+        match self {
+            ExtensionModuleFilter::All => "all",
+            ExtensionModuleFilter::Minimal => "minimal",
+            ExtensionModuleFilter::NoGPL => "no-gpl",
+            ExtensionModuleFilter::NoLibraries => "no-libraries",
+        }
+    }
+}
+
 /// Defines how Python resources should be packaged.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PythonPackagingPolicy {
     /// Which extension modules should be included.
     extension_module_filter: ExtensionModuleFilter,
@@ -187,14 +198,29 @@ impl PythonPackagingPolicy {
         self.resources_policy = policy;
     }
 
+    /// Get setting for whether to include source modules from the distribution.
+    pub fn include_distribution_sources(&self) -> bool {
+        self.include_distribution_sources
+    }
+
     /// Set whether we should include a Python distribution's module source code.
     pub fn set_include_distribution_sources(&mut self, include: bool) {
         self.include_distribution_sources = include;
     }
 
+    /// Get setting for whether to include Python package resources from the distribution.
+    pub fn include_distribution_resources(&self) -> bool {
+        self.include_distribution_resources
+    }
+
     /// Set whether to include package resources from the Python distribution.
     pub fn set_include_distribution_resources(&mut self, include: bool) {
         self.include_distribution_resources = include;
+    }
+
+    /// Get setting for whether to include test files.
+    pub fn include_test(&self) -> bool {
+        self.include_test
     }
 
     /// Set whether we should include Python modules that define tests.
