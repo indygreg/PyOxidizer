@@ -653,6 +653,26 @@ attributes:
 
    Default is ``in-memory-only``.
 
+``PythonPackagingPolicy`` instances have the following read-only attributes:
+
+``preferred_extension_module_variants``
+   ``(dict<string, string>)`` Mapping of extension module name to variant name.
+
+   This mapping defines which preferred named variant of an extension module
+   to use. Some Python distributions offer multiple variants of the same
+   extension module. This mapping allows defining which variant of which
+   extension to use when choosing among them.
+
+   Keys set on this dict are not reflected in the underlying policy. To set
+   a key, call the ``set_preferred_extension_module_variant()`` method.
+
+``PythonPackagingPolicy`` instances have the following methods:
+
+``set_preferred_extension_module_variant(name, value)``
+   This method will set a preferred Python extension module variant to
+   use. See the documentation for ``preferred_extension_module_variants``
+   above for more.
+
 .. _config_python_resources_policy:
 
 Python Resources Policy

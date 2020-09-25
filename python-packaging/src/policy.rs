@@ -180,6 +180,14 @@ impl PythonPackagingPolicy {
         self.extension_module_filter = filter;
     }
 
+    /// Obtain the preferred extension module variants for this policy.
+    ///
+    /// The returned object is a mapping of extension name to its variant
+    /// name.
+    pub fn preferred_extension_module_variants(&self) -> &HashMap<String, String> {
+        &self.preferred_extension_module_variants
+    }
+
     /// Denote the preferred variant for an extension module.
     ///
     /// If set, the named variant will be chosen if it is present.

@@ -3,12 +3,18 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
+    super::util::required_str_arg,
     python_packaging::policy::{
         ExtensionModuleFilter, PythonPackagingPolicy, PythonResourcesPolicy,
     },
-    starlark::values::{
-        error::{RuntimeError, UnsupportedOperation, ValueError},
-        Mutable, TypedValue, Value, ValueResult,
+    starlark::{
+        starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
+        starlark_signature_extraction, starlark_signatures,
+        values::{
+            error::{RuntimeError, UnsupportedOperation, ValueError},
+            none::NoneType,
+            Mutable, TypedValue, Value, ValueResult,
+        },
     },
     std::convert::TryFrom,
 };
@@ -36,6 +42,9 @@ impl TypedValue for PythonPackagingPolicyValue {
                 Value::from(self.inner.include_distribution_resources())
             }
             "include_test" => Value::from(self.inner.include_test()),
+            "preferred_extension_module_variants" => {
+                Value::try_from(self.inner.preferred_extension_module_variants().clone())?
+            }
             "resources_policy" => Value::new::<String>(self.inner.resources_policy().into()),
             attr => {
                 return Err(ValueError::OperationNotSupported {
@@ -55,6 +64,7 @@ impl TypedValue for PythonPackagingPolicyValue {
             "include_distribution_sources" => true,
             "include_distribution_resources" => true,
             "include_test" => true,
+            "preferred_extension_module_variants" => true,
             "resources_policy" => true,
             _ => false,
         })
@@ -106,6 +116,32 @@ impl TypedValue for PythonPackagingPolicyValue {
         }
 
         Ok(())
+    }
+}
+
+// Starlark methods.
+impl PythonPackagingPolicyValue {
+    fn set_preferred_extension_module_variant_starlark(
+        &mut self,
+        name: &Value,
+        value: &Value,
+    ) -> ValueResult {
+        let name = required_str_arg("name", name)?;
+        let value = required_str_arg("value", value)?;
+
+        self.inner
+            .set_preferred_extension_module_variant(&name, &value);
+
+        Ok(Value::from(NoneType::None))
+    }
+}
+
+starlark_module! { python_packaging_policy_module =>
+    PythonPackagingPolicy.set_preferred_extension_module_variant(this, name, value) {
+        match this.clone().downcast_mut::<PythonPackagingPolicyValue>()? {
+            Some(mut policy) => policy.set_preferred_extension_module_variant_starlark(&name, &value),
+            None => Err(ValueError::IncorrectParameterType),
+        }
     }
 }
 
@@ -246,5 +282,49 @@ mod tests {
             &PythonResourcesPolicy::try_from(value.to_string().as_str()).unwrap(),
             policy.resources_policy()
         );
+    }
+
+    #[test]
+    fn test_preferred_extension_module_variants() {
+        let (mut env, type_values) = starlark_env();
+
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "dist = default_python_distribution()",
+        )
+        .unwrap();
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy = dist.make_python_packaging_policy()",
+        )
+        .unwrap();
+
+        let value = starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy.preferred_extension_module_variants",
+        )
+        .unwrap();
+        assert_eq!(value.get_type(), "dict");
+        assert_eq!(value.length().unwrap(), 0);
+
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy.set_preferred_extension_module_variant('foo', 'bar')",
+        )
+        .unwrap();
+
+        let value = starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy.preferred_extension_module_variants",
+        )
+        .unwrap();
+        assert_eq!(value.get_type(), "dict");
+        assert_eq!(value.length().unwrap(), 1);
+        assert_eq!(value.at(Value::from("foo")).unwrap(), Value::from("bar"));
     }
 }

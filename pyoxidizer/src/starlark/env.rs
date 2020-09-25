@@ -582,6 +582,7 @@ pub fn global_environment(
     super::python_distribution::python_distribution_module(&mut env, &mut type_values);
     super::python_executable::python_executable_env(&mut env, &mut type_values);
     super::python_interpreter_config::embedded_python_config_module(&mut env, &mut type_values);
+    super::python_packaging_policy::python_packaging_policy_module(&mut env, &mut type_values);
 
     env.set("CONTEXT", Value::new(context.clone()))?;
 
