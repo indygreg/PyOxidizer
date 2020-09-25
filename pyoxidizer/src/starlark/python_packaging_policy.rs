@@ -28,16 +28,14 @@ impl TypedValue for PythonPackagingPolicyValue {
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
         let v = match attribute {
-            "extension_module_filter" => {
-                Value::from(self.inner.get_extension_module_filter().as_ref())
-            }
+            "extension_module_filter" => Value::from(self.inner.extension_module_filter().as_ref()),
             "include_distribution_sources" => {
                 Value::from(self.inner.include_distribution_sources())
             }
             "include_distribution_resources" => {
                 Value::from(self.inner.include_distribution_resources())
             }
-            "resources_policy" => Value::new::<String>(self.inner.get_resources_policy().into()),
+            "resources_policy" => Value::new::<String>(self.inner.resources_policy().into()),
             attr => {
                 return Err(ValueError::OperationNotSupported {
                     op: UnsupportedOperation::GetAttr(attr.to_string()),
@@ -156,10 +154,7 @@ mod tests {
         let value =
             starlark_eval_in_env(&mut env, &type_values, "policy.extension_module_filter").unwrap();
         assert_eq!(value.get_type(), "string");
-        assert_eq!(
-            value.to_string(),
-            policy.get_extension_module_filter().as_ref()
-        );
+        assert_eq!(value.to_string(), policy.extension_module_filter().as_ref());
 
         let value = starlark_eval_in_env(
             &mut env,
@@ -224,7 +219,7 @@ mod tests {
         assert_eq!(value.get_type(), "string");
         assert_eq!(
             &PythonResourcesPolicy::try_from(value.to_string().as_str()).unwrap(),
-            policy.get_resources_policy()
+            policy.resources_policy()
         );
     }
 }

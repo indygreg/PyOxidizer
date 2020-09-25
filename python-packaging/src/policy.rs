@@ -171,7 +171,7 @@ impl Default for PythonPackagingPolicy {
 
 impl PythonPackagingPolicy {
     /// Obtain the active extension module filter for this instance.
-    pub fn get_extension_module_filter(&self) -> &ExtensionModuleFilter {
+    pub fn extension_module_filter(&self) -> &ExtensionModuleFilter {
         &self.extension_module_filter
     }
 
@@ -189,7 +189,7 @@ impl PythonPackagingPolicy {
     }
 
     /// Obtain the active resources policy for this instance.
-    pub fn get_resources_policy(&self) -> &PythonResourcesPolicy {
+    pub fn resources_policy(&self) -> &PythonResourcesPolicy {
         &self.resources_policy
     }
 

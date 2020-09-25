@@ -155,7 +155,7 @@ impl StandalonePythonExecutableBuilder {
             supports_in_memory_dynamically_linked_extension_loading,
             packaging_policy: packaging_policy.clone(),
             resources_collector: PythonResourceCollector::new(
-                packaging_policy.get_resources_policy(),
+                packaging_policy.resources_policy(),
                 &cache_tag,
             ),
             core_build_context: LibPythonBuildContext::default(),
@@ -431,7 +431,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<()> {
         let location = match location {
             Some(location) => location,
-            None => match self.packaging_policy.get_resources_policy().clone() {
+            None => match self.packaging_policy.resources_policy().clone() {
                 PythonResourcesPolicy::InMemoryOnly
                 | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
                     ConcreteResourceLocation::InMemory
@@ -453,7 +453,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<()> {
         let location = match location {
             Some(location) => location,
-            None => match self.packaging_policy.get_resources_policy().clone() {
+            None => match self.packaging_policy.resources_policy().clone() {
                 PythonResourcesPolicy::InMemoryOnly
                 | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
                     ConcreteResourceLocation::InMemory
@@ -475,7 +475,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<()> {
         let location = match location {
             Some(location) => location,
-            None => match self.packaging_policy.get_resources_policy().clone() {
+            None => match self.packaging_policy.resources_policy().clone() {
                 PythonResourcesPolicy::InMemoryOnly
                 | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
                     ConcreteResourceLocation::InMemory
@@ -497,7 +497,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<()> {
         let location = match location {
             Some(location) => location,
-            None => match self.packaging_policy.get_resources_policy().clone() {
+            None => match self.packaging_policy.resources_policy().clone() {
                 PythonResourcesPolicy::InMemoryOnly
                 | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
                     ConcreteResourceLocation::InMemory
@@ -541,7 +541,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         let can_link_standalone = extension_module.shared_library.is_some();
 
         // Whether the resources policy prefers in-memory loading.
-        let policy_want_memory = match self.packaging_policy.clone().get_resources_policy() {
+        let policy_want_memory = match self.packaging_policy.clone().resources_policy() {
             PythonResourcesPolicy::InMemoryOnly => true,
             PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => true,
             PythonResourcesPolicy::FilesystemRelativeOnly(_) => false,
@@ -550,7 +550,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         let relative_path = match location {
             Some(ConcreteResourceLocation::RelativePath(ref prefix)) => Some(prefix.clone()),
             Some(ConcreteResourceLocation::InMemory) => None,
-            None => match self.packaging_policy.clone().get_resources_policy() {
+            None => match self.packaging_policy.clone().resources_policy() {
                 PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => Some(prefix.clone()),
                 PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(prefix) => {
                     Some(prefix.clone())
@@ -568,14 +568,13 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         let require_in_memory = if let Some(ConcreteResourceLocation::InMemory) = location {
             true
         } else {
-            self.packaging_policy.clone().get_resources_policy()
-                == &PythonResourcesPolicy::InMemoryOnly
+            self.packaging_policy.clone().resources_policy() == &PythonResourcesPolicy::InMemoryOnly
         };
 
         let require_filesystem = if let Some(ConcreteResourceLocation::RelativePath(_)) = location {
             true
         } else {
-            match *self.packaging_policy.clone().get_resources_policy() {
+            match *self.packaging_policy.clone().resources_policy() {
                 PythonResourcesPolicy::FilesystemRelativeOnly(_) => true,
                 PythonResourcesPolicy::InMemoryOnly => false,
                 PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => false,
@@ -896,8 +895,8 @@ pub mod tests {
                 distribution_flavor: DistributionFlavor::Standalone,
                 app_name: "testapp".to_string(),
                 libpython_link_mode: BinaryLibpythonLinkMode::Default,
-                extension_module_filter: default_policy.get_extension_module_filter().clone(),
-                resources_policy: default_policy.get_resources_policy().clone(),
+                extension_module_filter: default_policy.extension_module_filter().clone(),
+                resources_policy: default_policy.resources_policy().clone(),
             }
         }
     }
