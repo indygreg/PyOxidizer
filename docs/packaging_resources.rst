@@ -116,24 +116,35 @@ Here are some examples of how policies are used:
    def make_exe():
        dist = default_python_distribution()
 
+       policy = dist.make_python_packaging_policy()
+       policy.resources_policy = "in-memory-only"
+
        # Only allow resources to be added to the in-memory location.
        exe = dist.to_python_executable(
-           name="myapp",
-           resources_policy="in-memory-only",
+           name = "myapp",
+           packaging_policy = policy,
        )
 
        # Only allow resources to be added to the filesystem-relative location under
        # a "lib" directory.
+
+       policy = dist.make_python_packaging_policy()
+       policy.resources_policy = "filesystem-relative-only:lib"
+
        exe = dist.to_python_executable(
-           name="myapp",
-           resources_policy="filesystem-relative-only:lib",
+           name = "myapp",
+           packaging_policy = policy,
        )
 
        # Try to add resources to in-memory first. If that fails, add them to a
        # "lib" directory relative to the built executable.
+
+       policy = dist.make_python_packaging_policy()
+       policy.resources_policy = "prefer-in-memory-fallback-filesystem-relative:lib"
+
        exe = dist.to_python_executable(
-           name="myapp",
-           resources_policy="prefer-in-memory-fallback-filesystem-relative:lib"
+           name = "myapp",
+           packaging_policy = policy,
        )
 
        return exe
@@ -151,9 +162,12 @@ For example, to add a ``PythonSourceModule`` to a ``PythonExecutable``:
    def make_exe():
        dist = default_python_distribution()
 
+       policy = dist.make_python_packaging_policy()
+       policy.resources_policy = "prefer-in-memory-fallback-filesystem-relative:lib"
+
        exe = dist.to_python_executable(
-           name="myapp",
-           resources_policy="prefer-in-memory-fallback-filesystem-relative:lib",
+           name = "myapp",
+           packaging_policy = policy,
        )
 
        for resource in exe.pip_install(["my-package"]):

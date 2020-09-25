@@ -9,9 +9,7 @@ use {
     super::python_resource::{
         PythonExtensionModuleValue, PythonPackageResourceValue, PythonSourceModuleValue,
     },
-    super::util::{
-        optional_dict_arg, optional_str_arg, optional_type_arg, required_bool_arg, required_str_arg,
-    },
+    super::util::{optional_str_arg, optional_type_arg, required_bool_arg, required_str_arg},
     crate::py_packaging::config::EmbeddedPythonConfig,
     crate::py_packaging::distribution::BinaryLibpythonLinkMode,
     crate::py_packaging::distribution::{
@@ -22,7 +20,6 @@ use {
     anyhow::{anyhow, Result},
     itertools::Itertools,
     python_packaging::bytecode::{CompileMode, PythonBytecodeCompiler},
-    python_packaging::policy::{ExtensionModuleFilter, PythonResourcesPolicy},
     python_packaging::resource::BytecodeOptimizationLevel,
     starlark::environment::TypeValues,
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
@@ -32,8 +29,6 @@ use {
         starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
         starlark_signature_extraction, starlark_signatures,
     },
-    std::collections::HashMap,
-    std::convert::TryFrom,
     std::path::{Path, PathBuf},
     std::sync::Arc,
 };
@@ -259,13 +254,8 @@ impl PythonDistribution {
 
     /// PythonDistribution.to_python_executable(
     ///     name,
-    ///     resources_policy="in-memory-only",
+    ///     packaging_policy=None,
     ///     config=None,
-    ///     extension_module_filter="all",
-    ///     preferred_extension_module_variants=None,
-    ///     include_sources=true,
-    ///     include_resources=true,
-    ///     include_test=false,
     /// )
     #[allow(
         clippy::ptr_arg,
@@ -276,69 +266,21 @@ impl PythonDistribution {
         &mut self,
         type_values: &TypeValues,
         name: &Value,
-        resources_policy: &Value,
+        packaging_policy: &Value,
         config: &Value,
-        extension_module_filter: &Value,
-        preferred_extension_module_variants: &Value,
-        include_sources: &Value,
-        include_resources: &Value,
-        include_test: &Value,
     ) -> ValueResult {
         let name = required_str_arg("name", &name)?;
-        let resources_policy = required_str_arg("resources_policy", &resources_policy)?;
-        optional_type_arg("config", "PythonInterpreterConfig", &config)?;
-        let extension_module_filter =
-            required_str_arg("extension_module_filter", &extension_module_filter)?;
-        optional_dict_arg(
-            "preferred_extension_module_variants",
-            "string",
-            "string",
-            &preferred_extension_module_variants,
+        optional_type_arg(
+            "packaging_policy",
+            "PythonPackagingPolicy",
+            &packaging_policy,
         )?;
-        let include_sources = required_bool_arg("include_sources", &include_sources)?;
-        let include_resources = required_bool_arg("include_resources", &include_resources)?;
-        let include_test = required_bool_arg("include_test", &include_test)?;
+        optional_type_arg("config", "PythonInterpreterConfig", &config)?;
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
-
-        let resources_policy =
-            PythonResourcesPolicy::try_from(resources_policy.as_str()).map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
-                    label: "resources_policy".to_string(),
-                })
-            })?;
-
-        let extension_module_filter =
-            ExtensionModuleFilter::try_from(extension_module_filter.as_str()).map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                    message: e,
-                    label: "invalid policy value".to_string(),
-                })
-            })?;
-
-        let preferred_extension_module_variants =
-            match preferred_extension_module_variants.get_type() {
-                "NoneType" => None,
-                "dict" => {
-                    let mut m = HashMap::new();
-
-                    for k in &preferred_extension_module_variants.iter()? {
-                        let v = preferred_extension_module_variants
-                            .at(k.clone())?
-                            .to_string();
-                        m.insert(k.to_string(), v);
-                    }
-
-                    Some(m)
-                }
-                _ => panic!("type should have been validated above"),
-            };
 
         self.ensure_distribution_resolved(&context.logger)
             .map_err(|e| {
@@ -350,24 +292,20 @@ impl PythonDistribution {
             })?;
         let dist = self.distribution.as_ref().unwrap().clone();
 
-        let mut policy = dist.create_packaging_policy().map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "resolve_distribution()".to_string(),
-            })
-        })?;
-        policy.set_extension_module_filter(extension_module_filter);
-        policy.set_resources_policy(resources_policy);
-        policy.set_include_distribution_sources(include_sources);
-        policy.set_include_distribution_resources(include_resources);
-        policy.set_include_test(include_test);
-
-        if let Some(variants) = preferred_extension_module_variants {
-            for (ext, variant) in variants {
-                policy.set_preferred_extension_module_variant(&ext, &variant);
+        let policy = if packaging_policy.get_type() == "NoneType" {
+            Ok(dist.create_packaging_policy().map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "resolve_distribution()".to_string(),
+                })
+            })?)
+        } else {
+            match packaging_policy.downcast_ref::<PythonPackagingPolicyValue>() {
+                Some(policy) => Ok(policy.inner.clone()),
+                None => Err(ValueError::IncorrectParameterType),
             }
-        }
+        }?;
 
         let config = if config.get_type() == "NoneType" {
             Ok(EmbeddedPythonConfig::default_starlark())
@@ -557,25 +495,15 @@ starlark_module! { python_distribution_module =>
         env env,
         this,
         name,
-        resources_policy="in-memory-only",
-        config=NoneType::None,
-        extension_module_filter="all",
-        preferred_extension_module_variants=NoneType::None,
-        include_sources=true,
-        include_resources=false,
-        include_test=false
+        packaging_policy=NoneType::None,
+        config=NoneType::None
     ) {
         match this.clone().downcast_mut::<PythonDistribution>()? {
             Some(mut dist) =>dist.to_python_executable_starlark(
                 &env,
                 &name,
-                &resources_policy,
+                &packaging_policy,
                 &config,
-                &extension_module_filter,
-                &preferred_extension_module_variants,
-                &include_sources,
-                &include_resources,
-                &include_test,
             ),
             None => Err(ValueError::IncorrectParameterType),
         }

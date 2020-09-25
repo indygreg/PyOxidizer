@@ -12,6 +12,64 @@ def make_dist():
 # This function creates a Python executable and installs it in a destination
 # directory.
 def make_exe(dist):
+    # This function creates a `PythonPackagingPolicy` instance, which
+    # influences how executables are built and how resources are added to
+    # the executable. You can customize the default behavior by assigning
+    # to attributes and calling functions.
+    policy = dist.make_python_packaging_policy()
+
+    # Package all available Python extensions in the distribution.
+    # policy.extension_module_filter = "all"
+
+    # Package the minimum set of Python extensions in the distribution needed
+    # to run a Python interpreter. Various functionality from the Python
+    # standard library won't work with this setting! But it can be used to
+    # reduce the size of generated executables by omitting unused extensions.
+    # policy.extension_module_filter = "minimal"
+
+    # Package Python extensions in the distribution not having additional
+    # library dependencies. This will exclude working support for SSL,
+    # compression formats, and other functionality.
+    # policy.extension_module_filter = "no-libraries"
+
+    # Package Python extensions in the distribution not having a dependency on
+    # GPL licensed software.
+    # policy.extension_module_filter = "no-gpl"
+
+    # Toggle whether Python module source code for modules in the Python
+    # distribution's standard library are included.
+    # policy.include_distribution_sources = False
+
+    # Toggle whether Python package resource files for the Python standard
+    # library are included.
+    # policy.include_distribution_resources = False
+
+    # Toggle whether files associated with tests are included.
+    # policy.include_test = False
+
+    # Python resources are to be loaded from memory only.
+    # policy.resources_policy = "in-memory-only"
+
+    # Python resources are to be loaded from the filesystem, from a
+    # directory relative to the produced binary. (The directory name
+    # follows the colon. Use "." to denote the same directory as the
+    # binary.) In order to import Python modules from the filesystem,
+    # you will need to define `sys_paths` on the `PythonInterpreterConfig`
+    # instance so the Python interpreter is configured to locate resources
+    # in said path.
+    # policy.resources_policy = "filesystem-relative-only:<prefix>"
+
+    # Python resources are loaded from memory if memory loading is supported
+    # and from the filesystem if they are not. This is a hybrid of
+    # `in-memory-only` and `filesystem-relative-only:<prefix>`. See the
+    # "Managing Resources and Their Locations" packaging documentation for
+    # more on behavior.
+    # policy.resources_policy = "prefer-in-memory-fallback-filesystem-relative:<prefix>"
+
+    # Define a preferred Python extension module variant in the Python distribution
+    # to use.
+    # policy.set_preferred_extension_module_variant("foo", "bar")
+
     # This variable defines the configuration of the
     # embedded Python interpreter.
     python_config = PythonInterpreterConfig(
@@ -63,53 +121,12 @@ def make_exe(dist):
     exe = dist.to_python_executable(
         name="{{program_name}}",
 
-        # Python resources are to be loaded from memory only.
-        resources_policy='in-memory-only',
+        # If no argument passed, the default `PythonPackagingPolicy` for the
+        # distribution is used.
+        packaging_policy=policy,
 
-        # Python resources are to be loaded from the filesystem, from a
-        # directory relative to the produced binary. (The directory name
-        # follows the colon. Use "." to denote the same directory as the
-        # binary.) In order to import Python modules from the filesystem,
-        # you will need to define `sys_paths` on the `PythonInterpreterConfig`
-        # instance so the Python interpreter is configured to locate resources
-        # in said path.
-        #resources_policy='filesystem-relative-only:<prefix>',
-
-        # Python resources are loaded from memory if memory loading is supported
-        # and from the filesystem if they are not. This is a hybrid of
-        # `in-memory-only` and `filesystem-relative-only:<prefix>`. See the
-        # "Managing Resources and Their Locations" packaging documentation for
-        # more on behavior.
-        #resources_policy='prefer-in-memory-fallback-filesystem-relative:<prefix>',
-
+        # If no argument passed, the default `PythonInterpreterConfig` is used.
         config=python_config,
-        # Embed all extension modules, making this a fully-featured Python.
-        extension_module_filter='all',
-
-        # Only package the minimal set of extension modules needed to initialize
-        # a Python interpreter. Many common packages in Python's standard
-        # library won't work with this setting.
-        #extension_module_filter='minimal',
-
-        # Only package extension modules that don't require linking against
-        # non-Python libraries. e.g. will exclude support for OpenSSL, SQLite3,
-        # other features that require external libraries.
-        #extension_module_filter='no-libraries',
-
-        # Only package extension modules that don't link against GPL licensed
-        # libraries.
-        #extension_module_filter='no-gpl',
-
-        # Include Python module sources. This isn't strictly required and it does
-        # make binary sizes larger. But having the sources can be useful for
-        # activities such as debugging.
-        include_sources=True,
-
-        # Whether to include non-module resource data/files.
-        include_resources=False,
-
-        # Do not include functionality for testing Python itself.
-        include_test=False,
     )
 
     # Invoke `pip install` with our Python distribution to install a single package.

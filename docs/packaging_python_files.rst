@@ -125,17 +125,20 @@ comments removed for brevity):
    def make_exe():
        dist = default_python_distribution()
 
+       policy = dist.make_python_packaging_policy()
+       policy.extension_module_filter = "all"
+       policy.include_distribution_sources = True
+       policy.include_distribution_resources = True
+       policy.include_test = False
+
        config = PythonInterpreterConfig(
            run_eval="from pyflakes.api import main; main()",
        )
 
        exe = dist.to_python_executable(
            name="pyflakes",
+           packaging_policy=policy,
            config=config,
-           extension_module_filter="all",
-           include_sources=True,
-           include_resources=False,
-           include_test=False,
        )
 
        exe.add_python_resources(exe.pip_install(["pyflakes==2.1.1"]))
@@ -175,17 +178,20 @@ following:
    def make_exe():
        dist = default_python_distribution()
 
+       policy = dist.make_python_packaging_policy()
+       policy.extension_module_filter = "all"
+       policy.include_distribution_sources = True
+       policy.include_distribution_resources = False
+       policy.include_test = False
+
        config = PythonInterpreterConfig(
            run_eval="from myapp import main; main()",
        )
 
        exe = dist.to_python_executable(
            name="myapp",
+           packaging_policy=policy,
            config=config,
-           extension_module_filter="all",
-           include_sources=True,
-           include_resources=False,
-           include_test=False,
        )
 
        exe.add_python_resources(exe.read_virtualenv("/path/to/virtualenv"))

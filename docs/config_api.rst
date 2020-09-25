@@ -392,73 +392,16 @@ The accepted arguments are:
    The name of the application being built. This will be used to construct the
    default filename of the executable.
 
-``resources_policy`` (``str``)
-   The policy to apply when adding resources to the produced instance.
+``packaging_policy`` (``PythonPackagingPolicy``)
+   The packaging policy to apply to the executable builder.
 
-   See :ref:`config_python_resources_policy` for documentation on allowed
-   values. The default value is ``in-memory-only``.
+   This influences how Python resources from the distribution are added. It
+   also influences future resource adds to the executable.
 
 ``config`` (``PythonInterpreterConfig``)
    The default configuration of the embedded Python interpreter.
 
    Default is what ``PythonInterpreterConfig()`` returns.
-
-``extension_module_filter`` (``str``)
-   The filter to apply to determine which extension modules to add.
-   The following values are recognized:
-
-   ``all``
-      Every named extension module will be included.
-
-   ``minimal``
-      Return only extension modules that are required to initialize a
-      Python interpreter. This is a very small set and various functionality
-      from the Python standard library will not work with this value.
-
-   ``no-libraries``
-      Return only extension modules that don't require any additional libraries.
-
-      Most common Python extension modules are included. Extension modules
-      like ``_ssl`` (links against OpenSSL) and ``zlib`` are not included.
-
-   ``no-gpl``
-      Return only extension modules that do not link against GPL licensed
-      libraries.
-
-      Not all Python distributions may annotate license info for all extensions
-      or the libraries they link against. If license info is missing, the
-      extension is not included because it *could* be GPL licensed. Similarly,
-      the mechanism for determining whether a license is GPL is based on an
-      explicit list of non-GPL licenses. This ensures new GPL licenses don't
-      slip through.
-
-   Default is ``all``.
-
-``preferred_extension_module_variants`` (``dict`` of ``string`` to ``string``)
-   Preferred extension module variants to use.
-
-   If multiple variants of an extension module meet the filter requirements, the
-   preferred variant from this mapping will be used. Otherwise the first variant
-   will be used.
-
-   Default is ``None``, which will use the first variant.
-
-``include_sources`` (``bool``)
-   Boolean to control whether sources of Python modules are added in addition
-   to bytecode.
-
-   Default is ``True``.
-
-``include_resources`` (``bool``)
-   Boolean to control whether non-module resource data from the distribution is
-   added.
-
-   Default is ``False``.
-
-``include_test`` (``bool``)
-   Boolean to control whether test-specific objects are included.
-
-   Default is ``False``.
 
 .. important::
 

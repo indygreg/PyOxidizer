@@ -78,14 +78,13 @@ In this example, we create an executable embedding Python:
    register_target("dist", make_dist)
    register_target("exe", make_exe, depends=["dist"], default=True)
 
-``PythonDistribution.to_python_executable()`` accepts a number of
-arguments used to customize how the executable should be built,
-what it should contain, and the run-time behavior of that executable.
-See the
-:ref:`API documentation <config_python_distribution_to_python_executable>`
-for the complete list. Some of this behavior is described in the sections
-below. Other examples are provided throughout the :ref:`packaging`
-documentation.
+``PythonDistribution.to_python_executable()`` accepts an optional
+``PythonPackagingPolicy`` instance that influences how the executable
+is built and what resources are added where. See the
+:ref:`type documentation <config_python_packaging_policy>` for the
+list of parameters that can be influenced. Some of this behavior
+is described in the sections below. Other examples are provided
+throughout the :ref:`packaging` documentation.
 
 .. _packaging_config_interpreter_config:
 

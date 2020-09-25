@@ -871,10 +871,24 @@ mod tests {
         )
         .unwrap();
 
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy = dist.make_python_packaging_policy()",
+        )
+        .unwrap();
+
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy.include_distribution_sources = False",
+        )
+        .unwrap();
+
         let exe = starlark_eval_in_env(
             &mut env,
             &type_values,
-            "dist.to_python_executable('testapp', include_sources=False)",
+            "dist.to_python_executable('testapp', packaging_policy=policy)",
         )
         .unwrap();
 
@@ -932,7 +946,21 @@ mod tests {
         starlark_eval_in_env(
             &mut env,
             &type_values,
-            "exe = dist.to_python_executable('testapp', include_sources=False)",
+            "policy = dist.make_python_packaging_policy()",
+        )
+        .unwrap();
+
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy.include_distribution_sources = False",
+        )
+        .unwrap();
+
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "exe = dist.to_python_executable('testapp', packaging_policy = policy)",
         )
         .unwrap();
 
@@ -983,7 +1011,19 @@ mod tests {
         starlark_eval_in_env(
             &mut env,
             &type_values,
-            "exe = dist.to_python_executable('testapp', include_sources=False)",
+            "policy = dist.make_python_packaging_policy()",
+        )
+        .unwrap();
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy.include_distribution_sources = False",
+        )
+        .unwrap();
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "exe = dist.to_python_executable('testapp', packaging_policy = policy)",
         )
         .unwrap();
 

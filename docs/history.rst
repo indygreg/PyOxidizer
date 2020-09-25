@@ -111,6 +111,14 @@ Backwards Compatibility Notes
   ``PythonExecutable.add_filesystem_relative_python_resource()``;
   ``PythonExecutable.add_in_memory_python_resources()``;
   ``PythonExecutable.add_filesystem_relative_python_resources()``.
+* The Starlark ``PythonDistribution.to_python_executable()`` method
+  no longer accepts the arguments ``extension_module_filter``,
+  ``preferred_extension_module_variants``, ``include_sources``,
+  ``include_resources``, and ``include_test``. All of this functionality
+  has been replaced by the optional ``packaging_policy``, which accepts
+  a ``PythonPackagingPolicy`` instance. The new type represents all
+  settings influencing executable building and control over resources
+  added to the executable.
 
 New Features
 ^^^^^^^^^^^^
