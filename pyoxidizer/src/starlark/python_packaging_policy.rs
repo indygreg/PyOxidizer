@@ -35,6 +35,7 @@ impl TypedValue for PythonPackagingPolicyValue {
             "include_distribution_resources" => {
                 Value::from(self.inner.include_distribution_resources())
             }
+            "include_test" => Value::from(self.inner.include_test()),
             "resources_policy" => Value::new::<String>(self.inner.resources_policy().into()),
             attr => {
                 return Err(ValueError::OperationNotSupported {
@@ -53,6 +54,7 @@ impl TypedValue for PythonPackagingPolicyValue {
             "extension_module_filter" => true,
             "include_distribution_sources" => true,
             "include_distribution_resources" => true,
+            "include_test" => true,
             "resources_policy" => true,
             _ => false,
         })
@@ -78,6 +80,9 @@ impl TypedValue for PythonPackagingPolicyValue {
             "include_distribution_resources" => {
                 self.inner
                     .set_include_distribution_resources(value.to_bool());
+            }
+            "include_test" => {
+                self.inner.set_include_test(value.to_bool());
             }
             "resources_policy" => {
                 let policy =
@@ -210,6 +215,26 @@ mod tests {
             &mut env,
             &type_values,
             "policy.include_distribution_resources = True; policy.include_distribution_resources",
+        )
+        .unwrap();
+        assert!(value.to_bool());
+
+        let value = starlark_eval_in_env(&mut env, &type_values, "policy.include_test").unwrap();
+        assert_eq!(value.get_type(), "bool");
+        assert_eq!(value.to_bool(), policy.include_test());
+
+        let value = starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy.include_test = False; policy.include_test",
+        )
+        .unwrap();
+        assert!(!value.to_bool());
+
+        let value = starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy.include_test = True; policy.include_test",
         )
         .unwrap();
         assert!(value.to_bool());

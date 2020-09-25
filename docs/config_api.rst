@@ -636,6 +636,14 @@ attributes:
 
    Default is ``False``.
 
+``include_test``
+   (``bool``) Whether to add Python resources related to tests.
+
+   Not all files associated with tests may be properly flagged as such.
+   This is a best effort setting.
+
+   Default is ``False``.
+
 ``resources_policy``
    (``string``) The policy to apply when adding resources to the produced
    instance.
