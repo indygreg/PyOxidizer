@@ -3,33 +3,40 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::binary::{
-        EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder, PythonLinkingInfo,
+    super::{
+        binary::{
+            EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder, PythonLinkingInfo,
+        },
+        config::{EmbeddedPythonConfig, RawAllocator},
+        distribution::{BinaryLibpythonLinkMode, PythonDistribution},
+        filtering::{filter_btreemap, resolve_resource_names_from_files},
+        libpython::{link_libpython, LibPythonBuildContext},
+        packaging_tool::{find_resources, pip_install, read_virtualenv, setup_py_install},
+        standalone_distribution::StandaloneDistribution,
     },
-    super::config::{EmbeddedPythonConfig, RawAllocator},
-    super::distribution::{BinaryLibpythonLinkMode, PythonDistribution},
-    super::filtering::{filter_btreemap, resolve_resource_names_from_files},
-    super::libpython::{link_libpython, LibPythonBuildContext},
-    super::packaging_tool::{find_resources, pip_install, read_virtualenv, setup_py_install},
-    super::standalone_distribution::StandaloneDistribution,
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::{anyhow, Result},
     lazy_static::lazy_static,
-    python_packaging::bytecode::BytecodeCompiler,
-    python_packaging::policy::{PythonPackagingPolicy, PythonResourcesPolicy},
-    python_packaging::resource::{
-        BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
-        PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
-        PythonPackageResource, PythonResource,
-    },
-    python_packaging::resource_collection::{
-        ConcreteResourceLocation, PrePackagedResource, PythonResourceCollector,
+    python_packaging::{
+        bytecode::BytecodeCompiler,
+        policy::{PythonPackagingPolicy, PythonResourcesPolicy},
+        resource::{
+            BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
+            PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
+            PythonPackageResource, PythonResource,
+        },
+        resource_collection::{
+            ConcreteResourceLocation, PrePackagedResource, PythonResourceAddCollectionContext,
+            PythonResourceCollector,
+        },
     },
     slog::warn,
-    std::collections::{BTreeMap, HashMap},
-    std::io::Write,
-    std::path::{Path, PathBuf},
-    std::sync::Arc,
+    std::{
+        collections::{BTreeMap, HashMap},
+        io::Write,
+        path::{Path, PathBuf},
+        sync::Arc,
+    },
     tempdir::TempDir,
 };
 
@@ -432,23 +439,15 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     fn add_python_module_source(
         &mut self,
         module: &PythonModuleSource,
-        location: Option<ConcreteResourceLocation>,
+        add_context: Option<PythonResourceAddCollectionContext>,
     ) -> Result<()> {
-        let location = match location {
-            Some(location) => location,
-            None => match self.packaging_policy.resources_policy().clone() {
-                PythonResourcesPolicy::InMemoryOnly
-                | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
-                    ConcreteResourceLocation::InMemory
-                }
-                PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
-                    ConcreteResourceLocation::RelativePath(prefix)
-                }
-            },
-        };
+        let add_context = add_context.unwrap_or_else(|| {
+            self.packaging_policy
+                .derive_collection_add_context(&module.into())
+        });
 
         self.resources_collector
-            .add_python_module_source(module, &location)
+            .add_python_module_source(module, &add_context.location)
     }
 
     fn add_python_module_bytecode_from_source(

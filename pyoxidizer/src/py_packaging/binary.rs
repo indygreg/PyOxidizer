@@ -7,20 +7,28 @@ Defining and manipulating binaries embedding Python.
 */
 
 use {
-    super::config::EmbeddedPythonConfig,
-    super::pyembed::{derive_python_config, write_default_python_config_rs},
+    super::{
+        config::EmbeddedPythonConfig,
+        pyembed::{derive_python_config, write_default_python_config_rs},
+    },
     crate::app_packaging::resource::FileManifest,
     anyhow::Result,
-    python_packaging::policy::PythonPackagingPolicy,
-    python_packaging::resource::{
-        PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
-        PythonPackageDistributionResource, PythonPackageResource, PythonResource,
+    python_packaging::{
+        policy::PythonPackagingPolicy,
+        resource::{
+            PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
+            PythonPackageDistributionResource, PythonPackageResource, PythonResource,
+        },
+        resource_collection::{
+            ConcreteResourceLocation, PrePackagedResource, PythonResourceAddCollectionContext,
+        },
     },
-    python_packaging::resource_collection::{ConcreteResourceLocation, PrePackagedResource},
-    std::collections::HashMap,
-    std::fs::File,
-    std::io::Write,
-    std::path::{Path, PathBuf},
+    std::{
+        collections::HashMap,
+        fs::File,
+        io::Write,
+        path::{Path, PathBuf},
+    },
 };
 
 /// How a binary should link against libpython.
@@ -112,7 +120,7 @@ pub trait PythonBinaryBuilder {
     fn add_python_module_source(
         &mut self,
         module: &PythonModuleSource,
-        location: Option<ConcreteResourceLocation>,
+        add_context: Option<PythonResourceAddCollectionContext>,
     ) -> Result<()>;
 
     /// Add a `PythonModuleBytecodeFromSource` to the resources collection.
