@@ -535,6 +535,18 @@ impl TypedValue for PythonExtensionModuleValue {
     }
 }
 
+/// Whether a `PythonResource` can be converted to a Starlark value.
+pub fn is_resource_starlark_compatible(resource: &PythonResource) -> bool {
+    match resource {
+        PythonResource::ModuleSource(_) => true,
+        PythonResource::ModuleBytecodeRequest(_) => true,
+        PythonResource::Resource(_) => true,
+        PythonResource::DistributionResource(_) => true,
+        PythonResource::ExtensionModule(_) => true,
+        _ => false,
+    }
+}
+
 pub fn python_resource_to_value(
     resource: &PythonResource,
     policy: &PythonPackagingPolicy,
@@ -554,10 +566,6 @@ pub fn python_resource_to_value(
             Value::new(m)
         }
 
-        PythonResource::ModuleBytecode { .. } => {
-            panic!("not yet implemented");
-        }
-
         PythonResource::Resource(data) => Value::new(PythonPackageResourceValue {
             inner: data.clone().into_owned(),
         }),
@@ -572,12 +580,8 @@ pub fn python_resource_to_value(
             inner: em.clone().into_owned(),
         }),
 
-        PythonResource::EggFile(_) => {
-            panic!("egg files not supported");
-        }
-
-        PythonResource::PathExtension(_) => {
-            panic!("path extensions not supported");
+        _ => {
+            panic!("incompatible PythonResource variant passed; did you forget to filter through is_resource_starlark_compatible()?")
         }
     }
 }

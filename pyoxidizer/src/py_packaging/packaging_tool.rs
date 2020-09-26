@@ -179,26 +179,7 @@ pub fn find_resources<'a>(
 
     for r in find_python_resources(&path, dist.cache_tag(), &dist.python_module_suffixes()?) {
         let r = r?;
-
-        match r {
-            PythonResource::ModuleSource(_) => {
-                res.push(r.to_memory()?);
-            }
-
-            PythonResource::Resource(_) => {
-                res.push(r.to_memory()?);
-            }
-
-            PythonResource::DistributionResource(_) => {
-                res.push(r.to_memory()?);
-            }
-
-            PythonResource::ExtensionModule(_) => {
-                res.push(r.to_memory()?);
-            }
-
-            _ => {}
-        }
+        res.push(r.to_memory()?);
     }
 
     // TODO should we merge into an existing `PythonExtensionModule` instance

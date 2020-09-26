@@ -7,9 +7,9 @@ use {
     super::env::{get_context, EnvironmentContext},
     super::python_embedded_resources::PythonEmbeddedResources,
     super::python_resource::{
-        python_resource_to_value, OptionalResourceLocation, PythonExtensionModuleValue,
-        PythonPackageDistributionResourceValue, PythonPackageResourceValue,
-        PythonSourceModuleValue,
+        is_resource_starlark_compatible, python_resource_to_value, OptionalResourceLocation,
+        PythonExtensionModuleValue, PythonPackageDistributionResourceValue,
+        PythonPackageResourceValue, PythonSourceModuleValue,
     },
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
     super::util::{
@@ -154,14 +154,13 @@ impl PythonExecutable {
                     message: format!("error running pip install: {}", e),
                     label: "pip_install()".to_string(),
                 })
-            })?;
+            })?
+            .iter()
+            .filter(|r| is_resource_starlark_compatible(r))
+            .map(|r| python_resource_to_value(r, self.exe.python_packaging_policy()))
+            .collect::<Vec<Value>>();
 
-        Ok(Value::from(
-            resources
-                .iter()
-                .map(|r| python_resource_to_value(r, self.exe.python_packaging_policy()))
-                .collect::<Vec<Value>>(),
-        ))
+        Ok(Value::from(resources))
     }
 
     /// PythonExecutable.read_package_root(path, packages)
@@ -194,14 +193,13 @@ impl PythonExecutable {
                     message: format!("could not find resources: {}", e),
                     label: "read_package_root()".to_string(),
                 })
-            })?;
+            })?
+            .iter()
+            .filter(|r| is_resource_starlark_compatible(r))
+            .map(|r| python_resource_to_value(r, self.exe.python_packaging_policy()))
+            .collect::<Vec<Value>>();
 
-        Ok(Value::from(
-            resources
-                .iter()
-                .map(|r| python_resource_to_value(r, self.exe.python_packaging_policy()))
-                .collect::<Vec<Value>>(),
-        ))
+        Ok(Value::from(resources))
     }
 
     /// PythonExecutable.read_virtualenv(path)
@@ -222,14 +220,13 @@ impl PythonExecutable {
                     message: format!("could not find resources: {}", e),
                     label: "read_virtualenv()".to_string(),
                 })
-            })?;
+            })?
+            .iter()
+            .filter(|r| is_resource_starlark_compatible(r))
+            .map(|r| python_resource_to_value(r, self.exe.python_packaging_policy()))
+            .collect::<Vec<Value>>();
 
-        Ok(Value::from(
-            resources
-                .iter()
-                .map(|r| python_resource_to_value(r, self.exe.python_packaging_policy()))
-                .collect::<Vec<Value>>(),
-        ))
+        Ok(Value::from(resources))
     }
 
     /// PythonExecutable.setup_py_install(package_path, extra_envs=None, extra_global_arguments=None)
@@ -295,7 +292,11 @@ impl PythonExecutable {
                     message: e.to_string(),
                     label: "setup_py_install()".to_string(),
                 })
-            })?;
+            })?
+            .iter()
+            .filter(|r| is_resource_starlark_compatible(r))
+            .map(|r| python_resource_to_value(r, self.exe.python_packaging_policy()))
+            .collect::<Vec<Value>>();
 
         warn!(
             &context.logger,
@@ -303,12 +304,7 @@ impl PythonExecutable {
             resources.len()
         );
 
-        Ok(Value::from(
-            resources
-                .iter()
-                .map(|r| python_resource_to_value(r, self.exe.python_packaging_policy()))
-                .collect::<Vec<Value>>(),
-        ))
+        Ok(Value::from(resources))
     }
 
     /// PythonExecutable.add_python_module_source(module, location=None)
