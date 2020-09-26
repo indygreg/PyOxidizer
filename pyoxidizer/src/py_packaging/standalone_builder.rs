@@ -21,9 +21,8 @@ use {
         bytecode::BytecodeCompiler,
         policy::{PythonPackagingPolicy, PythonResourcesPolicy},
         resource::{
-            DataLocation, PythonExtensionModule, PythonModuleBytecodeFromSource,
-            PythonModuleSource, PythonPackageDistributionResource, PythonPackageResource,
-            PythonResource,
+            DataLocation, PythonExtensionModule, PythonModuleSource,
+            PythonPackageDistributionResource, PythonPackageResource, PythonResource,
         },
         resource_collection::{
             ConcreteResourceLocation, PrePackagedResource, PythonResourceAddCollectionContext,
@@ -435,28 +434,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
 
         self.resources_collector
             .add_python_module_source_with_context(module, &add_context)
-    }
-
-    fn add_python_module_bytecode_from_source(
-        &mut self,
-        module: &PythonModuleBytecodeFromSource,
-        location: Option<ConcreteResourceLocation>,
-    ) -> Result<()> {
-        let location = match location {
-            Some(location) => location,
-            None => match self.packaging_policy.resources_policy().clone() {
-                PythonResourcesPolicy::InMemoryOnly
-                | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
-                    ConcreteResourceLocation::InMemory
-                }
-                PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
-                    ConcreteResourceLocation::RelativePath(prefix)
-                }
-            },
-        };
-
-        self.resources_collector
-            .add_python_module_bytecode_from_source(module, &location)
     }
 
     fn add_python_package_resource(

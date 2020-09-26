@@ -16,8 +16,8 @@ use {
     python_packaging::{
         policy::PythonPackagingPolicy,
         resource::{
-            PythonExtensionModule, PythonModuleBytecodeFromSource, PythonModuleSource,
-            PythonPackageDistributionResource, PythonPackageResource, PythonResource,
+            PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
+            PythonPackageResource, PythonResource,
         },
         resource_collection::{
             ConcreteResourceLocation, PrePackagedResource, PythonResourceAddCollectionContext,
@@ -121,17 +121,6 @@ pub trait PythonBinaryBuilder {
         &mut self,
         module: &PythonModuleSource,
         add_context: Option<PythonResourceAddCollectionContext>,
-    ) -> Result<()>;
-
-    /// Add a `PythonModuleBytecodeFromSource` to the resources collection.
-    ///
-    /// The location to load the resource from is optional. If specified, it will
-    /// be used. If not, an appropriate location based on the resources policy
-    /// will be chosen.
-    fn add_python_module_bytecode_from_source(
-        &mut self,
-        module: &PythonModuleBytecodeFromSource,
-        location: Option<ConcreteResourceLocation>,
     ) -> Result<()>;
 
     /// Add a `PythonPackageResource` to the resources collection.
