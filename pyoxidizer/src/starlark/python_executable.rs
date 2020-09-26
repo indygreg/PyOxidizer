@@ -19,9 +19,7 @@ use {
     crate::project_building::build_python_executable,
     crate::py_packaging::binary::PythonBinaryBuilder,
     anyhow::{Context, Result},
-    python_packaging::resource::{
-        BytecodeOptimizationLevel, DataLocation, PythonModuleBytecodeFromSource, PythonModuleSource,
-    },
+    python_packaging::resource::{DataLocation, PythonModuleSource},
     slog::{info, warn},
     starlark::environment::TypeValues,
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
@@ -355,67 +353,6 @@ impl PythonExecutable {
         Ok(Value::new(NoneType::None))
     }
 
-    /// PythonExecutable.add_python_module_bytecode(module, optimize_level=0, location=None)
-    pub fn starlark_add_python_module_bytecode(
-        &mut self,
-        type_values: &TypeValues,
-        module: &Value,
-        optimize_level: &Value,
-        location: &Value,
-    ) -> ValueResult {
-        required_type_arg("module", "PythonSourceModule", &module)?;
-        required_type_arg("optimize_level", "int", &optimize_level)?;
-        let location = OptionalResourceLocation::try_from(location)?;
-
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        let optimize_level = optimize_level.to_int().unwrap();
-
-        let optimize_level = match optimize_level {
-            0 => BytecodeOptimizationLevel::Zero,
-            1 => BytecodeOptimizationLevel::One,
-            2 => BytecodeOptimizationLevel::Two,
-            i => {
-                return Err(ValueError::from(RuntimeError {
-                    code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-                    message: format!("optimize_level must be 0, 1, or 2: got {}", i),
-                    label: "invalid optimize_level value".to_string(),
-                }));
-            }
-        };
-
-        let m = match module.downcast_ref::<PythonSourceModuleValue>() {
-            Some(m) => Ok(m.inner.clone()),
-            None => Err(ValueError::IncorrectParameterType),
-        }?;
-        info!(&context.logger, "adding bytecode module {}", m.name);
-        self.exe
-            .add_python_module_bytecode_from_source(
-                &PythonModuleBytecodeFromSource {
-                    name: m.name.clone(),
-                    source: m.source.clone(),
-                    optimize_level,
-                    is_package: m.is_package,
-                    cache_tag: m.cache_tag,
-                    is_stdlib: m.is_stdlib,
-                    is_test: m.is_test,
-                },
-                location.into(),
-            )
-            .map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
-                    label: "add_python_module_bytecode".to_string(),
-                })
-            })?;
-
-        Ok(Value::new(NoneType::None))
-    }
-
     /// PythonExecutable.add_python_package_resource(resource, location=None)
     pub fn starlark_add_python_package_resource(
         &mut self,
@@ -723,15 +660,6 @@ starlark_module! { python_executable_env =>
     PythonExecutable.add_python_module_source(env env, this, module, location=NoneType::None) {
         match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_python_module_source(&env, &module, &location),
-            None => Err(ValueError::IncorrectParameterType),
-        }
-    }
-
-    // TODO consider unifying with add_python_module_source() so there only needs to be
-    #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_python_module_bytecode(env env, this, module, optimize_level=0, location=NoneType::None) {
-        match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_python_module_bytecode(&env, &module, &optimize_level, &location),
             None => Err(ValueError::IncorrectParameterType),
         }
     }

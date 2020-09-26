@@ -1154,27 +1154,6 @@ possible values. If ``None`` (the default), the resource location will be
 chosen by the active resources policy.
 See :ref:`config_python_resources_policy`.
 
-.. _config_python_executable_add_python_module_bytecode:
-
-``PythonExecutable.add_python_module_bytecode(module, optimize_level=0, location=None)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method registers a Python module bytecode with a ``PythonExecutable``
-instance.
-
-The ``module`` argument must be a ``PythonSourceModule`` instance.
-
-The ``optimize_level`` argument must be the value ``0``, ``1``, or ``2``.
-
-If ``location`` is defined, it is a ``str`` defining the resource location
-from which to load the module. See :ref:`config_resource_locations` for
-possible values. If ``None`` (the default), the resource location will be
-chosen by the active resources policy.
-See :ref:`config_python_resources_policy`.
-
-If the same bytecode variant (module name + optimization level + location)
-is defined multiple times, the last write wins.
-
 .. _config_python_executable.add_python_package_resource:
 
 ``PythonExecutable.add_python_package_resource(resource, location=None)``

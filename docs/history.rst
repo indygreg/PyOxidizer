@@ -134,6 +134,9 @@ Backwards Compatibility Notes
   ``optimize_level``. Instead, set various ``add_*`` attributes on
   resource instances being passed into the methods to influence what
   happens when they are added.
+* The Starlark method ``PythonExecutable.add_python_module_bytecode()``
+  has been removed because equivalent functionality is now available by
+  setting ``add_*`` attributes on Python resources.
 
 New Features
 ^^^^^^^^^^^^
