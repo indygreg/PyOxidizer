@@ -34,6 +34,11 @@ impl TypedValue for PythonPackagingPolicyValue {
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
         let v = match attribute {
+            "bytecode_optimize_level_zero" => {
+                Value::from(self.inner.bytecode_optimize_level_zero())
+            }
+            "bytecode_optimize_level_one" => Value::from(self.inner.bytecode_optimize_level_one()),
+            "bytecode_optimize_level_two" => Value::from(self.inner.bytecode_optimize_level_two()),
             "extension_module_filter" => Value::from(self.inner.extension_module_filter().as_ref()),
             "include_distribution_sources" => {
                 Value::from(self.inner.include_distribution_sources())
@@ -63,6 +68,9 @@ impl TypedValue for PythonPackagingPolicyValue {
 
     fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
         Ok(match attribute {
+            "bytecode_optimize_level_zero" => true,
+            "bytecode_optimize_level_one" => true,
+            "bytecode_optimize_level_two" => true,
             "extension_module_filter" => true,
             "include_distribution_sources" => true,
             "include_distribution_resources" => true,
@@ -76,6 +84,15 @@ impl TypedValue for PythonPackagingPolicyValue {
 
     fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
         match attribute {
+            "bytecode_optimize_level_zero" => {
+                self.inner.set_bytecode_optimize_level_zero(value.to_bool());
+            }
+            "bytecode_optimize_level_one" => {
+                self.inner.set_bytecode_optimize_level_one(value.to_bool());
+            }
+            "bytecode_optimize_level_two" => {
+                self.inner.set_bytecode_optimize_level_two(value.to_bool());
+            }
             "extension_module_filter" => {
                 let filter =
                     ExtensionModuleFilter::try_from(value.to_string().as_str()).map_err(|e| {
@@ -315,6 +332,78 @@ mod tests {
             &PythonResourcesPolicy::try_from(value.to_string().as_str()).unwrap(),
             policy.resources_policy()
         );
+
+        // bytecode_optimize_level_zero
+        let value = starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy.bytecode_optimize_level_zero",
+        )
+        .unwrap();
+        assert_eq!(value.get_type(), "bool");
+        assert_eq!(value.to_bool(), policy.bytecode_optimize_level_zero());
+
+        let value = starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy.bytecode_optimize_level_zero = False; policy.bytecode_optimize_level_zero",
+        )
+        .unwrap();
+        assert!(!value.to_bool());
+
+        let value = starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy.bytecode_optimize_level_zero = True; policy.bytecode_optimize_level_zero",
+        )
+        .unwrap();
+        assert!(value.to_bool());
+
+        // bytecode_optimize_level_one
+        let value =
+            starlark_eval_in_env(&mut env, &type_values, "policy.bytecode_optimize_level_one")
+                .unwrap();
+        assert_eq!(value.get_type(), "bool");
+        assert_eq!(value.to_bool(), policy.bytecode_optimize_level_one());
+
+        let value = starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy.bytecode_optimize_level_one = False; policy.bytecode_optimize_level_one",
+        )
+        .unwrap();
+        assert!(!value.to_bool());
+
+        let value = starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy.bytecode_optimize_level_one = True; policy.bytecode_optimize_level_one",
+        )
+        .unwrap();
+        assert!(value.to_bool());
+
+        // bytecode_optimize_level_two
+        let value =
+            starlark_eval_in_env(&mut env, &type_values, "policy.bytecode_optimize_level_two")
+                .unwrap();
+        assert_eq!(value.get_type(), "bool");
+        assert_eq!(value.to_bool(), policy.bytecode_optimize_level_two());
+
+        let value = starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy.bytecode_optimize_level_two = False; policy.bytecode_optimize_level_two",
+        )
+        .unwrap();
+        assert!(!value.to_bool());
+
+        let value = starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy.bytecode_optimize_level_two = True; policy.bytecode_optimize_level_two",
+        )
+        .unwrap();
+        assert!(value.to_bool());
     }
 
     #[test]

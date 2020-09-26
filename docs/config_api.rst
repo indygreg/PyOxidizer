@@ -536,8 +536,18 @@ Policy*. These settings are represented by the ``PythonPackagingPolicy`` type.
 Instances of ``PythonPackagingPolicy`` have the following read-write
 attributes:
 
+``bytecode_optimize_level_zero``
+   (``bool``) Whether to add Python bytecode at optimization level 0 (the
+   default optimization level the Python interpreter compiles bytecode for).
+
+``bytecode_optimize_level_one``
+   (``bool``) Whether to add Python bytecode at optimization level 1.
+
+``bytecode_optimize_level_two``
+   (``bool``) Whether to add Python bytecode at optimization level 2.
+
 ``extension_module_filter``
-   (str) The filter to apply to determine which extension modules to add.
+   (``string``) The filter to apply to determine which extension modules to add.
    The following values are recognized:
 
    ``all``
