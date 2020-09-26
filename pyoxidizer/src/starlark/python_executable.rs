@@ -586,12 +586,6 @@ impl PythonExecutable {
 
                 Ok(Value::new(NoneType::None))
             }
-            "PythonBytecodeModule" => self.starlark_add_python_module_bytecode(
-                type_values,
-                resource,
-                optimize_level,
-                &Value::from(&location),
-            ),
             "PythonPackageResource" => self.starlark_add_python_package_resource(
                 type_values,
                 resource,

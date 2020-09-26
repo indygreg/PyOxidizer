@@ -28,9 +28,6 @@ The following Starlark types represent individual resources:
 :ref:`PythonSourceModule <config_python_source_module>`
    Source code for a Python module. Roughly equivalent to a ``.py`` file.
 
-:ref:`PythonBytecodeModule <config_python_bytecode_module>`
-   Bytecode for a Python module. Roughly equivalent to a ``.pyc`` file.
-
 :ref:`PythonExtensionModule <config_python_extension_module>`
    A Python module defined through compiled, machine-native code. On Linux,
    these are typically encountered as ``.so`` files. On Windows, ``.pyd`` files.

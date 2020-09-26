@@ -22,7 +22,6 @@ Starlark environment:
 * :ref:`config_default_python_distribution`
 * :ref:`config_file_manifest`
 * :ref:`config_glob`
-* :ref:`config_python_bytecode_module`
 * :ref:`config_python_distribution`
 * :ref:`config_python_embedded_resources`
 * :ref:`config_python_executable`
@@ -47,9 +46,6 @@ The following custom data types are defined in the Starlark environment:
 
 ``FileManifest``
    Represents a mapping of filenames to file content.
-
-``PythonBytecodeModule``
-   Represents a ``.pyc`` file containing Python bytecode for a given module.
 
 ``PythonDistribution``
    Represents an implementation of Python.
@@ -422,7 +418,7 @@ module source and bytecode as well as resource/data files. We refer to all
 of these as *Python Resources*.
 
 Configuration files represent *Python Resources* via the types
-:ref:`config_python_source_module`, :ref:`config_python_bytecode_module`,
+:ref:`config_python_source_module`,
 :ref:`config_python_package_resource`,
 :ref:`config_python_package_distribution_resource`,
 and :ref:`config_python_extension_module`.
@@ -452,25 +448,6 @@ Each instance has the following attributes:
 
 Instances can be constructed via
 :ref:`config_python_executable_make_python_source_module`.
-
-.. _config_python_bytecode_module:
-
-``PythonBytecodeModule``
-------------------------
-
-This type represents a Python module defined through bytecode.
-
-Each instance has the following attributes:
-
-``name`` (string)
-   Fully qualified name of the module. e.g. ``foo.bar``
-
-``optimize_level`` (int)
-   Optimization level of compiled bytecode. Must be the value
-   ``0``, ``1``, or ``2``.
-
-``is_package`` (bool)
-   Whether the module is also a Python package (or sub-package).
 
 .. _config_python_package_resource:
 
@@ -1036,7 +1013,7 @@ the executable being built.
 
 Returns a ``list`` of objects representing Python resources installed as
 part of the operation. The types of these objects can be ``PythonSourceModule``,
-``PythonBytecodeModule``, ``PythonPackageResource``, etc.
+``PythonPackageResource``, etc.
 
 The returned resources are typically added to a ``FileManifest`` or
 ``PythonExecutable`` to make them available to a packaged
@@ -1071,8 +1048,8 @@ This rule has the following arguments:
    Filesystem walking will find files in a directory ``<path>/<value>/`` or in
    a file ``<path>/<value>.py``.
 
-Returns a ``list`` of objects representing Python resources found in the virtualenv.
-The types of these objects can be ``PythonSourceModule``, ``PythonBytecodeModule``,
+Returns a ``list`` of objects representing Python resources found in the
+virtualenv. The types of these objects can be ``PythonSourceModule``,
 ``PythonPackageResource``, etc.
 
 The returned resources are typically added to a ``FileManifest`` or
@@ -1102,7 +1079,7 @@ It accepts the following arguments:
    (on UNIX) or ``Lib/site-packages`` directory (on Windows) under this path.
 
 Returns a ``list`` of objects representing Python resources found in the virtualenv.
-The types of these objects can be ``PythonSourceModule``, ``PythonBytecodeModule``,
+The types of these objects can be ``PythonSourceModule``,
 ``PythonPackageResource``, etc.
 
 The returned resources are typically added to a ``FileManifest`` or
@@ -1132,8 +1109,7 @@ It accepts the following arguments:
 
 Returns a ``list`` of objects representing Python resources installed
 as part of the operation. The types of these objects can be
-``PythonSourceModule``, ``PythonBytecodeModule``, ``PythonPackageResource``,
-etc.
+``PythonSourceModule``, ``PythonPackageResource``, etc.
 
 The returned resources are typically added to a ``FileManifest`` or
 ``PythonExecutable`` to make them available to a packaged application.
@@ -1238,8 +1214,8 @@ added one is used.
 This method registers a Python resource of various types with the instance.
 
 It accepts a ``resource`` argument which can be a ``PythonSourceModule``,
-``PythonBytecodeModule``, ``PythonPackageResource``, or ``PythonExtensionModule``
-and registers that resource with this instance.
+``PythonPackageResource``, or ``PythonExtensionModule`` and registers that
+resource with this instance.
 
 The following arguments are accepted:
 
@@ -1349,7 +1325,7 @@ replaced by what is in the other manifest.
 
 This method adds a Python resource to a ``FileManifest`` instance in
 a specified directory prefix. A *Python resource* here can be a
-``PythonSourceModule``, ``PythonBytecodeModule``, ``PythonPackageResource``,
+``PythonSourceModule``, ``PythonPackageResource``,
 ``PythonPackageDistributionResource``,  or ``PythonExtensionModule``.
 
 This method can be used to place the Python resources derived from another

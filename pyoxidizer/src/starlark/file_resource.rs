@@ -6,9 +6,8 @@ use {
     super::env::{get_context, EnvironmentContext},
     super::python_executable::PythonExecutable,
     super::python_resource::{
-        PythonBytecodeModuleValue, PythonExtensionModuleValue,
-        PythonPackageDistributionResourceValue, PythonPackageResourceValue,
-        PythonSourceModuleValue,
+        PythonExtensionModuleValue, PythonPackageDistributionResourceValue,
+        PythonPackageResourceValue, PythonSourceModuleValue,
     },
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
     super::util::{
@@ -22,7 +21,6 @@ use {
     crate::py_packaging::resource::AddToFileManifest,
     anyhow::Result,
     itertools::Itertools,
-    python_packaging::resource::PythonModuleBytecodeFromSource,
     slog::warn,
     starlark::environment::TypeValues,
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
@@ -58,11 +56,6 @@ pub struct FileManifestValue {
 }
 
 impl FileManifestValue {
-    // TODO implement.
-    fn add_bytecode_module(&self, _prefix: &str, _module: &PythonModuleBytecodeFromSource) {
-        println!("support for adding bytecode modules not yet implemented");
-    }
-
     #[allow(clippy::too_many_arguments)]
     fn add_python_executable(
         &mut self,
@@ -200,19 +193,6 @@ impl FileManifestValue {
                             label: e.to_string(),
                         })
                     })
-            }
-            "PythonBytecodeModule" => {
-                let m = match resource.downcast_ref::<PythonBytecodeModuleValue>() {
-                    Some(m) => Ok(m.inner.clone()),
-                    None => Err(ValueError::IncorrectParameterType),
-                }?;
-                warn!(
-                    &context.logger,
-                    "adding bytecode module {} to {}", m.name, prefix
-                );
-                self.add_bytecode_module(&prefix, &m);
-
-                Ok(())
             }
             "PythonPackageResource" => {
                 let m = match resource.downcast_ref::<PythonPackageResourceValue>() {

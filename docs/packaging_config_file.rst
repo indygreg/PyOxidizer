@@ -151,7 +151,6 @@ will want to add their own Python packages/code.
 The Starlark environment defines various types for representing Python
 package resources. These include
 :ref:`PythonSourceModule <config_python_source_module>`,
-:ref:`PythonBytecodeModule <config_python_bytecode_module>`,
 :ref:`PythonExtensionModule <config_python_extension_module>`,
 :ref:`PythonPackageDistributionResource <config_python_package_distribution_resource>`,
 and more.

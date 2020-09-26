@@ -119,6 +119,15 @@ Backwards Compatibility Notes
   a ``PythonPackagingPolicy`` instance. The new type represents all
   settings influencing executable building and control over resources
   added to the executable.
+* The Starlark type ``PythonBytecodeModule`` has been removed. Previously,
+  this type was internally a request to convert Python module source into
+  bytecode. The introduction of ``PythonPackagingPolicy`` and underlying
+  abilities to derive bytecode from a Python source module instance when
+  adding that resource type rendered this Starlark type redundant. There
+  may still be the need for a Starlark type to represent actual Python
+  module bytecode (not derived from source code at build/packaging time).
+  However, this functionality did not exist before so the loss of this
+  type is not a loss in functionality.
 
 New Features
 ^^^^^^^^^^^^

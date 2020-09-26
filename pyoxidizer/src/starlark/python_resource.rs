@@ -5,9 +5,8 @@
 use {
     python_packaging::policy::PythonPackagingPolicy,
     python_packaging::resource::{
-        BytecodeOptimizationLevel, PythonExtensionModule, PythonModuleBytecodeFromSource,
-        PythonModuleSource, PythonPackageDistributionResource, PythonPackageResource,
-        PythonResource,
+        PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
+        PythonPackageResource, PythonResource,
     },
     python_packaging::resource_collection::{
         ConcreteResourceLocation, PythonResourceAddCollectionContext,
@@ -282,106 +281,6 @@ impl TypedValue for PythonSourceModuleValue {
     }
 }
 
-/// Starlark `Value` wrapper for `PythonModuleBytecodeFromSource`.
-#[derive(Debug, Clone)]
-pub struct PythonBytecodeModuleValue {
-    pub inner: PythonModuleBytecodeFromSource,
-    pub add_context: Option<PythonResourceAddCollectionContext>,
-}
-
-impl PythonBytecodeModuleValue {
-    pub fn new(module: PythonModuleBytecodeFromSource) -> Self {
-        Self {
-            inner: module,
-            add_context: None,
-        }
-    }
-}
-
-impl ResourceCollectionContext for PythonBytecodeModuleValue {
-    fn add_collection_context(&self) -> &Option<PythonResourceAddCollectionContext> {
-        &self.add_context
-    }
-
-    fn add_collection_context_mut(&mut self) -> &mut Option<PythonResourceAddCollectionContext> {
-        &mut self.add_context
-    }
-
-    fn as_python_resource(&self) -> PythonResource<'_> {
-        PythonResource::from(&self.inner)
-    }
-}
-
-impl TypedValue for PythonBytecodeModuleValue {
-    type Holder = Immutable<PythonBytecodeModuleValue>;
-    const TYPE: &'static str = "PythonBytecodeModule";
-
-    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
-        Box::new(std::iter::empty())
-    }
-
-    fn to_str(&self) -> String {
-        format!(
-            "PythonBytecodeModule<name={}; level={:?}>",
-            self.inner.name, self.inner.optimize_level
-        )
-    }
-
-    fn to_repr(&self) -> String {
-        self.to_str()
-    }
-
-    fn get_attr(&self, attribute: &str) -> ValueResult {
-        let v = match attribute {
-            "name" => Value::new(self.inner.name.clone()),
-            // TODO expose source
-            // "source" => Value::new(self.module.source),
-            "optimize_level" => Value::new(match self.inner.optimize_level {
-                BytecodeOptimizationLevel::Zero => 0,
-                BytecodeOptimizationLevel::One => 1,
-                BytecodeOptimizationLevel::Two => 2,
-            }),
-            "is_package" => Value::new(self.inner.is_package),
-            attr => {
-                return if self.add_collection_context_attrs().contains(&attr) {
-                    self.get_attr_add_collection_context(attr)
-                } else {
-                    Err(ValueError::OperationNotSupported {
-                        op: UnsupportedOperation::GetAttr(attr.to_string()),
-                        left: "PythonBytecodeModule".to_string(),
-                        right: None,
-                    })
-                };
-            }
-        };
-
-        Ok(v)
-    }
-
-    fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
-        Ok(match attribute {
-            "name" => true,
-            // TODO expose source
-            // "source" => true,
-            "optimize_level" => true,
-            "is_package" => true,
-            attr => self.add_collection_context_attrs().contains(&attr),
-        })
-    }
-
-    fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
-        if self.add_collection_context_attrs().contains(&attribute) {
-            self.set_attr_add_collection_context(attribute, value)
-        } else {
-            Err(ValueError::OperationNotSupported {
-                op: UnsupportedOperation::SetAttr(attribute.to_string()),
-                left: Self::TYPE.to_owned(),
-                right: None,
-            })
-        }
-    }
-}
-
 /// Starlark `Value` wrapper for `PythonPackageResource`.
 #[derive(Debug, Clone)]
 pub struct PythonPackageResourceValue {
@@ -587,7 +486,6 @@ impl TypedValue for PythonExtensionModuleValue {
 pub fn is_resource_starlark_compatible(resource: &PythonResource) -> bool {
     match resource {
         PythonResource::ModuleSource(_) => true,
-        PythonResource::ModuleBytecodeRequest(_) => true,
         PythonResource::Resource(_) => true,
         PythonResource::DistributionResource(_) => true,
         PythonResource::ExtensionModule(_) => true,
@@ -602,13 +500,6 @@ pub fn python_resource_to_value(
     match resource {
         PythonResource::ModuleSource(sm) => {
             let mut m = PythonSourceModuleValue::new(sm.clone().into_owned());
-            m.apply_packaging_policy(policy);
-
-            Value::new(m)
-        }
-
-        PythonResource::ModuleBytecodeRequest(m) => {
-            let mut m = PythonBytecodeModuleValue::new(m.clone().into_owned());
             m.apply_packaging_policy(policy);
 
             Value::new(m)
