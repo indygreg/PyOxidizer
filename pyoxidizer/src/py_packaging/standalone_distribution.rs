@@ -1165,26 +1165,6 @@ impl PythonDistribution for StandaloneDistribution {
             LibpythonLinkMode::Dynamic => Ok(HashMap::new()),
         }
     }
-
-    fn filter_compatible_python_resources<'a>(
-        &self,
-        resources: &[PythonResource<'a>],
-    ) -> Result<Vec<PythonResource<'a>>> {
-        Ok(resources
-            .iter()
-            .filter(|resource| match resource {
-                PythonResource::ExtensionModule { .. } => true,
-                PythonResource::ModuleSource { .. } => true,
-                PythonResource::ModuleBytecodeRequest { .. } => true,
-                PythonResource::ModuleBytecode { .. } => true,
-                PythonResource::PackageResource { .. } => true,
-                PythonResource::PackageDistributionResource(_) => true,
-                PythonResource::EggFile(_) => false,
-                PythonResource::PathExtension(_) => false,
-            })
-            .cloned()
-            .collect())
-    }
 }
 
 #[cfg(test)]

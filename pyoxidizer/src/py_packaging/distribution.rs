@@ -17,7 +17,7 @@ use {
     python_packaging::module_util::PythonModuleSuffixes,
     python_packaging::policy::PythonPackagingPolicy,
     python_packaging::resource::{
-        PythonExtensionModule, PythonModuleSource, PythonPackageResource, PythonResource,
+        PythonExtensionModule, PythonModuleSource, PythonPackageResource,
     },
     sha2::{Digest, Sha256},
     slog::warn,
@@ -164,17 +164,6 @@ pub trait PythonDistribution {
         dest_dir: &Path,
         extra_python_paths: &[&Path],
     ) -> Result<HashMap<String, String>>;
-
-    /// Filter a collection of `PythonResource` through this distribution.
-    ///
-    /// We will throw away resources that aren't compatible with us.
-    ///
-    /// TODO reconsider the existence of this API given changes to
-    /// extension module representation.
-    fn filter_compatible_python_resources<'a>(
-        &self,
-        resources: &[PythonResource<'a>],
-    ) -> Result<Vec<PythonResource<'a>>>;
 }
 
 /// Multiple threads or processes could race to extract the archive.

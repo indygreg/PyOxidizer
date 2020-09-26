@@ -190,7 +190,7 @@ pub fn find_resources<'a>(
         }
     }
 
-    dist.filter_compatible_python_resources(&res)
+    Ok(res)
 }
 
 /// Run `pip install` and return found resources.
