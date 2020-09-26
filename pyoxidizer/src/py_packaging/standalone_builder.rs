@@ -472,23 +472,15 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     fn add_python_package_resource(
         &mut self,
         resource: &PythonPackageResource,
-        location: Option<ConcreteResourceLocation>,
+        add_context: Option<PythonResourceAddCollectionContext>,
     ) -> Result<()> {
-        let location = match location {
-            Some(location) => location,
-            None => match self.packaging_policy.resources_policy().clone() {
-                PythonResourcesPolicy::InMemoryOnly
-                | PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => {
-                    ConcreteResourceLocation::InMemory
-                }
-                PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => {
-                    ConcreteResourceLocation::RelativePath(prefix)
-                }
-            },
-        };
+        let add_context = add_context.unwrap_or_else(|| {
+            self.packaging_policy
+                .derive_collection_add_context(&resource.into())
+        });
 
         self.resources_collector
-            .add_python_package_resource(resource, &location)
+            .add_python_package_resource_with_context(resource, &add_context)
     }
 
     fn add_python_package_distribution_resource(
