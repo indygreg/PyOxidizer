@@ -431,16 +431,20 @@ impl PythonExecutable {
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let r = match resource.downcast_ref::<PythonPackageResourceValue>() {
-            Some(r) => Ok(r.inner.clone()),
-            None => Err(ValueError::IncorrectParameterType),
-        }?;
+        // Type validated above.
+        let resource_value = resource
+            .downcast_ref::<PythonPackageResourceValue>()
+            .unwrap();
 
-        // TODO store context on Starlark value.
-        let mut add_context = self
-            .exe
-            .python_packaging_policy()
-            .derive_collection_add_context(&(&r).into());
+        let r = resource_value.inner.clone();
+
+        let mut add_context = match resource_value.add_context.as_ref() {
+            Some(add_context) => add_context.clone(),
+            None => self
+                .exe
+                .python_packaging_policy()
+                .derive_collection_add_context(&(&r).into()),
+        };
 
         if let Some(location) = location.into() {
             add_context.location = location;

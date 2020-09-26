@@ -579,15 +579,13 @@ mod tests {
             manifest: FileManifest::default(),
         });
 
-        let v = Value::new(PythonPackageResourceValue {
-            inner: PythonPackageResource {
-                leaf_package: "foo.bar".to_string(),
-                relative_name: "resource.txt".to_string(),
-                data: DataLocation::Memory(vec![]),
-                is_stdlib: false,
-                is_test: false,
-            },
-        });
+        let v = Value::new(PythonPackageResourceValue::new(PythonPackageResource {
+            leaf_package: "foo.bar".to_string(),
+            relative_name: "resource.txt".to_string(),
+            data: DataLocation::Memory(vec![]),
+            is_stdlib: false,
+            is_test: false,
+        }));
 
         let (mut env, type_values) = starlark_env();
         env.set("m", m).unwrap();

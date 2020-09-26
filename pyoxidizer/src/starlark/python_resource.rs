@@ -386,6 +386,30 @@ impl TypedValue for PythonBytecodeModuleValue {
 #[derive(Debug, Clone)]
 pub struct PythonPackageResourceValue {
     pub inner: PythonPackageResource,
+    pub add_context: Option<PythonResourceAddCollectionContext>,
+}
+
+impl PythonPackageResourceValue {
+    pub fn new(resource: PythonPackageResource) -> Self {
+        Self {
+            inner: resource,
+            add_context: None,
+        }
+    }
+}
+
+impl ResourceCollectionContext for PythonPackageResourceValue {
+    fn add_collection_context(&self) -> &Option<PythonResourceAddCollectionContext> {
+        &self.add_context
+    }
+
+    fn add_collection_context_mut(&mut self) -> &mut Option<PythonResourceAddCollectionContext> {
+        &mut self.add_context
+    }
+
+    fn as_python_resource(&self) -> PythonResource<'_> {
+        PythonResource::from(&self.inner)
+    }
 }
 
 impl TypedValue for PythonPackageResourceValue {
@@ -566,9 +590,12 @@ pub fn python_resource_to_value(
             Value::new(m)
         }
 
-        PythonResource::Resource(data) => Value::new(PythonPackageResourceValue {
-            inner: data.clone().into_owned(),
-        }),
+        PythonResource::Resource(data) => {
+            let mut r = PythonPackageResourceValue::new(data.clone().into_owned());
+            r.apply_packaging_policy(policy);
+
+            Value::new(r)
+        }
 
         PythonResource::DistributionResource(resource) => {
             Value::new(PythonPackageDistributionResourceValue {

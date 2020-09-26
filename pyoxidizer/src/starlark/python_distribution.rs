@@ -406,9 +406,7 @@ impl PythonDistribution {
                     if !include_test && is_stdlib_test_package(&data.leaf_package) {
                         None
                     } else {
-                        Some(Value::new(PythonPackageResourceValue {
-                            inner: data.clone(),
-                        }))
+                        Some(Value::new(PythonPackageResourceValue::new(data.clone())))
                     }
                 })
                 .collect_vec(),
