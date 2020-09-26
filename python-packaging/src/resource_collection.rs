@@ -990,8 +990,8 @@ impl PythonResourceCollector {
         Ok(())
     }
 
-    /// Add a package distribution resource to a given location.
-    pub fn add_package_distribution_resource(
+    /// Add a Python package distribution resource to a given location.
+    pub fn add_python_package_distribution_resource(
         &mut self,
         resource: &PythonPackageDistributionResource,
         location: &ConcreteResourceLocation,
@@ -3114,7 +3114,7 @@ mod tests {
     fn test_add_in_memory_package_distribution_resource() -> Result<()> {
         let mut r =
             PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
-        r.add_package_distribution_resource(
+        r.add_python_package_distribution_resource(
             &PythonPackageDistributionResource {
                 location: PythonPackageDistributionResourceFlavor::DistInfo,
                 package: "mypackage".to_string(),
@@ -3171,7 +3171,7 @@ mod tests {
             &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
             DEFAULT_CACHE_TAG,
         );
-        r.add_package_distribution_resource(
+        r.add_python_package_distribution_resource(
             &PythonPackageDistributionResource {
                 location: PythonPackageDistributionResourceFlavor::DistInfo,
                 package: "mypackage".to_string(),

@@ -510,7 +510,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         };
 
         self.resources_collector
-            .add_package_distribution_resource(resource, &location)
+            .add_python_package_distribution_resource(resource, &location)
     }
 
     #[allow(clippy::if_same_then_else)]

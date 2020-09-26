@@ -128,7 +128,7 @@ impl OxidizedResourceCollector {
             "PythonPackageDistributionResource" => {
                 let resource = resource.cast_into::<PythonPackageDistributionResource>(py)?;
                 collector
-                    .add_package_distribution_resource(
+                    .add_python_package_distribution_resource(
                         &resource.get_resource(py),
                         &ConcreteResourceLocation::InMemory,
                     )
@@ -201,7 +201,7 @@ impl OxidizedResourceCollector {
             "PythonPackageDistributionResource" => {
                 let resource = resource.cast_into::<PythonPackageDistributionResource>(py)?;
                 collector
-                    .add_package_distribution_resource(
+                    .add_python_package_distribution_resource(
                         &resource.get_resource(py),
                         &ConcreteResourceLocation::RelativePath(prefix),
                     )
