@@ -832,6 +832,58 @@ impl PythonResourceCollector {
         Ok(())
     }
 
+    /// Add Python module bytecode using an add context.
+    ///
+    /// This takes the context's fields into consideration when adding
+    /// the resource. If `include` is false, this is a no-op. The context
+    /// must also have an `optimize_level_*` field set corresponding with
+    /// the optimization level of the passed bytecode, or this is a no-op.
+    pub fn add_python_module_bytecode_with_context(
+        &mut self,
+        module: &PythonModuleBytecode,
+        add_context: &PythonResourceAddCollectionContext,
+    ) -> Result<()> {
+        if !add_context.include {
+            return Ok(());
+        }
+
+        match module.optimize_level {
+            BytecodeOptimizationLevel::Zero => {
+                if add_context.optimize_level_zero {
+                    self.add_python_resource_with_locations(
+                        &module.into(),
+                        &add_context.location,
+                        &add_context.location_fallback,
+                    )
+                } else {
+                    Ok(())
+                }
+            }
+            BytecodeOptimizationLevel::One => {
+                if add_context.optimize_level_one {
+                    self.add_python_resource_with_locations(
+                        &module.into(),
+                        &add_context.location,
+                        &add_context.location_fallback,
+                    )
+                } else {
+                    Ok(())
+                }
+            }
+            BytecodeOptimizationLevel::Two => {
+                if add_context.optimize_level_two {
+                    self.add_python_resource_with_locations(
+                        &module.into(),
+                        &add_context.location,
+                        &add_context.location_fallback,
+                    )
+                } else {
+                    Ok(())
+                }
+            }
+        }
+    }
+
     /// Add Python module bytecode derived from source code to the collection.
     pub fn add_python_module_bytecode_from_source(
         &mut self,
@@ -1222,6 +1274,18 @@ impl PythonResourceCollector {
                     Err(err) => {
                         if let Some(location) = fallback_location {
                             self.add_python_module_bytecode_from_source(module, location)
+                        } else {
+                            Err(err)
+                        }
+                    }
+                }
+            }
+            PythonResource::ModuleBytecode(module) => {
+                match self.add_python_module_bytecode(module, location) {
+                    Ok(()) => Ok(()),
+                    Err(err) => {
+                        if let Some(location) = fallback_location {
+                            self.add_python_module_bytecode(module, location)
                         } else {
                             Err(err)
                         }
@@ -2854,6 +2918,121 @@ mod tests {
             })
         );
         assert!(resources.extra_files.is_empty());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_module_bytecode_with_context() -> Result<()> {
+        let mut r =
+            PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
+
+        let mut module = PythonModuleBytecode::new(
+            "foo",
+            BytecodeOptimizationLevel::Zero,
+            false,
+            DEFAULT_CACHE_TAG,
+            &vec![42],
+        );
+
+        let mut add_context = PythonResourceAddCollectionContext {
+            include: false,
+            location: ConcreteResourceLocation::InMemory,
+            location_fallback: None,
+            store_source: false,
+            optimize_level_zero: false,
+            optimize_level_one: false,
+            optimize_level_two: false,
+        };
+
+        // include=false is a noop.
+        assert!(r.resources.is_empty());
+        r.add_python_module_bytecode_with_context(&module, &add_context)?;
+        assert!(r.resources.is_empty());
+
+        add_context.include = true;
+
+        // optimize_level_zero=false is a noop.
+        r.add_python_module_bytecode_with_context(&module, &add_context)?;
+        assert!(r.resources.is_empty());
+
+        // optimize_level_zero=true adds the resource.
+        add_context.optimize_level_zero = true;
+        r.add_python_module_bytecode_with_context(&module, &add_context)?;
+        assert_eq!(
+            r.resources.get(&module.name),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: module.name.clone(),
+                is_package: module.is_package,
+                in_memory_bytecode: Some(PythonModuleBytecodeProvider::Provided(
+                    DataLocation::Memory(module.resolve_bytecode()?)
+                )),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        r.resources.clear();
+        add_context.optimize_level_zero = false;
+
+        // Other optimize_level_* fields are noop.
+        add_context.optimize_level_one = true;
+        add_context.optimize_level_two = true;
+        r.add_python_module_bytecode_with_context(&module, &add_context)?;
+        assert!(r.resources.is_empty());
+
+        // No-ops for other module optimization levels.
+        add_context.optimize_level_zero = false;
+        add_context.optimize_level_one = false;
+        add_context.optimize_level_two = false;
+
+        module.optimize_level = BytecodeOptimizationLevel::One;
+        r.add_python_module_bytecode_with_context(&module, &add_context)?;
+        assert!(r.resources.is_empty());
+        module.optimize_level = BytecodeOptimizationLevel::Two;
+        r.add_python_module_bytecode_with_context(&module, &add_context)?;
+        assert!(r.resources.is_empty());
+
+        // optimize_level_one=true adds the resource.
+        module.optimize_level = BytecodeOptimizationLevel::One;
+        add_context.optimize_level_zero = true;
+        add_context.optimize_level_one = true;
+        add_context.optimize_level_two = true;
+        r.add_python_module_bytecode_with_context(&module, &add_context)?;
+
+        assert_eq!(
+            r.resources.get(&module.name),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: module.name.clone(),
+                is_package: module.is_package,
+                in_memory_bytecode_opt1: Some(PythonModuleBytecodeProvider::Provided(
+                    DataLocation::Memory(module.resolve_bytecode()?)
+                )),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        r.resources.clear();
+
+        // optimize_level_two=true adds the resource.
+        module.optimize_level = BytecodeOptimizationLevel::Two;
+        r.add_python_module_bytecode_with_context(&module, &add_context)?;
+
+        assert_eq!(
+            r.resources.get(&module.name),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: module.name.clone(),
+                is_package: module.is_package,
+                in_memory_bytecode_opt2: Some(PythonModuleBytecodeProvider::Provided(
+                    DataLocation::Memory(module.resolve_bytecode()?)
+                )),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        r.resources.clear();
 
         Ok(())
     }
