@@ -462,6 +462,30 @@ impl TypedValue for PythonPackageResourceValue {
 #[derive(Debug, Clone)]
 pub struct PythonPackageDistributionResourceValue {
     pub inner: PythonPackageDistributionResource,
+    pub add_context: Option<PythonResourceAddCollectionContext>,
+}
+
+impl PythonPackageDistributionResourceValue {
+    pub fn new(resource: PythonPackageDistributionResource) -> Self {
+        Self {
+            inner: resource,
+            add_context: None,
+        }
+    }
+}
+
+impl ResourceCollectionContext for PythonPackageDistributionResourceValue {
+    fn add_collection_context(&self) -> &Option<PythonResourceAddCollectionContext> {
+        &self.add_context
+    }
+
+    fn add_collection_context_mut(&mut self) -> &mut Option<PythonResourceAddCollectionContext> {
+        &mut self.add_context
+    }
+
+    fn as_python_resource(&self) -> PythonResource<'_> {
+        PythonResource::from(&self.inner)
+    }
 }
 
 impl TypedValue for PythonPackageDistributionResourceValue {
@@ -598,9 +622,10 @@ pub fn python_resource_to_value(
         }
 
         PythonResource::DistributionResource(resource) => {
-            Value::new(PythonPackageDistributionResourceValue {
-                inner: resource.clone().into_owned(),
-            })
+            let mut r = PythonPackageDistributionResourceValue::new(resource.clone().into_owned());
+            r.apply_packaging_policy(policy);
+
+            Value::new(r)
         }
 
         PythonResource::ExtensionModule(em) => Value::new(PythonExtensionModuleValue {
