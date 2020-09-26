@@ -1248,21 +1248,6 @@ The following arguments are accepted:
 ``resource``
    The resource to add to the embedded Python environment.
 
-``add_source_module`` (bool)
-   When the resource is a ``PythonSourceModule``, this flag determines
-   whether to add the source for that resource.
-
-   Default is ``True``.
-
-``add_bytecode_module`` (bool)
-   When the resource is a ``PythonSourceModule``, this flag determines
-   whether to add the bytecode for that module source.
-
-   Default is ``True``.
-
-``optimize_level`` (int)
-   Bytecode optimization level when compiling bytecode.
-
 ``location`` (str)
     Defines the resource location from which to load the resource.
     See :ref:`config_resource_locations` for possible values. See

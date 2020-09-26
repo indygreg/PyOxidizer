@@ -128,6 +128,12 @@ Backwards Compatibility Notes
   module bytecode (not derived from source code at build/packaging time).
   However, this functionality did not exist before so the loss of this
   type is not a loss in functionality.
+* The Starlark methods ``PythonExecutable.add_python_resource()`` and
+  ``PythonExecutable.add_python_resources()`` no longer accept the
+  arguments ``add_source_module``, ``add_bytecode_module``, and
+  ``optimize_level``. Instead, set various ``add_*`` attributes on
+  resource instances being passed into the methods to influence what
+  happens when they are added.
 
 New Features
 ^^^^^^^^^^^^

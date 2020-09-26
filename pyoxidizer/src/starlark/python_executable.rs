@@ -551,38 +551,22 @@ impl PythonExecutable {
         Ok(Value::new(NoneType::None))
     }
 
-    /// PythonExecutable.add_python_resource(resource, add_source_module=true, add_bytecode_module=true, optimize_level=0, location=None)
+    /// PythonExecutable.add_python_resource(resource, location=None)
     pub fn starlark_add_python_resource(
         &mut self,
         type_values: &TypeValues,
         resource: &Value,
-        add_source_module: &Value,
-        add_bytecode_module: &Value,
-        optimize_level: &Value,
         location: &Value,
     ) -> ValueResult {
-        let add_source_module = required_bool_arg("add_source_module", &add_source_module)?;
-        let add_bytecode_module = required_bool_arg("add_bytecode_module", &add_bytecode_module)?;
-        required_type_arg("optimize_level", "int", &optimize_level)?;
         let location = OptionalResourceLocation::try_from(location)?;
 
         match resource.get_type() {
             "PythonSourceModule" => {
-                if add_source_module {
-                    self.starlark_add_python_module_source(
-                        type_values,
-                        resource,
-                        &Value::from(&location),
-                    )?;
-                }
-                if add_bytecode_module {
-                    self.starlark_add_python_module_bytecode(
-                        type_values,
-                        resource,
-                        optimize_level,
-                        &Value::from(&location),
-                    )?;
-                }
+                self.starlark_add_python_module_source(
+                    type_values,
+                    resource,
+                    &Value::from(&location),
+                )?;
 
                 Ok(Value::new(NoneType::None))
             }
@@ -610,29 +594,15 @@ impl PythonExecutable {
         }
     }
 
-    /// PythonExecutable.add_python_resources(resources, add_source_module=true, add_bytecode_module=true, optimize_level=0, location=None)
+    /// PythonExecutable.add_python_resources(resources, location=None)
     pub fn starlark_add_python_resources(
         &mut self,
         type_values: &TypeValues,
         resources: &Value,
-        add_source_module: &Value,
-        add_bytecode_module: &Value,
-        optimize_level: &Value,
         location: &Value,
     ) -> ValueResult {
-        required_bool_arg("add_source_module", &add_source_module)?;
-        required_bool_arg("add_bytecode_module", &add_bytecode_module)?;
-        required_type_arg("optimize_level", "int", &optimize_level)?;
-
         for resource in &resources.iter()? {
-            self.starlark_add_python_resource(
-                type_values,
-                &resource,
-                add_source_module,
-                add_bytecode_module,
-                optimize_level,
-                &location,
-            )?;
+            self.starlark_add_python_resource(type_values, &resource, &location)?;
         }
 
         Ok(Value::new(NoneType::None))
@@ -795,18 +765,12 @@ starlark_module! { python_executable_env =>
         env env,
         this,
         resource,
-        add_source_module=true,
-        add_bytecode_module=true,
-        optimize_level=0,
         location=NoneType::None
     ) {
         match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_python_resource(
                 &env,
                 &resource,
-                &add_source_module,
-                &add_bytecode_module,
-                &optimize_level,
                 &location,
             ),
             None => Err(ValueError::IncorrectParameterType),
@@ -818,18 +782,12 @@ starlark_module! { python_executable_env =>
         env env,
         this,
         resources,
-        add_source_module=true,
-        add_bytecode_module=true,
-        optimize_level=0,
         location=NoneType::None
     ) {
         match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_python_resources(
                 &env,
                 &resources,
-                &add_source_module,
-                &add_bytecode_module,
-                &optimize_level,
                 &location,
             ),
             None => Err(ValueError::IncorrectParameterType),
