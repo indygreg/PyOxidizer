@@ -262,10 +262,7 @@ impl StandalonePythonExecutableBuilder {
 
         for resource in self.distribution.resource_datas()? {
             let add_context = policy.derive_collection_add_context(&(&resource).into());
-
-            if add_context.include {
-                self.add_python_package_resource(&resource, None)?;
-            }
+            self.add_python_package_resource(&resource, Some(add_context))?;
         }
 
         Ok(())
