@@ -443,7 +443,7 @@ Each instance has the following attributes:
 ``is_package`` (bool)
    Whether this module is also a Python package (or sub-package).
 
-``location`` (string) (mutable)
+``add_location`` (string) (mutable)
    Location from which this resource should be loaded when added to a binary.
 
 Instances can be constructed via
@@ -1240,7 +1240,7 @@ The following arguments are accepted:
 ``location`` (str)
     Defines the resource location from which to load the resource.
     See :ref:`config_resource_locations` for possible values. See
-    als /:ref:`config_python_resources_policy`.
+    also :ref:`config_python_resources_policy`.
 
 This method is a glorified proxy to the various ``add_python_*`` methods.
 Unlike those methods, this one accepts all types that are known Python

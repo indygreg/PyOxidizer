@@ -112,7 +112,7 @@ pub trait ResourceCollectionContext {
 
     /// Obtains the Starlark object attributes that are defined by the add collection context.
     fn add_collection_context_attrs(&self) -> Vec<&'static str> {
-        vec!["location"]
+        vec!["add_location"]
     }
 
     /// Obtain the attribute value for an add collection context.
@@ -123,7 +123,7 @@ pub trait ResourceCollectionContext {
         let context = self.add_collection_context();
 
         match attribute {
-            "location" => Ok(match context {
+            "add_location" => Ok(match context {
                 Some(context) => Value::new::<String>(context.location.clone().into()),
                 None => Value::from(NoneType::None),
             }),
@@ -144,7 +144,7 @@ pub trait ResourceCollectionContext {
         match context {
             Some(context) => {
                 match attribute {
-                    "location" => {
+                    "add_location" => {
                         let location: OptionalResourceLocation = (&value).try_into()?;
 
                         match location.inner {
@@ -555,16 +555,17 @@ mod tests {
         assert!(m.has_attr("is_package").unwrap());
         assert_eq!(m.get_attr("is_package").unwrap().to_bool(), false);
 
-        assert!(m.has_attr("location").unwrap());
-        assert_eq!(m.get_attr("location").unwrap().to_str(), "in-memory");
+        assert!(m.has_attr("add_location").unwrap());
+        assert_eq!(m.get_attr("add_location").unwrap().to_str(), "in-memory");
 
-        m.set_attr("location", Value::from("in-memory")).unwrap();
-        assert_eq!(m.get_attr("location").unwrap().to_str(), "in-memory");
+        m.set_attr("add_location", Value::from("in-memory"))
+            .unwrap();
+        assert_eq!(m.get_attr("add_location").unwrap().to_str(), "in-memory");
 
-        m.set_attr("location", Value::from("filesystem-relative:lib"))
+        m.set_attr("add_location", Value::from("filesystem-relative:lib"))
             .unwrap();
         assert_eq!(
-            m.get_attr("location").unwrap().to_str(),
+            m.get_attr("add_location").unwrap().to_str(),
             "filesystem-relative:lib"
         );
     }
