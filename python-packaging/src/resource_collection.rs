@@ -1228,7 +1228,7 @@ impl PythonResourceCollector {
                     }
                 }
             }
-            PythonResource::Resource(resource) => {
+            PythonResource::PackageResource(resource) => {
                 match self.add_python_package_resource(resource, location) {
                     Ok(()) => Ok(()),
                     Err(err) => {
@@ -1240,7 +1240,7 @@ impl PythonResourceCollector {
                     }
                 }
             }
-            PythonResource::DistributionResource(resource) => {
+            PythonResource::PackageDistributionResource(resource) => {
                 match self.add_python_package_distribution_resource(resource, location) {
                     Ok(()) => Ok(()),
                     Err(err) => {

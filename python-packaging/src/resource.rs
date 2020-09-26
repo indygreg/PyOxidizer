@@ -715,9 +715,9 @@ pub enum PythonResource<'a> {
     /// A module defined by existing bytecode.
     ModuleBytecode(Cow<'a, PythonModuleBytecode>),
     /// A non-module resource file.
-    Resource(Cow<'a, PythonPackageResource>),
+    PackageResource(Cow<'a, PythonPackageResource>),
     /// A file in a Python package distribution metadata collection.
-    DistributionResource(Cow<'a, PythonPackageDistributionResource>),
+    PackageDistributionResource(Cow<'a, PythonPackageDistributionResource>),
     /// An extension module.
     ExtensionModule(Cow<'a, PythonExtensionModule>),
     /// A self-contained Python egg.
@@ -733,10 +733,10 @@ impl<'a> PythonResource<'a> {
             PythonResource::ModuleSource(m) => m.name.clone(),
             PythonResource::ModuleBytecode(m) => m.name.clone(),
             PythonResource::ModuleBytecodeRequest(m) => m.name.clone(),
-            PythonResource::Resource(resource) => {
+            PythonResource::PackageResource(resource) => {
                 format!("{}.{}", resource.leaf_package, resource.relative_name)
             }
-            PythonResource::DistributionResource(resource) => {
+            PythonResource::PackageDistributionResource(resource) => {
                 format!("{}:{}", resource.package, resource.name)
             }
             PythonResource::ExtensionModule(em) => em.name.clone(),
@@ -750,8 +750,8 @@ impl<'a> PythonResource<'a> {
             PythonResource::ModuleSource(m) => &m.name,
             PythonResource::ModuleBytecode(m) => &m.name,
             PythonResource::ModuleBytecodeRequest(m) => &m.name,
-            PythonResource::Resource(resource) => &resource.leaf_package,
-            PythonResource::DistributionResource(resource) => &resource.package,
+            PythonResource::PackageResource(resource) => &resource.leaf_package,
+            PythonResource::PackageDistributionResource(resource) => &resource.package,
             PythonResource::ExtensionModule(em) => &em.name,
             PythonResource::EggFile(_) => return false,
             PythonResource::PathExtension(_) => return false,
@@ -776,8 +776,8 @@ impl<'a> PythonResource<'a> {
             PythonResource::ModuleSource(m) => m.to_memory()?.into(),
             PythonResource::ModuleBytecode(m) => m.to_memory()?.into(),
             PythonResource::ModuleBytecodeRequest(m) => m.to_memory()?.into(),
-            PythonResource::Resource(r) => r.to_memory()?.into(),
-            PythonResource::DistributionResource(r) => r.to_memory()?.into(),
+            PythonResource::PackageResource(r) => r.to_memory()?.into(),
+            PythonResource::PackageDistributionResource(r) => r.to_memory()?.into(),
             PythonResource::ExtensionModule(m) => m.to_memory()?.into(),
             PythonResource::EggFile(e) => e.to_memory()?.into(),
             PythonResource::PathExtension(e) => e.to_memory()?.into(),
@@ -823,25 +823,25 @@ impl<'a> From<&'a PythonModuleBytecode> for PythonResource<'a> {
 
 impl<'a> From<PythonPackageResource> for PythonResource<'a> {
     fn from(r: PythonPackageResource) -> Self {
-        PythonResource::Resource(Cow::Owned(r))
+        PythonResource::PackageResource(Cow::Owned(r))
     }
 }
 
 impl<'a> From<&'a PythonPackageResource> for PythonResource<'a> {
     fn from(r: &'a PythonPackageResource) -> Self {
-        PythonResource::Resource(Cow::Borrowed(r))
+        PythonResource::PackageResource(Cow::Borrowed(r))
     }
 }
 
 impl<'a> From<PythonPackageDistributionResource> for PythonResource<'a> {
     fn from(r: PythonPackageDistributionResource) -> Self {
-        PythonResource::DistributionResource(Cow::Owned(r))
+        PythonResource::PackageDistributionResource(Cow::Owned(r))
     }
 }
 
 impl<'a> From<&'a PythonPackageDistributionResource> for PythonResource<'a> {
     fn from(r: &'a PythonPackageDistributionResource) -> Self {
-        PythonResource::DistributionResource(Cow::Borrowed(r))
+        PythonResource::PackageDistributionResource(Cow::Borrowed(r))
     }
 }
 

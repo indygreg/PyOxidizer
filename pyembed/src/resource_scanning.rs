@@ -79,10 +79,10 @@ pub(crate) fn find_resources_in_path(py: Python, path: PyObject) -> PyResult<PyO
             PythonResource::ExtensionModule(extension) => {
                 res.push(PythonExtensionModule::new(py, extension.into_owned())?.into_object());
             }
-            PythonResource::Resource(resource) => {
+            PythonResource::PackageResource(resource) => {
                 res.push(PythonPackageResource::new(py, resource.into_owned())?.into_object());
             }
-            PythonResource::DistributionResource(resource) => res.push(
+            PythonResource::PackageDistributionResource(resource) => res.push(
                 PythonPackageDistributionResource::new(py, resource.into_owned())?.into_object(),
             ),
             _ => {}

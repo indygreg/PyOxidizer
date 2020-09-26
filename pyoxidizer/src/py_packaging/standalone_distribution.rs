@@ -801,7 +801,7 @@ impl StandaloneDistribution {
             &module_suffixes,
         ) {
             match entry? {
-                PythonResource::Resource(resource) => {
+                PythonResource::PackageResource(resource) => {
                     if !resources.contains_key(&resource.leaf_package) {
                         resources.insert(resource.leaf_package.clone(), BTreeMap::new());
                     }
@@ -1177,8 +1177,8 @@ impl PythonDistribution for StandaloneDistribution {
                 PythonResource::ModuleSource { .. } => true,
                 PythonResource::ModuleBytecodeRequest { .. } => true,
                 PythonResource::ModuleBytecode { .. } => true,
-                PythonResource::Resource { .. } => true,
-                PythonResource::DistributionResource(_) => true,
+                PythonResource::PackageResource { .. } => true,
+                PythonResource::PackageDistributionResource(_) => true,
                 PythonResource::EggFile(_) => false,
                 PythonResource::PathExtension(_) => false,
             })

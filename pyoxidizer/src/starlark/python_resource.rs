@@ -486,8 +486,8 @@ impl TypedValue for PythonExtensionModuleValue {
 pub fn is_resource_starlark_compatible(resource: &PythonResource) -> bool {
     match resource {
         PythonResource::ModuleSource(_) => true,
-        PythonResource::Resource(_) => true,
-        PythonResource::DistributionResource(_) => true,
+        PythonResource::PackageResource(_) => true,
+        PythonResource::PackageDistributionResource(_) => true,
         PythonResource::ExtensionModule(_) => true,
         _ => false,
     }
@@ -505,14 +505,14 @@ pub fn python_resource_to_value(
             Value::new(m)
         }
 
-        PythonResource::Resource(data) => {
+        PythonResource::PackageResource(data) => {
             let mut r = PythonPackageResourceValue::new(data.clone().into_owned());
             r.apply_packaging_policy(policy);
 
             Value::new(r)
         }
 
-        PythonResource::DistributionResource(resource) => {
+        PythonResource::PackageDistributionResource(resource) => {
             let mut r = PythonPackageDistributionResourceValue::new(resource.clone().into_owned());
             r.apply_packaging_policy(policy);
 

@@ -349,14 +349,14 @@ impl PythonPackagingPolicy {
             }
             PythonResource::ModuleBytecodeRequest(module) => self.include_test || !module.is_test,
             PythonResource::ModuleBytecode(_) => false,
-            PythonResource::Resource(resource) => {
+            PythonResource::PackageResource(resource) => {
                 if self.include_distribution_resources {
                     self.include_test || !resource.is_test
                 } else {
                     false
                 }
             }
-            PythonResource::DistributionResource(_) => false,
+            PythonResource::PackageDistributionResource(_) => false,
             PythonResource::ExtensionModule(_) => false,
             PythonResource::PathExtension(_) => false,
             PythonResource::EggFile(_) => false,
