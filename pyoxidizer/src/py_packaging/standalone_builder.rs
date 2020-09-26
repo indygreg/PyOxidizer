@@ -250,10 +250,7 @@ impl StandalonePythonExecutableBuilder {
 
         for source in self.distribution.source_modules()? {
             let add_context = policy.derive_collection_add_context(&(&source).into());
-
-            if add_context.include {
-                self.add_python_module_source(&source, None)?;
-            }
+            self.add_python_module_source(&source, Some(add_context))?;
 
             let bytecode = source.as_bytecode_module(BytecodeOptimizationLevel::Zero);
             let add_context = policy.derive_collection_add_context(&(&bytecode).into());
