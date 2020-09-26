@@ -153,7 +153,7 @@ pub trait PythonBinaryBuilder {
     fn add_python_package_distribution_resource(
         &mut self,
         resource: &PythonPackageDistributionResource,
-        location: Option<ConcreteResourceLocation>,
+        add_context: Option<PythonResourceAddCollectionContext>,
     ) -> Result<()>;
 
     /// Add a `PythonExtensionModule` to make available.

@@ -487,12 +487,23 @@ impl PythonExecutable {
             Some(r) => Ok(r.inner.clone()),
             None => Err(ValueError::IncorrectParameterType),
         }?;
+
+        // TODO store context on Starlark value.
+        let mut add_context = self
+            .exe
+            .python_packaging_policy()
+            .derive_collection_add_context(&(&r).into());
+
+        if let Some(location) = location.into() {
+            add_context.location = location;
+        }
+
         info!(
             &context.logger,
             "adding package distribution resource {}:{}", r.package, r.name
         );
         self.exe
-            .add_python_package_distribution_resource(&r, location.into())
+            .add_python_package_distribution_resource(&r, Some(add_context))
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
