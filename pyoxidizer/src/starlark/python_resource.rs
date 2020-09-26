@@ -112,7 +112,15 @@ pub trait ResourceCollectionContext {
 
     /// Obtains the Starlark object attributes that are defined by the add collection context.
     fn add_collection_context_attrs(&self) -> Vec<&'static str> {
-        vec!["add_location"]
+        vec![
+            "add_include",
+            "add_location",
+            "add_location_fallback",
+            "add_source",
+            "add_bytecode_optimization_level_zero",
+            "add_bytecode_optimization_level_one",
+            "add_bytecode_optimization_level_two",
+        ]
     }
 
     /// Obtain the attribute value for an add collection context.
@@ -120,18 +128,31 @@ pub trait ResourceCollectionContext {
     /// The caller should verify the attribute should be serviced by us
     /// before calling.
     fn get_attr_add_collection_context(&self, attribute: &str) -> ValueResult {
+        if !self.add_collection_context_attrs().contains(&attribute) {
+            panic!(
+                "get_attr_add_collection_context({}) called when it shouldn't have been",
+                attribute
+            );
+        }
+
         let context = self.add_collection_context();
 
-        match attribute {
-            "add_location" => Ok(match context {
-                Some(context) => Value::new::<String>(context.location.clone().into()),
-                None => Value::from(NoneType::None),
-            }),
-            attr => panic!(
-                "get_attr_add_collection_context({}) called when it shouldn't have been",
-                attr
-            ),
-        }
+        Ok(match context {
+            Some(context) => match attribute {
+                "add_bytecode_optimization_level_zero" => Value::new(context.optimize_level_zero),
+                "add_bytecode_optimization_level_one" => Value::new(context.optimize_level_one),
+                "add_bytecode_optimization_level_two" => Value::new(context.optimize_level_two),
+                "add_include" => Value::new(context.include),
+                "add_location" => Value::new::<String>(context.location.clone().into()),
+                "add_location_fallback" => match context.location_fallback.as_ref() {
+                    Some(location) => Value::new::<String>(location.clone().into()),
+                    None => Value::from(NoneType::None),
+                },
+                "add_source" => Value::new(context.store_source),
+                _ => panic!("this should not happen"),
+            },
+            None => Value::from(NoneType::None),
+        })
     }
 
     fn set_attr_add_collection_context(
@@ -144,6 +165,22 @@ pub trait ResourceCollectionContext {
         match context {
             Some(context) => {
                 match attribute {
+                    "add_bytecode_optimization_level_zero" => {
+                        context.optimize_level_zero = value.to_bool();
+                        Ok(())
+                    }
+                    "add_bytecode_optimization_level_one" => {
+                        context.optimize_level_one = value.to_bool();
+                        Ok(())
+                    }
+                    "add_bytecode_optimization_level_two" => {
+                        context.optimize_level_two = value.to_bool();
+                        Ok(())
+                    }
+                    "add_include" => {
+                        context.include = value.to_bool();
+                        Ok(())
+                    }
                     "add_location" => {
                         let location: OptionalResourceLocation = (&value).try_into()?;
 
@@ -161,7 +198,25 @@ pub trait ResourceCollectionContext {
                                 })
                             }
                         }
-                    },
+                    }
+                    "add_location_fallback" => {
+                        let location: OptionalResourceLocation = (&value).try_into()?;
+
+                        match location.inner {
+                            Some(location) => {
+                                context.location_fallback = Some(location);
+                                Ok(())
+                            }
+                            None => {
+                                context.location_fallback = None;
+                                Ok(())
+                            }
+                        }
+                    }
+                    "add_source" => {
+                        context.store_source = value.to_bool();
+                        Ok(())
+                    }
                     attr => panic!("set_attr_add_collection_context({}) called when it shouldn't have been", attr)
                 }
             },
@@ -555,6 +610,12 @@ mod tests {
         assert!(m.has_attr("is_package").unwrap());
         assert_eq!(m.get_attr("is_package").unwrap().to_bool(), false);
 
+        assert!(m.has_attr("add_include").unwrap());
+        assert_eq!(m.get_attr("add_include").unwrap().get_type(), "bool");
+        assert_eq!(m.get_attr("add_include").unwrap().to_bool(), true);
+        m.set_attr("add_include", Value::new(false)).unwrap();
+        assert_eq!(m.get_attr("add_include").unwrap().to_bool(), false);
+
         assert!(m.has_attr("add_location").unwrap());
         assert_eq!(m.get_attr("add_location").unwrap().to_str(), "in-memory");
 
@@ -567,6 +628,108 @@ mod tests {
         assert_eq!(
             m.get_attr("add_location").unwrap().to_str(),
             "filesystem-relative:lib"
+        );
+
+        assert!(m.has_attr("add_location_fallback").unwrap());
+        assert_eq!(
+            m.get_attr("add_location_fallback").unwrap().get_type(),
+            "NoneType"
+        );
+
+        m.set_attr("add_location_fallback", Value::from("in-memory"))
+            .unwrap();
+        assert_eq!(
+            m.get_attr("add_location_fallback").unwrap().to_str(),
+            "in-memory"
+        );
+
+        m.set_attr(
+            "add_location_fallback",
+            Value::from("filesystem-relative:lib"),
+        )
+        .unwrap();
+        assert_eq!(
+            m.get_attr("add_location_fallback").unwrap().to_str(),
+            "filesystem-relative:lib"
+        );
+
+        m.set_attr("add_location_fallback", Value::from(NoneType::None))
+            .unwrap();
+        assert_eq!(
+            m.get_attr("add_location_fallback").unwrap().get_type(),
+            "NoneType"
+        );
+
+        assert!(m.has_attr("add_source").unwrap());
+        assert_eq!(m.get_attr("add_source").unwrap().get_type(), "bool");
+        assert_eq!(m.get_attr("add_source").unwrap().to_bool(), true);
+        m.set_attr("add_source", Value::new(false)).unwrap();
+        assert_eq!(m.get_attr("add_source").unwrap().to_bool(), false);
+
+        assert!(m.has_attr("add_bytecode_optimization_level_zero").unwrap());
+        assert_eq!(
+            m.get_attr("add_bytecode_optimization_level_zero")
+                .unwrap()
+                .get_type(),
+            "bool"
+        );
+        assert_eq!(
+            m.get_attr("add_bytecode_optimization_level_zero")
+                .unwrap()
+                .to_bool(),
+            true
+        );
+        m.set_attr("add_bytecode_optimization_level_zero", Value::new(false))
+            .unwrap();
+        assert_eq!(
+            m.get_attr("add_bytecode_optimization_level_zero")
+                .unwrap()
+                .to_bool(),
+            false
+        );
+
+        assert!(m.has_attr("add_bytecode_optimization_level_one").unwrap());
+        assert_eq!(
+            m.get_attr("add_bytecode_optimization_level_one")
+                .unwrap()
+                .get_type(),
+            "bool"
+        );
+        assert_eq!(
+            m.get_attr("add_bytecode_optimization_level_one")
+                .unwrap()
+                .to_bool(),
+            false
+        );
+        m.set_attr("add_bytecode_optimization_level_one", Value::new(true))
+            .unwrap();
+        assert_eq!(
+            m.get_attr("add_bytecode_optimization_level_one")
+                .unwrap()
+                .to_bool(),
+            true
+        );
+
+        assert!(m.has_attr("add_bytecode_optimization_level_two").unwrap());
+        assert_eq!(
+            m.get_attr("add_bytecode_optimization_level_two")
+                .unwrap()
+                .get_type(),
+            "bool"
+        );
+        assert_eq!(
+            m.get_attr("add_bytecode_optimization_level_two")
+                .unwrap()
+                .to_bool(),
+            false
+        );
+        m.set_attr("add_bytecode_optimization_level_two", Value::new(true))
+            .unwrap();
+        assert_eq!(
+            m.get_attr("add_bytecode_optimization_level_two")
+                .unwrap()
+                .to_bool(),
+            true
         );
     }
 }

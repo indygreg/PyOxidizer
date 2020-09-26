@@ -180,9 +180,12 @@ New Features
 * The ``PythonExecutable`` Starlark type now has a
   ``make_python_source_module()`` method to allow construction of
   ``PythonSourceModule`` instances.
-* The ``PythonSourceModule`` Starlark type now has an ``add_location``
-  attribute exposing the location where the resource should be
-  loaded from.
+* The ``PythonSourceModule`` Starlark type now has attributes
+  ``add_include``, ``add_location``, ``add_location_fallback``,
+  ``add_source``, ``add_bytecode_optimization_level_zero``,
+  ``add_bytecode_optimization_level_one``, and
+  ``add_bytecode_optimization_level_two`` to influence what happens
+  when instances are added to to binaries.
 * The Starlark methods for adding Python resources now accept an
   optional ``location`` argument for controlling the load location
   of the resource. This functionality replaces the prior functionality
