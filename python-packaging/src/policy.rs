@@ -246,6 +246,36 @@ impl PythonPackagingPolicy {
         self.include_test = include;
     }
 
+    /// Whether to write bytecode at optimization level 0.
+    pub fn bytecode_optimize_level_zero(&self) -> bool {
+        self.bytecode_optimize_level_zero
+    }
+
+    /// Set whether to write bytecode at optimization level 0.
+    pub fn set_bytecode_optimize_level_zero(&mut self, value: bool) {
+        self.bytecode_optimize_level_zero = value;
+    }
+
+    /// Whether to write bytecode at optimization level 1.
+    pub fn bytecode_optimize_level_one(&self) -> bool {
+        self.bytecode_optimize_level_one
+    }
+
+    /// Set whether to write bytecode at optimization level 1.
+    pub fn set_bytecode_optimize_level_one(&mut self, value: bool) {
+        self.bytecode_optimize_level_one = value;
+    }
+
+    /// Whether to write bytecode at optimization level 2.
+    pub fn bytecode_optimize_level_two(&self) -> bool {
+        self.bytecode_optimize_level_two
+    }
+
+    /// Set whether to write bytecode at optimization level 2.
+    pub fn set_bytecode_optimize_level_two(&mut self, value: bool) {
+        self.bytecode_optimize_level_two = value;
+    }
+
     /// Mark an extension as broken on a target platform, preventing it from being used.
     pub fn register_broken_extension(&mut self, target_triple: &str, extension: &str) {
         if !self.broken_extensions.contains_key(target_triple) {
