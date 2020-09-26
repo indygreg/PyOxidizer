@@ -5,23 +5,27 @@
 /*! Functionality for collecting Python resources. */
 
 use {
-    crate::bytecode::{
-        compute_bytecode_header, BytecodeHeaderMode, CompileMode, PythonBytecodeCompiler,
-    },
-    crate::module_util::{packages_from_module_name, resolve_path_for_module},
-    crate::policy::PythonResourcesPolicy,
-    crate::python_source::has_dunder_file,
-    crate::resource::{
-        BytecodeOptimizationLevel, DataLocation, PythonExtensionModule, PythonModuleBytecode,
-        PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
-        PythonPackageResource,
+    crate::{
+        bytecode::{
+            compute_bytecode_header, BytecodeHeaderMode, CompileMode, PythonBytecodeCompiler,
+        },
+        module_util::{packages_from_module_name, resolve_path_for_module},
+        policy::PythonResourcesPolicy,
+        python_source::has_dunder_file,
+        resource::{
+            BytecodeOptimizationLevel, DataLocation, PythonExtensionModule, PythonModuleBytecode,
+            PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
+            PythonPackageResource, PythonResource,
+        },
     },
     anyhow::{anyhow, Result},
     python_packed_resources::data::{Resource, ResourceFlavor},
-    std::borrow::Cow,
-    std::collections::{BTreeMap, BTreeSet, HashMap},
-    std::iter::FromIterator,
-    std::path::PathBuf,
+    std::{
+        borrow::Cow,
+        collections::{BTreeMap, BTreeSet, HashMap},
+        iter::FromIterator,
+        path::PathBuf,
+    },
 };
 
 /// Represents a single file install.
@@ -711,6 +715,67 @@ impl PythonResourceCollector {
         Ok(())
     }
 
+    /// Add Python module source using an add context to influence operation.
+    ///
+    /// All of the context's properties are respected. This includes doing
+    /// nothing if `include` is false, not adding source if `store_source` is
+    /// false, and automatically deriving a bytecode request if the
+    /// `optimize_level_*` fields are set.
+    ///
+    /// This method is a glorified proxy to other `add_*` methods: it
+    /// simply contains the logic for expanding the context's wishes into
+    /// function calls.
+    pub fn add_python_module_source_with_context(
+        &mut self,
+        module: &PythonModuleSource,
+        add_context: &PythonResourceAddCollectionContext,
+    ) -> Result<()> {
+        if !add_context.include {
+            return Ok(());
+        }
+
+        if add_context.store_source {
+            self.add_python_resource_with_locations(
+                &module.into(),
+                &add_context.location,
+                &add_context.location_fallback,
+            )?;
+        }
+
+        // Derive bytecode as requested.
+        if add_context.optimize_level_zero {
+            self.add_python_resource_with_locations(
+                &module
+                    .as_bytecode_module(BytecodeOptimizationLevel::Zero)
+                    .into(),
+                &add_context.location,
+                &add_context.location_fallback,
+            )?;
+        }
+
+        if add_context.optimize_level_one {
+            self.add_python_resource_with_locations(
+                &module
+                    .as_bytecode_module(BytecodeOptimizationLevel::One)
+                    .into(),
+                &add_context.location,
+                &add_context.location_fallback,
+            )?;
+        }
+
+        if add_context.optimize_level_two {
+            self.add_python_resource_with_locations(
+                &module
+                    .as_bytecode_module(BytecodeOptimizationLevel::Two)
+                    .into(),
+                &add_context.location,
+                &add_context.location_fallback,
+            )?;
+        }
+
+        Ok(())
+    }
+
     /// Add Python module bytecode to the specified location.
     pub fn add_python_module_bytecode(
         &mut self,
@@ -1036,6 +1101,41 @@ impl PythonResourceCollector {
         }
 
         Ok(())
+    }
+
+    fn add_python_resource_with_locations(
+        &mut self,
+        resource: &PythonResource,
+        location: &ConcreteResourceLocation,
+        fallback_location: &Option<ConcreteResourceLocation>,
+    ) -> Result<()> {
+        match resource {
+            PythonResource::ModuleSource(module) => {
+                match self.add_python_module_source(module, location) {
+                    Ok(value) => Ok(value),
+                    Err(err) => {
+                        if let Some(location) = fallback_location {
+                            self.add_python_module_source(module, location)
+                        } else {
+                            Err(err)
+                        }
+                    }
+                }
+            }
+            PythonResource::ModuleBytecodeRequest(module) => {
+                match self.add_python_module_bytecode_from_source(module, location) {
+                    Ok(value) => Ok(value),
+                    Err(err) => {
+                        if let Some(location) = fallback_location {
+                            self.add_python_module_bytecode_from_source(module, location)
+                        } else {
+                            Err(err)
+                        }
+                    }
+                }
+            }
+            _ => Err(anyhow!("PythonResource variant not yet supported")),
+        }
     }
 
     /// Searches for Python sources for references to __file__.
@@ -2422,6 +2522,122 @@ mod tests {
                 )
             ]
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_module_source_with_context() -> Result<()> {
+        let mut r =
+            PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
+
+        let module = PythonModuleSource {
+            name: "foo".to_string(),
+            source: DataLocation::Memory(vec![42]),
+            is_package: false,
+            cache_tag: DEFAULT_CACHE_TAG.to_string(),
+            is_stdlib: false,
+            is_test: false,
+        };
+
+        let mut add_context = PythonResourceAddCollectionContext {
+            include: false,
+            location: ConcreteResourceLocation::InMemory,
+            location_fallback: None,
+            store_source: false,
+            optimize_level_zero: false,
+            optimize_level_one: false,
+            optimize_level_two: false,
+        };
+
+        // include=false is a noop.
+        assert!(r.resources.is_empty());
+        r.add_python_module_source_with_context(&module, &add_context)?;
+        assert!(r.resources.is_empty());
+
+        add_context.include = true;
+
+        // store_source=false is a noop.
+        r.add_python_module_source_with_context(&module, &add_context)?;
+        assert!(r.resources.is_empty());
+
+        add_context.store_source = true;
+
+        // store_source=true adds just the source.
+        r.add_python_module_source_with_context(&module, &add_context)?;
+        assert_eq!(
+            r.resources.get(&module.name),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: module.name.clone(),
+                is_package: module.is_package,
+                in_memory_source: Some(module.source.clone()),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        r.resources.clear();
+        add_context.store_source = false;
+
+        // optimize_level_zero stores the bytecode.
+
+        add_context.optimize_level_zero = true;
+        r.add_python_module_source_with_context(&module, &add_context)?;
+        assert_eq!(
+            r.resources.get(&module.name),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: module.name.clone(),
+                is_package: module.is_package,
+                in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
+                    module.source.clone()
+                )),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        r.resources.clear();
+        add_context.optimize_level_zero = false;
+
+        // optimize_level_one stores the bytecode.
+
+        add_context.optimize_level_one = true;
+        r.add_python_module_source_with_context(&module, &add_context)?;
+        assert_eq!(
+            r.resources.get(&module.name),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: module.name.clone(),
+                is_package: module.is_package,
+                in_memory_bytecode_opt1: Some(PythonModuleBytecodeProvider::FromSource(
+                    module.source.clone()
+                )),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        r.resources.clear();
+        add_context.optimize_level_one = false;
+
+        // optimize_level_two stores the bytecode.
+
+        add_context.optimize_level_two = true;
+        r.add_python_module_source_with_context(&module, &add_context)?;
+        assert_eq!(
+            r.resources.get(&module.name),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: module.name.clone(),
+                is_package: module.is_package,
+                in_memory_bytecode_opt2: Some(PythonModuleBytecodeProvider::FromSource(
+                    module.source.clone()
+                )),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        r.resources.clear();
+        add_context.optimize_level_two = false;
 
         Ok(())
     }
