@@ -1061,6 +1061,26 @@ impl PythonResourceCollector {
         Ok(())
     }
 
+    /// Add a Python package distribution resource using an add context.
+    ///
+    /// The fields from the context will be respected. This includes not doing
+    /// anything if `include` is false.
+    pub fn add_python_package_distribution_resource_with_context(
+        &mut self,
+        resource: &PythonPackageDistributionResource,
+        add_context: &PythonResourceAddCollectionContext,
+    ) -> Result<()> {
+        if !add_context.include {
+            return Ok(());
+        }
+
+        self.add_python_resource_with_locations(
+            &resource.into(),
+            &add_context.location,
+            &add_context.location_fallback,
+        )
+    }
+
     /// Add a built-in extension module.
     ///
     /// Built-in extension modules are statically linked into the binary and
@@ -1214,6 +1234,18 @@ impl PythonResourceCollector {
                     Err(err) => {
                         if let Some(location) = fallback_location {
                             self.add_python_package_resource(resource, location)
+                        } else {
+                            Err(err)
+                        }
+                    }
+                }
+            }
+            PythonResource::DistributionResource(resource) => {
+                match self.add_python_package_distribution_resource(resource, location) {
+                    Ok(value) => Ok(value),
+                    Err(err) => {
+                        if let Some(location) = fallback_location {
+                            self.add_python_package_distribution_resource(resource, location)
                         } else {
                             Err(err)
                         }
@@ -3347,6 +3379,82 @@ mod tests {
                 false
             ),]
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_package_distribution_resource_with_context() -> Result<()> {
+        let mut r =
+            PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
+
+        let resource = PythonPackageDistributionResource {
+            location: PythonPackageDistributionResourceFlavor::DistInfo,
+            package: "foo".to_string(),
+            version: "1.0".to_string(),
+            name: "resource.txt".to_string(),
+            data: DataLocation::Memory(vec![42]),
+        };
+
+        let mut add_context = PythonResourceAddCollectionContext {
+            include: false,
+            location: ConcreteResourceLocation::InMemory,
+            location_fallback: None,
+            store_source: false,
+            optimize_level_zero: false,
+            optimize_level_one: false,
+            optimize_level_two: false,
+        };
+
+        // include=false is a noop.
+        assert!(r.resources.is_empty());
+        r.add_python_package_distribution_resource_with_context(&resource, &add_context)?;
+        assert!(r.resources.is_empty());
+
+        // include=true adds the resource.
+        add_context.include = true;
+        r.add_python_package_distribution_resource_with_context(&resource, &add_context)?;
+        assert_eq!(
+            r.resources.get(&resource.package),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: resource.package.clone(),
+                is_package: true,
+                in_memory_distribution_resources: Some(BTreeMap::from_iter(
+                    [(resource.name.clone(), resource.data.clone())]
+                        .iter()
+                        .cloned()
+                )),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        r.resources.clear();
+
+        // location_fallback works.
+        r.policy = PythonResourcesPolicy::FilesystemRelativeOnly("prefix".to_string());
+        add_context.location_fallback =
+            Some(ConcreteResourceLocation::RelativePath("prefix".to_string()));
+        r.add_python_package_distribution_resource_with_context(&resource, &add_context)?;
+        assert_eq!(
+            r.resources.get(&resource.package),
+            Some(&PrePackagedResource {
+                flavor: ResourceFlavor::Module,
+                name: resource.package.clone(),
+                is_package: true,
+                relative_path_distribution_resources: Some(BTreeMap::from_iter(
+                    [(
+                        resource.name.clone(),
+                        (resource.resolve_path("prefix"), resource.data.clone())
+                    )]
+                    .iter()
+                    .cloned()
+                )),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        r.resources.clear();
 
         Ok(())
     }
