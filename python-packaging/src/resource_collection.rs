@@ -1206,7 +1206,7 @@ impl PythonResourceCollector {
         match resource {
             PythonResource::ModuleSource(module) => {
                 match self.add_python_module_source(module, location) {
-                    Ok(value) => Ok(value),
+                    Ok(()) => Ok(()),
                     Err(err) => {
                         if let Some(location) = fallback_location {
                             self.add_python_module_source(module, location)
@@ -1218,7 +1218,7 @@ impl PythonResourceCollector {
             }
             PythonResource::ModuleBytecodeRequest(module) => {
                 match self.add_python_module_bytecode_from_source(module, location) {
-                    Ok(value) => Ok(value),
+                    Ok(()) => Ok(()),
                     Err(err) => {
                         if let Some(location) = fallback_location {
                             self.add_python_module_bytecode_from_source(module, location)
@@ -1230,7 +1230,7 @@ impl PythonResourceCollector {
             }
             PythonResource::Resource(resource) => {
                 match self.add_python_package_resource(resource, location) {
-                    Ok(value) => Ok(value),
+                    Ok(()) => Ok(()),
                     Err(err) => {
                         if let Some(location) = fallback_location {
                             self.add_python_package_resource(resource, location)
@@ -1242,7 +1242,7 @@ impl PythonResourceCollector {
             }
             PythonResource::DistributionResource(resource) => {
                 match self.add_python_package_distribution_resource(resource, location) {
-                    Ok(value) => Ok(value),
+                    Ok(()) => Ok(()),
                     Err(err) => {
                         if let Some(location) = fallback_location {
                             self.add_python_package_distribution_resource(resource, location)
