@@ -447,7 +447,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         });
 
         self.resources_collector
-            .add_python_module_source(module, &add_context.location)
+            .add_python_module_source_with_context(module, &add_context)
     }
 
     fn add_python_module_bytecode_from_source(
