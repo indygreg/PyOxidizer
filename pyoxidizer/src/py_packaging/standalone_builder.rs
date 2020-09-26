@@ -242,19 +242,24 @@ impl StandalonePythonExecutableBuilder {
         }
 
         for source in self.distribution.source_modules()? {
-            if policy.filter_python_resource(&source.clone().into()) {
+            let add_context = policy.derive_collection_add_context(&(&source).into());
+
+            if add_context.include {
                 self.add_python_module_source(&source, None)?;
             }
 
             let bytecode = source.as_bytecode_module(BytecodeOptimizationLevel::Zero);
+            let add_context = policy.derive_collection_add_context(&(&bytecode).into());
 
-            if policy.filter_python_resource(&bytecode.clone().into()) {
+            if add_context.include {
                 self.add_python_module_bytecode_from_source(&bytecode, None)?;
             }
         }
 
         for resource in self.distribution.resource_datas()? {
-            if policy.filter_python_resource(&resource.clone().into()) {
+            let add_context = policy.derive_collection_add_context(&(&resource).into());
+
+            if add_context.include {
                 self.add_python_package_resource(&resource, None)?;
             }
         }

@@ -308,7 +308,7 @@ impl PythonPackagingPolicy {
     /// resource meets the inclusion requirements for the current policy.
     ///
     /// Returns true if the resource should be included, false otherwise.
-    pub fn filter_python_resource(&self, resource: &PythonResource) -> bool {
+    fn filter_python_resource(&self, resource: &PythonResource) -> bool {
         match resource {
             PythonResource::ModuleSource(module) => {
                 if !self.include_test && module.is_test {
