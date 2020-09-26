@@ -2,14 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use crate::starlark::python_resource::ResourceCollectionContext;
 use {
     super::env::{get_context, EnvironmentContext},
     super::python_embedded_resources::PythonEmbeddedResources,
     super::python_resource::{
         is_resource_starlark_compatible, python_resource_to_value, OptionalResourceLocation,
         PythonExtensionModuleValue, PythonPackageDistributionResourceValue,
-        PythonPackageResourceValue, PythonSourceModuleValue,
+        PythonPackageResourceValue, PythonSourceModuleValue, ResourceCollectionContext,
     },
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
     super::util::{
