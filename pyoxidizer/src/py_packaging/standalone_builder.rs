@@ -21,9 +21,9 @@ use {
         bytecode::BytecodeCompiler,
         policy::{PythonPackagingPolicy, PythonResourcesPolicy},
         resource::{
-            BytecodeOptimizationLevel, DataLocation, PythonExtensionModule,
-            PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
-            PythonPackageResource, PythonResource,
+            DataLocation, PythonExtensionModule, PythonModuleBytecodeFromSource,
+            PythonModuleSource, PythonPackageDistributionResource, PythonPackageResource,
+            PythonResource,
         },
         resource_collection::{
             ConcreteResourceLocation, PrePackagedResource, PythonResourceAddCollectionContext,
@@ -251,13 +251,6 @@ impl StandalonePythonExecutableBuilder {
         for source in self.distribution.source_modules()? {
             let add_context = policy.derive_collection_add_context(&(&source).into());
             self.add_python_module_source(&source, Some(add_context))?;
-
-            let bytecode = source.as_bytecode_module(BytecodeOptimizationLevel::Zero);
-            let add_context = policy.derive_collection_add_context(&(&bytecode).into());
-
-            if add_context.include {
-                self.add_python_module_bytecode_from_source(&bytecode, None)?;
-            }
         }
 
         for resource in self.distribution.resource_datas()? {
