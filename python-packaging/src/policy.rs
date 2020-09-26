@@ -226,6 +226,16 @@ impl PythonPackagingPolicy {
         self.include_distribution_resources = include;
     }
 
+    /// Whether to include Python sources for modules not in the standard library.
+    pub fn include_non_distribution_sources(&self) -> bool {
+        self.include_non_distribution_sources
+    }
+
+    /// Set whether to include Python sources for modules not in the standard library.
+    pub fn set_include_non_distribution_sources(&mut self, include: bool) {
+        self.include_non_distribution_sources = include;
+    }
+
     /// Get setting for whether to include test files.
     pub fn include_test(&self) -> bool {
         self.include_test

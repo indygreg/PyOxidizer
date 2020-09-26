@@ -41,6 +41,9 @@ impl TypedValue for PythonPackagingPolicyValue {
             "include_distribution_resources" => {
                 Value::from(self.inner.include_distribution_resources())
             }
+            "include_non_distribution_sources" => {
+                Value::from(self.inner.include_non_distribution_sources())
+            }
             "include_test" => Value::from(self.inner.include_test()),
             "preferred_extension_module_variants" => {
                 Value::try_from(self.inner.preferred_extension_module_variants().clone())?
@@ -63,6 +66,7 @@ impl TypedValue for PythonPackagingPolicyValue {
             "extension_module_filter" => true,
             "include_distribution_sources" => true,
             "include_distribution_resources" => true,
+            "include_non_distribution_sources" => true,
             "include_test" => true,
             "preferred_extension_module_variants" => true,
             "resources_policy" => true,
@@ -90,6 +94,10 @@ impl TypedValue for PythonPackagingPolicyValue {
             "include_distribution_resources" => {
                 self.inner
                     .set_include_distribution_resources(value.to_bool());
+            }
+            "include_non_distribution_sources" => {
+                self.inner
+                    .set_include_non_distribution_sources(value.to_bool());
             }
             "include_test" => {
                 self.inner.set_include_test(value.to_bool());
@@ -251,6 +259,31 @@ mod tests {
             &mut env,
             &type_values,
             "policy.include_distribution_resources = True; policy.include_distribution_resources",
+        )
+        .unwrap();
+        assert!(value.to_bool());
+
+        let value = starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy.include_non_distribution_sources",
+        )
+        .unwrap();
+        assert_eq!(value.get_type(), "bool");
+        assert_eq!(value.to_bool(), policy.include_non_distribution_sources());
+
+        let value = starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy.include_non_distribution_sources = False; policy.include_non_distribution_sources",
+        )
+        .unwrap();
+        assert!(!value.to_bool());
+
+        let value = starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy.include_non_distribution_sources = True; policy.include_non_distribution_sources",
         )
         .unwrap();
         assert!(value.to_bool());

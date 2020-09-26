@@ -579,6 +579,10 @@ attributes:
 
    Default is ``False``.
 
+``include_non_distribution_sources``
+   (``bool``) Whether to add source code for Python modules not in the Python
+   distribution.
+
 ``include_test``
    (``bool``) Whether to add Python resources related to tests.
 
