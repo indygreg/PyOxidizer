@@ -326,24 +326,28 @@ impl PythonExecutable {
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let m = match module.downcast_ref::<PythonSourceModuleValue>() {
-            Some(m) => Ok(m.inner.clone()),
-            None => Err(ValueError::IncorrectParameterType),
-        }?;
+        // Type was validated above.
+        let module_value = module.downcast_ref::<PythonSourceModuleValue>().unwrap();
+        let module = module_value.inner.clone();
 
-        // TODO use context on Starlark Value.
-        let mut add_context = self
-            .exe
-            .python_packaging_policy()
-            .derive_collection_add_context(&(&m).into());
+        let mut add_context = match module_value.add_context.as_ref() {
+            Some(add_context) => add_context.clone(),
+            None => self
+                .exe
+                .python_packaging_policy()
+                .derive_collection_add_context(&(&module).into()),
+        };
 
         if let Some(location) = location.into() {
             add_context.location = location;
         }
 
-        info!(&context.logger, "adding Python source module {}", m.name);
+        info!(
+            &context.logger,
+            "adding Python source module {}", module.name
+        );
         self.exe
-            .add_python_module_source(&m, Some(add_context))
+            .add_python_module_source(&module, Some(add_context))
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
