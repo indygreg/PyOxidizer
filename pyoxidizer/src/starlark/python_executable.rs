@@ -320,20 +320,12 @@ impl PythonExecutable {
         let module_value = module.downcast_ref::<PythonSourceModuleValue>().unwrap();
         let module = module_value.inner.clone();
 
-        let add_context = match module_value.add_context.as_ref() {
-            Some(add_context) => add_context.clone(),
-            None => self
-                .exe
-                .python_packaging_policy()
-                .derive_collection_add_context(&(&module).into()),
-        };
-
         info!(
             &context.logger,
             "adding Python source module {}", module.name
         );
         self.exe
-            .add_python_module_source(&module, Some(add_context))
+            .add_python_module_source(&module, module_value.add_collection_context().clone())
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
@@ -365,21 +357,13 @@ impl PythonExecutable {
 
         let r = resource_value.inner.clone();
 
-        let add_context = match resource_value.add_context.as_ref() {
-            Some(add_context) => add_context.clone(),
-            None => self
-                .exe
-                .python_packaging_policy()
-                .derive_collection_add_context(&(&r).into()),
-        };
-
         info!(
             &context.logger,
             "adding resource data {}",
             r.symbolic_name()
         );
         self.exe
-            .add_python_package_resource(&r, Some(add_context))
+            .add_python_package_resource(&r, resource_value.add_collection_context().clone())
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
@@ -411,20 +395,15 @@ impl PythonExecutable {
 
         let r = resource_value.inner.clone();
 
-        let add_context = match resource_value.add_context.as_ref() {
-            Some(add_context) => add_context.clone(),
-            None => self
-                .exe
-                .python_packaging_policy()
-                .derive_collection_add_context(&(&r).into()),
-        };
-
         info!(
             &context.logger,
             "adding package distribution resource {}:{}", r.package, r.name
         );
         self.exe
-            .add_python_package_distribution_resource(&r, Some(add_context))
+            .add_python_package_distribution_resource(
+                &r,
+                resource_value.add_collection_context().clone(),
+            )
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
@@ -453,17 +432,9 @@ impl PythonExecutable {
         let module_value = module.downcast_ref::<PythonExtensionModuleValue>().unwrap();
         let m = module_value.inner.clone();
 
-        let add_context = match module_value.add_context.as_ref() {
-            Some(add_context) => add_context.clone(),
-            None => self
-                .exe
-                .python_packaging_policy()
-                .derive_collection_add_context(&(&m).into()),
-        };
-
         info!(&context.logger, "adding extension module {}", m.name);
         self.exe
-            .add_python_extension_module(&m, Some(add_context))
+            .add_python_extension_module(&m, module_value.add_collection_context().clone())
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
