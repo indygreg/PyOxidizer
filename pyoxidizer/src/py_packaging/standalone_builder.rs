@@ -520,20 +520,23 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             },
         };
 
-        let want_in_memory = if let Some(ConcreteResourceLocation::InMemory) = location {
-            true
+        let want_in_memory = if let Some(add_context) = &add_context {
+            add_context.location == ConcreteResourceLocation::InMemory
         } else {
             policy_want_memory
         };
 
-        let require_in_memory = if let Some(ConcreteResourceLocation::InMemory) = location {
-            true
+        let require_in_memory = if let Some(add_context) = &add_context {
+            add_context.location == ConcreteResourceLocation::InMemory
         } else {
             self.packaging_policy.clone().resources_policy() == &PythonResourcesPolicy::InMemoryOnly
         };
 
-        let require_filesystem = if let Some(ConcreteResourceLocation::RelativePath(_)) = location {
-            true
+        let require_filesystem = if let Some(add_context) = &add_context {
+            match &add_context.location {
+                ConcreteResourceLocation::RelativePath(_) => true,
+                ConcreteResourceLocation::InMemory => false,
+            }
         } else {
             match *self.packaging_policy.clone().resources_policy() {
                 PythonResourcesPolicy::FilesystemRelativeOnly(_) => true,
