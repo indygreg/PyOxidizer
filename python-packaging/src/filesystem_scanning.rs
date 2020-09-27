@@ -7,18 +7,22 @@ Scanning the filesystem for Python resources.
 */
 
 use {
-    crate::module_util::{is_package_from_path, PythonModuleSuffixes},
-    crate::package_metadata::PythonPackageMetadata,
-    crate::resource::{
-        BytecodeOptimizationLevel, DataLocation, PythonEggFile, PythonExtensionModule,
-        PythonModuleBytecode, PythonModuleSource, PythonPackageDistributionResource,
-        PythonPackageDistributionResourceFlavor, PythonPackageResource, PythonPathExtension,
-        PythonResource,
+    crate::{
+        module_util::{is_package_from_path, PythonModuleSuffixes},
+        package_metadata::PythonPackageMetadata,
+        resource::{
+            BytecodeOptimizationLevel, DataLocation, PythonEggFile, PythonExtensionModule,
+            PythonModuleBytecode, PythonModuleSource, PythonPackageDistributionResource,
+            PythonPackageDistributionResourceFlavor, PythonPackageResource, PythonPathExtension,
+            PythonResource,
+        },
     },
     anyhow::Result,
-    std::collections::HashSet,
-    std::ffi::OsStr,
-    std::path::{Path, PathBuf},
+    std::{
+        collections::HashSet,
+        ffi::OsStr,
+        path::{Path, PathBuf},
+    },
 };
 
 pub fn walk_tree_files(path: &Path) -> Box<dyn Iterator<Item = walkdir::DirEntry>> {

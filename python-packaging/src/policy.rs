@@ -7,13 +7,13 @@ Functionality for defining how Python resources should be packaged.
 */
 
 use {
-    crate::licensing::NON_GPL_LICENSES,
-    crate::resource::{PythonExtensionModule, PythonExtensionModuleVariants, PythonResource},
-    crate::resource_collection::{ConcreteResourceLocation, PythonResourceAddCollectionContext},
+    crate::{
+        licensing::NON_GPL_LICENSES,
+        resource::{PythonExtensionModule, PythonExtensionModuleVariants, PythonResource},
+        resource_collection::{ConcreteResourceLocation, PythonResourceAddCollectionContext},
+    },
     anyhow::{anyhow, Result},
-    std::collections::HashMap,
-    std::convert::TryFrom,
-    std::iter::FromIterator,
+    std::{collections::HashMap, convert::TryFrom, iter::FromIterator},
 };
 
 /// Describes a policy for the location of Python resources.

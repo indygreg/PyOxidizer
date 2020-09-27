@@ -5,18 +5,20 @@
 /*! Defines types representing Python resources. */
 
 use {
-    crate::bytecode::{CompileMode, PythonBytecodeCompiler},
-    crate::module_util::{
-        is_package_from_path, packages_from_module_name, resolve_path_for_module,
+    crate::{
+        bytecode::{CompileMode, PythonBytecodeCompiler},
+        module_util::{is_package_from_path, packages_from_module_name, resolve_path_for_module},
+        python_source::has_dunder_file,
     },
-    crate::python_source::has_dunder_file,
     anyhow::{anyhow, Context, Result},
-    std::borrow::Cow,
-    std::collections::HashMap,
-    std::convert::TryFrom,
-    std::hash::BuildHasher,
-    std::iter::FromIterator,
-    std::path::{Path, PathBuf},
+    std::{
+        borrow::Cow,
+        collections::HashMap,
+        convert::TryFrom,
+        hash::BuildHasher,
+        iter::FromIterator,
+        path::{Path, PathBuf},
+    },
 };
 
 /// Represents an abstract location for binary data.

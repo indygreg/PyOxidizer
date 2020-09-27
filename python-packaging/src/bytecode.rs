@@ -8,10 +8,12 @@ use {
     super::resource::BytecodeOptimizationLevel,
     anyhow::{anyhow, Result},
     byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt},
-    std::fs::File,
-    std::io::{BufRead, BufReader, Read, Write},
-    std::path::{Path, PathBuf},
-    std::process,
+    std::{
+        fs::File,
+        io::{BufRead, BufReader, Read, Write},
+        path::{Path, PathBuf},
+        process,
+    },
 };
 
 pub const BYTECODE_COMPILER: &[u8] = include_bytes!("bytecodecompiler.py");

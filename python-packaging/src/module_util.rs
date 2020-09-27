@@ -4,7 +4,7 @@
 
 /*! Utility functions related to Python modules. */
 
-use {std::collections::BTreeSet, std::path::Path, std::path::PathBuf};
+use std::{collections::BTreeSet, path::Path, path::PathBuf};
 
 /// Represents file name suffixes for Python modules.
 #[derive(Clone, Debug, PartialEq)]
