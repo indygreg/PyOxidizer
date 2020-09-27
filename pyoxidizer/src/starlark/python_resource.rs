@@ -496,6 +496,30 @@ impl TypedValue for PythonPackageDistributionResourceValue {
 #[derive(Debug, Clone)]
 pub struct PythonExtensionModuleValue {
     pub inner: PythonExtensionModule,
+    pub add_context: Option<PythonResourceAddCollectionContext>,
+}
+
+impl PythonExtensionModuleValue {
+    pub fn new(em: PythonExtensionModule) -> Self {
+        Self {
+            inner: em,
+            add_context: None,
+        }
+    }
+}
+
+impl ResourceCollectionContext for PythonExtensionModuleValue {
+    fn add_collection_context(&self) -> &Option<PythonResourceAddCollectionContext> {
+        &self.add_context
+    }
+
+    fn add_collection_context_mut(&mut self) -> &mut Option<PythonResourceAddCollectionContext> {
+        &mut self.add_context
+    }
+
+    fn as_python_resource(&self) -> PythonResource<'_> {
+        PythonResource::from(&self.inner)
+    }
 }
 
 impl TypedValue for PythonExtensionModuleValue {
@@ -574,9 +598,12 @@ pub fn python_resource_to_value(
             Value::new(r)
         }
 
-        PythonResource::ExtensionModule(em) => Value::new(PythonExtensionModuleValue {
-            inner: em.clone().into_owned(),
-        }),
+        PythonResource::ExtensionModule(em) => {
+            let mut em = PythonExtensionModuleValue::new(em.clone().into_owned());
+            em.apply_packaging_policy(policy);
+
+            Value::new(em)
+        },
 
         _ => {
             panic!("incompatible PythonResource variant passed; did you forget to filter through is_resource_starlark_compatible()?")

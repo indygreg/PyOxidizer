@@ -469,13 +469,24 @@ impl PythonExecutable {
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let m = match module.downcast_ref::<PythonExtensionModuleValue>() {
-            Some(m) => Ok(m.inner.clone()),
-            None => Err(ValueError::IncorrectParameterType),
-        }?;
+        // Type validated above.
+        let module_value = module.downcast_ref::<PythonExtensionModuleValue>().unwrap();
+        let m = module_value.inner.clone();
+
+        let mut add_context = match module_value.add_context.as_ref() {
+            Some(add_context) => add_context.clone(),
+            None => self
+                .exe
+                .python_packaging_policy()
+                .derive_collection_add_context(&(&m).into()),
+        };
+        if let Some(location) = location.into() {
+            add_context.location = location;
+        }
+
         info!(&context.logger, "adding extension module {}", m.name);
         self.exe
-            .add_python_extension_module(&m, location.into())
+            .add_python_extension_module(&m, Some(add_context))
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",

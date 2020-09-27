@@ -468,8 +468,15 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     fn add_python_extension_module(
         &mut self,
         extension_module: &PythonExtensionModule,
-        location: Option<ConcreteResourceLocation>,
+        add_context: Option<PythonResourceAddCollectionContext>,
     ) -> Result<()> {
+        // TODO rewrite code in terms of add_context (the logic is a leftover from when
+        // we passed an Option<ConcreteResourceLocation> into the function).
+        let location = match add_context {
+            Some(add_context) => Some(add_context.location.clone()),
+            None => None,
+        };
+
         // Whether we can load extension modules as standalone shared library files.
         let can_load_standalone = self.distribution.is_extension_module_file_loadable();
 
@@ -758,6 +765,7 @@ pub mod tests {
         python_packed_resources::data::ResourceFlavor,
         std::collections::BTreeSet,
         std::iter::FromIterator,
+        std::ops::Deref,
     };
 
     lazy_static! {
@@ -1163,9 +1171,13 @@ pub mod tests {
 
             let mut builder = options.new_builder()?;
 
+            let mut add_context = builder.packaging_policy.derive_collection_add_context(
+                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY.deref().into(),
+            );
+            add_context.location = ConcreteResourceLocation::InMemory;
             let res = builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
-                Some(ConcreteResourceLocation::InMemory),
+                Some(add_context),
             );
             assert!(res.is_err());
             assert_eq!(
@@ -1173,15 +1185,25 @@ pub mod tests {
                         "rejecting request to load extension module shared_only from memory since it is not supported"
                     );
 
+            let mut add_context = builder
+                .packaging_policy
+                .derive_collection_add_context(&EXTENSION_MODULE_OBJECT_FILES_ONLY.deref().into());
+            add_context.location = ConcreteResourceLocation::InMemory;
             builder.add_python_extension_module(
                 &EXTENSION_MODULE_OBJECT_FILES_ONLY,
-                Some(ConcreteResourceLocation::InMemory),
+                Some(add_context),
             )?;
             assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
+            let mut add_context = builder.packaging_policy.derive_collection_add_context(
+                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES
+                    .deref()
+                    .into(),
+            );
+            add_context.location = ConcreteResourceLocation::InMemory;
             builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
-                Some(ConcreteResourceLocation::InMemory),
+                Some(add_context),
             )?;
             assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
         }
@@ -1323,13 +1345,13 @@ pub mod tests {
                 .default_variant()
                 .clone();
 
+            let mut add_context = builder
+                .packaging_policy
+                .derive_collection_add_context(&(&ext).into());
+            add_context.location =
+                ConcreteResourceLocation::RelativePath("prefix_policy".to_string());
             // TODO this should probably fail since an explicit, invalid location was requested.
-            builder.add_python_extension_module(
-                &ext,
-                Some(ConcreteResourceLocation::RelativePath(
-                    "prefix_policy".to_string(),
-                )),
-            )?;
+            builder.add_python_extension_module(&ext, Some(add_context))?;
 
             assert_eq!(
                 builder.extension_build_contexts.get("_sqlite3"),
@@ -1433,11 +1455,14 @@ pub mod tests {
 
             let mut builder = options.new_builder()?;
 
+            let mut add_context = builder.packaging_policy.derive_collection_add_context(
+                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY.deref().into(),
+            );
+            add_context.location =
+                ConcreteResourceLocation::RelativePath("prefix_explicit".to_string());
             builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
-                Some(ConcreteResourceLocation::RelativePath(
-                    "prefix_explicit".to_string(),
-                )),
+                Some(add_context),
             )?;
             assert_extension_shared_library(
                 &builder,
@@ -1445,19 +1470,27 @@ pub mod tests {
                 ConcreteResourceLocation::RelativePath("prefix_explicit".to_string()),
             )?;
 
+            let mut add_context = builder
+                .packaging_policy
+                .derive_collection_add_context(&EXTENSION_MODULE_OBJECT_FILES_ONLY.deref().into());
+            add_context.location =
+                ConcreteResourceLocation::RelativePath("prefix_explicit".to_string());
             builder.add_python_extension_module(
                 &EXTENSION_MODULE_OBJECT_FILES_ONLY,
-                Some(ConcreteResourceLocation::RelativePath(
-                    "prefix_explicit".to_string(),
-                )),
+                Some(add_context),
             )?;
             assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
+            let mut add_context = builder.packaging_policy.derive_collection_add_context(
+                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES
+                    .deref()
+                    .into(),
+            );
+            add_context.location =
+                ConcreteResourceLocation::RelativePath("prefix_explicit".to_string());
             builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
-                Some(ConcreteResourceLocation::RelativePath(
-                    "prefix_explicit".to_string(),
-                )),
+                Some(add_context),
             )?;
             assert_extension_shared_library(
                 &builder,
@@ -1662,13 +1695,13 @@ pub mod tests {
             .default_variant()
             .clone();
 
+        let mut add_context = builder
+            .packaging_policy
+            .derive_collection_add_context(&(&ext).into());
+        add_context.location =
+            ConcreteResourceLocation::RelativePath("prefix_explicit".to_string());
         let err = builder
-            .add_python_extension_module(
-                &ext,
-                Some(ConcreteResourceLocation::RelativePath(
-                    "prefix_explicit".to_string(),
-                )),
-            )
+            .add_python_extension_module(&ext, Some(add_context))
             .err();
         assert!(err.is_some());
         assert_eq!(
@@ -1938,13 +1971,13 @@ pub mod tests {
                 .default_variant()
                 .clone();
 
+            let mut add_context = builder
+                .packaging_policy
+                .derive_collection_add_context(&(&ext).into());
+            add_context.location =
+                ConcreteResourceLocation::RelativePath("prefix_explicit".to_string());
             // TODO this should probably fail due location request not being valid.
-            builder.add_python_extension_module(
-                &ext,
-                Some(ConcreteResourceLocation::RelativePath(
-                    "prefix_explicit".to_string(),
-                )),
-            )?;
+            builder.add_python_extension_module(&ext, Some(add_context))?;
 
             assert_eq!(
                 builder.extension_build_contexts.get("_sqlite3"),
@@ -2043,9 +2076,13 @@ pub mod tests {
 
             let mut builder = options.new_builder()?;
 
+            let mut add_context = builder.packaging_policy.derive_collection_add_context(
+                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY.deref().into(),
+            );
+            add_context.location = ConcreteResourceLocation::InMemory;
             let res = builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
-                Some(ConcreteResourceLocation::InMemory),
+                Some(add_context),
             );
             assert!(res.is_err());
             assert_eq!(
@@ -2053,15 +2090,25 @@ pub mod tests {
                         "rejecting request to load extension module shared_only from memory since it is not supported"
                     );
 
+            let mut add_context = builder
+                .packaging_policy
+                .derive_collection_add_context(&EXTENSION_MODULE_OBJECT_FILES_ONLY.deref().into());
+            add_context.location = ConcreteResourceLocation::InMemory;
             builder.add_python_extension_module(
                 &EXTENSION_MODULE_OBJECT_FILES_ONLY,
-                Some(ConcreteResourceLocation::InMemory),
+                Some(add_context),
             )?;
             assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
+            let mut add_context = builder.packaging_policy.derive_collection_add_context(
+                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES
+                    .deref()
+                    .into(),
+            );
+            add_context.location = ConcreteResourceLocation::InMemory;
             builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
-                Some(ConcreteResourceLocation::InMemory),
+                Some(add_context),
             )?;
             assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
         }
@@ -2129,11 +2176,14 @@ pub mod tests {
 
             let mut builder = options.new_builder()?;
 
+            let mut add_context = builder.packaging_policy.derive_collection_add_context(
+                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY.deref().into(),
+            );
+            add_context.location =
+                ConcreteResourceLocation::RelativePath("prefix_explicit".to_string());
             builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
-                Some(ConcreteResourceLocation::RelativePath(
-                    "prefix_explicit".to_string(),
-                )),
+                Some(add_context),
             )?;
             assert_extension_shared_library(
                 &builder,
@@ -2141,19 +2191,27 @@ pub mod tests {
                 ConcreteResourceLocation::RelativePath("prefix_explicit".to_string()),
             )?;
 
+            let mut add_context = builder
+                .packaging_policy
+                .derive_collection_add_context(&EXTENSION_MODULE_OBJECT_FILES_ONLY.deref().into());
+            add_context.location =
+                ConcreteResourceLocation::RelativePath("prefix_explicit".to_string());
             builder.add_python_extension_module(
                 &EXTENSION_MODULE_OBJECT_FILES_ONLY,
-                Some(ConcreteResourceLocation::RelativePath(
-                    "prefix_explicit".to_string(),
-                )),
+                Some(add_context),
             )?;
             assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
 
+            let mut add_context = builder.packaging_policy.derive_collection_add_context(
+                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES
+                    .deref()
+                    .into(),
+            );
+            add_context.location =
+                ConcreteResourceLocation::RelativePath("prefix_explicit".to_string());
             builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
-                Some(ConcreteResourceLocation::RelativePath(
-                    "prefix_explicit".to_string(),
-                )),
+                Some(add_context),
             )?;
             assert_extension_shared_library(
                 &builder,

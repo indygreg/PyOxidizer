@@ -19,9 +19,7 @@ use {
             PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
             PythonPackageResource, PythonResource,
         },
-        resource_collection::{
-            ConcreteResourceLocation, PrePackagedResource, PythonResourceAddCollectionContext,
-        },
+        resource_collection::{PrePackagedResource, PythonResourceAddCollectionContext},
     },
     std::{
         collections::HashMap,
@@ -156,7 +154,7 @@ pub trait PythonBinaryBuilder {
     fn add_python_extension_module(
         &mut self,
         extension_module: &PythonExtensionModule,
-        location: Option<ConcreteResourceLocation>,
+        add_context: Option<PythonResourceAddCollectionContext>,
     ) -> Result<()>;
 
     /// Filter embedded resources against names in files.

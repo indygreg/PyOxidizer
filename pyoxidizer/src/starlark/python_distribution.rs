@@ -359,7 +359,7 @@ impl PythonDistribution {
                 .as_ref()
                 .unwrap()
                 .iter_extension_modules()
-                .map(|em| Value::new(PythonExtensionModuleValue { inner: em.clone() }))
+                .map(|em| Value::new(PythonExtensionModuleValue::new(em.clone())))
                 .collect_vec(),
         ))
     }
