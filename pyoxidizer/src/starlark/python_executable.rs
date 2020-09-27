@@ -22,6 +22,7 @@ use {
     python_packaging::resource::{DataLocation, PythonModuleSource},
     slog::{info, warn},
     starlark::environment::TypeValues,
+    starlark::eval::call_stack::CallStack,
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
     starlark::values::none::NoneType,
     starlark::values::{Mutable, TypedValue, Value, ValueResult},
@@ -113,6 +114,8 @@ impl PythonExecutable {
     /// PythonExecutable.make_python_source_module(name, source, is_package=false)
     pub fn starlark_make_python_source_module(
         &self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
         name: &Value,
         source: &Value,
         is_package: &Value,
@@ -132,7 +135,7 @@ impl PythonExecutable {
 
         let mut value = PythonSourceModuleValue::new(module);
         self.python_packaging_policy()
-            .apply_to_resource(&mut value)?;
+            .apply_to_resource(type_values, call_stack, &mut value)?;
 
         Ok(Value::new(value))
     }
@@ -141,6 +144,7 @@ impl PythonExecutable {
     pub fn starlark_pip_install(
         &self,
         type_values: &TypeValues,
+        call_stack: &mut CallStack,
         args: &Value,
         extra_envs: &Value,
     ) -> ValueResult {
@@ -180,7 +184,14 @@ impl PythonExecutable {
             })?
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
-            .map(|r| python_resource_to_value(r, &self.python_packaging_policy()))
+            .map(|r| {
+                python_resource_to_value(
+                    type_values,
+                    call_stack,
+                    r,
+                    &self.python_packaging_policy(),
+                )
+            })
             .collect::<Result<Vec<Value>, ValueError>>()?;
 
         Ok(Value::from(resources))
@@ -190,6 +201,7 @@ impl PythonExecutable {
     pub fn starlark_read_package_root(
         &self,
         type_values: &TypeValues,
+        call_stack: &mut CallStack,
         path: &Value,
         packages: &Value,
     ) -> ValueResult {
@@ -219,14 +231,26 @@ impl PythonExecutable {
             })?
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
-            .map(|r| python_resource_to_value(r, &self.python_packaging_policy()))
+            .map(|r| {
+                python_resource_to_value(
+                    type_values,
+                    call_stack,
+                    r,
+                    &self.python_packaging_policy(),
+                )
+            })
             .collect::<Result<Vec<Value>, ValueError>>()?;
 
         Ok(Value::from(resources))
     }
 
     /// PythonExecutable.read_virtualenv(path)
-    pub fn starlark_read_virtualenv(&self, type_values: &TypeValues, path: &Value) -> ValueResult {
+    pub fn starlark_read_virtualenv(
+        &self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        path: &Value,
+    ) -> ValueResult {
         let path = required_str_arg("path", &path)?;
 
         let raw_context = get_context(type_values)?;
@@ -246,7 +270,14 @@ impl PythonExecutable {
             })?
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
-            .map(|r| python_resource_to_value(r, &self.python_packaging_policy()))
+            .map(|r| {
+                python_resource_to_value(
+                    type_values,
+                    call_stack,
+                    r,
+                    &self.python_packaging_policy(),
+                )
+            })
             .collect::<Result<Vec<Value>, ValueError>>()?;
 
         Ok(Value::from(resources))
@@ -256,6 +287,7 @@ impl PythonExecutable {
     pub fn starlark_setup_py_install(
         &self,
         type_values: &TypeValues,
+        call_stack: &mut CallStack,
         package_path: &Value,
         extra_envs: &Value,
         extra_global_arguments: &Value,
@@ -318,7 +350,14 @@ impl PythonExecutable {
             })?
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
-            .map(|r| python_resource_to_value(r, &self.python_packaging_policy()))
+            .map(|r| {
+                python_resource_to_value(
+                    type_values,
+                    call_stack,
+                    r,
+                    &self.python_packaging_policy(),
+                )
+            })
             .collect::<Result<Vec<Value>, ValueError>>()?;
 
         warn!(
@@ -541,17 +580,30 @@ impl PythonExecutable {
 
 starlark_module! { python_executable_env =>
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.make_python_source_module(this, name, source, is_package=false) {
+    PythonExecutable.make_python_source_module(
+        env env,
+        call_stack cs,
+        this,
+        name,
+        source,
+        is_package=false
+    ) {
         match this.clone().downcast_ref::<PythonExecutable>() {
-            Some(exe) => exe.starlark_make_python_source_module(&name, &source, &is_package),
+            Some(exe) => exe.starlark_make_python_source_module(&env, cs, &name, &source, &is_package),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.pip_install(env env, this, args, extra_envs=NoneType::None) {
+    PythonExecutable.pip_install(
+        env env,
+        call_stack cs,
+        this,
+        args,
+        extra_envs=NoneType::None
+    ) {
         match this.clone().downcast_ref::<PythonExecutable>() {
-            Some(exe) => exe.starlark_pip_install(&env, &args, &extra_envs),
+            Some(exe) => exe.starlark_pip_install(&env, cs, &args, &extra_envs),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
@@ -559,12 +611,13 @@ starlark_module! { python_executable_env =>
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.read_package_root(
         env env,
+        call_stack cs,
         this,
         path,
         packages
     ) {
         match this.clone().downcast_ref::<PythonExecutable>() {
-            Some(exe) => exe.starlark_read_package_root(&env, &path, &packages),
+            Some(exe) => exe.starlark_read_package_root(&env, cs, &path, &packages),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
@@ -572,11 +625,12 @@ starlark_module! { python_executable_env =>
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutabvle.read_virtualenv(
         env env,
+        call_stack cs,
         this,
         path
     ) {
         match this.clone().downcast_ref::<PythonExecutable>() {
-            Some(exe) => exe.starlark_read_virtualenv(&env, &path),
+            Some(exe) => exe.starlark_read_virtualenv(&env, cs, &path),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
@@ -584,13 +638,14 @@ starlark_module! { python_executable_env =>
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.setup_py_install(
         env env,
+        call_stack cs,
         this,
         package_path,
         extra_envs=NoneType::None,
         extra_global_arguments=NoneType::None
     ) {
         match this.clone().downcast_ref::<PythonExecutable>() {
-            Some(exe) => exe.starlark_setup_py_install(&env, &package_path, &extra_envs, &extra_global_arguments),
+            Some(exe) => exe.starlark_setup_py_install(&env, cs, &package_path, &extra_envs, &extra_global_arguments),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
@@ -754,6 +809,61 @@ mod tests {
         assert_eq!(m.get_attr("name").unwrap().to_str(), "foo");
         assert_eq!(m.get_attr("source").unwrap().to_str(), "import bar");
         assert_eq!(m.get_attr("is_package").unwrap().to_bool(), false);
+    }
+
+    #[test]
+    fn test_make_python_source_module_callback() {
+        let (mut env, type_values) = starlark_env();
+
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "dist = default_python_distribution()",
+        )
+        .unwrap();
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy = dist.make_python_packaging_policy()",
+        )
+        .unwrap();
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "def my_func(policy, resource):\n    resource.add_source = True\n    resource.add_bytecode_optimization_level_two = True\n",
+        )
+        .unwrap();
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy.register_resource_callback(my_func)",
+        )
+        .unwrap();
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "exe = dist.to_python_executable('testapp', packaging_policy = policy)",
+        )
+        .unwrap();
+
+        let m = starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "exe.make_python_source_module('foo', 'import bar')",
+        )
+        .unwrap();
+
+        assert_eq!(m.get_type(), "PythonSourceModule");
+        assert_eq!(m.get_attr("name").unwrap().to_str(), "foo");
+        assert_eq!(m.get_attr("source").unwrap().to_str(), "import bar");
+        assert_eq!(m.get_attr("is_package").unwrap().to_bool(), false);
+        assert_eq!(m.get_attr("add_source").unwrap().to_bool(), true);
+        assert_eq!(
+            m.get_attr("add_bytecode_optimization_level_two")
+                .unwrap()
+                .to_bool(),
+            true
+        );
     }
 
     #[test]

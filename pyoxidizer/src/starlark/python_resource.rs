@@ -11,6 +11,8 @@ use {
     python_packaging::resource_collection::{
         ConcreteResourceLocation, PythonResourceAddCollectionContext,
     },
+    starlark::environment::TypeValues,
+    starlark::eval::call_stack::CallStack,
     starlark::values::error::{
         RuntimeError, UnsupportedOperation, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE,
     },
@@ -563,34 +565,36 @@ pub fn is_resource_starlark_compatible(resource: &PythonResource) -> bool {
 }
 
 pub fn python_resource_to_value(
+    type_values: &TypeValues,
+    call_stack: &mut CallStack,
     resource: &PythonResource,
     policy: &PythonPackagingPolicyValue,
 ) -> ValueResult {
     match resource {
         PythonResource::ModuleSource(sm) => {
             let mut m = PythonSourceModuleValue::new(sm.clone().into_owned());
-            policy.apply_to_resource(&mut m)?;
+            policy.apply_to_resource(type_values, call_stack, &mut m)?;
 
             Ok(Value::new(m))
         }
 
         PythonResource::PackageResource(data) => {
             let mut r = PythonPackageResourceValue::new(data.clone().into_owned());
-            policy.apply_to_resource(&mut r)?;
+            policy.apply_to_resource(type_values, call_stack, &mut r)?;
 
             Ok(Value::new(r))
         }
 
         PythonResource::PackageDistributionResource(resource) => {
             let mut r = PythonPackageDistributionResourceValue::new(resource.clone().into_owned());
-            policy.apply_to_resource(&mut r)?;
+            policy.apply_to_resource(type_values, call_stack, &mut r)?;
 
             Ok(Value::new(r))
         }
 
         PythonResource::ExtensionModule(em) => {
             let mut em = PythonExtensionModuleValue::new(em.clone().into_owned());
-            policy.apply_to_resource(&mut em)?;
+            policy.apply_to_resource(type_values, call_stack,&mut em)?;
 
             Ok(Value::new(em))
         },

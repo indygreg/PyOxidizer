@@ -293,16 +293,18 @@ impl PythonDistribution {
         let dist = self.distribution.as_ref().unwrap().clone();
 
         let policy = if packaging_policy.get_type() == "NoneType" {
-            Ok(dist.create_packaging_policy().map_err(|e| {
-                ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: e.to_string(),
-                    label: "resolve_distribution()".to_string(),
-                })
-            })?)
+            Ok(PythonPackagingPolicyValue::new(
+                dist.create_packaging_policy().map_err(|e| {
+                    ValueError::from(RuntimeError {
+                        code: "PYOXIDIZER_BUILD",
+                        message: e.to_string(),
+                        label: "resolve_distribution()".to_string(),
+                    })
+                })?,
+            ))
         } else {
             match packaging_policy.downcast_ref::<PythonPackagingPolicyValue>() {
-                Some(policy) => Ok(policy.inner.clone()),
+                Some(policy) => Ok(policy.clone()),
                 None => Err(ValueError::IncorrectParameterType),
             }
         }?;
@@ -324,7 +326,7 @@ impl PythonDistribution {
                 &name,
                 // TODO make configurable
                 BinaryLibpythonLinkMode::Default,
-                &policy,
+                &policy.inner,
                 &config,
             )
             .map_err(|e| {
@@ -334,7 +336,7 @@ impl PythonDistribution {
                     label: "to_python_executable()".to_string(),
                 })
             })?,
-            PythonPackagingPolicyValue::new(policy),
+            policy,
         )))
     }
 

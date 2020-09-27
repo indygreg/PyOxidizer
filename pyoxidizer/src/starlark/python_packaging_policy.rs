@@ -7,10 +7,13 @@ use {
         python_resource::ResourceCollectionContext,
         util::{required_str_arg, required_type_arg},
     },
+    linked_hash_map::LinkedHashMap,
     python_packaging::policy::{
         ExtensionModuleFilter, PythonPackagingPolicy, PythonResourcesPolicy,
     },
     starlark::{
+        environment::TypeValues,
+        eval::call_stack::CallStack,
         starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
         starlark_signature_extraction, starlark_signatures,
         values::{
@@ -20,6 +23,7 @@ use {
         },
     },
     std::convert::TryFrom,
+    std::ops::Deref,
 };
 
 #[derive(Debug, Clone)]
@@ -27,7 +31,7 @@ pub struct PythonPackagingPolicyValue {
     pub inner: PythonPackagingPolicy,
 
     /// Starlark functions to influence PythonResourceAddCollectionContext creation.
-    pub derive_context_callbacks: Vec<Value>,
+    derive_context_callbacks: Vec<Value>,
 }
 
 impl PythonPackagingPolicyValue {
@@ -43,16 +47,49 @@ impl PythonPackagingPolicyValue {
     /// This has the effect of replacing the `PythonResourceAddCollectionContext`
     /// instance with a fresh one derived from the policy. If no context is
     /// currently defined on the resource, a new one will be created so there is.
-    pub fn apply_to_resource<T>(&self, value: &mut T) -> ValueResult
+    pub fn apply_to_resource<T>(
+        &self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        value: &mut T,
+    ) -> ValueResult
     where
-        T: TypedValue + ResourceCollectionContext,
+        T: TypedValue + ResourceCollectionContext + Clone,
     {
         let new_context = self
             .inner
             .derive_add_collection_context(&value.as_python_resource());
         value.add_collection_context_mut().replace(new_context);
 
-        // TODO call callbacks.
+        for func in &self.derive_context_callbacks {
+            // This is a bit wonky. We pass in a `TypeValue`, which isn't a `Value`.
+            // To go from `TypeValue` to `Value`, we need to construct a `Value`, which
+            // takes ownership of the `TypeValue`. But we need to move a `Value` as an
+            // argument into call().
+            //
+            // Our solution for this is to create a copy of the passed object and
+            // construct a `Value` from it. After the call, we downcast it back to
+            // our T, retrieve its add context, and replace that on the original value.
+            //
+            // There might be a way to pass a `Value` into this method. But for now,
+            // this solution works.
+            let temp_value = Value::new(value.clone());
+
+            func.call(
+                call_stack,
+                type_values,
+                vec![Value::new(self.clone()), temp_value.clone()],
+                LinkedHashMap::new(),
+                None,
+                None,
+            )?;
+
+            let downcast_value = temp_value.downcast_ref::<T>().unwrap();
+            let inner: &T = downcast_value.deref();
+            value
+                .add_collection_context_mut()
+                .replace(inner.add_collection_context().as_ref().unwrap().clone());
+        }
 
         Ok(Value::from(NoneType::None))
     }

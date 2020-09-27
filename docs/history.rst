@@ -221,6 +221,10 @@ New Features
 * The ``PythonDistribution`` Starlark type has gained a
   ``make_packaging_policy()`` method for obtaining the default
   ``PythonPackagingPolicy`` for that distribution.
+* The ``PythonPackagingPolicy.register_resource_callback()`` method can
+  be used to register a Starlark function that will be called whenever
+  resources are created. The callback allows a single function to inspect
+  and manipulate resources as they are created.
 
 Bug Fixes
 ^^^^^^^^^
