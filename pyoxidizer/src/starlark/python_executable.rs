@@ -13,7 +13,7 @@ use {
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
     super::util::{
         optional_dict_arg, optional_list_arg, required_bool_arg, required_list_arg,
-        required_str_arg, required_type_arg,
+        required_str_arg,
     },
     crate::project_building::build_python_executable,
     crate::py_packaging::binary::PythonBinaryBuilder,
@@ -303,143 +303,98 @@ impl PythonExecutable {
         Ok(Value::from(resources))
     }
 
-    /// PythonExecutable.add_python_module_source(module)
-    pub fn starlark_add_python_module_source(
+    pub fn add_python_module_source(
         &mut self,
-        type_values: &TypeValues,
-        module: &Value,
+        context: &EnvironmentContext,
+        label: &str,
+        module: &PythonSourceModuleValue,
     ) -> ValueResult {
-        required_type_arg("module", "PythonSourceModule", &module)?;
-
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        // Type was validated above.
-        let module_value = module.downcast_ref::<PythonSourceModuleValue>().unwrap();
-        let module = module_value.inner.clone();
-
         info!(
             &context.logger,
-            "adding Python source module {}", module.name
+            "adding Python source module {}", module.inner.name;
         );
         self.exe
-            .add_python_module_source(&module, module_value.add_collection_context().clone())
+            .add_python_module_source(&module.inner, module.add_collection_context().clone())
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
-                    label: "add_python_module_source".to_string(),
+                    label: label.to_string(),
                 })
             })?;
 
         Ok(Value::new(NoneType::None))
     }
 
-    /// PythonExecutable.add_python_package_resource(resource)
-    pub fn starlark_add_python_package_resource(
+    pub fn add_python_package_resource(
         &mut self,
-        type_values: &TypeValues,
-        resource: &Value,
+        context: &EnvironmentContext,
+        label: &str,
+        resource: &PythonPackageResourceValue,
     ) -> ValueResult {
-        required_type_arg("resource", "PythonPackageResource", &resource)?;
-
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        // Type validated above.
-        let resource_value = resource
-            .downcast_ref::<PythonPackageResourceValue>()
-            .unwrap();
-
-        let r = resource_value.inner.clone();
-
         info!(
             &context.logger,
             "adding resource data {}",
-            r.symbolic_name()
+            resource.inner.symbolic_name()
         );
         self.exe
-            .add_python_package_resource(&r, resource_value.add_collection_context().clone())
+            .add_python_package_resource(&resource.inner, resource.add_collection_context().clone())
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
-                    label: "add_python_package_resource".to_string(),
+                    label: label.to_string(),
                 })
             })?;
 
         Ok(Value::new(NoneType::None))
     }
 
-    /// PythonExecutable.add_python_package_distribution_resource(resource)
-    pub fn starlark_add_python_package_distribution_resource(
+    pub fn add_python_package_distribution_resource(
         &mut self,
-        type_values: &TypeValues,
-        resource: &Value,
+        context: &EnvironmentContext,
+        label: &str,
+        resource: &PythonPackageDistributionResourceValue,
     ) -> ValueResult {
-        required_type_arg("resource", "PythonPackageDistributionResource", &resource)?;
-
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        // Type validated above.
-        let resource_value = resource
-            .downcast_ref::<PythonPackageDistributionResourceValue>()
-            .unwrap();
-
-        let r = resource_value.inner.clone();
-
         info!(
             &context.logger,
-            "adding package distribution resource {}:{}", r.package, r.name
+            "adding package distribution resource {}:{}",
+            resource.inner.package,
+            resource.inner.name
         );
         self.exe
             .add_python_package_distribution_resource(
-                &r,
-                resource_value.add_collection_context().clone(),
+                &resource.inner,
+                resource.add_collection_context().clone(),
             )
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
-                    label: "add_python_package_distribution_resource".to_string(),
+                    label: label.to_string(),
                 })
             })?;
 
         Ok(Value::new(NoneType::None))
     }
 
-    /// PythonExecutable.add_python_extension_module(module)
-    pub fn starlark_add_python_extension_module(
+    pub fn add_python_extension_module(
         &mut self,
-        type_values: &TypeValues,
-        module: &Value,
+        context: &EnvironmentContext,
+        label: &str,
+        module: &PythonExtensionModuleValue,
     ) -> ValueResult {
-        required_type_arg("module", "PythonExtensionModule", &module)?;
-
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        // Type validated above.
-        let module_value = module.downcast_ref::<PythonExtensionModuleValue>().unwrap();
-        let m = module_value.inner.clone();
-
-        info!(&context.logger, "adding extension module {}", m.name);
+        info!(
+            &context.logger,
+            "adding extension module {}", module.inner.name
+        );
         self.exe
-            .add_python_extension_module(&m, module_value.add_collection_context().clone())
+            .add_python_extension_module(&module.inner, module.add_collection_context().clone())
             .map_err(|e| {
                 ValueError::from(RuntimeError {
                     code: "PYOXIDIZER_BUILD",
                     message: e.to_string(),
-                    label: "add_python_extension_module".to_string(),
+                    label: label.to_string(),
                 })
             })?;
 
@@ -451,21 +406,35 @@ impl PythonExecutable {
         &mut self,
         type_values: &TypeValues,
         resource: &Value,
+        label: &str,
     ) -> ValueResult {
+        let raw_context = get_context(type_values)?;
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
         match resource.get_type() {
             "PythonSourceModule" => {
-                self.starlark_add_python_module_source(type_values, resource)?;
-
-                Ok(Value::new(NoneType::None))
+                let module = resource.downcast_ref::<PythonSourceModuleValue>().unwrap();
+                self.add_python_module_source(context.deref(), label, module.deref())
             }
             "PythonPackageResource" => {
-                self.starlark_add_python_package_resource(type_values, resource)
+                let r = resource
+                    .downcast_ref::<PythonPackageResourceValue>()
+                    .unwrap();
+                self.add_python_package_resource(context.deref(), label, r.deref())
             }
             "PythonPackageDistributionResource" => {
-                self.starlark_add_python_package_distribution_resource(type_values, resource)
+                let r = resource
+                    .downcast_ref::<PythonPackageDistributionResourceValue>()
+                    .unwrap();
+                self.add_python_package_distribution_resource(context.deref(), label, r.deref())
             }
             "PythonExtensionModule" => {
-                self.starlark_add_python_extension_module(type_values, resource)
+                let module = resource
+                    .downcast_ref::<PythonExtensionModuleValue>()
+                    .unwrap();
+                self.add_python_extension_module(context.deref(), label, module.deref())
             }
             _ => Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -482,7 +451,7 @@ impl PythonExecutable {
         resources: &Value,
     ) -> ValueResult {
         for resource in &resources.iter()? {
-            self.starlark_add_python_resource(type_values, &resource)?;
+            self.starlark_add_python_resource(type_values, &resource, "add_python_resources()")?;
         }
 
         Ok(Value::new(NoneType::None))
@@ -609,6 +578,7 @@ starlark_module! { python_executable_env =>
             Some(mut exe) => exe.starlark_add_python_resource(
                 &env,
                 &resource,
+                "add_python_resource",
             ),
             None => Err(ValueError::IncorrectParameterType),
         }
