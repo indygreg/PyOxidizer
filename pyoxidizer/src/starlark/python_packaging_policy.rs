@@ -146,7 +146,7 @@ impl TypedValue for PythonPackagingPolicyValue {
 
 // Starlark methods.
 impl PythonPackagingPolicyValue {
-    fn set_preferred_extension_module_variant_starlark(
+    fn starlark_set_preferred_extension_module_variant(
         &mut self,
         name: &Value,
         value: &Value,
@@ -164,7 +164,7 @@ impl PythonPackagingPolicyValue {
 starlark_module! { python_packaging_policy_module =>
     PythonPackagingPolicy.set_preferred_extension_module_variant(this, name, value) {
         match this.clone().downcast_mut::<PythonPackagingPolicyValue>()? {
-            Some(mut policy) => policy.set_preferred_extension_module_variant_starlark(&name, &value),
+            Some(mut policy) => policy.starlark_set_preferred_extension_module_variant(&name, &value),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
