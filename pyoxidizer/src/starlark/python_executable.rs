@@ -6,9 +6,9 @@ use {
     super::env::{get_context, EnvironmentContext},
     super::python_embedded_resources::PythonEmbeddedResources,
     super::python_resource::{
-        is_resource_starlark_compatible, python_resource_to_value, OptionalResourceLocation,
-        PythonExtensionModuleValue, PythonPackageDistributionResourceValue,
-        PythonPackageResourceValue, PythonSourceModuleValue, ResourceCollectionContext,
+        is_resource_starlark_compatible, python_resource_to_value, PythonExtensionModuleValue,
+        PythonPackageDistributionResourceValue, PythonPackageResourceValue,
+        PythonSourceModuleValue, ResourceCollectionContext,
     },
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
     super::util::{
@@ -29,7 +29,6 @@ use {
         starlark_signature_extraction, starlark_signatures,
     },
     std::collections::HashMap,
-    std::convert::TryFrom,
     std::io::Write,
     std::ops::Deref,
     std::path::{Path, PathBuf},
@@ -304,15 +303,13 @@ impl PythonExecutable {
         Ok(Value::from(resources))
     }
 
-    /// PythonExecutable.add_python_module_source(module, location=None)
+    /// PythonExecutable.add_python_module_source(module)
     pub fn starlark_add_python_module_source(
         &mut self,
         type_values: &TypeValues,
         module: &Value,
-        location: &Value,
     ) -> ValueResult {
         required_type_arg("module", "PythonSourceModule", &module)?;
-        let location = OptionalResourceLocation::try_from(location)?;
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
@@ -323,17 +320,13 @@ impl PythonExecutable {
         let module_value = module.downcast_ref::<PythonSourceModuleValue>().unwrap();
         let module = module_value.inner.clone();
 
-        let mut add_context = match module_value.add_context.as_ref() {
+        let add_context = match module_value.add_context.as_ref() {
             Some(add_context) => add_context.clone(),
             None => self
                 .exe
                 .python_packaging_policy()
                 .derive_collection_add_context(&(&module).into()),
         };
-
-        if let Some(location) = location.into() {
-            add_context.location = location;
-        }
 
         info!(
             &context.logger,
@@ -352,15 +345,13 @@ impl PythonExecutable {
         Ok(Value::new(NoneType::None))
     }
 
-    /// PythonExecutable.add_python_package_resource(resource, location=None)
+    /// PythonExecutable.add_python_package_resource(resource)
     pub fn starlark_add_python_package_resource(
         &mut self,
         type_values: &TypeValues,
         resource: &Value,
-        location: &Value,
     ) -> ValueResult {
         required_type_arg("resource", "PythonPackageResource", &resource)?;
-        let location = OptionalResourceLocation::try_from(location)?;
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
@@ -374,17 +365,13 @@ impl PythonExecutable {
 
         let r = resource_value.inner.clone();
 
-        let mut add_context = match resource_value.add_context.as_ref() {
+        let add_context = match resource_value.add_context.as_ref() {
             Some(add_context) => add_context.clone(),
             None => self
                 .exe
                 .python_packaging_policy()
                 .derive_collection_add_context(&(&r).into()),
         };
-
-        if let Some(location) = location.into() {
-            add_context.location = location;
-        }
 
         info!(
             &context.logger,
@@ -404,15 +391,13 @@ impl PythonExecutable {
         Ok(Value::new(NoneType::None))
     }
 
-    /// PythonExecutable.add_python_package_distribution_resource(resource, location=None)
+    /// PythonExecutable.add_python_package_distribution_resource(resource)
     pub fn starlark_add_python_package_distribution_resource(
         &mut self,
         type_values: &TypeValues,
         resource: &Value,
-        location: &Value,
     ) -> ValueResult {
         required_type_arg("resource", "PythonPackageDistributionResource", &resource)?;
-        let location = OptionalResourceLocation::try_from(location)?;
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
@@ -426,16 +411,13 @@ impl PythonExecutable {
 
         let r = resource_value.inner.clone();
 
-        let mut add_context = match resource_value.add_context.as_ref() {
+        let add_context = match resource_value.add_context.as_ref() {
             Some(add_context) => add_context.clone(),
             None => self
                 .exe
                 .python_packaging_policy()
                 .derive_collection_add_context(&(&r).into()),
         };
-        if let Some(location) = location.into() {
-            add_context.location = location;
-        }
 
         info!(
             &context.logger,
@@ -459,10 +441,8 @@ impl PythonExecutable {
         &mut self,
         type_values: &TypeValues,
         module: &Value,
-        location: &Value,
     ) -> ValueResult {
         required_type_arg("module", "PythonExtensionModule", &module)?;
-        let location = OptionalResourceLocation::try_from(location)?;
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
@@ -473,16 +453,13 @@ impl PythonExecutable {
         let module_value = module.downcast_ref::<PythonExtensionModuleValue>().unwrap();
         let m = module_value.inner.clone();
 
-        let mut add_context = match module_value.add_context.as_ref() {
+        let add_context = match module_value.add_context.as_ref() {
             Some(add_context) => add_context.clone(),
             None => self
                 .exe
                 .python_packaging_policy()
                 .derive_collection_add_context(&(&m).into()),
         };
-        if let Some(location) = location.into() {
-            add_context.location = location;
-        }
 
         info!(&context.logger, "adding extension module {}", m.name);
         self.exe
@@ -498,41 +475,27 @@ impl PythonExecutable {
         Ok(Value::new(NoneType::None))
     }
 
-    /// PythonExecutable.add_python_resource(resource, location=None)
+    /// PythonExecutable.add_python_resource(resource)
     pub fn starlark_add_python_resource(
         &mut self,
         type_values: &TypeValues,
         resource: &Value,
-        location: &Value,
     ) -> ValueResult {
-        let location = OptionalResourceLocation::try_from(location)?;
-
         match resource.get_type() {
             "PythonSourceModule" => {
-                self.starlark_add_python_module_source(
-                    type_values,
-                    resource,
-                    &Value::from(&location),
-                )?;
+                self.starlark_add_python_module_source(type_values, resource)?;
 
                 Ok(Value::new(NoneType::None))
             }
-            "PythonPackageResource" => self.starlark_add_python_package_resource(
-                type_values,
-                resource,
-                &Value::from(&location),
-            ),
-            "PythonPackageDistributionResource" => self
-                .starlark_add_python_package_distribution_resource(
-                    type_values,
-                    resource,
-                    &Value::from(&location),
-                ),
-            "PythonExtensionModule" => self.starlark_add_python_extension_module(
-                type_values,
-                resource,
-                &Value::from(&location),
-            ),
+            "PythonPackageResource" => {
+                self.starlark_add_python_package_resource(type_values, resource)
+            }
+            "PythonPackageDistributionResource" => {
+                self.starlark_add_python_package_distribution_resource(type_values, resource)
+            }
+            "PythonExtensionModule" => {
+                self.starlark_add_python_extension_module(type_values, resource)
+            }
             _ => Err(ValueError::from(RuntimeError {
                 code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
                 message: "resource argument must be a Python resource type".to_string(),
@@ -541,15 +504,14 @@ impl PythonExecutable {
         }
     }
 
-    /// PythonExecutable.add_python_resources(resources, location=None)
+    /// PythonExecutable.add_python_resources(resources)
     pub fn starlark_add_python_resources(
         &mut self,
         type_values: &TypeValues,
         resources: &Value,
-        location: &Value,
     ) -> ValueResult {
         for resource in &resources.iter()? {
-            self.starlark_add_python_resource(type_values, &resource, &location)?;
+            self.starlark_add_python_resource(type_values, &resource)?;
         }
 
         Ok(Value::new(NoneType::None))
@@ -667,9 +629,9 @@ starlark_module! { python_executable_env =>
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_python_module_source(env env, this, module, location=NoneType::None) {
+    PythonExecutable.add_python_module_source(env env, this, module) {
         match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_python_module_source(&env, &module, &location),
+            Some(mut exe) => exe.starlark_add_python_module_source(&env, &module),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
@@ -677,23 +639,23 @@ starlark_module! { python_executable_env =>
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_python_package_resource(env env, this, resource, location=NoneType::None) {
         match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_python_package_resource(&env, &resource, &location),
+            Some(mut exe) => exe.starlark_add_python_package_resource(&env, &resource),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_python_package_distribution_resource(env env, this, resource, location=NoneType::None) {
+    PythonExecutable.add_python_package_distribution_resource(env env, this, resource) {
         match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_python_package_distribution_resource(&env, &resource, &location),
+            Some(mut exe) => exe.starlark_add_python_package_distribution_resource(&env, &resource),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
 
     #[allow(clippy::ptr_arg)]
-    PythonExecutable.add_python_extension_module(env env, this, module, location=NoneType::None) {
+    PythonExecutable.add_python_extension_module(env env, this, module) {
         match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_python_extension_module(&env, &module, &location),
+            Some(mut exe) => exe.starlark_add_python_extension_module(&env, &module),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
@@ -702,14 +664,12 @@ starlark_module! { python_executable_env =>
     PythonExecutable.add_python_resource(
         env env,
         this,
-        resource,
-        location=NoneType::None
+        resource
     ) {
         match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_python_resource(
                 &env,
                 &resource,
-                &location,
             ),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -719,14 +679,12 @@ starlark_module! { python_executable_env =>
     PythonExecutable.add_python_resources(
         env env,
         this,
-        resources,
-        location=NoneType::None
+        resources
     ) {
         match this.clone().downcast_mut::<PythonExecutable>()? {
             Some(mut exe) => exe.starlark_add_python_resources(
                 &env,
                 &resources,
-                &location,
             ),
             None => Err(ValueError::IncorrectParameterType),
         }

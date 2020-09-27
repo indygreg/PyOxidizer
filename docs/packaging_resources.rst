@@ -172,8 +172,10 @@ For example, to add a ``PythonSourceModule`` to a ``PythonExecutable``:
                # Location defined by policy.
                exe.add_python_module_source(resource)
                # Force a location.
-               exe.add_python_module_source(resource, location="in-memory")
-               exe.add_python_module_source(resource, location="filesystem-relative:lib")
+               resource.add_location = "in-memory"
+               exe.add_python_module_source(resource)
+               resource.add_location = "filesystem-relative:lib"
+               exe.add_python_module_source(resource)
 
 *Resource addition* APIs are either *type-aware* or *type-agnostic*.
 

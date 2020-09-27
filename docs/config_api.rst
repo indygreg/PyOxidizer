@@ -1142,59 +1142,35 @@ The returned resources are typically added to a ``FileManifest`` or
 
 .. _config_python_executable_add_python_module_source:
 
-``PythonExecutable.add_python_module_source(module, location=None)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonExecutable.add_python_module_source(module)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This method registers a Python source module with a ``PythonExecutable``
 instance.
 
-If ``location`` is defined, it is a ``str`` defining the resource location
-from which to load the module. See :ref:`config_resource_locations` for
-possible values. If ``None`` (the default), the resource location will be
-chosen by the active resources policy.
-See :ref:`config_python_resources_policy`.
-
 .. _config_python_executable.add_python_package_resource:
 
-``PythonExecutable.add_python_package_resource(resource, location=None)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonExecutable.add_python_package_resource(resource)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This method adds a ``PythonPackageResource`` instance to the
 ``PythonExecutable`` instance.
 
-If ``location`` is defined, it is a ``str`` defining the resource location
-from which to load the resource. See :ref:`config_resource_locations` for
-possible values. If ``None`` (the default), the resource location will be
-chosen by the active resources policy.
-See :ref:`config_python_resources_policy`.
-
 .. _config_python_executable.add_python_package_distribution_resource:
 
-``PythonExecutable.add_python_package_distribution_resource(resource, location=None)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonExecutable.add_python_package_distribution_resource(resource)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This method adds a ``PythonPackageDistributionResource`` instance to the
 ``PythonExecutable`` instance.
 
-If ``location`` is defined, it is a ``str`` defining the resource location
-from which to load the resource. See :ref:`config_resource_locations` for
-possible values. If ``None`` (the default), the resource location will be
-chosen by the active resources policy.
-See :ref:`config_python_resources_policy`.
-
 .. _config_python_executable_add_python_extension_module:
 
-``PythonExecutable.add_python_extension_module(module, location=None)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``PythonExecutable.add_python_extension_module(module)``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This method registers a ``PythonExtensionModule`` instance with a
 ``PythonExecutable`` instance.
-
-If ``location`` is defined, it is a ``str`` defining the resource location
-from which to load the resource. See :ref:`config_resource_locations` for
-possible values. If ``None`` (the default), the resource location will be
-chosen by the active resources policy.
-See :ref:`config_python_resources_policy`.
 
 The extension module could be packaged in the following manner depending
 on the capabilities of the underlying Python distribution and resources
@@ -1226,11 +1202,6 @@ The following arguments are accepted:
 
 ``resource``
    The resource to add to the embedded Python environment.
-
-``location`` (str)
-    Defines the resource location from which to load the resource.
-    See :ref:`config_resource_locations` for possible values. See
-    also :ref:`config_python_resources_policy`.
 
 This method is a glorified proxy to the various ``add_python_*`` methods.
 Unlike those methods, this one accepts all types that are known Python

@@ -35,7 +35,9 @@ Then edit the ``pyoxidizer.bzl`` file to have the following:
            name="black",
        )
 
-       exe.add_python_resources(exe.pip_install(["black==19.3b0"]), location="in-memory")
+       for resource in exe.pip_install(["black==19.3b0"]):
+           exe.add_location = "in-memory"
+           exe.add_python_resource(resource)
 
        return exe
 

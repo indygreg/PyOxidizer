@@ -94,9 +94,9 @@ Backwards Compatibility Notes
   ``PythonExecutable.add_extension_module()`` ->
   ``PythonExecutable.add_python_extension_module()``.
 * The location-specific Starlark methods for adding Python resources
-  have been removed. The functionality can be duplicated by passing
-  a ``location`` argument to the new methods for adding resources.
-  The following methods were removed:
+  have been removed. The functionality can be duplicated by modifying
+  the ``add_location`` and ``add_location_fallback`` attributes on
+  Python resource types. The following methods were removed:
   ``PythonExecutable.add_in_memory_module_source()``;
   ``PythonExecutable.add_filesystem_relative_module_source()``,
   ``PythonExecutable.add_in_memory_module_bytecode()``;
