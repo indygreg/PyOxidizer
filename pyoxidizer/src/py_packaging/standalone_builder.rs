@@ -472,7 +472,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<()> {
         // TODO rewrite code in terms of add_context (the logic is a leftover from when
         // we passed an Option<ConcreteResourceLocation> into the function).
-        let location = match add_context {
+        let location = match &add_context {
             Some(add_context) => Some(add_context.location.clone()),
             None => None,
         };
@@ -506,9 +506,11 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             PythonResourcesPolicy::FilesystemRelativeOnly(_) => false,
         };
 
-        let relative_path = match location {
-            Some(ConcreteResourceLocation::RelativePath(ref prefix)) => Some(prefix.clone()),
-            Some(ConcreteResourceLocation::InMemory) => None,
+        let relative_path = match &add_context {
+            Some(add_context) => match &add_context.location {
+                ConcreteResourceLocation::InMemory => None,
+                ConcreteResourceLocation::RelativePath(ref prefix) => Some(prefix.clone()),
+            },
             None => match self.packaging_policy.clone().resources_policy() {
                 PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => Some(prefix.clone()),
                 PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(prefix) => {
