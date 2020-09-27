@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+use crate::starlark::python_packaging_policy::PythonPackagingPolicyValue;
 use {
     super::env::{get_context, EnvironmentContext},
     super::python_embedded_resources::PythonEmbeddedResources,
@@ -37,14 +38,39 @@ use {
 /// Represents a builder for a Python executable.
 pub struct PythonExecutable {
     pub exe: Box<dyn PythonBinaryBuilder>,
+
+    /// The Starlark Value for the Python packaging policy.
+    // This is stored as a Vec because I couldn't figure out how to implement
+    // values_for_descendant_check_and_freeze() without the borrow checker
+    // complaining due to a temporary vec/array.
+    policy: Vec<Value>,
+}
+
+impl PythonExecutable {
+    pub fn new(exe: Box<dyn PythonBinaryBuilder>, policy: PythonPackagingPolicyValue) -> Self {
+        Self {
+            exe,
+            policy: vec![Value::new(policy)],
+        }
+    }
+
+    /// Obtains a copy of the `PythonPackagingPolicyValue` stored internally.
+    pub fn python_packaging_policy(&self) -> PythonPackagingPolicyValue {
+        self.policy[0]
+            .downcast_ref::<PythonPackagingPolicyValue>()
+            .unwrap()
+            .clone()
+    }
 }
 
 impl TypedValue for PythonExecutable {
     type Holder = Mutable<PythonExecutable>;
     const TYPE: &'static str = "PythonExecutable";
 
-    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
-        Box::new(std::iter::empty())
+    fn values_for_descendant_check_and_freeze<'a>(
+        &'a self,
+    ) -> Box<dyn Iterator<Item = Value> + 'a> {
+        Box::new(self.policy.iter().cloned())
     }
 }
 
@@ -105,7 +131,8 @@ impl PythonExecutable {
         };
 
         let mut value = PythonSourceModuleValue::new(module);
-        value.apply_packaging_policy(self.exe.python_packaging_policy());
+        self.python_packaging_policy()
+            .apply_to_resource(&mut value)?;
 
         Ok(Value::new(value))
     }
@@ -153,8 +180,8 @@ impl PythonExecutable {
             })?
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
-            .map(|r| python_resource_to_value(r, self.exe.python_packaging_policy()))
-            .collect::<Vec<Value>>();
+            .map(|r| python_resource_to_value(r, &self.python_packaging_policy()))
+            .collect::<Result<Vec<Value>, ValueError>>()?;
 
         Ok(Value::from(resources))
     }
@@ -192,8 +219,8 @@ impl PythonExecutable {
             })?
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
-            .map(|r| python_resource_to_value(r, self.exe.python_packaging_policy()))
-            .collect::<Vec<Value>>();
+            .map(|r| python_resource_to_value(r, &self.python_packaging_policy()))
+            .collect::<Result<Vec<Value>, ValueError>>()?;
 
         Ok(Value::from(resources))
     }
@@ -219,8 +246,8 @@ impl PythonExecutable {
             })?
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
-            .map(|r| python_resource_to_value(r, self.exe.python_packaging_policy()))
-            .collect::<Vec<Value>>();
+            .map(|r| python_resource_to_value(r, &self.python_packaging_policy()))
+            .collect::<Result<Vec<Value>, ValueError>>()?;
 
         Ok(Value::from(resources))
     }
@@ -291,8 +318,8 @@ impl PythonExecutable {
             })?
             .iter()
             .filter(|r| is_resource_starlark_compatible(r))
-            .map(|r| python_resource_to_value(r, self.exe.python_packaging_policy()))
-            .collect::<Vec<Value>>();
+            .map(|r| python_resource_to_value(r, &self.python_packaging_policy()))
+            .collect::<Result<Vec<Value>, ValueError>>()?;
 
         warn!(
             &context.logger,

@@ -3,7 +3,10 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::util::{required_str_arg, required_type_arg},
+    super::{
+        python_resource::ResourceCollectionContext,
+        util::{required_str_arg, required_type_arg},
+    },
     python_packaging::policy::{
         ExtensionModuleFilter, PythonPackagingPolicy, PythonResourcesPolicy,
     },
@@ -33,6 +36,25 @@ impl PythonPackagingPolicyValue {
             inner,
             derive_context_callbacks: vec![],
         }
+    }
+
+    /// Apply this policy to a resource.
+    ///
+    /// This has the effect of replacing the `PythonResourceAddCollectionContext`
+    /// instance with a fresh one derived from the policy. If no context is
+    /// currently defined on the resource, a new one will be created so there is.
+    pub fn apply_to_resource<T>(&self, value: &mut T) -> ValueResult
+    where
+        T: TypedValue + ResourceCollectionContext,
+    {
+        let new_context = self
+            .inner
+            .derive_add_collection_context(&value.as_python_resource());
+        value.add_collection_context_mut().replace(new_context);
+
+        // TODO call callbacks.
+
+        Ok(Value::from(NoneType::None))
     }
 }
 

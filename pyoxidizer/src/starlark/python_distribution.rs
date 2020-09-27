@@ -316,26 +316,26 @@ impl PythonDistribution {
             }
         }?;
 
-        Ok(Value::new(PythonExecutable {
-            exe: dist
-                .as_python_executable_builder(
-                    &context.logger,
-                    &context.build_host_triple,
-                    &context.build_target_triple,
-                    &name,
-                    // TODO make configurable
-                    BinaryLibpythonLinkMode::Default,
-                    &policy,
-                    &config,
-                )
-                .map_err(|e| {
-                    ValueError::from(RuntimeError {
-                        code: "PYOXIDIZER_BUILD",
-                        message: e.to_string(),
-                        label: "to_python_executable()".to_string(),
-                    })
-                })?,
-        }))
+        Ok(Value::new(PythonExecutable::new(
+            dist.as_python_executable_builder(
+                &context.logger,
+                &context.build_host_triple,
+                &context.build_target_triple,
+                &name,
+                // TODO make configurable
+                BinaryLibpythonLinkMode::Default,
+                &policy,
+                &config,
+            )
+            .map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "to_python_executable()".to_string(),
+                })
+            })?,
+            PythonPackagingPolicyValue::new(policy),
+        )))
     }
 
     /// PythonDistribution.extension_modules()

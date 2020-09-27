@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    python_packaging::policy::PythonPackagingPolicy,
+    super::python_packaging_policy::PythonPackagingPolicyValue,
     python_packaging::resource::{
         PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
         PythonPackageResource, PythonResource,
@@ -99,17 +99,6 @@ pub trait ResourceCollectionContext {
 
     /// Cast this instance to a `PythonResource`.
     fn as_python_resource(&self) -> PythonResource;
-
-    /// Apply a Python packaging policy to this instance.
-    ///
-    /// This has the effect of replacing the `PythonResourceAddCollectionContext`
-    /// instance with a fresh one derived from the policy. If no context
-    /// is currently defined on the instance, a new one will be created so
-    /// there is.
-    fn apply_packaging_policy(&mut self, policy: &PythonPackagingPolicy) {
-        let new_context = policy.derive_add_collection_context(&self.as_python_resource());
-        self.add_collection_context_mut().replace(new_context);
-    }
 
     /// Obtains the Starlark object attributes that are defined by the add collection context.
     fn add_collection_context_attrs(&self) -> Vec<&'static str> {
@@ -575,35 +564,35 @@ pub fn is_resource_starlark_compatible(resource: &PythonResource) -> bool {
 
 pub fn python_resource_to_value(
     resource: &PythonResource,
-    policy: &PythonPackagingPolicy,
-) -> Value {
+    policy: &PythonPackagingPolicyValue,
+) -> ValueResult {
     match resource {
         PythonResource::ModuleSource(sm) => {
             let mut m = PythonSourceModuleValue::new(sm.clone().into_owned());
-            m.apply_packaging_policy(policy);
+            policy.apply_to_resource(&mut m)?;
 
-            Value::new(m)
+            Ok(Value::new(m))
         }
 
         PythonResource::PackageResource(data) => {
             let mut r = PythonPackageResourceValue::new(data.clone().into_owned());
-            r.apply_packaging_policy(policy);
+            policy.apply_to_resource(&mut r)?;
 
-            Value::new(r)
+            Ok(Value::new(r))
         }
 
         PythonResource::PackageDistributionResource(resource) => {
             let mut r = PythonPackageDistributionResourceValue::new(resource.clone().into_owned());
-            r.apply_packaging_policy(policy);
+            policy.apply_to_resource(&mut r)?;
 
-            Value::new(r)
+            Ok(Value::new(r))
         }
 
         PythonResource::ExtensionModule(em) => {
             let mut em = PythonExtensionModuleValue::new(em.clone().into_owned());
-            em.apply_packaging_policy(policy);
+            policy.apply_to_resource(&mut em)?;
 
-            Value::new(em)
+            Ok(Value::new(em))
         },
 
         _ => {
