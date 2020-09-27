@@ -8,10 +8,7 @@ use {
     super::data::{BlobInteriorPadding, BlobSectionField, Resource, ResourceField, HEADER_V1},
     anyhow::{anyhow, Context, Result},
     byteorder::{LittleEndian, WriteBytesExt},
-    std::collections::BTreeMap,
-    std::convert::TryFrom,
-    std::io::Write,
-    std::path::Path,
+    std::{collections::BTreeMap, convert::TryFrom, io::Write, path::Path},
 };
 
 #[cfg(unix)]

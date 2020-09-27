@@ -4,10 +4,7 @@
 
 /*! Declares the foundational data primitives inside packed resources data. */
 
-use {
-    std::borrow::Cow, std::collections::HashMap, std::convert::TryFrom, std::iter::FromIterator,
-    std::path::Path,
-};
+use std::{borrow::Cow, collections::HashMap, convert::TryFrom, iter::FromIterator, path::Path};
 
 /// Header value for version 1 of resources payload.
 pub const HEADER_V1: &[u8] = b"pyembed\x01";

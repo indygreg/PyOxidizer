@@ -9,12 +9,14 @@ use {
         BlobInteriorPadding, BlobSectionField, Resource, ResourceField, ResourceFlavor, HEADER_V1,
     },
     byteorder::{LittleEndian, ReadBytesExt},
-    std::borrow::Cow,
-    std::collections::{HashMap, HashSet},
-    std::convert::TryFrom,
-    std::ffi::OsStr,
-    std::io::{Cursor, Read},
-    std::path::Path,
+    std::{
+        borrow::Cow,
+        collections::{HashMap, HashSet},
+        convert::TryFrom,
+        ffi::OsStr,
+        io::{Cursor, Read},
+        path::Path,
+    },
 };
 
 #[cfg(unix)]
