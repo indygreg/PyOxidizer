@@ -106,7 +106,7 @@ pub trait ResourceCollectionContext {
     /// is currently defined on the instance, a new one will be created so
     /// there is.
     fn apply_packaging_policy(&mut self, policy: &PythonPackagingPolicy) {
-        let new_context = policy.derive_collection_add_context(&self.as_python_resource());
+        let new_context = policy.derive_add_collection_context(&self.as_python_resource());
         self.add_collection_context_mut().replace(new_context);
     }
 

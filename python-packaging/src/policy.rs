@@ -293,7 +293,7 @@ impl PythonPackagingPolicy {
     ///
     /// The returned object essentially says how the resource should be added
     /// to a `PythonResourceCollector` given this policy.
-    pub fn derive_collection_add_context(
+    pub fn derive_add_collection_context(
         &self,
         resource: &PythonResource,
     ) -> PythonResourceAddCollectionContext {

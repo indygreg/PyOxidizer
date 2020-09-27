@@ -248,12 +248,12 @@ impl StandalonePythonExecutableBuilder {
         }
 
         for source in self.distribution.source_modules()? {
-            let add_context = policy.derive_collection_add_context(&(&source).into());
+            let add_context = policy.derive_add_collection_context(&(&source).into());
             self.add_python_module_source(&source, Some(add_context))?;
         }
 
         for resource in self.distribution.resource_datas()? {
-            let add_context = policy.derive_collection_add_context(&(&resource).into());
+            let add_context = policy.derive_add_collection_context(&(&resource).into());
             self.add_python_package_resource(&resource, Some(add_context))?;
         }
 
@@ -429,7 +429,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<()> {
         let add_context = add_context.unwrap_or_else(|| {
             self.packaging_policy
-                .derive_collection_add_context(&module.into())
+                .derive_add_collection_context(&module.into())
         });
 
         self.resources_collector
@@ -443,7 +443,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<()> {
         let add_context = add_context.unwrap_or_else(|| {
             self.packaging_policy
-                .derive_collection_add_context(&resource.into())
+                .derive_add_collection_context(&resource.into())
         });
 
         self.resources_collector
@@ -457,7 +457,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<()> {
         let add_context = add_context.unwrap_or_else(|| {
             self.packaging_policy
-                .derive_collection_add_context(&resource.into())
+                .derive_add_collection_context(&resource.into())
         });
 
         self.resources_collector
@@ -472,7 +472,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<()> {
         let add_context = add_context.unwrap_or_else(|| {
             self.packaging_policy
-                .derive_collection_add_context(&extension_module.into())
+                .derive_add_collection_context(&extension_module.into())
         });
 
         // Whether we can load extension modules as standalone shared library files.
