@@ -761,7 +761,6 @@ pub mod tests {
         python_packed_resources::data::ResourceFlavor,
         std::collections::BTreeSet,
         std::iter::FromIterator,
-        std::ops::Deref,
     };
 
     lazy_static! {
@@ -1116,7 +1115,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_linux_extension_in_memory_policy() -> Result<()> {
+    fn test_linux_extension_in_memory_only() -> Result<()> {
         for libpython_link_mode in vec![
             BinaryLibpythonLinkMode::Static,
             BinaryLibpythonLinkMode::Dynamic,
@@ -1153,61 +1152,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_linux_extension_in_memory_explicit() -> Result<()> {
-        for libpython_link_mode in vec![
-            BinaryLibpythonLinkMode::Static,
-            BinaryLibpythonLinkMode::Dynamic,
-        ] {
-            let options = StandalonePythonExecutableBuilderOptions {
-                target_triple: "x86_64-unknown-linux-gnu".to_string(),
-                extension_module_filter: ExtensionModuleFilter::Minimal,
-                libpython_link_mode,
-                ..StandalonePythonExecutableBuilderOptions::default()
-            };
-
-            let mut builder = options.new_builder()?;
-
-            let mut add_context = builder.packaging_policy.derive_collection_add_context(
-                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY.deref().into(),
-            );
-            add_context.location = ConcreteResourceLocation::InMemory;
-            let res = builder.add_python_extension_module(
-                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
-                Some(add_context),
-            );
-            assert!(res.is_err());
-            assert_eq!(
-                res.err().unwrap().to_string(),
-                "extension module shared_only cannot be loaded from memory but memory loading required"
-            );
-
-            let mut add_context = builder
-                .packaging_policy
-                .derive_collection_add_context(&EXTENSION_MODULE_OBJECT_FILES_ONLY.deref().into());
-            add_context.location = ConcreteResourceLocation::InMemory;
-            builder.add_python_extension_module(
-                &EXTENSION_MODULE_OBJECT_FILES_ONLY,
-                Some(add_context),
-            )?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
-
-            let mut add_context = builder.packaging_policy.derive_collection_add_context(
-                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES
-                    .deref()
-                    .into(),
-            );
-            add_context.location = ConcreteResourceLocation::InMemory;
-            builder.add_python_extension_module(
-                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
-                Some(add_context),
-            )?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn test_linux_extension_prefer_in_memory_policy() -> Result<()> {
+    fn test_linux_extension_prefer_in_memory() -> Result<()> {
         for libpython_link_mode in vec![
             BinaryLibpythonLinkMode::Static,
             BinaryLibpythonLinkMode::Dynamic,
@@ -1244,7 +1189,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_linux_distribution_extension_relative_path_policy() -> Result<()> {
+    fn test_linux_distribution_extension_filesystem_relative_only() -> Result<()> {
         for libpython_link_mode in vec![
             BinaryLibpythonLinkMode::Static,
             BinaryLibpythonLinkMode::Dynamic,
@@ -1316,83 +1261,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_linux_distribution_extension_relative_path_explicit() -> Result<()> {
-        for libpython_link_mode in vec![
-            BinaryLibpythonLinkMode::Static,
-            BinaryLibpythonLinkMode::Dynamic,
-        ] {
-            let options = StandalonePythonExecutableBuilderOptions {
-                target_triple: "x86_64-unknown-linux-gnu".to_string(),
-                extension_module_filter: ExtensionModuleFilter::Minimal,
-                libpython_link_mode,
-                resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
-                    "prefix_policy".to_string(),
-                ),
-                ..StandalonePythonExecutableBuilderOptions::default()
-            };
-
-            let mut builder = options.new_builder()?;
-
-            let ext = builder
-                .distribution
-                .extension_modules
-                .get("_sqlite3")
-                .unwrap()
-                .default_variant()
-                .clone();
-
-            let mut add_context = builder
-                .packaging_policy
-                .derive_collection_add_context(&(&ext).into());
-            add_context.location =
-                ConcreteResourceLocation::RelativePath("prefix_policy".to_string());
-            // TODO this should probably fail since an explicit, invalid location was requested.
-            builder.add_python_extension_module(&ext, Some(add_context))?;
-
-            assert_eq!(
-                builder.extension_build_contexts.get("_sqlite3"),
-                Some(&LibPythonBuildContext {
-                    object_files: ext.object_file_data,
-                    static_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
-                    init_functions: BTreeMap::from_iter(
-                        [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
-                            .iter()
-                            .cloned()
-                    ),
-                    license_infos: BTreeMap::from_iter(
-                        [(
-                            "_sqlite3".to_string(),
-                            builder
-                                .distribution
-                                .license_infos
-                                .get("_sqlite3")
-                                .unwrap()
-                                .clone()
-                        )]
-                        .iter()
-                        .cloned()
-                    ),
-                    ..LibPythonBuildContext::default()
-                })
-            );
-
-            assert_eq!(
-                builder
-                    .iter_resources()
-                    .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
-                Some(&PrePackagedResource {
-                    flavor: ResourceFlavor::BuiltinExtensionModule,
-                    name: "_sqlite3".to_string(),
-                    ..PrePackagedResource::default()
-                })
-            );
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_linux_extension_relative_path_policy() -> Result<()> {
+    fn test_linux_extension_filesystem_relative_only() -> Result<()> {
         for libpython_link_mode in vec![
             BinaryLibpythonLinkMode::Static,
             BinaryLibpythonLinkMode::Dynamic,
@@ -1427,71 +1296,6 @@ pub mod tests {
                 &builder,
                 &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
                 ConcreteResourceLocation::RelativePath("prefix_policy".to_string()),
-            )?;
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_linux_extension_relative_path_explicit() -> Result<()> {
-        for libpython_link_mode in vec![
-            BinaryLibpythonLinkMode::Static,
-            BinaryLibpythonLinkMode::Dynamic,
-        ] {
-            let options = StandalonePythonExecutableBuilderOptions {
-                target_triple: "x86_64-unknown-linux-gnu".to_string(),
-                extension_module_filter: ExtensionModuleFilter::Minimal,
-                libpython_link_mode,
-                resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
-                    "prefix_policy".to_string(),
-                ),
-                ..StandalonePythonExecutableBuilderOptions::default()
-            };
-
-            let mut builder = options.new_builder()?;
-
-            let mut add_context = builder.packaging_policy.derive_collection_add_context(
-                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY.deref().into(),
-            );
-            add_context.location =
-                ConcreteResourceLocation::RelativePath("prefix_explicit".to_string());
-            builder.add_python_extension_module(
-                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
-                Some(add_context),
-            )?;
-            assert_extension_shared_library(
-                &builder,
-                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
-                ConcreteResourceLocation::RelativePath("prefix_explicit".to_string()),
-            )?;
-
-            let mut add_context = builder
-                .packaging_policy
-                .derive_collection_add_context(&EXTENSION_MODULE_OBJECT_FILES_ONLY.deref().into());
-            add_context.location =
-                ConcreteResourceLocation::RelativePath("prefix_explicit".to_string());
-            builder.add_python_extension_module(
-                &EXTENSION_MODULE_OBJECT_FILES_ONLY,
-                Some(add_context),
-            )?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
-
-            let mut add_context = builder.packaging_policy.derive_collection_add_context(
-                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES
-                    .deref()
-                    .into(),
-            );
-            add_context.location =
-                ConcreteResourceLocation::RelativePath("prefix_explicit".to_string());
-            builder.add_python_extension_module(
-                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
-                Some(add_context),
-            )?;
-            assert_extension_shared_library(
-                &builder,
-                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
-                ConcreteResourceLocation::RelativePath("prefix_explicit".to_string()),
             )?;
         }
 
@@ -1603,7 +1407,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_linux_musl_distribution_extension_relative_path_policy() -> Result<()> {
+    fn test_linux_musl_distribution_extension_filesystem_relative_only() -> Result<()> {
         let options = StandalonePythonExecutableBuilderOptions {
             target_triple: "x86_64-unknown-linux-musl".to_string(),
             extension_module_filter: ExtensionModuleFilter::Minimal,
@@ -1670,46 +1474,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_linux_musl_distribution_extension_relative_path_explicit() -> Result<()> {
-        let options = StandalonePythonExecutableBuilderOptions {
-            target_triple: "x86_64-unknown-linux-musl".to_string(),
-            extension_module_filter: ExtensionModuleFilter::Minimal,
-            libpython_link_mode: BinaryLibpythonLinkMode::Static,
-            resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
-                "prefix_policy".to_string(),
-            ),
-            ..StandalonePythonExecutableBuilderOptions::default()
-        };
-
-        let mut builder = options.new_builder()?;
-
-        let ext = builder
-            .distribution
-            .extension_modules
-            .get("_sqlite3")
-            .unwrap()
-            .default_variant()
-            .clone();
-
-        let mut add_context = builder
-            .packaging_policy
-            .derive_collection_add_context(&(&ext).into());
-        add_context.location =
-            ConcreteResourceLocation::RelativePath("prefix_explicit".to_string());
-        let err = builder
-            .add_python_extension_module(&ext, Some(add_context))
-            .err();
-        assert!(err.is_some());
-        assert_eq!(
-            err.unwrap().to_string(),
-            "explicit request to load extension module _sqlite3 from the filesystem is not supported by this Python distribution"
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_linux_musl_extension_in_memory_policy() -> Result<()> {
+    fn test_linux_musl_extension_in_memory_only() -> Result<()> {
         let options = StandalonePythonExecutableBuilderOptions {
             target_triple: "x86_64-unknown-linux-musl".to_string(),
             extension_module_filter: ExtensionModuleFilter::Minimal,
@@ -1738,7 +1503,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_linux_musl_extension_prefer_in_memory_policy() -> Result<()> {
+    fn test_linux_musl_extension_prefer_in_memory() -> Result<()> {
         let options = StandalonePythonExecutableBuilderOptions {
             target_triple: "x86_64-unknown-linux-musl".to_string(),
             extension_module_filter: ExtensionModuleFilter::Minimal,
@@ -1868,7 +1633,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_macos_distribution_extension_relative_path_policy() -> Result<()> {
+    fn test_macos_distribution_extension_filesystem_relative_only() -> Result<()> {
         for libpython_link_mode in vec![
             BinaryLibpythonLinkMode::Static,
             BinaryLibpythonLinkMode::Dynamic,
@@ -1942,86 +1707,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_macos_distribution_extension_relative_path_explicit() -> Result<()> {
-        for libpython_link_mode in vec![
-            BinaryLibpythonLinkMode::Static,
-            BinaryLibpythonLinkMode::Dynamic,
-        ] {
-            let options = StandalonePythonExecutableBuilderOptions {
-                target_triple: "x86_64-apple-darwin".to_string(),
-                extension_module_filter: ExtensionModuleFilter::Minimal,
-                libpython_link_mode,
-                resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
-                    "prefix_policy".to_string(),
-                ),
-                ..StandalonePythonExecutableBuilderOptions::default()
-            };
-
-            let mut builder = options.new_builder()?;
-
-            let ext = builder
-                .distribution
-                .extension_modules
-                .get("_sqlite3")
-                .unwrap()
-                .default_variant()
-                .clone();
-
-            let mut add_context = builder
-                .packaging_policy
-                .derive_collection_add_context(&(&ext).into());
-            add_context.location =
-                ConcreteResourceLocation::RelativePath("prefix_explicit".to_string());
-            // TODO this should probably fail due location request not being valid.
-            builder.add_python_extension_module(&ext, Some(add_context))?;
-
-            assert_eq!(
-                builder.extension_build_contexts.get("_sqlite3"),
-                Some(&LibPythonBuildContext {
-                    object_files: ext.object_file_data,
-                    system_libraries: BTreeSet::from_iter(["iconv".to_string()].iter().cloned()),
-                    static_libraries: BTreeSet::from_iter(
-                        ["intl".to_string(), "sqlite3".to_string()].iter().cloned()
-                    ),
-                    init_functions: BTreeMap::from_iter(
-                        [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
-                            .iter()
-                            .cloned()
-                    ),
-                    license_infos: BTreeMap::from_iter(
-                        [(
-                            "_sqlite3".to_string(),
-                            builder
-                                .distribution
-                                .license_infos
-                                .get("_sqlite3")
-                                .unwrap()
-                                .clone()
-                        )]
-                        .iter()
-                        .cloned()
-                    ),
-                    ..LibPythonBuildContext::default()
-                })
-            );
-
-            assert_eq!(
-                builder
-                    .iter_resources()
-                    .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
-                Some(&PrePackagedResource {
-                    flavor: ResourceFlavor::BuiltinExtensionModule,
-                    name: "_sqlite3".to_string(),
-                    ..PrePackagedResource::default()
-                })
-            );
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_macos_extension_in_memory_policy() -> Result<()> {
+    fn test_macos_extension_in_memory_only() -> Result<()> {
         for libpython_link_mode in vec![
             BinaryLibpythonLinkMode::Static,
             BinaryLibpythonLinkMode::Dynamic,
@@ -2058,62 +1744,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_macos_extension_in_memory_explicit() -> Result<()> {
-        for libpython_link_mode in vec![
-            BinaryLibpythonLinkMode::Static,
-            BinaryLibpythonLinkMode::Dynamic,
-        ] {
-            let options = StandalonePythonExecutableBuilderOptions {
-                target_triple: "x86_64-apple-darwin".to_string(),
-                extension_module_filter: ExtensionModuleFilter::Minimal,
-                libpython_link_mode,
-                ..StandalonePythonExecutableBuilderOptions::default()
-            };
-
-            let mut builder = options.new_builder()?;
-
-            let mut add_context = builder.packaging_policy.derive_collection_add_context(
-                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY.deref().into(),
-            );
-            add_context.location = ConcreteResourceLocation::InMemory;
-            let res = builder.add_python_extension_module(
-                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
-                Some(add_context),
-            );
-            assert!(res.is_err());
-            assert_eq!(
-                res.err().unwrap().to_string(),
-                "extension module shared_only cannot be loaded from memory but memory loading required"
-            );
-
-            let mut add_context = builder
-                .packaging_policy
-                .derive_collection_add_context(&EXTENSION_MODULE_OBJECT_FILES_ONLY.deref().into());
-            add_context.location = ConcreteResourceLocation::InMemory;
-            builder.add_python_extension_module(
-                &EXTENSION_MODULE_OBJECT_FILES_ONLY,
-                Some(add_context),
-            )?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
-
-            let mut add_context = builder.packaging_policy.derive_collection_add_context(
-                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES
-                    .deref()
-                    .into(),
-            );
-            add_context.location = ConcreteResourceLocation::InMemory;
-            builder.add_python_extension_module(
-                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
-                Some(add_context),
-            )?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_macos_extension_relative_path_policy() -> Result<()> {
+    fn test_macos_extension_filesystem_relative_only() -> Result<()> {
         for libpython_link_mode in vec![
             BinaryLibpythonLinkMode::Static,
             BinaryLibpythonLinkMode::Dynamic,
@@ -2155,72 +1786,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_macos_extension_relative_path_explicit() -> Result<()> {
-        for libpython_link_mode in vec![
-            BinaryLibpythonLinkMode::Static,
-            BinaryLibpythonLinkMode::Dynamic,
-        ] {
-            let options = StandalonePythonExecutableBuilderOptions {
-                target_triple: "x86_64-apple-darwin".to_string(),
-                extension_module_filter: ExtensionModuleFilter::Minimal,
-                libpython_link_mode,
-                resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
-                    "prefix_policy".to_string(),
-                ),
-                ..StandalonePythonExecutableBuilderOptions::default()
-            };
-
-            let mut builder = options.new_builder()?;
-
-            let mut add_context = builder.packaging_policy.derive_collection_add_context(
-                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY.deref().into(),
-            );
-            add_context.location =
-                ConcreteResourceLocation::RelativePath("prefix_explicit".to_string());
-            builder.add_python_extension_module(
-                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
-                Some(add_context),
-            )?;
-            assert_extension_shared_library(
-                &builder,
-                &EXTENSION_MODULE_SHARED_LIBRARY_ONLY,
-                ConcreteResourceLocation::RelativePath("prefix_explicit".to_string()),
-            )?;
-
-            let mut add_context = builder
-                .packaging_policy
-                .derive_collection_add_context(&EXTENSION_MODULE_OBJECT_FILES_ONLY.deref().into());
-            add_context.location =
-                ConcreteResourceLocation::RelativePath("prefix_explicit".to_string());
-            builder.add_python_extension_module(
-                &EXTENSION_MODULE_OBJECT_FILES_ONLY,
-                Some(add_context),
-            )?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
-
-            let mut add_context = builder.packaging_policy.derive_collection_add_context(
-                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES
-                    .deref()
-                    .into(),
-            );
-            add_context.location =
-                ConcreteResourceLocation::RelativePath("prefix_explicit".to_string());
-            builder.add_python_extension_module(
-                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
-                Some(add_context),
-            )?;
-            assert_extension_shared_library(
-                &builder,
-                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
-                ConcreteResourceLocation::RelativePath("prefix_explicit".to_string()),
-            )?;
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_macos_extension_prefer_in_memory_policy() -> Result<()> {
+    fn test_macos_extension_prefer_in_memory() -> Result<()> {
         for libpython_link_mode in vec![
             BinaryLibpythonLinkMode::Static,
             BinaryLibpythonLinkMode::Dynamic,
@@ -2586,7 +2152,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_windows_dynamic_extension_in_memory_policy() -> Result<()> {
+    fn test_windows_dynamic_extension_in_memory_only() -> Result<()> {
         for target_triple in WINDOWS_TARGET_TRIPLES.iter() {
             let options = StandalonePythonExecutableBuilderOptions {
                 target_triple: target_triple.to_string(),
@@ -2620,7 +2186,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_windows_static_extension_in_memory_policy() -> Result<()> {
+    fn test_windows_static_extension_in_memory_only() -> Result<()> {
         for target_triple in WINDOWS_TARGET_TRIPLES.iter() {
             let options = StandalonePythonExecutableBuilderOptions {
                 target_triple: target_triple.to_string(),
@@ -2655,7 +2221,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_windows_dynamic_extension_relative_path_policy() -> Result<()> {
+    fn test_windows_dynamic_extension_filesystem_relative_only() -> Result<()> {
         for target_triple in WINDOWS_TARGET_TRIPLES.iter() {
             let options = StandalonePythonExecutableBuilderOptions {
                 target_triple: target_triple.to_string(),
@@ -2695,7 +2261,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_windows_static_extension_relative_path_policy() -> Result<()> {
+    fn test_windows_static_extension_filesystem_relative_only() -> Result<()> {
         for target_triple in WINDOWS_TARGET_TRIPLES.iter() {
             let options = StandalonePythonExecutableBuilderOptions {
                 target_triple: target_triple.to_string(),
@@ -2731,7 +2297,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_windows_dynamic_extension_prefer_in_memory_policy() -> Result<()> {
+    fn test_windows_dynamic_extension_prefer_in_memory() -> Result<()> {
         for target_triple in WINDOWS_TARGET_TRIPLES.iter() {
             let options = StandalonePythonExecutableBuilderOptions {
                 target_triple: target_triple.to_string(),
@@ -2767,7 +2333,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_windows_static_extension_prefer_in_memory_policy() -> Result<()> {
+    fn test_windows_static_extension_prefer_in_memory() -> Result<()> {
         for target_triple in WINDOWS_TARGET_TRIPLES.iter() {
             let options = StandalonePythonExecutableBuilderOptions {
                 target_triple: target_triple.to_string(),
