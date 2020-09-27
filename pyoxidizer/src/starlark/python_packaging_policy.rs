@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::util::required_str_arg,
+    super::util::{required_str_arg, required_type_arg},
     python_packaging::policy::{
         ExtensionModuleFilter, PythonPackagingPolicy, PythonResourcesPolicy,
     },
@@ -22,14 +22,28 @@ use {
 #[derive(Debug, Clone)]
 pub struct PythonPackagingPolicyValue {
     pub inner: PythonPackagingPolicy,
+
+    /// Starlark functions to influence PythonResourceAddCollectionContext creation.
+    pub derive_context_callbacks: Vec<Value>,
+}
+
+impl PythonPackagingPolicyValue {
+    pub fn new(inner: PythonPackagingPolicy) -> Self {
+        Self {
+            inner,
+            derive_context_callbacks: vec![],
+        }
+    }
 }
 
 impl TypedValue for PythonPackagingPolicyValue {
     type Holder = Mutable<PythonPackagingPolicyValue>;
     const TYPE: &'static str = "PythonPackagingPolicy";
 
-    fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
-        Box::new(std::iter::empty())
+    fn values_for_descendant_check_and_freeze<'a>(
+        &'a self,
+    ) -> Box<dyn Iterator<Item = Value> + 'a> {
+        Box::new(self.derive_context_callbacks.iter().cloned())
     }
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
@@ -146,6 +160,14 @@ impl TypedValue for PythonPackagingPolicyValue {
 
 // Starlark methods.
 impl PythonPackagingPolicyValue {
+    fn starlark_register_resource_callback(&mut self, func: &Value) -> ValueResult {
+        required_type_arg("func", "function", func)?;
+
+        self.derive_context_callbacks.push(func.clone());
+
+        Ok(Value::from(NoneType::None))
+    }
+
     fn starlark_set_preferred_extension_module_variant(
         &mut self,
         name: &Value,
@@ -162,6 +184,13 @@ impl PythonPackagingPolicyValue {
 }
 
 starlark_module! { python_packaging_policy_module =>
+    PythonPackagingPolicy.register_resource_callback(this, func) {
+        match this.clone().downcast_mut::<PythonPackagingPolicyValue>()? {
+            Some(mut policy) => policy.starlark_register_resource_callback(&func),
+            None => Err(ValueError::IncorrectParameterType),
+        }
+    }
+
     PythonPackagingPolicy.set_preferred_extension_module_variant(this, name, value) {
         match this.clone().downcast_mut::<PythonPackagingPolicyValue>()? {
             Some(mut policy) => policy.starlark_set_preferred_extension_module_variant(&name, &value),
@@ -448,5 +477,46 @@ mod tests {
         assert_eq!(value.get_type(), "dict");
         assert_eq!(value.length().unwrap(), 1);
         assert_eq!(value.at(Value::from("foo")).unwrap(), Value::from("bar"));
+    }
+
+    #[test]
+    fn test_register_resource_callback() {
+        let (mut env, type_values) = starlark_env();
+
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "dist = default_python_distribution()",
+        )
+        .unwrap();
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy = dist.make_python_packaging_policy()",
+        )
+        .unwrap();
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "def my_func(policy, resource):\n    return None",
+        )
+        .unwrap();
+
+        starlark_eval_in_env(
+            &mut env,
+            &type_values,
+            "policy.register_resource_callback(my_func)",
+        )
+        .unwrap();
+
+        let policy_value = starlark_eval_in_env(&mut env, &type_values, "policy").unwrap();
+        let policy = policy_value
+            .downcast_ref::<PythonPackagingPolicyValue>()
+            .unwrap();
+        assert_eq!(policy.derive_context_callbacks.len(), 1);
+
+        let func = policy.derive_context_callbacks[0].clone();
+        assert_eq!(func.get_type(), "function");
+        assert_eq!(func.to_str(), "my_func(policy, resource)");
     }
 }

@@ -249,7 +249,7 @@ impl PythonDistribution {
             })
         })?;
 
-        Ok(Value::new(PythonPackagingPolicyValue { inner: policy }))
+        Ok(Value::new(PythonPackagingPolicyValue::new(policy)))
     }
 
     /// PythonDistribution.to_python_executable(

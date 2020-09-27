@@ -628,6 +628,16 @@ attributes:
 
 ``PythonPackagingPolicy`` instances have the following methods:
 
+``register_resource_callback(func)``
+   This method registers a Starlark function to be called when resource objects
+   are created. The passed function receives 2 arguments: this
+   ``PythonPackagingPolicy`` instance and the resource (e.g.
+   ``PythonSourceModule``) that was created.
+
+   The purpose of the callback is to enable Starlark configuration files to
+   mutate resources upon creation so they can globally influence how those
+   resources are packaged.
+
 ``set_preferred_extension_module_variant(name, value)``
    This method will set a preferred Python extension module variant to
    use. See the documentation for ``preferred_extension_module_variants``
