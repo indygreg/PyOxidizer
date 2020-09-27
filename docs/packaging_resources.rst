@@ -7,16 +7,18 @@ Managing Resources and Their Locations
 An important concept in PyOxidizer packaging is how to manage
 *resources* and their *locations*.
 
-A *resource* is some entity that will be packaged or distributed. Examples
-of *resources* include Python module bytecode, Python extension modules, and
-arbitrary files on the filesystem.
+A *resource* is some entity that will be packaged and distributed. Examples
+of *resources* include Python module source and bytecode, Python
+extension modules, and arbitrary files on the filesystem.
 
-A *location* is where that resource will be placed. Examples of *locations*
-included *embedded in the built binary* and *in a file next to the built
-binary*.
+A packaged resource has the concept of a *location*. This influences where
+the resource's data lives and how it will be loaded at run-time. Examples
+of *locations* include *embedded in the built binary* and *in a file next
+to the build binary*.
 
-*Resources* are typically represented by a dedicated Starlark type. Locations
-are typically expressed through a function name.
+*Resources* are represented by a dedicated Starlark type for each
+resource (see below). *Locations* and other metadata influencing
+packaging behavior are stored as attributes on these objects.
 
 .. _packaging_resource_types:
 
