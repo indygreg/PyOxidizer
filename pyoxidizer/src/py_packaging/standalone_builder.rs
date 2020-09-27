@@ -470,13 +470,6 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         extension_module: &PythonExtensionModule,
         add_context: Option<PythonResourceAddCollectionContext>,
     ) -> Result<()> {
-        // TODO rewrite code in terms of add_context (the logic is a leftover from when
-        // we passed an Option<ConcreteResourceLocation> into the function).
-        let location = match &add_context {
-            Some(add_context) => Some(add_context.location.clone()),
-            None => None,
-        };
-
         // Whether we can load extension modules as standalone shared library files.
         let can_load_standalone = self.distribution.is_extension_module_file_loadable();
 
@@ -559,19 +552,22 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             want_in_memory && can_link_builtin && !require_filesystem
         };
 
-        // Reject explicit requests to load extension module from the filesystem
-        // when the distribution doesn't support this.
-        if let Some(ConcreteResourceLocation::RelativePath(_)) = location {
-            if !can_load_standalone {
-                return Err(anyhow!("explicit request to load extension module {} from the filesystem is not supported by this Python distribution", extension_module.name));
-            }
-        }
-
-        // Reject explicit requests to load extension module from memory when
-        // this isn't supported.
-        if let Some(ConcreteResourceLocation::InMemory) = location {
-            if !can_link_builtin && !can_load_dynamic_library_memory {
-                return Err(anyhow!("rejecting request to load extension module {} from memory since it is not supported", extension_module.name));
+        if let Some(add_context) = &add_context {
+            match &add_context.location {
+                // Reject explicit requests to load extension module from the filesystem
+                // when the distribution doesn't support this.
+                ConcreteResourceLocation::RelativePath(_) => {
+                    if !can_load_standalone {
+                        return Err(anyhow!("explicit request to load extension module {} from the filesystem is not supported by this Python distribution", extension_module.name));
+                    }
+                }
+                // Reject explicit requests to load extension module from memory when
+                // this isn't supported.
+                ConcreteResourceLocation::InMemory => {
+                    if !can_link_builtin && !can_load_dynamic_library_memory {
+                        return Err(anyhow!("rejecting request to load extension module {} from memory since it is not supported", extension_module.name));
+                    }
+                }
             }
         }
 
