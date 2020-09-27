@@ -19,7 +19,7 @@ use {
     lazy_static::lazy_static,
     python_packaging::{
         bytecode::BytecodeCompiler,
-        policy::{PythonPackagingPolicy, PythonResourcesPolicy},
+        policy::PythonPackagingPolicy,
         resource::{
             DataLocation, PythonExtensionModule, PythonModuleSource,
             PythonPackageDistributionResource, PythonPackageResource, PythonResource,
@@ -470,6 +470,11 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         extension_module: &PythonExtensionModule,
         add_context: Option<PythonResourceAddCollectionContext>,
     ) -> Result<()> {
+        let add_context = add_context.unwrap_or_else(|| {
+            self.packaging_policy
+                .derive_collection_add_context(&extension_module.into())
+        });
+
         // Whether we can load extension modules as standalone shared library files.
         let can_load_standalone = self.distribution.is_extension_module_file_loadable();
 
@@ -492,51 +497,44 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         // TODO consider allowing this if object files are present.
         let can_link_standalone = extension_module.shared_library.is_some();
 
-        // Whether the resources policy prefers in-memory loading.
-        let policy_want_memory = match self.packaging_policy.clone().resources_policy() {
-            PythonResourcesPolicy::InMemoryOnly => true,
-            PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => true,
-            PythonResourcesPolicy::FilesystemRelativeOnly(_) => false,
-        };
-
-        let relative_path = match &add_context {
-            Some(add_context) => match &add_context.location {
-                ConcreteResourceLocation::InMemory => None,
+        let mut relative_path = if let Some(location) = &add_context.location_fallback {
+            match location {
                 ConcreteResourceLocation::RelativePath(ref prefix) => Some(prefix.clone()),
-            },
-            None => match self.packaging_policy.clone().resources_policy() {
-                PythonResourcesPolicy::FilesystemRelativeOnly(prefix) => Some(prefix.clone()),
-                PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(prefix) => {
-                    Some(prefix.clone())
-                }
-                PythonResourcesPolicy::InMemoryOnly => None,
-            },
-        };
-
-        let want_in_memory = if let Some(add_context) = &add_context {
-            add_context.location == ConcreteResourceLocation::InMemory
-        } else {
-            policy_want_memory
-        };
-
-        let require_in_memory = if let Some(add_context) = &add_context {
-            add_context.location == ConcreteResourceLocation::InMemory
-        } else {
-            self.packaging_policy.clone().resources_policy() == &PythonResourcesPolicy::InMemoryOnly
-        };
-
-        let require_filesystem = if let Some(add_context) = &add_context {
-            match &add_context.location {
-                ConcreteResourceLocation::RelativePath(_) => true,
-                ConcreteResourceLocation::InMemory => false,
+                ConcreteResourceLocation::InMemory => None,
             }
         } else {
-            match *self.packaging_policy.clone().resources_policy() {
-                PythonResourcesPolicy::FilesystemRelativeOnly(_) => true,
-                PythonResourcesPolicy::InMemoryOnly => false,
-                PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => false,
-            }
+            None
         };
+
+        let prefer_in_memory = add_context.location == ConcreteResourceLocation::InMemory;
+        let prefer_filesystem = match &add_context.location {
+            ConcreteResourceLocation::RelativePath(_) => true,
+            ConcreteResourceLocation::InMemory => false,
+        };
+
+        let fallback_in_memory =
+            add_context.location_fallback == Some(ConcreteResourceLocation::InMemory);
+        let fallback_filesystem = match &add_context.location_fallback {
+            Some(ConcreteResourceLocation::RelativePath(_)) => true,
+            _ => false,
+        };
+
+        // TODO support this.
+        if prefer_filesystem && fallback_in_memory {
+            return Err(anyhow!("a preferred location of the filesystem and a fallback from memory is not supported"));
+        }
+
+        let require_in_memory =
+            prefer_in_memory && (add_context.location_fallback.is_none() || fallback_in_memory);
+        let require_filesystem =
+            prefer_filesystem && (add_context.location_fallback.is_none() || fallback_filesystem);
+
+        match &add_context.location {
+            ConcreteResourceLocation::RelativePath(prefix) => {
+                relative_path = Some(prefix.clone());
+            }
+            ConcreteResourceLocation::InMemory => {}
+        }
 
         // We produce a builtin extension module (by linking object files) if any
         // of the following conditions are met:
@@ -549,22 +547,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             true
         // We want in memory loading and we can link a builtin
         } else {
-            want_in_memory && can_link_builtin && !require_filesystem
+            prefer_in_memory && can_link_builtin && !require_filesystem
         };
-
-        if let Some(add_context) = &add_context {
-            match &add_context.location {
-                // Reject explicit requests to load extension module from the filesystem
-                // when the distribution doesn't support this.
-                ConcreteResourceLocation::RelativePath(_) => {
-                    if !can_load_standalone {
-                        return Err(anyhow!("explicit request to load extension module {} from the filesystem is not supported by this Python distribution", extension_module.name));
-                    }
-                }
-                // Case handled below.
-                ConcreteResourceLocation::InMemory => {}
-            }
-        }
 
         if require_in_memory && (!can_link_builtin && !can_load_dynamic_library_memory) {
             return Err(anyhow!(
@@ -628,7 +612,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             // extension module. We currently only support extension modules that
             // already have a shared library present. So we simply call into
             // the resources collector.
-            let location = if policy_want_memory && can_load_dynamic_library_memory {
+            let location = if prefer_in_memory && can_load_dynamic_library_memory {
                 ConcreteResourceLocation::InMemory
             } else {
                 match relative_path {
@@ -757,7 +741,7 @@ pub mod tests {
         crate::python_distributions::PYTHON_DISTRIBUTIONS,
         crate::testutil::*,
         lazy_static::lazy_static,
-        python_packaging::policy::ExtensionModuleFilter,
+        python_packaging::policy::{ExtensionModuleFilter, PythonResourcesPolicy},
         python_packed_resources::data::ResourceFlavor,
         std::collections::BTreeSet,
         std::iter::FromIterator,
