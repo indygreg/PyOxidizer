@@ -97,6 +97,7 @@ pub trait ResourceCollectionContext {
     /// Obtain the mutable `PythonResourceAddCollectionContext` associated with this instance, if available.
     fn add_collection_context_mut(&mut self) -> &mut Option<PythonResourceAddCollectionContext>;
 
+    /// Cast this instance to a `PythonResource`.
     fn as_python_resource(&self) -> PythonResource;
 
     /// Apply a Python packaging policy to this instance.
