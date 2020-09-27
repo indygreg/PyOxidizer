@@ -1140,53 +1140,6 @@ as part of the operation. The types of these objects can be
 The returned resources are typically added to a ``FileManifest`` or
 ``PythonExecutable`` to make them available to a packaged application.
 
-.. _config_python_executable_add_python_module_source:
-
-``PythonExecutable.add_python_module_source(module)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method registers a Python source module with a ``PythonExecutable``
-instance.
-
-.. _config_python_executable.add_python_package_resource:
-
-``PythonExecutable.add_python_package_resource(resource)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method adds a ``PythonPackageResource`` instance to the
-``PythonExecutable`` instance.
-
-.. _config_python_executable.add_python_package_distribution_resource:
-
-``PythonExecutable.add_python_package_distribution_resource(resource)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method adds a ``PythonPackageDistributionResource`` instance to the
-``PythonExecutable`` instance.
-
-.. _config_python_executable_add_python_extension_module:
-
-``PythonExecutable.add_python_extension_module(module)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This method registers a ``PythonExtensionModule`` instance with a
-``PythonExecutable`` instance.
-
-The extension module could be packaged in the following manner depending
-on the capabilities of the underlying Python distribution and resources
-policy:
-
-* If the object files for the extension module are available, the extension
-  module may be statically linked into the produced binary.
-* If loading extension modules from in-memory import is supported, the
-  extension module will have its dynamic library embedded in the binary.
-* The extension module will be materialized as a file next to the produced
-  binary and will be loaded from the filesystem. (This is how Python
-  extension modules typically work.)
-
-If multiple extension modules with the same name are added, the last
-added one is used.
-
 .. _config_python_executable_add_python_resource:
 
 ``PythonExecutable.add_python_resource(...)``

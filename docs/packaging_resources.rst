@@ -151,8 +151,9 @@ Here are some examples of how policies are used:
 Routing Python Resources to Locations
 =====================================
 
-Python resource collections have various APIs for adding resources to them.
-For example, to add a ``PythonSourceModule`` to a ``PythonExecutable``:
+Python resources are registered with built binaries by adding them to
+the corresponding builder. For example, to add ``PythonSourceModule``
+found by invoking a ``pip install`` command:
 
 .. code-block:: python
 
@@ -170,29 +171,21 @@ For example, to add a ``PythonSourceModule`` to a ``PythonExecutable``:
        for resource in exe.pip_install(["my-package"]):
            if type(resource) == "PythonSourceModule":
                # Location defined by policy.
-               exe.add_python_module_source(resource)
+               exe.add_python_resource(resource)
                # Force a location.
                resource.add_location = "in-memory"
-               exe.add_python_module_source(resource)
+               exe.add_python_resource(resource)
                resource.add_location = "filesystem-relative:lib"
-               exe.add_python_module_source(resource)
+               exe.add_python_resource(resource)
 
-*Resource addition* APIs are either *type-aware* or *type-agnostic*.
-
-*Type-aware* APIs require that the resource being passed in be a specific
-type or an error occurs. Examples of *type-aware* APIs include
-:ref:`config_python_executable_add_python_module_source` and
-:ref:`config_python_executable.add_python_package_resource`.
-
-*Type-agnostic* APIs operate on any instance of an allowed type. It is
-safe to call these APIs with any accepted type. Examples of *type-agnostic*
-APIs include
+The methods for adding resources are
 :ref:`config_python_executable_add_python_resource` and
-:ref:`config_python_executable_add_python_resources`.
+:ref:`config_python_executable_add_python_resources`. The former adds a single
+object. The latter an iterable of objects.
 
-In addition, resource locations can sometimes be specified in Starlark
-via string values. See :ref:`config_resource_locations` for the mapping
-of string values to resource locations.
+The method by which resources are added and loaded at run-time is
+influenced by attributes on each Python resource object. See
+:ref:`config_resource_locations` for more
 
 .. _python_extension_module_location_compatibility:
 
@@ -233,13 +226,13 @@ Here are some of the rules governing extension modules and their locations:
 * If the current build configuration targets Linux MUSL-libc, shared library
   extension modules are not supported and all extensions must be statically
   linked into the binary.
-
-The *location-agnostic* addition APIs will generally try to route a
-resource to an intelligent location based on the policy. And these APIs
-are a bit smarter about their actions than what is available in Starlark.
-For example, these APIs can see that both a static and shared library is
-available for an extension module and take a course of action that won't
-result in a build failure.
+* If the object files for the extension module are available, the extension
+  module may be statically linked into the produced binary.
+* If loading extension modules from in-memory import is supported, the
+  extension module will have its dynamic library embedded in the binary.
+* The extension module will be materialized as a file next to the produced
+  binary and will be loaded from the filesystem. (This is how Python
+  extension modules typically work.)
 
 .. note::
 

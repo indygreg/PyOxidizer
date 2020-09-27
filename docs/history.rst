@@ -134,9 +134,16 @@ Backwards Compatibility Notes
   ``optimize_level``. Instead, set various ``add_*`` attributes on
   resource instances being passed into the methods to influence what
   happens when they are added.
-* The Starlark method ``PythonExecutable.add_python_module_bytecode()``
-  has been removed because equivalent functionality is now available by
-  setting ``add_*`` attributes on Python resources.
+* The Starlark methods ``PythonExecutable.add_python_module_source()``,
+  ``PythonExecutable.add_python_module_bytecode()``,
+  ``PythonExecutable.add_python_package_resource()``,
+  ``PythonExecutable.add_python_package_distribution_resource()``, and
+  ``PythonExecutable.add_python_extension_module()`` have been removed.
+  The remaining ``PythonExecutable.add_python_resource()`` and
+  ``PythonExecutable.add_python_resources()`` methods are capable of
+  handling all resource types and should be used. Previous functionality
+  available via argument passing on these methods can be accomplished
+  by setting ``add_*`` attributes on individual Python resource objects.
 
 New Features
 ^^^^^^^^^^^^

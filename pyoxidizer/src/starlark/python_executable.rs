@@ -600,38 +600,6 @@ starlark_module! { python_executable_env =>
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_python_module_source(env env, this, module) {
-        match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_python_module_source(&env, &module),
-            None => Err(ValueError::IncorrectParameterType),
-        }
-    }
-
-    #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_python_package_resource(env env, this, resource, location=NoneType::None) {
-        match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_python_package_resource(&env, &resource),
-            None => Err(ValueError::IncorrectParameterType),
-        }
-    }
-
-    #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.add_python_package_distribution_resource(env env, this, resource) {
-        match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_python_package_distribution_resource(&env, &resource),
-            None => Err(ValueError::IncorrectParameterType),
-        }
-    }
-
-    #[allow(clippy::ptr_arg)]
-    PythonExecutable.add_python_extension_module(env env, this, module) {
-        match this.clone().downcast_mut::<PythonExecutable>()? {
-            Some(mut exe) => exe.starlark_add_python_extension_module(&env, &module),
-            None => Err(ValueError::IncorrectParameterType),
-        }
-    }
-
-    #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.add_python_resource(
         env env,
         this,
