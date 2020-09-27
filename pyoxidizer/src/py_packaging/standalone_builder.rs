@@ -561,13 +561,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
                         return Err(anyhow!("explicit request to load extension module {} from the filesystem is not supported by this Python distribution", extension_module.name));
                     }
                 }
-                // Reject explicit requests to load extension module from memory when
-                // this isn't supported.
-                ConcreteResourceLocation::InMemory => {
-                    if !can_link_builtin && !can_load_dynamic_library_memory {
-                        return Err(anyhow!("rejecting request to load extension module {} from memory since it is not supported", extension_module.name));
-                    }
-                }
+                // Case handled below.
+                ConcreteResourceLocation::InMemory => {}
             }
         }
 
@@ -1182,9 +1177,9 @@ pub mod tests {
             );
             assert!(res.is_err());
             assert_eq!(
-                        res.err().unwrap().to_string(),
-                        "rejecting request to load extension module shared_only from memory since it is not supported"
-                    );
+                res.err().unwrap().to_string(),
+                "extension module shared_only cannot be loaded from memory but memory loading required"
+            );
 
             let mut add_context = builder
                 .packaging_policy
@@ -2087,9 +2082,9 @@ pub mod tests {
             );
             assert!(res.is_err());
             assert_eq!(
-                        res.err().unwrap().to_string(),
-                        "rejecting request to load extension module shared_only from memory since it is not supported"
-                    );
+                res.err().unwrap().to_string(),
+                "extension module shared_only cannot be loaded from memory but memory loading required"
+            );
 
             let mut add_context = builder
                 .packaging_policy
