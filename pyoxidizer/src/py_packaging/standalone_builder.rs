@@ -170,12 +170,12 @@ impl StandalonePythonExecutableBuilder {
             python_exe,
         });
 
-        builder.add_distribution_resources(&packaging_policy)?;
+        builder.add_distribution_resources()?;
 
         Ok(builder)
     }
 
-    fn add_distribution_resources(&mut self, policy: &PythonPackagingPolicy) -> Result<()> {
+    fn add_distribution_resources(&mut self) -> Result<()> {
         self.core_build_context.inittab_cflags = Some(self.distribution.inittab_cflags.clone());
 
         for (name, path) in &self.distribution.includes {
@@ -248,13 +248,11 @@ impl StandalonePythonExecutableBuilder {
         }
 
         for source in self.distribution.source_modules()? {
-            let add_context = policy.derive_add_collection_context(&(&source).into());
-            self.add_python_module_source(&source, Some(add_context))?;
+            self.add_python_module_source(&source, None)?;
         }
 
         for resource in self.distribution.resource_datas()? {
-            let add_context = policy.derive_add_collection_context(&(&resource).into());
-            self.add_python_package_resource(&resource, Some(add_context))?;
+            self.add_python_package_resource(&resource, None)?;
         }
 
         Ok(())
