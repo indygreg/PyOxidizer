@@ -11,10 +11,12 @@ use {
     anyhow::{anyhow, Result},
     python_packaging::resource::DataLocation,
     slog::warn,
-    std::collections::{BTreeMap, BTreeSet},
-    std::fs,
-    std::fs::create_dir_all,
-    std::path::{Path, PathBuf},
+    std::{
+        collections::{BTreeMap, BTreeSet},
+        fs,
+        fs::create_dir_all,
+        path::{Path, PathBuf},
+    },
 };
 
 /// Produce the content of the config.c file containing built-in extensions.

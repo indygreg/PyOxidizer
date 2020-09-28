@@ -5,33 +5,40 @@
 /*! Functionality for standalone Python distributions. */
 
 use {
-    super::binary::{LibpythonLinkMode, PythonBinaryBuilder},
-    super::config::EmbeddedPythonConfig,
-    super::distribution::{
-        is_stdlib_test_package, resolve_python_distribution_from_location, BinaryLibpythonLinkMode,
-        DistributionExtractLock, PythonDistribution, PythonDistributionLocation,
+    super::{
+        binary::{LibpythonLinkMode, PythonBinaryBuilder},
+        config::EmbeddedPythonConfig,
+        distribution::{
+            is_stdlib_test_package, resolve_python_distribution_from_location,
+            BinaryLibpythonLinkMode, DistributionExtractLock, PythonDistribution,
+            PythonDistributionLocation,
+        },
+        distutils::prepare_hacked_distutils,
+        standalone_builder::StandalonePythonExecutableBuilder,
     },
-    super::distutils::prepare_hacked_distutils,
-    super::standalone_builder::StandalonePythonExecutableBuilder,
     crate::environment::{LINUX_TARGET_TRIPLES, MACOS_TARGET_TRIPLES},
     anyhow::{anyhow, Context, Result},
     copy_dir::copy_dir,
     lazy_static::lazy_static,
     path_dedot::ParseDot,
-    python_packaging::bytecode::{BytecodeCompiler, PythonBytecodeCompiler},
-    python_packaging::filesystem_scanning::{find_python_resources, walk_tree_files},
-    python_packaging::module_util::{is_package_from_path, PythonModuleSuffixes},
-    python_packaging::policy::PythonPackagingPolicy,
-    python_packaging::resource::{
-        DataLocation, LibraryDependency, PythonExtensionModule, PythonExtensionModuleVariants,
-        PythonModuleSource, PythonPackageResource, PythonResource,
+    python_packaging::{
+        bytecode::{BytecodeCompiler, PythonBytecodeCompiler},
+        filesystem_scanning::{find_python_resources, walk_tree_files},
+        module_util::{is_package_from_path, PythonModuleSuffixes},
+        policy::PythonPackagingPolicy,
+        resource::{
+            DataLocation, LibraryDependency, PythonExtensionModule, PythonExtensionModuleVariants,
+            PythonModuleSource, PythonPackageResource, PythonResource,
+        },
     },
     serde::{Deserialize, Serialize},
     slog::{info, warn},
-    std::collections::{BTreeMap, HashMap},
-    std::io::{BufRead, BufReader, Read},
-    std::path::{Path, PathBuf},
-    std::sync::Arc,
+    std::{
+        collections::{BTreeMap, HashMap},
+        io::{BufRead, BufReader, Read},
+        path::{Path, PathBuf},
+        sync::Arc,
+    },
 };
 
 // This needs to be kept in sync with *compiler.py

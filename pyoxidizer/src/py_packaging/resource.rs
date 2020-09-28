@@ -9,10 +9,12 @@ Defines primitives representing Python resources.
 use {
     crate::app_packaging::resource::{FileContent, FileManifest},
     anyhow::Result,
-    python_packaging::module_util::{packages_from_module_name, resolve_path_for_module},
-    python_packaging::resource::{
-        PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
-        PythonPackageResource,
+    python_packaging::{
+        module_util::{packages_from_module_name, resolve_path_for_module},
+        resource::{
+            PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
+            PythonPackageResource,
+        },
     },
 };
 

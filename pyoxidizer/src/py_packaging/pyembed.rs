@@ -6,11 +6,15 @@
 Functionality related to the pyembed crate.
 */
 
-use anyhow::Result;
-use itertools::Itertools;
-use std::fs::File;
-use std::io::Write;
-use std::path::{Path, PathBuf};
+use {
+    anyhow::Result,
+    itertools::Itertools,
+    std::{
+        fs::File,
+        io::Write,
+        path::{Path, PathBuf},
+    },
+};
 
 use super::config::{EmbeddedPythonConfig, RawAllocator, RunMode, TerminfoResolution};
 

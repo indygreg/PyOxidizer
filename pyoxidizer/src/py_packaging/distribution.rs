@@ -7,25 +7,29 @@ Defining and manipulating Python distributions.
 */
 
 use {
-    super::binary::{LibpythonLinkMode, PythonBinaryBuilder},
-    super::config::EmbeddedPythonConfig,
-    super::standalone_distribution::StandaloneDistribution,
+    super::{
+        binary::{LibpythonLinkMode, PythonBinaryBuilder},
+        config::EmbeddedPythonConfig,
+        standalone_distribution::StandaloneDistribution,
+    },
     crate::python_distributions::PYTHON_DISTRIBUTIONS,
     anyhow::{anyhow, Context, Result},
     fs2::FileExt,
-    python_packaging::bytecode::PythonBytecodeCompiler,
-    python_packaging::module_util::PythonModuleSuffixes,
-    python_packaging::policy::PythonPackagingPolicy,
-    python_packaging::resource::{
-        PythonExtensionModule, PythonModuleSource, PythonPackageResource,
+    python_packaging::{
+        bytecode::PythonBytecodeCompiler,
+        module_util::PythonModuleSuffixes,
+        policy::PythonPackagingPolicy,
+        resource::{PythonExtensionModule, PythonModuleSource, PythonPackageResource},
     },
     sha2::{Digest, Sha256},
     slog::warn,
-    std::collections::HashMap,
-    std::fs,
-    std::fs::{create_dir_all, File},
-    std::io::Read,
-    std::path::{Path, PathBuf},
+    std::{
+        collections::HashMap,
+        fs,
+        fs::{create_dir_all, File},
+        io::Read,
+        path::{Path, PathBuf},
+    },
     url::Url,
     uuid::Uuid,
 };

@@ -7,19 +7,22 @@ Interaction with Python packaging tools (pip, setuptools, etc).
 */
 
 use {
-    super::binary::LibpythonLinkMode,
-    super::distribution::{download_distribution, PythonDistribution},
-    super::distutils::read_built_extensions,
-    super::standalone_distribution::resolve_python_paths,
+    super::{
+        binary::LibpythonLinkMode,
+        distribution::{download_distribution, PythonDistribution},
+        distutils::read_built_extensions,
+        standalone_distribution::resolve_python_paths,
+    },
     crate::python_distributions::GET_PIP_PY_19,
     anyhow::{anyhow, Context, Result},
-    python_packaging::filesystem_scanning::find_python_resources,
-    python_packaging::resource::PythonResource,
+    python_packaging::{filesystem_scanning::find_python_resources, resource::PythonResource},
     slog::warn,
-    std::collections::HashMap,
-    std::hash::BuildHasher,
-    std::io::{BufRead, BufReader},
-    std::path::{Path, PathBuf},
+    std::{
+        collections::HashMap,
+        hash::BuildHasher,
+        io::{BufRead, BufReader},
+        path::{Path, PathBuf},
+    },
 };
 
 /// Pip requirements file for bootstrapping packaging tools.

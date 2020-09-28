@@ -12,9 +12,11 @@ use {
     python_packaging::resource::{DataLocation, LibraryDependency, PythonExtensionModule},
     serde::Deserialize,
     slog::warn,
-    std::collections::{BTreeMap, HashMap},
-    std::fs::{create_dir_all, read_dir, read_to_string},
-    std::path::{Path, PathBuf},
+    std::{
+        collections::{BTreeMap, HashMap},
+        fs::{create_dir_all, read_dir, read_to_string},
+        path::{Path, PathBuf},
+    },
 };
 
 lazy_static! {

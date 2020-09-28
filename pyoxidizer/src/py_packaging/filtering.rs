@@ -6,12 +6,16 @@
 Utility code for filtering.
 */
 
-use anyhow::{anyhow, Result};
-use slog::warn;
-use std::collections::{BTreeMap, BTreeSet};
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::path::Path;
+use {
+    anyhow::{anyhow, Result},
+    slog::warn,
+    std::{
+        collections::{BTreeMap, BTreeSet},
+        fs::File,
+        io::{BufRead, BufReader},
+        path::Path,
+    },
+};
 
 pub fn read_resource_names_file(path: &Path) -> Result<BTreeSet<String>> {
     let fh = File::open(path)?;
