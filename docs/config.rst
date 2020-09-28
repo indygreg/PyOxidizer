@@ -15,6 +15,7 @@ language and the syntax should be familiar to any Python programmer.
 
    config_locating
    config_processing
+   config_resource_locations
    config_globals
    config_global_state
    config_target_management
