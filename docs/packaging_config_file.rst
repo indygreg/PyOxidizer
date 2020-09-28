@@ -27,7 +27,7 @@ requested target is *built*.
 Python Distributions Provide Python
 ===================================
 
-The :ref:`PythonDistribution <config_python_distribution>` Starlark
+The :ref:`PythonDistribution <config_type_python_distribution>` Starlark
 type defines a Python distribution. A Python distribution is an entity
 which contains a Python interpreter, Python standard library, and which
 PyOxidizer knows how to consume and integrate into a new binary.

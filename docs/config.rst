@@ -18,3 +18,4 @@ language and the syntax should be familiar to any Python programmer.
    config_globals
    config_global_state
    config_target_management
+   config_python_distribution

@@ -10,7 +10,7 @@ extension modules.
 
 For PyOxidizer to recognize these Python resources as Python resources
 (as opposed to regular files), you will need to use the methods on the
-:ref:`PythonDistribution <config_python_distribution>` Starlark type
+:ref:`config_type_python_distribution` Starlark type
 to use the Python distribution to scan for resources, possibly performing
 a Python packaging action (such as invoking ``pip install``) along the way.
 
@@ -81,7 +81,7 @@ method which adds an iterable of objects representing Python resources to the
 set of embedded resources.
 
 Elsewhere in this function, the ``dist`` variable holds an instance of
-:ref:`PythonDistribution <config_python_distribution>`. This type
+:ref:`config_type_python_distribution`. This type
 represents a Python distribution, which is a fancy way of saying
 *an implementation of Python*.
 
