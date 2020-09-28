@@ -38,7 +38,7 @@ PyOxidizer's Starlark dialect defines the following custom types:
 :ref:`config_type_python_extension_module`
    Represents a compiled Python extension module.
 
-:any:`PythonInterpreterConfig <config_type_python_interpreter_config>`
+:ref:`config_type_python_interpreter_config`
    Represents the configuration of a Python interpreter.
 
 :ref:`config_type_python_package_distribution_resource`
