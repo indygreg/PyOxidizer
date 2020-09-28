@@ -4,6 +4,8 @@
 Configuration File Concepts
 ===========================
 
+.. _config_processing:
+
 Processing
 ==========
 
@@ -69,9 +71,24 @@ on the value returned by a target function, if present. For example,
 a ``PythonExecutable``'s *build* functionality would compile an
 executable binary embedding Python.
 
+.. _config_python_resources:
+
+Python Resources
+================
+
+At run-time, Python interpreters need to consult *resources* like Python
+module source and bytecode as well as resource/data files. We refer to all
+of these as *Python Resources*.
+
+Configuration files represent *Python Resources* via the following types:
+
+* :ref:`config_type_python_source_module`
+* :ref:`config_type_python_package_resource`
+* :ref:`config_type_python_package_distribution_resource`
+* :ref:`config_type_python_extension_module`
+
 .. _config_resource_locations:
 
-=============================
 Specifying Resource Locations
 =============================
 
