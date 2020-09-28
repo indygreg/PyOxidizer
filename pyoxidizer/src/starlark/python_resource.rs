@@ -17,7 +17,7 @@ use {
         RuntimeError, UnsupportedOperation, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE,
     },
     starlark::values::none::NoneType,
-    starlark::values::{Immutable, Mutable, TypedValue, Value, ValueResult},
+    starlark::values::{Mutable, TypedValue, Value, ValueResult},
     std::convert::{TryFrom, TryInto},
 };
 
@@ -260,7 +260,7 @@ impl TypedValue for PythonSourceModuleValue {
     }
 
     fn to_str(&self) -> String {
-        format!("PythonSourceModule<name={}>", self.inner.name)
+        format!("{}<name={}>", Self::TYPE, self.inner.name)
     }
 
     fn to_repr(&self) -> String {
@@ -296,7 +296,7 @@ impl TypedValue for PythonSourceModuleValue {
                 } else {
                     Err(ValueError::OperationNotSupported {
                         op: UnsupportedOperation::GetAttr(attr.to_string()),
-                        left: "PythonSourceModule".to_string(),
+                        left: Self::TYPE.to_string(),
                         right: None,
                     })
                 };
@@ -359,7 +359,7 @@ impl ResourceCollectionContext for PythonPackageResourceValue {
 }
 
 impl TypedValue for PythonPackageResourceValue {
-    type Holder = Immutable<PythonPackageResourceValue>;
+    type Holder = Mutable<PythonPackageResourceValue>;
     const TYPE: &'static str = "PythonPackageResource";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
@@ -368,8 +368,10 @@ impl TypedValue for PythonPackageResourceValue {
 
     fn to_str(&self) -> String {
         format!(
-            "PythonPackageResource<package={}, name={}>",
-            self.inner.leaf_package, self.inner.relative_name
+            "{}<package={}, name={}>",
+            Self::TYPE,
+            self.inner.leaf_package,
+            self.inner.relative_name
         )
     }
 
@@ -383,11 +385,15 @@ impl TypedValue for PythonPackageResourceValue {
             "name" => Value::new(self.inner.relative_name.clone()),
             // TODO expose raw data
             attr => {
-                return Err(ValueError::OperationNotSupported {
-                    op: UnsupportedOperation::GetAttr(attr.to_string()),
-                    left: "PythonPackageResource".to_string(),
-                    right: None,
-                })
+                return if self.add_collection_context_attrs().contains(&attr) {
+                    self.get_attr_add_collection_context(attr)
+                } else {
+                    Err(ValueError::OperationNotSupported {
+                        op: UnsupportedOperation::GetAttr(attr.to_string()),
+                        left: Self::TYPE.to_string(),
+                        right: None,
+                    })
+                };
             }
         };
 
@@ -399,8 +405,12 @@ impl TypedValue for PythonPackageResourceValue {
             "package" => true,
             "name" => true,
             // TODO expose raw data
-            _ => false,
+            attr => self.add_collection_context_attrs().contains(&attr),
         })
+    }
+
+    fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
+        self.set_attr_add_collection_context(attribute, value)
     }
 }
 
@@ -435,7 +445,7 @@ impl ResourceCollectionContext for PythonPackageDistributionResourceValue {
 }
 
 impl TypedValue for PythonPackageDistributionResourceValue {
-    type Holder = Immutable<PythonPackageDistributionResourceValue>;
+    type Holder = Mutable<PythonPackageDistributionResourceValue>;
     const TYPE: &'static str = "PythonPackageDistributionResource";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
@@ -444,8 +454,10 @@ impl TypedValue for PythonPackageDistributionResourceValue {
 
     fn to_str(&self) -> String {
         format!(
-            "PythonPackageDistributionResource<package={}, name={}>",
-            self.inner.package, self.inner.name
+            "{}<package={}, name={}>",
+            Self::TYPE,
+            self.inner.package,
+            self.inner.name
         )
     }
 
@@ -463,11 +475,15 @@ impl TypedValue for PythonPackageDistributionResourceValue {
             "name" => Value::new(self.inner.name.clone()),
             // TODO expose raw data
             attr => {
-                return Err(ValueError::OperationNotSupported {
-                    op: UnsupportedOperation::GetAttr(attr.to_string()),
-                    left: "PythonPackageDistributionResource".to_string(),
-                    right: None,
-                })
+                return if self.add_collection_context_attrs().contains(&attr) {
+                    self.get_attr_add_collection_context(attr)
+                } else {
+                    Err(ValueError::OperationNotSupported {
+                        op: UnsupportedOperation::GetAttr(attr.to_string()),
+                        left: Self::TYPE.to_string(),
+                        right: None,
+                    })
+                };
             }
         };
 
@@ -479,8 +495,12 @@ impl TypedValue for PythonPackageDistributionResourceValue {
             "package" => true,
             "name" => true,
             // TODO expose raw data
-            _ => false,
+            attr => self.add_collection_context_attrs().contains(&attr),
         })
+    }
+
+    fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
+        self.set_attr_add_collection_context(attribute, value)
     }
 }
 
@@ -515,7 +535,7 @@ impl ResourceCollectionContext for PythonExtensionModuleValue {
 }
 
 impl TypedValue for PythonExtensionModuleValue {
-    type Holder = Immutable<PythonExtensionModuleValue>;
+    type Holder = Mutable<PythonExtensionModuleValue>;
     const TYPE: &'static str = "PythonExtensionModule";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
@@ -523,7 +543,7 @@ impl TypedValue for PythonExtensionModuleValue {
     }
 
     fn to_str(&self) -> String {
-        format!("PythonExtensionModule<name={}>", self.inner.name)
+        format!("{}<name={}>", Self::TYPE, self.inner.name)
     }
 
     fn to_repr(&self) -> String {
@@ -534,11 +554,15 @@ impl TypedValue for PythonExtensionModuleValue {
         let v = match attribute {
             "name" => Value::new(self.inner.name.clone()),
             attr => {
-                return Err(ValueError::OperationNotSupported {
-                    op: UnsupportedOperation::GetAttr(attr.to_string()),
-                    left: "PythonExtensionModule".to_string(),
-                    right: None,
-                })
+                return if self.add_collection_context_attrs().contains(&attr) {
+                    self.get_attr_add_collection_context(attr)
+                } else {
+                    Err(ValueError::OperationNotSupported {
+                        op: UnsupportedOperation::GetAttr(attr.to_string()),
+                        left: Self::TYPE.to_string(),
+                        right: None,
+                    })
+                };
             }
         };
 
@@ -548,8 +572,12 @@ impl TypedValue for PythonExtensionModuleValue {
     fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
         Ok(match attribute {
             "name" => true,
-            _ => false,
+            attr => self.add_collection_context_attrs().contains(&attr),
         })
+    }
+
+    fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
+        self.set_attr_add_collection_context(attribute, value)
     }
 }
 
