@@ -273,6 +273,7 @@ impl TypedValue for PythonSourceModuleValue {
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
         let v = match attribute {
+            "is_stdlib" => Value::from(self.inner.is_stdlib),
             "name" => Value::new(self.inner.name.clone()),
             "source" => {
                 let source = self.inner.source.resolve().map_err(|e| {
@@ -315,6 +316,7 @@ impl TypedValue for PythonSourceModuleValue {
             "name" => true,
             "source" => true,
             "is_package" => true,
+            "is_stdlib" => true,
             attr => self.add_collection_context_attrs().contains(&attr),
         })
     }
@@ -385,6 +387,7 @@ impl TypedValue for PythonPackageResourceValue {
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
         let v = match attribute {
+            "is_stdlib" => Value::from(self.inner.is_stdlib),
             "package" => Value::new(self.inner.leaf_package.clone()),
             "name" => Value::new(self.inner.relative_name.clone()),
             // TODO expose raw data
@@ -406,6 +409,7 @@ impl TypedValue for PythonPackageResourceValue {
 
     fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
         Ok(match attribute {
+            "is_stdlib" => true,
             "package" => true,
             "name" => true,
             // TODO expose raw data
@@ -475,6 +479,7 @@ impl TypedValue for PythonPackageDistributionResourceValue {
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
         let v = match attribute {
+            "is_stdlib" => Value::from(false),
             "package" => Value::new(self.inner.package.clone()),
             "name" => Value::new(self.inner.name.clone()),
             // TODO expose raw data
@@ -496,6 +501,7 @@ impl TypedValue for PythonPackageDistributionResourceValue {
 
     fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
         Ok(match attribute {
+            "is_stdlib" => true,
             "package" => true,
             "name" => true,
             // TODO expose raw data
@@ -556,6 +562,7 @@ impl TypedValue for PythonExtensionModuleValue {
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
         let v = match attribute {
+            "is_stdlib" => Value::from(self.inner.is_stdlib),
             "name" => Value::new(self.inner.name.clone()),
             attr => {
                 return if self.add_collection_context_attrs().contains(&attr) {
@@ -575,6 +582,7 @@ impl TypedValue for PythonExtensionModuleValue {
 
     fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
         Ok(match attribute {
+            "is_stdlib" => true,
             "name" => true,
             attr => self.add_collection_context_attrs().contains(&attr),
         })

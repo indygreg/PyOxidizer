@@ -673,6 +673,11 @@ mod tests {
     fn test_source_modules() {
         let mods = starlark_ok("default_python_distribution().source_modules()");
         assert_eq!(mods.get_type(), "list");
+
+        for m in mods.iter().unwrap().iter() {
+            assert_eq!(m.get_type(), PythonSourceModuleValue::TYPE);
+            assert!(m.get_attr("is_stdlib").unwrap().to_bool());
+        }
     }
 
     #[test]
@@ -685,5 +690,21 @@ mod tests {
         let data_length = data_tests.length().unwrap();
 
         assert!(default_length < data_length);
+
+        for r in data_tests.iter().unwrap().iter() {
+            assert_eq!(r.get_type(), PythonPackageResourceValue::TYPE);
+            assert!(r.get_attr("is_stdlib").unwrap().to_bool());
+        }
+    }
+
+    #[test]
+    fn test_extension_modules() {
+        let mods = starlark_ok("default_python_distribution().extension_modules()");
+        assert_eq!(mods.get_type(), "list");
+
+        for m in mods.iter().unwrap().iter() {
+            assert_eq!(m.get_type(), PythonExtensionModuleValue::TYPE);
+            assert!(m.get_attr("is_stdlib").unwrap().to_bool());
+        }
     }
 }

@@ -443,6 +443,10 @@ Each instance has the following attributes:
 ``is_package`` (``bool``)
    Whether this module is also a Python package (or sub-package).
 
+``is_stdlib`` (``bool``)
+   Whether this module is part of the Python standard library (part of the
+   Python distribution).
+
 ``add_include`` (``bool``) (mutable)
    Whether to actually add this resource when it is added to a binary.
 
@@ -492,6 +496,10 @@ Each instance has the following attributes:
 ``name`` (string)
    Name of this resource.
 
+``is_stdlib`` (``bool``)
+   Whether this module is part of the Python standard library (part of the
+   Python distribution).
+
 .. _config_python_package_distribution_resource:
 
 ``PythonPackageDistributionResource``
@@ -514,6 +522,10 @@ Each instance has the following attributes:
 ``name`` (string)
    Name of this resource.
 
+``is_stdlib`` (``bool``)
+   Whether this module is part of the Python standard library (part of the
+   Python distribution).
+
 .. _config_python_extension_module:
 
 ``PythonExtensionModule``
@@ -525,6 +537,10 @@ Each instance has the following attributes:
 
 ``name`` (string)
    Unique name of the module being provided.
+
+``is_stdlib`` (``bool``)
+   Whether this module is part of the Python standard library (part of the
+   Python distribution).
 
 .. _config_python_packaging_policy:
 

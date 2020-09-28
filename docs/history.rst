@@ -225,6 +225,8 @@ New Features
   be used to register a Starlark function that will be called whenever
   resources are created. The callback allows a single function to inspect
   and manipulate resources as they are created.
+* Starlark types representing Python resources now expose an ``is_stdlib``
+  attribute denoting whether they came from the Python distribution.
 
 Bug Fixes
 ^^^^^^^^^
