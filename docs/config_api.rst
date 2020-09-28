@@ -42,14 +42,14 @@ module source and bytecode as well as resource/data files. We refer to all
 of these as *Python Resources*.
 
 Configuration files represent *Python Resources* via the types
-:ref:`config_python_source_module`,
-:ref:`config_python_package_resource`,
-:ref:`config_python_package_distribution_resource`,
-and :ref:`config_python_extension_module`.
+:ref:`config_type_python_source_module`,
+:ref:`config_type_python_package_resource`,
+:ref:`config_type_python_package_distribution_resource`,
+and :ref:`config_type_python_extension_module`.
 
 These are described in detail in the following sections.
 
-.. _config_python_source_module:
+.. _config_type_python_source_module:
 
 ``PythonSourceModule``
 ----------------------
@@ -101,9 +101,9 @@ Each instance has the following attributes:
    Whether to generate and add bytecode at optimization level 2.
 
 Instances can be constructed via
-:ref:`config_python_executable_make_python_source_module`.
+:ref:`config_type_python_executable_make_python_source_module`.
 
-.. _config_python_package_resource:
+.. _config_type_python_package_resource:
 
 ``PythonPackageResource``
 -------------------------
@@ -124,7 +124,7 @@ Each instance has the following attributes:
    Whether this module is part of the Python standard library (part of the
    Python distribution).
 
-.. _config_python_package_distribution_resource:
+.. _config_type_python_package_distribution_resource:
 
 ``PythonPackageDistributionResource``
 -------------------------------------
@@ -150,7 +150,7 @@ Each instance has the following attributes:
    Whether this module is part of the Python standard library (part of the
    Python distribution).
 
-.. _config_python_extension_module:
+.. _config_type_python_extension_module:
 
 ``PythonExtensionModule``
 -------------------------
@@ -166,7 +166,7 @@ Each instance has the following attributes:
    Whether this module is part of the Python standard library (part of the
    Python distribution).
 
-.. _config_python_packaging_policy:
+.. _config_type_python_packaging_policy:
 
 Python Packaging Policy
 =======================
@@ -321,9 +321,9 @@ Python Interpreter Configuration
 
 A Python interpreter has settings to control how it runs. Configuration
 files represent these settings through the
-:ref:`config_python_interpreter_config` type.
+:ref:`config_type_python_interpreter_config` type.
 
-.. _config_python_interpreter_config:
+.. _config_type_python_interpreter_config:
 
 ``PythonInterpreterConfig(...)``
 --------------------------------
@@ -611,11 +611,11 @@ Python Binaries
 ===============
 
 Binaries containing an embedded Python interpreter can be defined by
-configuration files. They are defined via the :ref:`config_python_executable`
-type. In addition, the :ref:`config_python_embedded_resources` type represents
+configuration files. They are defined via the :ref:`config_type_python_executable`
+type. In addition, the :ref:`config_type_python_embedded_resources` type represents
 the collection of resources made available to an embedded Python interpreter.
 
-.. _config_python_embedded_resources:
+.. _config_type_python_embedded_resources:
 
 ``PythonEmbeddedResources``
 ---------------------------
@@ -635,13 +635,13 @@ that the data structure describing the resources is typically *embedded*
 in the binary or made available to an *embedded* Python interpreter.
 
 Instances of this type are constructed by transforming a type representing
-a Python binary. e.g. :ref:`config_python_executable_to_embedded_resources`.
+a Python binary. e.g. :ref:`config_type_python_executable_to_embedded_resources`.
 
 If this type is returned by a target function, its build action will write
 out files that represent the various resources encapsulated by this type. There
 is no run action associated with this type.
 
-.. _config_python_executable:
+.. _config_type_python_executable:
 
 ``PythonExecutable``
 --------------------
@@ -653,7 +653,7 @@ and a default run-time configuration for that interpreter.
 Instances are constructed from ``PythonDistribution`` instances using
 :ref:`config_python_distribution_to_python_executable`.
 
-.. _config_python_executable_make_python_source_module:
+.. _config_type_python_executable_make_python_source_module:
 
 ``PythonExecutable.make_python_source_module(name, source, is_package=false)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -672,7 +672,7 @@ Arguments are as follows:
    Whether the Python module is also a package. (e.g. the equivalent of a
    ``__init__.py`` file or a module without a ``.`` in its name.
 
-.. _config_python_executable_pip_install:
+.. _config_type_python_executable_pip_install:
 
 ``PythonExecutable.pip_install(args, extra_envs={})``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -695,7 +695,7 @@ The returned resources are typically added to a ``FileManifest`` or
 ``PythonExecutable`` to make them available to a packaged
 application.
 
-.. _config_python_executable_read_package_root:
+.. _config_type_python_executable_read_package_root:
 
 ``PythonExecutable.read_package_root(path, packages)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -731,7 +731,7 @@ virtualenv. The types of these objects can be ``PythonSourceModule``,
 The returned resources are typically added to a ``FileManifest`` or
 ``PythonExecutable`` to make them available to a packaged application.
 
-.. _config_python_executable_read_virtualenv:
+.. _config_type_python_executable_read_virtualenv:
 
 ``PythonExecutable.read_virtualenv(path)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -761,7 +761,7 @@ The types of these objects can be ``PythonSourceModule``,
 The returned resources are typically added to a ``FileManifest`` or
 ``PythonExecutable`` to make them available to a packaged application.
 
-.. _config_python_executable_setup_py_install:
+.. _config_type_python_executable_setup_py_install:
 
 ``PythonExecutable.setup_py_install(...)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -790,7 +790,7 @@ as part of the operation. The types of these objects can be
 The returned resources are typically added to a ``FileManifest`` or
 ``PythonExecutable`` to make them available to a packaged application.
 
-.. _config_python_executable_add_python_resource:
+.. _config_type_python_executable_add_python_resource:
 
 ``PythonExecutable.add_python_resource(...)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -810,17 +810,17 @@ This method is a glorified proxy to the various ``add_python_*`` methods.
 Unlike those methods, this one accepts all types that are known Python
 resources.
 
-.. _config_python_executable_add_python_resources:
+.. _config_type_python_executable_add_python_resources:
 
 ``PythonExecutable.add_python_resources(...)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This method registers an iterable of Python resources of various types.
 This method is identical to
-:ref:`config_python_executable_add_python_resource` except the argument is
+:ref:`config_type_python_executable_add_python_resource` except the argument is
 an iterable of resources. All other arguments are identical.
 
-.. _config_python_executable_filter_from_files:
+.. _config_type_python_executable_filter_from_files:
 
 ``PythonExecutable.filter_from_files(files=[], glob_patterns=[])``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -849,20 +849,20 @@ All defined files are first read and the resource names encountered are
 unioned into a set. This set is then used to filter entities currently
 registered with the instance.
 
-.. _config_python_executable_to_embedded_resources:
+.. _config_type_python_executable_to_embedded_resources:
 
 ``PythonExecutable.to_embedded_resources()``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Obtains a :ref:`config_python_embedded_resources` instance representing
+Obtains a :ref:`config_type_python_embedded_resources` instance representing
 resources to be made available to the Python interpreter.
 
-See the :ref:`config_python_embedded_resources` type documentation for more.
+See the :ref:`config_type_python_embedded_resources` type documentation for more.
 
 Interacting With the Filesystem
 ===============================
 
-.. _config_file_manifest:
+.. _config_type_file_manifest:
 
 ``FileManifest()``
 ------------------
@@ -875,7 +875,7 @@ filesystem layout of an installed application.
 Conceptually, a ``FileManifest`` is a dict mapping relative paths to
 file content.
 
-.. _config_file_manifest_add_manifest:
+.. _config_type_file_manifest_add_manifest:
 
 ``FileManifest.add_manifest(manifest)``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -920,7 +920,7 @@ If ``replace`` is True (the default), the destination directory will
 be deleted and the final state of the destination directory should
 exactly match the state of the ``FileManifest``.
 
-.. _config_file_content:
+.. _config_type_file_content:
 
 ``FileContent``
 ---------------

@@ -70,7 +70,7 @@ PyOxidizer does support loading shared library extension modules from
 ``.pyd`` files on the filesystem like a typical Python program. So
 if you cannot make in-memory extension module importing work, you
 can fall back to packaging a ``.pyd`` file in a directory registered
-on ``sys.path``, as set through the :ref:`config_python_interpreter_config`
+on ``sys.path``, as set through the :ref:`config_type_python_interpreter_config`
 Starlark primitive.
 
 Extension Modules Everywhere Else

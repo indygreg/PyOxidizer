@@ -58,7 +58,7 @@ argument to the target function depending on it. See
 The value returned by a target function is special. If that value is one
 of the special types defined by our Starlark dialect (e.g.
 :ref:`PythonDistribution <config_type_python_distribution>` or
-:ref:`PythonExecutable <config_python_executable>`),
+:ref:`PythonExecutable <config_type_python_executable>`),
 ``PyOxidizer`` will attempt to invoke special functionality depending
 on the run mode. For example, when running ``pyoxidizer build`` to
 *build* a target, ``PyOxidizer`` will invoke any *build* functionality

@@ -18,10 +18,10 @@ Global Types
 
 PyOxidizer's Starlark dialect defines the following custom types:
 
-:any:`FileContent <config_file_content>`
+:any:`FileContent <config_type_file_content>`
    Represents the content of a file on the filesystem.
 
-:any:`FileManifest <config_file_manifest>`
+:any:`FileManifest <config_type_file_manifest>`
    Represents a mapping of filenames to file content.
 
 :any:`PythonDistribution <config_type_python_distribution>`
@@ -29,28 +29,28 @@ PyOxidizer's Starlark dialect defines the following custom types:
 
    Used for embedding into binaries and running Python code.
 
-:any:`PythonEmbeddedResources <config_python_embedded_resources>`
+:any:`PythonEmbeddedResources <config_type_python_embedded_resources>`
    Represents resources made available to a Python interpreter.
 
-:any:`PythonExecutable <config_python_executable>`
+:any:`PythonExecutable <config_type_python_executable>`
    Represents an executable file containing a Python interpreter.
 
-:any:`PythonExtensionModule <config_python_extension_module>`
+:any:`PythonExtensionModule <config_type_python_extension_module>`
    Represents a compiled Python extension module.
 
-:any:`PythonInterpreterConfig <config_python_interpreter_config>`
+:any:`PythonInterpreterConfig <config_type_python_interpreter_config>`
    Represents the configuration of a Python interpreter.
 
-:any:`PythonPackageDistributionResource <config_python_package_distribution_resource>`
+:any:`PythonPackageDistributionResource <config_type_python_package_distribution_resource>`
    Represents a file containing Python package distribution metadata.
 
-:any:`PythonPackageResource <config_python_package_resource>`
+:any:`PythonPackageResource <config_type_python_package_resource>`
    Represents a non-module *resource* data file.
 
-:any:`PythonPackagingPolicy <config_python_packaging_policy>`
+:any:`PythonPackagingPolicy <config_type_python_packaging_policy>`
    Represents a policy controlling how Python resources are added to a binary.
 
-:any:`PythonSourceModule <config_python_source_module>`
+:any:`PythonSourceModule <config_type_python_source_module>`
    Represents a ``.py`` file containing Python source code.
 
 .. _config_global_constants:

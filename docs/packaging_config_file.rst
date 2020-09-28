@@ -48,12 +48,12 @@ to reference the distribution instance:
 
    register_target("dist", make_dist)
 
-.. _packaging_config_python_executable:
+.. _packaging_config_type_python_executable:
 
 Defining an Executable Embedding Python
 =======================================
 
-The :ref:`PythonExecutable <config_python_executable>` Starlark type
+The :ref:`PythonExecutable <config_type_python_executable>` Starlark type
 defines an executable file embedding Python. Instances of this type
 are used to build an executable file (and possibly other files needed
 by it) that contains an embedded Python interpreter and other resources
@@ -81,7 +81,7 @@ In this example, we create an executable embedding Python:
 ``PythonDistribution.to_python_executable()`` accepts an optional
 ``PythonPackagingPolicy`` instance that influences how the executable
 is built and what resources are added where. See the
-:ref:`type documentation <config_python_packaging_policy>` for the
+:ref:`type documentation <config_type_python_packaging_policy>` for the
 list of parameters that can be influenced. Some of this behavior
 is described in the sections below. Other examples are provided
 throughout the :ref:`packaging` documentation.
@@ -91,7 +91,7 @@ throughout the :ref:`packaging` documentation.
 Configuring the Python Interpreter Run-Time Behavior
 ====================================================
 
-The :ref:`PythonInterpreterConfig <config_python_interpreter_config>`
+The :ref:`PythonInterpreterConfig <config_type_python_interpreter_config>`
 Starlark type configures the default behavior of the Python interpreter
 embedded in built binaries.
 
@@ -119,7 +119,7 @@ this instance into the constructed ``PythonExecutable``:
    register_target("exe", make_exe, depends=["dist"], default=True)
 
 The ``PythonInterpreterConfig`` type exposes a lot of modifiable settings.
-See the :ref:`API documentation <config_python_interpreter_config>` for
+See the :ref:`API documentation <config_type_python_interpreter_config>` for
 the complete list. These settings include but are not limited to:
 
 * Control of low-level Python interpreter settings, such as whether
@@ -150,9 +150,9 @@ will want to add their own Python packages/code.
 
 The Starlark environment defines various types for representing Python
 package resources. These include
-:ref:`PythonSourceModule <config_python_source_module>`,
-:ref:`PythonExtensionModule <config_python_extension_module>`,
-:ref:`PythonPackageDistributionResource <config_python_package_distribution_resource>`,
+:ref:`PythonSourceModule <config_type_python_source_module>`,
+:ref:`PythonExtensionModule <config_type_python_extension_module>`,
+:ref:`PythonPackageDistributionResource <config_type_python_package_distribution_resource>`,
 and more.
 
 Instances of these types can be created dynamically or by performing
@@ -169,7 +169,7 @@ for more on this topic, including many examples.
 Install Manifests Copy Files Next to Your Application
 =====================================================
 
-The :ref:`FileManifest <config_file_manifest>` Starlark type represents a
+The :ref:`FileManifest <config_type_file_manifest>` Starlark type represents a
 collection of files and their content. When ``FileManifest`` instances are
 returned from a target function, their build action results in their contents
 being manifested in a directory having the name of the build target.
@@ -183,7 +183,7 @@ next to your built executable defined by the ``PythonExecutable`` type.
 The :ref:`glob() <config_glob>` function can be used to discover existing
 files on the filesystem and turn them into a ``FileManifest``. You can then
 return this ``FileManifest`` directory or overlay it onto another
-instance using :ref:`config_file_manifest_add_manifest`. Here's an
+instance using :ref:`config_type_file_manifest_add_manifest`. Here's an
 example:
 
 .. code-block:: python

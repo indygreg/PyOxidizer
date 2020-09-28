@@ -127,14 +127,14 @@ Examples:
 =======================================
 
 Returns a ``list`` of
-:any:`PythonSourceModule <config_python_source_module>`
+:any:`PythonSourceModule <config_type_python_source_module>`
 representing Python source modules present in this distribution.
 
 ``PythonDistribution.package_resources()``
 ==========================================
 
 Returns a ``list`` of
-:any:`PythonPackageResource <config_python_package_resource>`
+:any:`PythonPackageResource <config_type_python_package_resource>`
 representing resource files present in this distribution.
 
 The ``include_test`` boolean argument controls whether resources associated
@@ -146,7 +146,7 @@ with test packages are included.
 ==========================================
 
 Returns a ``list`` of
-:any:`PythonExtensionModule <config_python_extension_module>`
+:any:`PythonExtensionModule <config_type_python_extension_module>`
 representing extension modules in this distribution.
 
 There may exist multiple extensions with the same name.
@@ -157,7 +157,7 @@ There may exist multiple extensions with the same name.
 =====================================================
 
 Obtain a
-:any:`PythonPackagingPolicy <config_python_packaging_policy>`
+:any:`PythonPackagingPolicy <config_type_python_packaging_policy>`
 derived from the distribution.
 
 The policy automatically uses settings globally appropriate for the
@@ -168,7 +168,7 @@ distribution.
 ``PythonDistribution.to_python_executable()``
 =============================================
 
-This method constructs a :ref:`config_python_executable` instance. It
+This method constructs a :ref:`config_type_python_executable` instance. It
 essentially says *build an executable embedding Python from this
 distribution*.
 

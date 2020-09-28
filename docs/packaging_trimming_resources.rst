@@ -20,7 +20,7 @@ are packaged.
 But maintaining explicit lists of resources can be tedious. ``PyOxidizer``
 offers a more automated approach to solving this problem.
 
-The :ref:`config_python_interpreter_config` type defines a
+The :ref:`config_type_python_interpreter_config` type defines a
 ``write_modules_directory_env`` setting, which when enabled will instruct
 the embedded Python interpreter to write the list of all loaded modules
 into a randomly named file in the directory identified by the environment

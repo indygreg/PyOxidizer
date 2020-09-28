@@ -26,7 +26,7 @@ Packaging Policies and Adding Resources
 
 The exact mechanism by which *resources* are added to *resource
 collectors* is influenced by a *packaging policy* (represented by the
-:ref:`PythonPackagingPolicy <config_python_packaging_policy>` Starlark
+:ref:`PythonPackagingPolicy <config_type_python_packaging_policy>` Starlark
 type) and attributes on each resource object influencing how they are
 added.
 
@@ -39,9 +39,9 @@ When a resource is added (e.g. by calling
 consulted and used to influence exactly how that *resource* is
 added/packaged.
 
-For example, a :ref:`config_python_source_module` can set attributes
+For example, a :ref:`config_type_python_source_module` can set attributes
 indicating to exclude source code and only generate bytecode at
-a specific optimization level. Or a :ref:`config_python_extension_module`
+a specific optimization level. Or a :ref:`config_type_python_extension_module`
 can set attributes saying to prefer to compile it into the built
 binary or materialize it as a standalone dynamic extension module
 (e.g. ``my_ext.so`` or ``my_ext.pyd``).
@@ -53,36 +53,36 @@ Resource Types
 
 The following Starlark types represent individual resources:
 
-:ref:`PythonSourceModule <config_python_source_module>`
+:ref:`PythonSourceModule <config_type_python_source_module>`
    Source code for a Python module. Roughly equivalent to a ``.py`` file.
 
    This type can also be converted to Python bytecode (roughly equivalent
    to a ``.pyc``) when added to a resource collector.
 
-:ref:`PythonExtensionModule <config_python_extension_module>`
+:ref:`PythonExtensionModule <config_type_python_extension_module>`
    A Python module defined through compiled, machine-native code. On Linux,
    these are typically encountered as ``.so`` files. On Windows, ``.pyd`` files.
 
-:ref:`PythonPackageResource <config_python_package_resource>`
+:ref:`PythonPackageResource <config_type_python_package_resource>`
    A non-module *resource file* loadable by Python resources APIs, such as
    those in ``importlib.resources``.
 
-:ref:`PythonPackageDistributionResource <config_python_package_distribution_resource>`
+:ref:`PythonPackageDistributionResource <config_type_python_package_distribution_resource>`
    A non-module *resource file* defining metadata for a Python package.
    Typically accessed via ``importlib.metadata``. This is how files in
    ``*.dist-info`` or ``*.egg-info`` directories are represented.
 
-:ref:`FileContent <config_file_content>`
+:ref:`FileContent <config_type_file_content>`
    Represents the content of a filesystem file.
 
 There are also Starlark types that are logically containers for multiple
 resources:
 
-:ref:`FileManifest <config_file_manifest>`
+:ref:`FileManifest <config_type_file_manifest>`
    Holds a mapping of relative filesystem paths to ``FileContent`` instances.
    This type effectively allows modeling a directory tree.
 
-:ref:`PythonEmbeddedResources <config_python_embedded_resources>`
+:ref:`PythonEmbeddedResources <config_type_python_embedded_resources>`
    Holds a collection of Python resources of various types. (This type is often
    hidden away. e.g. inside a ``PythonExecutable`` instance.)
 
@@ -259,7 +259,7 @@ what the default values of the ``add_*`` attributes are.
 The primary mechanisms for doing this are:
 
 1. Modifying the ``PythonPackagingPolicy`` instance's internal
-   state. See :ref:`config_python_packaging_policy` for the full
+   state. See :ref:`config_type_python_packaging_policy` for the full
    list of object attributes and methods that can be set or called.
 2. Registering a function that will be called whenever a resource
    is created. This enables custom Starlark code to perform

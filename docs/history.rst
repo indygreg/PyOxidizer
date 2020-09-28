@@ -328,7 +328,7 @@ New Features
 
 * Python resource scanning now recognizes ``*.dist-info`` and ``*.egg-info``
   directories as package distribution metadata. Files within these directories
-  are exposed to Starlark as :ref:`config_python_package_distribution_resource`
+  are exposed to Starlark as :ref:`config_type_python_package_distribution_resource`
   instances. These resources can be added to the embedded resources payload
   and made available for loading from memory or the filesystem, just like
   any other resource. The custom Python importer implements ``get_distributions()``
@@ -449,7 +449,7 @@ New Features
   ``python3-sys`` crates instead of a a specific Git commit.
 * Embedded Python interpreters can now be configured to run a file specified
   by a filename. See the ``run_file`` argument of
-  :ref:`config_python_interpreter_config`.
+  :ref:`config_type_python_interpreter_config`.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
