@@ -10,6 +10,10 @@ files to configure run-time behavior.
 Starlark is a dialect of Python intended to be used as a configuration
 language and the syntax should be familiar to any Python programmer.
 
+This documentation section contains both a high-level overview of
+the configuration files and their semantics as well as low-level
+documentation for every type and function in the Starlark dialect.
+
 .. toctree::
    :maxdepth: 3
 
