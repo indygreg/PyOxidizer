@@ -21,7 +21,7 @@ PyOxidizer's Starlark dialect defines the following custom types:
 :any:`FileContent <config_type_file_content>`
    Represents the content of a file on the filesystem.
 
-:any:`FileManifest <config_type_file_manifest>`
+:ref:`config_type_file_manifest`
    Represents a mapping of filenames to file content.
 
 :ref:`config_type_python_distribution`

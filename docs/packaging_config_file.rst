@@ -183,7 +183,7 @@ next to your built executable defined by the ``PythonExecutable`` type.
 The :ref:`glob() <config_glob>` function can be used to discover existing
 files on the filesystem and turn them into a ``FileManifest``. You can then
 return this ``FileManifest`` directory or overlay it onto another
-instance using :ref:`config_type_file_manifest_add_manifest`. Here's an
+instance using :ref:`config_file_manifest_add_manifest`. Here's an
 example:
 
 .. code-block:: python
