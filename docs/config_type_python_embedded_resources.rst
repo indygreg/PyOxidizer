@@ -19,7 +19,7 @@ that the data structure describing the resources is typically *embedded*
 in the binary or made available to an *embedded* Python interpreter.
 
 Instances of this type are constructed by transforming a type representing
-a Python binary. e.g. :ref:`config_type_python_executable_to_embedded_resources`.
+a Python binary. e.g. :ref:`config_python_executable_to_embedded_resources`.
 
 If this type is returned by a target function, its build action will write
 out files that represent the various resources encapsulated by this type. There

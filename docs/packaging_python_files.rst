@@ -26,19 +26,19 @@ The ``PythonExecutable`` Starlark type has the following methods that
 can be called to perform an action and obtain an iterable of objects
 representing discovered resources:
 
-:ref:`pip_install(...) <config_type_python_executable_pip_install>`
+:ref:`pip_install(...) <config_python_executable_pip_install>`
    Invokes ``pip install`` with specified arguments and collects all
    resources installed by that process.
 
-:ref:`read_package_root(...) <config_type_python_executable_read_package_root>`
+:ref:`read_package_root(...) <config_python_executable_read_package_root>`
    Recursively scans a filesystem directory for Python resources in a
    typical Python installation layout.
 
-:ref:`setup_py_install(...) <config_type_python_executable_setup_py_install>`
+:ref:`setup_py_install(...) <config_python_executable_setup_py_install>`
    Invokes ``python setup.py install`` for a given path and collects
    resources installed by that process.
 
-:ref:`read_virtualenv(...) <config_type_python_executable_read_virtualenv>`
+:ref:`read_virtualenv(...) <config_python_executable_read_virtualenv>`
    Reads Python resources present in an already populated virtualenv.
 
 Typically, the Starlark types resolved by these method calls are
@@ -76,7 +76,7 @@ The ``PythonExecutable`` type holds all state needed to package and run
 a Python interpreter. This includes low-level interpreter configuration
 settings to which Python resources (like source and bytecode modules)
 are embedded in that executable binary. This type exposes an
-:ref:`add_python_resources() <config_type_python_executable_add_python_resources>`
+:ref:`add_python_resources() <config_python_executable_add_python_resources>`
 method which adds an iterable of objects representing Python resources to the
 set of embedded resources.
 
@@ -86,7 +86,7 @@ represents a Python distribution, which is a fancy way of saying
 *an implementation of Python*.
 
 One of the methods exposed by ``PythonExecutable`` is
-:ref:`pip_install() <config_type_python_executable_pip_install>`, which
+:ref:`pip_install() <config_python_executable_pip_install>`, which
 invokes ``pip install`` with settings to target the built executable.
 
 To add a new Python package to our executable, we call

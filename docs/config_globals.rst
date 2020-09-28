@@ -32,7 +32,7 @@ PyOxidizer's Starlark dialect defines the following custom types:
 :ref:`config_type_python_embedded_resources`
    Represents resources made available to a Python interpreter.
 
-:any:`PythonExecutable <config_type_python_executable>`
+:ref:`config_type_python_executable`
    Represents an executable file containing a Python interpreter.
 
 :ref:`config_type_python_extension_module`

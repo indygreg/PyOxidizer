@@ -51,4 +51,4 @@ Each instance has the following attributes:
    Whether to generate and add bytecode at optimization level 2.
 
 Instances can be constructed via
-:ref:`config_type_python_executable_make_python_source_module`.
+:ref:`config_python_executable_make_python_source_module`.
