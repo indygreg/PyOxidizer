@@ -134,7 +134,7 @@ representing Python source modules present in this distribution.
 ==========================================
 
 Returns a ``list`` of
-:any:`PythonPackageResource <config_type_python_package_resource>`
+:ref:`config_type_python_package_resource`
 representing resource files present in this distribution.
 
 The ``include_test`` boolean argument controls whether resources associated

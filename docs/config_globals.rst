@@ -44,7 +44,7 @@ PyOxidizer's Starlark dialect defines the following custom types:
 :any:`PythonPackageDistributionResource <config_type_python_package_distribution_resource>`
    Represents a file containing Python package distribution metadata.
 
-:any:`PythonPackageResource <config_type_python_package_resource>`
+:ref:`config_type_python_package_resource`
    Represents a non-module *resource* data file.
 
 :any:`PythonPackagingPolicy <config_type_python_packaging_policy>`
