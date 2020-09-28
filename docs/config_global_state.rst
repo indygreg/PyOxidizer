@@ -6,8 +6,8 @@ Functions for Manipulating Global State
 
 .. _config_set_build_path:
 
-set_build_path(path)
---------------------
+``set_build_path()``
+====================
 
 Configure the directory where build artifacts will be written.
 

@@ -6,8 +6,8 @@ Functions for Managing Targets
 
 .. _config_register_target:
 
-register_target(name, fn, depends=[], default=False, default_build_script=False)
---------------------------------------------------------------------------------
+``register_target()``
+=====================
 
 Registers a named target that can be resolved by the configuration file.
 
@@ -17,20 +17,31 @@ of targets it depends on.
 The callable may return one of the types defined by this Starlark dialect
 to facilitate additional behavior, such as how to build and run it.
 
-``depends`` is an optional list of target strings this target depends on.
-If specified, each dependency will be evaluated in order and its returned
-value (possibly cached from prior evaluation) will be passed as a
-positional argument to this target's callable.
+Arguments:
 
-``default`` indicates whether this should be the default target
-to evaluate. The last registered target setting this to ``True``
-will be the default. If no target sets this to ``True``, the first
-registered target is the default.
+``name``
+   (``string``) The name of the target being register.
 
-``default_build_script`` indicates whether this should be the default
-target to evaluate when run from the context of a Rust build script (e.g.
-from ``pyoxidizer run-build-script``. It has the same semantics as
-``default``.
+``fn``
+   (``function``) A function to call when the target is resolved.
+
+``depends``
+   (``list`` of ``string`` or ``None``) List of target strings this target
+   depends on. If specified, each dependency will be evaluated in order and
+   its returned value (possibly cached from prior evaluation) will be passed
+   as a positional argument to this target's callable.
+
+``default``
+   (``bool``) Indicates whether this should be the default target
+   to evaluate. The last registered target setting this to ``True``
+   will be the default. If no target sets this to ``True``, the first
+   registered target is the default.
+
+``default_build_script``
+   (``bool``) indicates whether this should be the default target to
+   evaluate when run from the context of a Rust build script (e.g. from
+   ``pyoxidizer run-build-script``. It has the same semantics as
+   ``default``.
 
 .. note::
 
@@ -41,8 +52,8 @@ from ``pyoxidizer run-build-script``. It has the same semantics as
 
 .. _config_resolve_target:
 
-resolve_target(target)
-----------------------
+``resolve_target()``
+====================
 
 Triggers resolution of a requested build target.
 
@@ -57,8 +68,8 @@ from another target.
 
 .. _config_resolve_targets:
 
-resolve_targets()
------------------
+``resolve_targets()``
+=====================
 
 Triggers resolution of requested build targets.
 
