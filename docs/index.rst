@@ -30,7 +30,6 @@ The creator and maintainer of ``PyOxidizer`` is
    packaging
    oxidized_importer
    rust
-   config_api
    faq
    status
    comparisons

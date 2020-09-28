@@ -6,8 +6,7 @@ Packaging Primitives in ``pyoxidizer.bzl`` Files
 
 PyOxidizer's run-time behavior is controlled by ``pyoxidizer.bzl``
 Starlark (a Python-like language) configuration files. See :ref:`config_files`
-for a high-level overview of configuration files and :ref:`config_api`
-for a low-level reference of all primitives available in these files.
+for documentation on these files, including low-level API documentation.
 
 This document gives a medium-level overview of the important Starlark
 types and functions and how they all interact.

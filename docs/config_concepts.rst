@@ -12,9 +12,9 @@ Processing
 A configuration file is evaluated in a custom Starlark *dialect* which
 provides primitives used by PyOxidizer. This dialect provides some
 well-defined global variables (defined in UPPERCASE) as well as some
-types and functions that can be constructed and called. See below
-for general usage and :ref:`config_api` for a full reference of what's
-available to the Starlark environment.
+types and functions that can be constructed and called. See
+:ref:`config_globals` for a full list of what's available to the
+Starlark environment.
 
 Since Starlark is effectively a subset of Python, executing a ``PyOxidizer``
 configuration file is effectively running a sandboxed Python script. It is
