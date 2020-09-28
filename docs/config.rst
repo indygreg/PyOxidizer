@@ -14,8 +14,7 @@ language and the syntax should be familiar to any Python programmer.
    :maxdepth: 2
 
    config_locating
-   config_processing
-   config_resource_locations
+   config_concepts
    config_globals
    config_global_state
    config_target_management
