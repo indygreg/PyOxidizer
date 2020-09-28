@@ -12,10 +12,13 @@ Instances are constructed from :ref:`config_type_python_distribution`
 instances using
 :ref:`config_python_distribution_to_python_executable`.
 
+Methods
+=======
+
 .. _config_python_executable_make_python_source_module:
 
 ``PythonExecutable.make_python_source_module()``
-================================================
+------------------------------------------------
 
 This method creates a ``PythonSourceModule`` instance suitable for use with
 the executable being built.
@@ -34,7 +37,7 @@ Arguments are as follows:
 .. _config_python_executable_pip_install:
 
 ``PythonExecutable.pip_install()``
-==================================
+----------------------------------
 
 This method runs ``pip install <args>`` with settings appropriate to target
 the executable being built.
@@ -57,7 +60,7 @@ application.
 .. _config_python_executable_read_package_root:
 
 ``PythonExecutable.read_package_root()``
-========================================
+----------------------------------------
 
 This method discovers resources from a directory on the filesystem.
 
@@ -93,7 +96,7 @@ The returned resources are typically added to a ``FileManifest`` or
 .. _config_python_executable_read_virtualenv:
 
 ``PythonExecutable.read_virtualenv()``
-======================================
+--------------------------------------
 
 This method attempts to read Python resources from an already built
 virtualenv.
@@ -123,7 +126,7 @@ The returned resources are typically added to a ``FileManifest`` or
 .. _config_python_executable_setup_py_install:
 
 ``PythonExecutable.setup_py_install()``
-=======================================
+---------------------------------------
 
 This method runs ``python setup.py install`` against a package at the
 specified path.
@@ -152,7 +155,7 @@ The returned resources are typically added to a ``FileManifest`` or
 .. _config_python_executable_add_python_resource:
 
 ``PythonExecutable.add_python_resource()``
-==========================================
+------------------------------------------
 
 This method registers a Python resource of various types with the instance.
 
@@ -172,7 +175,7 @@ resources.
 .. _config_python_executable_add_python_resources:
 
 ``PythonExecutable.add_python_resources()``
-===========================================
+-------------------------------------------
 
 This method registers an iterable of Python resources of various types.
 This method is identical to
@@ -182,7 +185,7 @@ an iterable of resources. All other arguments are identical.
 .. _config_python_executable_filter_from_files:
 
 ``PythonExecutable.filter_from_files()``
-========================================
+----------------------------------------
 
 This method filters all embedded resources (source modules, bytecode modules,
 and resource names) currently present on the instance through a set of
@@ -211,7 +214,7 @@ registered with the instance.
 .. _config_python_executable_to_embedded_resources:
 
 ``PythonExecutable.to_embedded_resources()``
-============================================
+--------------------------------------------
 
 Obtains a :ref:`config_type_python_embedded_resources` instance representing
 resources to be made available to the Python interpreter.

@@ -18,10 +18,13 @@ in this type.
    config type is not relevant to you and can be omitted from your config
    file.
 
+Constructors
+============
+
 .. _config_python_interpreter_config_init:
 
 ``PythonInterpreterConfig()``
-=============================
+-----------------------------
 
 The ``PythonInterpreterConfig()`` constructor function can be called to
 create a new instance of this type.

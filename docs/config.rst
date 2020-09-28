@@ -11,7 +11,7 @@ Starlark is a dialect of Python intended to be used as a configuration
 language and the syntax should be familiar to any Python programmer.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    config_locating
    config_concepts

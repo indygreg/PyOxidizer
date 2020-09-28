@@ -9,6 +9,9 @@ distribution is an entity that defines an implementation of Python. This
 entity can be used to create a binary embedding or running Python and
 can be used to execute Python code.
 
+Constructors
+============
+
 Instances of ``PythonDistribution`` can be constructed via a constructor
 function or via
 :any:`default_python_distribution() <config_default_python_distribution>`.
@@ -16,7 +19,7 @@ function or via
 .. _config_default_python_distribution:
 
 ``default_python_distribution()``
-=================================
+---------------------------------
 
 Resolves the default ``PythonDistribution``.
 
@@ -78,7 +81,7 @@ need to build your own distribution or change the distribution manually.
 .. _config_python_distribution_init:
 
 ``PythonDistribution()``
-========================
+------------------------
 
 Construct a ``PythonDistribution`` from arguments.
 
@@ -123,15 +126,18 @@ Examples:
    )
 
 
+Methods
+=======
+
 ``PythonDistribution.source_modules()``
-=======================================
+---------------------------------------
 
 Returns a ``list`` of
 :ref:`config_type_python_source_module`
 representing Python source modules present in this distribution.
 
 ``PythonDistribution.package_resources()``
-==========================================
+------------------------------------------
 
 Returns a ``list`` of
 :ref:`config_type_python_package_resource`
@@ -143,7 +149,7 @@ with test packages are included.
 .. _config_python_distribution_extension_modules:
 
 ``PythonDistribution.extension_modules()``
-==========================================
+------------------------------------------
 
 Returns a ``list`` of
 :ref:`config_type_python_extension_module`
@@ -154,7 +160,7 @@ There may exist multiple extensions with the same name.
 .. _config_python_distribution_make_python_packaging_policy:
 
 ``PythonDistribution.make_python_packaging_policy()``
-=====================================================
+-----------------------------------------------------
 
 Obtain a
 :ref:`config_type_python_packaging_policy`
@@ -166,7 +172,7 @@ distribution.
 .. _config_python_distribution_to_python_executable:
 
 ``PythonDistribution.to_python_executable()``
-=============================================
+---------------------------------------------
 
 This method constructs a :ref:`config_type_python_executable` instance. It
 essentially says *build an executable embedding Python from this

@@ -12,17 +12,20 @@ filesystem layout of an installed application.
 Conceptually, a ``FileManifest`` is a dict mapping relative paths to
 file content.
 
+Methods
+=======
+
 .. _config_file_manifest_add_manifest:
 
 ``FileManifest.add_manifest()``
-===============================
+-------------------------------
 
 This method overlays another ``FileManifest`` on this one. If the other
 manifest provides a path already in this manifest, its content will be
 replaced by what is in the other manifest.
 
 ``FileManifest.add_python_resource()``
-======================================
+--------------------------------------
 
 This method adds a Python resource to a ``FileManifest`` instance in
 a specified directory prefix.
@@ -41,7 +44,7 @@ This method can be used to place the Python resources derived from another
 type or action in the filesystem next to an application binary.
 
 ``FileManifest.add_python_resources()``
-=======================================
+---------------------------------------
 
 This method adds an iterable of Python resources to a ``FileManifest``
 instance in a specified directory prefix. This is effectively a wrapper
@@ -55,7 +58,7 @@ source modules in a directory named ``lib``::
    m.add_python_resources(dist.source_modules())
 
 ``FileManifest.install()``
-==========================
+--------------------------
 
 This method writes the content of the ``FileManifest`` to a directory
 specified by ``path``. The path is evaluated relative to the path
