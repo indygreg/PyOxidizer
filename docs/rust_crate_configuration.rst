@@ -56,7 +56,7 @@ environment variable. Otherwise ``PATH`` will be used.
 
 At build time, ``pyoxidizer run-build-script`` will be run. A
 ``PyOxidizer`` configuration file will be discovered using the heuristics
-described at :ref:`config_finding_configuration_files`. ``OUT_DIR`` will
+described at :ref:`config_locating`. ``OUT_DIR`` will
 be set if running from ``cargo``, so a ``pyoxidizer.bzl`` next to the main
 Rust project being built should be found and used.
 

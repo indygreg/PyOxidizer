@@ -15,8 +15,8 @@ types and functions and how they all interact.
 Targets Define Actions
 ======================
 
-As detailed at :ref:`config_targets`, a PyOxidizer configuration file
-is composed of named *targets*, which are functions returning an object
+As detailed at :ref:`config_processing_targets`, a PyOxidizer configuration
+file is composed of named *targets*, which are functions returning an object
 that may have a build or run action attached. Commands like
 ``pyoxidizer build`` identify a target to evaluate then effectively
 walk the dependency graph evaluating dependent targets until the
