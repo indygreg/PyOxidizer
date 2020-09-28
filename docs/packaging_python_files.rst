@@ -44,7 +44,7 @@ representing discovered resources:
 Typically, the Starlark types resolved by these method calls are
 passed into a method that adds the resource to a to-be-generated
 entity, such as the :ref:`PythonExecutable <config_python_executable>`
-Starlark type. See :ref:`packaging_routing_resources` for more.
+Starlark type.
 
 The following sections demonstrate common use cases.
 

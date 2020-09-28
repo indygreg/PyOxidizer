@@ -1,24 +1,50 @@
 .. _packaging_resources:
 
-======================================
-Managing Resources and Their Locations
-======================================
+================================
+Managing How Resources are Added
+================================
 
-An important concept in PyOxidizer packaging is how to manage
-*resources* and their *locations*.
+An important concept in PyOxidizer packaging is how to manage *resources*
+that are added to built applications.
 
 A *resource* is some entity that will be packaged and distributed. Examples
 of *resources* include Python module source and bytecode, Python
 extension modules, and arbitrary files on the filesystem.
 
-A packaged resource has the concept of a *location*. This influences where
-the resource's data lives and how it will be loaded at run-time. Examples
-of *locations* include *embedded in the built binary* and *in a file next
-to the build binary*.
-
 *Resources* are represented by a dedicated Starlark type for each
-resource (see below). *Locations* and other metadata influencing
-packaging behavior are stored as attributes on these objects.
+resource flavor (see :ref:`packaging_resource_types`).
+
+During evaluation of PyOxidizer's Starlark configuration files,
+*resources* are created and *added* to another Starlark type whose
+job is to collect all desired *resources* and then do something with
+them.
+
+.. _packaging_resource_packaging_policy:
+
+Packaging Policies and Adding Resources
+=======================================
+
+The exact mechanism by which *resources* are added to *resource
+collectors* is influenced by a *packaging policy* (represented by the
+:ref:`PythonPackagingPolicy <config_python_packaging_policy>` Starlark
+type) and attributes on each resource object influencing how they are
+added.
+
+When a *resource* is created, the *packaging policy* associated with
+the entity creating the *resource* is applied and various ``add_*``
+attributes on the Starlark *resource* types are populated.
+
+When a resource is added (e.g. by calling
+``PythonExecutable.add_python_resource()``), these attributes are
+consulted and used to influence exactly how that *resource* is
+added/packaged.
+
+For example, a :ref:`config_python_source_module` can set attributes
+indicating to exclude source code and only generate bytecode at
+a specific optimization level. Or a :ref:`config_python_extension_module`
+can set attributes saying to prefer to compile it into the built
+binary or materialize it as a standalone dynamic extension module
+(e.g. ``my_ext.so`` or ``my_ext.pyd``).
 
 .. _packaging_resource_types:
 
@@ -29,6 +55,9 @@ The following Starlark types represent individual resources:
 
 :ref:`PythonSourceModule <config_python_source_module>`
    Source code for a Python module. Roughly equivalent to a ``.py`` file.
+
+   This type can also be converted to Python bytecode (roughly equivalent
+   to a ``.pyc``) when added to a resource collector.
 
 :ref:`PythonExtensionModule <config_python_extension_module>`
    A Python module defined through compiled, machine-native code. On Linux,
@@ -59,13 +88,12 @@ resources:
 
 .. _packaging_resource_locations:
 
-Python Resource Locations
-=========================
+Resource Locations
+==================
 
-The ``PythonEmbeddedResources`` type represents a collection of Python
-resources of varying *resource* types and locations. When adding a Python
-resource to this type, you have the choice of multiple locations for the
-resource.
+Resources have the concept of a *location*. A resource's *location*
+determines where the data for that resource is packaged and how that
+resource is loaded at run-time.
 
 In-Memory
 ---------
@@ -100,15 +128,185 @@ filesystem may look like a standard Python install layout, loading them is
 serviced by PyOxidizer's custom importer, not the standard importer that
 Python uses by default.
 
-Python Resource Location Policies
-=================================
+Resource Attributes Influencing Adding
+======================================
 
-When constructing a Starlark type that represents a collection of Python
-resources, the caller can specify a *policy* for what *locations* are
-allowed and how to handle a resource if no explicit *location* is specified.
-See :ref:`config_python_resources_policy` for the full documentation.
+Individual Starlark values representing resources expose various
+attributes prefixed with ``add_`` which influence what happens when
+that resource is added to a resource collector. These attributes are
+derived from the ``PythonPackagingPolicy`` attached to the entity
+creating the resource. But they can be modified by Starlark code
+before the resource is added to a collection.
 
-Here are some examples of how policies are used:
+The following sections describe each attribute that influences
+how the resource is added to a collection.
+
+.. _config_resource_add_include:
+
+``add_include``
+---------------
+
+This ``bool`` attribute defines a yes/no filter for whether to actually
+add this resource to a collection. If a resource with ``.add_include = False``
+is added to a collection, that add is processed as a no-op and no change
+is made.
+
+.. _config_resource_add_location:
+
+``add_location``
+----------------
+
+This ``string`` attributes defines the primary location this resource
+should be added to and loaded from at run-time.
+
+It can be set to the following values:
+
+``in-memory``
+   The resource should be loaded from memory.
+
+   For Python modules and resource files, the module is loaded from
+   memory using 0-copy by the custom module importer.
+
+   For Python extension modules, the extension module may be statically
+   linked into the built binary or loaded as a shared library from
+   memory (the latter is not supported on all platforms).
+
+``filesystem-relative:<prefix>``
+   The resource is materialized on the filesystem relative to the built
+   entity and loaded from the filesystem at run-time.
+
+   ``<prefix>`` here is a directory prefix to place the resource in.
+   ``.`` (e.g. ``filesystem-relative:.``) can be used to denote the same
+   directory as the built entity.
+
+.. _config_resource_add_location_fallback:
+
+``add_location_fallback``
+-------------------------
+
+This ``string`` or ``None`` value attribute is equivalent to
+``add_location`` except it only comes into play if the location
+specified by ``add_location`` could not be satisfied.
+
+Some resources (namely Python extension modules) cannot exist in
+all locations. Setting this attribute to a different location gives
+more flexibility for packaging resources with location constraints.
+
+.. _config_resource_add_source:
+
+``add_source``
+--------------
+
+This ``bool`` attribute defines whether to add source code for a
+Python module.
+
+For Python modules, typically only bytecode is required at run-time.
+For some applications, the presence of source code doesn't provide
+sufficient value or isn't desired since the application developer may
+want to obfuscate the source code. Setting this attribute to ``False``
+prevents Python module source code from being added.
+
+.. _config_resource_add_bytecode_optimize_level_zero:
+
+``add_bytecode_optimization_level_zero``
+----------------------------------------
+
+This ``bool`` attributes defines whether to add Python bytecode
+for optimization level 0 (the default optimization level).
+
+If ``True``, Python source code will be compiled to bytecode at
+build time.
+
+The default value is whatever
+``PythonPackagingPolicy.bytecode_optimize_level_zero`` is set to.
+
+.. _config_resource_add_bytecode_optimize_level_one:
+
+``add_bytecode_optimization_level_one``
+---------------------------------------
+
+This ``bool`` attributes defines whether to add Python bytecode for
+optimization level 1.
+
+The default value is whatever
+``PythonPackagingPolicy.bytecode_optimize_level_one`` is set to.
+
+.. _config_resource_add_bytecode_optimize_level_two:
+
+``add_bytecode_optimization_level_two``
+---------------------------------------
+
+This ``bool`` attributes defines whether to add Python bytecode for
+optimization level 2.
+
+The default value is whatever
+``PythonPackagingPolicy.bytecode_optimize_level_two`` is set to.
+
+.. _packaging_resource_custom_policies:
+
+Customizing Python Packaging Policies
+=====================================
+
+As described in :ref:`packaging_resource_packaging_policy`, a
+``PythonPackagingPolicy`` Starlark type instance is bound to every
+entity creating *resource* instances and this *packaging policy* is
+used to derive the default ``add_*`` attributes which influence
+what happens when a resource is added to some entity.
+
+``PythonPackagingPolicy`` instances can be customized to influence
+what the default values of the ``add_*`` attributes are.
+
+The primary mechanisms for doing this are:
+
+1. Modifying the ``PythonPackagingPolicy`` instance's internal
+   state. See :ref:`config_python_packaging_policy` for the full
+   list of object attributes and methods that can be set or called.
+2. Registering a function that will be called whenever a resource
+   is created. This enables custom Starlark code to perform
+   arbitrarily complex logic to influence settings and enables
+   application developers to devise packaging strategies more
+   advanced than what PyOxidizer provides out-of-the-box.
+
+The following sections give examples of customized packaging
+policies.
+
+.. _packaging_resource_default_resource_location:
+
+Customizing Default Resource Locations
+--------------------------------------
+
+The ``PythonPackagingPolicy.resources_policy`` attribute defines a
+string which defines the default values for the ``add_location``
+and ``add_location_fallback`` attributes.
+
+Here are how values map to different ``add_*`` attributes:
+
+``resources_policy = "in-memory-only"``
+   ``add_location = "in-memory"`` and ``add_location_fallback = None``.
+
+   Only adding and loading resources from memory is supported. This
+   setting can produce single file executables.
+
+``resources_policy = "filesystem-relative-only:<prefix>"``
+   ``add_location = "filesystem-relative:<prefix>"`` and
+   ``add_location_fallback = None``.
+
+   Only adding and loading resources from the filesystem is supported.
+   As a special case, Python extension modules may be linked as built-in
+   extensions as part of the built ``libpython``.
+
+   The ``<prefix>`` component of the value denotes the directory prefix
+   that resources should be materialized at, relative to the built entity.
+   The special value ``.`` denotes the same directory as the built entity.
+
+``resources_policy = "prefer-in-memory-fallback-filesystem-realtive:<prefix>``
+   ``add_location = "in-memory"`` and
+   ``add_location_fallback = "filesystem-relative:<prefix>"``
+
+   An attempt is made to add and load a resource from memory. If that isn't
+   supported, the resource will be materialized on the filesystem.
+
+And here is how you would set this value in Starlark:
 
 .. code-block:: python
 
@@ -148,46 +346,55 @@ Here are some examples of how policies are used:
 
        return exe
 
-.. _packaging_routing_resources:
+.. _packaging_resource_callback:
 
-Routing Python Resources to Locations
-=====================================
+Using Callbacks to Influence Resource Attributes
+------------------------------------------------
 
-Python resources are registered with built binaries by adding them to
-the corresponding builder. For example, to add ``PythonSourceModule``
-found by invoking a ``pip install`` command:
+The ``PythonPackagingPolicy.register_resource_callback(func)`` method will
+register a function to be called when resources are created. This function
+receives as arguments the active ``PythonPackagingPolicy`` and the newly
+created resource.
+
+Functions registered as resource callbacks are called after the
+``add_*`` attributes are derived for a resource but before the resource
+is otherwise made available to other Starlark code. This means that
+these callbacks provide a hook point where resources can be modified as
+soon as they are created.
+
+``register_resource_callback()`` can be called multiple times to register
+multiple callbacks. Registered functions will be called in order of
+registration.
+
+Functions can be leveraged to unify all resource packaging logic in a
+single place, making your Starlark configuration files easier to reason
+about.
+
+Here's an example showing how to route all resources belonging to
+a single package to a ``filesystem-relative`` location and everything
+else to memory:
 
 .. code-block:: python
+
+   def resource_callback(policy, resource):
+       if type(resource) in ("PythonSourceModule", "PythonPackageResource", "PythonPackageDistributionResource"):
+           if resource.package == "my_package":
+               resource.add_location = "filesystem-relative:lib"
+           else:
+               resource.add_location = "in-memory"
 
    def make_exe():
        dist = default_python_distribution()
 
        policy = dist.make_python_packaging_policy()
-       policy.resources_policy = "prefer-in-memory-fallback-filesystem-relative:lib"
+       policy.register_resource_callback(resource_callback)
 
        exe = dist.to_python_executable(
            name = "myapp",
            packaging_policy = policy,
        )
 
-       for resource in exe.pip_install(["my-package"]):
-           if type(resource) == "PythonSourceModule":
-               # Location defined by policy.
-               exe.add_python_resource(resource)
-               # Force a location.
-               resource.add_location = "in-memory"
-               exe.add_python_resource(resource)
-               resource.add_location = "filesystem-relative:lib"
-               exe.add_python_resource(resource)
-
-The methods for adding resources are
-:ref:`config_python_executable_add_python_resource` and
-:ref:`config_python_executable_add_python_resources`. The former adds a single
-object. The latter an iterable of objects.
-
-The method by which resources are added and loaded at run-time is
-influenced by attributes on each Python resource object. See
-:ref:`config_resource_locations` for more
+       exe.add_python_resources(exe.pip_install(["my_package"]))
 
 .. _python_extension_module_location_compatibility:
 
