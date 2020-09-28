@@ -710,10 +710,8 @@ mod tests {
 
     #[test]
     fn test_default_values() -> Result<()> {
-        let mut env = StarlarkEnvironment::new()?;
-
-        env.eval("dist = default_python_distribution()")?;
-        let exe = env.eval("dist.to_python_executable('testapp')")?;
+        let mut env = StarlarkEnvironment::new_with_exe()?;
+        let exe = env.eval("exe")?;
 
         assert_eq!(exe.get_type(), "PythonExecutable");
 
@@ -753,9 +751,7 @@ mod tests {
 
     #[test]
     fn test_make_python_source_module() -> Result<()> {
-        let mut env = StarlarkEnvironment::new()?;
-        env.eval("dist = default_python_distribution()")?;
-        env.eval("exe = dist.to_python_executable('testapp')")?;
+        let mut env = StarlarkEnvironment::new_with_exe()?;
         let m = env.eval("exe.make_python_source_module('foo', 'import bar')")?;
 
         assert_eq!(m.get_type(), "PythonSourceModule");

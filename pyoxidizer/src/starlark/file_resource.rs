@@ -602,9 +602,7 @@ mod tests {
 
     #[test]
     fn test_add_python_executable() -> Result<()> {
-        let mut env = StarlarkEnvironment::new()?;
-        env.eval("dist = default_python_distribution()")?;
-        env.eval("exe = dist.to_python_executable('testapp')")?;
+        let mut env = StarlarkEnvironment::new_with_exe()?;
 
         let m = Value::new(FileManifestValue {
             manifest: FileManifest::default(),
@@ -618,10 +616,7 @@ mod tests {
 
     #[test]
     fn test_install() -> Result<()> {
-        let mut env = StarlarkEnvironment::new()?;
-
-        env.eval("dist = default_python_distribution()")?;
-        env.eval("exe = dist.to_python_executable('testapp')")?;
+        let mut env = StarlarkEnvironment::new_with_exe()?;
 
         let m = Value::new(FileManifestValue {
             manifest: FileManifest::default(),
