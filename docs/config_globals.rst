@@ -35,7 +35,7 @@ PyOxidizer's Starlark dialect defines the following custom types:
 :any:`PythonExecutable <config_type_python_executable>`
    Represents an executable file containing a Python interpreter.
 
-:any:`PythonExtensionModule <config_type_python_extension_module>`
+:ref:`config_type_python_extension_module`
    Represents a compiled Python extension module.
 
 :any:`PythonInterpreterConfig <config_type_python_interpreter_config>`

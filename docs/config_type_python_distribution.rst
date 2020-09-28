@@ -146,7 +146,7 @@ with test packages are included.
 ==========================================
 
 Returns a ``list`` of
-:any:`PythonExtensionModule <config_type_python_extension_module>`
+:ref:`config_type_python_extension_module`
 representing extension modules in this distribution.
 
 There may exist multiple extensions with the same name.
