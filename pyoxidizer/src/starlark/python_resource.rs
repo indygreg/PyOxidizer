@@ -671,17 +671,13 @@ pub fn add_context_for_value(
 mod tests {
     use super::super::testutil::*;
     use super::*;
+    use anyhow::Result;
 
     #[test]
-    fn test_source_module_attrs() {
-        let (mut env, type_values) = starlark_make_exe().unwrap();
+    fn test_source_module_attrs() -> Result<()> {
+        let mut env = StarlarkEnvironment::new_with_exe()?;
 
-        let mut m = starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "exe.make_python_source_module('foo', 'import bar')",
-        )
-        .unwrap();
+        let mut m = env.eval("exe.make_python_source_module('foo', 'import bar')")?;
 
         assert_eq!(m.get_type(), "PythonSourceModule");
         assert!(m.has_attr("name").unwrap());
@@ -814,5 +810,7 @@ mod tests {
                 .to_bool(),
             true
         );
+
+        Ok(())
     }
 }

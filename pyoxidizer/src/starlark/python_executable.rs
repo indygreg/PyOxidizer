@@ -709,22 +709,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_default_values() {
-        let (mut env, type_values) = starlark_env();
+    fn test_default_values() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
 
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "dist = default_python_distribution()",
-        )
-        .unwrap();
-
-        let exe = starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "dist.to_python_executable('testapp')",
-        )
-        .unwrap();
+        env.eval("dist = default_python_distribution()")?;
+        let exe = env.eval("dist.to_python_executable('testapp')")?;
 
         assert_eq!(exe.get_type(), "PythonExecutable");
 
@@ -737,39 +726,19 @@ mod tests {
             .exe
             .iter_resources()
             .all(|(_, r)| r.in_memory_resources.is_none()));
+
+        Ok(())
     }
 
     #[test]
-    fn test_no_sources() {
-        let (mut env, type_values) = starlark_env();
+    fn test_no_sources() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
 
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "dist = default_python_distribution()",
-        )
-        .unwrap();
+        env.eval("dist = default_python_distribution()")?;
+        env.eval("policy = dist.make_python_packaging_policy()")?;
+        env.eval("policy.include_distribution_sources = False")?;
 
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy = dist.make_python_packaging_policy()",
-        )
-        .unwrap();
-
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy.include_distribution_sources = False",
-        )
-        .unwrap();
-
-        let exe = starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "dist.to_python_executable('testapp', packaging_policy=policy)",
-        )
-        .unwrap();
+        let exe = env.eval("dist.to_python_executable('testapp', packaging_policy=policy)")?;
 
         assert_eq!(exe.get_type(), "PythonExecutable");
 
@@ -778,80 +747,37 @@ mod tests {
             .exe
             .iter_resources()
             .all(|(_, r)| r.in_memory_source.is_none()));
+
+        Ok(())
     }
 
     #[test]
-    fn test_make_python_source_module() {
-        let (mut env, type_values) = starlark_env();
-
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "dist = default_python_distribution()",
-        )
-        .unwrap();
-
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "exe = dist.to_python_executable('testapp')",
-        )
-        .unwrap();
-
-        let m = starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "exe.make_python_source_module('foo', 'import bar')",
-        )
-        .unwrap();
+    fn test_make_python_source_module() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+        env.eval("dist = default_python_distribution()")?;
+        env.eval("exe = dist.to_python_executable('testapp')")?;
+        let m = env.eval("exe.make_python_source_module('foo', 'import bar')")?;
 
         assert_eq!(m.get_type(), "PythonSourceModule");
         assert_eq!(m.get_attr("name").unwrap().to_str(), "foo");
         assert_eq!(m.get_attr("source").unwrap().to_str(), "import bar");
         assert_eq!(m.get_attr("is_package").unwrap().to_bool(), false);
+
+        Ok(())
     }
 
     #[test]
-    fn test_make_python_source_module_callback() {
-        let (mut env, type_values) = starlark_env();
-
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "dist = default_python_distribution()",
-        )
-        .unwrap();
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy = dist.make_python_packaging_policy()",
-        )
-        .unwrap();
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
+    fn test_make_python_source_module_callback() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+        env.eval("dist = default_python_distribution()")?;
+        env.eval("policy = dist.make_python_packaging_policy()")?;
+        env.eval(
             "def my_func(policy, resource):\n    resource.add_source = True\n    resource.add_bytecode_optimization_level_two = True\n",
-        )
-        .unwrap();
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy.register_resource_callback(my_func)",
-        )
-        .unwrap();
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "exe = dist.to_python_executable('testapp', packaging_policy = policy)",
-        )
-        .unwrap();
+        )?;
+        env.eval("policy.register_resource_callback(my_func)")?;
+        env.eval("exe = dist.to_python_executable('testapp', packaging_policy = policy)")?;
 
-        let m = starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "exe.make_python_source_module('foo', 'import bar')",
-        )
-        .unwrap();
+        let m = env.eval("exe.make_python_source_module('foo', 'import bar')")?;
 
         assert_eq!(m.get_type(), "PythonSourceModule");
         assert_eq!(m.get_attr("name").unwrap().to_str(), "foo");
@@ -864,46 +790,20 @@ mod tests {
                 .to_bool(),
             true
         );
+
+        Ok(())
     }
 
     #[test]
-    fn test_pip_install_simple() {
-        let (mut env, type_values) = starlark_env();
+    fn test_pip_install_simple() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
 
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "dist = default_python_distribution()",
-        )
-        .unwrap();
+        env.eval("dist = default_python_distribution()")?;
+        env.eval("policy = dist.make_python_packaging_policy()")?;
+        env.eval("policy.include_distribution_sources = False")?;
+        env.eval("exe = dist.to_python_executable('testapp', packaging_policy = policy)")?;
 
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy = dist.make_python_packaging_policy()",
-        )
-        .unwrap();
-
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy.include_distribution_sources = False",
-        )
-        .unwrap();
-
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "exe = dist.to_python_executable('testapp', packaging_policy = policy)",
-        )
-        .unwrap();
-
-        let resources = starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "exe.pip_install(['pyflakes==2.1.1'])",
-        )
-        .unwrap();
+        let resources = env.eval("exe.pip_install(['pyflakes==2.1.1'])")?;
         assert_eq!(resources.get_type(), "list");
 
         let raw_it = resources.iter().unwrap();
@@ -914,6 +814,8 @@ mod tests {
         let x = v.downcast_ref::<PythonSourceModuleValue>().unwrap();
         assert_eq!(x.inner.name, "pyflakes");
         assert!(x.inner.is_package);
+
+        Ok(())
     }
 
     #[test]
@@ -935,41 +837,16 @@ mod tests {
         let extra_path = root.join("extra").join("__init__.py");
         std::fs::write(&extra_path, "# extra")?;
 
-        let (mut env, type_values) = starlark_env();
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "dist = default_python_distribution()",
-        )
-        .unwrap();
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy = dist.make_python_packaging_policy()",
-        )
-        .unwrap();
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy.include_distribution_sources = False",
-        )
-        .unwrap();
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "exe = dist.to_python_executable('testapp', packaging_policy = policy)",
-        )
-        .unwrap();
+        let mut env = StarlarkEnvironment::new()?;
+        env.eval("dist = default_python_distribution()")?;
+        env.eval("policy = dist.make_python_packaging_policy()")?;
+        env.eval("policy.include_distribution_sources = False")?;
+        env.eval("exe = dist.to_python_executable('testapp', packaging_policy = policy)")?;
 
-        let resources = starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            &format!(
-                "exe.read_package_root(\"{}\", packages=['foo', 'bar'])",
-                root.display()
-            ),
-        )
-        .unwrap();
+        let resources = env.eval(&format!(
+            "exe.read_package_root(\"{}\", packages=['foo', 'bar'])",
+            root.display()
+        ))?;
 
         assert_eq!(resources.get_type(), "list");
         assert_eq!(resources.length().unwrap(), 2);

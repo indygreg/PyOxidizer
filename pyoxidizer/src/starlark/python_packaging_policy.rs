@@ -262,26 +262,17 @@ starlark_module! { python_packaging_policy_module =>
 mod tests {
     use {
         super::super::python_distribution::PythonDistribution, super::super::testutil::*, super::*,
+        anyhow::Result,
     };
 
     #[test]
-    fn test_basic() {
-        let (mut env, type_values) = starlark_env();
+    fn test_basic() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
 
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "dist = default_python_distribution()",
-        )
-        .unwrap();
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy = dist.make_python_packaging_policy()",
-        )
-        .unwrap();
+        env.eval("dist = default_python_distribution()")?;
+        env.eval("policy = dist.make_python_packaging_policy()")?;
 
-        let dist_value = starlark_eval_in_env(&mut env, &type_values, "dist").unwrap();
+        let dist_value = env.eval("dist")?;
         let dist = dist_value.downcast_ref::<PythonDistribution>().unwrap();
 
         let policy = dist
@@ -293,7 +284,7 @@ mod tests {
 
         // Need value to go out of scope to avoid double borrow.
         {
-            let policy_value = starlark_eval_in_env(&mut env, &type_values, "policy").unwrap();
+            let policy_value = env.eval("policy")?;
             assert_eq!(policy_value.get_type(), "PythonPackagingPolicy");
 
             let x = policy_value
@@ -305,116 +296,67 @@ mod tests {
         }
 
         // attributes work
-        let value =
-            starlark_eval_in_env(&mut env, &type_values, "policy.extension_module_filter").unwrap();
+        let value = env.eval("policy.extension_module_filter")?;
         assert_eq!(value.get_type(), "string");
         assert_eq!(value.to_string(), policy.extension_module_filter().as_ref());
 
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy.extension_module_filter = 'minimal'; policy.extension_module_filter",
-        )
-        .unwrap();
+        let value =
+            env.eval("policy.extension_module_filter = 'minimal'; policy.extension_module_filter")?;
         assert_eq!(value.to_string(), "minimal");
 
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy.include_distribution_sources",
-        )
-        .unwrap();
+        let value = env.eval("policy.include_distribution_sources")?;
         assert_eq!(value.get_type(), "bool");
         assert_eq!(value.to_bool(), policy.include_distribution_sources());
 
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
+        let value = env.eval(
             "policy.include_distribution_sources = False; policy.include_distribution_sources",
-        )
-        .unwrap();
+        )?;
         assert!(!value.to_bool());
 
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
+        let value = env.eval(
             "policy.include_distribution_sources = True; policy.include_distribution_sources",
-        )
-        .unwrap();
+        )?;
         assert!(value.to_bool());
 
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy.include_distribution_resources",
-        )
-        .unwrap();
+        let value = env.eval("policy.include_distribution_resources")?;
         assert_eq!(value.get_type(), "bool");
         assert_eq!(value.to_bool(), policy.include_distribution_resources());
 
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
+        let value = env.eval(
             "policy.include_distribution_resources = False; policy.include_distribution_resources",
-        )
-        .unwrap();
+        )?;
         assert!(!value.to_bool());
 
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
+        let value = env.eval(
             "policy.include_distribution_resources = True; policy.include_distribution_resources",
-        )
-        .unwrap();
+        )?;
         assert!(value.to_bool());
 
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy.include_non_distribution_sources",
-        )
-        .unwrap();
+        let value = env.eval("policy.include_non_distribution_sources")?;
         assert_eq!(value.get_type(), "bool");
         assert_eq!(value.to_bool(), policy.include_non_distribution_sources());
 
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
+        let value = env.eval(
             "policy.include_non_distribution_sources = False; policy.include_non_distribution_sources",
-        )
-        .unwrap();
+        )?;
         assert!(!value.to_bool());
 
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
+        let value = env.eval(
             "policy.include_non_distribution_sources = True; policy.include_non_distribution_sources",
-        )
-        .unwrap();
+        )?;
         assert!(value.to_bool());
 
-        let value = starlark_eval_in_env(&mut env, &type_values, "policy.include_test").unwrap();
+        let value = env.eval("policy.include_test")?;
         assert_eq!(value.get_type(), "bool");
         assert_eq!(value.to_bool(), policy.include_test());
 
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy.include_test = False; policy.include_test",
-        )
-        .unwrap();
+        let value = env.eval("policy.include_test = False; policy.include_test")?;
         assert!(!value.to_bool());
 
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy.include_test = True; policy.include_test",
-        )
-        .unwrap();
+        let value = env.eval("policy.include_test = True; policy.include_test")?;
         assert!(value.to_bool());
 
-        let value =
-            starlark_eval_in_env(&mut env, &type_values, "policy.resources_policy").unwrap();
+        let value = env.eval("policy.resources_policy")?;
         assert_eq!(value.get_type(), "string");
         assert_eq!(
             &PythonResourcesPolicy::try_from(value.to_string().as_str()).unwrap(),
@@ -422,153 +364,85 @@ mod tests {
         );
 
         // bytecode_optimize_level_zero
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy.bytecode_optimize_level_zero",
-        )
-        .unwrap();
+        let value = env.eval("policy.bytecode_optimize_level_zero")?;
         assert_eq!(value.get_type(), "bool");
         assert_eq!(value.to_bool(), policy.bytecode_optimize_level_zero());
 
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
+        let value = env.eval(
             "policy.bytecode_optimize_level_zero = False; policy.bytecode_optimize_level_zero",
-        )
-        .unwrap();
+        )?;
         assert!(!value.to_bool());
 
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
+        let value = env.eval(
             "policy.bytecode_optimize_level_zero = True; policy.bytecode_optimize_level_zero",
-        )
-        .unwrap();
+        )?;
         assert!(value.to_bool());
 
         // bytecode_optimize_level_one
-        let value =
-            starlark_eval_in_env(&mut env, &type_values, "policy.bytecode_optimize_level_one")
-                .unwrap();
+        let value = env.eval("policy.bytecode_optimize_level_one")?;
         assert_eq!(value.get_type(), "bool");
         assert_eq!(value.to_bool(), policy.bytecode_optimize_level_one());
 
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
+        let value = env.eval(
             "policy.bytecode_optimize_level_one = False; policy.bytecode_optimize_level_one",
-        )
-        .unwrap();
+        )?;
         assert!(!value.to_bool());
 
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
+        let value = env.eval(
             "policy.bytecode_optimize_level_one = True; policy.bytecode_optimize_level_one",
-        )
-        .unwrap();
+        )?;
         assert!(value.to_bool());
 
         // bytecode_optimize_level_two
-        let value =
-            starlark_eval_in_env(&mut env, &type_values, "policy.bytecode_optimize_level_two")
-                .unwrap();
+        let value = env.eval("policy.bytecode_optimize_level_two")?;
         assert_eq!(value.get_type(), "bool");
         assert_eq!(value.to_bool(), policy.bytecode_optimize_level_two());
 
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
+        let value = env.eval(
             "policy.bytecode_optimize_level_two = False; policy.bytecode_optimize_level_two",
-        )
-        .unwrap();
+        )?;
         assert!(!value.to_bool());
 
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
+        let value = env.eval(
             "policy.bytecode_optimize_level_two = True; policy.bytecode_optimize_level_two",
-        )
-        .unwrap();
+        )?;
         assert!(value.to_bool());
+
+        Ok(())
     }
 
     #[test]
-    fn test_preferred_extension_module_variants() {
-        let (mut env, type_values) = starlark_env();
+    fn test_preferred_extension_module_variants() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
 
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "dist = default_python_distribution()",
-        )
-        .unwrap();
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy = dist.make_python_packaging_policy()",
-        )
-        .unwrap();
+        env.eval("dist = default_python_distribution()")?;
+        env.eval("policy = dist.make_python_packaging_policy()")?;
 
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy.preferred_extension_module_variants",
-        )
-        .unwrap();
+        let value = env.eval("policy.preferred_extension_module_variants")?;
         assert_eq!(value.get_type(), "dict");
         assert_eq!(value.length().unwrap(), 0);
 
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy.set_preferred_extension_module_variant('foo', 'bar')",
-        )
-        .unwrap();
+        env.eval("policy.set_preferred_extension_module_variant('foo', 'bar')")?;
 
-        let value = starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy.preferred_extension_module_variants",
-        )
-        .unwrap();
+        let value = env.eval("policy.preferred_extension_module_variants")?;
         assert_eq!(value.get_type(), "dict");
         assert_eq!(value.length().unwrap(), 1);
         assert_eq!(value.at(Value::from("foo")).unwrap(), Value::from("bar"));
+
+        Ok(())
     }
 
     #[test]
-    fn test_register_resource_callback() {
-        let (mut env, type_values) = starlark_env();
+    fn test_register_resource_callback() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
 
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "dist = default_python_distribution()",
-        )
-        .unwrap();
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy = dist.make_python_packaging_policy()",
-        )
-        .unwrap();
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "def my_func(policy, resource):\n    return None",
-        )
-        .unwrap();
+        env.eval("dist = default_python_distribution()")?;
+        env.eval("policy = dist.make_python_packaging_policy()")?;
+        env.eval("def my_func(policy, resource):\n    return None")?;
 
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "policy.register_resource_callback(my_func)",
-        )
-        .unwrap();
+        env.eval("policy.register_resource_callback(my_func)")?;
 
-        let policy_value = starlark_eval_in_env(&mut env, &type_values, "policy").unwrap();
+        let policy_value = env.eval("policy")?;
         let policy = policy_value
             .downcast_ref::<PythonPackagingPolicyValue>()
             .unwrap();
@@ -577,5 +451,7 @@ mod tests {
         let func = policy.derive_context_callbacks[0].clone();
         assert_eq!(func.get_type(), "function");
         assert_eq!(func.to_str(), "my_func(policy, resource)");
+
+        Ok(())
     }
 }

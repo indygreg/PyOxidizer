@@ -635,11 +635,12 @@ pub mod tests {
     }
 
     #[test]
-    fn test_register_target() {
-        let (mut env, type_values) = starlark_env();
-        starlark_eval_in_env(&mut env, &type_values, "def foo(): pass").unwrap();
-        starlark_eval_in_env(&mut env, &type_values, "register_target('default', foo)").unwrap();
-        let raw_context = starlark_eval_in_env(&mut env, &type_values, "CONTEXT").unwrap();
+    fn test_register_target() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+        env.eval("def foo(): pass")?;
+        env.eval("register_target('default', foo)")?;
+
+        let raw_context = env.eval("CONTEXT")?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)
@@ -653,21 +654,18 @@ pub mod tests {
         );
         assert_eq!(context.targets_order, vec!["default".to_string()]);
         assert_eq!(context.default_target, Some("default".to_string()));
+
+        Ok(())
     }
 
     #[test]
-    fn test_register_target_multiple() {
-        let (mut env, type_values) = starlark_env();
-        starlark_eval_in_env(&mut env, &type_values, "def foo(): pass").unwrap();
-        starlark_eval_in_env(&mut env, &type_values, "def bar(): pass").unwrap();
-        starlark_eval_in_env(&mut env, &type_values, "register_target('foo', foo)").unwrap();
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "register_target('bar', bar, depends=['foo'], default=True)",
-        )
-        .unwrap();
-        let raw_context = starlark_eval_in_env(&mut env, &type_values, "CONTEXT").unwrap();
+    fn test_register_target_multiple() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+        env.eval("def foo(): pass")?;
+        env.eval("def bar(): pass")?;
+        env.eval("register_target('foo', foo)")?;
+        env.eval("register_target('bar', bar, depends=['foo'], default=True)")?;
+        let raw_context = env.eval("CONTEXT")?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)
@@ -679,5 +677,7 @@ pub mod tests {
             &context.targets.get("bar").unwrap().depends,
             &vec!["foo".to_string()],
         );
+
+        Ok(())
     }
 }

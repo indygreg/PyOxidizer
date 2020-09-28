@@ -505,7 +505,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_python_source_module() {
+    fn test_add_python_source_module() -> Result<()> {
         let m = Value::new(FileManifestValue {
             manifest: FileManifest::default(),
         });
@@ -519,13 +519,13 @@ mod tests {
             is_test: false,
         }));
 
-        let (mut env, type_values) = starlark_env();
-        env.set("m", m).unwrap();
-        env.set("v", v).unwrap();
+        let mut env = StarlarkEnvironment::new()?;
+        env.set("m", m)?;
+        env.set("v", v)?;
 
-        starlark_eval_in_env(&mut env, &type_values, "m.add_python_resource('lib', v)").unwrap();
+        env.eval("m.add_python_resource('lib', v)")?;
 
-        let m = env.get("m").unwrap();
+        let m = env.get("m")?;
         let m = m.downcast_ref::<FileManifestValue>().unwrap();
 
         let mut entries = m.manifest.entries();
@@ -551,10 +551,12 @@ mod tests {
         );
 
         assert!(entries.next().is_none());
+
+        Ok(())
     }
 
     #[test]
-    fn test_add_python_resource_data() {
+    fn test_add_python_resource_data() -> Result<()> {
         let m = Value::new(FileManifestValue {
             manifest: FileManifest::default(),
         });
@@ -567,13 +569,13 @@ mod tests {
             is_test: false,
         }));
 
-        let (mut env, type_values) = starlark_env();
-        env.set("m", m).unwrap();
-        env.set("v", v).unwrap();
+        let mut env = StarlarkEnvironment::new()?;
+        env.set("m", m)?;
+        env.set("v", v)?;
 
-        starlark_eval_in_env(&mut env, &type_values, "m.add_python_resource('lib', v)").unwrap();
+        env.eval("m.add_python_resource('lib', v)")?;
 
-        let m = env.get("m").unwrap();
+        let m = env.get("m")?;
         let m = m.downcast_ref::<FileManifestValue>().unwrap();
 
         let mut entries = m.manifest.entries();
@@ -589,6 +591,8 @@ mod tests {
         );
 
         assert!(entries.next().is_none());
+
+        Ok(())
     }
 
     #[test]
@@ -597,47 +601,27 @@ mod tests {
     }
 
     #[test]
-    fn test_add_python_executable() {
-        let (mut env, type_values) = starlark_env();
-
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "dist = default_python_distribution()",
-        )
-        .unwrap();
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "exe = dist.to_python_executable('testapp')",
-        )
-        .unwrap();
+    fn test_add_python_executable() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+        env.eval("dist = default_python_distribution()")?;
+        env.eval("exe = dist.to_python_executable('testapp')")?;
 
         let m = Value::new(FileManifestValue {
             manifest: FileManifest::default(),
         });
 
-        env.set("m", m).unwrap();
+        env.set("m", m)?;
+        env.eval("m.add_python_resource('bin', exe)")?;
 
-        starlark_eval_in_env(&mut env, &type_values, "m.add_python_resource('bin', exe)").unwrap();
+        Ok(())
     }
 
     #[test]
-    fn test_install() {
-        let (mut env, type_values) = starlark_env();
+    fn test_install() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
 
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "dist = default_python_distribution()",
-        )
-        .unwrap();
-        starlark_eval_in_env(
-            &mut env,
-            &type_values,
-            "exe = dist.to_python_executable('testapp')",
-        )
-        .unwrap();
+        env.eval("dist = default_python_distribution()")?;
+        env.eval("exe = dist.to_python_executable('testapp')")?;
 
         let m = Value::new(FileManifestValue {
             manifest: FileManifest::default(),
@@ -645,9 +629,9 @@ mod tests {
 
         env.set("m", m).unwrap();
 
-        starlark_eval_in_env(&mut env, &type_values, "m.add_python_resource('bin', exe)").unwrap();
-        starlark_eval_in_env(&mut env, &type_values, "m.install('myapp')").unwrap();
-        let raw_context = starlark_eval_in_env(&mut env, &type_values, "CONTEXT").unwrap();
+        env.eval("m.add_python_resource('bin', exe)")?;
+        env.eval("m.install('myapp')")?;
+        let raw_context = env.eval("CONTEXT")?;
         let context = raw_context
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)
@@ -664,5 +648,7 @@ mod tests {
         };
 
         assert!(app_exe.exists());
+
+        Ok(())
     }
 }
