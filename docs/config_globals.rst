@@ -18,7 +18,7 @@ Global Types
 
 PyOxidizer's Starlark dialect defines the following custom types:
 
-:any:`FileContent <config_type_file_content>`
+:ref:`config_type_file_content`
    Represents the content of a file on the filesystem.
 
 :ref:`config_type_file_manifest`

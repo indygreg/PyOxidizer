@@ -95,13 +95,6 @@ the collection of resources made available to an embedded Python interpreter.
 Interacting With the Filesystem
 ===============================
 
-.. _config_type_file_content:
-
-``FileContent``
----------------
-
-This type represents the content of a single file.
-
 .. _config_glob:
 
 ``glob(include, exclude=None, strip_prefix=None)``
