@@ -18,6 +18,7 @@ language and the syntax should be familiar to any Python programmer.
    config_globals
    config_global_state
    config_target_management
+   config_filesystem
    config_type_file_content
    config_type_file_manifest
    config_type_python_distribution

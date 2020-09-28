@@ -91,27 +91,3 @@ Binaries containing an embedded Python interpreter can be defined by
 configuration files. They are defined via the :ref:`config_type_python_executable`
 type. In addition, the :ref:`config_type_python_embedded_resources` type represents
 the collection of resources made available to an embedded Python interpreter.
-
-Interacting With the Filesystem
-===============================
-
-.. _config_glob:
-
-``glob(include, exclude=None, strip_prefix=None)``
---------------------------------------------------
-
-The ``glob()`` function resolves file patterns to a ``FileManifest``.
-
-``include`` is a ``list`` of ``str`` containing file patterns that will be
-matched using the ``glob`` Rust crate. If patterns begin with ``/`` or
-look like a filesystem absolute path, they are absolute. Otherwise they are
-evaluated relative to the directory of the current config file.
-
-``exclude`` is an optional ``list`` of ``str`` and is used to exclude files
-from the result. All patterns in ``include`` are evaluated before ``exclude``.
-
-``strip_prefix`` is an optional ``str`` to strip from the beginning of
-matched files. ``strip_prefix`` is stripped after ``include`` and ``exclude``
-are processed.
-
-Returns a ``FileManifest``.
