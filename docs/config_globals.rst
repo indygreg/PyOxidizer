@@ -41,7 +41,7 @@ PyOxidizer's Starlark dialect defines the following custom types:
 :any:`PythonInterpreterConfig <config_type_python_interpreter_config>`
    Represents the configuration of a Python interpreter.
 
-:any:`PythonPackageDistributionResource <config_type_python_package_distribution_resource>`
+:ref:`config_type_python_package_distribution_resource`
    Represents a file containing Python package distribution metadata.
 
 :ref:`config_type_python_package_resource`

@@ -21,3 +21,4 @@ language and the syntax should be familiar to any Python programmer.
    config_type_python_distribution
    config_type_python_source_module
    config_type_python_package_resource
+   config_type_python_package_distribution_resource
