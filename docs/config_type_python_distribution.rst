@@ -157,7 +157,7 @@ There may exist multiple extensions with the same name.
 =====================================================
 
 Obtain a
-:any:`PythonPackagingPolicy <config_type_python_packaging_policy>`
+:ref:`config_type_python_packaging_policy`
 derived from the distribution.
 
 The policy automatically uses settings globally appropriate for the
