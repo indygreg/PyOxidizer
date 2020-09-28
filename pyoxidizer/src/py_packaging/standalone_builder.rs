@@ -170,12 +170,12 @@ impl StandalonePythonExecutableBuilder {
             python_exe,
         });
 
-        builder.add_distribution_resources()?;
+        builder.add_distribution_core_state()?;
 
         Ok(builder)
     }
 
-    fn add_distribution_resources(&mut self) -> Result<()> {
+    fn add_distribution_core_state(&mut self) -> Result<()> {
         self.core_build_context.inittab_cflags = Some(self.distribution.inittab_cflags.clone());
 
         for (name, path) in &self.distribution.includes {
@@ -238,21 +238,6 @@ impl StandalonePythonExecutableBuilder {
             self.core_build_context
                 .license_infos
                 .insert("python".to_string(), lis.clone());
-        }
-
-        for ext in self.packaging_policy.resolve_python_extension_modules(
-            self.distribution.extension_modules.values(),
-            &self.target_triple,
-        )? {
-            self.add_python_extension_module(&ext, None)?;
-        }
-
-        for source in self.distribution.source_modules()? {
-            self.add_python_module_source(&source, None)?;
-        }
-
-        for resource in self.distribution.resource_datas()? {
-            self.add_python_package_resource(&resource, None)?;
         }
 
         Ok(())
@@ -418,6 +403,25 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             extra_envs,
             extra_global_arguments,
         )
+    }
+
+    fn add_distribution_resources(&mut self) -> Result<()> {
+        for ext in self.packaging_policy.resolve_python_extension_modules(
+            self.distribution.extension_modules.values(),
+            &self.target_triple,
+        )? {
+            self.add_python_extension_module(&ext, None)?;
+        }
+
+        for source in self.distribution.source_modules()? {
+            self.add_python_module_source(&source, None)?;
+        }
+
+        for resource in self.distribution.resource_datas()? {
+            self.add_python_package_resource(&resource, None)?;
+        }
+
+        Ok(())
     }
 
     fn add_python_module_source(
@@ -852,7 +856,7 @@ pub mod tests {
 
             let config = EmbeddedPythonConfig::default();
 
-            StandalonePythonExecutableBuilder::from_distribution(
+            let mut builder = StandalonePythonExecutableBuilder::from_distribution(
                 distribution,
                 self.host_triple.clone(),
                 self.target_triple.clone(),
@@ -860,7 +864,11 @@ pub mod tests {
                 self.libpython_link_mode.clone(),
                 policy,
                 config,
-            )
+            )?;
+
+            builder.add_distribution_resources()?;
+
+            Ok(builder)
         }
     }
 

@@ -318,8 +318,8 @@ impl PythonDistribution {
             }
         }?;
 
-        Ok(Value::new(PythonExecutable::new(
-            dist.as_python_executable_builder(
+        let mut builder = dist
+            .as_python_executable_builder(
                 &context.logger,
                 &context.build_host_triple,
                 &context.build_target_triple,
@@ -335,9 +335,17 @@ impl PythonDistribution {
                     message: e.to_string(),
                     label: "to_python_executable()".to_string(),
                 })
-            })?,
-            policy,
-        )))
+            })?;
+
+        builder.add_distribution_resources().map_err(|e| {
+            ValueError::from(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "to_python_executable()".to_string(),
+            })
+        })?;
+
+        Ok(Value::new(PythonExecutable::new(builder, policy)))
     }
 
     /// PythonDistribution.extension_modules()

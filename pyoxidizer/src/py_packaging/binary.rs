@@ -110,6 +110,20 @@ pub trait PythonBinaryBuilder {
         extra_global_arguments: &[String],
     ) -> Result<Vec<PythonResource>>;
 
+    /// Add resources from the Python distribution to the builder.
+    ///
+    /// This method should likely be called soon after object construction
+    /// in order to finish adding state from the Python distribution to the
+    /// builder.
+    ///
+    /// The boundary between what distribution state should be initialized
+    /// at binary construction time versus this method is not well-defined
+    /// and is up to implementations. However, it is strongly recommended for
+    /// the division to be handling of core/required interpreter state at
+    /// construction time and all optional/standard library state in this
+    /// method.
+    fn add_distribution_resources(&mut self) -> Result<()>;
+
     /// Add a `PythonModuleSource` to the resources collection.
     ///
     /// The location to load the resource from is optional. If specified, it
