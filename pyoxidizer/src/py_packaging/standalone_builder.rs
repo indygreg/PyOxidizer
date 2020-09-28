@@ -6,6 +6,7 @@ use {
     super::{
         binary::{
             EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder, PythonLinkingInfo,
+            ResourceAddCollectionContextCallback,
         },
         config::{EmbeddedPythonConfig, RawAllocator},
         distribution::{BinaryLibpythonLinkMode, PythonDistribution},
@@ -405,20 +406,50 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         )
     }
 
-    fn add_distribution_resources(&mut self) -> Result<()> {
+    fn add_distribution_resources(
+        &mut self,
+        callback: Option<ResourceAddCollectionContextCallback>,
+    ) -> Result<()> {
         for ext in self.packaging_policy.resolve_python_extension_modules(
             self.distribution.extension_modules.values(),
             &self.target_triple,
         )? {
-            self.add_python_extension_module(&ext, None)?;
+            let resource = (&ext).into();
+            let mut add_context = self
+                .packaging_policy
+                .derive_add_collection_context(&resource);
+
+            if let Some(callback) = &callback {
+                callback(&self.packaging_policy, &resource, &mut add_context)?;
+            }
+
+            self.add_python_extension_module(&ext, Some(add_context))?;
         }
 
         for source in self.distribution.source_modules()? {
-            self.add_python_module_source(&source, None)?;
+            let resource = (&source).into();
+            let mut add_context = self
+                .packaging_policy
+                .derive_add_collection_context(&resource);
+
+            if let Some(callback) = &callback {
+                callback(&self.packaging_policy, &resource, &mut add_context)?;
+            }
+
+            self.add_python_module_source(&source, Some(add_context))?;
         }
 
-        for resource in self.distribution.resource_datas()? {
-            self.add_python_package_resource(&resource, None)?;
+        for data in self.distribution.resource_datas()? {
+            let resource = (&data).into();
+            let mut add_context = self
+                .packaging_policy
+                .derive_add_collection_context(&resource);
+
+            if let Some(callback) = &callback {
+                callback(&self.packaging_policy, &resource, &mut add_context)?;
+            }
+
+            self.add_python_package_resource(&data, Some(add_context))?;
         }
 
         Ok(())
@@ -866,7 +897,7 @@ pub mod tests {
                 config,
             )?;
 
-            builder.add_distribution_resources()?;
+            builder.add_distribution_resources(None)?;
 
             Ok(builder)
         }

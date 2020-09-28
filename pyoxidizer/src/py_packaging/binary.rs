@@ -38,6 +38,16 @@ pub enum LibpythonLinkMode {
     Dynamic,
 }
 
+/// A callable that can influence PythonResourceAddCollectionContext.
+pub type ResourceAddCollectionContextCallback<'a> = Box<
+    dyn Fn(
+            &PythonPackagingPolicy,
+            &PythonResource,
+            &mut PythonResourceAddCollectionContext,
+        ) -> Result<()>
+        + 'a,
+>;
+
 /// Describes a generic way to build a Python binary.
 ///
 /// Binary here means an executable or library containing or linking to a
@@ -122,7 +132,15 @@ pub trait PythonBinaryBuilder {
     /// the division to be handling of core/required interpreter state at
     /// construction time and all optional/standard library state in this
     /// method.
-    fn add_distribution_resources(&mut self) -> Result<()>;
+    ///
+    /// `callback` defines an optional function which can be called between
+    /// resource creation and adding that resource to the builder. This
+    /// gives the caller an opportunity to influence how resources are added
+    /// to the binary builder.
+    fn add_distribution_resources(
+        &mut self,
+        callback: Option<ResourceAddCollectionContextCallback>,
+    ) -> Result<()>;
 
     /// Add a `PythonModuleSource` to the resources collection.
     ///

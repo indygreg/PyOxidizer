@@ -337,7 +337,7 @@ impl PythonDistribution {
                 })
             })?;
 
-        builder.add_distribution_resources().map_err(|e| {
+        builder.add_distribution_resources(None).map_err(|e| {
             ValueError::from(RuntimeError {
                 code: "PYOXIDIZER_BUILD",
                 message: e.to_string(),
