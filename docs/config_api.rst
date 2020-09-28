@@ -8,74 +8,6 @@ This document describes the low-level API for ``PyOxidizer`` configuration
 files. For a higher-level overview of how configuration files work, see
 :ref:`config_files`.
 
-Global Symbols
-==============
-
-The following are all global symbols available by default in the
-Starlark environment:
-
-* `Starlark built-ins <https://github.com/bazelbuild/starlark/blob/master/spec.md#built-in-constants-and-functions>`_.
-* :ref:`config_build_target_triple`
-* :ref:`config_config_path`
-* :ref:`config_context`
-* :ref:`config_cwd`
-* :ref:`config_default_python_distribution`
-* :ref:`config_file_manifest`
-* :ref:`config_glob`
-* :ref:`config_python_distribution`
-* :ref:`config_python_embedded_resources`
-* :ref:`config_python_executable`
-* :ref:`config_python_extension_module`
-* :ref:`config_python_interpreter_config`
-* :ref:`config_python_package_distribution_resource`
-* :ref:`config_python_package_resource`
-* :ref:`config_python_packaging_policy`
-* :ref:`config_python_source_module`
-* :ref:`config_register_target`
-* :ref:`config_resolve_target`
-* :ref:`config_resolve_targets`
-* :ref:`config_set_build_path`
-
-Types
-=====
-
-The following custom data types are defined in the Starlark environment:
-
-``FileContent``
-   Represents the content of a file on the filesystem.
-
-``FileManifest``
-   Represents a mapping of filenames to file content.
-
-``PythonDistribution``
-   Represents an implementation of Python.
-
-   Used for embedding into binaries and running Python code.
-
-``PythonEmbeddedResources``
-   Represents resources made available to a Python interpreter.
-
-``PythonExecutable``
-   Represents an executable file containing a Python interpreter.
-
-``PythonExtensionModule``
-   Represents a compiled Python extension module.
-
-``PythonInterpreterConfig``
-   Represents the configuration of a Python interpreter.
-
-``PythonPackageDistributionResource``
-   Represents a file containing Python package distribution metadata.
-
-``PythonPackageResource``
-   Represents a non-module *resource* data file.
-
-``PythonPackagingPolicy``
-   Represents a policy controlling how Python resources are added to a binary.
-
-``PythonSourceModule``
-   Represents a ``.py`` file containing Python source code.
-
 .. _config_resource_locations:
 
 Specifying Resource Locations
@@ -99,43 +31,6 @@ of strings to resource locations is as follows:
    Install and load the resource from a filesystem relative path to the
    build binary. e.g. ``filesystem-relative:lib`` will place resources
    in the ``lib/`` directory next to the build binary.
-
-Constants
-=========
-
-PyOxidizer provides global constants as defined by the following sections.
-
-.. _config_build_target_triple:
-
-BUILD_TARGET_TRIPLE
--------------------
-
-The string Rust target triple that we're currently building for. Will be
-a value like ``x86_64-unknown-linux-gnu`` or ``x86_64-pc-windows-msvc``.
-Run ``rustup target list`` to see a list of targets.
-
-.. _config_config_path:
-
-CONFIG_PATH
------------
-
-The string path to the configuration file currently being evaluated.
-
-.. _config_context:
-
-CONTEXT
--------
-
-Holds build context. This is an internal variable and accessing it will
-not provide any value.
-
-.. _config_cwd:
-
-CWD
----
-
-The current working directory. Also the directory containing the active
-configuration file.
 
 Functions for Manipulating Global State
 =======================================
