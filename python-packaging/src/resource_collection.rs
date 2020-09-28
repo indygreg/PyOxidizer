@@ -583,6 +583,19 @@ pub struct PythonResourceAddCollectionContext {
     pub optimize_level_two: bool,
 }
 
+impl PythonResourceAddCollectionContext {
+    /// Replace the content of `self` with content of `other`.
+    pub fn replace(&mut self, other: &Self) {
+        self.include = other.include;
+        self.location = other.location.clone();
+        self.location_fallback = other.location_fallback.clone();
+        self.store_source = other.store_source;
+        self.optimize_level_zero = other.optimize_level_zero;
+        self.optimize_level_one = other.optimize_level_one;
+        self.optimize_level_two = other.optimize_level_two;
+    }
+}
+
 /// Represents a finalized collection of Python resources.
 ///
 /// Instances are produced from a `PythonResourceCollector` and a

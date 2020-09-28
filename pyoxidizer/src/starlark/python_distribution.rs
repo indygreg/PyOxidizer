@@ -7,7 +7,8 @@ use {
     super::python_executable::PythonExecutable,
     super::python_packaging_policy::PythonPackagingPolicyValue,
     super::python_resource::{
-        PythonExtensionModuleValue, PythonPackageResourceValue, PythonSourceModuleValue,
+        add_context_for_value, python_resource_to_value, PythonExtensionModuleValue,
+        PythonPackageResourceValue, PythonSourceModuleValue,
     },
     super::util::{optional_str_arg, optional_type_arg, required_bool_arg, required_str_arg},
     crate::py_packaging::config::EmbeddedPythonConfig,
@@ -20,8 +21,11 @@ use {
     anyhow::{anyhow, Result},
     itertools::Itertools,
     python_packaging::bytecode::{CompileMode, PythonBytecodeCompiler},
-    python_packaging::resource::BytecodeOptimizationLevel,
+    python_packaging::policy::PythonPackagingPolicy,
+    python_packaging::resource::{BytecodeOptimizationLevel, PythonResource},
+    python_packaging::resource_collection::PythonResourceAddCollectionContext,
     starlark::environment::TypeValues,
+    starlark::eval::call_stack::CallStack,
     starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
     starlark::values::none::NoneType,
     starlark::values::{Mutable, TypedValue, Value, ValueResult},
@@ -265,6 +269,7 @@ impl PythonDistribution {
     fn to_python_executable_starlark(
         &mut self,
         type_values: &TypeValues,
+        call_stack: &mut CallStack,
         name: &Value,
         packaging_policy: &Value,
         config: &Value,
@@ -337,13 +342,45 @@ impl PythonDistribution {
                 })
             })?;
 
-        builder.add_distribution_resources(None).map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "to_python_executable()".to_string(),
-            })
-        })?;
+        let callback = Box::new(
+            |_policy: &PythonPackagingPolicy,
+             resource: &PythonResource,
+             add_context: &mut PythonResourceAddCollectionContext|
+             -> Result<()> {
+                // Callback is declared Fn, so we can't take a mutable reference.
+                // A copy should be fine.
+                let mut cs = call_stack.clone();
+
+                // There is a PythonPackagingPolicy passed into this callback
+                // and one passed into the outer function as a &Value. The
+                // former is derived from the latter. And the latter has Starlark
+                // callbacks registered on it.
+                //
+                // When we call python_resource_to_value(), the Starlark
+                // callbacks are automatically called.
+
+                let value = python_resource_to_value(&type_values, &mut cs, resource, &policy)
+                    .map_err(|e| anyhow!("error converting PythonResource to Value: {:?}", e))?;
+
+                let new_add_context = add_context_for_value(&value, "to_python_executable")
+                    .map_err(|e| anyhow!("error obtaining add context from Value: {:?}", e))?
+                    .expect("add context should have been populated as part of Value conversion");
+
+                add_context.replace(&new_add_context);
+
+                Ok(())
+            },
+        );
+
+        builder
+            .add_distribution_resources(Some(callback))
+            .map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "to_python_executable()".to_string(),
+                })
+            })?;
 
         Ok(Value::new(PythonExecutable::new(builder, policy)))
     }
@@ -501,6 +538,7 @@ starlark_module! { python_distribution_module =>
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonDistribution.to_python_executable(
         env env,
+        call_stack cs,
         this,
         name,
         packaging_policy=NoneType::None,
@@ -509,6 +547,7 @@ starlark_module! { python_distribution_module =>
         match this.clone().downcast_mut::<PythonDistribution>()? {
             Some(mut dist) =>dist.to_python_executable_starlark(
                 &env,
+                cs,
                 &name,
                 &packaging_policy,
                 &config,

@@ -633,6 +633,40 @@ pub fn python_resource_to_value(
     }
 }
 
+/// Attempt to resolve the `PythonResourceAddCollectionContext` for a Value.
+pub fn add_context_for_value(
+    value: &Value,
+    label: &str,
+) -> Result<Option<PythonResourceAddCollectionContext>, ValueError> {
+    match value.get_type() {
+        "PythonSourceModule" => Ok(value
+            .downcast_ref::<PythonSourceModuleValue>()
+            .unwrap()
+            .add_collection_context()
+            .clone()),
+        "PythonPackageResource" => Ok(value
+            .downcast_ref::<PythonPackageResourceValue>()
+            .unwrap()
+            .add_collection_context()
+            .clone()),
+        "PythonPackageDistributionResource" => Ok(value
+            .downcast_ref::<PythonPackageDistributionResourceValue>()
+            .unwrap()
+            .add_collection_context()
+            .clone()),
+        "PythonExtensionModule" => Ok(value
+            .downcast_ref::<PythonExtensionModuleValue>()
+            .unwrap()
+            .add_collection_context()
+            .clone()),
+        t => Err(ValueError::from(RuntimeError {
+            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+            message: format!("unable to obtain add collection context from {}", t),
+            label: label.to_string(),
+        })),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::testutil::*;
