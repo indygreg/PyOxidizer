@@ -66,7 +66,7 @@ PyOxidizer about pyflakes. Open the ``pyflakes/pyoxidizer.bzl`` file in your
 favorite editor.
 
 Find the ``make_exe()`` function. This function returns a
-:ref:`PythonExecutable <config_type_python_executable>` instance which defines
+:ref:`config_type_python_executable` instance which defines
 a standalone executable containing Python. This function is a registered
 *target*, which is a named entity that can be individually built or run.
 By returning a ``PythonExecutable`` instance, this function/target is saying

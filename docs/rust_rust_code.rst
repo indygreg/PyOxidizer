@@ -71,7 +71,7 @@ If you don't want to use the default ``pyembed::PythonConfig`` instance,
 that's fine too! However, this will be slightly more complicated.
 
 First, if you use an explicit ``PythonConfig``, the
-:ref:`PythonInterpreterConfig <config_type_python_interpreter_config>` Starlark
+:ref:`config_type_python_interpreter_config` Starlark
 type defined in your PyOxidizer configuration file doesn't matter that much.
 The primary purpose of this Starlark type is to derive the default
 ``PythonConfig`` Rust struct. And if you are using your own custom
@@ -86,7 +86,7 @@ is not available.
 ``pyembed::PythonConfig::default()`` can be used to construct a new instance,
 pre-populated with default values for each field. The defaults should match
 what the
-:ref:`PythonInterpreterConfig <config_type_python_interpreter_config>` Starlark
+:ref:`config_type_python_interpreter_config` Starlark
 type would yield.
 
 The main catch to constructing the instance manually is that the custom

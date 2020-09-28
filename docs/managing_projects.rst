@@ -99,7 +99,7 @@ Running the Result of Building with ``run``
 
 Target functions in ``PyOxidizer`` configuration files return objects
 that may be *runnable*. For example, a
-:ref:`PythonExecutable <config_type_python_executable>` returned by a target
+:ref:`config_type_python_executable` returned by a target
 function that defines a Python executable binary can be *run* by
 executing a new process.
 

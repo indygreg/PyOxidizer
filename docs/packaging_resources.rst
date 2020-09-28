@@ -26,7 +26,7 @@ Packaging Policies and Adding Resources
 
 The exact mechanism by which *resources* are added to *resource
 collectors* is influenced by a *packaging policy* (represented by the
-:ref:`PythonPackagingPolicy <config_type_python_packaging_policy>` Starlark
+:ref:`config_type_python_packaging_policy` Starlark
 type) and attributes on each resource object influencing how they are
 added.
 
@@ -53,36 +53,36 @@ Resource Types
 
 The following Starlark types represent individual resources:
 
-:ref:`PythonSourceModule <config_type_python_source_module>`
+:ref:`config_type_python_source_module`
    Source code for a Python module. Roughly equivalent to a ``.py`` file.
 
    This type can also be converted to Python bytecode (roughly equivalent
    to a ``.pyc``) when added to a resource collector.
 
-:ref:`PythonExtensionModule <config_type_python_extension_module>`
+:ref:`config_type_python_extension_module`
    A Python module defined through compiled, machine-native code. On Linux,
    these are typically encountered as ``.so`` files. On Windows, ``.pyd`` files.
 
-:ref:`PythonPackageResource <config_type_python_package_resource>`
+:ref:`config_type_python_package_resource`
    A non-module *resource file* loadable by Python resources APIs, such as
    those in ``importlib.resources``.
 
-:ref:`PythonPackageDistributionResource <config_type_python_package_distribution_resource>`
+:ref:`config_type_python_package_distribution_resource`
    A non-module *resource file* defining metadata for a Python package.
    Typically accessed via ``importlib.metadata``. This is how files in
    ``*.dist-info`` or ``*.egg-info`` directories are represented.
 
-:ref:`FileContent <config_type_file_content>`
+:ref:`config_type_file_content`
    Represents the content of a filesystem file.
 
 There are also Starlark types that are logically containers for multiple
 resources:
 
-:ref:`FileManifest <config_type_file_manifest>`
+:ref:`config_type_file_manifest`
    Holds a mapping of relative filesystem paths to ``FileContent`` instances.
    This type effectively allows modeling a directory tree.
 
-:ref:`PythonEmbeddedResources <config_type_python_embedded_resources>`
+:ref:`config_type_python_embedded_resources`
    Holds a collection of Python resources of various types. (This type is often
    hidden away. e.g. inside a ``PythonExecutable`` instance.)
 

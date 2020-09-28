@@ -26,7 +26,7 @@ requested target is *built*.
 Python Distributions Provide Python
 ===================================
 
-The :ref:`PythonDistribution <config_type_python_distribution>` Starlark
+The :ref:`config_type_python_distribution` Starlark
 type defines a Python distribution. A Python distribution is an entity
 which contains a Python interpreter, Python standard library, and which
 PyOxidizer knows how to consume and integrate into a new binary.
@@ -52,7 +52,7 @@ to reference the distribution instance:
 Defining an Executable Embedding Python
 =======================================
 
-The :ref:`PythonExecutable <config_type_python_executable>` Starlark type
+The :ref:`config_type_python_executable` Starlark type
 defines an executable file embedding Python. Instances of this type
 are used to build an executable file (and possibly other files needed
 by it) that contains an embedded Python interpreter and other resources
@@ -90,7 +90,7 @@ throughout the :ref:`packaging` documentation.
 Configuring the Python Interpreter Run-Time Behavior
 ====================================================
 
-The :ref:`PythonInterpreterConfig <config_type_python_interpreter_config>`
+The :ref:`config_type_python_interpreter_config`
 Starlark type configures the default behavior of the Python interpreter
 embedded in built binaries.
 
@@ -149,9 +149,9 @@ will want to add their own Python packages/code.
 
 The Starlark environment defines various types for representing Python
 package resources. These include
-:ref:`PythonSourceModule <config_type_python_source_module>`,
-:ref:`PythonExtensionModule <config_type_python_extension_module>`,
-:ref:`PythonPackageDistributionResource <config_type_python_package_distribution_resource>`,
+:ref:`config_type_python_source_module`,
+:ref:`config_type_python_extension_module`,
+:ref:`config_type_python_package_distribution_resource`,
 and more.
 
 Instances of these types can be created dynamically or by performing
@@ -168,7 +168,7 @@ for more on this topic, including many examples.
 Install Manifests Copy Files Next to Your Application
 =====================================================
 
-The :ref:`FileManifest <config_type_file_manifest>` Starlark type represents a
+The :ref:`config_type_file_manifest` Starlark type represents a
 collection of files and their content. When ``FileManifest`` instances are
 returned from a target function, their build action results in their contents
 being manifested in a directory having the name of the build target.
