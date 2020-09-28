@@ -2,13 +2,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use starlark::values::Value;
 use {
     super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
     crate::py_packaging::binary::PythonBinaryBuilder,
     anyhow::Result,
     slog::warn,
-    starlark::values::{Mutable, TypedValue},
+    starlark::values::{Mutable, TypedValue, Value},
 };
 
 pub struct PythonEmbeddedResources {

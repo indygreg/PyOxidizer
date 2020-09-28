@@ -4,20 +4,24 @@
 
 use {
     super::python_packaging_policy::PythonPackagingPolicyValue,
-    python_packaging::resource::{
-        PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
-        PythonPackageResource, PythonResource,
+    python_packaging::{
+        resource::{
+            PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
+            PythonPackageResource, PythonResource,
+        },
+        resource_collection::{ConcreteResourceLocation, PythonResourceAddCollectionContext},
     },
-    python_packaging::resource_collection::{
-        ConcreteResourceLocation, PythonResourceAddCollectionContext,
+    starlark::{
+        environment::TypeValues,
+        eval::call_stack::CallStack,
+        values::{
+            error::{
+                RuntimeError, UnsupportedOperation, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+            },
+            none::NoneType,
+            {Mutable, TypedValue, Value, ValueResult},
+        },
     },
-    starlark::environment::TypeValues,
-    starlark::eval::call_stack::CallStack,
-    starlark::values::error::{
-        RuntimeError, UnsupportedOperation, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE,
-    },
-    starlark::values::none::NoneType,
-    starlark::values::{Mutable, TypedValue, Value, ValueResult},
     std::convert::{TryFrom, TryInto},
 };
 

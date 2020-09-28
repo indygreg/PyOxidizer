@@ -7,10 +7,11 @@ use {
     anyhow::{anyhow, Result},
     codemap::CodeMap,
     codemap_diagnostic::{Diagnostic, Level},
-    starlark::environment::Environment,
-    starlark::syntax::dialect::Dialect,
-    std::path::Path,
-    std::sync::{Arc, Mutex},
+    starlark::{environment::Environment, syntax::dialect::Dialect},
+    std::{
+        path::Path,
+        sync::{Arc, Mutex},
+    },
 };
 
 /// Represents the result of evaluating a Starlark environment.

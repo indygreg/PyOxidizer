@@ -2,18 +2,21 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use crate::py_packaging::config::RunMode;
 use {
     super::util::{optional_bool_arg, optional_int_arg, optional_list_arg, optional_str_arg},
     crate::py_packaging::config::{
-        default_raw_allocator, EmbeddedPythonConfig, RawAllocator, TerminfoResolution,
+        default_raw_allocator, EmbeddedPythonConfig, RawAllocator, RunMode, TerminfoResolution,
     },
-    starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
-    starlark::values::none::NoneType,
-    starlark::values::{Immutable, TypedValue, Value, ValueResult},
     starlark::{
-        starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
-        starlark_signature_extraction, starlark_signatures,
+        values::{
+            error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
+            none::NoneType,
+            {Immutable, TypedValue, Value, ValueResult},
+        },
+        {
+            starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
+            starlark_signature_extraction, starlark_signatures,
+        },
     },
 };
 

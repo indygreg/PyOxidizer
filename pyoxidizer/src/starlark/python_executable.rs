@@ -2,38 +2,45 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use crate::starlark::python_packaging_policy::PythonPackagingPolicyValue;
 use {
-    super::env::{get_context, EnvironmentContext},
-    super::python_embedded_resources::PythonEmbeddedResources,
-    super::python_resource::{
-        is_resource_starlark_compatible, python_resource_to_value, PythonExtensionModuleValue,
-        PythonPackageDistributionResourceValue, PythonPackageResourceValue,
-        PythonSourceModuleValue, ResourceCollectionContext,
+    super::{
+        env::{get_context, EnvironmentContext},
+        python_embedded_resources::PythonEmbeddedResources,
+        python_packaging_policy::PythonPackagingPolicyValue,
+        python_resource::{
+            is_resource_starlark_compatible, python_resource_to_value, PythonExtensionModuleValue,
+            PythonPackageDistributionResourceValue, PythonPackageResourceValue,
+            PythonSourceModuleValue, ResourceCollectionContext,
+        },
+        target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
+        util::{
+            optional_dict_arg, optional_list_arg, required_bool_arg, required_list_arg,
+            required_str_arg,
+        },
     },
-    super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
-    super::util::{
-        optional_dict_arg, optional_list_arg, required_bool_arg, required_list_arg,
-        required_str_arg,
-    },
-    crate::project_building::build_python_executable,
-    crate::py_packaging::binary::PythonBinaryBuilder,
+    crate::{project_building::build_python_executable, py_packaging::binary::PythonBinaryBuilder},
     anyhow::{Context, Result},
     python_packaging::resource::{DataLocation, PythonModuleSource},
     slog::{info, warn},
-    starlark::environment::TypeValues,
-    starlark::eval::call_stack::CallStack,
-    starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
-    starlark::values::none::NoneType,
-    starlark::values::{Mutable, TypedValue, Value, ValueResult},
     starlark::{
-        starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
-        starlark_signature_extraction, starlark_signatures,
+        environment::TypeValues,
+        eval::call_stack::CallStack,
+        values::{
+            error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
+            none::NoneType,
+            {Mutable, TypedValue, Value, ValueResult},
+        },
+        {
+            starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
+            starlark_signature_extraction, starlark_signatures,
+        },
     },
-    std::collections::HashMap,
-    std::io::Write,
-    std::ops::Deref,
-    std::path::{Path, PathBuf},
+    std::{
+        collections::HashMap,
+        io::Write,
+        ops::Deref,
+        path::{Path, PathBuf},
+    },
 };
 
 /// Represents a builder for a Python executable.

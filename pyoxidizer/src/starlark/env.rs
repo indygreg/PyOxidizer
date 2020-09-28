@@ -3,26 +3,34 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::file_resource::FileManifestValue,
-    super::python_embedded_resources::PythonEmbeddedResources,
-    super::python_executable::PythonExecutable,
-    super::target::{BuildContext, BuildTarget, ResolvedTarget},
-    super::util::{optional_list_arg, required_bool_arg, required_str_arg, required_type_arg},
+    super::{
+        file_resource::FileManifestValue,
+        python_embedded_resources::PythonEmbeddedResources,
+        python_executable::PythonExecutable,
+        target::{BuildContext, BuildTarget, ResolvedTarget},
+        util::{optional_list_arg, required_bool_arg, required_str_arg, required_type_arg},
+    },
     anyhow::{anyhow, Context, Result},
     linked_hash_map::LinkedHashMap,
     path_dedot::ParseDot,
     slog::warn,
-    starlark::environment::{Environment, EnvironmentError, TypeValues},
-    starlark::eval::call_stack::CallStack,
-    starlark::values::error::{RuntimeError, ValueError},
-    starlark::values::none::NoneType,
-    starlark::values::{Mutable, TypedValue, Value, ValueResult},
     starlark::{
-        starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
-        starlark_signature_extraction, starlark_signatures,
+        environment::{Environment, EnvironmentError, TypeValues},
+        eval::call_stack::CallStack,
+        values::{
+            error::{RuntimeError, ValueError},
+            none::NoneType,
+            {Mutable, TypedValue, Value, ValueResult},
+        },
+        {
+            starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
+            starlark_signature_extraction, starlark_signatures,
+        },
     },
-    std::collections::BTreeMap,
-    std::path::{Path, PathBuf},
+    std::{
+        collections::BTreeMap,
+        path::{Path, PathBuf},
+    },
 };
 
 /// Represents a registered target in the Starlark environment.

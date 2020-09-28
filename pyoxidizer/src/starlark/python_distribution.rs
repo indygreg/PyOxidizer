@@ -3,38 +3,50 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::env::{get_context, EnvironmentContext},
-    super::python_executable::PythonExecutable,
-    super::python_packaging_policy::PythonPackagingPolicyValue,
-    super::python_resource::{
-        add_context_for_value, python_resource_to_value, PythonExtensionModuleValue,
-        PythonPackageResourceValue, PythonSourceModuleValue,
+    super::{
+        env::{get_context, EnvironmentContext},
+        python_executable::PythonExecutable,
+        python_packaging_policy::PythonPackagingPolicyValue,
+        python_resource::{
+            add_context_for_value, python_resource_to_value, PythonExtensionModuleValue,
+            PythonPackageResourceValue, PythonSourceModuleValue,
+        },
+        util::{optional_str_arg, optional_type_arg, required_bool_arg, required_str_arg},
     },
-    super::util::{optional_str_arg, optional_type_arg, required_bool_arg, required_str_arg},
-    crate::py_packaging::config::EmbeddedPythonConfig,
-    crate::py_packaging::distribution::BinaryLibpythonLinkMode,
-    crate::py_packaging::distribution::{
-        default_distribution_location, is_stdlib_test_package, resolve_distribution,
-        DistributionFlavor, PythonDistribution as PythonDistributionTrait,
-        PythonDistributionLocation,
+    crate::py_packaging::{
+        config::EmbeddedPythonConfig,
+        distribution::BinaryLibpythonLinkMode,
+        distribution::{
+            default_distribution_location, is_stdlib_test_package, resolve_distribution,
+            DistributionFlavor, PythonDistribution as PythonDistributionTrait,
+            PythonDistributionLocation,
+        },
     },
     anyhow::{anyhow, Result},
     itertools::Itertools,
-    python_packaging::bytecode::{CompileMode, PythonBytecodeCompiler},
-    python_packaging::policy::PythonPackagingPolicy,
-    python_packaging::resource::{BytecodeOptimizationLevel, PythonResource},
-    python_packaging::resource_collection::PythonResourceAddCollectionContext,
-    starlark::environment::TypeValues,
-    starlark::eval::call_stack::CallStack,
-    starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
-    starlark::values::none::NoneType,
-    starlark::values::{Mutable, TypedValue, Value, ValueResult},
-    starlark::{
-        starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
-        starlark_signature_extraction, starlark_signatures,
+    python_packaging::{
+        bytecode::{CompileMode, PythonBytecodeCompiler},
+        policy::PythonPackagingPolicy,
+        resource::{BytecodeOptimizationLevel, PythonResource},
+        resource_collection::PythonResourceAddCollectionContext,
     },
-    std::path::{Path, PathBuf},
-    std::sync::Arc,
+    starlark::{
+        environment::TypeValues,
+        eval::call_stack::CallStack,
+        values::{
+            error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
+            none::NoneType,
+            {Mutable, TypedValue, Value, ValueResult},
+        },
+        {
+            starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
+            starlark_signature_extraction, starlark_signatures,
+        },
+    },
+    std::{
+        path::{Path, PathBuf},
+        sync::Arc,
+    },
 };
 
 pub struct PythonDistribution {

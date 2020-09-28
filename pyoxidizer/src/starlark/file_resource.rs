@@ -3,37 +3,43 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::env::{get_context, EnvironmentContext},
-    super::python_executable::PythonExecutable,
-    super::python_resource::{
-        PythonExtensionModuleValue, PythonPackageDistributionResourceValue,
-        PythonPackageResourceValue, PythonSourceModuleValue,
+    super::{
+        env::{get_context, EnvironmentContext},
+        python_executable::PythonExecutable,
+        python_resource::{
+            PythonExtensionModuleValue, PythonPackageDistributionResourceValue,
+            PythonPackageResourceValue, PythonSourceModuleValue,
+        },
+        target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
+        util::{
+            optional_list_arg, optional_str_arg, required_bool_arg, required_list_arg,
+            required_str_arg, required_type_arg,
+        },
     },
-    super::target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
-    super::util::{
-        optional_list_arg, optional_str_arg, required_bool_arg, required_list_arg,
-        required_str_arg, required_type_arg,
+    crate::{
+        app_packaging::{
+            glob::evaluate_glob,
+            resource::{FileContent, FileManifest},
+        },
+        project_building::build_python_executable,
+        py_packaging::{binary::PythonBinaryBuilder, resource::AddToFileManifest},
     },
-    crate::app_packaging::glob::evaluate_glob,
-    crate::app_packaging::resource::{FileContent, FileManifest},
-    crate::project_building::build_python_executable,
-    crate::py_packaging::binary::PythonBinaryBuilder,
-    crate::py_packaging::resource::AddToFileManifest,
     anyhow::Result,
     itertools::Itertools,
     slog::warn,
-    starlark::environment::TypeValues,
-    starlark::values::error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
-    starlark::values::none::NoneType,
-    starlark::values::{Immutable, Mutable, TypedValue, Value, ValueResult},
     starlark::{
-        starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
-        starlark_signature_extraction, starlark_signatures,
+        environment::TypeValues,
+        values::{
+            error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
+            none::NoneType,
+            {Immutable, Mutable, TypedValue, Value, ValueResult},
+        },
+        {
+            starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
+            starlark_signature_extraction, starlark_signatures,
+        },
     },
-    std::collections::HashSet,
-    std::convert::TryFrom,
-    std::ops::Deref,
-    std::path::Path,
+    std::{collections::HashSet, convert::TryFrom, ops::Deref, path::Path},
 };
 
 #[derive(Clone, Debug)]
