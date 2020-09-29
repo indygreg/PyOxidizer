@@ -689,7 +689,7 @@ mod tests {
     fn test_source_module_attrs() -> Result<()> {
         let mut env = StarlarkEnvironment::new_with_exe()?;
 
-        let mut m = env.eval("exe.make_python_source_module('foo', 'import bar')")?;
+        let mut m = env.eval("exe.make_python_module_source('foo', 'import bar')")?;
 
         assert_eq!(m.get_type(), PythonModuleSourceValue::TYPE);
         assert!(m.has_attr("name").unwrap());

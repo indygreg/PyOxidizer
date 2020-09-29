@@ -15,9 +15,9 @@ instances using
 Methods
 =======
 
-.. _config_python_executable_make_python_source_module:
+.. _config_python_executable_make_python_module_source:
 
-``PythonExecutable.make_python_source_module()``
+``PythonExecutable.make_python_module_source()``
 ------------------------------------------------
 
 This method creates a :ref:`config_type_python_module_source` instance

@@ -196,7 +196,7 @@ New Features
 * The ``PythonModuleSource`` Starlark type now exposes module source code
   via the ``source`` attribute.
 * The ``PythonExecutable`` Starlark type now has a
-  ``make_python_source_module()`` method to allow construction of
+  ``make_python_module_source()`` method to allow construction of
   ``PythonModuleSource`` instances.
 * The ``PythonModuleSource`` Starlark type now has attributes
   ``add_include``, ``add_location``, ``add_location_fallback``,

@@ -118,8 +118,8 @@ impl BuildTarget for PythonExecutable {
 
 // Starlark functions.
 impl PythonExecutable {
-    /// PythonExecutable.make_python_source_module(name, source, is_package=false)
-    pub fn starlark_make_python_source_module(
+    /// PythonExecutable.make_python_module_source(name, source, is_package=false)
+    pub fn starlark_make_python_module_source(
         &self,
         type_values: &TypeValues,
         call_stack: &mut CallStack,
@@ -587,7 +587,7 @@ impl PythonExecutable {
 
 starlark_module! { python_executable_env =>
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutable.make_python_source_module(
+    PythonExecutable.make_python_module_source(
         env env,
         call_stack cs,
         this,
@@ -596,7 +596,7 @@ starlark_module! { python_executable_env =>
         is_package=false
     ) {
         match this.clone().downcast_ref::<PythonExecutable>() {
-            Some(exe) => exe.starlark_make_python_source_module(&env, cs, &name, &source, &is_package),
+            Some(exe) => exe.starlark_make_python_module_source(&env, cs, &name, &source, &is_package),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
@@ -757,9 +757,9 @@ mod tests {
     }
 
     #[test]
-    fn test_make_python_source_module() -> Result<()> {
+    fn test_make_python_module_source() -> Result<()> {
         let mut env = StarlarkEnvironment::new_with_exe()?;
-        let m = env.eval("exe.make_python_source_module('foo', 'import bar')")?;
+        let m = env.eval("exe.make_python_module_source('foo', 'import bar')")?;
 
         assert_eq!(m.get_type(), PythonModuleSourceValue::TYPE);
         assert_eq!(m.get_attr("name").unwrap().to_str(), "foo");
@@ -770,7 +770,7 @@ mod tests {
     }
 
     #[test]
-    fn test_make_python_source_module_callback() -> Result<()> {
+    fn test_make_python_module_source_callback() -> Result<()> {
         let mut env = StarlarkEnvironment::new()?;
         env.eval("dist = default_python_distribution()")?;
         env.eval("policy = dist.make_python_packaging_policy()")?;
@@ -780,7 +780,7 @@ mod tests {
         env.eval("policy.register_resource_callback(my_func)")?;
         env.eval("exe = dist.to_python_executable('testapp', packaging_policy = policy)")?;
 
-        let m = env.eval("exe.make_python_source_module('foo', 'import bar')")?;
+        let m = env.eval("exe.make_python_module_source('foo', 'import bar')")?;
 
         assert_eq!(m.get_type(), PythonModuleSourceValue::TYPE);
         assert_eq!(m.get_attr("name").unwrap().to_str(), "foo");
