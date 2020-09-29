@@ -265,6 +265,9 @@ Other Relevant Changes
   be mostly backwards compatible, there may be some slight changes in
   behavior. Please file issues if any odd behavior or regressions are
   observed.
+* The configuration documentation was reorganized. The unified document
+  for the complete API document (which was the largest single document)
+  has been split into multiple documents.
 
 0.7.0
 -----
