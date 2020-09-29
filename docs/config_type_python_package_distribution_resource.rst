@@ -13,14 +13,43 @@ or ``<package>-<version>.egg-info`` directory. There are specifically named
 files that contain certain data. For example, a ``*.dist-info/METADATA`` file
 describes high-level metadata about a Python package.
 
-Each instance has the following attributes:
+Attributes
+==========
 
-``package`` (string)
-   Python package this resource is associated with.
+The following sections describe the attributes available on each
+instance.
 
-``name`` (string)
-   Name of this resource.
+.. _config_type_python_package_distribution_resource_package:
 
-``is_stdlib`` (``bool``)
-   Whether this module is part of the Python standard library (part of the
-   Python distribution).
+``package``
+-----------
+
+(``string``)
+
+Python package this resource is associated with.
+
+.. _config_type_python_package_distribution_resource_name:
+
+``name``
+--------
+
+(``string``)
+
+Name of this resource.
+
+.. _config_type_python_package_distribution_resource_is_stdlib:
+
+``is_stdlib``
+-------------
+
+(``bool``)
+
+Whether this module is part of the Python standard library (part of the
+Python distribution).
+
+``add_*``
+---------
+
+(various)
+
+See :ref:`config_resource_add_attributes`.

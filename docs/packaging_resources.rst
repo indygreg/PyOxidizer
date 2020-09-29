@@ -128,6 +128,8 @@ filesystem may look like a standard Python install layout, loading them is
 serviced by PyOxidizer's custom importer, not the standard importer that
 Python uses by default.
 
+.. _config_resource_add_attributes:
+
 Resource Attributes Influencing Adding
 ======================================
 
