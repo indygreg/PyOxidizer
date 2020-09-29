@@ -19,6 +19,7 @@ documentation for every type and function in the Starlark dialect.
 
    config_locating
    config_concepts
+   config_resource_add_attributes
    config_globals
    config_global_state
    config_target_management
