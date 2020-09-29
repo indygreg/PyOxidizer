@@ -8,7 +8,9 @@ dive into :ref:`getting_started` to learn how to start using
 
 The official home of the ``PyOxidizer`` project is
 https://github.com/indygreg/PyOxidizer. Official documentation lives
-at https://pyoxidizer.readthedocs.io/en/latest/index.html.
+at Read The Docs
+(`unreleased/latest commit <https://pyoxidizer.readthedocs.io/en/latest/index.html>`_,
+`last release <https://pyoxidizer.readthedocs.io/en/stable/index.html>`_).
 
 The `pyoxidizer-users <https://groups.google.com/forum/#!forum/pyoxidizer-users>`_
 mailing list is a forum for users to discuss all things PyOxidizer.
