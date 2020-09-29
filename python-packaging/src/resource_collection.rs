@@ -566,9 +566,9 @@ pub struct PythonResourceAddCollectionContext {
     /// we will fall back to adding the resource to this location.
     pub location_fallback: Option<ConcreteResourceLocation>,
 
-    /// Whether to store Python source code for a `PythonSourceModule`.
+    /// Whether to store Python source code for a `PythonModuleSource`.
     ///
-    /// When handling a `PythonSourceModule`, sometimes you want to
+    /// When handling a `PythonModuleSource`, sometimes you want to
     /// write just bytecode or source + bytecode. This flags allows
     /// controlling this behavior.
     pub store_source: bool,
