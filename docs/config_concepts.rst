@@ -71,6 +71,49 @@ on the value returned by a target function, if present. For example,
 a ``PythonExecutable``'s *build* functionality would compile an
 executable binary embedding Python.
 
+.. _config_concept_python_distribution:
+
+Python Distributions Provide Python
+===================================
+
+The :ref:`config_type_python_distribution` Starlark
+type defines a Python distribution. A Python distribution is an entity
+which contains a Python interpreter, Python standard library, and which
+PyOxidizer knows how to consume and integrate into a new binary.
+
+``PythonDistribution`` instances are arguably the most important type
+in configuration files because without them you can't perform Python
+packaging actions or construct binaries with Python embedded.
+
+Instances of ``PythonDistribution`` are typically constructed from
+:ref:`default_python_distribution() <config_default_python_distribution>`
+and are registered as their own target, since multiple targets may want
+to reference the distribution instance:
+
+.. code-block:: python
+
+   def make_dist():
+      return default_python_distribution()
+
+   register_target("dist", make_dist)
+
+.. _config_concept_python_executable:
+
+Python Executables Run Python
+=============================
+
+The :ref:`config_type_python_executable` Starlark type
+defines an executable file embedding Python. Instances of this type
+are used to build an executable file (and possibly other files needed
+by it) that contains an embedded Python interpreter and other resources
+required by it.
+
+Instances of ``PythonExecutable`` are derived from a ``PythonDistribution``
+instance via the
+:ref:`PythonDistribution.to_python_executable() <config_python_distribution_to_python_executable>`
+method. There is typically a standalone function/target in config files
+for doing this.
+
 .. _config_python_resources:
 
 Python Resources
