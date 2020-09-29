@@ -9,8 +9,8 @@ use {
         python_packaging_policy::PythonPackagingPolicyValue,
         python_resource::{
             is_resource_starlark_compatible, python_resource_to_value, PythonExtensionModuleValue,
-            PythonPackageDistributionResourceValue, PythonPackageResourceValue,
-            PythonSourceModuleValue, ResourceCollectionContext,
+            PythonModuleSourceValue, PythonPackageDistributionResourceValue,
+            PythonPackageResourceValue, ResourceCollectionContext,
         },
         target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
         util::{
@@ -140,7 +140,7 @@ impl PythonExecutable {
             is_test: false,
         };
 
-        let mut value = PythonSourceModuleValue::new(module);
+        let mut value = PythonModuleSourceValue::new(module);
         self.python_packaging_policy()
             .apply_to_resource(type_values, call_stack, &mut value)?;
 
@@ -380,7 +380,7 @@ impl PythonExecutable {
         &mut self,
         context: &EnvironmentContext,
         label: &str,
-        module: &PythonSourceModuleValue,
+        module: &PythonModuleSourceValue,
     ) -> ValueResult {
         info!(
             &context.logger,
@@ -488,7 +488,7 @@ impl PythonExecutable {
 
         match resource.get_type() {
             "PythonSourceModule" => {
-                let module = resource.downcast_ref::<PythonSourceModuleValue>().unwrap();
+                let module = resource.downcast_ref::<PythonModuleSourceValue>().unwrap();
                 self.add_python_module_source(context.deref(), label, module.deref())
             }
             "PythonPackageResource" => {
@@ -814,7 +814,7 @@ mod tests {
 
         let v = it.next().unwrap();
         assert_eq!(v.get_type(), "PythonSourceModule");
-        let x = v.downcast_ref::<PythonSourceModuleValue>().unwrap();
+        let x = v.downcast_ref::<PythonModuleSourceValue>().unwrap();
         assert_eq!(x.inner.name, "pyflakes");
         assert!(x.inner.is_package);
 
@@ -859,14 +859,14 @@ mod tests {
 
         let v = it.next().unwrap();
         assert_eq!(v.get_type(), "PythonSourceModule");
-        let x = v.downcast_ref::<PythonSourceModuleValue>().unwrap();
+        let x = v.downcast_ref::<PythonModuleSourceValue>().unwrap();
         assert_eq!(x.inner.name, "bar");
         assert!(x.inner.is_package);
         assert_eq!(x.inner.source.resolve().unwrap(), b"# bar");
 
         let v = it.next().unwrap();
         assert_eq!(v.get_type(), "PythonSourceModule");
-        let x = v.downcast_ref::<PythonSourceModuleValue>().unwrap();
+        let x = v.downcast_ref::<PythonModuleSourceValue>().unwrap();
         assert_eq!(x.inner.name, "foo");
         assert!(!x.inner.is_package);
         assert_eq!(x.inner.source.resolve().unwrap(), b"# foo");

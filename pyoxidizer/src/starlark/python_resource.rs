@@ -227,12 +227,12 @@ pub trait ResourceCollectionContext {
 
 /// Starlark value wrapper for `PythonModuleSource`.
 #[derive(Debug, Clone)]
-pub struct PythonSourceModuleValue {
+pub struct PythonModuleSourceValue {
     pub inner: PythonModuleSource,
     pub add_context: Option<PythonResourceAddCollectionContext>,
 }
 
-impl PythonSourceModuleValue {
+impl PythonModuleSourceValue {
     pub fn new(module: PythonModuleSource) -> Self {
         Self {
             inner: module,
@@ -241,7 +241,7 @@ impl PythonSourceModuleValue {
     }
 }
 
-impl ResourceCollectionContext for PythonSourceModuleValue {
+impl ResourceCollectionContext for PythonModuleSourceValue {
     fn add_collection_context(&self) -> &Option<PythonResourceAddCollectionContext> {
         &self.add_context
     }
@@ -255,8 +255,8 @@ impl ResourceCollectionContext for PythonSourceModuleValue {
     }
 }
 
-impl TypedValue for PythonSourceModuleValue {
-    type Holder = Mutable<PythonSourceModuleValue>;
+impl TypedValue for PythonModuleSourceValue {
+    type Holder = Mutable<PythonModuleSourceValue>;
     const TYPE: &'static str = "PythonSourceModule";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
@@ -612,7 +612,7 @@ pub fn python_resource_to_value(
 ) -> ValueResult {
     match resource {
         PythonResource::ModuleSource(sm) => {
-            let mut m = PythonSourceModuleValue::new(sm.clone().into_owned());
+            let mut m = PythonModuleSourceValue::new(sm.clone().into_owned());
             policy.apply_to_resource(type_values, call_stack, &mut m)?;
 
             Ok(Value::new(m))
@@ -652,7 +652,7 @@ pub fn add_context_for_value(
 ) -> Result<Option<PythonResourceAddCollectionContext>, ValueError> {
     match value.get_type() {
         "PythonSourceModule" => Ok(value
-            .downcast_ref::<PythonSourceModuleValue>()
+            .downcast_ref::<PythonModuleSourceValue>()
             .unwrap()
             .add_collection_context()
             .clone()),

@@ -7,8 +7,8 @@ use {
         env::{get_context, EnvironmentContext},
         python_executable::PythonExecutable,
         python_resource::{
-            PythonExtensionModuleValue, PythonPackageDistributionResourceValue,
-            PythonPackageResourceValue, PythonSourceModuleValue,
+            PythonExtensionModuleValue, PythonModuleSourceValue,
+            PythonPackageDistributionResourceValue, PythonPackageResourceValue,
         },
         target::{BuildContext, BuildTarget, ResolvedTarget, RunMode},
         util::{
@@ -182,7 +182,7 @@ impl FileManifestValue {
 
         match resource.get_type() {
             "PythonSourceModule" => {
-                let m = match resource.downcast_ref::<PythonSourceModuleValue>() {
+                let m = match resource.downcast_ref::<PythonModuleSourceValue>() {
                     Some(m) => Ok(m.inner.clone()),
                     None => Err(ValueError::IncorrectParameterType),
                 }?;
@@ -516,7 +516,7 @@ mod tests {
             manifest: FileManifest::default(),
         });
 
-        let v = Value::new(PythonSourceModuleValue::new(PythonModuleSource {
+        let v = Value::new(PythonModuleSourceValue::new(PythonModuleSource {
             name: "foo.bar".to_string(),
             source: DataLocation::Memory(vec![]),
             is_package: false,

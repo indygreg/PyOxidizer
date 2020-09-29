@@ -9,7 +9,7 @@ use {
         python_packaging_policy::PythonPackagingPolicyValue,
         python_resource::{
             add_context_for_value, python_resource_to_value, PythonExtensionModuleValue,
-            PythonPackageResourceValue, PythonSourceModuleValue,
+            PythonModuleSourceValue, PythonPackageResourceValue,
         },
         util::{optional_str_arg, optional_type_arg, required_bool_arg, required_str_arg},
     },
@@ -504,7 +504,7 @@ impl PythonDistribution {
         Ok(Value::from(
             modules
                 .iter()
-                .map(|module| Value::new(PythonSourceModuleValue::new(module.clone())))
+                .map(|module| Value::new(PythonModuleSourceValue::new(module.clone())))
                 .collect_vec(),
         ))
     }
@@ -675,7 +675,7 @@ mod tests {
         assert_eq!(mods.get_type(), "list");
 
         for m in mods.iter().unwrap().iter() {
-            assert_eq!(m.get_type(), PythonSourceModuleValue::TYPE);
+            assert_eq!(m.get_type(), PythonModuleSourceValue::TYPE);
             assert!(m.get_attr("is_stdlib").unwrap().to_bool());
         }
     }
