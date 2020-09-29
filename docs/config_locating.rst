@@ -1,8 +1,8 @@
 .. _config_locating:
 
-============================
-Locating Configuration Files
-============================
+================================
+Automatic File Location Strategy
+================================
 
 If the ``PYOXIDIZER_CONFIG`` environment variable is set, the path specified
 by this environment variable will be used as the location of the Starlark

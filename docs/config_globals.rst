@@ -1,8 +1,8 @@
 .. _config_globals:
 
-=================================
-Configuration File Global Symbols
-=================================
+==============
+Global Symbols
+==============
 
 This document lists every single global type, variable, and
 function available in PyOxidizer's Starlark execution environment.

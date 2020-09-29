@@ -1,8 +1,8 @@
 .. _config_concepts:
 
-===========================
-Configuration File Concepts
-===========================
+========
+Concepts
+========
 
 .. _config_processing:
 
