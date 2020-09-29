@@ -37,7 +37,7 @@ Arguments:
 
 ``value``
    (various) A *Python resource* instance to add. e.g.
-   :ref:`config_type_python_source_module` or
+   :ref:`config_type_python_module_source` or
    :ref:`config_type_python_package_resource`.
 
 This method can be used to place the Python resources derived from another

@@ -50,7 +50,7 @@ PyOxidizer's Starlark dialect defines the following custom types:
 :ref:`config_type_python_packaging_policy`
    Represents a policy controlling how Python resources are added to a binary.
 
-:ref:`config_type_python_source_module`
+:ref:`config_type_python_module_source`
    Represents a ``.py`` file containing Python source code.
 
 .. _config_global_constants:

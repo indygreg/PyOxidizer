@@ -1,7 +1,7 @@
-.. _config_type_python_source_module:
+.. _config_type_python_module_source:
 
 ======================
-``PythonSourceModule``
+``PythonModuleSource``
 ======================
 
 This type represents Python source modules, agnostic of location.

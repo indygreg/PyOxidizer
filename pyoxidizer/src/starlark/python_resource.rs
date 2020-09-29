@@ -257,7 +257,7 @@ impl ResourceCollectionContext for PythonModuleSourceValue {
 
 impl TypedValue for PythonModuleSourceValue {
     type Holder = Mutable<PythonModuleSourceValue>;
-    const TYPE: &'static str = "PythonSourceModule";
+    const TYPE: &'static str = "PythonModuleSource";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
         Box::new(std::iter::empty())
@@ -651,7 +651,7 @@ pub fn add_context_for_value(
     label: &str,
 ) -> Result<Option<PythonResourceAddCollectionContext>, ValueError> {
     match value.get_type() {
-        "PythonSourceModule" => Ok(value
+        "PythonModuleSource" => Ok(value
             .downcast_ref::<PythonModuleSourceValue>()
             .unwrap()
             .add_collection_context()
@@ -691,7 +691,7 @@ mod tests {
 
         let mut m = env.eval("exe.make_python_source_module('foo', 'import bar')")?;
 
-        assert_eq!(m.get_type(), "PythonSourceModule");
+        assert_eq!(m.get_type(), PythonModuleSourceValue::TYPE);
         assert!(m.has_attr("name").unwrap());
         assert_eq!(m.get_attr("name").unwrap().to_str(), "foo");
 

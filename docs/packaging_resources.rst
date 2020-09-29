@@ -39,7 +39,7 @@ When a resource is added (e.g. by calling
 consulted and used to influence exactly how that *resource* is
 added/packaged.
 
-For example, a :ref:`config_type_python_source_module` can set attributes
+For example, a :ref:`config_type_python_module_source` can set attributes
 indicating to exclude source code and only generate bytecode at
 a specific optimization level. Or a :ref:`config_type_python_extension_module`
 can set attributes saying to prefer to compile it into the built
@@ -53,7 +53,7 @@ Resource Types
 
 The following Starlark types represent individual resources:
 
-:ref:`config_type_python_source_module`
+:ref:`config_type_python_module_source`
    Source code for a Python module. Roughly equivalent to a ``.py`` file.
 
    This type can also be converted to Python bytecode (roughly equivalent
@@ -111,7 +111,7 @@ Filesystem-Relative
 
 When a Python resource is placed in the *filesystem-relative* location,
 the resource will be materialized as a file next to the produced entity.
-e.g. a *filesystem-relative* ``PythonSourceModule`` for the ``foo.bar``
+e.g. a *filesystem-relative* ``PythonModuleSource`` for the ``foo.bar``
 Python module added to a ``PythonExecutable`` will be materialized as the
 file ``foo/bar.py`` or ``foo/bar/__init__.py`` in a directory next to the
 built executable.
@@ -263,7 +263,7 @@ else to memory:
 .. code-block:: python
 
    def resource_callback(policy, resource):
-       if type(resource) in ("PythonSourceModule", "PythonPackageResource", "PythonPackageDistributionResource"):
+       if type(resource) in ("PythonModuleSource", "PythonPackageResource", "PythonPackageDistributionResource"):
            if resource.package == "my_package":
                resource.add_location = "filesystem-relative:lib"
            else:

@@ -173,7 +173,7 @@ The following sections describe methods on ``PythonPackagingPolicy`` instances.
 This method registers a Starlark function to be called when resource objects
 are created. The passed function receives 2 arguments: this
 ``PythonPackagingPolicy`` instance and the resource (e.g.
-``PythonSourceModule``) that was created.
+``PythonModuleSource``) that was created.
 
 The purpose of the callback is to enable Starlark configuration files to
 mutate resources upon creation so they can globally influence how those

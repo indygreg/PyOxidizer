@@ -181,7 +181,7 @@ impl FileManifestValue {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         match resource.get_type() {
-            "PythonSourceModule" => {
+            "PythonModuleSource" => {
                 let m = match resource.downcast_ref::<PythonModuleSourceValue>() {
                     Some(m) => Ok(m.inner.clone()),
                     None => Err(ValueError::IncorrectParameterType),

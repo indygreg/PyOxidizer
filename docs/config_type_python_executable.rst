@@ -20,8 +20,8 @@ Methods
 ``PythonExecutable.make_python_source_module()``
 ------------------------------------------------
 
-This method creates a ``PythonSourceModule`` instance suitable for use with
-the executable being built.
+This method creates a :ref:`config_type_python_module_source` instance
+suitable for use with the executable being built.
 
 Arguments are as follows:
 
@@ -50,8 +50,9 @@ the executable being built.
    variables to set in the invoked ``pip`` process.
 
 Returns a ``list`` of objects representing Python resources installed as
-part of the operation. The types of these objects can be ``PythonSourceModule``,
-``PythonPackageResource``, etc.
+part of the operation. The types of these objects can be
+:ref:`config_type_python_module_source`,
+:ref:`config_type_python_package_resource`, etc.
 
 The returned resources are typically added to a ``FileManifest`` or
 ``PythonExecutable`` to make them available to a packaged
@@ -87,7 +88,7 @@ This rule has the following arguments:
    a file ``<path>/<value>.py``.
 
 Returns a ``list`` of objects representing Python resources found in the
-virtualenv. The types of these objects can be ``PythonSourceModule``,
+virtualenv. The types of these objects can be ``PythonModuleSource``,
 ``PythonPackageResource``, etc.
 
 The returned resources are typically added to a ``FileManifest`` or
@@ -117,7 +118,7 @@ It accepts the following arguments:
    (on UNIX) or ``Lib/site-packages`` directory (on Windows) under this path.
 
 Returns a ``list`` of objects representing Python resources found in the virtualenv.
-The types of these objects can be ``PythonSourceModule``,
+The types of these objects can be ``PythonModuleSource``,
 ``PythonPackageResource``, etc.
 
 The returned resources are typically added to a ``FileManifest`` or
@@ -147,7 +148,7 @@ It accepts the following arguments:
 
 Returns a ``list`` of objects representing Python resources installed
 as part of the operation. The types of these objects can be
-``PythonSourceModule``, ``PythonPackageResource``, etc.
+``PythonModuleSource``, ``PythonPackageResource``, etc.
 
 The returned resources are typically added to a ``FileManifest`` or
 ``PythonExecutable`` to make them available to a packaged application.
@@ -159,7 +160,7 @@ The returned resources are typically added to a ``FileManifest`` or
 
 This method registers a Python resource of various types with the instance.
 
-It accepts a ``resource`` argument which can be a ``PythonSourceModule``,
+It accepts a ``resource`` argument which can be a ``PythonModuleSource``,
 ``PythonPackageResource``, or ``PythonExtensionModule`` and registers that
 resource with this instance.
 

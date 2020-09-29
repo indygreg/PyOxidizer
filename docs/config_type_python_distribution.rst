@@ -133,7 +133,7 @@ Methods
 ---------------------------------------
 
 Returns a ``list`` of
-:ref:`config_type_python_source_module`
+:ref:`config_type_python_module_source`
 representing Python source modules present in this distribution.
 
 ``PythonDistribution.package_resources()``

@@ -31,7 +31,7 @@ documentation for every type and function in the Starlark dialect.
    config_type_python_executable
    config_type_python_extension_module
    config_type_python_interpreter_config
-   config_type_python_source_module
+   config_type_python_module_source
    config_type_python_package_resource
    config_type_python_package_distribution_resource
    config_type_python_packaging_policy

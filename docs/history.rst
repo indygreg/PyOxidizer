@@ -144,6 +144,8 @@ Backwards Compatibility Notes
   handling all resource types and should be used. Previous functionality
   available via argument passing on these methods can be accomplished
   by setting ``add_*`` attributes on individual Python resource objects.
+* The Starlark type ``PythonSourceModule`` has been renamed to
+  ``PythonModuleSource``.
 
 New Features
 ^^^^^^^^^^^^
@@ -191,12 +193,12 @@ New Features
   code is provided. Previously, it required that bytecode be available.
 * ``OxidizedFinder`` now implements ``iter_modules()``. This enables
   ``pkgutil.iter_modules()`` to return modules serviced by ``OxidizedFinder``.
-* The ``PythonSourceModule`` Starlark type now exposes module source code
+* The ``PythonModuleSource`` Starlark type now exposes module source code
   via the ``source`` attribute.
 * The ``PythonExecutable`` Starlark type now has a
   ``make_python_source_module()`` method to allow construction of
-  ``PythonSourceModule`` instances.
-* The ``PythonSourceModule`` Starlark type now has attributes
+  ``PythonModuleSource`` instances.
+* The ``PythonModuleSource`` Starlark type now has attributes
   ``add_include``, ``add_location``, ``add_location_fallback``,
   ``add_source``, ``add_bytecode_optimization_level_zero``,
   ``add_bytecode_optimization_level_one``, and

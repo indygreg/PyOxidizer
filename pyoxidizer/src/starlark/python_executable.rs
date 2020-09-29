@@ -487,7 +487,7 @@ impl PythonExecutable {
             .ok_or(ValueError::IncorrectParameterType)?;
 
         match resource.get_type() {
-            "PythonSourceModule" => {
+            "PythonModuleSource" => {
                 let module = resource.downcast_ref::<PythonModuleSourceValue>().unwrap();
                 self.add_python_module_source(context.deref(), label, module.deref())
             }
@@ -761,7 +761,7 @@ mod tests {
         let mut env = StarlarkEnvironment::new_with_exe()?;
         let m = env.eval("exe.make_python_source_module('foo', 'import bar')")?;
 
-        assert_eq!(m.get_type(), "PythonSourceModule");
+        assert_eq!(m.get_type(), PythonModuleSourceValue::TYPE);
         assert_eq!(m.get_attr("name").unwrap().to_str(), "foo");
         assert_eq!(m.get_attr("source").unwrap().to_str(), "import bar");
         assert_eq!(m.get_attr("is_package").unwrap().to_bool(), false);
@@ -782,7 +782,7 @@ mod tests {
 
         let m = env.eval("exe.make_python_source_module('foo', 'import bar')")?;
 
-        assert_eq!(m.get_type(), "PythonSourceModule");
+        assert_eq!(m.get_type(), PythonModuleSourceValue::TYPE);
         assert_eq!(m.get_attr("name").unwrap().to_str(), "foo");
         assert_eq!(m.get_attr("source").unwrap().to_str(), "import bar");
         assert_eq!(m.get_attr("is_package").unwrap().to_bool(), false);
@@ -813,7 +813,7 @@ mod tests {
         let mut it = raw_it.iter();
 
         let v = it.next().unwrap();
-        assert_eq!(v.get_type(), "PythonSourceModule");
+        assert_eq!(v.get_type(), PythonModuleSourceValue::TYPE);
         let x = v.downcast_ref::<PythonModuleSourceValue>().unwrap();
         assert_eq!(x.inner.name, "pyflakes");
         assert!(x.inner.is_package);
@@ -858,14 +858,14 @@ mod tests {
         let mut it = raw_it.iter();
 
         let v = it.next().unwrap();
-        assert_eq!(v.get_type(), "PythonSourceModule");
+        assert_eq!(v.get_type(), PythonModuleSourceValue::TYPE);
         let x = v.downcast_ref::<PythonModuleSourceValue>().unwrap();
         assert_eq!(x.inner.name, "bar");
         assert!(x.inner.is_package);
         assert_eq!(x.inner.source.resolve().unwrap(), b"# bar");
 
         let v = it.next().unwrap();
-        assert_eq!(v.get_type(), "PythonSourceModule");
+        assert_eq!(v.get_type(), PythonModuleSourceValue::TYPE);
         let x = v.downcast_ref::<PythonModuleSourceValue>().unwrap();
         assert_eq!(x.inner.name, "foo");
         assert!(!x.inner.is_package);
