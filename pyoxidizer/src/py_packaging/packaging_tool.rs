@@ -610,4 +610,51 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_pip_download_numpy() -> Result<()> {
+        let logger = get_logger()?;
+
+        let host_dist = get_default_distribution()?;
+
+        for build_dist in get_all_standalone_distributions()? {
+            if build_dist.python_platform_compatibility_tag() == "none" {
+                continue;
+            }
+
+            warn!(
+                logger,
+                "using distribution {}-{}-{}",
+                build_dist.python_implementation,
+                build_dist.python_platform_tag,
+                build_dist.version
+            );
+
+            let resources = pip_download(
+                &logger,
+                &**host_dist,
+                &**build_dist,
+                false,
+                &["numpy==1.19.2".to_string()],
+            )?;
+
+            assert!(!resources.is_empty());
+
+            let extensions = resources
+                .iter()
+                .filter_map(|r| match r {
+                    PythonResource::ExtensionModule(em) => Some(em),
+                    _ => None,
+                })
+                .collect::<Vec<_>>();
+
+            assert!(!extensions.is_empty());
+
+            assert!(extensions
+                .iter()
+                .any(|em| em.name == "numpy.random._common"));
+        }
+
+        Ok(())
+    }
 }
