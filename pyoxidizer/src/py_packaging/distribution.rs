@@ -100,8 +100,33 @@ pub trait PythonDistribution {
     /// Obtain the filesystem path to a `python` executable for this distribution.
     fn python_exe_path(&self) -> &Path;
 
+    /// Obtain the full Python version string.
+    fn python_version(&self) -> &str;
+
     /// Obtain the X.Y Python version component. e.g. `3.7`.
     fn python_major_minor_version(&self) -> String;
+
+    /// Obtain the full Python implementation name. e.g. `cpython`.
+    fn python_implementation(&self) -> &str;
+
+    /// Obtain the short Python implementation name. e.g. `cp`
+    fn python_implementation_short(&self) -> &str;
+
+    /// Obtain the PEP 425 Python tag. e.g. `cp38`.
+    fn python_tag(&self) -> &str;
+
+    /// Obtain the PEP 425 Python ABI tag. e.g. `cp38d`.
+    fn python_abi_tag(&self) -> Option<&str>;
+
+    /// Obtain the Python platform tag.
+    fn python_platform_tag(&self) -> &str;
+
+    /// Obtain the Python platform tag used to indicate compatibility.
+    ///
+    /// This is similar to the platform tag. But where `python_platform_tag()`
+    /// exposes the raw value like `linux-x86_64`, this is the normalized
+    /// value that can be used by tools like `pip`. e.g. `manylinux2014_x86_64`.
+    fn python_platform_compatibility_tag(&self) -> &str;
 
     /// Obtain the cache tag to apply to Python bytecode modules.
     fn cache_tag(&self) -> &str;

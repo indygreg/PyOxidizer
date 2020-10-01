@@ -342,6 +342,9 @@ pub struct StandaloneDistribution {
     /// Rust target triple that this distribution runs on.
     pub target_triple: String,
 
+    /// Python implementation name.
+    pub python_implementation: String,
+
     /// PEP 425 Python tag value.
     pub python_tag: String,
 
@@ -855,6 +858,7 @@ impl StandaloneDistribution {
         Ok(Self {
             base_dir: dist_dir.to_path_buf(),
             target_triple: pi.target_triple,
+            python_implementation: pi.python_implementation_name,
             python_tag: pi.python_tag,
             python_abi_tag: pi.python_abi_tag,
             python_platform_tag: pi.python_platform_tag,
@@ -1034,8 +1038,65 @@ impl PythonDistribution for StandaloneDistribution {
         &self.python_exe
     }
 
+    fn python_version(&self) -> &str {
+        &self.version
+    }
+
     fn python_major_minor_version(&self) -> String {
         self.version[0..3].to_string()
+    }
+
+    fn python_implementation(&self) -> &str {
+        &self.python_implementation
+    }
+
+    fn python_implementation_short(&self) -> &str {
+        // TODO capture this in distribution metadata
+        match self.python_implementation.as_str() {
+            "cpython" => "cp",
+            "python" => "py",
+            "pypy" => "pp",
+            "ironpython" => "ip",
+            "jython" => "jy",
+            s => panic!("unsupported Python implementation: {}", s),
+        }
+    }
+
+    fn python_tag(&self) -> &str {
+        &self.python_tag
+    }
+
+    fn python_abi_tag(&self) -> Option<&str> {
+        match &self.python_abi_tag {
+            Some(tag) => {
+                if tag == "" {
+                    None
+                } else {
+                    Some(tag)
+                }
+            }
+            None => None,
+        }
+    }
+
+    fn python_platform_tag(&self) -> &str {
+        &self.python_platform_tag
+    }
+
+    fn python_platform_compatibility_tag(&self) -> &str {
+        // TODO capture this in distribution metadata.
+        if !self.is_extension_module_file_loadable() {
+            return "none";
+        }
+
+        match self.python_platform_tag.as_str() {
+            "linux-x86_64" => "manylinux2014_x86_64",
+            "linux-i686" => "manylinux2014_i686",
+            "macosx-10.9-x86_64" => "macosx_10_9_x86_64",
+            "win-amd64" => "win_amd64",
+            "win32" => "win32",
+            p => panic!("unsupported Python platform: {}", p),
+        }
     }
 
     fn cache_tag(&self) -> &str {
