@@ -1139,9 +1139,13 @@ impl PythonDistribution for StandaloneDistribution {
         policy: &PythonPackagingPolicy,
         config: &EmbeddedPythonConfig,
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
+        // TODO can we avoid this clone?
+        let dist = Arc::new(Box::new(self.clone()));
+
         let builder = StandalonePythonExecutableBuilder::from_distribution(
             // TODO can we avoid this clone?
-            Arc::new(Box::new(self.clone())),
+            dist.clone(),
+            dist,
             host_triple.to_string(),
             target_triple.to_string(),
             name.to_string(),
