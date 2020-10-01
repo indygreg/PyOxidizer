@@ -345,6 +345,7 @@ impl PythonDistribution {
                 BinaryLibpythonLinkMode::Default,
                 &policy.inner,
                 &config,
+                None,
             )
             .map_err(|e| {
                 ValueError::from(RuntimeError {

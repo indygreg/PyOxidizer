@@ -29,6 +29,7 @@ use {
         fs::{create_dir_all, File},
         io::Read,
         path::{Path, PathBuf},
+        sync::Arc,
     },
     url::Url,
     uuid::Uuid,
@@ -156,6 +157,7 @@ pub trait PythonDistribution {
         libpython_link_mode: BinaryLibpythonLinkMode,
         policy: &PythonPackagingPolicy,
         config: &EmbeddedPythonConfig,
+        host_distribution: Option<Arc<Box<dyn PythonDistribution>>>,
     ) -> Result<Box<dyn PythonBinaryBuilder>>;
 
     /// Obtain `PythonExtensionModule` instances present in this distribution.

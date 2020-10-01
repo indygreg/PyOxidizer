@@ -62,7 +62,7 @@ fn ignored_libraries_for_target(target_triple: &str) -> Vec<&'static str> {
 }
 
 /// A self-contained Python executable before it is compiled.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct StandalonePythonExecutableBuilder {
     /// The target triple we are running on.
     host_triple: String,
@@ -74,7 +74,7 @@ pub struct StandalonePythonExecutableBuilder {
     exe_name: String,
 
     /// The Python distribution being used to build this executable.
-    host_distribution: Arc<Box<StandaloneDistribution>>,
+    host_distribution: Arc<Box<dyn PythonDistribution>>,
 
     /// The Python distribution this executable is targeting.
     build_distribution: Arc<Box<StandaloneDistribution>>,
@@ -111,7 +111,7 @@ pub struct StandalonePythonExecutableBuilder {
 impl StandalonePythonExecutableBuilder {
     #[allow(clippy::too_many_arguments)]
     pub fn from_distribution(
-        host_distribution: Arc<Box<StandaloneDistribution>>,
+        host_distribution: Arc<Box<dyn PythonDistribution>>,
         build_distribution: Arc<Box<StandaloneDistribution>>,
         host_triple: String,
         target_triple: String,
@@ -120,7 +120,7 @@ impl StandalonePythonExecutableBuilder {
         packaging_policy: PythonPackagingPolicy,
         config: EmbeddedPythonConfig,
     ) -> Result<Box<Self>> {
-        let python_exe = host_distribution.python_exe.clone();
+        let python_exe = host_distribution.python_exe_path().to_path_buf();
         let cache_tag = build_distribution.cache_tag.clone();
 
         let (supports_static_libpython, supports_dynamic_libpython) =
@@ -904,9 +904,10 @@ pub mod tests {
         pub fn new_builder(&self) -> Result<Box<StandalonePythonExecutableBuilder>> {
             let record = PYTHON_DISTRIBUTIONS
                 .find_distribution(&self.target_triple, &self.distribution_flavor)
-                .ok_or_else(|| anyhow!("could not find Python distribution"))?;
+                .ok_or_else(|| anyhow!("could not find target Python distribution"))?;
 
-            let distribution = get_distribution(&record.location)?;
+            let build_distribution = get_distribution(&record.location)?;
+            let host_distribution = Arc::new(build_distribution.clone_box());
 
             let mut policy = PythonPackagingPolicy::default();
             policy.set_extension_module_filter(self.extension_module_filter.clone());
@@ -915,8 +916,8 @@ pub mod tests {
             let config = EmbeddedPythonConfig::default();
 
             let mut builder = StandalonePythonExecutableBuilder::from_distribution(
-                distribution.clone(),
-                distribution,
+                host_distribution,
+                build_distribution,
                 self.host_triple.clone(),
                 self.target_triple.clone(),
                 self.app_name.clone(),

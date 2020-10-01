@@ -1138,14 +1138,16 @@ impl PythonDistribution for StandaloneDistribution {
         libpython_link_mode: BinaryLibpythonLinkMode,
         policy: &PythonPackagingPolicy,
         config: &EmbeddedPythonConfig,
+        host_distribution: Option<Arc<Box<dyn PythonDistribution>>>,
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
-        // TODO can we avoid this clone?
-        let dist = Arc::new(Box::new(self.clone()));
+        // TODO can we avoid these clones?
+        let build_distribution = Arc::new(Box::new(self.clone()));
+        let host_distribution: Arc<Box<dyn PythonDistribution>> =
+            host_distribution.unwrap_or_else(|| Arc::new(Box::new(self.clone())));
 
         let builder = StandalonePythonExecutableBuilder::from_distribution(
-            // TODO can we avoid this clone?
-            dist.clone(),
-            dist,
+            host_distribution,
+            build_distribution,
             host_triple.to_string(),
             target_triple.to_string(),
             name.to_string(),
