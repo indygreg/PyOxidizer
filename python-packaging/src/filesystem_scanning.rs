@@ -58,6 +58,7 @@ enum DirEntryItem<'a> {
     ResourceFile(ResourceFile),
 }
 
+/// An iterator of `PythonResource`.
 pub struct PythonResourceIterator<'a> {
     root_path: PathBuf,
     cache_tag: String,
