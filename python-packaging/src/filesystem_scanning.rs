@@ -21,6 +21,7 @@ use {
     std::{
         collections::{HashMap, HashSet},
         ffi::OsStr,
+        iter::FromIterator,
         path::{Path, PathBuf},
     },
 };
@@ -63,7 +64,7 @@ pub struct PythonResourceIterator<'a> {
     root_path: PathBuf,
     cache_tag: String,
     suffixes: PythonModuleSuffixes,
-    paths: Box<dyn Iterator<Item = PathBuf>>,
+    paths: Vec<PathBuf>,
     /// Content overrides for individual paths.
     ///
     /// This is a hacky way to allow us to abstract I/O.
@@ -81,24 +82,45 @@ impl<'a> PythonResourceIterator<'a> {
     ) -> PythonResourceIterator<'a> {
         let res = walkdir::WalkDir::new(path).sort_by(|a, b| a.file_name().cmp(b.file_name()));
 
-        let filtered = res.into_iter().filter_map(|entry| {
-            let entry = entry.expect("unable to get directory entry");
+        let filtered = res
+            .into_iter()
+            .filter_map(|entry| {
+                let entry = entry.expect("unable to get directory entry");
 
-            let path = entry.path();
+                let path = entry.path();
 
-            if path.is_dir() {
-                None
-            } else {
-                Some(path.to_path_buf())
-            }
-        });
+                if path.is_dir() {
+                    None
+                } else {
+                    Some(path.to_path_buf())
+                }
+            })
+            .collect::<Vec<_>>();
 
         PythonResourceIterator {
             root_path: path.to_path_buf(),
             cache_tag: cache_tag.to_string(),
             suffixes: suffixes.clone(),
-            paths: Box::new(filtered),
+            paths: filtered,
             path_content_overrides: HashMap::new(),
+            seen_packages: HashSet::new(),
+            resources: Vec::new(),
+            _phantom: std::marker::PhantomData,
+        }
+    }
+
+    /// Construct an instance from an iterable of `(PathBuf, DataLocation)`.
+    fn from_data_locations(
+        resources: &[(PathBuf, DataLocation)],
+        cache_tag: &str,
+        suffixes: &PythonModuleSuffixes,
+    ) -> PythonResourceIterator<'a> {
+        PythonResourceIterator {
+            root_path: PathBuf::new(),
+            cache_tag: cache_tag.to_string(),
+            suffixes: suffixes.clone(),
+            paths: resources.iter().map(|(k, _)| k.clone()).collect::<Vec<_>>(),
+            path_content_overrides: HashMap::from_iter(resources.iter().cloned()),
             seen_packages: HashSet::new(),
             resources: Vec::new(),
             _phantom: std::marker::PhantomData,
@@ -450,14 +472,13 @@ impl<'a> Iterator for PythonResourceIterator<'a> {
         // We then emit those at the end, perhaps doing some post-processing along the
         // way.
         loop {
-            let res = self.paths.next();
-
-            // We're out of directory entries;
-            let path = if let Some(path) = res {
-                path
-            } else {
+            if self.paths.is_empty() {
                 break;
-            };
+            }
+
+            // Removing the first element is a bit inefficient. Should we
+            // reverse storage / iteration order instead?
+            let path = self.paths.remove(0);
 
             let entry = self.resolve_path(&path);
 
@@ -1551,6 +1572,52 @@ mod tests {
                 version: "1.2.3".to_string(),
                 name: "subdir/sub.txt".to_string(),
                 data: DataLocation::Path(subdir_resource_path),
+            }
+            .into()
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_memory_resources() -> Result<()> {
+        let inputs = vec![
+            (
+                PathBuf::from("foo/__init__.py"),
+                DataLocation::Memory(vec![0]),
+            ),
+            (PathBuf::from("foo/bar.py"), DataLocation::Memory(vec![1])),
+        ];
+
+        let resources = PythonResourceIterator::from_data_locations(
+            &inputs,
+            DEFAULT_CACHE_TAG,
+            &DEFAULT_SUFFIXES,
+        )
+        .collect::<Result<Vec<_>>>()?;
+
+        assert_eq!(resources.len(), 2);
+        assert_eq!(
+            resources[0],
+            PythonModuleSource {
+                name: "foo".to_string(),
+                source: DataLocation::Memory(vec![0]),
+                is_package: true,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
+                is_test: false,
+            }
+            .into()
+        );
+        assert_eq!(
+            resources[1],
+            PythonModuleSource {
+                name: "foo.bar".to_string(),
+                source: DataLocation::Memory(vec![1]),
+                is_package: false,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
+                is_test: false,
             }
             .into()
         );
