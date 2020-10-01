@@ -53,7 +53,7 @@ struct ResourceFile {
 }
 
 #[derive(Debug, PartialEq)]
-enum DirEntryItem<'a> {
+enum PathItem<'a> {
     PythonResource(PythonResource<'a>),
     ResourceFile(ResourceFile),
 }
@@ -100,9 +100,7 @@ impl<'a> PythonResourceIterator<'a> {
         }
     }
 
-    fn resolve_dir_entry(&mut self, entry: walkdir::DirEntry) -> Option<DirEntryItem<'a>> {
-        let path = entry.path();
-
+    fn resolve_path(&mut self, path: &Path) -> Option<PathItem<'a>> {
         let mut rel_path = path
             .strip_prefix(&self.root_path)
             .expect("unable to strip path prefix");
@@ -150,7 +148,7 @@ impl<'a> PythonResourceIterator<'a> {
             // Name of resource is file path after the initial directory.
             let name = components[1..components.len()].join("/");
 
-            return Some(DirEntryItem::PythonResource(
+            return Some(PathItem::PythonResource(
                 PythonPackageDistributionResource {
                     location,
                     package: package.to_string(),
@@ -243,7 +241,7 @@ impl<'a> PythonResourceIterator<'a> {
                 let final_name = module_components[module_components.len() - 1];
                 let init_fn = Some(format!("PyInit_{}", final_name));
 
-                return Some(DirEntryItem::PythonResource(
+                return Some(PathItem::PythonResource(
                     PythonExtensionModule {
                         name: full_module_name,
                         init_fn,
@@ -295,7 +293,7 @@ impl<'a> PythonResourceIterator<'a> {
 
             self.seen_packages.insert(package);
 
-            return Some(DirEntryItem::PythonResource(
+            return Some(PathItem::PythonResource(
                 PythonModuleSource {
                     name: full_module_name,
                     source: DataLocation::Path(path.to_path_buf()),
@@ -385,7 +383,7 @@ impl<'a> PythonResourceIterator<'a> {
 
             self.seen_packages.insert(package);
 
-            return Some(DirEntryItem::PythonResource(
+            return Some(PathItem::PythonResource(
                 PythonModuleBytecode::from_path(
                     &full_module_name,
                     optimization_level,
@@ -397,13 +395,13 @@ impl<'a> PythonResourceIterator<'a> {
         }
 
         let resource = match rel_path.extension().and_then(OsStr::to_str) {
-            Some("egg") => DirEntryItem::PythonResource(
+            Some("egg") => PathItem::PythonResource(
                 PythonEggFile {
                     data: DataLocation::Path(path.to_path_buf()),
                 }
                 .into(),
             ),
-            Some("pth") => DirEntryItem::PythonResource(
+            Some("pth") => PathItem::PythonResource(
                 PythonPathExtension {
                     data: DataLocation::Path(path.to_path_buf()),
                 }
@@ -413,7 +411,7 @@ impl<'a> PythonResourceIterator<'a> {
                 // If it is some other file type, we categorize it as a resource
                 // file. The package name and resource name are resolved later,
                 // by the iterator.
-                DirEntryItem::ResourceFile(ResourceFile {
+                PathItem::ResourceFile(ResourceFile {
                     full_path: path.to_path_buf(),
                     relative_path: rel_path.to_path_buf(),
                 })
@@ -440,7 +438,7 @@ impl<'a> Iterator for PythonResourceIterator<'a> {
             }
 
             let entry = res.unwrap();
-            let entry = self.resolve_dir_entry(entry);
+            let entry = self.resolve_path(entry.path());
 
             // Try the next directory entry.
             if entry.is_none() {
@@ -451,10 +449,10 @@ impl<'a> Iterator for PythonResourceIterator<'a> {
 
             // Buffer Resource entries until later.
             match entry {
-                DirEntryItem::ResourceFile(resource) => {
+                PathItem::ResourceFile(resource) => {
                     self.resources.push(resource);
                 }
-                DirEntryItem::PythonResource(resource) => {
+                PathItem::PythonResource(resource) => {
                     return Some(Ok(resource));
                 }
             }
