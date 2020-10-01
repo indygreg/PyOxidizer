@@ -77,7 +77,7 @@ pub struct StandalonePythonExecutableBuilder {
     host_distribution: Arc<Box<dyn PythonDistribution>>,
 
     /// The Python distribution this executable is targeting.
-    build_distribution: Arc<Box<StandaloneDistribution>>,
+    target_distribution: Arc<Box<StandaloneDistribution>>,
 
     /// How libpython should be linked.
     link_mode: LibpythonLinkMode,
@@ -112,7 +112,7 @@ impl StandalonePythonExecutableBuilder {
     #[allow(clippy::too_many_arguments)]
     pub fn from_distribution(
         host_distribution: Arc<Box<dyn PythonDistribution>>,
-        build_distribution: Arc<Box<StandaloneDistribution>>,
+        target_distribution: Arc<Box<StandaloneDistribution>>,
         host_triple: String,
         target_triple: String,
         exe_name: String,
@@ -121,10 +121,10 @@ impl StandalonePythonExecutableBuilder {
         config: EmbeddedPythonConfig,
     ) -> Result<Box<Self>> {
         let python_exe = host_distribution.python_exe_path().to_path_buf();
-        let cache_tag = build_distribution.cache_tag.clone();
+        let cache_tag = target_distribution.cache_tag.clone();
 
         let (supports_static_libpython, supports_dynamic_libpython) =
-            build_distribution.libpython_link_support();
+            target_distribution.libpython_link_support();
 
         let link_mode = match link_mode {
             BinaryLibpythonLinkMode::Default => {
@@ -157,14 +157,14 @@ impl StandalonePythonExecutableBuilder {
         };
 
         let supports_in_memory_dynamically_linked_extension_loading =
-            build_distribution.supports_in_memory_dynamically_linked_extension_loading();
+            target_distribution.supports_in_memory_dynamically_linked_extension_loading();
 
         let mut builder = Box::new(Self {
             host_triple,
             target_triple,
             exe_name,
             host_distribution,
-            build_distribution,
+            target_distribution,
             link_mode,
             supports_in_memory_dynamically_linked_extension_loading,
             packaging_policy: packaging_policy.clone(),
@@ -185,19 +185,19 @@ impl StandalonePythonExecutableBuilder {
 
     fn add_distribution_core_state(&mut self) -> Result<()> {
         self.core_build_context.inittab_cflags =
-            Some(self.build_distribution.inittab_cflags.clone());
+            Some(self.target_distribution.inittab_cflags.clone());
 
-        for (name, path) in &self.build_distribution.includes {
+        for (name, path) in &self.target_distribution.includes {
             self.core_build_context
                 .includes
                 .insert(PathBuf::from(name), DataLocation::Path(path.clone()));
         }
 
         // Add the distribution's object files from Python core to linking context.
-        for fs_path in self.build_distribution.objs_core.values() {
+        for fs_path in self.target_distribution.objs_core.values() {
             // libpython generation derives its own `_PyImport_Inittab`. So ignore
             // the object file containing it.
-            if fs_path == &self.build_distribution.inittab_object {
+            if fs_path == &self.target_distribution.inittab_object {
                 continue;
             }
 
@@ -206,7 +206,7 @@ impl StandalonePythonExecutableBuilder {
                 .push(DataLocation::Path(fs_path.clone()));
         }
 
-        for entry in &self.build_distribution.links_core {
+        for entry in &self.target_distribution.links_core {
             if entry.framework {
                 self.core_build_context
                     .frameworks
@@ -219,7 +219,7 @@ impl StandalonePythonExecutableBuilder {
             // TODO handle static/dynamic libraries.
         }
 
-        for location in self.build_distribution.libraries.values() {
+        for location in self.target_distribution.libraries.values() {
             let path = match location {
                 DataLocation::Path(p) => p,
                 DataLocation::Memory(_) => {
@@ -243,7 +243,7 @@ impl StandalonePythonExecutableBuilder {
                 .insert("msvcrt".to_string());
         }
 
-        if let Some(lis) = self.build_distribution.license_infos.get("python") {
+        if let Some(lis) = self.target_distribution.license_infos.get("python") {
             self.core_build_context
                 .license_infos
                 .insert("python".to_string(), lis.clone());
@@ -308,7 +308,7 @@ impl StandalonePythonExecutableBuilder {
             LibpythonLinkMode::Dynamic => {
                 libpythonxy_filename = PathBuf::from("pythonXY.lib");
                 libpythonxy_data = Vec::new();
-                libpython_filename = self.build_distribution.libpython_shared_library.clone();
+                libpython_filename = self.target_distribution.libpython_shared_library.clone();
                 libpyembeddedconfig_filename = None;
                 libpyembeddedconfig_data = None;
             }
@@ -339,7 +339,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     }
 
     fn cache_tag(&self) -> &str {
-        self.build_distribution.cache_tag()
+        self.target_distribution.cache_tag()
     }
 
     fn python_packaging_policy(&self) -> &PythonPackagingPolicy {
@@ -365,7 +365,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         pip_download(
             logger,
             &**self.host_distribution,
-            &**self.build_distribution,
+            &**self.target_distribution,
             verbose,
             args,
         )
@@ -380,7 +380,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<Vec<PythonResource>> {
         pip_install(
             logger,
-            &**self.build_distribution,
+            &**self.target_distribution,
             self.link_mode,
             verbose,
             install_args,
@@ -394,7 +394,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         path: &Path,
         packages: &[String],
     ) -> Result<Vec<PythonResource>> {
-        Ok(find_resources(&**self.build_distribution, path, None)?
+        Ok(find_resources(&**self.target_distribution, path, None)?
             .iter()
             .filter_map(|x| {
                 if x.is_in_packages(packages) {
@@ -407,7 +407,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     }
 
     fn read_virtualenv(&self, _logger: &slog::Logger, path: &Path) -> Result<Vec<PythonResource>> {
-        read_virtualenv(&**self.build_distribution, path)
+        read_virtualenv(&**self.target_distribution, path)
     }
 
     fn setup_py_install(
@@ -420,7 +420,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<Vec<PythonResource>> {
         setup_py_install(
             logger,
-            &**self.build_distribution,
+            &**self.target_distribution,
             self.link_mode,
             package_path,
             verbose,
@@ -434,7 +434,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         callback: Option<ResourceAddCollectionContextCallback>,
     ) -> Result<()> {
         for ext in self.packaging_policy.resolve_python_extension_modules(
-            self.build_distribution.extension_modules.values(),
+            self.target_distribution.extension_modules.values(),
             &self.target_triple,
         )? {
             let resource = (&ext).into();
@@ -449,7 +449,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             self.add_python_extension_module(&ext, Some(add_context))?;
         }
 
-        for source in self.build_distribution.source_modules()? {
+        for source in self.target_distribution.source_modules()? {
             let resource = (&source).into();
             let mut add_context = self
                 .packaging_policy
@@ -462,7 +462,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             self.add_python_module_source(&source, Some(add_context))?;
         }
 
-        for data in self.build_distribution.resource_datas()? {
+        for data in self.target_distribution.resource_datas()? {
             let resource = (&data).into();
             let mut add_context = self
                 .packaging_policy
@@ -532,7 +532,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         });
 
         // Whether we can load extension modules as standalone shared library files.
-        let can_load_standalone = self.build_distribution.is_extension_module_file_loadable();
+        let can_load_standalone = self.target_distribution.is_extension_module_file_loadable();
 
         // Whether we can load extension module dynamic libraries from memory. This
         // means we have a dynamic library extension module and that library is loaded
@@ -643,7 +643,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
             }
 
             if let Some(lis) = self
-                .build_distribution
+                .target_distribution
                 .license_infos
                 .get(&extension_module.name)
             {
@@ -770,7 +770,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         let linking_info = self.resolve_python_linking_info(logger, opt_level)?;
 
         if self.link_mode == LibpythonLinkMode::Dynamic {
-            if let Some(p) = &self.build_distribution.libpython_shared_library {
+            if let Some(p) = &self.target_distribution.libpython_shared_library {
                 let manifest_path = Path::new(p.file_name().unwrap());
                 let content = FileContent {
                     data: std::fs::read(&p)?,
@@ -906,8 +906,8 @@ pub mod tests {
                 .find_distribution(&self.target_triple, &self.distribution_flavor)
                 .ok_or_else(|| anyhow!("could not find target Python distribution"))?;
 
-            let build_distribution = get_distribution(&record.location)?;
-            let host_distribution = Arc::new(build_distribution.clone_box());
+            let target_distribution = get_distribution(&record.location)?;
+            let host_distribution = Arc::new(target_distribution.clone_box());
 
             let mut policy = PythonPackagingPolicy::default();
             policy.set_extension_module_filter(self.extension_module_filter.clone());
@@ -917,7 +917,7 @@ pub mod tests {
 
             let mut builder = StandalonePythonExecutableBuilder::from_distribution(
                 host_distribution,
-                build_distribution,
+                target_distribution,
                 self.host_triple.clone(),
                 self.target_triple.clone(),
                 self.app_name.clone(),
@@ -1043,7 +1043,7 @@ pub mod tests {
         let builder = options.new_builder()?;
 
         let expected = builder
-            .build_distribution
+            .target_distribution
             .extension_modules
             .iter()
             .filter_map(|(_, extensions)| {
@@ -1086,7 +1086,7 @@ pub mod tests {
             let builtin_names = builder.extension_build_contexts.keys().collect::<Vec<_>>();
 
             // All extensions compiled as built-ins by default.
-            for (name, _) in builder.build_distribution.extension_modules.iter() {
+            for (name, _) in builder.target_distribution.extension_modules.iter() {
                 assert!(builtin_names.contains(&name));
             }
         }
@@ -1113,7 +1113,7 @@ pub mod tests {
             // added as a built-in and linked with libpython.
 
             let sqlite = builder
-                .build_distribution
+                .target_distribution
                 .extension_modules
                 .get("_sqlite3")
                 .unwrap()
@@ -1136,7 +1136,7 @@ pub mod tests {
                         [(
                             "_sqlite3".to_string(),
                             builder
-                                .build_distribution
+                                .target_distribution
                                 .license_infos
                                 .get("_sqlite3")
                                 .unwrap()
@@ -1257,7 +1257,7 @@ pub mod tests {
             let mut builder = options.new_builder()?;
 
             let ext = builder
-                .build_distribution
+                .target_distribution
                 .extension_modules
                 .get("_sqlite3")
                 .unwrap()
@@ -1282,7 +1282,7 @@ pub mod tests {
                         [(
                             "_sqlite3".to_string(),
                             builder
-                                .build_distribution
+                                .target_distribution
                                 .license_infos
                                 .get("_sqlite3")
                                 .unwrap()
@@ -1384,7 +1384,7 @@ pub mod tests {
 
         // All extensions for musl Linux are built-in because dynamic linking
         // not possible.
-        for name in builder.build_distribution.extension_modules.keys() {
+        for name in builder.target_distribution.extension_modules.keys() {
             assert!(builder.extension_build_contexts.keys().any(|e| name == e));
         }
 
@@ -1406,7 +1406,7 @@ pub mod tests {
         // added as a built-in and linked with libpython.
 
         let sqlite = builder
-            .build_distribution
+            .target_distribution
             .extension_modules
             .get("_sqlite3")
             .unwrap()
@@ -1429,7 +1429,7 @@ pub mod tests {
                     [(
                         "_sqlite3".to_string(),
                         builder
-                            .build_distribution
+                            .target_distribution
                             .license_infos
                             .get("_sqlite3")
                             .unwrap()
@@ -1471,7 +1471,7 @@ pub mod tests {
         let mut builder = options.new_builder()?;
 
         let ext = builder
-            .build_distribution
+            .target_distribution
             .extension_modules
             .get("_sqlite3")
             .unwrap()
@@ -1496,7 +1496,7 @@ pub mod tests {
                     [(
                         "_sqlite3".to_string(),
                         builder
-                            .build_distribution
+                            .target_distribution
                             .license_infos
                             .get("_sqlite3")
                             .unwrap()
@@ -1601,7 +1601,7 @@ pub mod tests {
             let builtin_names = builder.extension_build_contexts.keys().collect::<Vec<_>>();
 
             // All extensions compiled as built-ins by default.
-            for (name, _) in builder.build_distribution.extension_modules.iter() {
+            for (name, _) in builder.target_distribution.extension_modules.iter() {
                 assert!(builtin_names.contains(&name));
             }
         }
@@ -1628,7 +1628,7 @@ pub mod tests {
             // added as a built-in and linked with libpython.
 
             let sqlite = builder
-                .build_distribution
+                .target_distribution
                 .extension_modules
                 .get("_sqlite3")
                 .unwrap()
@@ -1654,7 +1654,7 @@ pub mod tests {
                         [(
                             "_sqlite3".to_string(),
                             builder
-                                .build_distribution
+                                .target_distribution
                                 .license_infos
                                 .get("_sqlite3")
                                 .unwrap()
@@ -1701,7 +1701,7 @@ pub mod tests {
             let mut builder = options.new_builder()?;
 
             let ext = builder
-                .build_distribution
+                .target_distribution
                 .extension_modules
                 .get("_sqlite3")
                 .unwrap()
@@ -1728,7 +1728,7 @@ pub mod tests {
                         [(
                             "_sqlite3".to_string(),
                             builder
-                                .build_distribution
+                                .target_distribution
                                 .license_infos
                                 .get("_sqlite3")
                                 .unwrap()
@@ -1929,14 +1929,14 @@ pub mod tests {
             let builtin_names = builder.extension_build_contexts.keys().collect::<Vec<_>>();
 
             // Stdlib extensions are compiled as built-ins.
-            for (name, _variants) in builder.build_distribution.extension_modules.iter() {
+            for (name, _variants) in builder.target_distribution.extension_modules.iter() {
                 assert!(builtin_names.contains(&name));
             }
 
             // Required extensions are compiled as built-in.
             // This assumes that are extensions annotated as required are built-in.
             // But this is an implementation detail. If this fails, it might be OK.
-            for (name, variants) in builder.build_distribution.extension_modules.iter() {
+            for (name, variants) in builder.target_distribution.extension_modules.iter() {
                 // !required does not mean it is missing, however!
                 if variants.iter().any(|e| e.required) {
                     assert!(builtin_names.contains(&name));
@@ -1964,7 +1964,7 @@ pub mod tests {
             // added as a built-in and linked with libpython.
 
             let sqlite = builder
-                .build_distribution
+                .target_distribution
                 .extension_modules
                 .get("_sqlite3")
                 .unwrap()
@@ -1987,7 +1987,7 @@ pub mod tests {
                         [(
                             "_sqlite3".to_string(),
                             builder
-                                .build_distribution
+                                .target_distribution
                                 .license_infos
                                 .get("_sqlite3")
                                 .unwrap()
@@ -2032,7 +2032,7 @@ pub mod tests {
             // added as a built-in and linked with libpython.
 
             let sqlite = builder
-                .build_distribution
+                .target_distribution
                 .extension_modules
                 .get("_sqlite3")
                 .unwrap()
@@ -2055,7 +2055,7 @@ pub mod tests {
                         [(
                             "_sqlite3".to_string(),
                             builder
-                                .build_distribution
+                                .target_distribution
                                 .license_infos
                                 .get("_sqlite3")
                                 .unwrap()
@@ -2100,7 +2100,7 @@ pub mod tests {
             // library dependencies should be captured.
 
             let ssl_extension = builder
-                .build_distribution
+                .target_distribution
                 .extension_modules
                 .get("_ssl")
                 .unwrap()
@@ -2193,7 +2193,7 @@ pub mod tests {
 
             // All distribution extensions are built-ins in static Windows
             // distributions.
-            for name in builder.build_distribution.extension_modules.keys() {
+            for name in builder.target_distribution.extension_modules.keys() {
                 assert!(builtin_names.contains(&name));
             }
         }

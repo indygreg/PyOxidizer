@@ -1141,13 +1141,13 @@ impl PythonDistribution for StandaloneDistribution {
         host_distribution: Option<Arc<Box<dyn PythonDistribution>>>,
     ) -> Result<Box<dyn PythonBinaryBuilder>> {
         // TODO can we avoid these clones?
-        let build_distribution = Arc::new(Box::new(self.clone()));
+        let target_distribution = Arc::new(Box::new(self.clone()));
         let host_distribution: Arc<Box<dyn PythonDistribution>> =
             host_distribution.unwrap_or_else(|| Arc::new(Box::new(self.clone())));
 
         let builder = StandalonePythonExecutableBuilder::from_distribution(
             host_distribution,
-            build_distribution,
+            target_distribution,
             host_triple.to_string(),
             target_triple.to_string(),
             name.to_string(),

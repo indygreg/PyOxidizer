@@ -212,7 +212,7 @@ pub fn find_resources<'a>(
 pub fn pip_download<'a>(
     logger: &slog::Logger,
     host_dist: &dyn PythonDistribution,
-    build_dist: &dyn PythonDistribution,
+    taget_dist: &dyn PythonDistribution,
     verbose: bool,
     args: &[String],
 ) -> Result<Vec<PythonResource<'a>>> {
@@ -244,16 +244,16 @@ pub fn pip_download<'a>(
         // We download files compatible with the distribution we're targeting.
         format!(
             "--platform={}",
-            build_dist.python_platform_compatibility_tag()
+            taget_dist.python_platform_compatibility_tag()
         ),
-        format!("--python-version={}", build_dist.python_version()),
+        format!("--python-version={}", taget_dist.python_version()),
         format!(
             "--implementation={}",
-            build_dist.python_implementation_short()
+            taget_dist.python_implementation_short()
         ),
     ]);
 
-    if let Some(abi) = build_dist.python_abi_tag() {
+    if let Some(abi) = taget_dist.python_abi_tag() {
         pip_args.push(format!("--abi={}", abi));
     }
 
@@ -302,8 +302,8 @@ pub fn pip_download<'a>(
         let wheel = WheelArchive::from_path(path)?;
 
         res.extend(wheel.python_resources(
-            build_dist.cache_tag(),
-            &build_dist.python_module_suffixes()?,
+            taget_dist.cache_tag(),
+            &taget_dist.python_module_suffixes()?,
         )?);
     }
 
@@ -546,23 +546,23 @@ mod tests {
 
         let host_dist = get_default_distribution()?;
 
-        for build_dist in get_all_standalone_distributions()? {
-            if build_dist.python_platform_compatibility_tag() == "none" {
+        for target_dist in get_all_standalone_distributions()? {
+            if target_dist.python_platform_compatibility_tag() == "none" {
                 continue;
             }
 
             warn!(
                 logger,
                 "using distribution {}-{}-{}",
-                build_dist.python_implementation,
-                build_dist.python_platform_tag,
-                build_dist.version
+                target_dist.python_implementation,
+                target_dist.python_platform_tag,
+                target_dist.version
             );
 
             let resources = pip_download(
                 &logger,
                 &**host_dist,
-                &**build_dist,
+                &**target_dist,
                 false,
                 &["zstandard==0.14.0".to_string()],
             )?;
@@ -617,23 +617,23 @@ mod tests {
 
         let host_dist = get_default_distribution()?;
 
-        for build_dist in get_all_standalone_distributions()? {
-            if build_dist.python_platform_compatibility_tag() == "none" {
+        for target_dist in get_all_standalone_distributions()? {
+            if target_dist.python_platform_compatibility_tag() == "none" {
                 continue;
             }
 
             warn!(
                 logger,
                 "using distribution {}-{}-{}",
-                build_dist.python_implementation,
-                build_dist.python_platform_tag,
-                build_dist.version
+                target_dist.python_implementation,
+                target_dist.python_platform_tag,
+                target_dist.version
             );
 
             let resources = pip_download(
                 &logger,
                 &**host_dist,
-                &**build_dist,
+                &**target_dist,
                 false,
                 &["numpy==1.19.2".to_string()],
             )?;
