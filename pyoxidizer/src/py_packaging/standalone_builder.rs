@@ -364,7 +364,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     ) -> Result<Vec<PythonResource>> {
         pip_download(
             logger,
-            &**self.build_distribution,
+            &**self.host_distribution,
             &**self.build_distribution,
             verbose,
             args,
