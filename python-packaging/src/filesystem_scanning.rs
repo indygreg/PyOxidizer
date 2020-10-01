@@ -19,7 +19,7 @@ use {
     },
     anyhow::Result,
     std::{
-        collections::HashSet,
+        collections::{HashMap, HashSet},
         ffi::OsStr,
         path::{Path, PathBuf},
     },
@@ -64,6 +64,10 @@ pub struct PythonResourceIterator<'a> {
     cache_tag: String,
     suffixes: PythonModuleSuffixes,
     paths: Box<dyn Iterator<Item = PathBuf>>,
+    /// Content overrides for individual paths.
+    ///
+    /// This is a hacky way to allow us to abstract I/O.
+    path_content_overrides: HashMap<PathBuf, DataLocation>,
     seen_packages: HashSet<String>,
     resources: Vec<ResourceFile>,
     _phantom: std::marker::PhantomData<&'a ()>,
@@ -94,9 +98,17 @@ impl<'a> PythonResourceIterator<'a> {
             cache_tag: cache_tag.to_string(),
             suffixes: suffixes.clone(),
             paths: Box::new(filtered),
+            path_content_overrides: HashMap::new(),
             seen_packages: HashSet::new(),
             resources: Vec::new(),
             _phantom: std::marker::PhantomData,
+        }
+    }
+
+    fn resolve_data_location(&self, path: &Path) -> DataLocation {
+        match self.path_content_overrides.get(path) {
+            Some(location) => location.clone(),
+            None => DataLocation::Path(path.to_path_buf()),
         }
     }
 
@@ -132,12 +144,20 @@ impl<'a> PythonResourceIterator<'a> {
         };
 
         if let Some((metadata_path, location)) = distribution_info {
-            let metadata = if let Ok(data) = std::fs::read(&metadata_path) {
-                if let Ok(metadata) = PythonPackageMetadata::from_metadata(&data) {
-                    metadata
+            let data = if let Some(location) = self.path_content_overrides.get(&metadata_path) {
+                if let Ok(data) = location.resolve() {
+                    data
                 } else {
                     return None;
                 }
+            } else if let Ok(data) = std::fs::read(&metadata_path) {
+                data
+            } else {
+                return None;
+            };
+
+            let metadata = if let Ok(metadata) = PythonPackageMetadata::from_metadata(&data) {
+                metadata
             } else {
                 return None;
             };
@@ -154,7 +174,7 @@ impl<'a> PythonResourceIterator<'a> {
                     package: package.to_string(),
                     version: version.to_string(),
                     name,
-                    data: DataLocation::Path(path.to_path_buf()),
+                    data: self.resolve_data_location(path),
                 }
                 .into(),
             ));
@@ -246,7 +266,7 @@ impl<'a> PythonResourceIterator<'a> {
                         name: full_module_name,
                         init_fn,
                         extension_file_suffix: ext_suffix.clone(),
-                        shared_library: Some(DataLocation::Path(path.to_path_buf())),
+                        shared_library: Some(self.resolve_data_location(path)),
                         object_file_data: vec![],
                         is_package: is_package_from_path(path),
                         link_libraries: vec![],
@@ -296,7 +316,7 @@ impl<'a> PythonResourceIterator<'a> {
             return Some(PathItem::PythonResource(
                 PythonModuleSource {
                     name: full_module_name,
-                    source: DataLocation::Path(path.to_path_buf()),
+                    source: self.resolve_data_location(path),
                     is_package: is_package_from_path(&path),
                     cache_tag: self.cache_tag.clone(),
                     is_stdlib: false,
@@ -397,13 +417,13 @@ impl<'a> PythonResourceIterator<'a> {
         let resource = match rel_path.extension().and_then(OsStr::to_str) {
             Some("egg") => PathItem::PythonResource(
                 PythonEggFile {
-                    data: DataLocation::Path(path.to_path_buf()),
+                    data: self.resolve_data_location(path),
                 }
                 .into(),
             ),
             Some("pth") => PathItem::PythonResource(
                 PythonPathExtension {
-                    data: DataLocation::Path(path.to_path_buf()),
+                    data: self.resolve_data_location(path),
                 }
                 .into(),
             ),
@@ -538,7 +558,7 @@ impl<'a> Iterator for PythonResourceIterator<'a> {
             return Some(Ok(PythonPackageResource {
                 leaf_package,
                 relative_name,
-                data: DataLocation::Path(resource.full_path),
+                data: self.resolve_data_location(&resource.full_path),
                 is_stdlib: false,
                 is_test: false,
             }
