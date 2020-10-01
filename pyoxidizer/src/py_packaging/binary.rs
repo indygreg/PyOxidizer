@@ -86,6 +86,16 @@ pub trait PythonBinaryBuilder {
         &'a self,
     ) -> Box<dyn Iterator<Item = (&'a String, &'a PrePackagedResource)> + 'a>;
 
+    /// Runs `pip download` using the binary builder's settings.
+    ///
+    /// Returns resources discovered from the Python packages downloaded.
+    fn pip_download(
+        &self,
+        logger: &slog::Logger,
+        verbose: bool,
+        args: &[String],
+    ) -> Result<Vec<PythonResource>>;
+
     /// Runs `pip install` using the binary builder's settings.
     ///
     /// Returns resources discovered as part of performing an install.

@@ -15,7 +15,9 @@ use {
     },
     crate::python_distributions::GET_PIP_PY_19,
     anyhow::{anyhow, Context, Result},
-    python_packaging::{filesystem_scanning::find_python_resources, resource::PythonResource},
+    python_packaging::{
+        filesystem_scanning::find_python_resources, resource::PythonResource, wheel::WheelArchive,
+    },
     slog::warn,
     std::{
         collections::HashMap,
@@ -196,6 +198,118 @@ pub fn find_resources<'a>(
     Ok(res)
 }
 
+/// Run `pip download` and collect resources found from downloaded packages.
+///
+/// `host_dist` is the Python distribution to use to run `pip`.
+///
+/// `build_dist` is the Python distribution that packages are being downloaded
+/// for.
+///
+/// The distributions are often the same. But passing a different
+/// distribution targeting a different platform allows this command to
+/// resolve resources for a non-native platform, which enables it to be used
+/// when cross-compiling.
+pub fn pip_download<'a>(
+    logger: &slog::Logger,
+    host_dist: &dyn PythonDistribution,
+    build_dist: &dyn PythonDistribution,
+    verbose: bool,
+    args: &[String],
+) -> Result<Vec<PythonResource<'a>>> {
+    let temp_dir = tempdir::TempDir::new("pyoxidizer-pip-download")?;
+
+    host_dist.ensure_pip(logger)?;
+
+    let target_dir = temp_dir.path();
+
+    warn!(logger, "pip downloading to {}", target_dir.display());
+
+    let mut pip_args = vec![
+        "-m".to_string(),
+        "pip".to_string(),
+        "--disable-pip-version-check".to_string(),
+    ];
+
+    if verbose {
+        pip_args.push("--verbose".to_string());
+    }
+
+    pip_args.extend(vec![
+        "download".to_string(),
+        // Download packages to our temporary directory.
+        "--dest".to_string(),
+        format!("{}", target_dir.display()),
+        // Only download wheels.
+        "--only-binary=:all:".to_string(),
+        // We download files compatible with the distribution we're targeting.
+        format!(
+            "--platform={}",
+            build_dist.python_platform_compatibility_tag()
+        ),
+        format!("--python-version={}", build_dist.python_version()),
+        format!(
+            "--implementation={}",
+            build_dist.python_implementation_short()
+        ),
+    ]);
+
+    if let Some(abi) = build_dist.python_abi_tag() {
+        pip_args.push(format!("--abi={}", abi));
+    }
+
+    pip_args.extend(args.iter().cloned());
+
+    warn!(logger, "running python {:?}", pip_args);
+
+    // TODO send stderr to stdout
+    let mut cmd = std::process::Command::new(&host_dist.python_exe_path())
+        .args(&pip_args)
+        .stdout(std::process::Stdio::piped())
+        .spawn()?;
+    {
+        let stdout = cmd
+            .stdout
+            .as_mut()
+            .ok_or_else(|| anyhow!("unable to get stdout"))?;
+        let reader = BufReader::new(stdout);
+
+        for line in reader.lines() {
+            warn!(logger, "{}", line?);
+        }
+    }
+
+    let status = cmd
+        .wait()
+        .map_err(|e| anyhow!("error waiting on process: {}", e))?;
+
+    if !status.success() {
+        return Err(anyhow!("error running pip"));
+    }
+
+    // Since we used --only-binary=:all: above, we should only have .whl files
+    // in the destination directory. Iterate over them and collect resources
+    // from each.
+
+    let mut files = std::fs::read_dir(target_dir)?
+        .map(|entry| Ok(entry?.path()))
+        .collect::<Result<Vec<_>>>()?;
+    files.sort();
+
+    // TODO there's probably a way to do this using iterators.
+    let mut res = Vec::new();
+
+    for path in &files {
+        let wheel = WheelArchive::from_path(path)?;
+
+        res.extend(wheel.python_resources(
+            build_dist.cache_tag(),
+            &build_dist.python_module_suffixes()?,
+        )?);
+    }
+
+    Ok(res)
+}
+
 /// Run `pip install` and return found resources.
 pub fn pip_install<'a, S: BuildHasher>(
     logger: &slog::Logger,
@@ -370,7 +484,11 @@ pub fn setup_py_install<'a, S: BuildHasher>(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::testutil::*, std::ops::Deref};
+    use {
+        super::*,
+        crate::testutil::*,
+        std::{collections::BTreeSet, iter::FromIterator, ops::Deref},
+    };
 
     #[test]
     fn test_install_black() -> Result<()> {
@@ -418,6 +536,77 @@ mod tests {
 
         assert_eq!(ems.len(), 1);
         assert_eq!(ems[0].full_name(), "_cffi_backend");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_pip_download_zstandard() -> Result<()> {
+        let logger = get_logger()?;
+
+        let host_dist = get_default_distribution()?;
+
+        for build_dist in get_all_standalone_distributions()? {
+            if build_dist.python_platform_compatibility_tag() == "none" {
+                continue;
+            }
+
+            warn!(
+                logger,
+                "using distribution {}-{}-{}",
+                build_dist.python_implementation,
+                build_dist.python_platform_tag,
+                build_dist.version
+            );
+
+            let resources = pip_download(
+                &logger,
+                &**host_dist,
+                &**build_dist,
+                false,
+                &["zstandard==0.14.0".to_string()],
+            )?;
+
+            assert!(!resources.is_empty());
+            let zstandard_resources = resources
+                .iter()
+                .filter(|r| r.is_in_packages(&["zstandard".to_string(), "zstd".to_string()]))
+                .collect::<Vec<_>>();
+            assert!(!zstandard_resources.is_empty());
+
+            let full_names = BTreeSet::from_iter(zstandard_resources.iter().map(|r| r.full_name()));
+
+            assert_eq!(
+                full_names,
+                BTreeSet::from_iter(
+                    [
+                        "zstd",
+                        "zstandard",
+                        "zstandard.cffi",
+                        "zstandard:LICENSE",
+                        "zstandard:top_level.txt",
+                        "zstandard:WHEEL",
+                        "zstandard:RECORD",
+                        "zstandard:METADATA",
+                    ]
+                    .iter()
+                    .map(|x| x.to_string())
+                )
+            );
+
+            let extensions = zstandard_resources
+                .iter()
+                .filter_map(|r| match r {
+                    PythonResource::ExtensionModule(em) => Some(em),
+                    _ => None,
+                })
+                .collect::<Vec<_>>();
+
+            assert_eq!(extensions.len(), 1);
+            let em = extensions[0];
+            assert_eq!(em.name, "zstd");
+            assert!(em.shared_library.is_some());
+        }
 
         Ok(())
     }

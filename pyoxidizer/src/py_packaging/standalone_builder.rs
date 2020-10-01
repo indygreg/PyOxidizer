@@ -12,7 +12,9 @@ use {
         distribution::{BinaryLibpythonLinkMode, PythonDistribution},
         filtering::{filter_btreemap, resolve_resource_names_from_files},
         libpython::{link_libpython, LibPythonBuildContext},
-        packaging_tool::{find_resources, pip_install, read_virtualenv, setup_py_install},
+        packaging_tool::{
+            find_resources, pip_download, pip_install, read_virtualenv, setup_py_install,
+        },
         standalone_distribution::StandaloneDistribution,
     },
     crate::app_packaging::resource::{FileContent, FileManifest},
@@ -346,6 +348,21 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &'a self,
     ) -> Box<dyn Iterator<Item = (&'a String, &'a PrePackagedResource)> + 'a> {
         Box::new(self.resources_collector.iter_resources())
+    }
+
+    fn pip_download(
+        &self,
+        logger: &slog::Logger,
+        verbose: bool,
+        args: &[String],
+    ) -> Result<Vec<PythonResource>> {
+        pip_download(
+            logger,
+            &**self.distribution,
+            &**self.distribution,
+            verbose,
+            args,
+        )
     }
 
     fn pip_install(
