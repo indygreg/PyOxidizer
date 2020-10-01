@@ -63,7 +63,7 @@ pub struct PythonResourceIterator<'a> {
     root_path: PathBuf,
     cache_tag: String,
     suffixes: PythonModuleSuffixes,
-    walkdir_result: Box<dyn Iterator<Item = walkdir::DirEntry>>,
+    paths: Box<dyn Iterator<Item = PathBuf>>,
     seen_packages: HashSet<String>,
     resources: Vec<ResourceFile>,
     _phantom: std::marker::PhantomData<&'a ()>,
@@ -85,7 +85,7 @@ impl<'a> PythonResourceIterator<'a> {
             if path.is_dir() {
                 None
             } else {
-                Some(entry)
+                Some(path.to_path_buf())
             }
         });
 
@@ -93,7 +93,7 @@ impl<'a> PythonResourceIterator<'a> {
             root_path: path.to_path_buf(),
             cache_tag: cache_tag.to_string(),
             suffixes: suffixes.clone(),
-            walkdir_result: Box::new(filtered),
+            paths: Box::new(filtered),
             seen_packages: HashSet::new(),
             resources: Vec::new(),
             _phantom: std::marker::PhantomData,
@@ -430,15 +430,16 @@ impl<'a> Iterator for PythonResourceIterator<'a> {
         // We then emit those at the end, perhaps doing some post-processing along the
         // way.
         loop {
-            let res = self.walkdir_result.next();
+            let res = self.paths.next();
 
             // We're out of directory entries;
-            if res.is_none() {
+            let path = if let Some(path) = res {
+                path
+            } else {
                 break;
-            }
+            };
 
-            let entry = res.unwrap();
-            let entry = self.resolve_path(entry.path());
+            let entry = self.resolve_path(&path);
 
             // Try the next directory entry.
             if entry.is_none() {
