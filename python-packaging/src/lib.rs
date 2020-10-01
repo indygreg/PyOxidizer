@@ -17,3 +17,6 @@ pub mod policy;
 pub mod python_source;
 pub mod resource;
 pub mod resource_collection;
+
+#[cfg(feature = "wheel")]
+pub mod wheel;

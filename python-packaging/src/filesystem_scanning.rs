@@ -110,7 +110,7 @@ impl<'a> PythonResourceIterator<'a> {
     }
 
     /// Construct an instance from an iterable of `(PathBuf, DataLocation)`.
-    fn from_data_locations(
+    pub fn from_data_locations(
         resources: &[(PathBuf, DataLocation)],
         cache_tag: &str,
         suffixes: &PythonModuleSuffixes,

@@ -20,9 +20,13 @@ lazy_static = "1.4"
 libc = "0.2"
 memmap = "0.7"
 python3-sys = { git = "https://github.com/dgrunwald/rust-cpython.git", rev = "4283acd94f4e794fe03679efc7a6c18bc50938a8" }
-python-packaging = { version = "0.1.0-pre", path = "../python-packaging" }
 python-packed-resources = { version = "0.2.0-pre", path = "../python-packed-resources" }
 uuid = { version = "0.8", features = ["v4"] }
+
+[dependencies.python-packaging]
+version = "0.1.0-pre"
+path = "../python-packaging"
+default-features = false
 
 [target.'cfg(windows)'.dependencies]
 memory-module-sys = "0.3"

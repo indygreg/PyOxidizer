@@ -21,3 +21,10 @@ python-packed-resources = { version = "0.2.0-pre", path = "../python-packed-reso
 regex = "1"
 tempdir = "0.3"
 walkdir = "2"
+zip = { version = "0.5", optional = true }
+
+# We make `wheel` support optional because the `zip` crate has a handful
+# of dependencies that we don't want to bloat the dependency tree with.
+[features]
+default = ["wheel"]
+wheel = ["zip"]
