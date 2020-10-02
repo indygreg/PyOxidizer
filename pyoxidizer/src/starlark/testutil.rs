@@ -29,7 +29,7 @@ impl StarlarkEnvironment {
     pub fn new() -> Result<Self> {
         let logger = slog::Logger::root(
             PrintlnDrain {
-                min_level: slog::Level::Error,
+                min_level: slog::Level::Info,
             }
             .fuse(),
             slog::o!(),
