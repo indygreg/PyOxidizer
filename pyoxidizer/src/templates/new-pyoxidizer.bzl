@@ -129,6 +129,13 @@ def make_exe(dist):
         config=python_config,
     )
 
+    # Invoke `pip download` to install a single package using wheel archives
+    # obtained via `pip download`. `pip_download()` returns objects representing
+    # collected files inside Python wheels. `add_python_resources()` adds these
+    # objects to the binary, with a load location as defined by the current
+    # `resources_policy`.
+    #exe.add_python_resources(exe.pip_download(["pyflakes==2.2.0"]))
+
     # Invoke `pip install` with our Python distribution to install a single package.
     # `pip_install()` returns objects representing installed files.
     # `add_python_resources()` adds these objects to the binary, with a load

@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::env::{global_environment, EnvironmentContext},
+    super::env::{get_context, global_environment, EnvironmentContext},
     crate::logging::PrintlnDrain,
     anyhow::{anyhow, Result},
     codemap::CodeMap,
@@ -114,6 +114,22 @@ impl StarlarkEnvironment {
 
     pub fn set(&mut self, name: &str, value: Value) -> Result<()> {
         self.env.set(name, value).unwrap();
+
+        Ok(())
+    }
+
+    /// Set the target triple we are building for.
+    ///
+    /// This needs to be called shortly after construction or things won't work
+    /// as expected.
+    pub fn set_target_triple(&mut self, triple: &str) -> Result<()> {
+        let raw_context = get_context(&self.type_values).unwrap();
+        let mut context = raw_context
+            .downcast_mut::<EnvironmentContext>()
+            .unwrap()
+            .unwrap();
+
+        context.build_target_triple = triple.to_string();
 
         Ok(())
     }

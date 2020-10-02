@@ -147,6 +147,47 @@ impl PythonExecutable {
         Ok(Value::new(value))
     }
 
+    /// PythonExecutable.pip_download(args)
+    pub fn starlark_pip_download(
+        &self,
+        type_values: &TypeValues,
+        call_stack: &mut CallStack,
+        args: &Value,
+    ) -> ValueResult {
+        required_list_arg("args", "string", &args)?;
+
+        let args: Vec<String> = args.iter()?.iter().map(|x| x.to_string()).collect();
+
+        let raw_context = get_context(type_values)?;
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        let resources = self
+            .exe
+            .pip_download(&context.logger, context.verbose, &args)
+            .map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "PIP_INSTALL_ERROR",
+                    message: format!("error running pip install: {}", e),
+                    label: "pip_install()".to_string(),
+                })
+            })?
+            .iter()
+            .filter(|r| is_resource_starlark_compatible(r))
+            .map(|r| {
+                python_resource_to_value(
+                    type_values,
+                    call_stack,
+                    r,
+                    &self.python_packaging_policy(),
+                )
+            })
+            .collect::<Result<Vec<Value>, ValueError>>()?;
+
+        Ok(Value::from(resources))
+    }
+
     /// PythonExecutable.pip_install(args, extra_envs=None)
     pub fn starlark_pip_install(
         &self,
@@ -602,6 +643,19 @@ starlark_module! { python_executable_env =>
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
+    PythonExecutable.pip_download(
+        env env,
+        call_stack cs,
+        this,
+        args
+    ) {
+        match this.clone().downcast_ref::<PythonExecutable>() {
+            Some(exe) => exe.starlark_pip_download(&env, cs, &args),
+            None => Err(ValueError::IncorrectParameterType),
+        }
+    }
+
+    #[allow(non_snake_case, clippy::ptr_arg)]
     PythonExecutable.pip_install(
         env env,
         call_stack cs,
@@ -712,8 +766,7 @@ starlark_module! { python_executable_env =>
 
 #[cfg(test)]
 mod tests {
-    use super::super::testutil::*;
-    use super::*;
+    use {super::super::testutil::*, super::*, crate::python_distributions::PYTHON_DISTRIBUTIONS};
 
     #[test]
     fn test_default_values() -> Result<()> {
@@ -793,6 +846,31 @@ mod tests {
                 .to_bool(),
             true
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_pip_download_pyflakes() -> Result<()> {
+        for target_triple in PYTHON_DISTRIBUTIONS.all_target_triples() {
+            let mut env = StarlarkEnvironment::new()?;
+            env.set_target_triple(target_triple)?;
+
+            env.eval("dist = default_python_distribution()")?;
+            env.eval("exe = dist.to_python_executable('testapp')")?;
+
+            let resources = env.eval("exe.pip_download(['pyflakes==2.2.0'])")?;
+
+            assert_eq!(resources.get_type(), "list");
+
+            let raw_it = resources.iter().unwrap();
+            let mut it = raw_it.iter();
+
+            let v = it.next().unwrap();
+            assert_eq!(v.get_type(), PythonModuleSourceValue::TYPE);
+            let x = v.downcast_ref::<PythonModuleSourceValue>().unwrap();
+            assert!(x.inner.package().starts_with("pyflakes"));
+        }
 
         Ok(())
     }

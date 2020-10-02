@@ -34,6 +34,26 @@ Arguments are as follows:
    Whether the Python module is also a package. (e.g. the equivalent of a
    ``__init__.py`` file or a module without a ``.`` in its name.
 
+.. _config_python_executable_pip_download:
+
+``PythonExecutable.pip_download()``
+-----------------------------------
+
+This method runs ``pip download <args>`` with settings appropriate to target
+the executable being built.
+
+This always uses ``--only-binary=:all:``, forcing pip to only download wheel
+based packages.
+
+This method accepts the following arguments:
+
+``args``
+   (``list`` of ``string``) Command line arguments to pass to ``pip download``.
+   Arguments will be added after default arguments added internally.
+
+Returns a ``list`` of objects representing Python resources collected
+from wheels obtained via ``pip download``.
+
 .. _config_python_executable_pip_install:
 
 ``PythonExecutable.pip_install()``

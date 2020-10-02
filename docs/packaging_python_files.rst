@@ -5,14 +5,15 @@ Packaging Python Files
 ======================
 
 The most important packaged :ref:`resource type <packaging_resource_types>`
-is arguably Python files: source modules, bytecode modules, and
-extension modules.
+are arguably Python files: source modules, bytecode modules,
+extension modules, package resources, etc.
 
 For PyOxidizer to recognize these Python resources as Python resources
 (as opposed to regular files), you will need to use the methods on the
-:ref:`config_type_python_distribution` Starlark type
-to use the Python distribution to scan for resources, possibly performing
-a Python packaging action (such as invoking ``pip install``) along the way.
+:ref:`config_type_python_executable` Starlark type
+to use the settings from the thing being built to scan for resources, possibly
+performing a Python packaging action (such as invoking ``pip install``) along
+the way.
 
 This documentation covers the available methods and how they can be
 used.
@@ -25,6 +26,10 @@ used.
 The ``PythonExecutable`` Starlark type has the following methods that
 can be called to perform an action and obtain an iterable of objects
 representing discovered resources:
+
+:ref:`pip_download(...) <config_python_executable_pip_download>`
+   Invokes ``pip download`` with specified arguments and collects
+   resources discovered from downloaded Python wheels.
 
 :ref:`pip_install(...) <config_python_executable_pip_install>`
    Invokes ``pip install`` with specified arguments and collects all
@@ -85,26 +90,30 @@ Elsewhere in this function, the ``dist`` variable holds an instance of
 represents a Python distribution, which is a fancy way of saying
 *an implementation of Python*.
 
-One of the methods exposed by ``PythonExecutable`` is
+Two of the methods exposed by ``PythonExecutable`` are
+:ref:`pip_download() <config_python_executable_pip_download>` and
 :ref:`pip_install() <config_python_executable_pip_install>`, which
-invokes ``pip install`` with settings to target the built executable.
+invoke ``pip`` commands with settings to target the built executable.
 
-To add a new Python package to our executable, we call
-``exe.pip_install()`` then add the results to our ``PythonExecutable``
-instance. This is done like so:
+To add a new Python package to our executable, we call one of these
+methods then add t he results to our ``PythonExecutable`` instance. This
+is done like so:
 
 .. code-block:: python
 
-   exe.add_python_resources(exe.pip_install(["pyflakes==2.1.1"]))
+   exe.add_python_resources(exe.pip_download(["pyflakes==2.2.0"]))
+   # or
+   exe.add_python_resources(exe.pip_install(["pyflakes==2.2.0"]))
 
-The inner call to ``exe.pip_install()`` will effectively run
-``pip install pyflakes==2.1.1`` and collect a set of installed
-Python resources (like module sources and bytecode data) and return
-that as an iterable data structure. The ``exe.add_python_resources()``
-call will then teach the built executable binary about the existence of
-these resources. Many resource types will be embedded in the binary
-and loaded from binary. But some resource types (notably compiled
-extension modules) may be installed next to the built binary and
+When called, these methods will effectively run ``pip download pyflakes==2.2.0``
+or ``pip install pyflakes==2.2.0``, respectively. Actions are performed in
+a temporary directory and after ``pip`` runs, PyOxidizer will collect all the
+downloaded/installed resources (like module sources and bytecode data) and
+return them as an iterable of Starlark values. The
+``exe.add_python_resources()`` call will then teach the built executable
+binary about the existence of these resources. Many resource types will be
+embedded in the binary and loaded from binary. But some resource types (notably
+compiled extension modules) may be installed next to the built binary and
 loaded from the filesystem.
 
 Next, we tell PyOxidizer to run ``pyflakes`` when the interpreter is executed:
@@ -277,3 +286,100 @@ scan a directory tree for Python files:
 
    For best results, use a packaging method that invokes a Python packaging
    tool (like ``pip_install(...)`` or ``setup_py_install(...)``.
+
+.. _packaging_python_choosing:
+
+Choosing Which Packaging Method to Call
+=======================================
+
+There are a handful of different methods for obtaining Python resources that
+can be added to a resource collection. Which one should you use?
+
+The reason there are so many methods is because the answer is: *it depends*.
+
+Each method for obtaining resources has its niche use cases. That being said,
+**the preferred method for obtaining Python resources is pip_download()**.
+However, ``pip_download()`` may not work in all cases, which is why other
+methods exist.
+
+:ref:`config_python_executable_pip_download` runs ``pip download`` and
+attempts to fetch Python wheels for specified packages, requirements files,
+etc. It then extracts files from inside the wheel and converts them to
+Python resources which can be added to resource collectors.
+
+.. important::
+
+   ``pip_download()`` will only work if a compatible Python *wheel* package
+   (``.whl`` file) is available. If the configured Python package repository
+   doesn't offer a compatible wheel for the specified package or any of its
+   dependencies, the operation will fail.
+
+   Many Python packages do not yet publish wheels (only ``.tar.gz`` archives)
+   or don't publish at all to Python package repositories (this is common in
+   corporate environments, where you don't want to publish your proprietary
+   packages on PyPI or you don't run a Python package server).
+
+.. important::
+
+   Not all build targets support ``pip_download()`` for all published packages.
+   For example, when targeting Linux musl libc, built binaries are fully static
+   and aren't capable of loading Python extension modules (which are shared
+   libraries). So ``pip_download()`` only supports source-only Python wheels
+   in this configuration.
+
+Another advantage of ``pip_download()`` is it supports cross-compiling.
+Unlike ``pip install``, ``pip download`` supports arguments that tell it
+which Python version, platform, implementation, etc to download packages
+for. PyOxidizer automatically tells ``pip download`` to download wheels
+that are compatible with the target environment you are building for. This
+means you can do things like download wheels containing Windows binaries
+when building on Linux.
+
+.. note::
+
+   Cross-compiling is not yet fully supported by PyOxidizer and likely
+   doesn't work in many cases. However, this is a planned feature (at least
+   for some configurations) and ``pip_download()`` is likely the most
+   future-proof mechanism to support installing Python packages when
+   cross-compiling.
+
+A potential downside with ``pip_download()`` is that it only supports
+classical Python binary loading/shipping techniques. If you are trying
+to produce a statically linked executable containing custom Python
+extension modules, ``pip_download()`` won't work for you.
+
+After ``pip_download``,
+:ref:`config_python_executable_pip_install` and
+:ref:`config_python_executable_setup_py_install` are the next most-preferred
+packaging methods.
+
+Both of these work by locally running a Python packaging action
+(``pip install`` or ``python setup.py install``, respectively) and then
+collecting resources installed by that action.
+
+The advantage over ``pip download`` is that a pre-built Python wheel
+does not have to be available and published on a Python package repository
+for these commands to work: you can run either against say a local version
+control checkout of a Python project and it should work.
+
+The main disadvantage over ``pip download`` is that you are running
+Python packaging operations on the local machine as part of building
+an executable. If your package contains just Python code, this should
+*just work*. But if you need to compile extension modules, there's a
+good chance your local machine may either not be able to build them
+properly or will build those extension modules in such a way that
+they aren't compatible with other machines you want to run them on.
+
+The final options for obtaining Python resources are
+:ref:`config_python_executable_read_package_root` and
+:ref:`config_python_executable_read_virtualenv`. Both of these methods
+rely on traversing a filesystem tree that is already populated with Python
+resources. This should *just work* if only pure Python resources are in play.
+**But if there are compiled Python extension modules, all bets are off and
+there is no guarantee that found extension modules will be compatible with
+PyOxidizer or will have binary compatibility with other machines.** These
+resource discovery mechanisms also rely on state not under the control of
+PyOxidizer and therefore packaging results may be highly inconsistent and
+not reproducible across runs. For these reasons, **read_package_root()
+and read_virtualenv() are the least preferred methods for Python resource
+discovery.**

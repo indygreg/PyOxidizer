@@ -223,7 +223,7 @@ below where ``exe`` is assigned:
 
 .. code-block:: python
 
-   for resource in exe.pip_install(["pyflakes==2.1.1"]):
+   for resource in exe.pip_install(["pyflakes==2.2.0"]):
        resource.add_location = "in-memory"
        exe.add_python_resource(resource)
 

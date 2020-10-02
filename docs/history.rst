@@ -229,6 +229,9 @@ New Features
   and manipulate resources as they are created.
 * Starlark types representing Python resources now expose an ``is_stdlib``
   attribute denoting whether they came from the Python distribution.
+* The new ``PythonExecutable.pip_download()`` method will run ``pip download``
+  to obtain Python wheels for the requested package(s). Those wheels will
+  then be parsed for Python resources, which can be added to the executable.
 
 Bug Fixes
 ^^^^^^^^^
