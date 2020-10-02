@@ -335,6 +335,36 @@ impl PythonDistribution {
             }
         }?;
 
+        let host_distribution = if dist.target_triple() == context.build_host_triple {
+            Some(dist.clone())
+        } else {
+            let flavor = DistributionFlavor::Standalone;
+            let location = default_distribution_location(&flavor, &context.build_host_triple)
+                .map_err(|e| {
+                    ValueError::from(RuntimeError {
+                        code: "PYOXIDIZER_BUILD",
+                        message: format!("unable to find host Python distribution: {}", e),
+                        label: "to_python_executable()".to_string(),
+                    })
+                })?;
+
+            Some(Arc::new(
+                resolve_distribution(
+                    &context.logger,
+                    &flavor,
+                    &location,
+                    &context.python_distributions_path,
+                )
+                .map_err(|e| {
+                    ValueError::from(RuntimeError {
+                        code: "PYOXIDIZER_BUILD",
+                        message: format!("unable to resolve host Python distribution: {}", e),
+                        label: "to_python_executable".to_string(),
+                    })
+                })?,
+            ))
+        };
+
         let mut builder = dist
             .as_python_executable_builder(
                 &context.logger,
@@ -345,7 +375,7 @@ impl PythonDistribution {
                 BinaryLibpythonLinkMode::Default,
                 &policy.inner,
                 &config,
-                None,
+                host_distribution,
             )
             .map_err(|e| {
                 ValueError::from(RuntimeError {

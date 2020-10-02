@@ -1034,6 +1034,10 @@ impl PythonDistribution for StandaloneDistribution {
         Box::new(self.clone())
     }
 
+    fn target_triple(&self) -> &str {
+        &self.target_triple
+    }
+
     fn python_exe_path(&self) -> &Path {
         &self.python_exe
     }

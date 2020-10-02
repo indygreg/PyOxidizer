@@ -8,6 +8,7 @@ use {
     crate::py_packaging::distribution::{
         DistributionFlavor, PythonDistributionLocation, PythonDistributionRecord,
     },
+    itertools::Itertools,
     lazy_static::lazy_static,
 };
 
@@ -57,6 +58,15 @@ impl PythonDistributionCollection {
     #[allow(unused)]
     pub fn iter(&self) -> impl Iterator<Item = &PythonDistributionRecord> {
         self.dists.iter()
+    }
+
+    /// All target triples of distributions in this collection.
+    pub fn all_target_triples(&self) -> impl Iterator<Item = &str> {
+        self.dists
+            .iter()
+            .map(|dist| dist.target_triple.as_str())
+            .sorted()
+            .dedup()
     }
 }
 
@@ -149,4 +159,25 @@ lazy_static! {
             sha256: "b86f36cc4345ae87bfd4f10ef6b2dbfa7a872fbff70608a1e43944d283fd0eee".to_string(),
         }
     };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_all_target_triples() {
+        assert_eq!(
+            PYTHON_DISTRIBUTIONS
+                .all_target_triples()
+                .collect::<Vec<_>>(),
+            vec![
+                "i686-pc-windows-msvc",
+                "x86_64-apple-darwin",
+                "x86_64-pc-windows-msvc",
+                "x86_64-unknown-linux-gnu",
+                "x86_64-unknown-linux-musl",
+            ]
+        );
+    }
 }
