@@ -61,6 +61,7 @@ impl PythonDistributionCollection {
     }
 
     /// All target triples of distributions in this collection.
+    #[allow(unused)]
     pub fn all_target_triples(&self) -> impl Iterator<Item = &str> {
         self.dists
             .iter()
