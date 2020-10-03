@@ -805,6 +805,7 @@ pub mod tests {
         python_packed_resources::data::ResourceFlavor,
         std::collections::BTreeSet,
         std::iter::FromIterator,
+        std::ops::DerefMut,
     };
 
     lazy_static! {
@@ -2182,7 +2183,51 @@ pub mod tests {
                 shared_libraries[1].name,
                 format!("libssl-1_1{}", lib_suffix)
             );
+
+            let mut compiler = builder.host_distribution.create_bytecode_compiler()?;
+
+            let resources = shared_libraries
+                .iter()
+                .map(|r| r.to_resource(compiler.deref_mut()))
+                .collect::<Result<Vec<_>>>()?;
+            assert_eq!(resources.len(), 2);
+
+            assert_eq!(
+                &resources[0].1,
+                &vec![(
+                    // TODO this should have .dll extension.
+                    PathBuf::from(format!("lib/libcrypto-1_1{}", lib_suffix)),
+                    DataLocation::Path(
+                        builder
+                            .target_distribution
+                            .base_dir
+                            .join("python")
+                            .join("install")
+                            .join("DLLs")
+                            .join(format!("libcrypto-1_1{}.dll", lib_suffix))
+                    ),
+                    true
+                )]
+            );
+            assert_eq!(
+                &resources[1].1,
+                &vec![(
+                    // TODO this should have .dll extension.
+                    PathBuf::from(format!("lib/libssl-1_1{}", lib_suffix)),
+                    DataLocation::Path(
+                        builder
+                            .target_distribution
+                            .base_dir
+                            .join("python")
+                            .join("install")
+                            .join("DLLs")
+                            .join(format!("libssl-1_1{}.dll", lib_suffix))
+                    ),
+                    true
+                )]
+            );
         }
+
         Ok(())
     }
 
