@@ -367,13 +367,17 @@ impl PythonPackagingPolicy {
             PythonResource::ModuleBytecodeRequest(module) => self.include_test || !module.is_test,
             PythonResource::ModuleBytecode(_) => false,
             PythonResource::PackageResource(resource) => {
-                if self.include_distribution_resources {
-                    self.include_test || !resource.is_test
+                if resource.is_stdlib {
+                    if self.include_distribution_resources {
+                        self.include_test || !resource.is_test
+                    } else {
+                        false
+                    }
                 } else {
-                    false
+                    true
                 }
             }
-            PythonResource::PackageDistributionResource(_) => false,
+            PythonResource::PackageDistributionResource(_) => true,
             PythonResource::ExtensionModule(_) => false,
             PythonResource::PathExtension(_) => false,
             PythonResource::EggFile(_) => false,
