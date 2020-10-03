@@ -448,7 +448,7 @@ impl PythonExecutable {
     ) -> ValueResult {
         info!(
             &context.logger,
-            "adding resource data {}",
+            "adding Python package resource {}",
             resource.inner.symbolic_name()
         );
         self.exe
