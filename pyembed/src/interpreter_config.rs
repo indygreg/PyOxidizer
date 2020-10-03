@@ -102,7 +102,9 @@ fn set_config_string_from_path(
     context: &str,
 ) -> Result<(), String> {
     let status = unsafe {
-        let value: Vec<wchar_t> = path.as_os_str().encode_wide().collect();
+        let mut value: Vec<wchar_t> = path.as_os_str().encode_wide().collect();
+        // NULL terminate.
+        value.push(0);
 
         pyffi::PyConfig_SetString(
             config as *const _ as *mut _,
@@ -168,7 +170,9 @@ fn append_wide_string_list_from_path(
     context: &str,
 ) -> Result<(), String> {
     let status = unsafe {
-        let value: Vec<wchar_t> = path.as_os_str().encode_wide().collect();
+        let mut value: Vec<wchar_t> = path.as_os_str().encode_wide().collect();
+        // NULL terminate.
+        value.push(0);
 
         pyffi::PyWideStringList_Append(dest as *mut _, value.as_ptr() as *const _)
     };
@@ -198,7 +202,9 @@ fn append_wide_string_list_from_osstr(
     context: &str,
 ) -> Result<(), String> {
     let status = unsafe {
-        let value: Vec<wchar_t> = value.encode_wide().collect();
+        let mut value: Vec<wchar_t> = value.encode_wide().collect();
+        // NULL terminate.
+        value.push(0);
 
         pyffi::PyWideStringList_Append(dest as *mut _, value.as_ptr() as *const _)
     };
