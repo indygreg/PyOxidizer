@@ -489,6 +489,33 @@ impl LibraryDependency {
     }
 }
 
+/// Represents a shared library.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SharedLibrary {
+    /// Name of the library.
+    ///
+    /// This is the import name, not the full filename.
+    pub name: String,
+
+    /// Holds the raw content of the shared library.
+    pub data: DataLocation,
+}
+
+impl TryFrom<&LibraryDependency> for SharedLibrary {
+    type Error = &'static str;
+
+    fn try_from(value: &LibraryDependency) -> Result<Self, Self::Error> {
+        if let Some(data) = &value.dynamic_library {
+            Ok(Self {
+                name: value.name.clone(),
+                data: data.clone(),
+            })
+        } else {
+            Err("library dependency does not have a shared library")
+        }
+    }
+}
+
 /// Represents a Python extension module.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PythonExtensionModule {

@@ -16,7 +16,7 @@ use {
         resource::{
             BytecodeOptimizationLevel, DataLocation, PythonExtensionModule, PythonModuleBytecode,
             PythonModuleBytecodeFromSource, PythonModuleSource, PythonPackageDistributionResource,
-            PythonPackageResource, PythonResource,
+            PythonPackageResource, PythonResource, SharedLibrary,
         },
     },
     anyhow::{anyhow, Result},
@@ -24,6 +24,7 @@ use {
     std::{
         borrow::Cow,
         collections::{BTreeMap, BTreeSet, HashMap},
+        convert::TryFrom,
         iter::FromIterator,
         path::PathBuf,
     },
@@ -1139,7 +1140,7 @@ impl PythonResourceCollector {
         let mut depends = Vec::new();
 
         for link in &module.link_libraries {
-            if let Some(shared_library) = &link.dynamic_library {
+            if link.dynamic_library.is_some() {
                 let library_location = match location {
                     ConcreteResourceLocation::InMemory => ConcreteResourceLocation::InMemory,
                     ConcreteResourceLocation::RelativePath(prefix) => {
@@ -1154,7 +1155,9 @@ impl PythonResourceCollector {
                     }
                 };
 
-                self.add_shared_library(&link.name, shared_library, &library_location)?;
+                let library = SharedLibrary::try_from(link).map_err(|e| anyhow!(e.to_string()))?;
+
+                self.add_shared_library(&library, &library_location)?;
                 depends.push(link.name.to_string());
             }
         }
@@ -1190,27 +1193,27 @@ impl PythonResourceCollector {
     /// Add a shared library to be loaded from a location.
     pub fn add_shared_library(
         &mut self,
-        name: &str,
-        data: &DataLocation,
+        library: &SharedLibrary,
         location: &ConcreteResourceLocation,
     ) -> Result<()> {
         self.check_policy(location.into())?;
 
         let entry = self
             .resources
-            .entry(name.to_string())
+            .entry(library.name.to_string())
             .or_insert_with(|| PrePackagedResource {
                 flavor: ResourceFlavor::SharedLibrary,
-                name: name.to_string(),
+                name: library.name.to_string(),
                 ..PrePackagedResource::default()
             });
 
         match location {
             ConcreteResourceLocation::InMemory => {
-                entry.in_memory_shared_library = Some(data.clone());
+                entry.in_memory_shared_library = Some(library.data.clone());
             }
             ConcreteResourceLocation::RelativePath(prefix) => {
-                entry.relative_path_shared_library = Some((prefix.to_string(), data.clone()));
+                entry.relative_path_shared_library =
+                    Some((prefix.to_string(), library.data.clone()));
             }
         }
 
