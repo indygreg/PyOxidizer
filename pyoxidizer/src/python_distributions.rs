@@ -76,8 +76,8 @@ lazy_static! {
             // Linux glibc linked.
             PythonDistributionRecord {
                 location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200822/cpython-3.8.5-x86_64-unknown-linux-gnu-pgo-20200823T0036.tar.zst".to_string(),
-                    sha256: "30841db814a7837780b7161b13ad94e4da5a5425c054cedceb07052abf20c4c2".to_string(),
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20201003/cpython-3.8.6-x86_64-unknown-linux-gnu-pgo-20201003T2016.tar.zst".to_string(),
+                    sha256: "897bb37257a2181b64785c4688bc0b29454ddce7a634bbd491d7b59709f11531".to_string(),
                 },
                 target_triple: "x86_64-unknown-linux-gnu".to_string(),
                 supports_prebuilt_extension_modules: true,
@@ -86,8 +86,8 @@ lazy_static! {
             // Linux musl.
             PythonDistributionRecord {
                 location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200822/cpython-3.8.5-x86_64-unknown-linux-musl-noopt-20200823T0036.tar.zst".to_string(),
-                    sha256: "4ed4cd5de4fd17184079f00522639fdf86ee94f72112c7332048e488d86f0492".to_string(),
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20201003/cpython-3.8.6-x86_64-unknown-linux-musl-noopt-20201003T2016.tar.zst".to_string(),
+                    sha256: "7bace9a729eb823bc952554ee5dcb91b0e48b6e9717d52b0f44165335546b8df".to_string(),
                 },
                 target_triple: "x86_64-unknown-linux-musl".to_string(),
                 supports_prebuilt_extension_modules: false,
@@ -103,16 +103,16 @@ lazy_static! {
             // Windows shared.
             PythonDistributionRecord {
                 location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200830/cpython-3.8.5-i686-pc-windows-msvc-shared-pgo-20200830T2311.tar.zst".to_string(),
-                    sha256: "f4069091e13b1cd79a107c0f6abb4b568f45b4a0363e0486c034f264627f0be7".to_string(),
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20201003/cpython-3.8.6-i686-pc-windows-msvc-shared-pgo-20201003T2039.tar.zst".to_string(),
+                    sha256: "acefe8125a33338b8825c715c9dc49c5a80aa2c9742b1d9b576118ed1852adf8".to_string(),
                 },
                 target_triple: "i686-pc-windows-msvc".to_string(),
                 supports_prebuilt_extension_modules: true,
             },
             PythonDistributionRecord {
                 location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200830/cpython-3.8.5-x86_64-pc-windows-msvc-shared-pgo-20200830T2254.tar.zst".to_string(),
-                    sha256: "38fae4ef0e1eb3c87b761e0911d12cda9f36274ea6610266b3bfccbb8cb9ad9e".to_string(),
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20201003/cpython-3.8.6-x86_64-pc-windows-msvc-shared-pgo-20201003T2021.tar.zst".to_string(),
+                    sha256: "671122d910e57230df4fe3aae024e8a56613a1786d53567553adc8e31d2490f1".to_string(),
                 },
                 target_triple: "x86_64-pc-windows-msvc".to_string(),
                 supports_prebuilt_extension_modules: true,
@@ -121,16 +121,16 @@ lazy_static! {
             // Windows static.
             PythonDistributionRecord {
                 location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200830/cpython-3.8.5-i686-pc-windows-msvc-static-noopt-20200830T2307.tar.zst".to_string(),
-                    sha256: "16701af1df56a80b839a4f150e1df301df62f18aa342a61561f42e9d2b526387".to_string(),
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20201003/cpython-3.8.6-i686-pc-windows-msvc-static-noopt-20201003T2034.tar.zst".to_string(),
+                    sha256: "12a2ea07b3875228dae67582e97a721e865b1a924efa4dc79aaec1043986ef0b".to_string(),
                 },
                 target_triple: "i686-pc-windows-msvc".to_string(),
                 supports_prebuilt_extension_modules: false,
             },
             PythonDistributionRecord {
                 location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200830/cpython-3.8.5-x86_64-pc-windows-msvc-static-noopt-20200830T2250.tar.zst".to_string(),
-                    sha256: "6f10c0dcb70ce41f2b291cdea25f983a60168988d27421dec5f0bc781a88be0a".to_string(),
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20201003/cpython-3.8.6-x86_64-pc-windows-msvc-static-noopt-20201003T2015.tar.zst".to_string(),
+                    sha256: "4bcbbfc41ca03bb1a6edc1435406f9e27e02f64fc0a0248578a9c26e891c1e39".to_string(),
                 },
                 target_triple: "x86_64-pc-windows-msvc".to_string(),
                 supports_prebuilt_extension_modules: false,
@@ -139,8 +139,8 @@ lazy_static! {
             // macOS.
             PythonDistributionRecord {
                 location: PythonDistributionLocation::Url {
-                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20200823/cpython-3.8.5-x86_64-apple-darwin-pgo-20200823T2228.tar.zst".to_string(),
-                    sha256: "5b0d28496cecced067616f46b006f0f193f12d00d6fa3111b4b59180f1ac1c56".to_string(),
+                    url: "https://github.com/indygreg/python-build-standalone/releases/download/20201003/cpython-3.8.6-x86_64-apple-darwin-pgo-20201003T2017.tar.zst".to_string(),
+                    sha256: "aa1b61cceedf3e6661e25de40cc366c91af98a6c2d5a02334d665b59682b02e3".to_string(),
                 },
                 target_triple: "x86_64-apple-darwin".to_string(),
                 supports_prebuilt_extension_modules: true,

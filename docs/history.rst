@@ -38,7 +38,7 @@ Backwards Compatibility Notes
   The official Windows embeddable distributions are missing critical
   support files that make them difficult to integrate with PyOxidizer.
 * The default Python distributions have been upgraded to CPython
-  3.8.3 (from 3.7.7) and support for Python 3.7 has been removed.
+  3.8.6 (from 3.7.7) and support for Python 3.7 has been removed.
 * On Windows, the ``default_python_distribution()`` Starlark function
   now defaults to returning a ``standalone_dynamic`` distribution
   variant, meaning that it picks a distribution that can load standalone
@@ -155,7 +155,7 @@ New Features
   metadata about the distribution, enabling PyOxidizer to take fewer
   guesses about how the distribution works and will help enable
   more features over time.
-* Python distributions upgraded to CPython 3.8.3.
+* Python distributions upgraded to CPython 3.8.6.
 * Embedded Python interpreters are now managed via the
   `new apis <https://docs.python.org/3/c-api/init_config.htm>`_ defined
   by PEP-587. This gives us much more control over the configuration
