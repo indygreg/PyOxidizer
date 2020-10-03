@@ -459,8 +459,14 @@ pub struct LibraryDependency {
     /// Static library version of library.
     pub static_library: Option<DataLocation>,
 
+    /// The filename the static library should be materialized as.
+    pub static_filename: Option<PathBuf>,
+
     /// Shared library version of library.
     pub dynamic_library: Option<DataLocation>,
+
+    /// The filename the dynamic library should be materialized as.
+    pub dynamic_filename: Option<PathBuf>,
 
     /// Whether this is a system framework (macOS).
     pub framework: bool,
@@ -478,11 +484,13 @@ impl LibraryDependency {
             } else {
                 None
             },
+            static_filename: self.static_filename.clone(),
             dynamic_library: if let Some(data) = &self.dynamic_library {
                 Some(data.to_memory()?)
             } else {
                 None
             },
+            dynamic_filename: self.dynamic_filename.clone(),
             framework: self.framework,
             system: self.system,
         })
@@ -499,6 +507,9 @@ pub struct SharedLibrary {
 
     /// Holds the raw content of the shared library.
     pub data: DataLocation,
+
+    /// The filename the library should be materialized as.
+    pub filename: Option<PathBuf>,
 }
 
 impl TryFrom<&LibraryDependency> for SharedLibrary {
@@ -509,6 +520,7 @@ impl TryFrom<&LibraryDependency> for SharedLibrary {
             Ok(Self {
                 name: value.name.clone(),
                 data: data.clone(),
+                filename: value.dynamic_filename.clone(),
             })
         } else {
             Err("library dependency does not have a shared library")

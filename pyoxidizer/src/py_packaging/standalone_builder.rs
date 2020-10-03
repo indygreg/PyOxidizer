@@ -2195,8 +2195,7 @@ pub mod tests {
             assert_eq!(
                 &resources[0].1,
                 &vec![(
-                    // TODO this should have .dll extension.
-                    PathBuf::from(format!("lib/libcrypto-1_1{}", lib_suffix)),
+                    PathBuf::from(format!("lib/libcrypto-1_1{}.dll", lib_suffix)),
                     DataLocation::Path(
                         builder
                             .target_distribution
@@ -2212,8 +2211,7 @@ pub mod tests {
             assert_eq!(
                 &resources[1].1,
                 &vec![(
-                    // TODO this should have .dll extension.
-                    PathBuf::from(format!("lib/libssl-1_1{}", lib_suffix)),
+                    PathBuf::from(format!("lib/libssl-1_1{}.dll", lib_suffix)),
                     DataLocation::Path(
                         builder
                             .target_distribution

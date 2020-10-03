@@ -96,10 +96,18 @@ impl LinkEntry {
                 .path_static
                 .clone()
                 .map(|p| DataLocation::Path(python_path.join(p))),
+            static_filename: self
+                .path_static
+                .as_ref()
+                .map(|f| PathBuf::from(PathBuf::from(f).file_name().unwrap())),
             dynamic_library: self
                 .path_dynamic
                 .clone()
                 .map(|p| DataLocation::Path(python_path.join(p))),
+            dynamic_filename: self
+                .path_dynamic
+                .as_ref()
+                .map(|f| PathBuf::from(PathBuf::from(f).file_name().unwrap())),
             framework: self.framework.unwrap_or(false),
             system: self.system.unwrap_or(false),
         }

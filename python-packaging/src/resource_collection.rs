@@ -76,7 +76,7 @@ pub struct PrePackagedResource {
     pub relative_path_extension_module_shared_library: Option<(PathBuf, DataLocation)>,
     pub relative_path_package_resources: Option<BTreeMap<String, (PathBuf, DataLocation)>>,
     pub relative_path_distribution_resources: Option<BTreeMap<String, (PathBuf, DataLocation)>>,
-    pub relative_path_shared_library: Option<(String, DataLocation)>,
+    pub relative_path_shared_library: Option<(String, PathBuf, DataLocation)>,
 }
 
 impl PrePackagedResource {
@@ -350,12 +350,8 @@ impl PrePackagedResource {
             },
         };
 
-        if let Some((prefix, location)) = &self.relative_path_shared_library {
-            installs.push((
-                PathBuf::from(prefix).join(&self.name),
-                location.clone(),
-                true,
-            ));
+        if let Some((prefix, filename, location)) = &self.relative_path_shared_library {
+            installs.push((PathBuf::from(prefix).join(filename), location.clone(), true));
         }
 
         Ok((resource, installs))
@@ -1211,10 +1207,13 @@ impl PythonResourceCollector {
             ConcreteResourceLocation::InMemory => {
                 entry.in_memory_shared_library = Some(library.data.clone());
             }
-            ConcreteResourceLocation::RelativePath(prefix) => {
-                entry.relative_path_shared_library =
-                    Some((prefix.to_string(), library.data.clone()));
-            }
+            ConcreteResourceLocation::RelativePath(prefix) => match &library.filename {
+                Some(filename) => {
+                    entry.relative_path_shared_library =
+                        Some((prefix.to_string(), filename.clone(), library.data.clone()));
+                }
+                None => return Err(anyhow!("cannot add shared library without known filename")),
+            },
         }
 
         Ok(())
@@ -2255,6 +2254,7 @@ mod tests {
             name: "libfoo".to_string(),
             relative_path_shared_library: Some((
                 "prefix".to_string(),
+                PathBuf::from("libfoo.so"),
                 DataLocation::Memory(b"data".to_vec()),
             )),
             ..PrePackagedResource::default()
@@ -2274,7 +2274,7 @@ mod tests {
         assert_eq!(
             installs,
             vec![(
-                PathBuf::from("prefix/libfoo"),
+                PathBuf::from("prefix/libfoo.so"),
                 DataLocation::Memory(b"data".to_vec()),
                 true
             )]
@@ -3675,7 +3675,9 @@ mod tests {
             link_libraries: vec![LibraryDependency {
                 name: "foo".to_string(),
                 static_library: None,
+                static_filename: None,
                 dynamic_library: Some(DataLocation::Memory(vec![40])),
+                dynamic_filename: Some(PathBuf::from("libfoo.so")),
                 framework: false,
                 system: false,
             }],
@@ -3757,7 +3759,9 @@ mod tests {
             link_libraries: vec![LibraryDependency {
                 name: "mylib".to_string(),
                 static_library: None,
+                static_filename: None,
                 dynamic_library: Some(DataLocation::Memory(vec![40])),
+                dynamic_filename: Some(PathBuf::from("libmylib.so")),
                 framework: false,
                 system: false,
             }],
@@ -3796,6 +3800,7 @@ mod tests {
                 name: "mylib".to_string(),
                 relative_path_shared_library: Some((
                     "prefix/foo".to_string(),
+                    PathBuf::from("libmylib.so"),
                     DataLocation::Memory(vec![40])
                 )),
                 ..PrePackagedResource::default()
@@ -3847,7 +3852,7 @@ mod tests {
                     true
                 ),
                 (
-                    PathBuf::from("prefix/foo/mylib"),
+                    PathBuf::from("prefix/foo/libmylib.so"),
                     DataLocation::Memory(vec![40]),
                     true
                 )

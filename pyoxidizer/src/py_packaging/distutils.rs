@@ -188,7 +188,9 @@ pub fn read_built_extensions(state_dir: &Path) -> Result<Vec<PythonExtensionModu
             .map(|l| LibraryDependency {
                 name: l.clone(),
                 static_library: None,
+                static_filename: None,
                 dynamic_library: None,
+                dynamic_filename: None,
                 framework: false,
                 system: false,
             })
