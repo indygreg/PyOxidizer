@@ -249,9 +249,9 @@ Bug Fixes
   Starlark file changes.
 * Some Python resource types were improperly installed in the wrong
   relative directory. The buggy behavior has been fixed.
-* Shared library dependencies for Python extension modules loaded from the
-  filesystem no longer have the library file suffix stripped when materialized
-  on the filesystem.
+* Python extension modules and their shared library dependencies loaded from the
+  filesystem should no longer have the library file suffix stripped when
+  materialized on the filesystem.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

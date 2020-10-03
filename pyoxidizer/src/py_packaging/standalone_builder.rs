@@ -2116,6 +2116,7 @@ pub mod tests {
                 .unwrap()
                 .default_variant()
                 .clone();
+            assert_eq!(ssl_extension.extension_file_suffix, ".pyd");
             builder.add_python_extension_module(&ssl_extension, None)?;
 
             let extensions = builder
@@ -2141,7 +2142,7 @@ pub mod tests {
                 .relative_path_extension_module_shared_library
                 .as_ref()
                 .unwrap();
-            assert_eq!(path, &PathBuf::from("lib/_ssl"));
+            assert_eq!(path, &PathBuf::from("lib/_ssl.pyd"));
 
             let shared_libraries = builder
                 .iter_resources()

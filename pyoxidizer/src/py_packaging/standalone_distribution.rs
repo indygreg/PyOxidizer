@@ -716,6 +716,16 @@ impl StandaloneDistribution {
             let mut ems = PythonExtensionModuleVariants::default();
 
             for entry in variants.iter() {
+                let extension_file_suffix = if let Some(p) = &entry.shared_lib {
+                    if let Some(idx) = p.rfind('.') {
+                        p[idx..].to_string()
+                    } else {
+                        "".to_string()
+                    }
+                } else {
+                    "".to_string()
+                };
+
                 let object_file_data = entry
                     .objs
                     .iter()
@@ -759,7 +769,7 @@ impl StandaloneDistribution {
                 ems.push(PythonExtensionModule {
                     name: module.clone(),
                     init_fn: Some(entry.init_fn.clone()),
-                    extension_file_suffix: "".to_string(),
+                    extension_file_suffix,
                     shared_library: if let Some(path) = &entry.shared_lib {
                         Some(DataLocation::Path(python_path.join(path)))
                     } else {
