@@ -9,7 +9,7 @@ Functionality for defining how Python resources should be packaged.
 use {
     crate::{
         licensing::NON_GPL_LICENSES,
-        location::ConcreteResourceLocation,
+        location::{AbstractResourceLocation, ConcreteResourceLocation},
         resource::{PythonExtensionModule, PythonExtensionModuleVariants, PythonResource},
         resource_collection::PythonResourceAddCollectionContext,
     },
@@ -74,6 +74,22 @@ impl Into<String> for &PythonResourcesPolicy {
             PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(ref prefix) => {
                 format!("prefer-in-memory-fallback-filesystem-relative:{}", prefix)
             }
+        }
+    }
+}
+
+impl PythonResourcesPolicy {
+    /// Obtain allowed resource load locations for this policy.
+    pub fn allowed_locations(&self) -> Vec<AbstractResourceLocation> {
+        match self {
+            PythonResourcesPolicy::InMemoryOnly => vec![AbstractResourceLocation::InMemory],
+            PythonResourcesPolicy::FilesystemRelativeOnly(_) => {
+                vec![AbstractResourceLocation::RelativePath]
+            }
+            PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => vec![
+                AbstractResourceLocation::InMemory,
+                AbstractResourceLocation::RelativePath,
+            ],
         }
     }
 }

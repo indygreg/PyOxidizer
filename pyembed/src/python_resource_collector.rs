@@ -13,8 +13,8 @@ use {
     crate::python_resources::resource_to_pyobject,
     cpython::exc::{TypeError, ValueError},
     cpython::{
-        py_class, py_class_prop_getter, ObjectProtocol, PyBytes, PyErr, PyObject, PyResult, Python,
-        PythonObject, ToPyObject,
+        py_class, py_class_prop_getter, ObjectProtocol, PyBytes, PyErr, PyList, PyObject, PyResult,
+        Python, PythonObject, ToPyObject,
     },
     python_packaging::bytecode::BytecodeCompiler,
     python_packaging::location::ConcreteResourceLocation,
@@ -35,8 +35,8 @@ py_class!(pub class OxidizedResourceCollector |py| {
         Ok("<OxidizedResourceCollector>".to_string())
     }
 
-    @property def policy(&self) -> PyResult<String> {
-        Ok(self.collector(py).borrow().get_policy().into())
+    @property def allowed_locations(&self) -> PyResult<PyObject> {
+        self.allowed_locations_impl(py)
     }
 
     def add_in_memory(&self, resource: PyObject) -> PyResult<PyObject> {
@@ -66,6 +66,18 @@ impl OxidizedResourceCollector {
         let collector = PythonResourceCollector::new(&policy, &cache_tag);
 
         OxidizedResourceCollector::create_instance(py, RefCell::new(collector))
+    }
+
+    fn allowed_locations_impl(&self, py: Python) -> PyResult<PyObject> {
+        let values = self
+            .collector(py)
+            .borrow()
+            .allowed_locations()
+            .iter()
+            .map(|l| l.to_string().to_py_object(py).into_object())
+            .collect::<Vec<PyObject>>();
+
+        Ok(PyList::new(py, &values).into_object())
     }
 
     fn add_in_memory_impl(&self, py: Python, resource: PyObject) -> PyResult<PyObject> {

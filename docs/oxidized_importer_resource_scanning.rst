@@ -58,9 +58,8 @@ e.g. to create a collector that only marks resources for in-memory loading:
 
 Instances of ``OxidizedResourceCollector`` have the following properties:
 
-``policy`` (``str``)
-   Exposes the policy string this instance was constructed with. This property
-   is read-only.
+``allowed_locations`` (``list[str]``)
+   Exposes allowed locations where resources can be loaded from.
 
 Methods are documented in the following sections.
 

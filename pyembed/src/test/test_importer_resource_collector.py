@@ -34,7 +34,7 @@ class TestImporterResourceCollector(unittest.TestCase):
             OxidizedResourceCollector()
 
         c = OxidizedResourceCollector(policy="in-memory-only")
-        self.assertEqual(c.policy, "in-memory-only")
+        self.assertEqual(c.allowed_locations, ["in-memory"])
 
     def test_source_module(self):
         c = OxidizedResourceCollector(policy="in-memory-only")

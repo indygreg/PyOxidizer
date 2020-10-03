@@ -8,11 +8,21 @@
 ///
 /// The location is abstract because a concrete location (such as the
 /// relative path) is not specified.
+#[derive(Clone, Debug, PartialEq)]
 pub enum AbstractResourceLocation {
     /// Resource is loaded from memory.
     InMemory,
     /// Resource is loaded from a relative filesystem path.
     RelativePath,
+}
+
+impl ToString for &AbstractResourceLocation {
+    fn to_string(&self) -> String {
+        match self {
+            AbstractResourceLocation::InMemory => "in-memory".to_string(),
+            AbstractResourceLocation::RelativePath => "filesystem-relative".to_string(),
+        }
+    }
 }
 
 /// Describes the concrete location of a Python resource.

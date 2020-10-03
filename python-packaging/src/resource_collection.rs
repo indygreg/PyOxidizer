@@ -590,7 +590,8 @@ impl<'a> CompiledResourcesCollection<'a> {
 /// exists to facilitate doing this.
 #[derive(Debug, Clone)]
 pub struct PythonResourceCollector {
-    policy: PythonResourcesPolicy,
+    /// Where resources can be placed.
+    allowed_locations: Vec<AbstractResourceLocation>,
     resources: BTreeMap<String, PrePackagedResource>,
     cache_tag: String,
 }
@@ -605,33 +606,26 @@ impl PythonResourceCollector {
     /// derive filenames.
     pub fn new(policy: &PythonResourcesPolicy, cache_tag: &str) -> Self {
         Self {
-            policy: policy.clone(),
+            allowed_locations: policy.allowed_locations(),
             resources: BTreeMap::new(),
             cache_tag: cache_tag.to_string(),
         }
     }
 
-    /// Obtain the policy for this collector.
-    pub fn get_policy(&self) -> &PythonResourcesPolicy {
-        &self.policy
+    /// Obtain locations that resources can be loaded from.
+    pub fn allowed_locations(&self) -> &Vec<AbstractResourceLocation> {
+        &self.allowed_locations
     }
 
     /// Validate that a resource add in the specified location is allowed.
     pub fn check_policy(&self, location: AbstractResourceLocation) -> Result<()> {
-        match self.policy {
-            PythonResourcesPolicy::InMemoryOnly => match location {
-                AbstractResourceLocation::InMemory => Ok(()),
-                AbstractResourceLocation::RelativePath => Err(anyhow!(
-                    "in-memory-only policy does not allow relative path resources"
-                )),
-            },
-            PythonResourcesPolicy::FilesystemRelativeOnly(_) => match location {
-                AbstractResourceLocation::InMemory => Err(anyhow!(
-                    "filesystem-relative-only policy does not allow in-memory resources"
-                )),
-                AbstractResourceLocation::RelativePath => Ok(()),
-            },
-            PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(_) => Ok(()),
+        if self.allowed_locations.contains(&location) {
+            Ok(())
+        } else {
+            Err(anyhow!(
+                "resource collector does not allow resources in {}",
+                (&location).to_string()
+            ))
         }
     }
 
@@ -3376,7 +3370,7 @@ mod tests {
         r.resources.clear();
 
         // location_fallback works.
-        r.policy = PythonResourcesPolicy::FilesystemRelativeOnly("prefix".to_string());
+        r.allowed_locations = vec![AbstractResourceLocation::RelativePath];
         add_context.location_fallback =
             Some(ConcreteResourceLocation::RelativePath("prefix".to_string()));
         r.add_python_package_resource_with_context(&resource, &add_context)?;
@@ -3585,7 +3579,7 @@ mod tests {
         r.resources.clear();
 
         // location_fallback works.
-        r.policy = PythonResourcesPolicy::FilesystemRelativeOnly("prefix".to_string());
+        r.allowed_locations = vec![AbstractResourceLocation::RelativePath];
         add_context.location_fallback =
             Some(ConcreteResourceLocation::RelativePath("prefix".to_string()));
         r.add_python_package_distribution_resource_with_context(&resource, &add_context)?;
