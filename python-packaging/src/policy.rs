@@ -9,8 +9,9 @@ Functionality for defining how Python resources should be packaged.
 use {
     crate::{
         licensing::NON_GPL_LICENSES,
+        location::ConcreteResourceLocation,
         resource::{PythonExtensionModule, PythonExtensionModuleVariants, PythonResource},
-        resource_collection::{ConcreteResourceLocation, PythonResourceAddCollectionContext},
+        resource_collection::PythonResourceAddCollectionContext,
     },
     anyhow::{anyhow, Result},
     std::{collections::HashMap, convert::TryFrom, iter::FromIterator},

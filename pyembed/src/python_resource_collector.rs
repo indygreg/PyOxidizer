@@ -17,10 +17,9 @@ use {
         PythonObject, ToPyObject,
     },
     python_packaging::bytecode::BytecodeCompiler,
+    python_packaging::location::ConcreteResourceLocation,
     python_packaging::policy::PythonResourcesPolicy,
-    python_packaging::resource_collection::{
-        CompiledResourcesCollection, ConcreteResourceLocation, PythonResourceCollector,
-    },
+    python_packaging::resource_collection::{CompiledResourcesCollection, PythonResourceCollector},
     std::cell::RefCell,
     std::convert::TryFrom,
 };

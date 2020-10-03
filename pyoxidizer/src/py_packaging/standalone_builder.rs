@@ -22,14 +22,14 @@ use {
     lazy_static::lazy_static,
     python_packaging::{
         bytecode::BytecodeCompiler,
+        location::ConcreteResourceLocation,
         policy::PythonPackagingPolicy,
         resource::{
             DataLocation, PythonExtensionModule, PythonModuleSource,
             PythonPackageDistributionResource, PythonPackageResource, PythonResource,
         },
         resource_collection::{
-            ConcreteResourceLocation, PrePackagedResource, PythonResourceAddCollectionContext,
-            PythonResourceCollector,
+            PrePackagedResource, PythonResourceAddCollectionContext, PythonResourceCollector,
         },
     },
     slog::warn,

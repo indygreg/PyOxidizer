@@ -4,6 +4,7 @@
 
 /*! Functionality for collecting Python resources. */
 
+use crate::location::{AbstractResourceLocation, ConcreteResourceLocation};
 use {
     crate::{
         bytecode::{
@@ -509,46 +510,6 @@ pub fn populate_parent_packages(
     }
 
     Ok(())
-}
-
-/// Describes the location of a Python resource.
-///
-/// The location is abstract because a concrete location (such as the
-/// relative path) is not specified.
-pub enum AbstractResourceLocation {
-    /// Resource is loaded from memory.
-    InMemory,
-    /// Resource is loaded from a relative filesystem path.
-    RelativePath,
-}
-
-/// Describes the concrete location of a Python resource.
-#[derive(Clone, Debug, PartialEq)]
-pub enum ConcreteResourceLocation {
-    /// Resource is loaded from memory.
-    InMemory,
-    /// Reosurce is loaded from a relative filesystem path.
-    RelativePath(String),
-}
-
-impl From<&ConcreteResourceLocation> for AbstractResourceLocation {
-    fn from(l: &ConcreteResourceLocation) -> Self {
-        match l {
-            ConcreteResourceLocation::InMemory => AbstractResourceLocation::InMemory,
-            ConcreteResourceLocation::RelativePath(_) => AbstractResourceLocation::RelativePath,
-        }
-    }
-}
-
-impl Into<String> for ConcreteResourceLocation {
-    fn into(self) -> String {
-        match self {
-            ConcreteResourceLocation::InMemory => "in-memory".to_string(),
-            ConcreteResourceLocation::RelativePath(prefix) => {
-                format!("filesystem-relative:{}", prefix)
-            }
-        }
-    }
 }
 
 /// Defines how a Python resource should be added to a `PythonResourceCollector`.

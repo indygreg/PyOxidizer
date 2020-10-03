@@ -5,11 +5,12 @@
 use {
     super::python_packaging_policy::PythonPackagingPolicyValue,
     python_packaging::{
+        location::ConcreteResourceLocation,
         resource::{
             PythonExtensionModule, PythonModuleSource, PythonPackageDistributionResource,
             PythonPackageResource, PythonResource,
         },
-        resource_collection::{ConcreteResourceLocation, PythonResourceAddCollectionContext},
+        resource_collection::PythonResourceAddCollectionContext,
     },
     starlark::{
         environment::TypeValues,
