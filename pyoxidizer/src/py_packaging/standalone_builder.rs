@@ -902,12 +902,21 @@ pub mod tests {
 
     impl StandalonePythonExecutableBuilderOptions {
         pub fn new_builder(&self) -> Result<Box<StandalonePythonExecutableBuilder>> {
-            let record = PYTHON_DISTRIBUTIONS
+            let target_record = PYTHON_DISTRIBUTIONS
                 .find_distribution(&self.target_triple, &self.distribution_flavor)
                 .ok_or_else(|| anyhow!("could not find target Python distribution"))?;
 
-            let target_distribution = get_distribution(&record.location)?;
-            let host_distribution = Arc::new(target_distribution.clone_box());
+            let target_distribution = get_distribution(&target_record.location)?;
+
+            let host_distribution = if self.host_triple == self.target_triple {
+                Arc::new(target_distribution.clone_box())
+            } else {
+                let host_record = PYTHON_DISTRIBUTIONS
+                    .find_distribution(&self.host_triple, &DistributionFlavor::Standalone)
+                    .ok_or_else(|| anyhow!("could not find host Python distribution"))?;
+
+                Arc::new(get_distribution(&host_record.location)?.clone_box())
+            };
 
             let mut policy = PythonPackagingPolicy::default();
             policy.set_extension_module_filter(self.extension_module_filter.clone());
