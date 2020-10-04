@@ -146,6 +146,11 @@ Backwards Compatibility Notes
   by setting ``add_*`` attributes on individual Python resource objects.
 * The Starlark type ``PythonSourceModule`` has been renamed to
   ``PythonModuleSource``.
+* Serialized Python resources no longer rely on the ``flavor`` field
+  to influence how they are loaded at run-time. Instead, the new
+  ``is_*`` fields expressing individual type affinity are used. The
+  ``flavor`` attributes from the ``OxidizedResource`` Python type
+  has been removed since it does nothing.
 
 New Features
 ^^^^^^^^^^^^

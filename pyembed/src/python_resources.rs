@@ -13,14 +13,14 @@ use {
         pyobject_to_pathbuf_optional,
     },
     anyhow::Result,
-    cpython::exc::{ImportError, OSError, TypeError, ValueError},
+    cpython::exc::{ImportError, OSError, TypeError},
     cpython::{
         py_class, py_class_call_slot_impl_with_ref, py_class_prop_getter, py_class_prop_setter,
         NoArgs, ObjectProtocol, PyBytes, PyDict, PyErr, PyList, PyModule, PyObject, PyResult,
         PyString, PyTuple, Python, PythonObject, ToPyObject,
     },
     python3_sys as pyffi,
-    python_packed_resources::data::{Resource, ResourceFlavor},
+    python_packed_resources::data::Resource,
     std::borrow::Cow,
     std::cell::RefCell,
     std::collections::HashMap,
@@ -878,10 +878,15 @@ impl<'a> PythonResourcesState<'a, u8> {
         let mut resources = self
             .resources
             .values()
-            .filter(|resource| match resource.flavor {
-                ResourceFlavor::BuiltinExtensionModule => !ignore_builtin,
-                ResourceFlavor::FrozenModule => !ignore_frozen,
-                _ => true,
+            .filter(|resource| {
+                // This assumes builtins and frozen are mutually exclusive with other types.
+                if resource.is_builtin_extension_module && ignore_builtin {
+                    false
+                } else if resource.is_frozen_module && ignore_frozen {
+                    false
+                } else {
+                    true
+                }
             })
             .collect::<Vec<&Resource<u8>>>();
 
@@ -971,35 +976,6 @@ py_class!(pub class OxidizedResource |py| {
             Ok(())
         } else {
             Err(PyErr::new::<TypeError, _>(py, "cannot delete is_shared_library"))
-        }
-    }
-
-    @property def flavor(&self) -> PyResult<&'static str> {
-        Ok(match self.resource(py).borrow().flavor {
-            ResourceFlavor::None => "none",
-            ResourceFlavor::Module => "module",
-            ResourceFlavor::BuiltinExtensionModule => "builtin",
-            ResourceFlavor::FrozenModule => "frozen",
-            ResourceFlavor::Extension => "extension",
-            ResourceFlavor::SharedLibrary => "shared_library",
-        })
-    }
-
-    @flavor.setter def set_flavor(&self, value: Option<&str>) -> PyResult<()> {
-        if let Some(value) = value {
-            self.resource(py).borrow_mut().flavor = match value {
-                "none" => ResourceFlavor::None,
-                "module" => ResourceFlavor::Module,
-                "builtin" => ResourceFlavor::BuiltinExtensionModule,
-                "frozen" => ResourceFlavor::FrozenModule,
-                "extension" => ResourceFlavor::Extension,
-                "shared_library" => ResourceFlavor::SharedLibrary,
-                _ => return Err(PyErr::new::<ValueError, _>(py, "unknown resource flavor"))
-            };
-
-            Ok(())
-        } else {
-            Err(PyErr::new::<TypeError, _>(py, "cannot delete flavor"))
         }
     }
 

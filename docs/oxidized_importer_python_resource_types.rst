@@ -53,10 +53,6 @@ The following properties/attributes exist on ``OxidizedResource`` instances:
 ``is_shared_library``
    A ``bool`` indicating if this resource is a shared library.
 
-``flavor``
-   A ``str`` describing the *flavor* of this resource.
-   See :ref:`oxidized_resource_flavors` for more.
-
 ``name``
    The ``str`` name of the resource.
 

@@ -34,8 +34,6 @@ class TestImporterResources(unittest.TestCase):
         self.assertFalse(resource.is_frozen_module)
         self.assertFalse(resource.is_extension_module)
         self.assertFalse(resource.is_shared_library)
-        self.assertIsInstance(resource.flavor, str)
-        self.assertEqual(resource.flavor, "builtin")
         self.assertIsInstance(resource.name, str)
         self.assertEqual(resource.name, "_io")
 
@@ -64,7 +62,6 @@ class TestImporterResources(unittest.TestCase):
 
         resource = [x for x in resources if x.name == "_frozen_importlib"][0]
         self.assertTrue(resource.is_frozen_module)
-        self.assertEqual(resource.flavor, "frozen")
 
     def test_resource_constructor(self):
         resource = OxidizedResource()
@@ -74,7 +71,6 @@ class TestImporterResources(unittest.TestCase):
         self.assertFalse(resource.is_frozen_module)
         self.assertFalse(resource.is_extension_module)
         self.assertFalse(resource.is_shared_library)
-        self.assertEqual(resource.flavor, "none")
         self.assertEqual(resource.name, "")
 
     def test_resource_set_is_module(self):
@@ -153,29 +149,6 @@ class TestImporterResources(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             resource.name = None
-
-    def test_resource_set_flavor(self):
-        resource = OxidizedResource()
-
-        for flavor in (
-            "module",
-            "none",
-            "builtin",
-            "frozen",
-            "extension",
-            "shared_library",
-        ):
-            resource.flavor = flavor
-            self.assertEqual(resource.flavor, flavor)
-
-        with self.assertRaises(TypeError):
-            del resource.flavor
-
-        with self.assertRaises(TypeError):
-            resource.flavor = None
-
-        with self.assertRaisesRegex(ValueError, "unknown resource flavor"):
-            resource.flavor = "foo"
 
     def test_resource_set_package(self):
         resource = OxidizedResource()
@@ -625,7 +598,6 @@ class TestImporterResources(unittest.TestCase):
         resource = OxidizedResource()
         resource.is_module = True
         resource.name = "my_module"
-        resource.flavor = "module"
 
         source = b"print('hello from my_module')"
         code = compile(source, "my_module.py", "exec")
@@ -653,12 +625,10 @@ class TestImporterResources(unittest.TestCase):
         a = OxidizedResource()
         a.is_module = True
         a.name = "foo_a"
-        a.flavor = "module"
 
         b = OxidizedResource()
         b.is_module = True
         b.name = "foo_b"
-        b.flavor = "module"
 
         f.add_resources([a, b])
 
@@ -671,14 +641,12 @@ class TestImporterResources(unittest.TestCase):
         m = OxidizedResource()
         m.is_module = True
         m.name = "my_module"
-        m.flavor = "module"
         m.in_memory_source = b"import io"
         f.add_resource(m)
 
         m = OxidizedResource()
         m.is_module = True
         m.name = "module_b"
-        m.flavor = "module"
         m.in_memory_bytecode = b"dummy bytecode"
         f.add_resource(m)
 
