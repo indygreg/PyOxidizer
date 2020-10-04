@@ -182,7 +182,7 @@ like the following:
 
        resource = OxidizedResource()
        resource.name = module_name
-       resource.flavor = "module"
+       resource.is_module = True
        resource.in_memory_bytecode = bytecode
        resource.in_memory_source = source
 

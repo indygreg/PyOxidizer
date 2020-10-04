@@ -27,13 +27,31 @@ e.g. an instance can represent a Python module with associated source and
 bytecode.
 
 New instances can be constructed via ``OxidizedResource()``. This will return
-an instance whose ``flavor = "none"`` and ``name = ""``. All properties will
-be ``None`` or ``false``.
+an instance whose ``name = ""`` and all properties will be ``None`` or
+``false``.
 
 Properties
 ----------
 
 The following properties/attributes exist on ``OxidizedResource`` instances:
+
+``is_module``
+   A ``bool`` indicating if this resource is a Python module. Python modules
+   are backed by source or bytecode.
+
+``is_builtin_extension_module``
+   A ``bool`` indicating if this resource is a Python extension module
+   built-in to the Python interpreter.
+
+``is_frozen_module``
+   A ``bool`` indicating if this resource is a Python module whose bytecode
+   is frozen into the Python interpreter.
+
+``is_extension_module``
+   A ``bool`` indicating if this resource is a Python extension module.
+
+``is_shared_library``
+   A ``bool`` indicating if this resource is a shared library.
 
 ``flavor``
    A ``str`` describing the *flavor* of this resource.
@@ -141,37 +159,33 @@ The following properties/attributes exist on ``OxidizedResource`` instances:
 
 .. _oxidized_resource_flavors:
 
-``OxidizedResource`` Flavors
-----------------------------
+``OxidizedResource`` Resource Types
+-----------------------------------
 
 Each ``OxidizedResource`` instance describes a particular type of resource.
-The type is indicated by a ``flavor`` property on the instance.
+If a resource identifies as a type, it sets one of the following ``is_*``
+attributes to ``True``:
 
-The following flavors are defined:
-
-``none``
-   There is no resource flavor (you shouldn't see this).
-
-``module``
+``is_module``
    A Python module. These typically have source or bytecode attached.
 
    Modules can also be packages. In this case, they can hold additional
    data, such as a mapping of resource files.
 
-``built-in``
+``is_builtin_extension_module``
    A built-in extension module. These represent Python extension modules
    that are compiled into the application and don't exist as separate
    shared libraries.
 
-``frozen``
+``is_frozen_module``
    A frozen Python module. These are Python modules whose bytecode is
    compiled into the application.
 
-``extension``
+``is_extension_module``
    A Python extension module. These are shared libraries that can be loaded
    to provide additional modules to Python.
 
-``shared_library``
+``is_shared_library``
    A shared library. e.g. a ``.so`` or ``.dll``.
 
 ``PythonModuleSource``

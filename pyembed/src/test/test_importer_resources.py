@@ -29,6 +29,11 @@ class TestImporterResources(unittest.TestCase):
 
         self.assertEqual(repr(resource), '<OxidizedResource name="_io">')
 
+        self.assertFalse(resource.is_module)
+        self.assertTrue(resource.is_builtin_extension_module)
+        self.assertFalse(resource.is_frozen_module)
+        self.assertFalse(resource.is_extension_module)
+        self.assertFalse(resource.is_shared_library)
         self.assertIsInstance(resource.flavor, str)
         self.assertEqual(resource.flavor, "builtin")
         self.assertIsInstance(resource.name, str)
@@ -58,13 +63,84 @@ class TestImporterResources(unittest.TestCase):
         resources = f.indexed_resources()
 
         resource = [x for x in resources if x.name == "_frozen_importlib"][0]
+        self.assertTrue(resource.is_frozen_module)
         self.assertEqual(resource.flavor, "frozen")
 
     def test_resource_constructor(self):
         resource = OxidizedResource()
         self.assertIsInstance(resource, OxidizedResource)
+        self.assertFalse(resource.is_module)
+        self.assertFalse(resource.is_builtin_extension_module)
+        self.assertFalse(resource.is_frozen_module)
+        self.assertFalse(resource.is_extension_module)
+        self.assertFalse(resource.is_shared_library)
         self.assertEqual(resource.flavor, "none")
         self.assertEqual(resource.name, "")
+
+    def test_resource_set_is_module(self):
+        resource = OxidizedResource()
+        resource.is_module = True
+        self.assertTrue(resource.is_module)
+        resource.is_module = False
+        self.assertFalse(resource.is_module)
+
+        with self.assertRaises(TypeError):
+            del resource.is_module
+
+        with self.assertRaises(TypeError):
+            resource.is_module = None
+
+    def test_resource_set_is_builtin_extension_module(self):
+        resource = OxidizedResource()
+        resource.is_builtin_extension_module = True
+        self.assertTrue(resource.is_builtin_extension_module)
+        resource.is_builtin_extension_module = False
+        self.assertFalse(resource.is_builtin_extension_module)
+
+        with self.assertRaises(TypeError):
+            del resource.is_builtin_extension_module
+
+        with self.assertRaises(TypeError):
+            resource.is_builtin_extension_module = None
+
+    def test_resource_set_is_frozen_module(self):
+        resource = OxidizedResource()
+        resource.is_frozen_module = True
+        self.assertTrue(resource.is_frozen_module)
+        resource.is_frozen_module = False
+        self.assertFalse(resource.is_frozen_module)
+
+        with self.assertRaises(TypeError):
+            del resource.is_frozen_module
+
+        with self.assertRaises(TypeError):
+            resource.is_frozen_module = None
+
+    def test_resource_set_is_extension_module(self):
+        resource = OxidizedResource()
+        resource.is_extension_module = True
+        self.assertTrue(resource.is_extension_module)
+        resource.is_extension_module = False
+        self.assertFalse(resource.is_extension_module)
+
+        with self.assertRaises(TypeError):
+            del resource.is_extension_module
+
+        with self.assertRaises(TypeError):
+            resource.is_extension_module = None
+
+    def test_resource_set_is_shared_library(self):
+        resource = OxidizedResource()
+        resource.is_shared_library = True
+        self.assertTrue(resource.is_shared_library)
+        resource.is_shared_library = False
+        self.assertFalse(resource.is_shared_library)
+
+        with self.assertRaises(TypeError):
+            del resource.is_shared_library
+
+        with self.assertRaises(TypeError):
+            resource.is_shared_library = None
 
     def test_resource_set_name(self):
         resource = OxidizedResource()
@@ -547,6 +623,7 @@ class TestImporterResources(unittest.TestCase):
     def test_add_resource_module(self):
         f = OxidizedFinder()
         resource = OxidizedResource()
+        resource.is_module = True
         resource.name = "my_module"
         resource.flavor = "module"
 
@@ -574,10 +651,12 @@ class TestImporterResources(unittest.TestCase):
     def test_add_resources(self):
         f = OxidizedFinder()
         a = OxidizedResource()
+        a.is_module = True
         a.name = "foo_a"
         a.flavor = "module"
 
         b = OxidizedResource()
+        b.is_module = True
         b.name = "foo_b"
         b.flavor = "module"
 
@@ -590,12 +669,14 @@ class TestImporterResources(unittest.TestCase):
         f = OxidizedFinder()
 
         m = OxidizedResource()
+        m.is_module = True
         m.name = "my_module"
         m.flavor = "module"
         m.in_memory_source = b"import io"
         f.add_resource(m)
 
         m = OxidizedResource()
+        m.is_module = True
         m.name = "module_b"
         m.flavor = "module"
         m.in_memory_bytecode = b"dummy bytecode"
@@ -606,7 +687,7 @@ class TestImporterResources(unittest.TestCase):
 
         f2 = OxidizedFinder(resources_data=serialized)
 
-        modules = {r.name: r for r in f2.indexed_resources() if r.flavor == "module"}
+        modules = {r.name: r for r in f2.indexed_resources() if r.is_module}
         self.assertEqual(len(modules), 2)
 
         self.assertIn("my_module", modules)

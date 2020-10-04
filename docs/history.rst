@@ -252,6 +252,9 @@ Bug Fixes
 * Python extension modules and their shared library dependencies loaded from the
   filesystem should no longer have the library file suffix stripped when
   materialized on the filesystem.
+* On Windows, the ``sqlite`` module can now be imported. Before, the system
+  for serializing resources thought that ``sqlite`` was a shared library
+  and not a Python module.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -276,6 +279,10 @@ Other Relevant Changes
 * The configuration documentation was reorganized. The unified document
   for the complete API document (which was the largest single document)
   has been split into multiple documents.
+* The serialized data structure for representing Python resources metadata
+  and its data now allows resources to identify as multiple types. For
+  example, a single resource can contain both Python module source/bytecode
+  and a shared library.
 
 0.7.0
 -----

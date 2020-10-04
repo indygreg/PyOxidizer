@@ -909,6 +909,71 @@ py_class!(pub class OxidizedResource |py| {
         Ok(format!("<OxidizedResource name=\"{}\">", self.resource(py).borrow().name.to_string()))
     }
 
+    @property def is_module(&self) -> PyResult<bool> {
+        Ok(self.resource(py).borrow().is_module)
+    }
+
+    @is_module.setter def set_is_module(&self, value: Option<bool>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().is_module = value;
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete is_module"))
+        }
+    }
+
+    @property def is_builtin_extension_module(&self) -> PyResult<bool> {
+        Ok(self.resource(py).borrow().is_builtin_extension_module)
+    }
+
+    @is_builtin_extension_module.setter def set_is_builtin_extension_module(&self, value: Option<bool>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().is_builtin_extension_module = value;
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete is_builtin_extension_module"))
+        }
+    }
+
+    @property def is_frozen_module(&self) -> PyResult<bool> {
+        Ok(self.resource(py).borrow().is_frozen_module)
+    }
+
+    @is_frozen_module.setter def set_is_frozen_module(&self, value: Option<bool>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().is_frozen_module = value;
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete is_frozen_module"))
+        }
+    }
+
+    @property def is_extension_module(&self) -> PyResult<bool> {
+        Ok(self.resource(py).borrow().is_extension_module)
+    }
+
+    @is_extension_module.setter def set_is_extension_module(&self, value: Option<bool>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().is_extension_module = value;
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete is_extension_module"))
+        }
+    }
+
+    @property def is_shared_library(&self) -> PyResult<bool> {
+        Ok(self.resource(py).borrow().is_shared_library)
+    }
+
+    @is_shared_library.setter def set_is_shared_library(&self, value: Option<bool>) -> PyResult<()> {
+        if let Some(value) = value {
+            self.resource(py).borrow_mut().is_shared_library = value;
+            Ok(())
+        } else {
+            Err(PyErr::new::<TypeError, _>(py, "cannot delete is_shared_library"))
+        }
+    }
+
     @property def flavor(&self) -> PyResult<&'static str> {
         Ok(match self.resource(py).borrow().flavor {
             ResourceFlavor::None => "none",
