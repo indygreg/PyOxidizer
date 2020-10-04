@@ -447,6 +447,26 @@ impl<'a> ResourceParserIterator<'a> {
 
                     current_resource.relative_path_distribution_resources = Some(resources);
                 }
+
+                ResourceField::IsModule => {
+                    current_resource.is_module = true;
+                }
+
+                ResourceField::IsBuiltinExtensionModule => {
+                    current_resource.is_builtin_extension_module = true;
+                }
+
+                ResourceField::IsFrozenModule => {
+                    current_resource.is_frozen_module = true;
+                }
+
+                ResourceField::IsExtensionModule => {
+                    current_resource.is_extension_module = true;
+                }
+
+                ResourceField::IsSharedLibrary => {
+                    current_resource.is_shared_library = true;
+                }
             }
         }
     }
@@ -1353,6 +1373,11 @@ mod tests {
             relative_path_extension_module_shared_library: Some(Cow::from(Path::new("em_path"))),
             relative_path_package_resources: Some(relative_path_resources),
             relative_path_distribution_resources: Some(relative_path_distribution),
+            is_module: true,
+            is_builtin_extension_module: true,
+            is_frozen_module: true,
+            is_extension_module: true,
+            is_shared_library: true,
         };
 
         let mut data = Vec::new();
@@ -1453,6 +1478,11 @@ mod tests {
             distribution.get("resource.txt"),
             Some(&Cow::Borrowed(Path::new("package/resource.txt")))
         );
+        assert!(entry.is_module);
+        assert!(entry.is_builtin_extension_module);
+        assert!(entry.is_frozen_module);
+        assert!(entry.is_extension_module);
+        assert!(entry.is_shared_library);
     }
 
     #[test]

@@ -222,6 +222,26 @@ where
             index += 6 * metadata.len();
         }
 
+        if self.is_module {
+            index += 1;
+        }
+
+        if self.is_builtin_extension_module {
+            index += 1;
+        }
+
+        if self.is_frozen_module {
+            index += 1;
+        }
+
+        if self.is_extension_module {
+            index += 1;
+        }
+
+        if self.is_shared_library {
+            index += 1;
+        }
+
         // End of index entry.
         index += 1;
 
@@ -364,6 +384,11 @@ where
                     0
                 }
             }
+            ResourceField::IsModule => 0,
+            ResourceField::IsBuiltinExtensionModule => 0,
+            ResourceField::IsFrozenModule => 0,
+            ResourceField::IsExtensionModule => 0,
+            ResourceField::IsSharedLibrary => 0,
         }
     }
 
@@ -493,6 +518,11 @@ where
                     0
                 }
             }
+            ResourceField::IsModule => 0,
+            ResourceField::IsBuiltinExtensionModule => 0,
+            ResourceField::IsFrozenModule => 0,
+            ResourceField::IsExtensionModule => 0,
+            ResourceField::IsSharedLibrary => 0,
         };
 
         let overhead = match padding {
@@ -511,6 +541,7 @@ where
         dest.write_u8(ResourceField::StartOfEntry.into())
             .context("writing start of index entry")?;
 
+        // TODO only write flavor if defined.
         dest.write_u8(ResourceField::Flavor.into())
             .context("writing flavor field")?;
         dest.write_u8(self.flavor.into())
@@ -721,6 +752,31 @@ where
                 dest.write_u32::<LittleEndian>(path_length)
                     .context("writing resource path length")?;
             }
+        }
+
+        if self.is_module {
+            dest.write_u8(ResourceField::IsModule.into())
+                .context("writing is_module field")?;
+        }
+
+        if self.is_builtin_extension_module {
+            dest.write_u8(ResourceField::IsBuiltinExtensionModule.into())
+                .context("writing is_builtin_extension_module field")?;
+        }
+
+        if self.is_frozen_module {
+            dest.write_u8(ResourceField::IsFrozenModule.into())
+                .context("writing is_frozen_module field")?;
+        }
+
+        if self.is_extension_module {
+            dest.write_u8(ResourceField::IsExtensionModule.into())
+                .context("writing is_extension_module field")?;
+        }
+
+        if self.is_shared_library {
+            dest.write_u8(ResourceField::IsSharedLibrary.into())
+                .context("writing is_shared_library field")?;
         }
 
         dest.write_u8(ResourceField::EndOfEntry.into())

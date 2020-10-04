@@ -348,6 +348,12 @@ impl PrePackagedResource {
             } else {
                 None
             },
+            // TODO implement
+            is_module: false,
+            is_builtin_extension_module: false,
+            is_frozen_module: false,
+            is_extension_module: false,
+            is_shared_library: false,
         };
 
         if let Some((prefix, filename, location)) = &self.relative_path_shared_library {

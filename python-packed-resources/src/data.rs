@@ -144,6 +144,11 @@ pub enum ResourceField {
     RelativeFilesystemExtensionModuleSharedLibrary = 0x13,
     RelativeFilesystemPackageResources = 0x14,
     RelativeFilesystemDistributionResource = 0x15,
+    IsModule = 0x16,
+    IsBuiltinExtensionModule = 0x17,
+    IsFrozenModule = 0x18,
+    IsExtensionModule = 0x19,
+    IsSharedLibrary = 0x1a,
 }
 
 impl Into<u8> for ResourceField {
@@ -171,6 +176,11 @@ impl Into<u8> for ResourceField {
             ResourceField::RelativeFilesystemExtensionModuleSharedLibrary => 0x13,
             ResourceField::RelativeFilesystemPackageResources => 0x14,
             ResourceField::RelativeFilesystemDistributionResource => 0x15,
+            ResourceField::IsModule => 0x16,
+            ResourceField::IsBuiltinExtensionModule => 0x17,
+            ResourceField::IsFrozenModule => 0x18,
+            ResourceField::IsExtensionModule => 0x19,
+            ResourceField::IsSharedLibrary => 0x1a,
             ResourceField::EndOfEntry => 0xff,
         }
     }
@@ -203,6 +213,11 @@ impl TryFrom<u8> for ResourceField {
             0x13 => Ok(ResourceField::RelativeFilesystemExtensionModuleSharedLibrary),
             0x14 => Ok(ResourceField::RelativeFilesystemPackageResources),
             0x15 => Ok(ResourceField::RelativeFilesystemDistributionResource),
+            0x16 => Ok(ResourceField::IsModule),
+            0x17 => Ok(ResourceField::IsBuiltinExtensionModule),
+            0x18 => Ok(ResourceField::IsFrozenModule),
+            0x19 => Ok(ResourceField::IsExtensionModule),
+            0x1a => Ok(ResourceField::IsSharedLibrary),
             0xff => Ok(ResourceField::EndOfEntry),
             _ => Err("invalid field type"),
         }
@@ -279,6 +294,21 @@ where
 
     /// Mapping of Python package distribution files to relative filesystem paths for those resources.
     pub relative_path_distribution_resources: Option<HashMap<Cow<'a, str>, Cow<'a, Path>>>,
+
+    /// Whether this resource defines a Python module/package.
+    pub is_module: bool,
+
+    /// Whether this resource defines a builtin extension module.
+    pub is_builtin_extension_module: bool,
+
+    /// Whether this resource defines a frozen Python module.
+    pub is_frozen_module: bool,
+
+    /// Whether this resource defines a Python extension module.
+    pub is_extension_module: bool,
+
+    /// Whether this resource defines a shared library.
+    pub is_shared_library: bool,
 }
 
 impl<'a, X> Default for Resource<'a, X>
@@ -307,6 +337,11 @@ where
             relative_path_extension_module_shared_library: None,
             relative_path_package_resources: None,
             relative_path_distribution_resources: None,
+            is_module: false,
+            is_builtin_extension_module: false,
+            is_frozen_module: false,
+            is_extension_module: false,
+            is_shared_library: false,
         }
     }
 }
@@ -416,6 +451,11 @@ where
                         )
                     }))
                 }),
+            is_module: self.is_module,
+            is_builtin_extension_module: self.is_builtin_extension_module,
+            is_frozen_module: self.is_frozen_module,
+            is_extension_module: self.is_extension_module,
+            is_shared_library: self.is_shared_library,
         }
     }
 }
