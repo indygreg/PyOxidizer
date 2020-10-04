@@ -124,9 +124,10 @@ impl Environment {
             PyOxidizerSource::LocalPath { path } => {
                 PyembedLocation::Path(canonicalize_path(&path.join("pyembed")).unwrap())
             }
-            PyOxidizerSource::GitUrl { .. } => {
-                PyembedLocation::Version(PYOXIDIZER_VERSION.to_string())
-            }
+            PyOxidizerSource::GitUrl { url, commit, .. } => match commit {
+                Some(commit) => PyembedLocation::Git(url.clone(), commit.clone()),
+                None => PyembedLocation::Version(PYOXIDIZER_VERSION.to_string()),
+            },
         }
     }
 }

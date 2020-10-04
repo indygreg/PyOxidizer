@@ -228,8 +228,6 @@ pub fn add_pyoxidizer(project_dir: &Path, _suppress_help: bool) -> Result<()> {
 }
 
 /// How to define the ``pyembed`` crate dependency.
-///
-/// TODO support a Git repository location.
 pub enum PyembedLocation {
     /// Use a specific version, installed from the crate registry.
     ///
@@ -238,6 +236,9 @@ pub enum PyembedLocation {
 
     /// Use a local filesystem path.
     Path(PathBuf),
+
+    /// A git repository URL and revision hash.
+    Git(String, String),
 }
 
 /// Update the Cargo.toml of a new Rust project to use pyembed.
@@ -272,6 +273,10 @@ pub fn update_new_cargo_toml(path: &Path, pyembed_location: &PyembedLocation) ->
         PyembedLocation::Path(path) => format!(
             "pyembed = {{ path = \"{}\", default-features=false }}\n",
             path.display()
+        ),
+        PyembedLocation::Git(url, rev) => format!(
+            "pyembed = {{ git=\"{}\", rev=\"{}\", default-features=false }}\n",
+            url, rev
         ),
     });
 
