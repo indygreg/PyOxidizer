@@ -802,7 +802,6 @@ pub mod tests {
         crate::testutil::*,
         lazy_static::lazy_static,
         python_packaging::policy::{ExtensionModuleFilter, PythonResourcesPolicy},
-        python_packed_resources::data::ResourceFlavor,
         std::collections::BTreeSet,
         std::iter::FromIterator,
         std::ops::DerefMut,
@@ -963,7 +962,6 @@ pub mod tests {
             }),
             Some(&PrePackagedResource {
                 is_builtin_extension_module: true,
-                flavor: ResourceFlavor::BuiltinExtensionModule,
                 name: extension.name.clone(),
                 ..PrePackagedResource::default()
             })
@@ -995,7 +993,6 @@ pub mod tests {
     ) -> Result<()> {
         let mut entry = PrePackagedResource {
             is_extension_module: true,
-            flavor: ResourceFlavor::Extension,
             name: extension.name.clone(),
             shared_library_dependency_names: Some(vec![]),
             ..PrePackagedResource::default()
@@ -1167,7 +1164,6 @@ pub mod tests {
                     .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
                 Some(&PrePackagedResource {
                     is_builtin_extension_module: true,
-                    flavor: ResourceFlavor::BuiltinExtensionModule,
                     name: "_sqlite3".to_string(),
                     ..PrePackagedResource::default()
                 })
@@ -1314,7 +1310,6 @@ pub mod tests {
                     .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
                 Some(&PrePackagedResource {
                     is_builtin_extension_module: true,
-                    flavor: ResourceFlavor::BuiltinExtensionModule,
                     name: "_sqlite3".to_string(),
                     ..PrePackagedResource::default()
                 })
@@ -1462,7 +1457,6 @@ pub mod tests {
                 .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
             Some(&PrePackagedResource {
                 is_builtin_extension_module: true,
-                flavor: ResourceFlavor::BuiltinExtensionModule,
                 name: "_sqlite3".to_string(),
                 ..PrePackagedResource::default()
             })
@@ -1530,7 +1524,6 @@ pub mod tests {
                 .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
             Some(&PrePackagedResource {
                 is_builtin_extension_module: true,
-                flavor: ResourceFlavor::BuiltinExtensionModule,
                 name: "_sqlite3".to_string(),
                 ..PrePackagedResource::default()
             })
@@ -1689,7 +1682,6 @@ pub mod tests {
                     .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
                 Some(&PrePackagedResource {
                     is_builtin_extension_module: true,
-                    flavor: ResourceFlavor::BuiltinExtensionModule,
                     name: "_sqlite3".to_string(),
                     ..PrePackagedResource::default()
                 })
@@ -1764,7 +1756,6 @@ pub mod tests {
                     .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
                 Some(&PrePackagedResource {
                     is_builtin_extension_module: true,
-                    flavor: ResourceFlavor::BuiltinExtensionModule,
                     name: "_sqlite3".to_string(),
                     ..PrePackagedResource::default()
                 })
@@ -2024,7 +2015,6 @@ pub mod tests {
                     .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
                 Some(&PrePackagedResource {
                     is_builtin_extension_module: true,
-                    flavor: ResourceFlavor::BuiltinExtensionModule,
                     name: "_sqlite3".to_string(),
                     ..PrePackagedResource::default()
                 })
@@ -2093,7 +2083,6 @@ pub mod tests {
                     .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
                 Some(&PrePackagedResource {
                     is_builtin_extension_module: true,
-                    flavor: ResourceFlavor::BuiltinExtensionModule,
                     name: "_sqlite3".to_string(),
                     ..PrePackagedResource::default()
                 })

@@ -387,14 +387,7 @@ pub fn populate_parent_packages(
     let original_resources = resources
         .iter()
         .filter_map(|(k, v)| {
-            let emit = match v.flavor {
-                ResourceFlavor::BuiltinExtensionModule => true,
-                ResourceFlavor::Extension => true,
-                ResourceFlavor::FrozenModule => true,
-                ResourceFlavor::Module => true,
-                ResourceFlavor::None => false,
-                ResourceFlavor::SharedLibrary => false,
-            } || v.is_module
+            let emit = v.is_module
                 || v.is_builtin_extension_module
                 || v.is_frozen_module
                 || v.is_extension_module;
@@ -412,7 +405,6 @@ pub fn populate_parent_packages(
             let entry = resources
                 .entry(package.clone())
                 .or_insert_with(|| PrePackagedResource {
-                    flavor: ResourceFlavor::Module,
                     name: package,
                     ..PrePackagedResource::default()
                 });
@@ -675,7 +667,6 @@ impl PythonResourceCollector {
             .resources
             .entry(module.name.clone())
             .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 ..PrePackagedResource::default()
             });
@@ -769,7 +760,6 @@ impl PythonResourceCollector {
             .resources
             .entry(module.name.clone())
             .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 ..PrePackagedResource::default()
             });
@@ -878,7 +868,6 @@ impl PythonResourceCollector {
             .resources
             .entry(module.name.clone())
             .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 ..PrePackagedResource::default()
             });
@@ -987,7 +976,6 @@ impl PythonResourceCollector {
             .resources
             .entry(resource.leaf_package.clone())
             .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Module,
                 name: resource.leaf_package.clone(),
                 ..PrePackagedResource::default()
             });
@@ -1058,7 +1046,6 @@ impl PythonResourceCollector {
             .resources
             .entry(resource.package.clone())
             .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Module,
                 name: resource.package.clone(),
                 ..PrePackagedResource::default()
             });
@@ -1130,7 +1117,6 @@ impl PythonResourceCollector {
             .resources
             .entry(module.name.clone())
             .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::BuiltinExtensionModule,
                 name: module.name.clone(),
                 ..PrePackagedResource::default()
             });
@@ -1183,7 +1169,6 @@ impl PythonResourceCollector {
             .resources
             .entry(module.name.to_string())
             .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::Extension,
                 name: module.name.to_string(),
                 ..PrePackagedResource::default()
             });
@@ -1221,7 +1206,6 @@ impl PythonResourceCollector {
             .resources
             .entry(library.name.to_string())
             .or_insert_with(|| PrePackagedResource {
-                flavor: ResourceFlavor::SharedLibrary,
                 name: library.name.to_string(),
                 ..PrePackagedResource::default()
             });
@@ -1460,7 +1444,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             is_package: true,
             is_namespace_package: true,
@@ -1473,7 +1456,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 is_package: true,
                 is_namespace_package: true,
@@ -1492,7 +1474,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_source: Some(DataLocation::Memory(b"source".to_vec())),
             ..PrePackagedResource::default()
@@ -1504,7 +1485,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_source: Some(Cow::Owned(b"source".to_vec())),
                 ..Resource::default()
@@ -1522,7 +1502,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_bytecode: Some(PythonModuleBytecodeProvider::Provided(
                 DataLocation::Memory(b"bytecode".to_vec()),
@@ -1536,7 +1515,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_bytecode: Some(Cow::Owned(b"bytecode".to_vec())),
                 ..Resource::default()
@@ -1553,7 +1531,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
                 DataLocation::Memory(b"source".to_vec()),
@@ -1567,7 +1544,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_bytecode: Some(Cow::Owned(b"bc0source".to_vec())),
                 ..Resource::default()
@@ -1584,7 +1560,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_bytecode_opt1: Some(PythonModuleBytecodeProvider::Provided(
                 DataLocation::Memory(b"bytecode".to_vec()),
@@ -1598,7 +1573,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_bytecode_opt1: Some(Cow::Owned(b"bytecode".to_vec())),
                 ..Resource::default()
@@ -1615,7 +1589,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_bytecode_opt1: Some(PythonModuleBytecodeProvider::FromSource(
                 DataLocation::Memory(b"source".to_vec()),
@@ -1629,7 +1602,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_bytecode_opt1: Some(Cow::Owned(b"bc1source".to_vec())),
                 ..Resource::default()
@@ -1646,7 +1618,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_bytecode_opt2: Some(PythonModuleBytecodeProvider::Provided(
                 DataLocation::Memory(b"bytecode".to_vec()),
@@ -1660,7 +1631,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_bytecode_opt2: Some(Cow::Owned(b"bytecode".to_vec())),
                 ..Resource::default()
@@ -1677,7 +1647,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_bytecode_opt2: Some(PythonModuleBytecodeProvider::FromSource(
                 DataLocation::Memory(b"source".to_vec()),
@@ -1691,7 +1660,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_bytecode_opt2: Some(Cow::Owned(b"bc2source".to_vec())),
                 ..Resource::default()
@@ -1708,7 +1676,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_extension_module_shared_library: Some(DataLocation::Memory(
                 b"library".to_vec(),
@@ -1722,7 +1689,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_extension_module_shared_library: Some(Cow::Owned(b"library".to_vec())),
                 ..Resource::default()
@@ -1743,7 +1709,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_resources: Some(resources),
             ..PrePackagedResource::default()
@@ -1758,7 +1723,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_package_resources: Some(resources),
                 ..Resource::default()
@@ -1779,7 +1743,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_distribution_resources: Some(resources),
             ..PrePackagedResource::default()
@@ -1794,7 +1757,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_distribution_resources: Some(resources),
                 ..Resource::default()
@@ -1812,7 +1774,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_shared_library: true,
-            flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_shared_library: Some(DataLocation::Memory(b"library".to_vec())),
             shared_library_dependency_names: Some(vec!["foo".to_string(), "bar".to_string()]),
@@ -1825,7 +1786,6 @@ mod tests {
             resource,
             Resource {
                 is_shared_library: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_shared_library: Some(Cow::Owned(b"library".to_vec())),
                 shared_library_dependency_names: Some(vec![
@@ -1847,7 +1807,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             relative_path_module_source: Some((
                 "prefix".to_string(),
@@ -1862,7 +1821,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 relative_path_module_source: Some(Cow::Owned(PathBuf::from("prefix/module.py"))),
                 ..Resource::default()
@@ -1887,7 +1845,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "foo.bar".to_string(),
             relative_path_bytecode: Some((
                 "prefix".to_string(),
@@ -1903,7 +1860,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_bytecode: Some(Cow::Owned(PathBuf::from(
                     "prefix/foo/__pycache__/bar.tag.pyc"
@@ -1933,7 +1889,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "foo.bar".to_string(),
             relative_path_bytecode: Some((
                 "prefix".to_string(),
@@ -1949,7 +1904,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_bytecode: Some(Cow::Owned(PathBuf::from(
                     "prefix/foo/__pycache__/bar.tag.pyc"
@@ -1976,7 +1930,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "foo.bar".to_string(),
             relative_path_bytecode_opt1: Some((
                 "prefix".to_string(),
@@ -1992,7 +1945,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_bytecode_opt1: Some(Cow::Owned(PathBuf::from(
                     "prefix/foo/__pycache__/bar.tag.opt-1.pyc"
@@ -2022,7 +1974,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "foo.bar".to_string(),
             relative_path_bytecode_opt1: Some((
                 "prefix".to_string(),
@@ -2038,7 +1989,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_bytecode_opt1: Some(Cow::Owned(PathBuf::from(
                     "prefix/foo/__pycache__/bar.tag.opt-1.pyc"
@@ -2065,7 +2015,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "foo.bar".to_string(),
             relative_path_bytecode_opt2: Some((
                 "prefix".to_string(),
@@ -2081,7 +2030,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_bytecode_opt2: Some(Cow::Owned(PathBuf::from(
                     "prefix/foo/__pycache__/bar.tag.opt-2.pyc"
@@ -2111,7 +2059,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "foo.bar".to_string(),
             relative_path_bytecode_opt2: Some((
                 "prefix".to_string(),
@@ -2127,7 +2074,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_bytecode_opt2: Some(Cow::Owned(PathBuf::from(
                     "prefix/foo/__pycache__/bar.tag.opt-2.pyc"
@@ -2154,7 +2100,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             relative_path_extension_module_shared_library: Some((
                 PathBuf::from("prefix/ext.so"),
@@ -2169,7 +2114,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 relative_path_extension_module_shared_library: Some(Cow::Owned(PathBuf::from(
                     "prefix/ext.so"
@@ -2212,7 +2156,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             is_package: true,
             relative_path_package_resources: Some(resources),
@@ -2235,7 +2178,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 is_package: true,
                 relative_path_package_resources: Some(resources),
@@ -2277,7 +2219,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_module: true,
-            flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             relative_path_distribution_resources: Some(resources),
             ..PrePackagedResource::default()
@@ -2295,7 +2236,6 @@ mod tests {
             resource,
             Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 relative_path_distribution_resources: Some(resources),
                 ..Resource::default()
@@ -2320,7 +2260,6 @@ mod tests {
 
         let pre = PrePackagedResource {
             is_shared_library: true,
-            flavor: ResourceFlavor::SharedLibrary,
             name: "libfoo".to_string(),
             relative_path_shared_library: Some((
                 "prefix".to_string(),
@@ -2336,7 +2275,6 @@ mod tests {
             resource,
             Resource {
                 is_shared_library: true,
-                flavor: ResourceFlavor::SharedLibrary,
                 name: Cow::Owned("libfoo".to_string()),
                 ..Resource::default()
             }
@@ -2361,7 +2299,6 @@ mod tests {
             "root.parent.child".to_string(),
             PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "root.parent.child".to_string(),
                 in_memory_source: Some(DataLocation::Memory(vec![42])),
                 is_package: true,
@@ -2376,7 +2313,6 @@ mod tests {
             h.get("root.parent"),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "root.parent".to_string(),
                 is_package: true,
                 in_memory_source: Some(DataLocation::Memory(vec![])),
@@ -2387,7 +2323,6 @@ mod tests {
             h.get("root"),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "root".to_string(),
                 is_package: true,
                 in_memory_source: Some(DataLocation::Memory(vec![])),
@@ -2405,7 +2340,6 @@ mod tests {
             "root.parent.child".to_string(),
             PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "root.parent.child".to_string(),
                 relative_path_module_source: Some((
                     "prefix".to_string(),
@@ -2423,7 +2357,6 @@ mod tests {
             h.get("root.parent"),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "root.parent".to_string(),
                 is_package: true,
                 relative_path_module_source: Some((
@@ -2437,7 +2370,6 @@ mod tests {
             h.get("root"),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "root".to_string(),
                 is_package: true,
                 relative_path_module_source: Some((
@@ -2458,7 +2390,6 @@ mod tests {
             "root.parent.child".to_string(),
             PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "root.parent.child".to_string(),
                 in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
                     DataLocation::Memory(vec![42]),
@@ -2475,7 +2406,6 @@ mod tests {
             h.get("root.parent"),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "root.parent".to_string(),
                 is_package: true,
                 in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
@@ -2488,7 +2418,6 @@ mod tests {
             h.get("root"),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "root".to_string(),
                 is_package: true,
                 in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
@@ -2508,7 +2437,6 @@ mod tests {
             "foo.bar".to_string(),
             PrePackagedResource {
                 is_builtin_extension_module: true,
-                flavor: ResourceFlavor::BuiltinExtensionModule,
                 name: "foo.bar".to_string(),
                 relative_path_extension_module_shared_library: Some((
                     PathBuf::from("prefix/foo/bar.so"),
@@ -2524,7 +2452,6 @@ mod tests {
             h.get("foo"),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 is_package: true,
                 ..PrePackagedResource::default()
@@ -2541,7 +2468,6 @@ mod tests {
             "foo.bar".to_string(),
             PrePackagedResource {
                 is_extension_module: true,
-                flavor: ResourceFlavor::Extension,
                 name: "foo.bar".to_string(),
                 relative_path_extension_module_shared_library: Some((
                     PathBuf::from("prefix/foo/bar.so"),
@@ -2559,7 +2485,6 @@ mod tests {
             h.get("foo"),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 is_package: true,
                 ..PrePackagedResource::default()
@@ -2590,7 +2515,6 @@ mod tests {
             r.resources.get("foo"),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 is_package: false,
                 in_memory_source: Some(DataLocation::Memory(vec![42])),
@@ -2607,7 +2531,6 @@ mod tests {
             resources.resources.get("foo"),
             Some(&Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo".to_string()),
                 in_memory_source: Some(Cow::Owned(vec![42])),
                 ..Resource::default()
@@ -2639,7 +2562,6 @@ mod tests {
             r.resources.get("root.parent.child"),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "root.parent.child".to_string(),
                 is_package: true,
                 in_memory_source: Some(DataLocation::Memory(vec![42])),
@@ -2656,7 +2578,6 @@ mod tests {
             resources.resources.get("root"),
             Some(&Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("root".to_string()),
                 is_package: true,
                 in_memory_source: Some(Cow::Owned(vec![])),
@@ -2667,7 +2588,6 @@ mod tests {
             resources.resources.get("root.parent"),
             Some(&Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("root.parent".to_string()),
                 is_package: true,
                 in_memory_source: Some(Cow::Owned(vec![])),
@@ -2678,7 +2598,6 @@ mod tests {
             resources.resources.get("root.parent.child"),
             Some(&Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("root.parent.child".to_string()),
                 is_package: true,
                 in_memory_source: Some(Cow::Owned(vec![42])),
@@ -2714,7 +2633,6 @@ mod tests {
             r.resources.get("foo.bar"),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "foo.bar".to_string(),
                 is_package: false,
                 relative_path_module_source: Some((
@@ -2734,7 +2652,6 @@ mod tests {
             resources.resources.get("foo"),
             Some(&Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo".to_string()),
                 is_package: true,
                 relative_path_module_source: Some(Cow::Owned(PathBuf::from(
@@ -2747,7 +2664,6 @@ mod tests {
             resources.resources.get("foo.bar"),
             Some(&Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_source: Some(Cow::Owned(PathBuf::from("prefix/foo/bar.py"))),
                 ..Resource::default()
@@ -2815,7 +2731,6 @@ mod tests {
             r.resources.get(&module.name),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 is_package: module.is_package,
                 in_memory_source: Some(module.source.clone()),
@@ -2834,7 +2749,6 @@ mod tests {
             r.resources.get(&module.name),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 is_package: module.is_package,
                 in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
@@ -2855,7 +2769,6 @@ mod tests {
             r.resources.get(&module.name),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 is_package: module.is_package,
                 in_memory_bytecode_opt1: Some(PythonModuleBytecodeProvider::FromSource(
@@ -2876,7 +2789,6 @@ mod tests {
             r.resources.get(&module.name),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 is_package: module.is_package,
                 in_memory_bytecode_opt2: Some(PythonModuleBytecodeProvider::FromSource(
@@ -2912,7 +2824,6 @@ mod tests {
             r.resources.get("foo"),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 in_memory_bytecode: Some(PythonModuleBytecodeProvider::Provided(
                     DataLocation::Memory(vec![42])
@@ -2931,7 +2842,6 @@ mod tests {
             resources.resources.get("foo"),
             Some(&Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo".to_string()),
                 in_memory_bytecode: Some(Cow::Owned(vec![42])),
                 ..Resource::default()
@@ -2964,7 +2874,6 @@ mod tests {
             r.resources.get("foo"),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
                     DataLocation::Memory(vec![42])
@@ -2983,7 +2892,6 @@ mod tests {
             resources.resources.get("foo"),
             Some(&Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo".to_string()),
                 in_memory_bytecode: Some(Cow::Owned(b"bc0\x2a".to_vec())),
                 ..Resource::default()
@@ -3035,7 +2943,6 @@ mod tests {
             r.resources.get(&module.name),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 is_package: module.is_package,
                 in_memory_bytecode: Some(PythonModuleBytecodeProvider::Provided(
@@ -3077,7 +2984,6 @@ mod tests {
             r.resources.get(&module.name),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 is_package: module.is_package,
                 in_memory_bytecode_opt1: Some(PythonModuleBytecodeProvider::Provided(
@@ -3097,7 +3003,6 @@ mod tests {
             r.resources.get(&module.name),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 is_package: module.is_package,
                 in_memory_bytecode_opt2: Some(PythonModuleBytecodeProvider::Provided(
@@ -3134,7 +3039,6 @@ mod tests {
             r.resources.get("root.parent.child"),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "root.parent.child".to_string(),
                 in_memory_bytecode_opt1: Some(PythonModuleBytecodeProvider::FromSource(
                     DataLocation::Memory(vec![42])
@@ -3153,7 +3057,6 @@ mod tests {
             resources.resources.get("root"),
             Some(&Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("root".to_string()),
                 is_package: true,
                 in_memory_bytecode_opt1: Some(Cow::Owned(b"bc1".to_vec())),
@@ -3164,7 +3067,6 @@ mod tests {
             resources.resources.get("root.parent"),
             Some(&Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("root.parent".to_string()),
                 is_package: true,
                 in_memory_bytecode_opt1: Some(Cow::Owned(b"bc1".to_vec())),
@@ -3175,7 +3077,6 @@ mod tests {
             resources.resources.get("root.parent.child"),
             Some(&Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("root.parent.child".to_string()),
                 is_package: true,
                 in_memory_bytecode_opt1: Some(Cow::Owned(b"bc1\x2a".to_vec())),
@@ -3230,7 +3131,6 @@ mod tests {
             r.resources.get(&module.name),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 is_package: module.is_package,
                 in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
@@ -3272,7 +3172,6 @@ mod tests {
             r.resources.get(&module.name),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 is_package: module.is_package,
                 in_memory_bytecode_opt1: Some(PythonModuleBytecodeProvider::FromSource(
@@ -3292,7 +3191,6 @@ mod tests {
             r.resources.get(&module.name),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 is_package: module.is_package,
                 in_memory_bytecode_opt2: Some(PythonModuleBytecodeProvider::FromSource(
@@ -3327,7 +3225,6 @@ mod tests {
             r.resources.get("foo"),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 is_package: true,
                 in_memory_resources: Some(BTreeMap::from_iter(
@@ -3348,7 +3245,6 @@ mod tests {
             resources.resources.get("foo"),
             Some(&Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo".to_string()),
                 is_package: true,
                 in_memory_package_resources: Some(HashMap::from_iter(
@@ -3386,7 +3282,6 @@ mod tests {
             r.resources.get("foo"),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 is_package: true,
                 relative_path_package_resources: Some(BTreeMap::from_iter(
@@ -3413,7 +3308,6 @@ mod tests {
             resources.resources.get("foo"),
             Some(&Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo".to_string()),
                 is_package: true,
                 relative_path_package_resources: Some(HashMap::from_iter(
@@ -3474,7 +3368,6 @@ mod tests {
             r.resources.get(&resource.leaf_package),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: resource.leaf_package.clone(),
                 is_package: true,
                 in_memory_resources: Some(BTreeMap::from_iter(
@@ -3497,7 +3390,6 @@ mod tests {
             r.resources.get(&resource.leaf_package),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: resource.leaf_package.clone(),
                 is_package: true,
                 relative_path_package_resources: Some(BTreeMap::from_iter(
@@ -3542,7 +3434,6 @@ mod tests {
             r.resources.get("mypackage"),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "mypackage".to_string(),
                 is_package: true,
                 in_memory_distribution_resources: Some(BTreeMap::from_iter(
@@ -3563,7 +3454,6 @@ mod tests {
             resources.resources.get("mypackage"),
             Some(&Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("mypackage".to_string()),
                 is_package: true,
                 in_memory_distribution_resources: Some(HashMap::from_iter(
@@ -3601,7 +3491,6 @@ mod tests {
             r.resources.get("mypackage"),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: "mypackage".to_string(),
                 is_package: true,
                 relative_path_distribution_resources: Some(BTreeMap::from_iter(
@@ -3628,7 +3517,6 @@ mod tests {
             resources.resources.get("mypackage"),
             Some(&Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("mypackage".to_string()),
                 is_package: true,
                 relative_path_distribution_resources: Some(HashMap::from_iter(
@@ -3689,7 +3577,6 @@ mod tests {
             r.resources.get(&resource.package),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: resource.package.clone(),
                 is_package: true,
                 in_memory_distribution_resources: Some(BTreeMap::from_iter(
@@ -3712,7 +3599,6 @@ mod tests {
             r.resources.get(&resource.package),
             Some(&PrePackagedResource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: resource.package.clone(),
                 is_package: true,
                 relative_path_distribution_resources: Some(BTreeMap::from_iter(
@@ -3760,7 +3646,6 @@ mod tests {
             c.resources.get("_io"),
             Some(&PrePackagedResource {
                 is_builtin_extension_module: true,
-                flavor: ResourceFlavor::BuiltinExtensionModule,
                 name: "_io".to_string(),
                 ..PrePackagedResource::default()
             })
@@ -3775,7 +3660,6 @@ mod tests {
             resources.resources.get("_io"),
             Some(&Resource {
                 is_builtin_extension_module: true,
-                flavor: ResourceFlavor::BuiltinExtensionModule,
                 name: Cow::Owned("_io".to_string()),
                 ..Resource::default()
             })
@@ -3821,7 +3705,6 @@ mod tests {
             c.resources.get("myext"),
             Some(&PrePackagedResource {
                 is_extension_module: true,
-                flavor: ResourceFlavor::Extension,
                 name: "myext".to_string(),
                 in_memory_extension_module_shared_library: Some(DataLocation::Memory(vec![42])),
                 shared_library_dependency_names: Some(vec!["foo".to_string()]),
@@ -3832,7 +3715,6 @@ mod tests {
             c.resources.get("foo"),
             Some(&PrePackagedResource {
                 is_shared_library: true,
-                flavor: ResourceFlavor::SharedLibrary,
                 name: "foo".to_string(),
                 in_memory_shared_library: Some(DataLocation::Memory(vec![40])),
                 ..PrePackagedResource::default()
@@ -3848,7 +3730,6 @@ mod tests {
             resources.resources.get("myext"),
             Some(&Resource {
                 is_extension_module: true,
-                flavor: ResourceFlavor::Extension,
                 name: Cow::Owned("myext".to_string()),
                 in_memory_extension_module_shared_library: Some(Cow::Owned(vec![42])),
                 shared_library_dependency_names: Some(vec![Cow::Owned("foo".to_string())]),
@@ -3859,7 +3740,6 @@ mod tests {
             resources.resources.get("foo"),
             Some(&Resource {
                 is_shared_library: true,
-                flavor: ResourceFlavor::SharedLibrary,
                 name: Cow::Owned("foo".to_string()),
                 in_memory_shared_library: Some(Cow::Owned(vec![40])),
                 ..Resource::default()
@@ -3912,7 +3792,6 @@ mod tests {
             c.resources.get("foo.bar"),
             Some(&PrePackagedResource {
                 is_extension_module: true,
-                flavor: ResourceFlavor::Extension,
                 name: "foo.bar".to_string(),
                 is_package: false,
                 relative_path_extension_module_shared_library: Some((
@@ -3927,7 +3806,6 @@ mod tests {
             c.resources.get("mylib"),
             Some(&PrePackagedResource {
                 is_shared_library: true,
-                flavor: ResourceFlavor::SharedLibrary,
                 name: "mylib".to_string(),
                 relative_path_shared_library: Some((
                     "prefix/foo".to_string(),
@@ -3947,7 +3825,6 @@ mod tests {
             resources.resources.get("foo"),
             Some(&Resource {
                 is_module: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo".to_string()),
                 is_package: true,
                 ..Resource::default()
@@ -3957,7 +3834,6 @@ mod tests {
             resources.resources.get("foo.bar"),
             Some(&Resource {
                 is_extension_module: true,
-                flavor: ResourceFlavor::Extension,
                 name: Cow::Owned("foo.bar".to_string()),
                 is_package: false,
                 relative_path_extension_module_shared_library: Some(Cow::Owned(PathBuf::from(
@@ -3971,7 +3847,6 @@ mod tests {
             resources.resources.get("mylib"),
             Some(&Resource {
                 is_shared_library: true,
-                flavor: ResourceFlavor::SharedLibrary,
                 name: Cow::Owned("mylib".to_string()),
                 ..Resource::default()
             })
@@ -4028,7 +3903,6 @@ mod tests {
             Some(&PrePackagedResource {
                 is_module: true,
                 is_shared_library: true,
-                flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 is_package: true,
                 in_memory_source: Some(DataLocation::Memory(vec![1])),
@@ -4047,7 +3921,6 @@ mod tests {
             Some(&Resource {
                 is_module: true,
                 is_shared_library: true,
-                flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo".to_string()),
                 is_package: true,
                 in_memory_source: Some(Cow::Owned(vec![1])),
