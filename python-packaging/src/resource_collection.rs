@@ -53,7 +53,6 @@ pub enum PythonModuleBytecodeProvider {
 /// provided verbatim or via source.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct PrePackagedResource {
-    pub flavor: ResourceFlavor,
     pub name: String,
     pub is_package: bool,
     pub is_namespace_package: bool,
@@ -97,7 +96,7 @@ impl PrePackagedResource {
         let mut installs = Vec::new();
 
         let resource = Resource {
-            flavor: self.flavor,
+            flavor: ResourceFlavor::None,
             name: Cow::Owned(self.name.clone()),
             is_package: self.is_package,
             is_namespace_package: self.is_namespace_package,
