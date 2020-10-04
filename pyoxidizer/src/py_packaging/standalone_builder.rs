@@ -962,6 +962,7 @@ pub mod tests {
                 }
             }),
             Some(&PrePackagedResource {
+                is_builtin_extension_module: true,
                 flavor: ResourceFlavor::BuiltinExtensionModule,
                 name: extension.name.clone(),
                 ..PrePackagedResource::default()
@@ -993,6 +994,7 @@ pub mod tests {
         location: ConcreteResourceLocation,
     ) -> Result<()> {
         let mut entry = PrePackagedResource {
+            is_extension_module: true,
             flavor: ResourceFlavor::Extension,
             name: extension.name.clone(),
             shared_library_dependency_names: Some(vec![]),
@@ -1164,6 +1166,7 @@ pub mod tests {
                     .iter_resources()
                     .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
                 Some(&PrePackagedResource {
+                    is_builtin_extension_module: true,
                     flavor: ResourceFlavor::BuiltinExtensionModule,
                     name: "_sqlite3".to_string(),
                     ..PrePackagedResource::default()
@@ -1310,6 +1313,7 @@ pub mod tests {
                     .iter_resources()
                     .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
                 Some(&PrePackagedResource {
+                    is_builtin_extension_module: true,
                     flavor: ResourceFlavor::BuiltinExtensionModule,
                     name: "_sqlite3".to_string(),
                     ..PrePackagedResource::default()
@@ -1457,6 +1461,7 @@ pub mod tests {
                 .iter_resources()
                 .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
             Some(&PrePackagedResource {
+                is_builtin_extension_module: true,
                 flavor: ResourceFlavor::BuiltinExtensionModule,
                 name: "_sqlite3".to_string(),
                 ..PrePackagedResource::default()
@@ -1524,6 +1529,7 @@ pub mod tests {
                 .iter_resources()
                 .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
             Some(&PrePackagedResource {
+                is_builtin_extension_module: true,
                 flavor: ResourceFlavor::BuiltinExtensionModule,
                 name: "_sqlite3".to_string(),
                 ..PrePackagedResource::default()
@@ -1682,6 +1688,7 @@ pub mod tests {
                     .iter_resources()
                     .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
                 Some(&PrePackagedResource {
+                    is_builtin_extension_module: true,
                     flavor: ResourceFlavor::BuiltinExtensionModule,
                     name: "_sqlite3".to_string(),
                     ..PrePackagedResource::default()
@@ -1756,6 +1763,7 @@ pub mod tests {
                     .iter_resources()
                     .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
                 Some(&PrePackagedResource {
+                    is_builtin_extension_module: true,
                     flavor: ResourceFlavor::BuiltinExtensionModule,
                     name: "_sqlite3".to_string(),
                     ..PrePackagedResource::default()
@@ -2015,6 +2023,7 @@ pub mod tests {
                     .iter_resources()
                     .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
                 Some(&PrePackagedResource {
+                    is_builtin_extension_module: true,
                     flavor: ResourceFlavor::BuiltinExtensionModule,
                     name: "_sqlite3".to_string(),
                     ..PrePackagedResource::default()
@@ -2083,6 +2092,7 @@ pub mod tests {
                     .iter_resources()
                     .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
                 Some(&PrePackagedResource {
+                    is_builtin_extension_module: true,
                     flavor: ResourceFlavor::BuiltinExtensionModule,
                     name: "_sqlite3".to_string(),
                     ..PrePackagedResource::default()

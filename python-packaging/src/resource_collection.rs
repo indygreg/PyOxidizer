@@ -77,6 +77,11 @@ pub struct PrePackagedResource {
     pub relative_path_package_resources: Option<BTreeMap<String, (PathBuf, DataLocation)>>,
     pub relative_path_distribution_resources: Option<BTreeMap<String, (PathBuf, DataLocation)>>,
     pub relative_path_shared_library: Option<(String, PathBuf, DataLocation)>,
+    pub is_module: bool,
+    pub is_builtin_extension_module: bool,
+    pub is_frozen_module: bool,
+    pub is_extension_module: bool,
+    pub is_shared_library: bool,
 }
 
 impl PrePackagedResource {
@@ -348,12 +353,11 @@ impl PrePackagedResource {
             } else {
                 None
             },
-            // TODO implement
-            is_module: false,
-            is_builtin_extension_module: false,
-            is_frozen_module: false,
-            is_extension_module: false,
-            is_shared_library: false,
+            is_module: self.is_module,
+            is_builtin_extension_module: self.is_builtin_extension_module,
+            is_frozen_module: self.is_frozen_module,
+            is_extension_module: self.is_extension_module,
+            is_shared_library: self.is_shared_library,
         };
 
         if let Some((prefix, filename, location)) = &self.relative_path_shared_library {
@@ -390,7 +394,10 @@ pub fn populate_parent_packages(
                 ResourceFlavor::Module => true,
                 ResourceFlavor::None => false,
                 ResourceFlavor::SharedLibrary => false,
-            };
+            } || v.is_module
+                || v.is_builtin_extension_module
+                || v.is_frozen_module
+                || v.is_extension_module;
 
             if emit {
                 Some((k.to_owned(), v.to_owned()))
@@ -410,7 +417,8 @@ pub fn populate_parent_packages(
                     ..PrePackagedResource::default()
                 });
 
-            // Parents must be packages by definition.
+            // Parents must be modules + packages by definition.
+            entry.is_module = true;
             entry.is_package = true;
 
             // We want to materialize bytecode on parent packages no matter
@@ -671,6 +679,8 @@ impl PythonResourceCollector {
                 name: module.name.clone(),
                 ..PrePackagedResource::default()
             });
+
+        entry.is_module = true;
         entry.is_package = module.is_package;
 
         match location {
@@ -764,6 +774,7 @@ impl PythonResourceCollector {
                 ..PrePackagedResource::default()
             });
 
+        entry.is_module = true;
         entry.is_package = module.is_package;
 
         // TODO having to resolve the DataLocation here is a bit unfortunate.
@@ -872,6 +883,7 @@ impl PythonResourceCollector {
                 ..PrePackagedResource::default()
             });
 
+        entry.is_module = true;
         entry.is_package = module.is_package;
 
         let bytecode = PythonModuleBytecodeProvider::FromSource(module.source.clone());
@@ -981,6 +993,7 @@ impl PythonResourceCollector {
             });
 
         // Adding a resource automatically makes the module a package.
+        entry.is_module = true;
         entry.is_package = true;
 
         match location {
@@ -1051,6 +1064,7 @@ impl PythonResourceCollector {
             });
 
         // A distribution resource makes the entity a package.
+        entry.is_module = true;
         entry.is_package = true;
 
         match location {
@@ -1121,6 +1135,7 @@ impl PythonResourceCollector {
                 ..PrePackagedResource::default()
             });
 
+        entry.is_builtin_extension_module = true;
         entry.is_package = module.is_package;
 
         Ok(())
@@ -1173,6 +1188,8 @@ impl PythonResourceCollector {
                 ..PrePackagedResource::default()
             });
 
+        entry.is_extension_module = true;
+
         if module.is_package {
             entry.is_package = true;
         }
@@ -1208,6 +1225,8 @@ impl PythonResourceCollector {
                 name: library.name.to_string(),
                 ..PrePackagedResource::default()
             });
+
+        entry.is_shared_library = true;
 
         match location {
             ConcreteResourceLocation::InMemory => {
@@ -1440,6 +1459,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             is_package: true,
@@ -1452,6 +1472,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 is_package: true,
@@ -1470,6 +1491,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_source: Some(DataLocation::Memory(b"source".to_vec())),
@@ -1481,6 +1503,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_source: Some(Cow::Owned(b"source".to_vec())),
@@ -1498,6 +1521,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_bytecode: Some(PythonModuleBytecodeProvider::Provided(
@@ -1511,6 +1535,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_bytecode: Some(Cow::Owned(b"bytecode".to_vec())),
@@ -1527,6 +1552,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
@@ -1540,6 +1566,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_bytecode: Some(Cow::Owned(b"bc0source".to_vec())),
@@ -1556,6 +1583,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_bytecode_opt1: Some(PythonModuleBytecodeProvider::Provided(
@@ -1569,6 +1597,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_bytecode_opt1: Some(Cow::Owned(b"bytecode".to_vec())),
@@ -1585,6 +1614,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_bytecode_opt1: Some(PythonModuleBytecodeProvider::FromSource(
@@ -1598,6 +1628,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_bytecode_opt1: Some(Cow::Owned(b"bc1source".to_vec())),
@@ -1614,6 +1645,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_bytecode_opt2: Some(PythonModuleBytecodeProvider::Provided(
@@ -1627,6 +1659,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_bytecode_opt2: Some(Cow::Owned(b"bytecode".to_vec())),
@@ -1643,6 +1676,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_bytecode_opt2: Some(PythonModuleBytecodeProvider::FromSource(
@@ -1656,6 +1690,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_bytecode_opt2: Some(Cow::Owned(b"bc2source".to_vec())),
@@ -1672,6 +1707,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_extension_module_shared_library: Some(DataLocation::Memory(
@@ -1685,6 +1721,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_extension_module_shared_library: Some(Cow::Owned(b"library".to_vec())),
@@ -1705,6 +1742,7 @@ mod tests {
         resources.insert("foo".to_string(), DataLocation::Memory(b"value".to_vec()));
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_resources: Some(resources),
@@ -1719,6 +1757,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_package_resources: Some(resources),
@@ -1739,6 +1778,7 @@ mod tests {
         resources.insert("foo".to_string(), DataLocation::Memory(b"value".to_vec()));
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_distribution_resources: Some(resources),
@@ -1753,6 +1793,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_distribution_resources: Some(resources),
@@ -1770,6 +1811,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let pre = PrePackagedResource {
+            is_shared_library: true,
             flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             in_memory_shared_library: Some(DataLocation::Memory(b"library".to_vec())),
@@ -1782,6 +1824,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_shared_library: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 in_memory_shared_library: Some(Cow::Owned(b"library".to_vec())),
@@ -1803,6 +1846,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             relative_path_module_source: Some((
@@ -1817,6 +1861,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 relative_path_module_source: Some(Cow::Owned(PathBuf::from("prefix/module.py"))),
@@ -1841,6 +1886,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "foo.bar".to_string(),
             relative_path_bytecode: Some((
@@ -1856,6 +1902,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_bytecode: Some(Cow::Owned(PathBuf::from(
@@ -1885,6 +1932,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "foo.bar".to_string(),
             relative_path_bytecode: Some((
@@ -1900,6 +1948,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_bytecode: Some(Cow::Owned(PathBuf::from(
@@ -1926,6 +1975,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "foo.bar".to_string(),
             relative_path_bytecode_opt1: Some((
@@ -1941,6 +1991,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_bytecode_opt1: Some(Cow::Owned(PathBuf::from(
@@ -1970,6 +2021,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "foo.bar".to_string(),
             relative_path_bytecode_opt1: Some((
@@ -1985,6 +2037,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_bytecode_opt1: Some(Cow::Owned(PathBuf::from(
@@ -2011,6 +2064,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "foo.bar".to_string(),
             relative_path_bytecode_opt2: Some((
@@ -2026,6 +2080,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_bytecode_opt2: Some(Cow::Owned(PathBuf::from(
@@ -2055,6 +2110,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "foo.bar".to_string(),
             relative_path_bytecode_opt2: Some((
@@ -2070,6 +2126,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_bytecode_opt2: Some(Cow::Owned(PathBuf::from(
@@ -2096,6 +2153,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             relative_path_extension_module_shared_library: Some((
@@ -2110,6 +2168,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 relative_path_extension_module_shared_library: Some(Cow::Owned(PathBuf::from(
@@ -2152,6 +2211,7 @@ mod tests {
         );
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             is_package: true,
@@ -2174,6 +2234,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 is_package: true,
@@ -2215,6 +2276,7 @@ mod tests {
         );
 
         let pre = PrePackagedResource {
+            is_module: true,
             flavor: ResourceFlavor::Module,
             name: "module".to_string(),
             relative_path_distribution_resources: Some(resources),
@@ -2232,6 +2294,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("module".to_string()),
                 relative_path_distribution_resources: Some(resources),
@@ -2256,6 +2319,7 @@ mod tests {
         let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
 
         let pre = PrePackagedResource {
+            is_shared_library: true,
             flavor: ResourceFlavor::SharedLibrary,
             name: "libfoo".to_string(),
             relative_path_shared_library: Some((
@@ -2271,6 +2335,7 @@ mod tests {
         assert_eq!(
             resource,
             Resource {
+                is_shared_library: true,
                 flavor: ResourceFlavor::SharedLibrary,
                 name: Cow::Owned("libfoo".to_string()),
                 ..Resource::default()
@@ -2295,6 +2360,7 @@ mod tests {
         h.insert(
             "root.parent.child".to_string(),
             PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "root.parent.child".to_string(),
                 in_memory_source: Some(DataLocation::Memory(vec![42])),
@@ -2309,6 +2375,7 @@ mod tests {
         assert_eq!(
             h.get("root.parent"),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "root.parent".to_string(),
                 is_package: true,
@@ -2319,6 +2386,7 @@ mod tests {
         assert_eq!(
             h.get("root"),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "root".to_string(),
                 is_package: true,
@@ -2336,6 +2404,7 @@ mod tests {
         h.insert(
             "root.parent.child".to_string(),
             PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "root.parent.child".to_string(),
                 relative_path_module_source: Some((
@@ -2353,6 +2422,7 @@ mod tests {
         assert_eq!(
             h.get("root.parent"),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "root.parent".to_string(),
                 is_package: true,
@@ -2366,6 +2436,7 @@ mod tests {
         assert_eq!(
             h.get("root"),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "root".to_string(),
                 is_package: true,
@@ -2386,6 +2457,7 @@ mod tests {
         h.insert(
             "root.parent.child".to_string(),
             PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "root.parent.child".to_string(),
                 in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
@@ -2402,6 +2474,7 @@ mod tests {
         assert_eq!(
             h.get("root.parent"),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "root.parent".to_string(),
                 is_package: true,
@@ -2414,6 +2487,7 @@ mod tests {
         assert_eq!(
             h.get("root"),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "root".to_string(),
                 is_package: true,
@@ -2433,6 +2507,7 @@ mod tests {
         h.insert(
             "foo.bar".to_string(),
             PrePackagedResource {
+                is_builtin_extension_module: true,
                 flavor: ResourceFlavor::BuiltinExtensionModule,
                 name: "foo.bar".to_string(),
                 relative_path_extension_module_shared_library: Some((
@@ -2448,6 +2523,7 @@ mod tests {
         assert_eq!(
             h.get("foo"),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 is_package: true,
@@ -2464,6 +2540,7 @@ mod tests {
         h.insert(
             "foo.bar".to_string(),
             PrePackagedResource {
+                is_extension_module: true,
                 flavor: ResourceFlavor::Extension,
                 name: "foo.bar".to_string(),
                 relative_path_extension_module_shared_library: Some((
@@ -2481,6 +2558,7 @@ mod tests {
         assert_eq!(
             h.get("foo"),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 is_package: true,
@@ -2511,6 +2589,7 @@ mod tests {
         assert_eq!(
             r.resources.get("foo"),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 is_package: false,
@@ -2527,6 +2606,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("foo"),
             Some(&Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo".to_string()),
                 in_memory_source: Some(Cow::Owned(vec![42])),
@@ -2558,6 +2638,7 @@ mod tests {
         assert_eq!(
             r.resources.get("root.parent.child"),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "root.parent.child".to_string(),
                 is_package: true,
@@ -2574,6 +2655,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("root"),
             Some(&Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("root".to_string()),
                 is_package: true,
@@ -2584,6 +2666,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("root.parent"),
             Some(&Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("root.parent".to_string()),
                 is_package: true,
@@ -2594,6 +2677,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("root.parent.child"),
             Some(&Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("root.parent.child".to_string()),
                 is_package: true,
@@ -2629,6 +2713,7 @@ mod tests {
         assert_eq!(
             r.resources.get("foo.bar"),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "foo.bar".to_string(),
                 is_package: false,
@@ -2648,6 +2733,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("foo"),
             Some(&Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo".to_string()),
                 is_package: true,
@@ -2660,6 +2746,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("foo.bar"),
             Some(&Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo.bar".to_string()),
                 relative_path_module_source: Some(Cow::Owned(PathBuf::from("prefix/foo/bar.py"))),
@@ -2727,6 +2814,7 @@ mod tests {
         assert_eq!(
             r.resources.get(&module.name),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 is_package: module.is_package,
@@ -2745,6 +2833,7 @@ mod tests {
         assert_eq!(
             r.resources.get(&module.name),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 is_package: module.is_package,
@@ -2765,6 +2854,7 @@ mod tests {
         assert_eq!(
             r.resources.get(&module.name),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 is_package: module.is_package,
@@ -2785,6 +2875,7 @@ mod tests {
         assert_eq!(
             r.resources.get(&module.name),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 is_package: module.is_package,
@@ -2820,6 +2911,7 @@ mod tests {
         assert_eq!(
             r.resources.get("foo"),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 in_memory_bytecode: Some(PythonModuleBytecodeProvider::Provided(
@@ -2838,6 +2930,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("foo"),
             Some(&Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo".to_string()),
                 in_memory_bytecode: Some(Cow::Owned(vec![42])),
@@ -2870,6 +2963,7 @@ mod tests {
         assert_eq!(
             r.resources.get("foo"),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 in_memory_bytecode: Some(PythonModuleBytecodeProvider::FromSource(
@@ -2888,6 +2982,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("foo"),
             Some(&Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo".to_string()),
                 in_memory_bytecode: Some(Cow::Owned(b"bc0\x2a".to_vec())),
@@ -2909,7 +3004,7 @@ mod tests {
             BytecodeOptimizationLevel::Zero,
             false,
             DEFAULT_CACHE_TAG,
-            &vec![42],
+            &[42],
         );
 
         let mut add_context = PythonResourceAddCollectionContext {
@@ -2939,6 +3034,7 @@ mod tests {
         assert_eq!(
             r.resources.get(&module.name),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 is_package: module.is_package,
@@ -2980,6 +3076,7 @@ mod tests {
         assert_eq!(
             r.resources.get(&module.name),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 is_package: module.is_package,
@@ -2999,6 +3096,7 @@ mod tests {
         assert_eq!(
             r.resources.get(&module.name),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 is_package: module.is_package,
@@ -3035,6 +3133,7 @@ mod tests {
         assert_eq!(
             r.resources.get("root.parent.child"),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "root.parent.child".to_string(),
                 in_memory_bytecode_opt1: Some(PythonModuleBytecodeProvider::FromSource(
@@ -3053,6 +3152,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("root"),
             Some(&Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("root".to_string()),
                 is_package: true,
@@ -3063,6 +3163,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("root.parent"),
             Some(&Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("root.parent".to_string()),
                 is_package: true,
@@ -3073,6 +3174,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("root.parent.child"),
             Some(&Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("root.parent.child".to_string()),
                 is_package: true,
@@ -3127,6 +3229,7 @@ mod tests {
         assert_eq!(
             r.resources.get(&module.name),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 is_package: module.is_package,
@@ -3168,6 +3271,7 @@ mod tests {
         assert_eq!(
             r.resources.get(&module.name),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 is_package: module.is_package,
@@ -3187,6 +3291,7 @@ mod tests {
         assert_eq!(
             r.resources.get(&module.name),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: module.name.clone(),
                 is_package: module.is_package,
@@ -3221,6 +3326,7 @@ mod tests {
         assert_eq!(
             r.resources.get("foo"),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 is_package: true,
@@ -3241,6 +3347,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("foo"),
             Some(&Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo".to_string()),
                 is_package: true,
@@ -3278,6 +3385,7 @@ mod tests {
         assert_eq!(
             r.resources.get("foo"),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "foo".to_string(),
                 is_package: true,
@@ -3304,6 +3412,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("foo"),
             Some(&Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo".to_string()),
                 is_package: true,
@@ -3364,6 +3473,7 @@ mod tests {
         assert_eq!(
             r.resources.get(&resource.leaf_package),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: resource.leaf_package.clone(),
                 is_package: true,
@@ -3386,6 +3496,7 @@ mod tests {
         assert_eq!(
             r.resources.get(&resource.leaf_package),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: resource.leaf_package.clone(),
                 is_package: true,
@@ -3430,6 +3541,7 @@ mod tests {
         assert_eq!(
             r.resources.get("mypackage"),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "mypackage".to_string(),
                 is_package: true,
@@ -3450,6 +3562,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("mypackage"),
             Some(&Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("mypackage".to_string()),
                 is_package: true,
@@ -3487,6 +3600,7 @@ mod tests {
         assert_eq!(
             r.resources.get("mypackage"),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: "mypackage".to_string(),
                 is_package: true,
@@ -3513,6 +3627,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("mypackage"),
             Some(&Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("mypackage".to_string()),
                 is_package: true,
@@ -3573,6 +3688,7 @@ mod tests {
         assert_eq!(
             r.resources.get(&resource.package),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: resource.package.clone(),
                 is_package: true,
@@ -3595,6 +3711,7 @@ mod tests {
         assert_eq!(
             r.resources.get(&resource.package),
             Some(&PrePackagedResource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: resource.package.clone(),
                 is_package: true,
@@ -3642,6 +3759,7 @@ mod tests {
         assert_eq!(
             c.resources.get("_io"),
             Some(&PrePackagedResource {
+                is_builtin_extension_module: true,
                 flavor: ResourceFlavor::BuiltinExtensionModule,
                 name: "_io".to_string(),
                 ..PrePackagedResource::default()
@@ -3656,6 +3774,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("_io"),
             Some(&Resource {
+                is_builtin_extension_module: true,
                 flavor: ResourceFlavor::BuiltinExtensionModule,
                 name: Cow::Owned("_io".to_string()),
                 ..Resource::default()
@@ -3701,6 +3820,7 @@ mod tests {
         assert_eq!(
             c.resources.get("myext"),
             Some(&PrePackagedResource {
+                is_extension_module: true,
                 flavor: ResourceFlavor::Extension,
                 name: "myext".to_string(),
                 in_memory_extension_module_shared_library: Some(DataLocation::Memory(vec![42])),
@@ -3711,6 +3831,7 @@ mod tests {
         assert_eq!(
             c.resources.get("foo"),
             Some(&PrePackagedResource {
+                is_shared_library: true,
                 flavor: ResourceFlavor::SharedLibrary,
                 name: "foo".to_string(),
                 in_memory_shared_library: Some(DataLocation::Memory(vec![40])),
@@ -3726,6 +3847,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("myext"),
             Some(&Resource {
+                is_extension_module: true,
                 flavor: ResourceFlavor::Extension,
                 name: Cow::Owned("myext".to_string()),
                 in_memory_extension_module_shared_library: Some(Cow::Owned(vec![42])),
@@ -3736,6 +3858,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("foo"),
             Some(&Resource {
+                is_shared_library: true,
                 flavor: ResourceFlavor::SharedLibrary,
                 name: Cow::Owned("foo".to_string()),
                 in_memory_shared_library: Some(Cow::Owned(vec![40])),
@@ -3788,6 +3911,7 @@ mod tests {
         assert_eq!(
             c.resources.get("foo.bar"),
             Some(&PrePackagedResource {
+                is_extension_module: true,
                 flavor: ResourceFlavor::Extension,
                 name: "foo.bar".to_string(),
                 is_package: false,
@@ -3802,6 +3926,7 @@ mod tests {
         assert_eq!(
             c.resources.get("mylib"),
             Some(&PrePackagedResource {
+                is_shared_library: true,
                 flavor: ResourceFlavor::SharedLibrary,
                 name: "mylib".to_string(),
                 relative_path_shared_library: Some((
@@ -3821,6 +3946,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("foo"),
             Some(&Resource {
+                is_module: true,
                 flavor: ResourceFlavor::Module,
                 name: Cow::Owned("foo".to_string()),
                 is_package: true,
@@ -3830,6 +3956,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("foo.bar"),
             Some(&Resource {
+                is_extension_module: true,
                 flavor: ResourceFlavor::Extension,
                 name: Cow::Owned("foo.bar".to_string()),
                 is_package: false,
@@ -3843,6 +3970,7 @@ mod tests {
         assert_eq!(
             resources.resources.get("mylib"),
             Some(&Resource {
+                is_shared_library: true,
                 flavor: ResourceFlavor::SharedLibrary,
                 name: Cow::Owned("mylib".to_string()),
                 ..Resource::default()
@@ -3863,6 +3991,69 @@ mod tests {
                     true
                 )
             ]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_shared_library_and_module() -> Result<()> {
+        let mut r =
+            PythonResourceCollector::new(&PythonResourcesPolicy::InMemoryOnly, DEFAULT_CACHE_TAG);
+
+        r.add_python_module_source(
+            &PythonModuleSource {
+                name: "foo".to_string(),
+                source: DataLocation::Memory(vec![1]),
+                is_package: true,
+                cache_tag: DEFAULT_CACHE_TAG.to_string(),
+                is_stdlib: false,
+                is_test: false,
+            },
+            &ConcreteResourceLocation::InMemory,
+        )?;
+
+        r.add_shared_library(
+            &SharedLibrary {
+                name: "foo".to_string(),
+                data: DataLocation::Memory(vec![2]),
+                filename: None,
+            },
+            &ConcreteResourceLocation::InMemory,
+        )?;
+
+        assert_eq!(r.resources.len(), 1);
+        assert_eq!(
+            r.resources.get("foo"),
+            Some(&PrePackagedResource {
+                is_module: true,
+                is_shared_library: true,
+                flavor: ResourceFlavor::Module,
+                name: "foo".to_string(),
+                is_package: true,
+                in_memory_source: Some(DataLocation::Memory(vec![1])),
+                in_memory_shared_library: Some(DataLocation::Memory(vec![2])),
+                ..PrePackagedResource::default()
+            })
+        );
+
+        let mut compiler = FakeBytecodeCompiler { magic_number: 42 };
+
+        let resources = r.compile_resources(&mut compiler)?;
+
+        assert_eq!(resources.resources.len(), 1);
+        assert_eq!(
+            resources.resources.get("foo"),
+            Some(&Resource {
+                is_module: true,
+                is_shared_library: true,
+                flavor: ResourceFlavor::Module,
+                name: Cow::Owned("foo".to_string()),
+                is_package: true,
+                in_memory_source: Some(Cow::Owned(vec![1])),
+                in_memory_shared_library: Some(Cow::Owned(vec![2])),
+                ..Resource::default()
+            })
         );
 
         Ok(())
