@@ -5,7 +5,9 @@
 /*! Serializing of structures into packed resources blobs. */
 
 use {
-    super::data::{BlobInteriorPadding, BlobSectionField, Resource, ResourceField, HEADER_V1},
+    super::data::{
+        BlobInteriorPadding, BlobSectionField, Resource, ResourceField, ResourceFlavor, HEADER_V1,
+    },
     anyhow::{anyhow, Context, Result},
     byteorder::{LittleEndian, WriteBytesExt},
     std::{collections::BTreeMap, convert::TryFrom, io::Write, path::Path},
@@ -134,8 +136,10 @@ where
         // Start of index entry.
         let mut index = 1;
 
-        // Flavor field + value.
-        index += 2;
+        if self.flavor != ResourceFlavor::None {
+            // Flavor field + value.
+            index += 2;
+        }
 
         // Module name field + module length.
         index += 3;
@@ -541,11 +545,12 @@ where
         dest.write_u8(ResourceField::StartOfEntry.into())
             .context("writing start of index entry")?;
 
-        // TODO only write flavor if defined.
-        dest.write_u8(ResourceField::Flavor.into())
-            .context("writing flavor field")?;
-        dest.write_u8(self.flavor.into())
-            .context("writing flavor value")?;
+        if self.flavor != ResourceFlavor::None {
+            dest.write_u8(ResourceField::Flavor.into())
+                .context("writing flavor field")?;
+            dest.write_u8(self.flavor.into())
+                .context("writing flavor value")?;
+        }
 
         dest.write_u8(ResourceField::ModuleName.into())
             .context("writing module name field")?;
