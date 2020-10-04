@@ -4,12 +4,12 @@
 
 /*! Functionality for collecting Python resources. */
 
-use crate::location::{AbstractResourceLocation, ConcreteResourceLocation};
 use {
     crate::{
         bytecode::{
             compute_bytecode_header, BytecodeHeaderMode, CompileMode, PythonBytecodeCompiler,
         },
+        location::{AbstractResourceLocation, ConcreteResourceLocation},
         module_util::{packages_from_module_name, resolve_path_for_module},
         policy::PythonResourcesPolicy,
         python_source::has_dunder_file,
