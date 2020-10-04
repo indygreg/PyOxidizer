@@ -14,7 +14,7 @@ use cpython::NoArgs;
 use {
     super::conversion::pyobject_to_pathbuf,
     super::python_resources::{
-        pyobject_to_resource, resource_to_pyobject, OptimizeLevel, OxidizedResource,
+        pyobject_to_resource, resource_to_pyobject, ModuleFlavor, OptimizeLevel, OxidizedResource,
         PythonResourcesState,
     },
     super::resource_scanning::find_resources_in_path,
@@ -25,7 +25,6 @@ use {
         PyModule, PyObject, PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
     },
     python3_sys as pyffi,
-    python_packed_resources::data::ResourceFlavor,
     std::sync::Arc,
 };
 #[cfg(windows)]
@@ -594,25 +593,24 @@ impl OxidizedFinder {
         };
 
         match module.flavor {
-            ResourceFlavor::Extension | ResourceFlavor::Module => module.resolve_module_spec(
+            ModuleFlavor::Extension | ModuleFlavor::SourceBytecode => module.resolve_module_spec(
                 py,
                 &state.module_spec_type,
                 self.as_object(),
                 state.optimize_level,
             ),
-            ResourceFlavor::BuiltinExtensionModule => {
+            ModuleFlavor::Builtin => {
                 // BuiltinImporter.find_spec() always returns None if `path` is defined.
                 // And it doesn't use `target`. So don't proxy these values.
                 state
                     .builtin_importer
                     .call_method(py, "find_spec", (fullname,), None)
             }
-            ResourceFlavor::FrozenModule => {
+            ModuleFlavor::Frozen => {
                 state
                     .frozen_importer
                     .call_method(py, "find_spec", (fullname, path, target), None)
             }
-            _ => Ok(py.None()),
         }
     }
 
@@ -645,45 +643,46 @@ impl OxidizedFinder {
         let name = spec.getattr(py, "name")?;
         let key = name.extract::<String>(py)?;
 
-        let entry = match state.get_resources_state().resources.get(&*key) {
-            Some(entry) => entry,
+        let module = match state
+            .get_resources_state()
+            .resolve_importable_module(&key, state.optimize_level)
+        {
+            Some(module) => module,
             None => return Ok(py.None()),
         };
 
-        match entry.flavor {
-            // Extension modules need special module creation logic.
-            ResourceFlavor::Extension => {
-                // We need a custom implementation of create_module() for in-memory shared
-                // library extensions because if we wait until `exec_module()` to
-                // initialize the module object, this can confuse some CPython
-                // internals. A side-effect of initializing extension modules is
-                // populating `sys.modules` and this made `LazyLoader` unhappy.
-                // If we ever implement our own lazy module importer, we could
-                // potentially work around this and move all extension module
-                // initialization into `exec_module()`.
-                if let Some(library_data) = &entry.in_memory_extension_module_shared_library {
-                    let sys_modules = state.sys_module.as_object().getattr(py, "modules")?;
+        // Extension modules need special module creation logic.
+        if module.flavor == ModuleFlavor::Extension {
+            // We need a custom implementation of create_module() for in-memory shared
+            // library extensions because if we wait until `exec_module()` to
+            // initialize the module object, this can confuse some CPython
+            // internals. A side-effect of initializing extension modules is
+            // populating `sys.modules` and this made `LazyLoader` unhappy.
+            // If we ever implement our own lazy module importer, we could
+            // potentially work around this and move all extension module
+            // initialization into `exec_module()`.
+            if let Some(library_data) = &module.in_memory_extension_module_shared_library() {
+                let sys_modules = state.sys_module.as_object().getattr(py, "modules")?;
 
-                    extension_module_shared_library_create_module(
-                        state.get_resources_state(),
-                        py,
-                        sys_modules,
-                        spec,
-                        name,
-                        &key,
-                        library_data,
-                    )
-                } else {
-                    // Call `imp.create_dynamic()` for dynamic extension modules.
-                    let create_dynamic =
-                        state.imp_module.as_object().getattr(py, "create_dynamic")?;
+                extension_module_shared_library_create_module(
+                    state.get_resources_state(),
+                    py,
+                    sys_modules,
+                    spec,
+                    name,
+                    &key,
+                    library_data,
+                )
+            } else {
+                // Call `imp.create_dynamic()` for dynamic extension modules.
+                let create_dynamic = state.imp_module.as_object().getattr(py, "create_dynamic")?;
 
-                    state
-                        .call_with_frames_removed
-                        .call(py, (&create_dynamic, spec), None)
-                }
+                state
+                    .call_with_frames_removed
+                    .call(py, (&create_dynamic, spec), None)
             }
-            _ => Ok(py.None()),
+        } else {
+            Ok(py.None())
         }
     }
 
@@ -716,15 +715,15 @@ impl OxidizedFinder {
             state
                 .call_with_frames_removed
                 .call(py, (&state.exec_fn, code, dict), None)
-        } else if entry.flavor == &ResourceFlavor::BuiltinExtensionModule {
+        } else if entry.flavor == ModuleFlavor::Builtin {
             state
                 .builtin_importer
                 .call_method(py, "exec_module", (module,), None)
-        } else if entry.flavor == &ResourceFlavor::FrozenModule {
+        } else if entry.flavor == ModuleFlavor::Frozen {
             state
                 .frozen_importer
                 .call_method(py, "exec_module", (module,), None)
-        } else if entry.flavor == &ResourceFlavor::Extension {
+        } else if entry.flavor == ModuleFlavor::Extension {
             // `ExtensionFileLoader.exec_module()` simply calls `imp.exec_dynamic()`.
             let exec_dynamic = state.imp_module.as_object().getattr(py, "exec_dynamic")?;
 
@@ -774,7 +773,7 @@ impl OxidizedFinder {
             &state.io_module,
         )? {
             state.marshal_loads.call(py, (bytecode,), None)
-        } else if module.flavor == &ResourceFlavor::FrozenModule {
+        } else if module.flavor == ModuleFlavor::Frozen {
             state
                 .imp_module
                 .call(py, "get_frozen_object", (fullname,), None)

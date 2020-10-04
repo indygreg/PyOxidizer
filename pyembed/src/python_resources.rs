@@ -44,8 +44,6 @@ fn is_module_importable<X>(entry: &Resource<X>, optimize_level: OptimizeLevel) -
 where
     [X]: ToOwned<Owned = Vec<X>>,
 {
-    assert_eq!(entry.flavor, ResourceFlavor::Module);
-
     entry.in_memory_source.is_some()
         || entry.relative_path_module_source.is_some()
         || match optimize_level {
@@ -59,6 +57,15 @@ where
                 entry.in_memory_bytecode_opt2.is_some() || entry.in_memory_bytecode_opt2.is_some()
             }
         }
+}
+
+/// Describes the type of an importable Python module.
+#[derive(Debug, PartialEq)]
+pub(crate) enum ModuleFlavor {
+    Builtin,
+    Frozen,
+    Extension,
+    SourceBytecode,
 }
 
 /// Holds state for an importable Python module.
@@ -78,8 +85,8 @@ where
     /// Path from which relative paths should be interpreted.
     origin: &'a Path,
 
-    /// The resource/module flavor.
-    pub flavor: &'a ResourceFlavor,
+    /// The type of importable module.
+    pub flavor: ModuleFlavor,
     /// Whether this module is a package.
     pub is_package: bool,
 }
@@ -297,7 +304,7 @@ impl<'a> ImportablePythonModule<'a, u8> {
         optimize_level: OptimizeLevel,
     ) -> PyResult<Option<PyObject>> {
         let path = match self.flavor {
-            ResourceFlavor::Module => self.bytecode_path(optimize_level),
+            ModuleFlavor::SourceBytecode => self.bytecode_path(optimize_level),
             _ => None,
         };
 
@@ -311,14 +318,14 @@ impl<'a> ImportablePythonModule<'a, u8> {
     /// Obtain the filesystem path to this resource to be used for `ModuleSpec.origin`.
     fn origin_path(&self) -> Option<PathBuf> {
         match self.flavor {
-            ResourceFlavor::Module => {
+            ModuleFlavor::SourceBytecode => {
                 if let Some(path) = &self.resource.relative_path_module_source {
                     Some(self.origin.join(path))
                 } else {
                     None
                 }
             }
-            ResourceFlavor::Extension => {
+            ModuleFlavor::Extension => {
                 if let Some(path) = &self.resource.relative_path_extension_module_shared_library {
                     Some(self.origin.join(path))
                 } else {
@@ -342,6 +349,10 @@ impl<'a> ImportablePythonModule<'a, u8> {
         } else {
             None
         }
+    }
+
+    pub fn in_memory_extension_module_shared_library(&self) -> &'a Option<Cow<'a, [u8]>> {
+        &self.resource.in_memory_extension_module_shared_library
     }
 }
 
@@ -426,42 +437,70 @@ impl<'a> PythonResourcesState<'a, u8> {
             None => return None,
         };
 
-        match resource.flavor {
-            ResourceFlavor::Module => {
-                if is_module_importable(resource, optimize_level) {
-                    Some(ImportablePythonModule {
-                        resource,
-                        current_exe: &self.current_exe,
-                        origin: &self.origin,
-                        flavor: &resource.flavor,
-                        is_package: resource.is_package,
-                    })
-                } else {
-                    None
-                }
+        // Since resources can exist as multiple types and it is possible
+        // that a single resource will express itself as multiple types
+        // (e.g. we have both bytecode and an extension module available),
+        // we have to break ties and choose an order of preference. Our
+        // default mimics the default order of the meta path importers
+        // registered on sys.meta_path:
+        //
+        // 1. built-in extension modules
+        // 2. frozen modules
+        // 3. path-based
+        //
+        // Within the path-based importer, the loader order as defined by
+        // sys.path_hooks is:
+        // 1. zip files
+        // 2. extensions
+        // 3. source
+        // 4. bytecode
+        //
+        // "source" here really checks for .pyc files and "bytecode" is
+        // "sourceless" modules. So our effective order is:
+        //
+        // 1. built-in extension modules
+        // 2. frozen modules
+        // 3. extension modules
+        // 4. module (covers both source and bytecode)
+
+        if resource.is_builtin_extension_module {
+            Some(ImportablePythonModule {
+                resource,
+                current_exe: &self.current_exe,
+                origin: &self.origin,
+                flavor: ModuleFlavor::Builtin,
+                is_package: resource.is_package,
+            })
+        } else if resource.is_frozen_module {
+            Some(ImportablePythonModule {
+                resource,
+                current_exe: &self.current_exe,
+                origin: &self.origin,
+                flavor: ModuleFlavor::Frozen,
+                is_package: resource.is_package,
+            })
+        } else if resource.is_extension_module {
+            Some(ImportablePythonModule {
+                resource,
+                current_exe: &self.current_exe,
+                origin: &self.origin,
+                flavor: ModuleFlavor::Extension,
+                is_package: resource.is_package,
+            })
+        } else if resource.is_module {
+            if is_module_importable(resource, optimize_level) {
+                Some(ImportablePythonModule {
+                    resource,
+                    current_exe: &self.current_exe,
+                    origin: &self.origin,
+                    flavor: ModuleFlavor::SourceBytecode,
+                    is_package: resource.is_package,
+                })
+            } else {
+                None
             }
-            ResourceFlavor::Extension => Some(ImportablePythonModule {
-                resource,
-                current_exe: &self.current_exe,
-                origin: &self.origin,
-                flavor: &resource.flavor,
-                is_package: resource.is_package,
-            }),
-            ResourceFlavor::BuiltinExtensionModule => Some(ImportablePythonModule {
-                resource,
-                current_exe: &self.current_exe,
-                origin: &self.origin,
-                flavor: &resource.flavor,
-                is_package: resource.is_package,
-            }),
-            ResourceFlavor::FrozenModule => Some(ImportablePythonModule {
-                resource,
-                current_exe: &self.current_exe,
-                origin: &self.origin,
-                flavor: &resource.flavor,
-                is_package: resource.is_package,
-            }),
-            _ => None,
+        } else {
+            None
         }
     }
 
@@ -714,10 +753,8 @@ impl<'a> PythonResourcesState<'a, u8> {
         let infos: PyResult<Vec<PyObject>> = self
             .resources
             .values()
-            .filter(|r| match r.flavor {
-                ResourceFlavor::Module => is_module_importable(r, optimize_level),
-                ResourceFlavor::Extension => true,
-                _ => false,
+            .filter(|r| {
+                r.is_extension_module || (r.is_module && is_module_importable(r, optimize_level))
             })
             .map(|r| {
                 let name = if let Some(prefix) = &prefix {
@@ -760,12 +797,12 @@ impl<'a> PythonResourcesState<'a, u8> {
             // Module can be defined by embedded resources data. If exists, just
             // update the big.
             if let Some(mut entry) = self.resources.get_mut(name_str) {
-                entry.flavor = ResourceFlavor::BuiltinExtensionModule;
+                entry.is_builtin_extension_module = true;
             } else {
                 self.resources.insert(
                     Cow::Owned(name_str.to_string()),
                     Resource {
-                        flavor: ResourceFlavor::BuiltinExtensionModule,
+                        is_builtin_extension_module: true,
                         name: Cow::Owned(name_str.to_string()),
                         ..Resource::default()
                     },
@@ -796,12 +833,12 @@ impl<'a> PythonResourcesState<'a, u8> {
             // Module can be defined by embedded resources data. If exists, just
             // update the big.
             if let Some(mut entry) = self.resources.get_mut(name_str) {
-                entry.flavor = ResourceFlavor::FrozenModule;
+                entry.is_frozen_module = true;
             } else {
                 self.resources.insert(
                     Cow::Owned(name_str.to_string()),
                     Resource {
-                        flavor: ResourceFlavor::FrozenModule,
+                        is_frozen_module: true,
                         name: Cow::Owned(name_str.to_string()),
                         ..Resource::default()
                     },
