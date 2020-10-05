@@ -44,6 +44,21 @@ In theory, yes. However, it is considerable more effort than Python 3. And
 since Python 2.7 is being deprecated in 2020, in the project author's
 opinion it isn't worth the effort.
 
+.. _faq_python_38:
+
+Why is Python 3.8 Required?
+===========================
+
+Python 3.8 contains a new C API for controlling how embedded Python
+interpreters are started. This makes the run-time code that native
+binaries execute much, much simpler.
+
+PyOxidizer versions up to 0.7 supported Python 3.7. But a decision
+was made to require Python 3.8 because the run-time code to manage
+the Python interpreter was vastly simpler and less prone to bugs.
+Given that Python 3.8 is mostly backwards compatible with Python 3.7,
+this wasn't perceived as a significant annoyance.
+
 ``No python interpreter found of version 3.*`` Error When Building
 ==================================================================
 

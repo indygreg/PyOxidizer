@@ -6,20 +6,27 @@ Getting Started
 
 .. _installing:
 
+Python Requirements
+===================
+
+PyOxidizer currently targets Python 3.8. Your Python application will need
+to already be compatible with Python 3.8 for it to work with PyOxidizer. See
+:ref:`faq_python_38` for more on the minimum Python requirement.
+
 Installing
 ==========
 
 Installing Rust
 ---------------
 
-PyOxidizer is a Rust application and requires Rust (1.36 or newer) to be
+PyOxidizer is a Rust application and requires Rust (1.40 or newer) to be
 installed in order to build PyOxidizer itself as well as Python application
 binaries.
 
 You can verify your installed version of Rust by running::
 
    $ rustc --version
-   rustc 1.38.0 (625451e37 2019-09-23)
+   rustc 1.46.0 (04488afe3 2020-08-24)
 
 If you don't have Rust installed, https://www.rust-lang.org/ has very detailed
 instructions on how to install it.
@@ -85,12 +92,12 @@ Or by cloning the Git repository and building the project locally::
 Once the ``pyoxidizer`` executable is installed, try to run it::
 
    $ pyoxidizer
-   PyOxidizer 0.5
+   PyOxidizer 0.8-pre
    Gregory Szorc <gregory.szorc@gmail.com>
    Build and distribute Python applications
 
    USAGE:
-       pyoxidizer [SUBCOMMAND]
+       pyoxidizer [FLAGS] [SUBCOMMAND]
 
    ...
 
