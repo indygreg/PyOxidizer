@@ -241,6 +241,17 @@ pub enum PyembedLocation {
     Git(String, String),
 }
 
+impl PyembedLocation {
+    /// Convert the location to a string holding Cargo manifest location info.
+    pub fn cargo_manifest_fields(&self) -> String {
+        match self {
+            Self::Version(version) => format!("version = \"{}\"", version),
+            Self::Path(path) => format!("path = \"{}\"", path.display()),
+            Self::Git(url, commit) => format!("git = \"{}\", rev = \"{}\"", url, commit),
+        }
+    }
+}
+
 /// Update the Cargo.toml of a new Rust project to use pyembed.
 pub fn update_new_cargo_toml(path: &Path, pyembed_location: &PyembedLocation) -> Result<()> {
     let content = std::fs::read_to_string(path)?;
@@ -265,20 +276,10 @@ pub fn update_new_cargo_toml(path: &Path, pyembed_location: &PyembedLocation) ->
 
     content.push_str("jemallocator-global = { version = \"0.3\", optional = true }\n");
 
-    content.push_str(&match pyembed_location {
-        PyembedLocation::Version(version) => format!(
-            "pyembed = {{ version = \"{}\", default-features=false }}\n",
-            version
-        ),
-        PyembedLocation::Path(path) => format!(
-            "pyembed = {{ path = \"{}\", default-features=false }}\n",
-            path.display()
-        ),
-        PyembedLocation::Git(url, rev) => format!(
-            "pyembed = {{ git=\"{}\", rev=\"{}\", default-features=false }}\n",
-            url, rev
-        ),
-    });
+    content.push_str(&format!(
+        "pyembed = {{ {}, default-features = false }}\n",
+        pyembed_location.cargo_manifest_fields()
+    ));
 
     content.push_str("\n");
     content.push_str("[features]\n");

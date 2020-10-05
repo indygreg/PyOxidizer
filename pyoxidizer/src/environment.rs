@@ -134,7 +134,7 @@ impl Environment {
     /// Obtain a string to be used as the long form version info for the executable.
     pub fn version_long(&self) -> String {
         format!(
-            "{}\ncommit: {}\nsource: {}",
+            "{}\ncommit: {}\nsource: {}\npyembed crate location: {}",
             env!("CARGO_PKG_VERSION"),
             BUILD_GIT_COMMIT,
             match &self.pyoxidizer_source {
@@ -144,7 +144,8 @@ impl Environment {
                 PyOxidizerSource::GitUrl { url, .. } => {
                     url.clone()
                 }
-            }
+            },
+            self.as_pyembed_location().cargo_manifest_fields(),
         )
     }
 }
