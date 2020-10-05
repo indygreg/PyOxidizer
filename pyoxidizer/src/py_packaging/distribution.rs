@@ -101,6 +101,14 @@ pub trait PythonDistribution {
     /// The Rust machine triple this distribution runs on.
     fn target_triple(&self) -> &str;
 
+    /// Rust target triples on which this distribution's binaries can run.
+    ///
+    /// For example, an x86 distribution might advertise that it can run on
+    /// 64-bit host triples.
+    ///
+    /// `target_triple()` is always in the result.
+    fn compatible_host_triples(&self) -> Vec<String>;
+
     /// Obtain the filesystem path to a `python` executable for this distribution.
     fn python_exe_path(&self) -> &Path;
 

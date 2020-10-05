@@ -912,7 +912,10 @@ pub mod tests {
 
             let target_distribution = get_distribution(&target_record.location)?;
 
-            let host_distribution = if self.host_triple == self.target_triple {
+            let host_distribution = if target_distribution
+                .compatible_host_triples()
+                .contains(&self.host_triple)
+            {
                 Arc::new(target_distribution.clone_box())
             } else {
                 let host_record = PYTHON_DISTRIBUTIONS

@@ -1056,6 +1056,39 @@ impl PythonDistribution for StandaloneDistribution {
         &self.target_triple
     }
 
+    fn compatible_host_triples(&self) -> Vec<String> {
+        let mut res = vec![self.target_triple.clone()];
+
+        res.extend(
+            match self.target_triple() {
+                "x86_64-unknown-linux-gnu" => vec![],
+                // musl libc linked distributions run on GNU Linux.
+                "x86_64-unknown-linux-musl" => vec!["x86_64-unknown-linux-gnu"],
+                "x86_64-apple-darwin" => vec![],
+                // 32-bit Windows GNU on 32-bit Windows MSVC and 64-bit Windows.
+                "i686-pc-windows-gnu" => vec![
+                    "i686-pc-windows-msvc",
+                    "x86_64-pc-windows-gnu",
+                    "x86_64-pc-windows-msvc",
+                ],
+                // 32-bit Windows MSVC runs on 32-bit Windows MSVC and 64-bit Windows.
+                "i686-pc-windows-msvc" => vec![
+                    "i686-pc-windows-gnu",
+                    "x86_64-pc-windows-gnu",
+                    "x86_64-pc-windows-msvc",
+                ],
+                // 64-bit Windows GNU/MSVC runs on the other.
+                "x86_64-pc-windows-gnu" => vec!["x86_64-pc-windows-msvc"],
+                "x86_64-pc-windows-msvc" => vec!["x86_64-pc-windows-gnu"],
+                _ => vec![],
+            }
+            .iter()
+            .map(|x| x.to_string()),
+        );
+
+        res
+    }
+
     fn python_exe_path(&self) -> &Path {
         &self.python_exe
     }

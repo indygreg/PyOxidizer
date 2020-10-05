@@ -335,7 +335,10 @@ impl PythonDistribution {
             }
         }?;
 
-        let host_distribution = if dist.target_triple() == context.build_host_triple {
+        let host_distribution = if dist
+            .compatible_host_triples()
+            .contains(&context.build_host_triple)
+        {
             Some(dist.clone())
         } else {
             let flavor = DistributionFlavor::Standalone;
