@@ -76,7 +76,7 @@ pub trait PythonBinaryBuilder {
     ///
     /// The produced binary is effectively a clone of the Python distribution behind the
     /// returned executable.
-    fn python_exe_path(&self) -> &Path;
+    fn host_python_exe_path(&self) -> &Path;
 
     /// Obtain an iterator over all resource entries that will be embedded in the binary.
     ///

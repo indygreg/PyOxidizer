@@ -105,7 +105,7 @@ pub struct StandalonePythonExecutableBuilder {
     config: EmbeddedPythonConfig,
 
     /// Path to python executable that can be invoked at build time.
-    python_exe: PathBuf,
+    host_python_exe: PathBuf,
 }
 
 impl StandalonePythonExecutableBuilder {
@@ -120,7 +120,7 @@ impl StandalonePythonExecutableBuilder {
         packaging_policy: PythonPackagingPolicy,
         config: EmbeddedPythonConfig,
     ) -> Result<Box<Self>> {
-        let python_exe = host_distribution.python_exe_path().to_path_buf();
+        let host_python_exe = host_distribution.python_exe_path().to_path_buf();
         let cache_tag = target_distribution.cache_tag.clone();
 
         let (supports_static_libpython, supports_dynamic_libpython) =
@@ -175,7 +175,7 @@ impl StandalonePythonExecutableBuilder {
             core_build_context: LibPythonBuildContext::default(),
             extension_build_contexts: BTreeMap::new(),
             config,
-            python_exe,
+            host_python_exe,
         });
 
         builder.add_distribution_core_state()?;
@@ -346,8 +346,8 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &self.packaging_policy
     }
 
-    fn python_exe_path(&self) -> &Path {
-        &self.python_exe
+    fn host_python_exe_path(&self) -> &Path {
+        &self.host_python_exe
     }
 
     fn iter_resources<'a>(
@@ -741,7 +741,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         }
 
         let compiled_resources = {
-            let mut compiler = BytecodeCompiler::new(&self.python_exe)?;
+            let mut compiler = BytecodeCompiler::new(self.host_python_exe_path())?;
             self.resources_collector.compile_resources(&mut compiler)?
         };
 
