@@ -168,7 +168,10 @@ pub fn build_executable_with_rust_project(
 
     // Set PYTHON_SYS_EXECUTABLE so python3-sys uses our distribution's Python to configure
     // itself.
-    let python_exe_path = exe.host_python_exe_path();
+    // TODO the build environment requiring use of target arch executable prevents
+    // cross-compiling. We should be able to pass in all state without having to
+    // run an executable in a build script.
+    let python_exe_path = exe.target_python_exe_path();
     envs.push((
         "PYTHON_SYS_EXECUTABLE",
         python_exe_path.display().to_string(),

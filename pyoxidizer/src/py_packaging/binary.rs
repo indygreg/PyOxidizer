@@ -78,6 +78,10 @@ pub trait PythonBinaryBuilder {
     /// returned executable.
     fn host_python_exe_path(&self) -> &Path;
 
+    /// Path to Python executable that is native to the target architecture.
+    // TODO this should not need to exist if we properly supported cross-compiling.
+    fn target_python_exe_path(&self) -> &Path;
+
     /// Obtain an iterator over all resource entries that will be embedded in the binary.
     ///
     /// This likely does not return extension modules that are statically linked

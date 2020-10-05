@@ -350,6 +350,10 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
         &self.host_python_exe
     }
 
+    fn target_python_exe_path(&self) -> &Path {
+        &self.target_distribution.python_exe_path()
+    }
+
     fn iter_resources<'a>(
         &'a self,
     ) -> Box<dyn Iterator<Item = (&'a String, &'a PrePackagedResource)> + 'a> {
