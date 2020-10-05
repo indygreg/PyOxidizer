@@ -4,7 +4,7 @@
 
 use {
     super::analyze,
-    super::environment::BUILD_SEMVER_LIGHTWEIGHT,
+    super::environment::PYOXIDIZER_VERSION,
     super::logging,
     super::project_building,
     super::project_layout,
@@ -75,7 +75,7 @@ emits special lines that tell the Rust build system how to consume them.
 pub fn run_cli() -> Result<()> {
     let matches = App::new("PyOxidizer")
         .setting(AppSettings::ArgRequiredElseHelp)
-        .version(BUILD_SEMVER_LIGHTWEIGHT)
+        .version(PYOXIDIZER_VERSION.as_str())
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .long_about("Build and distribute Python applications")
         .arg(

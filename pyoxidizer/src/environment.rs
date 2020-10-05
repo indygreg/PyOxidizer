@@ -13,8 +13,6 @@ use {
     std::path::{Path, PathBuf},
 };
 
-pub const PYOXIDIZER_VERSION: &str = env!("CARGO_PKG_VERSION");
-
 /// Canonical Git repository for PyOxidizer.
 const CANONICAL_GIT_REPO_URL: &str = "https://github.com/indygreg/PyOxidizer.git";
 
@@ -28,11 +26,16 @@ pub const BUILD_GIT_COMMIT: &str = env!("VERGEN_SHA");
 /// tag or version string from Cargo.toml.
 pub const BUILD_SEMVER: &str = env!("VERGEN_SEMVER");
 
-/// Semantic version for this build of PyOxidizer. Usually of form
-/// <tag>-<count>-<short sha>.
-pub const BUILD_SEMVER_LIGHTWEIGHT: &str = env!("VERGEN_SEMVER_LIGHTWEIGHT");
-
 lazy_static! {
+    /// Version string of PyOxidizer.
+    pub static ref PYOXIDIZER_VERSION: String = {
+        if env!("CARGO_PKG_VERSION").ends_with("-pre") {
+            format!("{}-{}", env!("CARGO_PKG_VERSION"), BUILD_GIT_COMMIT)
+        } else {
+            env!("CARGO_PKG_VERSION").to_string()
+        }
+    };
+
     /// Minimum version of Rust required to build PyOxidizer applications.
     ///
     // Remember to update the CI configuration in ci/azure-pipelines-template.yml
@@ -126,7 +129,7 @@ impl Environment {
             }
             PyOxidizerSource::GitUrl { url, commit, .. } => match commit {
                 Some(commit) => PyembedLocation::Git(url.clone(), commit.clone()),
-                None => PyembedLocation::Version(PYOXIDIZER_VERSION.to_string()),
+                None => PyembedLocation::Version(env!("CARGO_PKG_VERSION").to_string()),
             },
         }
     }
