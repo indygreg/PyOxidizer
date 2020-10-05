@@ -108,9 +108,6 @@ pub enum PyOxidizerSource {
 pub struct Environment {
     /// Where a copy of PyOxidizer can be obtained from.
     pub pyoxidizer_source: PyOxidizerSource,
-
-    /// Semantic version string for PyOxidizer.
-    pub pyoxidizer_semver: String,
 }
 
 impl Environment {
@@ -171,8 +168,6 @@ pub fn resolve_environment() -> Result<Environment> {
             .ok_or_else(|| anyhow!("could not resolve parent of current exe"))?,
     );
 
-    let pyoxidizer_semver = BUILD_SEMVER.to_string();
-
     let pyoxidizer_source = match Repository::discover(&exe_path) {
         Ok(repo) => {
             let head = repo.head().unwrap();
@@ -203,8 +198,5 @@ pub fn resolve_environment() -> Result<Environment> {
         }
     };
 
-    Ok(Environment {
-        pyoxidizer_source,
-        pyoxidizer_semver,
-    })
+    Ok(Environment { pyoxidizer_source })
 }
