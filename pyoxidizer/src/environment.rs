@@ -130,6 +130,23 @@ impl Environment {
             },
         }
     }
+
+    /// Obtain a string to be used as the long form version info for the executable.
+    pub fn version_long(&self) -> String {
+        format!(
+            "{}\ncommit: {}\nsource: {}",
+            env!("CARGO_PKG_VERSION"),
+            BUILD_GIT_COMMIT,
+            match &self.pyoxidizer_source {
+                PyOxidizerSource::LocalPath { path } => {
+                    format!("{}", path.display())
+                }
+                PyOxidizerSource::GitUrl { url, .. } => {
+                    url.clone()
+                }
+            }
+        )
+    }
 }
 
 /// Obtain a PyOxidizerSource pointing to the GitUrl this binary was built with.

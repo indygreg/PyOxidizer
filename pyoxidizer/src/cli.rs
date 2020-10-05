@@ -73,9 +73,12 @@ emits special lines that tell the Rust build system how to consume them.
 ";
 
 pub fn run_cli() -> Result<()> {
+    let env = crate::environment::resolve_environment()?;
+
     let matches = App::new("PyOxidizer")
         .setting(AppSettings::ArgRequiredElseHelp)
         .version(PYOXIDIZER_VERSION.as_str())
+        .long_version(env.version_long().as_str())
         .author("Gregory Szorc <gregory.szorc@gmail.com>")
         .long_about("Build and distribute Python applications")
         .arg(
