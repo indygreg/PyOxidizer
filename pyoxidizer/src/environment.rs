@@ -20,7 +20,7 @@ const CANONICAL_GIT_REPO_URL: &str = "https://github.com/indygreg/PyOxidizer.git
 const ROOT_COMMIT: &str = "b1f95017c897e0fd3ed006aec25b6886196a889d";
 
 /// Git commit this build of PyOxidizer was produced with.
-pub const BUILD_GIT_COMMIT: &str = env!("VERGEN_SHA");
+pub const BUILD_GIT_COMMIT: &str = env!("GIT_COMMIT");
 
 /// Semantic version for this build of PyOxidizer. Can correspond to a Git
 /// tag or version string from Cargo.toml.
@@ -156,7 +156,7 @@ pub fn built_git_url() -> PyOxidizerSource {
         // Can happen when not run from a Git checkout (such as installing
         // from a crate).
         "" => None,
-        // Can happen if `git` is not available at build time.
+        // Can happen if build script could not find Git repository.
         "UNKNOWN" => None,
         value => Some(value.to_string()),
     };

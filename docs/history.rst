@@ -260,6 +260,10 @@ Bug Fixes
 * On Windows, the ``sqlite`` module can now be imported. Before, the system
   for serializing resources thought that ``sqlite`` was a shared library
   and not a Python module.
+* The build script of the pyoxidizer crate now uses the ``git2`` crate to
+  try to resolve the Git commit instead of relying on the ``git`` command.
+  This should result in fewer cases where the commit was being identified
+  as ``unknown``.
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -288,6 +292,9 @@ Other Relevant Changes
   and its data now allows resources to identify as multiple types. For
   example, a single resource can contain both Python module source/bytecode
   and a shared library.
+* ``pyoxidizer --version`` now prints verbose information about where PyOxidizer
+  was installed, what Git commit was used, and how the ``pyembed`` crate will
+  be referenced. This should make it easier to help debug installation issues.
 
 0.7.0
 -----
