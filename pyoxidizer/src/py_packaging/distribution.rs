@@ -83,6 +83,9 @@ pub enum PythonDistributionLocation {
 /// Describes an obtainable Python distribution.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PythonDistributionRecord {
+    /// X.Y major.minor version of Python.
+    pub python_major_minor_version: String,
+
     /// Where the distribution can be obtained from.
     pub location: PythonDistributionLocation,
 
