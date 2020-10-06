@@ -15,9 +15,8 @@ use {
     anyhow::Result,
     cpython::exc::{ImportError, OSError, TypeError},
     cpython::{
-        py_class, py_class_call_slot_impl_with_ref, py_class_prop_getter, py_class_prop_setter,
-        NoArgs, ObjectProtocol, PyBytes, PyDict, PyErr, PyList, PyModule, PyObject, PyResult,
-        PyString, PyTuple, Python, PythonObject, ToPyObject,
+        py_class, NoArgs, ObjectProtocol, PyBytes, PyDict, PyErr, PyList, PyModule, PyObject,
+        PyResult, PyString, PyTuple, Python, PythonObject, ToPyObject,
     },
     python3_sys as pyffi,
     python_packed_resources::data::Resource,

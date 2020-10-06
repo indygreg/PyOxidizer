@@ -13,8 +13,8 @@ use {
     crate::python_resources::resource_to_pyobject,
     cpython::exc::{TypeError, ValueError},
     cpython::{
-        py_class, py_class_prop_getter, ObjectProtocol, PyBytes, PyErr, PyList, PyObject, PyResult,
-        Python, PythonObject, ToPyObject,
+        py_class, ObjectProtocol, PyBytes, PyErr, PyList, PyObject, PyResult, Python, PythonObject,
+        ToPyObject,
     },
     python_packaging::bytecode::BytecodeCompiler,
     python_packaging::location::ConcreteResourceLocation,

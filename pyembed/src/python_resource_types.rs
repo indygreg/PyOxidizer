@@ -7,10 +7,7 @@
 use {
     crate::conversion::pyobject_to_owned_bytes,
     cpython::exc::{TypeError, ValueError},
-    cpython::{
-        py_class, py_class_call_slot_impl_with_ref, py_class_prop_getter, py_class_prop_setter,
-        PyBytes, PyErr, PyObject, PyResult, Python,
-    },
+    cpython::{py_class, PyBytes, PyErr, PyObject, PyResult, Python},
     python_packaging::resource::{
         BytecodeOptimizationLevel, DataLocation, PythonExtensionModule as RawPythonExtensionModule,
         PythonModuleBytecode as RawPythonModuleBytecode,

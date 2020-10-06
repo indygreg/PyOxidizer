@@ -6,8 +6,8 @@ use {
     super::importer::ImporterState,
     cpython::exc::{IOError, NotImplementedError},
     cpython::{
-        py_class, py_class_prop_getter, NoArgs, ObjectProtocol, PyBytes, PyErr, PyList, PyObject,
-        PyResult, PyString, Python, PythonObject, ToPyObject,
+        py_class, NoArgs, ObjectProtocol, PyBytes, PyErr, PyList, PyObject, PyResult, PyString,
+        Python, PythonObject, ToPyObject,
     },
     python_packed_resources::data::Resource,
     std::borrow::Cow,
