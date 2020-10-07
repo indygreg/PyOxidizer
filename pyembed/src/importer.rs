@@ -69,11 +69,7 @@ fn extension_module_shared_library_create_module(
     let origin = PyString::new(py, "memory");
 
     let existing_module = unsafe {
-        pyffi::_PyImport_FindExtensionObjectEx(
-            name_py.as_ptr(),
-            origin.as_object().as_ptr(),
-            sys_modules.as_ptr(),
-        )
+        pyffi::_PyImport_FindExtensionObject(name_py.as_ptr(), origin.as_object().as_ptr())
     };
 
     // We found an existing module object. Return it.
