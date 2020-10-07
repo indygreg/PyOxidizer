@@ -66,7 +66,7 @@ pub fn get_distribution(
 
 pub fn get_default_distribution() -> Result<Arc<Box<StandaloneDistribution>>> {
     let record = PYTHON_DISTRIBUTIONS
-        .find_distribution(env!("HOST"), &DistributionFlavor::Standalone)
+        .find_distribution(env!("HOST"), &DistributionFlavor::Standalone, None)
         .ok_or_else(|| anyhow!("unable to find distribution"))?;
 
     get_distribution(&record.location)
@@ -75,7 +75,7 @@ pub fn get_default_distribution() -> Result<Arc<Box<StandaloneDistribution>>> {
 #[cfg(windows)]
 pub fn get_default_dynamic_distribution() -> Result<Arc<Box<StandaloneDistribution>>> {
     let record = PYTHON_DISTRIBUTIONS
-        .find_distribution(env!("HOST"), &DistributionFlavor::StandaloneDynamic)
+        .find_distribution(env!("HOST"), &DistributionFlavor::StandaloneDynamic, None)
         .ok_or_else(|| anyhow!("unable to find distribution"))?;
 
     get_distribution(&record.location)

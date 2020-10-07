@@ -481,7 +481,7 @@ pub fn default_distribution_location(
     target: &str,
 ) -> Result<PythonDistributionLocation> {
     let dist = PYTHON_DISTRIBUTIONS
-        .find_distribution(target, flavor)
+        .find_distribution(target, flavor, None)
         .ok_or_else(|| anyhow!("could not find default Python distribution for {}", target))?;
 
     Ok(dist.location)

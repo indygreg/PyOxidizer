@@ -23,15 +23,23 @@ pub struct PythonDistributionCollection {
 }
 
 impl PythonDistributionCollection {
-    /// Find a Python distribution given a target triple and flavor preference.
+    /// Find a Python distribution given requirements.
+    ///
+    /// `target_triple` is the Rust machine triple the distribution is built for.
+    /// `flavor` is the type of Python distribution.
+    /// `python_major_minor_version` is an optional `X.Y` version string being
+    /// requested. If `None`, `3.8` is assumed.
     pub fn find_distribution(
         &self,
         target_triple: &str,
         flavor: &DistributionFlavor,
+        python_major_minor_version: Option<&str>,
     ) -> Option<PythonDistributionRecord> {
+        let python_major_minor_version = python_major_minor_version.unwrap_or("3.8");
+
         self.dists
             .iter()
-            .filter(|dist| dist.python_major_minor_version == "3.8")
+            .filter(|dist| dist.python_major_minor_version == python_major_minor_version)
             .filter(|dist| dist.target_triple == target_triple)
             .filter(|dist| match flavor {
                 DistributionFlavor::Standalone => true,

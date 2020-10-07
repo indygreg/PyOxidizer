@@ -624,6 +624,7 @@ mod tests {
             .find_distribution(
                 crate::project_building::HOST,
                 &DistributionFlavor::Standalone,
+                None,
             )
             .unwrap();
 
@@ -650,6 +651,7 @@ mod tests {
             .find_distribution(
                 crate::project_building::HOST,
                 &DistributionFlavor::StandaloneDynamic,
+                None,
             )
             .unwrap();
 
