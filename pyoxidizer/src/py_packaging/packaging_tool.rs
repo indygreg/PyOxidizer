@@ -551,6 +551,11 @@ mod tests {
                 continue;
             }
 
+            // TODO enable once Python 3.9 wheel is published.
+            if target_dist.python_major_minor_version() == "3.9" {
+                continue;
+            }
+
             warn!(
                 logger,
                 "using distribution {}-{}-{}",
@@ -619,6 +624,11 @@ mod tests {
 
         for target_dist in get_all_standalone_distributions()? {
             if target_dist.python_platform_compatibility_tag() == "none" {
+                continue;
+            }
+
+            // TODO support once a Python 3.9 wheel is published.
+            if target_dist.python_major_minor_version() == "3.9" {
                 continue;
             }
 
