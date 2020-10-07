@@ -31,6 +31,7 @@ impl PythonDistributionCollection {
     ) -> Option<PythonDistributionRecord> {
         self.dists
             .iter()
+            .filter(|dist| dist.python_major_minor_version == "3.8")
             .filter(|dist| dist.target_triple == target_triple)
             .filter(|dist| match flavor {
                 DistributionFlavor::Standalone => true,
