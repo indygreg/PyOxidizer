@@ -389,3 +389,108 @@ no way to create virtualenvs using the distribution itself.
 
 The Python C development headers are not part of the distribution, so
 even if you install packaging tools, you can't build C extensions.
+
+Extension Module / Shared Library Filename Ambiguity
+----------------------------------------------------
+
+On some platforms, Python extension modules and shared libraries have
+the same filename extension. e.g. on Linux, both are named ``foo.so``.
+
+PyOxidizer's packaging functionality needs to classify files as
+specific resource types (source modules, bytecode modules, resource
+files, extension modules, shared libraries, etc). Because certain file
+patterns (like ``.so``) are ambiguous, PyOxidizer cannot perform this
+classification trivially.
+
+It would be much preferred if there were unique file extensions that
+distinguished Python extension modules from regular shared libraries.
+
+On Windows, this is already the case with the ``.pyd`` extension.
+However, POSIX architectures aren't so fortunate.
+
+Ambiguous File Classification
+-----------------------------
+
+This is somewhat related to the previous section but is more generic.
+
+Python's default path-based importer dynamically looks for presence
+of various files on the filesystem and loads the first type variant
+(extension module, bytecode, source, etc) discovered.
+
+PyOxidizer's importer indexes resources during packaging and its
+import-time resource resolution is static: the type of resource is
+baked into the definition of the resource.
+
+These approaches are somewhat at odds with each other. The path-based
+importer is dynamic in nature: it defers answering questions until
+a specific resource is requested. PyOxidizer's importer is static /
+pre-compiled: it must classify a resource based on its filename/path
+so it can bake that knowledge into an immutable data structure. It
+does not have knowledge of what names will be requested at run-time.
+
+Bridging this divide has revealed various ambiguities and corner cases
+in the filenames of Python resources.
+
+The Python extension module or shared library ambiguity is described
+above.
+
+There is also an ambiguity with extra files that aren't part of
+a known Python package. If you attempt to classify every file in
+a ``sys.path`` directory, it is tempting to classify a file as a
+Python module (``.py``, ``.pyc``, or extension module), package
+resource (``importlib.resources``), or package metadata (e.g.
+``.dist-info`` files accessed via ``importlib.metadata``). However,
+there exists the possibility that a file is not obviously classified
+as one of these.
+
+For example, a file ``foo/libfoo.so`` without the presence of a
+``foo/__init__.py`` file is ambiguous. We could say this is an
+extension module (``foo.libfoo``) due to the extension module
+shared library ambiguity. We could also consider this a package
+resource ``foo:libfoo.so`` or ``"":foo/libfoo.so``. Although the
+latter case of using an empty string for the package name doesn't
+make much sense. And we arguably shouldn't consider it a resource
+of ``foo`` because no obvious ``foo`` Python package exists!
+
+This is relevant in the real world because various Python packages
+rely on installing arbitrary files in ``sys.path`` directories.
+For example, ``numpy`` installs files like
+``numpy.libs/libz-eb09ad1d.so.1.2.3``, where the ``numpy.libs``
+directory only contains file extensions ``*.so[.*]``. Note that
+this example is particularly confusing because the directory names
+in ``sys.path`` directories are typically split on ``.`` and
+correspond to Python [sub-]packages.
+
+Because there is no unambiguous way to classify all files in
+a ``sys.path`` directory and because Python packaging tools allow
+the presence of files not contained within a known Python package
+(identified by the presence of an ``__init__`` file/module), this
+externalizes the requirement to introduce an *other* classification
+of files. And because a specific file can't easily be classified
+as a specific type, this effectively prevents the use of *resource*
+loading techniques not involving explicit filesystem I/O without
+significant smarts. I.e. because PyOxidizer cannot easily
+unambiguously identify file X as a specific type, it is forced to
+materialize that file at a similar location on the run-time system.
+However, if runtimes like PyOxidizer were able to identify the
+type of a file by its file extension and/or presence of other files,
+it would know exactly how to load/treat the file at run-time without
+having to resort to heuristics.
+
+This ambiguity effectively means that PyOxidizer needs to:
+
+* Determine if a file is a shared library or not (because shared
+  libraries are treated specially and we can't unambiguously identify
+  a shared library from its file extension).
+* Examine symbols within shared libraries to see if a Python extension
+  module is present (via presence of ``PyInit_*`` symbols).
+* Preserve *extra* files not present in a Python package. (In the case
+  of numpy, there are no *obvious* links to the shared libraries in the
+  ``numpy.libs`` directory: this relative path is encoded within the
+  extension module shared library via e.g. ``DT_NEEDED``.)
+
+The most robust mitigation to this ambiguity is for all files
+associated with an installable Python package/distribution to be
+annotated with their type and for Python package installers to refuse
+to process files that aren't identified. This could be achieved by
+having a ``.dist-info/`` file annotating the *role* of each file.
