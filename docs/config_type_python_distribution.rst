@@ -36,6 +36,14 @@ The following named arguments are accepted:
 
    Defaults to the value of the ``BUILD_TARGET`` global constant.
 
+``python_version``
+   (``string``) ``X.Y`` *major.minor* string denoting the Python release version
+   to use.
+
+   Supported values are ``3.8`` and ``3.9``.
+
+   Defaults to ``3.8``.
+
 ``flavor`` is a string denoting the distribution *flavor*. Values can be one
 of the following:
 

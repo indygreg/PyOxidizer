@@ -132,14 +132,16 @@ impl TypedValue for PythonDistribution {
 
 // Starlark functions.
 impl PythonDistribution {
-    /// default_python_distribution(flavor, build_target=None)
+    /// default_python_distribution(flavor, build_target=None, python_version=None)
     fn default_python_distribution(
         type_values: &TypeValues,
         flavor: &Value,
         build_target: &Value,
+        python_version: &Value,
     ) -> ValueResult {
         let flavor = required_str_arg("flavor", flavor)?;
         let build_target = optional_str_arg("build_target", build_target)?;
+        let python_version = optional_str_arg("python_version", &python_version)?;
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
@@ -164,13 +166,19 @@ impl PythonDistribution {
             }
         };
 
-        let location = default_distribution_location(&flavor, &build_target).map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "default_python_distribution()".to_string(),
-            })
-        })?;
+        let python_version_str = match &python_version {
+            Some(x) => Some(x.as_str()),
+            None => None,
+        };
+
+        let location = default_distribution_location(&flavor, &build_target, python_version_str)
+            .map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "default_python_distribution()".to_string(),
+                })
+            })?;
 
         let raw_context = get_context(type_values)?;
         let context = raw_context
@@ -342,14 +350,18 @@ impl PythonDistribution {
             Some(dist.clone())
         } else {
             let flavor = DistributionFlavor::Standalone;
-            let location = default_distribution_location(&flavor, &context.build_host_triple)
-                .map_err(|e| {
-                    ValueError::from(RuntimeError {
-                        code: "PYOXIDIZER_BUILD",
-                        message: format!("unable to find host Python distribution: {}", e),
-                        label: "to_python_executable()".to_string(),
-                    })
-                })?;
+            let location = default_distribution_location(
+                &flavor,
+                &context.build_host_triple,
+                Some(dist.python_major_minor_version().as_str()),
+            )
+            .map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: format!("unable to find host Python distribution: {}", e),
+                    label: "to_python_executable()".to_string(),
+                })
+            })?;
 
             Some(Arc::new(
                 resolve_distribution(
@@ -603,8 +615,13 @@ starlark_module! { python_distribution_module =>
     }
 
     #[allow(clippy::ptr_arg)]
-    default_python_distribution(env env, flavor="standalone", build_target=NoneType::None) {
-        PythonDistribution::default_python_distribution(&env, &flavor, &build_target)
+    default_python_distribution(
+        env env,
+        flavor="standalone",
+        build_target=NoneType::None,
+        python_version=NoneType::None
+    ) {
+        PythonDistribution::default_python_distribution(&env, &flavor, &build_target, &python_version)
     }
 }
 
@@ -639,6 +656,48 @@ mod tests {
             err.message,
             "function expects a string for flavor; got type bool"
         );
+    }
+
+    #[test]
+    fn test_default_python_distribution_python_38() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        let dist = env.eval("default_python_distribution(python_version='3.8')")?;
+        assert_eq!(dist.get_type(), "PythonDistribution");
+
+        let wanted = PYTHON_DISTRIBUTIONS
+            .find_distribution(
+                crate::project_building::HOST,
+                &DistributionFlavor::Standalone,
+                Some("3.8"),
+            )
+            .unwrap();
+
+        let x = dist.downcast_ref::<PythonDistribution>().unwrap();
+        assert_eq!(x.source, wanted.location);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_default_python_distribution_python_39() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        let dist = env.eval("default_python_distribution(python_version='3.9')")?;
+        assert_eq!(dist.get_type(), "PythonDistribution");
+
+        let wanted = PYTHON_DISTRIBUTIONS
+            .find_distribution(
+                crate::project_building::HOST,
+                &DistributionFlavor::Standalone,
+                Some("3.9"),
+            )
+            .unwrap();
+
+        let x = dist.downcast_ref::<PythonDistribution>().unwrap();
+        assert_eq!(x.source, wanted.location);
+
+        Ok(())
     }
 
     #[test]

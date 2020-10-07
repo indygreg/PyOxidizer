@@ -621,6 +621,23 @@ mod tests {
     }
 
     #[test]
+    fn test_add_python_executable_39() -> Result<()> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("dist = default_python_distribution(python_version='3.9')")?;
+        env.eval("exe = dist.to_python_executable('testapp')")?;
+
+        let m = Value::new(FileManifestValue {
+            manifest: FileManifest::default(),
+        });
+
+        env.set("m", m)?;
+        env.eval("m.add_python_resource('bin', exe)")?;
+
+        Ok(())
+    }
+
+    #[test]
     fn test_install() -> Result<()> {
         let mut env = StarlarkEnvironment::new_with_exe()?;
 

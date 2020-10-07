@@ -479,9 +479,10 @@ pub fn resolve_distribution(
 pub fn default_distribution_location(
     flavor: &DistributionFlavor,
     target: &str,
+    python_major_minor_version: Option<&str>,
 ) -> Result<PythonDistributionLocation> {
     let dist = PYTHON_DISTRIBUTIONS
-        .find_distribution(target, flavor, None)
+        .find_distribution(target, flavor, python_major_minor_version)
         .ok_or_else(|| anyhow!("could not find default Python distribution for {}", target))?;
 
     Ok(dist.location)
@@ -500,7 +501,7 @@ pub fn default_distribution(
     target: &str,
     dest_dir: &Path,
 ) -> Result<Box<dyn PythonDistribution>> {
-    let location = default_distribution_location(flavor, target)?;
+    let location = default_distribution_location(flavor, target, None)?;
 
     resolve_distribution(logger, flavor, &location, dest_dir)
 }

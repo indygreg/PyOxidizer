@@ -9,9 +9,9 @@ Getting Started
 Python Requirements
 ===================
 
-PyOxidizer currently targets Python 3.8. Your Python application will need
-to already be compatible with Python 3.8 for it to work with PyOxidizer. See
-:ref:`faq_python_38` for more on the minimum Python requirement.
+PyOxidizer currently targets Python 3.8 or 3.9. Your Python application will
+need to already be compatible with 1 of these versions for it to work with
+PyOxidizer. See :ref:`faq_python_38` for more on the minimum Python requirement.
 
 Installing
 ==========

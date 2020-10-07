@@ -237,6 +237,12 @@ New Features
 * The new ``PythonExecutable.pip_download()`` method will run ``pip download``
   to obtain Python wheels for the requested package(s). Those wheels will
   then be parsed for Python resources, which can be added to the executable.
+* The Starlark function ``default_python_distribution()`` now accepts a
+  ``python_version`` argument to control the *X.Y* version of Python to
+  use.
+* CPython 3.9 distributions are now supported by passing
+  ``python_version="3.9"`` to the ``default_python_distribution()`` Starlark
+  function. CPython 3.8 is the default distribution version.
 
 Bug Fixes
 ^^^^^^^^^
