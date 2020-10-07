@@ -29,29 +29,16 @@ impl PythonDistributionCollection {
         target_triple: &str,
         flavor: &DistributionFlavor,
     ) -> Option<PythonDistributionRecord> {
-        for dist in &self.dists {
-            if dist.target_triple != target_triple {
-                continue;
-            }
-
-            match flavor {
-                DistributionFlavor::Standalone => {
-                    return Some(dist.clone());
-                }
-                DistributionFlavor::StandaloneStatic => {
-                    if !dist.supports_prebuilt_extension_modules {
-                        return Some(dist.clone());
-                    }
-                }
-                DistributionFlavor::StandaloneDynamic => {
-                    if dist.supports_prebuilt_extension_modules {
-                        return Some(dist.clone());
-                    }
-                }
-            }
-        }
-
-        None
+        self.dists
+            .iter()
+            .filter(|dist| dist.target_triple == target_triple)
+            .filter(|dist| match flavor {
+                DistributionFlavor::Standalone => true,
+                DistributionFlavor::StandaloneStatic => !dist.supports_prebuilt_extension_modules,
+                DistributionFlavor::StandaloneDynamic => dist.supports_prebuilt_extension_modules,
+            })
+            .cloned()
+            .next()
     }
 
     /// Obtain records for all registered distributions.
