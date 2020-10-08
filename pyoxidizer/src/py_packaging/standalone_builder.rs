@@ -22,7 +22,7 @@ use {
     lazy_static::lazy_static,
     python_packaging::{
         bytecode::BytecodeCompiler,
-        location::ConcreteResourceLocation,
+        location::{AbstractResourceLocation, ConcreteResourceLocation},
         policy::PythonPackagingPolicy,
         resource::{
             DataLocation, PythonExtensionModule, PythonModuleSource,
@@ -170,6 +170,11 @@ impl StandalonePythonExecutableBuilder {
             packaging_policy: packaging_policy.clone(),
             resources_collector: PythonResourceCollector::new(
                 packaging_policy.resources_policy(),
+                // TODO pass proper values.
+                vec![
+                    AbstractResourceLocation::InMemory,
+                    AbstractResourceLocation::RelativePath,
+                ],
                 &cache_tag,
             ),
             core_build_context: LibPythonBuildContext::default(),
