@@ -494,3 +494,29 @@ associated with an installable Python package/distribution to be
 annotated with their type and for Python package installers to refuse
 to process files that aren't identified. This could be achieved by
 having a ``.dist-info/`` file annotating the *role* of each file.
+
+Push Harder for Wheels
+----------------------
+
+Wheels are superior for Python packaging distribution because they
+are more *static* and follow a finite set of rules for how they
+should be installed. In theory, one could write code to install a
+wheel in any programming language. Non-wheel distributions, however,
+are a different matter entirely. A ``.tar.gz`` source distribution
+often relies on running a ``setup.py`` file, which requires a Python
+interpreter.
+
+In the ideal world, PyOxidizer doesn't care about how a package is
+built: just the files that comprise the installed package. So wheels
+are a more desirable distribution format. In fact, PyOxidizer has
+Rust code for extracting wheels and repackaging their contents: no
+Python necessary. This means PyOxidizer can do things like download
+wheels targeting non-native architectures and it *just works*.
+
+As good as wheels are, they are universal in Python land. There are
+tons of packages that don't have wheel distributions and continue to
+offer the older ``.tar.gz`` distribution format.
+
+We would like to see a concerted effort to push harder for the
+presence of wheels. For example, PyPI could encourage/nag package
+maintainers to upload wheels.
