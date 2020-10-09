@@ -25,6 +25,17 @@ This functionality is similar to using a ``.zip`` file for holding
 Python modules. However, the *Python packed resources* data structure
 is far more advanced.
 
+Implementation
+==============
+
+The canonical implementation of the writer and parser of this data
+structure lives in the ``python-packed-resources`` Rust crate. The
+canonical home of this crate is
+https://github.com/indygreg/PyOxidizer/tree/main/python-packed-resources.
+
+This crate is published to crates.io at
+https://crates.io/crates/python-packed-resources.
+
 Specification
 =============
 
