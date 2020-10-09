@@ -386,8 +386,28 @@ There is no checksumming of the data because we don't want to incur
 I/O overhead to read the entire blob. It could be added as an optional
 feature.
 
+Potential Future Features
+=========================
+
+This data structure is robust enough to be used by PyOxidizer to
+power importing of every Python module used by a Python interpreter.
+However, there are various aspects that could be improved.
+
+Compression
+-----------
+
 A potential area for optimization is use of general compression. Various
 fields should compress well - either in streaming mode or by utilizing
 compression dictionaries. Compression would undermine 0-copy, of course.
 But in environments where we want to optimize for size, it could be
 desirable.
+
+Platform Portability
+--------------------
+
+Currently, filesystem paths are encoded as platform native. That means
+``[u8]`` on POSIX and ``[u16]`` on Windows. This isn't portable.
+
+Most filenames are likely ASCII or UTF-8 safe. For the common case where
+we don't need platform-native filenames to preserve subtle encoding
+differences, we could express paths as a simpler string type.
