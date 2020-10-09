@@ -20,8 +20,19 @@ use {
     std::path::PathBuf,
 };
 
-impl TypedValue for EmbeddedPythonConfig {
-    type Holder = Immutable<EmbeddedPythonConfig>;
+#[derive(Debug, Clone)]
+pub struct PythonInterpreterConfigValue {
+    pub inner: EmbeddedPythonConfig,
+}
+
+impl PythonInterpreterConfigValue {
+    pub fn new(inner: EmbeddedPythonConfig) -> Self {
+        Self { inner }
+    }
+}
+
+impl TypedValue for PythonInterpreterConfigValue {
+    type Holder = Immutable<PythonInterpreterConfigValue>;
     const TYPE: &'static str = "PythonInterpreterConfig";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
@@ -29,7 +40,7 @@ impl TypedValue for EmbeddedPythonConfig {
     }
 
     fn to_str(&self) -> String {
-        format!("PythonInterpreterConfig<{:#?}>", self)
+        format!("PythonInterpreterConfig<{:#?}>", self.inner)
     }
 
     fn to_repr(&self) -> String {
@@ -38,10 +49,10 @@ impl TypedValue for EmbeddedPythonConfig {
 }
 
 // Starlark functions.
-impl EmbeddedPythonConfig {
+impl PythonInterpreterConfigValue {
     /// Obtain a default instance from the context of Starlark.
     pub fn default_starlark() -> Self {
-        Self {
+        Self::new(EmbeddedPythonConfig {
             bytes_warning: 0,
             ignore_environment: true,
             inspect: false,
@@ -69,7 +80,7 @@ impl EmbeddedPythonConfig {
             user_site_directory: false,
             write_bytecode: false,
             write_modules_directory_env: None,
-        }
+        })
     }
 
     /// PythonInterpreterConfig(...)
@@ -106,7 +117,7 @@ impl EmbeddedPythonConfig {
         write_bytecode: &Value,
         write_modules_directory_env: &Value,
     ) -> ValueResult {
-        let default = EmbeddedPythonConfig::default_starlark();
+        let default = PythonInterpreterConfigValue::default_starlark().inner;
 
         let bytes_warning = optional_int_arg("bytes_warning", &bytes_warning)?
             .unwrap_or(default.bytes_warning as i64) as i32;
@@ -254,34 +265,36 @@ impl EmbeddedPythonConfig {
         // Automatically enable the filesystem importer if sys.paths are defined.
         let filesystem_importer = filesystem_importer || !sys_paths.is_empty();
 
-        Ok(Value::new(EmbeddedPythonConfig {
-            bytes_warning,
-            ignore_environment,
-            inspect,
-            interactive,
-            isolated,
-            legacy_windows_fs_encoding,
-            legacy_windows_stdio,
-            optimize_level,
-            parser_debug,
-            quiet,
-            stdio_encoding_name,
-            stdio_encoding_errors,
-            unbuffered_stdio,
-            filesystem_importer,
-            site_import,
-            sys_frozen,
-            sys_meipass,
-            sys_paths,
-            raw_allocator,
-            run_mode,
-            terminfo_resolution,
-            use_hash_seed,
-            user_site_directory,
-            verbose,
-            write_bytecode,
-            write_modules_directory_env,
-        }))
+        Ok(Value::new(PythonInterpreterConfigValue::new(
+            EmbeddedPythonConfig {
+                bytes_warning,
+                ignore_environment,
+                inspect,
+                interactive,
+                isolated,
+                legacy_windows_fs_encoding,
+                legacy_windows_stdio,
+                optimize_level,
+                parser_debug,
+                quiet,
+                stdio_encoding_name,
+                stdio_encoding_errors,
+                unbuffered_stdio,
+                filesystem_importer,
+                site_import,
+                sys_frozen,
+                sys_meipass,
+                sys_paths,
+                raw_allocator,
+                run_mode,
+                terminfo_resolution,
+                use_hash_seed,
+                user_site_directory,
+                verbose,
+                write_bytecode,
+                write_modules_directory_env,
+            },
+        )))
     }
 }
 
@@ -319,7 +332,7 @@ starlark_module! { embedded_python_config_module =>
         write_bytecode=NoneType::None,
         write_modules_directory_env=NoneType::None
     ) {
-        EmbeddedPythonConfig::starlark_new(
+        PythonInterpreterConfigValue::starlark_new(
             &bytes_warning,
             &ignore_environment,
             &inspect,
@@ -363,63 +376,63 @@ mod tests {
         let c = starlark_ok("PythonInterpreterConfig()");
         assert_eq!(c.get_type(), "PythonInterpreterConfig");
 
-        let wanted = EmbeddedPythonConfig::default_starlark();
+        let wanted = PythonInterpreterConfigValue::default_starlark();
 
-        let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
-        assert_eq!(*x, wanted);
+        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
+        assert_eq!(x.inner, wanted.inner);
     }
 
     #[test]
     fn test_bytes_warning() {
         let c = starlark_ok("PythonInterpreterConfig(bytes_warning=2)");
-        let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
-        assert_eq!(x.bytes_warning, 2);
+        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
+        assert_eq!(x.inner.bytes_warning, 2);
     }
 
     #[test]
     fn test_optimize_level() {
         let c = starlark_ok("PythonInterpreterConfig(optimize_level=1)");
-        let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
-        assert_eq!(x.optimize_level, 1);
+        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
+        assert_eq!(x.inner.optimize_level, 1);
     }
 
     #[test]
     fn test_sys_paths() {
         let c = starlark_ok("PythonInterpreterConfig(sys_paths=['foo', 'bar'])");
-        let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
-        assert_eq!(x.sys_paths, ["foo", "bar"]);
+        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
+        assert_eq!(x.inner.sys_paths, ["foo", "bar"]);
         // Setting sys_paths enables filesystem importer.
-        assert!(x.filesystem_importer);
+        assert!(x.inner.filesystem_importer);
     }
 
     #[test]
     fn test_stdio_encoding() {
         let c = starlark_ok("PythonInterpreterConfig(stdio_encoding='foo:strict')");
-        let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
-        assert_eq!(x.stdio_encoding_name, Some("foo".to_string()));
-        assert_eq!(x.stdio_encoding_errors, Some("strict".to_string()));
+        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
+        assert_eq!(x.inner.stdio_encoding_name, Some("foo".to_string()));
+        assert_eq!(x.inner.stdio_encoding_errors, Some("strict".to_string()));
     }
 
     #[test]
     fn test_raw_allocator() {
         let c = starlark_ok("PythonInterpreterConfig(raw_allocator='system')");
-        let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
-        assert_eq!(x.raw_allocator, MemoryAllocatorBackend::System);
+        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
+        assert_eq!(x.inner.raw_allocator, MemoryAllocatorBackend::System);
 
         let c = starlark_ok("PythonInterpreterConfig(raw_allocator='jemalloc')");
-        let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
-        assert_eq!(x.raw_allocator, MemoryAllocatorBackend::Jemalloc);
+        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
+        assert_eq!(x.inner.raw_allocator, MemoryAllocatorBackend::Jemalloc);
         let c = starlark_ok("PythonInterpreterConfig(raw_allocator='rust')");
-        let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
-        assert_eq!(x.raw_allocator, MemoryAllocatorBackend::Rust);
+        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
+        assert_eq!(x.inner.raw_allocator, MemoryAllocatorBackend::Rust);
     }
 
     #[test]
     fn test_run_eval() {
         let c = starlark_ok("PythonInterpreterConfig(run_eval='1')");
-        let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
+        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
         assert_eq!(
-            x.run_mode,
+            x.inner.run_mode,
             PythonRunMode::Eval {
                 code: "1".to_string()
             }
@@ -429,10 +442,10 @@ mod tests {
     #[test]
     fn test_run_file() {
         let c = starlark_ok("PythonInterpreterConfig(run_file='hello.py')");
-        let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
+        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
 
         assert_eq!(
-            x.run_mode,
+            x.inner.run_mode,
             PythonRunMode::File {
                 path: PathBuf::from("hello.py"),
             }
@@ -442,9 +455,9 @@ mod tests {
     #[test]
     fn test_run_module() {
         let c = starlark_ok("PythonInterpreterConfig(run_module='main')");
-        let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
+        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
         assert_eq!(
-            x.run_mode,
+            x.inner.run_mode,
             PythonRunMode::Module {
                 module: "main".to_string()
             }
@@ -454,37 +467,37 @@ mod tests {
     #[test]
     fn test_run_noop() {
         let c = starlark_ok("PythonInterpreterConfig(run_noop=True)");
-        let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
-        assert_eq!(x.run_mode, PythonRunMode::None);
+        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
+        assert_eq!(x.inner.run_mode, PythonRunMode::None);
     }
 
     #[test]
     fn test_run_repl() {
         let c = starlark_ok("PythonInterpreterConfig(run_repl=True)");
-        let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
-        assert_eq!(x.run_mode, PythonRunMode::Repl);
+        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
+        assert_eq!(x.inner.run_mode, PythonRunMode::Repl);
     }
 
     #[test]
     fn test_terminfo_resolution() {
         let c = starlark_ok("PythonInterpreterConfig(terminfo_resolution=None)");
-        let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
-        assert_eq!(x.terminfo_resolution, TerminfoResolution::Dynamic);
+        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
+        assert_eq!(x.inner.terminfo_resolution, TerminfoResolution::Dynamic);
 
         let c = starlark_ok("PythonInterpreterConfig(terminfo_resolution='dynamic')");
-        let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
-        assert_eq!(x.terminfo_resolution, TerminfoResolution::Dynamic);
+        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
+        assert_eq!(x.inner.terminfo_resolution, TerminfoResolution::Dynamic);
 
         let c = starlark_ok("PythonInterpreterConfig(terminfo_resolution='none')");
-        let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
-        assert_eq!(x.terminfo_resolution, TerminfoResolution::None);
+        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
+        assert_eq!(x.inner.terminfo_resolution, TerminfoResolution::None);
 
         let c = starlark_ok(
             "PythonInterpreterConfig(terminfo_resolution='static', terminfo_dirs='foo')",
         );
-        let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
+        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
         assert_eq!(
-            x.terminfo_resolution,
+            x.inner.terminfo_resolution,
             TerminfoResolution::Static("foo".to_string())
         );
     }

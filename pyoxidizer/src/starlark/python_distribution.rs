@@ -6,6 +6,7 @@ use {
     super::{
         env::{get_context, EnvironmentContext},
         python_executable::PythonExecutable,
+        python_interpreter_config::PythonInterpreterConfigValue,
         python_packaging_policy::PythonPackagingPolicyValue,
         python_resource::{
             add_context_for_value, python_resource_to_value, PythonExtensionModuleValue,
@@ -14,7 +15,6 @@ use {
         util::{optional_str_arg, optional_type_arg, required_bool_arg, required_str_arg},
     },
     crate::py_packaging::{
-        config::EmbeddedPythonConfig,
         distribution::BinaryLibpythonLinkMode,
         distribution::{
             default_distribution_location, is_stdlib_test_package, resolve_distribution,
@@ -335,9 +335,9 @@ impl PythonDistribution {
         }?;
 
         let config = if config.get_type() == "NoneType" {
-            Ok(EmbeddedPythonConfig::default_starlark())
+            Ok(PythonInterpreterConfigValue::default_starlark())
         } else {
-            match config.downcast_ref::<EmbeddedPythonConfig>() {
+            match config.downcast_ref::<PythonInterpreterConfigValue>() {
                 Some(c) => Ok(c.clone()),
                 None => Err(ValueError::IncorrectParameterType),
             }
@@ -389,7 +389,7 @@ impl PythonDistribution {
                 // TODO make configurable
                 BinaryLibpythonLinkMode::Default,
                 &policy.inner,
-                &config,
+                &config.inner,
                 host_distribution,
             )
             .map_err(|e| {
