@@ -792,8 +792,6 @@ where
 }
 
 /// Write packed resources data, version 1.
-///
-/// See the `specifications` module for the format.
 #[allow(clippy::cognitive_complexity)]
 pub fn write_packed_resources_v1<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
     modules: &[T],

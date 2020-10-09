@@ -21,11 +21,11 @@ the module `import` mechanism.
 
 This crate is developed primarily for
 [PyOxidizer](https://pyoxidizer.readthedocs.io/en/stable/). But it can
-be used outside the PyOxidizer project.
+be used outside the PyOxidizer project. See the aforementioned docs
+for the canonical specification of this format.
 */
 
 pub mod data;
 #[allow(unused)]
 pub mod parser;
-pub mod specifications;
 pub mod writer;
