@@ -159,6 +159,16 @@ impl StandalonePythonExecutableBuilder {
         let supports_in_memory_dynamically_linked_extension_loading =
             target_distribution.supports_in_memory_dynamically_linked_extension_loading();
 
+        let mut allowed_extension_module_locations = vec![];
+
+        if supports_in_memory_dynamically_linked_extension_loading {
+            allowed_extension_module_locations.push(AbstractResourceLocation::InMemory);
+        }
+
+        if target_distribution.is_extension_module_file_loadable() {
+            allowed_extension_module_locations.push(AbstractResourceLocation::RelativePath);
+        }
+
         let mut builder = Box::new(Self {
             host_triple,
             target_triple,
@@ -170,11 +180,7 @@ impl StandalonePythonExecutableBuilder {
             packaging_policy: packaging_policy.clone(),
             resources_collector: PythonResourceCollector::new(
                 packaging_policy.resources_policy(),
-                // TODO pass proper values.
-                vec![
-                    AbstractResourceLocation::InMemory,
-                    AbstractResourceLocation::RelativePath,
-                ],
+                allowed_extension_module_locations,
                 &cache_tag,
             ),
             core_build_context: LibPythonBuildContext::default(),
