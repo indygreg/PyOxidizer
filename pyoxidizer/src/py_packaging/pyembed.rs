@@ -27,6 +27,45 @@ pub fn derive_python_config(
         "pyembed::OxidizedPythonInterpreterConfig {{\n    \
         interpreter_config: pyembed::PythonInterpreterConfig {{\n        \
         profile: {},\n        \
+        allocator: None,\n        \
+        configure_locale: None,\n        \
+        coerce_c_locale: None,\n        \
+        coerce_c_locale_warn: None,\n        \
+        development_mode: None,\n        \
+        isolated: None,\n        \
+        parse_argv: None,\n        \
+        utf8_mode: None,\n        \
+        argv: None,\n        \
+        base_exec_prefix: None,\n        \
+        base_executable: None,\n        \
+        base_prefix: None,\n        \
+        check_hash_pycs_mode: None,\n        \
+        configure_c_stdio: None,\n        \
+        dump_refs: None,\n        \
+        exec_prefix: None,\n        \
+        executable: None,\n        \
+        fault_handler: None,\n        \
+        filesystem_encoding: None,\n        \
+        filesystem_errors: None,\n        \
+        hash_seed: None,\n        \
+        home: None,\n        \
+        import_time: None,\n        \
+        install_signal_handlers: None,\n        \
+        malloc_stats: None,\n        \
+        prefix: None,\n        \
+        program_name: None,\n        \
+        python_path_env: None,\n        \
+        pathconfig_warnings: None,\n        \
+        pycache_prefix: None,\n        \
+        run_command: None,\n        \
+        run_filename: None,\n        \
+        run_module: None,\n        \
+        tracemalloc: None,\n        \
+        warn_options: None,\n        \
+        show_alloc_count: None,\n        \
+        show_ref_count: None,\n        \
+        skip_first_source_line: None,\n        \
+        x_options: None,\n        \
         stdio_encoding: {},\n        \
         stdio_errors: {},\n        \
         optimization_level: Some({}),\n        \
@@ -44,7 +83,6 @@ pub fn derive_python_config(
         parser_debug: Some({}),\n        \
         quiet: Some({}),\n        \
         verbose: Some({}),\n        \
-        ..pyembed::PythonInterpreterConfig::default()\n    \
         }},\n    \
         raw_allocator: Some({}),\n    \
         oxidized_importer: true,\n    \
