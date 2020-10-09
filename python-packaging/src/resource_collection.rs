@@ -9,6 +9,7 @@ use {
         bytecode::{
             compute_bytecode_header, BytecodeHeaderMode, CompileMode, PythonBytecodeCompiler,
         },
+        libpython::LibPythonBuildContext,
         location::{AbstractResourceLocation, ConcreteResourceLocation},
         module_util::{packages_from_module_name, resolve_path_for_module},
         policy::PythonResourcesPolicy,
@@ -1115,6 +1116,165 @@ impl PythonResourceCollector {
             &add_context.location,
             &add_context.location_fallback,
         )
+    }
+
+    /// Add a Python extension module using an add context.
+    #[allow(clippy::if_same_then_else)]
+    pub fn add_python_extension_module_with_context(
+        &mut self,
+        extension_module: &PythonExtensionModule,
+        add_context: &PythonResourceAddCollectionContext,
+    ) -> Result<Option<LibPythonBuildContext>> {
+        // TODO consult this attribute (it isn't set for built-ins for some reason)
+        //if !add_context.include {
+        //    return Ok(None);
+        // }
+
+        // Whether we can load extension modules as standalone shared library files.
+        let can_load_standalone = self
+            .allowed_extension_module_locations
+            .contains(&AbstractResourceLocation::RelativePath);
+
+        // Whether we can load extension module dynamic libraries from memory. This
+        // means we have a dynamic library extension module and that library is loaded
+        // from memory: this is not a built-in extension!
+        let can_load_dynamic_library_memory = self
+            .allowed_extension_module_locations
+            .contains(&AbstractResourceLocation::InMemory);
+
+        // Whether we can link the extension as a built-in. This requires the extension
+        // to be builtin to the core distribution, have object files that we can link
+        // together, or a static library to link.
+        let can_link_builtin = if extension_module.builtin_default {
+            true
+        } else {
+            !extension_module.object_file_data.is_empty()
+        };
+
+        // Whether we can produce a standalone shared library extension module.
+        // TODO consider allowing this if object files are present.
+        let can_link_standalone = extension_module.shared_library.is_some();
+
+        let mut relative_path = if let Some(location) = &add_context.location_fallback {
+            match location {
+                ConcreteResourceLocation::RelativePath(ref prefix) => Some(prefix.clone()),
+                ConcreteResourceLocation::InMemory => None,
+            }
+        } else {
+            None
+        };
+
+        let prefer_in_memory = add_context.location == ConcreteResourceLocation::InMemory;
+        let prefer_filesystem = match &add_context.location {
+            ConcreteResourceLocation::RelativePath(_) => true,
+            ConcreteResourceLocation::InMemory => false,
+        };
+
+        let fallback_in_memory =
+            add_context.location_fallback == Some(ConcreteResourceLocation::InMemory);
+        let fallback_filesystem = match &add_context.location_fallback {
+            Some(ConcreteResourceLocation::RelativePath(_)) => true,
+            _ => false,
+        };
+
+        // TODO support this.
+        if prefer_filesystem && fallback_in_memory {
+            return Err(anyhow!("a preferred location of the filesystem and a fallback from memory is not supported"));
+        }
+
+        let require_in_memory =
+            prefer_in_memory && (add_context.location_fallback.is_none() || fallback_in_memory);
+        let require_filesystem =
+            prefer_filesystem && (add_context.location_fallback.is_none() || fallback_filesystem);
+
+        match &add_context.location {
+            ConcreteResourceLocation::RelativePath(prefix) => {
+                relative_path = Some(prefix.clone());
+            }
+            ConcreteResourceLocation::InMemory => {}
+        }
+
+        // We produce a builtin extension module (by linking object files) if any
+        // of the following conditions are met:
+        //
+        // We are a stdlib extension module built into libpython core
+        let produce_builtin = if extension_module.is_stdlib && extension_module.builtin_default {
+            true
+        // Builtin linking is the only mechanism available to us.
+        } else if can_link_builtin && (!can_link_standalone || !can_load_standalone) {
+            true
+        // We want in memory loading and we can link a builtin
+        } else {
+            prefer_in_memory && can_link_builtin && !require_filesystem
+        };
+
+        if require_in_memory && (!can_link_builtin && !can_load_dynamic_library_memory) {
+            return Err(anyhow!(
+                "extension module {} cannot be loaded from memory but memory loading required",
+                extension_module.name
+            ));
+        }
+
+        if require_filesystem && !can_link_standalone && !produce_builtin {
+            return Err(anyhow!("extension module {} cannot be materialized as a shared library extension but filesystem loading required", extension_module.name));
+        }
+
+        if !produce_builtin && !can_load_standalone {
+            return Err(anyhow!("extension module {} cannot be materialized as a shared library because distribution does not support loading extension module shared libraries", extension_module.name));
+        }
+
+        if produce_builtin {
+            let mut build_context = LibPythonBuildContext::default();
+
+            for depends in &extension_module.link_libraries {
+                if depends.framework {
+                    build_context.frameworks.insert(depends.name.clone());
+                } else if depends.system {
+                    build_context.system_libraries.insert(depends.name.clone());
+                } else if depends.static_library.is_some() {
+                    build_context.static_libraries.insert(depends.name.clone());
+                } else if depends.dynamic_library.is_some() {
+                    build_context.dynamic_libraries.insert(depends.name.clone());
+                }
+            }
+
+            if let Some(lis) = &extension_module.licenses {
+                build_context
+                    .license_infos
+                    .insert(extension_module.name.clone(), lis.clone());
+            }
+
+            if let Some(init_fn) = &extension_module.init_fn {
+                build_context
+                    .init_functions
+                    .insert(extension_module.name.clone(), init_fn.clone());
+            }
+
+            for location in &extension_module.object_file_data {
+                build_context.object_files.push(location.clone());
+            }
+
+            self.add_builtin_python_extension_module(extension_module)?;
+
+            Ok(Some(build_context))
+        } else {
+            // If we're not producing a builtin, we're producing a shared library
+            // extension module. We currently only support extension modules that
+            // already have a shared library present. So we simply call into
+            // the resources collector.
+            let location = if prefer_in_memory && can_load_dynamic_library_memory {
+                ConcreteResourceLocation::InMemory
+            } else {
+                match relative_path {
+                    Some(prefix) => ConcreteResourceLocation::RelativePath(prefix),
+                    None => ConcreteResourceLocation::InMemory,
+                }
+            };
+
+            self.add_python_extension_module(extension_module, &location)?;
+
+            Ok(None)
+        }
     }
 
     /// Add a built-in extension module.
