@@ -6,7 +6,7 @@
 Configuring a Python interpreter.
 */
 
-use python_packaging::interpreter::{MemoryAllocatorBackend, TerminfoResolution};
+use python_packaging::interpreter::{MemoryAllocatorBackend, PythonRunMode, TerminfoResolution};
 
 /// Determine the default raw allocator for a target triple.
 pub fn default_raw_allocator(target_triple: &str) -> MemoryAllocatorBackend {
@@ -19,15 +19,6 @@ pub fn default_raw_allocator(target_triple: &str) -> MemoryAllocatorBackend {
     } else {
         MemoryAllocatorBackend::Jemalloc
     }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum RunMode {
-    Noop,
-    Repl,
-    Module { module: String },
-    Eval { code: String },
-    File { path: String },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -47,7 +38,7 @@ pub struct EmbeddedPythonConfig {
     pub filesystem_importer: bool,
     pub quiet: bool,
     pub raw_allocator: MemoryAllocatorBackend,
-    pub run_mode: RunMode,
+    pub run_mode: PythonRunMode,
     pub site_import: bool,
     pub sys_frozen: bool,
     pub sys_meipass: bool,
@@ -84,7 +75,7 @@ impl Default for EmbeddedPythonConfig {
             sys_meipass: false,
             sys_paths: Vec::new(),
             raw_allocator: MemoryAllocatorBackend::System,
-            run_mode: RunMode::Repl,
+            run_mode: PythonRunMode::Repl,
             terminfo_resolution: TerminfoResolution::None,
             user_site_directory: false,
             write_bytecode: false,

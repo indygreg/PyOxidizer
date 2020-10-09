@@ -8,30 +8,11 @@ use {
     libc::c_ulong,
     python3_sys as pyffi,
     python_packaging::interpreter::{
-        PythonInterpreterProfile, PythonRawAllocator, TerminfoResolution,
+        PythonInterpreterProfile, PythonRawAllocator, PythonRunMode, TerminfoResolution,
     },
     std::ffi::{CString, OsString},
     std::path::PathBuf,
 };
-
-/// Defines Python code to run.
-#[derive(Clone, Debug, PartialEq)]
-pub enum PythonRunMode {
-    /// No-op.
-    None,
-    /// Run a Python REPL.
-    Repl,
-    /// Run a Python module as the main module.
-    Module { module: String },
-    /// Evaluate Python code from a string.
-    Eval { code: String },
-    /// Execute Python code in a file.
-    ///
-    /// We define this as a CString because the underlying API wants
-    /// a char* and we want the constructor of this type to worry about
-    /// the type coercion.
-    File { path: PathBuf },
-}
 
 /// Defines an extra extension module to load.
 #[derive(Clone, Debug)]

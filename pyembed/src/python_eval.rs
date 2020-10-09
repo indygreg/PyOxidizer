@@ -5,7 +5,6 @@
 //! Functionality for evaluating Python code.
 
 use {
-    super::config::PythonRunMode,
     super::conversion::path_to_cstring,
     cpython::exc::{RuntimeError, SystemExit, ValueError},
     cpython::{
@@ -13,6 +12,7 @@ use {
     },
     libc::c_char,
     python3_sys as pyffi,
+    python_packaging::interpreter::PythonRunMode,
     std::ffi::CString,
     std::io::Write,
     std::path::Path,

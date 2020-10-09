@@ -4,8 +4,8 @@
 
 use {
     super::util::{optional_bool_arg, optional_int_arg, optional_list_arg, optional_str_arg},
-    crate::py_packaging::config::{default_raw_allocator, EmbeddedPythonConfig, RunMode},
-    python_packaging::interpreter::{MemoryAllocatorBackend, TerminfoResolution},
+    crate::py_packaging::config::{default_raw_allocator, EmbeddedPythonConfig},
+    python_packaging::interpreter::{MemoryAllocatorBackend, PythonRunMode, TerminfoResolution},
     starlark::{
         values::{
             error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
@@ -17,6 +17,7 @@ use {
             starlark_signature_extraction, starlark_signatures,
         },
     },
+    std::path::PathBuf,
 };
 
 impl TypedValue for EmbeddedPythonConfig {
@@ -63,7 +64,7 @@ impl EmbeddedPythonConfig {
             sys_paths: Vec::new(),
             // TODO this should come from the build context.
             raw_allocator: default_raw_allocator(crate::project_building::HOST),
-            run_mode: RunMode::Repl,
+            run_mode: PythonRunMode::Repl,
             terminfo_resolution: TerminfoResolution::Dynamic,
             user_site_directory: false,
             write_bytecode: false,
@@ -183,13 +184,15 @@ impl EmbeddedPythonConfig {
         }
 
         let run_mode = if let Some(code) = run_eval {
-            RunMode::Eval { code }
+            PythonRunMode::Eval { code }
         } else if let Some(path) = run_file {
-            RunMode::File { path }
+            PythonRunMode::File {
+                path: PathBuf::from(path),
+            }
         } else if let Some(module) = run_module {
-            RunMode::Module { module }
+            PythonRunMode::Module { module }
         } else if run_noop {
-            RunMode::Noop
+            PythonRunMode::None
         } else {
             default.run_mode
         };
@@ -417,7 +420,7 @@ mod tests {
         let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
         assert_eq!(
             x.run_mode,
-            RunMode::Eval {
+            PythonRunMode::Eval {
                 code: "1".to_string()
             }
         );
@@ -430,8 +433,8 @@ mod tests {
 
         assert_eq!(
             x.run_mode,
-            RunMode::File {
-                path: "hello.py".to_string(),
+            PythonRunMode::File {
+                path: PathBuf::from("hello.py"),
             }
         );
     }
@@ -442,7 +445,7 @@ mod tests {
         let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
         assert_eq!(
             x.run_mode,
-            RunMode::Module {
+            PythonRunMode::Module {
                 module: "main".to_string()
             }
         );
@@ -452,14 +455,14 @@ mod tests {
     fn test_run_noop() {
         let c = starlark_ok("PythonInterpreterConfig(run_noop=True)");
         let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
-        assert_eq!(x.run_mode, RunMode::Noop);
+        assert_eq!(x.run_mode, PythonRunMode::None);
     }
 
     #[test]
     fn test_run_repl() {
         let c = starlark_ok("PythonInterpreterConfig(run_repl=True)");
         let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
-        assert_eq!(x.run_mode, RunMode::Repl);
+        assert_eq!(x.run_mode, PythonRunMode::Repl);
     }
 
     #[test]

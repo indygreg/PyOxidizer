@@ -4,6 +4,8 @@
 
 /*! Functionality related to running Python interpreters. */
 
+use std::path::PathBuf;
+
 /// Defines the profile to use to configure a Python interpreter.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum PythonInterpreterProfile {
@@ -22,6 +24,25 @@ impl Default for PythonInterpreterProfile {
     fn default() -> Self {
         PythonInterpreterProfile::Isolated
     }
+}
+
+/// Defines Python code to run.
+#[derive(Clone, Debug, PartialEq)]
+pub enum PythonRunMode {
+    /// No-op.
+    None,
+    /// Run a Python REPL.
+    Repl,
+    /// Run a Python module as the main module.
+    Module { module: String },
+    /// Evaluate Python code from a string.
+    Eval { code: String },
+    /// Execute Python code in a file.
+    ///
+    /// We define this as a CString because the underlying API wants
+    /// a char* and we want the constructor of this type to worry about
+    /// the type coercion.
+    File { path: PathBuf },
 }
 
 /// Defines `terminfo`` database resolution semantics.

@@ -7,10 +7,10 @@ Functionality related to the pyembed crate.
 */
 
 use {
-    super::config::{EmbeddedPythonConfig, RunMode},
+    super::config::EmbeddedPythonConfig,
     anyhow::Result,
     itertools::Itertools,
-    python_packaging::interpreter::{MemoryAllocatorBackend, TerminfoResolution},
+    python_packaging::interpreter::{MemoryAllocatorBackend, PythonRunMode, TerminfoResolution},
     std::{
         fs::File,
         io::Write,
@@ -167,22 +167,21 @@ pub fn derive_python_config(
             _ => "None".to_owned(),
         },
         match embedded.run_mode {
-            RunMode::Noop => "pyembed::PythonRunMode::None".to_owned(),
-            RunMode::Repl => "pyembed::PythonRunMode::Repl".to_owned(),
-            RunMode::Module { ref module } => {
+            PythonRunMode::None => "pyembed::PythonRunMode::None".to_owned(),
+            PythonRunMode::Repl => "pyembed::PythonRunMode::Repl".to_owned(),
+            PythonRunMode::Module { ref module } => {
                 "pyembed::PythonRunMode::Module { module: \"".to_owned()
                     + module
                     + "\".to_string() }"
             }
-            RunMode::Eval { ref code } => {
+            PythonRunMode::Eval { ref code } => {
                 "pyembed::PythonRunMode::Eval { code: r###\"".to_owned()
                     + code
                     + "\"###.to_string() }"
             }
-            RunMode::File { ref path } => {
-                "pyembed::PythonRunMode::File { path: std::path::PathBuf::new(r###\"".to_owned()
-                    + path
-                    + "\"###) }"
+            PythonRunMode::File { ref path } => {
+                format!("pyembed::PythonRunMode::File {{ path: std::path::PathBuf::new(r###\"{}\"###) }}",
+                    path.display())
             }
         },
     )
