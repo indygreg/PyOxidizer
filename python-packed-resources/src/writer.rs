@@ -6,7 +6,7 @@
 
 use {
     super::data::{
-        BlobInteriorPadding, BlobSectionField, Resource, ResourceField, ResourceFlavor, HEADER_V1,
+        BlobInteriorPadding, BlobSectionField, Resource, ResourceField, ResourceFlavor, HEADER_V2,
     },
     anyhow::{anyhow, Context, Result},
     byteorder::{LittleEndian, WriteBytesExt},
@@ -791,9 +791,9 @@ where
     }
 }
 
-/// Write packed resources data, version 1.
+/// Write packed resources data, version 2.
 #[allow(clippy::cognitive_complexity)]
-pub fn write_packed_resources_v1<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
+pub fn write_packed_resources_v2<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
     modules: &[T],
     dest: &mut W,
     interior_padding: Option<BlobInteriorPadding>,
@@ -921,7 +921,7 @@ pub fn write_packed_resources_v1<'a, T: AsRef<Resource<'a, u8>>, W: Write>(
         blob_index_length += section.index_v1_length();
     }
 
-    dest.write_all(HEADER_V1)?;
+    dest.write_all(HEADER_V2)?;
 
     dest.write_u8(blob_section_count)?;
     dest.write_u32::<LittleEndian>(blob_index_length as u32)?;
@@ -1090,9 +1090,9 @@ mod tests {
     fn test_write_empty() -> Result<()> {
         let mut data = Vec::new();
         let resources: Vec<Resource<u8>> = Vec::new();
-        write_packed_resources_v1(&resources, &mut data, None)?;
+        write_packed_resources_v2(&resources, &mut data, None)?;
 
-        let mut expected: Vec<u8> = b"pyembed\x01".to_vec();
+        let mut expected: Vec<u8> = b"pyembed\x02".to_vec();
         // Number of blob sections.
         expected.write_u8(0)?;
         // Length of blob index (end of index marker).
@@ -1119,9 +1119,9 @@ mod tests {
             ..Resource::default()
         };
 
-        write_packed_resources_v1(&[module], &mut data, None)?;
+        write_packed_resources_v2(&[module], &mut data, None)?;
 
-        let mut expected: Vec<u8> = b"pyembed\x01".to_vec();
+        let mut expected: Vec<u8> = b"pyembed\x02".to_vec();
         // Number of blob sections.
         expected.write_u8(1)?;
         // Length of blob index. Start of entry, field type, field value, length field, length, end of entry, end of index.

@@ -34,7 +34,7 @@ class TestImporterConstruction(unittest.TestCase):
 
     def test_no_indices(self):
         OxidizedFinder(
-            resources_data=b"pyembed\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+            resources_data=b"pyembed\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
         )
 
     def test_origin_bad_value(self):

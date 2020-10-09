@@ -6,8 +6,8 @@
 
 use std::{borrow::Cow, collections::HashMap, convert::TryFrom, iter::FromIterator, path::Path};
 
-/// Header value for version 1 of resources payload.
-pub const HEADER_V1: &[u8] = b"pyembed\x01";
+/// Header value for version 2 of resources payload.
+pub const HEADER_V2: &[u8] = b"pyembed\x02";
 
 /// Defines the type of a resource.
 #[derive(Clone, Copy, Debug, PartialEq)]

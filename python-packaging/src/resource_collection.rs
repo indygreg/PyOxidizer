@@ -573,7 +573,7 @@ pub struct CompiledResourcesCollection<'a> {
 impl<'a> CompiledResourcesCollection<'a> {
     /// Write resources to packed resources data, version 1.
     pub fn write_packed_resources_v1<W: std::io::Write>(&self, writer: &mut W) -> Result<()> {
-        python_packed_resources::writer::write_packed_resources_v1(
+        python_packed_resources::writer::write_packed_resources_v2(
             &self
                 .resources
                 .values()

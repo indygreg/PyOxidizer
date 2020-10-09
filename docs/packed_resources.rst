@@ -176,8 +176,8 @@ the field. The values of each defined metadata type follow.
    A ``u8`` defining the resource flavor immediately follows this byte. See the
    section below for valid resource flavors.
 
-   This field is deprecated in favor of the individual fields expressing
-   presence of a resource type.
+   This field is deprecated in version 2 in favor of the individual fields
+   expressing presence of a resource type. (See fields starting at ``0x16``.)
 
 ``0xff``
    End of resource entry. The next encountered ``u8`` in the index should
@@ -317,6 +317,11 @@ the field. The values of each defined metadata type follow.
 Resource Flavors
 ----------------
 
+.. important::
+
+   Enumerated resource flavors are deprecated after version 1. You should
+   use individual fields to express resource identity instead.
+
 The data format allows defining different types/flavors of resources.
 This flavor of a resource is identified by a ``u8``. The declared flavors are:
 
@@ -347,6 +352,20 @@ This flavor of a resource is identified by a ``u8``. The declared flavors are:
 ----------------------
 
 The initially released/formalized packed resources data format.
+
+Supports resource field types up to and including ``0x15``.
+
+``pyembed\x02`` Format
+----------------------
+
+Version 2 of the packed resources data format.
+
+This version introduces field type values ``0x16`` to ``0x1a``. The
+resource flavor field type (``0x02``) is deprecated and the individual
+field types denoting resource types should be used instead.
+
+(PyOxidizer removed run-time code looking at field type ``0x02`` when
+this format was introduced.)
 
 Design Considerations
 =====================
