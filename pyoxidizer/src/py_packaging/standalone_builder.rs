@@ -8,7 +8,7 @@ use {
             EmbeddedPythonContext, LibpythonLinkMode, PythonBinaryBuilder, PythonLinkingInfo,
             ResourceAddCollectionContextCallback,
         },
-        config::{EmbeddedPythonConfig, RawAllocator},
+        config::EmbeddedPythonConfig,
         distribution::{BinaryLibpythonLinkMode, PythonDistribution},
         filtering::{filter_btreemap, resolve_resource_names_from_files},
         libpython::link_libpython,
@@ -22,6 +22,7 @@ use {
     lazy_static::lazy_static,
     python_packaging::{
         bytecode::BytecodeCompiler,
+        interpreter::MemoryAllocatorBackend,
         libpython::LibPythonBuildContext,
         location::AbstractResourceLocation,
         policy::PythonPackagingPolicy,
@@ -602,7 +603,7 @@ impl PythonBinaryBuilder for StandalonePythonExecutableBuilder {
     }
 
     fn requires_jemalloc(&self) -> bool {
-        self.config.raw_allocator == RawAllocator::Jemalloc
+        self.config.raw_allocator == MemoryAllocatorBackend::Jemalloc
     }
 
     fn to_embedded_python_context(

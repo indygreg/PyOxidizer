@@ -6,26 +6,19 @@
 Configuring a Python interpreter.
 */
 
-use python_packaging::interpreter::TerminfoResolution;
+use python_packaging::interpreter::{MemoryAllocatorBackend, TerminfoResolution};
 
 /// Determine the default raw allocator for a target triple.
-pub fn default_raw_allocator(target_triple: &str) -> RawAllocator {
+pub fn default_raw_allocator(target_triple: &str) -> MemoryAllocatorBackend {
     // Jemalloc doesn't work on Windows.
     //
     // We don't use Jemalloc by default in the test environment because it slows down
     // builds of test projects.
     if target_triple == "x86_64-pc-windows-msvc" || cfg!(test) {
-        RawAllocator::System
+        MemoryAllocatorBackend::System
     } else {
-        RawAllocator::Jemalloc
+        MemoryAllocatorBackend::Jemalloc
     }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum RawAllocator {
-    Jemalloc,
-    Rust,
-    System,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -53,7 +46,7 @@ pub struct EmbeddedPythonConfig {
     pub unbuffered_stdio: bool,
     pub filesystem_importer: bool,
     pub quiet: bool,
-    pub raw_allocator: RawAllocator,
+    pub raw_allocator: MemoryAllocatorBackend,
     pub run_mode: RunMode,
     pub site_import: bool,
     pub sys_frozen: bool,
@@ -90,7 +83,7 @@ impl Default for EmbeddedPythonConfig {
             sys_frozen: false,
             sys_meipass: false,
             sys_paths: Vec::new(),
-            raw_allocator: RawAllocator::System,
+            raw_allocator: MemoryAllocatorBackend::System,
             run_mode: RunMode::Repl,
             terminfo_resolution: TerminfoResolution::None,
             user_site_directory: false,

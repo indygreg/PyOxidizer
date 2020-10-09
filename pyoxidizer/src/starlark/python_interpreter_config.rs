@@ -4,10 +4,8 @@
 
 use {
     super::util::{optional_bool_arg, optional_int_arg, optional_list_arg, optional_str_arg},
-    crate::py_packaging::config::{
-        default_raw_allocator, EmbeddedPythonConfig, RawAllocator, RunMode,
-    },
-    python_packaging::interpreter::TerminfoResolution,
+    crate::py_packaging::config::{default_raw_allocator, EmbeddedPythonConfig, RunMode},
+    python_packaging::interpreter::{MemoryAllocatorBackend, TerminfoResolution},
     starlark::{
         values::{
             error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
@@ -205,9 +203,9 @@ impl EmbeddedPythonConfig {
 
         let raw_allocator = match raw_allocator {
             Some(x) => match x.as_ref() {
-                "jemalloc" => RawAllocator::Jemalloc,
-                "rust" => RawAllocator::Rust,
-                "system" => RawAllocator::System,
+                "jemalloc" => MemoryAllocatorBackend::Jemalloc,
+                "rust" => MemoryAllocatorBackend::Rust,
+                "system" => MemoryAllocatorBackend::System,
                 _ => {
                     return Err(ValueError::from(RuntimeError {
                         code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
@@ -403,14 +401,14 @@ mod tests {
     fn test_raw_allocator() {
         let c = starlark_ok("PythonInterpreterConfig(raw_allocator='system')");
         let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
-        assert_eq!(x.raw_allocator, RawAllocator::System);
+        assert_eq!(x.raw_allocator, MemoryAllocatorBackend::System);
 
         let c = starlark_ok("PythonInterpreterConfig(raw_allocator='jemalloc')");
         let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
-        assert_eq!(x.raw_allocator, RawAllocator::Jemalloc);
+        assert_eq!(x.raw_allocator, MemoryAllocatorBackend::Jemalloc);
         let c = starlark_ok("PythonInterpreterConfig(raw_allocator='rust')");
         let x = c.downcast_ref::<EmbeddedPythonConfig>().unwrap();
-        assert_eq!(x.raw_allocator, RawAllocator::Rust);
+        assert_eq!(x.raw_allocator, MemoryAllocatorBackend::Rust);
     }
 
     #[test]

@@ -7,7 +7,7 @@
 use {
     libc::c_ulong,
     python3_sys as pyffi,
-    python_packaging::interpreter::TerminfoResolution,
+    python_packaging::interpreter::{PythonRawAllocator, TerminfoResolution},
     std::ffi::{CString, OsString},
     std::path::PathBuf,
 };
@@ -291,66 +291,6 @@ pub struct PythonInterpreterConfig {
 
     /// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.xoptions.
     pub x_options: Option<Vec<String>>,
-}
-
-/// Defines a backend for a memory allocator.
-#[derive(Clone, Copy, Debug)]
-pub enum MemoryAllocatorBackend {
-    /// The default system allocator.
-    System,
-    /// Use jemalloc.
-    Jemalloc,
-    /// Use Rust's global allocator.
-    Rust,
-}
-
-/// Defines configuration for Python's raw allocator.
-///
-/// This allocator is what Python uses for all memory allocations.
-///
-/// See https://docs.python.org/3/c-api/memory.html for more.
-#[derive(Clone, Copy, Debug)]
-pub struct PythonRawAllocator {
-    /// Which allocator backend to use.
-    pub backend: MemoryAllocatorBackend,
-    /// Whether memory debugging should be enabled.
-    pub debug: bool,
-}
-
-impl PythonRawAllocator {
-    pub fn system() -> Self {
-        Self {
-            backend: MemoryAllocatorBackend::System,
-            ..PythonRawAllocator::default()
-        }
-    }
-
-    pub fn jemalloc() -> Self {
-        Self {
-            backend: MemoryAllocatorBackend::Jemalloc,
-            ..PythonRawAllocator::default()
-        }
-    }
-
-    pub fn rust() -> Self {
-        Self {
-            backend: MemoryAllocatorBackend::Rust,
-            ..PythonRawAllocator::default()
-        }
-    }
-}
-
-impl Default for PythonRawAllocator {
-    fn default() -> Self {
-        Self {
-            backend: if cfg!(windows) {
-                MemoryAllocatorBackend::System
-            } else {
-                MemoryAllocatorBackend::Jemalloc
-            },
-            debug: false,
-        }
-    }
 }
 
 /// Configure a Python interpreter.

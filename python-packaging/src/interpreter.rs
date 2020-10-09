@@ -14,3 +14,63 @@ pub enum TerminfoResolution {
     /// Use a specified string as the `TERMINFO_DIRS` value.
     Static(String),
 }
+
+/// Defines a backend for a memory allocator.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum MemoryAllocatorBackend {
+    /// The default system allocator.
+    System,
+    /// Use jemalloc.
+    Jemalloc,
+    /// Use Rust's global allocator.
+    Rust,
+}
+
+/// Defines configuration for Python's raw allocator.
+///
+/// This allocator is what Python uses for all memory allocations.
+///
+/// See https://docs.python.org/3/c-api/memory.html for more.
+#[derive(Clone, Copy, Debug)]
+pub struct PythonRawAllocator {
+    /// Which allocator backend to use.
+    pub backend: MemoryAllocatorBackend,
+    /// Whether memory debugging should be enabled.
+    pub debug: bool,
+}
+
+impl PythonRawAllocator {
+    pub fn system() -> Self {
+        Self {
+            backend: MemoryAllocatorBackend::System,
+            ..PythonRawAllocator::default()
+        }
+    }
+
+    pub fn jemalloc() -> Self {
+        Self {
+            backend: MemoryAllocatorBackend::Jemalloc,
+            ..PythonRawAllocator::default()
+        }
+    }
+
+    pub fn rust() -> Self {
+        Self {
+            backend: MemoryAllocatorBackend::Rust,
+            ..PythonRawAllocator::default()
+        }
+    }
+}
+
+impl Default for PythonRawAllocator {
+    fn default() -> Self {
+        Self {
+            backend: if cfg!(windows) {
+                MemoryAllocatorBackend::System
+            } else {
+                MemoryAllocatorBackend::Jemalloc
+            },
+            debug: false,
+        }
+    }
+}

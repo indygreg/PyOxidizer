@@ -7,10 +7,10 @@ Functionality related to the pyembed crate.
 */
 
 use {
-    super::config::{EmbeddedPythonConfig, RawAllocator, RunMode},
+    super::config::{EmbeddedPythonConfig, RunMode},
     anyhow::Result,
     itertools::Itertools,
-    python_packaging::interpreter::TerminfoResolution,
+    python_packaging::interpreter::{MemoryAllocatorBackend, TerminfoResolution},
     std::{
         fs::File,
         io::Write,
@@ -147,9 +147,9 @@ pub fn derive_python_config(
         embedded.verbose != 0,
         embedded.write_bytecode,
         match embedded.raw_allocator {
-            RawAllocator::Jemalloc => "pyembed::PythonRawAllocator::jemalloc()",
-            RawAllocator::Rust => "pyembed::PythonRawAllocator::rust()",
-            RawAllocator::System => "pyembed::PythonRawAllocator::system()",
+            MemoryAllocatorBackend::Jemalloc => "pyembed::PythonRawAllocator::jemalloc()",
+            MemoryAllocatorBackend::Rust => "pyembed::PythonRawAllocator::rust()",
+            MemoryAllocatorBackend::System => "pyembed::PythonRawAllocator::system()",
         },
         embedded.filesystem_importer,
         embedded_resources_path.display(),
