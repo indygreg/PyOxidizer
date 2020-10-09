@@ -7,9 +7,8 @@ Building a native binary containing Python.
 */
 
 use {
-    super::standalone_distribution::LicenseInfo,
     anyhow::{anyhow, Result},
-    python_packaging::resource::DataLocation,
+    python_packaging::{licensing::LicenseInfo, resource::DataLocation},
     slog::warn,
     std::{
         collections::{BTreeMap, BTreeSet},

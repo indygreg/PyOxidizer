@@ -431,7 +431,7 @@ pub struct StandaloneDistribution {
     pub resources: BTreeMap<String, BTreeMap<String, PathBuf>>,
 
     /// Describes license info for things in this distribution.
-    pub license_infos: BTreeMap<String, Vec<LicenseInfo>>,
+    pub license_infos: BTreeMap<String, Vec<python_packaging::licensing::LicenseInfo>>,
 
     /// Path to copy of hacked dist to use for packaging rules venvs
     pub venv_base: PathBuf,
@@ -607,7 +607,8 @@ impl StandaloneDistribution {
         let frozen_c: Vec<u8> = Vec::new();
         let mut py_modules: BTreeMap<String, PathBuf> = BTreeMap::new();
         let mut resources: BTreeMap<String, BTreeMap<String, PathBuf>> = BTreeMap::new();
-        let mut license_infos: BTreeMap<String, Vec<LicenseInfo>> = BTreeMap::new();
+        let mut license_infos: BTreeMap<String, Vec<python_packaging::licensing::LicenseInfo>> =
+            BTreeMap::new();
 
         for entry in std::fs::read_dir(dist_dir)? {
             let entry = entry?;
@@ -656,7 +657,7 @@ impl StandaloneDistribution {
             })?;
 
             let mut licenses = Vec::new();
-            licenses.push(LicenseInfo {
+            licenses.push(python_packaging::licensing::LicenseInfo {
                 licenses: pi.licenses.clone().unwrap(),
                 license_filename: "LICENSE.python.txt".to_string(),
                 license_text,
@@ -751,7 +752,7 @@ impl StandaloneDistribution {
                         let license_text = std::fs::read_to_string(&license_path)
                             .with_context(|| "unable to read license file")?;
 
-                        licenses.push(LicenseInfo {
+                        licenses.push(python_packaging::licensing::LicenseInfo {
                             licenses: entry.licenses.clone().unwrap(),
                             license_filename: license_path
                                 .file_name()

@@ -15,3 +15,14 @@ pub const NON_GPL_LICENSES: &[&str] = &[
     "X11",
     "Zlib",
 ];
+
+/// Describes license information for a library.
+#[derive(Clone, Debug, PartialEq)]
+pub struct LicenseInfo {
+    /// SPDX license shortnames.
+    pub licenses: Vec<String>,
+    /// Suggested filename for the license.
+    pub license_filename: String,
+    /// Text of the license.
+    pub license_text: String,
+}
