@@ -115,3 +115,30 @@ impl Default for PythonRawAllocator {
         }
     }
 }
+
+/// Holds values for coerce_c_locale.
+///
+/// See https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.coerce_c_locale.
+#[derive(Clone, Copy, Debug)]
+pub enum CoerceCLocale {
+    LCCtype = 1,
+    C = 2,
+}
+
+/// Defines what to do when comparing bytes with str.
+///
+/// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.bytes_warning.
+#[derive(Clone, Copy, Debug)]
+pub enum BytesWarning {
+    None = 0,
+    Warn = 1,
+    Raise = 2,
+}
+
+/// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.check_hash_pycs_mode.
+#[derive(Clone, Copy, Debug)]
+pub enum CheckHashPYCsMode {
+    Always,
+    Never,
+    Default,
+}

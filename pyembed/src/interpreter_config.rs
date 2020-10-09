@@ -5,10 +5,10 @@
 //! Utilities for configuring a Python interpreter.
 
 use {
-    super::config::{CheckHashPYCsMode, OxidizedPythonInterpreterConfig, PythonInterpreterConfig},
+    super::config::{OxidizedPythonInterpreterConfig, PythonInterpreterConfig},
     libc::{c_int, size_t, wchar_t},
     python3_sys as pyffi,
-    python_packaging::interpreter::{PythonInterpreterProfile, PythonRunMode},
+    python_packaging::interpreter::{CheckHashPYCsMode, PythonInterpreterProfile, PythonRunMode},
     std::convert::TryInto,
     std::ffi::{CStr, CString, OsStr},
     std::path::Path,
