@@ -6,11 +6,11 @@
 
 use {
     super::config::{
-        CheckHashPYCsMode, OxidizedPythonInterpreterConfig, PythonInterpreterConfig,
-        PythonInterpreterProfile, PythonRunMode,
+        CheckHashPYCsMode, OxidizedPythonInterpreterConfig, PythonInterpreterConfig, PythonRunMode,
     },
     libc::{c_int, size_t, wchar_t},
     python3_sys as pyffi,
+    python_packaging::interpreter::PythonInterpreterProfile,
     std::convert::TryInto,
     std::ffi::{CStr, CString, OsStr},
     std::path::Path,

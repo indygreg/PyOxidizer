@@ -3,9 +3,10 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    crate::{MainPythonInterpreter, OxidizedPythonInterpreterConfig, PythonInterpreterProfile},
+    crate::{MainPythonInterpreter, OxidizedPythonInterpreterConfig},
     anyhow::Result,
     cpython::ObjectProtocol,
+    python_packaging::interpreter::PythonInterpreterProfile,
 };
 
 #[test]

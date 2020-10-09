@@ -7,7 +7,9 @@
 use {
     libc::c_ulong,
     python3_sys as pyffi,
-    python_packaging::interpreter::{PythonRawAllocator, TerminfoResolution},
+    python_packaging::interpreter::{
+        PythonInterpreterProfile, PythonRawAllocator, TerminfoResolution,
+    },
     std::ffi::{CString, OsString},
     std::path::PathBuf,
 };
@@ -39,26 +41,6 @@ pub struct ExtensionModule {
 
     /// Extension module initialization function.
     pub init_func: unsafe extern "C" fn() -> *mut pyffi::PyObject,
-}
-
-/// Defines the profile to use to configure a Python interpreter.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum PythonInterpreterProfile {
-    /// Python is isolated from the system.
-    ///
-    /// See https://docs.python.org/3/c-api/init_config.html#isolated-configuration.
-    Isolated,
-
-    /// Python interpreter behaves like `python`.
-    ///
-    /// See https://docs.python.org/3/c-api/init_config.html#python-configuration.
-    Python,
-}
-
-impl Default for PythonInterpreterProfile {
-    fn default() -> Self {
-        PythonInterpreterProfile::Isolated
-    }
 }
 
 /// See https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.allocator.

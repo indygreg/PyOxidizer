@@ -4,6 +4,26 @@
 
 /*! Functionality related to running Python interpreters. */
 
+/// Defines the profile to use to configure a Python interpreter.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum PythonInterpreterProfile {
+    /// Python is isolated from the system.
+    ///
+    /// See https://docs.python.org/3/c-api/init_config.html#isolated-configuration.
+    Isolated,
+
+    /// Python interpreter behaves like `python`.
+    ///
+    /// See https://docs.python.org/3/c-api/init_config.html#python-configuration.
+    Python,
+}
+
+impl Default for PythonInterpreterProfile {
+    fn default() -> Self {
+        PythonInterpreterProfile::Isolated
+    }
+}
+
 /// Defines `terminfo`` database resolution semantics.
 #[derive(Clone, Debug, PartialEq)]
 pub enum TerminfoResolution {
