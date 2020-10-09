@@ -18,7 +18,7 @@ use {
 
 use super::config::{EmbeddedPythonConfig, RawAllocator, RunMode, TerminfoResolution};
 
-/// Obtain the Rust source code to construct a PythonConfig instance.
+/// Obtain the Rust source code to construct a OxidizedPythonInterpreterConfig instance.
 pub fn derive_python_config(
     embedded: &EmbeddedPythonConfig,
     embedded_resources_path: &PathBuf,
@@ -150,7 +150,7 @@ pub fn derive_python_config(
     )
 }
 
-/// Write a standalone .rs file containing a function for obtaining the default PythonConfig.
+/// Write a standalone .rs file containing a function for obtaining the default OxidizedPythonInterpreterConfig.
 pub fn write_default_python_config_rs(path: &Path, python_config_rs: &str) -> Result<()> {
     let mut f = File::create(&path)?;
 

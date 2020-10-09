@@ -53,8 +53,8 @@ must be named `pythonXY`.
 The optional `jemalloc` feature controls support for using
 [jemalloc](http://jemalloc.net/) as Python's memory allocator. Use of Jemalloc
 from Python is a run-time configuration option controlled by the
-`PythonConfig` type and having `jemalloc` compiled into the binary does not
-mean it is being used!
+`OxidizedPythonInterpreterConfig` type and having `jemalloc` compiled into the
+binary does not mean it is being used!
 
 There exist mutually exclusive `build-mode-*` features to control how the
 `build.rs` build script works.
@@ -118,8 +118,8 @@ mod test;
 #[allow(unused_imports)]
 pub use crate::config::{
     Allocator, BytesWarning, CheckHashPYCsMode, CoerceCLocale, ExtensionModule, OptimizationLevel,
-    OxidizedPythonInterpreterConfig, PythonConfig, PythonInterpreterConfig,
-    PythonInterpreterProfile, PythonRawAllocator, PythonRunMode, TerminfoResolution,
+    OxidizedPythonInterpreterConfig, PythonInterpreterConfig, PythonInterpreterProfile,
+    PythonRawAllocator, PythonRunMode, TerminfoResolution,
 };
 
 #[cfg(not(library_mode = "extension"))]

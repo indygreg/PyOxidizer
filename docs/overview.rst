@@ -142,11 +142,11 @@ From here, Rust's build system combines the standard Rust bits with the
 files produced by ``PyOxidizer`` and turns everything into a binary,
 typically an executable.
 
-At run time, an instance of the ``PythonConfig`` struct from the ``pyembed``
-crate is created to define how an embedded Python interpreter should behave.
-(One of the build-time actions performed by ``PyOxidizer`` is to convert the
-Starlark configuration file into a default instance of this struct.) This struct
-is used to instantiate a Python interpreter.
+At run time, an instance of the ``OxidizedPythonInterpreterConfig`` struct from
+the ``pyembed`` crate is created to define how an embedded Python interpreter
+should behave. (One of the build-time actions performed by ``PyOxidizer`` is
+to convert the Starlark configuration file into a default instance of this
+struct.) This struct is used to instantiate a Python interpreter.
 
 The ``pyembed`` crate implements a Python *extension module* which provides
 custom module importing functionality. Light magic is used to coerce the

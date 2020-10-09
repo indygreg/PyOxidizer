@@ -9,9 +9,10 @@ When trying to understand the code, a good place to start is
 `MainPythonInterpreter.new()`, as this will initialize the CPython runtime and
 Python initialization is where most of the magic occurs.
 
-A lot of initialization code revolves around mapping `PythonConfig` members to
-C API calls. This functionality is rather straightforward. There's
-nothing really novel or complicated here. So we won't cover it.
+A lot of initialization code revolves around mapping
+`OxidizedPythonInterpreterConfig` members to C API calls. This functionality is
+rather straightforward. There's nothing really novel or complicated here. So
+we won't cover it.
 
 # Python Memory Allocators
 

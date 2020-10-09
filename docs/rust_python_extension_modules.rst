@@ -22,8 +22,8 @@ You can inform the ``pyembed`` crate about the existence of additional
 Python extension modules which are statically linked into the binary.
 
 To do this, you will need to populate the ``extra_extension_modules`` field
-of the ``PythonConfig`` Rust struct used to construct the Python
-interpreter. Simply add an entry defining the extension module's
+of the ``OxidizedPythonInterpreterConfig`` Rust struct used to construct the
+Python interpreter. Simply add an entry defining the extension module's
 ``import`` name and a pointer to its C initialization function
 (often named ``PyInit_<name>``. e.g. if you are defining the extension
 module ``foo``, the initialization function would be ``PyInit_foo``

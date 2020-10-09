@@ -7,16 +7,16 @@
 This type configures the default behavior of the embedded Python interpreter.
 
 Embedded Python interpreters are configured and instantiated using a
-Rust ``pyembed::PythonConfig`` data structure. The ``pyembed`` crate defines a
-default instance of this data structure with parameters defined by the settings
-in this type.
+Rust ``pyembed::OxidizedPythonInterpreterConfig`` data structure. The
+``pyembed`` crate defines a default instance of this data structure with
+parameters defined by the settings in this type.
 
 .. note::
 
    If you are writing custom Rust code and constructing a custom
-   ``pyembed::PythonConfig`` instance and don't use the default instance, this
-   config type is not relevant to you and can be omitted from your config
-   file.
+   ``pyembed::OxidizedPythonInterpreterConfig`` instance and don't use the
+   default instance, this config type is not relevant to you and can be
+   omitted from your config file.
 
 Constructors
 ============
@@ -29,8 +29,8 @@ Constructors
 The ``PythonInterpreterConfig()`` constructor function can be called to
 create a new instance of this type.
 
-The following arguments can be defined to control the default ``PythonConfig``
-behavior:
+The following arguments can be defined to control the default
+``OxidizedPythonInterpreterConfig`` behavior:
 
 ``bytes_warning`` (int)
    Controls the value of

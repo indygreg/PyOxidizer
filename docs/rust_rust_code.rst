@@ -32,26 +32,28 @@ Initializing a Python Interpreter
 =================================
 
 Initializing an embedded Python interpreter in your Rust process is as simple
-as calling ``pyembed::MainPythonInterpreter::new(config: PythonConfig)``.
+as calling
+``pyembed::MainPythonInterpreter::new(config: OxidizedPythonInterpreterConfig)``.
 
-The hardest part about this is constructing the ``pyembed::PythonConfig``
-instance.
+The hardest part about this is constructing the
+``pyembed::OxidizedPythonInterpreterConfig`` instance.
 
-Using the Default ``PythonConfig``
-----------------------------------
+Using the Default ``OxidizedPythonInterpreterConfig``
+-----------------------------------------------------
 
 If the ``pyembed`` crate is configured to emit build artifacts (the default),
 its build script will generate a Rust source file containing a
-``fn default_python_config() -> pyembed::PythonConfig`` which emits a
-``pyembed::PythonConfig`` using the configuration as defined by the utilized
-PyOxidizer :ref:`configuration file <config_files>`. Assuming you are using the
-boilerplate ``Cargo.toml`` and ``build.rs`` script generated with
-``pyoxidizer init-rust-project``, the path to this generated source file will
+``fn default_python_config() -> pyembed::OxidizedPythonInterpreterConfig`` which
+emits a ``pyembed::OxidizedPythonInterpreterConfig`` using the configuration as
+defined by the utilized PyOxidizer :ref:`configuration file <config_files>`.
+Assuming you are using the boilerplate ``Cargo.toml`` and ``build.rs`` script
+generated with ``pyoxidizer init-rust-project``, the path to this generated
+source file will
 be in the ``PYOXIDIZER_DEFAULT_PYTHON_CONFIG_RS`` environment variable.
 
-This all means that to use the auto-generated ``pyembed::PythonConfig``
-instance with your Rust application, you simply need to do something like
-the following:
+This all means that to use the auto-generated
+``pyembed::OxidizedPythonInterpreterConfig`` instance with your Rust application,
+you simply need to do something like the following:
 
 .. code-block:: rust
 
@@ -59,33 +61,34 @@ the following:
 
    fn create_interpreter() -> Result<pyembed::MainPythonInterpreter> {
        // Calls function from include!()'d file.
-       let config: pyembed::PythonConfig = default_python_config();
+       let config: pyembed::OxidizedPythonInterpreterConfig = default_python_config();
 
        pyembed::MainPythonInterpreter::new(config)
    }
 
-Using a Custom ``PythonConfig``
--------------------------------
+Using a Custom ``OxidizedPythonInterpreterConfig``
+--------------------------------------------------
 
-If you don't want to use the default ``pyembed::PythonConfig`` instance,
-that's fine too! However, this will be slightly more complicated.
+If you don't want to use the default
+``pyembed::OxidizedPythonInterpreterConfig`` instance, that's fine too! However,
+this will be slightly more complicated.
 
-First, if you use an explicit ``PythonConfig``, the
+First, if you use an explicit ``OxidizedPythonInterpreterConfig``, the
 :ref:`config_type_python_interpreter_config` Starlark
 type defined in your PyOxidizer configuration file doesn't matter that much.
 The primary purpose of this Starlark type is to derive the default
-``PythonConfig`` Rust struct. And if you are using your own custom
-``PythonConfig`` instance, you can ignore most of the arguments when
-creating the ``PythonInterpreterConfig`` instance.
+``OxidizedPythonInterpreterConfig`` Rust struct. And if you are using your own
+custom ``OxidizedPythonInterpreterConfig`` instance, you can ignore most of the
+arguments when creating the ``PythonInterpreterConfig`` instance.
 
 An exception to this is the ``raw_allocator`` argument/field. If you
 are using jemalloc, you will need to enable a Cargo feature when building
 the ``pyembed`` crate or else you will get a run-time error that jemalloc
 is not available.
 
-``pyembed::PythonConfig::default()`` can be used to construct a new instance,
-pre-populated with default values for each field. The defaults should match
-what the
+``pyembed::OxidizedPythonInterpreterConfig::default()`` can be used to
+construct a new instance, pre-populated with default values for each field.
+The defaults should match what the
 :ref:`config_type_python_interpreter_config` Starlark
 type would yield.
 
@@ -110,8 +113,8 @@ a segfault.
 The reason we can't ``import encodings`` is twofold:
 
 1. The default filesystem importer is disabled by default.
-2. No Python resources are being registered with the ``PythonConfig``
-   instance.
+2. No Python resources are being registered with the
+   ``OxidizedPythonInterpreterConfig`` instance.
 
 This error can be addressed by working around either.
 
@@ -119,7 +122,7 @@ To enable the default filesystem importer:
 
 .. code-block:: rust
 
-   let mut config = pyembed::PythonConfig::default();
+   let mut config = pyembed::OxidizedPythonInterpreterConfig::default();
    config.filesystem_importer = true;
    config.sys_paths.push("/path/to/python/standard/library");
 
@@ -139,7 +142,7 @@ to import Python resources, you will need to update a handful of fields:
 
 .. code-block:: rust
 
-   let mut config = pyembed::PythonConfig::default();
+   let mut config = pyembed::OxidizedPythonInterpreterConfig::default();
    config.packed_resources = ...;
    config.use_custom_importlib = true;
 
