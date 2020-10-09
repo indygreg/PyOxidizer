@@ -24,38 +24,45 @@ pub fn derive_python_config(
     embedded_resources_path: &PathBuf,
 ) -> String {
     format!(
-        "pyembed::PythonConfig {{\n    \
-         standard_io_encoding: {},\n    \
-         standard_io_errors: {},\n    \
-         opt_level: {},\n    \
-         use_custom_importlib: true,\n    \
-         filesystem_importer: {},\n    \
-         sys_paths: [{}].to_vec(),\n    \
-         bytes_warning: {},\n    \
-         import_site: {},\n    \
-         import_user_site: {},\n    \
-         ignore_python_env: {},\n    \
-         inspect: {},\n    \
-         interactive: {},\n    \
-         isolated: {},\n    \
-         legacy_windows_fs_encoding: {},\n    \
-         legacy_windows_stdio: {},\n    \
-         write_bytecode: {},\n    \
-         unbuffered_stdio: {},\n    \
-         parser_debug: {},\n    \
-         quiet: {},\n    \
-         use_hash_seed: {},\n    \
-         verbose: {},\n    \
-         packed_resources: include_bytes!(r#\"{}\"#),\n    \
-         extra_extension_modules: vec![],\n    \
-         argvb: false,\n    \
-         sys_frozen: {},\n    \
-         sys_meipass: {},\n    \
-         raw_allocator: {},\n    \
-         terminfo_resolution: {},\n    \
-         write_modules_directory_env: {},\n    \
-         run: {},\n\
-         }}",
+        "pyembed::OxidizedPythonInterpreterConfig {{\n    \
+        interpreter_config: pyembed::PythonInterpreterConfig {{\n        \
+        profile: {},\n        \
+        stdio_encoding: {},\n        \
+        stdio_errors: {},\n        \
+        optimization_level: Some({}),\n        \
+        module_search_paths: {},\n        \
+        bytes_warning: Some({}),\n        \
+        site_import: Some({}),\n        \
+        user_site_directory: Some({}),\n        \
+        use_environment: Some({}),\n        \
+        inspect: Some({}),\n        \
+        interactive: Some({}),\n        \
+        legacy_windows_fs_encoding: Some({}),\n        \
+        legacy_windows_stdio: Some({}),\n        \
+        write_bytecode: Some({}),\n        \
+        buffered_stdio: Some({}),\n        \
+        parser_debug: Some({}),\n        \
+        quiet: Some({}),\n        \
+        verbose: Some({}),\n        \
+        ..pyembed::PythonInterpreterConfig::default()\n    \
+        }},\n    \
+        raw_allocator: Some({}),\n    \
+        oxidized_importer: true,\n    \
+        filesystem_importer: {},\n    \
+        packed_resources: Some(include_bytes!(r#\"{}\"#)),\n    \
+        extra_extension_modules: None,\n    \
+        argvb: false,\n    \
+        sys_frozen: {},\n    \
+        sys_meipass: {},\n    \
+        terminfo_resolution: {},\n    \
+        write_modules_directory_env: {},\n    \
+        run: {},\n\
+        }}\n",
+        if embedded.isolated {
+            "pyembed::PythonInterpreterProfile::Isolated"
+        } else {
+            "pyembed::PythonInterpreterProfile::Python"
+        },
         match &embedded.stdio_encoding_name {
             Some(value) => format_args!("Some(\"{}\")", value).to_string(),
             None => "None".to_owned(),
@@ -64,37 +71,52 @@ pub fn derive_python_config(
             Some(value) => format_args!("Some(\"{}\")", value).to_string(),
             None => "None".to_owned(),
         },
-        embedded.optimize_level,
-        embedded.filesystem_importer,
-        &embedded
-            .sys_paths
-            .iter()
-            .map(|p| "\"".to_owned() + p + "\".to_string()")
-            .collect::<Vec<String>>()
-            .join(", "),
-        embedded.bytes_warning,
+        match embedded.optimize_level {
+            0 => "pyembed::OptimizationLevel::Zero",
+            1 => "pyembed::OptimizationLevel::One",
+            2 => "pyembed::OptimizationLevel::Two",
+            _ => "pyembed::OptimizationLevel::Two",
+        },
+        if embedded.sys_paths.is_empty() {
+            "None".to_string()
+        } else {
+            format!(
+                "Some({})",
+                &embedded
+                    .sys_paths
+                    .iter()
+                    .map(|p| "\"".to_owned() + p + "\".to_string()")
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            )
+        },
+        match embedded.bytes_warning {
+            0 => "pyembed::BytesWarning::None",
+            1 => "pyembed::BytesWarning::Warn",
+            2 => "pyembed::BytesWarning::Raise",
+            _ => "pyembed::BytesWarning::Raise",
+        },
         embedded.site_import,
         embedded.user_site_directory,
-        embedded.ignore_environment,
+        !embedded.ignore_environment,
         embedded.inspect,
         embedded.interactive,
-        embedded.isolated,
         embedded.legacy_windows_fs_encoding,
         embedded.legacy_windows_stdio,
         embedded.write_bytecode,
-        embedded.unbuffered_stdio,
+        !embedded.unbuffered_stdio,
         embedded.parser_debug,
         embedded.quiet,
-        embedded.use_hash_seed,
-        embedded.verbose,
-        embedded_resources_path.display(),
-        embedded.sys_frozen,
-        embedded.sys_meipass,
+        embedded.verbose != 0,
         match embedded.raw_allocator {
             RawAllocator::Jemalloc => "pyembed::PythonRawAllocator::jemalloc()",
             RawAllocator::Rust => "pyembed::PythonRawAllocator::rust()",
             RawAllocator::System => "pyembed::PythonRawAllocator::system()",
         },
+        embedded.filesystem_importer,
+        embedded_resources_path.display(),
+        embedded.sys_frozen,
+        embedded.sys_meipass,
         match embedded.terminfo_resolution {
             TerminfoResolution::Dynamic => "pyembed::TerminfoResolution::Dynamic".to_string(),
             TerminfoResolution::None => "pyembed::TerminfoResolution::None".to_string(),
@@ -146,7 +168,7 @@ pub fn write_default_python_config_rs(path: &Path, python_config_rs: &str) -> Re
          /// The crate is compiled with a default Python configuration embedded\n\
          /// in the crate. This function will return an instance of that\n\
          /// configuration.\n\
-         pub fn default_python_config<'a>() -> pyembed::PythonConfig<'a> {{\n{}\n}}\n",
+         pub fn default_python_config<'a>() -> pyembed::OxidizedPythonInterpreterConfig<'a> {{\n{}\n}}\n",
         indented
     ))?;
 

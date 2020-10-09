@@ -18,7 +18,7 @@ fn main() {
 
         // Construct a new Python interpreter using that config, handling any errors
         // from construction.
-        match MainPythonInterpreter::new(config.into()) {
+        match MainPythonInterpreter::new(config) {
             Ok(mut interp) => {
                 // And run it using the default run configuration as specified by the
                 // configuration. If an uncaught Python exception is raised, handle it.

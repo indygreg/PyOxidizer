@@ -117,7 +117,7 @@ mod test;
 #[cfg(not(library_mode = "extension"))]
 #[allow(unused_imports)]
 pub use crate::config::{
-    Allocator, CheckHashPYCsMode, CoerceCLocale, ExtensionModule, OptimizationLevel,
+    Allocator, BytesWarning, CheckHashPYCsMode, CoerceCLocale, ExtensionModule, OptimizationLevel,
     OxidizedPythonInterpreterConfig, PythonConfig, PythonInterpreterConfig,
     PythonInterpreterProfile, PythonRawAllocator, PythonRunMode, TerminfoResolution,
 };
