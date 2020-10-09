@@ -8,7 +8,10 @@ use {
     super::config::{OxidizedPythonInterpreterConfig, PythonInterpreterConfig},
     libc::{c_int, size_t, wchar_t},
     python3_sys as pyffi,
-    python_packaging::interpreter::{CheckHashPYCsMode, PythonInterpreterProfile, PythonRunMode},
+    python_packaging::{
+        interpreter::{CheckHashPYCsMode, PythonInterpreterProfile, PythonRunMode},
+        resource::BytecodeOptimizationLevel,
+    },
     std::convert::TryInto,
     std::ffi::{CStr, CString, OsStr},
     std::path::Path,
@@ -419,7 +422,11 @@ impl TryInto<pyffi::PyConfig> for &PythonInterpreterConfig {
             config.interactive = if interactive { 1 } else { 0 };
         }
         if let Some(optimization_level) = self.optimization_level {
-            config.optimization_level = optimization_level as c_int;
+            config.optimization_level = match optimization_level {
+                BytecodeOptimizationLevel::Zero => 0,
+                BytecodeOptimizationLevel::One => 1,
+                BytecodeOptimizationLevel::Two => 2,
+            };
         }
         if let Some(parser_debug) = self.parser_debug {
             config.parser_debug = if parser_debug { 1 } else { 0 };

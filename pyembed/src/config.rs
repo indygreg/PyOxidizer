@@ -7,9 +7,12 @@
 use {
     libc::c_ulong,
     python3_sys as pyffi,
-    python_packaging::interpreter::{
-        BytesWarning, CheckHashPYCsMode, CoerceCLocale, PythonInterpreterProfile,
-        PythonRawAllocator, PythonRunMode, TerminfoResolution,
+    python_packaging::{
+        interpreter::{
+            BytesWarning, CheckHashPYCsMode, CoerceCLocale, PythonInterpreterProfile,
+            PythonRawAllocator, PythonRunMode, TerminfoResolution,
+        },
+        resource::BytecodeOptimizationLevel,
     },
     std::ffi::{CString, OsString},
     std::path::PathBuf,
@@ -35,16 +38,6 @@ pub enum Allocator {
     MallocDebug = 4,
     PyMalloc = 5,
     PyMallocDebug = 6,
-}
-
-/// Optimization level for bytecode.
-///
-/// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.optimization_level.
-#[derive(Clone, Copy, Debug)]
-pub enum OptimizationLevel {
-    Zero = 0,
-    One = 1,
-    Two = 2,
 }
 
 /// Holds configuration of a Python interpreter.
@@ -164,7 +157,7 @@ pub struct PythonInterpreterConfig {
     pub module_search_paths: Option<Vec<PathBuf>>,
 
     /// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.optimization_level.
-    pub optimization_level: Option<OptimizationLevel>,
+    pub optimization_level: Option<BytecodeOptimizationLevel>,
 
     /// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.parser_debug.
     pub parser_debug: Option<bool>,

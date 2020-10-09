@@ -127,10 +127,10 @@ pub fn derive_python_config(
             )
         },
         match embedded.optimize_level {
-            0 => "pyembed::OptimizationLevel::Zero",
-            1 => "pyembed::OptimizationLevel::One",
-            2 => "pyembed::OptimizationLevel::Two",
-            _ => "pyembed::OptimizationLevel::Two",
+            0 => "pyembed::BytecodeOptimizationLevel::Zero",
+            1 => "pyembed::BytecodeOptimizationLevel::One",
+            2 => "pyembed::BytecodeOptimizationLevel::Two",
+            _ => "pyembed::BytecodeOptimizationLevel::Two",
         },
         embedded.parser_debug,
         embedded.quiet,
