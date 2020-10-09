@@ -3709,7 +3709,6 @@ mod tests {
             required: true,
             variant: None,
             licenses: None,
-            license_texts: None,
             license_public_domain: None,
         };
 
@@ -3765,7 +3764,6 @@ mod tests {
             required: false,
             variant: None,
             licenses: None,
-            license_texts: None,
             license_public_domain: None,
         };
 
@@ -3860,7 +3858,6 @@ mod tests {
             required: false,
             variant: None,
             licenses: None,
-            license_texts: None,
             license_public_domain: None,
         };
 

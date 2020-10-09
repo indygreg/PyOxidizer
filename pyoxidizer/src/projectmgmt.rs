@@ -255,7 +255,10 @@ pub fn python_distribution_info(dist_path: &str) -> Result<()> {
             println!("Required: {}", em.required);
             println!("Built-in Default: {}", em.builtin_default);
             if let Some(licenses) = &em.licenses {
-                println!("Licenses: {}", licenses.join(", "));
+                println!(
+                    "Licenses: {}",
+                    itertools::join(licenses.iter().flat_map(|l| &l.licenses), ", ")
+                );
             }
             if !em.link_libraries.is_empty() {
                 println!(
@@ -349,9 +352,14 @@ pub fn python_distribution_licenses(path: &str) -> Result<()> {
             if variant.license_public_domain.is_some() && variant.license_public_domain.unwrap() {
                 println!("Licenses: Public Domain");
             } else if let Some(ref licenses) = variant.licenses {
-                println!("Licenses: {}", itertools::join(licenses, ", "));
-                for license in licenses {
-                    println!("License Info: https://spdx.org/licenses/{}.html", license);
+                println!(
+                    "Licenses: {}",
+                    itertools::join(licenses.iter().flat_map(|x| &x.licenses), ", ")
+                );
+                for li in licenses {
+                    for license in &li.licenses {
+                        println!("License Info: https://spdx.org/licenses/{}.html", license);
+                    }
                 }
             } else {
                 println!("Licenses: UNKNOWN");

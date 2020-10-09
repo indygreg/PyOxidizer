@@ -744,7 +744,7 @@ impl StandaloneDistribution {
                     links.push(depends);
                 }
 
-                if let Some(ref license_paths) = entry.license_paths {
+                let licenses = if let Some(ref license_paths) = entry.license_paths {
                     let mut licenses = Vec::new();
 
                     for license_path in license_paths {
@@ -764,8 +764,12 @@ impl StandaloneDistribution {
                         });
                     }
 
-                    license_infos.insert(module.clone(), licenses);
-                }
+                    license_infos.insert(module.clone(), licenses.clone());
+
+                    Some(licenses)
+                } else {
+                    None
+                };
 
                 ems.push(PythonExtensionModule {
                     name: module.clone(),
@@ -783,17 +787,7 @@ impl StandaloneDistribution {
                     builtin_default: entry.in_core,
                     required: entry.required,
                     variant: Some(entry.variant.clone()),
-                    licenses: entry.licenses.clone(),
-                    license_texts: if let Some(licenses) = &entry.license_paths {
-                        Some(
-                            licenses
-                                .iter()
-                                .map(|p| DataLocation::Path(python_path.join(p)))
-                                .collect(),
-                        )
-                    } else {
-                        None
-                    },
+                    licenses,
                     license_public_domain: entry.license_public_domain,
                 });
             }

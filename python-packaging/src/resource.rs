@@ -7,6 +7,7 @@
 use {
     crate::{
         bytecode::{CompileMode, PythonBytecodeCompiler},
+        licensing::LicenseInfo,
         module_util::{is_package_from_path, packages_from_module_name, resolve_path_for_module},
         python_source::has_dunder_file,
     },
@@ -562,10 +563,8 @@ pub struct PythonExtensionModule {
     /// This may be set if there are multiple versions of an extension module
     /// available to choose from.
     pub variant: Option<String>,
-    /// SPDX license shortnames that apply to this extension or its library dependencies.
-    pub licenses: Option<Vec<String>>,
-    /// List of files or text data of license text that apply to this extension.
-    pub license_texts: Option<Vec<DataLocation>>,
+    /// Licenses that apply to this extension.
+    pub licenses: Option<Vec<LicenseInfo>>,
     /// Whether the license for this extension and any library dependencies are in the public domain.
     pub license_public_domain: Option<bool>,
 }
@@ -593,16 +592,6 @@ impl PythonExtensionModule {
             required: self.required,
             variant: self.variant.clone(),
             licenses: self.licenses.clone(),
-            license_texts: if let Some(texts) = &self.license_texts {
-                Some(
-                    texts
-                        .iter()
-                        .map(|t| t.to_memory())
-                        .collect::<Result<Vec<_>, _>>()?,
-                )
-            } else {
-                None
-            },
             license_public_domain: self.license_public_domain,
         })
     }
