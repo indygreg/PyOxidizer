@@ -47,14 +47,11 @@ are defined.
 
 The first 8 bytes of the data structure are a magic header identifying
 the content as our data structure and the version of it. The first
-7 bytes are ``pyembed`` and the following 1 byte denotes a version. The
-following sections denote the different magic headers/versions and
-their semantics.
+7 bytes are ``pyembed`` and the following 1 byte denotes a version.
+Semantics of each version are denoted in sections below.
 
-``pyembed\x01``
-===============
-
-Version 1 of the packed resources data.
+High-Level Layout
+-----------------
 
 From a high-level, the serialized format consists of:
 
@@ -345,6 +342,11 @@ This flavor of a resource is identified by a ``u8``. The declared flavors are:
 ``0x05``
    Shared library. This is equivalent to resource field ``0x1a`` being
    set.
+
+``pyembed\x01`` Format
+----------------------
+
+The initially released/formalized packed resources data format.
 
 Design Considerations
 =====================
