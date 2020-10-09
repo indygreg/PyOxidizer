@@ -33,12 +33,16 @@ pub fn derive_python_config(
         coerce_c_locale_warn: None,\n        \
         development_mode: None,\n        \
         isolated: None,\n        \
+        legacy_windows_fs_encoding: Some({}),\n        \
         parse_argv: None,\n        \
+        use_environment: Some({}),\n        \
         utf8_mode: None,\n        \
         argv: None,\n        \
         base_exec_prefix: None,\n        \
         base_executable: None,\n        \
         base_prefix: None,\n        \
+        buffered_stdio: Some({}),\n        \
+        bytes_warning: Some({}),\n        \
         check_hash_pycs_mode: None,\n        \
         configure_c_stdio: None,\n        \
         dump_refs: None,\n        \
@@ -51,38 +55,34 @@ pub fn derive_python_config(
         home: None,\n        \
         import_time: None,\n        \
         install_signal_handlers: None,\n        \
+        inspect: Some({}),\n        \
+        interactive: Some({}),\n        \
+        legacy_windows_stdio: Some({}),\n        \
         malloc_stats: None,\n        \
+        module_search_paths: {},\n        \
+        optimization_level: Some({}),\n        \
         prefix: None,\n        \
         program_name: None,\n        \
         python_path_env: None,\n        \
+        parser_debug: Some({}),\n        \
         pathconfig_warnings: None,\n        \
         pycache_prefix: None,\n        \
+        quiet: Some({}),\n        \
         run_command: None,\n        \
         run_filename: None,\n        \
         run_module: None,\n        \
-        tracemalloc: None,\n        \
-        warn_options: None,\n        \
         show_alloc_count: None,\n        \
         show_ref_count: None,\n        \
         skip_first_source_line: None,\n        \
-        x_options: None,\n        \
+        site_import: Some({}),\n        \
         stdio_encoding: {},\n        \
         stdio_errors: {},\n        \
-        optimization_level: Some({}),\n        \
-        module_search_paths: {},\n        \
-        bytes_warning: Some({}),\n        \
-        site_import: Some({}),\n        \
+        tracemalloc: None,\n        \
         user_site_directory: Some({}),\n        \
-        use_environment: Some({}),\n        \
-        inspect: Some({}),\n        \
-        interactive: Some({}),\n        \
-        legacy_windows_fs_encoding: Some({}),\n        \
-        legacy_windows_stdio: Some({}),\n        \
-        write_bytecode: Some({}),\n        \
-        buffered_stdio: Some({}),\n        \
-        parser_debug: Some({}),\n        \
-        quiet: Some({}),\n        \
         verbose: Some({}),\n        \
+        warn_options: None,\n        \
+        write_bytecode: Some({}),\n        \
+        x_options: None,\n        \
         }},\n    \
         raw_allocator: Some({}),\n    \
         oxidized_importer: true,\n    \
@@ -101,20 +101,18 @@ pub fn derive_python_config(
         } else {
             "pyembed::PythonInterpreterProfile::Python"
         },
-        match &embedded.stdio_encoding_name {
-            Some(value) => format_args!("Some(\"{}\")", value).to_string(),
-            None => "None".to_owned(),
+        embedded.legacy_windows_fs_encoding,
+        !embedded.ignore_environment,
+        !embedded.unbuffered_stdio,
+        match embedded.bytes_warning {
+            0 => "pyembed::BytesWarning::None",
+            1 => "pyembed::BytesWarning::Warn",
+            2 => "pyembed::BytesWarning::Raise",
+            _ => "pyembed::BytesWarning::Raise",
         },
-        match &embedded.stdio_encoding_errors {
-            Some(value) => format_args!("Some(\"{}\")", value).to_string(),
-            None => "None".to_owned(),
-        },
-        match embedded.optimize_level {
-            0 => "pyembed::OptimizationLevel::Zero",
-            1 => "pyembed::OptimizationLevel::One",
-            2 => "pyembed::OptimizationLevel::Two",
-            _ => "pyembed::OptimizationLevel::Two",
-        },
+        embedded.inspect,
+        embedded.interactive,
+        embedded.legacy_windows_stdio,
         if embedded.sys_paths.is_empty() {
             "None".to_string()
         } else {
@@ -128,24 +126,26 @@ pub fn derive_python_config(
                     .join(", ")
             )
         },
-        match embedded.bytes_warning {
-            0 => "pyembed::BytesWarning::None",
-            1 => "pyembed::BytesWarning::Warn",
-            2 => "pyembed::BytesWarning::Raise",
-            _ => "pyembed::BytesWarning::Raise",
+        match embedded.optimize_level {
+            0 => "pyembed::OptimizationLevel::Zero",
+            1 => "pyembed::OptimizationLevel::One",
+            2 => "pyembed::OptimizationLevel::Two",
+            _ => "pyembed::OptimizationLevel::Two",
         },
-        embedded.site_import,
-        embedded.user_site_directory,
-        !embedded.ignore_environment,
-        embedded.inspect,
-        embedded.interactive,
-        embedded.legacy_windows_fs_encoding,
-        embedded.legacy_windows_stdio,
-        embedded.write_bytecode,
-        !embedded.unbuffered_stdio,
         embedded.parser_debug,
         embedded.quiet,
+        embedded.site_import,
+        match &embedded.stdio_encoding_name {
+            Some(value) => format_args!("Some(\"{}\")", value).to_string(),
+            None => "None".to_owned(),
+        },
+        match &embedded.stdio_encoding_errors {
+            Some(value) => format_args!("Some(\"{}\")", value).to_string(),
+            None => "None".to_owned(),
+        },
+        embedded.user_site_directory,
         embedded.verbose != 0,
+        embedded.write_bytecode,
         match embedded.raw_allocator {
             RawAllocator::Jemalloc => "pyembed::PythonRawAllocator::jemalloc()",
             RawAllocator::Rust => "pyembed::PythonRawAllocator::rust()",
