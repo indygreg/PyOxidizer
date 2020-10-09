@@ -6,6 +6,8 @@
 Configuring a Python interpreter.
 */
 
+use python_packaging::interpreter::TerminfoResolution;
+
 /// Determine the default raw allocator for a target triple.
 pub fn default_raw_allocator(target_triple: &str) -> RawAllocator {
     // Jemalloc doesn't work on Windows.
@@ -33,14 +35,6 @@ pub enum RunMode {
     Module { module: String },
     Eval { code: String },
     File { path: String },
-}
-
-/// How the `terminfo` database is resolved at run-time.
-#[derive(Clone, Debug, PartialEq)]
-pub enum TerminfoResolution {
-    Dynamic,
-    None,
-    Static(String),
 }
 
 #[derive(Clone, Debug, PartialEq)]

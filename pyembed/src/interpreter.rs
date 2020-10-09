@@ -5,7 +5,7 @@
 //! Manage an embedded Python interpreter.
 
 use {
-    super::config::{MemoryAllocatorBackend, OxidizedPythonInterpreterConfig, TerminfoResolution},
+    super::config::{MemoryAllocatorBackend, OxidizedPythonInterpreterConfig},
     super::conversion::{osstr_to_pyobject, osstring_to_bytes},
     super::importer::{
         initialize_importer, PyInit_oxidized_importer, OXIDIZED_IMPORTER_NAME,
@@ -20,6 +20,7 @@ use {
     },
     lazy_static::lazy_static,
     python3_sys as pyffi,
+    python_packaging::interpreter::TerminfoResolution,
     std::collections::BTreeSet,
     std::convert::TryInto,
     std::env,

@@ -7,16 +7,16 @@ Functionality related to the pyembed crate.
 */
 
 use {
+    super::config::{EmbeddedPythonConfig, RawAllocator, RunMode},
     anyhow::Result,
     itertools::Itertools,
+    python_packaging::interpreter::TerminfoResolution,
     std::{
         fs::File,
         io::Write,
         path::{Path, PathBuf},
     },
 };
-
-use super::config::{EmbeddedPythonConfig, RawAllocator, RunMode, TerminfoResolution};
 
 /// Obtain the Rust source code to construct a OxidizedPythonInterpreterConfig instance.
 pub fn derive_python_config(

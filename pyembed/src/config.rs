@@ -7,6 +7,7 @@
 use {
     libc::c_ulong,
     python3_sys as pyffi,
+    python_packaging::interpreter::TerminfoResolution,
     std::ffi::{CString, OsString},
     std::path::PathBuf,
 };
@@ -28,17 +29,6 @@ pub enum PythonRunMode {
     /// a char* and we want the constructor of this type to worry about
     /// the type coercion.
     File { path: PathBuf },
-}
-
-/// Defines `terminfo`` database resolution semantics.
-#[derive(Clone, Debug)]
-pub enum TerminfoResolution {
-    /// Resolve `terminfo` database using appropriate behavior for current OS.
-    Dynamic,
-    /// Do not attempt to resolve the `terminfo` database. Basically a no-op.
-    None,
-    /// Use a specified string as the `TERMINFO_DIRS` value.
-    Static(String),
 }
 
 /// Defines an extra extension module to load.

@@ -5,8 +5,9 @@
 use {
     super::util::{optional_bool_arg, optional_int_arg, optional_list_arg, optional_str_arg},
     crate::py_packaging::config::{
-        default_raw_allocator, EmbeddedPythonConfig, RawAllocator, RunMode, TerminfoResolution,
+        default_raw_allocator, EmbeddedPythonConfig, RawAllocator, RunMode,
     },
+    python_packaging::interpreter::TerminfoResolution,
     starlark::{
         values::{
             error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},

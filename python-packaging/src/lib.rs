@@ -10,6 +10,7 @@ and packaging facilities.
 
 pub mod bytecode;
 pub mod filesystem_scanning;
+pub mod interpreter;
 pub mod libpython;
 pub mod licensing;
 pub mod location;
