@@ -11,6 +11,7 @@ use {
         initialize_importer, PyInit_oxidized_importer, OXIDIZED_IMPORTER_NAME,
         OXIDIZED_IMPORTER_NAME_STR,
     },
+    super::interpreter_config::python_interpreter_config_to_py_pre_config,
     super::osutils::resolve_terminfo_dirs,
     super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
     super::python_resources::PythonResourcesState,
@@ -283,9 +284,9 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         set_pyimport_inittab(&self.config);
 
         // Pre-configure Python.
-        let pre_config: pyffi::PyPreConfig = (&self.config.interpreter_config)
-            .try_into()
-            .map_err(NewInterpreterError::Dynamic)?;
+        let pre_config =
+            python_interpreter_config_to_py_pre_config(&self.config.interpreter_config)
+                .map_err(NewInterpreterError::Dynamic)?;
 
         unsafe {
             let status = pyffi::Py_PreInitialize(&pre_config);
