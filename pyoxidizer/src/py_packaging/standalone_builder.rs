@@ -11,7 +11,7 @@ use {
         config::{EmbeddedPythonConfig, RawAllocator},
         distribution::{BinaryLibpythonLinkMode, PythonDistribution},
         filtering::{filter_btreemap, resolve_resource_names_from_files},
-        libpython::{link_libpython, LibPythonBuildContext},
+        libpython::link_libpython,
         packaging_tool::{
             find_resources, pip_download, pip_install, read_virtualenv, setup_py_install,
         },
@@ -22,6 +22,7 @@ use {
     lazy_static::lazy_static,
     python_packaging::{
         bytecode::BytecodeCompiler,
+        libpython::LibPythonBuildContext,
         location::{AbstractResourceLocation, ConcreteResourceLocation},
         policy::PythonPackagingPolicy,
         resource::{
