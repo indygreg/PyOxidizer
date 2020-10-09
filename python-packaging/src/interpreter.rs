@@ -142,3 +142,15 @@ pub enum CheckHashPYCsMode {
     Never,
     Default,
 }
+
+/// See https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.allocator.
+#[derive(Clone, Copy, Debug)]
+pub enum Allocator {
+    NotSet = 0,
+    Default = 1,
+    Debug = 2,
+    Malloc = 3,
+    MallocDebug = 4,
+    PyMalloc = 5,
+    PyMallocDebug = 6,
+}

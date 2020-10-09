@@ -117,7 +117,7 @@ mod test;
 #[cfg(not(library_mode = "extension"))]
 #[allow(unused_imports)]
 pub use crate::config::{
-    Allocator, ExtensionModule, OxidizedPythonInterpreterConfig, PythonInterpreterConfig,
+    ExtensionModule, OxidizedPythonInterpreterConfig, PythonInterpreterConfig,
 };
 
 #[cfg(not(library_mode = "extension"))]
@@ -137,7 +137,7 @@ pub use crate::importer::PyInit_oxidized_importer;
 #[allow(unused_imports)]
 pub use python_packaging::{
     interpreter::{
-        BytesWarning, CheckHashPYCsMode, CoerceCLocale, PythonInterpreterProfile,
+        Allocator, BytesWarning, CheckHashPYCsMode, CoerceCLocale, PythonInterpreterProfile,
         PythonRawAllocator, PythonRunMode, TerminfoResolution,
     },
     resource::BytecodeOptimizationLevel,
