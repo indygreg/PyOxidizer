@@ -65,8 +65,17 @@ fn test_sys_paths_origin() -> Result<()> {
     let mut config = OxidizedPythonInterpreterConfig::default();
     config.interpreter_config.module_search_paths = Some(vec![PathBuf::from("$ORIGIN/lib")]);
 
+    let origin = std::env::current_exe()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .to_path_buf();
+
     let paths = config.resolve_module_search_paths().unwrap();
-    assert_eq!(paths, &Some(vec![PathBuf::from("$ORIGIN/lib")]));
+    assert_eq!(
+        paths,
+        &Some(vec![PathBuf::from(format!("{}/lib", origin.display()))])
+    );
 
     let py_config: pyffi::PyConfig = (&config).try_into().unwrap();
 

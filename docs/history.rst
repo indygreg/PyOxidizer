@@ -274,6 +274,9 @@ Bug Fixes
   try to resolve the Git commit instead of relying on the ``git`` command.
   This should result in fewer cases where the commit was being identified
   as ``unknown``.
+* ``$ORIGIN`` is properly expanded in ``sys.path``. (This was a regression
+  during the development of version 0.8 and is not a regression from the
+  0.7 release.)
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^

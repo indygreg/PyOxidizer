@@ -159,7 +159,24 @@ impl<'a> OxidizedPythonInterpreterConfig<'a> {
     }
 
     /// Resolve the value to use for module search paths / sys.path.
-    pub fn resolve_module_search_paths(&self) -> Result<&Option<Vec<PathBuf>>, &'static str> {
+    pub fn resolve_module_search_paths(&mut self) -> Result<&Option<Vec<PathBuf>>, &'static str> {
+        let origin = self.ensure_origin()?;
+        let origin_string = origin.display().to_string();
+
+        let paths = match &self.interpreter_config.module_search_paths {
+            Some(paths) => Some(
+                paths
+                    .iter()
+                    .map(|p| {
+                        PathBuf::from(p.display().to_string().replace("$ORIGIN", &origin_string))
+                    })
+                    .collect::<Vec<_>>(),
+            ),
+            None => None,
+        };
+
+        self.interpreter_config.module_search_paths = paths;
+
         Ok(&self.interpreter_config.module_search_paths)
     }
 }
