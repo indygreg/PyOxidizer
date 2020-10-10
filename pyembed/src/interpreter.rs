@@ -273,12 +273,10 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
 
         self.interpreter_state = InterpreterState::Initializing;
 
-        let exe = env::current_exe()
-            .map_err(|_| NewInterpreterError::Simple("could not obtain current exe"))?;
-        let origin = exe
-            .parent()
-            .ok_or_else(|| NewInterpreterError::Simple("unable to get exe parent"))?
-            .to_path_buf();
+        let origin = self
+            .config
+            .ensure_origin()
+            .map_err(|e| NewInterpreterError::Simple(e))?;
         let origin_string = origin.display().to_string();
 
         set_pyimport_inittab(&self.config);

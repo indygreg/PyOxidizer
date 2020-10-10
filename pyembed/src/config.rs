@@ -10,7 +10,10 @@ use {
         PythonInterpreterConfig, PythonInterpreterProfile, PythonRawAllocator, PythonRunMode,
         TerminfoResolution,
     },
-    std::ffi::CString,
+    std::{
+        ffi::CString,
+        path::{Path, PathBuf},
+    },
 };
 
 /// Defines an extra extension module to load.
@@ -54,6 +57,9 @@ pub struct ExtensionModule {
 /// hold higher-level configuration for features specific to this crate.
 #[derive(Clone, Debug)]
 pub struct OxidizedPythonInterpreterConfig<'a> {
+    /// The filesystem path from which relative paths will be interpreted.
+    pub origin: Option<PathBuf>,
+
     /// Low-level configuration of Python interpreter.
     pub interpreter_config: PythonInterpreterConfig,
 
@@ -118,6 +124,7 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
 impl<'a> Default for OxidizedPythonInterpreterConfig<'a> {
     fn default() -> Self {
         Self {
+            origin: None,
             interpreter_config: PythonInterpreterConfig {
                 profile: PythonInterpreterProfile::Python,
                 ..PythonInterpreterConfig::default()
@@ -134,5 +141,20 @@ impl<'a> Default for OxidizedPythonInterpreterConfig<'a> {
             write_modules_directory_env: None,
             run: PythonRunMode::Repl,
         }
+    }
+}
+
+impl<'a> OxidizedPythonInterpreterConfig<'a> {
+    pub fn ensure_origin(&mut self) -> Result<&Path, &'static str> {
+        if self.origin.is_none() {
+            let exe = std::env::current_exe().map_err(|_| "could not obtain current executable")?;
+            let origin = exe
+                .parent()
+                .ok_or_else(|| "unable to obtain current executable parent directory")?;
+
+            self.origin = Some(origin.to_path_buf());
+        }
+
+        Ok(self.origin.as_ref().unwrap())
     }
 }

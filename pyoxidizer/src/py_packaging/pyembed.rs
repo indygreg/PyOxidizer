@@ -25,6 +25,7 @@ pub fn derive_python_config(
 ) -> String {
     format!(
         "pyembed::OxidizedPythonInterpreterConfig {{\n    \
+        origin: None,\n    \
         interpreter_config: pyembed::PythonInterpreterConfig {{\n        \
         profile: {},\n        \
         allocator: None,\n        \
