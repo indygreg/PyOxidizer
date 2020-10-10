@@ -44,6 +44,7 @@ use {
         },
     },
     std::{
+        convert::TryFrom,
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -153,18 +154,13 @@ impl PythonDistribution {
             None => context.build_target_triple.clone(),
         };
 
-        let flavor = match flavor.as_ref() {
-            "standalone" => DistributionFlavor::Standalone,
-            "standalone_static" => DistributionFlavor::StandaloneStatic,
-            "standalone_dynamic" => DistributionFlavor::StandaloneDynamic,
-            v => {
-                return Err(ValueError::from(RuntimeError {
-                    code: "PYOXIDIZER_BUILD",
-                    message: format!("unknown distribution flavor {}", v),
-                    label: "default_python_distribution()".to_string(),
-                }))
-            }
-        };
+        let flavor = DistributionFlavor::try_from(flavor.as_str()).map_err(|e| {
+            ValueError::from(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e,
+                label: "default_python_distribution()".to_string(),
+            })
+        })?;
 
         let python_version_str = match &python_version {
             Some(x) => Some(x.as_str()),

@@ -25,6 +25,7 @@ use {
     slog::warn,
     std::{
         collections::HashMap,
+        convert::TryFrom,
         fs,
         fs::{create_dir_all, File},
         io::Read,
@@ -447,6 +448,19 @@ pub enum DistributionFlavor {
 impl Default for DistributionFlavor {
     fn default() -> Self {
         DistributionFlavor::Standalone
+    }
+}
+
+impl TryFrom<&str> for DistributionFlavor {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "standalone" => Ok(Self::Standalone),
+            "standalone_static" | "standalone-static" => Ok(Self::StandaloneStatic),
+            "standalone_dynamic" | "standalone-dynamic" => Ok(Self::StandaloneDynamic),
+            _ => Err(format!("distribution flavor {} not recognized", value)),
+        }
     }
 }
 
