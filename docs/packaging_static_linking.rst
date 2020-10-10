@@ -4,6 +4,12 @@
 Static Linking
 ==============
 
+This document describes how to statically link binaries embedding Python.
+
+See also :ref:`packaging_extension_modules` for extensive documentation
+about extension modules, which are often a pain point when it comes to
+static linking.
+
 .. _statically_linked_linux:
 
 Building Fully Statically Linked Binaries on Linux

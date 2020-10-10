@@ -16,9 +16,11 @@ instructions.
 
    packaging_creating_projects
    packaging_config_file
+   packaging_python_distributions
    packaging_resources
    packaging_python_files
    packaging_additional_files
+   packaging_extension_modules
    packaging_trimming_resources
    packaging_performance
    packaging_pitfalls
