@@ -278,6 +278,9 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
             .ensure_origin()
             .map_err(|e| NewInterpreterError::Simple(e))?;
         let origin_string = origin.display().to_string();
+        self.config
+            .resolve_module_search_paths()
+            .map_err(|e| NewInterpreterError::Simple(e))?;
 
         set_pyimport_inittab(&self.config);
 

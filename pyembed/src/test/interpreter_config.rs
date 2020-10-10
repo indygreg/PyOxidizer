@@ -6,7 +6,9 @@ use {
     crate::{MainPythonInterpreter, OxidizedPythonInterpreterConfig},
     anyhow::Result,
     cpython::ObjectProtocol,
+    python3_sys as pyffi,
     python_packaging::interpreter::PythonInterpreterProfile,
+    std::{convert::TryInto, path::PathBuf},
 };
 
 #[test]
@@ -54,6 +56,22 @@ fn test_isolated_interpreter() -> Result<()> {
             .unwrap(),
         1
     );
+
+    Ok(())
+}
+
+#[test]
+fn test_sys_paths_origin() -> Result<()> {
+    let mut config = OxidizedPythonInterpreterConfig::default();
+    config.interpreter_config.module_search_paths = Some(vec![PathBuf::from("$ORIGIN/lib")]);
+
+    let paths = config.resolve_module_search_paths().unwrap();
+    assert_eq!(paths, &Some(vec![PathBuf::from("$ORIGIN/lib")]));
+
+    let py_config: pyffi::PyConfig = (&config).try_into().unwrap();
+
+    assert_eq!(py_config.module_search_paths_set, 1);
+    assert_eq!(py_config.module_search_paths.length, 1);
 
     Ok(())
 }

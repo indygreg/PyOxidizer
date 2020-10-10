@@ -157,4 +157,9 @@ impl<'a> OxidizedPythonInterpreterConfig<'a> {
 
         Ok(self.origin.as_ref().unwrap())
     }
+
+    /// Resolve the value to use for module search paths / sys.path.
+    pub fn resolve_module_search_paths(&self) -> Result<&Option<Vec<PathBuf>>, &'static str> {
+        Ok(&self.interpreter_config.module_search_paths)
+    }
 }
