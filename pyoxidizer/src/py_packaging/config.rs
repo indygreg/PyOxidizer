@@ -16,7 +16,10 @@ use {
         },
         resource::BytecodeOptimizationLevel,
     },
-    std::{io::Write, path::Path},
+    std::{
+        io::Write,
+        path::{Path, PathBuf},
+    },
 };
 
 /// Determine the default raw allocator for a target triple.
@@ -35,6 +38,13 @@ pub fn default_raw_allocator(target_triple: &str) -> MemoryAllocatorBackend {
 fn optional_bool_to_string(value: &Option<bool>) -> String {
     match value {
         Some(value) => format!("Some({})", value),
+        None => "None".to_string(),
+    }
+}
+
+fn optional_pathbuf_to_string(value: &Option<PathBuf>) -> String {
+    match value {
+        Some(value) => format_args!("Some(PathBuf::from(\"{}\"", value.display()).to_string(),
         None => "None".to_string(),
     }
 }
@@ -113,21 +123,21 @@ impl EmbeddedPythonConfig {
             use_environment: {},\n        \
             utf8_mode: {},\n        \
             argv: None,\n        \
-            base_exec_prefix: None,\n        \
-            base_executable: None,\n        \
-            base_prefix: None,\n        \
+            base_exec_prefix: {},\n        \
+            base_executable: {},\n        \
+            base_prefix: {},\n        \
             buffered_stdio: {},\n        \
             bytes_warning: {},\n        \
             check_hash_pycs_mode: None,\n        \
             configure_c_stdio: {},\n        \
             dump_refs: {},\n        \
-            exec_prefix: None,\n        \
-            executable: None,\n        \
+            exec_prefix: {},\n        \
+            executable: {},\n        \
             fault_handler: {},\n        \
             filesystem_encoding: None,\n        \
             filesystem_errors: None,\n        \
             hash_seed: None,\n        \
-            home: None,\n        \
+            home: {},\n        \
             import_time: {},\n        \
             inspect: {},\n        \
             install_signal_handlers: {},\n        \
@@ -136,15 +146,15 @@ impl EmbeddedPythonConfig {
             malloc_stats: {},\n        \
             module_search_paths: {},\n        \
             optimization_level: {},\n        \
-            prefix: None,\n        \
-            program_name: None,\n        \
             python_path_env: None,\n        \
             parser_debug: {},\n        \
             pathconfig_warnings: {},\n        \
-            pycache_prefix: None,\n        \
+            prefix: {},\n        \
+            program_name: {},\n        \
+            pycache_prefix: {},\n        \
             quiet: {},\n        \
             run_command: None,\n        \
-            run_filename: None,\n        \
+            run_filename: {},\n        \
             run_module: None,\n        \
             show_alloc_count: {},\n        \
             show_ref_count: {},\n        \
@@ -184,6 +194,9 @@ impl EmbeddedPythonConfig {
             optional_bool_to_string(&self.config.parse_argv),
             optional_bool_to_string(&self.config.use_environment),
             optional_bool_to_string(&self.config.utf8_mode),
+            optional_pathbuf_to_string(&self.config.base_exec_prefix),
+            optional_pathbuf_to_string(&self.config.base_executable),
+            optional_pathbuf_to_string(&self.config.base_prefix),
             optional_bool_to_string(&self.config.buffered_stdio),
             match self.config.bytes_warning {
                 Some(BytesWarning::None) => "Some(pyembed::BytesWarning::None)",
@@ -193,7 +206,10 @@ impl EmbeddedPythonConfig {
             },
             optional_bool_to_string(&self.config.configure_c_stdio),
             optional_bool_to_string(&self.config.dump_refs),
+            optional_pathbuf_to_string(&self.config.exec_prefix),
+            optional_pathbuf_to_string(&self.config.executable),
             optional_bool_to_string(&self.config.fault_handler),
+            optional_pathbuf_to_string(&self.config.home),
             optional_bool_to_string(&self.config.import_time),
             optional_bool_to_string(&self.config.inspect),
             optional_bool_to_string(&self.config.install_signal_handlers),
@@ -224,7 +240,11 @@ impl EmbeddedPythonConfig {
             },
             optional_bool_to_string(&self.config.parser_debug),
             optional_bool_to_string(&self.config.pathconfig_warnings),
+            optional_pathbuf_to_string(&self.config.prefix),
+            optional_pathbuf_to_string(&self.config.program_name),
+            optional_pathbuf_to_string(&self.config.pycache_prefix),
             optional_bool_to_string(&self.config.quiet),
+            optional_pathbuf_to_string(&self.config.run_filename),
             optional_bool_to_string(&self.config.show_alloc_count),
             optional_bool_to_string(&self.config.show_ref_count),
             optional_bool_to_string(&self.config.site_import),
