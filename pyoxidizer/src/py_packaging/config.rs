@@ -8,8 +8,9 @@ Configuring a Python interpreter.
 
 use {
     anyhow::Result,
+    itertools::Itertools,
     python_packaging::interpreter::{MemoryAllocatorBackend, PythonRunMode, TerminfoResolution},
-    std::path::Path,
+    std::{io::Write, path::Path},
 };
 
 /// Determine the default raw allocator for a target triple.
@@ -264,5 +265,32 @@ impl EmbeddedPythonConfig {
         );
 
         Ok(code)
+    }
+
+    /// Write a Rust file containing a function for obtaining the default `OxidizedPythonInterpreterConfig`.
+    pub fn write_default_python_confis_rs(
+        &self,
+        path: &Path,
+        packed_resources_path: Option<&Path>,
+    ) -> Result<()> {
+        let mut f = std::fs::File::create(&path)?;
+
+        let indented = self
+            .to_oxidized_python_interpreter_config_rs(packed_resources_path)?
+            .split('\n')
+            .map(|line| "    ".to_string() + line)
+            .join("\n");
+
+        f.write_fmt(format_args!(
+            "/// Obtain the default Python configuration\n\
+             ///\n\
+             /// The crate is compiled with a default Python configuration embedded\n\
+             /// in the crate. This function will return an instance of that\n\
+             /// configuration.\n\
+             pub fn default_python_config<'a>() -> pyembed::OxidizedPythonInterpreterConfig<'a> {{\n{}\n}}\n",
+            indented
+        ))?;
+
+        Ok(())
     }
 }

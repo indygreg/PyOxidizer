@@ -7,7 +7,7 @@ Defining and manipulating binaries embedding Python.
 */
 
 use {
-    super::{config::EmbeddedPythonConfig, pyembed::write_default_python_config_rs},
+    super::config::EmbeddedPythonConfig,
     crate::app_packaging::resource::FileManifest,
     anyhow::Result,
     python_packaging::{
@@ -320,11 +320,9 @@ impl EmbeddedPythonContext {
             None
         };
 
-        let config_rs_data = self
-            .config
-            .to_oxidized_python_interpreter_config_rs(Some(&embedded_resources))?;
         let config_rs = dest_dir.join("default_python_config.rs");
-        write_default_python_config_rs(&config_rs, &config_rs_data)?;
+        self.config
+            .write_default_python_confis_rs(&config_rs, Some(&embedded_resources))?;
 
         let mut cargo_metadata_lines = Vec::new();
         cargo_metadata_lines.extend(self.linking_info.cargo_metadata.clone());
