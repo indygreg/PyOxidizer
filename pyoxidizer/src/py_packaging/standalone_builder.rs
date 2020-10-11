@@ -972,7 +972,7 @@ pub mod tests {
             })
             .collect::<Vec<_>>();
 
-        // Sanity check.
+        // Spot check.
         assert!(expected.contains(&"_io".to_string()));
 
         for name in &expected {
@@ -986,7 +986,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_linux_extensions_sanity() -> Result<()> {
+    fn test_linux_distribution_extensions() -> Result<()> {
         for libpython_link_mode in vec![
             BinaryLibpythonLinkMode::Static,
             BinaryLibpythonLinkMode::Dynamic,
@@ -1377,7 +1377,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_linux_musl_extensions_sanity() -> Result<()> {
+    fn test_linux_musl_distribution_extensions() -> Result<()> {
         let options = StandalonePythonExecutableBuilderOptions {
             target_triple: "x86_64-unknown-linux-musl".to_string(),
             extension_module_filter: ExtensionModuleFilter::All,
@@ -1598,7 +1598,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_macos_extensions_sanity() -> Result<()> {
+    fn test_macos_distribution_extensions() -> Result<()> {
         for libpython_link_mode in vec![
             BinaryLibpythonLinkMode::Static,
             BinaryLibpythonLinkMode::Dynamic,
@@ -2016,7 +2016,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_windows_dynamic_extensions_sanity() -> Result<()> {
+    fn test_windows_dynamic_distribution_extensions() -> Result<()> {
         for target in WINDOWS_TARGET_TRIPLES.iter() {
             let options = StandalonePythonExecutableBuilderOptions {
                 target_triple: target.to_string(),
@@ -2341,7 +2341,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_windows_static_extensions_sanity() -> Result<()> {
+    fn test_windows_static_distribution_extensions() -> Result<()> {
         for target in WINDOWS_TARGET_TRIPLES.iter() {
             let options = StandalonePythonExecutableBuilderOptions {
                 target_triple: target.to_string(),
