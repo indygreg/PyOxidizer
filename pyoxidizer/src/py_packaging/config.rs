@@ -56,6 +56,20 @@ fn optional_pathbuf_to_string(value: &Option<PathBuf>) -> String {
     }
 }
 
+fn optional_vec_string_to_string(value: &Option<Vec<String>>) -> String {
+    match value {
+        Some(value) => format!(
+            "Some({})",
+            value
+                .iter()
+                .map(|x| format_args!("\"{}\"", x).to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        None => "None".to_string(),
+    }
+}
+
 /// Represents the run-time configuration of a Python interpreter.
 ///
 /// This type mirrors `pyembed::OxidizedPythonInterpreterConfig`. We can't
@@ -172,9 +186,9 @@ impl EmbeddedPythonConfig {
             tracemalloc: {},\n        \
             user_site_directory: {},\n        \
             verbose: {},\n        \
-            warn_options: None,\n        \
+            warn_options: {},\n        \
             write_bytecode: {},\n        \
-            x_options: None,\n        \
+            x_options: {},\n        \
             }},\n    \
             raw_allocator: Some({}),\n    \
             oxidized_importer: true,\n    \
@@ -287,7 +301,9 @@ impl EmbeddedPythonConfig {
             optional_bool_to_string(&self.config.tracemalloc),
             optional_bool_to_string(&self.config.user_site_directory),
             optional_bool_to_string(&self.config.verbose),
+            optional_vec_string_to_string(&self.config.warn_options),
             optional_bool_to_string(&self.config.write_bytecode),
+            optional_vec_string_to_string(&self.config.x_options),
             match self.raw_allocator {
                 MemoryAllocatorBackend::Jemalloc => "pyembed::PythonRawAllocator::jemalloc()",
                 MemoryAllocatorBackend::Rust => "pyembed::PythonRawAllocator::rust()",
