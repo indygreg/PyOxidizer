@@ -250,6 +250,11 @@ impl PythonPackagingPolicy {
         self.bytecode_optimize_level_two = value;
     }
 
+    /// Obtain broken extensions for a target triple.
+    pub fn broken_extensions_for_triple(&self, target_triple: &str) -> Option<&Vec<String>> {
+        self.broken_extensions.get(target_triple)
+    }
+
     /// Mark an extension as broken on a target platform, preventing it from being used.
     pub fn register_broken_extension(&mut self, target_triple: &str, extension: &str) {
         if !self.broken_extensions.contains_key(target_triple) {

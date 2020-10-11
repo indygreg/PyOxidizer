@@ -821,7 +821,7 @@ pub mod tests {
                 Arc::new(get_distribution(&host_record.location)?.clone_box())
             };
 
-            let mut policy = PythonPackagingPolicy::default();
+            let mut policy = target_distribution.create_packaging_policy()?;
             policy.set_extension_module_filter(self.extension_module_filter.clone());
             policy.set_resources_location(self.resources_location.clone());
             policy.set_resources_location_fallback(self.resources_location_fallback.clone());
@@ -1004,7 +1004,16 @@ pub mod tests {
 
             // All extensions compiled as built-ins by default.
             for (name, _) in builder.target_distribution.extension_modules.iter() {
-                assert!(builtin_names.contains(&name));
+                if builder
+                    .python_packaging_policy()
+                    .broken_extensions_for_triple(&builder.target_triple)
+                    .unwrap_or(&vec![])
+                    .contains(name)
+                {
+                    assert!(!builtin_names.contains(&name))
+                } else {
+                    assert!(builtin_names.contains(&name));
+                }
             }
         }
 
@@ -1380,7 +1389,16 @@ pub mod tests {
         // All extensions for musl Linux are built-in because dynamic linking
         // not possible.
         for name in builder.target_distribution.extension_modules.keys() {
-            assert!(builder.extension_build_contexts.keys().any(|e| name == e));
+            if builder
+                .python_packaging_policy()
+                .broken_extensions_for_triple(&builder.target_triple)
+                .unwrap_or(&vec![])
+                .contains(name)
+            {
+                assert!(!builder.extension_build_contexts.keys().any(|e| name == e));
+            } else {
+                assert!(builder.extension_build_contexts.keys().any(|e| name == e));
+            }
         }
 
         Ok(())
@@ -1598,7 +1616,16 @@ pub mod tests {
 
             // All extensions compiled as built-ins by default.
             for (name, _) in builder.target_distribution.extension_modules.iter() {
-                assert!(builtin_names.contains(&name));
+                if builder
+                    .python_packaging_policy()
+                    .broken_extensions_for_triple(&builder.target_triple)
+                    .unwrap_or(&vec![])
+                    .contains(name)
+                {
+                    assert!(!builtin_names.contains(&name))
+                } else {
+                    assert!(builtin_names.contains(&name));
+                }
             }
         }
 
