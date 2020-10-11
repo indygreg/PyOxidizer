@@ -7,10 +7,7 @@ Defining and manipulating binaries embedding Python.
 */
 
 use {
-    super::{
-        config::EmbeddedPythonConfig,
-        pyembed::{derive_python_config, write_default_python_config_rs},
-    },
+    super::{config::EmbeddedPythonConfig, pyembed::write_default_python_config_rs},
     crate::app_packaging::resource::FileManifest,
     anyhow::Result,
     python_packaging::{
@@ -323,7 +320,9 @@ impl EmbeddedPythonContext {
             None
         };
 
-        let config_rs_data = derive_python_config(&self.config, &embedded_resources);
+        let config_rs_data = self
+            .config
+            .to_oxidized_python_interpreter_config_rs(Some(&embedded_resources))?;
         let config_rs = dest_dir.join("default_python_config.rs");
         write_default_python_config_rs(&config_rs, &config_rs_data)?;
 

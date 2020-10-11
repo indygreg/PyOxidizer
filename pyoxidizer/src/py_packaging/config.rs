@@ -6,7 +6,11 @@
 Configuring a Python interpreter.
 */
 
-use python_packaging::interpreter::{MemoryAllocatorBackend, PythonRunMode, TerminfoResolution};
+use {
+    anyhow::Result,
+    python_packaging::interpreter::{MemoryAllocatorBackend, PythonRunMode, TerminfoResolution},
+    std::path::Path,
+};
 
 /// Determine the default raw allocator for a target triple.
 pub fn default_raw_allocator(target_triple: &str) -> MemoryAllocatorBackend {
@@ -81,5 +85,184 @@ impl Default for EmbeddedPythonConfig {
             write_bytecode: false,
             write_modules_directory_env: None,
         }
+    }
+}
+
+impl EmbeddedPythonConfig {
+    /// Convert the instance to Rust code that constructs a `pyembed::OxidizedPythonInterpreterConfig`.
+    pub fn to_oxidized_python_interpreter_config_rs(
+        &self,
+        packed_resources_path: Option<&Path>,
+    ) -> Result<String> {
+        let code = format!(
+            "pyembed::OxidizedPythonInterpreterConfig {{\n    \
+            origin: None,\n    \
+            interpreter_config: pyembed::PythonInterpreterConfig {{\n        \
+            profile: {},\n        \
+            allocator: None,\n        \
+            configure_locale: None,\n        \
+            coerce_c_locale: None,\n        \
+            coerce_c_locale_warn: None,\n        \
+            development_mode: None,\n        \
+            isolated: None,\n        \
+            legacy_windows_fs_encoding: Some({}),\n        \
+            parse_argv: None,\n        \
+            use_environment: Some({}),\n        \
+            utf8_mode: None,\n        \
+            argv: None,\n        \
+            base_exec_prefix: None,\n        \
+            base_executable: None,\n        \
+            base_prefix: None,\n        \
+            buffered_stdio: Some({}),\n        \
+            bytes_warning: Some({}),\n        \
+            check_hash_pycs_mode: None,\n        \
+            configure_c_stdio: None,\n        \
+            dump_refs: None,\n        \
+            exec_prefix: None,\n        \
+            executable: None,\n        \
+            fault_handler: None,\n        \
+            filesystem_encoding: None,\n        \
+            filesystem_errors: None,\n        \
+            hash_seed: None,\n        \
+            home: None,\n        \
+            import_time: None,\n        \
+            install_signal_handlers: None,\n        \
+            inspect: Some({}),\n        \
+            interactive: Some({}),\n        \
+            legacy_windows_stdio: Some({}),\n        \
+            malloc_stats: None,\n        \
+            module_search_paths: {},\n        \
+            optimization_level: Some({}),\n        \
+            prefix: None,\n        \
+            program_name: None,\n        \
+            python_path_env: None,\n        \
+            parser_debug: Some({}),\n        \
+            pathconfig_warnings: None,\n        \
+            pycache_prefix: None,\n        \
+            quiet: Some({}),\n        \
+            run_command: None,\n        \
+            run_filename: None,\n        \
+            run_module: None,\n        \
+            show_alloc_count: None,\n        \
+            show_ref_count: None,\n        \
+            skip_first_source_line: None,\n        \
+            site_import: Some({}),\n        \
+            stdio_encoding: {},\n        \
+            stdio_errors: {},\n        \
+            tracemalloc: None,\n        \
+            user_site_directory: Some({}),\n        \
+            verbose: Some({}),\n        \
+            warn_options: None,\n        \
+            write_bytecode: Some({}),\n        \
+            x_options: None,\n        \
+            }},\n    \
+            raw_allocator: Some({}),\n    \
+            oxidized_importer: true,\n    \
+            filesystem_importer: {},\n    \
+            packed_resources: {},\n    \
+            extra_extension_modules: None,\n    \
+            argvb: false,\n    \
+            sys_frozen: {},\n    \
+            sys_meipass: {},\n    \
+            terminfo_resolution: {},\n    \
+            write_modules_directory_env: {},\n    \
+            run: {},\n\
+            }}\n\
+            ",
+            if self.isolated {
+                "pyembed::PythonInterpreterProfile::Isolated"
+            } else {
+                "pyembed::PythonInterpreterProfile::Python"
+            },
+            self.legacy_windows_fs_encoding,
+            !self.ignore_environment,
+            !self.unbuffered_stdio,
+            match self.bytes_warning {
+                0 => "pyembed::BytesWarning::None",
+                1 => "pyembed::BytesWarning::Warn",
+                2 => "pyembed::BytesWarning::Raise",
+                _ => "pyembed::BytesWarning::Raise",
+            },
+            self.inspect,
+            self.interactive,
+            self.legacy_windows_stdio,
+            if self.sys_paths.is_empty() {
+                "None".to_string()
+            } else {
+                format!(
+                    "Some({})",
+                    &self
+                        .sys_paths
+                        .iter()
+                        .map(|p| "\"".to_owned() + p + "\".to_string()")
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )
+            },
+            match self.optimize_level {
+                0 => "pyembed::BytecodeOptimizationLevel::Zero",
+                1 => "pyembed::BytecodeOptimizationLevel::One",
+                2 => "pyembed::BytecodeOptimizationLevel::Two",
+                _ => "pyembed::BytecodeOptimizationLevel::Two",
+            },
+            self.parser_debug,
+            self.quiet,
+            self.site_import,
+            match &self.stdio_encoding_name {
+                Some(value) => format_args!("Some(\"{}\")", value).to_string(),
+                None => "None".to_owned(),
+            },
+            match &self.stdio_encoding_errors {
+                Some(value) => format_args!("Some(\"{}\")", value).to_string(),
+                None => "None".to_owned(),
+            },
+            self.user_site_directory,
+            self.verbose != 0,
+            self.write_bytecode,
+            match self.raw_allocator {
+                MemoryAllocatorBackend::Jemalloc => "pyembed::PythonRawAllocator::jemalloc()",
+                MemoryAllocatorBackend::Rust => "pyembed::PythonRawAllocator::rust()",
+                MemoryAllocatorBackend::System => "pyembed::PythonRawAllocator::system()",
+            },
+            self.filesystem_importer,
+            if let Some(path) = packed_resources_path {
+                format!("Some(include_bytes!(r#\"{}\"#))", path.display())
+            } else {
+                "None".to_string()
+            },
+            self.sys_frozen,
+            self.sys_meipass,
+            match self.terminfo_resolution {
+                TerminfoResolution::Dynamic => "pyembed::TerminfoResolution::Dynamic".to_string(),
+                TerminfoResolution::None => "pyembed::TerminfoResolution::None".to_string(),
+                TerminfoResolution::Static(ref v) => {
+                    format!("pyembed::TerminfoResolution::Static(r###\"{}\"###", v)
+                }
+            },
+            match &self.write_modules_directory_env {
+                Some(path) => "Some(\"".to_owned() + &path + "\".to_string())",
+                _ => "None".to_owned(),
+            },
+            match self.run_mode {
+                PythonRunMode::None => "pyembed::PythonRunMode::None".to_owned(),
+                PythonRunMode::Repl => "pyembed::PythonRunMode::Repl".to_owned(),
+                PythonRunMode::Module { ref module } => {
+                    "pyembed::PythonRunMode::Module { module: \"".to_owned()
+                        + module
+                        + "\".to_string() }"
+                }
+                PythonRunMode::Eval { ref code } => {
+                    "pyembed::PythonRunMode::Eval { code: r###\"".to_owned()
+                        + code
+                        + "\"###.to_string() }"
+                }
+                PythonRunMode::File { ref path } => {
+                    format!("pyembed::PythonRunMode::File {{ path: std::path::PathBuf::new(r###\"{}\"###) }}",
+                    path.display())
+                }
+            },
+        );
+
+        Ok(code)
     }
 }
