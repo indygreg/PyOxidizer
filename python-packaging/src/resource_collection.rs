@@ -12,7 +12,6 @@ use {
         libpython::LibPythonBuildContext,
         location::{AbstractResourceLocation, ConcreteResourceLocation},
         module_util::{packages_from_module_name, resolve_path_for_module},
-        policy::PythonResourcesPolicy,
         python_source::has_dunder_file,
         resource::{
             BytecodeOptimizationLevel, DataLocation, PythonExtensionModule, PythonModuleBytecode,
@@ -626,13 +625,13 @@ impl PythonResourceCollector {
     /// We also pass a Python bytecode cache tag, which is used to
     /// derive filenames.
     pub fn new(
-        policy: &PythonResourcesPolicy,
+        allowed_locations: Vec<AbstractResourceLocation>,
         allowed_extension_module_locations: Vec<AbstractResourceLocation>,
         allow_new_builtin_extension_modules: bool,
         cache_tag: &str,
     ) -> Self {
         Self {
-            allowed_locations: policy.allowed_locations(),
+            allowed_locations,
             allowed_extension_module_locations,
             allow_new_builtin_extension_modules,
             resources: BTreeMap::new(),
@@ -1585,7 +1584,10 @@ impl PythonResourceCollector {
 mod tests {
     use {
         super::*,
-        crate::resource::{LibraryDependency, PythonPackageDistributionResourceFlavor},
+        crate::{
+            policy::PythonResourcesPolicy,
+            resource::{LibraryDependency, PythonPackageDistributionResourceFlavor},
+        },
         std::convert::TryFrom,
     };
 
@@ -2704,7 +2706,7 @@ mod tests {
     #[test]
     fn test_add_in_memory_source_module() -> Result<()> {
         let mut r = PythonResourceCollector::new(
-            &PythonResourcesPolicy::InMemoryOnly,
+            vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
             DEFAULT_CACHE_TAG,
@@ -2755,7 +2757,7 @@ mod tests {
     #[test]
     fn test_add_in_memory_source_module_parents() -> Result<()> {
         let mut r = PythonResourceCollector::new(
-            &PythonResourcesPolicy::InMemoryOnly,
+            vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
             DEFAULT_CACHE_TAG,
@@ -2828,7 +2830,7 @@ mod tests {
     #[test]
     fn test_add_relative_path_source_module() -> Result<()> {
         let mut r = PythonResourceCollector::new(
-            &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
+            vec![AbstractResourceLocation::RelativePath],
             vec![],
             false,
             DEFAULT_CACHE_TAG,
@@ -2908,7 +2910,7 @@ mod tests {
     #[test]
     fn test_add_module_source_with_context() -> Result<()> {
         let mut r = PythonResourceCollector::new(
-            &PythonResourcesPolicy::InMemoryOnly,
+            vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
             DEFAULT_CACHE_TAG,
@@ -3028,7 +3030,7 @@ mod tests {
     #[test]
     fn test_add_in_memory_bytecode_module() -> Result<()> {
         let mut r = PythonResourceCollector::new(
-            &PythonResourcesPolicy::InMemoryOnly,
+            vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
             DEFAULT_CACHE_TAG,
@@ -3080,7 +3082,7 @@ mod tests {
     #[test]
     fn test_add_in_memory_bytecode_module_from_source() -> Result<()> {
         let mut r = PythonResourceCollector::new(
-            &PythonResourcesPolicy::InMemoryOnly,
+            vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
             DEFAULT_CACHE_TAG,
@@ -3134,7 +3136,7 @@ mod tests {
     #[test]
     fn test_add_module_bytecode_with_context() -> Result<()> {
         let mut r = PythonResourceCollector::new(
-            &PythonResourcesPolicy::InMemoryOnly,
+            vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
             DEFAULT_CACHE_TAG,
@@ -3253,7 +3255,7 @@ mod tests {
     #[test]
     fn test_add_in_memory_bytecode_module_parents() -> Result<()> {
         let mut r = PythonResourceCollector::new(
-            &PythonResourcesPolicy::InMemoryOnly,
+            vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
             DEFAULT_CACHE_TAG,
@@ -3328,7 +3330,7 @@ mod tests {
     #[test]
     fn test_add_module_bytecode_from_source_with_context() -> Result<()> {
         let mut r = PythonResourceCollector::new(
-            &PythonResourcesPolicy::InMemoryOnly,
+            vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
             DEFAULT_CACHE_TAG,
@@ -3449,7 +3451,7 @@ mod tests {
     #[test]
     fn test_add_in_memory_package_resource() -> Result<()> {
         let mut r = PythonResourceCollector::new(
-            &PythonResourcesPolicy::InMemoryOnly,
+            vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
             DEFAULT_CACHE_TAG,
@@ -3508,7 +3510,7 @@ mod tests {
     #[test]
     fn test_add_relative_path_package_resource() -> Result<()> {
         let mut r = PythonResourceCollector::new(
-            &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
+            vec![AbstractResourceLocation::RelativePath],
             vec![],
             false,
             DEFAULT_CACHE_TAG,
@@ -3583,7 +3585,7 @@ mod tests {
     #[test]
     fn test_add_package_resource_with_context() -> Result<()> {
         let mut r = PythonResourceCollector::new(
-            &PythonResourcesPolicy::InMemoryOnly,
+            vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
             DEFAULT_CACHE_TAG,
@@ -3668,7 +3670,7 @@ mod tests {
     #[test]
     fn test_add_in_memory_package_distribution_resource() -> Result<()> {
         let mut r = PythonResourceCollector::new(
-            &PythonResourcesPolicy::InMemoryOnly,
+            vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
             DEFAULT_CACHE_TAG,
@@ -3727,7 +3729,7 @@ mod tests {
     #[test]
     fn test_add_relative_path_package_distribution_resource() -> Result<()> {
         let mut r = PythonResourceCollector::new(
-            &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
+            vec![AbstractResourceLocation::RelativePath],
             vec![],
             false,
             DEFAULT_CACHE_TAG,
@@ -3802,7 +3804,7 @@ mod tests {
     #[test]
     fn test_add_package_distribution_resource_with_context() -> Result<()> {
         let mut r = PythonResourceCollector::new(
-            &PythonResourcesPolicy::InMemoryOnly,
+            vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
             DEFAULT_CACHE_TAG,
@@ -3882,7 +3884,7 @@ mod tests {
     #[test]
     fn test_add_builtin_python_extension_module() -> Result<()> {
         let mut c = PythonResourceCollector::new(
-            &PythonResourcesPolicy::InMemoryOnly,
+            vec![AbstractResourceLocation::InMemory],
             vec![AbstractResourceLocation::InMemory],
             false,
             DEFAULT_CACHE_TAG,
@@ -3960,7 +3962,7 @@ mod tests {
         };
 
         let mut c = PythonResourceCollector::new(
-            &PythonResourcesPolicy::InMemoryOnly,
+            vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
             DEFAULT_CACHE_TAG,
@@ -3971,7 +3973,7 @@ mod tests {
         assert_eq!(res.err().unwrap().to_string(), "cannot add extension module myext for in-memory import because in-memory loading is not supported/allowed");
 
         let mut c = PythonResourceCollector::new(
-            &PythonResourcesPolicy::InMemoryOnly,
+            vec![AbstractResourceLocation::InMemory],
             vec![AbstractResourceLocation::InMemory],
             false,
             DEFAULT_CACHE_TAG,
@@ -4056,7 +4058,7 @@ mod tests {
         };
 
         let mut c = PythonResourceCollector::new(
-            &PythonResourcesPolicy::FilesystemRelativeOnly("prefix".to_string()),
+            vec![AbstractResourceLocation::RelativePath],
             vec![],
             false,
             DEFAULT_CACHE_TAG,
@@ -4069,7 +4071,7 @@ mod tests {
         assert_eq!(res.err().unwrap().to_string(), "cannot add extension module foo.bar as a file because extension modules as files are not allowed");
 
         let mut c = PythonResourceCollector::new(
-            &PythonResourcesPolicy::FilesystemRelativeOnly("prefix".to_string()),
+            vec![AbstractResourceLocation::RelativePath],
             vec![AbstractResourceLocation::RelativePath],
             false,
             DEFAULT_CACHE_TAG,
@@ -4166,7 +4168,7 @@ mod tests {
     #[test]
     fn test_add_shared_library_and_module() -> Result<()> {
         let mut r = PythonResourceCollector::new(
-            &PythonResourcesPolicy::InMemoryOnly,
+            vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
             DEFAULT_CACHE_TAG,
@@ -4231,7 +4233,7 @@ mod tests {
     #[test]
     fn test_find_dunder_file() -> Result<()> {
         let mut r = PythonResourceCollector::new(
-            &PythonResourcesPolicy::InMemoryOnly,
+            vec![AbstractResourceLocation::InMemory],
             vec![],
             false,
             DEFAULT_CACHE_TAG,

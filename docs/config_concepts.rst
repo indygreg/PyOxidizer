@@ -142,10 +142,6 @@ where a resource should be loaded from at run-time. See
 Resource locations are represented as strings in Starlark. The mapping
 of strings to resource locations is as follows:
 
-``default``
-   Use the default resource location. Often equivalent to a resource location
-   of the type/value ``None``.
-
 ``in-memory``
    Load the resource from memory.
 

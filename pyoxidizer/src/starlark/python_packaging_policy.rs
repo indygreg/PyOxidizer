@@ -8,8 +8,9 @@ use {
         util::{required_str_arg, required_type_arg},
     },
     linked_hash_map::LinkedHashMap,
-    python_packaging::policy::{
-        ExtensionModuleFilter, PythonPackagingPolicy, PythonResourcesPolicy,
+    python_packaging::{
+        location::ConcreteResourceLocation,
+        policy::{ExtensionModuleFilter, PythonPackagingPolicy},
     },
     starlark::{
         environment::TypeValues,
@@ -126,7 +127,11 @@ impl TypedValue for PythonPackagingPolicyValue {
             "preferred_extension_module_variants" => {
                 Value::try_from(self.inner.preferred_extension_module_variants().clone())?
             }
-            "resources_policy" => Value::new::<String>(self.inner.resources_policy().into()),
+            "resources_location" => Value::from(self.inner.resources_location().to_string()),
+            "resources_location_fallback" => match self.inner.resources_location_fallback() {
+                Some(location) => Value::from(location.to_string()),
+                None => Value::from(NoneType::None),
+            },
             attr => {
                 return Err(ValueError::OperationNotSupported {
                     op: UnsupportedOperation::GetAttr(attr.to_string()),
@@ -150,7 +155,8 @@ impl TypedValue for PythonPackagingPolicyValue {
             "include_non_distribution_sources" => true,
             "include_test" => true,
             "preferred_extension_module_variants" => true,
-            "resources_policy" => true,
+            "resources_location" => true,
+            "resources_location_fallback" => true,
             _ => false,
         })
     }
@@ -192,17 +198,45 @@ impl TypedValue for PythonPackagingPolicyValue {
             "include_test" => {
                 self.inner.set_include_test(value.to_bool());
             }
-            "resources_policy" => {
-                let policy =
-                    PythonResourcesPolicy::try_from(value.to_string().as_str()).map_err(|e| {
-                        ValueError::from(RuntimeError {
-                            code: "PYOXIDIZER_BUILD",
-                            message: e.to_string(),
-                            label: format!("{}.{} = {}", Self::TYPE, attribute, value.to_string()),
-                        })
-                    })?;
-
-                self.inner.set_resources_policy(policy);
+            "resources_location" => {
+                self.inner.set_resources_location(
+                    ConcreteResourceLocation::try_from(value.to_string().as_str()).map_err(
+                        |e| {
+                            ValueError::from(RuntimeError {
+                                code: "PYOXIDIZER_BUILD",
+                                message: e,
+                                label: format!(
+                                    "{}.{} = {}",
+                                    Self::TYPE,
+                                    attribute,
+                                    value.to_string()
+                                ),
+                            })
+                        },
+                    )?,
+                );
+            }
+            "resources_location_fallback" => {
+                if value.get_type() == "NoneType" {
+                    self.inner.set_resources_location_fallback(None);
+                } else {
+                    self.inner.set_resources_location_fallback(Some(
+                        ConcreteResourceLocation::try_from(value.to_string().as_str()).map_err(
+                            |e| {
+                                ValueError::from(RuntimeError {
+                                    code: "PYOXIDIZER_BUILD",
+                                    message: e,
+                                    label: format!(
+                                        "{}.{} = {}",
+                                        Self::TYPE,
+                                        attribute,
+                                        value.to_string()
+                                    ),
+                                })
+                            },
+                        )?,
+                    ));
+                }
             }
             attr => {
                 return Err(ValueError::OperationNotSupported {
@@ -356,12 +390,25 @@ mod tests {
         let value = env.eval("policy.include_test = True; policy.include_test")?;
         assert!(value.to_bool());
 
-        let value = env.eval("policy.resources_policy")?;
+        let value = env.eval("policy.resources_location")?;
         assert_eq!(value.get_type(), "string");
-        assert_eq!(
-            &PythonResourcesPolicy::try_from(value.to_string().as_str()).unwrap(),
-            policy.resources_policy()
-        );
+        assert_eq!(value.to_string(), "in-memory");
+
+        let value = env.eval(
+            "policy.resources_location = 'filesystem-relative:lib'; policy.resources_location",
+        )?;
+        assert_eq!(value.to_string(), "filesystem-relative:lib");
+
+        let value = env.eval("policy.resources_location_fallback")?;
+        assert_eq!(value.get_type(), "NoneType");
+
+        let value = env.eval("policy.resources_location_fallback = 'filesystem-relative:lib'; policy.resources_location_fallback")?;
+        assert_eq!(value.to_string(), "filesystem-relative:lib");
+
+        let value = env.eval(
+            "policy.resources_location_fallback = None; policy.resources_location_fallback",
+        )?;
+        assert_eq!(value.get_type(), "NoneType");
 
         // bytecode_optimize_level_zero
         let value = env.eval("policy.bytecode_optimize_level_zero")?;

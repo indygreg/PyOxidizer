@@ -47,24 +47,24 @@ def make_exe(dist):
     # Toggle whether files associated with tests are included.
     # policy.include_test = False
 
-    # Python resources are to be loaded from memory only.
-    # policy.resources_policy = "in-memory-only"
+    # Resources are loaded from "in-memory" or "filesystem-relative" paths.
+    # The locations to attempt to add resources to are defined by the
+    # `resources_location` and `resources_location_fallback` attributes.
+    # The former is the first/primary location to try and the latter is
+    # an optional fallback.
 
-    # Python resources are to be loaded from the filesystem, from a
-    # directory relative to the produced binary. (The directory name
-    # follows the colon. Use "." to denote the same directory as the
-    # binary.) In order to import Python modules from the filesystem,
-    # you will need to define `sys_paths` on the `PythonInterpreterConfig`
-    # instance so the Python interpreter is configured to locate resources
-    # in said path.
-    # policy.resources_policy = "filesystem-relative-only:<prefix>"
+    # Use in-memory location for adding resources by default.
+    # policy.resources_location = "in-memory"
 
-    # Python resources are loaded from memory if memory loading is supported
-    # and from the filesystem if they are not. This is a hybrid of
-    # `in-memory-only` and `filesystem-relative-only:<prefix>`. See the
-    # "Managing Resources and Their Locations" packaging documentation for
-    # more on behavior.
-    # policy.resources_policy = "prefer-in-memory-fallback-filesystem-relative:<prefix>"
+    # Use filesystem-relative location for adding resources by default.
+    # policy.resources_location = "filesystem-relative:prefix"
+
+    # Attempt to add resources relative to the built binary when
+    # `resources_location` fails.
+    # policy.resources_location_fallback = "filesystem-relative:prefix"
+
+    # Clear out a fallback resource location.
+    # policy.resources_location_fallback = None
 
     # Define a preferred Python extension module variant in the Python distribution
     # to use.
@@ -132,14 +132,15 @@ def make_exe(dist):
     # Invoke `pip download` to install a single package using wheel archives
     # obtained via `pip download`. `pip_download()` returns objects representing
     # collected files inside Python wheels. `add_python_resources()` adds these
-    # objects to the binary, with a load location as defined by the current
-    # `resources_policy`.
+    # objects to the binary, with a load location as defined by the packaging
+    # policy's resource location attributes.
     #exe.add_python_resources(exe.pip_download(["pyflakes==2.2.0"]))
 
     # Invoke `pip install` with our Python distribution to install a single package.
     # `pip_install()` returns objects representing installed files.
     # `add_python_resources()` adds these objects to the binary, with a load
-    # location as defined by the current `resources_policy`.
+    # location as defined by the packaging policy's resource location
+    # attributes.
     #exe.add_python_resources(exe.pip_install(["appdirs"]))
 
     # Invoke `pip install` using a requirements file and add the collected resources

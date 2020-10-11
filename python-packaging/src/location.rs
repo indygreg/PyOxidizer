@@ -4,6 +4,8 @@
 
 /*! Functionality related to resource locations. */
 
+use std::convert::TryFrom;
+
 /// Describes the location of a Python resource.
 ///
 /// The location is abstract because a concrete location (such as the
@@ -43,13 +45,63 @@ impl From<&ConcreteResourceLocation> for AbstractResourceLocation {
     }
 }
 
-impl Into<String> for ConcreteResourceLocation {
-    fn into(self) -> String {
+impl ToString for ConcreteResourceLocation {
+    fn to_string(&self) -> String {
         match self {
             ConcreteResourceLocation::InMemory => "in-memory".to_string(),
             ConcreteResourceLocation::RelativePath(prefix) => {
                 format!("filesystem-relative:{}", prefix)
             }
         }
+    }
+}
+
+impl Into<String> for ConcreteResourceLocation {
+    fn into(self) -> String {
+        self.to_string()
+    }
+}
+
+impl TryFrom<&str> for ConcreteResourceLocation {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        if value == "in-memory" {
+            Ok(Self::InMemory)
+        } else {
+            let parts = value.splitn(2, ":").collect::<Vec<_>>();
+
+            if parts.len() != 2 {
+                Err(format!("{} is not a valid resource location", value))
+            } else {
+                let prefix = parts[0];
+                let suffix = parts[1];
+
+                if prefix == "filesystem-relative" {
+                    Ok(Self::RelativePath(suffix.to_string()))
+                } else {
+                    Err(format!("{} is not a valid resource location", value))
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, anyhow::Result};
+
+    #[test]
+    fn test_concrete_from_string() -> Result<()> {
+        assert_eq!(
+            ConcreteResourceLocation::try_from("in-memory"),
+            Ok(ConcreteResourceLocation::InMemory)
+        );
+        assert_eq!(
+            ConcreteResourceLocation::try_from("filesystem-relative:lib"),
+            Ok(ConcreteResourceLocation::RelativePath("lib".to_string()))
+        );
+
+        Ok(())
     }
 }

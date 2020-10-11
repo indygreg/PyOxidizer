@@ -159,6 +159,8 @@ Backwards Compatibility Notes
   now emits a ``pyembed::OxidizedPythonInterpreterConfig`` instance instead
   of ``pyembed::PythonConfig``. The new type is more powerful and what is
   actually used to initialize an embedded Python interpreter.
+* The concept of a *resources policy* in Starlark has now largely been
+  replaced by attributes denoting valid locations for resources.
 
 New Features
 ^^^^^^^^^^^^
@@ -293,7 +295,7 @@ Other Relevant Changes
   Starlark packaging methods.
 * The modified ``distutils`` files used when building statically linked
   extensions have been upgraded to those based on Python 3.8.3.
-* The default ``pyoxidizer.bzl`` now has comments for the ``resources_policy``
+* The default ``pyoxidizer.bzl`` now has comments for the ``packaging_policy``
   argument to ``PythonDistribution.to_python_executable()``.
 * The default ``pyoxidizer.bzl`` now uses ``add_python_resources()`` instead
   of ``add_in_memory_python_resources()``.
@@ -327,7 +329,7 @@ Backwards Compatibility Notes
 * Resolved Python resource names have changed behavior. See the note in the
   bug fixes section below.
 * The ``PythonDistribution.to_python_executable()`` Starlark method has added
-  a ``resources_policy`` named argument as its 2nd argument / 1st named
+  a ``packaging_policy`` named argument as its 2nd argument / 1st named
   argument. If you were affected by this, you should add argument names to all
   arguments passed to this method.
 * The default Rust project for built executables now builds executables such
@@ -385,7 +387,7 @@ New Features
 * The custom Python importer now implements ``get_data(path)``, allowing loading
   of resources from filesystem paths (#139).
 * The ``PythonDistribution.to_python_executable()`` Starlark method now accepts
-  a ``resources_policy`` argument to control a policy and default behavior for
+  a ``packaging_policy`` argument to control a policy and default behavior for
   resources on the produced executable. Using this argument, it is possible
   to control how resources should be materialized. For example, you can specify
   that resources should be loaded from memory if supported and from the filesystem

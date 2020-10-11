@@ -137,8 +137,11 @@ pub struct PythonPackagingPolicy {
     /// Preferred variants of extension modules.
     preferred_extension_module_variants: HashMap<String, String>,
 
-    /// Where resources should be packaged by default.
-    resources_policy: PythonResourcesPolicy,
+    /// Where resources should be placed/loaded from by default.
+    resources_location: ConcreteResourceLocation,
+
+    /// Optional fallback location for resources should `resources_location` fail.
+    resources_location_fallback: Option<ConcreteResourceLocation>,
 
     /// Whether to include source module from the Python distribution.
     include_distribution_sources: bool,
@@ -173,7 +176,8 @@ impl Default for PythonPackagingPolicy {
         PythonPackagingPolicy {
             extension_module_filter: ExtensionModuleFilter::All,
             preferred_extension_module_variants: HashMap::new(),
-            resources_policy: PythonResourcesPolicy::InMemoryOnly,
+            resources_location: ConcreteResourceLocation::InMemory,
+            resources_location_fallback: None,
             include_distribution_sources: true,
             include_non_distribution_sources: true,
             include_distribution_resources: false,
@@ -213,14 +217,24 @@ impl PythonPackagingPolicy {
             .insert(extension.to_string(), variant.to_string());
     }
 
-    /// Obtain the active resources policy for this instance.
-    pub fn resources_policy(&self) -> &PythonResourcesPolicy {
-        &self.resources_policy
+    /// Obtain the primary location for added resources.
+    pub fn resources_location(&self) -> &ConcreteResourceLocation {
+        &self.resources_location
     }
 
-    /// Set the resource loading policy.
-    pub fn set_resources_policy(&mut self, policy: PythonResourcesPolicy) {
-        self.resources_policy = policy;
+    /// Set the primary location for added resources.
+    pub fn set_resources_location(&mut self, location: ConcreteResourceLocation) {
+        self.resources_location = location;
+    }
+
+    /// Obtain the fallback location for added resources.
+    pub fn resources_location_fallback(&self) -> &Option<ConcreteResourceLocation> {
+        &self.resources_location_fallback
+    }
+
+    /// Set the fallback location for added resources.
+    pub fn set_resources_location_fallback(&mut self, location: Option<ConcreteResourceLocation>) {
+        self.resources_location_fallback = location;
     }
 
     /// Get setting for whether to include source modules from the distribution.
@@ -327,16 +341,8 @@ impl PythonPackagingPolicy {
             _ => false,
         };
 
-        let (location, location_fallback) = match self.resources_policy {
-            PythonResourcesPolicy::InMemoryOnly => (ConcreteResourceLocation::InMemory, None),
-            PythonResourcesPolicy::FilesystemRelativeOnly(ref prefix) => {
-                (ConcreteResourceLocation::RelativePath(prefix.clone()), None)
-            }
-            PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(ref prefix) => (
-                ConcreteResourceLocation::InMemory,
-                Some(ConcreteResourceLocation::RelativePath(prefix.clone())),
-            ),
-        };
+        let location = self.resources_location.clone();
+        let location_fallback = self.resources_location_fallback.clone();
 
         PythonResourceAddCollectionContext {
             include,

@@ -161,38 +161,25 @@ policies.
 Customizing Default Resource Locations
 --------------------------------------
 
-The ``PythonPackagingPolicy.resources_policy`` attribute defines a
-string which defines the default values for the ``add_location``
-and ``add_location_fallback`` attributes.
+The ``PythonPackagingPolicy.resources_location`` and
+``PythonPackagingPolicy.resources_location_fallback`` attributes define
+primary and fallback locations that resources should attempt to be added
+to. These effectively define the default values for the ``add_location``
+and ``add_location_fallback`` attributes on individual resource objects.
 
-Here are how values map to different ``add_*`` attributes:
+The accepted values are:
 
-``resources_policy = "in-memory-only"``
-   ``add_location = "in-memory"`` and ``add_location_fallback = None``.
+``in-memory``
+   Load resources from memory.
 
-   Only adding and loading resources from memory is supported. This
-   setting can produce single file executables.
+``filesystem-relative:prefix``
+   Load resources from the filesystem at a path relative to some entity
+   (probably the binary being built).
 
-``resources_policy = "filesystem-relative-only:<prefix>"``
-   ``add_location = "filesystem-relative:<prefix>"`` and
-   ``add_location_fallback = None``.
+Additionally, ``PythonPackagingPolicy.resources_location_fallback`` can be
+set to ``None`` to remove a fallback location.
 
-   Only adding and loading resources from the filesystem is supported.
-   As a special case, Python extension modules may be linked as built-in
-   extensions as part of the built ``libpython``.
-
-   The ``<prefix>`` component of the value denotes the directory prefix
-   that resources should be materialized at, relative to the built entity.
-   The special value ``.`` denotes the same directory as the built entity.
-
-``resources_policy = "prefer-in-memory-fallback-filesystem-realtive:<prefix>``
-   ``add_location = "in-memory"`` and
-   ``add_location_fallback = "filesystem-relative:<prefix>"``
-
-   An attempt is made to add and load a resource from memory. If that isn't
-   supported, the resource will be materialized on the filesystem.
-
-And here is how you would set this value in Starlark:
+And here is how you would manage these values in Starlark:
 
 .. code-block:: python
 
@@ -200,7 +187,8 @@ And here is how you would set this value in Starlark:
        dist = default_python_distribution()
 
        policy = dist.make_python_packaging_policy()
-       policy.resources_policy = "in-memory-only"
+       policy.resources_location = "in-memory"
+       policy.resources_location_fallback = None
 
        # Only allow resources to be added to the in-memory location.
        exe = dist.to_python_executable(
@@ -212,7 +200,8 @@ And here is how you would set this value in Starlark:
        # a "lib" directory.
 
        policy = dist.make_python_packaging_policy()
-       policy.resources_policy = "filesystem-relative-only:lib"
+       policy.resources_location = "filesystem-relative:lib"
+       policy.resources_location_fallback = None
 
        exe = dist.to_python_executable(
            name = "myapp",
@@ -223,7 +212,8 @@ And here is how you would set this value in Starlark:
        # "lib" directory relative to the built executable.
 
        policy = dist.make_python_packaging_policy()
-       policy.resources_policy = "prefer-in-memory-fallback-filesystem-relative:lib"
+       policy.resources_location = "in-memory"
+       policy.resources_location_fallback = "filesystem-relative:lib"
 
        exe = dist.to_python_executable(
            name = "myapp",

@@ -17,7 +17,7 @@ use {
         ToPyObject,
     },
     python_packaging::bytecode::BytecodeCompiler,
-    python_packaging::location::{AbstractResourceLocation, ConcreteResourceLocation},
+    python_packaging::location::ConcreteResourceLocation,
     python_packaging::policy::PythonResourcesPolicy,
     python_packaging::resource_collection::{CompiledResourcesCollection, PythonResourceCollector},
     std::cell::RefCell,
@@ -63,13 +63,9 @@ impl OxidizedResourceCollector {
             .getattr(py, "cache_tag")?
             .extract::<String>(py)?;
 
-        // TODO allow controlling extension modules policy.
         let collector = PythonResourceCollector::new(
-            &policy,
-            vec![
-                AbstractResourceLocation::InMemory,
-                AbstractResourceLocation::RelativePath,
-            ],
+            policy.allowed_locations(),
+            policy.allowed_locations(),
             true,
             &cache_tag,
         );

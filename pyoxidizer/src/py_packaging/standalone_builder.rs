@@ -161,6 +161,13 @@ impl StandalonePythonExecutableBuilder {
         let supports_in_memory_dynamically_linked_extension_loading =
             target_distribution.supports_in_memory_dynamically_linked_extension_loading();
 
+        let mut allowed_locations = vec![AbstractResourceLocation::from(
+            packaging_policy.resources_location(),
+        )];
+        if let Some(fallback) = packaging_policy.resources_location_fallback() {
+            allowed_locations.push(AbstractResourceLocation::from(fallback));
+        }
+
         let mut allowed_extension_module_locations = vec![];
 
         if supports_in_memory_dynamically_linked_extension_loading {
@@ -183,7 +190,7 @@ impl StandalonePythonExecutableBuilder {
             supports_in_memory_dynamically_linked_extension_loading,
             packaging_policy: packaging_policy.clone(),
             resources_collector: PythonResourceCollector::new(
-                packaging_policy.resources_policy(),
+                allowed_locations,
                 allowed_extension_module_locations,
                 allow_new_builtin_extension_modules,
                 &cache_tag,
@@ -693,10 +700,7 @@ pub mod tests {
         crate::python_distributions::PYTHON_DISTRIBUTIONS,
         crate::testutil::*,
         lazy_static::lazy_static,
-        python_packaging::{
-            location::ConcreteResourceLocation,
-            policy::{ExtensionModuleFilter, PythonResourcesPolicy},
-        },
+        python_packaging::{location::ConcreteResourceLocation, policy::ExtensionModuleFilter},
         std::collections::BTreeSet,
         std::iter::FromIterator,
         std::ops::DerefMut,
@@ -772,7 +776,8 @@ pub mod tests {
         pub app_name: String,
         pub libpython_link_mode: BinaryLibpythonLinkMode,
         pub extension_module_filter: ExtensionModuleFilter,
-        pub resources_policy: PythonResourcesPolicy,
+        pub resources_location: ConcreteResourceLocation,
+        pub resources_location_fallback: Option<ConcreteResourceLocation>,
     }
 
     impl Default for StandalonePythonExecutableBuilderOptions {
@@ -787,7 +792,8 @@ pub mod tests {
                 app_name: "testapp".to_string(),
                 libpython_link_mode: BinaryLibpythonLinkMode::Default,
                 extension_module_filter: default_policy.extension_module_filter().clone(),
-                resources_policy: default_policy.resources_policy().clone(),
+                resources_location: default_policy.resources_location().clone(),
+                resources_location_fallback: default_policy.resources_location_fallback().clone(),
             }
         }
     }
@@ -815,7 +821,8 @@ pub mod tests {
 
             let mut policy = PythonPackagingPolicy::default();
             policy.set_extension_module_filter(self.extension_module_filter.clone());
-            policy.set_resources_policy(self.resources_policy.clone());
+            policy.set_resources_location(self.resources_location.clone());
+            policy.set_resources_location_fallback(self.resources_location_fallback.clone());
 
             let config = EmbeddedPythonConfig::default();
 
@@ -1082,7 +1089,8 @@ pub mod tests {
                 target_triple: "x86_64-unknown-linux-gnu".to_string(),
                 extension_module_filter: ExtensionModuleFilter::Minimal,
                 libpython_link_mode: libpython_link_mode.clone(),
-                resources_policy: PythonResourcesPolicy::InMemoryOnly,
+                resources_location: ConcreteResourceLocation::InMemory,
+                resources_location_fallback: None,
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
@@ -1147,9 +1155,10 @@ pub mod tests {
                 target_triple: "x86_64-unknown-linux-gnu".to_string(),
                 extension_module_filter: ExtensionModuleFilter::Minimal,
                 libpython_link_mode: libpython_link_mode.clone(),
-                resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
+                resources_location: ConcreteResourceLocation::InMemory,
+                resources_location_fallback: Some(ConcreteResourceLocation::RelativePath(
                     "prefix_policy".to_string(),
-                ),
+                )),
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
@@ -1217,9 +1226,10 @@ pub mod tests {
                 target_triple: "x86_64-unknown-linux-gnu".to_string(),
                 extension_module_filter: ExtensionModuleFilter::Minimal,
                 libpython_link_mode,
-                resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly(
+                resources_location: ConcreteResourceLocation::RelativePath(
                     "prefix_policy".to_string(),
                 ),
+                resources_location_fallback: None,
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
@@ -1289,9 +1299,10 @@ pub mod tests {
                 target_triple: "x86_64-unknown-linux-gnu".to_string(),
                 extension_module_filter: ExtensionModuleFilter::Minimal,
                 libpython_link_mode: libpython_link_mode.clone(),
-                resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly(
+                resources_location: ConcreteResourceLocation::RelativePath(
                     "prefix_policy".to_string(),
                 ),
+                resources_location_fallback: None,
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
@@ -1444,9 +1455,8 @@ pub mod tests {
             target_triple: "x86_64-unknown-linux-musl".to_string(),
             extension_module_filter: ExtensionModuleFilter::Minimal,
             libpython_link_mode: BinaryLibpythonLinkMode::Static,
-            resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly(
-                "prefix_policy".to_string(),
-            ),
+            resources_location: ConcreteResourceLocation::RelativePath("prefix_policy".to_string()),
+            resources_location_fallback: None,
             ..StandalonePythonExecutableBuilderOptions::default()
         };
 
@@ -1511,7 +1521,8 @@ pub mod tests {
             target_triple: "x86_64-unknown-linux-musl".to_string(),
             extension_module_filter: ExtensionModuleFilter::Minimal,
             libpython_link_mode: BinaryLibpythonLinkMode::Static,
-            resources_policy: PythonResourcesPolicy::InMemoryOnly,
+            resources_location: ConcreteResourceLocation::InMemory,
+            resources_location_fallback: None,
             ..StandalonePythonExecutableBuilderOptions::default()
         };
 
@@ -1540,9 +1551,10 @@ pub mod tests {
             target_triple: "x86_64-unknown-linux-musl".to_string(),
             extension_module_filter: ExtensionModuleFilter::Minimal,
             libpython_link_mode: BinaryLibpythonLinkMode::Static,
-            resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
+            resources_location: ConcreteResourceLocation::InMemory,
+            resources_location_fallback: Some(ConcreteResourceLocation::RelativePath(
                 "prefix_policy".to_string(),
-            ),
+            )),
             ..StandalonePythonExecutableBuilderOptions::default()
         };
 
@@ -1674,9 +1686,10 @@ pub mod tests {
                 target_triple: "x86_64-apple-darwin".to_string(),
                 extension_module_filter: ExtensionModuleFilter::Minimal,
                 libpython_link_mode,
-                resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly(
+                resources_location: ConcreteResourceLocation::RelativePath(
                     "prefix_policy".to_string(),
                 ),
+                resources_location_fallback: None,
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
@@ -1748,7 +1761,8 @@ pub mod tests {
                 target_triple: "x86_64-apple-darwin".to_string(),
                 extension_module_filter: ExtensionModuleFilter::Minimal,
                 libpython_link_mode: libpython_link_mode.clone(),
-                resources_policy: PythonResourcesPolicy::InMemoryOnly,
+                resources_location: ConcreteResourceLocation::InMemory,
+                resources_location_fallback: None,
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
@@ -1813,9 +1827,10 @@ pub mod tests {
                 target_triple: "x86_64-apple-darwin".to_string(),
                 extension_module_filter: ExtensionModuleFilter::Minimal,
                 libpython_link_mode: libpython_link_mode.clone(),
-                resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly(
+                resources_location: ConcreteResourceLocation::RelativePath(
                     "prefix_policy".to_string(),
                 ),
+                resources_location_fallback: None,
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
@@ -1868,9 +1883,10 @@ pub mod tests {
                 target_triple: "x86_64-apple-darwin".to_string(),
                 extension_module_filter: ExtensionModuleFilter::Minimal,
                 libpython_link_mode: libpython_link_mode.clone(),
-                resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
+                resources_location: ConcreteResourceLocation::InMemory,
+                resources_location_fallback: Some(ConcreteResourceLocation::RelativePath(
                     "prefix_policy".to_string(),
-                ),
+                )),
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
@@ -2163,7 +2179,8 @@ pub mod tests {
             let options = StandalonePythonExecutableBuilderOptions {
                 target_triple: target.to_string(),
                 extension_module_filter: ExtensionModuleFilter::Minimal,
-                resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly("lib".to_string()),
+                resources_location: ConcreteResourceLocation::RelativePath("lib".to_string()),
+                resources_location_fallback: None,
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
@@ -2326,7 +2343,8 @@ pub mod tests {
                 distribution_flavor: DistributionFlavor::StandaloneDynamic,
                 extension_module_filter: ExtensionModuleFilter::Minimal,
                 libpython_link_mode: BinaryLibpythonLinkMode::Dynamic,
-                resources_policy: PythonResourcesPolicy::InMemoryOnly,
+                resources_location: ConcreteResourceLocation::InMemory,
+                resources_location_fallback: None,
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
@@ -2369,7 +2387,8 @@ pub mod tests {
                 distribution_flavor: DistributionFlavor::StandaloneStatic,
                 extension_module_filter: ExtensionModuleFilter::Minimal,
                 libpython_link_mode: BinaryLibpythonLinkMode::Static,
-                resources_policy: PythonResourcesPolicy::InMemoryOnly,
+                resources_location: ConcreteResourceLocation::InMemory,
+                resources_location_fallback: None,
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
@@ -2404,9 +2423,10 @@ pub mod tests {
                 distribution_flavor: DistributionFlavor::StandaloneDynamic,
                 extension_module_filter: ExtensionModuleFilter::Minimal,
                 libpython_link_mode: BinaryLibpythonLinkMode::Dynamic,
-                resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly(
+                resources_location: ConcreteResourceLocation::RelativePath(
                     "prefix_policy".to_string(),
                 ),
+                resources_location_fallback: None,
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
@@ -2446,9 +2466,10 @@ pub mod tests {
                 distribution_flavor: DistributionFlavor::StandaloneStatic,
                 extension_module_filter: ExtensionModuleFilter::Minimal,
                 libpython_link_mode: BinaryLibpythonLinkMode::Static,
-                resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly(
+                resources_location: ConcreteResourceLocation::RelativePath(
                     "prefix_policy".to_string(),
                 ),
+                resources_location_fallback: None,
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
@@ -2482,9 +2503,10 @@ pub mod tests {
                 distribution_flavor: DistributionFlavor::StandaloneDynamic,
                 extension_module_filter: ExtensionModuleFilter::Minimal,
                 libpython_link_mode: BinaryLibpythonLinkMode::Dynamic,
-                resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
+                resources_location: ConcreteResourceLocation::InMemory,
+                resources_location_fallback: Some(ConcreteResourceLocation::RelativePath(
                     "prefix_policy".to_string(),
-                ),
+                )),
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
@@ -2528,9 +2550,10 @@ pub mod tests {
                 distribution_flavor: DistributionFlavor::StandaloneStatic,
                 extension_module_filter: ExtensionModuleFilter::Minimal,
                 libpython_link_mode: BinaryLibpythonLinkMode::Static,
-                resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
+                resources_location: ConcreteResourceLocation::InMemory,
+                resources_location_fallback: Some(ConcreteResourceLocation::RelativePath(
                     "prefix_policy".to_string(),
-                ),
+                )),
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 

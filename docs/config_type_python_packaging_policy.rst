@@ -128,20 +128,25 @@ This is a best effort setting.
 
 Default is ``False``.
 
-.. _config_type_python_packaging_policy_resources_policy:
+.. _config_type_python_packaging_policy_resources_location:
 
-``resources_policy``
---------------------
+``resources_location``
+----------------------
 
 (``string``)
 
-The policy to apply when adding resources to the produced
-instance.
+The location that resources should be added to by default.
 
-See :ref:`config_python_resources_policy` for documentation on allowed
-values.
+Default is ``in-memory``.
 
-Default is ``in-memory-only``.
+.. _config_type_python_packaging_policy_resources_location_fallback:
+
+(``string`` or ``None``)
+
+The fallback location that resources should be added to if
+``resources_location`` fails.
+
+Default is ``None``.
 
 .. _config_type_python_packaging_policy_preferred_extension_module_variants:
 
