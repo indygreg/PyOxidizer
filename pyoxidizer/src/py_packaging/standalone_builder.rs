@@ -159,7 +159,7 @@ impl StandalonePythonExecutableBuilder {
         };
 
         let supports_in_memory_dynamically_linked_extension_loading =
-            target_distribution.supports_in_memory_dynamically_linked_extension_loading();
+            target_distribution.supports_in_memory_shared_library_loading();
 
         let mut allowed_locations = vec![AbstractResourceLocation::from(
             packaging_policy.resources_location(),
@@ -780,6 +780,7 @@ pub mod tests {
         pub extension_module_filter: Option<ExtensionModuleFilter>,
         pub resources_location: Option<ConcreteResourceLocation>,
         pub resources_location_fallback: Option<Option<ConcreteResourceLocation>>,
+        pub allow_in_memory_shared_library_loading: Option<bool>,
     }
 
     impl Default for StandalonePythonExecutableBuilderOptions {
@@ -793,6 +794,7 @@ pub mod tests {
                 extension_module_filter: None,
                 resources_location: None,
                 resources_location_fallback: None,
+                allow_in_memory_shared_library_loading: None,
             }
         }
     }
@@ -827,6 +829,9 @@ pub mod tests {
             }
             if let Some(location) = &self.resources_location_fallback {
                 policy.set_resources_location_fallback(location.clone());
+            }
+            if let Some(value) = &self.allow_in_memory_shared_library_loading {
+                policy.set_allow_in_memory_shared_library_loading(*value);
             }
 
             let config = EmbeddedPythonConfig::default();
@@ -2075,8 +2080,8 @@ pub mod tests {
             for (name, variants) in builder.target_distribution.extension_modules.iter() {
                 if variants.iter().all(|e| !e.builtin_default) {
                     assert!(!builtin_names.contains(&name));
-                    assert!(!relative_path_extension_names.contains(&name));
-                    assert!(in_memory_extension_names.contains(&name));
+                    assert!(relative_path_extension_names.contains(&name));
+                    assert!(!in_memory_extension_names.contains(&name));
                 }
             }
         }
@@ -2188,9 +2193,10 @@ pub mod tests {
                 Some(&PrePackagedResource {
                     name: "_sqlite3".to_string(),
                     is_extension_module: true,
-                    in_memory_extension_module_shared_library: Some(
+                    relative_path_extension_module_shared_library: Some((
+                        PathBuf::from("lib/_sqlite3.pyd"),
                         sqlite.shared_library.as_ref().unwrap().to_memory()?
-                    ),
+                    )),
                     shared_library_dependency_names: Some(vec!["sqlite3".to_string()]),
                     ..PrePackagedResource::default()
                 })
@@ -2201,7 +2207,7 @@ pub mod tests {
                 .find_map(|(name, r)| if *name == "sqlite3" { Some(r) } else { None })
                 .unwrap();
             assert!(library.is_shared_library);
-            assert!(library.in_memory_shared_library.is_some());
+            assert!(library.relative_path_shared_library.is_some());
         }
 
         Ok(())
@@ -2379,6 +2385,7 @@ pub mod tests {
                 libpython_link_mode: BinaryLibpythonLinkMode::Dynamic,
                 resources_location: Some(ConcreteResourceLocation::InMemory),
                 resources_location_fallback: Some(None),
+                allow_in_memory_shared_library_loading: Some(true),
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 
@@ -2541,6 +2548,7 @@ pub mod tests {
                 resources_location_fallback: Some(Some(ConcreteResourceLocation::RelativePath(
                     "prefix_policy".to_string(),
                 ))),
+                allow_in_memory_shared_library_loading: Some(true),
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
 

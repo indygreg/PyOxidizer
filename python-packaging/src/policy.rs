@@ -110,7 +110,7 @@ impl Default for PythonPackagingPolicy {
             preferred_extension_module_variants: HashMap::new(),
             resources_location: ConcreteResourceLocation::InMemory,
             resources_location_fallback: None,
-            allow_in_memory_shared_library_loading: true,
+            allow_in_memory_shared_library_loading: false,
             include_distribution_sources: true,
             include_non_distribution_sources: true,
             include_distribution_resources: false,

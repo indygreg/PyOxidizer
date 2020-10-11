@@ -213,6 +213,12 @@ pub trait PythonDistribution {
         dest_dir: &Path,
         extra_python_paths: &[&Path],
     ) -> Result<HashMap<String, String>>;
+
+    /// Whether this distribution supports loading shared libraries from memory.
+    ///
+    /// This effectively answers whether we can embed a shared library into an
+    /// executable and load it without having to materialize it on a filesystem.
+    fn supports_in_memory_shared_library_loading(&self) -> bool;
 }
 
 /// Multiple threads or processes could race to extract the archive.

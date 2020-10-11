@@ -168,6 +168,15 @@ Backwards Compatibility Notes
   ``PythonDistribution.make_python_interpreter_config()``. In addition,
   instances are mutated by setting attributes rather than passing
   perhaps dozens of arguments to a constructor function.
+* The default build configuration for Windows no longer forces
+  extension modules to be loaded from memory and materializes some
+  extension modules as standalone files. This was done because some
+  some extension modules weren't working when loaded from memory and the
+  configuration caused lots of problems in the wild. The new default should
+  be much more user friendly. To use the old settings, construct a custom
+  ``PythonPackagingPolicy`` and set
+  ``allow_in_memory_shared_library_loading = True`` and
+  ``resources_location_fallback = None``.
 
 New Features
 ^^^^^^^^^^^^

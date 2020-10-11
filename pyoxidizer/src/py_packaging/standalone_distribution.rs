@@ -27,6 +27,7 @@ use {
         interpreter::{
             PythonInterpreterConfig, PythonInterpreterProfile, PythonRunMode, TerminfoResolution,
         },
+        location::ConcreteResourceLocation,
         module_util::{is_package_from_path, PythonModuleSuffixes},
         policy::PythonPackagingPolicy,
         resource::{
@@ -940,18 +941,6 @@ impl StandaloneDistribution {
         }
     }
 
-    /// Determines whether dynamically linked extension modules can be loaded from memory.
-    pub fn supports_in_memory_dynamically_linked_extension_loading(&self) -> bool {
-        // Loading from memory is only supported on Windows where symbols are
-        // declspec(dllexport) and the distribution is capable of loading
-        // shared library extensions.
-        self.target_triple.contains("pc-windows")
-            && self.python_symbol_visibility == "dllexport"
-            && self
-                .extension_module_loading
-                .contains(&"shared-library".to_string())
-    }
-
     /// Duplicate the python distribution, with distutils hacked
     #[allow(unused)]
     pub fn create_hacked_base(&self, logger: &slog::Logger) -> PythonPaths {
@@ -1167,6 +1156,15 @@ impl PythonDistribution for StandaloneDistribution {
     fn create_packaging_policy(&self) -> Result<PythonPackagingPolicy> {
         let mut policy = PythonPackagingPolicy::default();
 
+        // In-memory shared library loading is brittle. Disable this configuration
+        // even if supported because it leads to pain.
+        if self.supports_in_memory_shared_library_loading() {
+            policy.set_resources_location(ConcreteResourceLocation::InMemory);
+            policy.set_resources_location_fallback(Some(ConcreteResourceLocation::RelativePath(
+                "lib".to_string(),
+            )));
+        }
+
         for triple in LINUX_TARGET_TRIPLES.iter() {
             for ext in BROKEN_EXTENSIONS_LINUX.iter() {
                 policy.register_broken_extension(triple, ext);
@@ -1306,6 +1304,18 @@ impl PythonDistribution for StandaloneDistribution {
             ),
             LibpythonLinkMode::Dynamic => Ok(HashMap::new()),
         }
+    }
+
+    /// Determines whether dynamically linked extension modules can be loaded from memory.
+    fn supports_in_memory_shared_library_loading(&self) -> bool {
+        // Loading from memory is only supported on Windows where symbols are
+        // declspec(dllexport) and the distribution is capable of loading
+        // shared library extensions.
+        self.target_triple.contains("pc-windows")
+            && self.python_symbol_visibility == "dllexport"
+            && self
+                .extension_module_loading
+                .contains(&"shared-library".to_string())
     }
 }
 

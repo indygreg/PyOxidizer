@@ -316,13 +316,9 @@ mod tests {
 
         let dist_value = env.eval("dist")?;
         let dist = dist_value.downcast_ref::<PythonDistribution>().unwrap();
+        let dist_ref = dist.distribution.as_ref().unwrap();
 
-        let policy = dist
-            .distribution
-            .as_ref()
-            .unwrap()
-            .create_packaging_policy()
-            .unwrap();
+        let policy = dist_ref.create_packaging_policy().unwrap();
 
         // Need value to go out of scope to avoid double borrow.
         {
@@ -408,7 +404,12 @@ mod tests {
         assert_eq!(value.to_string(), "filesystem-relative:lib");
 
         let value = env.eval("policy.resources_location_fallback")?;
-        assert_eq!(value.get_type(), "NoneType");
+        if dist_ref.supports_in_memory_shared_library_loading() {
+            assert_eq!(value.get_type(), "string");
+            assert_eq!(value.to_string(), "filesystem-relative:lib");
+        } else {
+            assert_eq!(value.get_type(), "NoneType");
+        }
 
         let value = env.eval("policy.resources_location_fallback = 'filesystem-relative:lib'; policy.resources_location_fallback")?;
         assert_eq!(value.to_string(), "filesystem-relative:lib");
@@ -420,11 +421,11 @@ mod tests {
 
         let value = env.eval("policy.allow_in_memory_shared_library_loading")?;
         assert_eq!(value.get_type(), "bool");
-        assert!(value.to_bool());
-
-        let value = env.eval("policy.allow_in_memory_shared_library_loading = False; policy.allow_in_memory_shared_library_loading")?;
-        assert_eq!(value.get_type(), "bool");
         assert!(!value.to_bool());
+
+        let value = env.eval("policy.allow_in_memory_shared_library_loading = True; policy.allow_in_memory_shared_library_loading")?;
+        assert_eq!(value.get_type(), "bool");
+        assert!(value.to_bool());
 
         // bytecode_optimize_level_zero
         let value = env.eval("policy.bytecode_optimize_level_zero")?;

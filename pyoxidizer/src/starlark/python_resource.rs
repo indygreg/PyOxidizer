@@ -682,6 +682,7 @@ pub fn add_context_for_value(
 
 #[cfg(test)]
 mod tests {
+    use super::super::python_distribution::PythonDistribution;
     use super::super::testutil::*;
     use super::*;
     use anyhow::Result;
@@ -689,6 +690,10 @@ mod tests {
     #[test]
     fn test_source_module_attrs() -> Result<()> {
         let mut env = StarlarkEnvironment::new_with_exe()?;
+
+        let dist_value = env.eval("dist")?;
+        let dist_ref = dist_value.downcast_ref::<PythonDistribution>().unwrap();
+        let dist = dist_ref.distribution.as_ref().unwrap();
 
         let mut m = env.eval("exe.make_python_module_source('foo', 'import bar')")?;
 
@@ -723,9 +728,14 @@ mod tests {
         );
 
         assert!(m.has_attr("add_location_fallback").unwrap());
+
         assert_eq!(
             m.get_attr("add_location_fallback").unwrap().get_type(),
-            "NoneType"
+            if dist.supports_in_memory_shared_library_loading() {
+                "string"
+            } else {
+                "NoneType"
+            }
         );
 
         m.set_attr("add_location_fallback", Value::from("in-memory"))
