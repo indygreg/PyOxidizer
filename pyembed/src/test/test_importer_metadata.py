@@ -37,7 +37,7 @@ class TestImporterMetadata(unittest.TestCase):
             fh.write("Version: 1.0\n")
 
     def _finder_from_td(self):
-        collector = OxidizedResourceCollector(policy="in-memory-only")
+        collector = OxidizedResourceCollector(allowed_locations=["in-memory"])
         for r in find_resources_in_path(self.td):
             collector.add_in_memory(r)
 
@@ -92,7 +92,7 @@ class TestImporterMetadata(unittest.TestCase):
             fh.write("Name: my_package\n")
             fh.write("Version: 1.0\n")
 
-        collector = OxidizedResourceCollector(policy="in-memory-only")
+        collector = OxidizedResourceCollector(allowed_locations=["in-memory"])
         for r in find_resources_in_path(self.td):
             collector.add_in_memory(r)
 

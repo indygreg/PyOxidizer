@@ -43,10 +43,10 @@ of ``OxidizedResource`` for loading into an ``OxidizedFinder`` instance. It
 exists as a convenience, as working with individual ``OxidizedResource``
 instances can be rather cumbersome.
 
-Instances can be constructed by passing a ``policy=<str>`` argument defining
-the resources policy for this collector. The string values are the same
-as recognized by PyOxidizer's config files and are documented at
-:ref:`config_python_resources_policy`.
+Instances can be constructed by passing an ``allowed_locations=<list[str]>``
+argument defining locations that resources can be loaded from. The string
+values are the same as recognized by PyOxidizer's config files and are
+documented at :ref:`packaging_resource_default_resource_location`.
 
 e.g. to create a collector that only marks resources for in-memory loading:
 
@@ -54,7 +54,9 @@ e.g. to create a collector that only marks resources for in-memory loading:
 
    import oxidized_importer
 
-   collector = oxidized_importer.OxidizedResourceCollector(policy="in-memory-only")
+   collector = oxidized_importer.OxidizedResourceCollector(
+       allowed_locations=["in-memory"]
+   )
 
 Instances of ``OxidizedResourceCollector`` have the following properties:
 

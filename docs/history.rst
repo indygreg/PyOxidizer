@@ -161,6 +161,8 @@ Backwards Compatibility Notes
   actually used to initialize an embedded Python interpreter.
 * The concept of a *resources policy* in Starlark has now largely been
   replaced by attributes denoting valid locations for resources.
+* ``oxidized_importer.OxidizedResourceCollector.__init__()`` now
+   accepts an ``allowed_locations`` argument instead of ``policy``.
 
 New Features
 ^^^^^^^^^^^^

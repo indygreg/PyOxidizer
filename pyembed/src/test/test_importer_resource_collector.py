@@ -33,11 +33,11 @@ class TestImporterResourceCollector(unittest.TestCase):
         with self.assertRaises(TypeError):
             OxidizedResourceCollector()
 
-        c = OxidizedResourceCollector(policy="in-memory-only")
+        c = OxidizedResourceCollector(allowed_locations=["in-memory"])
         self.assertEqual(c.allowed_locations, ["in-memory"])
 
     def test_source_module(self):
-        c = OxidizedResourceCollector(policy="in-memory-only")
+        c = OxidizedResourceCollector(allowed_locations=["in-memory"])
 
         source_path = self.td / "foo.py"
 
@@ -58,7 +58,7 @@ class TestImporterResourceCollector(unittest.TestCase):
 
     def test_add_sys_path(self):
         c = OxidizedResourceCollector(
-            policy="prefer-in-memory-fallback-filesystem-relative:prefix"
+            allowed_locations=["in-memory", "filesystem-relative"]
         )
 
         for path in sys.path:
@@ -83,7 +83,7 @@ class TestImporterResourceCollector(unittest.TestCase):
             r.in_memory_bytecode
 
     def test_urllib(self):
-        c = OxidizedResourceCollector(policy="filesystem-relative-only:lib")
+        c = OxidizedResourceCollector(allowed_locations=["filesystem-relative"])
 
         for path in sys.path:
             if os.path.isdir(path):

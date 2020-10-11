@@ -1584,11 +1584,7 @@ impl PythonResourceCollector {
 mod tests {
     use {
         super::*,
-        crate::{
-            policy::PythonResourcesPolicy,
-            resource::{LibraryDependency, PythonPackageDistributionResourceFlavor},
-        },
-        std::convert::TryFrom,
+        crate::resource::{LibraryDependency, PythonPackageDistributionResourceFlavor},
     };
 
     const DEFAULT_CACHE_TAG: &str = "cpython-37";
@@ -1621,30 +1617,6 @@ mod tests {
 
             Ok(res)
         }
-    }
-
-    #[test]
-    fn test_resource_policy_from_str() -> Result<()> {
-        assert_eq!(
-            PythonResourcesPolicy::try_from("in-memory-only")?,
-            PythonResourcesPolicy::InMemoryOnly
-        );
-        assert_eq!(
-            PythonResourcesPolicy::try_from("filesystem-relative-only:lib")?,
-            PythonResourcesPolicy::FilesystemRelativeOnly("lib".to_string())
-        );
-        assert_eq!(
-            PythonResourcesPolicy::try_from("prefer-in-memory-fallback-filesystem-relative:lib")?,
-            PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative("lib".to_string())
-        );
-        assert_eq!(
-            PythonResourcesPolicy::try_from("foo")
-                .unwrap_err()
-                .to_string(),
-            "invalid value for Python Resources Policy: foo"
-        );
-
-        Ok(())
     }
 
     #[test]

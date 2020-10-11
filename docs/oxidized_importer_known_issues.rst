@@ -32,7 +32,7 @@ like this:
    import oxidized_importer
 
    collector = oxidized_importer.OxidizedResourceCollector(
-       policy="prefer-in-memory-fallback-filesystem-relative:"
+       allowed_locations=["in-memory", "filesystem-relative"],
    )
 
    # Redirect extension modules to the filesystem and everything else to

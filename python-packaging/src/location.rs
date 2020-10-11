@@ -27,6 +27,18 @@ impl ToString for &AbstractResourceLocation {
     }
 }
 
+impl TryFrom<&str> for AbstractResourceLocation {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "in-memory" => Ok(Self::InMemory),
+            "filesystem-relative" => Ok(Self::RelativePath),
+            _ => Err(format!("{} is not a valid resource location", value)),
+        }
+    }
+}
+
 /// Describes the concrete location of a Python resource.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ConcreteResourceLocation {
@@ -90,6 +102,20 @@ impl TryFrom<&str> for ConcreteResourceLocation {
 #[cfg(test)]
 mod tests {
     use {super::*, anyhow::Result};
+
+    #[test]
+    fn test_abstract_from_string() -> Result<()> {
+        assert_eq!(
+            AbstractResourceLocation::try_from("in-memory"),
+            Ok(AbstractResourceLocation::InMemory)
+        );
+        assert_eq!(
+            AbstractResourceLocation::try_from("filesystem-relative"),
+            Ok(AbstractResourceLocation::RelativePath)
+        );
+
+        Ok(())
+    }
 
     #[test]
     fn test_concrete_from_string() -> Result<()> {

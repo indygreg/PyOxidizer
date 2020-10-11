@@ -69,7 +69,7 @@ pub trait PythonBinaryBuilder {
     /// Obtain the cache tag to apply to Python bytecode modules.
     fn cache_tag(&self) -> &str;
 
-    /// Obtain the `PythonResourcesPolicy` for the builder.
+    /// Obtain the `PythonPackagingPolicy` for the builder.
     fn python_packaging_policy(&self) -> &PythonPackagingPolicy;
 
     /// Path to Python executable that can be used to derive info at build time.

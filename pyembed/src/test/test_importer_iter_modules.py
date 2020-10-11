@@ -46,7 +46,7 @@ class TestImporterIterModules(unittest.TestCase):
         return package_path
 
     def _finder_from_td(self):
-        collector = OxidizedResourceCollector(policy="in-memory-only")
+        collector = OxidizedResourceCollector(allowed_locations=["in-memory"])
         for r in find_resources_in_path(self.td):
             collector.add_in_memory(r)
 

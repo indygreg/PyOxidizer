@@ -4,6 +4,7 @@
 
 /*! Python functionality for resource collection. */
 
+use python_packaging::location::AbstractResourceLocation;
 use {
     crate::conversion::{path_to_pathlib_path, pyobject_to_pathbuf},
     crate::python_resource_types::{
@@ -18,17 +19,15 @@ use {
     },
     python_packaging::bytecode::BytecodeCompiler,
     python_packaging::location::ConcreteResourceLocation,
-    python_packaging::policy::PythonResourcesPolicy,
     python_packaging::resource_collection::{CompiledResourcesCollection, PythonResourceCollector},
-    std::cell::RefCell,
-    std::convert::TryFrom,
+    std::{cell::RefCell, convert::TryFrom},
 };
 
 py_class!(pub class OxidizedResourceCollector |py| {
     data collector: RefCell<PythonResourceCollector>;
 
-    def __new__(_cls, policy: String) -> PyResult<OxidizedResourceCollector> {
-        OxidizedResourceCollector::new(py, policy)
+    def __new__(_cls, allowed_locations: Vec<String>) -> PyResult<OxidizedResourceCollector> {
+        OxidizedResourceCollector::new(py, allowed_locations)
     }
 
     def __repr__(&self) -> PyResult<String> {
@@ -53,9 +52,12 @@ py_class!(pub class OxidizedResourceCollector |py| {
 });
 
 impl OxidizedResourceCollector {
-    pub fn new(py: Python, policy: String) -> PyResult<Self> {
-        let policy = PythonResourcesPolicy::try_from(policy.as_ref())
-            .map_err(|e| PyErr::new::<ValueError, _>(py, e.to_string()))?;
+    pub fn new(py: Python, allowed_locations: Vec<String>) -> PyResult<Self> {
+        let allowed_locations = allowed_locations
+            .iter()
+            .map(|location| AbstractResourceLocation::try_from(location.as_str()))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| PyErr::new::<ValueError, _>(py, e))?;
 
         let sys_module = py.import("sys")?;
         let cache_tag = sys_module
@@ -64,8 +66,8 @@ impl OxidizedResourceCollector {
             .extract::<String>(py)?;
 
         let collector = PythonResourceCollector::new(
-            policy.allowed_locations(),
-            policy.allowed_locations(),
+            allowed_locations.clone(),
+            allowed_locations,
             true,
             &cache_tag,
         );

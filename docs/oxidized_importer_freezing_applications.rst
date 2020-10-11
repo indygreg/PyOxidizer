@@ -56,7 +56,9 @@ Try something like the following:
    import oxidized_importer
 
    # Create a collector to help with managing resources.
-   collector = oxidized_importer.OxidizedResourceCollector(policy="in-memory-only")
+   collector = oxidized_importer.OxidizedResourceCollector(
+       allowed_locations=["in-memory"]
+   )
 
    # Add all known Python resources by scanning sys.path.
    # Note: this will pull in the Python standard library and
