@@ -42,6 +42,13 @@ fn optional_bool_to_string(value: &Option<bool>) -> String {
     }
 }
 
+fn optional_string_to_string(value: &Option<String>) -> String {
+    match value {
+        Some(value) => format_args!("Some(\"{}\")", value).to_string(),
+        None => "None".to_string(),
+    }
+}
+
 fn optional_pathbuf_to_string(value: &Option<PathBuf>) -> String {
     match value {
         Some(value) => format_args!("Some(PathBuf::from(\"{}\"", value.display()).to_string(),
@@ -134,8 +141,8 @@ impl EmbeddedPythonConfig {
             exec_prefix: {},\n        \
             executable: {},\n        \
             fault_handler: {},\n        \
-            filesystem_encoding: None,\n        \
-            filesystem_errors: None,\n        \
+            filesystem_encoding: {},\n        \
+            filesystem_errors: {},\n        \
             hash_seed: None,\n        \
             home: {},\n        \
             import_time: {},\n        \
@@ -146,16 +153,16 @@ impl EmbeddedPythonConfig {
             malloc_stats: {},\n        \
             module_search_paths: {},\n        \
             optimization_level: {},\n        \
-            python_path_env: None,\n        \
             parser_debug: {},\n        \
             pathconfig_warnings: {},\n        \
             prefix: {},\n        \
             program_name: {},\n        \
             pycache_prefix: {},\n        \
+            python_path_env: {},\n        \
             quiet: {},\n        \
-            run_command: None,\n        \
+            run_command: {},\n        \
             run_filename: {},\n        \
-            run_module: None,\n        \
+            run_module: {},\n        \
             show_alloc_count: {},\n        \
             show_ref_count: {},\n        \
             site_import: {},\n        \
@@ -230,6 +237,8 @@ impl EmbeddedPythonConfig {
             optional_pathbuf_to_string(&self.config.exec_prefix),
             optional_pathbuf_to_string(&self.config.executable),
             optional_bool_to_string(&self.config.fault_handler),
+            optional_string_to_string(&self.config.filesystem_encoding),
+            optional_string_to_string(&self.config.filesystem_errors),
             optional_pathbuf_to_string(&self.config.home),
             optional_bool_to_string(&self.config.import_time),
             optional_bool_to_string(&self.config.inspect),
@@ -264,20 +273,17 @@ impl EmbeddedPythonConfig {
             optional_pathbuf_to_string(&self.config.prefix),
             optional_pathbuf_to_string(&self.config.program_name),
             optional_pathbuf_to_string(&self.config.pycache_prefix),
+            optional_string_to_string(&self.config.python_path_env),
             optional_bool_to_string(&self.config.quiet),
+            optional_string_to_string(&self.config.run_command),
             optional_pathbuf_to_string(&self.config.run_filename),
+            optional_string_to_string(&self.config.run_module),
             optional_bool_to_string(&self.config.show_alloc_count),
             optional_bool_to_string(&self.config.show_ref_count),
             optional_bool_to_string(&self.config.site_import),
             optional_bool_to_string(&self.config.skip_first_source_line),
-            match &self.config.stdio_encoding {
-                Some(value) => format_args!("Some(\"{}\")", value).to_string(),
-                None => "None".to_string(),
-            },
-            match &self.config.stdio_errors {
-                Some(value) => format_args!("Some(\"{}\")", value).to_string(),
-                None => "None".to_owned(),
-            },
+            optional_string_to_string(&self.config.stdio_encoding),
+            optional_string_to_string(&self.config.stdio_errors),
             optional_bool_to_string(&self.config.tracemalloc),
             optional_bool_to_string(&self.config.user_site_directory),
             optional_bool_to_string(&self.config.verbose),

@@ -278,9 +278,6 @@ pub struct PythonInterpreterConfig {
     /// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.malloc_stats.
     pub malloc_stats: Option<bool>,
 
-    /// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.pythonpath_env.
-    pub python_path_env: Option<String>,
-
     /// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.module_search_paths.
     pub module_search_paths: Option<Vec<PathBuf>>,
 
@@ -301,6 +298,9 @@ pub struct PythonInterpreterConfig {
 
     /// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.pycache_prefix.
     pub pycache_prefix: Option<PathBuf>,
+
+    /// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.pythonpath_env.
+    pub python_path_env: Option<String>,
 
     /// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.quiet.
     pub quiet: Option<bool>,
