@@ -170,7 +170,9 @@ impl StandalonePythonExecutableBuilder {
 
         let mut allowed_extension_module_locations = vec![];
 
-        if supports_in_memory_dynamically_linked_extension_loading {
+        if supports_in_memory_dynamically_linked_extension_loading
+            && packaging_policy.allow_in_memory_shared_library_loading()
+        {
             allowed_extension_module_locations.push(AbstractResourceLocation::InMemory);
         }
 

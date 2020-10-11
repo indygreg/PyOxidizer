@@ -66,6 +66,15 @@ pub struct PythonPackagingPolicy {
     /// Optional fallback location for resources should `resources_location` fail.
     resources_location_fallback: Option<ConcreteResourceLocation>,
 
+    /// Whether to allow in-memory shared library loading.
+    ///
+    /// If true, we will attempt to load Python extension modules
+    /// and their shared library dependencies from memory if supported.
+    ///
+    /// This feature is not supported on all platforms and this setting
+    /// can get overrules by platform-specific capabilities.
+    allow_in_memory_shared_library_loading: bool,
+
     /// Whether to include source module from the Python distribution.
     include_distribution_sources: bool,
 
@@ -101,6 +110,7 @@ impl Default for PythonPackagingPolicy {
             preferred_extension_module_variants: HashMap::new(),
             resources_location: ConcreteResourceLocation::InMemory,
             resources_location_fallback: None,
+            allow_in_memory_shared_library_loading: true,
             include_distribution_sources: true,
             include_non_distribution_sources: true,
             include_distribution_resources: false,
@@ -158,6 +168,16 @@ impl PythonPackagingPolicy {
     /// Set the fallback location for added resources.
     pub fn set_resources_location_fallback(&mut self, location: Option<ConcreteResourceLocation>) {
         self.resources_location_fallback = location;
+    }
+
+    /// Whether to allow in-memory shared library loading.
+    pub fn allow_in_memory_shared_library_loading(&self) -> bool {
+        self.allow_in_memory_shared_library_loading
+    }
+
+    /// Set the value for whether to allow in-memory shared library loading.
+    pub fn set_allow_in_memory_shared_library_loading(&mut self, value: bool) {
+        self.allow_in_memory_shared_library_loading = value;
     }
 
     /// Get setting for whether to include source modules from the distribution.

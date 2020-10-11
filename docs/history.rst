@@ -255,6 +255,8 @@ New Features
 * CPython 3.9 distributions are now supported by passing
   ``python_version="3.9"`` to the ``default_python_distribution()`` Starlark
   function. CPython 3.8 is the default distribution version.
+* The ``PythonPackagingPolicy`` Starlark type now exposes a flag to
+  control whether shared libraries can be loaded from memory.
 
 Bug Fixes
 ^^^^^^^^^

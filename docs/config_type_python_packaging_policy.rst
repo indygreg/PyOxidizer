@@ -15,6 +15,25 @@ Attributes
 The following sections describe the attributes available on each
 instance.
 
+.. _config_type_python_packaging_policy_allow_in_memory_shared_library_loading:
+
+``allow_in_memory_shared_library_loading``
+------------------------------------------
+
+(``bool``)
+
+Whether to allow loading of Python extension modules and shared libraries
+from memory at run-time.
+
+Some platforms (notably Windows) allow opening shared libraries from a
+memory address. This mode of opening shared libraries allows libraries
+to be embedded in binaries without having to statically link them. However,
+not every library works correctly when loaded this way.
+
+This flag defines whether to enable this feature where supported. Its
+true value can be ignored if the target platform doesn't support loading
+shared library from memory.
+
 .. _config_type_python_packaging_policy_bytecode_optimize_level_zero:
 
 ``bytecode_optimize_level_zero``

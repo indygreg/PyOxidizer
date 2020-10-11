@@ -108,6 +108,9 @@ impl TypedValue for PythonPackagingPolicyValue {
 
     fn get_attr(&self, attribute: &str) -> ValueResult {
         let v = match attribute {
+            "allow_in_memory_shared_library_loading" => {
+                Value::from(self.inner.allow_in_memory_shared_library_loading())
+            }
             "bytecode_optimize_level_zero" => {
                 Value::from(self.inner.bytecode_optimize_level_zero())
             }
@@ -146,6 +149,7 @@ impl TypedValue for PythonPackagingPolicyValue {
 
     fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
         Ok(match attribute {
+            "allow_in_memory_shared_library_loading" => true,
             "bytecode_optimize_level_zero" => true,
             "bytecode_optimize_level_one" => true,
             "bytecode_optimize_level_two" => true,
@@ -163,6 +167,10 @@ impl TypedValue for PythonPackagingPolicyValue {
 
     fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
         match attribute {
+            "allow_in_memory_shared_library_loading" => {
+                self.inner
+                    .set_allow_in_memory_shared_library_loading(value.to_bool());
+            }
             "bytecode_optimize_level_zero" => {
                 self.inner.set_bytecode_optimize_level_zero(value.to_bool());
             }
@@ -409,6 +417,14 @@ mod tests {
             "policy.resources_location_fallback = None; policy.resources_location_fallback",
         )?;
         assert_eq!(value.get_type(), "NoneType");
+
+        let value = env.eval("policy.allow_in_memory_shared_library_loading")?;
+        assert_eq!(value.get_type(), "bool");
+        assert!(value.to_bool());
+
+        let value = env.eval("policy.allow_in_memory_shared_library_loading = False; policy.allow_in_memory_shared_library_loading")?;
+        assert_eq!(value.get_type(), "bool");
+        assert!(!value.to_bool());
 
         // bytecode_optimize_level_zero
         let value = env.eval("policy.bytecode_optimize_level_zero")?;
