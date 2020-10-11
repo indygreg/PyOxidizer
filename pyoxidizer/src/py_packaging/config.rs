@@ -332,10 +332,7 @@ impl EmbeddedPythonConfig {
                     format!("pyembed::TerminfoResolution::Static(r###\"{}\"###", v)
                 }
             },
-            match &self.write_modules_directory_env {
-                Some(path) => "Some(\"".to_owned() + &path + "\".to_string())",
-                _ => "None".to_owned(),
-            },
+            optional_string_to_string(&self.write_modules_directory_env),
             match self.run_mode {
                 PythonRunMode::None => "pyembed::PythonRunMode::None".to_owned(),
                 PythonRunMode::Repl => "pyembed::PythonRunMode::Repl".to_owned(),
