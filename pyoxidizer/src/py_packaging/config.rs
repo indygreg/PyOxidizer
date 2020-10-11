@@ -11,8 +11,8 @@ use {
     itertools::Itertools,
     python_packaging::{
         interpreter::{
-            BytesWarning, MemoryAllocatorBackend, PythonInterpreterConfig,
-            PythonInterpreterProfile, PythonRunMode, TerminfoResolution,
+            Allocator, BytesWarning, CheckHashPYCsMode, CoerceCLocale, MemoryAllocatorBackend,
+            PythonInterpreterConfig, PythonInterpreterProfile, PythonRunMode, TerminfoResolution,
         },
         resource::BytecodeOptimizationLevel,
     },
@@ -112,9 +112,9 @@ impl EmbeddedPythonConfig {
             origin: None,\n    \
             interpreter_config: pyembed::PythonInterpreterConfig {{\n        \
             profile: {},\n        \
-            allocator: None,\n        \
+            allocator: {},\n        \
             configure_locale: {},\n        \
-            coerce_c_locale: None,\n        \
+            coerce_c_locale: {},\n        \
             coerce_c_locale_warn: {},\n        \
             development_mode: {},\n        \
             isolated: {},\n        \
@@ -128,7 +128,7 @@ impl EmbeddedPythonConfig {
             base_prefix: {},\n        \
             buffered_stdio: {},\n        \
             bytes_warning: {},\n        \
-            check_hash_pycs_mode: None,\n        \
+            check_hash_pycs_mode: {},\n        \
             configure_c_stdio: {},\n        \
             dump_refs: {},\n        \
             exec_prefix: {},\n        \
@@ -186,7 +186,22 @@ impl EmbeddedPythonConfig {
                 PythonInterpreterProfile::Isolated => "pyembed::PythonInterpreterProfile::Isolated",
                 PythonInterpreterProfile::Python => "pyembed::PythonInterpreterProfile::Python",
             },
+            match self.config.allocator {
+                Some(Allocator::Debug) => "Some(pyembed::Allocator::Debug)",
+                Some(Allocator::Default) => "Some(pyembed::Allocator::Default)",
+                Some(Allocator::Malloc) => "Some(pyembed::Allocator::Malloc)",
+                Some(Allocator::MallocDebug) => "Some(pyembed::Allocator::MallocDebug)",
+                Some(Allocator::NotSet) => "Some(pyembed::Allocator::NotSet)",
+                Some(Allocator::PyMalloc) => "Some(pyembed::Allocator::PyMalloc)",
+                Some(Allocator::PyMallocDebug) => "Some(pyembed::Allocator::PyMallocDebug)",
+                None => "None",
+            },
             optional_bool_to_string(&self.config.configure_locale),
+            match &self.config.coerce_c_locale {
+                Some(CoerceCLocale::C) => "Some(pyembed::CoerceCLocale::C)",
+                Some(CoerceCLocale::LCCtype) => "Some(pyembed::CoerceCLocale::LCCtype)",
+                None => "None",
+            },
             optional_bool_to_string(&self.config.coerce_c_locale_warn),
             optional_bool_to_string(&self.config.development_mode),
             optional_bool_to_string(&self.config.isolated),
@@ -202,6 +217,12 @@ impl EmbeddedPythonConfig {
                 Some(BytesWarning::None) => "Some(pyembed::BytesWarning::None)",
                 Some(BytesWarning::Warn) => "Some(pyembed::BytesWarning::Warn)",
                 Some(BytesWarning::Raise) => "Some(pyembed::BytesWarning::Raise)",
+                None => "None",
+            },
+            match self.config.check_hash_pycs_mode {
+                Some(CheckHashPYCsMode::Always) => "Some(pyembed::CheckHashPYCsMode::Always)",
+                Some(CheckHashPYCsMode::Default) => "Some(pyembed::CheckHashPYCsMode::Default)",
+                Some(CheckHashPYCsMode::Never) => "Some(pyembed::CheckHashPYCsMode::Never)",
                 None => "None",
             },
             optional_bool_to_string(&self.config.configure_c_stdio),
