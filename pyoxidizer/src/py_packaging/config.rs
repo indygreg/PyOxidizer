@@ -82,6 +82,7 @@ pub struct EmbeddedPythonConfig {
     pub raw_allocator: MemoryAllocatorBackend,
     pub oxidized_importer: bool,
     pub filesystem_importer: bool,
+    pub argvb: bool,
     pub sys_frozen: bool,
     pub sys_meipass: bool,
     pub terminfo_resolution: TerminfoResolution,
@@ -113,6 +114,7 @@ impl Default for EmbeddedPythonConfig {
             raw_allocator: MemoryAllocatorBackend::System,
             oxidized_importer: true,
             filesystem_importer: false,
+            argvb: false,
             sys_frozen: false,
             sys_meipass: false,
             terminfo_resolution: TerminfoResolution::None,
@@ -191,11 +193,11 @@ impl EmbeddedPythonConfig {
             x_options: {},\n        \
             }},\n    \
             raw_allocator: Some({}),\n    \
-            oxidized_importer: true,\n    \
+            oxidized_importer: {},\n    \
             filesystem_importer: {},\n    \
             packed_resources: {},\n    \
             extra_extension_modules: None,\n    \
-            argvb: false,\n    \
+            argvb: {},\n    \
             sys_frozen: {},\n    \
             sys_meipass: {},\n    \
             terminfo_resolution: {},\n    \
@@ -313,12 +315,14 @@ impl EmbeddedPythonConfig {
                 MemoryAllocatorBackend::Rust => "pyembed::PythonRawAllocator::rust()",
                 MemoryAllocatorBackend::System => "pyembed::PythonRawAllocator::system()",
             },
+            self.oxidized_importer,
             self.filesystem_importer,
             if let Some(path) = packed_resources_path {
                 format!("Some(include_bytes!(r#\"{}\"#))", path.display())
             } else {
                 "None".to_string()
             },
+            self.argvb,
             self.sys_frozen,
             self.sys_meipass,
             match self.terminfo_resolution {
