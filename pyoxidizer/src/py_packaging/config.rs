@@ -103,15 +103,15 @@ impl EmbeddedPythonConfig {
             interpreter_config: pyembed::PythonInterpreterConfig {{\n        \
             profile: {},\n        \
             allocator: None,\n        \
-            configure_locale: None,\n        \
+            configure_locale: {},\n        \
             coerce_c_locale: None,\n        \
-            coerce_c_locale_warn: None,\n        \
-            development_mode: None,\n        \
-            isolated: None,\n        \
+            coerce_c_locale_warn: {},\n        \
+            development_mode: {},\n        \
+            isolated: {},\n        \
             legacy_windows_fs_encoding: {},\n        \
-            parse_argv: None,\n        \
+            parse_argv: {},\n        \
             use_environment: {},\n        \
-            utf8_mode: None,\n        \
+            utf8_mode: {},\n        \
             argv: None,\n        \
             base_exec_prefix: None,\n        \
             base_executable: None,\n        \
@@ -119,40 +119,40 @@ impl EmbeddedPythonConfig {
             buffered_stdio: {},\n        \
             bytes_warning: {},\n        \
             check_hash_pycs_mode: None,\n        \
-            configure_c_stdio: None,\n        \
-            dump_refs: None,\n        \
+            configure_c_stdio: {},\n        \
+            dump_refs: {},\n        \
             exec_prefix: None,\n        \
             executable: None,\n        \
-            fault_handler: None,\n        \
+            fault_handler: {},\n        \
             filesystem_encoding: None,\n        \
             filesystem_errors: None,\n        \
             hash_seed: None,\n        \
             home: None,\n        \
-            import_time: None,\n        \
-            install_signal_handlers: None,\n        \
+            import_time: {},\n        \
             inspect: {},\n        \
+            install_signal_handlers: {},\n        \
             interactive: {},\n        \
             legacy_windows_stdio: {},\n        \
-            malloc_stats: None,\n        \
+            malloc_stats: {},\n        \
             module_search_paths: {},\n        \
             optimization_level: {},\n        \
             prefix: None,\n        \
             program_name: None,\n        \
             python_path_env: None,\n        \
             parser_debug: {},\n        \
-            pathconfig_warnings: None,\n        \
+            pathconfig_warnings: {},\n        \
             pycache_prefix: None,\n        \
             quiet: {},\n        \
             run_command: None,\n        \
             run_filename: None,\n        \
             run_module: None,\n        \
-            show_alloc_count: None,\n        \
-            show_ref_count: None,\n        \
-            skip_first_source_line: None,\n        \
+            show_alloc_count: {},\n        \
+            show_ref_count: {},\n        \
             site_import: {},\n        \
+            skip_first_source_line: {},\n        \
             stdio_encoding: {},\n        \
             stdio_errors: {},\n        \
-            tracemalloc: None,\n        \
+            tracemalloc: {},\n        \
             user_site_directory: {},\n        \
             verbose: {},\n        \
             warn_options: None,\n        \
@@ -176,8 +176,14 @@ impl EmbeddedPythonConfig {
                 PythonInterpreterProfile::Isolated => "pyembed::PythonInterpreterProfile::Isolated",
                 PythonInterpreterProfile::Python => "pyembed::PythonInterpreterProfile::Python",
             },
+            optional_bool_to_string(&self.config.configure_locale),
+            optional_bool_to_string(&self.config.coerce_c_locale_warn),
+            optional_bool_to_string(&self.config.development_mode),
+            optional_bool_to_string(&self.config.isolated),
             optional_bool_to_string(&self.config.legacy_windows_fs_encoding),
+            optional_bool_to_string(&self.config.parse_argv),
             optional_bool_to_string(&self.config.use_environment),
+            optional_bool_to_string(&self.config.utf8_mode),
             optional_bool_to_string(&self.config.buffered_stdio),
             match self.config.bytes_warning {
                 Some(BytesWarning::None) => "Some(pyembed::BytesWarning::None)",
@@ -185,9 +191,15 @@ impl EmbeddedPythonConfig {
                 Some(BytesWarning::Raise) => "Some(pyembed::BytesWarning::Raise)",
                 None => "None",
             },
+            optional_bool_to_string(&self.config.configure_c_stdio),
+            optional_bool_to_string(&self.config.dump_refs),
+            optional_bool_to_string(&self.config.fault_handler),
+            optional_bool_to_string(&self.config.import_time),
             optional_bool_to_string(&self.config.inspect),
+            optional_bool_to_string(&self.config.install_signal_handlers),
             optional_bool_to_string(&self.config.interactive),
             optional_bool_to_string(&self.config.legacy_windows_stdio),
+            optional_bool_to_string(&self.config.malloc_stats),
             match &self.config.module_search_paths {
                 Some(paths) => {
                     format!(
@@ -211,8 +223,12 @@ impl EmbeddedPythonConfig {
                 None => "None",
             },
             optional_bool_to_string(&self.config.parser_debug),
+            optional_bool_to_string(&self.config.pathconfig_warnings),
             optional_bool_to_string(&self.config.quiet),
+            optional_bool_to_string(&self.config.show_alloc_count),
+            optional_bool_to_string(&self.config.show_ref_count),
             optional_bool_to_string(&self.config.site_import),
+            optional_bool_to_string(&self.config.skip_first_source_line),
             match &self.config.stdio_encoding {
                 Some(value) => format_args!("Some(\"{}\")", value).to_string(),
                 None => "None".to_string(),
@@ -221,6 +237,7 @@ impl EmbeddedPythonConfig {
                 Some(value) => format_args!("Some(\"{}\")", value).to_string(),
                 None => "None".to_owned(),
             },
+            optional_bool_to_string(&self.config.tracemalloc),
             optional_bool_to_string(&self.config.user_site_directory),
             optional_bool_to_string(&self.config.verbose),
             optional_bool_to_string(&self.config.write_bytecode),
