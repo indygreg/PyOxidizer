@@ -9,7 +9,13 @@ Configuring a Python interpreter.
 use {
     anyhow::Result,
     itertools::Itertools,
-    python_packaging::interpreter::{MemoryAllocatorBackend, PythonRunMode, TerminfoResolution},
+    python_packaging::{
+        interpreter::{
+            BytesWarning, MemoryAllocatorBackend, PythonInterpreterConfig,
+            PythonInterpreterProfile, PythonRunMode, TerminfoResolution,
+        },
+        resource::BytecodeOptimizationLevel,
+    },
     std::{io::Write, path::Path},
 };
 
@@ -26,65 +32,61 @@ pub fn default_raw_allocator(target_triple: &str) -> MemoryAllocatorBackend {
     }
 }
 
+fn optional_bool_to_string(value: &Option<bool>) -> String {
+    match value {
+        Some(value) => format!("Some({})", value),
+        None => "None".to_string(),
+    }
+}
+
+/// Represents the run-time configuration of a Python interpreter.
+///
+/// This type mirrors `pyembed::OxidizedPythonInterpreterConfig`. We can't
+/// use that type verbatim because of lifetime issues. It might be possible.
+/// But that type holds a reference to resources data and this type needs to
+/// be embedded in Starlark values, which have a `static lifetime.
 #[derive(Clone, Debug, PartialEq)]
 pub struct EmbeddedPythonConfig {
-    pub bytes_warning: i32,
-    pub ignore_environment: bool,
-    pub inspect: bool,
-    pub interactive: bool,
-    pub isolated: bool,
-    pub legacy_windows_fs_encoding: bool,
-    pub legacy_windows_stdio: bool,
-    pub optimize_level: i64,
-    pub parser_debug: bool,
-    pub stdio_encoding_name: Option<String>,
-    pub stdio_encoding_errors: Option<String>,
-    pub unbuffered_stdio: bool,
-    pub filesystem_importer: bool,
-    pub quiet: bool,
+    pub config: PythonInterpreterConfig,
     pub raw_allocator: MemoryAllocatorBackend,
-    pub run_mode: PythonRunMode,
-    pub site_import: bool,
+    pub oxidized_importer: bool,
+    pub filesystem_importer: bool,
     pub sys_frozen: bool,
     pub sys_meipass: bool,
-    pub sys_paths: Vec<String>,
     pub terminfo_resolution: TerminfoResolution,
-    pub use_hash_seed: bool,
-    pub user_site_directory: bool,
-    pub verbose: i32,
-    pub write_bytecode: bool,
     pub write_modules_directory_env: Option<String>,
+    pub run_mode: PythonRunMode,
 }
 
 impl Default for EmbeddedPythonConfig {
     fn default() -> Self {
         EmbeddedPythonConfig {
-            bytes_warning: 0,
-            ignore_environment: true,
-            inspect: false,
-            interactive: false,
-            isolated: true,
-            legacy_windows_fs_encoding: false,
-            legacy_windows_stdio: false,
-            optimize_level: 0,
-            parser_debug: false,
-            quiet: false,
-            stdio_encoding_name: None,
-            stdio_encoding_errors: None,
-            unbuffered_stdio: false,
-            use_hash_seed: false,
-            verbose: 0,
+            config: PythonInterpreterConfig {
+                profile: PythonInterpreterProfile::Isolated,
+                buffered_stdio: Some(true),
+                bytes_warning: Some(BytesWarning::None),
+                inspect: Some(false),
+                interactive: Some(false),
+                legacy_windows_fs_encoding: Some(false),
+                legacy_windows_stdio: Some(false),
+                optimization_level: Some(BytecodeOptimizationLevel::Zero),
+                parser_debug: Some(false),
+                quiet: Some(false),
+                site_import: Some(false),
+                use_environment: Some(false),
+                user_site_directory: Some(false),
+                verbose: Some(false),
+                write_bytecode: Some(false),
+                ..PythonInterpreterConfig::default()
+            },
+            raw_allocator: MemoryAllocatorBackend::System,
+            oxidized_importer: true,
             filesystem_importer: false,
-            site_import: false,
             sys_frozen: false,
             sys_meipass: false,
-            sys_paths: Vec::new(),
-            raw_allocator: MemoryAllocatorBackend::System,
-            run_mode: PythonRunMode::Repl,
             terminfo_resolution: TerminfoResolution::None,
-            user_site_directory: false,
-            write_bytecode: false,
             write_modules_directory_env: None,
+            run_mode: PythonRunMode::Repl,
         }
     }
 }
@@ -106,16 +108,16 @@ impl EmbeddedPythonConfig {
             coerce_c_locale_warn: None,\n        \
             development_mode: None,\n        \
             isolated: None,\n        \
-            legacy_windows_fs_encoding: Some({}),\n        \
+            legacy_windows_fs_encoding: {},\n        \
             parse_argv: None,\n        \
-            use_environment: Some({}),\n        \
+            use_environment: {},\n        \
             utf8_mode: None,\n        \
             argv: None,\n        \
             base_exec_prefix: None,\n        \
             base_executable: None,\n        \
             base_prefix: None,\n        \
-            buffered_stdio: Some({}),\n        \
-            bytes_warning: Some({}),\n        \
+            buffered_stdio: {},\n        \
+            bytes_warning: {},\n        \
             check_hash_pycs_mode: None,\n        \
             configure_c_stdio: None,\n        \
             dump_refs: None,\n        \
@@ -128,33 +130,33 @@ impl EmbeddedPythonConfig {
             home: None,\n        \
             import_time: None,\n        \
             install_signal_handlers: None,\n        \
-            inspect: Some({}),\n        \
-            interactive: Some({}),\n        \
-            legacy_windows_stdio: Some({}),\n        \
+            inspect: {},\n        \
+            interactive: {},\n        \
+            legacy_windows_stdio: {},\n        \
             malloc_stats: None,\n        \
             module_search_paths: {},\n        \
-            optimization_level: Some({}),\n        \
+            optimization_level: {},\n        \
             prefix: None,\n        \
             program_name: None,\n        \
             python_path_env: None,\n        \
-            parser_debug: Some({}),\n        \
+            parser_debug: {},\n        \
             pathconfig_warnings: None,\n        \
             pycache_prefix: None,\n        \
-            quiet: Some({}),\n        \
+            quiet: {},\n        \
             run_command: None,\n        \
             run_filename: None,\n        \
             run_module: None,\n        \
             show_alloc_count: None,\n        \
             show_ref_count: None,\n        \
             skip_first_source_line: None,\n        \
-            site_import: Some({}),\n        \
+            site_import: {},\n        \
             stdio_encoding: {},\n        \
             stdio_errors: {},\n        \
             tracemalloc: None,\n        \
-            user_site_directory: Some({}),\n        \
-            verbose: Some({}),\n        \
+            user_site_directory: {},\n        \
+            verbose: {},\n        \
             warn_options: None,\n        \
-            write_bytecode: Some({}),\n        \
+            write_bytecode: {},\n        \
             x_options: None,\n        \
             }},\n    \
             raw_allocator: Some({}),\n    \
@@ -170,56 +172,58 @@ impl EmbeddedPythonConfig {
             run: {},\n\
             }}\n\
             ",
-            if self.isolated {
-                "pyembed::PythonInterpreterProfile::Isolated"
-            } else {
-                "pyembed::PythonInterpreterProfile::Python"
+            match self.config.profile {
+                PythonInterpreterProfile::Isolated => "pyembed::PythonInterpreterProfile::Isolated",
+                PythonInterpreterProfile::Python => "pyembed::PythonInterpreterProfile::Python",
             },
-            self.legacy_windows_fs_encoding,
-            !self.ignore_environment,
-            !self.unbuffered_stdio,
-            match self.bytes_warning {
-                0 => "pyembed::BytesWarning::None",
-                1 => "pyembed::BytesWarning::Warn",
-                2 => "pyembed::BytesWarning::Raise",
-                _ => "pyembed::BytesWarning::Raise",
+            optional_bool_to_string(&self.config.legacy_windows_fs_encoding),
+            optional_bool_to_string(&self.config.use_environment),
+            optional_bool_to_string(&self.config.buffered_stdio),
+            match self.config.bytes_warning {
+                Some(BytesWarning::None) => "Some(pyembed::BytesWarning::None)",
+                Some(BytesWarning::Warn) => "Some(pyembed::BytesWarning::Warn)",
+                Some(BytesWarning::Raise) => "Some(pyembed::BytesWarning::Raise)",
+                None => "None",
             },
-            self.inspect,
-            self.interactive,
-            self.legacy_windows_stdio,
-            if self.sys_paths.is_empty() {
-                "None".to_string()
-            } else {
-                format!(
-                    "Some({})",
-                    &self
-                        .sys_paths
-                        .iter()
-                        .map(|p| "\"".to_owned() + p + "\".to_string()")
-                        .collect::<Vec<String>>()
-                        .join(", ")
-                )
+            optional_bool_to_string(&self.config.inspect),
+            optional_bool_to_string(&self.config.interactive),
+            optional_bool_to_string(&self.config.legacy_windows_stdio),
+            match &self.config.module_search_paths {
+                Some(paths) => {
+                    format!(
+                        "Some({})",
+                        paths
+                            .iter()
+                            .map(|p| format_args!("\"{}\"", p.display()).to_string())
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    )
+                }
+                None => "None".to_string(),
             },
-            match self.optimize_level {
-                0 => "pyembed::BytecodeOptimizationLevel::Zero",
-                1 => "pyembed::BytecodeOptimizationLevel::One",
-                2 => "pyembed::BytecodeOptimizationLevel::Two",
-                _ => "pyembed::BytecodeOptimizationLevel::Two",
+            match self.config.optimization_level {
+                Some(BytecodeOptimizationLevel::Zero) =>
+                    "Some(pyembed::BytecodeOptimizationLevel::Zero)",
+                Some(BytecodeOptimizationLevel::One) =>
+                    "Some(pyembed::BytecodeOptimizationLevel::One)",
+                Some(BytecodeOptimizationLevel::Two) =>
+                    "Some(pyembed::BytecodeOptimizationLevel::Two)",
+                None => "None",
             },
-            self.parser_debug,
-            self.quiet,
-            self.site_import,
-            match &self.stdio_encoding_name {
+            optional_bool_to_string(&self.config.parser_debug),
+            optional_bool_to_string(&self.config.quiet),
+            optional_bool_to_string(&self.config.site_import),
+            match &self.config.stdio_encoding {
+                Some(value) => format_args!("Some(\"{}\")", value).to_string(),
+                None => "None".to_string(),
+            },
+            match &self.config.stdio_errors {
                 Some(value) => format_args!("Some(\"{}\")", value).to_string(),
                 None => "None".to_owned(),
             },
-            match &self.stdio_encoding_errors {
-                Some(value) => format_args!("Some(\"{}\")", value).to_string(),
-                None => "None".to_owned(),
-            },
-            self.user_site_directory,
-            self.verbose != 0,
-            self.write_bytecode,
+            optional_bool_to_string(&self.config.user_site_directory),
+            optional_bool_to_string(&self.config.verbose),
+            optional_bool_to_string(&self.config.write_bytecode),
             match self.raw_allocator {
                 MemoryAllocatorBackend::Jemalloc => "pyembed::PythonRawAllocator::jemalloc()",
                 MemoryAllocatorBackend::Rust => "pyembed::PythonRawAllocator::rust()",

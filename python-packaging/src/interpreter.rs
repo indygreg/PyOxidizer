@@ -75,7 +75,7 @@ pub enum MemoryAllocatorBackend {
 /// This allocator is what Python uses for all memory allocations.
 ///
 /// See https://docs.python.org/3/c-api/memory.html for more.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PythonRawAllocator {
     /// Which allocator backend to use.
     pub backend: MemoryAllocatorBackend,
@@ -122,7 +122,7 @@ impl Default for PythonRawAllocator {
 /// Holds values for coerce_c_locale.
 ///
 /// See https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.coerce_c_locale.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum CoerceCLocale {
     LCCtype = 1,
     C = 2,
@@ -131,15 +131,25 @@ pub enum CoerceCLocale {
 /// Defines what to do when comparing bytes with str.
 ///
 /// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.bytes_warning.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BytesWarning {
     None = 0,
     Warn = 1,
     Raise = 2,
 }
 
+impl From<i32> for BytesWarning {
+    fn from(value: i32) -> BytesWarning {
+        match value {
+            0 => Self::None,
+            1 => Self::Warn,
+            _ => Self::Raise,
+        }
+    }
+}
+
 /// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.check_hash_pycs_mode.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum CheckHashPYCsMode {
     Always,
     Never,
@@ -147,7 +157,7 @@ pub enum CheckHashPYCsMode {
 }
 
 /// See https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.allocator.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Allocator {
     NotSet = 0,
     Default = 1,
@@ -166,7 +176,7 @@ pub enum Allocator {
 /// Other than the profile (which is used to initialize instances of
 /// `PyPreConfig` and `PyConfig`), all fields are optional. Only fields
 /// with `Some(T)` will be updated from the defaults.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct PythonInterpreterConfig {
     /// Profile to use to initialize pre-config and config state of interpreter.
     pub profile: PythonInterpreterProfile,

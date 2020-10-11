@@ -163,6 +163,8 @@ Backwards Compatibility Notes
   replaced by attributes denoting valid locations for resources.
 * ``oxidized_importer.OxidizedResourceCollector.__init__()`` now
    accepts an ``allowed_locations`` argument instead of ``policy``.
+* The ``isolated`` and ``use_hash_seed`` arguments of the
+  ``PythonInterpreterConfig()`` Starlark type constructor have been removed.
 
 New Features
 ^^^^^^^^^^^^

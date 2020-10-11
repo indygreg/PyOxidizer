@@ -5,7 +5,13 @@
 use {
     super::util::{optional_bool_arg, optional_int_arg, optional_list_arg, optional_str_arg},
     crate::py_packaging::config::{default_raw_allocator, EmbeddedPythonConfig},
-    python_packaging::interpreter::{MemoryAllocatorBackend, PythonRunMode, TerminfoResolution},
+    python_packaging::{
+        interpreter::{
+            BytesWarning, MemoryAllocatorBackend, PythonInterpreterConfig,
+            PythonInterpreterProfile, PythonRunMode, TerminfoResolution,
+        },
+        resource::BytecodeOptimizationLevel,
+    },
     starlark::{
         values::{
             error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
@@ -17,7 +23,7 @@ use {
             starlark_signature_extraction, starlark_signatures,
         },
     },
-    std::path::PathBuf,
+    std::{convert::TryFrom, path::PathBuf},
 };
 
 #[derive(Debug, Clone)]
@@ -53,33 +59,19 @@ impl PythonInterpreterConfigValue {
     /// Obtain a default instance from the context of Starlark.
     pub fn default_starlark() -> Self {
         Self::new(EmbeddedPythonConfig {
-            bytes_warning: 0,
-            ignore_environment: true,
-            inspect: false,
-            interactive: false,
-            isolated: true,
-            legacy_windows_fs_encoding: false,
-            legacy_windows_stdio: false,
-            optimize_level: 0,
-            parser_debug: false,
-            quiet: false,
-            use_hash_seed: false,
-            verbose: 0,
-            stdio_encoding_name: None,
-            stdio_encoding_errors: None,
-            unbuffered_stdio: false,
-            filesystem_importer: false,
-            site_import: false,
-            sys_frozen: false,
-            sys_meipass: false,
-            sys_paths: Vec::new(),
+            config: PythonInterpreterConfig {
+                profile: PythonInterpreterProfile::Isolated,
+                ..PythonInterpreterConfig::default()
+            },
             // TODO this should come from the build context.
             raw_allocator: default_raw_allocator(crate::project_building::HOST),
-            run_mode: PythonRunMode::Repl,
+            oxidized_importer: true,
+            filesystem_importer: false,
+            sys_frozen: false,
+            sys_meipass: false,
             terminfo_resolution: TerminfoResolution::Dynamic,
-            user_site_directory: false,
-            write_bytecode: false,
             write_modules_directory_env: None,
+            run_mode: PythonRunMode::Repl,
         })
     }
 
@@ -90,7 +82,6 @@ impl PythonInterpreterConfigValue {
         ignore_environment: &Value,
         inspect: &Value,
         interactive: &Value,
-        isolated: &Value,
         legacy_windows_fs_encoding: &Value,
         legacy_windows_stdio: &Value,
         optimize_level: &Value,
@@ -111,7 +102,6 @@ impl PythonInterpreterConfigValue {
         raw_allocator: &Value,
         terminfo_resolution: &Value,
         terminfo_dirs: &Value,
-        use_hash_seed: &Value,
         user_site_directory: &Value,
         verbose: &Value,
         write_bytecode: &Value,
@@ -120,36 +110,28 @@ impl PythonInterpreterConfigValue {
         let default = PythonInterpreterConfigValue::default_starlark().inner;
 
         let bytes_warning = optional_int_arg("bytes_warning", &bytes_warning)?
-            .unwrap_or(default.bytes_warning as i64) as i32;
-        let ignore_environment = optional_bool_arg("ignore_environment", &ignore_environment)?
-            .unwrap_or(default.ignore_environment);
-        let inspect = optional_bool_arg("inspect", &inspect)?.unwrap_or(default.inspect);
-        let interactive =
-            optional_bool_arg("interactive", &interactive)?.unwrap_or(default.interactive);
-        let isolated = optional_bool_arg("isolated", &isolated)?.unwrap_or(default.isolated);
+            .map(|x| BytesWarning::from(x as i32));
+        let use_environment =
+            optional_bool_arg("ignore_environment", &ignore_environment)?.map(|v| !v);
+        let inspect = optional_bool_arg("inspect", &inspect)?;
+        let interactive = optional_bool_arg("interactive", &interactive)?;
         let legacy_windows_fs_encoding =
-            optional_bool_arg("legacy_windows_fs_encoding", &legacy_windows_fs_encoding)?
-                .unwrap_or(default.legacy_windows_fs_encoding);
+            optional_bool_arg("legacy_windows_fs_encoding", &legacy_windows_fs_encoding)?;
         let legacy_windows_stdio =
-            optional_bool_arg("legacy_windows_stdio", &legacy_windows_stdio)?
-                .unwrap_or(default.legacy_windows_stdio);
-        let optimize_level =
-            optional_int_arg("optimize_level", &optimize_level)?.unwrap_or(default.optimize_level);
-        let parser_debug =
-            optional_bool_arg("parser_debug", &parser_debug)?.unwrap_or(default.parser_debug);
+            optional_bool_arg("legacy_windows_stdio", &legacy_windows_stdio)?;
+        let optimize_level = optional_int_arg("optimize_level", &optimize_level)?;
+        let parser_debug = optional_bool_arg("parser_debug", &parser_debug)?;
         let stdio_encoding = optional_str_arg("stdio_encoding", &stdio_encoding)?;
-        let unbuffered_stdio = optional_bool_arg("unbuffered_stdio", &unbuffered_stdio)?
-            .unwrap_or(default.unbuffered_stdio);
+        let buffered_stdio = optional_bool_arg("unbuffered_stdio", &unbuffered_stdio)?.map(|v| !v);
         let filesystem_importer = optional_bool_arg("filesystem_importer", &filesystem_importer)?
             .unwrap_or(default.filesystem_importer);
-        let quiet = optional_bool_arg("quiet", &quiet)?.unwrap_or(default.quiet);
+        let quiet = optional_bool_arg("quiet", &quiet)?;
         let run_eval = optional_str_arg("run_eval", &run_eval)?;
         let run_file = optional_str_arg("run_file", &run_file)?;
         let run_module = optional_str_arg("run_module", &run_module)?;
-        let run_noop = optional_bool_arg("run_noop", &run_noop)?.unwrap_or(false);
-        let run_repl = optional_bool_arg("run_repl", &run_repl)?.unwrap_or(false);
-        let site_import =
-            optional_bool_arg("site_importer", &site_import)?.unwrap_or(default.site_import);
+        let run_noop = optional_bool_arg("run_noop", &run_noop)?;
+        let run_repl = optional_bool_arg("run_repl", &run_repl)?;
+        let site_import = optional_bool_arg("site_importer", &site_import)?;
         let sys_frozen =
             optional_bool_arg("sys_frozen", &sys_frozen)?.unwrap_or(default.sys_frozen);
         let sys_meipass =
@@ -158,14 +140,9 @@ impl PythonInterpreterConfigValue {
         let raw_allocator = optional_str_arg("raw_allocator", &raw_allocator)?;
         let terminfo_resolution = optional_str_arg("terminfo_resolution", &terminfo_resolution)?;
         let terminfo_dirs = optional_str_arg("terminfo_dirs", &terminfo_dirs)?;
-        let use_hash_seed =
-            optional_bool_arg("use_hash_seed", &use_hash_seed)?.unwrap_or(default.use_hash_seed);
-        let user_site_directory = optional_bool_arg("user_site_directory", &user_site_directory)?
-            .unwrap_or(default.user_site_directory);
-        let verbose =
-            optional_int_arg("verbose", &verbose)?.unwrap_or(default.verbose as i64) as i32;
-        let write_bytecode =
-            optional_bool_arg("write_bytecode", &write_bytecode)?.unwrap_or(default.write_bytecode);
+        let user_site_directory = optional_bool_arg("user_site_directory", &user_site_directory)?;
+        let verbose = optional_bool_arg("verbose", &verbose)?;
+        let write_bytecode = optional_bool_arg("write_bytecode", &write_bytecode)?;
         let write_modules_directory_env =
             optional_str_arg("write_modules_directory_env", &write_modules_directory_env)?;
 
@@ -179,10 +156,10 @@ impl PythonInterpreterConfigValue {
         if run_module.is_some() {
             run_count += 1;
         }
-        if run_noop {
+        if run_noop.is_some() {
             run_count += 1;
         }
-        if run_repl {
+        if run_repl.is_some() {
             run_count += 1;
         }
 
@@ -194,6 +171,20 @@ impl PythonInterpreterConfigValue {
             }));
         }
 
+        let optimization_level = if let Some(value) = optimize_level {
+            Some(
+                BytecodeOptimizationLevel::try_from(value as i32).map_err(|e| {
+                    ValueError::from(RuntimeError {
+                        code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                        message: format!("invalid bytecode optimization level: {}", e),
+                        label: "PythonInterpreterConfig()".to_string(),
+                    })
+                })?,
+            )
+        } else {
+            None
+        };
+
         let run_mode = if let Some(code) = run_eval {
             PythonRunMode::Eval { code }
         } else if let Some(path) = run_file {
@@ -202,13 +193,13 @@ impl PythonInterpreterConfigValue {
             }
         } else if let Some(module) = run_module {
             PythonRunMode::Module { module }
-        } else if run_noop {
+        } else if run_noop == Some(true) {
             PythonRunMode::None
         } else {
-            default.run_mode
+            default.run_mode.clone()
         };
 
-        let (stdio_encoding_name, stdio_encoding_errors) = if let Some(ref v) = stdio_encoding {
+        let (stdio_encoding, stdio_errors) = if let Some(ref v) = stdio_encoding {
             let values: Vec<&str> = v.split(':').collect();
             (Some(values[0].to_string()), Some(values[1].to_string()))
         } else {
@@ -228,7 +219,7 @@ impl PythonInterpreterConfigValue {
                     }));
                 }
             },
-            None => default.raw_allocator,
+            None => default.raw_allocator.clone(),
         };
 
         let terminfo_resolution = match terminfo_resolution {
@@ -254,45 +245,54 @@ impl PythonInterpreterConfigValue {
                     }));
                 }
             },
-            None => default.terminfo_resolution,
+            None => default.terminfo_resolution.clone(),
         };
 
-        let sys_paths = match sys_paths.get_type() {
-            "list" => sys_paths.iter()?.iter().map(|x| x.to_string()).collect(),
-            _ => Vec::new(),
+        let module_search_paths = match sys_paths.get_type() {
+            "list" => Some(
+                sys_paths
+                    .iter()?
+                    .iter()
+                    .map(|x| PathBuf::from(x.to_string()))
+                    .collect(),
+            ),
+            _ => None,
         };
 
         // Automatically enable the filesystem importer if sys.paths are defined.
-        let filesystem_importer = filesystem_importer || !sys_paths.is_empty();
+        let filesystem_importer = filesystem_importer || module_search_paths.is_some();
 
         Ok(Value::new(PythonInterpreterConfigValue::new(
             EmbeddedPythonConfig {
-                bytes_warning,
-                ignore_environment,
-                inspect,
-                interactive,
-                isolated,
-                legacy_windows_fs_encoding,
-                legacy_windows_stdio,
-                optimize_level,
-                parser_debug,
-                quiet,
-                stdio_encoding_name,
-                stdio_encoding_errors,
-                unbuffered_stdio,
+                config: PythonInterpreterConfig {
+                    profile: PythonInterpreterProfile::Isolated,
+                    buffered_stdio,
+                    bytes_warning,
+                    inspect,
+                    interactive,
+                    legacy_windows_fs_encoding,
+                    legacy_windows_stdio,
+                    parser_debug,
+                    quiet,
+                    module_search_paths,
+                    optimization_level,
+                    site_import,
+                    stdio_encoding,
+                    stdio_errors,
+                    use_environment,
+                    user_site_directory,
+                    verbose,
+                    write_bytecode,
+                    ..PythonInterpreterConfig::default()
+                },
+                raw_allocator,
+                oxidized_importer: true,
                 filesystem_importer,
-                site_import,
                 sys_frozen,
                 sys_meipass,
-                sys_paths,
-                raw_allocator,
-                run_mode,
                 terminfo_resolution,
-                use_hash_seed,
-                user_site_directory,
-                verbose,
-                write_bytecode,
                 write_modules_directory_env,
+                run_mode,
             },
         )))
     }
@@ -305,7 +305,6 @@ starlark_module! { embedded_python_config_module =>
         ignore_environment=NoneType::None,
         inspect=NoneType::None,
         interactive=NoneType::None,
-        isolated=NoneType::None,
         legacy_windows_fs_encoding=NoneType::None,
         legacy_windows_stdio=NoneType::None,
         optimize_level=NoneType::None,
@@ -326,7 +325,6 @@ starlark_module! { embedded_python_config_module =>
         raw_allocator=NoneType::None,
         terminfo_resolution=NoneType::None,
         terminfo_dirs=NoneType::None,
-        use_hash_seed=NoneType::None,
         user_site_directory=NoneType::None,
         verbose=NoneType::None,
         write_bytecode=NoneType::None,
@@ -337,7 +335,6 @@ starlark_module! { embedded_python_config_module =>
             &ignore_environment,
             &inspect,
             &interactive,
-            &isolated,
             &legacy_windows_fs_encoding,
             &legacy_windows_stdio,
             &optimize_level,
@@ -358,7 +355,6 @@ starlark_module! { embedded_python_config_module =>
             &raw_allocator,
             &terminfo_resolution,
             &terminfo_dirs,
-            &use_hash_seed,
             &user_site_directory,
             &verbose,
             &write_bytecode,
@@ -386,21 +382,27 @@ mod tests {
     fn test_bytes_warning() {
         let c = starlark_ok("PythonInterpreterConfig(bytes_warning=2)");
         let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
-        assert_eq!(x.inner.bytes_warning, 2);
+        assert_eq!(x.inner.config.bytes_warning, Some(BytesWarning::Raise));
     }
 
     #[test]
     fn test_optimize_level() {
         let c = starlark_ok("PythonInterpreterConfig(optimize_level=1)");
         let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
-        assert_eq!(x.inner.optimize_level, 1);
+        assert_eq!(
+            x.inner.config.optimization_level,
+            Some(BytecodeOptimizationLevel::One)
+        );
     }
 
     #[test]
     fn test_sys_paths() {
         let c = starlark_ok("PythonInterpreterConfig(sys_paths=['foo', 'bar'])");
         let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
-        assert_eq!(x.inner.sys_paths, ["foo", "bar"]);
+        assert_eq!(
+            x.inner.config.module_search_paths,
+            Some(vec![PathBuf::from("foo"), PathBuf::from("bar")])
+        );
         // Setting sys_paths enables filesystem importer.
         assert!(x.inner.filesystem_importer);
     }
@@ -409,8 +411,8 @@ mod tests {
     fn test_stdio_encoding() {
         let c = starlark_ok("PythonInterpreterConfig(stdio_encoding='foo:strict')");
         let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
-        assert_eq!(x.inner.stdio_encoding_name, Some("foo".to_string()));
-        assert_eq!(x.inner.stdio_encoding_errors, Some("strict".to_string()));
+        assert_eq!(x.inner.config.stdio_encoding, Some("foo".to_string()));
+        assert_eq!(x.inner.config.stdio_errors, Some("strict".to_string()));
     }
 
     #[test]
