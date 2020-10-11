@@ -157,7 +157,7 @@ impl EmbeddedPythonConfig {
             fault_handler: {},\n        \
             filesystem_encoding: {},\n        \
             filesystem_errors: {},\n        \
-            hash_seed: None,\n        \
+            hash_seed: {},\n        \
             home: {},\n        \
             import_time: {},\n        \
             inspect: {},\n        \
@@ -253,6 +253,10 @@ impl EmbeddedPythonConfig {
             optional_bool_to_string(&self.config.fault_handler),
             optional_string_to_string(&self.config.filesystem_encoding),
             optional_string_to_string(&self.config.filesystem_errors),
+            match &self.config.hash_seed {
+                Some(value) => format!("Some({})", value),
+                None => "None".to_string(),
+            },
             optional_pathbuf_to_string(&self.config.home),
             optional_bool_to_string(&self.config.import_time),
             optional_bool_to_string(&self.config.inspect),
