@@ -171,6 +171,8 @@ impl StandalonePythonExecutableBuilder {
             allowed_extension_module_locations.push(AbstractResourceLocation::RelativePath);
         }
 
+        let allow_new_builtin_extension_modules = matches!(link_mode, LibpythonLinkMode::Static);
+
         let mut builder = Box::new(Self {
             host_triple,
             target_triple,
@@ -183,6 +185,7 @@ impl StandalonePythonExecutableBuilder {
             resources_collector: PythonResourceCollector::new(
                 packaging_policy.resources_policy(),
                 allowed_extension_module_locations,
+                allow_new_builtin_extension_modules,
                 &cache_tag,
             ),
             core_build_context: LibPythonBuildContext::default(),
@@ -856,7 +859,9 @@ pub mod tests {
                 is_builtin_extension_module: true,
                 name: extension.name.clone(),
                 ..PrePackagedResource::default()
-            })
+            }),
+            "extension module {} is built-in",
+            extension.name,
         );
 
         assert_eq!(
@@ -872,7 +877,9 @@ pub mod tests {
                     .cloned()
                 ),
                 ..LibPythonBuildContext::default()
-            })
+            }),
+            "build context for extension module {} is present",
+            extension.name
         );
 
         Ok(())
@@ -1074,7 +1081,7 @@ pub mod tests {
             let options = StandalonePythonExecutableBuilderOptions {
                 target_triple: "x86_64-unknown-linux-gnu".to_string(),
                 extension_module_filter: ExtensionModuleFilter::Minimal,
-                libpython_link_mode,
+                libpython_link_mode: libpython_link_mode.clone(),
                 resources_policy: PythonResourcesPolicy::InMemoryOnly,
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
@@ -1089,14 +1096,42 @@ pub mod tests {
             "extension module shared_only cannot be loaded from memory but memory loading required"
         );
 
-            builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+            match libpython_link_mode {
+                BinaryLibpythonLinkMode::Static => {
+                    assert!(res.is_ok());
+                    assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+                }
+                BinaryLibpythonLinkMode::Dynamic => {
+                    assert!(res.is_err());
+                    assert_eq!(res.err().unwrap().to_string(), "extension module object_files_only cannot be loaded from memory but memory loading required");
+                }
+                BinaryLibpythonLinkMode::Default => {
+                    panic!("should not get here");
+                }
+            }
 
-            builder.add_python_extension_module(
+            let res = builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
                 None,
-            )?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
+            );
+            match libpython_link_mode {
+                BinaryLibpythonLinkMode::Static => {
+                    assert!(res.is_ok());
+                    assert_extension_builtin(
+                        &builder,
+                        &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
+                    )?;
+                }
+                BinaryLibpythonLinkMode::Dynamic => {
+                    assert!(res.is_err());
+                    assert_eq!(res.err().unwrap().to_string(), "extension module shared_and_object_files cannot be loaded from memory but memory loading required")
+                }
+                BinaryLibpythonLinkMode::Default => {
+                    panic!("should not get here");
+                }
+            }
         }
 
         Ok(())
@@ -1111,7 +1146,7 @@ pub mod tests {
             let options = StandalonePythonExecutableBuilderOptions {
                 target_triple: "x86_64-unknown-linux-gnu".to_string(),
                 extension_module_filter: ExtensionModuleFilter::Minimal,
-                libpython_link_mode,
+                libpython_link_mode: libpython_link_mode.clone(),
                 resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
                     "prefix_policy".to_string(),
                 ),
@@ -1127,14 +1162,47 @@ pub mod tests {
                 ConcreteResourceLocation::RelativePath("prefix_policy".to_string()),
             )?;
 
-            builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+            match libpython_link_mode {
+                BinaryLibpythonLinkMode::Static => {
+                    assert!(res.is_ok());
+                    assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+                }
+                BinaryLibpythonLinkMode::Dynamic => {
+                    assert!(res.is_err());
+                    assert_eq!(
+                        res.err().unwrap().to_string(),
+                        "no shared library data present"
+                    );
+                }
+                BinaryLibpythonLinkMode::Default => {
+                    panic!("should not get here");
+                }
+            }
 
             builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
                 None,
             )?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
+            match libpython_link_mode {
+                BinaryLibpythonLinkMode::Static => {
+                    assert_extension_builtin(
+                        &builder,
+                        &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
+                    )?;
+                }
+                BinaryLibpythonLinkMode::Dynamic => {
+                    assert_extension_shared_library(
+                        &builder,
+                        &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
+                        ConcreteResourceLocation::RelativePath("prefix_policy".to_string()),
+                    )?;
+                }
+                BinaryLibpythonLinkMode::Default => {
+                    panic!("should not get here");
+                }
+            }
         }
         Ok(())
     }
@@ -1220,7 +1288,7 @@ pub mod tests {
             let options = StandalonePythonExecutableBuilderOptions {
                 target_triple: "x86_64-unknown-linux-gnu".to_string(),
                 extension_module_filter: ExtensionModuleFilter::Minimal,
-                libpython_link_mode,
+                libpython_link_mode: libpython_link_mode.clone(),
                 resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly(
                     "prefix_policy".to_string(),
                 ),
@@ -1236,8 +1304,21 @@ pub mod tests {
                 ConcreteResourceLocation::RelativePath("prefix_policy".to_string()),
             )?;
 
-            builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+            match libpython_link_mode {
+                BinaryLibpythonLinkMode::Static => {
+                    assert!(res.is_ok());
+                    assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+                }
+                BinaryLibpythonLinkMode::Dynamic => {
+                    assert!(res.is_err());
+                    assert_eq!(res.err().unwrap().to_string(), "extension module object_files_only cannot be materialized as a shared library extension but filesystem loading required");
+                }
+                BinaryLibpythonLinkMode::Default => {
+                    panic!("should not get here");
+                }
+            }
 
             builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
@@ -1666,7 +1747,7 @@ pub mod tests {
             let options = StandalonePythonExecutableBuilderOptions {
                 target_triple: "x86_64-apple-darwin".to_string(),
                 extension_module_filter: ExtensionModuleFilter::Minimal,
-                libpython_link_mode,
+                libpython_link_mode: libpython_link_mode.clone(),
                 resources_policy: PythonResourcesPolicy::InMemoryOnly,
                 ..StandalonePythonExecutableBuilderOptions::default()
             };
@@ -1681,14 +1762,42 @@ pub mod tests {
                         "extension module shared_only cannot be loaded from memory but memory loading required"
                     );
 
-            builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+            match libpython_link_mode {
+                BinaryLibpythonLinkMode::Static => {
+                    assert!(res.is_ok());
+                    assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+                }
+                BinaryLibpythonLinkMode::Dynamic => {
+                    assert!(res.is_err());
+                    assert_eq!(res.err().unwrap().to_string(), "extension module object_files_only cannot be loaded from memory but memory loading required");
+                }
+                BinaryLibpythonLinkMode::Default => {
+                    panic!("should not get here");
+                }
+            }
 
-            builder.add_python_extension_module(
+            let res = builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
                 None,
-            )?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
+            );
+            match libpython_link_mode {
+                BinaryLibpythonLinkMode::Static => {
+                    assert!(res.is_ok());
+                    assert_extension_builtin(
+                        &builder,
+                        &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
+                    )?;
+                }
+                BinaryLibpythonLinkMode::Dynamic => {
+                    assert!(res.is_err());
+                    assert_eq!(res.err().unwrap().to_string(), "extension module shared_and_object_files cannot be loaded from memory but memory loading required")
+                }
+                BinaryLibpythonLinkMode::Default => {
+                    panic!("should not get here");
+                }
+            }
         }
 
         Ok(())
@@ -1703,7 +1812,7 @@ pub mod tests {
             let options = StandalonePythonExecutableBuilderOptions {
                 target_triple: "x86_64-apple-darwin".to_string(),
                 extension_module_filter: ExtensionModuleFilter::Minimal,
-                libpython_link_mode,
+                libpython_link_mode: libpython_link_mode.clone(),
                 resources_policy: PythonResourcesPolicy::FilesystemRelativeOnly(
                     "prefix_policy".to_string(),
                 ),
@@ -1719,8 +1828,21 @@ pub mod tests {
                 ConcreteResourceLocation::RelativePath("prefix_policy".to_string()),
             )?;
 
-            builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+            match libpython_link_mode {
+                BinaryLibpythonLinkMode::Static => {
+                    assert!(res.is_ok());
+                    assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+                }
+                BinaryLibpythonLinkMode::Dynamic => {
+                    assert!(res.is_err());
+                    assert_eq!(res.err().unwrap().to_string(), "extension module object_files_only cannot be materialized as a shared library extension but filesystem loading required");
+                }
+                BinaryLibpythonLinkMode::Default => {
+                    panic!("should not get here");
+                }
+            }
 
             builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
@@ -1745,7 +1867,7 @@ pub mod tests {
             let options = StandalonePythonExecutableBuilderOptions {
                 target_triple: "x86_64-apple-darwin".to_string(),
                 extension_module_filter: ExtensionModuleFilter::Minimal,
-                libpython_link_mode,
+                libpython_link_mode: libpython_link_mode.clone(),
                 resources_policy: PythonResourcesPolicy::PreferInMemoryFallbackFilesystemRelative(
                     "prefix_policy".to_string(),
                 ),
@@ -1761,14 +1883,47 @@ pub mod tests {
                 ConcreteResourceLocation::RelativePath("prefix_policy".to_string()),
             )?;
 
-            builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+            match libpython_link_mode {
+                BinaryLibpythonLinkMode::Static => {
+                    assert!(res.is_ok());
+                    assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+                }
+                BinaryLibpythonLinkMode::Dynamic => {
+                    assert!(res.is_err());
+                    assert_eq!(
+                        res.err().unwrap().to_string(),
+                        "no shared library data present"
+                    );
+                }
+                BinaryLibpythonLinkMode::Default => {
+                    panic!("should not get here");
+                }
+            }
 
             builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
                 None,
             )?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
+            match libpython_link_mode {
+                BinaryLibpythonLinkMode::Static => {
+                    assert_extension_builtin(
+                        &builder,
+                        &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
+                    )?;
+                }
+                BinaryLibpythonLinkMode::Dynamic => {
+                    assert_extension_shared_library(
+                        &builder,
+                        &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
+                        ConcreteResourceLocation::RelativePath("prefix_policy".to_string()),
+                    )?;
+                }
+                BinaryLibpythonLinkMode::Default => {
+                    panic!("should not get here");
+                }
+            }
         }
 
         Ok(())
@@ -1828,19 +1983,50 @@ pub mod tests {
             let builder = options.new_builder()?;
 
             let builtin_names = builder.extension_build_contexts.keys().collect::<Vec<_>>();
-
-            // Stdlib extensions are compiled as built-ins.
-            for (name, _variants) in builder.target_distribution.extension_modules.iter() {
-                assert!(builtin_names.contains(&name));
-            }
+            let relative_path_extension_names = builder
+                .iter_resources()
+                .filter_map(|(name, r)| {
+                    if r.relative_path_extension_module_shared_library.is_some() {
+                        Some(name)
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>();
+            let in_memory_extension_names = builder
+                .iter_resources()
+                .filter_map(|(name, r)| {
+                    if r.in_memory_extension_module_shared_library.is_some() {
+                        Some(name)
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>();
 
             // Required extensions are compiled as built-in.
-            // This assumes that are extensions annotated as required are built-in.
+            // This assumes that our extensions annotated as required are built-in.
             // But this is an implementation detail. If this fails, it might be OK.
             for (name, variants) in builder.target_distribution.extension_modules.iter() {
                 // !required does not mean it is missing, however!
                 if variants.iter().any(|e| e.required) {
                     assert!(builtin_names.contains(&name));
+                }
+            }
+
+            // Builtin/default extensions are compiled as built-in.
+            for (name, variants) in builder.target_distribution.extension_modules.iter() {
+                if variants.iter().any(|e| e.builtin_default) {
+                    assert!(builtin_names.contains(&name));
+                }
+            }
+
+            // Non-builtin/default extensions are compiled as standalone files.
+            for (name, variants) in builder.target_distribution.extension_modules.iter() {
+                if variants.iter().all(|e| !e.builtin_default) {
+                    assert!(!builtin_names.contains(&name));
+                    assert!(!relative_path_extension_names.contains(&name));
+                    assert!(in_memory_extension_names.contains(&name));
                 }
             }
         }
@@ -1929,8 +2115,9 @@ pub mod tests {
 
             let mut builder = options.new_builder()?;
 
-            // When adding an extension module in static link mode, it gets
-            // added as a built-in and linked with libpython.
+            // When adding an extension module in dynamic link mode and it isn't
+            // already a built-in, it should be preserved as a standalone extension
+            // module file.
 
             let sqlite = builder
                 .target_distribution
@@ -1942,43 +2129,29 @@ pub mod tests {
 
             builder.add_python_extension_module(&sqlite, None)?;
 
-            assert_eq!(
-                builder.extension_build_contexts.get("_sqlite3"),
-                Some(&LibPythonBuildContext {
-                    object_files: sqlite.object_file_data.clone(),
-                    dynamic_libraries: BTreeSet::from_iter(["sqlite3".to_string()].iter().cloned()),
-                    init_functions: BTreeMap::from_iter(
-                        [("_sqlite3".to_string(), "PyInit__sqlite3".to_string())]
-                            .iter()
-                            .cloned()
-                    ),
-                    license_infos: BTreeMap::from_iter(
-                        [(
-                            "_sqlite3".to_string(),
-                            builder
-                                .target_distribution
-                                .license_infos
-                                .get("_sqlite3")
-                                .unwrap()
-                                .clone()
-                        )]
-                        .iter()
-                        .cloned()
-                    ),
-                    ..LibPythonBuildContext::default()
-                })
-            );
+            assert!(!builder.extension_build_contexts.contains_key("_sqlite3"));
 
             assert_eq!(
                 builder
                     .iter_resources()
                     .find_map(|(name, r)| if *name == "_sqlite3" { Some(r) } else { None }),
                 Some(&PrePackagedResource {
-                    is_builtin_extension_module: true,
                     name: "_sqlite3".to_string(),
+                    is_extension_module: true,
+                    in_memory_extension_module_shared_library: Some(
+                        sqlite.shared_library.as_ref().unwrap().to_memory()?
+                    ),
+                    shared_library_dependency_names: Some(vec!["sqlite3".to_string()]),
                     ..PrePackagedResource::default()
                 })
             );
+
+            let library = builder
+                .iter_resources()
+                .find_map(|(name, r)| if *name == "sqlite3" { Some(r) } else { None })
+                .unwrap();
+            assert!(library.is_shared_library);
+            assert!(library.in_memory_shared_library.is_some());
         }
 
         Ok(())
@@ -2166,14 +2339,23 @@ pub mod tests {
                 ConcreteResourceLocation::InMemory,
             )?;
 
-            builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+            assert!(res.is_err());
+            assert_eq!(
+                res.err().unwrap().to_string(),
+                "no shared library data present"
+            );
 
             builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
                 None,
             )?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
+            assert_extension_shared_library(
+                &builder,
+                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
+                ConcreteResourceLocation::InMemory,
+            )?;
         }
 
         Ok(())
@@ -2237,8 +2419,10 @@ pub mod tests {
                 ConcreteResourceLocation::RelativePath("prefix_policy".to_string()),
             )?;
 
-            builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+            assert!(res.is_err());
+            assert_eq!(res.err().unwrap().to_string(), "extension module object_files_only cannot be materialized as a shared library extension but filesystem loading required");
 
             builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
@@ -2313,14 +2497,24 @@ pub mod tests {
                 ConcreteResourceLocation::InMemory,
             )?;
 
-            builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None)?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_OBJECT_FILES_ONLY)?;
+            // Cannot link new builtins in dynamic libpython link mode.
+            let res =
+                builder.add_python_extension_module(&EXTENSION_MODULE_OBJECT_FILES_ONLY, None);
+            assert!(res.is_err());
+            assert_eq!(
+                res.err().unwrap().to_string(),
+                "no shared library data present"
+            );
 
             builder.add_python_extension_module(
                 &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
                 None,
             )?;
-            assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
+            assert_extension_shared_library(
+                &builder,
+                &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES,
+                ConcreteResourceLocation::InMemory,
+            )?;
         }
 
         Ok(())

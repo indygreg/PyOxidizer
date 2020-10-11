@@ -601,6 +601,16 @@ pub struct PythonResourceCollector {
     /// This is applied in addition to `allowed_locations` and can be
     /// more strict.
     allowed_extension_module_locations: Vec<AbstractResourceLocation>,
+
+    /// Whether builtin extension modules outside the standard library are allowed.
+    ///
+    /// This is effectively "are we building a custom libpython." If true,
+    /// we can take object files / static libraries from adding extension
+    /// modules are add the extension module as a built-in. If false, only
+    /// builtin extension modules already in libpython can be added as a
+    /// built-in.
+    allow_new_builtin_extension_modules: bool,
+
     /// Named resources that have been collected.
     resources: BTreeMap<String, PrePackagedResource>,
     /// Bytecode cache tag to use for compiled bytecode modules.
@@ -618,11 +628,13 @@ impl PythonResourceCollector {
     pub fn new(
         policy: &PythonResourcesPolicy,
         allowed_extension_module_locations: Vec<AbstractResourceLocation>,
+        allow_new_builtin_extension_modules: bool,
         cache_tag: &str,
     ) -> Self {
         Self {
             allowed_locations: policy.allowed_locations(),
             allowed_extension_module_locations,
+            allow_new_builtin_extension_modules,
             resources: BTreeMap::new(),
             cache_tag: cache_tag.to_string(),
         }
@@ -1142,13 +1154,17 @@ impl PythonResourceCollector {
             .allowed_extension_module_locations
             .contains(&AbstractResourceLocation::InMemory);
 
-        // Whether we can link the extension as a built-in. This requires the extension
-        // to be builtin to the core distribution, have object files that we can link
-        // together, or a static library to link.
-        let can_link_builtin = if extension_module.builtin_default {
+        // Whether we can link the extension as a built-in. This requires one of the
+        // following:
+        //
+        // 1. The extension module is already a built-in.
+        // 2. Object files or static library data and for the policy to allow new built-in
+        //    extension modules.
+        let can_link_builtin = if extension_module.in_libpython() {
             true
         } else {
-            !extension_module.object_file_data.is_empty()
+            self.allow_new_builtin_extension_modules
+                && !extension_module.object_file_data.is_empty()
         };
 
         // Whether we can produce a standalone shared library extension module.
@@ -2690,6 +2706,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             &PythonResourcesPolicy::InMemoryOnly,
             vec![],
+            false,
             DEFAULT_CACHE_TAG,
         );
         r.add_python_module_source(
@@ -2740,6 +2757,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             &PythonResourcesPolicy::InMemoryOnly,
             vec![],
+            false,
             DEFAULT_CACHE_TAG,
         );
         r.add_python_module_source(
@@ -2812,6 +2830,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
             vec![],
+            false,
             DEFAULT_CACHE_TAG,
         );
         r.add_python_module_source(
@@ -2891,6 +2910,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             &PythonResourcesPolicy::InMemoryOnly,
             vec![],
+            false,
             DEFAULT_CACHE_TAG,
         );
 
@@ -3010,6 +3030,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             &PythonResourcesPolicy::InMemoryOnly,
             vec![],
+            false,
             DEFAULT_CACHE_TAG,
         );
         r.add_python_module_bytecode(
@@ -3061,6 +3082,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             &PythonResourcesPolicy::InMemoryOnly,
             vec![],
+            false,
             DEFAULT_CACHE_TAG,
         );
         r.add_python_module_bytecode_from_source(
@@ -3114,6 +3136,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             &PythonResourcesPolicy::InMemoryOnly,
             vec![],
+            false,
             DEFAULT_CACHE_TAG,
         );
 
@@ -3232,6 +3255,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             &PythonResourcesPolicy::InMemoryOnly,
             vec![],
+            false,
             DEFAULT_CACHE_TAG,
         );
         r.add_python_module_bytecode_from_source(
@@ -3306,6 +3330,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             &PythonResourcesPolicy::InMemoryOnly,
             vec![],
+            false,
             DEFAULT_CACHE_TAG,
         );
 
@@ -3426,6 +3451,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             &PythonResourcesPolicy::InMemoryOnly,
             vec![],
+            false,
             DEFAULT_CACHE_TAG,
         );
         r.add_python_package_resource(
@@ -3484,6 +3510,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
             vec![],
+            false,
             DEFAULT_CACHE_TAG,
         );
         r.add_python_package_resource(
@@ -3558,6 +3585,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             &PythonResourcesPolicy::InMemoryOnly,
             vec![],
+            false,
             DEFAULT_CACHE_TAG,
         );
 
@@ -3642,6 +3670,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             &PythonResourcesPolicy::InMemoryOnly,
             vec![],
+            false,
             DEFAULT_CACHE_TAG,
         );
         r.add_python_package_distribution_resource(
@@ -3700,6 +3729,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             &PythonResourcesPolicy::FilesystemRelativeOnly("".to_string()),
             vec![],
+            false,
             DEFAULT_CACHE_TAG,
         );
         r.add_python_package_distribution_resource(
@@ -3774,6 +3804,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             &PythonResourcesPolicy::InMemoryOnly,
             vec![],
+            false,
             DEFAULT_CACHE_TAG,
         );
 
@@ -3853,6 +3884,7 @@ mod tests {
         let mut c = PythonResourceCollector::new(
             &PythonResourcesPolicy::InMemoryOnly,
             vec![AbstractResourceLocation::InMemory],
+            false,
             DEFAULT_CACHE_TAG,
         );
 
@@ -3930,6 +3962,7 @@ mod tests {
         let mut c = PythonResourceCollector::new(
             &PythonResourcesPolicy::InMemoryOnly,
             vec![],
+            false,
             DEFAULT_CACHE_TAG,
         );
 
@@ -3940,6 +3973,7 @@ mod tests {
         let mut c = PythonResourceCollector::new(
             &PythonResourcesPolicy::InMemoryOnly,
             vec![AbstractResourceLocation::InMemory],
+            false,
             DEFAULT_CACHE_TAG,
         );
 
@@ -4024,6 +4058,7 @@ mod tests {
         let mut c = PythonResourceCollector::new(
             &PythonResourcesPolicy::FilesystemRelativeOnly("prefix".to_string()),
             vec![],
+            false,
             DEFAULT_CACHE_TAG,
         );
         let res = c.add_python_extension_module(
@@ -4036,6 +4071,7 @@ mod tests {
         let mut c = PythonResourceCollector::new(
             &PythonResourcesPolicy::FilesystemRelativeOnly("prefix".to_string()),
             vec![AbstractResourceLocation::RelativePath],
+            false,
             DEFAULT_CACHE_TAG,
         );
 
@@ -4132,6 +4168,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             &PythonResourcesPolicy::InMemoryOnly,
             vec![],
+            false,
             DEFAULT_CACHE_TAG,
         );
 
@@ -4196,6 +4233,7 @@ mod tests {
         let mut r = PythonResourceCollector::new(
             &PythonResourcesPolicy::InMemoryOnly,
             vec![],
+            false,
             DEFAULT_CACHE_TAG,
         );
         assert_eq!(r.find_dunder_file()?.len(), 0);

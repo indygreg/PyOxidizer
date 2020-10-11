@@ -639,6 +639,14 @@ impl PythonExtensionModule {
     pub fn is_minimally_required(&self) -> bool {
         self.is_stdlib && (self.builtin_default || self.required)
     }
+
+    /// Whether this extension module is already in libpython.
+    ///
+    /// This is true if this is a stdlib extension module and is a core module or no
+    /// shared library extension module is available.
+    pub fn in_libpython(&self) -> bool {
+        self.is_stdlib && (self.builtin_default || self.shared_library.is_none())
+    }
 }
 
 /// Represents a collection of variants for a given Python extension module.

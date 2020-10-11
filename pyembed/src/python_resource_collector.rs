@@ -70,6 +70,7 @@ impl OxidizedResourceCollector {
                 AbstractResourceLocation::InMemory,
                 AbstractResourceLocation::RelativePath,
             ],
+            true,
             &cache_tag,
         );
 
