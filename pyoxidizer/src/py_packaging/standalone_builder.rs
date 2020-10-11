@@ -180,7 +180,7 @@ impl StandalonePythonExecutableBuilder {
             allowed_extension_module_locations.push(AbstractResourceLocation::RelativePath);
         }
 
-        let allow_new_builtin_extension_modules = matches!(link_mode, LibpythonLinkMode::Static);
+        let allow_new_builtin_extension_modules = link_mode == LibpythonLinkMode::Static;
 
         let mut builder = Box::new(Self {
             host_triple,
