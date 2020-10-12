@@ -163,8 +163,11 @@ Backwards Compatibility Notes
   replaced by attributes denoting valid locations for resources.
 * ``oxidized_importer.OxidizedResourceCollector.__init__()`` now
    accepts an ``allowed_locations`` argument instead of ``policy``.
-* The ``isolated`` and ``use_hash_seed`` arguments of the
-  ``PythonInterpreterConfig()`` Starlark type constructor have been removed.
+* The ``PythonInterpreterConfig()`` constructor has been removed. Instances
+  of this Starlark type are now created via
+  ``PythonDistribution.make_python_interpreter_config()``. In addition,
+  instances are mutated by setting attributes rather than passing
+  perhaps dozens of arguments to a constructor function.
 
 New Features
 ^^^^^^^^^^^^
@@ -262,6 +265,9 @@ New Features
 * The ``PythonDistribution`` Starlark type now has a
   ``make_python_interpreter_config()`` method to obtain instances of
   ``PythonInterpreterConfig`` that are appropriate for that distribution.
+* ``PythonInterpreterConfig`` Starlark types now expose attributes to query
+  and mutate state. Nearly every setting exposed by Python's initialization
+  API can be set.
 
 Bug Fixes
 ^^^^^^^^^

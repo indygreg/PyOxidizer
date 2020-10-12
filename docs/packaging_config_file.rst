@@ -70,9 +70,8 @@ this instance into the constructed ``PythonExecutable``:
        return default_python_distribution()
 
    def make_exe(dist):
-       config = PythonInterpreterConfig(
-           run_eval("print('hello, world')")
-       )
+       config = dist.make_python_interpreter_config()
+       config.run_mode = "eval:print('hello, world')"
 
        return dist.to_python_executable("myapp", config=config)
 

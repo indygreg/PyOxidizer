@@ -70,48 +70,58 @@ def make_exe(dist):
     # to use.
     # policy.set_preferred_extension_module_variant("foo", "bar")
 
-    # This variable defines the configuration of the
-    # embedded Python interpreter.
-    python_config = PythonInterpreterConfig(
-    #     bytes_warning=0,
-    #     write_bytecode=False,
-    #     ignore_environment=True,
-    #     inspect=False,
-    #     interactive=False,
-    #     legacy_windows_fs_encoding=False,
-    #     legacy_windows_stdio=False,
-    #     no_site=True,
-    #     no_user_site_directory=True,
-    #     optimize_level=0,
-    #     parser_debug=False,
-    #     stdio_encoding=None,
-    #     unbuffered_stdio=False,
-    #     filesystem_importer=False,
-    #     sys_frozen=False,
-    #     sys_meipass=False,
-    #     sys_paths=None,
-    #     raw_allocator=None,
-    #     terminfo_resolution="dynamic",
-    #     terminfo_dirs=None,
-    #     verbose=0,
-    #     write_modules_directory_env=None,
-    #     run_eval={{#if code}}(r"""{{{code}}}"""{{else}}None{{/if}},
-    #     run_module=None,
-    #     run_noop=False,
-    #     run_repl={{#if code}}False{{else}}True{{/if}},
-    )
+    # This variable defines the configuration of the embedded Python
+    # interpreter. By default, the interpreter will run a Python REPL
+    # using settings that are appropriate for an "isolated" run-time
+    # environment.
+    #
+    # The configuration of the embedded Python interpreter can be modified
+    # by setting attributes on the instance. Some of these are
+    # documented below.
+    python_config = dist.make_python_interpreter_config()
 
-    # The run_eval, run_module, run_noop, and run_repl arguments are mutually
-    # exclusive controls over what the interpreter should do once it initializes.
-    #
-    # run_eval -- Run the specified string value via `eval()`.
-    # run_module -- Import the specified module as __main__ and run it.
-    # run_noop -- Do nothing.
-    # run_repl -- Start a Python REPL.
-    #
-    # These arguments can be ignored if you are providing your own Rust code for
-    # starting the interpreter, as Rust code has full control over interpreter
-    # behavior.
+    # Make the embedded interpreter behave like a `python` process.
+    # python_config.config_profile = "python"
+
+    # Set initial value for `sys.path`. If the string `$ORIGIN` exists in
+    # a value, it will be expanded to the directory of the built executable.
+    # python_config.module_search_paths = ["$ORIGIN/lib"]
+
+    # Use jemalloc as Python's memory allocator
+    # python_config.raw_allocator = "jemalloc"
+
+    # Use the system allocator as Python's memory allocator.
+    # python_config.raw_allocator = "system"
+
+    # Control whether `oxidized_importer` is the first importer on
+    # `sys.meta_path`.
+    # python_config.oxidized_importer = False
+
+    # Enable the standard path-based importer which attempts to load
+    # modules from the filesystem.
+    # python_config.filesystem_importer = True
+
+    # Set `sys.frozen = True`
+    # python_config.sys_frozen = True
+
+    # Set `sys.meipass`
+    # python_config.sys_meipass = True
+
+    # Write files containing loaded modules to the directory specified
+    # by the given environment variable.
+    # python_config.write_modules_directory_env = "/tmp/oxidized/loaded_modules"
+
+    # Don't run any Python code when the interpreter starts.
+    # python_config.run_mode = 'none'
+
+    # Start a Python REPL when the interpreter starts.
+    # python_config.run_mode = 'repl'
+
+    # Evaluate a string as Python code when the interpreter starts.
+    # python_config.run_mode = 'eval:<code>'
+
+    # Run a Python module as __main__ when the interpreter starts.
+    # python_config.run_mode = 'module:foo.bar'
 
     # Produce a PythonExecutable from a Python distribution, embedded
     # resources, and other options. The returned object represents the

@@ -140,9 +140,8 @@ comments removed for brevity):
        policy.include_distribution_resources = True
        policy.include_test = False
 
-       config = PythonInterpreterConfig(
-           run_eval="from pyflakes.api import main; main()",
-       )
+       config = dist.make_python_interpreter_config()
+       config.run_mode = "eval:from pyflakes.api import main; main()"
 
        exe = dist.to_python_executable(
            name="pyflakes",
@@ -193,9 +192,8 @@ following:
        policy.include_distribution_resources = False
        policy.include_test = False
 
-       config = PythonInterpreterConfig(
-           run_eval="from myapp import main; main()",
-       )
+       config = dist.make_python_interpreter_config()
+       config.run_mode = "eval:from myapp import main; main()"
 
        exe = dist.to_python_executable(
            name="myapp",

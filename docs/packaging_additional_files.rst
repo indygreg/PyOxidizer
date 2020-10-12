@@ -27,9 +27,8 @@ Then edit the ``pyoxidizer.bzl`` file to have the following:
    def make_exe():
        dist = default_python_distribution()
 
-       config = PythonInterpreterConfig(
-           run_module="black",
-       )
+       config = dist.make_python_interpreter_config()
+       config.run_mode = "module:black"
 
        exe = dist.to_python_executable(
            name="black",
@@ -100,10 +99,9 @@ Change your configuration file to look like the following:
        policy.include_distribution_resources = False
        policy.include_test = False
 
-       python_config = PythonInterpreterConfig(
-           run_module="black",
-           sys_paths=["$ORIGIN/lib"],
-       )
+       python_config = dist.make_python_interpreter_config()
+       python_config.run_mode = "module:black"
+       python_config.module_search_paths = ["$ORIGIN/lib"]
 
        return dist.to_python_executable(
            name="black",
@@ -133,11 +131,11 @@ We added a new ``make_dist()`` function and ``python_dist`` *target* to
 represent obtaining the Python distribution. This isn't strictly required,
 but it helps avoid redundant work during execution.
 
-The ``PythonInterpreterConfig`` construction adds a ``sys_paths=["$ORIGIN/lib"]``
-argument. This argument says *adjust ``sys.path`` at run-time to include the
-``lib`` directory next to the executable file*. It allows the Python
-interpreter to import Python files on the filesystem instead of just from
-memory.
+We obtain a ``PythonInterpreterConfig`` via a method on the distribution.
+We then set ``module_search_paths = ["$ORIGIN/lib"]`` to adjust ``sys.path``
+at run-time to include the ``lib`` directory next to the executable file. It
+allows the Python interpreter to import Python files on the filesystem using
+the standard importer.
 
 The ``make_install()`` function/target has also gained a call to
 ``files.add_python_resources()``. This method call takes the Python resources

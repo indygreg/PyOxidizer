@@ -214,7 +214,8 @@ The accepted arguments are:
    (``PythonInterpreterConfig``) The default configuration of the
    embedded Python interpreter.
 
-   Default is what ``PythonInterpreterConfig()`` returns.
+   Default is what :ref:`config_python_distribution_make_python_interpreter_config`
+   returns.
 
 .. important::
 
