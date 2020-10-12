@@ -106,6 +106,16 @@ impl StarlarkEnvironment {
             })
     }
 
+    pub fn eval_assert(&mut self, code: &str) -> Result<()> {
+        let value = self.eval(code)?;
+
+        if value.get_type() != "bool" || !value.to_bool() {
+            Err(anyhow!("{} does not evaluate to True", code))
+        } else {
+            Ok(())
+        }
+    }
+
     pub fn get(&self, name: &str) -> Result<Value> {
         let value = self.env.get(name).unwrap();
 

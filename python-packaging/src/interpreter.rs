@@ -389,7 +389,7 @@ impl TryFrom<&str> for Allocator {
             "not-set" => Ok(Self::NotSet),
             "default" => Ok(Self::Default),
             "debug" => Ok(Self::Debug),
-            "malloc" => Ok(Self::Debug),
+            "malloc" => Ok(Self::Malloc),
             "malloc-debug" => Ok(Self::MallocDebug),
             "py-malloc" => Ok(Self::PyMalloc),
             "py-malloc-debug" => Ok(Self::PyMallocDebug),

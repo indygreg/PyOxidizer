@@ -61,7 +61,7 @@ impl ToValue for Option<CoerceCLocale> {
 impl ToValue for Option<BytesWarning> {
     fn to_value(&self) -> Value {
         match self {
-            Some(value) => Value::from(*value as i32),
+            Some(value) => Value::from(value.to_string()),
             None => Value::from(NoneType::None),
         }
     }
@@ -897,7 +897,17 @@ starlark_module! { embedded_python_config_module =>
 
 #[cfg(test)]
 mod tests {
-    use {super::super::testutil::*, super::*};
+    use {super::super::testutil::*, super::*, anyhow::Result};
+
+    // TODO instantiating a new distribution every call is expensive. Can we cache this?
+    fn get_env() -> Result<StarlarkEnvironment> {
+        let mut env = StarlarkEnvironment::new()?;
+
+        env.eval("dist = default_python_distribution()")?;
+        env.eval("config = dist.make_python_interpreter_config()")?;
+
+        Ok(env)
+    }
 
     #[test]
     fn test_constructor() {
@@ -911,20 +921,648 @@ mod tests {
     }
 
     #[test]
-    fn test_bytes_warning() {
-        let c = starlark_ok("PythonInterpreterConfig(bytes_warning=2)");
-        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
-        assert_eq!(x.inner.config.bytes_warning, Some(BytesWarning::Raise));
+    fn test_profile() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.config_profile == 'isolated'")?;
+
+        env.eval("config.config_profile = 'python'")?;
+        env.eval_assert("config.config_profile == 'python'")?;
+
+        env.eval("config.config_profile = 'isolated'")?;
+        env.eval_assert("config.config_profile == 'isolated'")?;
+
+        Ok(())
     }
 
     #[test]
-    fn test_optimize_level() {
-        let c = starlark_ok("PythonInterpreterConfig(optimize_level=1)");
-        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
-        assert_eq!(
-            x.inner.config.optimization_level,
-            Some(BytecodeOptimizationLevel::One)
-        );
+    fn test_allocator() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.allocator == None")?;
+
+        env.eval("config.allocator = 'not-set'")?;
+        env.eval_assert("config.allocator == 'not-set'")?;
+
+        env.eval("config.allocator = 'default'")?;
+        env.eval_assert("config.allocator == 'default'")?;
+
+        env.eval("config.allocator = 'debug'")?;
+        env.eval_assert("config.allocator == 'debug'")?;
+
+        env.eval("config.allocator = 'malloc'")?;
+        env.eval_assert("config.allocator == 'malloc'")?;
+
+        env.eval("config.allocator = 'malloc-debug'")?;
+        env.eval_assert("config.allocator == 'malloc-debug'")?;
+
+        env.eval("config.allocator = 'py-malloc'")?;
+        env.eval_assert("config.allocator == 'py-malloc'")?;
+
+        env.eval("config.allocator = 'py-malloc-debug'")?;
+        env.eval_assert("config.allocator == 'py-malloc-debug'")?;
+
+        env.eval("config.allocator = None")?;
+        env.eval_assert("config.allocator == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_configure_locale() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.configure_locale == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_coerce_c_locale() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.coerce_c_locale == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_development_mode() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.development_mode == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_isolated() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.isolated == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_legacy_windows_fs_encoding() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.legacy_windows_fs_encoding == False")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_argv() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.parse_argv == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_use_environment() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.use_environment == False")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_utf8_mode() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.utf8_mode == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_base_exec_prefix() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.base_exec_prefix == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_base_executable() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.base_executable == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_base_prefix() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.base_prefix == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_buffered_stdio() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.buffered_stdio == True")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_bytes_warning() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.bytes_warning == 'none'")?;
+
+        env.eval("config.bytes_warning = 'warn'")?;
+        env.eval_assert("config.bytes_warning == 'warn'")?;
+
+        env.eval("config.bytes_warning = 'raise'")?;
+        env.eval_assert("config.bytes_warning == 'raise'")?;
+
+        env.eval("config.bytes_warning = None")?;
+        env.eval_assert("config.bytes_warning == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_check_hash_pycs_mode() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.check_hash_pycs_mode == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_configure_c_stdio() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.configure_c_stdio == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_dump_refs() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.dump_refs == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_exec_prefix() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.exec_prefix == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_executable() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.executable == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_fault_handler() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.fault_handler == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_filesystem_encoding() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.filesystem_encoding == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_filesystem_errors() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.filesystem_errors == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_hash_seed() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.hash_seed == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_home() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.home == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_import_time() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.import_time == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_inspect() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.inspect == False")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_install_signal_handlers() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.install_signal_handlers == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_interactive() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.interactive == False")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_legacy_windows_stdio() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.legacy_windows_stdio == False")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_malloc_stats() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.malloc_stats == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_module_search_paths() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.module_search_paths == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_optimization_level() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.optimization_level == 0")?;
+
+        env.eval("config.optimization_level = 1")?;
+        env.eval_assert("config.optimization_level == 1")?;
+
+        env.eval("config.optimization_level = 2")?;
+        env.eval_assert("config.optimization_level == 2")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_parser_debug() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.parser_debug == False")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_pathconfig_warnings() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.pathconfig_warnings == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_prefix() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.prefix == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_program_name() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.program_name == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_pycache_prefix() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.pycache_prefix == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_python_path_env() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.python_path_env == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_quiet() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.quiet == False")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_run_command() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.run_command == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_run_filename() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.run_filename == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_run_module() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.run_module == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_show_alloc_count() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.show_alloc_count == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_show_ref_count() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.show_ref_count == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_site_import() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.site_import == False")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_skip_first_source_line() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.skip_first_source_line == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_stdio_encoding() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.stdio_encoding == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_stdio_errors() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.stdio_errors == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_tracemalloc() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.tracemalloc == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_user_site_directory() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.user_site_directory == False")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_verbose() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.verbose == False")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_warn_options() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.warn_options == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_write_bytecode() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.write_bytecode == False")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_x_options() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.x_options == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_raw_allocator() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.raw_allocator == 'system'")?;
+
+        env.eval("config.raw_allocator = 'jemalloc'")?;
+        env.eval_assert("config.raw_allocator == 'jemalloc'")?;
+
+        env.eval("config.raw_allocator = 'rust'")?;
+        env.eval_assert("config.raw_allocator == 'rust'")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_oxidized_importer() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.oxidized_importer == True")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_filesystem_importer() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.filesystem_importer == False")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_argvb() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.argvb == False")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_sys_frozen() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.sys_frozen == False")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_sys_meipass() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.sys_meipass == False")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_terminfo_resolution() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.terminfo_resolution == 'none'")?;
+
+        env.eval("config.terminfo_resolution = 'dynamic'")?;
+        env.eval_assert("config.terminfo_resolution == 'dynamic'")?;
+
+        env.eval("config.terminfo_resolution = 'static:foo'")?;
+        env.eval_assert("config.terminfo_resolution == 'static:foo'")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_write_modules_directory_env() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.write_modules_directory_env == None")?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_run_mode() -> Result<()> {
+        let mut env = get_env()?;
+
+        env.eval_assert("config.run_mode == 'repl'")?;
+
+        env.eval("config.run_mode = 'module:foo'")?;
+        env.eval_assert("config.run_mode == 'module:foo'")?;
+
+        env.eval("config.run_mode = 'none'")?;
+        env.eval_assert("config.run_mode == 'none'")?;
+
+        env.eval("config.run_mode = 'eval:code'")?;
+        env.eval_assert("config.run_mode == 'eval:code'")?;
+
+        env.eval("config.run_mode = 'file:path'")?;
+        env.eval_assert("config.run_mode == 'file:path'")?;
+
+        Ok(())
     }
 
     #[test]
@@ -937,102 +1575,5 @@ mod tests {
         );
         // Setting sys_paths enables filesystem importer.
         assert!(x.inner.filesystem_importer);
-    }
-
-    #[test]
-    fn test_stdio_encoding() {
-        let c = starlark_ok("PythonInterpreterConfig(stdio_encoding='foo:strict')");
-        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
-        assert_eq!(x.inner.config.stdio_encoding, Some("foo".to_string()));
-        assert_eq!(x.inner.config.stdio_errors, Some("strict".to_string()));
-    }
-
-    #[test]
-    fn test_raw_allocator() {
-        let c = starlark_ok("PythonInterpreterConfig(raw_allocator='system')");
-        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
-        assert_eq!(x.inner.raw_allocator, MemoryAllocatorBackend::System);
-
-        let c = starlark_ok("PythonInterpreterConfig(raw_allocator='jemalloc')");
-        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
-        assert_eq!(x.inner.raw_allocator, MemoryAllocatorBackend::Jemalloc);
-        let c = starlark_ok("PythonInterpreterConfig(raw_allocator='rust')");
-        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
-        assert_eq!(x.inner.raw_allocator, MemoryAllocatorBackend::Rust);
-    }
-
-    #[test]
-    fn test_run_eval() {
-        let c = starlark_ok("PythonInterpreterConfig(run_eval='1')");
-        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
-        assert_eq!(
-            x.inner.run_mode,
-            PythonRunMode::Eval {
-                code: "1".to_string()
-            }
-        );
-    }
-
-    #[test]
-    fn test_run_file() {
-        let c = starlark_ok("PythonInterpreterConfig(run_file='hello.py')");
-        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
-
-        assert_eq!(
-            x.inner.run_mode,
-            PythonRunMode::File {
-                path: PathBuf::from("hello.py"),
-            }
-        );
-    }
-
-    #[test]
-    fn test_run_module() {
-        let c = starlark_ok("PythonInterpreterConfig(run_module='main')");
-        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
-        assert_eq!(
-            x.inner.run_mode,
-            PythonRunMode::Module {
-                module: "main".to_string()
-            }
-        );
-    }
-
-    #[test]
-    fn test_run_noop() {
-        let c = starlark_ok("PythonInterpreterConfig(run_noop=True)");
-        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
-        assert_eq!(x.inner.run_mode, PythonRunMode::None);
-    }
-
-    #[test]
-    fn test_run_repl() {
-        let c = starlark_ok("PythonInterpreterConfig(run_repl=True)");
-        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
-        assert_eq!(x.inner.run_mode, PythonRunMode::Repl);
-    }
-
-    #[test]
-    fn test_terminfo_resolution() {
-        let c = starlark_ok("PythonInterpreterConfig(terminfo_resolution=None)");
-        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
-        assert_eq!(x.inner.terminfo_resolution, TerminfoResolution::Dynamic);
-
-        let c = starlark_ok("PythonInterpreterConfig(terminfo_resolution='dynamic')");
-        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
-        assert_eq!(x.inner.terminfo_resolution, TerminfoResolution::Dynamic);
-
-        let c = starlark_ok("PythonInterpreterConfig(terminfo_resolution='none')");
-        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
-        assert_eq!(x.inner.terminfo_resolution, TerminfoResolution::None);
-
-        let c = starlark_ok(
-            "PythonInterpreterConfig(terminfo_resolution='static', terminfo_dirs='foo')",
-        );
-        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
-        assert_eq!(
-            x.inner.terminfo_resolution,
-            TerminfoResolution::Static("foo".to_string())
-        );
     }
 }
