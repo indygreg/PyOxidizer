@@ -30,6 +30,12 @@ Not yet released.
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* The default Python distributions have been upgraded to CPython
+  3.8.6 (from 3.7.7) and support for Python 3.7 has been removed.
+* On Windows, the ``default_python_distribution()`` Starlark function
+  now defaults to returning a ``standalone_dynamic`` distribution
+  variant, meaning that it picks a distribution that can load standalone
+  ``.pyd`` Python extension modules by default.
 * The *standalone* Python distributions are now validated to be at
   least version 5 of the distribution format. If you are using the
   default Python distributions, this change should not affect you.
@@ -37,16 +43,9 @@ Backwards Compatibility Notes
   distributions has been removed. This support was experimental.
   The official Windows embeddable distributions are missing critical
   support files that make them difficult to integrate with PyOxidizer.
-* The default Python distributions have been upgraded to CPython
-  3.8.6 (from 3.7.7) and support for Python 3.7 has been removed.
-* On Windows, the ``default_python_distribution()`` Starlark function
-  now defaults to returning a ``standalone_dynamic`` distribution
-  variant, meaning that it picks a distribution that can load standalone
-  ``.pyd`` Python extension modules by default.
 * The ``pyembed`` crate now defines a new ``OxidizedPythonInterpreterConfig``
-  type to configure Python interpreters. ``PythonConfig`` still exists
-  and can be converted into a ``OxidizedPythonInterpreterConfig`` using
-  ``.into()``.
+  type to configure Python interpreters. The legacy ``PythonConfig`` type
+  has been removed.
 * Various ``run_*`` functions on ``pyembed::MainPythonInterpreter`` have
   been moved to standalone functions in the ``pyembed`` crate. The
   ``run_as_main()`` function (which is called by the default Rust
@@ -79,12 +78,8 @@ Backwards Compatibility Notes
   for this change were to make code simpler and the justification for
   removing it was rather weak. Please file an issue if this feature loss
   affects you.
-* The ``PythonInterpreterConfig()`` Starlark function/constructor now
-  internally has all arguments defined to ``None`` by default instead of
-  their default values. To specify no terminfo database resolution at
-  run-time, you must now pass ``terminfo_resolution='none'`` instead of
-  ``terminfo_resolution=None``. ``terminfo_resolution=None`` is now
-  interpreted as the default value, which is ``dynamic``.
+* The ``PythonInterpreterConfig`` Starlark type now interally has most of
+  its fields defined to ``None`` by default instead of their default values.
 * The following Starlark methods have been renamed:
   ``PythonExecutable.add_module_source()`` ->
   ``PythonExecutable.add_python_module_source()``;
@@ -184,16 +179,25 @@ Backwards Compatibility Notes
 New Features
 ^^^^^^^^^^^^
 
+* Python distributions upgraded to CPython 3.8.6.
+* CPython 3.9 distributions are now supported by passing
+  ``python_version="3.9"`` to the ``default_python_distribution()`` Starlark
+  function. CPython 3.8 is the default distribution version.
+* Embedded Python interpreters are now managed via the
+  `new apis <https://docs.python.org/3/c-api/init_config.htm>`_ defined
+  by PEP-587. This gives us much more control over the configuration
+  of interpreters.
+* A ``FileManifest`` Starlark instance will now have its default
+  ``pyoxidizer run`` executable set to the last added Python executable.
+  Previously, it would only have a run target if there was a single executable
+  file in the ``FileManifest``. If there were multiple executables or
+  executable files (such as Python extension modules) a run target would
+  not be available and ``pyoxidizer run`` would do nothing.
 * Default Python distributions upgraded to version 5 of the
   standalone distribution format. This new format advertises much more
   metadata about the distribution, enabling PyOxidizer to take fewer
   guesses about how the distribution works and will help enable
   more features over time.
-* Python distributions upgraded to CPython 3.8.6.
-* Embedded Python interpreters are now managed via the
-  `new apis <https://docs.python.org/3/c-api/init_config.htm>`_ defined
-  by PEP-587. This gives us much more control over the configuration
-  of interpreters.
 * The ``pyembed`` crate now exposes a new ``OxidizedPythonInterpreterConfig``
   type (and associated types) allowing configuration of every field
   supported by Python's interpreter configuration API.
@@ -269,9 +273,6 @@ New Features
 * The Starlark function ``default_python_distribution()`` now accepts a
   ``python_version`` argument to control the *X.Y* version of Python to
   use.
-* CPython 3.9 distributions are now supported by passing
-  ``python_version="3.9"`` to the ``default_python_distribution()`` Starlark
-  function. CPython 3.8 is the default distribution version.
 * The ``PythonPackagingPolicy`` Starlark type now exposes a flag to
   control whether shared libraries can be loaded from memory.
 * The ``PythonDistribution`` Starlark type now has a
@@ -280,12 +281,6 @@ New Features
 * ``PythonInterpreterConfig`` Starlark types now expose attributes to query
   and mutate state. Nearly every setting exposed by Python's initialization
   API can be set.
-* A ``FileManifest`` Starlark instance will now have its default
-  ``pyoxidizer run`` executable set to the last added Python executable.
-  Previously, it would only have a run target if there was a single executable
-  file in the ``FileManifest``. If there were multiple executables or
-  executable files (such as Python extension modules) a run target would
-  not be available and ``pyoxidizer run`` would do nothing.
 
 Bug Fixes
 ^^^^^^^^^
