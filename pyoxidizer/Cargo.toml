@@ -60,7 +60,7 @@ zstd = "0.5"
 
 [dependencies.python-packaging]
 version = "0.1.0"
-path = "../python-packaging"
+#path = "../python-packaging"
 
 [dependencies.python-packed-resources]
 version = "0.2.0"
