@@ -453,6 +453,14 @@ impl TypedValue for PythonInterpreterConfigValue {
             }
             "module_search_paths" => {
                 self.inner.config.module_search_paths = value.try_to_optional()?;
+
+                // Automatically enable filesystem importer if module search paths
+                // are registered.
+                if let Some(paths) = &self.inner.config.module_search_paths {
+                    if !paths.is_empty() {
+                        self.inner.filesystem_importer = true;
+                    }
+                }
             }
             "optimization_level" => {
                 self.inner.config.optimization_level = value.try_to_optional()?;
@@ -1243,6 +1251,16 @@ mod tests {
         let mut env = get_env()?;
 
         env.eval_assert("config.module_search_paths == None")?;
+        env.eval_assert("config.filesystem_importer == False")?;
+
+        env.eval("config.module_search_paths = []")?;
+        env.eval_assert("config.module_search_paths == []")?;
+        env.eval_assert("config.filesystem_importer == False")?;
+
+        env.eval("config.module_search_paths = ['foo']")?;
+        env.eval_assert("config.module_search_paths == ['foo']")?;
+        // filesystem_importer enabled when setting paths.
+        env.eval_assert("config.filesystem_importer == True")?;
 
         Ok(())
     }
@@ -1563,17 +1581,5 @@ mod tests {
         env.eval_assert("config.run_mode == 'file:path'")?;
 
         Ok(())
-    }
-
-    #[test]
-    fn test_sys_paths() {
-        let c = starlark_ok("PythonInterpreterConfig(sys_paths=['foo', 'bar'])");
-        let x = c.downcast_ref::<PythonInterpreterConfigValue>().unwrap();
-        assert_eq!(
-            x.inner.config.module_search_paths,
-            Some(vec![PathBuf::from("foo"), PathBuf::from("bar")])
-        );
-        // Setting sys_paths enables filesystem importer.
-        assert!(x.inner.filesystem_importer);
     }
 }
