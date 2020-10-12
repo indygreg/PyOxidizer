@@ -1162,7 +1162,7 @@ checksum = "a86ed3f5f244b372d6b1a00b72ef7f8876d0bc6a78a4c9985c53614041512063"
 
 [[package]]
 name = "oxidized-importer"
-version = "0.8.0-pre"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "lazy_static",
@@ -1353,7 +1353,7 @@ dependencies = [
 
 [[package]]
 name = "pyembed"
-version = "0.8.0-pre"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "cpython",
@@ -1371,7 +1371,7 @@ dependencies = [
 
 [[package]]
 name = "pyoxidizer"
-version = "0.8.0-pre"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -1415,7 +1415,7 @@ dependencies = [
 
 [[package]]
 name = "python-packaging"
-version = "0.1.0-pre"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -1432,7 +1432,7 @@ dependencies = [
 
 [[package]]
 name = "python-packed-resources"
-version = "0.2.0-pre"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "byteorder",
