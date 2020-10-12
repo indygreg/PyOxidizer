@@ -156,6 +156,9 @@ pub trait PythonDistribution {
     /// Construct a `PythonPackagingPolicy` derived from this instance.
     fn create_packaging_policy(&self) -> Result<PythonPackagingPolicy>;
 
+    /// Construct an `EmbeddedPythonConfig` derived from this instance.
+    fn create_python_interpreter_config(&self) -> Result<EmbeddedPythonConfig>;
+
     /// Obtain a `PythonBinaryBuilder` for constructing an executable embedding Python.
     ///
     /// This method is how you start the process of creating a new executable file

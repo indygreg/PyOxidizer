@@ -1179,6 +1179,10 @@ impl PythonDistribution for StandaloneDistribution {
         Ok(policy)
     }
 
+    fn create_python_interpreter_config(&self) -> Result<EmbeddedPythonConfig> {
+        Ok(EmbeddedPythonConfig::default())
+    }
+
     fn as_python_executable_builder(
         &self,
         _logger: &slog::Logger,
