@@ -9,6 +9,7 @@ Work on PyOxidizer started in November 2018 by Gregory Szorc.
 Blog Posts
 ==========
 
+* `Announcing the 0.8 Release of PyOxidizer <https://gregoryszorc.com/blog/2020/10/12/announcing-the-0.8-release-of-pyoxidizer/>`_ (2020-10-12)
 * `Using Rust to Power Python Importing with oxidized_importer <https://gregoryszorc.com/blog/2020/05/10/using-rust-to-power-python-importing-with-oxidized_importer/>`_ (2020-05-10)
 * `PyOxidizer 0.7 <https://gregoryszorc.com/blog/2020/04/09/pyoxidizer-0.7/>`_ (2020-04-09)
 * `C Extension Support in PyOxidizer <https://gregoryszorc.com/blog/2019/06/30/c-extension-support-in-pyoxidizer/>`_ (2019-06-30)
@@ -22,10 +23,10 @@ Blog Posts
 Version History
 ===============
 
-0.8.0-pre
----------
+0.8.0
+-----
 
-Not yet released.
+Released October 12, 2020.
 
 Backwards Compatibility Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
