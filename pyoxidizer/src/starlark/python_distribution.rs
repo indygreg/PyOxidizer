@@ -359,7 +359,15 @@ impl PythonDistribution {
         }?;
 
         let config = if config.get_type() == "NoneType" {
-            Ok(PythonInterpreterConfigValue::default_starlark())
+            Ok(PythonInterpreterConfigValue::new(
+                dist.create_python_interpreter_config().map_err(|e| {
+                    ValueError::from(RuntimeError {
+                        code: "PYOXIDIZER_BUILD",
+                        message: e.to_string(),
+                        label: "resolve_distribution()".to_string(),
+                    })
+                })?,
+            ))
         } else {
             match config.downcast_ref::<PythonInterpreterConfigValue>() {
                 Some(c) => Ok(c.clone()),
