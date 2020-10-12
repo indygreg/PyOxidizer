@@ -3,20 +3,25 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use {
-    super::util::{optional_bool_arg, optional_int_arg, optional_list_arg, optional_str_arg},
+    super::util::{
+        optional_bool_arg, optional_int_arg, optional_list_arg, optional_str_arg, ToOptional,
+        ToValue, TryToOptional,
+    },
     crate::py_packaging::config::{default_raw_allocator, EmbeddedPythonConfig},
     python_packaging::{
         interpreter::{
-            BytesWarning, MemoryAllocatorBackend, PythonInterpreterConfig,
-            PythonInterpreterProfile, PythonRunMode, TerminfoResolution,
+            Allocator, BytesWarning, CheckHashPYCsMode, CoerceCLocale, MemoryAllocatorBackend,
+            PythonInterpreterConfig, PythonInterpreterProfile, PythonRunMode, TerminfoResolution,
         },
         resource::BytecodeOptimizationLevel,
     },
     starlark::{
         values::{
-            error::{RuntimeError, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE},
+            error::{
+                RuntimeError, UnsupportedOperation, ValueError, INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+            },
             none::NoneType,
-            {Immutable, TypedValue, Value, ValueResult},
+            {Mutable, TypedValue, Value, ValueResult},
         },
         {
             starlark_fun, starlark_module, starlark_parse_param_type, starlark_signature,
@@ -25,6 +30,94 @@ use {
     },
     std::{convert::TryFrom, path::PathBuf},
 };
+
+impl ToValue for PythonInterpreterProfile {
+    fn to_value(&self) -> Value {
+        Value::from(self.to_string())
+    }
+}
+
+impl ToValue for PythonRunMode {
+    fn to_value(&self) -> Value {
+        Value::from(self.to_string())
+    }
+}
+
+impl ToValue for TerminfoResolution {
+    fn to_value(&self) -> Value {
+        Value::from(self.to_string())
+    }
+}
+
+impl ToValue for Option<CoerceCLocale> {
+    fn to_value(&self) -> Value {
+        match self {
+            Some(value) => Value::from(value.to_string()),
+            None => Value::from(NoneType::None),
+        }
+    }
+}
+
+impl ToValue for Option<BytesWarning> {
+    fn to_value(&self) -> Value {
+        match self {
+            Some(value) => Value::from(*value as i32),
+            None => Value::from(NoneType::None),
+        }
+    }
+}
+
+impl ToValue for Option<CheckHashPYCsMode> {
+    fn to_value(&self) -> Value {
+        match self {
+            Some(value) => Value::from(value.to_string()),
+            None => Value::from(NoneType::None),
+        }
+    }
+}
+
+impl ToValue for Option<Allocator> {
+    fn to_value(&self) -> Value {
+        match self {
+            Some(value) => Value::from(value.to_string()),
+            None => Value::from(NoneType::None),
+        }
+    }
+}
+
+impl ToValue for Option<BytecodeOptimizationLevel> {
+    fn to_value(&self) -> Value {
+        match self {
+            Some(value) => Value::from(*value as i32),
+            None => Value::from(NoneType::None),
+        }
+    }
+}
+
+impl ToValue for MemoryAllocatorBackend {
+    fn to_value(&self) -> Value {
+        Value::from(self.to_string())
+    }
+}
+
+impl TryToOptional<BytecodeOptimizationLevel> for Value {
+    fn try_to_optional(&self) -> Result<Option<BytecodeOptimizationLevel>, ValueError> {
+        if self.get_type() == "NoneType" {
+            Ok(None)
+        } else {
+            match self.to_int()? {
+                0 => Ok(Some(BytecodeOptimizationLevel::Zero)),
+                1 => Ok(Some(BytecodeOptimizationLevel::One)),
+                2 => Ok(Some(BytecodeOptimizationLevel::Two)),
+                _ => Err(ValueError::from(RuntimeError {
+                    code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                    message: "invalid Python bytecode integer value".to_string(),
+                    label: "PythonInterpreterConfig.optimization_level".to_string(),
+                })),
+            }
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct PythonInterpreterConfigValue {
@@ -38,7 +131,7 @@ impl PythonInterpreterConfigValue {
 }
 
 impl TypedValue for PythonInterpreterConfigValue {
-    type Holder = Immutable<PythonInterpreterConfigValue>;
+    type Holder = Mutable<PythonInterpreterConfigValue>;
     const TYPE: &'static str = "PythonInterpreterConfig";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
@@ -51,6 +144,443 @@ impl TypedValue for PythonInterpreterConfigValue {
 
     fn to_repr(&self) -> String {
         self.to_str()
+    }
+
+    fn get_attr(&self, attribute: &str) -> ValueResult {
+        let v = match attribute {
+            "config_profile" => self.inner.config.profile.to_value(),
+            "allocator" => self.inner.config.allocator.to_value(),
+            "configure_locale" => self.inner.config.configure_locale.to_value(),
+            "coerce_c_locale" => self.inner.config.coerce_c_locale.to_value(),
+            "coerce_c_locale_warn" => self.inner.config.coerce_c_locale_warn.to_value(),
+            "development_mode" => self.inner.config.development_mode.to_value(),
+            "isolated" => self.inner.config.isolated.to_value(),
+            "legacy_windows_fs_encoding" => self.inner.config.legacy_windows_fs_encoding.to_value(),
+            "parse_argv" => self.inner.config.parse_argv.to_value(),
+            "use_environment" => self.inner.config.use_environment.to_value(),
+            "utf8_mode" => self.inner.config.utf8_mode.to_value(),
+            "base_exec_prefix" => self.inner.config.base_exec_prefix.to_value(),
+            "base_executable" => self.inner.config.base_executable.to_value(),
+            "base_prefix" => self.inner.config.base_prefix.to_value(),
+            "buffered_stdio" => self.inner.config.buffered_stdio.to_value(),
+            "bytes_warning" => self.inner.config.bytes_warning.to_value(),
+            "check_hash_pycs_mode" => self.inner.config.check_hash_pycs_mode.to_value(),
+            "configure_c_stdio" => self.inner.config.configure_c_stdio.to_value(),
+            "dump_refs" => self.inner.config.dump_refs.to_value(),
+            "exec_prefix" => self.inner.config.exec_prefix.to_value(),
+            "executable" => self.inner.config.executable.to_value(),
+            "fault_handler" => self.inner.config.fault_handler.to_value(),
+            "filesystem_encoding" => self.inner.config.filesystem_encoding.to_value(),
+            "filesystem_errors" => self.inner.config.filesystem_errors.to_value(),
+            "hash_seed" => self.inner.config.hash_seed.to_value(),
+            "home" => self.inner.config.home.to_value(),
+            "import_time" => self.inner.config.import_time.to_value(),
+            "inspect" => self.inner.config.inspect.to_value(),
+            "install_signal_handlers" => self.inner.config.install_signal_handlers.to_value(),
+            "interactive" => self.inner.config.interactive.to_value(),
+            "legacy_windows_stdio" => self.inner.config.legacy_windows_stdio.to_value(),
+            "malloc_stats" => self.inner.config.malloc_stats.to_value(),
+            "module_search_paths" => self.inner.config.module_search_paths.to_value(),
+            "optimization_level" => self.inner.config.optimization_level.to_value(),
+            "parser_debug" => self.inner.config.parser_debug.to_value(),
+            "pathconfig_warnings" => self.inner.config.pathconfig_warnings.to_value(),
+            "prefix" => self.inner.config.prefix.to_value(),
+            "program_name" => self.inner.config.program_name.to_value(),
+            "pycache_prefix" => self.inner.config.pycache_prefix.to_value(),
+            "python_path_env" => self.inner.config.python_path_env.to_value(),
+            "quiet" => self.inner.config.quiet.to_value(),
+            "run_command" => self.inner.config.run_command.to_value(),
+            "run_filename" => self.inner.config.run_filename.to_value(),
+            "run_module" => self.inner.config.run_module.to_value(),
+            "show_alloc_count" => self.inner.config.show_alloc_count.to_value(),
+            "show_ref_count" => self.inner.config.show_ref_count.to_value(),
+            "site_import" => self.inner.config.site_import.to_value(),
+            "skip_first_source_line" => self.inner.config.skip_first_source_line.to_value(),
+            "stdio_encoding" => self.inner.config.stdio_encoding.to_value(),
+            "stdio_errors" => self.inner.config.stdio_errors.to_value(),
+            "tracemalloc" => self.inner.config.tracemalloc.to_value(),
+            "user_site_directory" => self.inner.config.user_site_directory.to_value(),
+            "verbose" => self.inner.config.verbose.to_value(),
+            "warn_options" => self.inner.config.warn_options.to_value(),
+            "write_bytecode" => self.inner.config.write_bytecode.to_value(),
+            "x_options" => self.inner.config.x_options.to_value(),
+            "raw_allocator" => self.inner.raw_allocator.to_value(),
+            "oxidized_importer" => Value::from(self.inner.oxidized_importer),
+            "filesystem_importer" => Value::from(self.inner.filesystem_importer),
+            "argvb" => Value::from(self.inner.argvb),
+            "sys_frozen" => Value::from(self.inner.sys_frozen),
+            "sys_meipass" => Value::from(self.inner.sys_meipass),
+            "terminfo_resolution" => self.inner.terminfo_resolution.to_value(),
+            "write_modules_directory_env" => self.inner.write_modules_directory_env.to_value(),
+            "run_mode" => self.inner.run_mode.to_value(),
+            attr => {
+                return Err(ValueError::OperationNotSupported {
+                    op: UnsupportedOperation::GetAttr(attr.to_string()),
+                    left: Self::TYPE.to_owned(),
+                    right: None,
+                })
+            }
+        };
+
+        Ok(v)
+    }
+
+    fn has_attr(&self, attribute: &str) -> Result<bool, ValueError> {
+        Ok(match attribute {
+            "config_profile" => true,
+            "allocator" => true,
+            "configure_locale" => true,
+            "coerce_c_locale" => true,
+            "coerce_c_locale_warn" => true,
+            "development_mode" => true,
+            "isolated" => true,
+            "legacy_windows_fs_encoding" => true,
+            "parse_argv" => true,
+            "use_environment" => true,
+            "utf8_mode" => true,
+            "base_exec_prefix" => true,
+            "base_executable" => true,
+            "base_prefix" => true,
+            "buffered_stdio" => true,
+            "bytes_warning" => true,
+            "check_hash_pycs_mode" => true,
+            "configure_c_stdio" => true,
+            "dump_refs" => true,
+            "exec_prefix" => true,
+            "executable" => true,
+            "fault_handler" => true,
+            "filesystem_encoding" => true,
+            "filesystem_errors" => true,
+            "hash_seed" => true,
+            "home" => true,
+            "import_time" => true,
+            "inspect" => true,
+            "install_signal_handlers" => true,
+            "interactive" => true,
+            "legacy_windows_stdio" => true,
+            "malloc_stats" => true,
+            "module_search_paths" => true,
+            "optimization_level" => true,
+            "parser_debug" => true,
+            "pathconfig_warnings" => true,
+            "prefix" => true,
+            "program_name" => true,
+            "pycache_prefix" => true,
+            "python_path_env" => true,
+            "quiet" => true,
+            "run_command" => true,
+            "run_filename" => true,
+            "run_module" => true,
+            "show_alloc_count" => true,
+            "show_ref_count" => true,
+            "site_import" => true,
+            "skip_first_source_line" => true,
+            "stdio_encoding" => true,
+            "stdio_errors" => true,
+            "tracemalloc" => true,
+            "user_site_directory" => true,
+            "verbose" => true,
+            "warn_options" => true,
+            "write_bytecode" => true,
+            "x_options" => true,
+            "raw_allocator" => true,
+            "oxidized_importer" => true,
+            "filesystem_importer" => true,
+            "argvb" => true,
+            "sys_frozen" => true,
+            "sys_meipass" => true,
+            "terminfo_resolution" => true,
+            "write_modules_directory_env" => true,
+            "run_mode" => true,
+            _ => false,
+        })
+    }
+
+    fn set_attr(&mut self, attribute: &str, value: Value) -> Result<(), ValueError> {
+        match attribute {
+            "config_profile" => {
+                self.inner.config.profile = PythonInterpreterProfile::try_from(
+                    value.to_string().as_str(),
+                )
+                .map_err(|e| {
+                    ValueError::from(RuntimeError {
+                        code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                        message: e,
+                        label: format!("{}.{}", Self::TYPE, attribute),
+                    })
+                })?;
+            }
+            "allocator" => {
+                self.inner.config.allocator = if value.get_type() == "NoneType" {
+                    None
+                } else {
+                    Some(
+                        Allocator::try_from(value.to_string().as_str()).map_err(|e| {
+                            ValueError::from(RuntimeError {
+                                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                                message: e,
+                                label: format!("{}.{}", Self::TYPE, attribute),
+                            })
+                        })?,
+                    )
+                };
+            }
+            "configure_locale" => {
+                self.inner.config.configure_locale = value.to_optional();
+            }
+            "coerce_c_locale" => {
+                self.inner.config.coerce_c_locale = if value.get_type() == "NoneType" {
+                    None
+                } else {
+                    Some(
+                        CoerceCLocale::try_from(value.to_string().as_str()).map_err(|e| {
+                            ValueError::from(RuntimeError {
+                                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                                message: e,
+                                label: format!("{}.{}", Self::TYPE, attribute),
+                            })
+                        })?,
+                    )
+                };
+            }
+            "coerce_c_locale_warn" => {
+                self.inner.config.coerce_c_locale_warn = value.to_optional();
+            }
+            "development_mode" => {
+                self.inner.config.development_mode = value.to_optional();
+            }
+            "isolated" => {
+                self.inner.config.isolated = value.to_optional();
+            }
+            "legacy_windows_fs_encoding" => {
+                self.inner.config.legacy_windows_fs_encoding = value.to_optional();
+            }
+            "parse_argv" => {
+                self.inner.config.parse_argv = value.to_optional();
+            }
+            "use_environment" => {
+                self.inner.config.use_environment = value.to_optional();
+            }
+            "utf8_mode" => {
+                self.inner.config.utf8_mode = value.to_optional();
+            }
+            "base_exec_prefix" => {
+                self.inner.config.base_exec_prefix = value.to_optional();
+            }
+            "base_executable" => {
+                self.inner.config.base_executable = value.to_optional();
+            }
+            "base_prefix" => {
+                self.inner.config.base_prefix = value.to_optional();
+            }
+            "buffered_stdio" => {
+                self.inner.config.buffered_stdio = value.to_optional();
+            }
+            "bytes_warning" => {
+                self.inner.config.bytes_warning = if value.get_type() == "NoneType" {
+                    None
+                } else {
+                    Some(
+                        BytesWarning::try_from(value.to_string().as_str()).map_err(|e| {
+                            ValueError::from(RuntimeError {
+                                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                                message: e,
+                                label: format!("{}.{}", Self::TYPE, attribute),
+                            })
+                        })?,
+                    )
+                };
+            }
+            "check_hash_pycs_mode" => {
+                self.inner.config.check_hash_pycs_mode = if value.get_type() == "NoneType" {
+                    None
+                } else {
+                    Some(
+                        CheckHashPYCsMode::try_from(value.to_string().as_str()).map_err(|e| {
+                            ValueError::from(RuntimeError {
+                                code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                                message: e,
+                                label: format!("{}.{}", Self::TYPE, attribute),
+                            })
+                        })?,
+                    )
+                };
+            }
+            "configure_c_stdio" => {
+                self.inner.config.configure_c_stdio = value.to_optional();
+            }
+            "dump_refs" => {
+                self.inner.config.dump_refs = value.to_optional();
+            }
+            "exec_prefix" => {
+                self.inner.config.exec_prefix = value.to_optional();
+            }
+            "executable" => {
+                self.inner.config.executable = value.to_optional();
+            }
+            "fault_handler" => {
+                self.inner.config.fault_handler = value.to_optional();
+            }
+            "filesystem_encoding" => {
+                self.inner.config.filesystem_encoding = value.to_optional();
+            }
+            "filesystem_errors" => {
+                self.inner.config.filesystem_errors = value.to_optional();
+            }
+            "hash_seed" => {
+                self.inner.config.hash_seed = value.try_to_optional()?;
+            }
+            "home" => {
+                self.inner.config.home = value.to_optional();
+            }
+            "import_time" => {
+                self.inner.config.import_time = value.to_optional();
+            }
+            "inspect" => {
+                self.inner.config.inspect = value.to_optional();
+            }
+            "install_signal_handlers" => {
+                self.inner.config.install_signal_handlers = value.to_optional();
+            }
+            "interactive" => {
+                self.inner.config.interactive = value.to_optional();
+            }
+            "legacy_windows_stdio" => {
+                self.inner.config.legacy_windows_stdio = value.to_optional();
+            }
+            "malloc_stats" => {
+                self.inner.config.malloc_stats = value.to_optional();
+            }
+            "module_search_paths" => {
+                self.inner.config.module_search_paths = value.try_to_optional()?;
+            }
+            "optimization_level" => {
+                self.inner.config.optimization_level = value.try_to_optional()?;
+            }
+            "parser_debug" => {
+                self.inner.config.parser_debug = value.to_optional();
+            }
+            "pathconfig_warnings" => {
+                self.inner.config.pathconfig_warnings = value.to_optional();
+            }
+            "prefix" => {
+                self.inner.config.prefix = value.to_optional();
+            }
+            "program_name" => {
+                self.inner.config.program_name = value.to_optional();
+            }
+            "pycache_prefix" => {
+                self.inner.config.pycache_prefix = value.to_optional();
+            }
+            "python_path_env" => {
+                self.inner.config.python_path_env = value.to_optional();
+            }
+            "quiet" => {
+                self.inner.config.quiet = value.to_optional();
+            }
+            "run_command" => {
+                self.inner.config.run_command = value.to_optional();
+            }
+            "run_filename" => {
+                self.inner.config.run_filename = value.to_optional();
+            }
+            "run_module" => {
+                self.inner.config.run_module = value.to_optional();
+            }
+            "show_alloc_count" => {
+                self.inner.config.show_alloc_count = value.to_optional();
+            }
+            "show_ref_count" => {
+                self.inner.config.show_ref_count = value.to_optional();
+            }
+            "site_import" => {
+                self.inner.config.site_import = value.to_optional();
+            }
+            "skip_first_source_line" => {
+                self.inner.config.skip_first_source_line = value.to_optional();
+            }
+            "stdio_encoding" => {
+                self.inner.config.stdio_encoding = value.to_optional();
+            }
+            "stdio_errors" => {
+                self.inner.config.stdio_errors = value.to_optional();
+            }
+            "tracemalloc" => {
+                self.inner.config.tracemalloc = value.to_optional();
+            }
+            "user_site_directory" => {
+                self.inner.config.user_site_directory = value.to_optional();
+            }
+            "verbose" => {
+                self.inner.config.configure_locale = value.to_optional();
+            }
+            "warn_options" => {
+                self.inner.config.warn_options = value.try_to_optional()?;
+            }
+            "write_bytecode" => {
+                self.inner.config.write_bytecode = value.to_optional();
+            }
+            "x_options" => {
+                self.inner.config.x_options = value.try_to_optional()?;
+            }
+            "raw_allocator" => {
+                self.inner.raw_allocator =
+                    MemoryAllocatorBackend::try_from(value.to_string().as_str()).map_err(|e| {
+                        ValueError::from(RuntimeError {
+                            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                            message: e,
+                            label: format!("{}.{}", Self::TYPE, attribute),
+                        })
+                    })?;
+            }
+            "oxidized_importer" => {
+                self.inner.oxidized_importer = value.to_bool();
+            }
+            "filesystem_importer" => {
+                self.inner.filesystem_importer = value.to_bool();
+            }
+            "argvb" => {
+                self.inner.argvb = value.to_bool();
+            }
+            "sys_frozen" => {
+                self.inner.sys_frozen = value.to_bool();
+            }
+            "sys_meipass" => {
+                self.inner.sys_meipass = value.to_bool();
+            }
+            "terminfo_resolution" => {
+                self.inner.terminfo_resolution =
+                    TerminfoResolution::try_from(value.to_string().as_str()).map_err(|e| {
+                        ValueError::from(RuntimeError {
+                            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                            message: e,
+                            label: format!("{}.{}", Self::TYPE, attribute),
+                        })
+                    })?;
+            }
+            "write_modules_directory_env" => {
+                self.inner.write_modules_directory_env = value.to_optional();
+            }
+            "run_mode" => {
+                self.inner.run_mode =
+                    PythonRunMode::try_from(value.to_string().as_str()).map_err(|e| {
+                        ValueError::from(RuntimeError {
+                            code: INCORRECT_PARAMETER_TYPE_ERROR_CODE,
+                            message: e,
+                            label: format!("{}.{}", Self::TYPE, attribute),
+                        })
+                    })?;
+            }
+            attr => {
+                return Err(ValueError::OperationNotSupported {
+                    op: UnsupportedOperation::SetAttr(attr.to_string()),
+                    left: Self::TYPE.to_owned(),
+                    right: None,
+                })
+            }
+        }
+
+        Ok(())
     }
 }
 

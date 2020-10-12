@@ -6,7 +6,7 @@
 
 use {
     crate::resource::BytecodeOptimizationLevel,
-    std::{ffi::OsString, os::raw::c_ulong, path::PathBuf},
+    std::{convert::TryFrom, ffi::OsString, os::raw::c_ulong, path::PathBuf},
 };
 
 /// Defines the profile to use to configure a Python interpreter.
@@ -29,6 +29,31 @@ impl Default for PythonInterpreterProfile {
     }
 }
 
+impl ToString for PythonInterpreterProfile {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Isolated => "isolated",
+            Self::Python => "python",
+        }
+        .to_string()
+    }
+}
+
+impl TryFrom<&str> for PythonInterpreterProfile {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "isolated" => Ok(Self::Isolated),
+            "python" => Ok(Self::Python),
+            _ => Err(format!(
+                "{} is not a valid profile; use 'isolated' or 'python'",
+                value
+            )),
+        }
+    }
+}
+
 /// Defines Python code to run.
 #[derive(Clone, Debug, PartialEq)]
 pub enum PythonRunMode {
@@ -48,6 +73,52 @@ pub enum PythonRunMode {
     File { path: PathBuf },
 }
 
+impl ToString for PythonRunMode {
+    fn to_string(&self) -> String {
+        match self {
+            Self::None => "none".to_string(),
+            Self::Repl => "repl".to_string(),
+            Self::Module { module } => format!("module:{}", module),
+            Self::Eval { code } => format!("eval:{}", code),
+            Self::File { path } => format!("file:{}", path.display()),
+        }
+    }
+}
+
+impl TryFrom<&str> for PythonRunMode {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "none" => Ok(Self::None),
+            "repl" => Ok(Self::Repl),
+            value => {
+                let parts = value.splitn(2, ":").collect::<Vec<_>>();
+
+                if parts.len() != 2 {
+                    return Err(format!("{} is not a valid Python run mode", value));
+                }
+
+                let prefix = parts[0];
+                let suffix = parts[1];
+
+                match prefix {
+                    "module" => Ok(Self::Module {
+                        module: suffix.to_string(),
+                    }),
+                    "eval" => Ok(Self::Eval {
+                        code: suffix.to_string(),
+                    }),
+                    "file" => Ok(Self::File {
+                        path: PathBuf::from(suffix),
+                    }),
+                    _ => Err(format!("{} is not a valid Python run mode", value)),
+                }
+            }
+        }
+    }
+}
+
 /// Defines `terminfo`` database resolution semantics.
 #[derive(Clone, Debug, PartialEq)]
 pub enum TerminfoResolution {
@@ -59,6 +130,36 @@ pub enum TerminfoResolution {
     Static(String),
 }
 
+impl ToString for TerminfoResolution {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Dynamic => "dynamic".to_string(),
+            Self::None => "none".to_string(),
+            Self::Static(value) => format!("static:{}", value),
+        }
+    }
+}
+
+impl TryFrom<&str> for TerminfoResolution {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        if value == "dynamic" {
+            Ok(Self::Dynamic)
+        } else if value == "none" {
+            Ok(Self::None)
+        } else if value.starts_with("static:") {
+            let suffix = &value[7..];
+            Ok(Self::Static(suffix.to_string()))
+        } else {
+            Err(format!(
+                "{} is not a valid terminfo resolution value",
+                value
+            ))
+        }
+    }
+}
+
 /// Defines a backend for a memory allocator.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum MemoryAllocatorBackend {
@@ -68,6 +169,30 @@ pub enum MemoryAllocatorBackend {
     Jemalloc,
     /// Use Rust's global allocator.
     Rust,
+}
+
+impl ToString for MemoryAllocatorBackend {
+    fn to_string(&self) -> String {
+        match self {
+            Self::System => "system",
+            Self::Jemalloc => "jemalloc",
+            Self::Rust => "rust",
+        }
+        .to_string()
+    }
+}
+
+impl TryFrom<&str> for MemoryAllocatorBackend {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "system" => Ok(Self::System),
+            "jemalloc" => Ok(Self::Jemalloc),
+            "rust" => Ok(Self::Rust),
+            _ => Err(format!("{} is not a valid memory allocator backend", value)),
+        }
+    }
 }
 
 /// Defines configuration for Python's raw allocator.
@@ -128,6 +253,28 @@ pub enum CoerceCLocale {
     C = 2,
 }
 
+impl ToString for CoerceCLocale {
+    fn to_string(&self) -> String {
+        match self {
+            Self::LCCtype => "LC_CTYPE",
+            Self::C => "C",
+        }
+        .to_string()
+    }
+}
+
+impl TryFrom<&str> for CoerceCLocale {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "LC_CTYPE" => Ok(Self::LCCtype),
+            "C" => Ok(Self::C),
+            _ => Err(format!("{} is not a valid C locale coercion value", value)),
+        }
+    }
+}
+
 /// Defines what to do when comparing bytes with str.
 ///
 /// See https://docs.python.org/3/c-api/init_config.html#c.PyConfig.bytes_warning.
@@ -136,6 +283,30 @@ pub enum BytesWarning {
     None = 0,
     Warn = 1,
     Raise = 2,
+}
+
+impl ToString for BytesWarning {
+    fn to_string(&self) -> String {
+        match self {
+            Self::None => "none",
+            Self::Warn => "warn",
+            Self::Raise => "raise",
+        }
+        .to_string()
+    }
+}
+
+impl TryFrom<&str> for BytesWarning {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "none" => Ok(Self::None),
+            "warn" => Ok(Self::Warn),
+            "raise" => Ok(Self::Raise),
+            _ => Err(format!("{} is not a valid bytes warning value", value)),
+        }
+    }
 }
 
 impl From<i32> for BytesWarning {
@@ -156,6 +327,33 @@ pub enum CheckHashPYCsMode {
     Default,
 }
 
+impl ToString for CheckHashPYCsMode {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Always => "always",
+            Self::Never => "never",
+            Self::Default => "default",
+        }
+        .to_string()
+    }
+}
+
+impl TryFrom<&str> for CheckHashPYCsMode {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "always" => Ok(Self::Always),
+            "never" => Ok(Self::Never),
+            "default" => Ok(Self::Default),
+            _ => Err(format!(
+                "{} is not a valid check hash pycs mode value",
+                value
+            )),
+        }
+    }
+}
+
 /// See https://docs.python.org/3/c-api/init_config.html#c.PyPreConfig.allocator.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Allocator {
@@ -166,6 +364,38 @@ pub enum Allocator {
     MallocDebug = 4,
     PyMalloc = 5,
     PyMallocDebug = 6,
+}
+
+impl ToString for Allocator {
+    fn to_string(&self) -> String {
+        match self {
+            Self::NotSet => "not-set",
+            Self::Default => "default",
+            Self::Debug => "debug",
+            Self::Malloc => "malloc",
+            Self::MallocDebug => "malloc-debug",
+            Self::PyMalloc => "py-malloc",
+            Self::PyMallocDebug => "py-malloc-debug",
+        }
+        .to_string()
+    }
+}
+
+impl TryFrom<&str> for Allocator {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "not-set" => Ok(Self::NotSet),
+            "default" => Ok(Self::Default),
+            "debug" => Ok(Self::Debug),
+            "malloc" => Ok(Self::Debug),
+            "malloc-debug" => Ok(Self::MallocDebug),
+            "py-malloc" => Ok(Self::PyMalloc),
+            "py-malloc-debug" => Ok(Self::PyMallocDebug),
+            _ => Err(format!("{} is not a valid allocator value", value)),
+        }
+    }
 }
 
 /// Holds configuration of a Python interpreter.
