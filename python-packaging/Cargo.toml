@@ -24,7 +24,7 @@ zip = { version = "0.5", optional = true }
 
 [dependencies.python-packed-resources]
 version = "0.2.0"
-path = "../python-packed-resources"
+#path = "../python-packed-resources"
 
 # We make `wheel` support optional because the `zip` crate has a handful
 # of dependencies that we don't want to bloat the dependency tree with.

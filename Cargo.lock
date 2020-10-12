@@ -1169,7 +1169,7 @@ dependencies = [
  "libc",
  "memory-module-sys",
  "pyembed",
- "python-packed-resources",
+ "python-packed-resources 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "python3-sys",
  "winapi 0.3.9",
 ]
@@ -1363,7 +1363,7 @@ dependencies = [
  "memmap",
  "memory-module-sys",
  "python-packaging",
- "python-packed-resources",
+ "python-packed-resources 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "python3-sys",
  "uuid",
  "winapi 0.3.9",
@@ -1394,7 +1394,7 @@ dependencies = [
  "linked-hash-map",
  "path-dedot",
  "python-packaging",
- "python-packed-resources",
+ "python-packed-resources 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest",
  "rustc_version",
  "semver",
@@ -1423,7 +1423,7 @@ dependencies = [
  "itertools 0.9.0",
  "lazy_static",
  "mailparse",
- "python-packed-resources",
+ "python-packed-resources 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex",
  "tempdir",
  "walkdir 2.3.1",
@@ -1433,6 +1433,16 @@ dependencies = [
 [[package]]
 name = "python-packed-resources"
 version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "byteorder",
+]
+
+[[package]]
+name = "python-packed-resources"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4284a7f889b71627a595790f740580dae84a1e44f94f979f7826340c46da704"
 dependencies = [
  "anyhow",
  "byteorder",

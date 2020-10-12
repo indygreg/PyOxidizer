@@ -24,7 +24,7 @@ uuid = { version = "0.8", features = ["v4"] }
 
 [dependencies.python-packed-resources]
 version = "0.2.0"
-path = "../python-packed-resources"
+#path = "../python-packed-resources"
 
 [dependencies.python-packaging]
 version = "0.1.0"
