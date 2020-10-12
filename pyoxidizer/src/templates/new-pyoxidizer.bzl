@@ -193,9 +193,9 @@ def make_install(exe):
 
 # Tell PyOxidizer about the build targets defined above.
 register_target("dist", make_dist)
-register_target("exe", make_exe, depends=["dist"], default=True)
+register_target("exe", make_exe, depends=["dist"])
 register_target("resources", make_embedded_resources, depends=["exe"], default_build_script=True)
-register_target("install", make_install, depends=["exe"])
+register_target("install", make_install, depends=["exe"], default=True)
 
 # Resolve whatever targets the invoker of this configuration file is requesting
 # be resolved.
