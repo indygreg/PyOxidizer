@@ -23,7 +23,7 @@ version = "0.2.0"
 
 [dependencies.pyembed]
 version = "0.8.0"
-path = "../pyembed"
+#path = "../pyembed"
 default-features = false
 features = ["build-mode-extension-module"]
 
