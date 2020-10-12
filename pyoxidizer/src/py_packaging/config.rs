@@ -95,20 +95,6 @@ impl Default for EmbeddedPythonConfig {
         EmbeddedPythonConfig {
             config: PythonInterpreterConfig {
                 profile: PythonInterpreterProfile::Isolated,
-                buffered_stdio: Some(true),
-                bytes_warning: Some(BytesWarning::None),
-                inspect: Some(false),
-                interactive: Some(false),
-                legacy_windows_fs_encoding: Some(false),
-                legacy_windows_stdio: Some(false),
-                optimization_level: Some(BytecodeOptimizationLevel::Zero),
-                parser_debug: Some(false),
-                quiet: Some(false),
-                site_import: Some(false),
-                use_environment: Some(false),
-                user_site_directory: Some(false),
-                verbose: Some(false),
-                write_bytecode: Some(false),
                 ..PythonInterpreterConfig::default()
             },
             raw_allocator: MemoryAllocatorBackend::System,

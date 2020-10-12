@@ -7,7 +7,7 @@
 use {
     super::{
         binary::{LibpythonLinkMode, PythonBinaryBuilder},
-        config::EmbeddedPythonConfig,
+        config::{default_raw_allocator, EmbeddedPythonConfig},
         distribution::{
             is_stdlib_test_package, resolve_python_distribution_from_location,
             BinaryLibpythonLinkMode, DistributionExtractLock, PythonDistribution,
@@ -24,6 +24,9 @@ use {
     python_packaging::{
         bytecode::{BytecodeCompiler, PythonBytecodeCompiler},
         filesystem_scanning::{find_python_resources, walk_tree_files},
+        interpreter::{
+            PythonInterpreterConfig, PythonInterpreterProfile, PythonRunMode, TerminfoResolution,
+        },
         module_util::{is_package_from_path, PythonModuleSuffixes},
         policy::PythonPackagingPolicy,
         resource::{
@@ -1180,7 +1183,18 @@ impl PythonDistribution for StandaloneDistribution {
     }
 
     fn create_python_interpreter_config(&self) -> Result<EmbeddedPythonConfig> {
-        Ok(EmbeddedPythonConfig::default())
+        Ok(EmbeddedPythonConfig {
+            config: PythonInterpreterConfig {
+                profile: PythonInterpreterProfile::Isolated,
+                ..PythonInterpreterConfig::default()
+            },
+            raw_allocator: default_raw_allocator(self.target_triple()),
+            oxidized_importer: true,
+            filesystem_importer: false,
+            terminfo_resolution: TerminfoResolution::Dynamic,
+            run_mode: PythonRunMode::Repl,
+            ..EmbeddedPythonConfig::default()
+        })
     }
 
     fn as_python_executable_builder(

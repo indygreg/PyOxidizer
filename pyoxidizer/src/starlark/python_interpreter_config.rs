@@ -1016,7 +1016,7 @@ mod tests {
     fn test_legacy_windows_fs_encoding() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.legacy_windows_fs_encoding == False")?;
+        env.eval_assert("config.legacy_windows_fs_encoding == None")?;
 
         Ok(())
     }
@@ -1034,7 +1034,7 @@ mod tests {
     fn test_use_environment() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.use_environment == False")?;
+        env.eval_assert("config.use_environment == None")?;
 
         Ok(())
     }
@@ -1079,7 +1079,7 @@ mod tests {
     fn test_buffered_stdio() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.buffered_stdio == True")?;
+        env.eval_assert("config.buffered_stdio == None")?;
 
         Ok(())
     }
@@ -1088,7 +1088,7 @@ mod tests {
     fn test_bytes_warning() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.bytes_warning == 'none'")?;
+        env.eval_assert("config.bytes_warning == None")?;
 
         env.eval("config.bytes_warning = 'warn'")?;
         env.eval_assert("config.bytes_warning == 'warn'")?;
@@ -1205,7 +1205,7 @@ mod tests {
     fn test_inspect() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.inspect == False")?;
+        env.eval_assert("config.inspect == None")?;
 
         Ok(())
     }
@@ -1223,7 +1223,7 @@ mod tests {
     fn test_interactive() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.interactive == False")?;
+        env.eval_assert("config.interactive == None")?;
 
         Ok(())
     }
@@ -1232,7 +1232,7 @@ mod tests {
     fn test_legacy_windows_stdio() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.legacy_windows_stdio == False")?;
+        env.eval_assert("config.legacy_windows_stdio == None")?;
 
         Ok(())
     }
@@ -1269,6 +1269,9 @@ mod tests {
     fn test_optimization_level() -> Result<()> {
         let mut env = get_env()?;
 
+        env.eval_assert("config.optimization_level == None")?;
+
+        env.eval("config.optimization_level = 0")?;
         env.eval_assert("config.optimization_level == 0")?;
 
         env.eval("config.optimization_level = 1")?;
@@ -1284,7 +1287,7 @@ mod tests {
     fn test_parser_debug() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.parser_debug == False")?;
+        env.eval_assert("config.parser_debug == None")?;
 
         Ok(())
     }
@@ -1338,7 +1341,7 @@ mod tests {
     fn test_quiet() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.quiet == False")?;
+        env.eval_assert("config.quiet == None")?;
 
         Ok(())
     }
@@ -1392,7 +1395,7 @@ mod tests {
     fn test_site_import() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.site_import == False")?;
+        env.eval_assert("config.site_import == None")?;
 
         Ok(())
     }
@@ -1437,7 +1440,7 @@ mod tests {
     fn test_user_site_directory() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.user_site_directory == False")?;
+        env.eval_assert("config.user_site_directory == None")?;
 
         Ok(())
     }
@@ -1446,7 +1449,7 @@ mod tests {
     fn test_verbose() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.verbose == False")?;
+        env.eval_assert("config.verbose == None")?;
 
         Ok(())
     }
@@ -1464,7 +1467,7 @@ mod tests {
     fn test_write_bytecode() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.write_bytecode == False")?;
+        env.eval_assert("config.write_bytecode == None")?;
 
         Ok(())
     }
@@ -1542,10 +1545,10 @@ mod tests {
     fn test_terminfo_resolution() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.terminfo_resolution == 'none'")?;
-
-        env.eval("config.terminfo_resolution = 'dynamic'")?;
         env.eval_assert("config.terminfo_resolution == 'dynamic'")?;
+
+        env.eval("config.terminfo_resolution = 'none'")?;
+        env.eval_assert("config.terminfo_resolution == 'none'")?;
 
         env.eval("config.terminfo_resolution = 'static:foo'")?;
         env.eval_assert("config.terminfo_resolution == 'static:foo'")?;
