@@ -39,7 +39,12 @@ use {
             starlark_signature_extraction, starlark_signatures,
         },
     },
-    std::{collections::HashSet, convert::TryFrom, ops::Deref, path::Path},
+    std::{
+        collections::HashSet,
+        convert::TryFrom,
+        ops::Deref,
+        path::{Path, PathBuf},
+    },
 };
 
 #[derive(Clone, Debug)]
@@ -59,6 +64,8 @@ impl TypedValue for FileContentValue {
 #[derive(Clone, Debug)]
 pub struct FileManifestValue {
     pub manifest: FileManifest,
+    /// Optional path to be the default run target.
+    run_path: Option<PathBuf>,
 }
 
 impl FileManifestValue {
@@ -92,6 +99,9 @@ impl FileManifestValue {
 
         self.manifest.add_manifest(&extra_files)?;
 
+        // Make the last added Python executable the default run target.
+        self.run_path = Some(path);
+
         Ok(())
     }
 }
@@ -105,20 +115,27 @@ impl BuildTarget for FileManifestValue {
         );
         self.manifest.replace_path(&context.output_path)?;
 
-        // If there exists a single executable, make it the run target.
+        // Use the stored run target if available, falling back to the single
+        // executable file if non-ambiguous.
         // TODO support defining default run target in data structure.
-
-        let exes = self
-            .manifest
-            .entries()
-            .filter(|(_, c)| c.executable)
-            .collect_vec();
-        let run_mode = if exes.len() == 1 {
+        let run_mode = if let Some(default) = &self.run_path {
             RunMode::Path {
-                path: context.output_path.join(exes[0].0),
+                path: context.output_path.join(default),
             }
         } else {
-            RunMode::None
+            let exes = self
+                .manifest
+                .entries()
+                .filter(|(_, c)| c.executable)
+                .collect_vec();
+
+            if exes.len() == 1 {
+                RunMode::Path {
+                    path: context.output_path.join(exes[0].0),
+                }
+            } else {
+                RunMode::None
+            }
         };
 
         Ok(ResolvedTarget {
@@ -143,7 +160,10 @@ impl FileManifestValue {
     fn new_from_args() -> ValueResult {
         let manifest = FileManifest::default();
 
-        Ok(Value::new(FileManifestValue { manifest }))
+        Ok(Value::new(FileManifestValue {
+            manifest,
+            run_path: None,
+        }))
     }
 
     /// FileManifest.add_manifest(other)
@@ -443,7 +463,10 @@ fn starlark_glob(
         })?;
     }
 
-    Ok(Value::new(FileManifestValue { manifest }))
+    Ok(Value::new(FileManifestValue {
+        manifest,
+        run_path: None,
+    }))
 }
 
 starlark_module! { file_resource_env =>
@@ -514,6 +537,7 @@ mod tests {
     fn test_add_python_source_module() -> Result<()> {
         let m = Value::new(FileManifestValue {
             manifest: FileManifest::default(),
+            run_path: None,
         });
 
         let v = Value::new(PythonModuleSourceValue::new(PythonModuleSource {
@@ -565,6 +589,7 @@ mod tests {
     fn test_add_python_resource_data() -> Result<()> {
         let m = Value::new(FileManifestValue {
             manifest: FileManifest::default(),
+            run_path: None,
         });
 
         let v = Value::new(PythonPackageResourceValue::new(PythonPackageResource {
@@ -612,6 +637,7 @@ mod tests {
 
         let m = Value::new(FileManifestValue {
             manifest: FileManifest::default(),
+            run_path: None,
         });
 
         env.set("m", m)?;
@@ -629,6 +655,7 @@ mod tests {
 
         let m = Value::new(FileManifestValue {
             manifest: FileManifest::default(),
+            run_path: None,
         });
 
         env.set("m", m)?;
@@ -643,6 +670,7 @@ mod tests {
 
         let m = Value::new(FileManifestValue {
             manifest: FileManifest::default(),
+            run_path: None,
         });
 
         env.set("m", m).unwrap();

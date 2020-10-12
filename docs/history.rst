@@ -268,6 +268,12 @@ New Features
 * ``PythonInterpreterConfig`` Starlark types now expose attributes to query
   and mutate state. Nearly every setting exposed by Python's initialization
   API can be set.
+* A ``FileManifest`` Starlark instance will now have its default
+  ``pyoxidizer run`` executable set to the last added Python executable.
+  Previously, it would only have a run target if there was a single executable
+  file in the ``FileManifest``. If there were multiple executables or
+  executable files (such as Python extension modules) a run target would
+  not be available and ``pyoxidizer run`` would do nothing.
 
 Bug Fixes
 ^^^^^^^^^
