@@ -63,8 +63,11 @@ Backwards Compatibility Notes
   from ``_pyoxidizer_importer`` to ``oxidized_importer``.
 * Minimum Rust version changed from 1.36 to 1.40 to allow for upgrading
   various dependencies to modern versions.
-* (TO BE FIXED BEFORE RELEASE) Windows static extension building is likely
-  broken due to changes to ``distutils``.
+* Windows static extension building is possibly broken due to changes to
+  ``distutils``. However, since we changed the default configuration to
+  not use this build mode, we've deemed this potential regression acceptable
+  for the 0.8 release. If it exists, it will hopefully be fixed in the 0.9
+  release.
 * The ``pip_install()``, ``read_package_root()``, ``read_virtualenv()`` and
   ``setup_py_install()`` methods of the ``PythonDistribution`` Starlark type
   have been moved to the ``PythonExecutable`` type. Existing Starlark config
