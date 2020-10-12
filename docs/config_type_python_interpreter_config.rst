@@ -21,6 +21,9 @@ parameters defined by the settings in this type.
 Constructors
 ============
 
+Instances are constructed by calling
+:ref:`config_python_distribution_make_python_interpreter_config`.
+
 .. _config_python_interpreter_config_init:
 
 ``PythonInterpreterConfig()``

@@ -165,6 +165,17 @@ representing extension modules in this distribution.
 
 There may exist multiple extensions with the same name.
 
+.. _config_python_distribution_make_python_interpreter_config:
+
+``PythonDistribution.make_python_interpreter_config()``
+-------------------------------------------------------
+
+Obtain a :ref:`config_type_python_interpreter_config` derived from the
+distribution.
+
+The interpreter configuration automatically uses settings appropriate
+for the distribution.
+
 .. _config_python_distribution_make_python_packaging_policy:
 
 ``PythonDistribution.make_python_packaging_policy()``

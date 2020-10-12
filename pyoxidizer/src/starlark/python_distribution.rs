@@ -272,6 +272,34 @@ impl PythonDistribution {
         Ok(Value::new(PythonPackagingPolicyValue::new(policy)))
     }
 
+    /// PythonDistribution.make_python_interpreter_config()
+    fn make_python_interpreter_config_starlark(&mut self, type_values: &TypeValues) -> ValueResult {
+        let raw_context = get_context(type_values)?;
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
+
+        self.ensure_distribution_resolved(&context.logger)
+            .map_err(|e| {
+                ValueError::from(RuntimeError {
+                    code: "PYOXIDIZER_BUILD",
+                    message: e.to_string(),
+                    label: "resolve_distribution()".to_string(),
+                })
+            })?;
+        let dist = self.distribution.as_ref().unwrap().clone();
+
+        let config = dist.create_python_interpreter_config().map_err(|e| {
+            ValueError::from(RuntimeError {
+                code: "PYOXIDIZER_BUILD",
+                message: e.to_string(),
+                label: "make_python_packaging_policy()".to_string(),
+            })
+        })?;
+
+        Ok(Value::new(PythonInterpreterConfigValue::new(config)))
+    }
+
     /// PythonDistribution.to_python_executable(
     ///     name,
     ///     packaging_policy=None,
@@ -565,6 +593,13 @@ starlark_module! { python_distribution_module =>
         }
     }
 
+    PythonDistribution.make_python_interpreter_config(env env, this) {
+        match this.clone().downcast_mut::<PythonDistribution>()? {
+            Some(mut dist) => dist.make_python_interpreter_config_starlark(&env),
+            None => Err(ValueError::IncorrectParameterType),
+        }
+    }
+
     #[allow(clippy::ptr_arg)]
     PythonDistribution.extension_modules(env env, this) {
         match this.clone().downcast_mut::<PythonDistribution>()? {
@@ -758,6 +793,12 @@ mod tests {
     fn test_make_python_packaging_policy() {
         let policy = starlark_ok("default_python_distribution().make_python_packaging_policy()");
         assert_eq!(policy.get_type(), "PythonPackagingPolicy");
+    }
+
+    #[test]
+    fn test_make_python_interpreter_config() {
+        let config = starlark_ok("default_python_distribution().make_python_interpreter_config()");
+        assert_eq!(config.get_type(), "PythonInterpreterConfig");
     }
 
     #[test]

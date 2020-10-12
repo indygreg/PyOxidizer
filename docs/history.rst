@@ -259,6 +259,9 @@ New Features
   function. CPython 3.8 is the default distribution version.
 * The ``PythonPackagingPolicy`` Starlark type now exposes a flag to
   control whether shared libraries can be loaded from memory.
+* The ``PythonDistribution`` Starlark type now has a
+  ``make_python_interpreter_config()`` method to obtain instances of
+  ``PythonInterpreterConfig`` that are appropriate for that distribution.
 
 Bug Fixes
 ^^^^^^^^^
