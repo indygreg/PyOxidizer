@@ -197,13 +197,13 @@ and built. It controls everything from what Python distribution to use,
 which Python packages to install, how the embedded Python interpreter is
 configured, and what code to run in that interpreter.
 
-Open ``pyoxidizer.bzl`` in your favorite editor and find the line passing a
-``run_repl`` argument, which configures the embedded interpreter to run
-a Python REPL. Let's replace that line with the following:
+Open ``pyoxidizer.bzl`` in your favorite editor and find the commented lines
+assigning to ``python_config.run_mode``. Let's uncomment or add a line
+to match the following:
 
 .. code-block:: python
 
-   run_eval="import uuid; print(uuid.uuid4())",
+   python_config.run_mode = "eval:import uuid; print(uuid.uuid4())"
 
 We're now telling the interpreter to run the Python statement
 ``eval(import uuid; print(uuid.uuid4())`` when it starts. Test that out::
@@ -234,11 +234,11 @@ below where ``exe`` is assigned:
        resource.add_location = "in-memory"
        exe.add_python_resource(resource)
 
-In addition, replace the ``run_*`` argument to execute ``pyflakes``:
+In addition, set the ``python_config.run_mode`` attribute to execute ``pyflakes``:
 
 .. code-block:: python
 
-   run_eval="from pyflakes.api import main; main()",
+   python_config.run_mode = "eval:from pyflakes.api import main; main()"
 
 Now let's try building and running the new configuration::
 

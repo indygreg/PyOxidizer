@@ -23,6 +23,19 @@ Blog Posts
 Version History
 ===============
 
+.. _version_0_8_1:
+
+0.8.1-pre
+---------
+
+Not yet released.
+
+Bug Fixes
+^^^^^^^^^
+
+* Fix some documentation references to outdated Starlark configuration
+  syntax (#291).
+
 .. _version_0_8_0:
 
 0.8.0

@@ -120,7 +120,7 @@ Next, we tell PyOxidizer to run ``pyflakes`` when the interpreter is executed:
 
 .. code-block:: python
 
-   run_eval="from pyflakes.api import main; main()",
+   python_config.run_mode = "eval:from pyflakes.api import main; main()"
 
 This says to effectively run the Python code
 ``eval(from pyflakes.api import main; main())`` when the embedded interpreter
