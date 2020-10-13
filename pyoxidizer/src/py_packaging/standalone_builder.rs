@@ -702,7 +702,10 @@ pub mod tests {
         crate::python_distributions::PYTHON_DISTRIBUTIONS,
         crate::testutil::*,
         lazy_static::lazy_static,
-        python_packaging::{location::ConcreteResourceLocation, policy::ExtensionModuleFilter},
+        python_packaging::{
+            location::ConcreteResourceLocation, policy::ExtensionModuleFilter,
+            resource::LibraryDependency,
+        },
         std::collections::BTreeSet,
         std::iter::FromIterator,
         std::ops::DerefMut,
@@ -2616,6 +2619,117 @@ pub mod tests {
                 None,
             )?;
             assert_extension_builtin(&builder, &EXTENSION_MODULE_SHARED_LIBRARY_AND_OBJECT_FILES)?;
+        }
+
+        Ok(())
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn test_linux_extension_build_with_library() -> Result<()> {
+        for libpython_link_mode in vec![
+            BinaryLibpythonLinkMode::Static,
+            BinaryLibpythonLinkMode::Dynamic,
+        ] {
+            let options = StandalonePythonExecutableBuilderOptions {
+                target_triple: "x86_64-unknown-linux-gnu".to_string(),
+                extension_module_filter: Some(ExtensionModuleFilter::All),
+                libpython_link_mode: libpython_link_mode.clone(),
+                resources_location: Some(ConcreteResourceLocation::InMemory),
+                ..StandalonePythonExecutableBuilderOptions::default()
+            };
+
+            let builder = options.new_builder()?;
+            let logger = get_logger()?;
+
+            let resources = builder.pip_install(
+                &logger,
+                false,
+                &["pyyaml==5.3.1".to_string()],
+                &HashMap::new(),
+            )?;
+
+            let extensions = resources
+                .iter()
+                .filter_map(|r| match r {
+                    PythonResource::ExtensionModule(e) => Some(e),
+                    _ => None,
+                })
+                .collect::<Vec<_>>();
+
+            let mut orig = extensions[0].clone();
+            assert!(orig.shared_library.is_some());
+
+            // Makes compare easier.
+            let mut e = orig.to_mut();
+            e.shared_library = None;
+
+            assert_eq!(
+                e,
+                &PythonExtensionModule {
+                    name: "_yaml".to_string(),
+                    init_fn: Some("PyInit__yaml".to_string()),
+                    extension_file_suffix: ".cpython-38-x86_64-linux-gnu.so".to_string(),
+                    shared_library: None,
+                    object_file_data: vec![],
+                    is_package: false,
+                    link_libraries: vec![],
+                    is_stdlib: false,
+                    builtin_default: false,
+                    required: false,
+                    variant: None,
+                    licenses: None,
+                    license_public_domain: None,
+                }
+            );
+
+            match libpython_link_mode {
+                BinaryLibpythonLinkMode::Static => {
+                    assert_eq!(extensions.len(), 2);
+
+                    let mut orig = extensions[1].clone();
+                    assert!(orig.shared_library.is_some());
+                    assert_eq!(orig.object_file_data.len(), 1);
+
+                    // Makes compare easier.
+                    let mut e = orig.to_mut();
+                    e.shared_library = None;
+                    e.object_file_data = vec![];
+
+                    assert_eq!(
+                        e,
+                        &PythonExtensionModule {
+                            name: "_yaml".to_string(),
+                            init_fn: Some("PyInit__yaml".to_string()),
+                            extension_file_suffix: ".cpython-38-x86_64-linux-gnu.so".to_string(),
+                            shared_library: None,
+                            object_file_data: vec![],
+                            is_package: false,
+                            link_libraries: vec![LibraryDependency {
+                                name: "yaml".to_string(),
+                                static_library: None,
+                                static_filename: None,
+                                dynamic_library: None,
+                                dynamic_filename: None,
+                                framework: false,
+                                system: false,
+                            }],
+                            is_stdlib: false,
+                            builtin_default: false,
+                            required: false,
+                            variant: None,
+                            licenses: None,
+                            license_public_domain: None,
+                        }
+                    );
+                }
+                BinaryLibpythonLinkMode::Dynamic => {
+                    assert_eq!(extensions.len(), 1);
+                }
+                BinaryLibpythonLinkMode::Default => {
+                    panic!("should not get here");
+                }
+            }
         }
 
         Ok(())
