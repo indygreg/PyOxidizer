@@ -13,8 +13,34 @@ PyOxidizer currently targets Python 3.8 or 3.9. Your Python application will
 need to already be compatible with 1 of these versions for it to work with
 PyOxidizer. See :ref:`faq_python_38` for more on the minimum Python requirement.
 
+.. _operating_system_requirements:
+
+Operating System Requirements
+=============================
+
+PyOxidizer itself is a Rust program and should theoretically be installable
+on any environment that Rust supports.
+
+However, PyOxidizer needs to run Python interpreters on the machine performing
+build/packaging actions and the built binary needs to run a Python interpreter
+for the target architecture and operating system. These Python interpreters
+need to be built/packaged in a specific way so PyOxidizer can interact with
+them.
+
+See :ref:`packaging_available_python_distributions` for the full list of
+available Python distributions. The supported operating systems and
+architectures are:
+
+* Linux x86_64 (glibc 2.19 or musl linked)
+* Windows 7+ x86 and x86_64
+* macOS 10.9+ Intel x86_64
+
+.. _installing:
+
 Installing
 ==========
+
+.. _installing_rust:
 
 Installing Rust
 ---------------
@@ -53,6 +79,8 @@ There is a known issue with PyOxidizer on Fedora 30+ that will require you
 to install the ``libxcrypt-compat`` package to avoid an error due to a missing
 ``libcrypt.so.1`` file. See https://github.com/indygreg/PyOxidizer/issues/89
 for more info.
+
+.. _installing_pyoxidizer:
 
 Installing PyOxidizer
 ---------------------
