@@ -8,7 +8,7 @@ use {
     cpython::ObjectProtocol,
     python3_sys as pyffi,
     python_packaging::interpreter::PythonInterpreterProfile,
-    std::{convert::TryInto, path::PathBuf},
+    std::{convert::TryInto, ffi::OsString, path::PathBuf},
 };
 
 #[test]
@@ -81,6 +81,80 @@ fn test_sys_paths_origin() -> Result<()> {
 
     assert_eq!(py_config.module_search_paths_set, 1);
     assert_eq!(py_config.module_search_paths.length, 1);
+
+    Ok(())
+}
+
+/// sys.argv is initialized using the Rust process's arguments by default.
+#[test]
+fn test_argv_default() -> Result<()> {
+    let config = OxidizedPythonInterpreterConfig::default();
+    let mut interp = MainPythonInterpreter::new(config)?;
+
+    let py = interp.acquire_gil().unwrap();
+    let sys = py.import("sys").unwrap();
+
+    let argv = sys
+        .get(py, "argv")
+        .unwrap()
+        .extract::<Vec<String>>(py)
+        .unwrap();
+    let rust_args = std::env::args().collect::<Vec<_>>();
+    assert_eq!(argv, rust_args);
+
+    Ok(())
+}
+
+/// `OxidizedPythonInterpreterConfig.interpreter_config.argv` is respected.
+#[test]
+fn test_argv_respect_interpreter_config() -> Result<()> {
+    let mut config = OxidizedPythonInterpreterConfig::default();
+
+    // .argv expands to current process args by default. But setting
+    // .interpreter_config.argv overrides this behavior.
+    config.argv = None;
+    config.interpreter_config.argv = Some(vec![
+        OsString::from("prog"),
+        OsString::from("arg0"),
+        OsString::from("arg1"),
+    ]);
+
+    let mut interp = MainPythonInterpreter::new(config)?;
+
+    let py = interp.acquire_gil().unwrap();
+    let sys = py.import("sys").unwrap();
+
+    let argv = sys
+        .get(py, "argv")
+        .unwrap()
+        .extract::<Vec<String>>(py)
+        .unwrap();
+    assert_eq!(argv, vec!["arg0", "arg1"]);
+
+    Ok(())
+}
+
+/// `OxidizedPythonInterpreterConfig.argv` can be used to define `sys.argv`.
+#[test]
+fn test_argv_override() -> Result<()> {
+    let mut config = OxidizedPythonInterpreterConfig::default();
+    config.argv = Some(vec![
+        OsString::from("prog"),
+        OsString::from("foo"),
+        OsString::from("bar"),
+    ]);
+
+    let mut interp = MainPythonInterpreter::new(config)?;
+
+    let py = interp.acquire_gil().unwrap();
+    let sys = py.import("sys").unwrap();
+
+    let argv = sys
+        .get(py, "argv")
+        .unwrap()
+        .extract::<Vec<String>>(py)
+        .unwrap();
+    assert_eq!(argv, vec!["prog", "foo", "bar"]);
 
     Ok(())
 }

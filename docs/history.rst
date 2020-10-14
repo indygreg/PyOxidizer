@@ -30,6 +30,13 @@ Version History
 
 Not yet released.
 
+Backwards Compatibility Notes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* The ``pyembed::OxidizedPythonInterpreterConfig`` Rust struct now contains
+  an ``argv`` field that can be used to control the population of
+  ``sys.argv``.
+
 Bug Fixes
 ^^^^^^^^^
 

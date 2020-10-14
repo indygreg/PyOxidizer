@@ -434,27 +434,33 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         // will be derived from wchar_t on Windows and char* on POSIX. We can
         // convert these to Python str instances using a platform-specific
         // mechanism.
-        let args_objs = env::args_os()
-            .map(|os_arg| osstr_to_pyobject(py, &os_arg, None))
-            .collect::<Result<Vec<PyObject>, &'static str>>()?;
+        if let Some(args) = self.config.resolve_sys_argv() {
+            let args_objs = args
+                .iter()
+                .map(|x| osstr_to_pyobject(py, x, None))
+                .collect::<Result<Vec<PyObject>, &'static str>>()?;
 
-        // This will steal the pointer to the elements and mem::forget them.
-        let args = PyList::new(py, &args_objs);
-        let argv = b"argv\0";
+            // This will steal the pointer to the elements and mem::forget them.
+            let args = PyList::new(py, &args_objs);
+            let argv = b"argv\0";
 
-        let res = args.with_borrowed_ptr(py, |args_ptr| unsafe {
-            pyffi::PySys_SetObject(argv.as_ptr() as *const i8, args_ptr)
-        });
+            let res = args.with_borrowed_ptr(py, |args_ptr| unsafe {
+                pyffi::PySys_SetObject(argv.as_ptr() as *const i8, args_ptr)
+            });
 
-        match res {
-            0 => (),
-            _ => return Err(NewInterpreterError::Simple("unable to set sys.argv")),
+            match res {
+                0 => (),
+                _ => return Err(NewInterpreterError::Simple("unable to set sys.argv")),
+            }
         }
 
         if self.config.argvb {
-            let args_objs: Vec<PyObject> = env::args_os()
-                .map(|os_arg| osstring_to_bytes(py, os_arg))
-                .collect();
+            let args_objs = self
+                .config
+                .resolve_sys_argvb()
+                .iter()
+                .map(|x| osstring_to_bytes(py, x.clone()))
+                .collect::<Vec<_>>();
 
             let args = PyList::new(py, &args_objs);
             let argvb = b"argvb\0";

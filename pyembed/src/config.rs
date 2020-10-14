@@ -11,7 +11,7 @@ use {
         TerminfoResolution,
     },
     std::{
-        ffi::CString,
+        ffi::{CString, OsString},
         path::{Path, PathBuf},
     },
 };
@@ -87,6 +87,17 @@ pub struct OxidizedPythonInterpreterConfig<'a> {
     /// The values will effectively be passed to ``PyImport_ExtendInitTab()``.
     pub extra_extension_modules: Option<Vec<ExtensionModule>>,
 
+    /// Command line arguments to initialize `sys.argv` with.
+    ///
+    /// If `Some(T)`, interpreter initialization will set `PyConfig.argv`
+    /// to a value derived from this value, overwriting an existing
+    /// `.interpreter_config.argv` value, if set.
+    ///
+    /// `None` is evaluated to `Some(std::env::args_os().collect::<Vec<_>>()`
+    /// if `.interpreter_config.argv` is `None` or `None` if
+    /// `.interpreter_config.argv` is `Some(T)`.
+    pub argv: Option<Vec<OsString>>,
+
     /// Whether to set sys.argvb with bytes versions of process arguments.
     ///
     /// On Windows, bytes will be UTF-16. On POSIX, bytes will be raw char*
@@ -134,6 +145,7 @@ impl<'a> Default for OxidizedPythonInterpreterConfig<'a> {
             filesystem_importer: true,
             packed_resources: None,
             extra_extension_modules: None,
+            argv: None,
             argvb: false,
             sys_frozen: false,
             sys_meipass: false,
@@ -178,5 +190,30 @@ impl<'a> OxidizedPythonInterpreterConfig<'a> {
         self.interpreter_config.module_search_paths = paths;
 
         Ok(&self.interpreter_config.module_search_paths)
+    }
+
+    /// Resolve `OsString` to use for `sys.argv`.
+    ///
+    /// Returns `Some(T)` if we should populate `PyConfig.argv` or `None` if we should
+    /// leave this value alone.
+    pub fn resolve_sys_argv(&self) -> Option<Vec<OsString>> {
+        if self.interpreter_config.argv.is_some() {
+            None
+        } else if let Some(args) = &self.argv {
+            Some(args.clone())
+        } else {
+            Some(std::env::args_os().collect::<Vec<_>>())
+        }
+    }
+
+    /// Resolve the value to use for `sys.argvb`.
+    pub fn resolve_sys_argvb(&self) -> Vec<OsString> {
+        if let Some(args) = &self.interpreter_config.argv {
+            args.clone()
+        } else if let Some(args) = &self.argv {
+            args.clone()
+        } else {
+            std::env::args_os().collect::<Vec<_>>()
+        }
     }
 }

@@ -183,6 +183,7 @@ impl EmbeddedPythonConfig {
             filesystem_importer: {},\n    \
             packed_resources: {},\n    \
             extra_extension_modules: None,\n    \
+            argv: None,\n    \
             argvb: {},\n    \
             sys_frozen: {},\n    \
             sys_meipass: {},\n    \
