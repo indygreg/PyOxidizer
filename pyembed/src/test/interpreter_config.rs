@@ -5,11 +5,17 @@
 use {
     crate::{MainPythonInterpreter, OxidizedPythonInterpreterConfig},
     anyhow::Result,
-    cpython::ObjectProtocol,
+    cpython::{ObjectProtocol, PyBytes, PyList, PyString, PyStringData},
     python3_sys as pyffi,
     python_packaging::interpreter::PythonInterpreterProfile,
     std::{convert::TryInto, ffi::OsString, path::PathBuf},
 };
+
+#[cfg(target_family = "unix")]
+use std::os::unix::ffi::OsStringExt;
+
+#[cfg(target_family = "windows")]
+use std::os::windows::ffi::OsStringExt;
 
 #[test]
 fn test_default_interpreter() -> Result<()> {
@@ -155,6 +161,74 @@ fn test_argv_override() -> Result<()> {
         .extract::<Vec<String>>(py)
         .unwrap();
     assert_eq!(argv, vec!["prog", "foo", "bar"]);
+
+    Ok(())
+}
+
+#[cfg(target_family = "unix")]
+fn get_unicode_argument() -> OsString {
+    // 中文
+    OsString::from_vec([0xe4, 0xb8, 0xad, 0xe6, 0x96, 0x87].to_vec())
+}
+
+#[cfg(target_family = "windows")]
+fn get_unicode_argument() -> OsString {
+    // 中文
+    OsString::from_wide(&[0x2d4e, 0x8765])
+}
+
+#[test]
+fn test_argv_utf8() -> Result<()> {
+    let mut config = OxidizedPythonInterpreterConfig::default();
+
+    config.argv = Some(vec![get_unicode_argument()]);
+    config.argvb = true;
+
+    let mut interp = MainPythonInterpreter::new(config)?;
+
+    let py = interp.acquire_gil().unwrap();
+    let sys = py.import("sys").unwrap();
+
+    let argv_raw = sys.get(py, "argv").unwrap();
+    let argv = argv_raw.cast_as::<PyList>(py).unwrap();
+    assert_eq!(argv.len(py), 1);
+
+    let value_raw = argv.get_item(py, 0);
+    let value_string = value_raw.cast_as::<PyString>(py).unwrap();
+    match value_string.data(py) {
+        PyStringData::Utf8(b"\xe4\xb8\xad\xe6\x96\x87") => {
+            if cfg!(target_family = "unix") {
+                assert!(true)
+            } else {
+                assert!(false)
+            }
+        }
+        PyStringData::Utf8(b"\xe2\xb5\x8e\xe8\x9d\xa5") => {
+            if cfg!(target_family = "windows") {
+                assert!(true)
+            } else {
+                assert!(false)
+            }
+        }
+        value => assert!(false, "{:?}", value),
+    }
+
+    let argvb_raw = sys.get(py, "argvb").unwrap();
+    let argvb = argvb_raw.cast_as::<PyList>(py).unwrap();
+    assert_eq!(argvb.len(py), 1);
+
+    let value_raw = argvb.get_item(py, 0);
+    let value_bytes = value_raw.cast_as::<PyBytes>(py).unwrap();
+    assert_eq!(
+        value_bytes.data(py),
+        if cfg!(windows) {
+            // UTF-16.
+            b"\x4e\x2d\x65\x87".to_vec()
+        } else {
+            // UTF-8.
+            b"\xe4\xb8\xad\xe6\x96\x87".to_vec()
+        }
+    );
 
     Ok(())
 }
