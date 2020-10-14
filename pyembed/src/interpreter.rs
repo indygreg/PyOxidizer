@@ -6,7 +6,7 @@
 
 use {
     super::config::OxidizedPythonInterpreterConfig,
-    super::conversion::{osstr_to_pyobject, osstring_to_bytes},
+    super::conversion::osstring_to_bytes,
     super::importer::{
         initialize_importer, PyInit_oxidized_importer, OXIDIZED_IMPORTER_NAME,
         OXIDIZED_IMPORTER_NAME_STR,
@@ -16,8 +16,7 @@ use {
     super::pyalloc::{make_raw_rust_memory_allocator, RawAllocator},
     super::python_resources::PythonResourcesState,
     cpython::{
-        GILGuard, NoArgs, ObjectProtocol, PyDict, PyErr, PyList, PyObject, PyString, Python,
-        ToPyObject,
+        GILGuard, NoArgs, ObjectProtocol, PyDict, PyErr, PyList, PyString, Python, ToPyObject,
     },
     lazy_static::lazy_static,
     python3_sys as pyffi,
@@ -25,12 +24,18 @@ use {
     std::collections::BTreeSet,
     std::convert::TryInto,
     std::env,
-    std::ffi::CStr,
+    std::ffi::{CStr, OsString},
     std::fmt::{Display, Formatter},
     std::fs,
     std::io::Write,
     std::path::PathBuf,
 };
+
+#[cfg(target_family = "unix")]
+use std::os::unix::ffi::OsStrExt;
+
+#[cfg(target_family = "windows")]
+use std::os::windows::ffi::OsStrExt;
 
 #[cfg(feature = "jemalloc-sys")]
 use super::pyalloc::make_raw_jemalloc_allocator;
@@ -153,6 +158,61 @@ impl From<pyffi::PyMemAllocatorEx> for InterpreterRawAllocator {
 impl From<RawAllocator> for InterpreterRawAllocator {
     fn from(allocator: RawAllocator) -> Self {
         InterpreterRawAllocator::Raw(allocator)
+    }
+}
+
+#[cfg(target_family = "unix")]
+pub fn set_argv(
+    config: &mut pyffi::PyConfig,
+    args: &[OsString],
+) -> Result<(), NewInterpreterError> {
+    let argc = args.len() as isize;
+    let argv = args
+        .iter()
+        .map(|x| x.as_bytes().as_ptr() as *mut i8)
+        .collect::<Vec<_>>();
+
+    let status = unsafe { pyffi::PyConfig_SetBytesArgv(config as *mut _, argc, argv.as_ptr()) };
+
+    if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
+        Err(NewInterpreterError::new_from_pystatus(
+            &status,
+            "setting argv",
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+#[cfg(target_family = "windows")]
+pub fn set_argv(
+    config: &mut pyffi::PyConfig,
+    args: &[OsString],
+) -> Result<(), NewInterpreterError> {
+    let argc = args.len() as isize;
+    let argv = args
+        .iter()
+        .map(|x| {
+            let mut buffer = x.encode_wide().collect::<Vec<u16>>();
+            buffer.push(0);
+
+            buffer
+        })
+        .collect::<Vec<_>>();
+    let argvp = argv
+        .iter()
+        .map(|x| x.as_ptr() as *mut u16)
+        .collect::<Vec<_>>();
+
+    let status = unsafe { pyffi::PyConfig_SetArgv(config as *mut _, argc, argvp.as_ptr()) };
+
+    if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
+        Err(NewInterpreterError::new_from_pystatus(
+            &status,
+            "setting argv",
+        ))
+    } else {
+        Ok(())
     }
 }
 
@@ -338,6 +398,11 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
         // our custom importer before Python attempts any imports.
         py_config._init_main = 0;
 
+        // Set PyConfig.argv if we didn't do so already.
+        if let Some(args) = self.config.resolve_sys_argv() {
+            set_argv(&mut py_config, &args)?;
+        }
+
         let status = unsafe { pyffi::Py_InitializeFromConfig(&py_config) };
         if unsafe { pyffi::PyStatus_Exception(status) } != 0 {
             return Err(NewInterpreterError::new_from_pystatus(
@@ -425,34 +490,6 @@ impl<'python, 'interpreter, 'resources> MainPythonInterpreter<'python, 'interpre
 
         self.py = Some(py);
         self.interpreter_state = InterpreterState::Initialized;
-
-        // env::args() panics if arguments aren't valid Unicode. But invalid
-        // Unicode arguments are possible and some applications may want to
-        // support them.
-        //
-        // env::args_os() provides access to the raw OsString instances, which
-        // will be derived from wchar_t on Windows and char* on POSIX. We can
-        // convert these to Python str instances using a platform-specific
-        // mechanism.
-        if let Some(args) = self.config.resolve_sys_argv() {
-            let args_objs = args
-                .iter()
-                .map(|x| osstr_to_pyobject(py, x, None))
-                .collect::<Result<Vec<PyObject>, &'static str>>()?;
-
-            // This will steal the pointer to the elements and mem::forget them.
-            let args = PyList::new(py, &args_objs);
-            let argv = b"argv\0";
-
-            let res = args.with_borrowed_ptr(py, |args_ptr| unsafe {
-                pyffi::PySys_SetObject(argv.as_ptr() as *const i8, args_ptr)
-            });
-
-            match res {
-                0 => (),
-                _ => return Err(NewInterpreterError::Simple("unable to set sys.argv")),
-            }
-        }
 
         if self.config.argvb {
             let args_objs = self

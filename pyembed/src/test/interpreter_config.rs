@@ -94,7 +94,10 @@ fn test_sys_paths_origin() -> Result<()> {
 /// sys.argv is initialized using the Rust process's arguments by default.
 #[test]
 fn test_argv_default() -> Result<()> {
-    let config = OxidizedPythonInterpreterConfig::default();
+    let mut config = OxidizedPythonInterpreterConfig::default();
+    // Otherwise the Rust arguments are interpreted as Python arguments.
+    config.interpreter_config.parse_argv = Some(false);
+
     let mut interp = MainPythonInterpreter::new(config)?;
 
     let py = interp.acquire_gil().unwrap();
@@ -160,7 +163,7 @@ fn test_argv_override() -> Result<()> {
         .unwrap()
         .extract::<Vec<String>>(py)
         .unwrap();
-    assert_eq!(argv, vec!["prog", "foo", "bar"]);
+    assert_eq!(argv, vec!["foo", "bar"]);
 
     Ok(())
 }
@@ -181,7 +184,7 @@ fn get_unicode_argument() -> OsString {
 fn test_argv_utf8() -> Result<()> {
     let mut config = OxidizedPythonInterpreterConfig::default();
 
-    config.argv = Some(vec![get_unicode_argument()]);
+    config.argv = Some(vec![OsString::from("ignored"), get_unicode_argument()]);
     config.argvb = true;
 
     let mut interp = MainPythonInterpreter::new(config)?;
@@ -215,9 +218,10 @@ fn test_argv_utf8() -> Result<()> {
 
     let argvb_raw = sys.get(py, "argvb").unwrap();
     let argvb = argvb_raw.cast_as::<PyList>(py).unwrap();
-    assert_eq!(argvb.len(py), 1);
+    // TODO should be same length as sys.argv
+    assert_eq!(argvb.len(py), 2);
 
-    let value_raw = argvb.get_item(py, 0);
+    let value_raw = argvb.get_item(py, 1);
     let value_bytes = value_raw.cast_as::<PyBytes>(py).unwrap();
     assert_eq!(
         value_bytes.data(py),

@@ -47,6 +47,14 @@ Bug Fixes
   This should result in compiled Python extension modules being usable as
   built-in extensions instead of being recognized as only shared libraries.
 
+Other Relevant Changes
+^^^^^^^^^^^^^^^^^^^^^^
+
+* The ``pyembed`` Rust crate now calls ``PyConfig_SetBytesArgv`` or
+  ``PyConfig_SetArgv()`` to initialize argv instead of
+  ``PySys_SetObject()``. The encoding of string values should also
+  behave more similarly to what ``python`` does.
+
 .. _version_0_8_0:
 
 0.8.0
