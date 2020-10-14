@@ -23,6 +23,7 @@ use {
         collections::HashMap,
         hash::BuildHasher,
         io::{BufRead, BufReader},
+        iter::FromIterator,
         path::{Path, PathBuf},
     },
 };
@@ -182,16 +183,31 @@ pub fn find_resources<'a>(
 ) -> Result<Vec<PythonResource<'a>>> {
     let mut res = Vec::new();
 
-    for r in find_python_resources(&path, dist.cache_tag(), &dist.python_module_suffixes()?) {
-        let r = r?;
-        res.push(r.to_memory()?);
-    }
+    let built_extensions = if let Some(p) = state_dir {
+        HashMap::from_iter(
+            read_built_extensions(&p)?
+                .iter()
+                .map(|ext| (ext.name.clone(), ext.clone())),
+        )
+    } else {
+        HashMap::new()
+    };
 
-    // TODO should we merge into an existing `PythonExtensionModule` instance
-    // instead of emitting multiple objects?
-    if let Some(p) = state_dir {
-        for ext in read_built_extensions(&p)? {
-            res.push(ext.into());
+    for r in find_python_resources(&path, dist.cache_tag(), &dist.python_module_suffixes()?) {
+        let r = r?.to_memory()?;
+
+        match r {
+            PythonResource::ExtensionModule(e) => {
+                // Use a built extension if present, as it will contain more metadata.
+                res.push(if let Some(built) = built_extensions.get(&e.name) {
+                    PythonResource::from(built.to_memory()?)
+                } else {
+                    PythonResource::ExtensionModule(e)
+                });
+            }
+            _ => {
+                res.push(r);
+            }
         }
     }
 

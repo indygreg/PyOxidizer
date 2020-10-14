@@ -35,6 +35,10 @@ Bug Fixes
 
 * Fix some documentation references to outdated Starlark configuration
   syntax (#291).
+* Emit only the ``PythonExtensionModule`` built with our patched distutils
+  instead of emitting 2 ``PythonExtensionModule`` for the same named module.
+  This should result in compiled Python extension modules being usable as
+  built-in extensions instead of being recognized as only shared libraries.
 
 .. _version_0_8_0:
 

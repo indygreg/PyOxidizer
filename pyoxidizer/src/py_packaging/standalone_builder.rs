@@ -2657,12 +2657,36 @@ pub mod tests {
                 })
                 .collect::<Vec<_>>();
 
+            assert_eq!(extensions.len(), 1);
+
             let mut orig = extensions[0].clone();
             assert!(orig.shared_library.is_some());
+
+            let (objects_len, link_libraries) = match libpython_link_mode {
+                BinaryLibpythonLinkMode::Dynamic => (0, vec![]),
+                BinaryLibpythonLinkMode::Static => (
+                    1,
+                    vec![LibraryDependency {
+                        name: "yaml".to_string(),
+                        static_library: None,
+                        static_filename: None,
+                        dynamic_library: None,
+                        dynamic_filename: None,
+                        framework: false,
+                        system: false,
+                    }],
+                ),
+                BinaryLibpythonLinkMode::Default => {
+                    panic!("should not get here");
+                }
+            };
+
+            assert_eq!(orig.object_file_data.len(), objects_len);
 
             // Makes compare easier.
             let mut e = orig.to_mut();
             e.shared_library = None;
+            e.object_file_data = vec![];
 
             assert_eq!(
                 e,
@@ -2673,63 +2697,17 @@ pub mod tests {
                     shared_library: None,
                     object_file_data: vec![],
                     is_package: false,
-                    link_libraries: vec![],
+                    link_libraries,
                     is_stdlib: false,
                     builtin_default: false,
                     required: false,
                     variant: None,
                     licenses: None,
                     license_public_domain: None,
-                }
+                },
+                "PythonExtensionModule for {:?}",
+                libpython_link_mode
             );
-
-            match libpython_link_mode {
-                BinaryLibpythonLinkMode::Static => {
-                    assert_eq!(extensions.len(), 2);
-
-                    let mut orig = extensions[1].clone();
-                    assert!(orig.shared_library.is_some());
-                    assert_eq!(orig.object_file_data.len(), 1);
-
-                    // Makes compare easier.
-                    let mut e = orig.to_mut();
-                    e.shared_library = None;
-                    e.object_file_data = vec![];
-
-                    assert_eq!(
-                        e,
-                        &PythonExtensionModule {
-                            name: "_yaml".to_string(),
-                            init_fn: Some("PyInit__yaml".to_string()),
-                            extension_file_suffix: ".cpython-38-x86_64-linux-gnu.so".to_string(),
-                            shared_library: None,
-                            object_file_data: vec![],
-                            is_package: false,
-                            link_libraries: vec![LibraryDependency {
-                                name: "yaml".to_string(),
-                                static_library: None,
-                                static_filename: None,
-                                dynamic_library: None,
-                                dynamic_filename: None,
-                                framework: false,
-                                system: false,
-                            }],
-                            is_stdlib: false,
-                            builtin_default: false,
-                            required: false,
-                            variant: None,
-                            licenses: None,
-                            license_public_domain: None,
-                        }
-                    );
-                }
-                BinaryLibpythonLinkMode::Dynamic => {
-                    assert_eq!(extensions.len(), 1);
-                }
-                BinaryLibpythonLinkMode::Default => {
-                    panic!("should not get here");
-                }
-            }
         }
 
         Ok(())
