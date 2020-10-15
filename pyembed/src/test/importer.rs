@@ -12,6 +12,8 @@ use {
 fn new_interpreter<'python, 'interpreter, 'resources>(
 ) -> Result<MainPythonInterpreter<'python, 'interpreter, 'resources>> {
     let mut config = OxidizedPythonInterpreterConfig::default();
+    // Otherwise Rust test executable args are parsed as Python args.
+    config.interpreter_config.parse_argv = Some(false);
     config.oxidized_importer = true;
     let interp = MainPythonInterpreter::new(config)?;
 
@@ -23,6 +25,8 @@ fn run_py_test(test_filename: &str) -> Result<()> {
     let test_path = PathBuf::from(test_dir).join(test_filename);
 
     let mut config = OxidizedPythonInterpreterConfig::default();
+    // Otherwise Rust test executable args are parsed as Python args.
+    config.interpreter_config.parse_argv = Some(false);
     config.oxidized_importer = true;
     config.interpreter_config.run_filename = Some(test_path);
     config.interpreter_config.buffered_stdio = Some(false);
@@ -53,6 +57,8 @@ fn get_importer(interp: &mut MainPythonInterpreter) -> Result<PyObject> {
 #[test]
 fn no_resources() -> Result<()> {
     let mut config = OxidizedPythonInterpreterConfig::default();
+    // Otherwise Rust test executable args are parsed as Python args.
+    config.interpreter_config.parse_argv = Some(false);
     config.oxidized_importer = true;
     let mut interp = MainPythonInterpreter::new(config)?;
 
