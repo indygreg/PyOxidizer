@@ -23,9 +23,9 @@ Blog Posts
 Version History
 ===============
 
-.. _version_0_8_1:
+.. _version_0_9_0:
 
-0.8.1-pre
+0.9.0-pre
 ---------
 
 Not yet released.
@@ -36,6 +36,13 @@ Backwards Compatibility Notes
 * The ``pyembed::OxidizedPythonInterpreterConfig`` Rust struct now contains
   an ``argv`` field that can be used to control the population of
   ``sys.argv``.
+
+New Features
+^^^^^^^^^^^^
+
+* A ``print(*args)`` function is now exposed to Starlark. This function is
+  documented as a Starlark built-in but isn't provided by the Rust Starlark
+  implementation by default. So we've implemented it ourselves. (#292)
 
 Bug Fixes
 ^^^^^^^^^
