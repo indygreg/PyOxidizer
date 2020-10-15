@@ -15,6 +15,9 @@ jobs:
       1.40:
         rustup_toolchain: 1.40.0
 
+  variables:
+    IN_CI: '1'
+
   steps:
   - ${{ if ne(parameters.name, 'Windows') }}:
     - script: |
@@ -39,12 +42,12 @@ jobs:
         cargo -V
     displayName: Query rust and cargo versions
 
-  - script: IN_CI=1 cargo build -p pyoxidizer -p python-packed-resources
+  - script: cargo build -p pyoxidizer -p python-packed-resources
     displayName: Build
 
-  - script: IN_CI=1 cargo test -p pyoxidizer -p python-packed-resources
+  - script: cargo test -p pyoxidizer -p python-packed-resources
     displayName: Test
 
-  - script: IN_CI=1 cargo clippy -p pyoxidizer -p python-packed-resources -- --allow clippy::cast_ptr_alignment
+  - script: cargo clippy -p pyoxidizer -p python-packed-resources -- --allow clippy::cast_ptr_alignment
     displayName: Clippy
     condition: ne( variables['rustup_toolchain'], 'nightly' )
