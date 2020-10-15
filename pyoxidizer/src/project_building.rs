@@ -9,10 +9,16 @@ use {
     crate::starlark::eval::{eval_starlark_config_file, EvalResult},
     crate::starlark::target::ResolvedTarget,
     anyhow::{anyhow, Context, Result},
+    duct::cmd,
     slog::warn,
-    std::env,
-    std::fs::create_dir_all,
-    std::path::{Path, PathBuf},
+    std::{
+        collections::{hash_map::RandomState, HashMap},
+        env,
+        fs::create_dir_all,
+        io::{BufRead, BufReader},
+        iter::FromIterator,
+        path::{Path, PathBuf},
+    },
 };
 
 pub const HOST: &str = env!("HOST");
@@ -159,12 +165,12 @@ pub fn build_executable_with_rust_project(
         args.push(&features);
     }
 
-    let mut envs = Vec::new();
-    envs.push((
-        "PYOXIDIZER_ARTIFACT_DIR",
+    let mut envs: HashMap<String, String, RandomState> = HashMap::from_iter(std::env::vars());
+    envs.insert(
+        "PYOXIDIZER_ARTIFACT_DIR".to_string(),
         artifacts_path.display().to_string(),
-    ));
-    envs.push(("PYOXIDIZER_REUSE_ARTIFACTS", "1".to_string()));
+    );
+    envs.insert("PYOXIDIZER_REUSE_ARTIFACTS".to_string(), "1".to_string());
 
     // Set PYTHON_SYS_EXECUTABLE so python3-sys uses our distribution's Python to configure
     // itself.
@@ -172,10 +178,10 @@ pub fn build_executable_with_rust_project(
     // cross-compiling. We should be able to pass in all state without having to
     // run an executable in a build script.
     let python_exe_path = exe.target_python_exe_path();
-    envs.push((
-        "PYTHON_SYS_EXECUTABLE",
+    envs.insert(
+        "PYTHON_SYS_EXECUTABLE".to_string(),
         python_exe_path.display().to_string(),
-    ));
+    );
 
     // If linking against an existing dynamic library on Windows, add the path to that
     // library to an environment variable so link.exe can find it.
@@ -185,30 +191,39 @@ pub fn build_executable_with_rust_project(
                 .parent()
                 .ok_or_else(|| anyhow!("unable to find parent directory of python DLL"))?;
 
-            envs.push((
-                "LIB",
+            envs.insert(
+                "LIB".to_string(),
                 if let Ok(lib) = std::env::var("LIB") {
                     format!("{};{}", lib, libpython_dir.display())
                 } else {
                     format!("{}", libpython_dir.display())
                 },
-            ));
+            );
         }
     }
 
     // static-nobundle link kind requires nightly Rust compiler until
     // https://github.com/rust-lang/rust/issues/37403 is resolved.
     if cfg!(windows) {
-        envs.push(("RUSTC_BOOTSTRAP", "1".to_string()));
+        envs.insert("RUSTC_BOOTSTRAP".to_string(), "1".to_string());
     }
 
-    let status = std::process::Command::new("cargo")
-        .args(args)
-        .current_dir(&project_path)
-        .envs(envs)
-        .status()?;
-
-    if !status.success() {
+    // TODO force cargo to colorize output under certain circumstances?
+    let command = cmd("cargo", &args)
+        .dir(&project_path)
+        .full_env(&envs)
+        .stderr_to_stdout()
+        .reader()?;
+    {
+        let reader = BufReader::new(&command);
+        for line in reader.lines() {
+            warn!(logger, "{}", line?);
+        }
+    }
+    let output = command
+        .try_wait()?
+        .ok_or_else(|| anyhow!("unable to wait on command"))?;
+    if !output.status.success() {
         return Err(anyhow!("cargo build failed"));
     }
 
