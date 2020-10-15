@@ -684,7 +684,7 @@ starlark_module! { python_executable_env =>
     }
 
     #[allow(non_snake_case, clippy::ptr_arg)]
-    PythonExecutabvle.read_virtualenv(
+    PythonExecutable.read_virtualenv(
         env env,
         call_stack cs,
         this,

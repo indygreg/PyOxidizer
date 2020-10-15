@@ -46,6 +46,8 @@ Bug Fixes
   instead of emitting 2 ``PythonExtensionModule`` for the same named module.
   This should result in compiled Python extension modules being usable as
   built-in extensions instead of being recognized as only shared libraries.
+* Fix typo preventing the Starlark method ``PythonExecutable.read_virtualenv()``
+  from being defined. (#297)
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
