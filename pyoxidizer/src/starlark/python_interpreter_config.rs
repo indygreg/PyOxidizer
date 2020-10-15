@@ -649,7 +649,7 @@ mod tests {
     fn test_configure_locale() -> Result<()> {
         let mut env = get_env()?;
 
-        env.eval_assert("config.configure_locale == None")?;
+        env.eval_assert("config.configure_locale == True")?;
 
         Ok(())
     }

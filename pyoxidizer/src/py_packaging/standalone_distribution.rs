@@ -1181,17 +1181,19 @@ impl PythonDistribution for StandaloneDistribution {
     }
 
     fn create_python_interpreter_config(&self) -> Result<EmbeddedPythonConfig> {
+        let embedded_default = EmbeddedPythonConfig::default();
+
         Ok(EmbeddedPythonConfig {
             config: PythonInterpreterConfig {
                 profile: PythonInterpreterProfile::Isolated,
-                ..PythonInterpreterConfig::default()
+                ..embedded_default.config
             },
             raw_allocator: default_raw_allocator(self.target_triple()),
             oxidized_importer: true,
             filesystem_importer: false,
             terminfo_resolution: TerminfoResolution::Dynamic,
             run_mode: PythonRunMode::Repl,
-            ..EmbeddedPythonConfig::default()
+            ..embedded_default
         })
     }
 
