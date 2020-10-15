@@ -39,12 +39,12 @@ jobs:
         cargo -V
     displayName: Query rust and cargo versions
 
-  - script: cargo build -p pyoxidizer -p python-packed-resources
+  - script: IN_CI=1 cargo build -p pyoxidizer -p python-packed-resources
     displayName: Build
 
-  - script: cargo test -p pyoxidizer -p python-packed-resources
+  - script: IN_CI=1 cargo test -p pyoxidizer -p python-packed-resources
     displayName: Test
 
-  - script: cargo clippy -p pyoxidizer -p python-packed-resources -- --allow clippy::cast_ptr_alignment
+  - script: IN_CI=1 cargo clippy -p pyoxidizer -p python-packed-resources -- --allow clippy::cast_ptr_alignment
     displayName: Clippy
     condition: ne( variables['rustup_toolchain'], 'nightly' )
