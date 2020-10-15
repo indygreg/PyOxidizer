@@ -35,6 +35,9 @@ default-features = false
 memory-module-sys = "0.3"
 winapi = { version = "0.3", features = ["libloaderapi", "memoryapi", "minwindef"] }
 
+[dev-dependencies]
+rusty-fork = "0.3"
+
 [features]
 default = ["build-mode-standalone", "cpython-link-unresolved-static"]
 jemalloc = ["jemalloc-sys"]

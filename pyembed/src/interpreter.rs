@@ -24,7 +24,7 @@ use {
     std::collections::BTreeSet,
     std::convert::TryInto,
     std::env,
-    std::ffi::{CStr, CString, NulError, OsString},
+    std::ffi::{CStr, OsString},
     std::fmt::{Display, Formatter},
     std::fs,
     std::io::Write,
@@ -32,7 +32,10 @@ use {
 };
 
 #[cfg(target_family = "unix")]
-use std::os::unix::ffi::OsStrExt;
+use std::{
+    ffi::{CString, NulError},
+    os::unix::ffi::OsStrExt,
+};
 
 #[cfg(target_family = "windows")]
 use std::os::windows::ffi::OsStrExt;
