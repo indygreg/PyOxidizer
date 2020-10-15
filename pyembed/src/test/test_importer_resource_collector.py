@@ -117,6 +117,4 @@ class TestImporterResourceCollector(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # Reset command arguments so test runner isn't confused.
-    sys.argv[1:] = []
     unittest.main(exit=False)

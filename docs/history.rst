@@ -66,6 +66,13 @@ Other Relevant Changes
   ``PyConfig_SetArgv()`` to initialize argv instead of
   ``PySys_SetObject()``. The encoding of string values should also
   behave more similarly to what ``python`` does.
+* The ``pyembed`` tests exercising Python interpreters now run in
+  separate processes. Before, Rust would instantiate multiple interpreters
+  in the same process. However, CPython uses global variables and APIs
+  (like ``setlocale()``) that also make use of globals and process
+  reuse resulted in tests not having pristine execution environments.
+  All tests now run in isolated processes and should be much more
+  resilient.
 
 .. _version_0_8_0:
 
