@@ -95,6 +95,12 @@ impl Default for EmbeddedPythonConfig {
         EmbeddedPythonConfig {
             config: PythonInterpreterConfig {
                 profile: PythonInterpreterProfile::Isolated,
+                // Isolated mode disables configure_locale by default. But this
+                // setting is essential for properly initializing encoding at
+                // run-time. Without this, UTF-8 arguments are mangled, for
+                // example. See
+                // https://github.com/indygreg/PyOxidizer/issues/294 for more.
+                configure_locale: Some(true),
                 ..PythonInterpreterConfig::default()
             },
             raw_allocator: MemoryAllocatorBackend::System,

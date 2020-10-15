@@ -39,6 +39,8 @@ Backwards Compatibility Notes
 * The ``pyembed::OxidizedPythonInterpreterConfig`` Rust struct now contains
   an ``isolated_auto_set_path_configuration`` field that can be used to
   disable the automatic run-time population of *path configuration* fields.
+* The ``configure_locale`` interpreter configuration setting is enabled
+  by default. (#294)
 
 New Features
 ^^^^^^^^^^^^
@@ -58,6 +60,11 @@ Bug Fixes
   built-in extensions instead of being recognized as only shared libraries.
 * Fix typo preventing the Starlark method ``PythonExecutable.read_virtualenv()``
   from being defined. (#297)
+* The default value of the Starlark ``PythonInterpreterConfig.configure_locale``
+  field is ``True`` instead of ``None`` (effectively ``False`` since the
+  default ``.profile`` value is ``isolated``). This results in Python's
+  encodings being more reasonable by default, which helps ensure
+  non-ASCII arguments are interpreted properly. (#294)
 
 Other Relevant Changes
 ^^^^^^^^^^^^^^^^^^^^^^
