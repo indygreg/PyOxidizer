@@ -18,8 +18,7 @@ use {
         distribution::BinaryLibpythonLinkMode,
         distribution::{
             default_distribution_location, is_stdlib_test_package, resolve_distribution,
-            DistributionFlavor, PythonDistribution as PythonDistributionTrait,
-            PythonDistributionLocation,
+            DistributionFlavor, PythonDistribution, PythonDistributionLocation,
         },
     },
     anyhow::{anyhow, Result},
@@ -50,24 +49,25 @@ use {
     },
 };
 
-pub struct PythonDistribution {
+/// A Starlark Value wrapper for `PythonDistribution` traits.
+pub struct PythonDistributionValue {
     flavor: DistributionFlavor,
     pub source: PythonDistributionLocation,
 
     dest_dir: PathBuf,
 
-    pub distribution: Option<Arc<Box<dyn PythonDistributionTrait>>>,
+    pub distribution: Option<Arc<Box<dyn PythonDistribution>>>,
 
     compiler: Option<Box<dyn PythonBytecodeCompiler>>,
 }
 
-impl PythonDistribution {
+impl PythonDistributionValue {
     fn from_location(
         flavor: DistributionFlavor,
         location: PythonDistributionLocation,
         dest_dir: &Path,
-    ) -> PythonDistribution {
-        PythonDistribution {
+    ) -> PythonDistributionValue {
+        PythonDistributionValue {
             flavor,
             source: location,
             dest_dir: dest_dir.to_path_buf(),
@@ -118,8 +118,8 @@ impl PythonDistribution {
     }
 }
 
-impl TypedValue for PythonDistribution {
-    type Holder = Mutable<PythonDistribution>;
+impl TypedValue for PythonDistributionValue {
+    type Holder = Mutable<PythonDistributionValue>;
     const TYPE: &'static str = "PythonDistribution";
 
     fn values_for_descendant_check_and_freeze(&self) -> Box<dyn Iterator<Item = Value>> {
@@ -132,7 +132,7 @@ impl TypedValue for PythonDistribution {
 }
 
 // Starlark functions.
-impl PythonDistribution {
+impl PythonDistributionValue {
     /// default_python_distribution(flavor, build_target=None, python_version=None)
     fn default_python_distribution(
         type_values: &TypeValues,
@@ -181,7 +181,7 @@ impl PythonDistribution {
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        Ok(Value::new(PythonDistribution::from_location(
+        Ok(Value::new(PythonDistributionValue::from_location(
             flavor,
             location,
             &context.python_distributions_path,
@@ -237,7 +237,7 @@ impl PythonDistribution {
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        Ok(Value::new(PythonDistribution::from_location(
+        Ok(Value::new(PythonDistributionValue::from_location(
             flavor,
             distribution,
             &context.python_distributions_path,
@@ -591,18 +591,18 @@ impl PythonDistribution {
 starlark_module! { python_distribution_module =>
     #[allow(non_snake_case, clippy::ptr_arg)]
     PythonDistribution(env env, sha256, local_path=NoneType::None, url=NoneType::None, flavor="standalone") {
-        PythonDistribution::from_args(&env, &sha256, &local_path, &url, &flavor)
+        PythonDistributionValue::from_args(&env, &sha256, &local_path, &url, &flavor)
     }
 
     PythonDistribution.make_python_packaging_policy(env env, this) {
-        match this.clone().downcast_mut::<PythonDistribution>()? {
+        match this.clone().downcast_mut::<PythonDistributionValue>()? {
             Some(mut dist) => dist.make_python_packaging_policy_starlark(&env),
             None => Err(ValueError::IncorrectParameterType),
         }
     }
 
     PythonDistribution.make_python_interpreter_config(env env, this) {
-        match this.clone().downcast_mut::<PythonDistribution>()? {
+        match this.clone().downcast_mut::<PythonDistributionValue>()? {
             Some(mut dist) => dist.make_python_interpreter_config_starlark(&env),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -610,7 +610,7 @@ starlark_module! { python_distribution_module =>
 
     #[allow(clippy::ptr_arg)]
     PythonDistribution.extension_modules(env env, this) {
-        match this.clone().downcast_mut::<PythonDistribution>()? {
+        match this.clone().downcast_mut::<PythonDistributionValue>()? {
             Some(mut dist) => dist.extension_modules(&env),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -618,7 +618,7 @@ starlark_module! { python_distribution_module =>
 
     #[allow(clippy::ptr_arg)]
     PythonDistribution.source_modules(env env, this) {
-        match this.clone().downcast_mut::<PythonDistribution>()? {
+        match this.clone().downcast_mut::<PythonDistributionValue>()? {
             Some(mut dist) => dist.source_modules(&env),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -626,7 +626,7 @@ starlark_module! { python_distribution_module =>
 
     #[allow(clippy::ptr_arg)]
     PythonDistribution.package_resources(env env, this, include_test=false) {
-        match this.clone().downcast_mut::<PythonDistribution>()? {
+        match this.clone().downcast_mut::<PythonDistributionValue>()? {
             Some(mut dist) => dist.package_resources(&env, &include_test),
             None => Err(ValueError::IncorrectParameterType),
         }
@@ -641,7 +641,7 @@ starlark_module! { python_distribution_module =>
         packaging_policy=NoneType::None,
         config=NoneType::None
     ) {
-        match this.clone().downcast_mut::<PythonDistribution>()? {
+        match this.clone().downcast_mut::<PythonDistributionValue>()? {
             Some(mut dist) =>dist.to_python_executable_starlark(
                 &env,
                 cs,
@@ -660,7 +660,7 @@ starlark_module! { python_distribution_module =>
         build_target=NoneType::None,
         python_version=NoneType::None
     ) {
-        PythonDistribution::default_python_distribution(&env, &flavor, &build_target, &python_version)
+        PythonDistributionValue::default_python_distribution(&env, &flavor, &build_target, &python_version)
     }
 }
 
@@ -684,7 +684,7 @@ mod tests {
             )
             .unwrap();
 
-        let x = dist.downcast_ref::<PythonDistribution>().unwrap();
+        let x = dist.downcast_ref::<PythonDistributionValue>().unwrap();
         assert_eq!(x.source, host_distribution.location)
     }
 
@@ -712,7 +712,7 @@ mod tests {
             )
             .unwrap();
 
-        let x = dist.downcast_ref::<PythonDistribution>().unwrap();
+        let x = dist.downcast_ref::<PythonDistributionValue>().unwrap();
         assert_eq!(x.source, wanted.location);
 
         Ok(())
@@ -733,7 +733,7 @@ mod tests {
             )
             .unwrap();
 
-        let x = dist.downcast_ref::<PythonDistribution>().unwrap();
+        let x = dist.downcast_ref::<PythonDistributionValue>().unwrap();
         assert_eq!(x.source, wanted.location);
 
         Ok(())
@@ -753,7 +753,7 @@ mod tests {
             )
             .unwrap();
 
-        let x = dist.downcast_ref::<PythonDistribution>().unwrap();
+        let x = dist.downcast_ref::<PythonDistributionValue>().unwrap();
         assert_eq!(x.source, host_distribution.location)
     }
 
@@ -779,7 +779,7 @@ mod tests {
             sha256: "sha256".to_string(),
         };
 
-        let x = dist.downcast_ref::<PythonDistribution>().unwrap();
+        let x = dist.downcast_ref::<PythonDistributionValue>().unwrap();
         assert_eq!(x.source, wanted);
         assert_eq!(x.flavor, DistributionFlavor::Standalone);
     }
@@ -792,7 +792,7 @@ mod tests {
             sha256: "sha256".to_string(),
         };
 
-        let x = dist.downcast_ref::<PythonDistribution>().unwrap();
+        let x = dist.downcast_ref::<PythonDistributionValue>().unwrap();
         assert_eq!(x.source, wanted);
         assert_eq!(x.flavor, DistributionFlavor::Standalone);
     }

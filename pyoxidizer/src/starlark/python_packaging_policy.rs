@@ -303,8 +303,8 @@ starlark_module! { python_packaging_policy_module =>
 #[cfg(test)]
 mod tests {
     use {
-        super::super::python_distribution::PythonDistribution, super::super::testutil::*, super::*,
-        anyhow::Result,
+        super::super::python_distribution::PythonDistributionValue, super::super::testutil::*,
+        super::*, anyhow::Result,
     };
 
     #[test]
@@ -315,7 +315,9 @@ mod tests {
         env.eval("policy = dist.make_python_packaging_policy()")?;
 
         let dist_value = env.eval("dist")?;
-        let dist = dist_value.downcast_ref::<PythonDistribution>().unwrap();
+        let dist = dist_value
+            .downcast_ref::<PythonDistributionValue>()
+            .unwrap();
         let dist_ref = dist.distribution.as_ref().unwrap();
 
         let policy = dist_ref.create_packaging_policy().unwrap();

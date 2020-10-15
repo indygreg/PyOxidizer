@@ -682,7 +682,7 @@ pub fn add_context_for_value(
 
 #[cfg(test)]
 mod tests {
-    use super::super::python_distribution::PythonDistribution;
+    use super::super::python_distribution::PythonDistributionValue;
     use super::super::testutil::*;
     use super::*;
     use anyhow::Result;
@@ -692,7 +692,9 @@ mod tests {
         let mut env = StarlarkEnvironment::new_with_exe()?;
 
         let dist_value = env.eval("dist")?;
-        let dist_ref = dist_value.downcast_ref::<PythonDistribution>().unwrap();
+        let dist_ref = dist_value
+            .downcast_ref::<PythonDistributionValue>()
+            .unwrap();
         let dist = dist_ref.distribution.as_ref().unwrap();
 
         let mut m = env.eval("exe.make_python_module_source('foo', 'import bar')")?;
