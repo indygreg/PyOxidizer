@@ -19,6 +19,7 @@ use {
     crate::environment::{LINUX_TARGET_TRIPLES, MACOS_TARGET_TRIPLES},
     anyhow::{anyhow, Context, Result},
     copy_dir::copy_dir,
+    duct::cmd,
     lazy_static::lazy_static,
     path_dedot::ParseDot,
     python_packaging::{
@@ -38,8 +39,9 @@ use {
     serde::{Deserialize, Serialize},
     slog::{info, warn},
     std::{
-        collections::{BTreeMap, HashMap},
+        collections::{hash_map::RandomState, BTreeMap, HashMap},
         io::{BufRead, BufReader, Read},
+        iter::FromIterator,
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -291,8 +293,8 @@ pub fn invoke_python(python_paths: &PythonPaths, logger: &slog::Logger, args: &[
 
     info!(logger, "setting PYTHONPATH {}", site_packages_s);
 
-    let mut extra_envs = HashMap::new();
-    extra_envs.insert("PYTHONPATH".to_string(), site_packages_s);
+    let mut envs: HashMap<String, String, RandomState> = HashMap::from_iter(std::env::vars());
+    envs.insert("PYTHONPATH".to_string(), site_packages_s);
 
     info!(
         logger,
@@ -301,11 +303,10 @@ pub fn invoke_python(python_paths: &PythonPaths, logger: &slog::Logger, args: &[
         args.join(" ")
     );
 
-    let mut cmd = std::process::Command::new(&python_paths.python_exe)
-        .args(args)
-        .envs(&extra_envs)
-        .stdout(std::process::Stdio::piped())
-        .spawn()
+    let command = cmd(&python_paths.python_exe, args)
+        .full_env(&envs)
+        .stderr_to_stdout()
+        .reader()
         .unwrap_or_else(|_| {
             panic!(
                 "failed to run {} {}",
@@ -314,8 +315,7 @@ pub fn invoke_python(python_paths: &PythonPaths, logger: &slog::Logger, args: &[
             )
         });
     {
-        let stdout = cmd.stdout.as_mut().unwrap();
-        let reader = BufReader::new(stdout);
+        let reader = BufReader::new(&command);
         for line in reader.lines() {
             warn!(logger, "{}", line.unwrap());
         }

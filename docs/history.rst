@@ -80,6 +80,9 @@ Other Relevant Changes
   reuse resulted in tests not having pristine execution environments.
   All tests now run in isolated processes and should be much more
   resilient.
+* When PyOxidizer invokes a subprocess and logs its output, stderr
+  is now redirected to stdout and logged as a unified stream. Previously,
+  stdout was logged and stderr went to the parent process stderr.
 
 .. _version_0_8_0:
 

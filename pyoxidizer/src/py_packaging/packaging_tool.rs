@@ -15,12 +15,13 @@ use {
     },
     crate::python_distributions::GET_PIP_PY_19,
     anyhow::{anyhow, Context, Result},
+    duct::cmd,
     python_packaging::{
         filesystem_scanning::find_python_resources, resource::PythonResource, wheel::WheelArchive,
     },
     slog::warn,
     std::{
-        collections::HashMap,
+        collections::{hash_map::RandomState, HashMap},
         hash::BuildHasher,
         io::{BufRead, BufReader},
         iter::FromIterator,
@@ -106,31 +107,31 @@ pub fn bootstrap_packaging_tools(
     let install_dir = temp_dir.path().join("pip-installed");
 
     warn!(logger, "running get-pip.py to bootstrap pip");
-    let mut cmd = std::process::Command::new(python_exe)
-        .args(vec![
+    let command = cmd(
+        python_exe,
+        vec![
             format!("{}", get_pip_py_path.display()),
             "--require-hashes".to_string(),
             "-r".to_string(),
             format!("{}", bootstrap_txt_path.display()),
             "--prefix".to_string(),
             format!("{}", install_dir.display()),
-        ])
-        .current_dir(temp_dir.path())
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::null())
-        .spawn()?;
+        ],
+    )
+    .dir(temp_dir.path())
+    .stderr_to_stdout()
+    .reader()?;
     {
-        let stdout = cmd
-            .stdout
-            .as_mut()
-            .ok_or_else(|| anyhow!("could not read stdout"))?;
-        let reader = BufReader::new(stdout);
+        let reader = BufReader::new(&command);
         for line in reader.lines() {
             warn!(logger, "{}", line?);
         }
     }
-    let result = cmd.wait()?;
-    if !result.success() {
+
+    let output = command
+        .try_wait()?
+        .ok_or_else(|| anyhow!("unable to wait on command"))?;
+    if !output.status.success() {
         return Err(anyhow!("error installing pip"));
     }
 
@@ -277,28 +278,21 @@ pub fn pip_download<'a>(
 
     warn!(logger, "running python {:?}", pip_args);
 
-    // TODO send stderr to stdout
-    let mut cmd = std::process::Command::new(&host_dist.python_exe_path())
-        .args(&pip_args)
-        .stdout(std::process::Stdio::piped())
-        .spawn()?;
-    {
-        let stdout = cmd
-            .stdout
-            .as_mut()
-            .ok_or_else(|| anyhow!("unable to get stdout"))?;
-        let reader = BufReader::new(stdout);
+    let command = cmd(host_dist.python_exe_path(), &pip_args)
+        .stderr_to_stdout()
+        .reader()?;
 
+    {
+        let reader = BufReader::new(&command);
         for line in reader.lines() {
             warn!(logger, "{}", line?);
         }
     }
 
-    let status = cmd
-        .wait()
-        .map_err(|e| anyhow!("error waiting on process: {}", e))?;
-
-    if !status.success() {
+    let output = command
+        .try_wait()?
+        .ok_or_else(|| anyhow!("unable to wait on command"))?;
+    if !output.status.success() {
         return Err(anyhow!("error running pip"));
     }
 
@@ -339,7 +333,10 @@ pub fn pip_install<'a, S: BuildHasher>(
 
     dist.ensure_pip(logger)?;
 
-    let mut env = dist.resolve_distutils(logger, libpython_link_mode, temp_dir.path(), &[])?;
+    let mut env: HashMap<String, String, RandomState> = HashMap::from_iter(std::env::vars());
+    for (k, v) in dist.resolve_distutils(logger, libpython_link_mode, temp_dir.path(), &[])? {
+        env.insert(k, v);
+    }
 
     for (key, value) in extra_envs.iter() {
         env.insert(key.clone(), value.clone());
@@ -367,26 +364,21 @@ pub fn pip_install<'a, S: BuildHasher>(
 
     pip_args.extend(install_args.iter().cloned());
 
-    // TODO send stderr to stdout
-    let mut cmd = std::process::Command::new(&dist.python_exe_path())
-        .args(&pip_args)
-        .envs(&env)
-        .stdout(std::process::Stdio::piped())
-        .spawn()?;
+    let command = cmd(dist.python_exe_path(), &pip_args)
+        .full_env(&env)
+        .stderr_to_stdout()
+        .reader()?;
     {
-        let stdout = cmd
-            .stdout
-            .as_mut()
-            .ok_or_else(|| anyhow!("unable to get stdout"))?;
-        let reader = BufReader::new(stdout);
-
+        let reader = BufReader::new(&command);
         for line in reader.lines() {
             warn!(logger, "{}", line?);
         }
     }
 
-    let status = cmd.wait().unwrap();
-    if !status.success() {
+    let output = command
+        .try_wait()?
+        .ok_or_else(|| anyhow!("unable to wait on command"))?;
+    if !output.status.success() {
         return Err(anyhow!("error running pip"));
     }
 
@@ -434,12 +426,15 @@ pub fn setup_py_install<'a, S: BuildHasher>(
 
     std::fs::create_dir_all(&python_paths.site_packages)?;
 
-    let mut envs = dist.resolve_distutils(
+    let mut envs: HashMap<String, String, RandomState> = HashMap::from_iter(std::env::vars());
+    for (k, v) in dist.resolve_distutils(
         &logger,
         libpython_link_mode,
         temp_dir.path(),
         &[&python_paths.site_packages, &python_paths.stdlib],
-    )?;
+    )? {
+        envs.insert(k, v);
+    }
 
     for (key, value) in extra_envs {
         envs.insert(key.clone(), value.clone());
@@ -464,26 +459,23 @@ pub fn setup_py_install<'a, S: BuildHasher>(
 
     args.extend(&["install", "--prefix", &target_dir_s, "--no-compile"]);
 
-    // TODO send stderr to stdout.
-    let mut cmd = std::process::Command::new(dist.python_exe_path())
-        .current_dir(package_path)
-        .args(&args)
-        .envs(&envs)
-        .stdout(std::process::Stdio::piped())
-        .spawn()
-        .expect("error running setup.py");
+    let command = cmd(dist.python_exe_path(), &args)
+        .dir(package_path)
+        .full_env(&envs)
+        .stderr_to_stdout()
+        .reader()?;
     {
-        let stdout = cmd.stdout.as_mut().unwrap();
-        let reader = BufReader::new(stdout);
-
+        let reader = BufReader::new(&command);
         for line in reader.lines() {
             warn!(logger, "{}", line.unwrap());
         }
     }
 
-    let status = cmd.wait().unwrap();
-    if !status.success() {
-        return Err(anyhow!("error running setup.py"));
+    let output = command
+        .try_wait()?
+        .ok_or_else(|| anyhow!("unable to wait on command"))?;
+    if !output.status.success() {
+        return Err(anyhow!("error running pip"));
     }
 
     let state_dir = match envs.get("PYOXIDIZER_DISTUTILS_STATE_DIR") {
