@@ -133,13 +133,18 @@ of process arguments.
 
 On platforms where the process receives ``char *`` arguments, Python
 normalizes these values to ``unicode`` and makes them available via
-``sys.argv``. On platforms where the process received ``wchar_t *``
-arguments, Python may interpreter the bytes as a certain encoding.
+``sys.argv``. On platforms where the process receives ``wchar_t *``
+arguments, Python may interpret the bytes as a certain encoding.
 This encoding normalization can be lossy.
 
 Enabling this feature will give Python applications access to the raw
 ``bytes`` values of arguments that are actually used. The single or
 double width bytes nature of the data is preserved.
+
+Unlike ``sys.argv`` which may chomp off leading arguments depending
+on the Python execution mode, ``sys.argvb`` has all the arguments
+used to initialize the process. The first argument is always the
+executable.
 
 .. _config_type_python_interpreter_config_sys_frozen:
 

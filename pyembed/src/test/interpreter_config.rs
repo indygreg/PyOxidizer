@@ -183,13 +183,44 @@ rusty_fork_test! {
     }
 
     #[test]
-    fn test_argv_utf8() {
+    fn test_argvb_utf8() {
         let mut config = OxidizedPythonInterpreterConfig::default();
 
         // Otherwise the Rust arguments are interpreted as Python arguments.
         config.interpreter_config.parse_argv = Some(false);
         config.argv = Some(vec![get_unicode_argument()]);
         config.argvb = true;
+
+        let mut interp = MainPythonInterpreter::new(config).unwrap();
+
+        let py = interp.acquire_gil().unwrap();
+        let sys = py.import("sys").unwrap();
+
+        let argvb_raw = sys.get(py, "argvb").unwrap();
+        let argvb = argvb_raw.cast_as::<PyList>(py).unwrap();
+        assert_eq!(argvb.len(py), 1);
+
+        let value_raw = argvb.get_item(py, 0);
+        let value_bytes = value_raw.cast_as::<PyBytes>(py).unwrap();
+        assert_eq!(
+            value_bytes.data(py),
+            if cfg!(windows) {
+                // UTF-16.
+                b"\x4e\x2d\x65\x87".to_vec()
+            } else {
+                // UTF-8.
+                b"\xe4\xb8\xad\xe6\x96\x87".to_vec()
+            }
+        );
+    }
+
+    #[test]
+    fn test_argv_utf8() {
+        let mut config = OxidizedPythonInterpreterConfig::default();
+
+        // Otherwise the Rust arguments are interpreted as Python arguments.
+        config.interpreter_config.parse_argv = Some(false);
+        config.argv = Some(vec![get_unicode_argument()]);
 
         let mut interp = MainPythonInterpreter::new(config).unwrap();
 
@@ -219,23 +250,6 @@ rusty_fork_test! {
             }
             value => assert!(false, "{:?}", value),
         }
-
-        let argvb_raw = sys.get(py, "argvb").unwrap();
-        let argvb = argvb_raw.cast_as::<PyList>(py).unwrap();
-        assert_eq!(argvb.len(py), 1);
-
-        let value_raw = argvb.get_item(py, 0);
-        let value_bytes = value_raw.cast_as::<PyBytes>(py).unwrap();
-        assert_eq!(
-            value_bytes.data(py),
-            if cfg!(windows) {
-                // UTF-16.
-                b"\x4e\x2d\x65\x87".to_vec()
-            } else {
-                // UTF-8.
-                b"\xe4\xb8\xad\xe6\x96\x87".to_vec()
-            }
-        );
     }
 
 }
