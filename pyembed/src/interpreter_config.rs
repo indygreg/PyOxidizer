@@ -595,9 +595,11 @@ impl<'a> TryInto<pyffi::PyConfig> for &'a OxidizedPythonInterpreterConfig<'a> {
         // explicitly defined in the `PythonInterpreterConfig`.
         //
         // In "isolated" mode, we automatically fill in various fields as
-        // derived from the environment. But we never overwrite values that
-        // are explicitly set in the config.
-        if self.interpreter_config.profile == PythonInterpreterProfile::Isolated {
+        // derived from the environment if allowed to do so. But we never
+        // overwrite values that are explicitly set in the config.
+        if self.interpreter_config.profile == PythonInterpreterProfile::Isolated
+            && self.isolated_auto_set_path_configuration
+        {
             let exe = std::env::current_exe()
                 .map_err(|err| format!("unable to obtain current executable: {}", err))?;
             let origin = exe

@@ -36,6 +36,9 @@ Backwards Compatibility Notes
 * The ``pyembed::OxidizedPythonInterpreterConfig`` Rust struct now contains
   an ``argv`` field that can be used to control the population of
   ``sys.argv``.
+* The ``pyembed::OxidizedPythonInterpreterConfig`` Rust struct now contains
+  an ``isolated_auto_set_path_configuration`` field that can be used to
+  disable the automatic run-time population of *path configuration* fields.
 
 New Features
 ^^^^^^^^^^^^

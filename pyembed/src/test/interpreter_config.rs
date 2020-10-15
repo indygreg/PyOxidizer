@@ -49,6 +49,11 @@ fn test_default_interpreter() -> Result<()> {
 fn test_isolated_interpreter() -> Result<()> {
     let mut config = OxidizedPythonInterpreterConfig::default();
     config.interpreter_config.profile = PythonInterpreterProfile::Isolated;
+    // This allows us to pick up the default paths from the Python install
+    // detected by python3_sys. Without this, sys.path and other paths reference
+    // directories next to the Rust test executable, and there is no Python stdlib
+    // there.
+    config.isolated_auto_set_path_configuration = false;
 
     let mut interp = MainPythonInterpreter::new(config)?;
 

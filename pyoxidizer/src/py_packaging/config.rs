@@ -179,6 +179,7 @@ impl EmbeddedPythonConfig {
             x_options: {},\n        \
             }},\n    \
             raw_allocator: Some({}),\n    \
+            isolated_auto_set_path_configuration: true,\n    \
             oxidized_importer: {},\n    \
             filesystem_importer: {},\n    \
             packed_resources: {},\n    \
