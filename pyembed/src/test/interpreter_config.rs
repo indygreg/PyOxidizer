@@ -4,7 +4,7 @@
 
 use {
     crate::{MainPythonInterpreter, OxidizedPythonInterpreterConfig},
-    cpython::{ObjectProtocol, PyBytes, PyList, PyString, PyStringData},
+    cpython::{ObjectProtocol, PyBytes, PyList, PyObject, PyString, PyStringData},
     python3_sys as pyffi,
     python_packaging::interpreter::PythonInterpreterProfile,
     rusty_fork::rusty_fork_test,
@@ -252,4 +252,109 @@ rusty_fork_test! {
         }
     }
 
+    #[test]
+    fn test_argv_utf8_isolated() {
+        let mut config = OxidizedPythonInterpreterConfig::default();
+        config.interpreter_config.profile = PythonInterpreterProfile::Isolated;
+        // Otherwise the Rust arguments are interpreted as Python arguments.
+        config.interpreter_config.parse_argv = Some(false);
+        config.isolated_auto_set_path_configuration = false;
+        config.argv = Some(vec![get_unicode_argument()]);
+
+        let mut interp = MainPythonInterpreter::new(config).unwrap();
+
+        let py = interp.acquire_gil().unwrap();
+        let sys = py.import("sys").unwrap();
+
+        let argv_raw = sys.get(py, "argv").unwrap();
+        let argv = argv_raw.cast_as::<PyList>(py).unwrap();
+        assert_eq!(argv.len(py), 1);
+
+        let value_raw = argv.get_item(py, 0);
+
+        // The cpython crate only converts to PyStringData if the internal
+        // representation is UTF-8 and will panic otherwise. Since we're using
+        // surrogates for the test string, `.data()` will panic. So let's poke
+        // at the CPython APIs to get what we need.
+        //
+        // Unfortunately, python3_sys doesn't expose `PyUnicode_Type` to us,
+        // since `PyUnicode_KIND` is a macro. Neither do we have bindings to
+        // `PyUnicode_DATA`.
+        assert_eq!(unsafe {
+            pyffi::PyUnicode_GetLength(value_raw.as_ptr())
+        }, if cfg!(target_family = "windows") {
+            2
+        } else {
+            6
+        });
+
+        let encoded_raw = unsafe {
+            PyObject::from_owned_ptr(
+                py,
+                pyffi::PyUnicode_AsEncodedString(
+                    value_raw.as_ptr(),
+                    b"utf-8\0".as_ptr() as *const _,
+                    b"surrogatepass\0".as_ptr() as *const _,
+                )
+            )
+        };
+        let encoded_bytes = encoded_raw.cast_as::<PyBytes>(py).unwrap();
+        let encoded_data = encoded_bytes.data(py);
+
+        if cfg!(target_family = "windows") {
+            assert_eq!(encoded_data.len(), 6);
+            assert_eq!(encoded_data, b"\xe2\xb5\x8e\xe8\x9d\xa5");
+        } else {
+            // This is very wrong.
+            assert_eq!(encoded_data.len(), 18);
+            assert_eq!(
+                String::from_utf8(encoded_data.to_owned()).unwrap_err().to_string(),
+                "invalid utf-8 sequence of 1 bytes from index 0",
+            );
+        }
+    }
+
+    #[test]
+    fn test_argv_utf8_isolated_configure_locale() {
+        let mut config = OxidizedPythonInterpreterConfig::default();
+        config.interpreter_config.profile = PythonInterpreterProfile::Isolated;
+        config.interpreter_config.configure_locale = Some(true);
+        // Otherwise the Rust arguments are interpreted as Python arguments.
+        config.interpreter_config.parse_argv = Some(false);
+        config.isolated_auto_set_path_configuration = false;
+        config.argv = Some(vec![get_unicode_argument()]);
+
+        let mut interp = MainPythonInterpreter::new(config).unwrap();
+
+        let py = interp.acquire_gil().unwrap();
+        let sys = py.import("sys").unwrap();
+
+        let argv_raw = sys.get(py, "argv").unwrap();
+        let argv = argv_raw.cast_as::<PyList>(py).unwrap();
+        assert_eq!(argv.len(py), 1);
+
+        let value_raw = argv.get_item(py, 0);
+
+        assert_eq!(unsafe {
+            pyffi::PyUnicode_GetLength(value_raw.as_ptr())
+        }, 2);
+
+        let encoded_raw = unsafe {
+            PyObject::from_owned_ptr(
+                py,
+                pyffi::PyUnicode_AsEncodedString(
+                    value_raw.as_ptr(),
+                    b"utf-8\0".as_ptr() as *const _,
+                    b"strict\0".as_ptr() as *const _,
+                )
+            )
+        };
+        let encoded_bytes = encoded_raw.cast_as::<PyBytes>(py).unwrap();
+        let encoded_data = encoded_bytes.data(py);
+        assert_eq!(encoded_data, if cfg!(target_family = "windows") {
+            b"\xe2\xb5\x8e\xe8\x9d\xa5"
+        } else {
+            b"\xe4\xb8\xad\xe6\x96\x87"
+        });
+    }
 }
