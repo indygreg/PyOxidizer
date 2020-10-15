@@ -4,8 +4,6 @@
 Getting Started
 ===============
 
-.. _installing:
-
 Python Requirements
 ===================
 
