@@ -19,7 +19,9 @@ use std::os::windows::ffi::OsStringExt;
 
 #[test]
 fn test_default_interpreter() -> Result<()> {
-    let config = OxidizedPythonInterpreterConfig::default();
+    let mut config = OxidizedPythonInterpreterConfig::default();
+    // Otherwise the Rust arguments are interpreted as Python arguments.
+    config.interpreter_config.parse_argv = Some(false);
     let mut interp = MainPythonInterpreter::new(config)?;
 
     let py = interp.acquire_gil().unwrap();
@@ -69,6 +71,8 @@ fn test_isolated_interpreter() -> Result<()> {
 #[test]
 fn test_sys_paths_origin() -> Result<()> {
     let mut config = OxidizedPythonInterpreterConfig::default();
+    // Otherwise the Rust arguments are interpreted as Python arguments.
+    config.interpreter_config.parse_argv = Some(false);
     config.interpreter_config.module_search_paths = Some(vec![PathBuf::from("$ORIGIN/lib")]);
 
     let origin = std::env::current_exe()
