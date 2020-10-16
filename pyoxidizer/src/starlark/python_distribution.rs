@@ -76,13 +76,18 @@ impl PythonDistributionValue {
     pub fn resolve_distribution(
         &mut self,
         logger: &slog::Logger,
-    ) -> Result<Arc<Box<dyn PythonDistribution>>> {
+        label: &str,
+    ) -> Result<Arc<Box<dyn PythonDistribution>>, ValueError> {
         if self.distribution.is_none() {
-            self.distribution = Some(Arc::new(resolve_distribution(
-                logger,
-                &self.source,
-                &self.dest_dir,
-            )?));
+            self.distribution = Some(Arc::new(
+                resolve_distribution(logger, &self.source, &self.dest_dir).map_err(|e| {
+                    ValueError::from(RuntimeError {
+                        code: "PYOXIDIZER_BUILD",
+                        message: e.to_string(),
+                        label: label.to_string(),
+                    })
+                })?,
+            ));
         }
 
         Ok(self.distribution.as_ref().unwrap().clone())
@@ -220,13 +225,7 @@ impl PythonDistributionValue {
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let dist = self.resolve_distribution(&context.logger).map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "resolve_distribution()".to_string(),
-            })
-        })?;
+        let dist = self.resolve_distribution(&context.logger, "resolve_distribution")?;
 
         let policy = dist.create_packaging_policy().map_err(|e| {
             ValueError::from(RuntimeError {
@@ -246,13 +245,7 @@ impl PythonDistributionValue {
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let dist = self.resolve_distribution(&context.logger).map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "resolve_distribution()".to_string(),
-            })
-        })?;
+        let dist = self.resolve_distribution(&context.logger, "resolve_distribution()")?;
 
         let config = dist.create_python_interpreter_config().map_err(|e| {
             ValueError::from(RuntimeError {
@@ -296,13 +289,7 @@ impl PythonDistributionValue {
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let dist = self.resolve_distribution(&context.logger).map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "resolve_distribution()".to_string(),
-            })
-        })?;
+        let dist = self.resolve_distribution(&context.logger, "resolve_distribution()")?;
 
         let policy = if packaging_policy.get_type() == "NoneType" {
             Ok(PythonPackagingPolicyValue::new(
@@ -310,7 +297,7 @@ impl PythonDistributionValue {
                     ValueError::from(RuntimeError {
                         code: "PYOXIDIZER_BUILD",
                         message: e.to_string(),
-                        label: "resolve_distribution()".to_string(),
+                        label: "to_python_executable_starlark()".to_string(),
                     })
                 })?,
             ))
@@ -327,7 +314,7 @@ impl PythonDistributionValue {
                     ValueError::from(RuntimeError {
                         code: "PYOXIDIZER_BUILD",
                         message: e.to_string(),
-                        label: "resolve_distribution()".to_string(),
+                        label: "to_python_executable_starlark()".to_string(),
                     })
                 })?,
             ))
@@ -444,13 +431,7 @@ impl PythonDistributionValue {
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let dist = self.resolve_distribution(&context.logger).map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "resolve_distribution()".to_string(),
-            })
-        })?;
+        let dist = self.resolve_distribution(&context.logger, "resolve_distribution()")?;
 
         Ok(Value::from(
             dist.iter_extension_modules()
@@ -472,13 +453,7 @@ impl PythonDistributionValue {
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let dist = self.resolve_distribution(&context.logger).map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "resolve_distribution()".to_string(),
-            })
-        })?;
+        let dist = self.resolve_distribution(&context.logger, "resolve_distribution()")?;
 
         let resources = dist.resource_datas().map_err(|e| {
             ValueError::from(RuntimeError {
@@ -509,13 +484,7 @@ impl PythonDistributionValue {
             .downcast_ref::<EnvironmentContext>()
             .ok_or(ValueError::IncorrectParameterType)?;
 
-        let dist = self.resolve_distribution(&context.logger).map_err(|e| {
-            ValueError::from(RuntimeError {
-                code: "PYOXIDIZER_BUILD",
-                message: e.to_string(),
-                label: "resolve_distribution()".to_string(),
-            })
-        })?;
+        let dist = self.resolve_distribution(&context.logger, "resolve_distribution")?;
 
         let modules = dist.source_modules().map_err(|e| {
             ValueError::from(RuntimeError {
