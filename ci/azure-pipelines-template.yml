@@ -15,9 +15,6 @@ jobs:
       1.40:
         rustup_toolchain: 1.40.0
 
-  variables:
-    IN_CI: '1'
-
   steps:
   - ${{ if ne(parameters.name, 'Windows') }}:
     - script: |
@@ -47,6 +44,8 @@ jobs:
 
   - script: cargo test -p pyoxidizer -p python-packed-resources
     displayName: Test
+    env:
+      IN_CI: '1'
 
   - script: cargo clippy -p pyoxidizer -p python-packed-resources -- --allow clippy::cast_ptr_alignment
     displayName: Clippy
