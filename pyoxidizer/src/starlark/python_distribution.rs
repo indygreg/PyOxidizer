@@ -24,9 +24,7 @@ use {
     anyhow::{anyhow, Result},
     itertools::Itertools,
     python_packaging::{
-        bytecode::{CompileMode, PythonBytecodeCompiler},
-        policy::PythonPackagingPolicy,
-        resource::{BytecodeOptimizationLevel, PythonResource},
+        policy::PythonPackagingPolicy, resource::PythonResource,
         resource_collection::PythonResourceAddCollectionContext,
     },
     starlark::{
@@ -56,8 +54,6 @@ pub struct PythonDistributionValue {
     dest_dir: PathBuf,
 
     pub distribution: Option<Arc<Box<dyn PythonDistribution>>>,
-
-    compiler: Option<Box<dyn PythonBytecodeCompiler>>,
 }
 
 impl PythonDistributionValue {
@@ -69,7 +65,6 @@ impl PythonDistributionValue {
             source: location,
             dest_dir: dest_dir.to_path_buf(),
             distribution: None,
-            compiler: None,
         }
     }
 
@@ -84,34 +79,6 @@ impl PythonDistributionValue {
         self.distribution = Some(Arc::new(dist));
 
         Ok(())
-    }
-
-    /// Compile bytecode using this distribution.
-    ///
-    /// A bytecode compiler will be lazily instantiated and preserved for the
-    /// lifetime of the instance. So calling multiple times does not pay a
-    /// recurring performance penalty for instantiating the bytecode compiler.
-    pub fn compile_bytecode(
-        &mut self,
-        logger: &slog::Logger,
-        source: &[u8],
-        filename: &str,
-        optimize: BytecodeOptimizationLevel,
-        output_mode: CompileMode,
-    ) -> Result<Vec<u8>> {
-        self.ensure_distribution_resolved(logger)?;
-
-        if let Some(dist) = &self.distribution {
-            if self.compiler.is_none() {
-                self.compiler = Some(dist.create_bytecode_compiler()?);
-            }
-        }
-
-        if let Some(compiler) = &mut self.compiler {
-            compiler.compile(source, filename, optimize, output_mode)
-        } else {
-            Err(anyhow!("bytecode compiler should exist"))
-        }
     }
 }
 
