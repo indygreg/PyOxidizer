@@ -29,6 +29,7 @@ use {
         fs,
         fs::{create_dir_all, File},
         io::Read,
+        ops::DerefMut,
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -470,6 +471,63 @@ impl TryFrom<&str> for DistributionFlavor {
             "standalone_dynamic" | "standalone-dynamic" => Ok(Self::StandaloneDynamic),
             _ => Err(format!("distribution flavor {} not recognized", value)),
         }
+    }
+}
+
+/// Holds references to resolved PythonDistribution instances.
+pub struct DistributionCache {
+    cache: std::sync::Mutex<
+        HashMap<(PathBuf, PythonDistributionLocation), Arc<Box<StandaloneDistribution>>>,
+    >,
+    default_dest_dir: Option<PathBuf>,
+}
+
+impl DistributionCache {
+    pub fn new(default_dest_dir: Option<&Path>) -> Self {
+        Self {
+            cache: std::sync::Mutex::new(HashMap::new()),
+            default_dest_dir: default_dest_dir.clone().map(|x| x.to_path_buf()),
+        }
+    }
+
+    /// Resolve a `PythonDistribution` given its source and storage locations.
+    pub fn resolve_distribution(
+        &mut self,
+        logger: &slog::Logger,
+        location: &PythonDistributionLocation,
+        dest_dir: Option<&Path>,
+    ) -> Result<Arc<Box<StandaloneDistribution>>> {
+        let dest_dir = if let Some(p) = dest_dir {
+            p
+        } else if let Some(p) = &self.default_dest_dir {
+            p
+        } else {
+            return Err(anyhow!("no destination directory available"));
+        };
+
+        let key = (dest_dir.to_path_buf(), location.clone());
+
+        {
+            let lock = self
+                .cache
+                .lock()
+                .map_err(|e| anyhow!("cannot obtain distribution cache lock: {}", e))?;
+            if let Some(dist) = lock.get(&key) {
+                return Ok(dist.clone());
+            }
+        }
+
+        let dist = Arc::new(Box::new(StandaloneDistribution::from_location(
+            logger, location, &dest_dir,
+        )?));
+
+        let mut lock = self
+            .cache
+            .lock()
+            .map_err(|e| anyhow!("cannot obtain distribution lock: {}", e))?;
+        lock.deref_mut().insert(key, dist.clone());
+
+        Ok(dist)
     }
 }
 

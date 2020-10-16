@@ -4,14 +4,15 @@
 
 use {
     crate::logging::PrintlnDrain,
-    crate::py_packaging::distribution::{DistributionFlavor, PythonDistributionLocation},
+    crate::py_packaging::distribution::{
+        DistributionCache, DistributionFlavor, PythonDistributionLocation,
+    },
     crate::py_packaging::standalone_distribution::StandaloneDistribution,
     crate::python_distributions::PYTHON_DISTRIBUTIONS,
     anyhow::{anyhow, Result},
     lazy_static::lazy_static,
     slog::{Drain, Logger},
-    std::collections::HashMap,
-    std::ops::{Deref, DerefMut},
+    std::ops::DerefMut,
     std::path::PathBuf,
     std::sync::{Arc, Mutex},
 };
@@ -29,8 +30,9 @@ pub fn get_logger() -> Result<slog::Logger> {
 lazy_static! {
     pub static ref DEFAULT_DISTRIBUTION_TEMP_DIR: tempdir::TempDir =
         tempdir::TempDir::new("pyoxidizer-test").expect("unable to create temp directory");
-    static ref CACHED_DISTRIBUTIONS: Mutex<HashMap<PythonDistributionLocation, Arc<Box<StandaloneDistribution>>>> =
-        Mutex::new(HashMap::new());
+    pub static ref DISTRIBUTION_CACHE: Mutex<DistributionCache> = Mutex::new(
+        DistributionCache::new(Some(DEFAULT_DISTRIBUTION_TEMP_DIR.path()))
+    );
 }
 
 pub fn get_distribution(
@@ -51,17 +53,11 @@ pub fn get_distribution(
 
     let logger = get_logger()?;
 
-    let mut lock = CACHED_DISTRIBUTIONS.lock().unwrap();
-
-    if !lock.deref_mut().contains_key(location) {
-        let dist = Arc::new(Box::new(StandaloneDistribution::from_location(
-            &logger, &location, &dest_path,
-        )?));
-
-        lock.deref_mut().insert(location.clone(), dist);
-    }
-
-    Ok(lock.deref().get(location).unwrap().clone())
+    DISTRIBUTION_CACHE
+        .lock()
+        .unwrap()
+        .deref_mut()
+        .resolve_distribution(&logger, &location, Some(&dest_path))
 }
 
 pub fn get_default_distribution() -> Result<Arc<Box<StandaloneDistribution>>> {
