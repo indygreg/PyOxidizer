@@ -4,7 +4,7 @@
 
 use {
     super::env::{get_context, global_environment, EnvironmentContext},
-    crate::logging::PrintlnDrain,
+    crate::{logging::PrintlnDrain, testutil::DISTRIBUTION_CACHE},
     anyhow::{anyhow, Result},
     codemap::CodeMap,
     codemap_diagnostic::{Diagnostic, Emitter},
@@ -50,7 +50,7 @@ impl StarlarkEnvironment {
             "0",
             None,
             false,
-            None,
+            Some(DISTRIBUTION_CACHE.clone()),
         )?;
 
         let (env, type_values) = global_environment(&context)

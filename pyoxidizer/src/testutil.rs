@@ -30,9 +30,9 @@ pub fn get_logger() -> Result<slog::Logger> {
 lazy_static! {
     pub static ref DEFAULT_DISTRIBUTION_TEMP_DIR: tempdir::TempDir =
         tempdir::TempDir::new("pyoxidizer-test").expect("unable to create temp directory");
-    pub static ref DISTRIBUTION_CACHE: Mutex<DistributionCache> = Mutex::new(
+    pub static ref DISTRIBUTION_CACHE: Arc<Mutex<DistributionCache>> = Arc::new(Mutex::new(
         DistributionCache::new(Some(DEFAULT_DISTRIBUTION_TEMP_DIR.path()))
-    );
+    ));
 }
 
 pub fn get_distribution(
