@@ -49,10 +49,15 @@ use {
 
 /// A Starlark Value wrapper for `PythonDistribution` traits.
 pub struct PythonDistributionValue {
+    /// Where the distribution should be obtained from.
     pub source: PythonDistributionLocation,
 
+    /// Directory where distribution should be extracted.
     dest_dir: PathBuf,
 
+    /// The actual distribution.
+    ///
+    /// Populated on first read.
     pub distribution: Option<Arc<Box<dyn PythonDistribution>>>,
 }
 
