@@ -42,6 +42,7 @@ pub fn evaluate_file(
         "0",
         resolve_targets,
         build_script_mode,
+        None,
     )
     .map_err(|e| Diagnostic {
         level: Level::Error,

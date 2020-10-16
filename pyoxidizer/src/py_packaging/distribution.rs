@@ -475,6 +475,7 @@ impl TryFrom<&str> for DistributionFlavor {
 }
 
 /// Holds references to resolved PythonDistribution instances.
+#[derive(Debug)]
 pub struct DistributionCache {
     cache: std::sync::Mutex<
         HashMap<(PathBuf, PythonDistributionLocation), Arc<Box<StandaloneDistribution>>>,

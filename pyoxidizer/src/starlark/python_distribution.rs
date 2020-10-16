@@ -42,6 +42,7 @@ use {
     },
     std::{
         convert::TryFrom,
+        ops::DerefMut,
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -75,18 +76,36 @@ impl PythonDistributionValue {
 
     pub fn resolve_distribution(
         &mut self,
-        logger: &slog::Logger,
+        type_values: &TypeValues,
         label: &str,
     ) -> Result<Arc<Box<dyn PythonDistribution>>, ValueError> {
         if self.distribution.is_none() {
+            let raw_context = get_context(type_values)?;
+            let context = raw_context
+                .downcast_mut::<EnvironmentContext>()?
+                .ok_or(ValueError::IncorrectParameterType)?;
+
             self.distribution = Some(Arc::new(
-                resolve_distribution(logger, &self.source, &self.dest_dir).map_err(|e| {
-                    ValueError::from(RuntimeError {
-                        code: "PYOXIDIZER_BUILD",
-                        message: e.to_string(),
-                        label: label.to_string(),
-                    })
-                })?,
+                context
+                    .distribution_cache
+                    .lock()
+                    .map_err(|e| {
+                        ValueError::from(RuntimeError {
+                            code: "PYOXIDIZER_BUILD",
+                            message: format!("cannot lock distribution cache: {}", e),
+                            label: label.to_string(),
+                        })
+                    })?
+                    .deref_mut()
+                    .resolve_distribution(&context.logger, &self.source, Some(&self.dest_dir))
+                    .map_err(|e| {
+                        ValueError::from(RuntimeError {
+                            code: "PYOXIDIZER_BUILD",
+                            message: e.to_string(),
+                            label: label.to_string(),
+                        })
+                    })?
+                    .clone_box(),
             ));
         }
 
@@ -220,12 +239,7 @@ impl PythonDistributionValue {
 
     /// PythonDistribution.make_python_packaging_policy()
     fn make_python_packaging_policy_starlark(&mut self, type_values: &TypeValues) -> ValueResult {
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        let dist = self.resolve_distribution(&context.logger, "resolve_distribution")?;
+        let dist = self.resolve_distribution(type_values, "resolve_distribution")?;
 
         let policy = dist.create_packaging_policy().map_err(|e| {
             ValueError::from(RuntimeError {
@@ -240,12 +254,7 @@ impl PythonDistributionValue {
 
     /// PythonDistribution.make_python_interpreter_config()
     fn make_python_interpreter_config_starlark(&mut self, type_values: &TypeValues) -> ValueResult {
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        let dist = self.resolve_distribution(&context.logger, "resolve_distribution()")?;
+        let dist = self.resolve_distribution(type_values, "resolve_distribution()")?;
 
         let config = dist.create_python_interpreter_config().map_err(|e| {
             ValueError::from(RuntimeError {
@@ -284,12 +293,7 @@ impl PythonDistributionValue {
         )?;
         optional_type_arg("config", "PythonInterpreterConfig", &config)?;
 
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        let dist = self.resolve_distribution(&context.logger, "resolve_distribution()")?;
+        let dist = self.resolve_distribution(type_values, "resolve_distribution()")?;
 
         let policy = if packaging_policy.get_type() == "NoneType" {
             Ok(PythonPackagingPolicyValue::new(
@@ -324,6 +328,11 @@ impl PythonDistributionValue {
                 None => Err(ValueError::IncorrectParameterType),
             }
         }?;
+
+        let raw_context = get_context(type_values)?;
+        let context = raw_context
+            .downcast_ref::<EnvironmentContext>()
+            .ok_or(ValueError::IncorrectParameterType)?;
 
         let host_distribution = if dist
             .compatible_host_triples()
@@ -426,12 +435,7 @@ impl PythonDistributionValue {
 
     /// PythonDistribution.extension_modules()
     pub fn extension_modules(&mut self, type_values: &TypeValues) -> ValueResult {
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        let dist = self.resolve_distribution(&context.logger, "resolve_distribution()")?;
+        let dist = self.resolve_distribution(type_values, "resolve_distribution()")?;
 
         Ok(Value::from(
             dist.iter_extension_modules()
@@ -448,12 +452,7 @@ impl PythonDistributionValue {
     ) -> ValueResult {
         let include_test = required_bool_arg("include_test", &include_test)?;
 
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        let dist = self.resolve_distribution(&context.logger, "resolve_distribution()")?;
+        let dist = self.resolve_distribution(type_values, "resolve_distribution()")?;
 
         let resources = dist.resource_datas().map_err(|e| {
             ValueError::from(RuntimeError {
@@ -479,12 +478,7 @@ impl PythonDistributionValue {
 
     /// PythonDistribution.source_modules()
     pub fn source_modules(&mut self, type_values: &TypeValues) -> ValueResult {
-        let raw_context = get_context(type_values)?;
-        let context = raw_context
-            .downcast_ref::<EnvironmentContext>()
-            .ok_or(ValueError::IncorrectParameterType)?;
-
-        let dist = self.resolve_distribution(&context.logger, "resolve_distribution")?;
+        let dist = self.resolve_distribution(type_values, "resolve_distribution")?;
 
         let modules = dist.source_modules().map_err(|e| {
             ValueError::from(RuntimeError {

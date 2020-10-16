@@ -10,6 +10,7 @@ use {
         target::{BuildContext, BuildTarget, ResolvedTarget},
         util::{optional_list_arg, required_bool_arg, required_str_arg, required_type_arg},
     },
+    crate::py_packaging::distribution::DistributionCache,
     anyhow::{anyhow, Context, Result},
     linked_hash_map::LinkedHashMap,
     path_dedot::ParseDot,
@@ -30,6 +31,7 @@ use {
     std::{
         collections::BTreeMap,
         path::{Path, PathBuf},
+        sync::{Arc, Mutex},
     },
 };
 
@@ -85,6 +87,12 @@ pub struct EnvironmentContext {
     /// Path where Python distributions are written.
     pub python_distributions_path: PathBuf,
 
+    /// Cache of ready-to-clone Python distribution objects.
+    ///
+    /// This exists because constructing a new instance can take a
+    /// few seconds in debug builds. And this adds up, especially in tests!
+    pub distribution_cache: Arc<Mutex<DistributionCache>>,
+
     /// Registered build targets.
     ///
     /// A target consists of a name and a Starlark callable.
@@ -120,6 +128,7 @@ impl EnvironmentContext {
         build_opt_level: &str,
         resolve_targets: Option<Vec<String>>,
         build_script_mode: bool,
+        distribution_cache: Option<Arc<Mutex<DistributionCache>>>,
     ) -> Result<EnvironmentContext> {
         let parent = config_path
             .parent()
@@ -133,6 +142,13 @@ impl EnvironmentContext {
 
         let build_path = parent.join("build");
 
+        let python_distributions_path = build_path.join("python_distributions");
+        let distribution_cache = distribution_cache.unwrap_or_else(|| {
+            Arc::new(Mutex::new(DistributionCache::new(Some(
+                &python_distributions_path,
+            ))))
+        });
+
         Ok(EnvironmentContext {
             logger: logger.clone(),
             verbose,
@@ -143,7 +159,8 @@ impl EnvironmentContext {
             build_release,
             build_opt_level: build_opt_level.to_string(),
             build_path: build_path.clone(),
-            python_distributions_path: build_path.join("python_distributions"),
+            python_distributions_path: python_distributions_path.clone(),
+            distribution_cache,
             targets: BTreeMap::new(),
             targets_order: Vec::new(),
             default_target: None,
